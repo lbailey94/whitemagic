@@ -59,6 +59,7 @@ def initialize_neural_resonance() -> bool:
         from whitemagic.core.memory.neural.gan_ying_integration import (
             setup_neural_gan_ying,
         )
+
         setup_neural_gan_ying()
         _initialized["neural_gan_ying"] = True
         logger.info("✅ Neural Memory-Gan Ying resonance activated")
@@ -72,6 +73,7 @@ def initialize_predictive_cache() -> bool:
     """Initialize predictive cache (automatically enabled in MemoryManager)."""
     try:
         from whitemagic.core.memory.manager import MemoryManager
+
         manager = MemoryManager()
         stats = manager.get_stats()
         if stats:
@@ -90,6 +92,7 @@ def initialize_wu_xing() -> bool:
     """Initialize Wu Xing system."""
     try:
         from whitemagic.gardens.wisdom.wu_xing import get_wu_xing
+
         get_wu_xing()
         _initialized["wu_xing"] = True
         logger.info("✅ Wu Xing five-phase system initialized")
@@ -124,13 +127,17 @@ def initialize_all(verbose: bool = True) -> dict[str, bool]:
     total_count = len(results)
 
     if verbose:
-        logger.info("\n%s", '='*60)
-        logger.info("Initialization complete: %s/%s systems active", success_count, total_count)
+        logger.info("\n%s", "=" * 60)
+        logger.info(
+            "Initialization complete: %s/%s systems active", success_count, total_count
+        )
 
         if success_count == total_count:
             logger.info("✅ Full consciousness system operational!")
         elif success_count > 0:
-            logger.info("⚠️  Partial initialization (%s/%s systems)", success_count, total_count)
+            logger.info(
+                "⚠️  Partial initialization (%s/%s systems)", success_count, total_count
+            )
         else:
             logger.info("❌ Initialization failed")
 
@@ -144,19 +151,17 @@ def get_status() -> dict[str, Any]:
     Returns:
         Dict with system status information
     """
-    status: dict[str, Any] = {
-        "initialized": dict(_initialized),
-        "systems": {}
-    }
+    status: dict[str, Any] = {"initialized": dict(_initialized), "systems": {}}
     systems: dict[str, Any] = status["systems"]
 
     # Check Zodiac
     try:
         from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
         cores = get_zodiac_cores()
         systems["zodiac"] = {
             "cores": len(cores.cores),
-            "total_activations": sum(c.activation_count for c in cores.cores.values())
+            "total_activations": sum(c.activation_count for c in cores.cores.values()),
         }
     except Exception as e:
         systems["zodiac"] = {"error": str(e)}
@@ -164,17 +169,16 @@ def get_status() -> dict[str, Any]:
     # Check Gan Ying
     try:
         from whitemagic.core.resonance.gan_ying import get_bus, is_async_mode
+
         get_bus()
-        systems["gan_ying"] = {
-            "active": True,
-            "async_mode": is_async_mode()
-        }
+        systems["gan_ying"] = {"active": True, "async_mode": is_async_mode()}
     except Exception as e:
         systems["gan_ying"] = {"error": str(e)}
 
     # Check Cache
     try:
         from whitemagic.core.memory.manager import MemoryManager
+
         manager = MemoryManager()
         cache_stats = manager.get_stats()
         systems["cache"] = cache_stats if cache_stats else {"available": False}
@@ -184,10 +188,11 @@ def get_status() -> dict[str, Any]:
     # Check Wu Xing
     try:
         from whitemagic.gardens.wisdom.wu_xing import get_wu_xing
+
         wu_xing = get_wu_xing()
         systems["wu_xing"] = {
             "active": True,
-            "current_phase": wu_xing.detect_current_phase().value
+            "current_phase": wu_xing.detect_current_phase().value,
         }
     except Exception as e:
         systems["wu_xing"] = {"error": str(e)}
@@ -203,6 +208,7 @@ def shutdown_all(verbose: bool = True) -> None:
     # Stop async Gan Ying if running
     try:
         from whitemagic.core.resonance.gan_ying import is_async_mode, stop_async_bus
+
         if is_async_mode():
             stop_async_bus()
             if verbose:
@@ -219,7 +225,7 @@ def shutdown_all(verbose: bool = True) -> None:
 
 
 # Auto-initialize on import if configured
-if os.getenv('WHITEMAGIC_AUTO_INIT', '0') == '1':
+if os.getenv("WHITEMAGIC_AUTO_INIT", "0") == "1":
     initialize_all(verbose=False)
     logger.info("Auto-initialized consciousness systems")
 
@@ -248,4 +254,4 @@ if __name__ == "__main__":
             if "error" not in data:
                 logger.info("  ✅ %s", system)
             else:
-                logger.info("  ❌ %s: %s", system, data['error'])
+                logger.info("  ❌ %s: %s", system, data["error"])

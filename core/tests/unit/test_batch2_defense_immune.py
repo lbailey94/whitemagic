@@ -17,12 +17,14 @@ class TestThreatDetector:
 
     def test_scan(self):
         from whitemagic.core.immune.detector import ThreatDetector
+
         detector = ThreatDetector()
         threats = detector.scan()
         assert isinstance(threats, list)
 
     def test_health_report(self):
         from whitemagic.core.immune.detector import ThreatDetector
+
         detector = ThreatDetector()
         detector.scan()
         report = detector.generate_health_report()
@@ -32,6 +34,7 @@ class TestThreatDetector:
 
     def test_threat_dataclass(self):
         from whitemagic.core.immune.detector import Threat, ThreatLevel, ThreatType
+
         t = Threat(
             threat_type=ThreatType.IMPORT_ERROR,
             level=ThreatLevel.HIGH,
@@ -46,11 +49,13 @@ class TestAntibodyLibrary:
 
     def test_defaults(self):
         from whitemagic.core.immune.antibodies_recovered import AntibodyLibrary
+
         lib = AntibodyLibrary()
         assert len(lib.antibodies) >= 4
 
     def test_find_for_antigen(self):
         from whitemagic.core.immune.antibodies_recovered import AntibodyLibrary
+
         lib = AntibodyLibrary()
         ab = lib.find_for_antigen("import_failure")
         assert ab is not None
@@ -58,17 +63,20 @@ class TestAntibodyLibrary:
 
     def test_find_missing(self):
         from whitemagic.core.immune.antibodies_recovered import AntibodyLibrary
+
         lib = AntibodyLibrary()
         assert lib.find_for_antigen("nonexistent") is None
 
     def test_apply(self):
         from whitemagic.core.immune.antibodies_recovered import AntibodyLibrary
+
         lib = AntibodyLibrary()
         result = lib.apply("fix_import")
         assert result is True
 
     def test_list(self):
         from whitemagic.core.immune.antibodies_recovered import AntibodyLibrary
+
         lib = AntibodyLibrary()
         listing = lib.list_antibodies()
         assert len(listing) >= 4
@@ -81,6 +89,7 @@ class TestImmuneResponse:
     def test_respond_no_antibody(self):
         from whitemagic.core.immune.detector import Threat, ThreatLevel, ThreatType
         from whitemagic.core.immune.response import ImmuneResponse
+
         response = ImmuneResponse()
         threat = Threat(
             threat_type=ThreatType.CONFIGURATION,
@@ -93,6 +102,7 @@ class TestImmuneResponse:
 
     def test_summary(self):
         from whitemagic.core.immune.response import ImmuneResponse
+
         response = ImmuneResponse()
         summary = response.summary()
         assert "total_responses" in summary
@@ -103,6 +113,7 @@ class TestImmuneMemory:
 
     def test_record_and_recall(self, tmp_path):
         from whitemagic.core.immune.memory import ImmuneMemory
+
         mem = ImmuneMemory(data_dir=tmp_path)
         mem.record("test_antigen", "test_antibody", True)
         entries = mem.recall("test_antigen")
@@ -111,6 +122,7 @@ class TestImmuneMemory:
 
     def test_best_antibody(self, tmp_path):
         from whitemagic.core.immune.memory import ImmuneMemory
+
         mem = ImmuneMemory(data_dir=tmp_path)
         mem.record("antigen1", "ab1", True)
         mem.record("antigen1", "ab2", False)
@@ -120,6 +132,7 @@ class TestImmuneMemory:
 
     def test_summary(self, tmp_path):
         from whitemagic.core.immune.memory import ImmuneMemory
+
         mem = ImmuneMemory(data_dir=tmp_path)
         summary = mem.summary()
         assert "total_entries" in summary
@@ -130,22 +143,26 @@ class TestDNALayer:
 
     def test_principles(self):
         from whitemagic.core.immune.dna import DNALayer
+
         dna = DNALayer()
         principles = dna.list_principles()
         assert len(principles) >= 5
 
     def test_check_action_safe(self):
         from whitemagic.core.immune.dna import DNALayer
+
         dna = DNALayer()
         assert dna.check_action("read file", {"confirmed": True}) is True
 
     def test_check_action_unsafe(self):
         from whitemagic.core.immune.dna import DNALayer
+
         dna = DNALayer()
         assert dna.check_action("delete files", {"confirmed": False}) is False
 
     def test_autoimmune_detection(self):
         from whitemagic.core.immune.dna import DNALayer
+
         dna = DNALayer()
         assert dna.is_autoimmune("delete whitemagic core") is True
         assert dna.is_autoimmune("read memory") is False
@@ -156,6 +173,7 @@ class TestHomeostaticMonitor:
 
     def test_snapshot(self, tmp_path):
         from whitemagic.defense.homeostatic_monitor import HomeostaticMonitor
+
         (tmp_path / "test.py").write_text("print('hello')")
         monitor = HomeostaticMonitor(project_root=tmp_path)
         snap = monitor.snapshot()
@@ -163,6 +181,7 @@ class TestHomeostaticMonitor:
 
     def test_compare(self, tmp_path):
         from whitemagic.defense.homeostatic_monitor import HomeostaticMonitor
+
         (tmp_path / "a.py").write_text("print('a')\n")
         monitor = HomeostaticMonitor(project_root=tmp_path)
         monitor.save_snapshot()
@@ -179,12 +198,14 @@ class TestGranularAwareness:
     def test_scan(self, tmp_path):
         from whitemagic.defense.granular_awareness import GranularAwareness
         from whitemagic.defense.homeostatic_monitor import HomeostaticMonitor
+
         # Use a small temp dir to avoid scanning the entire project (22s+)
         monitor = HomeostaticMonitor(project_root=tmp_path)
         monitor.save_snapshot()
         awareness = GranularAwareness()
         # Patch get_monitor to use our temp-based monitor instead of singleton
         import whitemagic.defense.homeostatic_monitor as hm_mod
+
         original_hm_get = hm_mod.get_monitor
         hm_mod.get_monitor = lambda: monitor
         try:
@@ -196,6 +217,7 @@ class TestGranularAwareness:
 
     def test_summary(self):
         from whitemagic.defense.granular_awareness import GranularAwareness
+
         awareness = GranularAwareness()
         summary = awareness.summary()
         assert "total_scans" in summary
@@ -206,18 +228,21 @@ class TestMultiAgentCoordinator:
 
     def test_acquire_and_release(self, tmp_path):
         from whitemagic.defense.multi_agent import MultiAgentCoordinator
+
         coord = MultiAgentCoordinator(data_dir=tmp_path)
         assert coord.acquire_lock("resource1", "agent1")
         assert coord.release_lock("resource1", "agent1")
 
     def test_conflicting_lock(self, tmp_path):
         from whitemagic.defense.multi_agent import MultiAgentCoordinator
+
         coord = MultiAgentCoordinator(data_dir=tmp_path)
         coord.acquire_lock("resource1", "agent1")
         assert not coord.acquire_lock("resource1", "agent2")
 
     def test_list_locks(self, tmp_path):
         from whitemagic.defense.multi_agent import MultiAgentCoordinator
+
         coord = MultiAgentCoordinator(data_dir=tmp_path)
         coord.acquire_lock("r1", "a1")
         locks = coord.list_locks()
@@ -225,6 +250,7 @@ class TestMultiAgentCoordinator:
 
     def test_cleanup_expired(self, tmp_path):
         from whitemagic.defense.multi_agent import MultiAgentCoordinator
+
         coord = MultiAgentCoordinator(data_dir=tmp_path)
         coord.acquire_lock("r1", "a1", ttl=0.01)
         time.sleep(0.02)
@@ -237,15 +263,19 @@ class TestAutoimmuneDefense:
 
     def test_scan_file(self, tmp_path):
         from whitemagic.defense.autoimmune import AutoimmuneDefense
+
         f = tmp_path / "test.py"
         f.write_text("from pathlib import Path\nx = Path.home()\n")
         defense = AutoimmuneDefense(data_dir=tmp_path)
         findings = defense.scan_file(f)
         assert len(findings) >= 1
-        assert any(finding["antipattern"] == "path_home_violation" for finding in findings)
+        assert any(
+            finding["antipattern"] == "path_home_violation" for finding in findings
+        )
 
     def test_summary(self, tmp_path):
         from whitemagic.defense.autoimmune import AutoimmuneDefense
+
         defense = AutoimmuneDefense(data_dir=tmp_path)
         summary = defense.summary()
         assert "total_findings" in summary

@@ -12,13 +12,14 @@ from enum import IntEnum
 
 class ThreadingTier(IntEnum):
     """Threading tiers aligned with I Ching trigrams."""
-    QIAN = 1   # Heaven — single thread, max focus
-    KUN = 2    # Earth — dual thread, balanced
-    ZHEN = 4   # Thunder — 4 threads, rapid
-    KAN = 8    # Water — 8 threads, flowing
-    GEN = 16   # Mountain — 16 threads, heavy
-    XUN = 32   # Wind — 32 threads, distributed
-    LI = 64    # Fire — 64 threads, max parallel
+
+    QIAN = 1  # Heaven — single thread, max focus
+    KUN = 2  # Earth — dual thread, balanced
+    ZHEN = 4  # Thunder — 4 threads, rapid
+    KAN = 8  # Water — 8 threads, flowing
+    GEN = 16  # Mountain — 16 threads, heavy
+    XUN = 32  # Wind — 32 threads, distributed
+    LI = 64  # Fire — 64 threads, max parallel
     DUI = 128  # Lake — 128 threads, extreme
 
 

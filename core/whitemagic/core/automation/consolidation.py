@@ -39,8 +39,6 @@ Usage:
 """
 
 
-
-
 class ConsolidationEngine:
     """Automated memory consolidation with parallel processing."""
 
@@ -65,10 +63,16 @@ class ConsolidationEngine:
         try:
             stats = self.manager.stats()
         except Exception as e:
-            logger.debug("Manager stats failed, estimating from recent memories: %s", e, exc_info=True)
+            logger.debug(
+                "Manager stats failed, estimating from recent memories: %s",
+                e,
+                exc_info=True,
+            )
             # Fallback: estimate from recent memories
             try:
-                recent = self.manager.read_recent_memories(memory_type="short_term", limit=100)
+                recent = self.manager.read_recent_memories(
+                    memory_type="short_term", limit=100
+                )
                 short_term_count = len(recent)
             except Exception as e2:
                 logger.debug("Recent memories read failed: %s", e2, exc_info=True)
@@ -81,12 +85,16 @@ class ConsolidationEngine:
 
         # Check count threshold
         if short_term_count > self.thresholds["count"]:
-            reasons.append(f"Too many short-term memories ({short_term_count}/{self.thresholds['count']})")
+            reasons.append(
+                f"Too many short-term memories ({short_term_count}/{self.thresholds['count']})"
+            )
 
         # Check age threshold
         old_memories = self.find_old_memories()
         if len(old_memories) > 5:
-            reasons.append(f"{len(old_memories)} memories older than {self.thresholds['age_days']} days")
+            reasons.append(
+                f"{len(old_memories)} memories older than {self.thresholds['age_days']} days"
+            )
 
         # Check for duplicates/similar
         duplicates = self.find_duplicates()
@@ -102,7 +110,9 @@ class ConsolidationEngine:
             "threshold": self.thresholds["count"],
         }
 
-    def _archive_memory(self, memory: dict[str, Any], dry_run: bool = True) -> dict[str, Any]:
+    def _archive_memory(
+        self, memory: dict[str, Any], dry_run: bool = True
+    ) -> dict[str, Any]:
         """Archive a single memory (for parallel processing)."""
         try:
             filename = memory.get("filename")
@@ -131,7 +141,9 @@ class ConsolidationEngine:
         cutoff_date = datetime.now() - timedelta(days=self.thresholds["age_days"])
 
         # Get short-term memories
-        short_term_files = self.manager.read_recent_memories(memory_type="short_term", limit=500)
+        short_term_files = self.manager.read_recent_memories(
+            memory_type="short_term", limit=500
+        )
 
         old = []
         for mem_data in short_term_files:
@@ -153,13 +165,14 @@ class ConsolidationEngine:
     @lru_cache(maxsize=128)
     def find_duplicates(self) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
         """Find similar/duplicate memories by title."""
-        short_term_files = self.manager.read_recent_memories(memory_type="short_term", limit=500)
+        short_term_files = self.manager.read_recent_memories(
+            memory_type="short_term", limit=500
+        )
         duplicates = []
 
         # Compare all pairs
         for i, mem1 in enumerate(short_term_files):
-            for mem2 in short_term_files[i+1:
-                ]:
+            for mem2 in short_term_files[i + 1 :]:
                 # Compare titles
                 try:
                     title1 = mem1.get("title", "")
@@ -172,13 +185,16 @@ class ConsolidationEngine:
                     from whitemagic.core.polyglot.mansion_bridge import (
                         get_mansion_bridge,
                     )
+
                     bridge = get_mansion_bridge()
                     similarity = bridge.similarity(title1.lower(), title2.lower())
 
                     if similarity > self.thresholds["similarity"]:
                         duplicates.append((mem1, mem2, similarity))
                 except Exception as e:
-                    logger.debug("Duplicate similarity check failed: %s", e, exc_info=True)
+                    logger.debug(
+                        "Duplicate similarity check failed: %s", e, exc_info=True
+                    )
                     continue
 
         # Sort by similarity (highest first)
@@ -219,25 +235,33 @@ class ConsolidationEngine:
                     for future in as_completed(futures):
                         result = future.result()
                         if result.get("success"):
-                            results["archived"].append({
-                                "filename": result["filename"],
-                                "title": result["title"],
-                                "age_days": result["age_days"],
-                            })
+                            results["archived"].append(
+                                {
+                                    "filename": result["filename"],
+                                    "title": result["title"],
+                                    "age_days": result["age_days"],
+                                }
+                            )
                         else:
-                            results["errors"].append(f"Archive failed for {result['filename']}: {result.get('error', 'Unknown')}")
+                            results["errors"].append(
+                                f"Archive failed for {result['filename']}: {result.get('error', 'Unknown')}"
+                            )
             else:
                 # Sequential processing for small batches
                 for memory in old_memories:
                     result = self._archive_memory(memory, dry_run)
                     if result.get("success"):
-                        results["archived"].append({
-                            "filename": result["filename"],
-                            "title": result["title"],
-                            "age_days": result["age_days"],
-                        })
+                        results["archived"].append(
+                            {
+                                "filename": result["filename"],
+                                "title": result["title"],
+                                "age_days": result["age_days"],
+                            }
+                        )
                     else:
-                        results["errors"].append(f"Archive failed for {result['filename']}: {result.get('error', 'Unknown')}")
+                        results["errors"].append(
+                            f"Archive failed for {result['filename']}: {result.get('error', 'Unknown')}"
+                        )
 
             # 2. Merge highly similar duplicates (top 5)
             duplicates = self.find_duplicates()[:5]
@@ -275,26 +299,32 @@ class ConsolidationEngine:
                         if filename2:
                             self.manager.delete(filename2, permanent=False)
 
-                        results["merged"].append({
-                            "source1": mem1.get("filename"),
-                            "source2": mem2.get("filename"),
-                            "target": merged.filename,
-                            "similarity": f"{similarity:.1%}",
-                        })
+                        results["merged"].append(
+                            {
+                                "source1": mem1.get("filename"),
+                                "source2": mem2.get("filename"),
+                                "target": merged.filename,
+                                "similarity": f"{similarity:.1%}",
+                            }
+                        )
                     else:
-                        results["merged"].append({
-                            "source1": filename1,
-                            "source2": filename2,
-                            "similarity": f"{similarity:.1%}",
-                            "note": "Would be merged",
-                        })
+                        results["merged"].append(
+                            {
+                                "source1": filename1,
+                                "source2": filename2,
+                                "similarity": f"{similarity:.1%}",
+                                "note": "Would be merged",
+                            }
+                        )
                 except Exception as e:
                     results["errors"].append(
                         f"Merge failed for {mem1.get('filename')} + {mem2.get('filename')}: {str(e)}",
                     )
 
             # 3. Auto-promote memories (enhanced logic)
-            short_term_files = self.manager.read_recent_memories(memory_type="short_term", limit=500)
+            short_term_files = self.manager.read_recent_memories(
+                memory_type="short_term", limit=500
+            )
             important_tags = ["critical", "important", "permanent", "reference", "keep"]
 
             for mem_data in short_term_files:
@@ -321,7 +351,11 @@ class ConsolidationEngine:
                                 should_promote = True
                                 promotion_reason.append(f"age_{age_days}d")
                         except (ValueError, TypeError) as e:
-                            logger.debug("Date parse failed for promotion check: %s", e, exc_info=True)
+                            logger.debug(
+                                "Date parse failed for promotion check: %s",
+                                e,
+                                exc_info=True,
+                            )
 
                     # Rule 3: Size-based promotion (>1000 words)
                     word_count = len(content.split())
@@ -331,7 +365,16 @@ class ConsolidationEngine:
 
                     # Rule 4: Title indicators (comprehensive, guide, reference)
                     title = mem_data.get("title", "").lower()
-                    if any(keyword in title for keyword in ["comprehensive", "guide", "reference", "complete", "roadmap"]):
+                    if any(
+                        keyword in title
+                        for keyword in [
+                            "comprehensive",
+                            "guide",
+                            "reference",
+                            "complete",
+                            "roadmap",
+                        ]
+                    ):
                         should_promote = True
                         promotion_reason.append("comprehensive_doc")
 
@@ -344,23 +387,31 @@ class ConsolidationEngine:
                                 type="long_term",
                                 tags=memory_tags + ["auto_promoted"],
                             )
-                            self.manager.delete(mem_data.get("filename"), permanent=False)  # type: ignore[arg-type]
+                            self.manager.delete(
+                                mem_data.get("filename"), permanent=False
+                            )  # type: ignore[arg-type]
 
-                            results["promoted"].append({
-                                "source": mem_data.get("filename"),
-                                "target": promoted.filename,
-                                "reason": ", ".join(promotion_reason),
-                                "tags": memory_tags,
-                            })
+                            results["promoted"].append(
+                                {
+                                    "source": mem_data.get("filename"),
+                                    "target": promoted.filename,
+                                    "reason": ", ".join(promotion_reason),
+                                    "tags": memory_tags,
+                                }
+                            )
                         else:
-                            results["promoted"].append({
-                                "source": mem_data.get("filename"),
-                                "reason": ", ".join(promotion_reason),
-                                "tags": memory_tags,
-                                "note": "Would be promoted",
-                            })
+                            results["promoted"].append(
+                                {
+                                    "source": mem_data.get("filename"),
+                                    "reason": ", ".join(promotion_reason),
+                                    "tags": memory_tags,
+                                    "note": "Would be promoted",
+                                }
+                            )
                 except Exception as e:
-                    results["errors"].append(f"Promotion failed for {mem_data.get('filename', 'unknown')}: {str(e)}")
+                    results["errors"].append(
+                        f"Promotion failed for {mem_data.get('filename', 'unknown')}: {str(e)}"
+                    )
 
             # 4. Clean old scratchpads (>24 hours)
             try:
@@ -384,31 +435,38 @@ class ConsolidationEngine:
         # Add completion metrics
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        results["metrics"].update({
-            "end_time": end_time.isoformat(),
-            "duration_seconds": duration,
-            "total_actions": (
-                len(results["archived"]) +
-                len(results["promoted"]) +
-                len(results["merged"]) +
-                len(results["scratchpads_cleaned"])
-            ),
-            "success": len(results["errors"]) == 0,
-        })
+        results["metrics"].update(
+            {
+                "end_time": end_time.isoformat(),
+                "duration_seconds": duration,
+                "total_actions": (
+                    len(results["archived"])
+                    + len(results["promoted"])
+                    + len(results["merged"])
+                    + len(results["scratchpads_cleaned"])
+                ),
+                "success": len(results["errors"]) == 0,
+            }
+        )
 
         # Emit MEMORY_CONSOLIDATED event
         if not dry_run and results["metrics"]["success"]:
-            self.bus.emit(EventType.MEMORY_CONSOLIDATED, {  # type: ignore[arg-type, call-arg]
-                "archived_count": len(results["archived"]),
-                "promoted_count": len(results["promoted"]),
-                "merged_count": len(results["merged"]),
-                "duration_seconds": duration,
-                "timestamp": end_time.isoformat(),
-            })
+            self.bus.emit(
+                EventType.MEMORY_CONSOLIDATED,
+                {  # type: ignore[arg-type, call-arg]
+                    "archived_count": len(results["archived"]),
+                    "promoted_count": len(results["promoted"]),
+                    "merged_count": len(results["merged"]),
+                    "duration_seconds": duration,
+                    "timestamp": end_time.isoformat(),
+                },
+            )
 
         return results
 
-    def consolidate_session(self, session_id: str, dry_run: bool = True) -> Memory | None:
+    def consolidate_session(
+        self, session_id: str, dry_run: bool = True
+    ) -> Memory | None:
         """Create session consolidation memory."""
         try:
             # Get all memories from session
@@ -426,7 +484,9 @@ class ConsolidationEngine:
             for memory in memories:
                 title = memory.title if hasattr(memory, "title") else "Untitled"
                 tags = memory.tags if hasattr(memory, "tags") else []
-                content_preview = memory.content[:300] if hasattr(memory, "content") else ""
+                content_preview = (
+                    memory.content[:300] if hasattr(memory, "content") else ""
+                )
 
                 content += f"### {title}\n\n"
                 content += f"**Tags**: {', '.join(tags)}\n\n"
@@ -446,7 +506,12 @@ class ConsolidationEngine:
                     try:
                         self.manager.delete(memory.filename, permanent=False)
                     except OSError as e:
-                        logger.debug("Archive delete failed for %s: %s", memory.filename, e, exc_info=True)
+                        logger.debug(
+                            "Archive delete failed for %s: %s",
+                            memory.filename,
+                            e,
+                            exc_info=True,
+                        )
 
                 return consolidated  # type: ignore[no-any-return, return-value]
             else:
@@ -469,11 +534,11 @@ def consolidate_cli(args: Any) -> None:
 
     if not check["should_consolidate"]:
         logger.info("✓ No consolidation needed")
-        logger.info("  Short-term memories: %s/%s", check['count'], check['threshold'])
+        logger.info("  Short-term memories: %s/%s", check["count"], check["threshold"])
         return
 
     logger.info("📊 Consolidation Analysis:")
-    logger.info("  Short-term count: %s/%s", check['count'], check['threshold'])
+    logger.info("  Short-term count: %s/%s", check["count"], check["threshold"])
     for reason in check["reasons"]:
         logger.info("  • %s", reason)
 
@@ -487,45 +552,50 @@ def consolidate_cli(args: Any) -> None:
 
     results = engine.auto_consolidate(dry_run=dry_run)
 
-    logger.info("\n%s Results:", 'Would be' if dry_run else 'Consolidation')
+    logger.info("\n%s Results:", "Would be" if dry_run else "Consolidation")
     if results["archived"]:
-        logger.info("  📦 Archived: %s memories", len(results['archived']))
-        for item in results["archived"][:
-            5]:
-            logger.info("     - %s (%s days old)", item['filename'], item.get('age_days', '?'))
+        logger.info("  📦 Archived: %s memories", len(results["archived"]))
+        for item in results["archived"][:5]:
+            logger.info(
+                "     - %s (%s days old)", item["filename"], item.get("age_days", "?")
+            )
         if len(results["archived"]) > 5:
-            logger.info("     ... and %s more", len(results['archived']) - 5)
+            logger.info("     ... and %s more", len(results["archived"]) - 5)
 
     if results["merged"]:
-        logger.info("  🔗 Merged: %s memory pairs", len(results['merged']))
-        for item in results["merged"][:
-            3]:
-            logger.info("     - %s + %s (%s)", item['source1'], item['source2'], item['similarity'])
+        logger.info("  🔗 Merged: %s memory pairs", len(results["merged"]))
+        for item in results["merged"][:3]:
+            logger.info(
+                "     - %s + %s (%s)",
+                item["source1"],
+                item["source2"],
+                item["similarity"],
+            )
         if len(results["merged"]) > 3:
-            logger.info("     ... and %s more", len(results['merged']) - 3)
+            logger.info("     ... and %s more", len(results["merged"]) - 3)
 
     if results["promoted"]:
-        logger.info("  ⬆️  Promoted: %s memories to long-term", len(results['promoted']))
-        for item in results["promoted"][:
-            3]:
+        logger.info("  ⬆️  Promoted: %s memories to long-term", len(results["promoted"]))
+        for item in results["promoted"][:3]:
             reason = item.get("reason", "N/A")
-            logger.info("     - %s (%s)", item['source'], reason)
+            logger.info("     - %s (%s)", item["source"], reason)
         if len(results["promoted"]) > 3:
-            logger.info("     ... and %s more", len(results['promoted']) - 3)
+            logger.info("     ... and %s more", len(results["promoted"]) - 3)
 
     if results["scratchpads_cleaned"]:
-        logger.info("  🧹 Scratchpads: %s cleaned (>24h old)", len(results['scratchpads_cleaned']))
-        for item in results["scratchpads_cleaned"][:
-            3]:
+        logger.info(
+            "  🧹 Scratchpads: %s cleaned (>24h old)",
+            len(results["scratchpads_cleaned"]),
+        )
+        for item in results["scratchpads_cleaned"][:3]:
             age_hours = item.get("age_hours", 0)
-            logger.info("     - %s (%sh old)", item['name'], age_hours)
+            logger.info("     - %s (%sh old)", item["name"], age_hours)
         if len(results["scratchpads_cleaned"]) > 3:
-            logger.info("     ... and %s more", len(results['scratchpads_cleaned']) - 3)
+            logger.info("     ... and %s more", len(results["scratchpads_cleaned"]) - 3)
 
     if results["errors"]:
-        logger.info("\n⚠️  Errors: %s", len(results['errors']))
-        for error in results["errors"][:
-            3]:
+        logger.info("\n⚠️  Errors: %s", len(results["errors"]))
+        for error in results["errors"][:3]:
             logger.info("     - %s", error)
 
     if dry_run:
@@ -534,7 +604,9 @@ def consolidate_cli(args: Any) -> None:
         logger.info("\n✅ Consolidation complete!")
 
 
-def get_consolidation_engine(manager: MemoryManager | None = None) -> ConsolidationEngine:
+def get_consolidation_engine(
+    manager: MemoryManager | None = None,
+) -> ConsolidationEngine:
     """Get consolidation engine instance."""
     if manager is None:
         manager = MemoryManager()

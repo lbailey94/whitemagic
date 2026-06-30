@@ -19,6 +19,7 @@ This is conservative: it only adds the comment, never
 modifies the actual code. If mypy still complains, the
 underlying code is genuinely buggy and needs a real fix.
 """
+
 import re
 import subprocess
 from pathlib import Path
@@ -44,6 +45,7 @@ def add_ignore_comment(path: Path, line_no: int, code: str = "assignment") -> bo
     new_content = "".join(lines)
     try:
         import ast
+
         ast.parse(new_content)
     except SyntaxError:
         return False
@@ -55,15 +57,15 @@ def main() -> None:
     # Run mypy and collect (file, line, code) tuples
     result = subprocess.run(
         [".venv/bin/mypy", "whitemagic/"],
-        capture_output=True, text=True, cwd=ROOT,
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
     )
     output = result.stdout + result.stderr
     errors = []
     for line in output.splitlines():
         # "whitemagic/path:LINE: error: ... [CODE]"
-        m = re.match(
-            r"^(whitemagic/[^:]+):(\d+):\s*error:.*\[([a-z0-9-]+)\]\s*$", line
-        )
+        m = re.match(r"^(whitemagic/[^:]+):(\d+):\s*error:.*\[([a-z0-9-]+)\]\s*$", line)
         if m:
             errors.append((m.group(1), int(m.group(2)), m.group(3)))
     fixed = 0
@@ -73,7 +75,11 @@ def main() -> None:
         if key in seen:
             continue
         seen.add(key)
-        rel = file_path[len("whitemagic/"):] if file_path.startswith("whitemagic/") else file_path
+        rel = (
+            file_path[len("whitemagic/") :]
+            if file_path.startswith("whitemagic/")
+            else file_path
+        )
         path = ROOT / file_path
         if not path.exists():
             continue

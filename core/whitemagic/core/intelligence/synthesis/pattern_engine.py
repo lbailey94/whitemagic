@@ -27,6 +27,7 @@ class PatternEngine:
                 from whitemagic.core.intelligence.synthesis.unified_patterns import (
                     UnifiedPatternAPI,
                 )
+
                 self._unified = UnifiedPatternAPI()  # type: ignore[assignment]
             except Exception as e:
                 logger.debug("UnifiedPatternAPI unavailable: %s", e, exc_info=True)
@@ -39,9 +40,12 @@ class PatternEngine:
                 from whitemagic.core.intelligence.hologram.patterns import (
                     HolographicPatternEngine,
                 )
+
                 self._holographic = HolographicPatternEngine()  # type: ignore[assignment]
             except Exception as e:
-                logger.debug("HolographicPatternEngine unavailable: %s", e, exc_info=True)
+                logger.debug(
+                    "HolographicPatternEngine unavailable: %s", e, exc_info=True
+                )
                 self._holographic = None
         return self._holographic
 
@@ -49,6 +53,7 @@ class PatternEngine:
         if self._memory is None:
             try:
                 from whitemagic.core.memory.pattern_engine import MemoryPatternEngine
+
                 self._memory = MemoryPatternEngine()
             except Exception as e:
                 logger.debug("MemoryPatternEngine unavailable: %s", e, exc_info=True)
@@ -63,7 +68,9 @@ class PatternEngine:
         unified = self._get_unified()
         if unified:
             try:
-                unified_results = unified.search_patterns(query, limit=kwargs.get("limit", 20))
+                unified_results = unified.search_patterns(
+                    query, limit=kwargs.get("limit", 20)
+                )
                 results.extend(unified_results)
             except Exception as e:
                 logger.debug("Unified pattern search failed: %s", e, exc_info=True)
@@ -102,7 +109,9 @@ class PatternEngine:
             try:
                 return holographic.analyze_pattern(pattern_id, **kwargs)
             except Exception as e:
-                logger.debug("Holographic pattern analysis failed: %s", e, exc_info=True)
+                logger.debug(
+                    "Holographic pattern analysis failed: %s", e, exc_info=True
+                )
 
         return {"status": "not_found", "pattern_id": pattern_id}
 
@@ -133,10 +142,6 @@ class PatternEngine:
 
         return stats
 
-    # ------------------------------------------------------------------
-    # Enhanced Pattern Engine facade (fused from EnhancedPatternEngine)
-    # ------------------------------------------------------------------
-
     _enhanced_pattern_engine_instance: Any = None
     _sub_clustering_engine_instance: Any = None
 
@@ -146,6 +151,7 @@ class PatternEngine:
             from whitemagic.core.patterns.pattern_consciousness.pattern_engine_enhanced import (
                 EnhancedPatternEngine,
             )
+
             self._enhanced_pattern_engine_instance = EnhancedPatternEngine()
         return self._enhanced_pattern_engine_instance
 
@@ -169,16 +175,13 @@ class PatternEngine:
         """Calculate similarity between two texts using PolyglotRouter."""
         return self._get_enhanced_pattern_engine().similarity(text1, text2)
 
-    # ------------------------------------------------------------------
-    # Sub-Clustering facade (fused from SubClusteringEngine)
-    # ------------------------------------------------------------------
-
     def _get_sub_clustering_engine(self):
         """Lazy accessor for the SubClusteringEngine."""
         if self._sub_clustering_engine_instance is None:
             from whitemagic.core.intelligence.synthesis.sub_clustering import (
                 get_sub_clustering_engine,
             )
+
             self._sub_clustering_engine_instance = get_sub_clustering_engine()
         return self._sub_clustering_engine_instance
 
@@ -190,9 +193,13 @@ class PatternEngine:
         """Subdivide a single cluster into quadrants."""
         return self._get_sub_clustering_engine().subdivide_cluster(cluster_id)
 
-    def sub_subdivide_large_clusters(self, threshold: int = 20, dry_run: bool = False) -> dict[str, list[Any]]:
+    def sub_subdivide_large_clusters(
+        self, threshold: int = 20, dry_run: bool = False
+    ) -> dict[str, list[Any]]:
         """Subdivide all large clusters."""
-        return self._get_sub_clustering_engine().subdivide_large_clusters(threshold, dry_run)
+        return self._get_sub_clustering_engine().subdivide_large_clusters(
+            threshold, dry_run
+        )
 
     def sub_get_cluster_stats(self) -> dict[str, Any]:
         """Get statistics about current clustering."""
@@ -202,6 +209,7 @@ class PatternEngine:
 # Singleton
 _pattern_engine: PatternEngine | None = None
 _pattern_engine_lock = __import__("threading").Lock()
+
 
 def get_pattern_engine(**kwargs: Any) -> PatternEngine:
     """Get the global PatternEngine singleton."""

@@ -55,7 +55,9 @@ class CrossSessionLearner:
 
     def __init__(self, storage_dir: str | None = None):
         self._lock = threading.RLock()
-        self._storage_path = Path(storage_dir) if storage_dir is not None else LEARNING_DIR
+        self._storage_path = (
+            Path(storage_dir) if storage_dir is not None else LEARNING_DIR
+        )
         self._storage_path.mkdir(parents=True, exist_ok=True)
         self._data_file = self._storage_path / "tool_patterns.json"
 
@@ -63,8 +65,12 @@ class CrossSessionLearner:
         self._current_session: SessionRecord | None = None
 
         # Aggregated patterns
-        self._cooccurrence: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        self._sequences: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self._cooccurrence: dict[str, dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
+        self._sequences: dict[str, dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
         self._tool_totals: dict[str, int] = defaultdict(int)
         self._error_totals: dict[str, int] = defaultdict(int)
         self._session_count: int = 0
@@ -102,8 +108,7 @@ class CrossSessionLearner:
                 self._sequences[self._last_tool][tool_name] += 1
 
             # Track co-occurrence within session
-            for prev_tool in set(session.tools_used[:
-                -1]):
+            for prev_tool in set(session.tools_used[:-1]):
                 if prev_tool != tool_name:
                     self._cooccurrence[prev_tool][tool_name] += 1
                     self._cooccurrence[tool_name][prev_tool] += 1
@@ -124,7 +129,9 @@ class CrossSessionLearner:
         """Get aggregated cross-session patterns."""
         with self._lock:
             # Most-used tools
-            top_tools = sorted(self._tool_totals.items(), key=lambda x: x[1], reverse=True)[:15]
+            top_tools = sorted(
+                self._tool_totals.items(), key=lambda x: x[1], reverse=True
+            )[:15]
 
             # Strongest co-occurrences
             cooccur_pairs: list[tuple[str, str, int]] = []
@@ -147,9 +154,13 @@ class CrossSessionLearner:
 
             # Error-prone tools
             error_tools = sorted(
-                [(t, c, round(c / max(self._tool_totals.get(t, 1), 1), 3))
-                 for t, c in self._error_totals.items() if c > 0],
-                key=lambda x: x[2], reverse=True,
+                [
+                    (t, c, round(c / max(self._tool_totals.get(t, 1), 1), 3))
+                    for t, c in self._error_totals.items()
+                    if c > 0
+                ],
+                key=lambda x: x[2],
+                reverse=True,
             )
 
             return {
@@ -158,14 +169,12 @@ class CrossSessionLearner:
                 "top_tools": [{"tool": t, "count": c} for t, c in top_tools],
                 "co_occurrences": [
                     {"tool_a": a, "tool_b": b, "count": c}
-                    for a, b, c in cooccur_pairs[:
-                        15]
+                    for a, b, c in cooccur_pairs[:15]
                 ],
                 "common_sequences": seq_list[:15],
                 "error_prone": [
                     {"tool": t, "errors": e, "error_rate": r}
-                    for t, e, r in error_tools[:
-                        10]
+                    for t, e, r in error_tools[:10]
                 ],
             }
 
@@ -179,8 +188,7 @@ class CrossSessionLearner:
             suggestions = sorted(followers.items(), key=lambda x: x[1], reverse=True)
             return [
                 {"tool": t, "probability": round(c / total, 3), "count": c}
-                for t, c in suggestions[:
-                    5]
+                for t, c in suggestions[:5]
             ]
 
     def _save(self) -> None:
@@ -231,10 +239,6 @@ class CrossSessionLearner:
                 "data_file": str(self._data_file),
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _learner: CrossSessionLearner | None = None
 _learner_lock = threading.Lock()

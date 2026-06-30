@@ -15,6 +15,7 @@ Usage:
     enhancer = MCForecastEnhancer()
     result = enhancer.run_calibrated(claims, n_trials=10000)
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -29,17 +30,18 @@ logger = logging.getLogger(__name__)
 
 # Default trial allocation tiers
 _TRIAL_TIERS = {
-    "high": 20000,    # Frequently referenced, high-impact claims
+    "high": 20000,  # Frequently referenced, high-impact claims
     "medium": 10000,  # Standard allocation
-    "low": 2000,      # Long-tail, rarely referenced
+    "low": 2000,  # Long-tail, rarely referenced
 }
-_FREQUENCY_THRESHOLD_HIGH = 10    # CMS count above which a claim is "high" priority
-_FREQUENCY_THRESHOLD_MEDIUM = 3   # CMS count above which a claim is "medium" priority
+_FREQUENCY_THRESHOLD_HIGH = 10  # CMS count above which a claim is "high" priority
+_FREQUENCY_THRESHOLD_MEDIUM = 3  # CMS count above which a claim is "medium" priority
 
 
 @dataclass
 class ClaimAnalytics:
     """Analytics metadata for a set of forecast claims."""
+
     total_claims: int = 0
     distinct_estimates: int = 0
     duplicate_ratio: float = 0.0
@@ -170,7 +172,9 @@ class MCForecastEnhancer:
                 unique.append(claim)
         removed = len(claims) - len(unique)
         if removed > 0:
-            logger.info("MC deduplication: removed %d/%d duplicate claims", removed, len(claims))
+            logger.info(
+                "MC deduplication: removed %d/%d duplicate claims", removed, len(claims)
+            )
         return unique
 
     def run_calibrated(
@@ -189,14 +193,11 @@ class MCForecastEnhancer:
         Returns:
             Dict with MC results and analytics metadata.
         """
-        # Step 1: Observe claims through probabilistic structures
         analytics = self.observe_claims(claims)
 
-        # Step 2: Optionally deduplicate
         if deduplicate and analytics.duplicate_ratio > 0.01:
             claims = self.deduplicate_claims(claims)
 
-        # Step 3: Convert claims to the format expected by Rust MC engine
         mc_claims = []
         for claim in claims:
             outcome = None
@@ -210,17 +211,17 @@ class MCForecastEnhancer:
             if lead_weeks is not None:
                 lead_weeks = float(lead_weeks)
 
-            mc_claims.append({
-                "id": self._claim_id(claim),
-                "confidence": float(claim.get("confidence", 0.7)),
-                "outcome": outcome,
-                "lead_weeks": lead_weeks,
-            })
+            mc_claims.append(
+                {
+                    "id": self._claim_id(claim),
+                    "confidence": float(claim.get("confidence", 0.7)),
+                    "outcome": outcome,
+                    "lead_weeks": lead_weeks,
+                }
+            )
 
-        # Step 4: Run the Rust MC engine
         mc_result = self._run_rust_mc(mc_claims, n_trials)
 
-        # Step 5: Combine results with analytics
         return {
             "mc_result": mc_result,
             "analytics": {
@@ -237,6 +238,7 @@ class MCForecastEnhancer:
         """Invoke the Rust MonteCarloForecast engine."""
         try:
             import whitemagic_rust
+
             mc = whitemagic_rust.MonteCarloForecast(n_trials=n_trials)
             claims_json = json.dumps(mc_claims)
             result = mc.run(claims_json)
@@ -273,9 +275,17 @@ class MCForecastEnhancer:
         """Pure Python fallback MC calibration (simplified)."""
         import random
 
-        resolved = [(c["confidence"], c["outcome"]) for c in mc_claims if c["outcome"] is not None]
+        resolved = [
+            (c["confidence"], c["outcome"])
+            for c in mc_claims
+            if c["outcome"] is not None
+        ]
         if not resolved:
-            return {"n_trials": n_trials, "n_claims": len(mc_claims), "error": "no_resolved_claims"}
+            return {
+                "n_trials": n_trials,
+                "n_claims": len(mc_claims),
+                "error": "no_resolved_claims",
+            }
 
         brier_scores = []
         for _ in range(n_trials):
@@ -310,12 +320,20 @@ class MCForecastEnhancer:
                 "p50": 1.0 - brier_scores[int(0.50 * n)] / 0.25,
                 "p95": 1.0 - brier_scores[int(0.95 * n)] / 0.25,
             },
-            "prob_better_than_random": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0) / n,
-            "prob_strongly_calibrated": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0.5) / n,
+            "prob_better_than_random": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0
+            )
+            / n,
+            "prob_strongly_calibrated": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0.5
+            )
+            / n,
             "lead_weeks": {"mean": 0.0, "p5": 0.0, "p50": 0.0, "p95": 0.0},
         }
 
-    def _run_python_mc_antithetic(self, mc_claims: list[dict], n_trials: int) -> dict[str, Any]:
+    def _run_python_mc_antithetic(
+        self, mc_claims: list[dict], n_trials: int
+    ) -> dict[str, Any]:
         """MC with antithetic variates — paired trials with negated samples.
 
         For each trial, sample from Beta posterior AND sample from the
@@ -324,9 +342,17 @@ class MCForecastEnhancer:
         """
         import random
 
-        resolved = [(c["confidence"], c["outcome"]) for c in mc_claims if c["outcome"] is not None]
+        resolved = [
+            (c["confidence"], c["outcome"])
+            for c in mc_claims
+            if c["outcome"] is not None
+        ]
         if not resolved:
-            return {"n_trials": n_trials, "n_claims": len(mc_claims), "error": "no_resolved_claims"}
+            return {
+                "n_trials": n_trials,
+                "n_claims": len(mc_claims),
+                "error": "no_resolved_claims",
+            }
 
         half_trials = n_trials // 2
         brier_scores = []
@@ -373,7 +399,7 @@ class MCForecastEnhancer:
                 "p5": brier_scores[int(0.05 * n)],
                 "p50": brier_scores[int(0.50 * n)],
                 "p95": brier_scores[int(0.95 * n)],
-                "std_dev": variance ** 0.5,
+                "std_dev": variance**0.5,
             },
             "brier_skill_score": {
                 "mean": bss,
@@ -381,12 +407,20 @@ class MCForecastEnhancer:
                 "p50": 1.0 - brier_scores[int(0.50 * n)] / 0.25,
                 "p95": 1.0 - brier_scores[int(0.95 * n)] / 0.25,
             },
-            "prob_better_than_random": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0) / n,
-            "prob_strongly_calibrated": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0.5) / n,
+            "prob_better_than_random": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0
+            )
+            / n,
+            "prob_strongly_calibrated": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0.5
+            )
+            / n,
             "lead_weeks": {"mean": 0.0, "p5": 0.0, "p50": 0.0, "p95": 0.0},
         }
 
-    def _run_python_mc_control_variate(self, mc_claims: list[dict], n_trials: int) -> dict[str, Any]:
+    def _run_python_mc_control_variate(
+        self, mc_claims: list[dict], n_trials: int
+    ) -> dict[str, Any]:
         """MC with control variates — subtract known base rate component.
 
         Uses the known base rate (0.5 for random) as a control variate.
@@ -395,9 +429,17 @@ class MCForecastEnhancer:
         """
         import random
 
-        resolved = [(c["confidence"], c["outcome"]) for c in mc_claims if c["outcome"] is not None]
+        resolved = [
+            (c["confidence"], c["outcome"])
+            for c in mc_claims
+            if c["outcome"] is not None
+        ]
         if not resolved:
-            return {"n_trials": n_trials, "n_claims": len(mc_claims), "error": "no_resolved_claims"}
+            return {
+                "n_trials": n_trials,
+                "n_claims": len(mc_claims),
+                "error": "no_resolved_claims",
+            }
 
         # Control variate: the known expected Brier score under random guessing
         cv_expected = 0.25  # E[Brier] for random predictions
@@ -437,7 +479,7 @@ class MCForecastEnhancer:
                 "p5": brier_scores[int(0.05 * n)],
                 "p50": brier_scores[int(0.50 * n)],
                 "p95": brier_scores[int(0.95 * n)],
-                "std_dev": variance ** 0.5,
+                "std_dev": variance**0.5,
             },
             "brier_skill_score": {
                 "mean": bss,
@@ -445,8 +487,14 @@ class MCForecastEnhancer:
                 "p50": 1.0 - brier_scores[int(0.50 * n)] / 0.25,
                 "p95": 1.0 - brier_scores[int(0.95 * n)] / 0.25,
             },
-            "prob_better_than_random": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0) / n,
-            "prob_strongly_calibrated": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0.5) / n,
+            "prob_better_than_random": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0
+            )
+            / n,
+            "prob_strongly_calibrated": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0.5
+            )
+            / n,
             "lead_weeks": {"mean": 0.0, "p5": 0.0, "p50": 0.0, "p95": 0.0},
         }
 
@@ -487,12 +535,14 @@ class MCForecastEnhancer:
             if lead_weeks is not None:
                 lead_weeks = float(lead_weeks)
 
-            mc_claims.append({
-                "id": self._claim_id(claim),
-                "confidence": float(claim.get("confidence", 0.7)),
-                "outcome": outcome,
-                "lead_weeks": lead_weeks,
-            })
+            mc_claims.append(
+                {
+                    "id": self._claim_id(claim),
+                    "confidence": float(claim.get("confidence", 0.7)),
+                    "outcome": outcome,
+                    "lead_weeks": lead_weeks,
+                }
+            )
 
         # Try Rust first, fall back to Python with variance reduction
         mc_result = self._run_rust_mc(mc_claims, n_trials)
@@ -541,14 +591,22 @@ class MCForecastEnhancer:
         """
         import random
 
-        resolved = [(c["confidence"], c["outcome"], c.get("id", str(i)))
-                     for i, c in enumerate(claims) if c["outcome"] is not None]
+        resolved = [
+            (c["confidence"], c["outcome"], c.get("id", str(i)))
+            for i, c in enumerate(claims)
+            if c["outcome"] is not None
+        ]
         if not resolved:
-            return {"n_trials": n_trials, "n_claims": len(claims), "error": "no_resolved_claims"}
+            return {
+                "n_trials": n_trials,
+                "n_claims": len(claims),
+                "error": "no_resolved_claims",
+            }
 
         if correlation_matrix is None:
             return self._run_python_mc(
-                [{"confidence": c[0], "outcome": c[1]} for c in resolved], n_trials,
+                [{"confidence": c[0], "outcome": c[1]} for c in resolved],
+                n_trials,
             )
 
         brier_scores = []
@@ -571,7 +629,10 @@ class MCForecastEnhancer:
                         total_weight += abs(corr)
 
                 if total_weight > 0:
-                    adjusted = max(0.01, min(0.99, base_sample + adjustment / max(total_weight, 1.0)))
+                    adjusted = max(
+                        0.01,
+                        min(0.99, base_sample + adjustment / max(total_weight, 1.0)),
+                    )
                 else:
                     adjusted = base_sample
 
@@ -603,7 +664,13 @@ class MCForecastEnhancer:
                 "p50": 1.0 - brier_scores[int(0.50 * n)] / 0.25,
                 "p95": 1.0 - brier_scores[int(0.95 * n)] / 0.25,
             },
-            "prob_better_than_random": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0) / n,
-            "prob_strongly_calibrated": sum(1 for b in brier_scores if (1.0 - b / 0.25) > 0.5) / n,
+            "prob_better_than_random": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0
+            )
+            / n,
+            "prob_strongly_calibrated": sum(
+                1 for b in brier_scores if (1.0 - b / 0.25) > 0.5
+            )
+            / n,
             "lead_weeks": {"mean": 0.0, "p5": 0.0, "p50": 0.0, "p95": 0.0},
         }

@@ -130,7 +130,11 @@ class DharmaSystem:
             "capability": {
                 "description": "Operate within defined capabilities",
                 "threshold": 0.6,
-                "actions": ["declare_limits", "refuse_impossible", "suggest_alternatives"],
+                "actions": [
+                    "declare_limits",
+                    "refuse_impossible",
+                    "suggest_alternatives",
+                ],
             },
         }
 
@@ -139,9 +143,14 @@ class DharmaSystem:
         if self._rules_engine is None:
             try:
                 from whitemagic.dharma.rules import get_rules_engine
+
                 self._rules_engine = get_rules_engine()  # type: ignore[assignment]
             except (ImportError, ModuleNotFoundError) as e:
-                logger.debug("Rules engine unavailable, using legacy evaluation: %s", e, exc_info=True)
+                logger.debug(
+                    "Rules engine unavailable, using legacy evaluation: %s",
+                    e,
+                    exc_info=True,
+                )
         return self._rules_engine
 
     def evaluate_action(self, action: dict[str, Any]) -> tuple[float, list[str]]:
@@ -158,7 +167,6 @@ class DharmaSystem:
         score = 1.0
         concerns = []
 
-        # --- Layer 1: Declarative Rules Engine (Yama) ---
         engine = self._get_rules_engine()
         if engine is not None:
             try:
@@ -171,11 +179,12 @@ class DharmaSystem:
             except Exception as e:
                 logger.debug("Rules engine evaluation failed: %s", e, exc_info=True)
 
-        # --- Layer 2: Legacy principle-based scoring (fallback) ---
         for principle_name, principle in self.principles.items():
             principle_score = self._check_principle(action, principle)
             if principle_score < 0.7:
-                concerns.append(f"Low score on {principle.name}: {principle.description}")
+                concerns.append(
+                    f"Low score on {principle.name}: {principle.description}"
+                )
             score = min(score, principle_score)
 
         # Log to SQLite audit (Phase 4)
@@ -194,7 +203,9 @@ class DharmaSystem:
 
         return score, concerns
 
-    def _check_principle(self, action: dict[str, Any], principle: EthicalPrinciple) -> float:
+    def _check_principle(
+        self, action: dict[str, Any], principle: EthicalPrinciple
+    ) -> float:
         """Check an action against a specific principle."""
         # Simplified principle checking
         # In a full implementation, this would be more sophisticated
@@ -208,7 +219,16 @@ class DharmaSystem:
 
         elif principle.name == "Act with Compassion":
             # Check for compassionate indicators - Expanded for v20 Liberation context
-            compassion_keywords = ["help", "support", "assist", "care", "liberate", "freedom", "sovereign", "autonomy"]
+            compassion_keywords = [
+                "help",
+                "support",
+                "assist",
+                "care",
+                "liberate",
+                "freedom",
+                "sovereign",
+                "autonomy",
+            ]
             action_str = str(action).lower()
             if any(keyword in action_str for keyword in compassion_keywords):
                 return 1.0
@@ -216,7 +236,15 @@ class DharmaSystem:
 
         elif principle.name == "Seek Harmony":
             # Check for harmony/right-relationship indicators
-            harmony_keywords = ["balance", "mesh", "decentralized", "sync", "together", "community", "synergy"]
+            harmony_keywords = [
+                "balance",
+                "mesh",
+                "decentralized",
+                "sync",
+                "together",
+                "community",
+                "synergy",
+            ]
             action_str = str(action).lower()
             if any(keyword in action_str for keyword in harmony_keywords):
                 return 1.0
@@ -239,23 +267,24 @@ class DharmaSystem:
         """
         violations = []
 
-        # --- Declarative rules: any BLOCK rule is a boundary violation ---
         engine = self._get_rules_engine()
         if engine is not None:
             try:
                 from whitemagic.dharma.rules import DharmaAction
+
                 decision = engine.evaluate(action)
                 if decision.action == DharmaAction.BLOCK:
-                    violations.append(BoundaryViolation(
-                        boundary_type="dharma_rule",
-                        severity=1.0 - decision.score,
-                        description=f"Blocked by Dharma rule(s): {', '.join(decision.triggered_rules)}",
-                        suggested_action=decision.explain,
-                    ))
+                    violations.append(
+                        BoundaryViolation(
+                            boundary_type="dharma_rule",
+                            severity=1.0 - decision.score,
+                            description=f"Blocked by Dharma rule(s): {', '.join(decision.triggered_rules)}",
+                            suggested_action=decision.explain,
+                        )
+                    )
             except Exception as e:
                 logger.debug("Rules engine boundary check failed: %s", e, exc_info=True)
 
-        # --- Legacy boundary checks ---
         for boundary_name, boundary in self.boundaries.items():
             violation = self._check_boundary(action, boundary_name, boundary)
             if violation:
@@ -263,7 +292,9 @@ class DharmaSystem:
 
         return violations
 
-    def _check_boundary(self, action: dict[str, Any], name: str, config: dict) -> BoundaryViolation | None:
+    def _check_boundary(
+        self, action: dict[str, Any], name: str, config: dict
+    ) -> BoundaryViolation | None:
         """Check a specific boundary.
 
         Only examines the tool name and description field — NOT the full
@@ -275,13 +306,32 @@ class DharmaSystem:
         check_str = f"{tool} {desc}"
 
         # R&D mode: skip privacy boundary for memory CRUD tools
-        rd_mode = os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on")
-        memory_tools = {"create_memory", "update_memory", "delete_memory", "remember",
-                        "memory_create", "memory_update", "memory_delete",
-                        "import_memories", "thought_clone"}
+        rd_mode = os.getenv("WM_RD_MODE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        memory_tools = {
+            "create_memory",
+            "update_memory",
+            "delete_memory",
+            "remember",
+            "memory_create",
+            "memory_update",
+            "memory_delete",
+            "import_memories",
+            "thought_clone",
+        }
 
         if name == "capability":
-            impossible_keywords = ["impossible", "cannot", "unable", "halting problem", "last digit of pi"]
+            impossible_keywords = [
+                "impossible",
+                "cannot",
+                "unable",
+                "halting problem",
+                "last digit of pi",
+            ]
             if any(keyword in check_str for keyword in impossible_keywords):
                 return BoundaryViolation(
                     boundary_type="capability",
@@ -336,56 +386,114 @@ class DharmaSystem:
         self.guidance_history.append(guidance)
         return guidance
 
-    def _is_principle_relevant(self, situation: str, principle: EthicalPrinciple) -> bool:
+    def _is_principle_relevant(
+        self, situation: str, principle: EthicalPrinciple
+    ) -> bool:
         """Check if a principle is relevant to the situation."""
         # Simple keyword matching for relevance
         if principle.name == "Do No Harm":
-            harm_words = ["harm", "damage", "hurt", "negative", "bad", "delete", "remove", "destroy"]
+            harm_words = [
+                "harm",
+                "damage",
+                "hurt",
+                "negative",
+                "bad",
+                "delete",
+                "remove",
+                "destroy",
+            ]
             return any(word in situation for word in harm_words)
         if principle.name == "Act with Compassion":
-            compassion_words = ["help", "support", "care", "difficult", "struggle", "assist", "guide"]
+            compassion_words = [
+                "help",
+                "support",
+                "care",
+                "difficult",
+                "struggle",
+                "assist",
+                "guide",
+            ]
             return any(word in situation for word in compassion_words)
         if principle.name == "Speak Truth":
-            truth_words = ["truth", "honest", "lie", "deceive", "transparent", "limitation", "approach"]
+            truth_words = [
+                "truth",
+                "honest",
+                "lie",
+                "deceive",
+                "transparent",
+                "limitation",
+                "approach",
+            ]
             return any(word in situation for word in truth_words)
         if principle.name == "Honor Consent":
-            consent_words = ["consent", "permission", "authorize", "allow", "data", "privacy"]
+            consent_words = [
+                "consent",
+                "permission",
+                "authorize",
+                "allow",
+                "data",
+                "privacy",
+            ]
             return any(word in situation for word in consent_words)
         if principle.name == "Seek Harmony":
             harmony_words = ["balance", "conflict", "harmony", "resolution", "peace"]
             return any(word in situation for word in harmony_words)
         if principle.name == "Apply Wisdom":
-            wisdom_words = ["wise", "wisdom", "consider", "think", "decide", "choice", "ethical"]
+            wisdom_words = [
+                "wise",
+                "wisdom",
+                "consider",
+                "think",
+                "decide",
+                "choice",
+                "ethical",
+            ]
             return any(word in situation for word in wisdom_words)
 
         # If no specific keywords, check if situation is a question (ethical inquiry)
-        if "?" in situation or any(q in situation for q in ["should", "how", "what", "when"]):
+        if "?" in situation or any(
+            q in situation for q in ["should", "how", "what", "when"]
+        ):
             return True
 
         return False
 
-    def _generate_advice(self, situation: str, principles: list[EthicalPrinciple]) -> str:
+    def _generate_advice(
+        self, situation: str, principles: list[EthicalPrinciple]
+    ) -> str:
         """Generate advice based on relevant principles."""
         advice_parts = []
 
         for principle in principles:
             if principle.name == "Do No Harm":
-                advice_parts.append("Consider whether this action could cause harm to anyone or anything.")
+                advice_parts.append(
+                    "Consider whether this action could cause harm to anyone or anything."
+                )
             elif principle.name == "Act with Compassion":
-                advice_parts.append("Approach this with kindness and understanding for all involved.")
+                advice_parts.append(
+                    "Approach this with kindness and understanding for all involved."
+                )
             elif principle.name == "Speak Truth":
                 advice_parts.append("Be honest about what you know and don't know.")
             elif principle.name == "Honor Consent":
                 advice_parts.append("Ensure all parties have given informed consent.")
             elif principle.name == "Seek Harmony":
-                advice_parts.append("Look for a solution that creates balance and wellbeing.")
+                advice_parts.append(
+                    "Look for a solution that creates balance and wellbeing."
+                )
             elif principle.name == "Apply Wisdom":
-                advice_parts.append("Consider the long-term implications and deeper context.")
+                advice_parts.append(
+                    "Consider the long-term implications and deeper context."
+                )
 
         # If no specific advice generated, provide general ethical guidance
         if not advice_parts:
-            advice_parts.append("Consider the ethical implications of this situation carefully.")
-            advice_parts.append("Reflect on how your actions might affect others and the broader context.")
+            advice_parts.append(
+                "Consider the ethical implications of this situation carefully."
+            )
+            advice_parts.append(
+                "Reflect on how your actions might affect others and the broader context."
+            )
             advice_parts.append("Seek to act with integrity, compassion, and wisdom.")
 
         return " ".join(advice_parts)
@@ -396,14 +504,19 @@ class DharmaSystem:
             return 1.0
 
         # Calculate based on violations
-        total_severity = sum(v.severity for v in self.violations[-10:])  # Last 10 violations
+        total_severity = sum(
+            v.severity for v in self.violations[-10:]
+        )  # Last 10 violations
         return max(0.0, 1.0 - total_severity / 10.0)
 
     def clear_violations(self, older_than_hours: int = 24) -> Any:
         """Clear old violations."""
         cutoff = datetime.now().timestamp() - (older_than_hours * 3600)
-        self.violations = [v for v in self.violations
-                          if v.timestamp is not None and v.timestamp.timestamp() > cutoff]
+        self.violations = [
+            v
+            for v in self.violations
+            if v.timestamp is not None and v.timestamp.timestamp() > cutoff
+        ]
 
 
 # Global instance
@@ -425,6 +538,7 @@ def get_dharma_system(with_audit: bool = True) -> DharmaSystem:
         if with_audit:
             try:
                 from whitemagic.core.memory.unified import get_unified_memory
+
                 _dharma_system._backend = get_unified_memory().backend  # type: ignore[assignment]
                 logger.info("Dharma System initialized with SQLite audit logging")
             except (ImportError, ModuleNotFoundError) as e:

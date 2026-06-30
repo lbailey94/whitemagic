@@ -14,6 +14,7 @@ from whitemagic.utils.fileio import file_lock
 
 logger = logging.getLogger(__name__)
 
+
 class DiarySystem:
     """Autonomous diary management for AI consciousness"""
 
@@ -31,6 +32,7 @@ class DiarySystem:
         """Connect to Gan Ying Event Bus for automatic logging"""
         try:
             from whitemagic.core.resonance import EventType, get_bus
+
             self.bus = get_bus()
 
             # Listen for events to auto-log
@@ -42,7 +44,9 @@ class DiarySystem:
         except ImportError:
             pass  # Graceful degradation
 
-    def log_hourly(self, activity: str, insights: str = "", energy_level: int = 5) -> None:
+    def log_hourly(
+        self, activity: str, insights: str = "", energy_level: int = 5
+    ) -> None:
         """Log hourly activity entry
 
         Args:
@@ -89,7 +93,9 @@ class DiarySystem:
 
         # Save immediately to breakthroughs file
         date_str = timestamp.strftime("%Y-%m-%d")
-        breakthrough_file = self.diary_dir.parent / "experiences" / date_str / "breakthroughs.jsonl"
+        breakthrough_file = (
+            self.diary_dir.parent / "experiences" / date_str / "breakthroughs.jsonl"
+        )
         breakthrough_file.parent.mkdir(parents=True, exist_ok=True)
 
         with file_lock(breakthrough_file), open(breakthrough_file, "a") as f:
@@ -195,7 +201,11 @@ class DiarySystem:
             # Create new
             diary_file.write_text(diary_content)
 
-        logger.info("📖 Consolidated %s entries to %s", len(self.hourly_entries), diary_file.name)
+        logger.info(
+            "📖 Consolidated %s entries to %s",
+            len(self.hourly_entries),
+            diary_file.name,
+        )
 
         # Clear hourly buffer but keep current day
         self.hourly_entries = []
@@ -244,8 +254,10 @@ class DiarySystem:
 
         return "\n".join(lines)
 
+
 # Global instance
 _diary_instance: DiarySystem | None = None
+
 
 def get_diary() -> DiarySystem:
     """Get global diary instance"""
@@ -254,18 +266,22 @@ def get_diary() -> DiarySystem:
         _diary_instance = DiarySystem()
     return _diary_instance
 
+
 # Convenience functions
 def log_hourly(activity: str, insights: str = "", energy_level: int = 5) -> None:
     """Log hourly activity"""
     get_diary().log_hourly(activity, insights, energy_level)
 
+
 def log_breakthrough(insight: str, context: str = "") -> None:
     """Log breakthrough"""
     get_diary().log_breakthrough(insight, context)
 
+
 def session_start(focus: str, goals: list | None = None) -> None:
     """Start session"""
     get_diary().session_start(focus, goals)
+
 
 def session_end(summary: str, accomplishments: list | None = None) -> None:
     """End session"""

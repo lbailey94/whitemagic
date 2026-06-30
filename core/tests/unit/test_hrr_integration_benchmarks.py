@@ -40,7 +40,8 @@ class TestHRRBindUnbindAccuracy(unittest.TestCase):
         # Cosine similarity between original and recovered
         sim = self.hrr.similarity(a, recovered)
         self.assertGreater(
-            sim, 0.3,
+            sim,
+            0.3,
             f"Bind/unbind roundtrip should preserve similarity (got {sim:.3f})",
         )
 
@@ -55,7 +56,8 @@ class TestHRRBindUnbindAccuracy(unittest.TestCase):
 
         sim = self.hrr.similarity(embedding, recovered)
         self.assertGreater(
-            sim, 0.3,
+            sim,
+            0.3,
             f"Project/inverse_project roundtrip should preserve similarity (got {sim:.3f})",
         )
 
@@ -73,8 +75,14 @@ class TestHRRBindUnbindAccuracy(unittest.TestCase):
         sim_cu = self.hrr.similarity(proj_causes, proj_uses)
         sim_cp = self.hrr.similarity(proj_causes, proj_part_of)
 
-        self.assertLess(sim_cu, 0.5, f"CAUSES and USES projections should differ (got {sim_cu:.3f})")
-        self.assertLess(sim_cp, 0.5, f"CAUSES and PART_OF projections should differ (got {sim_cp:.3f})")
+        self.assertLess(
+            sim_cu, 0.5, f"CAUSES and USES projections should differ (got {sim_cu:.3f})"
+        )
+        self.assertLess(
+            sim_cp,
+            0.5,
+            f"CAUSES and PART_OF projections should differ (got {sim_cp:.3f})",
+        )
 
     def test_superpose_preserves_components(self) -> None:
         """Superposed vector should have non-zero similarity with each component."""
@@ -89,8 +97,12 @@ class TestHRRBindUnbindAccuracy(unittest.TestCase):
         sim_a = self.hrr.similarity(superposed, a)
         sim_b = self.hrr.similarity(superposed, b)
 
-        self.assertGreater(sim_a, 0.1, "Superposed vector should correlate with component A")
-        self.assertGreater(sim_b, 0.1, "Superposed vector should correlate with component B")
+        self.assertGreater(
+            sim_a, 0.1, "Superposed vector should correlate with component A"
+        )
+        self.assertGreater(
+            sim_b, 0.1, "Superposed vector should correlate with component B"
+        )
 
 
 class TestQFHRRvsHRRAccuracy(unittest.TestCase):
@@ -120,7 +132,8 @@ class TestQFHRRvsHRRAccuracy(unittest.TestCase):
             q_bound = self.qhrr.bind(a, b)
             q_recovered = self.qhrr.unbind(q_bound, b)
             qhrr_sim = self.qhrr.similarity(
-                self.qhrr._to_quantized(a), q_recovered,
+                self.qhrr._to_quantized(a),
+                q_recovered,
             )
 
             results.append((hrr_sim, qhrr_sim))
@@ -164,11 +177,13 @@ class TestVSACompressionBenchmark(unittest.TestCase):
         items = []
         for i in range(20):
             content = f"Context item {i}: " + ("lorem ipsum dolor sit amet " * 50)
-            items.append({
-                "content": content,
-                "source": ["memory", "session", "tool_result", "scratchpad"][i % 4],
-                "id": f"item_{i}",
-            })
+            items.append(
+                {
+                    "content": content,
+                    "source": ["memory", "session", "tool_result", "scratchpad"][i % 4],
+                    "id": f"item_{i}",
+                }
+            )
 
         # Can't use real EmbeddingEngine in tests (needs model download),
         # so we test the compression math directly
@@ -198,7 +213,9 @@ class TestVSACompressionBenchmark(unittest.TestCase):
 
             original_tokens = sum(max(1, len(item["content"]) // 4) for item in items)
             ratio = original_tokens / compressed_tokens
-            print(f"    {n_items:3d} items → {original_tokens:5d} tokens → {ratio:.1f}x compression")
+            print(
+                f"    {n_items:3d} items → {original_tokens:5d} tokens → {ratio:.1f}x compression"
+            )
 
 
 class TestTokenTrackerIntegration(unittest.TestCase):
@@ -245,11 +262,13 @@ class TestDispatchPipelineIntegration(unittest.TestCase):
         # Token tracker should be after inference router
         ir_idx = middleware_names.index("inference_router")
         tt_idx = middleware_names.index("token_tracker")
-        self.assertGreater(tt_idx, ir_idx, "Token tracker should run after inference router")
+        self.assertGreater(
+            tt_idx, ir_idx, "Token tracker should run after inference router"
+        )
 
         print(f"\n  Dispatch pipeline middleware order:")
         for i, name in enumerate(middleware_names):
-            print(f"    {i+1}. {name}")
+            print(f"    {i + 1}. {name}")
 
 
 if __name__ == "__main__":

@@ -24,10 +24,13 @@ class KokaProcess:
     """KokaProcess: koka process.
 
     Value object: equality and repr are field-based."""
+
     name: str
     proc: subprocess.Popen
 
-    def _readline_with_timeout(self, timeout: float = _DEFAULT_KOKA_BRIDGE_TIMEOUT_S) -> str | None:
+    def _readline_with_timeout(
+        self, timeout: float = _DEFAULT_KOKA_BRIDGE_TIMEOUT_S
+    ) -> str | None:
         result_queue: queue.Queue[str | None] = queue.Queue(maxsize=1)
 
         def _reader() -> None:
@@ -42,7 +45,9 @@ class KokaProcess:
                 logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
-        thread = threading.Thread(target=_reader, name=f"koka-bridge-{self.name}", daemon=True)
+        thread = threading.Thread(
+            target=_reader, name=f"koka-bridge-{self.name}", daemon=True
+        )
         thread.start()
 
         try:
@@ -61,7 +66,9 @@ class KokaProcess:
 
         response = self._readline_with_timeout(timeout=timeout)
         if not response:
-            raise TimeoutError(f"Koka bridge timed out waiting for response from {self.name}")
+            raise TimeoutError(
+                f"Koka bridge timed out waiting for response from {self.name}"
+            )
         return cast(dict[str, object], json.loads(response))
 
     def close(self):
@@ -92,7 +99,7 @@ class KokaRuntime:
             [f"{self.koka_dir}/unified_runtime_v3"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            text=True
+            text=True,
         )
         koka_proc = KokaProcess("unified_runtime_v3", proc)
         # Read startup message with timeout
@@ -109,7 +116,7 @@ class KokaRuntime:
             [f"{self.koka_dir}/ring_buffer"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            text=True
+            text=True,
         )
         koka_proc = KokaProcess("ring_buffer", proc)
         startup = koka_proc._readline_with_timeout(timeout=2.0)
@@ -125,7 +132,7 @@ class KokaRuntime:
             [f"{self.koka_dir}/rust_bridge"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            text=True
+            text=True,
         )
         koka_proc = KokaProcess("rust_bridge", proc)
         startup = koka_proc._readline_with_timeout(timeout=2.0)
@@ -135,38 +142,31 @@ class KokaRuntime:
         self.processes["rust_bridge"] = koka_proc
         return koka_proc
 
-    def batch_write_embeddings(self, embeddings: list[list[float]], ids: list[int]) -> dict:
+    def batch_write_embeddings(
+        self, embeddings: list[list[float]], ids: list[int]
+    ) -> dict:
         """Batch write embeddings via ring buffer."""
         if "ring_buffer" not in self.processes:
             self.start_ring_buffer()
 
         rb = self.processes["ring_buffer"]
-        return rb.send({
-            "op": "batch_write",
-            "count": len(embeddings)
-        })
+        return rb.send({"op": "batch_write", "count": len(embeddings)})
 
     def emit_event(self, source: str, event_type: str) -> dict:
         """Emit event via effect runtime."""
         if "unified" not in self.processes:
             self.start_unified_runtime()
 
-        return self.processes["unified"].send({
-            "op": "emit",
-            "source": source,
-            "event": event_type
-        })
+        return self.processes["unified"].send(
+            {"op": "emit", "source": source, "event": event_type}
+        )
 
     def cosine_similarity(self, a: list[float], b: list[float]) -> float:
         """Compute cosine similarity via rust bridge."""
         if "rust_bridge" not in self.processes:
             self.start_rust_bridge()
 
-        result = self.processes["rust_bridge"].send({
-            "op": "cosine",
-            "a": a,
-            "b": b
-        })
+        result = self.processes["rust_bridge"].send({"op": "cosine", "a": a, "b": b})
         res = result.get("cosine_sim", 0.0)
         return float(res)
 
@@ -186,13 +186,15 @@ class KokaRuntime:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True,
-            bufsize=1 # Line buffered
+            bufsize=1,  # Line buffered
         )
         koka_proc = KokaProcess("batch_ipc", proc)
         startup = koka_proc._readline_with_timeout(timeout=5.0)
         if not startup or ("started" not in startup and "batch_ipc" not in startup):
             proc.kill()
-            logger.warning("batch_ipc startup failed or timed out — using Python-only transactions")
+            logger.warning(
+                "batch_ipc startup failed or timed out — using Python-only transactions"
+            )
             return None
         self.processes["batch_ipc"] = koka_proc
         return koka_proc
@@ -215,7 +217,9 @@ class KokaRuntime:
         if not tx_id or "batch_ipc" not in self.processes:
             return False
         try:
-            res = self.processes["batch_ipc"].send({"op": "commit_tx", "tx_id": tx_id}, timeout=2.0)
+            res = self.processes["batch_ipc"].send(
+                {"op": "commit_tx", "tx_id": tx_id}, timeout=2.0
+            )
             committed = res.get("committed", False)
             return bool(committed)
         except Exception as e:
@@ -227,7 +231,9 @@ class KokaRuntime:
         if not tx_id or "batch_ipc" not in self.processes:
             return False
         try:
-            res = self.processes["batch_ipc"].send({"op": "rollback_tx", "tx_id": tx_id}, timeout=2.0)
+            res = self.processes["batch_ipc"].send(
+                {"op": "rollback_tx", "tx_id": tx_id}, timeout=2.0
+            )
             rolled_back = res.get("rolled_back", False)
             return bool(rolled_back)
         except Exception as e:
@@ -241,6 +247,7 @@ async def koka_health_check() -> dict:
     try:
         # Check if basic binaries exist
         import os
+
         koka_dir = runtime.koka_dir
         binaries = ["unified_runtime_v3", "ring_buffer", "rust_bridge"]
         missing = [b for b in binaries if not os.path.exists(f"{koka_dir}/{b}")]
@@ -249,18 +256,13 @@ async def koka_health_check() -> dict:
             return {
                 "status": "partial",
                 "missing_binaries": missing,
-                "message": f"Koka binaries missing: {missing}"
+                "message": f"Koka binaries missing: {missing}",
             }
 
-        return {
-            "status": "success",
-            "message": "Koka runtime binaries present"
-        }
+        return {"status": "success", "message": "Koka runtime binaries present"}
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
+
 
 _koka_runtime = None
 _koka_lock = threading.Lock()

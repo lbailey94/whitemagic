@@ -7,28 +7,46 @@ from typing import Any, cast
 def zodiac_list_cores(**kwargs: Any) -> dict[str, Any]:
     """List all 12 zodiac cores."""
     from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
     cores_obj = get_zodiac_cores()
 
     result = []
-    for sign in ["aries", "taurus", "gemini", "cancer", "leo", "virgo",
-                 "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"]:
+    for sign in [
+        "aries",
+        "taurus",
+        "gemini",
+        "cancer",
+        "leo",
+        "virgo",
+        "libra",
+        "scorpio",
+        "sagittarius",
+        "capricorn",
+        "aquarius",
+        "pisces",
+    ]:
         core = cores_obj.get_core(sign)
         if core:
-            result.append({
-                "name": sign,
-                "element": core.element,
-                "mode": core.mode,
-                "ruler": core.ruler,
-                "frequency": core.frequency,
-                "activation_count": core.activation_count,
-            })
+            result.append(
+                {
+                    "name": sign,
+                    "element": core.element,
+                    "mode": core.mode,
+                    "ruler": core.ruler,
+                    "frequency": core.frequency,
+                    "activation_count": core.activation_count,
+                }
+            )
 
     return {"cores": result}
 
 
-def zodiac_activate_core(core_name: str, context: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def zodiac_activate_core(
+    core_name: str, context: dict[str, Any] | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Activate a specific zodiac core."""
     from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
     cores = get_zodiac_cores()
 
     ctx = context or {}
@@ -44,20 +62,27 @@ def zodiac_activate_core(core_name: str, context: dict[str, Any] | None = None, 
     return {"error": f"Core not found: {core_name}"}
 
 
-def zodiac_consult_council(query: str, context: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def zodiac_consult_council(
+    query: str, context: dict[str, Any] | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Consult the full zodiac council."""
     from whitemagic.gardens.metal.zodiac import consult_council
+
     result = consult_council(query, context or {})
     return cast("dict[str, Any]", result)
 
 
-def zodiac_run_cycle(intention: str | None = None, context: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def zodiac_run_cycle(
+    intention: str | None = None, context: dict[str, Any] | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Run one zodiacal cycle."""
     from whitemagic.zodiac.zodiac_round_cycle import run_one_cycle
+
     ctx = context or {}
     if intention:
         ctx["intention"] = intention
     import asyncio
+
     result = asyncio.run(run_one_cycle(ctx))
     return {"result": str(result)}
 

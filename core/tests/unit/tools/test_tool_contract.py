@@ -128,4 +128,3 @@ def test_now_override_sets_timestamp_verbatim():
     out = call_tool("capabilities", include_tools=False, include_env=False, now=ts)
     _assert_envelope_shape(out)
     assert out["timestamp"] == ts
-

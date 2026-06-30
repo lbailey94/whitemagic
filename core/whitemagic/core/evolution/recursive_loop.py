@@ -18,6 +18,7 @@ Usage:
     loop = get_improvement_loop()
     cycle = loop.run_cycle()  # One full observe→imagine→predict cycle
 """
+
 from __future__ import annotations
 
 import logging
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ImprovementHypothesis:
     """A predicted improvement with confidence and simulated impact."""
+
     id: str
     source: str  # "kaizen", "predictive", "emergence", "dream"
     title: str
@@ -68,6 +70,7 @@ class ImprovementHypothesis:
 @dataclass
 class ImprovementCycle:
     """Result of one complete improvement cycle."""
+
     cycle_id: str
     timestamp: str
     phase_results: dict[str, Any] = field(default_factory=dict)
@@ -112,7 +115,7 @@ class RecursiveImprovementLoop:
         # Objective D: Surprisal-driven exploration
         self._surprise_gate: Any = None
         self._surprisal_alpha = 0.6  # Weight for CMS novelty
-        self._surprisal_beta = 0.4   # Weight for surprisal score
+        self._surprisal_beta = 0.4  # Weight for surprisal score
         # Objective P: Information-theoretic exploration
         self._exploration_weights: Any = None
         # Objective Q: Thermodynamic resource allocation
@@ -167,29 +170,25 @@ class RecursiveImprovementLoop:
         cycle_id = str(uuid.uuid4())[:8]
         self._cycle_count += 1
 
-        logger.info("Recursive improvement cycle %d (%s) starting", self._cycle_count, cycle_id)
+        logger.info(
+            "Recursive improvement cycle %d (%s) starting", self._cycle_count, cycle_id
+        )
 
         cycle = ImprovementCycle(
             cycle_id=cycle_id,
             timestamp=datetime.now().isoformat(),
         )
 
-        # Phase 0: VERIFY previous cycle outcomes (closes the feedback loop)
         cycle.phase_results["verify"] = self._phase_verify(cycle)
 
-        # Phase 1: OBSERVE
         cycle.phase_results["observe"] = self._phase_observe(cycle)
 
-        # Phase 2: IMAGINE
         cycle.phase_results["imagine"] = self._phase_imagine(cycle, max_hypotheses)
 
-        # Phase 3: PREDICT
         cycle.phase_results["predict"] = self._phase_predict(cycle)
 
-        # Phase 4: RANK + RECOMMEND
         cycle.phase_results["recommend"] = self._phase_recommend(cycle)
 
-        # Phase 5: LEARN (update tracking structures)
         cycle.phase_results["learn"] = self._phase_learn(cycle)
 
         # Analytics
@@ -202,20 +201,19 @@ class RecursiveImprovementLoop:
         self._last_cycle = cycle
         logger.info(
             "Improvement cycle %d complete: %d hypotheses, %.0fms",
-            self._cycle_count, len(cycle.hypotheses), cycle.duration_ms,
+            self._cycle_count,
+            len(cycle.hypotheses),
+            cycle.duration_ms,
         )
 
         return cycle
-
-    # ------------------------------------------------------------------
-    # Phase implementations
-    # ------------------------------------------------------------------
 
     def _get_surprise_gate(self) -> Any:
         """Lazy-load the SurpriseGate singleton (Objective D)."""
         if self._surprise_gate is None:
             try:
                 from whitemagic.core.memory.surprise_gate import get_surprise_gate
+
                 self._surprise_gate = get_surprise_gate()
             except (ImportError, AttributeError) as e:
                 logger.debug("SurpriseGate unavailable: %s", e)
@@ -230,6 +228,7 @@ class RecursiveImprovementLoop:
                     AdaptiveWeights,
                     system_uncertainty,
                 )
+
                 weights = AdaptiveWeights()
                 # Adapt based on current cycle's confidence distribution
                 if self._last_cycle and self._last_cycle.hypotheses:
@@ -240,7 +239,11 @@ class RecursiveImprovementLoop:
             except (ImportError, AttributeError) as e:
                 logger.debug("Info-theory weights unavailable: %s", e)
                 self._exploration_weights = False
-        return self._exploration_weights if self._exploration_weights is not False else None
+        return (
+            self._exploration_weights
+            if self._exploration_weights is not False
+            else None
+        )
 
     def _compute_surprisal_novelty(self, description: str, cms_novelty: float) -> float:
         """Blend CMS-based novelty with embedding-based surprisal (Objective D).
@@ -266,8 +269,7 @@ class RecursiveImprovementLoop:
             # Normalize surprise score: typical range 0-10, clamp to 0-1
             surprisal = min(verdict.surprise_score / 10.0, 1.0)
             blended = (
-                self._surprisal_alpha * cms_novelty
-                + self._surprisal_beta * surprisal
+                self._surprisal_alpha * cms_novelty + self._surprisal_beta * surprisal
             )
             return max(0.0, min(1.0, blended))
         except Exception as e:
@@ -301,67 +303,125 @@ class RecursiveImprovementLoop:
 
     def _get_thermo_state(self) -> Any:
         """Objective Q: Lazy-load ThermodynamicState."""
-        return self._get_module("_thermo_state", "whitemagic.core.evolution.thermodynamic", "ThermodynamicState")
+        return self._get_module(
+            "_thermo_state",
+            "whitemagic.core.evolution.thermodynamic",
+            "ThermodynamicState",
+        )
 
     def _get_garden_router(self) -> Any:
         """Objective L: Lazy-load GardenRouter."""
-        return self._get_module("_garden_router", "whitemagic.core.evolution.garden_router", "GardenRouter")
+        return self._get_module(
+            "_garden_router", "whitemagic.core.evolution.garden_router", "GardenRouter"
+        )
 
     def _get_guna_classifier(self) -> Any:
         """Objective V: Lazy-load GunaClassifier."""
-        return self._get_module("_guna_classifier", "whitemagic.core.evolution.guna_classifier", "GunaClassifier")
+        return self._get_module(
+            "_guna_classifier",
+            "whitemagic.core.evolution.guna_classifier",
+            "GunaClassifier",
+        )
 
     def _get_valence_tracker(self) -> Any:
         """Objective K: Lazy-load ValenceUtilityTracker."""
-        return self._get_module("_valence_tracker", "whitemagic.core.evolution.valence_utility", "ValenceUtilityTracker")
+        return self._get_module(
+            "_valence_tracker",
+            "whitemagic.core.evolution.valence_utility",
+            "ValenceUtilityTracker",
+        )
 
     def _get_bicameral_debate(self) -> Any:
         """Objective O: Lazy-load BicameralDebate."""
-        return self._get_module("_bicameral_debate", "whitemagic.core.evolution.bicameral_debate", "BicameralDebate")
+        return self._get_module(
+            "_bicameral_debate",
+            "whitemagic.core.evolution.bicameral_debate",
+            "BicameralDebate",
+        )
 
     def _get_causal_ledger(self) -> Any:
         """Objective T: Lazy-load CausalLedger."""
-        return self._get_module("_causal_ledger", "whitemagic.core.evolution.causal_ledger", "CausalLedger")
+        return self._get_module(
+            "_causal_ledger", "whitemagic.core.evolution.causal_ledger", "CausalLedger"
+        )
 
     def _get_predictive_coding(self) -> Any:
         """Objective R: Lazy-load PredictiveCodingModel."""
-        return self._get_module("_predictive_coding", "whitemagic.core.evolution.predictive_coding", "PredictiveCodingModel")
+        return self._get_module(
+            "_predictive_coding",
+            "whitemagic.core.evolution.predictive_coding",
+            "PredictiveCodingModel",
+        )
 
     def _get_yield_portfolio(self) -> Any:
         """Objective Y: Lazy-load YieldPortfolio."""
-        return self._get_module("_yield_portfolio", "whitemagic.core.evolution.yield_curve", "YieldPortfolio")
+        return self._get_module(
+            "_yield_portfolio",
+            "whitemagic.core.evolution.yield_curve",
+            "YieldPortfolio",
+        )
 
     def _get_meta_bandit(self) -> Any:
         """Objective Z: Lazy-load MetaBandit."""
-        return self._get_module("_meta_bandit", "whitemagic.core.evolution.zen_meta", "MetaBandit")
+        return self._get_module(
+            "_meta_bandit", "whitemagic.core.evolution.zen_meta", "MetaBandit"
+        )
 
     def _get_actor_supervisor(self) -> Any:
         """Objective M: Lazy-load ActorSupervisor."""
-        return self._get_module("_actor_supervisor", "whitemagic.core.evolution.actor_outcome", "ActorSupervisor")
+        return self._get_module(
+            "_actor_supervisor",
+            "whitemagic.core.evolution.actor_outcome",
+            "ActorSupervisor",
+        )
 
     def _get_resonance_transfer(self) -> Any:
         """Objective I: Lazy-load ResonanceTransferEngine."""
-        return self._get_module("_resonance_transfer", "whitemagic.core.evolution.resonance_transfer", "ResonanceTransferEngine")
+        return self._get_module(
+            "_resonance_transfer",
+            "whitemagic.core.evolution.resonance_transfer",
+            "ResonanceTransferEngine",
+        )
 
     def _get_polyglot_mc(self) -> Any:
         """Objective S: Lazy-load PolyglotMCOrchestrator."""
-        return self._get_module("_polyglot_mc", "whitemagic.core.evolution.polyglot_mc", "PolyglotMCOrchestrator")
+        return self._get_module(
+            "_polyglot_mc",
+            "whitemagic.core.evolution.polyglot_mc",
+            "PolyglotMCOrchestrator",
+        )
 
     def _get_galactic_hyp(self) -> Any:
         """Objective G: Lazy-load GalacticHypothesisManager."""
-        return self._get_module("_galactic_hyp", "whitemagic.core.evolution.galactic_hypothesis", "GalacticHypothesisManager")
+        return self._get_module(
+            "_galactic_hyp",
+            "whitemagic.core.evolution.galactic_hypothesis",
+            "GalacticHypothesisManager",
+        )
 
     def _get_holographic_traj(self) -> Any:
         """Objective F: Lazy-load HolographicTrajectory."""
-        return self._get_module("_holographic_traj", "whitemagic.core.evolution.holographic_trajectory", "HolographicTrajectory")
+        return self._get_module(
+            "_holographic_traj",
+            "whitemagic.core.evolution.holographic_trajectory",
+            "HolographicTrajectory",
+        )
 
     def _get_dependency_graph(self) -> Any:
         """Objective U: Lazy-load DependencyGraph."""
-        return self._get_module("_dependency_graph", "whitemagic.core.evolution.dependency_graph", "DependencyGraph")
+        return self._get_module(
+            "_dependency_graph",
+            "whitemagic.core.evolution.dependency_graph",
+            "DependencyGraph",
+        )
 
     def _get_constellation_eval(self) -> Any:
         """Objective N: Lazy-load ConstellationEvaluator."""
-        return self._get_module("_constellation_eval", "whitemagic.core.evolution.constellation_eval", "ConstellationEvaluator")
+        return self._get_module(
+            "_constellation_eval",
+            "whitemagic.core.evolution.constellation_eval",
+            "ConstellationEvaluator",
+        )
 
     def _classify_hypothesis(self, hyp: ImprovementHypothesis) -> None:
         """Classify a hypothesis through garden, guna, and galactic systems.
@@ -444,7 +504,8 @@ class RecursiveImprovementLoop:
             successes = sum(1 for v in verifications if v.get("success"))
             logger.info(
                 "Verify phase: %d outcomes checked, %d succeeded",
-                len(verifications), successes,
+                len(verifications),
+                successes,
             )
         except Exception as e:
             results["error"] = str(e)
@@ -461,6 +522,7 @@ class RecursiveImprovementLoop:
             from whitemagic.core.intelligence.synthesis.kaizen_engine import (
                 get_kaizen_engine,
             )
+
             engine = get_kaizen_engine()
             report = engine.analyze()
             for prop in report.proposals:
@@ -470,20 +532,22 @@ class RecursiveImprovementLoop:
                 verification_query = "_".join(parts[1:-1]) if len(parts) > 2 else None
                 before_count = prop.metadata.get("count") if prop.metadata else None
 
-                results["proposals"].append({
-                    "source": "kaizen",
-                    "id": prop.id,
-                    "title": prop.title,
-                    "description": prop.description,
-                    "category": prop.category,
-                    "impact": prop.impact,
-                    "effort": prop.effort,
-                    "auto_fixable": prop.auto_fixable,
-                    "fix_action": prop.fix_action,
-                    "metadata": prop.metadata,
-                    "verification_query": verification_query,
-                    "before_count": before_count,
-                })
+                results["proposals"].append(
+                    {
+                        "source": "kaizen",
+                        "id": prop.id,
+                        "title": prop.title,
+                        "description": prop.description,
+                        "category": prop.category,
+                        "impact": prop.impact,
+                        "effort": prop.effort,
+                        "auto_fixable": prop.auto_fixable,
+                        "fix_action": prop.fix_action,
+                        "metadata": prop.metadata,
+                        "verification_query": verification_query,
+                        "before_count": before_count,
+                    }
+                )
             results["kaizen_metrics"] = report.metrics
         except Exception as e:
             results["errors"].append(f"kaizen: {e}")
@@ -494,25 +558,28 @@ class RecursiveImprovementLoop:
             from whitemagic.core.intelligence.synthesis.predictive_engine import (
                 get_predictive_engine,
             )
+
             engine = get_predictive_engine()
             report = engine.predict()
             for pred in report.predictions[:10]:
-                results["proposals"].append({
-                    "source": "predictive",
-                    "id": pred.id,
-                    "title": pred.title,
-                    "description": pred.description,
-                    "category": "prediction",
-                    "impact": "high" if pred.impact_score > 0.7 else "medium",
-                    "effort": "medium",
-                    "auto_fixable": False,
-                    "fix_action": None,
-                    "metadata": {
-                        "impact_score": pred.impact_score,
-                        "time_horizon": pred.time_horizon,
-                        "suggested_actions": pred.suggested_actions[:3],
-                    },
-                })
+                results["proposals"].append(
+                    {
+                        "source": "predictive",
+                        "id": pred.id,
+                        "title": pred.title,
+                        "description": pred.description,
+                        "category": "prediction",
+                        "impact": "high" if pred.impact_score > 0.7 else "medium",
+                        "effort": "medium",
+                        "auto_fixable": False,
+                        "fix_action": None,
+                        "metadata": {
+                            "impact_score": pred.impact_score,
+                            "time_horizon": pred.time_horizon,
+                            "suggested_actions": pred.suggested_actions[:3],
+                        },
+                    }
+                )
             results["predictive_metrics"] = {
                 "patterns_analyzed": report.patterns_analyzed,
                 "memories_scanned": report.memories_scanned,
@@ -526,24 +593,27 @@ class RecursiveImprovementLoop:
             from whitemagic.core.intelligence.agentic.emergence_engine import (
                 get_emergence_engine,
             )
+
             engine = get_emergence_engine()
             insights = engine.scan_for_emergence()
             for insight in insights[:5]:
-                results["proposals"].append({
-                    "source": "emergence",
-                    "id": insight.id,
-                    "title": insight.title,
-                    "description": insight.description,
-                    "category": "emergence",
-                    "impact": "high" if insight.confidence > 0.7 else "medium",
-                    "effort": "medium",
-                    "auto_fixable": False,
-                    "fix_action": None,
-                    "metadata": {
-                        "confidence": insight.confidence,
-                        "source_type": insight.source,
-                    },
-                })
+                results["proposals"].append(
+                    {
+                        "source": "emergence",
+                        "id": insight.id,
+                        "title": insight.title,
+                        "description": insight.description,
+                        "category": "emergence",
+                        "impact": "high" if insight.confidence > 0.7 else "medium",
+                        "effort": "medium",
+                        "auto_fixable": False,
+                        "fix_action": None,
+                        "metadata": {
+                            "confidence": insight.confidence,
+                            "source_type": insight.source,
+                        },
+                    }
+                )
         except Exception as e:
             results["errors"].append(f"emergence: {e}")
             logger.debug("EmergenceEngine failed: %s", e, exc_info=True)
@@ -551,27 +621,32 @@ class RecursiveImprovementLoop:
         # InsightPipeline — strategic foresight from all cognitive engines
         try:
             from whitemagic.core.intelligence.insight_pipeline import InsightPipeline
+
             pipeline = InsightPipeline()
             briefing = pipeline.generate_briefing()
             for item in briefing.items:
                 if item.priority in ("critical", "high"):
-                    results["proposals"].append({
-                        "source": "insight",
-                        "id": item.id,
-                        "title": item.title,
-                        "description": item.description,
-                        "category": item.category,
-                        "impact": "high" if item.priority == "critical" else "medium",
-                        "effort": "medium",
-                        "auto_fixable": False,
-                        "fix_action": None,
-                        "metadata": {
-                            "confidence": item.confidence,
-                            "source_engine": item.source_engine,
-                            "suggested_actions": item.suggested_actions[:3],
-                            "priority": item.priority,
-                        },
-                    })
+                    results["proposals"].append(
+                        {
+                            "source": "insight",
+                            "id": item.id,
+                            "title": item.title,
+                            "description": item.description,
+                            "category": item.category,
+                            "impact": "high"
+                            if item.priority == "critical"
+                            else "medium",
+                            "effort": "medium",
+                            "auto_fixable": False,
+                            "fix_action": None,
+                            "metadata": {
+                                "confidence": item.confidence,
+                                "source_engine": item.source_engine,
+                                "suggested_actions": item.suggested_actions[:3],
+                                "priority": item.priority,
+                            },
+                        }
+                    )
             results["insight_count"] = len(briefing.items)
         except Exception as e:
             results["errors"].append(f"insight: {e}")
@@ -603,26 +678,36 @@ class RecursiveImprovementLoop:
             effort_factor = effort_map.get(prop["effort"], 0.5)
             confidence = base_confidence * effort_factor
 
-            mc_claims.append({
-                "id": prop["id"],
-                "claim": prop["title"],
-                "confidence": confidence,
-                "outcome": None,  # Unknown — this is a prediction
-                "category": prop["category"],
-                "status": "pending",
-            })
+            mc_claims.append(
+                {
+                    "id": prop["id"],
+                    "claim": prop["title"],
+                    "confidence": confidence,
+                    "outcome": None,  # Unknown — this is a prediction
+                    "category": prop["category"],
+                    "status": "pending",
+                }
+            )
 
         # Run MC simulation to get predicted impact distributions
         if mc_claims:
             try:
                 mc_result = self._mc_enhancer.run_calibrated(
-                    mc_claims, n_trials=5000, deduplicate=False,
+                    mc_claims,
+                    n_trials=5000,
+                    deduplicate=False,
                 )
-                results["mc_simulations"] = mc_result.get("mc_result", {}).get("n_trials", 0)
+                results["mc_simulations"] = mc_result.get("mc_result", {}).get(
+                    "n_trials", 0
+                )
                 results["mc_analytics"] = mc_result.get("analytics", {})
 
                 # Extract per-claim predicted impact from MC
-                bss_mean = mc_result.get("mc_result", {}).get("brier_skill_score", {}).get("mean", 0.0)
+                bss_mean = (
+                    mc_result.get("mc_result", {})
+                    .get("brier_skill_score", {})
+                    .get("mean", 0.0)
+                )
 
                 for prop, claim in zip(proposals[:max_hypotheses], mc_claims):
                     # Track in HLL/CMS
@@ -634,7 +719,8 @@ class RecursiveImprovementLoop:
                     cms_novelty = max(0.0, 1.0 - freq / 20.0)  # Novel if rarely seen
                     # Objective D: Blend CMS novelty with surprisal score
                     novelty = self._compute_surprisal_novelty(
-                        prop["description"], cms_novelty,
+                        prop["description"],
+                        cms_novelty,
                     )
 
                     # Objective P: Compute information gain
@@ -643,54 +729,60 @@ class RecursiveImprovementLoop:
                         from whitemagic.core.evolution.info_theory import (
                             information_gain as compute_ig,
                         )
+
                         ig = compute_ig(claim["confidence"])
                     except (ImportError, Exception):
                         pass
 
-                    hypotheses.append(ImprovementHypothesis(
-                        id=claim["id"],
-                        source=prop["source"],
-                        title=prop["title"],
-                        description=prop["description"],
-                        category=prop["category"],
-                        predicted_impact=claim["confidence"],
-                        confidence=max(0.0, min(1.0, bss_mean)),
-                        effort=prop["effort"],
-                        auto_fixable=prop["auto_fixable"],
-                        fix_action=prop["fix_action"],
-                        metadata=prop["metadata"],
-                        novelty_score=novelty,
-                        verification_query=prop.get("verification_query"),
-                        before_count=prop.get("before_count"),
-                        information_gain=ig,
-                    ))
+                    hypotheses.append(
+                        ImprovementHypothesis(
+                            id=claim["id"],
+                            source=prop["source"],
+                            title=prop["title"],
+                            description=prop["description"],
+                            category=prop["category"],
+                            predicted_impact=claim["confidence"],
+                            confidence=max(0.0, min(1.0, bss_mean)),
+                            effort=prop["effort"],
+                            auto_fixable=prop["auto_fixable"],
+                            fix_action=prop["fix_action"],
+                            metadata=prop["metadata"],
+                            novelty_score=novelty,
+                            verification_query=prop.get("verification_query"),
+                            before_count=prop.get("before_count"),
+                            information_gain=ig,
+                        )
+                    )
             except Exception as e:
                 results["mc_error"] = str(e)
                 logger.debug("MC simulation failed: %s", e, exc_info=True)
                 # Fall back: create hypotheses without MC
                 for prop, claim in zip(proposals[:max_hypotheses], mc_claims):
-                    hypotheses.append(ImprovementHypothesis(
-                        id=claim["id"],
-                        source=prop["source"],
-                        title=prop["title"],
-                        description=prop["description"],
-                        category=prop["category"],
-                        predicted_impact=claim["confidence"],
-                        confidence=claim["confidence"],
-                        effort=prop["effort"],
-                        auto_fixable=prop["auto_fixable"],
-                        fix_action=prop["fix_action"],
-                        metadata=prop["metadata"],
-                        novelty_score=1.0,
-                        verification_query=prop.get("verification_query"),
-                        before_count=prop.get("before_count"),
-                    ))
+                    hypotheses.append(
+                        ImprovementHypothesis(
+                            id=claim["id"],
+                            source=prop["source"],
+                            title=prop["title"],
+                            description=prop["description"],
+                            category=prop["category"],
+                            predicted_impact=claim["confidence"],
+                            confidence=claim["confidence"],
+                            effort=prop["effort"],
+                            auto_fixable=prop["auto_fixable"],
+                            fix_action=prop["fix_action"],
+                            metadata=prop["metadata"],
+                            novelty_score=1.0,
+                            verification_query=prop.get("verification_query"),
+                            before_count=prop.get("before_count"),
+                        )
+                    )
 
         # Phase 4c: HRR-based analogical hypothesis generation
         # Use Holographic Reduced Representations to find novel analogies
         # between current proposals and historical improvement patterns
         try:
             from whitemagic.core.memory.hrr import get_hrr_engine
+
             hrr = get_hrr_engine()
 
             # Bind current proposal descriptions with "improves" relation
@@ -699,6 +791,7 @@ class RecursiveImprovementLoop:
                 try:
                     # Get embedding for the proposal
                     from whitemagic.core.memory.embeddings import get_embedding_engine
+
                     emb_engine = get_embedding_engine()
                     prop_embedding = emb_engine.encode(prop["description"][:200])
                     if prop_embedding is None:
@@ -713,7 +806,10 @@ class RecursiveImprovementLoop:
                     try:
                         similar = emb_engine.search_similar(projected.tolist(), top_k=3)
                         analogical_sources = [
-                            {"id": s.get("id", ""), "similarity": float(s.get("similarity", 0))}
+                            {
+                                "id": s.get("id", ""),
+                                "similarity": float(s.get("similarity", 0)),
+                            }
                             for s in similar
                         ]
                     except Exception:
@@ -724,34 +820,44 @@ class RecursiveImprovementLoop:
                     # Check if we already have this hypothesis
                     existing_ids = {h.id for h in hypotheses}
                     if hrr_hyp_id not in existing_ids:
-                        hypotheses.append(ImprovementHypothesis(
-                            id=hrr_hyp_id,
-                            source="hrr",
-                            title=f"Analogical: {prop['title'][:60]}",
-                            description=(
-                                f"HRR-projected hypothesis via IMPROVES relation. "
-                                f"Original: {prop['description'][:150]}. "
-                                f"This hypothesis was generated by binding the "
-                                f"proposal embedding with the improvement relation "
-                                f"vector, enabling analogical transfer from "
-                                f"historical improvement patterns."
-                            ),
-                            category=prop["category"],
-                            predicted_impact={"high": 0.8, "medium": 0.5, "low": 0.3}.get(prop.get("impact"), 0.5) if isinstance(prop.get("impact"), str) else prop.get("impact", 0.5),
-                            confidence=0.5,  # Base confidence for HRR-generated
-                            effort=prop["effort"],
-                            auto_fixable=False,
-                            fix_action=None,
-                            metadata={
-                                **prop.get("metadata", {}),
-                                "hrr_relation": "IMPROVES",
-                                "source_proposal": prop["source"],
-                                "analogical_sources": analogical_sources,
-                            },
-                            novelty_score=0.8,  # HRR analogies are inherently novel
-                        ))
+                        hypotheses.append(
+                            ImprovementHypothesis(
+                                id=hrr_hyp_id,
+                                source="hrr",
+                                title=f"Analogical: {prop['title'][:60]}",
+                                description=(
+                                    f"HRR-projected hypothesis via IMPROVES relation. "
+                                    f"Original: {prop['description'][:150]}. "
+                                    f"This hypothesis was generated by binding the "
+                                    f"proposal embedding with the improvement relation "
+                                    f"vector, enabling analogical transfer from "
+                                    f"historical improvement patterns."
+                                ),
+                                category=prop["category"],
+                                predicted_impact={
+                                    "high": 0.8,
+                                    "medium": 0.5,
+                                    "low": 0.3,
+                                }.get(prop.get("impact"), 0.5)
+                                if isinstance(prop.get("impact"), str)
+                                else prop.get("impact", 0.5),
+                                confidence=0.5,  # Base confidence for HRR-generated
+                                effort=prop["effort"],
+                                auto_fixable=False,
+                                fix_action=None,
+                                metadata={
+                                    **prop.get("metadata", {}),
+                                    "hrr_relation": "IMPROVES",
+                                    "source_proposal": prop["source"],
+                                    "analogical_sources": analogical_sources,
+                                },
+                                novelty_score=0.8,  # HRR analogies are inherently novel
+                            )
+                        )
                 except Exception as e:
-                    logger.debug("HRR hypothesis generation skipped for proposal: %s", e)
+                    logger.debug(
+                        "HRR hypothesis generation skipped for proposal: %s", e
+                    )
         except Exception as e:
             logger.debug("HRR engine unavailable: %s", e, exc_info=True)
 
@@ -809,6 +915,7 @@ class RecursiveImprovementLoop:
             from whitemagic.core.intelligence.synthesis.predictive_engine import (
                 get_predictive_engine,
             )
+
             engine = get_predictive_engine()
             cal = engine.get_calibration()
             if cal:
@@ -817,7 +924,8 @@ class RecursiveImprovementLoop:
                     hyp.confidence = engine.apply_calibration(hyp.confidence)
                 logger.info(
                     "Calibration applied: brier=%.4f gap=%.4f",
-                    cal.get("brier_score", 0), cal.get("calibration_gap", 0),
+                    cal.get("brier_score", 0),
+                    cal.get("calibration_gap", 0),
                 )
         except Exception as e:
             results["errors"].append(f"calibration: {e}")
@@ -825,6 +933,7 @@ class RecursiveImprovementLoop:
 
         try:
             from whitemagic.forecasting.temporal_db import TemporalForecastDB
+
             db = TemporalForecastDB()
 
             for hyp in cycle.hypotheses:
@@ -845,20 +954,24 @@ class RecursiveImprovementLoop:
             results["errors"].append(f"temporal_db: {e}")
             logger.debug("TemporalForecastDB unavailable: %s", e, exc_info=True)
 
-        logger.info("Predict phase: %d predictions stored", results["predictions_stored"])
+        logger.info(
+            "Predict phase: %d predictions stored", results["predictions_stored"]
+        )
 
         # Phase 3b: Auto-generate prescience claims from PredictiveEngine
         try:
             from whitemagic.core.intelligence.synthesis.predictive_engine import (
                 get_predictive_engine,
             )
+
             engine = get_predictive_engine()
             claim_results = engine.auto_prescience_claims(min_confidence=0.7)
             results["auto_prescience"] = claim_results
             if claim_results["stored_claims"] > 0:
                 logger.info(
                     "Auto prescience: %d/%d predictions stored as claims",
-                    claim_results["stored_claims"], claim_results["total_predictions"],
+                    claim_results["stored_claims"],
+                    claim_results["total_predictions"],
                 )
         except Exception as e:
             results["errors"].append(f"auto_prescience: {e}")
@@ -881,6 +994,7 @@ class RecursiveImprovementLoop:
         if meta_bandit is not None:
             try:
                 from whitemagic.core.evolution.zen_meta import MetaFeatures
+
                 # Build meta-features from current cycle state
                 confidences = [h.confidence for h in cycle.hypotheses] or [0.5]
                 mf = MetaFeatures(
@@ -897,10 +1011,16 @@ class RecursiveImprovementLoop:
         for hyp in cycle.hypotheses:
             # Guard against non-float predicted_impact
             if not isinstance(hyp.predicted_impact, (int, float)):
-                logger.debug("Skipping hypothesis %s: predicted_impact is %s", hyp.id, type(hyp.predicted_impact))
+                logger.debug(
+                    "Skipping hypothesis %s: predicted_impact is %s",
+                    hyp.id,
+                    type(hyp.predicted_impact),
+                )
                 continue
             # Base score
-            score = hyp.predicted_impact * hyp.confidence * (0.5 + hyp.novelty_score * 0.5)
+            score = (
+                hyp.predicted_impact * hyp.confidence * (0.5 + hyp.novelty_score * 0.5)
+            )
             # Objective O: Add exploration boost from debate contention
             score += hyp.exploration_boost
             # Objective P: Add information gain (normalized)
@@ -909,7 +1029,10 @@ class RecursiveImprovementLoop:
             # High temperature → more weight on novelty (exploration)
             # Low temperature → more weight on predicted_impact (exploitation)
             if temperature < 1.0:
-                score = score * (1 - (1 - temperature) * 0.3) + hyp.predicted_impact * (1 - temperature) * 0.3
+                score = (
+                    score * (1 - (1 - temperature) * 0.3)
+                    + hyp.predicted_impact * (1 - temperature) * 0.3
+                )
             scored.append((hyp, score))
 
         scored.sort(key=lambda x: x[1], reverse=True)
@@ -918,7 +1041,9 @@ class RecursiveImprovementLoop:
             # Recommend tools via bandit
             task_type = self._bandit.classify_task_type(hyp.title)
             recommended_tools = self._bandit.recommend_tools(
-                task=hyp.title, k=3, task_type=task_type,
+                task=hyp.title,
+                k=3,
+                task_type=task_type,
             )
 
             rec = {
@@ -940,7 +1065,6 @@ class RecursiveImprovementLoop:
                     for t in recommended_tools
                 ],
                 "task_type": task_type,
-                # Phase 3-6 enrichments
                 "garden": hyp.garden,
                 "guna": hyp.guna,
                 "galactic_zone": hyp.galactic_zone,
@@ -950,7 +1074,10 @@ class RecursiveImprovementLoop:
             results["recommendations"].append(rec)
 
         cycle.top_recommendations = results["recommendations"]
-        logger.info("Recommend phase: %d recommendations ranked", len(results["recommendations"]))
+        logger.info(
+            "Recommend phase: %d recommendations ranked",
+            len(results["recommendations"]),
+        )
         return results
 
     def _phase_learn(self, cycle: ImprovementCycle) -> dict[str, Any]:
@@ -984,12 +1111,10 @@ class RecursiveImprovementLoop:
         except Exception:
             results["learning_summary"] = {}
 
-        logger.info("Learn phase: %d applications recorded", results["applications_recorded"])
+        logger.info(
+            "Learn phase: %d applications recorded", results["applications_recorded"]
+        )
         return results
-
-    # ------------------------------------------------------------------
-    # Outcome recording (called after an improvement is actually implemented)
-    # ------------------------------------------------------------------
 
     def record_outcome(
         self,
@@ -1053,6 +1178,7 @@ class RecursiveImprovementLoop:
         if ledger is not None:
             try:
                 from whitemagic.core.evolution.causal_ledger import EffectType
+
                 magnitude = performance_gain or (1.0 if success else 0.0)
                 ledger.record_effect(
                     improvement_id=hypothesis_id,
@@ -1068,7 +1194,9 @@ class RecursiveImprovementLoop:
         supervisor = self._get_actor_supervisor()
         if supervisor is not None:
             try:
-                supervisor.send_outcome(hypothesis_id, success=success, gain=performance_gain or 0.0)
+                supervisor.send_outcome(
+                    hypothesis_id, success=success, gain=performance_gain or 0.0
+                )
             except Exception:
                 pass
 
@@ -1076,9 +1204,14 @@ class RecursiveImprovementLoop:
         router = self._get_garden_router()
         if router is not None and self._last_cycle:
             try:
-                hyp = next((h for h in self._last_cycle.hypotheses if h.id == hypothesis_id), None)
+                hyp = next(
+                    (h for h in self._last_cycle.hypotheses if h.id == hypothesis_id),
+                    None,
+                )
                 if hyp and hyp.garden:
-                    router.record_outcome(hyp.garden, hyp.confidence, 1.0 if success else 0.0)
+                    router.record_outcome(
+                        hyp.garden, hyp.confidence, 1.0 if success else 0.0
+                    )
             except Exception:
                 pass
 
@@ -1087,7 +1220,11 @@ class RecursiveImprovementLoop:
         if clf is not None and self._last_cycle:
             try:
                 from whitemagic.core.evolution.guna_classifier import Guna
-                hyp = next((h for h in self._last_cycle.hypotheses if h.id == hypothesis_id), None)
+
+                hyp = next(
+                    (h for h in self._last_cycle.hypotheses if h.id == hypothesis_id),
+                    None,
+                )
                 if hyp and hyp.guna:
                     guna = Guna(hyp.guna)
                     clf.record_outcome(guna, success)
@@ -1107,7 +1244,9 @@ class RecursiveImprovementLoop:
 
         logger.info(
             "Outcome recorded: %s success=%s gain=%s",
-            hypothesis_id, success, performance_gain,
+            hypothesis_id,
+            success,
+            performance_gain,
         )
 
     def verify_outcome(
@@ -1151,6 +1290,7 @@ class RecursiveImprovementLoop:
             from whitemagic.core.intelligence.synthesis.kaizen_engine import (
                 get_kaizen_engine,
             )
+
             engine = get_kaizen_engine()
             report = engine.analyze()
 
@@ -1167,7 +1307,8 @@ class RecursiveImprovementLoop:
             if after_count == before_count:
                 # Check if the proposal disappeared entirely (issue resolved)
                 matching = [
-                    p for p in report.proposals
+                    p
+                    for p in report.proposals
                     if "_".join(p.id.split("_")[1:-1]) == verification_query
                 ]
                 if not matching:
@@ -1197,7 +1338,11 @@ class RecursiveImprovementLoop:
 
             logger.info(
                 "Auto-verified %s: before=%d after=%d delta=%.2f success=%s",
-                hypothesis_id, before_count, after_count, delta, success,
+                hypothesis_id,
+                before_count,
+                after_count,
+                delta,
+                success,
             )
         except Exception as e:
             result["error"] = str(e)
@@ -1205,7 +1350,9 @@ class RecursiveImprovementLoop:
 
         return result
 
-    def auto_verify_cycle(self, cycle: ImprovementCycle | None = None) -> list[dict[str, Any]]:
+    def auto_verify_cycle(
+        self, cycle: ImprovementCycle | None = None
+    ) -> list[dict[str, Any]]:
         """Auto-verify all auto-fixable hypotheses from a cycle.
 
         Args:
@@ -1229,10 +1376,6 @@ class RecursiveImprovementLoop:
                 results.append(result)
 
         return results
-
-    # ------------------------------------------------------------------
-    # Analytics and events
-    # ------------------------------------------------------------------
 
     def _build_analytics(self, cycle: ImprovementCycle) -> dict[str, Any]:
         """Build analytics summary for the cycle."""
@@ -1269,29 +1412,36 @@ class RecursiveImprovementLoop:
             "distinct_improvements_seen": self._hll.estimate(),
             "mc_simulations": imagine.get("mc_simulations", 0),
             "mc_analytics": imagine.get("mc_analytics", {}),
-            "predictions_stored": cycle.phase_results.get("predict", {}).get("predictions_stored", 0),
+            "predictions_stored": cycle.phase_results.get("predict", {}).get(
+                "predictions_stored", 0
+            ),
             "recommendations_count": len(cycle.top_recommendations),
             "learning_summary": learn.get("learning_summary", {}),
             "errors": observe.get("errors", []),
-            # Phase 3-6 enrichments
             "meta_strategy": recommend.get("meta_strategy"),
             "evolution_modules": evolution_stats,
-            "garden_distribution": {
-                h.garden: 1 for h in cycle.hypotheses if h.garden
-            } if cycle.hypotheses else {},
-            "guna_distribution": {
-                h.guna: 1 for h in cycle.hypotheses if h.guna
-            } if cycle.hypotheses else {},
+            "garden_distribution": {h.garden: 1 for h in cycle.hypotheses if h.garden}
+            if cycle.hypotheses
+            else {},
+            "guna_distribution": {h.guna: 1 for h in cycle.hypotheses if h.guna}
+            if cycle.hypotheses
+            else {},
             "galactic_zones": {
                 h.galactic_zone: 1 for h in cycle.hypotheses if h.galactic_zone
-            } if cycle.hypotheses else {},
+            }
+            if cycle.hypotheses
+            else {},
             "avg_debate_contention": (
-                sum(h.debate_contention for h in cycle.hypotheses) / len(cycle.hypotheses)
-                if cycle.hypotheses else 0.0
+                sum(h.debate_contention for h in cycle.hypotheses)
+                / len(cycle.hypotheses)
+                if cycle.hypotheses
+                else 0.0
             ),
             "avg_information_gain": (
-                sum(h.information_gain for h in cycle.hypotheses) / len(cycle.hypotheses)
-                if cycle.hypotheses else 0.0
+                sum(h.information_gain for h in cycle.hypotheses)
+                / len(cycle.hypotheses)
+                if cycle.hypotheses
+                else 0.0
             ),
         }
 
@@ -1299,6 +1449,7 @@ class RecursiveImprovementLoop:
         """Emit Gan Ying event for cycle completion."""
         try:
             from whitemagic.core.resonance._consolidated import EventType, emit_event
+
             emit_event(
                 source="recursive_improvement_loop",
                 event_type=EventType.LEARNING_COMPLETED,
@@ -1322,7 +1473,10 @@ class RecursiveImprovementLoop:
         """Emit Gan Ying event for outcome recording."""
         try:
             from whitemagic.core.resonance._consolidated import EventType, emit_event
-            event_type = EventType.SOLUTION_FOUND if success else EventType.ANOMALY_DETECTED
+
+            event_type = (
+                EventType.SOLUTION_FOUND if success else EventType.ANOMALY_DETECTED
+            )
             emit_event(
                 source="recursive_improvement_loop",
                 event_type=event_type,
@@ -1367,10 +1521,6 @@ class RecursiveImprovementLoop:
 
         return status
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _loop: RecursiveImprovementLoop | None = None
 

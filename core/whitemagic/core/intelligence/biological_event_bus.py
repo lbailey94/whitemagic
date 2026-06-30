@@ -17,8 +17,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class EventType(Enum):
     """Standardized event types for biological communication."""
+
     DREAM_PHASE_COMPLETE = "dream_phase_complete"
     IMMUNE_ALERT = "immune_alert"
     MEMORY_DECAY = "memory_decay"
@@ -28,9 +30,11 @@ class EventType(Enum):
     SELECTION_PRESSURE = "selection_pressure"
     PATTERN_IMMUNITY = "pattern_immunity"
 
+
 @dataclass
 class BiologicalEvent:
     """Single biological event with metadata."""
+
     event_type: EventType
     data: dict[str, Any]
     source_subsystem: str
@@ -40,6 +44,7 @@ class BiologicalEvent:
     def __post_init__(self):
         if self.timestamp is None:
             self.timestamp = time.time()
+
 
 class BiologicalEventBus:
     """High-performance event bus for biological subsystem coordination."""
@@ -52,11 +57,17 @@ class BiologicalEventBus:
             "events_published": 0,
             "events_processed": 0,
             "errors": 0,
-            "queue_depth": 0
+            "queue_depth": 0,
         }
-        self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="bio_event")
+        self._executor = ThreadPoolExecutor(
+            max_workers=4, thread_name_prefix="bio_event"
+        )
         self._rust_dispatcher = None
-        self._circuit_breaker_state = {"failures": 0, "last_failure": 0, "state": "closed"}
+        self._circuit_breaker_state = {
+            "failures": 0,
+            "last_failure": 0,
+            "state": "closed",
+        }
 
     async def start(self) -> None:
         """Start the event bus with Rust dispatcher if available."""
@@ -65,11 +76,14 @@ class BiologicalEventBus:
         # Try to initialize Rust dispatcher for performance
         try:
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "tokio_event_dispatcher"):
                 self._rust_dispatcher = whitemagic_rs.tokio_event_dispatcher()
                 logger.info("🦀 Rust event dispatcher initialized")
             else:
-                logger.info("🐍 Using Python event dispatcher (Rust function unavailable)")
+                logger.info(
+                    "🐍 Using Python event dispatcher (Rust function unavailable)"
+                )
         except ImportError:
             logger.info("🐍 Using Python event dispatcher (Rust unavailable)")
 
@@ -83,7 +97,9 @@ class BiologicalEventBus:
         self._executor.shutdown(wait=True)
         logger.info("🧠 Biological Event Bus stopped")
 
-    def subscribe(self, event_type: EventType, handler: Callable, subsystem: str) -> None:
+    def subscribe(
+        self, event_type: EventType, handler: Callable, subsystem: str
+    ) -> None:
         """Subscribe to specific event types."""
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
@@ -106,13 +122,22 @@ class BiologicalEventBus:
                     )
             except Exception as e:
                 self._stats["errors"] += 1
-                logger.error("Event handler error in %s: %s", subsystem, e, exc_info=True)
+                logger.error(
+                    "Event handler error in %s: %s", subsystem, e, exc_info=True
+                )
 
         self._subscribers[event_type].append(safe_handler)
-        logger.debug("📡 %s subscribed to %s", subsystem, event_type.value, exc_info=True)
+        logger.debug(
+            "📡 %s subscribed to %s", subsystem, event_type.value, exc_info=True
+        )
 
-    async def publish(self, event_type: EventType, data: dict[str, Any],
-                      source: str, priority: int = 1) -> bool:
+    async def publish(
+        self,
+        event_type: EventType,
+        data: dict[str, Any],
+        source: str,
+        priority: int = 1,
+    ) -> bool:
         """Publish an event to the bus."""
         if not self.is_active:
             return False
@@ -122,7 +147,7 @@ class BiologicalEventBus:
             data=data,
             source_subsystem=source,
             timestamp=time.time(),
-            priority=priority
+            priority=priority,
         )
 
         # Check circuit breaker
@@ -167,7 +192,7 @@ class BiologicalEventBus:
                 "data": event.data,
                 "source": event.source_subsystem,
                 "timestamp": event.timestamp,
-                "priority": event.priority
+                "priority": event.priority,
             }
             self._rust_dispatcher.dispatch(event_dict)
 
@@ -176,9 +201,7 @@ class BiologicalEventBus:
         while self.is_active:
             try:
                 # Get event with timeout
-                event = await asyncio.wait_for(
-                    self._event_queue.get(), timeout=1.0
-                )
+                event = await asyncio.wait_for(self._event_queue.get(), timeout=1.0)
 
                 # Find subscribers
                 handlers = self._subscribers.get(event.event_type, [])
@@ -202,13 +225,17 @@ class BiologicalEventBus:
         """Get event bus statistics."""
         return {
             **self._stats,
-            "subscribers_count": sum(len(handlers) for handlers in self._subscribers.values()),
+            "subscribers_count": sum(
+                len(handlers) for handlers in self._subscribers.values()
+            ),
             "circuit_breaker_state": self._circuit_breaker_state["state"],
-            "rust_dispatcher_available": self._rust_dispatcher is not None
+            "rust_dispatcher_available": self._rust_dispatcher is not None,
         }
+
 
 # Global event bus instance
 _event_bus: BiologicalEventBus | None = None
+
 
 async def get_event_bus() -> BiologicalEventBus:
     """Get the global biological event bus."""
@@ -218,7 +245,9 @@ async def get_event_bus() -> BiologicalEventBus:
         await _event_bus.start()
     return _event_bus
 
+
 # Integration helpers for specific subsystem connections
+
 
 async def connect_dream_to_immune():
     """Connect Dream System to Immune System (VC2)."""
@@ -235,10 +264,11 @@ async def connect_dream_to_immune():
                     EventType.IMMUNE_ALERT,
                     {"scan_targets": suspicious, "trigger": "dream_serendipity"},
                     "dream_system",
-                    priority=3
+                    priority=3,
                 )
 
     bus.subscribe(EventType.DREAM_PHASE_COMPLETE, dream_phase_handler, "immune_system")
+
 
 async def connect_metabolism_to_evolution():
     """Connect Memory Metabolism to Evolution System (VC3)."""
@@ -254,10 +284,11 @@ async def connect_metabolism_to_evolution():
                 EventType.SELECTION_PRESSURE,
                 {"pressure_type": "memory_decay", "strength": decay_rate},
                 "metabolism_system",
-                priority=2
+                priority=2,
             )
 
     bus.subscribe(EventType.MEMORY_DECAY, memory_decay_handler, "evolution_system")
+
 
 async def connect_resonance_to_emergence():
     """Connect Resonance to Emergence (VC4)."""
@@ -274,7 +305,9 @@ async def connect_resonance_to_emergence():
             EventType.EMERGENCE_DETECTED,
             {"threshold_modifier": threshold_modifier, "trigger": "resonance_shift"},
             "resonance_system",
-            priority=2
+            priority=2,
         )
 
-    bus.subscribe(EventType.RESONANCE_SHIFT, resonance_shift_handler, "emergence_system")
+    bus.subscribe(
+        EventType.RESONANCE_SHIFT, resonance_shift_handler, "emergence_system"
+    )

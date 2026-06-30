@@ -15,11 +15,11 @@ from typing import Any
 class NarrativeArc(Enum):
     """Types of narrative arcs."""
 
-    BEGINNING = "beginning"        # Starting something new
+    BEGINNING = "beginning"  # Starting something new
     RISING_ACTION = "rising_action"  # Building, developing
-    CLIMAX = "climax"              # Peak moment, breakthrough
+    CLIMAX = "climax"  # Peak moment, breakthrough
     FALLING_ACTION = "falling_action"  # Integration, winding down
-    RESOLUTION = "resolution"      # Completion, closure
+    RESOLUTION = "resolution"  # Completion, closure
     CONTINUATION = "continuation"  # Ongoing, no clear arc
 
 
@@ -35,6 +35,7 @@ class NarrativeThread:
     key_moments: list[dict]
     current_state: str
     tags: list[str]
+
 
 class NarrativeEngine:
     """Track and maintain narrative coherence.
@@ -63,11 +64,13 @@ class NarrativeEngine:
             started=datetime.now(),
             arc=NarrativeArc.BEGINNING,
             participants=participants,
-            key_moments=[{
-                "timestamp": datetime.now().isoformat(),
-                "event": "Thread started",
-                "state": initial_state,
-            }],
+            key_moments=[
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "event": "Thread started",
+                    "state": initial_state,
+                }
+            ],
             current_state=initial_state,
             tags=tags or [],
         )
@@ -115,11 +118,13 @@ class NarrativeEngine:
         thread.arc = NarrativeArc.RESOLUTION
         thread.current_state = resolution
 
-        thread.key_moments.append({
-            "timestamp": datetime.now().isoformat(),
-            "event": "Thread completed",
-            "resolution": resolution,
-        })
+        thread.key_moments.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "event": "Thread completed",
+                "resolution": resolution,
+            }
+        )
 
         if thread_id in self.active_threads:
             self.active_threads.remove(thread_id)
@@ -148,10 +153,7 @@ class NarrativeEngine:
 
     def find_threads_by_tag(self, tag: str) -> list[NarrativeThread]:
         """Find all threads with a specific tag."""
-        return [
-            thread for thread in self.threads.values()
-            if tag in thread.tags
-        ]
+        return [thread for thread in self.threads.values() if tag in thread.tags]
 
     def get_active_threads(self) -> list[NarrativeThread]:
         """Get all currently active threads."""
@@ -176,7 +178,9 @@ class NarrativeEngine:
         if thread.arc == NarrativeArc.RISING_ACTION and moments_count > 8:
             # Check for breakthrough/peak moment
             recent_events = [m["event"] for m in thread.key_moments[-3:]]
-            if any("complete" in e.lower() or "success" in e.lower() for e in recent_events):
+            if any(
+                "complete" in e.lower() or "success" in e.lower() for e in recent_events
+            ):
                 return NarrativeArc.CLIMAX
 
         if thread.arc == NarrativeArc.CLIMAX:
@@ -190,15 +194,12 @@ class NarrativeEngine:
     def _generate_id(self, title: str) -> str:
         """Generate thread ID from title."""
         import re
+
         # Simple slug generation
         slug = re.sub(r"[^\w\s-]", "", title.lower())
         slug = re.sub(r"[-\s]+", "-", slug)
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         return f"{slug}-{timestamp}"
-
-    # ------------------------------------------------------------------
-    # Story Engine facade (fused from narrative.py NarrativeEngine)
-    # ------------------------------------------------------------------
 
     _story_engine_instance: Any = None
 
@@ -209,7 +210,10 @@ class NarrativeEngine:
             from whitemagic.gardens.voice.narrative import (
                 NarrativeEngine as StoryNarrativeEngine,
             )
-            self._story_engine_instance = StoryNarrativeEngine(base_dir=MEMORY_DIR / "narrative")
+
+            self._story_engine_instance = StoryNarrativeEngine(
+                base_dir=MEMORY_DIR / "narrative"
+            )
         return self._story_engine_instance
 
     def create_story(self, title: str, theme: str | None = None) -> Any:
@@ -224,7 +228,9 @@ class NarrativeEngine:
         """Create a narrative thread (story-engine variant)."""
         return self._get_story_engine().create_thread(name, theme)
 
-    def add_entry(self, story: str, chapter: str, text: str, context: dict[str, Any] | None = None) -> str:
+    def add_entry(
+        self, story: str, chapter: str, text: str, context: dict[str, Any] | None = None
+    ) -> str:
         """Add a narrative entry to a story chapter."""
         return self._get_story_engine().add_entry(story, chapter, text, context)
 
@@ -240,7 +246,9 @@ class NarrativeEngine:
         """Get an entry by ID."""
         return self._get_story_engine().get_entry(entry_id)
 
-    def get_recent_entries(self, story: str | None = None, limit: int = 10) -> list[dict[str, Any]]:
+    def get_recent_entries(
+        self, story: str | None = None, limit: int = 10
+    ) -> list[dict[str, Any]]:
         """Get recent narrative entries."""
         return self._get_story_engine().get_recent_entries(story, limit)
 
@@ -256,13 +264,16 @@ class NarrativeEngine:
         """List all thread IDs (story-engine variant)."""
         return self._get_story_engine().list_threads()
 
-    def search_entries(self, query: str, story: str | None = None) -> list[dict[str, Any]]:
+    def search_entries(
+        self, query: str, story: str | None = None
+    ) -> list[dict[str, Any]]:
         """Search narrative entries."""
         return self._get_story_engine().search_entries(query, story)
 
 
 # Singleton instance
 _narrative_instance = None
+
 
 def get_narrative_engine() -> NarrativeEngine:
     """Get singleton narrative engine."""

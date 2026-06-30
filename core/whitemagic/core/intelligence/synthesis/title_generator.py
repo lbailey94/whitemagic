@@ -21,6 +21,7 @@ class TitleGenerator:
         from pathlib import Path
 
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = str(Path(db_path)) if db_path else str(DB_PATH)
         self._conn: sqlite3.Connection | None = None
 
@@ -75,9 +76,9 @@ class TitleGenerator:
     def _extract_header(self, content: str) -> str | None:
         """Extract markdown header."""
         patterns = [
-            r"^#\s+(.+)$",      # # Header
-            r"^##\s+(.+)$",     # ## Header
-            r"^\*\*(.+)\*\*",   # **Bold header**
+            r"^#\s+(.+)$",  # # Header
+            r"^##\s+(.+)$",  # ## Header
+            r"^\*\*(.+)\*\*",  # **Bold header**
         ]
 
         for pattern in patterns:
@@ -94,7 +95,7 @@ class TitleGenerator:
         """Extract key phrases indicating topic."""
         patterns = [
             r"(?:v\d+\.\d+\.?\d*)",  # Version numbers
-            r"(?:Phase \d+)",         # Phase markers
+            r"(?:Phase \d+)",  # Phase markers
             r"(?:Session|Handoff|Report|Summary)",  # Document types
             r"(?:Complete|Completion|Implementation)",  # Milestones
         ]
@@ -161,8 +162,10 @@ class TitleGenerator:
 
         return {"fixed": fixed, "skipped": skipped, "titles": titles}
 
+
 # Global instance
 _title_generator: TitleGenerator | None = None
+
 
 def get_title_generator() -> TitleGenerator:
     """

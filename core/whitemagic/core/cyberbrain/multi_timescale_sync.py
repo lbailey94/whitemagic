@@ -6,11 +6,12 @@ import asyncio
 
 class TimescaleSync:
     """TimescaleSync: timescale sync."""
+
     def __init__(self):
         self.loops = {
-            "reflex": [],      # 10ms
-            "planner": [],     # 1s
-            "consolidation": [] # 1hr
+            "reflex": [],  # 10ms
+            "planner": [],  # 1s
+            "consolidation": [],  # 1hr
         }
 
     def register_hook(self, timescale: str, callback):

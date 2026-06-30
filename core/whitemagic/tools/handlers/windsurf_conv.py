@@ -1,4 +1,5 @@
 """Windsurf conversation reader tool handlers."""
+
 from typing import Any
 
 
@@ -10,6 +11,7 @@ def handle_windsurf_list_conversations(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
+
     reader = WindsurfConversationReader()
     return {"status": "success", "conversations": reader.list_conversations()}
 
@@ -22,6 +24,7 @@ def handle_windsurf_read_conversation(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
+
     reader = WindsurfConversationReader()
     path = kwargs.get("path")
     if not path:
@@ -38,6 +41,7 @@ def handle_windsurf_export_conversation(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
+
     reader = WindsurfConversationReader()
     path = kwargs.get("path")
     if not path:
@@ -54,6 +58,7 @@ def handle_windsurf_search_conversations(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
+
     reader = WindsurfConversationReader()
     query = kwargs.get("query")
     if not query:
@@ -70,5 +75,6 @@ def handle_windsurf_stats(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
+
     reader = WindsurfConversationReader()
     return {"status": "success", **reader.stats()}

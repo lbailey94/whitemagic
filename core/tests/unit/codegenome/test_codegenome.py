@@ -58,7 +58,9 @@ class TestCodeGenomeEngine:
 
     def test_render_builtin_fastapi(self):
         engine = CodeGenomeEngine()
-        code = engine.render("fastapi_endpoint", path="/items", name="items", tier="xianfeng")
+        code = engine.render(
+            "fastapi_endpoint", path="/items", name="items", tier="xianfeng"
+        )
         assert "get_items" in code
         assert "/items" in code
 

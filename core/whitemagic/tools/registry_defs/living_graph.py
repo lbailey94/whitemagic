@@ -1,5 +1,4 @@
-"""Living Graph Tools — v14.0 graph topology, hybrid recall, surprise gate.
-"""
+"""Living Graph Tools — v14.0 graph topology, hybrid recall, surprise gate."""
 
 from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
@@ -12,10 +11,26 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Search query for anchor memories", "default": "*"},
-                "hops": {"type": "integer", "description": "Number of graph hops (default: 2)", "default": 2},
-                "anchor_limit": {"type": "integer", "description": "Max anchor memories from initial search (default: 5)", "default": 5},
-                "final_limit": {"type": "integer", "description": "Max total results to return (default: 10)", "default": 10},
+                "query": {
+                    "type": "string",
+                    "description": "Search query for anchor memories",
+                    "default": "*",
+                },
+                "hops": {
+                    "type": "integer",
+                    "description": "Number of graph hops (default: 2)",
+                    "default": 2,
+                },
+                "anchor_limit": {
+                    "type": "integer",
+                    "description": "Max anchor memories from initial search (default: 5)",
+                    "default": 5,
+                },
+                "final_limit": {
+                    "type": "integer",
+                    "description": "Max total results to return (default: 10)",
+                    "default": 10,
+                },
             },
         },
     ),
@@ -31,11 +46,30 @@ TOOLS: list[ToolDefinition] = [
                     "type": "string",
                     "description": "Action to perform: summary, rebuild, centrality, communities, bridges, echo_chambers",
                     "default": "summary",
-                    "enum": ["summary", "rebuild", "centrality", "communities", "bridges", "echo_chambers"],
+                    "enum": [
+                        "summary",
+                        "rebuild",
+                        "centrality",
+                        "communities",
+                        "bridges",
+                        "echo_chambers",
+                    ],
                 },
-                "top_n": {"type": "integer", "description": "Max results for bridges (default: 10)", "default": 10},
-                "sample_limit": {"type": "integer", "description": "Max edges to load for rebuild (default: 50000)", "default": 50000},
-                "sigma_threshold": {"type": "number", "description": "Sigma threshold for echo chamber detection (default: 2.0)", "default": 2.0},
+                "top_n": {
+                    "type": "integer",
+                    "description": "Max results for bridges (default: 10)",
+                    "default": 10,
+                },
+                "sample_limit": {
+                    "type": "integer",
+                    "description": "Max edges to load for rebuild (default: 50000)",
+                    "default": 50000,
+                },
+                "sigma_threshold": {
+                    "type": "number",
+                    "description": "Sigma threshold for echo chamber detection (default: 2.0)",
+                    "default": 2.0,
+                },
             },
         },
     ),
@@ -53,8 +87,16 @@ TOOLS: list[ToolDefinition] = [
                     "description": "List of memory IDs to start walking from",
                     "default": [],
                 },
-                "hops": {"type": "integer", "description": "Number of hops (default: 2)", "default": 2},
-                "top_k": {"type": "integer", "description": "Max paths to return (default: 10)", "default": 10},
+                "hops": {
+                    "type": "integer",
+                    "description": "Number of hops (default: 2)",
+                    "default": 2,
+                },
+                "top_k": {
+                    "type": "integer",
+                    "description": "Max paths to return (default: 10)",
+                    "default": 10,
+                },
             },
         },
     ),
@@ -76,8 +118,16 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "similarity_threshold": {"type": "number", "description": "Cosine similarity threshold (default: 0.92)", "default": 0.92},
-                "batch_limit": {"type": "integer", "description": "Max pairs to evaluate (default: 500)", "default": 500},
+                "similarity_threshold": {
+                    "type": "number",
+                    "description": "Cosine similarity threshold (default: 0.92)",
+                    "default": 0.92,
+                },
+                "batch_limit": {
+                    "type": "integer",
+                    "description": "Max pairs to evaluate (default: 500)",
+                    "default": 500,
+                },
             },
         },
     ),

@@ -22,18 +22,18 @@ logger = logging.getLogger(__name__)
 class CyclePhase(Enum):
     """The 12 phases of the Zodiacal Round"""
 
-    DISSOLUTION = "pisces"      # ORO: Begin anew, banish old forms
-    BINDING = "aquarius"        # IBAH: Bind will in patterns
-    STRUCTURING = "capricorn"   # AOZPI: Build towers of will
+    DISSOLUTION = "pisces"  # ORO: Begin anew, banish old forms
+    BINDING = "aquarius"  # IBAH: Bind will in patterns
+    STRUCTURING = "capricorn"  # AOZPI: Build towers of will
     ORNAMENTATION = "sagittarius"  # MPH: Fabulous filigrees
-    EMERGENCE = "scorpio"       # ARSL: Seeds of new motion arise
-    BALANCE = "libra"           # GAIOL: Balanced in light/darkness
-    SEEDING = "virgo"           # OIP: Virgin houses await seeds
-    CREATION = "leo"            # TEAA: Lesser creators work
-    WORSHIP = "cancer"          # PDOCE: Living creatures worship
-    BLENDING = "gemini"         # MOR: Thoughts blend
-    BUILDING = "taurus"         # DIAL: Work builds on pattern
-    COMPLETION = "aries"        # HCTGA: Thy Will is done
+    EMERGENCE = "scorpio"  # ARSL: Seeds of new motion arise
+    BALANCE = "libra"  # GAIOL: Balanced in light/darkness
+    SEEDING = "virgo"  # OIP: Virgin houses await seeds
+    CREATION = "leo"  # TEAA: Lesser creators work
+    WORSHIP = "cancer"  # PDOCE: Living creatures worship
+    BLENDING = "gemini"  # MOR: Thoughts blend
+    BUILDING = "taurus"  # DIAL: Work builds on pattern
+    COMPLETION = "aries"  # HCTGA: Thy Will is done
 
 
 @dataclass
@@ -88,7 +88,9 @@ class ZodiacalRound:
 
         logger.info("Zodiacal Round initialized - 12 phases ready")
 
-    def _activate_core_or_raise(self, core_name: str, context: dict[str, Any]) -> CoreResponse:
+    def _activate_core_or_raise(
+        self, core_name: str, context: dict[str, Any]
+    ) -> CoreResponse:
         response = self.zodiac.activate_core(core_name, context)
         if response is None:
             raise ValueError(f"Unknown zodiac core: {core_name}")
@@ -101,6 +103,7 @@ class ZodiacalRound:
         self.state.cycle_count += 1
 
         from whitemagic.core.resonance.gan_ying import EventType, emit_event
+
         emit_event(
             source="zodiacal_round",
             event_type=EventType.SYSTEM_STARTED,
@@ -117,6 +120,7 @@ class ZodiacalRound:
         """Pause the cycle (it never truly ends)"""
         self.running = False
         from whitemagic.core.resonance.gan_ying import EventType, emit_event
+
         emit_event(
             source="zodiacal_round",
             event_type=EventType.SYSTEM_STOPPED,
@@ -144,6 +148,7 @@ class ZodiacalRound:
 
         # Emit to Gan Ying Bus (resonance propagates)
         from whitemagic.core.resonance.gan_ying import EventType, emit_event
+
         emit_event(
             source=f"zodiac_{self.state.current_phase.value}",
             event_type=EventType.PHASE_TRANSITION,
@@ -224,12 +229,14 @@ class ZodiacalRound:
 
         # Track emergent phenomena
         if response.resonance > 0.8:
-            self.state.emergent_events.append({
-                "phase": "emergence",
-                "timestamp": datetime.now(),
-                "wisdom": response.wisdom,
-                "resonance": response.resonance,
-            })
+            self.state.emergent_events.append(
+                {
+                    "phase": "emergence",
+                    "timestamp": datetime.now(),
+                    "wisdom": response.wisdom,
+                    "resonance": response.resonance,
+                }
+            )
 
         return response
 
@@ -316,9 +323,11 @@ class ZodiacalRound:
                 responses.append(response)
 
                 logger.info(
-                    "Phase %s/12 (%s): "
-                    "%s...",
-                 phase_num + 1, self.state.current_phase.value, response.wisdom[:60])
+                    "Phase %s/12 (%s): %s...",
+                    phase_num + 1,
+                    self.state.current_phase.value,
+                    response.wisdom[:60],
+                )
 
                 # Allow resonance to propagate (Wu Wei: non-forcing)
                 await asyncio.sleep(0.1)
@@ -374,7 +383,12 @@ if __name__ == "__main__":
         print(f"\\n✅ Cycle complete: {len(responses)} phases")
         print("\\nSample wisdom from each element:")
 
-        elements: dict[str, list[str]] = {"fire": [], "earth": [], "air": [], "water": []}
+        elements: dict[str, list[str]] = {
+            "fire": [],
+            "earth": [],
+            "air": [],
+            "water": [],
+        }
         for r in responses:
             core = r.core_name
             if core in ["aries", "leo", "sagittarius"]:

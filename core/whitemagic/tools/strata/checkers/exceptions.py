@@ -1,6 +1,5 @@
 import ast
 from pathlib import Path
-from typing import List
 
 from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
@@ -26,7 +25,14 @@ def _handler_logs_and_reraises(handler: ast.ExceptHandler) -> bool:
             # Check for logging calls
             func = stmt.func
             if isinstance(func, ast.Attribute) and func.attr in (
-                "debug", "info", "warning", "warn", "error", "critical", "exception", "log"
+                "debug",
+                "info",
+                "warning",
+                "warn",
+                "error",
+                "critical",
+                "exception",
+                "log",
             ):
                 has_log = True
     return has_raise and has_log
@@ -53,10 +59,18 @@ def _handler_returns_error_envelope(handler: ast.ExceptHandler) -> bool:
             # Check for dict return with "status" key
             if isinstance(stmt.value, ast.Dict):
                 for key in stmt.value.keys:
-                    if isinstance(key, ast.Constant) and isinstance(key.value, str) and key.value == "status":
+                    if (
+                        isinstance(key, ast.Constant)
+                        and isinstance(key.value, str)
+                        and key.value == "status"
+                    ):
                         return True
             # Check for dict() call with status key
-            if isinstance(stmt.value, ast.Call) and isinstance(stmt.value.func, ast.Name) and stmt.value.func.id == "dict":
+            if (
+                isinstance(stmt.value, ast.Call)
+                and isinstance(stmt.value.func, ast.Name)
+                and stmt.value.func.id == "dict"
+            ):
                 for kw in stmt.value.keywords:
                     if kw.arg == "status":
                         return True
@@ -78,7 +92,14 @@ def _handler_logs_and_continues(handler: ast.ExceptHandler) -> bool:
         elif isinstance(stmt, ast.Call):
             func = stmt.func
             if isinstance(func, ast.Attribute) and func.attr in (
-                "debug", "info", "warning", "warn", "error", "critical", "exception", "log"
+                "debug",
+                "info",
+                "warning",
+                "warn",
+                "error",
+                "critical",
+                "exception",
+                "log",
             ):
                 has_log = True
     # Only skip if it logs AND does NOT re-raise (log+continue, not log+rereraise)
@@ -86,7 +107,9 @@ def _handler_logs_and_continues(handler: ast.ExceptHandler) -> bool:
 
 
 @register
-def check_bare_except(project_path: Path, file_index: FileIndex, findings: List[Finding]):
+def check_bare_except(
+    project_path: Path, file_index: FileIndex, findings: list[Finding]
+):
     """Detect bare/blank except clauses and overly broad Exception catches.
 
     Skips false positives:
@@ -117,28 +140,32 @@ def check_bare_except(project_path: Path, file_index: FileIndex, findings: List[
             # Still check for bare except: in bridge files (those are always wrong)
             for node in ast.walk(tree):
                 if isinstance(node, ast.ExceptHandler) and node.type is None:
-                    findings.append(Finding(
-                        severity=FindingSeverity.WARNING,
-                        category="bare_except",
-                        file=str(rel),
-                        line=node.lineno,
-                        message="Bare 'except:' clause catches KeyboardInterrupt and SystemExit.",
-                        suggestion="Use 'except Exception:' or be more specific."
-                    ))
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.WARNING,
+                            category="bare_except",
+                            file=str(rel),
+                            line=node.lineno,
+                            message="Bare 'except:' clause catches KeyboardInterrupt and SystemExit.",
+                            suggestion="Use 'except Exception:' or be more specific.",
+                        )
+                    )
             continue
 
         for node in ast.walk(tree):
             if isinstance(node, ast.ExceptHandler):
                 if node.type is None:
                     # bare except:
-                    findings.append(Finding(
-                        severity=FindingSeverity.WARNING,
-                        category="bare_except",
-                        file=str(py_file.relative_to(project_path)),
-                        line=node.lineno,
-                        message="Bare 'except:' clause catches KeyboardInterrupt and SystemExit.",
-                        suggestion="Use 'except Exception:' or be more specific."
-                    ))
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.WARNING,
+                            category="bare_except",
+                            file=str(py_file.relative_to(project_path)),
+                            line=node.lineno,
+                            message="Bare 'except:' clause catches KeyboardInterrupt and SystemExit.",
+                            suggestion="Use 'except Exception:' or be more specific.",
+                        )
+                    )
                 elif isinstance(node.type, ast.Name) and node.type.id == "Exception":
                     # overly broad except Exception:
                     # Skip if parent try block is import-only (graceful degradation)
@@ -166,11 +193,13 @@ def check_bare_except(project_path: Path, file_index: FileIndex, findings: List[
                     # Skip files in directories where broad except is intentional
                     if any(skip_dir in rel_str for skip_dir in _BROAD_EXCEPT_SKIP_DIRS):
                         continue
-                    findings.append(Finding(
-                        severity=FindingSeverity.INFO,
-                        category="broad_except",
-                        file=str(py_file.relative_to(project_path)),
-                        line=node.lineno,
-                        message="Overly broad 'except Exception:' may hide bugs.",
-                        suggestion="Catch specific exceptions where possible."
-                    ))
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.INFO,
+                            category="broad_except",
+                            file=str(py_file.relative_to(project_path)),
+                            line=node.lineno,
+                            message="Overly broad 'except Exception:' may hide bugs.",
+                            suggestion="Catch specific exceptions where possible.",
+                        )
+                    )

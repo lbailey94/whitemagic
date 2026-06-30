@@ -39,7 +39,9 @@ class MeshAwareness:
         self._max_events = 200
         self._listening = False
 
-    def register_peer(self, node_id: str, address: str = "", meta: dict | None = None) -> None:
+    def register_peer(
+        self, node_id: str, address: str = "", meta: dict | None = None
+    ) -> None:
         """
         Register a peer.
 
@@ -95,7 +97,7 @@ class MeshAwareness:
         with self._lock:
             self._mesh_events.append({**event, "_received_at": time.time()})
             if len(self._mesh_events) > self._max_events:
-                self._mesh_events = self._mesh_events[-self._max_events:]
+                self._mesh_events = self._mesh_events[-self._max_events :]
 
     def process_redis_message(self, data: str) -> None:
         """Process a message from the Redis ganying channel for mesh events."""
@@ -123,18 +125,23 @@ class MeshAwareness:
             # Forward to mesh client
             try:
                 from whitemagic.mesh.client import get_mesh_client
+
                 get_mesh_client()
                 coords = msg.get("coordinates", [])
                 if coords and msg.get("source_node"):
-                    self.register_peer(msg["source_node"], meta={"last_hologram": time.time()})
+                    self.register_peer(
+                        msg["source_node"], meta={"last_hologram": time.time()}
+                    )
             except (ImportError, ModuleNotFoundError) as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     def status(self) -> dict[str, Any]:
         """Full mesh awareness status."""
         try:
             from whitemagic.mesh.client import get_mesh_client
+
             client = get_mesh_client()
             client_status = client.status()
         except (ImportError, ModuleNotFoundError):

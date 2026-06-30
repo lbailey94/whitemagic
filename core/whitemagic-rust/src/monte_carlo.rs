@@ -17,10 +17,6 @@ use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Backward-compat stub (kept for any existing callers)
-// ---------------------------------------------------------------------------
-
 pub struct MonteCarloEngine {
     dimensions: usize,
     sample_size: usize,
@@ -42,10 +38,6 @@ impl MonteCarloEngine {
         sim
     }
 }
-
-// ---------------------------------------------------------------------------
-// Input / output types
-// ---------------------------------------------------------------------------
 
 /// A single forecast claim as passed from TemporalForecastDB.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,10 +98,6 @@ impl MonteCarloResult {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Beta distribution sampling
-// ---------------------------------------------------------------------------
-
 /// Sample from Beta(α, β) using the Johnk method.
 /// α = confidence * precision, β = (1 - confidence) * precision
 /// precision = 10 (moderate; higher = tighter posterior)
@@ -152,10 +140,6 @@ fn sample_gamma(rng: &mut SmallRng, shape: f64) -> f64 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Brier score helpers
-// ---------------------------------------------------------------------------
-
 fn brier_score_from_pairs(pairs: &[(f64, f64)]) -> f64 {
     if pairs.is_empty() { return 0.25; }
     pairs.iter().map(|(p, o)| (p - o).powi(2)).sum::<f64>() / pairs.len() as f64
@@ -164,10 +148,6 @@ fn brier_score_from_pairs(pairs: &[(f64, f64)]) -> f64 {
 fn brier_skill_score(bs: f64) -> f64 {
     1.0 - bs / 0.25
 }
-
-// ---------------------------------------------------------------------------
-// Percentile computation
-// ---------------------------------------------------------------------------
 
 fn percentile_summary(mut values: Vec<f64>) -> PercentileSummary {
     if values.is_empty() {
@@ -193,10 +173,6 @@ fn percentile_summary(mut values: Vec<f64>) -> PercentileSummary {
         std_dev: variance.sqrt(),
     }
 }
-
-// ---------------------------------------------------------------------------
-// Core engine
-// ---------------------------------------------------------------------------
 
 /// Run N Monte Carlo trials over `claims`, sampling each confidence from its
 /// Beta posterior.  Returns a `MonteCarloResult` with percentile distributions.
@@ -300,10 +276,6 @@ fn claim_precision(claim: &ForecastClaim) -> f64 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Python-facing class
-// ---------------------------------------------------------------------------
-
 /// Monte Carlo forecasting calibration engine.
 ///
 /// Example:
@@ -344,10 +316,6 @@ impl MonteCarloForecast {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Standalone pyfunction (convenience wrapper)
-// ---------------------------------------------------------------------------
-
 /// Run Monte Carlo forecasting calibration from Python.
 ///
 /// Args:
@@ -366,10 +334,6 @@ pub fn run_mc_forecast_calibration(claims_json: &str, n_trials: usize) -> PyResu
     serde_json::to_string(&result)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

@@ -3,10 +3,12 @@ import sys
 # Add the editable install location if needed, though venv should handle it
 try:
     import whitemagic_rs
+
     print(f"✅ Successfully imported whitemagic_rs")
 except ImportError as e:
     print(f"❌ Failed to import whitemagic_rs: {e}")
     sys.exit(1)
+
 
 def test_similarity():
     print("\n--- Testing Fast Similarity ---")
@@ -19,6 +21,7 @@ def test_similarity():
     except Exception as e:
         print(f"❌ Error in fast_similarity: {e}")
 
+
 def test_iching():
     print("\n--- Testing I Ching Oracle (Layer 10 Check) ---")
     query = "Status of Whitemagic Reconstruction"
@@ -30,6 +33,7 @@ def test_iching():
     except Exception as e:
         print(f"❌ Error in iching_cast: {e}")
 
+
 def test_patterns():
     print("\n--- Testing Pattern Extraction ---")
     content = ["def bad_code():\n    pass # TODO: Fix me"]
@@ -40,6 +44,7 @@ def test_patterns():
         print(f"Duration: {result[6]:.6f}s")
     except Exception as e:
         print(f"❌ Error in extract_patterns: {e}")
+
 
 if __name__ == "__main__":
     test_similarity()

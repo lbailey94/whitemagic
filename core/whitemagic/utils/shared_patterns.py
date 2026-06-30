@@ -30,6 +30,7 @@ def connect_to_gan_ying(owner: str = "") -> Any:
     """
     try:
         from whitemagic.core.resonance.gan_ying_async import GanYingBus
+
         bus = GanYingBus.get_instance()
         if owner:
             bus.owner = owner
@@ -53,6 +54,7 @@ def run_async(coro: Any) -> Any:
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import threading
+
             result: list[Any] = []
             error: list[Exception] = []
 

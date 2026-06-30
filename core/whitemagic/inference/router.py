@@ -22,6 +22,7 @@ Integration points:
     - BitNet bridge (inference/bitnet_bridge.py): Tier 2 handler
     - Cloud API: Tier 3 (user-provided API key)
 """
+
 from __future__ import annotations
 
 import logging
@@ -93,11 +94,16 @@ class TokenBudgetTracker:
         # Bridge to consciousness token economy
         try:
             from whitemagic.core.consciousness.token_economy import get_token_tracker
-            get_token_tracker().record_api_call(f"inference:{self._request_count}", total)
+
+            get_token_tracker().record_api_call(
+                f"inference:{self._request_count}", total
+            )
         except (ImportError, RuntimeError, AttributeError):
             pass
 
-    def recommend_downgrade(self, requested_tier: InferenceTier) -> InferenceTier | None:
+    def recommend_downgrade(
+        self, requested_tier: InferenceTier
+    ) -> InferenceTier | None:
         """Recommend a lower tier if token budget is running low.
 
         Returns the downgraded tier if a downgrade is recommended,
@@ -135,13 +141,16 @@ class TokenBudgetTracker:
             "is_warning": self.is_warning,
             "is_critical": self.is_critical,
             "request_count": self._request_count,
-            "avg_tokens_per_request": round(self._ema_usage, 1) if self._request_count > 0 else 0,
+            "avg_tokens_per_request": round(self._ema_usage, 1)
+            if self._request_count > 0
+            else 0,
         }
 
 
 @dataclass
 class RoutingDecision:
     """Result of a routing decision."""
+
     tier: InferenceTier
     assessment: ComplexityAssessment
     reason: str
@@ -151,6 +160,7 @@ class RoutingDecision:
 @dataclass
 class InferenceResponse:
     """Response from routed inference."""
+
     answer: str
     confidence: float
     tier: InferenceTier
@@ -235,7 +245,6 @@ class InferenceRouter:
         """
         start_time = time.time()
 
-        # Step 1: Classify complexity
         if force_tier is not None:
             assessment = self._classifier.classify(
                 prompt, max_output_tokens, latency_budget_ms, is_background
@@ -249,7 +258,6 @@ class InferenceRouter:
             tier = assessment.tier
             reason = assessment.task_type
 
-        # Step 2: Token budget feedback — downgrade if budget is running low
         budget_downgrade = self._budget_tracker.recommend_downgrade(tier)
         if budget_downgrade is not None:
             original_tier = tier
@@ -263,11 +271,12 @@ class InferenceRouter:
             }
             logger.debug(
                 "Token budget feedback: %s → %s (usage=%.1f%%, remaining=%d)",
-                original_tier.name, tier.name,
-                self._budget_tracker.usage_ratio * 100, self._budget_tracker.remaining,
+                original_tier.name,
+                tier.name,
+                self._budget_tracker.usage_ratio * 100,
+                self._budget_tracker.remaining,
             )
 
-        # Step 3: Self-model forecast — upgrade tier if error rate is predicted critical
         self_model_upgrade = self._check_self_model_forecast(tier)
         if self_model_upgrade is not None:
             original_tier = tier
@@ -280,10 +289,10 @@ class InferenceRouter:
             }
             logger.debug(
                 "Self-model forecast upgrade: %s → %s (predicted error rate critical)",
-                original_tier.name, tier.name,
+                original_tier.name,
+                tier.name,
             )
 
-        # Step 4: Check cloud availability for cloud-tier requests
         if tier == InferenceTier.CLOUD and not self._cloud_available:
             if assessment.is_sensitive:
                 tier = InferenceTier.LOCAL_LARGE
@@ -292,27 +301,29 @@ class InferenceRouter:
                 tier = InferenceTier.LOCAL_LARGE
                 reason = "cloud_unavailable_fallback"
 
-        # Step 4.5: GHRR attention pre-processing for local LLM inference
-        # Compresses context items using HRR binding before passing to handler
         ghrr_metadata: dict[str, Any] = {}
         if tier in (InferenceTier.LOCAL_SMALL, InferenceTier.LOCAL_LARGE):
             try:
                 from whitemagic.core.memory.ghrr_attention import get_ghrr_attention
+
                 ghrr = get_ghrr_attention()
                 # Fetch relevant context from CoreAccessLayer if available
                 context_items: list[dict[str, Any]] = []
                 try:
                     from whitemagic.core.intelligence.core_access import get_core_access
+
                     cal = get_core_access()
                     # Use hybrid recall to get relevant context
                     results = cal.hybrid_recall(query=prompt, k=5)
                     for r in results:
                         mem = r.get("memory") or r
                         if isinstance(mem, dict):
-                            context_items.append({
-                                "content": str(mem.get("content", ""))[:500],
-                                "source": "memory",
-                            })
+                            context_items.append(
+                                {
+                                    "content": str(mem.get("content", ""))[:500],
+                                    "source": "memory",
+                                }
+                            )
                 except Exception:
                     pass  # No context available — GHRR will skip
 
@@ -327,7 +338,6 @@ class InferenceRouter:
             except (ImportError, ModuleNotFoundError):
                 pass  # GHRR not available — skip pre-processing
 
-        # Step 5: Execute with confidence cascading
         escalation_chain: list[InferenceTier] = []
         current_tier = tier
         escalations = 0
@@ -338,7 +348,9 @@ class InferenceRouter:
                 # No handler for this tier — escalate
                 if current_tier < InferenceTier.CLOUD:
                     escalation_chain.append(current_tier)
-                    self._metrics.record_escalation(current_tier, InferenceTier(int(current_tier) + 1), "no_handler")
+                    self._metrics.record_escalation(
+                        current_tier, InferenceTier(int(current_tier) + 1), "no_handler"
+                    )
                     current_tier = InferenceTier(int(current_tier) + 1)
                     escalations += 1
                     continue
@@ -351,7 +363,10 @@ class InferenceRouter:
                         latency_ms=(time.time() - start_time) * 1000,
                         escalated=len(escalation_chain) > 0,
                         escalation_chain=escalation_chain,
-                        metadata={"reason": "no_handler", "assessment": assessment.signals},
+                        metadata={
+                            "reason": "no_handler",
+                            "assessment": assessment.signals,
+                        },
                     )
 
             # Execute handler
@@ -363,11 +378,22 @@ class InferenceRouter:
             except Exception as e:
                 logger.error("Tier %s handler failed: %s", current_tier.name, e)
                 self._metrics.record_routing(
-                    current_tier, (time.time() - start_time) * 1000, 0.0, False, "handler_error"
+                    current_tier,
+                    (time.time() - start_time) * 1000,
+                    0.0,
+                    False,
+                    "handler_error",
                 )
-                if current_tier < InferenceTier.CLOUD and escalations < self._max_escalations:
+                if (
+                    current_tier < InferenceTier.CLOUD
+                    and escalations < self._max_escalations
+                ):
                     escalation_chain.append(current_tier)
-                    self._metrics.record_escalation(current_tier, InferenceTier(int(current_tier) + 1), "handler_error")
+                    self._metrics.record_escalation(
+                        current_tier,
+                        InferenceTier(int(current_tier) + 1),
+                        "handler_error",
+                    )
                     current_tier = InferenceTier(int(current_tier) + 1)
                     escalations += 1
                     continue
@@ -387,9 +413,10 @@ class InferenceRouter:
             success = confidence > 0.0
 
             # Record metrics
-            self._metrics.record_routing(current_tier, latency_ms, confidence, success, reason)
+            self._metrics.record_routing(
+                current_tier, latency_ms, confidence, success, reason
+            )
 
-            # Step 4: Confidence cascading
             if (
                 confidence < self._confidence_threshold
                 and current_tier < InferenceTier.CLOUD
@@ -398,11 +425,15 @@ class InferenceRouter:
             ):
                 logger.debug(
                     "Confidence cascade: %s (conf=%.2f) → %s",
-                    current_tier.name, confidence, InferenceTier(int(current_tier) + 1).name,
+                    current_tier.name,
+                    confidence,
+                    InferenceTier(int(current_tier) + 1).name,
                 )
                 escalation_chain.append(current_tier)
                 next_tier = InferenceTier(int(current_tier) + 1)
-                self._metrics.record_escalation(current_tier, next_tier, "low_confidence")
+                self._metrics.record_escalation(
+                    current_tier, next_tier, "low_confidence"
+                )
                 current_tier = InferenceTier(int(current_tier) + 1)
                 escalations += 1
                 continue
@@ -432,8 +463,8 @@ class InferenceRouter:
 
         # Exhausted escalations
         return InferenceResponse(
-            answer=answer if 'answer' in locals() else "All tiers exhausted.",
-            confidence=confidence if 'confidence' in locals() else 0.0,
+            answer=answer if "answer" in locals() else "All tiers exhausted.",
+            confidence=confidence if "confidence" in locals() else 0.0,
             tier=current_tier,
             latency_ms=(time.time() - start_time) * 1000,
             escalated=True,
@@ -463,7 +494,9 @@ class InferenceRouter:
         """Access token budget tracker for budget management."""
         return self._budget_tracker
 
-    def _check_self_model_forecast(self, current_tier: InferenceTier) -> InferenceTier | None:
+    def _check_self_model_forecast(
+        self, current_tier: InferenceTier
+    ) -> InferenceTier | None:
         """Check SelfModel forecasts for error rate trends.
 
         If the self-model predicts error_rate will breach critical threshold
@@ -473,6 +506,7 @@ class InferenceRouter:
         """
         try:
             from whitemagic.core.intelligence.self_model import get_self_model
+
             model = get_self_model()
             alerts = model.get_alerts()
             for alert in alerts:
@@ -520,7 +554,11 @@ def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
         llm = LocalLLM(model="qwen2.5-coder:1.5b")
         if not llm.is_available:
-            return {"answer": "", "confidence": 0.0, "metadata": {"error": "ollama_unavailable"}}
+            return {
+                "answer": "",
+                "confidence": 0.0,
+                "metadata": {"error": "ollama_unavailable"},
+            }
 
         max_tokens = kwargs.get("max_tokens", 256)
         answer = llm.complete(prompt, max_tokens=max_tokens, temperature=0.3)
@@ -554,11 +592,18 @@ def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
                     return {
                         "answer": result.get("response", ""),
                         "confidence": 0.85,
-                        "metadata": {"method": "bitnet", "model": result.get("model", "bitnet")},
+                        "metadata": {
+                            "method": "bitnet",
+                            "model": result.get("model", "bitnet"),
+                        },
                     }
             except Exception:
                 pass
-            return {"answer": "", "confidence": 0.0, "metadata": {"error": "no_local_large"}}
+            return {
+                "answer": "",
+                "confidence": 0.0,
+                "metadata": {"error": "no_local_large"},
+            }
 
         max_tokens = kwargs.get("max_tokens", 512)
         answer = llm.complete(prompt, max_tokens=max_tokens, temperature=0.5)

@@ -37,7 +37,7 @@ def to_ptr(arr: np.ndarray) -> Any:
     Raises:
         ValueError: If array is not contiguous
     """
-    if not arr.flags['C_CONTIGUOUS']:
+    if not arr.flags["C_CONTIGUOUS"]:
         arr = np.ascontiguousarray(arr)
     return arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
 
@@ -55,7 +55,7 @@ def to_double_ptr(arr: np.ndarray) -> Any:
     """
     if arr.dtype != np.float64:
         arr = arr.astype(np.float64)
-    if not arr.flags['C_CONTIGUOUS']:
+    if not arr.flags["C_CONTIGUOUS"]:
         arr = np.ascontiguousarray(arr)
     return arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
 
@@ -71,7 +71,7 @@ def to_flat_ptr(arr_2d: np.ndarray) -> tuple[Any, tuple[int, int]]:
     """
     if arr_2d.ndim != 2:
         raise ValueError(f"Expected 2D array, got {arr_2d.ndim}D")
-    if not arr_2d.flags['C_CONTIGUOUS']:
+    if not arr_2d.flags["C_CONTIGUOUS"]:
         arr_2d = np.ascontiguousarray(arr_2d)
     ptr = arr_2d.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     return ptr, arr_2d.shape
@@ -117,7 +117,7 @@ def batch_to_ptrs(vectors: list[np.ndarray] | np.ndarray) -> tuple[list[Any], in
     if isinstance(vectors, np.ndarray):
         if vectors.ndim != 2:
             raise ValueError(f"Expected 2D array, got {vectors.ndim}D")
-        if not vectors.flags['C_CONTIGUOUS']:
+        if not vectors.flags["C_CONTIGUOUS"]:
             vectors = np.ascontiguousarray(vectors)
         n, dim = vectors.shape
         ptrs = []
@@ -132,7 +132,7 @@ def batch_to_ptrs(vectors: list[np.ndarray] | np.ndarray) -> tuple[list[Any], in
     dim = len(vectors[0])
     ptrs = []
     for vec in vectors:
-        if not vec.flags['C_CONTIGUOUS']:
+        if not vec.flags["C_CONTIGUOUS"]:
             vec = np.ascontiguousarray(vec)
         ptrs.append(vec.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
     return ptrs, dim

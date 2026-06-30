@@ -1,5 +1,5 @@
-"""Unified Zodiac API - Facade for Zodiac Cores.
-"""
+"""Unified Zodiac API - Facade for Zodiac Cores."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,8 +25,7 @@ class UnifiedZodiacPerspective:
 
 
 class UnifiedZodiacSystem:
-    """Unified interface to zodiac implementations.
-    """
+    """Unified interface to zodiac implementations."""
 
     def __init__(self) -> None:
         """Initialize zodiac system."""
@@ -40,7 +39,9 @@ class UnifiedZodiacSystem:
             "water": ["cancer", "scorpio", "pisces"],
         }
 
-    def get_perspective(self, sign: str, context: dict[str, Any]) -> UnifiedZodiacPerspective:
+    def get_perspective(
+        self, sign: str, context: dict[str, Any]
+    ) -> UnifiedZodiacPerspective:
         """Get perspective from a specific core."""
         sign_lower = sign.lower()
 
@@ -64,7 +65,9 @@ class UnifiedZodiacSystem:
             timestamp=datetime.now(),
         )
 
-    def activate_trine(self, element: str, context: dict[str, Any]) -> list[UnifiedZodiacPerspective]:
+    def activate_trine(
+        self, element: str, context: dict[str, Any]
+    ) -> list[UnifiedZodiacPerspective]:
         """Activate all three signs of an element for resonance."""
         if element not in self.triads:
             raise ValueError(f"Unknown element: {element}")
@@ -79,6 +82,7 @@ class UnifiedZodiacSystem:
 
 # Singleton instance
 _unified_zodiac = None
+
 
 def get_unified_zodiac() -> UnifiedZodiacSystem:
     """Get global unified zodiac system."""

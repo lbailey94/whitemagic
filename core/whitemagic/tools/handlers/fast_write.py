@@ -27,12 +27,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
 _ALLOWED_ROOTS: list[str] = [
-    str(__import__("whitemagic.config.paths", fromlist=["get_state_root"]).get_state_root()),
+    str(
+        __import__(
+            "whitemagic.config.paths", fromlist=["get_state_root"]
+        ).get_state_root()
+    ),
     str(Path.cwd()),
 ]
 
@@ -40,8 +40,16 @@ _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB max
 _MAX_BATCH_FILES = 50
 
 _PROTECTED_PATTERNS = {
-    ".git/", "__pycache__/", ".venv/", "node_modules/",
-    ".env", ".ssh/", "/etc/", "/usr/", "/proc/", "/sys/",
+    ".git/",
+    "__pycache__/",
+    ".venv/",
+    "node_modules/",
+    ".env",
+    ".ssh/",
+    "/etc/",
+    "/usr/",
+    "/proc/",
+    "/sys/",
 }
 
 
@@ -107,11 +115,6 @@ def _validate_file(file_path: str) -> tuple[bool, str]:
         return False, str(e)
 
 
-# ---------------------------------------------------------------------------
-# MCP Tool Handlers
-# ---------------------------------------------------------------------------
-
-
 def handle_fast_write_write(**kwargs: Any) -> dict[str, Any]:
     """Write content to a file atomically. Overwrites if file exists.
 
@@ -136,7 +139,10 @@ def handle_fast_write_write(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": "content must be a string"}
 
     if len(content.encode(encoding)) > _MAX_FILE_SIZE:
-        return {"status": "error", "error": f"Content exceeds max size ({_MAX_FILE_SIZE} bytes)"}
+        return {
+            "status": "error",
+            "error": f"Content exceeds max size ({_MAX_FILE_SIZE} bytes)",
+        }
 
     allowed, reason = _is_path_safe(file_path)
     if not allowed:
@@ -270,12 +276,22 @@ def handle_fast_write_batch(**kwargs: Any) -> dict[str, Any]:
             backup=backup,
         )
         if r.get("status") == "success":
-            results.append({"path": file_path, "bytes": r.get("bytes", 0), "lines": r.get("lines", 0)})
+            results.append(
+                {
+                    "path": file_path,
+                    "bytes": r.get("bytes", 0),
+                    "lines": r.get("lines", 0),
+                }
+            )
         else:
             errors.append({"path": file_path, "error": r.get("error", "unknown")})
 
     return {
-        "status": "success" if not errors else "partial_success" if results else "error",
+        "status": "success"
+        if not errors
+        else "partial_success"
+        if results
+        else "error",
         "written": len(results),
         "errors": len(errors),
         "results": results,

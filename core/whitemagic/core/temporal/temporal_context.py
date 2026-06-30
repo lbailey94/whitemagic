@@ -111,7 +111,9 @@ class TemporalContext:
                 "duration_minutes": self.session_duration_minutes,
             },
             "consolidation": {
-                "last": self.last_consolidation.isoformat() if self.last_consolidation else None,
+                "last": self.last_consolidation.isoformat()
+                if self.last_consolidation
+                else None,
                 "memories_since": self.memories_since_consolidation,
                 "due": self.consolidation_due,
             },
@@ -175,7 +177,9 @@ class TemporalContextManager:
     def _save_state(self) -> None:
         """Persist state."""
         state = {
-            "session_start": self._session_start.isoformat() if self._session_start else None,
+            "session_start": self._session_start.isoformat()
+            if self._session_start
+            else None,
             "current_phase": self._current_phase,
             "phase_start": self._phase_start.isoformat() if self._phase_start else None,
             "last_updated": datetime.now().isoformat(),
@@ -225,7 +229,7 @@ class TemporalContextManager:
             return WuXingPhase.EARTH
         elif month in (9, 10, 11):
             return WuXingPhase.METAL
-        else :
+        else:
             # 12, 1
             return WuXingPhase.WATER
 
@@ -245,7 +249,9 @@ class TemporalContextManager:
                     last_consolidation = parse_datetime(state["last_run"])
 
                     # Check if consolidation is due (>24h)
-                    hours_since = (datetime.now() - last_consolidation).total_seconds() / 3600
+                    hours_since = (
+                        datetime.now() - last_consolidation
+                    ).total_seconds() / 3600
                     consolidation_due = hours_since > 24
 
                 memories_since = state.get("memories_since_last", 0)
@@ -280,7 +286,9 @@ class TemporalContextManager:
             session_duration = (now - self._session_start).total_seconds() / 60
 
         # Consolidation
-        last_consolidation, memories_since, consolidation_due = self._get_consolidation_info()
+        last_consolidation, memories_since, consolidation_due = (
+            self._get_consolidation_info()
+        )
 
         return TemporalContext(
             timestamp=now,
@@ -321,6 +329,7 @@ class TemporalContextManager:
 
 # Singleton accessor
 _manager: TemporalContextManager | None = None
+
 
 def get_temporal_context_manager() -> TemporalContextManager:
     """Get or create the singleton TemporalContextManager."""

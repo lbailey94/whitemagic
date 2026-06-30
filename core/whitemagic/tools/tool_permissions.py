@@ -32,23 +32,33 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Role → Allowed ToolCategory mappings
-# ---------------------------------------------------------------------------
-
 # Categories from registry.py ToolCategory enum
 _ROLE_ALLOWED_CATEGORIES: dict[str, set[str]] = {
     "observer": {
-        "introspection", "memory",  # read-only memory search
+        "introspection",
+        "memory",  # read-only memory search
     },
     "agent": {
-        "introspection", "memory", "session", "garden", "balance",
-        "dharma", "intelligence", "archaeology", "inference", "synthesis",
-        "system", "utility", "watcher", "metrics", "edge", "governor",
+        "introspection",
+        "memory",
+        "session",
+        "garden",
+        "balance",
+        "dharma",
+        "intelligence",
+        "archaeology",
+        "inference",
+        "synthesis",
+        "system",
+        "utility",
+        "watcher",
+        "metrics",
+        "edge",
+        "governor",
         "browser",
     },
     "coordinator": set(),  # Empty = all categories allowed (like admin)
-    "admin": set(),        # Empty = all categories allowed
+    "admin": set(),  # Empty = all categories allowed
 }
 
 # Specific tool overrides: tools that require specific roles regardless of category
@@ -68,14 +78,15 @@ _TOOL_ROLE_REQUIREMENTS: dict[str, str] = {
 
 # Tools always allowed regardless of role (basic discovery)
 _ALWAYS_ALLOWED: set[str] = {
-    "capabilities", "manifest", "gnosis", "maturity.assess",
-    "starter_packs.list", "starter_packs.get", "starter_packs.suggest",
+    "capabilities",
+    "manifest",
+    "gnosis",
+    "maturity.assess",
+    "starter_packs.list",
+    "starter_packs.get",
+    "starter_packs.suggest",
 }
 
-
-# ---------------------------------------------------------------------------
-# Agent role registry — persistent via JSON file in WM_STATE_ROOT
-# ---------------------------------------------------------------------------
 
 def _rbac_path() -> Path:
     """Resolve the persistent RBAC storage path."""
@@ -108,10 +119,15 @@ class AgentRoleRegistry:
         try:
             p = _rbac_path()
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(_json_dumps({
-                "agent_roles": self._agent_roles,
-                "default_roles": self._default_roles,
-            }, indent=2))
+            p.write_text(
+                _json_dumps(
+                    {
+                        "agent_roles": self._agent_roles,
+                        "default_roles": self._default_roles,
+                    },
+                    indent=2,
+                )
+            )
         except Exception as e:
             logger.debug("Could not save RBAC roles: %s", e)
 
@@ -167,10 +183,6 @@ class AgentRoleRegistry:
         with self._lock:
             return dict(self._agent_roles)
 
-
-# ---------------------------------------------------------------------------
-# Permission checking
-# ---------------------------------------------------------------------------
 
 _registry_instance: AgentRoleRegistry | None = None
 _registry_lock = threading.Lock()
@@ -229,14 +241,20 @@ def check_tool_permission(
                 return None
             if tool_category in allowed_cats:
                 return None
-        return _blocked(tool_name, roles, f"Category '{tool_category}' not allowed for roles {roles}")
+        return _blocked(
+            tool_name,
+            roles,
+            f"Category '{tool_category}' not allowed for roles {roles}",
+        )
 
     # Unknown tool — allow through (will fail at dispatch lookup anyway)
     return None
 
 
 def _blocked(tool_name: str, roles: list[str], reason: str) -> dict[str, Any]:
-    logger.info("Permission denied: tool=%s roles=%s reason=%s", tool_name, roles, reason)
+    logger.info(
+        "Permission denied: tool=%s roles=%s reason=%s", tool_name, roles, reason
+    )
     return {
         "status": "error",
         "error": f"Permission denied: {reason}",
@@ -250,11 +268,13 @@ def _get_tool_category(tool_name: str) -> str | None:
     """Look up tool category from registry (cached)."""
     try:
         from whitemagic.tools.tool_surface import get_callable_tool_definition
+
         tool_def = get_callable_tool_definition(tool_name)
         if tool_def is not None:
             category_value = getattr(tool_def.category, "value", None)
             return str(category_value) if category_value is not None else None
     except (ImportError, ModuleNotFoundError) as e:
         import logging
+
         logging.getLogger(__name__).debug("Exception silenced: %s", e)
     return None

@@ -77,7 +77,9 @@ class WorkingChunk:
         return {
             "memory_id": self.memory_id,
             "title": self.title,
-            "content_preview": self.content[:100] + "..." if len(self.content) > 100 else self.content,
+            "content_preview": self.content[:100] + "..."
+            if len(self.content) > 100
+            else self.content,
             "activation": round(self.effective_activation, 3),
             "importance": self.importance,
             "access_count": self.access_count,
@@ -132,7 +134,11 @@ class WorkingMemory:
         if memory_id in self._chunks:
             chunk = self._chunks[memory_id]
             chunk.rehearse()
-            logger.debug("Rehearsed chunk %s: activation=%s", memory_id, chunk.effective_activation)
+            logger.debug(
+                "Rehearsed chunk %s: activation=%s",
+                memory_id,
+                chunk.effective_activation,
+            )
             return chunk
 
         # Apply decay and evict dead chunks first
@@ -152,10 +158,17 @@ class WorkingMemory:
             tags=tags or [],
         )
         self._chunks[memory_id] = chunk
-        logger.debug("Attended to %s: %s/%s slots used", memory_id, len(self._chunks), self.capacity)
+        logger.debug(
+            "Attended to %s: %s/%s slots used",
+            memory_id,
+            len(self._chunks),
+            self.capacity,
+        )
         return chunk
 
-    def group(self, chunk_ids: list[str], group_id: str, group_title: str = "") -> WorkingChunk | None:
+    def group(
+        self, chunk_ids: list[str], group_id: str, group_title: str = ""
+    ) -> WorkingChunk | None:
         """Group multiple chunks into a single slot (chunking).
 
         This frees up working memory capacity by combining related
@@ -195,7 +208,12 @@ class WorkingMemory:
             grouped_ids=all_ids,
         )
         self._chunks[group_id] = chunk
-        logger.info("Grouped %s chunks into %s: freed %s slots", len(valid_chunks), group_id, len(valid_chunks) - 1)
+        logger.info(
+            "Grouped %s chunks into %s: freed %s slots",
+            len(valid_chunks),
+            group_id,
+            len(valid_chunks) - 1,
+        )
         return chunk
 
     def forget(self, memory_id: str) -> bool:
@@ -225,13 +243,16 @@ class WorkingMemory:
 
         """
         self._apply_decay()
-        chunks = sorted(self._chunks.values(), key=lambda c: c.effective_activation, reverse=True)
+        chunks = sorted(
+            self._chunks.values(), key=lambda c: c.effective_activation, reverse=True
+        )
 
         # Lazy import dense encoding
         _encode_dense = None
         if dense:
             try:
                 from whitemagic.ai.dense_encoding import encode_dense as _enc
+
                 _encode_dense = _enc
             except ImportError:
                 logger.debug("Dense encoding unavailable, falling back to raw text")
@@ -280,10 +301,14 @@ class WorkingMemory:
         if not self._chunks:
             return
 
-        lowest_id = min(self._chunks, key=lambda k: self._chunks[k].effective_activation)
+        lowest_id = min(
+            self._chunks, key=lambda k: self._chunks[k].effective_activation
+        )
         evicted = self._chunks.pop(lowest_id)
         self._eviction_count += 1
-        logger.debug("Evicted %s (activation=%s)", lowest_id, evicted.effective_activation)
+        logger.debug(
+            "Evicted %s (activation=%s)", lowest_id, evicted.effective_activation
+        )
 
     def get_status(self) -> dict[str, Any]:
         """Get working memory status."""
@@ -294,11 +319,14 @@ class WorkingMemory:
             "available": self.capacity - len(self._chunks),
             "total_attended": self._total_attended,
             "total_evicted": self._eviction_count,
-            "chunks": [c.to_dict() for c in sorted(
-                self._chunks.values(),
-                key=lambda c: c.effective_activation,
-                reverse=True,
-            )],
+            "chunks": [
+                c.to_dict()
+                for c in sorted(
+                    self._chunks.values(),
+                    key=lambda c: c.effective_activation,
+                    reverse=True,
+                )
+            ],
         }
 
 

@@ -9,6 +9,7 @@ from whitemagic.core.intelligence.synthesis.solver_engine import DharmicSolver
 
 logger = logging.getLogger(__name__)
 
+
 def handle_solve_optimization(**kwargs: Any) -> dict[str, Any]:
     """Solve a constrained optimization problem.
     Arguments:

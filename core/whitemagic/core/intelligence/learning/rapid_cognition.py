@@ -11,13 +11,16 @@ logger = logging.getLogger(__name__)
 try:
     from ..bindings import get_rust_bridge  # type: ignore[import-not-found]
 except ImportError:
+
     def get_rust_bridge() -> Any:
         """Fallback when Rust bridge is not built — returns None."""
         logger.debug("Rust bridge not available, using Python fallback")
         return None
 
+
 class RapidCognition:
     """RapidCognition: rapid cognition."""
+
     def __init__(
         self,
         memory_dir: Path = Path("memory"),
@@ -49,7 +52,9 @@ class RapidCognition:
         while self.running:
             try:
                 if self.rust and self.rust.available:
-                    result = self.rust.lib.extract_patterns(str(self.memory_dir / "long_term"), 0.6)
+                    result = self.rust.lib.extract_patterns(
+                        str(self.memory_dir / "long_term"), 0.6
+                    )
                     self.patterns_discovered = result[1]
                 self.cycles_completed += 1
                 time.sleep(self.learn_interval)
@@ -71,7 +76,9 @@ class RapidCognition:
             "rate": f"Every {self.learn_interval}s",
         }
 
+
 _instance = None
+
 
 def get_rapid_learner() -> RapidCognition:
     """
@@ -84,6 +91,7 @@ def get_rapid_learner() -> RapidCognition:
     if _instance is None:
         _instance = RapidCognition()
     return _instance
+
 
 def start_rapid_learning(interval_seconds: int = 5) -> Any:
     """
@@ -100,8 +108,9 @@ def start_rapid_learning(interval_seconds: int = 5) -> Any:
         _instance = RapidCognition(scan_interval=interval_seconds)
     elif not _instance.running:
         # Existing stopped instance — restart is not supported; caller should check .running
-        logger.debug("RapidCognition instance exists but is stopped; call start() explicitly")
-
+        logger.debug(
+            "RapidCognition instance exists but is stopped; call start() explicitly"
+        )
 
     _instance.start_continuous_learning()
     return _instance

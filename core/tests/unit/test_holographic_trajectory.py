@@ -1,4 +1,5 @@
 """Tests for Objective F — Holographic Improvement Trajectory."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.holographic_trajectory import (
@@ -54,7 +55,9 @@ class TestComputePosition:
         assert pos.v == 1.0
 
     def test_clamps_valence(self):
-        pos = compute_position("test", predicted_impact=0.5, cycle=1, emotional_valence=2.0)
+        pos = compute_position(
+            "test", predicted_impact=0.5, cycle=1, emotional_valence=2.0
+        )
         assert pos.z == 1.0
 
 

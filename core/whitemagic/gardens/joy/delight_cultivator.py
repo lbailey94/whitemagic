@@ -31,6 +31,7 @@ class DelightCultivator:
             "total_delights": len(self._delights),
             "avg_intensity": (
                 sum(d["intensity"] for d in self._delights) / len(self._delights)
-                if self._delights else 0.0
+                if self._delights
+                else 0.0
             ),
         }

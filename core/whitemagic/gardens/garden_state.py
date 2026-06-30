@@ -54,7 +54,9 @@ class GardenStateTracker:
                     for name, state_data in data.items():
                         self.states[name] = GardenState(**state_data)
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.info("Warning: Could not load garden state: %s", e, exc_info=True)
+                logger.info(
+                    "Warning: Could not load garden state: %s", e, exc_info=True
+                )
 
     def _save_state(self) -> None:
         """Save state to disk."""
@@ -67,13 +69,16 @@ class GardenStateTracker:
 
     def is_active(self, garden_name: str) -> bool:
         """Check if a garden is currently active."""
-        return self.states.get(garden_name, GardenState(
-            name=garden_name,
-            is_active=False,
-            activation_count=0,
-            last_activated=None,
-            last_deactivated=None,
-        )).is_active
+        return self.states.get(
+            garden_name,
+            GardenState(
+                name=garden_name,
+                is_active=False,
+                activation_count=0,
+                last_activated=None,
+                last_deactivated=None,
+            ),
+        ).is_active
 
     def activate(self, garden_name: str) -> None:
         """Mark a garden as active."""

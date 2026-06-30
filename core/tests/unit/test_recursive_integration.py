@@ -47,7 +47,9 @@ class TestLazyLoading:
     """Verify lazy-loading helpers work with graceful degradation."""
 
     def test_get_module_returns_none_on_missing(self, loop):
-        result = loop._get_module("_nonexistent", "whitemagic.core.evolution.nonexistent", "NoClass")
+        result = loop._get_module(
+            "_nonexistent", "whitemagic.core.evolution.nonexistent", "NoClass"
+        )
         assert result is None
 
     def test_get_module_caches(self, loop):
@@ -127,6 +129,7 @@ class TestRecordOutcomeIntegration:
         )
         # Manually set last cycle
         from whitemagic.core.evolution.recursive_loop import ImprovementCycle
+
         cycle = ImprovementCycle(
             cycle_id="test_cycle",
             timestamp="2026-01-01T00:00:00Z",
@@ -164,6 +167,7 @@ class TestAnalyticsIntegration:
 
     def test_analytics_has_evolution_fields(self, loop):
         from whitemagic.core.evolution.recursive_loop import ImprovementCycle
+
         cycle = ImprovementCycle(
             cycle_id="test_analytics",
             timestamp="2026-01-01T00:00:00Z",

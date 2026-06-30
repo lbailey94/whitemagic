@@ -12,7 +12,6 @@ Covers:
   8. Gnosis portal integration
 """
 
-
 import pytest
 
 
@@ -20,16 +19,19 @@ import pytest
 # 1. Emotion & Drive Core
 # =========================================================================
 
+
 class TestEmotionDriveCore:
     """Test the DriveCore intrinsic motivation engine."""
 
     def test_import(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore, DriveSnapshot
+
         assert DriveCore is not None
         assert DriveSnapshot is not None
 
     def test_initial_snapshot(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         snap = core.snapshot()
         assert 0.0 <= snap.curiosity <= 1.0
@@ -42,6 +44,7 @@ class TestEmotionDriveCore:
 
     def test_tool_success_event(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         initial = core.snapshot()
         snap = core.on_event("tool_success", {"tool": "search_memories"})
@@ -51,6 +54,7 @@ class TestEmotionDriveCore:
 
     def test_tool_error_event(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         snap = core.on_event("tool_error", {"tool": "broken_tool"})
         assert snap.event_count == 1
@@ -59,6 +63,7 @@ class TestEmotionDriveCore:
 
     def test_novelty_boosts_curiosity(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         initial_curiosity = core.snapshot().curiosity
         for _ in range(5):
@@ -68,6 +73,7 @@ class TestEmotionDriveCore:
 
     def test_dharma_violation_boosts_caution(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         for _ in range(3):
             core.on_event("dharma_violation")
@@ -76,6 +82,7 @@ class TestEmotionDriveCore:
 
     def test_social_events(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         for _ in range(5):
             core.on_event("agent_interaction")
@@ -85,6 +92,7 @@ class TestEmotionDriveCore:
 
     def test_idle_decay(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         # Boost curiosity high
         for _ in range(10):
@@ -98,6 +106,7 @@ class TestEmotionDriveCore:
 
     def test_to_dict(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         snap = core.snapshot()
         d = snap.to_dict()
@@ -109,6 +118,7 @@ class TestEmotionDriveCore:
 
     def test_motivation_bias(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         bias = core.get_motivation_bias()
         assert "explore" in bias
@@ -120,6 +130,7 @@ class TestEmotionDriveCore:
 
     def test_get_stats(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         core.on_event("tool_success")
         stats = core.get_stats()
@@ -128,12 +139,14 @@ class TestEmotionDriveCore:
 
     def test_unknown_event_no_crash(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         core = DriveCore()
         snap = core.on_event("completely_unknown_event")
         assert snap.event_count == 1  # Still counted
 
     def test_score_scaling(self):
         from whitemagic.core.intelligence.emotion_drive import DriveCore
+
         # High score should amplify effect
         snap_high = DriveCore()
         snap_high.on_event("novelty_detected", {"score": 2.0})
@@ -146,16 +159,19 @@ class TestEmotionDriveCore:
 # 2. Self-Model / Predictive Introspection
 # =========================================================================
 
+
 class TestSelfModel:
     """Test the SelfModel predictive introspection engine."""
 
     def test_import(self):
         from whitemagic.core.intelligence.self_model import SelfModel, Forecast
+
         assert SelfModel is not None
         assert Forecast is not None
 
     def test_record_and_forecast(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         # Record a rising series
         for i in range(20):
@@ -168,6 +184,7 @@ class TestSelfModel:
 
     def test_falling_trend(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(20):
             model.record("energy", 0.8 - i * 0.02)
@@ -177,6 +194,7 @@ class TestSelfModel:
 
     def test_stable_trend(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(20):
             model.record("balance", 0.5)
@@ -185,6 +203,7 @@ class TestSelfModel:
 
     def test_threshold_alert(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         # Energy dropping toward critical low (0.15)
         for i in range(30):
@@ -195,6 +214,7 @@ class TestSelfModel:
 
     def test_no_alert_when_safe(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(20):
             model.record("energy", 0.7 + i * 0.001)
@@ -203,6 +223,7 @@ class TestSelfModel:
 
     def test_forecast_all(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(10):
             model.record("energy", 0.5 + i * 0.01)
@@ -213,6 +234,7 @@ class TestSelfModel:
 
     def test_get_alerts(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         # Create a dangerous trend
         for i in range(30):
@@ -222,6 +244,7 @@ class TestSelfModel:
 
     def test_gnosis_portal(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(10):
             model.record("energy", 0.5)
@@ -232,6 +255,7 @@ class TestSelfModel:
 
     def test_forecast_to_dict(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(10):
             model.record("energy", 0.5 + i * 0.01)
@@ -245,6 +269,7 @@ class TestSelfModel:
 
     def test_insufficient_data(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         model.record("energy", 0.5)
         f = model.forecast("energy")
@@ -252,6 +277,7 @@ class TestSelfModel:
 
     def test_record_batch(self):
         from whitemagic.core.intelligence.self_model import SelfModel
+
         model = SelfModel()
         for i in range(5):
             model.record_batch({"energy": 0.5, "karma_debt": 0.1})
@@ -264,6 +290,7 @@ class TestSelfModel:
 # 3. Multi-LLM Ensemble Voting
 # =========================================================================
 
+
 class TestEnsembleVoting:
     """Test ensemble voting handler logic."""
 
@@ -272,16 +299,19 @@ class TestEnsembleVoting:
 
     def test_extract_confidence_percentage(self):
         from whitemagic.tools.handlers.ensemble import _extract_confidence
+
         assert _extract_confidence("I'm 85% confident") == 85
         assert _extract_confidence("Confidence: 92%") == 92
         assert _extract_confidence("My confidence is 70/100") == 70
 
     def test_extract_confidence_default(self):
         from whitemagic.tools.handlers.ensemble import _extract_confidence
+
         assert _extract_confidence("No confidence mentioned here") == 70
 
     def test_analyze_results_strong_consensus(self):
         from whitemagic.tools.handlers.ensemble import _analyze_results
+
         results = [
             {"model": "a", "response": "yes", "confidence": 90, "success": True},
             {"model": "b", "response": "yes", "confidence": 88, "success": True},
@@ -294,6 +324,7 @@ class TestEnsembleVoting:
 
     def test_analyze_results_weak_consensus(self):
         from whitemagic.tools.handlers.ensemble import _analyze_results
+
         results = [
             {"model": "a", "response": "yes", "confidence": 95, "success": True},
             {"model": "b", "response": "no", "confidence": 40, "success": True},
@@ -303,6 +334,7 @@ class TestEnsembleVoting:
 
     def test_analyze_results_no_success(self):
         from whitemagic.tools.handlers.ensemble import _analyze_results
+
         results = [
             {"model": "a", "error": "timeout", "success": False},
         ]
@@ -312,17 +344,20 @@ class TestEnsembleVoting:
 
     def test_query_requires_prompt(self):
         from whitemagic.tools.handlers.ensemble import handle_ensemble_query
+
         result = handle_ensemble_query()
         assert result["status"] == "error"
         assert "prompt" in result["error"]
 
     def test_status_requires_id(self):
         from whitemagic.tools.handlers.ensemble import handle_ensemble_status
+
         result = handle_ensemble_status()
         assert result["status"] == "success"
 
     def test_history_returns_list(self):
         from whitemagic.tools.handlers.ensemble import handle_ensemble_history
+
         result = handle_ensemble_history(limit=5)
         assert result["status"] == "success"
         assert isinstance(result["ensembles"], list)
@@ -332,6 +367,7 @@ class TestEnsembleVoting:
 # 4. Cross-Device Session Handoff
 # =========================================================================
 
+
 class TestSessionHandoff:
     """Test cross-device session handoff handlers."""
 
@@ -340,18 +376,21 @@ class TestSessionHandoff:
 
     def test_handoff_transfer_requires_session_id(self):
         from whitemagic.tools.handlers.session import handle_session_handoff_transfer
+
         result = handle_session_handoff_transfer()
         assert result["status"] == "error"
         assert "session_id" in result["error"]
 
     def test_accept_handoff_requires_id(self):
         from whitemagic.tools.handlers.session import handle_session_accept_handoff
+
         result = handle_session_accept_handoff()
         assert result["status"] == "error"
         assert "handoff_id" in result["error"]
 
     def test_list_handoffs(self):
         from whitemagic.tools.handlers.session import handle_session_list_handoffs
+
         result = handle_session_list_handoffs()
         assert result["status"] == "success"
         assert "handoffs" in result
@@ -361,6 +400,7 @@ class TestSessionHandoff:
 # 5. Load-Aware Task Routing
 # =========================================================================
 
+
 class TestLoadAwareRouting:
     """Test load-aware task routing."""
 
@@ -369,6 +409,7 @@ class TestLoadAwareRouting:
 
     def test_route_smart_returns_local(self):
         from whitemagic.tools.handlers.task_dist import handle_task_route_smart
+
         result = handle_task_route_smart(task_type="general")
         assert result["status"] == "success"
         assert "recommended_host" in result
@@ -377,6 +418,7 @@ class TestLoadAwareRouting:
 
     def test_route_smart_local_load(self):
         from whitemagic.tools.handlers.task_dist import _get_local_load
+
         load = _get_local_load()
         assert load["available"] is True
         assert "load_pct" in load
@@ -387,6 +429,7 @@ class TestLoadAwareRouting:
 # 6. Worker Daemon
 # =========================================================================
 
+
 class TestWorkerDaemon:
     """Test the WorkerDaemon class."""
 
@@ -395,12 +438,14 @@ class TestWorkerDaemon:
 
     def test_init(self):
         from whitemagic.agents.worker_daemon import WorkerDaemon
+
         daemon = WorkerDaemon(poll_interval=1.0, worker_name="test-worker")
         assert daemon.worker_name == "test-worker"
         assert daemon.poll_interval == 1.0
 
     def test_get_stats(self):
         from whitemagic.agents.worker_daemon import WorkerDaemon
+
         daemon = WorkerDaemon(worker_name="test-worker")
         stats = daemon.get_stats()
         assert stats["worker_name"] == "test-worker"
@@ -409,16 +454,25 @@ class TestWorkerDaemon:
 
     def test_shell_safety_check(self):
         from whitemagic.agents.worker_daemon import WorkerDaemon
+
         daemon = WorkerDaemon()
-        task = {"id": "test-1", "mode": "shell", "command": "rm -rf /", "status": "pending"}
+        task = {
+            "id": "test-1",
+            "mode": "shell",
+            "command": "rm -rf /",
+            "status": "pending",
+        }
         result = daemon._execute_shell_task(task)
         assert result["success"] is False
-        assert "safety" in result["error"].lower() or "rejected" in result["error"].lower()
+        assert (
+            "safety" in result["error"].lower() or "rejected" in result["error"].lower()
+        )
 
 
 # =========================================================================
 # 7. Mobile Webhook Triggers
 # =========================================================================
+
 
 class TestWebhookTriggers:
     """Test webhook trigger route definitions."""
@@ -426,17 +480,24 @@ class TestWebhookTriggers:
     def test_import(self):
         try:
             from whitemagic.interfaces.api.routes.webhook_triggers import (
-                ALLOWED_ACTIONS, router
+                ALLOWED_ACTIONS,
+                router,
             )
+
             assert len(ALLOWED_ACTIONS) > 0
             if router is None:
-                pytest.skip("FastAPI not installed — router is None (graceful degradation)")
+                pytest.skip(
+                    "FastAPI not installed — router is None (graceful degradation)"
+                )
         except ImportError:
             pytest.skip("FastAPI not installed")
 
     def test_allowed_actions_structure(self):
         try:
-            from whitemagic.interfaces.api.routes.webhook_triggers import ALLOWED_ACTIONS
+            from whitemagic.interfaces.api.routes.webhook_triggers import (
+                ALLOWED_ACTIONS,
+            )
+
             for name, config in ALLOWED_ACTIONS.items():
                 assert "description" in config
                 assert "tool" in config
@@ -450,17 +511,25 @@ class TestWebhookTriggers:
 # 8. Dispatch Table Wiring
 # =========================================================================
 
+
 class TestDispatchWiring:
     """Verify all new tools are wired into the dispatch table."""
 
     def test_new_tools_in_dispatch_table(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         new_tools = [
-            "ensemble.query", "ensemble.status", "ensemble.history",
-            "session.handoff_transfer", "session.accept_handoff", "session.list_handoffs",
+            "ensemble.query",
+            "ensemble.status",
+            "ensemble.history",
+            "session.handoff_transfer",
+            "session.accept_handoff",
+            "session.list_handoffs",
             "task.route_smart",
-            "drive.snapshot", "drive.event",
-            "selfmodel.forecast", "selfmodel.alerts",
+            "drive.snapshot",
+            "drive.event",
+            "selfmodel.forecast",
+            "selfmodel.alerts",
             "worker.status",
         ]
         for tool in new_tools:
@@ -471,19 +540,23 @@ class TestDispatchWiring:
 # 9. Registry Wiring
 # =========================================================================
 
+
 class TestRegistryWiring:
     """Verify all new tools are registered."""
 
     def test_new_tools_in_registry(self):
         from whitemagic.tools.registry import get_tool
+
         # v12.5: ensemble.query/status/history → ensemble (unified)
         # v12.5: session.handoff_transfer/accept/list → session.handoff (unified)
         new_tools = [
             "ensemble",
             "session.handoff",
             "task.route_smart",
-            "drive.snapshot", "drive.event",
-            "selfmodel.forecast", "selfmodel.alerts",
+            "drive.snapshot",
+            "drive.event",
+            "selfmodel.forecast",
+            "selfmodel.alerts",
             "worker.status",
         ]
         for tool_name in new_tools:
@@ -496,11 +569,13 @@ class TestRegistryWiring:
 # 10. Introspection Handler Wiring
 # =========================================================================
 
+
 class TestIntrospectionHandlers:
     """Verify introspection handlers for new modules work."""
 
     def test_drive_snapshot_handler(self):
         from whitemagic.tools.handlers.cyberbrain import handle_drive_snapshot
+
         result = handle_drive_snapshot()
         assert result["status"] == "success"
         assert "drives" in result
@@ -508,29 +583,34 @@ class TestIntrospectionHandlers:
 
     def test_drive_event_handler(self):
         from whitemagic.tools.handlers.cyberbrain import handle_drive_event
+
         result = handle_drive_event(event_type="tool_success")
         assert result["status"] == "success"
         assert "drives" in result
 
     def test_drive_event_requires_type(self):
         from whitemagic.tools.handlers.cyberbrain import handle_drive_event
+
         result = handle_drive_event()
         assert result["status"] == "error"
 
     def test_selfmodel_forecast_handler(self):
         from whitemagic.tools.handlers.cyberbrain import handle_selfmodel_forecast
+
         # No data yet — should return empty forecasts
         result = handle_selfmodel_forecast()
         assert result["status"] == "success"
 
     def test_selfmodel_alerts_handler(self):
         from whitemagic.tools.handlers.cyberbrain import handle_selfmodel_alerts
+
         result = handle_selfmodel_alerts()
         assert result["status"] == "success"
         assert "alert_count" in result
 
     def test_worker_status_handler(self):
         from whitemagic.tools.handlers.cyberbrain import handle_worker_status
+
         result = handle_worker_status()
         assert result["status"] == "success"
         assert "worker_count" in result

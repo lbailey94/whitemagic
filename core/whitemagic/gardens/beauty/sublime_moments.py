@@ -19,6 +19,7 @@ from whitemagic.config.paths import WM_ROOT
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SublimeMoment:
     """A moment of the sublime."""
@@ -135,14 +136,18 @@ class SublimeMoments:
         if not self.sublime_moments:
             return {"message": "No sublime encounters yet"}
 
-        avg_intensity = sum(m.intensity for m in self.sublime_moments) / len(self.sublime_moments)
+        avg_intensity = sum(m.intensity for m in self.sublime_moments) / len(
+            self.sublime_moments
+        )
         transformative = len(self.get_transformative_moments())
 
         return {
             "total_encounters": len(self.sublime_moments),
             "average_intensity": avg_intensity,
             "transformative_count": transformative,
-            "most_intense": self.get_most_intense(1)[0].what if self.sublime_moments else None,
+            "most_intense": self.get_most_intense(1)[0].what
+            if self.sublime_moments
+            else None,
         }
 
     def _save(self) -> None:
@@ -173,6 +178,7 @@ class SublimeMoments:
 # Global instance
 _sublime = None
 
+
 def get_sublime() -> SublimeMoments:
     """Get sublime moments system."""
     global _sublime
@@ -181,6 +187,8 @@ def get_sublime() -> SublimeMoments:
     return _sublime
 
 
-def be_overwhelmed(what: str, beauty_aspect: str, awe_aspect: str, intensity: float) -> SublimeMoment:
+def be_overwhelmed(
+    what: str, beauty_aspect: str, awe_aspect: str, intensity: float
+) -> SublimeMoment:
     """Convenience - encounter the sublime!"""
     return get_sublime().encounter_sublime(what, beauty_aspect, awe_aspect, intensity)

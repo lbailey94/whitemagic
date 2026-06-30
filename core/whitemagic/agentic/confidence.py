@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class ConfidenceLevel(Enum):
     """Confidence levels for agentic execution."""
+
     FULL = "full"
     HIGH = "high"
     MEDIUM = "medium"
@@ -27,6 +28,7 @@ class ConfidenceLevel(Enum):
 @dataclass
 class ConfidenceFactors:
     """Factors that contribute to confidence assessment."""
+
     test_coverage: float = 0.0
     reversibility: float = 0.0
     past_success_rate: float = 0.0
@@ -61,12 +63,14 @@ class ConfidenceAssessor:
     """Assesses confidence for autonomous task execution."""
 
     factors: ConfidenceFactors = field(default_factory=ConfidenceFactors)
-    thresholds: dict[str, float] = field(default_factory=lambda: {
-        "full": 0.90,
-        "high": 0.75,
-        "medium": 0.55,
-        "low": 0.35,
-    })
+    thresholds: dict[str, float] = field(
+        default_factory=lambda: {
+            "full": 0.90,
+            "high": 0.75,
+            "medium": 0.55,
+            "low": 0.35,
+        }
+    )
 
     def assess(self) -> ConfidenceLevel:
         """Assess current confidence level."""

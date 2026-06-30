@@ -29,10 +29,7 @@ class ParallelCognition:
     ) -> list[Any]:
         """Run multiple cognitive tasks in parallel."""
         self._active = len(problems)
-        futures = {
-            self._executor.submit(p): i
-            for i, p in enumerate(problems)
-        }
+        futures = {self._executor.submit(p): i for i, p in enumerate(problems)}
         results: list[Any] = [None] * len(problems)
         for future in as_completed(futures):
             idx = futures[future]

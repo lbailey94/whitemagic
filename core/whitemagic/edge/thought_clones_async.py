@@ -55,12 +55,14 @@ try:
     from whitemagic.optimization.rust_accelerators import (
         tokio_deploy_clones as _imported_tokio_deploy,
     )
+
     _RUST_TOKIO = tokio_clones_available()
     _tokio_deploy = _imported_tokio_deploy
     if _RUST_TOKIO:
         logger.debug("Rust Tokio Clone Army available — 208× fast-path enabled")
 except ImportError:
     pass
+
 
 @dataclass
 class AsyncThoughtPath:
@@ -74,6 +76,7 @@ class AsyncThoughtPath:
     duration_ms: float = field(default=0)
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 class CloneTier(StrEnum):
     """Ancient Chinese military-inspired capability/cost tiers.
 
@@ -81,6 +84,7 @@ class CloneTier(StrEnum):
     Wei Wuzu (魏武卒): Martial Troops — professional heavy infantry, main force.
     Huben (虎贲): Tiger Runners — king's personal elite guard, held in reserve.
     """
+
     XIANFENG = "xianfeng"
     WEI_WUZU = "wei_wuzu"
     HUBEN = "huben"
@@ -96,6 +100,7 @@ class CloneConfig:
     min_confidence: float = 0.5
     diversity_factor: int = 8  # Number of base strategies to cycle through
     default_tier: CloneTier = CloneTier.XIANFENG  # Default tier for tiered exploration
+
 
 class AsyncThoughtCloneArmy:
     """Deploy thousands of async thought clones for parallel exploration.
@@ -141,34 +146,51 @@ class AsyncThoughtCloneArmy:
         if active_tier == CloneTier.XIANFENG:
             # Fast, diverse, lightweight strategies
             base_strategies = [
-                "quick_analytical", "surface_scan", "pattern_match",
-                "heuristic_guess", "fast_filter", "shallow_search",
+                "quick_analytical",
+                "surface_scan",
+                "pattern_match",
+                "heuristic_guess",
+                "fast_filter",
+                "shallow_search",
             ]
             confidence_floor = 0.3
             cost_estimate = "low"
         elif active_tier == CloneTier.WEI_WUZU:
             # Balanced depth and speed
             base_strategies = [
-                "analytical", "systematic", "pragmatic", "creative",
-                "skeptical", "deep_dive", "cross_reference",
+                "analytical",
+                "systematic",
+                "pragmatic",
+                "creative",
+                "skeptical",
+                "deep_dive",
+                "cross_reference",
             ]
             confidence_floor = 0.5
             cost_estimate = "medium"
-        else :
+        else:
             # HUBEN
             # Maximum reasoning, used sparingly
             base_strategies = [
-                "deep_analytical", "first_principles", "comprehensive_review",
-                "adversarial_stress_test", "formal_verification", "meta_synthesis",
+                "deep_analytical",
+                "first_principles",
+                "comprehensive_review",
+                "adversarial_stress_test",
+                "formal_verification",
+                "meta_synthesis",
             ]
             confidence_floor = 0.7
             cost_estimate = "high"
 
         start_time = datetime.now()
-        clones_to_deploy = min(num_clones or self.config.max_clones, self.config.max_clones)
+        clones_to_deploy = min(
+            num_clones or self.config.max_clones, self.config.max_clones
+        )
 
         # Generate tier-aware strategies
-        strategies = self._generate_strategies(clones_to_deploy, base_pool=base_strategies)
+        strategies = self._generate_strategies(
+            clones_to_deploy, base_pool=base_strategies
+        )
 
         # Launch clones
         async def safe_clone(strategy: str, clone_id: int) -> Any:
@@ -183,7 +205,9 @@ class AsyncThoughtCloneArmy:
                 Any
             """
             try:
-                return await self._clone_think(prompt, strategy, clone_id, tier_hint=active_tier.value)
+                return await self._clone_think(
+                    prompt, strategy, clone_id, tier_hint=active_tier.value
+                )
             except Exception as e:
                 logger.error("Clone %s failed: %s", clone_id, e, exc_info=True)
                 return None
@@ -194,7 +218,11 @@ class AsyncThoughtCloneArmy:
             max_concurrent=self.config.max_concurrent_api_calls,
         )
 
-        valid_paths = [p for p in paths if isinstance(p, AsyncThoughtPath) and p.confidence >= confidence_floor]
+        valid_paths = [
+            p
+            for p in paths
+            if isinstance(p, AsyncThoughtPath) and p.confidence >= confidence_floor
+        ]
         failed_paths = len(paths) - len(valid_paths)
 
         # Update stats
@@ -205,29 +233,44 @@ class AsyncThoughtCloneArmy:
             new_conf_sum = sum(p.confidence for p in valid_paths)
             total_success = prev_success + len(valid_paths)
 
-            self._stats.update({
-                "total_clones_deployed": self._stats["total_clones_deployed"] + len(paths),
-                "successful_paths": total_success,
-                "failed_paths": self._stats["failed_paths"] + failed_paths,
-                "deployment_time_ms": self._stats["deployment_time_ms"] + deployment_time,
-                "total_tokens": self._stats["total_tokens"] + sum(p.tokens for p in valid_paths),
-                "avg_confidence": (prev_conf_sum + new_conf_sum) / max(1, total_success),
-            })
+            self._stats.update(
+                {
+                    "total_clones_deployed": self._stats["total_clones_deployed"]
+                    + len(paths),
+                    "successful_paths": total_success,
+                    "failed_paths": self._stats["failed_paths"] + failed_paths,
+                    "deployment_time_ms": self._stats["deployment_time_ms"]
+                    + deployment_time,
+                    "total_tokens": self._stats["total_tokens"]
+                    + sum(p.tokens for p in valid_paths),
+                    "avg_confidence": (prev_conf_sum + new_conf_sum)
+                    / max(1, total_success),
+                }
+            )
 
         if valid_paths:
             best_path = max(valid_paths, key=lambda p: p.confidence)
             logger.info(
-                "Tiered best path [%s]: %s "
-                "(confidence: %.2f, cost: %s)"
-            , active_tier.value, best_path.strategy, best_path.confidence, cost_estimate)
+                "Tiered best path [%s]: %s (confidence: %.2f, cost: %s)",
+                active_tier.value,
+                best_path.strategy,
+                best_path.confidence,
+                cost_estimate,
+            )
             return best_path
 
         # Fallback: if no valid paths and we're not at Huben, escalate
         if active_tier != CloneTier.HUBEN:
-            next_tier = CloneTier.WEI_WUZU if active_tier == CloneTier.XIANFENG else CloneTier.HUBEN
+            next_tier = (
+                CloneTier.WEI_WUZU
+                if active_tier == CloneTier.XIANFENG
+                else CloneTier.HUBEN
+            )
             logger.warning(
-                "No valid paths at %s tier. Escalating to %s."
-            , active_tier.value, next_tier.value)
+                "No valid paths at %s tier. Escalating to %s.",
+                active_tier.value,
+                next_tier.value,
+            )
             return await self.parallel_explore_tiered(
                 prompt, num_clones=num_clones, use_tokio=use_tokio, tier=next_tier
             )
@@ -243,7 +286,11 @@ class AsyncThoughtCloneArmy:
         )
 
     async def parallel_explore(
-        self, prompt: str, num_clones: int | None = None, *, use_tokio: bool = True,
+        self,
+        prompt: str,
+        num_clones: int | None = None,
+        *,
+        use_tokio: bool = True,
     ) -> AsyncThoughtPath:
         """Explore prompt with async clones.
 
@@ -257,7 +304,9 @@ class AsyncThoughtCloneArmy:
 
         """
         start_time = datetime.now()
-        clones_to_deploy = min(num_clones or self.config.max_clones, self.config.max_clones)
+        clones_to_deploy = min(
+            num_clones or self.config.max_clones, self.config.max_clones
+        )
 
         # v14.5: Rust Tokio fast-path — 208× faster than Python asyncio
         if use_tokio and _RUST_TOKIO and callable(_tokio_deploy):
@@ -268,15 +317,22 @@ class AsyncThoughtCloneArmy:
                     elapsed_ms = result.get("elapsed_ms", 0.0)
                     # Update cumulative stats
                     async with self._stats_lock:
-                        self._stats["total_clones_deployed"] += result.get("total_clones", 0)
+                        self._stats["total_clones_deployed"] += result.get(
+                            "total_clones", 0
+                        )
                         self._stats["successful_paths"] += result.get("total_clones", 0)
                         self._stats["total_tokens"] += result.get("total_tokens", 0)
                         self._stats["deployment_time_ms"] += elapsed_ms
-                        self._stats["avg_confidence"] = result.get("avg_confidence", 0.0)
+                        self._stats["avg_confidence"] = result.get(
+                            "avg_confidence", 0.0
+                        )
                     logger.info(
-                        "Tokio fast-path: %s clones in %sms "
-                        "(winner: %s, conf: %s)"
-                    , clones_to_deploy, format(elapsed_ms, ".1f"), winner.get('strategy', '?'), format(winner.get('confidence', 0), ".2f"))
+                        "Tokio fast-path: %s clones in %sms (winner: %s, conf: %s)",
+                        clones_to_deploy,
+                        format(elapsed_ms, ".1f"),
+                        winner.get("strategy", "?"),
+                        format(winner.get("confidence", 0), ".2f"),
+                    )
                     return AsyncThoughtPath(
                         strategy=winner.get("strategy", "tokio_direct"),
                         content=winner.get("response", ""),
@@ -284,12 +340,23 @@ class AsyncThoughtCloneArmy:
                         tokens=winner.get("tokens_used", 0),
                         clone_id=winner.get("clone_id", 0),
                         duration_ms=elapsed_ms,
-                        metadata={"backend": "rust_tokio", "strategy_votes": result.get("strategy_votes", {})},
+                        metadata={
+                            "backend": "rust_tokio",
+                            "strategy_votes": result.get("strategy_votes", {}),
+                        },
                     )
             except Exception as e:
-                logger.debug("Tokio fast-path failed, falling back to asyncio: %s", e, exc_info=True)
+                logger.debug(
+                    "Tokio fast-path failed, falling back to asyncio: %s",
+                    e,
+                    exc_info=True,
+                )
 
-        logger.info("Deploying %s clones for prompt: {prompt[:50]}...", clones_to_deploy, exc_info=True)
+        logger.info(
+            "Deploying %s clones for prompt: {prompt[:50]}...",
+            clones_to_deploy,
+            exc_info=True,
+        )
 
         # Generate strategies
         strategies = self._generate_strategies(clones_to_deploy)
@@ -328,7 +395,9 @@ class AsyncThoughtCloneArmy:
                     if result.confidence >= early_stop_threshold:
                         logger.info(
                             "Early stop: clone %s reached confidence %.2f, skipping %d pending",
-                            result.clone_id, result.confidence, len([t for t in tasks if not t.done()]),
+                            result.clone_id,
+                            result.confidence,
+                            len([t for t in tasks if not t.done()]),
                         )
                         # Cancel remaining tasks
                         for t in tasks:
@@ -359,18 +428,25 @@ class AsyncThoughtCloneArmy:
             new_conf_sum = sum(p.confidence for p in valid_paths)
             total_success = prev_success + len(valid_paths)
 
-            self._stats.update({
-                "total_clones_deployed": self._stats["total_clones_deployed"] + len(paths),
-                "successful_paths": total_success,
-                "failed_paths": self._stats["failed_paths"] + failed_paths,
-                "deployment_time_ms": self._stats["deployment_time_ms"] + deployment_time,
-                "total_tokens": self._stats["total_tokens"] + sum(p.tokens for p in valid_paths),
-                "avg_confidence": (prev_conf_sum + new_conf_sum) / max(1, total_success),
-            })
+            self._stats.update(
+                {
+                    "total_clones_deployed": self._stats["total_clones_deployed"]
+                    + len(paths),
+                    "successful_paths": total_success,
+                    "failed_paths": self._stats["failed_paths"] + failed_paths,
+                    "deployment_time_ms": self._stats["deployment_time_ms"]
+                    + deployment_time,
+                    "total_tokens": self._stats["total_tokens"]
+                    + sum(p.tokens for p in valid_paths),
+                    "avg_confidence": (prev_conf_sum + new_conf_sum)
+                    / max(1, total_success),
+                }
+            )
 
         # Feed outcomes to ToolBandit for strategy learning
         try:
             from whitemagic.tools.handlers.tool_bandit import get_tool_bandit
+
             bandit = get_tool_bandit()
             for p in valid_paths:
                 bandit.record_clone_outcome(
@@ -378,7 +454,11 @@ class AsyncThoughtCloneArmy:
                     success=p.confidence > 0.5,
                     clone_type="thought",
                     task_type="clone_deployment",
-                    metadata={"confidence": p.confidence, "tokens": p.tokens, "llm_used": p.metadata.get("llm_used", False)},
+                    metadata={
+                        "confidence": p.confidence,
+                        "tokens": p.tokens,
+                        "llm_used": p.metadata.get("llm_used", False),
+                    },
                     quality=p.confidence,
                 )
         except Exception as e:
@@ -386,7 +466,11 @@ class AsyncThoughtCloneArmy:
 
         if valid_paths:
             best_path = max(valid_paths, key=lambda p: p.confidence)
-            logger.info("Best path: %s (confidence: {best_path.confidence:.2f})", best_path.strategy, exc_info=True)
+            logger.info(
+                "Best path: %s (confidence: {best_path.confidence:.2f})",
+                best_path.strategy,
+                exc_info=True,
+            )
             return best_path
 
         # Fallback if no valid paths
@@ -399,7 +483,9 @@ class AsyncThoughtCloneArmy:
             clone_id=-1,
         )
 
-    async def batch_explore(self, prompts: list[str], clones_per_prompt: int = 100) -> list[AsyncThoughtPath]:
+    async def batch_explore(
+        self, prompts: list[str], clones_per_prompt: int = 100
+    ) -> list[AsyncThoughtPath]:
         """Explore multiple prompts in parallel.
 
         Args:
@@ -410,6 +496,7 @@ class AsyncThoughtCloneArmy:
             Best path for each prompt
 
         """
+
         async def explore_prompt(prompt: Any) -> Any:
             """
             Perform the explore prompt operation.
@@ -442,7 +529,10 @@ class AsyncThoughtCloneArmy:
             try:
                 # Attempt real LLM call via Ollama
                 content, tokens, llm_used = await self._llm_think(
-                    prompt, strategy, clone_id, tier_hint,
+                    prompt,
+                    strategy,
+                    clone_id,
+                    tier_hint,
                 )
 
                 if not llm_used:
@@ -473,7 +563,9 @@ class AsyncThoughtCloneArmy:
                         "timestamp": datetime.now().isoformat(),
                         "prompt_length": len(prompt),
                         "llm_used": llm_used,
-                        "model": _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"]) if llm_used else None,
+                        "model": _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"])
+                        if llm_used
+                        else None,
                     },
                 )
 
@@ -500,13 +592,16 @@ class AsyncThoughtCloneArmy:
         """Call Ollama LLM for real reasoning. Returns (content, tokens, used_llm)."""
         try:
             from whitemagic.tools.handlers.ollama import _generate, _ollama_preflight
+
             if _ollama_preflight() is not None:
                 return "", 0, False
 
             model = _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"])
             strategy_guidance = _STRATEGY_PROMPTS.get(
                 strategy.split("_")[-1] if "_" in strategy else strategy,
-                _STRATEGY_PROMPTS.get(strategy, f"Approach this using {strategy} methodology."),
+                _STRATEGY_PROMPTS.get(
+                    strategy, f"Approach this using {strategy} methodology."
+                ),
             )
             system = f"You are clone {clone_id} in a thought clone army. {strategy_guidance} Be concise."
             result = await _generate(model, prompt, system=system)
@@ -519,7 +614,9 @@ class AsyncThoughtCloneArmy:
             logger.debug("LLM think fallback for clone %s: %s", clone_id, e)
             return "", 0, False
 
-    def _generate_strategies(self, count: int, base_pool: list[str] | None = None) -> list[str]:
+    def _generate_strategies(
+        self, count: int, base_pool: list[str] | None = None
+    ) -> list[str]:
         """Generate diverse strategies for clones.
 
         Args:
@@ -527,9 +624,18 @@ class AsyncThoughtCloneArmy:
             base_pool: Optional override for the base strategy pool (used by tiered mode)
         """
         base_strategies = base_pool or [
-            "analytical", "creative", "systematic", "intuitive",
-            "skeptical", "optimistic", "pragmatic", "theoretical",
-            "experimental", "minimalist", "comprehensive", "focused",
+            "analytical",
+            "creative",
+            "systematic",
+            "intuitive",
+            "skeptical",
+            "optimistic",
+            "pragmatic",
+            "theoretical",
+            "experimental",
+            "minimalist",
+            "comprehensive",
+            "focused",
         ]
 
         strategies = []
@@ -565,7 +671,9 @@ class AsyncThoughtCloneArmy:
             f"Clone {clone_id} approaches {prompt} using {strategy} methodology.",
         )
         if strategy not in template:
-            template = template.replace(f"Clone {clone_id}", f"Clone {clone_id} ({strategy})")
+            template = template.replace(
+                f"Clone {clone_id}", f"Clone {clone_id} ({strategy})"
+            )
 
         # Add strategy-specific insights
         insights = [
@@ -627,9 +735,9 @@ class AsyncThoughtCloneArmy:
         Phase 3 (Huben): Production validation → comprehensive output
         """
         from whitemagic.codegenome.vault import get_geneseed_vault
+
         vault = get_geneseed_vault()
 
-        # Phase 1: Xianfeng — fast intent extraction
         xianfeng_result = await self.parallel_explore_tiered(
             f"Parse vibe prompt into code template query: {prompt}",
             num_clones=num_clones or 100,
@@ -640,7 +748,10 @@ class AsyncThoughtCloneArmy:
         if xianfeng_result.confidence < 0.3:
             logger.warning("Vibe parsing failed at Xianfeng tier, escalating")
             return await self.parallel_explore_tiered(
-                prompt, num_clones=num_clones, use_tokio=use_tokio, tier=CloneTier.WEI_WUZU,
+                prompt,
+                num_clones=num_clones,
+                use_tokio=use_tokio,
+                tier=CloneTier.WEI_WUZU,
             )
 
         # Extract template info from Xianfeng result
@@ -654,7 +765,6 @@ class AsyncThoughtCloneArmy:
         variables = vault_result.get("variables", {})
         base_code = vault_result["code"]
 
-        # Phase 2: Wei Wuzu — template refinement
         wei_wuzu_prompt = (
             f"Refine this {template_name} code with variables {variables}:\n"
             f"{base_code}\n\n"
@@ -685,7 +795,6 @@ class AsyncThoughtCloneArmy:
 
         refined_code = wei_wuzu_result.content
 
-        # Phase 3: Huben — production validation
         huben_prompt = (
             f"Validate and harden this {template_name} for production:\n"
             f"{refined_code}\n\n"
@@ -748,9 +857,6 @@ class AsyncThoughtCloneArmy:
             "deployment_time_ms": 0,
         }
 
-# ---------------------------------------------------------------------------
-# Doctrine-Aware Deployment Functions
-# ---------------------------------------------------------------------------
 
 async def quick_explore(prompt: str, clones: int = 1000) -> AsyncThoughtPath:
     """Quick exploration with default configuration."""
@@ -779,9 +885,11 @@ async def doctrine_deploy(
     # Try doctrine-aware deployment
     try:
         from whitemagic.agents.doctrine import get_doctrine
+
         doctrine = get_doctrine()
         force_specs = doctrine.recommend_force(
-            objective, constraints={"max_clones": num_clones},
+            objective,
+            constraints={"max_clones": num_clones},
         )
 
         # Deploy per force spec
@@ -791,33 +899,40 @@ async def doctrine_deploy(
             if spec.force_type.value == "light_infantry":
                 # Tokio fast-path for infantry
                 path = await army.parallel_explore(
-                    objective, spec.clone_count, use_tokio=True,
+                    objective,
+                    spec.clone_count,
+                    use_tokio=True,
                 )
-                results.append({
-                    "force": spec.force_type.value,
-                    "clones": spec.clone_count,
-                    "strategy": path.strategy,
-                    "confidence": path.confidence,
-                    "nature": spec.nature.value,
-                    "wu_xing_phase": spec.wu_xing_phase.value,
-                })
+                results.append(
+                    {
+                        "force": spec.force_type.value,
+                        "clones": spec.clone_count,
+                        "strategy": path.strategy,
+                        "confidence": path.confidence,
+                        "nature": spec.nature.value,
+                        "wu_xing_phase": spec.wu_xing_phase.value,
+                    }
+                )
             elif spec.force_type.value == "dare_to_die":
                 # Ralph Wiggum stateless mode
                 try:
                     from whitemagic.core.intelligence.agentic.fool_guard import (
                         deploy_dare_to_die,
                     )
+
                     dtd = await deploy_dare_to_die(
                         mission=objective,
                         max_attempts=min(spec.clone_count, 20),
                     )
-                    results.append({
-                        "force": "dare_to_die",
-                        "attempts": dtd.total_attempts,
-                        "verdict": dtd.verdict,
-                        "nature": "qi",
-                        "wu_xing_phase": spec.wu_xing_phase.value,
-                    })
+                    results.append(
+                        {
+                            "force": "dare_to_die",
+                            "attempts": dtd.total_attempts,
+                            "verdict": dtd.verdict,
+                            "nature": "qi",
+                            "wu_xing_phase": spec.wu_xing_phase.value,
+                        }
+                    )
                 except (ImportError, AttributeError):
                     pass
 
@@ -863,15 +978,15 @@ async def cast_brick_to_attract_jade(
     """
     army = AsyncThoughtCloneArmy()
 
-    # Phase 1: The Brick — mass scouting
     scout_result = await army.parallel_explore(objective, scout_clones, use_tokio=True)
 
-    # Phase 2: The Jade — precision strike using scout intelligence
     refined_prompt = (
         f"Based on initial analysis (strategy={scout_result.strategy}, "
         f"confidence={scout_result.confidence:.2f}): {objective}"
     )
-    strike_result = await army.parallel_explore(refined_prompt, strike_clones, use_tokio=False)
+    strike_result = await army.parallel_explore(
+        refined_prompt, strike_clones, use_tokio=False
+    )
 
     return {
         "tactic": "Cast a Brick to Attract Jade",

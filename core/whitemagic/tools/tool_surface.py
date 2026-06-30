@@ -22,7 +22,6 @@ def get_gana_names() -> list[str]:
     return list(GANA_NAMES)
 
 
-
 def get_gana_descriptions() -> dict[str, str]:
     """
     Get the gana descriptions.
@@ -31,7 +30,6 @@ def get_gana_descriptions() -> dict[str, str]:
         dict[str, str]
     """
     return dict(GANA_SHORT_DESC)
-
 
 
 @lru_cache(maxsize=1)
@@ -55,10 +53,14 @@ def get_surface_counts() -> dict[str, int | dict[str, int]]:
     Returns:
         dict[str, int | dict[str, int]]
     """
-    authored_tools, callable_tools, gana_tools, nested_unique_tools, dispatch_tools = _cached_surface_counts()
+    authored_tools, callable_tools, gana_tools, nested_unique_tools, dispatch_tools = (
+        _cached_surface_counts()
+    )
     by_stability: dict[str, int] = {tier.value: 0 for tier in ToolStability}
     for tool in TOOL_REGISTRY:
-        by_stability[tool.stability.value] = by_stability.get(tool.stability.value, 0) + 1
+        by_stability[tool.stability.value] = (
+            by_stability.get(tool.stability.value, 0) + 1
+        )
     return {
         "authored_tools": authored_tools,
         "callable_tools": callable_tools,
@@ -67,7 +69,6 @@ def get_surface_counts() -> dict[str, int | dict[str, int]]:
         "dispatch_tools": dispatch_tools,
         "by_stability": by_stability,
     }
-
 
 
 def get_gana_metadata() -> dict[str, tuple[str, list[str]]]:
@@ -87,7 +88,6 @@ def get_gana_metadata() -> dict[str, tuple[str, list[str]]]:
     }
 
 
-
 @lru_cache(maxsize=1)
 def _cached_callable_tool_names() -> tuple[str, ...]:
     return tuple(tool.name for tool in TOOL_REGISTRY)
@@ -103,7 +103,6 @@ def get_callable_tool_names() -> list[str]:
     return list(_cached_callable_tool_names())
 
 
-
 @lru_cache(maxsize=1)
 def _cached_callable_tool_definitions() -> tuple[ToolDefinition, ...]:
     return tuple(TOOL_REGISTRY)
@@ -117,7 +116,6 @@ def get_callable_tool_definitions() -> list[ToolDefinition]:
         list[ToolDefinition]
     """
     return list(_cached_callable_tool_definitions())
-
 
 
 def get_callable_tool_definition(name: str) -> ToolDefinition | None:

@@ -16,6 +16,7 @@ Usage:
         holographic_5d_distance, holographic_5d_knn, simd_holographic_status
     )
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -37,6 +38,7 @@ _HAS_ZIG = False
 def _find_zig_lib() -> str | None:
     """Locate the compiled Zig shared library."""
     import os
+
     base = Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-zig"
     candidates = [
         os.environ.get("WM_ZIG_LIB", ""),
@@ -60,14 +62,18 @@ def _load_lib() -> Any:
             return _lib
         path = _find_zig_lib()
         if not path:
-            logger.debug("Zig SIMD library not found — using Python fallback for holographic 5D")
+            logger.debug(
+                "Zig SIMD library not found — using Python fallback for holographic 5D"
+            )
             return None
         try:
             lib = ctypes.CDLL(path)
 
             # Check for holographic 5D exports
             if not hasattr(lib, "wm_holographic_5d_distance"):
-                logger.debug("Zig library missing holographic 5D symbols — using Python fallback")
+                logger.debug(
+                    "Zig library missing holographic 5D symbols — using Python fallback"
+                )
                 return None
 
             # wm_holographic_5d_distance(a_ptr, b_ptr, weights_ptr) -> f32
@@ -106,10 +112,6 @@ def _load_lib() -> Any:
             logger.debug("Failed to load Zig holographic 5D: %s", e)
             return None
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 # Default 5D weights: X(logic/emotion), Y(micro/macro), Z(time), W(importance), V(vitality)
 _DEFAULT_WEIGHTS = (1.0, 1.0, 0.8, 1.2, 1.5)
@@ -150,7 +152,9 @@ def circular_convolution(a: np.ndarray, b: np.ndarray) -> np.ndarray:
             logger.debug("Zig circular_convolution failed: %s", e)
 
     # Fallback to FFT
-    result: np.ndarray = np.real(np.fft.ifft(np.fft.fft(a) * np.fft.fft(b))).astype(np.float32)
+    result: np.ndarray = np.real(np.fft.ifft(np.fft.fft(a) * np.fft.fft(b))).astype(
+        np.float32
+    )
     return cast(np.ndarray, result)
 
 
@@ -170,7 +174,9 @@ def circular_correlation(a: np.ndarray, b: np.ndarray) -> np.ndarray:
             logger.debug("Zig circular_correlation failed: %s", e)
 
     # Fallback to FFT correlation
-    result = np.real(np.fft.ifft(np.conj(np.fft.fft(b)) * np.fft.fft(a))).astype(np.float32)
+    result = np.real(np.fft.ifft(np.conj(np.fft.fft(b)) * np.fft.fft(a))).astype(
+        np.float32
+    )
     return cast(np.ndarray, result)
 
 

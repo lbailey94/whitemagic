@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class ChunkType(Enum):
     """Types of chunks in a stream."""
+
     DATA = "data"
     PROGRESS = "progress"
     METADATA = "metadata"
@@ -30,6 +31,7 @@ class ChunkType(Enum):
 @dataclass
 class StreamChunk:
     """A chunk of streamed data."""
+
     chunk_id: int
     chunk_type: ChunkType
     data: Any
@@ -50,9 +52,7 @@ class StreamableToolResponse:
         self.cancelled = False
 
     async def stream_results(
-        self,
-        results: list,
-        chunk_size: int = 10
+        self, results: list, chunk_size: int = 10
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream results in chunks.
@@ -71,7 +71,7 @@ class StreamableToolResponse:
             progress=0.0,
             is_final=False,
             timestamp=datetime.now(),
-            metadata={"tool": self.tool_name}
+            metadata={"tool": self.tool_name},
         )
         self.chunk_counter += 1
 
@@ -81,9 +81,9 @@ class StreamableToolResponse:
                 logger.info("Stream cancelled for %s", self.tool_name)
                 break
 
-            chunk_data = results[i:i + chunk_size]
+            chunk_data = results[i : i + chunk_size]
             progress = min(1.0, (i + len(chunk_data)) / total)
-            is_final = (i + chunk_size >= total)
+            is_final = i + chunk_size >= total
 
             yield StreamChunk(
                 chunk_id=self.chunk_counter,
@@ -96,7 +96,7 @@ class StreamableToolResponse:
                     "items_in_chunk": len(chunk_data),
                     "items_so_far": i + len(chunk_data),
                     "total_items": total,
-                }
+                },
             )
             self.chunk_counter += 1
 
@@ -114,7 +114,7 @@ class StreamableToolResponse:
                 progress=1.0,
                 is_final=True,
                 timestamp=datetime.now(),
-                metadata={"total_chunks": self.chunk_counter}
+                metadata={"total_chunks": self.chunk_counter},
             )
 
     def cancel(self):
@@ -122,7 +122,9 @@ class StreamableToolResponse:
         self.cancelled = True
 
 
-async def stream_search_results(query: str, results: list, chunk_size: int = 10) -> AsyncGenerator[StreamChunk, None]:
+async def stream_search_results(
+    query: str, results: list, chunk_size: int = 10
+) -> AsyncGenerator[StreamChunk, None]:
     """
     Stream search results progressively.
 
@@ -138,7 +140,9 @@ async def stream_search_results(query: str, results: list, chunk_size: int = 10)
         yield chunk
 
 
-async def stream_large_memory(memory_id: str, content: str, chunk_size: int = 1000) -> AsyncGenerator[StreamChunk, None]:
+async def stream_large_memory(
+    memory_id: str, content: str, chunk_size: int = 1000
+) -> AsyncGenerator[StreamChunk, None]:
     """
     Stream large memory content in chunks.
 
@@ -154,15 +158,15 @@ async def stream_large_memory(memory_id: str, content: str, chunk_size: int = 10
         progress=0.0,
         is_final=False,
         timestamp=datetime.now(),
-        metadata={"content_type": "text"}
+        metadata={"content_type": "text"},
     )
 
     # Stream content in chunks
     chunk_id = 1
     for i in range(0, len(content), chunk_size):
-        chunk_text = content[i:i + chunk_size]
+        chunk_text = content[i : i + chunk_size]
         progress = min(1.0, (i + len(chunk_text)) / len(content))
-        is_final = (i + chunk_size >= len(content))
+        is_final = i + chunk_size >= len(content)
 
         yield StreamChunk(
             chunk_id=chunk_id,
@@ -174,7 +178,7 @@ async def stream_large_memory(memory_id: str, content: str, chunk_size: int = 10
             metadata={
                 "char_offset": i,
                 "chunk_length": len(chunk_text),
-            }
+            },
         )
         chunk_id += 1
 
@@ -188,11 +192,13 @@ async def stream_large_memory(memory_id: str, content: str, chunk_size: int = 10
         progress=1.0,
         is_final=True,
         timestamp=datetime.now(),
-        metadata={}
+        metadata={},
     )
 
 
-async def stream_tool_call(tool_name: str, **kwargs) -> AsyncGenerator[StreamChunk, None]:
+async def stream_tool_call(
+    tool_name: str, **kwargs
+) -> AsyncGenerator[StreamChunk, None]:
     """
     Generic streaming wrapper for any tool call.
 
@@ -209,7 +215,7 @@ async def stream_tool_call(tool_name: str, **kwargs) -> AsyncGenerator[StreamChu
             progress=0.0,
             is_final=False,
             timestamp=datetime.now(),
-            metadata={"tool": tool_name, "args": kwargs}
+            metadata={"tool": tool_name, "args": kwargs},
         )
 
         # Execute tool (would call actual tool here)
@@ -231,7 +237,7 @@ async def stream_tool_call(tool_name: str, **kwargs) -> AsyncGenerator[StreamChu
                 progress=1.0,
                 is_final=True,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             )
 
     except Exception as e:
@@ -243,7 +249,7 @@ async def stream_tool_call(tool_name: str, **kwargs) -> AsyncGenerator[StreamChu
             progress=0.0,
             is_final=True,
             timestamp=datetime.now(),
-            metadata={"error_type": type(e).__name__}
+            metadata={"error_type": type(e).__name__},
         )
 
 
@@ -252,7 +258,9 @@ class StreamingToolAdapter:
     """Adapter to make existing tools streamable."""
 
     @staticmethod
-    async def search_memories_stream(query: str, limit: int = 100, **kwargs) -> AsyncGenerator[StreamChunk, None]:
+    async def search_memories_stream(
+        query: str, limit: int = 100, **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
         """Stream search_memories results."""
         # In production, this would call the actual search_memories tool
         # For now, simulate
@@ -262,7 +270,9 @@ class StreamingToolAdapter:
             yield chunk
 
     @staticmethod
-    async def list_memories_stream(limit: int = 1000, **kwargs) -> AsyncGenerator[StreamChunk, None]:
+    async def list_memories_stream(
+        limit: int = 1000, **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
         """Stream list_memories results."""
         # Simulate large list
         results = [{"id": f"mem_{i}"} for i in range(limit)]
@@ -272,7 +282,9 @@ class StreamingToolAdapter:
             yield chunk
 
     @staticmethod
-    async def graph_walk_stream(start_id: str, depth: int = 3, **kwargs) -> AsyncGenerator[StreamChunk, None]:
+    async def graph_walk_stream(
+        start_id: str, depth: int = 3, **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
         """Stream graph walk results as they're discovered."""
         StreamableToolResponse("graph_walk")
 
@@ -284,7 +296,7 @@ class StreamingToolAdapter:
             progress=0.0,
             is_final=False,
             timestamp=datetime.now(),
-            metadata={"depth": depth}
+            metadata={"depth": depth},
         )
 
         # Simulate progressive discovery
@@ -303,7 +315,7 @@ class StreamingToolAdapter:
                 progress=progress,
                 is_final=(level == depth - 1),
                 timestamp=datetime.now(),
-                metadata={"total_visited": len(visited)}
+                metadata={"total_visited": len(visited)},
             )
 
             await asyncio.sleep(0.05)
@@ -316,7 +328,7 @@ class StreamingToolAdapter:
             progress=1.0,
             is_final=True,
             timestamp=datetime.now(),
-            metadata={}
+            metadata={},
         )
 
 

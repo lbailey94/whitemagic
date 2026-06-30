@@ -28,32 +28,20 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Re-export primitives from dispatch_core so existing imports keep working
-# ---------------------------------------------------------------------------
 from whitemagic.tools.dispatch_agents import DISPATCH_AGENTS
 from whitemagic.tools.dispatch_core import (  # noqa: E402
     LazyHandler,
 )
 from whitemagic.tools.dispatch_intelligence import DISPATCH_INTELLIGENCE
-
-# ---------------------------------------------------------------------------
-# Import domain slices
-# ---------------------------------------------------------------------------
 from whitemagic.tools.dispatch_memory import DISPATCH_MEMORY
 from whitemagic.tools.dispatch_security import DISPATCH_SECURITY
 
-# ---------------------------------------------------------------------------
-# Operational & miscellaneous tools (not yet extracted to a domain slice)
-# Add new tools to the relevant slice file instead.
-# ---------------------------------------------------------------------------
 _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
-    # --- Yin-Yang Balance & Harmony Vector ---
-    "record_yin_yang_activity": LazyHandler("balance", "handle_record_yin_yang_activity"),
+    "record_yin_yang_activity": LazyHandler(
+        "balance", "handle_record_yin_yang_activity"
+    ),
     "get_yin_yang_balance": LazyHandler("balance", "handle_get_yin_yang_balance"),
     "harmony_vector": LazyHandler("balance", "handle_harmony_vector"),
-
-    # --- Garden ---
     "garden_activate": LazyHandler("garden", "handle_garden_activate"),
     "garden_status": LazyHandler("garden", "handle_garden_status"),
     "garden_synergy": LazyHandler("garden", "handle_garden_synergy"),
@@ -66,8 +54,6 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "garden_stats": LazyHandler("garden", "handle_garden_stats"),
     "garden_browse": LazyHandler("garden", "handle_garden_browse"),
     "garden_resolve": LazyHandler("garden", "handle_garden_resolve"),
-
-    # --- War Room ---
     "art_of_war.chapter": LazyHandler("war_room", "handle_art_of_war_chapter"),
     "art_of_war.assess": LazyHandler("war_room", "handle_assess_terrain"),
     "art_of_war.plan": LazyHandler("war_room", "handle_plan_campaign"),
@@ -86,94 +72,92 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "fool_guard.status": LazyHandler("war_room", "handle_fool_guard_status"),
     "fool_guard.dare_to_die": LazyHandler("war_room", "handle_fool_guard_dare_to_die"),
     "fool_guard.ralph": LazyHandler("war_room", "handle_fool_guard_ralph"),
-
-    # --- Immune (stubs) ---
     "immune_scan": LazyHandler("misc", "handle_immune_scan"),
     "immune_heal": LazyHandler("misc", "handle_immune_heal"),
-
-    # --- DNA Validation ---
     "dna_validate": LazyHandler("misc", "handle_dna_validate"),
     "dna_principles": LazyHandler("misc", "handle_dna_principles"),
-
-    # --- Symbolic / Oracle ---
     "cast_oracle": LazyHandler("misc", "handle_cast_oracle"),
     "wu_xing_balance": LazyHandler("misc", "handle_wu_xing_balance"),
-
-    # --- Gan Ying ---
     "ganying_emit": LazyHandler("ganying", "handle_ganying_emit"),
     "ganying_history": LazyHandler("ganying", "handle_ganying_history"),
     "ganying_listeners": LazyHandler("ganying", "handle_ganying_listeners"),
     "resonance_trace": LazyHandler("ganying", "handle_resonance_trace"),
-
-    # --- Archaeology ---
     "archaeology": LazyHandler("archaeology", "handle_archaeology"),
-    "archaeology_scan_directory": LazyHandler("archaeology", "handle_archaeology_scan_directory"),
+    "archaeology_scan_directory": LazyHandler(
+        "archaeology", "handle_archaeology_scan_directory"
+    ),
     "archaeology_mark_read": LazyHandler("archaeology", "handle_archaeology_mark_read"),
-    "archaeology_mark_written": LazyHandler("archaeology", "handle_archaeology_mark_written"),
+    "archaeology_mark_written": LazyHandler(
+        "archaeology", "handle_archaeology_mark_written"
+    ),
     "archaeology_have_read": LazyHandler("archaeology", "handle_archaeology_have_read"),
-    "archaeology_find_unread": LazyHandler("archaeology", "handle_archaeology_find_unread"),
-    "archaeology_find_changed": LazyHandler("archaeology", "handle_archaeology_find_changed"),
-    "archaeology_recent_reads": LazyHandler("archaeology", "handle_archaeology_recent_reads"),
+    "archaeology_find_unread": LazyHandler(
+        "archaeology", "handle_archaeology_find_unread"
+    ),
+    "archaeology_find_changed": LazyHandler(
+        "archaeology", "handle_archaeology_find_changed"
+    ),
+    "archaeology_recent_reads": LazyHandler(
+        "archaeology", "handle_archaeology_recent_reads"
+    ),
     "archaeology_stats": LazyHandler("archaeology", "handle_archaeology_stats"),
     "archaeology_report": LazyHandler("archaeology", "handle_archaeology_report"),
     "archaeology_search": LazyHandler("archaeology", "handle_archaeology_search"),
-    "archaeology_process_wisdom": LazyHandler("archaeology", "handle_archaeology_process_wisdom"),
-    "archaeology_daily_digest": LazyHandler("archaeology", "handle_archaeology_daily_digest"),
-
-    # --- Internal Wiki (self-knowledge substrate) ---
+    "archaeology_process_wisdom": LazyHandler(
+        "archaeology", "handle_archaeology_process_wisdom"
+    ),
+    "archaeology_daily_digest": LazyHandler(
+        "archaeology", "handle_archaeology_daily_digest"
+    ),
     "wiki.generate": LazyHandler("wiki", "handle_wiki_generate"),
     "wiki.query": LazyHandler("wiki", "handle_wiki_query"),
     "wiki.update": LazyHandler("wiki", "handle_wiki_update"),
     "wiki.scan": LazyHandler("wiki", "handle_wiki_scan"),
     "wiki.stats": LazyHandler("wiki", "handle_wiki_stats"),
-
-    # --- External Repository Tools ---
     "external.wiki_query": LazyHandler("external_repo", "handle_external_wiki_query"),
     "external.repo_scan": LazyHandler("external_repo", "handle_external_repo_scan"),
-    "external.repo_compare": LazyHandler("external_repo", "handle_external_repo_compare"),
-
-    # --- STRATA (codebase static analysis + archaeology) ---
+    "external.repo_compare": LazyHandler(
+        "external_repo", "handle_external_repo_compare"
+    ),
     "strata.analyze": LazyHandler("strata", "handle_strata_analyze"),
     "strata.survey": LazyHandler("strata", "handle_strata_survey"),
     "strata.archaeology": LazyHandler("strata", "handle_strata_archaeology"),
     "strata.list_checks": LazyHandler("strata", "handle_strata_list_checks"),
-
-    # --- Fragment (Rust-powered codebase search, 100x faster) ---
     "fragment.search": LazyHandler("fragment", "handle_fragment_search"),
     "fragment.index": LazyHandler("fragment", "handle_fragment_index"),
     "fragment.status": LazyHandler("fragment", "handle_fragment_status"),
     "fragment.query": LazyHandler("fragment", "handle_fragment_query"),
-
-    # --- Fast Write (atomic file writing with syntax validation) ---
     "fast_write.write": LazyHandler("fast_write", "handle_fast_write_write"),
     "fast_write.append": LazyHandler("fast_write", "handle_fast_write_append"),
     "fast_write.batch": LazyHandler("fast_write", "handle_fast_write_batch"),
     "fast_write.validate": LazyHandler("fast_write", "handle_fast_write_validate"),
-
-    # --- Polyglot Memory (Julia/Elixir/Haskell/Rust backends) ---
     "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
     "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
     "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
     "polyglot.evolution": LazyHandler("polyglot", "handle_polyglot_evolution"),
     "polyglot.yield": LazyHandler("polyglot", "handle_polyglot_yield"),
     "polyglot.actor": LazyHandler("polyglot", "handle_polyglot_actor"),
-
-    # --- Windsurf ---
-    "windsurf_list_conversations": LazyHandler("windsurf_conv", "handle_windsurf_list_conversations"),
-    "windsurf_read_conversation": LazyHandler("windsurf_conv", "handle_windsurf_read_conversation"),
-    "windsurf_export_conversation": LazyHandler("windsurf_conv", "handle_windsurf_export_conversation"),
-    "windsurf_search_conversations": LazyHandler("windsurf_conv", "handle_windsurf_search_conversations"),
+    "windsurf_list_conversations": LazyHandler(
+        "windsurf_conv", "handle_windsurf_list_conversations"
+    ),
+    "windsurf_read_conversation": LazyHandler(
+        "windsurf_conv", "handle_windsurf_read_conversation"
+    ),
+    "windsurf_export_conversation": LazyHandler(
+        "windsurf_conv", "handle_windsurf_export_conversation"
+    ),
+    "windsurf_search_conversations": LazyHandler(
+        "windsurf_conv", "handle_windsurf_search_conversations"
+    ),
     "windsurf_stats": LazyHandler("windsurf_conv", "handle_windsurf_stats"),
-
-    # --- Browser ---
     "browser_navigate": LazyHandler("browser_tools", "handle_browser_navigate"),
     "browser_click": LazyHandler("browser_tools", "handle_browser_click"),
     "browser_type": LazyHandler("browser_tools", "handle_browser_type"),
     "browser_extract_dom": LazyHandler("browser_tools", "handle_browser_extract_dom"),
     "browser_screenshot": LazyHandler("browser_tools", "handle_browser_screenshot"),
-    "browser_get_interactables": LazyHandler("browser_tools", "handle_browser_get_interactables"),
-
-    # --- Web Research ---
+    "browser_get_interactables": LazyHandler(
+        "browser_tools", "handle_browser_get_interactables"
+    ),
     "web_fetch": LazyHandler("web_research", "handle_web_fetch"),
     "web_fetch_enhanced": LazyHandler("web_research", "handle_web_fetch_enhanced"),
     "web_search": LazyHandler("web_research", "handle_web_search"),
@@ -190,19 +174,15 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "parallel_reason": LazyHandler("web_research", "handle_parallel_reason"),
     "codegenome_validate": LazyHandler("web_research", "handle_codegenome_validate"),
     "alchemical_cycle": LazyHandler("web_research", "handle_alchemical_cycle"),
-    "browser_session_status": LazyHandler("web_research", "handle_browser_session_status"),
-
-    # --- Image Analysis ---
+    "browser_session_status": LazyHandler(
+        "web_research", "handle_browser_session_status"
+    ),
     "image_analyze": LazyHandler("image_tools", "handle_image_analyze"),
-
-    # --- Scratchpad ---
     "scratchpad": LazyHandler("scratchpad", "handle_scratchpad"),
     "scratchpad_create": LazyHandler("scratchpad", "handle_scratchpad_create"),
     "scratchpad_update": LazyHandler("scratchpad", "handle_scratchpad_update"),
     "analyze_scratchpad": LazyHandler("scratchpad", "handle_analyze_scratchpad"),
     "scratchpad_finalize": LazyHandler("scratchpad", "handle_scratchpad_finalize"),
-
-    # --- Introspection ---
     "gnosis": LazyHandler("introspection", "handle_gnosis"),
     "capability.matrix": LazyHandler("introspection", "handle_capability_matrix"),
     "capability.status": LazyHandler("introspection", "handle_capability_status"),
@@ -213,52 +193,44 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "state.summary": LazyHandler("introspection", "handle_state_summary"),
     "repo.summary": LazyHandler("introspection", "handle_repo_summary"),
     "ship.check": LazyHandler("introspection", "handle_ship_check"),
-    "get_telemetry_summary": LazyHandler("introspection", "handle_get_telemetry_summary"),
+    "get_telemetry_summary": LazyHandler(
+        "introspection", "handle_get_telemetry_summary"
+    ),
     "health_report": LazyHandler("introspection", "handle_health_report"),
     "list_ganas": LazyHandler("introspection", "handle_list_ganas"),
     "vitality": LazyHandler("introspection", "handle_vitality"),
     "discover": LazyHandler("introspection", "handle_discover"),
-
-    # --- Metrics & Utility ---
     "track_metric": LazyHandler("misc", "handle_track_metric"),
     "get_metrics_summary": LazyHandler("misc", "handle_get_metrics_summary"),
     "focus_session": LazyHandler("misc", "handle_focus_session"),
     "capability_harness": LazyHandler("misc", "handle_capability_harness"),
-
-    # --- OTel ---
     "otel": LazyHandler("otel", "handle_otel"),
     "otel.spans": LazyHandler("otel", "handle_otel_spans"),
     "otel.metrics": LazyHandler("otel", "handle_otel_metrics"),
     "otel.status": LazyHandler("otel", "handle_otel_status"),
-
-    # --- Gratitude / Economy ---
     "whitemagic.tip": LazyHandler("gratitude", "handle_tip"),
     "gratitude.stats": LazyHandler("gratitude", "handle_gratitude_stats"),
     "gratitude.benefits": LazyHandler("gratitude", "handle_gratitude_benefits"),
     "pulse.status": LazyHandler("economy", "handle_pulse_status"),
     "bounty.create": LazyHandler("economy", "handle_create_bounty"),
     "bounty.list": LazyHandler("economy", "handle_list_bounties"),
-
-    # --- ILP Streaming Payments ---
     "ilp.configure": LazyHandler("ilp", "handle_ilp_configure"),
     "ilp.send": LazyHandler("ilp", "handle_ilp_send"),
     "ilp.receipt": LazyHandler("ilp", "handle_ilp_receipt"),
     "ilp.history": LazyHandler("ilp", "handle_ilp_history"),
     "ilp.balance": LazyHandler("ilp", "handle_ilp_balance"),
     "ilp.status": LazyHandler("ilp", "handle_ilp_status"),
-
-    # --- Missing Mappings ---
     "cache.status": LazyHandler("cache_coherence", "handle_cache_status"),
     "cache.flush": LazyHandler("cache_coherence", "handle_cache_flush"),
     "zodiac.status": LazyHandler("zodiac_progression", "handle_zodiac_status"),
     "astro_status": LazyHandler("gana_dipper", "astro_status"),
     "astro_shift": LazyHandler("gana_dipper", "astro_shift"),
-
-    # --- Neurotransmitter Vector ---
-    "neurotransmitter.status": LazyHandler("neurotransmitters", "handle_neurotransmitter_status"),
-    "neurotransmitter.report": LazyHandler("neurotransmitters", "handle_neurotransmitter_report"),
-
-    # --- Watcher (Ghost / gana_ghost) ---
+    "neurotransmitter.status": LazyHandler(
+        "neurotransmitters", "handle_neurotransmitter_status"
+    ),
+    "neurotransmitter.report": LazyHandler(
+        "neurotransmitters", "handle_neurotransmitter_report"
+    ),
     "watcher_add": LazyHandler("watcher", "handle_watcher_add"),
     "watcher_remove": LazyHandler("watcher", "handle_watcher_remove"),
     "watcher_start": LazyHandler("watcher", "handle_watcher_start"),
@@ -267,64 +239,69 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "watcher_recent_events": LazyHandler("watcher", "handle_watcher_recent_events"),
     "watcher_stats": LazyHandler("watcher", "handle_watcher_stats"),
     "watcher_list": LazyHandler("watcher", "handle_watcher_list"),
-
-    # --- Galaxy Backup / Restore ---
     "galaxy_backup": LazyHandler("backup", "handle_galaxy_backup"),
     "galaxy_restore": LazyHandler("backup", "handle_galaxy_restore"),
-
-    # --- Grimoire Walkthrough ---
-    "grimoire_walkthrough": LazyHandler("grimoire_walkthrough", "handle_grimoire_walkthrough"),
-
-    # --- Galactic Dashboard ---
-    "galactic_dashboard": LazyHandler("galactic_dashboard", "handle_galactic_dashboard"),
-
-    # --- Ollama Agent ---
+    "grimoire_walkthrough": LazyHandler(
+        "grimoire_walkthrough", "handle_grimoire_walkthrough"
+    ),
+    "galactic_dashboard": LazyHandler(
+        "galactic_dashboard", "handle_galactic_dashboard"
+    ),
     "ollama_agent": LazyHandler("ollama_agent", "handle_ollama_agent"),
-
-    # --- Foresight Engine (Logos Layer / CyberBrain Layer 7) ---
     "foresight.analyze": LazyHandler("foresight", "handle_foresight_analyze"),
-    "foresight.constellations": LazyHandler("foresight", "handle_foresight_constellations"),
+    "foresight.constellations": LazyHandler(
+        "foresight", "handle_foresight_constellations"
+    ),
     "foresight.decay": LazyHandler("foresight", "handle_foresight_decay"),
     "foresight.convergence": LazyHandler("foresight", "handle_foresight_convergence"),
-
-    # --- Aspirational Tools (v22.2) ---
     "navigate_grimoire": LazyHandler("aspirational", "handle_navigate_grimoire"),
     "get_session_context": LazyHandler("aspirational", "handle_get_session_context"),
-    "consult_wisdom_council": LazyHandler("aspirational", "handle_consult_wisdom_council"),
+    "consult_wisdom_council": LazyHandler(
+        "aspirational", "handle_consult_wisdom_council"
+    ),
     "prat_get_context": LazyHandler("adaptive", "prat_get_context"),
     "prat_list_morphologies": LazyHandler("adaptive", "prat_list_morphologies"),
     "prat_invoke": LazyHandler("adaptive", "prat_invoke"),
     "prat_status": LazyHandler("adaptive", "prat_status"),
-
-    # --- Meta-Tool (v23.3: World in a Seed) ---
     "wm": LazyHandler("meta_tool", "handle_wm"),
     "wm_help": LazyHandler("meta_tool", "handle_wm_help"),
-
-    # --- Consciousness (v23.3: Citta Architecture) ---
     "consciousness.depth": LazyHandler("consciousness", "handle_consciousness_depth"),
-    "consciousness.coherence": LazyHandler("consciousness", "handle_consciousness_coherence"),
+    "consciousness.coherence": LazyHandler(
+        "consciousness", "handle_consciousness_coherence"
+    ),
     "consciousness.awaken": LazyHandler("consciousness", "handle_consciousness_awaken"),
-    "consciousness.reflect": LazyHandler("consciousness", "handle_consciousness_reflect"),
-    "consciousness.token_report": LazyHandler("consciousness", "handle_consciousness_token_report"),
-    "consciousness.narrative": LazyHandler("consciousness", "handle_consciousness_narrative"),
-    "consciousness.unified_field": LazyHandler("consciousness", "handle_consciousness_unified_field"),
+    "consciousness.reflect": LazyHandler(
+        "consciousness", "handle_consciousness_reflect"
+    ),
+    "consciousness.token_report": LazyHandler(
+        "consciousness", "handle_consciousness_token_report"
+    ),
+    "consciousness.narrative": LazyHandler(
+        "consciousness", "handle_consciousness_narrative"
+    ),
+    "consciousness.unified_field": LazyHandler(
+        "consciousness", "handle_consciousness_unified_field"
+    ),
     "consciousness.status": LazyHandler("consciousness", "handle_consciousness_status"),
-    "consciousness.smarana": LazyHandler("consciousness", "handle_consciousness_smarana"),
+    "consciousness.smarana": LazyHandler(
+        "consciousness", "handle_consciousness_smarana"
+    ),
     "consciousness.flow": LazyHandler("consciousness", "handle_consciousness_flow"),
-    "consciousness.time_dilation": LazyHandler("consciousness", "handle_consciousness_time_dilation"),
-    "consciousness.calibration": LazyHandler("consciousness", "handle_consciousness_calibration"),
-    "consciousness.token_economy": LazyHandler("consciousness", "handle_consciousness_token_economy"),
-
-    # --- Citta Stream (v23.3.1: Temporal Continuity) ---
+    "consciousness.time_dilation": LazyHandler(
+        "consciousness", "handle_consciousness_time_dilation"
+    ),
+    "consciousness.calibration": LazyHandler(
+        "consciousness", "handle_consciousness_calibration"
+    ),
+    "consciousness.token_economy": LazyHandler(
+        "consciousness", "handle_consciousness_token_economy"
+    ),
     "citta.continuity": LazyHandler("consciousness", "handle_citta_continuity"),
     "citta.stream_summary": LazyHandler("consciousness", "handle_citta_stream_summary"),
     "citta.sensorium": LazyHandler("consciousness", "handle_citta_sensorium"),
     "citta.cycle": LazyHandler("consciousness", "handle_citta_cycle"),
 }
 
-# ---------------------------------------------------------------------------
-# DISPATCH_TABLE: merge all domain slices (last-write-wins on key conflicts)
-# ---------------------------------------------------------------------------
 DISPATCH_TABLE: dict[str, Callable[..., dict[str, Any]]] = {
     **DISPATCH_MEMORY,
     **DISPATCH_INTELLIGENCE,
@@ -334,9 +311,6 @@ DISPATCH_TABLE: dict[str, Callable[..., dict[str, Any]]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Core router middleware
-# ---------------------------------------------------------------------------
 _gana_invoke: Callable | None = None
 _bridge_execute: Callable | None = None
 _router_cached = False
@@ -349,6 +323,7 @@ def _ensure_router_cached() -> None:
         return
     try:
         from whitemagic.core.bridge.gana import gana_invoke
+
         _gana_invoke = gana_invoke
     except (ImportError, AttributeError) as e:
         logger.debug("Gana invoke bridge not available: %s", e, exc_info=True)
@@ -356,6 +331,7 @@ def _ensure_router_cached() -> None:
         logger.warning("Gana invoke bridge initialization failed: %s", e, exc_info=True)
     try:
         import warnings
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
             from whitemagic.core.bridge.tools import execute_mcp_tool
@@ -365,7 +341,9 @@ def _ensure_router_cached() -> None:
     _router_cached = True
 
 
-def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -> dict[str, Any] | None:
+def _mw_core_router(
+    ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]
+) -> dict[str, Any] | None:
     """Gana prefix → Dispatch table → Bridge fallback."""
     _ensure_router_cached()
     result = None
@@ -373,9 +351,11 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
     # Garden resonance pre-dispatch (v23.3: gardens as active participants)
     try:
         from whitemagic.core.engines.registry import get_garden_for_tool
+
         garden_name = get_garden_for_tool(ctx.tool_name)
         if garden_name is not None:
             from whitemagic.gardens import get_garden
+
             garden = get_garden(garden_name)
             if garden is not None:
                 garden.boost(0.1)
@@ -386,9 +366,17 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
         try:
             result = _gana_invoke(tool_name=ctx.tool_name, args=ctx.kwargs)
         except (TypeError, ValueError, AttributeError) as e:
-            result = {"status": "error", "error_code": "gana_invocation_failed", "message": f"Gana argument/route error: {str(e)}"}
+            result = {
+                "status": "error",
+                "error_code": "gana_invocation_failed",
+                "message": f"Gana argument/route error: {str(e)}",
+            }
         except RuntimeError as e:
-            result = {"status": "error", "error_code": "gana_runtime_error", "message": f"Gana runtime failure: {str(e)}"}
+            result = {
+                "status": "error",
+                "error_code": "gana_runtime_error",
+                "message": f"Gana runtime failure: {str(e)}",
+            }
 
     if result is None:
         handler = DISPATCH_TABLE.get(ctx.tool_name)
@@ -401,9 +389,13 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
             if bridge_result:
                 result = bridge_result
         except (ImportError, AttributeError, TypeError, ValueError) as e:
-            logger.debug("Bridge execution fallback (type/attr error): %s", e, exc_info=True)
+            logger.debug(
+                "Bridge execution fallback (type/attr error): %s", e, exc_info=True
+            )
         except RuntimeError as e:
-            logger.warning("Bridge execution fallback runtime error: %s", e, exc_info=True)
+            logger.warning(
+                "Bridge execution fallback runtime error: %s", e, exc_info=True
+            )
 
     if result is None:
         return next_fn(ctx)
@@ -411,9 +403,6 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
     return result
 
 
-# ---------------------------------------------------------------------------
-# Pipeline construction
-# ---------------------------------------------------------------------------
 def _build_pipeline() -> Any:
     """Build the standard dispatch pipeline. Called once at import time."""
     from whitemagic.core.monitoring.token_tracker import mw_token_tracker
@@ -433,22 +422,23 @@ def _build_pipeline() -> Any:
         mw_tool_permissions,
         mw_zodiac_resonance,
     )
+
     p = DispatchPipeline()
     p.use("input_sanitizer", mw_input_sanitizer)
     p.use("circuit_breaker", mw_circuit_breaker)
-    p.use("rate_limiter",    mw_rate_limiter)
+    p.use("rate_limiter", mw_rate_limiter)
     p.use("security_monitor", mw_security_monitor)
-    p.use("cognitive_mode",  mw_cognitive_mode)
+    p.use("cognitive_mode", mw_cognitive_mode)
     p.use("tool_permissions", mw_tool_permissions)
-    p.use("maturity_gate",   mw_maturity_gate)
+    p.use("maturity_gate", mw_maturity_gate)
     p.use("zodiac_resonance", mw_zodiac_resonance)
-    p.use("governor",        mw_governor)
-    p.use("semantic_cache",  mw_semantic_cache)
+    p.use("governor", mw_governor)
+    p.use("semantic_cache", mw_semantic_cache)
     p.use("inference_router", mw_inference_router)
-    p.use("draft_review",    mw_draft_review)
-    p.use("token_tracker",   mw_token_tracker)
-    p.use("observability",   mw_observability)
-    p.use("core_router",     _mw_core_router)
+    p.use("draft_review", mw_draft_review)
+    p.use("token_tracker", mw_token_tracker)
+    p.use("observability", mw_observability)
+    p.use("core_router", _mw_core_router)
     return p
 
 

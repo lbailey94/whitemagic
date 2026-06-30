@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from whitemagic.config.paths import WM_ROOT
+from whitemagic.utils.core import parse_datetime
 from whitemagic.utils.fileio import file_lock
 
 logger = logging.getLogger(__name__)

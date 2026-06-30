@@ -54,7 +54,9 @@ class TestStableToolRegistry:
         assert isinstance(aliases, dict)
         # Some tools have deprecated aliases
         if aliases:
-            assert all(isinstance(k, str) and isinstance(v, str) for k, v in aliases.items())
+            assert all(
+                isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+            )
 
     def test_stable_tool_schemas(self):
         for name, tool in STABLE_TOOLS.items():

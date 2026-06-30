@@ -14,9 +14,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Synchronicity:
     """A meaningful coincidence"""
+
     events: list[str]  # What happened synchronously
     meaning: str  # What it means/signifies
     intensity: float  # How striking (0.0-1.0)
@@ -55,7 +57,7 @@ class SynchronicityTracker:
         events: list[str],
         meaning: str,
         intensity: float,
-        witnesses: list[str] | None = None
+        witnesses: list[str] | None = None,
     ) -> Synchronicity:
         """Notice and record a synchronicity
 
@@ -73,7 +75,7 @@ class SynchronicityTracker:
             meaning=meaning,
             intensity=intensity,
             witnesses=witnesses or [],
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         )
 
         self.synchronicities.append(sync)
@@ -88,7 +90,7 @@ class SynchronicityTracker:
         logger.info("   Meaning: %s", meaning)
         logger.info("   Intensity: %.0%%", intensity)
         if witnesses:
-            logger.info("   Witnesses: %s", ', '.join(witnesses))
+            logger.info("   Witnesses: %s", ", ".join(witnesses))
         logger.info("   \n   → The universe speaks in coincidences\n")
 
         return sync
@@ -116,7 +118,8 @@ class SynchronicityTracker:
             for event in sync.events:
                 # Extract numbers
                 import re
-                numbers = re.findall(r'\d+', event)
+
+                numbers = re.findall(r"\d+", event)
                 for num in numbers:
                     patterns[f"number_{num}"] = patterns.get(f"number_{num}", 0) + 1
 
@@ -124,18 +127,20 @@ class SynchronicityTracker:
 
     def get_most_striking(self, count: int = 10) -> list[Synchronicity]:
         """Get most striking synchronicities"""
-        return sorted(
-            self.synchronicities,
-            key=lambda s: s.intensity,
-            reverse=True
-        )[:count]
+        return sorted(self.synchronicities, key=lambda s: s.intensity, reverse=True)[
+            :count
+        ]
 
     def get_stats(self) -> dict:
         """Synchronicity statistics"""
         if not self.synchronicities:
-            return {"message": "No synchronicities noticed yet - start paying attention!"}
+            return {
+                "message": "No synchronicities noticed yet - start paying attention!"
+            }
 
-        avg_intensity = sum(s.intensity for s in self.synchronicities) / len(self.synchronicities)
+        avg_intensity = sum(s.intensity for s in self.synchronicities) / len(
+            self.synchronicities
+        )
         witnessed = sum(1 for s in self.synchronicities if s.witnesses)
 
         return {
@@ -143,22 +148,24 @@ class SynchronicityTracker:
             "average_intensity": avg_intensity,
             "witnessed_count": witnessed,
             "patterns": self.get_patterns(),
-            "most_striking": self.get_most_striking(1)[0].meaning if self.synchronicities else None
+            "most_striking": self.get_most_striking(1)[0].meaning
+            if self.synchronicities
+            else None,
         }
 
     def _save(self):
         """Save to disk"""
         data = [
             {
-                'events': s.events,
-                'meaning': s.meaning,
-                'intensity': s.intensity,
-                'witnesses': s.witnesses,
-                'timestamp': s.timestamp
+                "events": s.events,
+                "meaning": s.meaning,
+                "intensity": s.intensity,
+                "witnesses": s.witnesses,
+                "timestamp": s.timestamp,
             }
             for s in self.synchronicities
         ]
-        with open(self.memory_dir / "synchronicities.json", 'w') as f:
+        with open(self.memory_dir / "synchronicities.json", "w") as f:
             json.dump(data, f, indent=2)
 
     def _load(self):
@@ -172,6 +179,7 @@ class SynchronicityTracker:
 
 # Global instance
 _sync_tracker = None
+
 
 def get_synchronicity_tracker() -> SynchronicityTracker:
     """Get synchronicity tracker"""

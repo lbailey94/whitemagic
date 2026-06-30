@@ -13,7 +13,6 @@ pub mod conductor;
 #[cfg(feature = "zig")]
 pub mod zig_bridge;
 
-// --- Directory modules (reorganized from flat structure) ---
 #[cfg(feature = "python")]
 pub mod embeddings;
 #[cfg(feature = "python")]
@@ -33,7 +32,6 @@ pub mod safety;
 #[cfg(feature = "python")]
 pub mod search;
 
-// --- Re-exports for backward compatibility (flat access from crate root) ---
 #[cfg(feature = "python")]
 pub use ffi::arrow_bridge;
 #[cfg(feature = "python")]
@@ -91,7 +89,6 @@ pub use memory::unified;
 #[cfg(feature = "python")]
 pub use embeddings::vector_search;
 
-// --- Remaining flat modules ---
 #[cfg(feature = "python")]
 pub mod hot_paths;
 #[cfg(feature = "python")]
@@ -189,8 +186,6 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     inference_pymodule::inference(_py, &inference_module)?;
     m.add_submodule(&inference_module)?;
 
-    // --- START RECONCILLATION ---
-    // Manually register missing top-level functions from submodules for flat whitemagic_rust access
     m.add_function(wrap_pyfunction!(search::keyword_extract::keyword_extract, m)?)?;
     m.add_function(wrap_pyfunction!(search::keyword_extract::keyword_extract_batch, m)?)?;
     m.add_function(wrap_pyfunction!(math::minhash::minhash_find_duplicates, m)?)?;
@@ -200,7 +195,6 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pipeline::tokio_clones::tokio_clone_stats, m)?)?;
     m.add_function(wrap_pyfunction!(math::spatial_index_5d::batch_nearest_5d, m)?)?;
     m.add_function(wrap_pyfunction!(math::spatial_index_5d::density_map_5d, m)?)?;
-    // --- END RECONCILLATION ---
 
     // Register prat router functions
     ffi::prat_router_v6::register_prat_router(m)?;
@@ -351,10 +345,6 @@ pub mod hexagram_simd;
 // Zig FFI module for polyglot bridge support (Python only)
 #[cfg(feature = "python")]
 mod zig_ffi;
-
-// ---------------------------------------------------------------------------
-// Phase 6b: PyO3 wrappers for hexagram SIMD engine
-// ---------------------------------------------------------------------------
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;

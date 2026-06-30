@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class DiscoveredCapability:
     discovery_context: str
     confidence: float
     tested: bool
-    test_results: Optional[dict[str, Any]]
+    test_results: dict[str, Any] | None
     discovered_at: float
 
 
@@ -166,7 +167,11 @@ class SelfMonitoringHealthLoop:
             key=lambda s: list(HealthStatus).index(s),
         )
 
-        if worst_status in (HealthStatus.STRESSED, HealthStatus.DEGRADED, HealthStatus.CRITICAL):
+        if worst_status in (
+            HealthStatus.STRESSED,
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
             for callback in self._callbacks:
                 try:
                     callback(worst_status, self._generate_diagnosis(readings))
@@ -211,7 +216,8 @@ class SelfMonitoringHealthLoop:
         concerns = [
             f"{r.metric_name}: {r.value:.2f} (threshold: {r.threshold})"
             for r in readings.values()
-            if r.status in (HealthStatus.STRESSED, HealthStatus.DEGRADED, HealthStatus.CRITICAL)
+            if r.status
+            in (HealthStatus.STRESSED, HealthStatus.DEGRADED, HealthStatus.CRITICAL)
         ]
         return "Health concerns detected: " + "; ".join(concerns)
 
@@ -228,11 +234,19 @@ class SelfMonitoringHealthLoop:
         """Automatically trigger healing measures based on health readings."""
         actions: list[str] = []
 
-        if readings["coherence"].status in (HealthStatus.DEGRADED, HealthStatus.CRITICAL):
+        if readings["coherence"].status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
             actions.append("triggered_dream_cycle")
-            logger.warning("Auto-heal: Triggering dream cycle for coherence restoration")
+            logger.warning(
+                "Auto-heal: Triggering dream cycle for coherence restoration"
+            )
 
-        if readings["memory_usage"].status in (HealthStatus.STRESSED, HealthStatus.DEGRADED):
+        if readings["memory_usage"].status in (
+            HealthStatus.STRESSED,
+            HealthStatus.DEGRADED,
+        ):
             actions.append("scheduled_galactic_sweep")
             logger.warning("Auto-heal: Scheduling galactic sweep for memory pressure")
 
@@ -246,7 +260,9 @@ class PredictiveMaintenanceEngine:
         self._alerts: list[PredictiveAlert] = []
         self._pattern_history: list[dict[str, Any]] = []
 
-    def analyze_trends(self, health_history: list[HealthReading]) -> list[PredictiveAlert]:
+    def analyze_trends(
+        self, health_history: list[HealthReading]
+    ) -> list[PredictiveAlert]:
         """Analyze health trends to predict future issues."""
         alerts: list[PredictiveAlert] = []
 
@@ -276,7 +292,9 @@ class PredictiveMaintenanceEngine:
                             confidence=min(0.95, abs(trend) * 10),
                             time_horizon_hours=time_to_cross,
                             recommended_action=self._recommend_action(metric_name),
-                            severity=HealthStatus.STRESSED if time_to_cross > 12 else HealthStatus.DEGRADED,
+                            severity=HealthStatus.STRESSED
+                            if time_to_cross > 12
+                            else HealthStatus.DEGRADED,
                             created_at=time.time(),
                         )
                         alerts.append(alert)
@@ -314,7 +332,9 @@ class PredictiveMaintenanceEngine:
             f"projected_in_{days_ahead}d": int(projected_count),
             "growth_rate_per_day": growth_rate_per_day,
             "estimated_days_to_sweep": days_to_threshold,
-            "recommended_sweep_date": datetime.now().isoformat() if days_to_threshold < 14 else None,
+            "recommended_sweep_date": datetime.now().isoformat()
+            if days_to_threshold < 14
+            else None,
         }
 
     def get_active_alerts(self, max_age_hours: float = 24.0) -> list[PredictiveAlert]:
@@ -323,7 +343,8 @@ class PredictiveMaintenanceEngine:
         return [
             alert
             for alert in self._alerts
-            if (now - alert.created_at) / 3600 < alert.time_horizon_hours + max_age_hours
+            if (now - alert.created_at) / 3600
+            < alert.time_horizon_hours + max_age_hours
         ]
 
 
@@ -335,7 +356,9 @@ class CapabilityDiscoveryEngine:
         self._tested_combinations: set[tuple[str, ...]] = set()
         self._tool_usage: dict[str, int] = {}
 
-    def discover_capabilities(self, available_tools: list[str]) -> list[DiscoveredCapability]:
+    def discover_capabilities(
+        self, available_tools: list[str]
+    ) -> list[DiscoveredCapability]:
         """Test unused tools and combinations to discover new capabilities."""
         discoveries: list[DiscoveredCapability] = []
 
@@ -403,7 +426,9 @@ class CapabilityDiscoveryEngine:
                     status = result.get("status", "")
                     has_error = "error" in result or status == "error"
                     if has_error:
-                        err_msg = result.get("error", result.get("message", "unknown error"))
+                        err_msg = result.get(
+                            "error", result.get("message", "unknown error")
+                        )
                         test_result["errors"].append(f"{tool_name}: {err_msg}")
                         test_result["success"] = False
                     else:
@@ -435,7 +460,9 @@ class CapabilityDiscoveryEngine:
                 "tools": cap.tools_involved,
                 "confidence": cap.confidence,
                 "tested": cap.tested,
-                "success": cap.test_results.get("success") if cap.test_results else None,
+                "success": cap.test_results.get("success")
+                if cap.test_results
+                else None,
             }
             for cap in self._discovered
             if cap.tested and cap.confidence > 0.7
@@ -542,7 +569,7 @@ class ApotheosisEngine:
         return "\n".join(lines)
 
 
-_apotheosis_engine: Optional[ApotheosisEngine] = None
+_apotheosis_engine: ApotheosisEngine | None = None
 
 
 def get_apotheosis_engine() -> ApotheosisEngine:

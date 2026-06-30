@@ -124,10 +124,6 @@ class NarrativeCompressor:
         self._total_compressions = 0
         self._total_narratives = 0
 
-    # ------------------------------------------------------------------
-    # Main compression pipeline
-    # ------------------------------------------------------------------
-
     def compress(
         self,
         max_clusters: int = 5,
@@ -149,25 +145,24 @@ class NarrativeCompressor:
 
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug("Narrative compressor: cannot access memory: %s", e, exc_info=True)
+            logger.debug(
+                "Narrative compressor: cannot access memory: %s", e, exc_info=True
+            )
             result.duration_ms = (time.perf_counter() - start) * 1000
             return result
 
-        # Step 1: Load candidate memories
         candidates = self._load_candidates(um, sample_limit)
         if not candidates:
             result.duration_ms = (time.perf_counter() - start) * 1000
             return result
 
-        # Step 2: Cluster by temporal adjacency + tag overlap
         clusters = self._cluster_memories(candidates)
         result.clusters_found = len(clusters)
 
-        # Step 3: Process top clusters
-        for cluster in clusters[:
-            max_clusters]:
+        for cluster in clusters[:max_clusters]:
             narrative = self._compress_cluster(cluster, um, dry_run)
             if narrative:
                 result.narratives.append(narrative)
@@ -188,23 +183,30 @@ class NarrativeCompressor:
         logger.info(
             "📖 Narrative compression: %d clusters → %d narratives, "
             "%d memories compressed (%.0fms)",
-            result.clusters_found, result.narratives_created,
-            result.memories_compressed, result.duration_ms,
+            result.clusters_found,
+            result.narratives_created,
+            result.memories_compressed,
+            result.duration_ms,
         )
         return result
 
-    # ------------------------------------------------------------------
-    # Step 1: Load candidate memories
-    # ------------------------------------------------------------------
-
     # Noise patterns — memories matching these are excluded from compression
     _NOISE_TITLE_PREFIXES = (
-        "bench_t1", "_bench", "Benchmark test memory",
-        "Test Memory", "Test Artifact", "Recovered:",
+        "bench_t1",
+        "_bench",
+        "Benchmark test memory",
+        "Test Memory",
+        "Test Artifact",
+        "Recovered:",
     )
     _NOISE_TITLE_SUBSTRINGS = (
-        "CHANGELOG", "release notes", "BSD License", "MIT License",
-        "Apache License", "node_modules", "__pycache__",
+        "CHANGELOG",
+        "release notes",
+        "BSD License",
+        "MIT License",
+        "Apache License",
+        "node_modules",
+        "__pycache__",
         "README.md",
     )
     _NOISE_MEMORY_TYPES = ("deep_archive", "scavenged", "quarantined")
@@ -253,25 +255,24 @@ class NarrativeCompressor:
                 if self._is_noise(m):
                     continue
 
-                candidates.append({
-                    "id": m.id,
-                    "title": m.title or "",
-                    "content": str(m.content or ""),
-                    "tags": tags,
-                    "importance": getattr(m, "importance", 0.5) or 0.5,
-                    "created_at": str(getattr(m, "created_at", "")),
-                })
+                candidates.append(
+                    {
+                        "id": m.id,
+                        "title": m.title or "",
+                        "content": str(m.content or ""),
+                        "tags": tags,
+                        "importance": getattr(m, "importance", 0.5) or 0.5,
+                        "created_at": str(getattr(m, "created_at", "")),
+                    }
+                )
             return candidates
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Failed to load candidates: %s", e, exc_info=True)
             return []
 
-    # ------------------------------------------------------------------
-    # Step 2: Cluster memories
-    # ------------------------------------------------------------------
-
     def _cluster_memories(
-        self, candidates: list[dict[str, Any]],
+        self,
+        candidates: list[dict[str, Any]],
     ) -> list[NarrativeCluster]:
         """Cluster memories by tag overlap and temporal proximity."""
         if not candidates:
@@ -329,7 +330,11 @@ class NarrativeCompressor:
                 # Set time range
                 first_time = candidates[i].get("created_at", "")
                 last_idx = max(
-                    (k for k, c in enumerate(candidates) if c["id"] in set(cluster.memory_ids)),
+                    (
+                        k
+                        for k, c in enumerate(candidates)
+                        if c["id"] in set(cluster.memory_ids)
+                    ),
                     default=i,
                 )
                 last_time = candidates[last_idx].get("created_at", "")
@@ -339,10 +344,6 @@ class NarrativeCompressor:
         # Sort clusters by size (largest first)
         clusters.sort(key=lambda c: c.size, reverse=True)
         return clusters
-
-    # ------------------------------------------------------------------
-    # Step 3: Compress a cluster into a narrative
-    # ------------------------------------------------------------------
 
     def _compress_cluster(
         self,
@@ -379,13 +380,16 @@ class NarrativeCompressor:
         if not dry_run:
             try:
                 from whitemagic.core.memory.unified_types import MemoryType
+
                 stored = um.store(
                     content=narrative_text,
                     title=narrative_title,
                     memory_type=MemoryType.LONG_TERM,
                     importance=0.8,  # High importance — narrative anchor
                     tags={
-                        "narrative", "auto_generated", "dream_narrative",
+                        "narrative",
+                        "auto_generated",
+                        "dream_narrative",
                         *sorted(cluster.shared_tags)[:5],
                     },
                     metadata={
@@ -411,7 +415,9 @@ class NarrativeCompressor:
         }
 
     def _generate_narrative(
-        self, cluster: NarrativeCluster, contents: list[str],
+        self,
+        cluster: NarrativeCluster,
+        contents: list[str],
     ) -> str:
         """Generate narrative text from cluster contents.
 
@@ -422,6 +428,7 @@ class NarrativeCompressor:
             from whitemagic.tools.handlers.ollama import (
                 handle_ollama_generate as _ollama_generate,
             )
+
             evidence_text = "\n".join(contents[:10])
             tags_text = ", ".join(sorted(cluster.shared_tags)[:10])
             prompt = (
@@ -446,8 +453,7 @@ class NarrativeCompressor:
             "",
             "Key memories:",
         ]
-        for content in contents[:
-            8]:
+        for content in contents[:8]:
             lines.append(f"  - {content[:150]}")
 
         return "\n".join(lines)
@@ -458,10 +464,6 @@ class NarrativeCompressor:
         tag_str = ", ".join(tags) if tags else "mixed topics"
         return f"Narrative: {tag_str} ({cluster.size} memories)"
 
-    # ------------------------------------------------------------------
-    # Step 4: Demote source memories
-    # ------------------------------------------------------------------
-
     def _demote_sources(self, cluster: NarrativeCluster, um: Any) -> int:
         """Reduce importance of compressed source memories."""
         demoted = 0
@@ -470,7 +472,9 @@ class NarrativeCompressor:
             with pool.connection() as conn:
                 with conn:
                     # N+1 fix: executemany instead of per-memory UPDATE loop
-                    params = [(self._demotion_factor, mid) for mid in cluster.memory_ids]
+                    params = [
+                        (self._demotion_factor, mid) for mid in cluster.memory_ids
+                    ]
                     conn.executemany(
                         """UPDATE memories
                            SET importance = importance * ?,
@@ -482,10 +486,6 @@ class NarrativeCompressor:
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Failed to demote sources: %s", e, exc_info=True)
         return demoted
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
         """Get compressor statistics."""
@@ -499,10 +499,6 @@ class NarrativeCompressor:
                 "demotion_factor": self._demotion_factor,
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _compressor: NarrativeCompressor | None = None
 _compressor_lock = threading.Lock()

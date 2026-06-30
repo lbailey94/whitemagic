@@ -62,8 +62,7 @@ class ContinuousAudit:
     def health_trend(self) -> list[float]:
         """Get health trend (1.0 = healthy, 0.0 = issues)."""
         return [
-            1.0 - (r["issues_found"] / max(r["checks_run"], 1))
-            for r in self.results
+            1.0 - (r["issues_found"] / max(r["checks_run"], 1)) for r in self.results
         ]
 
     def summary(self) -> dict[str, Any]:
@@ -73,7 +72,8 @@ class ContinuousAudit:
             "last_audit": self._last_audit,
             "avg_health": (
                 sum(self.health_trend()) / len(self.health_trend())
-                if self.health_trend() else 1.0
+                if self.health_trend()
+                else 1.0
             ),
         }
 

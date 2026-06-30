@@ -11,6 +11,7 @@ Edge types:
 
 This is proper causal graph reasoning (do-calculus in Pearl's framework).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,6 +21,7 @@ from typing import Any
 
 class DependencyType(Enum):
     """Type of dependency between two improvements."""
+
     PREREQUISITE = "prerequisite"
     SYNERGY = "synergy"
     CONFLICT = "conflict"
@@ -29,10 +31,11 @@ class DependencyType(Enum):
 @dataclass
 class DependencyEdge:
     """An edge in the improvement dependency graph."""
+
     source_id: str  # A
     target_id: str  # B
     edge_type: DependencyType
-    p_b_given_a: float = 0.5      # P(B succeeds | A applied)
+    p_b_given_a: float = 0.5  # P(B succeeds | A applied)
     p_b_given_not_a: float = 0.5  # P(B succeeds | A not applied)
     co_occurrences: int = 0
     confirmed: bool = False  # True if conditional probs differ significantly
@@ -127,11 +130,15 @@ class DependencyGraph:
         if a_applied:
             # Update P(B|A)
             n = edge.co_occurrences
-            edge.p_b_given_a = ((n - 1) * edge.p_b_given_a + (1.0 if b_succeeded else 0.0)) / n
+            edge.p_b_given_a = (
+                (n - 1) * edge.p_b_given_a + (1.0 if b_succeeded else 0.0)
+            ) / n
         else:
             # Update P(B|¬A)
             n = edge.co_occurrences
-            edge.p_b_given_not_a = ((n - 1) * edge.p_b_given_not_a + (1.0 if b_succeeded else 0.0)) / n
+            edge.p_b_given_not_a = (
+                (n - 1) * edge.p_b_given_not_a + (1.0 if b_succeeded else 0.0)
+            ) / n
 
         # Update edge type based on causal effect
         if edge.is_confirmed_dependency:
@@ -156,21 +163,25 @@ class DependencyGraph:
             List of prerequisite improvement IDs.
         """
         return [
-            edge.source_id for edge in self._edges.values()
-            if edge.target_id == target_id and edge.edge_type == DependencyType.PREREQUISITE
+            edge.source_id
+            for edge in self._edges.values()
+            if edge.target_id == target_id
+            and edge.edge_type == DependencyType.PREREQUISITE
         ]
 
     def get_synergies(self, source_id: str) -> list[str]:
         """Get all improvements that synergize with the given one."""
         return [
-            edge.target_id for edge in self._edges.values()
+            edge.target_id
+            for edge in self._edges.values()
             if edge.source_id == source_id and edge.edge_type == DependencyType.SYNERGY
         ]
 
     def get_conflicts(self, source_id: str) -> list[str]:
         """Get all improvements that conflict with the given one."""
         return [
-            edge.target_id for edge in self._edges.values()
+            edge.target_id
+            for edge in self._edges.values()
             if edge.source_id == source_id and edge.edge_type == DependencyType.CONFLICT
         ]
 
@@ -225,5 +236,7 @@ class DependencyGraph:
             "total_nodes": len(self._nodes),
             "total_edges": len(self._edges),
             "edge_types": type_counts,
-            "confirmed_dependencies": sum(1 for e in self._edges.values() if e.confirmed),
+            "confirmed_dependencies": sum(
+                1 for e in self._edges.values() if e.confirmed
+            ),
         }

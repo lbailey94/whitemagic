@@ -28,26 +28,25 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
 _FRAGMENT_BIN = Path(
     os.environ.get(
         "FRAGMENT_BIN",
-        str(Path(__file__).resolve().parent.parent.parent.parent.parent
-            / "WHITEMAGIC-aux" / "experiments" / "whitemagic-labs-aux"
-            / "fragment" / "target" / "release" / "fragment"),
+        str(
+            Path(__file__).resolve().parent.parent.parent.parent.parent
+            / "WHITEMAGIC-aux"
+            / "experiments"
+            / "whitemagic-labs-aux"
+            / "fragment"
+            / "target"
+            / "release"
+            / "fragment"
+        ),
     )
 )
 
 _FRAGMENT_HTTP_URL = os.environ.get("FRAGMENT_HTTP_URL", "http://127.0.0.1:7727")
 _FRAGMENT_TIMEOUT = int(os.environ.get("FRAGMENT_TIMEOUT", "30"))
 _FRAGMENT_INDEX_TIMEOUT = int(os.environ.get("FRAGMENT_INDEX_TIMEOUT", "300"))
-
-# ---------------------------------------------------------------------------
-# Layer detection
-# ---------------------------------------------------------------------------
 
 _pyo3_module: Any = None
 _pyo3_checked: bool = False
@@ -61,6 +60,7 @@ def _get_pyo3() -> Any:
     _pyo3_checked = True
     try:
         import fragment as _frag  # type: ignore[import-not-found]
+
         if hasattr(_frag, "is_available") and _frag.is_available():
             _pyo3_module = _frag
             logger.info("Fragment PyO3 module loaded — using native Rust core")
@@ -78,6 +78,7 @@ def _http_available() -> bool:
     """Check if Fragment HTTP server is running."""
     try:
         import urllib.request
+
         req = urllib.request.Request(
             f"{_FRAGMENT_HTTP_URL}/api/health",
             method="GET",
@@ -104,19 +105,18 @@ def get_fragment_layer() -> str:
     return "none"
 
 
-# ---------------------------------------------------------------------------
-# Layer 1: PyO3
-# ---------------------------------------------------------------------------
-
-
-def _pyo3_index(path: str, mode: str, force: bool, output: str | None) -> dict[str, Any]:
+def _pyo3_index(
+    path: str, mode: str, force: bool, output: str | None
+) -> dict[str, Any]:
     frag = _get_pyo3()
     if frag is None:
         raise RuntimeError("PyO3 not available")
     return frag.index(path, mode=mode, force=force, output=output)
 
 
-def _pyo3_query(path: str, query: str, top: int, index_dir: str | None) -> dict[str, Any]:
+def _pyo3_query(
+    path: str, query: str, top: int, index_dir: str | None
+) -> dict[str, Any]:
     frag = _get_pyo3()
     if frag is None:
         raise RuntimeError("PyO3 not available")
@@ -130,12 +130,9 @@ def _pyo3_status(path: str, index_dir: str | None) -> dict[str, Any]:
     return frag.status(path, index_dir=index_dir)
 
 
-# ---------------------------------------------------------------------------
-# Layer 2: HTTP
-# ---------------------------------------------------------------------------
-
-
-def _http_index(path: str, mode: str, force: bool, output: str | None) -> dict[str, Any]:
+def _http_index(
+    path: str, mode: str, force: bool, output: str | None
+) -> dict[str, Any]:
     import urllib.request
 
     payload = json.dumps({"path": path, "mode": mode, "force": force}).encode()
@@ -149,7 +146,9 @@ def _http_index(path: str, mode: str, force: bool, output: str | None) -> dict[s
         return json.loads(resp.read())
 
 
-def _http_query(path: str, query: str, top: int, index_dir: str | None) -> dict[str, Any]:
+def _http_query(
+    path: str, query: str, top: int, index_dir: str | None
+) -> dict[str, Any]:
     import urllib.request
 
     payload = json.dumps({"q": query, "top": top, "path": path}).encode()
@@ -164,7 +163,12 @@ def _http_query(path: str, query: str, top: int, index_dir: str | None) -> dict[
         # Normalize HTTP response to match PyO3 format
         if "results" in data and isinstance(data["results"], list):
             return data
-        return {"query": query, "top": top, "results": data.get("results", []), "count": len(data.get("results", []))}
+        return {
+            "query": query,
+            "top": top,
+            "results": data.get("results", []),
+            "count": len(data.get("results", [])),
+        }
 
 
 def _http_status(path: str, index_dir: str | None) -> dict[str, Any]:
@@ -178,18 +182,17 @@ def _http_status(path: str, index_dir: str | None) -> dict[str, Any]:
         return json.loads(resp.read())
 
 
-# ---------------------------------------------------------------------------
-# Layer 3: Subprocess
-# ---------------------------------------------------------------------------
-
-
-def _subprocess_index(path: str, mode: str, force: bool, output: str | None) -> dict[str, Any]:
+def _subprocess_index(
+    path: str, mode: str, force: bool, output: str | None
+) -> dict[str, Any]:
     cmd = [str(_FRAGMENT_BIN), "index", path, "--mode", mode]
     if force:
         cmd.append("--force")
     if output:
         cmd.extend(["--output", output])
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=_FRAGMENT_INDEX_TIMEOUT)
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=_FRAGMENT_INDEX_TIMEOUT
+    )
     if result.returncode != 0:
         raise RuntimeError(f"Fragment index failed: {result.stderr}")
     return {
@@ -204,17 +207,36 @@ def _subprocess_index(path: str, mode: str, force: bool, output: str | None) -> 
     }
 
 
-def _subprocess_query(path: str, query: str, top: int, index_dir: str | None) -> dict[str, Any]:
-    cmd = [str(_FRAGMENT_BIN), "query", path, query, "--top", str(top), "--format", "json"]
+def _subprocess_query(
+    path: str, query: str, top: int, index_dir: str | None
+) -> dict[str, Any]:
+    cmd = [
+        str(_FRAGMENT_BIN),
+        "query",
+        path,
+        query,
+        "--top",
+        str(top),
+        "--format",
+        "json",
+    ]
     if index_dir:
         cmd.extend(["--index", index_dir])
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=_FRAGMENT_TIMEOUT)
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=_FRAGMENT_TIMEOUT
+    )
     if result.returncode != 0:
         raise RuntimeError(f"Fragment query failed: {result.stderr}")
     try:
         data = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return {"query": query, "top": top, "results": [], "count": 0, "raw": result.stdout}
+        return {
+            "query": query,
+            "top": top,
+            "results": [],
+            "count": 0,
+            "raw": result.stdout,
+        }
     return data
 
 
@@ -242,13 +264,9 @@ def _subprocess_status(path: str, index_dir: str | None) -> dict[str, Any]:
     return meta
 
 
-# ---------------------------------------------------------------------------
-# Unified dispatch — tries PyO3 → HTTP → Subprocess
-# ---------------------------------------------------------------------------
-
-
-def _dispatch_index(path: str, mode: str = "quick", force: bool = False,
-                    output: str | None = None) -> dict[str, Any]:
+def _dispatch_index(
+    path: str, mode: str = "quick", force: bool = False, output: str | None = None
+) -> dict[str, Any]:
     """Index a codebase using the best available Fragment layer."""
     # Layer 1: PyO3
     try:
@@ -266,8 +284,9 @@ def _dispatch_index(path: str, mode: str = "quick", force: bool = False,
     return _subprocess_index(path, mode, force, output)
 
 
-def _dispatch_query(path: str, query: str, top: int = 10,
-                    index_dir: str | None = None) -> dict[str, Any]:
+def _dispatch_query(
+    path: str, query: str, top: int = 10, index_dir: str | None = None
+) -> dict[str, Any]:
     """Query a Fragment index using the best available layer."""
     # Layer 1: PyO3
     try:
@@ -298,11 +317,6 @@ def _dispatch_status(path: str, index_dir: str | None = None) -> dict[str, Any]:
         logger.debug("Fragment HTTP status failed: %s", e)
 
     return _subprocess_status(path, index_dir)
-
-
-# ---------------------------------------------------------------------------
-# MCP Tool Handlers
-# ---------------------------------------------------------------------------
 
 
 def handle_fragment_search(**kwargs: Any) -> dict[str, Any]:
@@ -379,13 +393,9 @@ def handle_fragment_query(**kwargs: Any) -> dict[str, Any]:
     return handle_fragment_search(**kwargs)
 
 
-# ---------------------------------------------------------------------------
-# Fragment-accelerated wrappers for existing Winnowing Basket tools
-# ---------------------------------------------------------------------------
-
-
-def fragment_accelerated_search(query: str, path: str | None = None,
-                                 top: int = 10) -> dict[str, Any] | None:
+def fragment_accelerated_search(
+    query: str, path: str | None = None, top: int = 10
+) -> dict[str, Any] | None:
     """Try Fragment-accelerated search. Returns None if Fragment is unavailable
     or no index exists, so callers can fall back to the Python implementation.
 

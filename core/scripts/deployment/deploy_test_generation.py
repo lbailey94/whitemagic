@@ -2,7 +2,7 @@ import time
 
 import whitemagic_rust as rs
 
-deployer = rs.MassiveDeployer(8) # Max parallel
+deployer = rs.MassiveDeployer(8)  # Max parallel
 
 tasks = [
     rs.CampaignTask(
@@ -11,9 +11,9 @@ tasks = [
         "whitemagic/autonomous/executor/continuous_executor.py",
         "python",
         "python",
-        10, # priority
+        10,  # priority
         8,  # complexity
-        "100% coverage target, focusing on lines 172-207, 230-273, 398-511, 620-681"
+        "100% coverage target, focusing on lines 172-207, 230-273, 398-511, 620-681",
     )
 ]
 

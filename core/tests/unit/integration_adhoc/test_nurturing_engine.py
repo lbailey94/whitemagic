@@ -4,10 +4,9 @@ from whitemagic.core.nurturing.nurturing_engine import NurturingEngine
 
 
 class TestNurturingEngine:
-
     @pytest.fixture
     def engine(self):
-        engine = NurturingEngine(storage_path=None) # In-memory only
+        engine = NurturingEngine(storage_path=None)  # In-memory only
         return engine
 
     def test_profile_creation(self, engine):
@@ -26,7 +25,7 @@ class TestNurturingEngine:
         messages = [
             "We need to debug the API function",
             "The algorithm complexity is O(n)",
-            "Push the code to production"
+            "Push the code to production",
         ]
 
         style = engine.detect_communication_style(user_id, messages)
@@ -43,7 +42,9 @@ class TestNurturingEngine:
         user_id = "pref_user"
 
         # Learn a preference
-        pref = engine.learn_preference(user_id, "response_length", "short", confidence=0.6)
+        pref = engine.learn_preference(
+            user_id, "response_length", "short", confidence=0.6
+        )
 
         assert pref.value == "short"
         assert pref.observations == 1

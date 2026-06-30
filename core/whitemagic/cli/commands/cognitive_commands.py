@@ -19,12 +19,17 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 def _get_json_output(ctx, json_flag: bool) -> bool:
     """Merge local --json flag with global ctx.obj["json_output"]."""
-    return json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    return json_flag or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
 
 
 # ---------------------------------------------------------------------------
 # wm think — Multi-spectral reasoning
 # ---------------------------------------------------------------------------
+
 
 @click.command()
 @click.argument("query")
@@ -75,6 +80,7 @@ def think(ctx, query: str, json_flag: bool) -> None:
 # wm reflect — Self-reflection / cognitive state snapshot
 # ---------------------------------------------------------------------------
 
+
 @click.command()
 @click.option("--json", "json_flag", is_flag=True, help="Output as JSON")
 @click.pass_context
@@ -98,35 +104,45 @@ def reflect(ctx, json_flag: bool) -> None:
     # Self-model forecast
     try:
         sm = call_tool("selfmodel.forecast")
-        snapshot["sections"]["self_model"] = sm.get("details", sm) if isinstance(sm, dict) else sm
+        snapshot["sections"]["self_model"] = (
+            sm.get("details", sm) if isinstance(sm, dict) else sm
+        )
     except Exception:
         pass
 
     # Coherence
     try:
         coh = call_tool("homeostasis.check")
-        snapshot["sections"]["coherence"] = coh.get("details", coh) if isinstance(coh, dict) else coh
+        snapshot["sections"]["coherence"] = (
+            coh.get("details", coh) if isinstance(coh, dict) else coh
+        )
     except Exception:
         pass
 
     # Cognitive mode
     try:
         cm = call_tool("cognitive.mode")
-        snapshot["sections"]["cognitive_mode"] = cm.get("details", cm) if isinstance(cm, dict) else cm
+        snapshot["sections"]["cognitive_mode"] = (
+            cm.get("details", cm) if isinstance(cm, dict) else cm
+        )
     except Exception:
         pass
 
     # Galactic distribution
     try:
         gal = call_tool("galactic.stats")
-        snapshot["sections"]["galactic"] = gal.get("details", gal) if isinstance(gal, dict) else gal
+        snapshot["sections"]["galactic"] = (
+            gal.get("details", gal) if isinstance(gal, dict) else gal
+        )
     except Exception:
         pass
 
     # Gnosis (unified introspection)
     try:
         gn = call_tool("gnosis", compact=True)
-        snapshot["sections"]["gnosis"] = gn.get("details", gn) if isinstance(gn, dict) else gn
+        snapshot["sections"]["gnosis"] = (
+            gn.get("details", gn) if isinstance(gn, dict) else gn
+        )
     except Exception:
         pass
 
@@ -140,7 +156,11 @@ def reflect(ctx, json_flag: bool) -> None:
             click.echo(f"\n  [{section}]")
             if isinstance(data, dict):
                 for k, v in list(data.items())[:10]:
-                    val_str = str(v)[:100] if isinstance(v, (str, int, float, bool)) else _json_dumps(v, default=str)[:100]
+                    val_str = (
+                        str(v)[:100]
+                        if isinstance(v, (str, int, float, bool))
+                        else _json_dumps(v, default=str)[:100]
+                    )
                     click.echo(f"    {k}: {val_str}")
             else:
                 click.echo(f"    {data}")
@@ -152,8 +172,11 @@ def reflect(ctx, json_flag: bool) -> None:
 # wm dream --auto — Start dream cycle with auto-promotion
 # ---------------------------------------------------------------------------
 
+
 @click.command()
-@click.option("--auto", is_flag=True, help="Auto-promote dream artifacts to permanent memories")
+@click.option(
+    "--auto", is_flag=True, help="Auto-promote dream artifacts to permanent memories"
+)
 @click.option("--cycles", "-n", default=1, help="Number of dream cycles to run")
 @click.option("--json", "json_flag", is_flag=True, help="Output as JSON")
 @click.pass_context
@@ -189,7 +212,11 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
     results: list = []
     for i in range(cycles):
         cycle_result = call_tool("dream_now")
-        data = cycle_result.get("details", cycle_result) if isinstance(cycle_result, dict) else cycle_result
+        data = (
+            cycle_result.get("details", cycle_result)
+            if isinstance(cycle_result, dict)
+            else cycle_result
+        )
         results.append(data)
 
         # Auto-promote artifacts if any
@@ -202,14 +229,20 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
                         pass
 
     if json_output:
-        click.echo(_json_dumps({"cycles": results, "auto_promoted": auto}, indent=2, default=str))
+        click.echo(
+            _json_dumps(
+                {"cycles": results, "auto_promoted": auto}, indent=2, default=str
+            )
+        )
     else:
         click.echo(f"\n🌙 Dream cycle complete: {cycles} cycle(s)")
         for i, r in enumerate(results):
             if isinstance(r, dict):
                 phase = r.get("phase", "?")
                 artifacts = r.get("artifacts", [])
-                click.echo(f"  Cycle {i+1}: phase={phase}, artifacts={len(artifacts)}")
+                click.echo(
+                    f"  Cycle {i + 1}: phase={phase}, artifacts={len(artifacts)}"
+                )
                 if auto and artifacts:
                     click.echo(f"    → Auto-promoted {len(artifacts)} artifact(s)")
 
@@ -217,6 +250,7 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
 # ---------------------------------------------------------------------------
 # wm evolve — Self-improvement cycles
 # ---------------------------------------------------------------------------
+
 
 @click.command()
 @click.option("--cycles", "-n", default=1, help="Number of improvement cycles")
@@ -242,27 +276,39 @@ def evolve(ctx, cycles: int, record: bool, json_flag: bool) -> None:
 
         if record and isinstance(data, dict):
             try:
-                call_tool("karma_record", action="self_improve",
-                          outcome="improvement_cycle", details=data)
+                call_tool(
+                    "karma_record",
+                    action="self_improve",
+                    outcome="improvement_cycle",
+                    details=data,
+                )
             except Exception:
                 pass
 
     if json_output:
-        click.echo(_json_dumps({"cycles_run": len(all_cycles), "results": all_cycles},
-                               indent=2, default=str))
+        click.echo(
+            _json_dumps(
+                {"cycles_run": len(all_cycles), "results": all_cycles},
+                indent=2,
+                default=str,
+            )
+        )
     else:
         click.echo(f"\n🧬 Self-Evolution: {cycles} cycle(s) complete")
         for i, cycle in enumerate(all_cycles):
             if isinstance(cycle, dict):
                 improvements = cycle.get("improvements", cycle.get("hints", []))
-                click.echo(f"  Cycle {i+1}: {len(improvements) if isinstance(improvements, list) else '?'} improvement(s)")
+                click.echo(
+                    f"  Cycle {i + 1}: {len(improvements) if isinstance(improvements, list) else '?'} improvement(s)"
+                )
                 if record:
-                    click.echo(f"    → Outcome recorded to Karma Ledger")
+                    click.echo("    → Outcome recorded to Karma Ledger")
 
 
 # ---------------------------------------------------------------------------
 # wm ground — Dharma go/no-go evaluation
 # ---------------------------------------------------------------------------
+
 
 @click.command()
 @click.argument("action")
@@ -310,7 +356,9 @@ def ground(ctx, action: str, params: str | None, json_flag: bool) -> None:
             verdict = "NO-GO"
 
     if json_output:
-        click.echo(_json_dumps({"verdict": verdict, "result": result}, indent=2, default=str))
+        click.echo(
+            _json_dumps({"verdict": verdict, "result": result}, indent=2, default=str)
+        )
     else:
         icons = {"GO": "✅", "CAUTION": "⚠️", "NO-GO": "🛑"}
 
@@ -321,7 +369,11 @@ def ground(ctx, action: str, params: str | None, json_flag: bool) -> None:
         if isinstance(data, dict):
             for k, v in data.items():
                 if k not in ("action",):
-                    val_str = str(v)[:120] if not isinstance(v, (dict, list)) else _json_dumps(v, default=str)[:120]
+                    val_str = (
+                        str(v)[:120]
+                        if not isinstance(v, (dict, list))
+                        else _json_dumps(v, default=str)[:120]
+                    )
                     click.echo(f"  {k}: {val_str}")
 
 

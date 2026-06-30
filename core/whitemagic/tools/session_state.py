@@ -45,6 +45,7 @@ def _activate_consciousness() -> None:
         from whitemagic.core.consciousness.unified_nervous_system import (
             wire_cross_subsystem_patterns,
         )
+
         wire_cross_subsystem_patterns()
     except Exception:
         pass
@@ -54,6 +55,7 @@ def _activate_consciousness() -> None:
         from whitemagic.core.consciousness.apotheosis_engine import (
             get_apotheosis_engine,
         )
+
         engine = get_apotheosis_engine()
         if not engine._running:
             engine.start()

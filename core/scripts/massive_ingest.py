@@ -81,6 +81,7 @@ SOURCE_IMPORTANCE = {
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -98,9 +99,17 @@ def content_hash(text: str) -> str:
     return hashlib.sha256(text[:4000].encode()).hexdigest()[:16]
 
 
-def ingest_memory(conn, memory_id: str, content: str, title: str,
-                  memory_type: str, tags: list, metadata: dict,
-                  importance: float = 0.5, dry_run: bool = False) -> bool:
+def ingest_memory(
+    conn,
+    memory_id: str,
+    content: str,
+    title: str,
+    memory_type: str,
+    tags: list,
+    metadata: dict,
+    importance: float = 0.5,
+    dry_run: bool = False,
+) -> bool:
     """Insert a memory with holographic coordinates."""
     now = datetime.now().isoformat()
 
@@ -108,41 +117,56 @@ def ingest_memory(conn, memory_id: str, content: str, title: str,
         return True
 
     try:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT OR IGNORE INTO memories (
                 id, content, title, memory_type, created_at, updated_at,
                 accessed_at, importance, metadata, ingestion_time,
                 galactic_distance, is_protected
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            memory_id, content[:100000], title, memory_type, now, now,
-            now, importance, json.dumps(metadata), now,
-            1.0 - importance, 0
-        ))
+        """,
+            (
+                memory_id,
+                content[:100000],
+                title,
+                memory_type,
+                now,
+                now,
+                now,
+                importance,
+                json.dumps(metadata),
+                now,
+                1.0 - importance,
+                0,
+            ),
+        )
 
         # Insert tags
         for tag in tags:
             conn.execute(
                 "INSERT OR IGNORE INTO tags (memory_id, tag) VALUES (?, ?)",
-                (memory_id, tag)
+                (memory_id, tag),
             )
 
         # Generate holographic coordinates
         try:
             from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
+
             encoder = CoordinateEncoder()
-            coord = encoder.encode({
-                "id": memory_id,
-                "content": content[:2000],
-                "title": title,
-                "memory_type": memory_type,
-                "importance": importance,
-                "tags": tags,
-                "metadata": metadata,
-            })
+            coord = encoder.encode(
+                {
+                    "id": memory_id,
+                    "content": content[:2000],
+                    "title": title,
+                    "memory_type": memory_type,
+                    "importance": importance,
+                    "tags": tags,
+                    "metadata": metadata,
+                }
+            )
             conn.execute(
                 "INSERT OR IGNORE INTO holographic_coords (memory_id, x, y, z, w, v) VALUES (?, ?, ?, ?, ?, ?)",
-                (memory_id, coord.x, coord.y, coord.z, coord.w, coord.v)
+                (memory_id, coord.x, coord.y, coord.z, coord.w, coord.v),
             )
         except Exception as e:
             log.debug(f"  Failed to encode coordinates for {memory_id[:12]}: {e}")
@@ -152,7 +176,7 @@ def ingest_memory(conn, memory_id: str, content: str, title: str,
             tags_text = " ".join(tags)
             conn.execute(
                 "INSERT OR IGNORE INTO memories_fts (id, title, content, tags_text) VALUES (?, ?, ?, ?)",
-                (memory_id, title, content[:10000], tags_text)
+                (memory_id, title, content[:10000], tags_text),
             )
         except Exception as e:
             log.debug(f"  FTS insert failed for {memory_id[:12]}: {e}")
@@ -176,7 +200,8 @@ def ingest_codex_consolidated(conn, dry_run: bool = False, limit: int = 0) -> di
 
     # Count existing IDs
     existing = set(
-        row[0] for row in conn.execute(
+        row[0]
+        for row in conn.execute(
             "SELECT id FROM memories WHERE id LIKE 'codex-consolidated-%'"
         ).fetchall()
     )
@@ -219,9 +244,17 @@ def ingest_codex_consolidated(conn, dry_run: bool = False, limit: int = 0) -> di
                 "content_hash": content_hash(content),
             }
 
-            if ingest_memory(conn, node_id, content, title,
-                           SOURCE_MEMORY_TYPES["codex_consolidated"], tags,
-                           metadata, SOURCE_IMPORTANCE["codex_consolidated"], dry_run):
+            if ingest_memory(
+                conn,
+                node_id,
+                content,
+                title,
+                SOURCE_MEMORY_TYPES["codex_consolidated"],
+                tags,
+                metadata,
+                SOURCE_IMPORTANCE["codex_consolidated"],
+                dry_run,
+            ):
                 ingested += 1
             else:
                 skipped += 1
@@ -246,7 +279,8 @@ def ingest_codex_chunks(conn, dry_run: bool = False, limit: int = 0) -> dict:
         return {"ingested": 0, "skipped": 0}
 
     existing = set(
-        row[0] for row in conn.execute(
+        row[0]
+        for row in conn.execute(
             "SELECT id FROM memories WHERE id LIKE 'codex-chunk-%'"
         ).fetchall()
     )
@@ -302,9 +336,17 @@ def ingest_codex_chunks(conn, dry_run: bool = False, limit: int = 0) -> dict:
                     "content_hash": content_hash(content),
                 }
 
-                if ingest_memory(conn, memory_id, content, title,
-                               SOURCE_MEMORY_TYPES["codex_chunks"], tags,
-                               metadata, SOURCE_IMPORTANCE["codex_chunks"], dry_run):
+                if ingest_memory(
+                    conn,
+                    memory_id,
+                    content,
+                    title,
+                    SOURCE_MEMORY_TYPES["codex_chunks"],
+                    tags,
+                    metadata,
+                    SOURCE_IMPORTANCE["codex_chunks"],
+                    dry_run,
+                ):
                     ingested += 1
                 else:
                     skipped += 1
@@ -328,7 +370,8 @@ def ingest_grok(conn, dry_run: bool = False, limit: int = 0) -> dict:
         return {"ingested": 0, "skipped": 0}
 
     existing = set(
-        row[0] for row in conn.execute(
+        row[0]
+        for row in conn.execute(
             "SELECT id FROM memories WHERE id LIKE 'grok-%'"
         ).fetchall()
     )
@@ -371,9 +414,17 @@ def ingest_grok(conn, dry_run: bool = False, limit: int = 0) -> dict:
             "content_hash": content_hash(content),
         }
 
-        if ingest_memory(conn, memory_id, content, title,
-                       SOURCE_MEMORY_TYPES["grok"], tags,
-                       metadata, SOURCE_IMPORTANCE["grok"], dry_run):
+        if ingest_memory(
+            conn,
+            memory_id,
+            content,
+            title,
+            SOURCE_MEMORY_TYPES["grok"],
+            tags,
+            metadata,
+            SOURCE_IMPORTANCE["grok"],
+            dry_run,
+        ):
             ingested += 1
         else:
             skipped += 1
@@ -396,7 +447,8 @@ def ingest_library(conn, dry_run: bool = False, limit: int = 0) -> dict:
         return {"ingested": 0, "skipped": 0}
 
     existing = set(
-        row[0] for row in conn.execute(
+        row[0]
+        for row in conn.execute(
             "SELECT id FROM memories WHERE id LIKE 'library-%'"
         ).fetchall()
     )
@@ -442,9 +494,17 @@ def ingest_library(conn, dry_run: bool = False, limit: int = 0) -> dict:
             "content_hash": content_hash(content),
         }
 
-        if ingest_memory(conn, memory_id, content[:50000], title,
-                       SOURCE_MEMORY_TYPES["library"], tags,
-                       metadata, SOURCE_IMPORTANCE["library"], dry_run):
+        if ingest_memory(
+            conn,
+            memory_id,
+            content[:50000],
+            title,
+            SOURCE_MEMORY_TYPES["library"],
+            tags,
+            metadata,
+            SOURCE_IMPORTANCE["library"],
+            dry_run,
+        ):
             ingested += 1
         else:
             skipped += 1
@@ -468,7 +528,8 @@ def ingest_research(conn, dry_run: bool = False, limit: int = 0) -> dict:
         return {"ingested": 0, "skipped": 0}
 
     existing = set(
-        row[0] for row in conn.execute(
+        row[0]
+        for row in conn.execute(
             "SELECT id FROM memories WHERE id LIKE 'research-%'"
         ).fetchall()
     )
@@ -509,9 +570,17 @@ def ingest_research(conn, dry_run: bool = False, limit: int = 0) -> dict:
             "content_hash": content_hash(content),
         }
 
-        if ingest_memory(conn, memory_id, content[:50000], title,
-                       SOURCE_MEMORY_TYPES["research"], tags,
-                       metadata, SOURCE_IMPORTANCE["research"], dry_run):
+        if ingest_memory(
+            conn,
+            memory_id,
+            content[:50000],
+            title,
+            SOURCE_MEMORY_TYPES["research"],
+            tags,
+            metadata,
+            SOURCE_IMPORTANCE["research"],
+            dry_run,
+        ):
             ingested += 1
         else:
             skipped += 1
@@ -530,7 +599,8 @@ def ingest_project_docs(conn, dry_run: bool = False, limit: int = 0) -> dict:
     total = 0
 
     existing = set(
-        row[0] for row in conn.execute(
+        row[0]
+        for row in conn.execute(
             "SELECT id FROM memories WHERE id LIKE 'doc-project-%'"
         ).fetchall()
     )
@@ -567,9 +637,17 @@ def ingest_project_docs(conn, dry_run: bool = False, limit: int = 0) -> dict:
             "content_hash": content_hash(content),
         }
 
-        if ingest_memory(conn, memory_id, content[:50000], title,
-                       SOURCE_MEMORY_TYPES["project_docs"], tags,
-                       metadata, SOURCE_IMPORTANCE["project_docs"], dry_run):
+        if ingest_memory(
+            conn,
+            memory_id,
+            content[:50000],
+            title,
+            SOURCE_MEMORY_TYPES["project_docs"],
+            tags,
+            metadata,
+            SOURCE_IMPORTANCE["project_docs"],
+            dry_run,
+        ):
             ingested += 1
         else:
             skipped += 1
@@ -606,9 +684,17 @@ def ingest_project_docs(conn, dry_run: bool = False, limit: int = 0) -> dict:
             "content_hash": content_hash(content),
         }
 
-        if ingest_memory(conn, memory_id, content[:50000], title,
-                       SOURCE_MEMORY_TYPES["grimoire"], tags,
-                       metadata, SOURCE_IMPORTANCE["grimoire"], dry_run):
+        if ingest_memory(
+            conn,
+            memory_id,
+            content[:50000],
+            title,
+            SOURCE_MEMORY_TYPES["grimoire"],
+            tags,
+            metadata,
+            SOURCE_IMPORTANCE["grimoire"],
+            dry_run,
+        ):
             ingested += 1
         else:
             skipped += 1
@@ -658,10 +744,16 @@ def print_final_stats(conn):
 
 def main():
     parser = argparse.ArgumentParser(description="Massive Semantic Ingestion Pipeline")
-    parser.add_argument("--source", choices=["codex", "grok", "library", "research", "docs", "all"],
-                       default="all", help="Ingest specific source")
+    parser.add_argument(
+        "--source",
+        choices=["codex", "grok", "library", "research", "docs", "all"],
+        default="all",
+        help="Ingest specific source",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
-    parser.add_argument("--limit", type=int, default=0, help="Limit per source (0=unlimited)")
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Limit per source (0=unlimited)"
+    )
     args = parser.parse_args()
 
     db_path = get_db_path()
@@ -680,9 +772,12 @@ def main():
         backup_path = db_path.with_suffix(f".db.pre-ingest-backup")
         if not backup_path.exists():
             import shutil
+
             log.info(f"💾 Backing up DB to {backup_path.name}...")
             shutil.copy2(db_path, backup_path)
-            log.info(f"  ✅ Backup created ({backup_path.stat().st_size / 1024 / 1024:.1f} MB)")
+            log.info(
+                f"  ✅ Backup created ({backup_path.stat().st_size / 1024 / 1024:.1f} MB)"
+            )
 
     conn = get_conn(db_path)
     total_start = time.perf_counter()

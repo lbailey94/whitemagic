@@ -20,6 +20,7 @@ Usage:
     matrix = pairwise_distance_matrix(vectors)
     sim = cosine_similarity_zig(vec_a, vec_b)
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -56,10 +57,10 @@ def _setup_ffi(lib: Any) -> None:
 
 # Unified library loader for Zig SIMD
 _zig_loader = LibraryLoader(
-    lib_name='libwhitemagic',
+    lib_name="libwhitemagic",
     base_path=Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-zig",
-    env_var='WM_ZIG_LIB',
-    search_paths=['zig-out/lib/', '', ''],
+    env_var="WM_ZIG_LIB",
+    search_paths=["zig-out/lib/", "", ""],
     setup_function=_setup_ffi,
 )
 
@@ -71,10 +72,6 @@ def _to_c_float_array(vec: Sequence[float]) -> ctypes.Array:
         arr[i] = v
     return arr
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def cosine_similarity_zig(a: Sequence[float], b: Sequence[float]) -> float:
     """Compute cosine similarity between two vectors using Zig SIMD.
@@ -123,8 +120,7 @@ def pairwise_distance_matrix(
             # Flatten vectors into contiguous array
             flat = (ctypes.c_float * (n * dim))()
             for i, vec in enumerate(vectors):
-                for j, v in enumerate(vec[:
-                    dim]):
+                for j, v in enumerate(vec[:dim]):
                     flat[i * dim + j] = v
 
             # Output: N×N matrix
@@ -171,10 +167,6 @@ def top_k_nearest(
         results.append([(idx, d) for d, idx in dists[:k]])
     return results
 
-
-# ---------------------------------------------------------------------------
-# Pure Python fallbacks
-# ---------------------------------------------------------------------------
 
 def _py_cosine(a: Sequence[float], b: Sequence[float]) -> float:
     """Pure Python cosine similarity."""

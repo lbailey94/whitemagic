@@ -29,22 +29,51 @@ HOME = Path.home()
 ACTIVE_DB = HOME / ".whitemagic" / "memory" / "whitemagic.db"
 HOT_DB = HOME / "Desktop" / "whitemagic_memory_archive" / "whitemagic_hot.db"
 COLD_DB = HOME / "Desktop" / "whitemagic_memory_archive" / "whitemagic_cold.db"
-PRE_MERGE_DB = HOME / "Desktop" / "wm_archive" / "phase6_dead_files" / "primary_db_pre_merge.db"
+PRE_MERGE_DB = (
+    HOME / "Desktop" / "wm_archive" / "phase6_dead_files" / "primary_db_pre_merge.db"
+)
 
 # Shared columns between active and archive memories tables
 ACTIVE_MEMORY_COLS = [
-    "id", "content", "memory_type", "created_at", "updated_at", "accessed_at",
-    "access_count", "emotional_valence", "importance", "neuro_score",
-    "novelty_score", "recall_count", "half_life_days", "is_protected",
-    "metadata", "title", "galactic_distance", "retention_score",
-    "last_retention_sweep", "content_hash", "event_time", "ingestion_time",
-    "is_private", "model_exclude"
+    "id",
+    "content",
+    "memory_type",
+    "created_at",
+    "updated_at",
+    "accessed_at",
+    "access_count",
+    "emotional_valence",
+    "importance",
+    "neuro_score",
+    "novelty_score",
+    "recall_count",
+    "half_life_days",
+    "is_protected",
+    "metadata",
+    "title",
+    "galactic_distance",
+    "retention_score",
+    "last_retention_sweep",
+    "content_hash",
+    "event_time",
+    "ingestion_time",
+    "is_private",
+    "model_exclude",
 ]
 
 ACTIVE_ASSOC_COLS = [
-    "source_id", "target_id", "strength", "last_traversed_at",
-    "traversal_count", "created_at", "direction", "relation_type",
-    "edge_type", "valid_from", "valid_until", "ingestion_time"
+    "source_id",
+    "target_id",
+    "strength",
+    "last_traversed_at",
+    "traversal_count",
+    "created_at",
+    "direction",
+    "relation_type",
+    "edge_type",
+    "valid_from",
+    "valid_until",
+    "ingestion_time",
 ]
 
 HOLO_COLS = ["memory_id", "x", "y", "z", "w", "v"]
@@ -93,7 +122,7 @@ def ingest_memories(active_conn, source_path, dry_run=False):
     if not dry_run and new_rows:
         active_conn.executemany(
             f"INSERT OR IGNORE INTO memories ({col_list}) VALUES ({placeholders})",
-            new_rows
+            new_rows,
         )
         active_conn.commit()
         print(f"  ✅ Inserted {len(new_rows)} memories")
@@ -129,7 +158,7 @@ def ingest_associations(active_conn, source_path, batch_size=50000, dry_run=Fals
             break
         active_conn.executemany(
             f"INSERT OR IGNORE INTO associations ({col_list}) VALUES ({placeholders})",
-            batch
+            batch,
         )
         active_conn.commit()
         total_inserted += len(batch)
@@ -158,14 +187,16 @@ def ingest_holographic_coords(active_conn, source_path, dry_run=False):
     col_list = ", ".join(cols)
     placeholders = ", ".join(["?"] * len(cols))
 
-    source_rows = source_conn.execute(f"SELECT {col_list} FROM holographic_coords").fetchall()
+    source_rows = source_conn.execute(
+        f"SELECT {col_list} FROM holographic_coords"
+    ).fetchall()
     before = count_table(active_conn, "holographic_coords")
     print(f"  Holographic coords: {len(source_rows)} in source, {before} in active")
 
     if not dry_run and source_rows:
         active_conn.executemany(
             f"INSERT OR IGNORE INTO holographic_coords ({col_list}) VALUES ({placeholders})",
-            source_rows
+            source_rows,
         )
         active_conn.commit()
 
@@ -211,7 +242,7 @@ def ingest_embeddings(active_conn, source_path, batch_size=5000, dry_run=False):
             break
         active_conn.executemany(
             f"INSERT OR IGNORE INTO memory_embeddings ({col_list}) VALUES ({placeholders})",
-            batch
+            batch,
         )
         active_conn.commit()
         total += len(batch)
@@ -246,7 +277,7 @@ def ingest_tags(active_conn, source_path, dry_run=False):
     if not dry_run and source_rows:
         active_conn.executemany(
             f"INSERT OR IGNORE INTO tags ({col_list}) VALUES ({placeholders})",
-            source_rows
+            source_rows,
         )
         active_conn.commit()
 
@@ -260,10 +291,10 @@ def ingest_tags(active_conn, source_path, dry_run=False):
 
 def ingest_source(active_conn, source_path, label, dry_run=False):
     """Ingest all tables from a single source DB."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"📦 Ingesting: {label}")
     print(f"   Source: {source_path}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     if not source_path.exists():
         print(f"  ❌ Source not found: {source_path}")
@@ -279,7 +310,9 @@ def ingest_source(active_conn, source_path, label, dry_run=False):
 
     elapsed = time.perf_counter() - start
     print(f"\n  ⏱  {label} done in {elapsed:.1f}s")
-    print(f"  📊 +{new_mems} memories, +{new_assocs:,} assocs, +{new_holo} holo, +{new_embeds:,} embeds, +{new_tags} tags")
+    print(
+        f"  📊 +{new_mems} memories, +{new_assocs:,} assocs, +{new_holo} holo, +{new_embeds:,} embeds, +{new_tags} tags"
+    )
 
     return {
         "memories": new_mems,
@@ -287,25 +320,41 @@ def ingest_source(active_conn, source_path, label, dry_run=False):
         "holographic": new_holo,
         "embeddings": new_embeds,
         "tags": new_tags,
-        "elapsed": elapsed
+        "elapsed": elapsed,
     }
 
 
 def print_db_stats(conn, label="Active DB"):
     """Print current DB statistics."""
     print(f"\n📊 {label} Statistics:")
-    for table in ["memories", "associations", "holographic_coords", "memory_embeddings", "tags"]:
+    for table in [
+        "memories",
+        "associations",
+        "holographic_coords",
+        "memory_embeddings",
+        "tags",
+    ]:
         count = count_table(conn, table)
         print(f"  {table}: {count:,}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Rehydrate WhiteMagic galaxy from archives")
-    parser.add_argument("--dry-run", action="store_true", help="Preview only, no writes")
-    parser.add_argument("--include-cold", action="store_true",
-                        help="Include cold archive (105K memories, 18.7M assocs — SLOW)")
-    parser.add_argument("--source", choices=["hot", "pre-merge", "cold", "all"],
-                        help="Ingest only a specific source")
+    parser = argparse.ArgumentParser(
+        description="Rehydrate WhiteMagic galaxy from archives"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Preview only, no writes"
+    )
+    parser.add_argument(
+        "--include-cold",
+        action="store_true",
+        help="Include cold archive (105K memories, 18.7M assocs — SLOW)",
+    )
+    parser.add_argument(
+        "--source",
+        choices=["hot", "pre-merge", "cold", "all"],
+        help="Ingest only a specific source",
+    )
     args = parser.parse_args()
 
     print("🌌 WhiteMagic Galaxy Rehydration")
@@ -323,9 +372,12 @@ def main():
         backup_path = ACTIVE_DB.with_suffix(f".db.pre-rehydrate-backup")
         if not backup_path.exists():
             import shutil
+
             print(f"\n💾 Backing up active DB to {backup_path.name}...")
             shutil.copy2(ACTIVE_DB, backup_path)
-            print(f"  ✅ Backup created ({backup_path.stat().st_size / 1024 / 1024:.1f} MB)")
+            print(
+                f"  ✅ Backup created ({backup_path.stat().st_size / 1024 / 1024:.1f} MB)"
+            )
 
     active_conn = sqlite3.connect(str(ACTIVE_DB))
     active_conn.execute("PRAGMA journal_mode=WAL")
@@ -363,7 +415,9 @@ def main():
     if not args.dry_run:
         print("\n🔄 Rebuilding FTS index...")
         try:
-            active_conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
+            active_conn.execute(
+                "INSERT INTO memories_fts(memories_fts) VALUES('rebuild')"
+            )
             active_conn.commit()
             print("  ✅ FTS index rebuilt")
         except Exception as e:

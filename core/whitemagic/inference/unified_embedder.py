@@ -47,7 +47,7 @@ class UnifiedEmbedder:
         self.rust_onnx_available = self._check_rust_onnx()
 
         logger.info("UnifiedEmbedder initialized")
-        logger.info("  Rust ONNX: %s", '✓' if self.rust_onnx_available else '✗')
+        logger.info("  Rust ONNX: %s", "✓" if self.rust_onnx_available else "✗")
 
     def _get_default_model_path(self) -> str:
         """Get default ONNX model path."""
@@ -69,16 +69,13 @@ class UnifiedEmbedder:
         """Check if Rust ONNX is available."""
         try:
             import whitemagic_rs
+
             rs = cast(Any, whitemagic_rs)
             return hasattr(rs, "arrow_onnx_embed")
         except ImportError:
             return False
 
-    def encode_batch(
-        self,
-        texts: list[str],
-        batch_size: int = 2048
-    ) -> np.ndarray:
+    def encode_batch(self, texts: list[str], batch_size: int = 2048) -> np.ndarray:
         """Encode batch with automatic polyglot routing.
 
         Args:
@@ -97,7 +94,7 @@ class UnifiedEmbedder:
         all_embeddings = []
 
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+            batch = texts[i : i + batch_size]
             batch_embeddings = self._encode_single_batch(batch)
             all_embeddings.append(batch_embeddings)
 
@@ -120,13 +117,15 @@ class UnifiedEmbedder:
     def _encode_rust_onnx(self, texts: list[str]) -> np.ndarray:
         """Encode using Rust ONNX with Arrow."""
         import whitemagic_rs
+
         rs = cast(Any, whitemagic_rs)
 
         # Convert texts to Arrow IPC (zero-copy)
-        texts_arrow = rs.arrow_encode_memories(json.dumps([
-            {"id": str(i), "title": "", "content": t}
-            for i, t in enumerate(texts)
-        ]))
+        texts_arrow = rs.arrow_encode_memories(
+            json.dumps(
+                [{"id": str(i), "title": "", "content": t} for i, t in enumerate(texts)]
+            )
+        )
 
         # Call Rust ONNX embedder
         result_arrow = rs.arrow_onnx_embed(texts_arrow, self.model_path)
@@ -148,7 +147,10 @@ class UnifiedEmbedder:
             # Ultimate fallback: random embeddings for testing
             logger.warning("FastEmbed not available, using random embeddings")
             embedding_dim = 384
-            return cast(np.ndarray, np.random.randn(len(texts), embedding_dim).astype(np.float32))
+            return cast(
+                np.ndarray,
+                np.random.randn(len(texts), embedding_dim).astype(np.float32),
+            )
 
     def _arrow_to_numpy(self, arrow_bytes: bytes) -> np.ndarray:
         """Convert Arrow IPC to numpy (zero-copy).
@@ -168,10 +170,7 @@ class UnifiedEmbedder:
         return cast(np.ndarray, batch.column(0).to_numpy(zero_copy_only=True))
 
 
-def batch_embed_memories(
-    db_path: str,
-    embedder: UnifiedEmbedder | None = None
-) -> int:
+def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) -> int:
     """Batch embed all memories in database.
 
     This is the F001 completion function.
@@ -211,7 +210,7 @@ def batch_embed_memories(
                 conn.execute(
                     """INSERT OR REPLACE INTO memory_embeddings
                        (memory_id, embedding) VALUES (?, ?)""",
-                    (mid, emb.tobytes())
+                    (mid, emb.tobytes()),
                 )
 
             total_embedded += len(batch_texts)
@@ -227,7 +226,7 @@ def batch_embed_memories(
             conn.execute(
                 """INSERT OR REPLACE INTO memory_embeddings
                    (memory_id, embedding) VALUES (?, ?)""",
-                (mid, emb.tobytes())
+                (mid, emb.tobytes()),
             )
         total_embedded += len(batch_texts)
 

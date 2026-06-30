@@ -229,11 +229,14 @@ async def set_viewport_size(
         True if successful
 
     """
-    response = await cdp.send("Emulation.setDeviceMetricsOverride", {
-        "width": width,
-        "height": height,
-        "deviceScaleFactor": device_scale_factor,
-        "mobile": mobile,
-    })
+    response = await cdp.send(
+        "Emulation.setDeviceMetricsOverride",
+        {
+            "width": width,
+            "height": height,
+            "deviceScaleFactor": device_scale_factor,
+            "mobile": mobile,
+        },
+    )
 
     return response.success

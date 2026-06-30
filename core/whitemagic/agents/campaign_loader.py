@@ -51,13 +51,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Data classes
-# ---------------------------------------------------------------------------
 
 @dataclass
 class VictoryCondition:
     """A single victory condition — ALL must be met for campaign success."""
+
     description: str
     met: bool = False
     check_cmd: str | None = None
@@ -70,6 +68,7 @@ class VictoryCondition:
 @dataclass
 class Target:
     """A specific target (file, line, item) for the campaign."""
+
     file: str = ""
     line: int | None = None
     type: str = ""
@@ -160,26 +159,22 @@ class Campaign:
                 vc.met = met
 
 
-# ---------------------------------------------------------------------------
-# Parsing
-# ---------------------------------------------------------------------------
-
 def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     """Parse YAML-style frontmatter delimited by ---."""
-    m = re.match(r'^---\s*\n(.*?)\n---\s*\n', text, re.DOTALL)
+    m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
     if not m:
         return {}, text
 
     fm_text = m.group(1)
-    body = text[m.end():]
+    body = text[m.end() :]
 
     meta: dict[str, Any] = {}
-    for line in fm_text.strip().split('\n'):
+    for line in fm_text.strip().split("\n"):
         line = line.strip()
-        if not line or line.startswith('#'):
+        if not line or line.startswith("#"):
             continue
 
-        kv = line.split(':', 1)
+        kv = line.split(":", 1)
         if len(kv) != 2:
             continue
 
@@ -187,15 +182,16 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         val = kv[1].strip()
 
         # Parse lists [a, b, c]
-        if val.startswith('[') and val.endswith(']'):
-            items = [s.strip().strip('"').strip("'") for s in val[1:-1].split(',')]
+        if val.startswith("[") and val.endswith("]"):
+            items = [s.strip().strip('"').strip("'") for s in val[1:-1].split(",")]
             meta[key] = [s for s in items if s]
         # Parse integers
         elif val.isdigit():
             meta[key] = int(val)
         # Parse quoted strings
-        elif (val.startswith('"') and val.endswith('"')) or \
-             (val.startswith("'") and val.endswith("'")):
+        elif (val.startswith('"') and val.endswith('"')) or (
+            val.startswith("'") and val.endswith("'")
+        ):
             meta[key] = val[1:-1]
         else:
             meta[key] = val
@@ -205,7 +201,7 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
 
 def _extract_section(body: str, heading: str) -> str:
     """Extract content under a specific ## heading."""
-    pattern = rf'^##\s+{re.escape(heading)}\s*\n(.*?)(?=^##\s|\Z)'
+    pattern = rf"^##\s+{re.escape(heading)}\s*\n(.*?)(?=^##\s|\Z)"
     m = re.search(pattern, body, re.MULTILINE | re.DOTALL)
     return m.group(1).strip() if m else ""
 
@@ -217,21 +213,25 @@ def _parse_victory_conditions(body: str) -> list[VictoryCondition]:
         return []
 
     conditions = []
-    for line in section.split('\n'):
+    for line in section.split("\n"):
         line = line.strip()
-        m = re.match(r'^-\s*\[([ xX])\]\s*(.*)', line)
+        m = re.match(r"^-\s*\[([ xX])\]\s*(.*)", line)
         if m:
-            met = m.group(1).lower() == 'x'
+            met = m.group(1).lower() == "x"
             desc = m.group(2).strip()
             # Check for inline verification: desc (check: command)
             check_cmd = None
-            cm = re.search(r'\(check:\s*(.+?)\)\s*$', desc)
+            cm = re.search(r"\(check:\s*(.+?)\)\s*$", desc)
             if cm:
                 check_cmd = cm.group(1)
-                desc = desc[:cm.start()].strip()
-            conditions.append(VictoryCondition(
-                description=desc, met=met, check_cmd=check_cmd,
-            ))
+                desc = desc[: cm.start()].strip()
+            conditions.append(
+                VictoryCondition(
+                    description=desc,
+                    met=met,
+                    check_cmd=check_cmd,
+                )
+            )
 
     return conditions
 
@@ -246,29 +246,38 @@ def _parse_targets(body: str) -> list[Target]:
 
     # Try table format: | File | Line | Type |
     table_rows = re.findall(
-        r'^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|',
-        section, re.MULTILINE,
+        r"^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|",
+        section,
+        re.MULTILINE,
     )
     for row in table_rows:
         file_path, line, desc = row
-        if file_path.startswith('-') or file_path.strip().lower() == 'file':
+        if file_path.startswith("-") or file_path.strip().lower() == "file":
             continue
         line_num = int(line.strip()) if line.strip().isdigit() else None
-        targets.append(Target(
-            file=file_path.strip(), line=line_num,
-            type=desc.strip(), description=desc.strip(),
-        ))
+        targets.append(
+            Target(
+                file=file_path.strip(),
+                line=line_num,
+                type=desc.strip(),
+                description=desc.strip(),
+            )
+        )
 
     # Also try list format: - `path/to/file.py:42` — description
     if not targets:
-        for line in section.split('\n'):
-            m = re.match(r'^[-*]\s+`?([^`\s:]+):?(\d+)?`?\s*[—\-]?\s*(.*)', line.strip())
+        for line in section.split("\n"):
+            m = re.match(
+                r"^[-*]\s+`?([^`\s:]+):?(\d+)?`?\s*[—\-]?\s*(.*)", line.strip()
+            )
             if m:
-                targets.append(Target(
-                    file=m.group(1),
-                    line=int(m.group(2)) if m.group(2) else None,
-                    description=m.group(3).strip(),
-                ))
+                targets.append(
+                    Target(
+                        file=m.group(1),
+                        line=int(m.group(2)) if m.group(2) else None,
+                        description=m.group(3).strip(),
+                    )
+                )
 
     return targets
 
@@ -280,41 +289,39 @@ def _parse_strategy_steps(body: str) -> list[str]:
         return []
 
     steps = []
-    for line in section.split('\n'):
+    for line in section.split("\n"):
         line = line.strip()
-        m = re.match(r'^(\d+)\.\s+(.*)', line)
+        m = re.match(r"^(\d+)\.\s+(.*)", line)
         if m:
             steps.append(m.group(2))
     return steps
 
 
-# ---------------------------------------------------------------------------
-# Loading
-# ---------------------------------------------------------------------------
-
 def load_campaign(path: Path) -> Campaign:
     """Load a single campaign from a markdown file."""
-    text = path.read_text(errors='replace')
+    text = path.read_text(errors="replace")
     meta, body = _parse_frontmatter(text)
 
     return Campaign(
-        name=meta.get('name', path.stem),
-        codename=meta.get('codename', path.stem),
+        name=meta.get("name", path.stem),
+        codename=meta.get("codename", path.stem),
         source_file=path,
-        army=meta.get('army', 'alpha'),
-        type=meta.get('type', 'discovery'),
-        priority=int(meta.get('priority', 99)),
-        clone_count=int(meta.get('clone_count', 10000)),
-        strategies=meta.get('strategies', ['analytical', 'synthesis']),
-        category=meta.get('category', 'general'),
-        phase=meta.get('phase', 'immediate'),
-        source=meta.get('source', ''),
-        column_size=int(meta.get('column_size', 50000)),
-        description=_extract_section(body, 'Objective') or _extract_section(body, 'Description') or "",
+        army=meta.get("army", "alpha"),
+        type=meta.get("type", "discovery"),
+        priority=int(meta.get("priority", 99)),
+        clone_count=int(meta.get("clone_count", 10000)),
+        strategies=meta.get("strategies", ["analytical", "synthesis"]),
+        category=meta.get("category", "general"),
+        phase=meta.get("phase", "immediate"),
+        source=meta.get("source", ""),
+        column_size=int(meta.get("column_size", 50000)),
+        description=_extract_section(body, "Objective")
+        or _extract_section(body, "Description")
+        or "",
         victory_conditions=_parse_victory_conditions(body),
         targets=_parse_targets(body),
         strategy_steps=_parse_strategy_steps(body),
-        verification=_extract_section(body, 'Verification'),
+        verification=_extract_section(body, "Verification"),
         raw_body=body,
     )
 
@@ -361,10 +368,6 @@ def load_all_campaigns(
     return campaigns
 
 
-# ---------------------------------------------------------------------------
-# Reporting
-# ---------------------------------------------------------------------------
-
 def campaign_summary_table(campaigns: list[Campaign]) -> str:
     """Generate a markdown summary table of loaded campaigns."""
     lines = [
@@ -372,14 +375,19 @@ def campaign_summary_table(campaigns: list[Campaign]) -> str:
         "|---|----------|----------|------|--------|------|----------|------------|--------|",
     ]
     for i, c in enumerate(campaigns, 1):
-        icon = {"pending": "⏳", "in_progress": "🔄", "complete": "✅",
-                "failed": "❌", "partial": "⚠️"}.get(c.status, "?")
+        icon = {
+            "pending": "⏳",
+            "in_progress": "🔄",
+            "complete": "✅",
+            "failed": "❌",
+            "partial": "⚠️",
+        }.get(c.status, "?")
         lines.append(
             f"| {i} | {c.codename} | {c.name[:40]} | {c.army} | "
             f"{c.clone_count:,} | {c.type} | P{c.priority} | "
             f"{c.victory_progress} | {icon} |"
         )
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def victory_report(campaigns: list[Campaign]) -> str:
@@ -392,4 +400,4 @@ def victory_report(campaigns: list[Campaign]) -> str:
         for vc in c.victory_conditions:
             lines.append(f"  {vc}")
         lines.append("")
-    return '\n'.join(lines)
+    return "\n".join(lines)

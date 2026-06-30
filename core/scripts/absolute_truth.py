@@ -3,20 +3,26 @@ from dataclasses import dataclass
 
 from whitemagic.config.paths import DB_PATH
 
+
 @dataclass
 class Coords:
-    x: float; y: float; z: float; w: float; v: float
+    x: float
+    y: float
+    z: float
+    w: float
+    v: float
+
 
 def absolute_truth_sql():
     db_path = str(DB_PATH)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
-    
+
     # Mirror QueryManager logic exactly
     fts_query = '"foundation" OR "comprehensive" OR "project"'
     poled = Coords(0.1, 0.2, 0.3, 0.4, 0.5)
     native = Coords(0.0, 0.0, 0.0, 0.5, 0.5)
-    
+
     sql = """
         SELECT m.id, m.title, fts.rank,
         MIN(
@@ -37,13 +43,31 @@ def absolute_truth_sql():
         ORDER BY fts.rank ASC 
         LIMIT 10
     """
-    
+
     params = [
-        poled.x, poled.x, poled.y, poled.y, poled.z, poled.z, poled.w, poled.w, poled.v, poled.v,
-        native.x, native.x, native.y, native.y, native.z, native.z, native.w, native.w, native.v, native.v,
-        fts_query
+        poled.x,
+        poled.x,
+        poled.y,
+        poled.y,
+        poled.z,
+        poled.z,
+        poled.w,
+        poled.w,
+        poled.v,
+        poled.v,
+        native.x,
+        native.x,
+        native.y,
+        native.y,
+        native.z,
+        native.z,
+        native.w,
+        native.w,
+        native.v,
+        native.v,
+        fts_query,
     ]
-    
+
     print(f"Executing SQL with {len(params)} params...")
     try:
         rows = conn.execute(sql, params).fetchall()
@@ -54,6 +78,7 @@ def absolute_truth_sql():
         print(f"SQL FAILED: {e}")
 
     conn.close()
+
 
 if __name__ == "__main__":
     absolute_truth_sql()

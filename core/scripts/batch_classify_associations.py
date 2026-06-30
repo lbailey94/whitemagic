@@ -122,13 +122,13 @@ def run(args: argparse.Namespace) -> None:
     um = get_unified_memory()
     pool = um.backend.pool
 
-    print(f"\n{'━'*60}")
+    print(f"\n{'━' * 60}")
     print("  🔬 Batch Association Classifier v15.4")
-    print(f"{'━'*60}")
+    print(f"{'━' * 60}")
     print(f"  Mode:       {'DRY RUN' if args.dry_run else 'APPLY'}")
     print(f"  Batch size: {args.batch_size}")
     print(f"  Offset:     {args.offset}")
-    print(f"{'━'*60}\n")
+    print(f"{'━' * 60}\n")
 
     start = time.perf_counter()
 
@@ -156,10 +156,16 @@ def run(args: argparse.Namespace) -> None:
         for row in conn.execute("SELECT memory_id, tag FROM tags").fetchall():
             mem_tags[row["memory_id"]].add(row["tag"])
 
-        print(f"done ({len(mem_titles):,} memories, {sum(len(t) for t in mem_tags.values()):,} tags)")
+        print(
+            f"done ({len(mem_titles):,} memories, {sum(len(t) for t in mem_tags.values()):,} tags)"
+        )
 
         # Fetch batch of untyped associations
-        print(f"  Fetching associations (offset={args.offset}, limit={args.batch_size})...", end=" ", flush=True)
+        print(
+            f"  Fetching associations (offset={args.offset}, limit={args.batch_size})...",
+            end=" ",
+            flush=True,
+        )
         assocs = conn.execute(
             """SELECT rowid, source_id, target_id, strength
                FROM associations
@@ -203,11 +209,11 @@ def run(args: argparse.Namespace) -> None:
 
         # Report
         print(f"\n  Classification results ({elapsed:.1f}s):")
-        print(f"  {'─'*50}")
+        print(f"  {'─' * 50}")
         for rtype, count in retype_counts.most_common():
             marker = "  " if rtype == "associated_with" else "→ "
             print(f"  {marker}{rtype:20s}: {count:,}")
-        print(f"  {'─'*50}")
+        print(f"  {'─' * 50}")
         print(f"  Reclassified:  {len(updates):,}")
         print(f"  Kept as-is:    {retype_counts.get('associated_with', 0):,}")
         print(f"  Skipped (no tags): {skipped:,}")
@@ -233,7 +239,9 @@ def run(args: argparse.Namespace) -> None:
         remaining = total_untyped - len(updates) - args.offset
         if remaining > 0:
             print(f"  Remaining untyped: ~{remaining:,}")
-            print(f"  Run again with --offset {args.offset + args.batch_size} to continue")
+            print(
+                f"  Run again with --offset {args.offset + args.batch_size} to continue"
+            )
     print()
 
 
@@ -242,19 +250,26 @@ def main() -> None:
         description="Batch-classify 'associated_with' edges into typed relations",
     )
     parser.add_argument(
-        "--dry-run", action="store_true", default=True,
+        "--dry-run",
+        action="store_true",
+        default=True,
         help="Show what would change without modifying DB (default)",
     )
     parser.add_argument(
-        "--apply", action="store_true",
+        "--apply",
+        action="store_true",
         help="Actually apply the reclassifications",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=10000,
+        "--batch-size",
+        type=int,
+        default=10000,
         help="Number of associations to process per run (default: 10000)",
     )
     parser.add_argument(
-        "--offset", type=int, default=0,
+        "--offset",
+        type=int,
+        default=0,
         help="Start offset for pagination (default: 0)",
     )
     args = parser.parse_args()

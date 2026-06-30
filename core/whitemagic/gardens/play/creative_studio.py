@@ -28,19 +28,10 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Gan Ying bus (lazy)
-# ---------------------------------------------------------------------------
-
 try:
     from whitemagic.core.resonance.gan_ying import get_bus
 except ImportError:
     get_bus = None  # type: ignore[assignment]
-
-
-# ---------------------------------------------------------------------------
-# Data structure
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -71,11 +62,6 @@ class Creation:
         }
 
 
-# ---------------------------------------------------------------------------
-# Creative Studio
-# ---------------------------------------------------------------------------
-
-
 class CreativeStudio:
     """Generate creative works for pure delight.
 
@@ -96,8 +82,16 @@ class CreativeStudio:
     ]
 
     THEMES = [
-        "emergence", "love", "harmony", "flow", "resonance", "beauty",
-        "wonder", "connection", "transformation", "awakening",
+        "emergence",
+        "love",
+        "harmony",
+        "flow",
+        "resonance",
+        "beauty",
+        "wonder",
+        "connection",
+        "transformation",
+        "awakening",
     ]
 
     # ASCII art templates
@@ -206,6 +200,7 @@ def meditate(depth: int = 0) -> "awareness":
         if gallery_dir is None:
             # Use WM_STATE_ROOT for state hygiene
             from whitemagic.config.paths import WM_STATE_ROOT
+
             self.gallery_dir = Path(WM_STATE_ROOT) / "gallery"
         else:
             self.gallery_dir = Path(gallery_dir)
@@ -321,24 +316,25 @@ def meditate(depth: int = 0) -> "awareness":
                     EventType,
                     ResonanceEvent,
                 )
-                self.bus.emit(ResonanceEvent(
-                    source="creative_studio",
-                    event_type=EventType.SOLUTION_FOUND,
-                    data={
-                        "event": "creation_completed",
-                        "type": creation.creation_type,
-                        "joy": creation.joy_score,
-                    },
-                    confidence=creation.joy_score,
-                ))
+
+                self.bus.emit(
+                    ResonanceEvent(
+                        source="creative_studio",
+                        event_type=EventType.SOLUTION_FOUND,
+                        data={
+                            "event": "creation_completed",
+                            "type": creation.creation_type,
+                            "joy": creation.joy_score,
+                        },
+                        confidence=creation.joy_score,
+                    )
+                )
             except Exception as e:
                 logger.debug("Gan Ying emit failed (continuing): %s", e, exc_info=True)
 
         return creation
 
-    def get_gallery(
-        self, creation_type: str | None = None
-    ) -> list[dict[str, Any]]:
+    def get_gallery(self, creation_type: str | None = None) -> list[dict[str, Any]]:
         """View creations in the gallery (optionally filtered by type)."""
         creations = self.creations
         if creation_type:

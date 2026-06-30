@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Pattern bridge — Pattern detection and analysis."""
+
 import logging
 from typing import Any
 
@@ -17,7 +18,7 @@ def detect_patterns(query: str = "", **kwargs: Any) -> dict[str, Any]:
         return {
             "status": "success",
             "patterns": patterns,
-            "count": len(patterns) if isinstance(patterns, list) else 0
+            "count": len(patterns) if isinstance(patterns, list) else 0,
         }
     except Exception as e:
         logger.error("Pattern detection failed: %s", e, exc_info=True)

@@ -19,6 +19,7 @@ def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
     if path:
         try:
             from whitemagic.tools.handlers.fragment import fragment_accelerated_search
+
             accel = fragment_accelerated_search(query, path=path, top=limit)
             if accel is not None:
                 return {
@@ -32,6 +33,7 @@ def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
             pass  # Fall through to Python vector search
 
     from whitemagic.core.memory.vector_search import get_vector_search
+
     vs = get_vector_search()
     results = vs.search(query, limit=limit)
     return {
@@ -45,6 +47,7 @@ def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
 def handle_vector_index(**kwargs: Any) -> dict[str, Any]:
     """Index a memory for vector search."""
     from whitemagic.core.memory.vector_search import get_vector_search
+
     memory_id = kwargs.get("memory_id", "")
     content = kwargs.get("content", "")
     title = kwargs.get("title", "")
@@ -58,4 +61,5 @@ def handle_vector_index(**kwargs: Any) -> dict[str, Any]:
 def handle_vector_status(**kwargs: Any) -> dict[str, Any]:
     """Get vector search engine status."""
     from whitemagic.core.memory.vector_search import get_vector_status
+
     return {"status": "success", **get_vector_status()}

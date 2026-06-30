@@ -34,8 +34,16 @@ class JoyCore:
     def detect_joy(self, content: str) -> float:
         """Detect joy level in content."""
         joy_indicators = [
-            "joy", "happy", "delighted", "wonderful", "amazing",
-            "grateful", "love", "beautiful", "celebrate", "thrilled",
+            "joy",
+            "happy",
+            "delighted",
+            "wonderful",
+            "amazing",
+            "grateful",
+            "love",
+            "beautiful",
+            "celebrate",
+            "thrilled",
         ]
         content_lower = content.lower()
         matches = sum(1 for indicator in joy_indicators if indicator in content_lower)
@@ -69,8 +77,10 @@ class JoyCore:
             "total_events": len(self._joy_events),
             "baseline": round(self._baseline, 2),
             "avg_recent": (
-                sum(e["joy_level"] for e in self._joy_events[-10:]) / min(len(self._joy_events), 10)
-                if self._joy_events else 0.0
+                sum(e["joy_level"] for e in self._joy_events[-10:])
+                / min(len(self._joy_events), 10)
+                if self._joy_events
+                else 0.0
             ),
         }
 

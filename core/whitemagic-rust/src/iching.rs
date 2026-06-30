@@ -13,11 +13,6 @@ use rand::Rng;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
-// ---------------------------------------------------------------------------
-// King Wen sequence: maps binary pattern (0-63) → King Wen number (1-64)
-// Binary: bit 0 = bottom line, bit 5 = top line. 1=yang, 0=yin.
-// ---------------------------------------------------------------------------
-
 const KING_WEN: [u8; 64] = [
      2, 24,  7, 19, 15, 36, 46, 11,
     16, 51, 40, 54, 62, 55, 32, 34,
@@ -36,10 +31,6 @@ fn binary_to_king_wen(binary: u32) -> u32 {
     let kw = KING_WEN[idx];
     if kw == 0 { binary + 1 } else { kw as u32 }
 }
-
-// ---------------------------------------------------------------------------
-// Trigram enum
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Trigram {
@@ -101,10 +92,6 @@ impl Trigram {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Cast method + result
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CastMethod { Coin, Yarrow, Hash }
 
@@ -163,10 +150,6 @@ fn build_cast(lines: Vec<u32>, method: CastMethod) -> HexagramCast {
     HexagramCast { primary, relating, lines, moving_lines, lower_trigram, upper_trigram, cast_method: method }
 }
 
-// ---------------------------------------------------------------------------
-// Casting methods
-// ---------------------------------------------------------------------------
-
 /// 3-coin method: each line = sum of 3 coins (2=yang, 3=yin).
 /// 6=old yin (all tails), 7=young yang (2 heads 1 tail), 8=young yin (1 head 2 tails), 9=old yang (all heads).
 pub fn cast_coin(rng: &mut impl Rng) -> HexagramCast {
@@ -214,10 +197,6 @@ pub fn cast_hash(query: &str) -> HexagramCast {
     build_cast(lines, CastMethod::Hash)
 }
 
-// ---------------------------------------------------------------------------
-// Hexagram metadata (names for all 64)
-// ---------------------------------------------------------------------------
-
 pub static HEXAGRAM_NAMES: [&str; 64] = [
     "The Creative", "The Receptive", "Difficulty at the Beginning", "Youthful Folly",
     "Waiting", "Conflict", "The Army", "Holding Together",
@@ -241,10 +220,6 @@ pub fn hexagram_name(num: u32) -> &'static str {
     if num == 0 || num > 64 { return "Unknown"; }
     HEXAGRAM_NAMES[(num - 1) as usize]
 }
-
-// ---------------------------------------------------------------------------
-// Phase 4a: Beta-Calibrated Line Probabilities
-// ---------------------------------------------------------------------------
 
 /// Standard I Ching line probabilities:
 /// - 3-coin: P(6)=1/8, P(7)=3/8, P(8)=3/8, P(9)=1/8
@@ -310,10 +285,6 @@ pub fn line_entropy(temperature: f64) -> f64 {
     h
 }
 
-// ---------------------------------------------------------------------------
-// PyO3 wrapper — matches what Python i_ching.py expects: `iching_cast(query)`
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
@@ -345,10 +316,6 @@ pub fn iching_cast_stochastic(method: &str) -> PyResult<(u32, u32, Vec<u32>, Vec
         format!("{:?}", cast.cast_method),
     ))
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

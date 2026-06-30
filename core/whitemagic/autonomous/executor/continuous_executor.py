@@ -20,34 +20,42 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class FileCreateAction:
     """FileCreateAction: file create action.
 
     Value object: equality and repr are field-based."""
+
     path: str
     content: str
+
 
 @dataclass
 class FileEditAction:
     """FileEditAction: file edit action.
 
     Value object: equality and repr are field-based."""
+
     path: str
     changes: str
+
 
 @dataclass
 class ShellCommandAction:
     """ShellCommandAction: shell command action.
 
     Value object: equality and repr are field-based."""
+
     command: str
+
 
 @dataclass
 class ComplexTaskAction:
     """ComplexTaskAction: complex task action.
 
     Value object: equality and repr are field-based."""
+
     description: str
 
 
@@ -90,7 +98,9 @@ class Objective:
             **asdict(self),
             "created_at": self.created_at.isoformat(),
             "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
         }
 
 
@@ -138,6 +148,7 @@ class ContinuousExecutor:
             from whitemagic.core.intelligence.nervous_system import (
                 get_nervous_system_sync,
             )
+
             self.nervous_system = get_nervous_system_sync()
             if (
                 self.nervous_system
@@ -149,7 +160,8 @@ class ContinuousExecutor:
             self.nervous_system = None  # type: ignore[assignment]
         try:
             import whitemagic_rust as rs
-            if hasattr(rs, 'ContinuousDaemon'):
+
+            if hasattr(rs, "ContinuousDaemon"):
                 self._rust_daemon = rs.ContinuousDaemon()
             else:
                 self._rust_daemon = None
@@ -168,6 +180,7 @@ class ContinuousExecutor:
         # Initialize Governor
         try:
             from whitemagic.core.governor import get_governor
+
             self.governor: Any | None = get_governor()
         except ImportError:
             logger.info("⚠️  Governor not available, running without safety checks")
@@ -219,7 +232,7 @@ class ContinuousExecutor:
 
                 # Homeostasis / Biological Subsystem pulse
                 # Update iteration count to properly trigger pulses
-                self.current_iteration = getattr(self, 'current_iteration', 0) + 1
+                self.current_iteration = getattr(self, "current_iteration", 0) + 1
 
                 # Homeostasis / Biological Subsystem pulse
                 if self.current_iteration % 5 == 0:
@@ -246,7 +259,9 @@ class ContinuousExecutor:
                         batch_failures = 0
                         for i, result in enumerate(results):
                             obj = batch[i]
-                            assessment = await self.assessor.assess_objective(obj, result)
+                            assessment = await self.assessor.assess_objective(
+                                obj, result
+                            )
 
                             if assessment.complete:
                                 obj.completed_at = datetime.now()
@@ -308,11 +323,15 @@ class ContinuousExecutor:
                 if hasattr(self.governor, "validate_objective"):
                     validation = self.governor.validate_objective(obj.description)
                     if not validation.get("safe", True):
-                        self.log(f"Skipped (unsafe): {validation.get('reason')}", "WARN")
+                        self.log(
+                            f"Skipped (unsafe): {validation.get('reason')}", "WARN"
+                        )
                         self.failed.append(obj)
                         return False
                 else:
-                    self.log("⚠️  Governor does not have validate_objective method, skipping validation")
+                    self.log(
+                        "⚠️  Governor does not have validate_objective method, skipping validation"
+                    )
             except Exception as e:
                 self.log(f"⚠️  Governor validation failed: {e}, proceeding anyway")
 
@@ -355,20 +374,27 @@ class ContinuousExecutor:
             actions = self.parse_objective(obj.description)
             self.log(f"Parsed {len(actions)} actions from objective: {obj.description}")
             if len(actions) == 0:
-                self.log(f"WARNING: No actions parsed from objective description: {obj.description}", "WARN")
+                self.log(
+                    f"WARNING: No actions parsed from objective description: {obj.description}",
+                    "WARN",
+                )
                 result.output = f"No actions parsed from: {obj.description}"
                 result.success = False
                 return result
 
             for i, action in enumerate(actions):
-                self.log(f"Action {i+1}: {type(action).__name__}")
+                self.log(f"Action {i + 1}: {type(action).__name__}")
                 if isinstance(action, FileCreateAction):
-                    self.log(f"Creating file at {action.path} with content length {len(action.content)}")
+                    self.log(
+                        f"Creating file at {action.path} with content length {len(action.content)}"
+                    )
                     await self.create_file(action.path, action.content)
                     result.files_changed.append(action.path)
 
                 elif isinstance(action, FileEditAction):
-                    self.log(f"Editing file at {action.path} with changes length {len(action.changes)}")
+                    self.log(
+                        f"Editing file at {action.path} with changes length {len(action.changes)}"
+                    )
                     await self.edit_file(action.path, action.changes)
                     result.files_changed.append(action.path)
 
@@ -378,7 +404,9 @@ class ContinuousExecutor:
                     if self.governor:
                         validation = self.governor.validate_command(action.command)
                         if not validation.get("safe", True):
-                            raise Exception(f"Unsafe command: {validation.get('reason')}")
+                            raise Exception(
+                                f"Unsafe command: {validation.get('reason')}"
+                            )
                     output = await self.run_command(action.command)
                     result.output += output
 
@@ -399,6 +427,7 @@ class ContinuousExecutor:
     async def create_file(self, path: str, content: str):
         """Create a file with content."""
         from pathlib import Path
+
         path_obj = Path(path)
         path_obj.parent.mkdir(parents=True, exist_ok=True)
         path_obj.write_text(content)
@@ -448,20 +477,26 @@ class ContinuousExecutor:
                     replacement += "\n"
                 lines[start:end] = [replacement]
                 path_obj.write_text("".join(lines), encoding="utf-8")
-                self.log(f"Patched lines {patch['start_line']}–{patch['end_line']} in {path}")
+                self.log(
+                    f"Patched lines {patch['start_line']}–{patch['end_line']} in {path}"
+                )
 
             elif "find" in patch and "replace" in patch:
                 # Find-and-replace (first occurrence)
                 find_str: str = patch["find"]
                 replace_str: str = patch["replace"]
                 if find_str not in text:
-                    raise ValueError(f"edit_file: pattern not found in {path}: {find_str!r}")
+                    raise ValueError(
+                        f"edit_file: pattern not found in {path}: {find_str!r}"
+                    )
                 new_text = text.replace(find_str, replace_str, 1)
                 path_obj.write_text(new_text, encoding="utf-8")
                 self.log(f"Find-replaced in {path}")
 
             else:
-                raise ValueError(f"edit_file: unrecognised patch spec keys: {list(patch.keys())}")
+                raise ValueError(
+                    f"edit_file: unrecognised patch spec keys: {list(patch.keys())}"
+                )
 
         else:
             # Legacy: plain-string append
@@ -505,13 +540,17 @@ class ContinuousExecutor:
                 task_description=action.description,
             )
 
-            self.log(f"Decomposed into {len(decomposed.subtasks)} subtasks (confidence: {decomposed.confidence})")
+            self.log(
+                f"Decomposed into {len(decomposed.subtasks)} subtasks (confidence: {decomposed.confidence})"
+            )
 
             # For now, just report the decomposition
-            subtask_summary = "\n".join([
-                f"  {i}. [{st['type']}] {st['description']}"
-                for i, st in enumerate(decomposed.subtasks, 1)
-            ])
+            subtask_summary = "\n".join(
+                [
+                    f"  {i}. [{st['type']}] {st['description']}"
+                    for i, st in enumerate(decomposed.subtasks, 1)
+                ]
+            )
 
             return f"Complex task decomposed into {len(decomposed.subtasks)} steps:\n{subtask_summary}"
 
@@ -524,10 +563,17 @@ class ContinuousExecutor:
         """Estimate token count for text (rough)."""
         return len(text.split()) * 2
 
-    def parse_objective(self, description: str) -> list[FileCreateAction | FileEditAction | ShellCommandAction | ComplexTaskAction]:
+    def parse_objective(
+        self, description: str
+    ) -> list[
+        FileCreateAction | FileEditAction | ShellCommandAction | ComplexTaskAction
+    ]:
         """Parse objective description into executable actions."""
         import re
-        actions: list[FileCreateAction | FileEditAction | ShellCommandAction | ComplexTaskAction] = []
+
+        actions: list[
+            FileCreateAction | FileEditAction | ShellCommandAction | ComplexTaskAction
+        ] = []
 
         self.log(f"Parsing objective description: '{description}'")
         desc_lower = description.lower()
@@ -535,19 +581,36 @@ class ContinuousExecutor:
         # Pattern 1: Create file
         if "create file" in desc_lower or "create test" in desc_lower:
             self.log("Detected 'create file' or 'create test' in description")
-            match = re.search(r"create (?:file|test)(?: for)?\s+([^\s]+(?:\s+[^\s]+)*?)(?:\s+with content\s+['\"]?(.*?)['\"]?)?$", description, re.IGNORECASE)
+            match = re.search(
+                r"create (?:file|test)(?: for)?\s+([^\s]+(?:\s+[^\s]+)*?)(?:\s+with content\s+['\"]?(.*?)['\"]?)?$",
+                description,
+                re.IGNORECASE,
+            )
             if match:
                 path = match.group(1).strip()
-                content = match.group(2).strip() if match.group(2) else "# Auto-generated file\n"
-                self.log(f"Matched create: path='{path}', content length={len(content)}")
+                content = (
+                    match.group(2).strip()
+                    if match.group(2)
+                    else "# Auto-generated file\n"
+                )
+                self.log(
+                    f"Matched create: path='{path}', content length={len(content)}"
+                )
                 actions.append(FileCreateAction(path=path, content=content))
             else:
                 self.log("Failed to match 'create file' pattern")
 
         # Pattern 2: Edit/Update/Modify file
-        elif any(kw in desc_lower for kw in ["edit file", "update file", "modify file", "add to file"]):
+        elif any(
+            kw in desc_lower
+            for kw in ["edit file", "update file", "modify file", "add to file"]
+        ):
             self.log("Detected file edit operation")
-            match = re.search(r"(?:edit|update|modify|add to) file\s+([^\s]+(?:\s+[^\s]+)*?)(?:\s+with changes\s+['\"]?(.*?)['\"]?)?$", description, re.IGNORECASE)
+            match = re.search(
+                r"(?:edit|update|modify|add to) file\s+([^\s]+(?:\s+[^\s]+)*?)(?:\s+with changes\s+['\"]?(.*?)['\"]?)?$",
+                description,
+                re.IGNORECASE,
+            )
             if match:
                 path = match.group(1).strip()
                 changes = match.group(2).strip() if match.group(2) else "# Updated\n"
@@ -559,7 +622,9 @@ class ContinuousExecutor:
         # Pattern 3: Delete file
         elif "delete file" in desc_lower or "remove file" in desc_lower:
             self.log("Detected file deletion")
-            match = re.search(r"(?:delete|remove) file\s+(.+)$", description, re.IGNORECASE)
+            match = re.search(
+                r"(?:delete|remove) file\s+(.+)$", description, re.IGNORECASE
+            )
             if match:
                 path = match.group(1).strip()
                 self.log(f"Matched delete: path='{path}'")
@@ -570,7 +635,11 @@ class ContinuousExecutor:
         # Pattern 4: Run command
         elif "run command" in desc_lower or "execute" in desc_lower:
             self.log("Detected command execution")
-            match = re.search(r"(?:run command|execute)\s+['\"]?(.*?)['\"]?$", description, re.IGNORECASE)
+            match = re.search(
+                r"(?:run command|execute)\s+['\"]?(.*?)['\"]?$",
+                description,
+                re.IGNORECASE,
+            )
             if match:
                 command = match.group(1).strip()
                 self.log(f"Matched command: '{command}'")
@@ -590,7 +659,9 @@ class ContinuousExecutor:
         # Pattern 5: Run tests
         elif "run test" in desc_lower or "test" in desc_lower and "in" in desc_lower:
             self.log("Detected test execution")
-            match = re.search(r"(?:run )?tests?(?: in| for)?\s+(.+)$", description, re.IGNORECASE)
+            match = re.search(
+                r"(?:run )?tests?(?: in| for)?\s+(.+)$", description, re.IGNORECASE
+            )
             if match:
                 target = match.group(1).strip()
                 self.log(f"Matched test: target='{target}'")
@@ -605,31 +676,51 @@ class ContinuousExecutor:
                 self.log("Failed to match test pattern")
 
         # Pattern 6: Resolve TODO in specific file
-        elif "resolve todo" in desc_lower or "address todo" in desc_lower or "fix todo" in desc_lower:
+        elif (
+            "resolve todo" in desc_lower
+            or "address todo" in desc_lower
+            or "fix todo" in desc_lower
+        ):
             self.log("Detected TODO resolution")
-            match = re.search(r"(?:resolve|address|fix) todo.*?(?:in|at)\s+([^:]+)(?::\s*(.+))?$", description, re.IGNORECASE)
+            match = re.search(
+                r"(?:resolve|address|fix) todo.*?(?:in|at)\s+([^:]+)(?::\s*(.+))?$",
+                description,
+                re.IGNORECASE,
+            )
             if match:
                 file_path = match.group(1).strip()
                 todo_desc = match.group(2).strip() if match.group(2) else "TODO"
                 self.log(f"Matched TODO: file='{file_path}', description='{todo_desc}'")
                 # This is complex - needs actual code changes
-                actions.append(ComplexTaskAction(description=f"Resolve TODO in {file_path}: {todo_desc}"))
+                actions.append(
+                    ComplexTaskAction(
+                        description=f"Resolve TODO in {file_path}: {todo_desc}"
+                    )
+                )
             else:
                 self.log("Failed to match TODO pattern")
 
         # Pattern 7: Add documentation
         elif "document" in desc_lower or "add doc" in desc_lower:
             self.log("Detected documentation request")
-            match = re.search(r"(?:document|add (?:doc|documentation)(?: to| for)?)\s+(.+)$", description, re.IGNORECASE)
+            match = re.search(
+                r"(?:document|add (?:doc|documentation)(?: to| for)?)\s+(.+)$",
+                description,
+                re.IGNORECASE,
+            )
             if match:
                 target = match.group(1).strip()
                 self.log(f"Matched documentation: target='{target}'")
-                actions.append(ComplexTaskAction(description=f"Add documentation for {target}"))
+                actions.append(
+                    ComplexTaskAction(description=f"Add documentation for {target}")
+                )
             else:
                 self.log("Failed to match documentation pattern")
 
         # Pattern 8: Fix/Implement (complex)
-        elif "fix" in desc_lower or "implement" in desc_lower or "complete" in desc_lower:
+        elif (
+            "fix" in desc_lower or "implement" in desc_lower or "complete" in desc_lower
+        ):
             self.log("Detected complex fix/implement task")
             actions.append(ComplexTaskAction(description=description))
 
@@ -676,9 +767,14 @@ class ContinuousExecutor:
         # Log strategy
         await self.log_strategy(self.strategy, new_objectives)
 
-    async def log_strategy(self, strategy: dict[str, Any], objectives: list[Objective]) -> None:
+    async def log_strategy(
+        self, strategy: dict[str, Any], objectives: list[Objective]
+    ) -> None:
         """Log strategy and objectives to file."""
-        strategy_path = self.config.base_dir / f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        strategy_path = (
+            self.config.base_dir
+            / f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
         strategy_doc = {
             "timestamp": datetime.now().isoformat(),
@@ -701,22 +797,29 @@ class ContinuousExecutor:
         }
 
         self.checkpoint_path.write_text(_json_dumps(checkpoint, indent=2))
-        self.log(f"Checkpointed: {len(self.completed)} complete, {len(self.objectives)} pending")
+        self.log(
+            f"Checkpointed: {len(self.completed)} complete, {len(self.objectives)} pending"
+        )
 
     async def get_git_state(self) -> dict[str, Any]:
         """Get current git state for context persistence."""
         import subprocess
+
         try:
             # Get git diff stat for recent changes
             diff_stat = subprocess.run(
                 ["git", "diff", "--stat"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             ).stdout
 
             # Get last commit message for context
             last_commit = subprocess.run(
                 ["git", "log", "-1", "--pretty=%B"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             ).stdout
 
             return {
@@ -750,18 +853,19 @@ class ContinuousExecutor:
         """
         import asyncio
         from uuid import uuid4
+
         all_results: list[ExecutionResult] = []
 
         # Process in batches to avoid overwhelming event loop
         for i in range(0, len(objectives), batch_size):
-            batch = objectives[i:i+batch_size]
+            batch = objectives[i : i + batch_size]
 
             # Limit concurrent tasks
             semaphore = asyncio.Semaphore(max_concurrent)
 
             # Capture git state at batch boundaries for context persistence
             git_state = await self.get_git_state()
-            self.log(f"Captured git state for batch {i//batch_size + 1}")
+            self.log(f"Captured git state for batch {i // batch_size + 1}")
 
             async def execute_with_limit(obj: Objective) -> ExecutionResult:
                 """
@@ -785,7 +889,7 @@ class ContinuousExecutor:
                     return await self.execute_objective(obj)
 
             # Execute batch concurrently
-            self.log(f"Executing batch {i//batch_size + 1}: {len(batch)} objectives")
+            self.log(f"Executing batch {i // batch_size + 1}: {len(batch)} objectives")
 
             tasks = [execute_with_limit(obj) for obj in batch]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -813,10 +917,17 @@ class ContinuousExecutor:
                 break
 
             # NEW: Circuit Breaker Check (Stop if too many failures in batch)
-            batch_failures = sum(1 for r in batch_results if isinstance(r, ExecutionResult) and not r.success)
+            batch_failures = sum(
+                1
+                for r in batch_results
+                if isinstance(r, ExecutionResult) and not r.success
+            )
             if batch_failures > len(batch) * 0.5:
                 # >50% failure rate
-                self.log(f"Stopping: Circuit breaker tripped ({batch_failures} failures in batch)", "ERROR")
+                self.log(
+                    f"Stopping: Circuit breaker tripped ({batch_failures} failures in batch)",
+                    "ERROR",
+                )
                 break
 
         return all_results

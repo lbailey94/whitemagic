@@ -52,7 +52,9 @@ def session_get_context(
     }
 
 
-def session_checkpoint(session_name: str | None = None, include_state: bool = True, **kwargs: Any) -> dict[str, Any]:
+def session_checkpoint(
+    session_name: str | None = None, include_state: bool = True, **kwargs: Any
+) -> dict[str, Any]:
     """Checkpoint the current session."""
     from whitemagic.session.manager import SessionManager
 
@@ -119,4 +121,5 @@ def session_handoff(**kwargs: Any) -> dict[str, Any]:
 
 def get_system_time() -> str:
     from datetime import datetime
+
     return datetime.now().isoformat()

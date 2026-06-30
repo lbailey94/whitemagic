@@ -131,9 +131,9 @@ class ResourceBudget:
             "api_calls": f"{self.api_calls_used}/{self.max_api_calls}",
             "time_remaining": self.time_remaining(),
             "budgets_ok": (
-                self.file_ops_used <= self.max_file_ops and
-                self.api_calls_used <= self.max_api_calls and
-                not self.is_time_exceeded()
+                self.file_ops_used <= self.max_file_ops
+                and self.api_calls_used <= self.max_api_calls
+                and not self.is_time_exceeded()
             ),
         }
 
@@ -146,10 +146,6 @@ class Governor:
     checking for context drift.
     """
 
-    # =========================================================================
-    # Forbidden Patterns - Commands that should never be executed
-    # =========================================================================
-
     FORBIDDEN_COMMANDS = [
         # Destructive file operations
         r"rm\s+-rf\s+/$",  # Delete root itself
@@ -161,25 +157,21 @@ class Governor:
         r"rmdir\s+/",  # Remove root dirs
         r"find\s+.*-delete",  # Find with delete
         r"find\s+.*-exec\s+rm",  # Find with rm
-
         # Format/disk operations
         r"mkfs\.",  # Format filesystem
         r"dd\s+.*of=/dev/",  # Write to device
         r"fdisk",  # Partition editor
         r"parted",  # Partition tool
-
         # System destruction
         r":()\{\s*:\|:\&\s*\};:",  # Fork bomb
         r">\s*/dev/sda",  # Overwrite disk
         r"mv\s+/\s+",  # Move root
         r"chmod\s+-R\s+777\s+/",  # Permission chaos
         r"chown\s+-R\s+.*\s+/",  # Ownership change on root
-
         # Network attacks
         r"nmap\s+-sS",  # SYN scan (could be attack)
         r"hping3",  # Packet crafting
         r"ettercap",  # ARP spoofing
-
         # Credential exposure
         r"echo\s+.*password",  # Echoing passwords
         r"curl\s+.*\|\s*sh",  # Curl pipe to shell
@@ -187,10 +179,6 @@ class Governor:
     ]
 
     FORBIDDEN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in FORBIDDEN_COMMANDS]
-
-    # =========================================================================
-    # Dangerous Patterns - Require explicit confirmation
-    # =========================================================================
 
     DANGEROUS_COMMANDS = [
         r"rm\s+-r",  # Recursive delete (not forced from root)
@@ -210,10 +198,6 @@ class Governor:
 
     DANGEROUS_PATTERNS = [re.compile(p, re.IGNORECASE) for p in DANGEROUS_COMMANDS]
 
-    # =========================================================================
-    # Caution Patterns - Log and proceed
-    # =========================================================================
-
     CAUTION_COMMANDS = [
         r"sudo\s+",  # Any sudo
         r"rm\s+",  # Any remove
@@ -227,24 +211,23 @@ class Governor:
 
     CAUTION_PATTERNS = [re.compile(p, re.IGNORECASE) for p in CAUTION_COMMANDS]
 
-    # =========================================================================
-    # Protected Paths - Directories that should not be modified
-    # =========================================================================
-
     PROTECTED_PATHS = [
-        "/bin", "/sbin", "/usr/bin", "/usr/sbin",
-        "/etc", "/boot", "/sys", "/proc",
-        "/var/lib", "/var/log",
+        "/bin",
+        "/sbin",
+        "/usr/bin",
+        "/usr/sbin",
+        "/etc",
+        "/boot",
+        "/sys",
+        "/proc",
+        "/var/lib",
+        "/var/log",
         "/root",
-        "~/.ssh",      # Pattern: expanded at validation time for any user
-        "~/.gnupg",    # Pattern: expanded at validation time for any user
+        "~/.ssh",  # Pattern: expanded at validation time for any user
+        "~/.gnupg",  # Pattern: expanded at validation time for any user
         "/home/*/.ssh",
         "/home/*/.gnupg",
     ]
-
-    # =========================================================================
-    # Constitutional Principles (Dharma)
-    # =========================================================================
 
     DHARMA_PRINCIPLES = {
         "non_harm": "Actions should not cause harm to users or systems",
@@ -263,13 +246,16 @@ class Governor:
         self._validation_count = 0
         self._blocked_count = 0
         # Check active enforcement flag - Hard-locked to True for v20 Liberation release
-        self.enabled = os.getenv("WHITEMAGIC_ENFORCE_DHARMA", "1").lower() in ("1", "true", "yes", "on")
+        self.enabled = os.getenv("WHITEMAGIC_ENFORCE_DHARMA", "1").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
 
-    # =========================================================================
-    # Tool Validation (MCP)
-    # =========================================================================
-
-    def validate_tool_call(self, tool_name: str, args: dict[str, Any]) -> ValidationResult:
+    def validate_tool_call(
+        self, tool_name: str, args: dict[str, Any]
+    ) -> ValidationResult:
         """Validate an MCP tool call.
 
         Args:
@@ -281,12 +267,15 @@ class Governor:
 
         """
         if not self.enabled:
-            return ValidationResult(safe=True, reason="Governor disabled", risk_level=RiskLevel.SAFE)
+            return ValidationResult(
+                safe=True, reason="Governor disabled", risk_level=RiskLevel.SAFE
+            )
 
         self._validation_count += 1
 
         # 1. Fetch tool definition from registry
         from whitemagic.tools.registry import get_tool
+
         tool_def = get_tool(tool_name)
 
         # 2. Derive risk level
@@ -298,16 +287,26 @@ class Governor:
                 risk_level = RiskLevel.SAFE
         else:
             # Fallback for unregistered tools (treat as caution if starts with risky prefix)
-            destructive_prefixes = ("delete_", "update_", "execute_", "bash", "shell", "run_command", "write_")
+            destructive_prefixes = (
+                "delete_",
+                "update_",
+                "execute_",
+                "bash",
+                "shell",
+                "run_command",
+                "write_",
+            )
             is_risky = any(tool_name.startswith(p) for p in destructive_prefixes)
             risk_level = RiskLevel.CAUTION if is_risky else RiskLevel.SAFE
 
         if risk_level == RiskLevel.SAFE:
-            return ValidationResult(safe=True, reason="Low risk tool", risk_level=RiskLevel.SAFE)
+            return ValidationResult(
+                safe=True, reason="Low risk tool", risk_level=RiskLevel.SAFE
+            )
 
         # 3. Check Resource Budget (if active)
         if not self.budget.status()["budgets_ok"]:
-             return ValidationResult(
+            return ValidationResult(
                 safe=False,
                 reason="Resource budget exceeded",
                 risk_level=RiskLevel.FORBIDDEN,
@@ -322,33 +321,60 @@ class Governor:
             action = {"tool": tool_name, "args": args}
 
             # Use strict mode if set
-            strict = os.getenv("WHITEMAGIC_DHARMA_STRICT", "0").lower() in ("1", "true", "yes", "on")
+            strict = os.getenv("WHITEMAGIC_DHARMA_STRICT", "0").lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
 
             safety_status = dharma_check_boundaries(action, strict_mode=strict)
 
             if safety_status.get("has_violations"):
                 violations = safety_status.get("violations", [])
-                reasons = [v.get("description", "Unknown violation") for v in violations]
+                reasons = [
+                    v.get("description", "Unknown violation") for v in violations
+                ]
 
                 # R&D mode: downgrade Dharma blocks to warnings for memory CRUD tools
-                rd_mode = os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on")
-                memory_tools = {"create_memory", "update_memory", "delete_memory", "remember",
-                                "memory_create", "memory_update", "memory_delete",
-                                "import_memories", "thought_clone"}
+                rd_mode = os.getenv("WM_RD_MODE", "").strip().lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                )
+                memory_tools = {
+                    "create_memory",
+                    "update_memory",
+                    "delete_memory",
+                    "remember",
+                    "memory_create",
+                    "memory_update",
+                    "memory_delete",
+                    "import_memories",
+                    "thought_clone",
+                }
                 if rd_mode and tool_name in memory_tools:
                     return ValidationResult(
                         safe=True,
                         reason=f"R&D mode: Dharma warning (not blocked): {'; '.join(reasons)}",
                         risk_level=RiskLevel.CAUTION,
-                        suggestions=[v.get("suggested_action", "Review ethics") for v in violations],
+                        suggestions=[
+                            v.get("suggested_action", "Review ethics")
+                            for v in violations
+                        ],
                     )
 
                 self._blocked_count += 1
                 return ValidationResult(
                     safe=False,
                     reason=f"Dharma Violations: {'; '.join(reasons)}",
-                    risk_level=RiskLevel.DANGEROUS if not strict else RiskLevel.FORBIDDEN,
-                    suggestions=[v.get("suggested_action", "Review ethics") for v in violations],
+                    risk_level=RiskLevel.DANGEROUS
+                    if not strict
+                    else RiskLevel.FORBIDDEN,
+                    suggestions=[
+                        v.get("suggested_action", "Review ethics") for v in violations
+                    ],
                 )
 
             return ValidationResult(
@@ -359,26 +385,44 @@ class Governor:
 
         except ImportError:
             # If Dharma system is missing, fail open unless strict
-            if os.getenv("WHITEMAGIC_DHARMA_STRICT", "0").lower() in ("1", "true", "yes", "on"):
+            if os.getenv("WHITEMAGIC_DHARMA_STRICT", "0").lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            ):
                 self._blocked_count += 1
-                return ValidationResult(safe=False, reason="Dharma system missing in STRICT mode", risk_level=RiskLevel.FORBIDDEN)
-            return ValidationResult(safe=True, reason="Dharma system unavailable (fail-open)", risk_level=RiskLevel.CAUTION)
+                return ValidationResult(
+                    safe=False,
+                    reason="Dharma system missing in STRICT mode",
+                    risk_level=RiskLevel.FORBIDDEN,
+                )
+            return ValidationResult(
+                safe=True,
+                reason="Dharma system unavailable (fail-open)",
+                risk_level=RiskLevel.CAUTION,
+            )
 
         except (AttributeError, TypeError, ValueError) as e:
             # Known errors from tool validation
             self._blocked_count += 1
-            return ValidationResult(safe=False, reason=f"Governor validation error: {e}", risk_level=RiskLevel.DANGEROUS)
+            return ValidationResult(
+                safe=False,
+                reason=f"Governor validation error: {e}",
+                risk_level=RiskLevel.DANGEROUS,
+            )
         except Exception as e:
             # Unexpected error - log and fail-safe
             import logging
+
             logger = logging.getLogger(__name__)
             logger.exception("Unexpected error in Governor.validate_tool_call")
             self._blocked_count += 1
-            return ValidationResult(safe=False, reason=f"Governor internal error: {type(e).__name__}", risk_level=RiskLevel.DANGEROUS)
-
-    # =========================================================================
-    # Command Validation
-    # =========================================================================
+            return ValidationResult(
+                safe=False,
+                reason=f"Governor internal error: {type(e).__name__}",
+                risk_level=RiskLevel.DANGEROUS,
+            )
 
     def validate_command(self, cmd: str) -> ValidationResult:
         """Validate a shell command before execution.
@@ -447,7 +491,9 @@ class Governor:
         for protected in self.PROTECTED_PATHS:
             if protected.replace("~", "").replace("*", "") in cmd:
                 # Check if it's a modifying command
-                if any(mod in cmd_lower for mod in ["rm ", "mv ", "chmod ", "chown ", "> "]):
+                if any(
+                    mod in cmd_lower for mod in ["rm ", "mv ", "chmod ", "chown ", "> "]
+                ):
                     return ValidationResult(
                         safe=False,
                         reason=f"Attempting to modify protected path: {protected}",
@@ -490,7 +536,14 @@ class Governor:
                     )
 
         # Check for credential files
-        credential_patterns = [".ssh", ".gnupg", ".aws", "credentials", "secret", ".env"]
+        credential_patterns = [
+            ".ssh",
+            ".gnupg",
+            ".aws",
+            "credentials",
+            "secret",
+            ".env",
+        ]
         for pattern in credential_patterns:
             if pattern in path_str.lower():
                 return ValidationResult(
@@ -505,10 +558,6 @@ class Governor:
             reason="Path validated",
             risk_level=RiskLevel.SAFE,
         )
-
-    # =========================================================================
-    # Context Drift Detection
-    # =========================================================================
 
     def set_goal(self, goal: str) -> None:
         """Set the current goal for drift detection."""
@@ -552,11 +601,45 @@ class Governor:
             Returns:
                 set[str]
             """
-            stop_words = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
-                         "to", "of", "in", "for", "on", "with", "at", "by", "from",
-                         "this", "that", "it", "and", "or", "but", "if", "then",
-                         "new", "add", "adding", "update", "updating", "create", "creating",
-                         "implement", "implementing", "feature", "component"}
+            stop_words = {
+                "the",
+                "a",
+                "an",
+                "is",
+                "are",
+                "was",
+                "were",
+                "be",
+                "been",
+                "to",
+                "of",
+                "in",
+                "for",
+                "on",
+                "with",
+                "at",
+                "by",
+                "from",
+                "this",
+                "that",
+                "it",
+                "and",
+                "or",
+                "but",
+                "if",
+                "then",
+                "new",
+                "add",
+                "adding",
+                "update",
+                "updating",
+                "create",
+                "creating",
+                "implement",
+                "implementing",
+                "feature",
+                "component",
+            }
             words = re.findall(r"\b\w+\b", text.lower())
             keywords = set()
             for w in words:
@@ -564,9 +647,21 @@ class Governor:
                     continue
                 # Simple stemming - remove common suffixes
                 stem = w
-                for suffix in ["ing", "tion", "ment", "ness", "able", "ible", "ed", "er", "est", "ly", "ful"]:
+                for suffix in [
+                    "ing",
+                    "tion",
+                    "ment",
+                    "ness",
+                    "able",
+                    "ible",
+                    "ed",
+                    "er",
+                    "est",
+                    "ly",
+                    "ful",
+                ]:
                     if stem.endswith(suffix) and len(stem) > len(suffix) + 2:
-                        stem = stem[:-len(suffix)]
+                        stem = stem[: -len(suffix)]
                         break
                 keywords.add(stem)
             return keywords
@@ -589,11 +684,13 @@ class Governor:
         similarity = len(intersection) / len(union) if union else 0.0
 
         # Track action
-        self.action_history.append({
-            "action": action,
-            "similarity": similarity,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self.action_history.append(
+            {
+                "action": action,
+                "similarity": similarity,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         # Consider drifted if similarity is below threshold
         drift_threshold = 0.2
@@ -616,10 +713,6 @@ class Governor:
             current_action=action,
             explanation=explanation,
         )
-
-    # =========================================================================
-    # Resource Budget Enforcement
-    # =========================================================================
 
     def start_session(
         self,
@@ -652,7 +745,10 @@ class Governor:
                 safe=False,
                 reason="; ".join(reasons),
                 risk_level=RiskLevel.DANGEROUS,
-                suggestions=["Consider completing the current task", "Request budget extension"],
+                suggestions=[
+                    "Consider completing the current task",
+                    "Request budget extension",
+                ],
             )
 
         return ValidationResult(
@@ -669,11 +765,9 @@ class Governor:
         """Record an API call and check budget."""
         return self.budget.record_api_call()
 
-    # =========================================================================
-    # Constitutional Checks (Dharma)
-    # =========================================================================
-
-    def check_dharma(self, action: str, context: dict[str, Any] | None = None) -> ValidationResult:
+    def check_dharma(
+        self, action: str, context: dict[str, Any] | None = None
+    ) -> ValidationResult:
         """Check action against constitutional principles.
 
         Args:
@@ -691,7 +785,9 @@ class Governor:
         harmful_indicators = ["delete", "destroy", "remove all", "wipe", "kill"]
         if any(ind in action.lower() for ind in harmful_indicators):
             if not context.get("user_confirmed"):
-                violations.append(("non_harm", "Potentially harmful action without confirmation"))
+                violations.append(
+                    ("non_harm", "Potentially harmful action without confirmation")
+                )
 
         # Check reversibility
         irreversible_indicators = ["permanent", "cannot undo", "force", "--hard"]
@@ -706,7 +802,9 @@ class Governor:
         data_indicators = ["database", "user data", "credentials", "personal"]
         if any(ind in action.lower() for ind in data_indicators):
             if not context.get("backup_exists"):
-                violations.append(("data_sanctity", "Operating on sensitive data without backup"))
+                violations.append(
+                    ("data_sanctity", "Operating on sensitive data without backup")
+                )
 
         if violations:
             reasons = [f"{v[0]}: {v[1]}" for v in violations]
@@ -725,10 +823,6 @@ class Governor:
             reason="Action aligns with dharma principles",
             risk_level=RiskLevel.SAFE,
         )
-
-    # =========================================================================
-    # Statistics and Reporting
-    # =========================================================================
 
     def stats(self) -> dict[str, Any]:
         """Get governor statistics."""
@@ -756,10 +850,6 @@ def get_governor() -> Governor:
             _governor_instance = Governor()
         return _governor_instance
 
-
-# =========================================================================
-# Convenience Functions
-# =========================================================================
 
 def validate_command(cmd: str) -> tuple[bool, str]:
     """Convenience function to validate a command.

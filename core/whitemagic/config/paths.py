@@ -9,6 +9,7 @@ Policy (AI-first / OSS-friendly):
 - Whitemagic should not write runtime state into the repo by default.
 - Callers can explicitly set `WM_STATE_ROOT` to place state wherever they want.
 """
+
 import logging
 import os
 import tempfile
@@ -24,7 +25,9 @@ def _is_writable(path: Path) -> bool:
             path.mkdir(parents=True, exist_ok=True)
         if not path.is_dir():
             return False
-        with tempfile.NamedTemporaryFile(prefix=".wm_write_probe_", dir=path, delete=True) as fp:
+        with tempfile.NamedTemporaryFile(
+            prefix=".wm_write_probe_", dir=path, delete=True
+        ) as fp:
             fp.write(b"probe")
             fp.flush()
         return True
@@ -57,10 +60,7 @@ ARCHIVE_DIR: Path = PROJECT_ROOT / "archive"
 # Runtime state (memory DB, sessions, logs) must never live inside the
 # repository tree. If you previously relied on an in-repo memory/whitemagic.db,
 # set WM_STATE_ROOT to that directory explicitly.
-_intended_root_path = (
-    os.getenv("WM_STATE_ROOT")
-    or os.getenv("WM_CONFIG_ROOT")
-)
+_intended_root_path = os.getenv("WM_STATE_ROOT") or os.getenv("WM_CONFIG_ROOT")
 
 if _intended_root_path:
     _intended_root = Path(_intended_root_path).expanduser()
@@ -77,7 +77,11 @@ if not _is_writable(_intended_root):
         # STRICT MODE: Never fall back to CWD to prevent repo pollution.
         # In restricted environments, users MUST explicitly set WM_STATE_ROOT
         # to a writable location outside the repository.
-        _opt_in_cwd = os.getenv("WM_FALLBACK_TO_CWD", "false").lower() in ("true", "1", "yes")
+        _opt_in_cwd = os.getenv("WM_FALLBACK_TO_CWD", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
         if _opt_in_cwd:
             # Opt-in only: CWD fallback with explicit user acknowledgment
             WM_ROOT = Path.cwd() / ".whitemagic"
@@ -141,13 +145,14 @@ if _db_env:
     _p = Path(_db_env).expanduser()
     if not _p.is_absolute():
         # Treat relative DB paths as relative to the state root.
-        _p = (WM_ROOT / _p)
+        _p = WM_ROOT / _p
     DB_PATH = _p.resolve()
 else:
     DB_PATH = MEMORY_DIR / "whitemagic.db"
 
 # Cold storage DB (v13.3.2) — deep_archive + scavenged memories
 COLD_DB_PATH: Path = MEMORY_DIR / "whitemagic_cold.db"
+
 
 def get_state_root() -> Path:
     """Returns the effective state root (WM_ROOT)."""

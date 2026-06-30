@@ -63,9 +63,9 @@ class BatchCosine:
             raise ValueError(f"Shape mismatch: {a.shape} vs {b.shape}")
 
         # Ensure contiguous
-        if not a.flags['C_CONTIGUOUS']:
+        if not a.flags["C_CONTIGUOUS"]:
             a = np.ascontiguousarray(a)
-        if not b.flags['C_CONTIGUOUS']:
+        if not b.flags["C_CONTIGUOUS"]:
             b = np.ascontiguousarray(b)
 
         # Call Zig SIMD batch cosine for each pair
@@ -116,10 +116,13 @@ class BatchGalacticScore:
 
         # Convert to JSON for Rust FFI
         import json
+
         coords_json = json.dumps(coords.tolist())
 
         # Single FFI call
-        return np.array(self._rust.galactic_batch_score_quick(coords_json), dtype=np.float32)
+        return np.array(
+            self._rust.galactic_batch_score_quick(coords_json), dtype=np.float32
+        )
 
 
 class FFIMetrics:

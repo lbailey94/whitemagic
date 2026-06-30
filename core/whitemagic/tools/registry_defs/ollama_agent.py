@@ -12,7 +12,10 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.INFERENCE,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
-        gana="Roof", garden="protection", quadrant="northern", element="water",
+        gana="Roof",
+        garden="protection",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="ollama.generate",
@@ -28,13 +31,24 @@ TOOLS: list[ToolDefinition] = [
             "properties": {
                 "model": {"type": "string", "description": "Ollama model name"},
                 "prompt": {"type": "string", "description": "Prompt text"},
-                "context": {"type": "boolean", "default": True, "description": "Inject relevant memories"},
-                "store": {"type": "boolean", "default": False, "description": "Store output as memory"},
+                "context": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Inject relevant memories",
+                },
+                "store": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Store output as memory",
+                },
                 "system": {"type": "string", "description": "System prompt override"},
             },
             "required": ["model", "prompt"],
         },
-        gana="Roof", garden="protection", quadrant="northern", element="water",
+        gana="Roof",
+        garden="protection",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="ollama.chat",
@@ -48,13 +62,27 @@ TOOLS: list[ToolDefinition] = [
             "type": "object",
             "properties": {
                 "model": {"type": "string", "description": "Ollama model name"},
-                "messages": {"type": "array", "description": "List of {role, content} messages"},
-                "context": {"type": "boolean", "default": True, "description": "Inject relevant memories"},
-                "store": {"type": "boolean", "default": False, "description": "Store output as memory"},
+                "messages": {
+                    "type": "array",
+                    "description": "List of {role, content} messages",
+                },
+                "context": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Inject relevant memories",
+                },
+                "store": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Store output as memory",
+                },
             },
             "required": ["model", "messages"],
         },
-        gana="Roof", garden="protection", quadrant="northern", element="water",
+        gana="Roof",
+        garden="protection",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="ollama.agent",
@@ -69,14 +97,35 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "model": {"type": "string", "description": "Ollama model name (e.g., 'llama3.2', 'phi4', 'qwen2.5')"},
-                "task": {"type": "string", "description": "The task or question for the agent"},
-                "max_iterations": {"type": "integer", "default": 10, "description": "Maximum tool-call rounds"},
-                "context": {"type": "boolean", "default": True, "description": "Whether to inject relevant memories"},
-                "store": {"type": "boolean", "default": False, "description": "Store outputs as memories"},
+                "model": {
+                    "type": "string",
+                    "description": "Ollama model name (e.g., 'llama3.2', 'phi4', 'qwen2.5')",
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The task or question for the agent",
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Maximum tool-call rounds",
+                },
+                "context": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Whether to inject relevant memories",
+                },
+                "store": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Store outputs as memories",
+                },
             },
             "required": ["model", "task"],
         },
-        gana="Roof", garden="protection", quadrant="northern", element="water",
+        gana="Roof",
+        garden="protection",
+        quadrant="northern",
+        element="water",
     ),
 ]

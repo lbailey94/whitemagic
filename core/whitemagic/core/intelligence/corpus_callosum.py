@@ -122,7 +122,9 @@ class SynthesisArbiter:
         return SequenceMatcher(None, a_norm, b_norm).ratio()
 
     @classmethod
-    def synthesize(cls, topic: str, rounds: list[DebateRound]) -> tuple[str, float, str]:
+    def synthesize(
+        cls, topic: str, rounds: list[DebateRound]
+    ) -> tuple[str, float, str]:
         """Produce final synthesis text, tension, and dominant side.
 
         Uses semantic similarity between left/right positions to adjust
@@ -289,7 +291,8 @@ class CorpusCallosumBus:
             "total_debates": self._total_debates,
             "active_debates_in_memory": len(self._debates),
             "recent_avg_tension": round(avg_tension, 4),
-            "escalation_rate": sum(1 for d in recent if d.escalated) / max(len(recent), 1),
+            "escalation_rate": sum(1 for d in recent if d.escalated)
+            / max(len(recent), 1),
         }
 
     def _run_round(
@@ -311,12 +314,14 @@ class CorpusCallosumBus:
             from whitemagic.core.intelligence.bicameral import (
                 get_bicameral_reasoner,
             )
+
             if round_number == 1:
                 reasoner = get_bicameral_reasoner()
             else:
                 from whitemagic.core.intelligence.bicameral import (
                     BicameralReasoner,
                 )
+
                 reasoner = BicameralReasoner(
                     left_clones=self._followup_clones,
                     right_clones=self._followup_clones,
@@ -331,12 +336,23 @@ class CorpusCallosumBus:
                 ctx["previous_right_critique"] = previous.right_critique
                 ctx["previous_tension"] = previous.tension
 
-            result = _run_async(reasoner.reason(topic, context=ctx), timeout=self.TIMEOUT_PER_ROUND)
+            result = _run_async(
+                reasoner.reason(topic, context=ctx), timeout=self.TIMEOUT_PER_ROUND
+            )
 
             left_pos = f"Left: {result.left_analysis.content[:200]}"
             right_pos = f"Right: {result.right_analysis.content[:200]}"
-            left_crit = f"Left→Right: {result.cross_critique[0].challenges[0][:120]}" if result.cross_critique and result.cross_critique[0].challenges else "Left→Right: (no critique)"
-            right_crit = f"Right→Left: {result.cross_critique[1].challenges[0][:120]}" if len(result.cross_critique) > 1 and result.cross_critique[1].challenges else "Right→Left: (no critique)"
+            left_crit = (
+                f"Left→Right: {result.cross_critique[0].challenges[0][:120]}"
+                if result.cross_critique and result.cross_critique[0].challenges
+                else "Left→Right: (no critique)"
+            )
+            right_crit = (
+                f"Right→Left: {result.cross_critique[1].challenges[0][:120]}"
+                if len(result.cross_critique) > 1
+                and result.cross_critique[1].challenges
+                else "Right→Left: (no critique)"
+            )
             tension = result.tension_score
 
         except (Exception, TimeoutError):
@@ -356,9 +372,15 @@ class CorpusCallosumBus:
             else:
                 prev_left = previous.left_position if previous else ""
                 prev_right = previous.right_position if previous else ""
-                left_pos = f"Left (rebuttal): Reaffirming precision concerns about '{topic}'."
-                right_pos = f"Right (rebuttal): Expanding on creative potential of '{topic}'."
-                left_crit = f"Left→Right: '{prev_right[:60]}...' lacks sufficient validation."
+                left_pos = (
+                    f"Left (rebuttal): Reaffirming precision concerns about '{topic}'."
+                )
+                right_pos = (
+                    f"Right (rebuttal): Expanding on creative potential of '{topic}'."
+                )
+                left_crit = (
+                    f"Left→Right: '{prev_right[:60]}...' lacks sufficient validation."
+                )
                 right_crit = f"Right→Left: '{prev_left[:60]}...' is overly constrained."
                 tension = min(1.0, (previous.tension if previous else 0.5) + 0.05)
 
@@ -377,6 +399,7 @@ class CorpusCallosumBus:
         """Log debate outcome to Karma Ledger."""
         try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger
+
             get_karma_ledger().record(
                 tool="corpus_callosum.debate",
                 declared_safety="READ",
@@ -387,10 +410,6 @@ class CorpusCallosumBus:
         except Exception as exc:
             logger.debug("CorpusCallosum karma log failed: %s", exc, exc_info=True)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _bus_instance: CorpusCallosumBus | None = None
 _bus_lock = __import__("threading").Lock()

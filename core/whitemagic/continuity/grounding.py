@@ -17,11 +17,13 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SystemState:
     """SystemState: system state.
 
     Value object: equality and repr are field-based."""
+
     timestamp_utc: str
     timestamp_local: str
     unix_time: float
@@ -35,8 +37,10 @@ class SystemState:
     platform: str
     python_version: str
 
+
 class GroundingSystem:
     """GroundingSystem: grounding system."""
+
     def __init__(self, storage_dir: str = "PROJECT_ROOT/whitemagic/memory/continuity"):
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +81,9 @@ class GroundingSystem:
                 "time": {
                     "utc": state.timestamp_utc,
                     "local": state.timestamp_local,
-                    "human_readable": datetime.now().strftime("%A, %B %d, %Y at %I:%M:%S %p"),
+                    "human_readable": datetime.now().strftime(
+                        "%A, %B %d, %Y at %I:%M:%S %p"
+                    ),
                 },
                 "host": {
                     "name": state.hostname,
@@ -91,7 +97,7 @@ class GroundingSystem:
             },
             "session": {
                 "id": self.current_session_id,
-                "start_time": self.boot_time, # Session start approx
+                "start_time": self.boot_time,  # Session start approx
             },
             "environment": {
                 "cwd": os.getcwd(),
@@ -124,13 +130,19 @@ class GroundingSystem:
 
         logger.info("\n⚓ CONTINUITY GROUNDING ANCHOR ⚓")
         logger.info("================================")
-        logger.info("📅 Current Time: %s", t['human_readable'])
-        logger.info("🌍 UTC:          %s", t['utc'])
-        logger.info("🖥️  System:       %s (%s)", h['name'], h['platform'])
-        logger.info("📊 Resources:    CPU: %s | RAM: %s | Disk: %s", h['resources']['cpu'], h['resources']['ram'], h['resources']['disk'])
-        logger.info("👤 User:         %s", anchor['environment']['user'])
-        logger.info("📂 CWD:          %s", anchor['environment']['cwd'])
+        logger.info("📅 Current Time: %s", t["human_readable"])
+        logger.info("🌍 UTC:          %s", t["utc"])
+        logger.info("🖥️  System:       %s (%s)", h["name"], h["platform"])
+        logger.info(
+            "📊 Resources:    CPU: %s | RAM: %s | Disk: %s",
+            h["resources"]["cpu"],
+            h["resources"]["ram"],
+            h["resources"]["disk"],
+        )
+        logger.info("👤 User:         %s", anchor["environment"]["user"])
+        logger.info("📂 CWD:          %s", anchor["environment"]["cwd"])
         logger.info("================================\n")
+
 
 if __name__ == "__main__":
     grounding = GroundingSystem()

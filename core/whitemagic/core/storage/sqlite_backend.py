@@ -70,7 +70,9 @@ class SQLiteBackend:
     def get(self, key: str, default: Any = None) -> Any:
         """Get a value by key."""
         conn = self._get_conn()
-        row = conn.execute("SELECT value FROM kv_store WHERE key = ?", (key,)).fetchone()
+        row = conn.execute(
+            "SELECT value FROM kv_store WHERE key = ?", (key,)
+        ).fetchone()
         if row:
             return json.loads(row["value"])
         return default
@@ -85,10 +87,14 @@ class SQLiteBackend:
     def keys(self, pattern: str = "%") -> list[str]:
         """List keys matching a pattern."""
         conn = self._get_conn()
-        rows = conn.execute("SELECT key FROM kv_store WHERE key LIKE ?", (pattern,)).fetchall()
+        rows = conn.execute(
+            "SELECT key FROM kv_store WHERE key LIKE ?", (pattern,)
+        ).fetchall()
         return [r["key"] for r in rows]
 
-    def log_event(self, event_type: str, source: str = "", data: dict[str, Any] | None = None) -> None:
+    def log_event(
+        self, event_type: str, source: str = "", data: dict[str, Any] | None = None
+    ) -> None:
         """Log an event."""
         conn = self._get_conn()
         conn.execute(
@@ -97,7 +103,9 @@ class SQLiteBackend:
         )
         conn.commit()
 
-    def recent_events(self, limit: int = 50, event_type: str | None = None) -> list[dict[str, Any]]:
+    def recent_events(
+        self, limit: int = 50, event_type: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get recent events."""
         conn = self._get_conn()
         if event_type:

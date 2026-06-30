@@ -1,4 +1,5 @@
 """Tests for Objective R — Predictive Coding for Self-Model."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.predictive_coding import (

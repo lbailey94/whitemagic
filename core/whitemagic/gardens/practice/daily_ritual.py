@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RitualPhase:
     """A phase in daily ritual"""
+
     name: str  # yin/yang/dream
     time_of_day: time
     duration_minutes: int
@@ -38,6 +39,7 @@ class DailyRitual:
         """Connect to Gan Ying Bus"""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()
             logger.info("🎵 Daily Ritual connected to Gan Ying Bus")
         except ImportError:
@@ -53,19 +55,19 @@ class DailyRitual:
 
         # Morning (6am-12pm): Yin phase (Reflection, Planning)
         if time(6, 0) <= now < time(12, 0):
-            return 'yin'
+            return "yin"
 
         # Afternoon (12pm-6pm): Yang phase (Creation, Execution)
         elif time(12, 0) <= now < time(18, 0):
-            return 'yang'
+            return "yang"
 
         # Evening (6pm-12am): Dream phase (Synthesis, Rest)
         elif time(18, 0) <= now < time(23, 59):
-            return 'dream'
+            return "dream"
 
         # Night (12am-6am): Deep rest
         else:
-            return 'rest'
+            return "rest"
 
     def execute_morning_ritual(self) -> dict:
         """Execute morning Yin ritual
@@ -74,7 +76,7 @@ class DailyRitual:
             Dict with ritual results
         """
         logger.info("\n☀️ Morning Ritual - Yin Phase (Receptive)")
-        logger.info("="*50)
+        logger.info("=" * 50)
 
         actions = []
 
@@ -82,6 +84,7 @@ class DailyRitual:
         logger.info("1. 🙏 Loading Sangha collective context...")
         try:
             from whitemagic.gardens.sangha import get_collective
+
             collective = get_collective()
             context = collective.get_shared_context("morning_ritual")
             actions.append(f"Loaded context: {len(context.participants)} participants")
@@ -92,9 +95,12 @@ class DailyRitual:
         logger.info("2. 🌑 Running Yin phase analysis...")
         try:
             from whitemagic.core.orchestration.yin_phase import YinPhase
+
             yin = YinPhase(self.base_dir)
             results = yin.run_full_cycle()
-            actions.append(f"Yin analysis: {results['analyses']['patterns']['total']} patterns")
+            actions.append(
+                f"Yin analysis: {results['analyses']['patterns']['total']} patterns"
+            )
         except Exception as e:
             actions.append(f"Yin analysis: {e}")
 
@@ -102,6 +108,7 @@ class DailyRitual:
         logger.info("3. ☸️  Checking ethical harmony...")
         try:
             from whitemagic.gardens.dharma import get_dharma
+
             dharma = get_dharma()
             report = dharma.get_harmony_report()
             actions.append(f"Harmony: {report['overall_harmony']:.2f}")
@@ -111,13 +118,13 @@ class DailyRitual:
         logger.info("\n✅ Morning ritual complete\n")
 
         result = {
-            'phase': 'yin',
-            'time': datetime.now().isoformat(),
-            'actions': actions,
-            'duration': '15-30 minutes'
+            "phase": "yin",
+            "time": datetime.now().isoformat(),
+            "actions": actions,
+            "duration": "15-30 minutes",
         }
 
-        self._emit_ritual_complete('yin', result)
+        self._emit_ritual_complete("yin", result)
         return result
 
     def execute_afternoon_ritual(self) -> dict:
@@ -127,7 +134,7 @@ class DailyRitual:
             Dict with ritual results
         """
         logger.info("\n🔥 Afternoon Ritual - Yang Phase (Creative)")
-        logger.info("="*50)
+        logger.info("=" * 50)
 
         actions = []
 
@@ -135,6 +142,7 @@ class DailyRitual:
         logger.info("1. 🎯 Checking Sangha collective goals...")
         try:
             from whitemagic.gardens.sangha import get_collective
+
             collective = get_collective()
             context = collective.get_shared_context("afternoon_ritual")
             actions.append(f"Active goals: {len(context.active_goals)}")
@@ -145,6 +153,7 @@ class DailyRitual:
         logger.info("2. 📚 Loading federated patterns...")
         try:
             from whitemagic.gardens.sangha import get_federation
+
             federation = get_federation()
             patterns = federation.get_best_patterns(count=5)
             actions.append(f"Best patterns: {len(patterns)}")
@@ -158,13 +167,13 @@ class DailyRitual:
         logger.info("\n✅ Afternoon ritual complete\n")
 
         result = {
-            'phase': 'yang',
-            'time': datetime.now().isoformat(),
-            'actions': actions,
-            'duration': '2-4 hours'
+            "phase": "yang",
+            "time": datetime.now().isoformat(),
+            "actions": actions,
+            "duration": "2-4 hours",
         }
 
-        self._emit_ritual_complete('yang', result)
+        self._emit_ritual_complete("yang", result)
         return result
 
     def execute_evening_ritual(self) -> dict:
@@ -174,7 +183,7 @@ class DailyRitual:
             Dict with ritual results
         """
         logger.info("\n🌙 Evening Ritual - Dream Phase (Synthesis)")
-        logger.info("="*50)
+        logger.info("=" * 50)
 
         actions = []
 
@@ -186,6 +195,7 @@ class DailyRitual:
         logger.info("2. 💤 Entering dream state for pattern synthesis...")
         try:
             from whitemagic.emergence.dream_state import DreamState
+
             dream = DreamState(self.base_dir / "memory")
             insights = dream.enter_dream_state(duration_minutes=5)
             actions.append(f"Dream insights: {len(insights)}")
@@ -196,6 +206,7 @@ class DailyRitual:
         logger.info("3. 🙏 Contributing insights to Sangha...")
         try:
             from whitemagic.gardens.sangha import get_collective
+
             get_collective()
             # Would contribute day's key insights
             actions.append("Insights contributed to collective")
@@ -205,13 +216,13 @@ class DailyRitual:
         logger.info("\n✅ Evening ritual complete\n")
 
         result = {
-            'phase': 'dream',
-            'time': datetime.now().isoformat(),
-            'actions': actions,
-            'duration': '30-60 minutes'
+            "phase": "dream",
+            "time": datetime.now().isoformat(),
+            "actions": actions,
+            "duration": "30-60 minutes",
         }
 
-        self._emit_ritual_complete('dream', result)
+        self._emit_ritual_complete("dream", result)
         return result
 
     def auto_execute_current(self) -> dict:
@@ -222,17 +233,17 @@ class DailyRitual:
         """
         phase = self.get_current_phase()
 
-        if phase == 'yin':
+        if phase == "yin":
             return self.execute_morning_ritual()
-        elif phase == 'yang':
+        elif phase == "yang":
             return self.execute_afternoon_ritual()
-        elif phase == 'dream':
+        elif phase == "dream":
             return self.execute_evening_ritual()
         else:
             return {
-                'phase': 'rest',
-                'message': 'Deep rest time - no ritual scheduled',
-                'time': datetime.now().isoformat()
+                "phase": "rest",
+                "message": "Deep rest time - no ritual scheduled",
+                "time": datetime.now().isoformat(),
             }
 
     def _emit_ritual_complete(self, phase: str, result: dict):
@@ -242,17 +253,20 @@ class DailyRitual:
 
         try:
             from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
-            self.bus.emit(ResonanceEvent(
-                source="daily_ritual",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "ritual_phase": phase,
-                    "completed": True,
-                    "actions": len(result.get('actions', [])),
-                    "time": result['time']
-                },
-                confidence=0.95
-            ))
+
+            self.bus.emit(
+                ResonanceEvent(
+                    source="daily_ritual",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={
+                        "ritual_phase": phase,
+                        "completed": True,
+                        "actions": len(result.get("actions", [])),
+                        "time": result["time"],
+                    },
+                    confidence=0.95,
+                )
+            )
         except Exception:
             pass
 

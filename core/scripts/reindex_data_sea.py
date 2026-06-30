@@ -86,7 +86,9 @@ def reindex(db_path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="The Great Realignment — Reindex Data Sea")
+    parser = argparse.ArgumentParser(
+        description="The Great Realignment — Reindex Data Sea"
+    )
     parser.add_argument("--db", type=str, default=None, help="Path to whitemagic.db")
     args = parser.parse_args()
 

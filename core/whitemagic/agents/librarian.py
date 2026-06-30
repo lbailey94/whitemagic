@@ -26,11 +26,6 @@ from typing import Any, Protocol
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Storage Protocol — pluggable backend (defaults to in-memory list)
-# ---------------------------------------------------------------------------
-
-
 class MemoryStorage(Protocol):
     """Minimal storage interface for the Librarian agents.
 
@@ -139,11 +134,6 @@ def _get_default_storage() -> MemoryStorage:
         return InMemoryStorage()
 
 
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class ExtractedMemory:
     """A memory candidate extracted by the Librarian agent."""
@@ -154,11 +144,6 @@ class ExtractedMemory:
     confidence: float = 0.5
     source: str = "unknown"
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-
-
-# ---------------------------------------------------------------------------
-# Agent 1: Librarian — extraction
-# ---------------------------------------------------------------------------
 
 
 class LibrarianAgent:
@@ -174,15 +159,26 @@ class LibrarianAgent:
     ]
 
     # Words that signal definitive statements in assistant messages
-    ACTION_WORDS = ["decided", "created", "implemented", "fixed", "discovered", "learned"]
+    ACTION_WORDS = [
+        "decided",
+        "created",
+        "implemented",
+        "fixed",
+        "discovered",
+        "learned",
+    ]
 
     MIN_CONTENT_LENGTH = 15  # Skip very short matches
 
     def __init__(self, storage: MemoryStorage | None = None) -> None:
         self.storage: MemoryStorage = storage or _get_default_storage()
-        self._compiled_patterns = [re.compile(p, re.IGNORECASE) for p in self.MEMORY_INDICATORS]
+        self._compiled_patterns = [
+            re.compile(p, re.IGNORECASE) for p in self.MEMORY_INDICATORS
+        ]
 
-    def extract_from_text(self, text: str, source: str = "unknown") -> list[ExtractedMemory]:
+    def extract_from_text(
+        self, text: str, source: str = "unknown"
+    ) -> list[ExtractedMemory]:
         """Extract memorable content from free-form text."""
         extracted: list[ExtractedMemory] = []
 
@@ -277,11 +273,6 @@ class LibrarianAgent:
         return stored
 
 
-# ---------------------------------------------------------------------------
-# Agent 2: Editor — dedup, merge, hygiene
-# ---------------------------------------------------------------------------
-
-
 class EditorAgent:
     """Refactors, deduplicates, and cleans memory."""
 
@@ -361,7 +352,9 @@ class EditorAgent:
             px, py = find(x), find(y)
             if px != py:
                 # Keep the higher-importance as the new root
-                if memories[px].get("importance", 0) >= memories[py].get("importance", 0):
+                if memories[px].get("importance", 0) >= memories[py].get(
+                    "importance", 0
+                ):
                     parent[py] = px
                 else:
                     parent[px] = py
@@ -378,8 +371,7 @@ class EditorAgent:
         merged: list[dict[str, Any]] = []
         for indices in groups.values():
             primary = dict(memories[indices[0]])  # copy
-            for idx in indices[1:
-                ]:
+            for idx in indices[1:]:
                 other = memories[idx]
                 # Append other content if different
                 if other.get("content") and other["content"] != primary.get("content"):
@@ -399,15 +391,12 @@ class EditorAgent:
             merged.append(primary)
 
         logger.info(
-            "Merged %s -> %s memories "
-            "(%s duplicates removed)"
-        , len(memories), len(merged), len(memories) - len(merged))
+            "Merged %s -> %s memories (%s duplicates removed)",
+            len(memories),
+            len(merged),
+            len(memories) - len(merged),
+        )
         return merged
-
-
-# ---------------------------------------------------------------------------
-# Agent 3: Planner — task generation from memory + goals
-# ---------------------------------------------------------------------------
 
 
 class PlannerAgent:
@@ -415,8 +404,17 @@ class PlannerAgent:
 
     # Action verbs that signal task-ness
     TASK_VERBS = [
-        "implement", "create", "fix", "refactor", "add", "remove",
-        "update", "investigate", "analyze", "document", "test",
+        "implement",
+        "create",
+        "fix",
+        "refactor",
+        "add",
+        "remove",
+        "update",
+        "investigate",
+        "analyze",
+        "document",
+        "test",
     ]
 
     def __init__(self) -> None:
@@ -440,12 +438,14 @@ class PlannerAgent:
                 target = re.split(r"[.!?]\s", target, maxsplit=1)[0]
                 if len(target) > 10:
                     # Skip very short matches
-                    tasks.append({
-                        "verb": verb.lower(),
-                        "target": target,
-                        "source_memory_id": source_id,
-                        "priority": mem.get("importance", 0.5),
-                    })
+                    tasks.append(
+                        {
+                            "verb": verb.lower(),
+                            "target": target,
+                            "source_memory_id": source_id,
+                            "priority": mem.get("importance", 0.5),
+                        }
+                    )
         return tasks
 
     def plan_from_goal(

@@ -13,16 +13,19 @@ class TestGalaxySyncChannelNaming:
     def test_user_channel(self):
         """Channel for a user without specific galaxy."""
         from whitemagic.core.memory.galaxy_sync import _galaxy_channel
+
         assert _galaxy_channel("alice") == "galaxy:alice"
 
     def test_user_galaxy_channel(self):
         """Channel for a specific user+galaxy."""
         from whitemagic.core.memory.galaxy_sync import _galaxy_channel
+
         assert _galaxy_channel("alice", "project-x") == "galaxy:alice:project-x"
 
     def test_local_user_channel(self):
         """Channel for the default local user."""
         from whitemagic.core.memory.galaxy_sync import _galaxy_channel
+
         assert _galaxy_channel("local") == "galaxy:local"
         assert _galaxy_channel("local", "default") == "galaxy:local:default"
 
@@ -34,24 +37,28 @@ class TestGalaxySyncDisabled:
         """Sync is disabled when WM_SILENT_INIT=1 (test env)."""
         monkeypatch.setenv("WM_SILENT_INIT", "1")
         from whitemagic.core.memory.galaxy_sync import _is_sync_enabled
+
         assert _is_sync_enabled() is False
 
     def test_publish_returns_false_when_disabled(self, monkeypatch):
         """publish_galaxy_event returns False when sync is disabled."""
         monkeypatch.setenv("WM_SILENT_INIT", "1")
         from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
+
         assert publish_galaxy_event("galaxy.created", "alice", "test") is False
 
     def test_start_listener_returns_none_when_disabled(self, monkeypatch):
         """start_galaxy_sync_listener returns None when sync is disabled."""
         monkeypatch.setenv("WM_SILENT_INIT", "1")
         from whitemagic.core.memory.galaxy_sync import start_galaxy_sync_listener
+
         assert start_galaxy_sync_listener("alice") is None
 
     def test_stop_listener_returns_false_when_disabled(self, monkeypatch):
         """stop_galaxy_sync_listener returns False when sync is disabled."""
         monkeypatch.setenv("WM_SILENT_INIT", "1")
         from whitemagic.core.memory.galaxy_sync import stop_galaxy_sync_listener
+
         assert stop_galaxy_sync_listener("alice") is False
 
 
@@ -84,7 +91,10 @@ class TestGalaxySyncPublish:
 
         from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
 
-        with patch("whitemagic.tools.handlers.broker._run", side_effect=Exception("Connection refused")):
+        with patch(
+            "whitemagic.tools.handlers.broker._run",
+            side_effect=Exception("Connection refused"),
+        ):
             result = publish_galaxy_event("galaxy.created", "alice", "test")
             assert result is False
 
@@ -119,5 +129,6 @@ class TestBrokerRedisUrl:
     def test_broker_init_with_url(self):
         """_AsyncBroker stores URL parameter."""
         from whitemagic.tools.handlers.broker import _AsyncBroker
+
         broker = _AsyncBroker(url="redis://example:6380")
         assert broker._url == "redis://example:6380"

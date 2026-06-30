@@ -36,23 +36,39 @@ class GardenWeaver:
 
     GARDENS = [
         # Core Expression (Fire)
-        "voice", "play", "joy", "truth", "beauty",
-
+        "voice",
+        "play",
+        "joy",
+        "truth",
+        "beauty",
         # Wisdom & Learning (Air)
-        "wisdom", "learning", "agentic", "emergence",
-
+        "wisdom",
+        "learning",
+        "agentic",
+        "emergence",
         # Relationship & Connection (Water)
-        "love", "mystery", "wonder", "connection", "sangha",
-
+        "love",
+        "mystery",
+        "wonder",
+        "connection",
+        "sangha",
         # Structure & Ethics (Earth)
-        "dharma", "practice", "presence", "ecology",
-
+        "dharma",
+        "practice",
+        "presence",
+        "ecology",
         # Protection & Health (Metal)
-        "immune", "defense", "harmony", "homeostasis",
-
+        "immune",
+        "defense",
+        "harmony",
+        "homeostasis",
         # Integration & Performance (Ether)
-        "integration", "orchestration", "performance",
-        "resonance", "autonomous", "consciousness",
+        "integration",
+        "orchestration",
+        "performance",
+        "resonance",
+        "autonomous",
+        "consciousness",
     ]
 
     def __init__(self) -> None:
@@ -78,7 +94,9 @@ class GardenWeaver:
                 module_count = len([x for x in dir(module) if not x.startswith("_")])
 
                 # Check Gan Ying connection
-                has_resonance = hasattr(module, "get_bus") or hasattr(module, "emit_event")
+                has_resonance = hasattr(module, "get_bus") or hasattr(
+                    module, "emit_event"
+                )
 
                 status = GardenStatus(
                     name=garden,
@@ -91,7 +109,12 @@ class GardenWeaver:
                 self.garden_status[garden] = status
                 successful.append(garden)
 
-                logger.info("  ✅ {garden:20s} - %s modules, resonance: %s", module_count, has_resonance, exc_info=True)
+                logger.info(
+                    "  ✅ {garden:20s} - %s modules, resonance: %s",
+                    module_count,
+                    has_resonance,
+                    exc_info=True,
+                )
 
             except Exception as e:
                 failed.append((garden, str(e)))
@@ -114,8 +137,6 @@ class GardenWeaver:
 
     def _create_connections(self) -> Any:
         """Create resonance connections and functional bridges between gardens"""
-        # --- RESONANCE CONNECTIONS (Legacy) ---
-        # Voice <-> Joy, Truth, Beauty (expression gardens)
         for garden in ["joy", "truth", "beauty"]:
             if "voice" in self.garden_status and garden in self.garden_status:
                 self.connections.add(("voice", garden))
@@ -140,11 +161,11 @@ class GardenWeaver:
             if garden != "integration":
                 self.connections.add(("integration", garden))
 
-        # --- FUNCTIONAL BRIDGES (Phase 21) ---
         try:
             from whitemagic.core.patterns.pattern_consciousness.resonance_cascade import (
                 get_orchestrator,
             )
+
             orch = get_orchestrator()
 
             # Bridge: Breakthrough -> Narrative Climax
@@ -154,12 +175,17 @@ class GardenWeaver:
                         NarrativeArc,
                         get_narrative_engine,
                     )
+
                     engine = get_narrative_engine()
                     # Find or start a systemic thread
                     threads = engine.get_active_threads()
                     thread_id = threads[0].id if threads else "systemic-evolution"
                     if not threads:
-                        engine.start_thread("Systemic Evolution", ["unified_field"], "Active consciousness loop")
+                        engine.start_thread(
+                            "Systemic Evolution",
+                            ["unified_field"],
+                            "Active consciousness loop",
+                        )
 
                     engine.add_moment(
                         thread_id=thread_id,
@@ -178,7 +204,9 @@ class GardenWeaver:
 
             logger.info("✅ Functional bridges activated between gardens")
         except ImportError:
-            logger.warning("ResonanceOrchestrator not found, functional bridges skipped")
+            logger.warning(
+                "ResonanceOrchestrator not found, functional bridges skipped"
+            )
 
     def get_ecosystem_health(self) -> dict[str, Any]:
         """Assess overall ecosystem health"""
@@ -248,6 +276,7 @@ class GardenWeaver:
 # Singleton
 _weaver = None
 
+
 def get_garden_weaver() -> GardenWeaver:
     """Get the global garden weaver"""
     global _weaver
@@ -274,7 +303,7 @@ if __name__ == "__main__":
     health = weaver.get_ecosystem_health()
 
     logger.info("\n🌿 ECOSYSTEM HEALTH:")
-    logger.info("   Score: %s", health['health_score'])
-    logger.info("   Resonance: %s", health['resonance_score'])
-    logger.info("   Status: %s", health['status'])
+    logger.info("   Score: %s", health["health_score"])
+    logger.info("   Resonance: %s", health["resonance_score"])
+    logger.info("   Status: %s", health["status"])
     logger.info("\n陰陽調和，萬物昇華 ✨")

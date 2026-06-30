@@ -35,17 +35,23 @@ from whitemagic.core.resonance.gan_ying_enhanced import (
 
 logger = logging.getLogger(__name__)
 
+
 def _emit_bridge_event(event_name: str, data: dict[str, Any]) -> None:
     try:
         bus = get_bus()
-        event = ResonanceEvent(source="bridge_intelligence", event_type=EventType.INTERNAL_STATE_CHANGED, data={"bridge_event": event_name, **data})
+        event = ResonanceEvent(
+            source="bridge_intelligence",
+            event_type=EventType.INTERNAL_STATE_CHANGED,
+            data={"bridge_event": event_name, **data},
+        )
         bus.emit(event)
     except Exception as e:
         logger.debug("Bridge event emit failed: %s", e)
 
-# --- REASONING ---
 
-def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+def conduct_reasoning(
+    question: str, context: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Perform the conduct reasoning operation.
 
@@ -60,6 +66,7 @@ def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> d
         ReasoningContext,
         get_reasoner,
     )
+
     ctx = ReasoningContext(question=question)
     if context:
         ctx = ReasoningContext(
@@ -81,7 +88,6 @@ def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> d
         ],
     }
 
-# --- WISDOM (I Ching) ---
 
 def consult_i_ching(question: str, method: str = "coins") -> dict[str, Any]:
     """
@@ -95,11 +101,15 @@ def consult_i_ching(question: str, method: str = "coins") -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.intelligence.wisdom import IchingEngine
+
     engine = IchingEngine()
     result = engine.consult(question, method=method)
-    return {"question": question, "wisdom": getattr(result, "wisdom", ""), "guidance": getattr(result, "guidance", "")}
+    return {
+        "question": question,
+        "wisdom": getattr(result, "wisdom", ""),
+        "guidance": getattr(result, "guidance", ""),
+    }
 
-# --- AGENTIC COLLABORATION ---
 
 def manage_agent_collaboration(operation: str = "list", **kwargs) -> dict[str, Any]:
     # Simplified collaboration logic for bridge
@@ -114,7 +124,6 @@ def manage_agent_collaboration(operation: str = "list", **kwargs) -> dict[str, A
     """
     return {"status": "ok", "operation": operation, "agents": []}
 
-# --- AUTONOMOUS INFERENCE ---
 
 def run_autonomous_inference(input_data: str, mode: str = "fast") -> dict[str, Any]:
     """
@@ -129,7 +138,6 @@ def run_autonomous_inference(input_data: str, mode: str = "fast") -> dict[str, A
     """
     return {"status": "ok", "inference": "Simulation successful"}
 
-# --- PATTERN RECOGNITION ---
 
 def detect_intelligence_patterns(content: str) -> list[dict[str, Any]]:
     """Detect patterns in content — graceful fallback returns basic keyword matches."""

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 _rs: Any = None
 try:
     import whitemagic_rust as _wmr
+
     if hasattr(_wmr, "CodeWritingClone"):
         _rs = _wmr
         logger.debug("Rust CodeWritingClone available — parallel file ops enabled")
@@ -47,7 +48,9 @@ def create_code_operation(
     """
     if not code_writing_available():
         raise RuntimeError("Rust code writing clone not available")
-    return _rs.CodeOperation(op_type, source_file, target_file, content, line_start, line_end)
+    return _rs.CodeOperation(
+        op_type, source_file, target_file, content, line_start, line_end
+    )
 
 
 def write_file(base_path: str, target_file: str, content: str) -> dict[str, Any]:

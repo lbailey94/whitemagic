@@ -33,7 +33,10 @@ class DistributedCache:
     """
 
     def __init__(
-        self, redis_url: str | None = None, default_ttl: int = 3600, max_size: int = 10000,
+        self,
+        redis_url: str | None = None,
+        default_ttl: int = 3600,
+        max_size: int = 10000,
     ):
         """Initialize distributed cache.
 
@@ -91,7 +94,9 @@ class DistributedCache:
                 if value:
                     return json.loads(value)
             except Exception as e:
-                logger.warning("Redis cache get failed for %s: %s", cache_key, e, exc_info=True)
+                logger.warning(
+                    "Redis cache get failed for %s: %s", cache_key, e, exc_info=True
+                )
 
         # Fallback to in-memory
         entry = self._cache.get(cache_key)
@@ -121,7 +126,9 @@ class DistributedCache:
                 self._redis_client.setex(cache_key, ttl, json.dumps(value))
                 return True
             except Exception as e:
-                logger.warning("Redis cache set failed for %s: %s", cache_key, e, exc_info=True)
+                logger.warning(
+                    "Redis cache set failed for %s: %s", cache_key, e, exc_info=True
+                )
 
         # Fallback to in-memory
         if len(self._cache) >= self.max_size:
@@ -139,7 +146,9 @@ class DistributedCache:
             try:
                 self._redis_client.delete(cache_key)
             except Exception as e:
-                logger.warning("Redis cache delete failed for %s: %s", cache_key, e, exc_info=True)
+                logger.warning(
+                    "Redis cache delete failed for %s: %s", cache_key, e, exc_info=True
+                )
 
         self._cache.pop(cache_key, None)
         return True
@@ -162,7 +171,12 @@ class DistributedCache:
                     if keys:
                         return self._redis_client.delete(*keys)
                 except Exception as e:
-                    logger.warning("Redis pattern clear failed for %s: %s", pattern, e, exc_info=True)
+                    logger.warning(
+                        "Redis pattern clear failed for %s: %s",
+                        pattern,
+                        e,
+                        exc_info=True,
+                    )
 
             # In-memory pattern clear
             to_delete = [k for k in self._cache.keys() if pattern in k]

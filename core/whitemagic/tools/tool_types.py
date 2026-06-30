@@ -36,6 +36,7 @@ class ToolCategory(StrEnum):
         AGENT
         GOVERNANCE
         SECURITY"""
+
     MEMORY = "memory"
     SESSION = "session"
     GARDEN = "garden"
@@ -68,6 +69,7 @@ class ToolSafety(StrEnum):
         READ
         WRITE
         DELETE"""
+
     READ = "read"
     WRITE = "write"
     DELETE = "delete"
@@ -142,7 +144,9 @@ class ToolDefinition:
 
     def to_mcp_tool(self) -> dict[str, Any]:
         """Convert to MCP tool format."""
-        safety_suffix = "" if self.safety == ToolSafety.READ else f" | {self.safety.value.upper()}"
+        safety_suffix = (
+            "" if self.safety == ToolSafety.READ else f" | {self.safety.value.upper()}"
+        )
         return {
             "name": self.name,
             "description": f"[{self.category.value.upper()}{safety_suffix}] {self.description}",

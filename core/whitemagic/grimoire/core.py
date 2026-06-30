@@ -17,10 +17,10 @@ from typing import Any
 class GrimoireState(Enum):
     """Current state of the grimoire"""
 
-    DORMANT = "dormant"      # Not active
+    DORMANT = "dormant"  # Not active
     LISTENING = "listening"  # Monitoring context
-    CASTING = "casting"      # Actively casting spell
-    LEARNING = "learning"    # Processing outcomes
+    CASTING = "casting"  # Actively casting spell
+    LEARNING = "learning"  # Processing outcomes
 
 
 class WuXingPhase(Enum):
@@ -76,7 +76,7 @@ class WuXingPhase(Enum):
 class YinYangPhase(Enum):
     """Yin/Yang phase"""
 
-    YIN = "yin"    # Receptive, inward
+    YIN = "yin"  # Receptive, inward
     YANG = "yang"  # Creative, outward
 
 
@@ -257,23 +257,30 @@ class Grimoire:
                 reason_parts.append(f"Wu Xing {self.context.wu_xing.symbol}")
 
             if score > 0:
-                recommendations.append(SpellRecommendation(
-                    spell_name=f"Chapter {chapter_num} Spells",
-                    chapter=chapter_num,
-                    confidence=min(score, 1.0),
-                    reason=", ".join(reason_parts) if reason_parts else "general match",
-                    auto_cast=score >= 0.7,
-                ))
+                recommendations.append(
+                    SpellRecommendation(
+                        spell_name=f"Chapter {chapter_num} Spells",
+                        chapter=chapter_num,
+                        confidence=min(score, 1.0),
+                        reason=", ".join(reason_parts)
+                        if reason_parts
+                        else "general match",
+                        auto_cast=score >= 0.7,
+                    )
+                )
 
         # Sort by confidence and return top results
         recommendations.sort(key=lambda r: r.confidence, reverse=True)
         selected = recommendations[:max_results]
 
         for rec in selected:
-            self._emit("on_spell_suggested", {
-                "spell": rec.spell_name,
-                "confidence": rec.confidence,
-            })
+            self._emit(
+                "on_spell_suggested",
+                {
+                    "spell": rec.spell_name,
+                    "confidence": rec.confidence,
+                },
+            )
 
         return selected
 
@@ -295,7 +302,9 @@ class Grimoire:
         self.state = GrimoireState.LISTENING
         return result
 
-    def learn_outcome(self, spell_name: str, success: bool, notes: str = "") -> dict[str, Any]:
+    def learn_outcome(
+        self, spell_name: str, success: bool, notes: str = ""
+    ) -> dict[str, Any]:
         """Learn from spell outcome to improve future recommendations"""
         self.state = GrimoireState.LEARNING
 
@@ -320,11 +329,11 @@ class Grimoire:
 
         status = f"""
 📚 GRIMOIRE 2.0 STATUS
-{'='*50}
+{"=" * 50}
 State: {self.state.value.upper()}
 Wu Xing: {ctx.wu_xing.symbol} {ctx.wu_xing.element.title()}
-Yin/Yang: {'🌙' if ctx.yin_yang == YinYangPhase.YIN else '☀️'} {ctx.yin_yang.value.title()}
-Task: {ctx.task or '(none)'}
+Yin/Yang: {"🌙" if ctx.yin_yang == YinYangPhase.YIN else "☀️"} {ctx.yin_yang.value.title()}
+Task: {ctx.task or "(none)"}
 Emotional State: {ctx.emotional_state}
 
 🔮 RECOMMENDED SPELLS:
@@ -349,11 +358,13 @@ Emotional State: {ctx.emotional_state}
                 callback(data)
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
 
 # Singleton instance
 _grimoire: Grimoire | None = None
+
 
 def get_grimoire() -> Grimoire:
     """Get the global grimoire instance"""

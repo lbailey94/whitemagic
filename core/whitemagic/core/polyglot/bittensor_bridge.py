@@ -6,6 +6,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class BittensorBridge:
     """Bridge to Bittensor Decentralized Intelligence Network.
 
@@ -14,7 +15,7 @@ class BittensorBridge:
     """
 
     def __init__(self) -> None:
-        self.sn51_api = "https://api.lium.io/v1" # Example endpoint for SN51 data
+        self.sn51_api = "https://api.lium.io/v1"  # Example endpoint for SN51 data
         self.last_discovery: datetime | None = None
         self.discovery_cache: dict[str, Any] = {}
 
@@ -59,7 +60,9 @@ class BittensorBridge:
             return {"type": "h100", "price": pricing.get("h100")}
         return {"type": "rtx_4090", "price": pricing.get("rtx_4090")}
 
+
 _bridge: BittensorBridge | None = None
+
 
 def get_bittensor_bridge() -> BittensorBridge:
     """
@@ -72,6 +75,7 @@ def get_bittensor_bridge() -> BittensorBridge:
     if _bridge is None:
         _bridge = BittensorBridge()
     return _bridge
+
 
 if __name__ == "__main__":
     # Test discovery

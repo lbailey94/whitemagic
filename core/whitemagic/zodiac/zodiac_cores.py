@@ -25,8 +25,8 @@ class ZodiacCore:
     def __init__(self, name: str, element: str, mode: str, ruler: str) -> None:
         self.name = name
         self.element = element  # fire, earth, air, water
-        self.mode = mode        # cardinal, fixed, mutable
-        self.ruler = ruler      # planetary ruler
+        self.mode = mode  # cardinal, fixed, mutable
+        self.ruler = ruler  # planetary ruler
         self.frequency = self._calculate_frequency()
         self.activation_count = 0
         self.last_activation: datetime | None = None
@@ -34,9 +34,9 @@ class ZodiacCore:
     def _calculate_frequency(self) -> float:
         """Calculate core's energetic frequency"""
         base_freq = {
-            "fire": 440.0,   # A note
+            "fire": 440.0,  # A note
             "earth": 392.0,  # G note
-            "air": 493.88,   # B note
+            "air": 493.88,  # B note
             "water": 349.23,  # F note
         }
 
@@ -59,11 +59,31 @@ class ZodiacCore:
         urgency = str(context.get("urgency", "")).lower()
 
         # 1. Element matching
-        if self.element == "fire" and ("start" in operation or "action" in intention or urgency == "high") or self.element == "earth" and ("build" in operation or "stable" in intention or "save" in operation) or self.element == "air" and ("think" in operation or "analyze" in intention or "communicate" in operation) or self.element == "water" and ("feel" in operation or "dream" in intention or "connect" in operation):
+        if (
+            self.element == "fire"
+            and ("start" in operation or "action" in intention or urgency == "high")
+            or self.element == "earth"
+            and ("build" in operation or "stable" in intention or "save" in operation)
+            or self.element == "air"
+            and (
+                "think" in operation
+                or "analyze" in intention
+                or "communicate" in operation
+            )
+            or self.element == "water"
+            and ("feel" in operation or "dream" in intention or "connect" in operation)
+        ):
             score += 0.2
 
         # 2. Mode matching
-        if self.mode == "cardinal" and ("new" in operation or "initiate" in intention) or self.mode == "fixed" and ("maintain" in operation or "finish" in intention) or self.mode == "mutable" and ("change" in operation or "adapt" in intention):
+        if (
+            self.mode == "cardinal"
+            and ("new" in operation or "initiate" in intention)
+            or self.mode == "fixed"
+            and ("maintain" in operation or "finish" in intention)
+            or self.mode == "mutable"
+            and ("change" in operation or "adapt" in intention)
+        ):
             score += 0.15
 
         # 3. Core specific keywords (Override in subclasses for precision)
@@ -100,7 +120,9 @@ class ZodiacCore:
 
         if mojo_result and mojo_result.get("status") == "mojo_processed":
             self.frequency = mojo_result["frequency"]
-            transformed = self._apply_transformation(context.get("operation", ""), context)
+            transformed = self._apply_transformation(
+                context.get("operation", ""), context
+            )
             wisdom = self._generate_wisdom(context, transformed)
             resonance = mojo_result["resonance"]
         else:
@@ -215,7 +237,16 @@ class GeminiCore(ZodiacCore):
         self.learning_rate = 1.2
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["communicate", "learn", "connect", "write", "speak", "idea", "network", "share"]
+        keywords = [
+            "communicate",
+            "learn",
+            "connect",
+            "write",
+            "speak",
+            "idea",
+            "network",
+            "share",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -249,7 +280,16 @@ class CancerCore(ZodiacCore):
         self.intuitive_accuracy = 0.8
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["nurture", "memory", "remember", "history", "care", "protect", "home", "feel"]
+        keywords = [
+            "nurture",
+            "memory",
+            "remember",
+            "history",
+            "care",
+            "protect",
+            "home",
+            "feel",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -326,7 +366,17 @@ class VirgoCore(ZodiacCore):
         self.healing_capacity = 0.8
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["analyze", "debug", "fix", "clean", "organize", "detail", "perfect", "optimize", "refactor"]
+        keywords = [
+            "analyze",
+            "debug",
+            "fix",
+            "clean",
+            "organize",
+            "detail",
+            "perfect",
+            "optimize",
+            "refactor",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -368,7 +418,16 @@ class LibraCore(ZodiacCore):
         self.harmony_generator = True
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["balance", "harmony", "relate", "partner", "fair", "justice", "beauty", "negotiate"]
+        keywords = [
+            "balance",
+            "harmony",
+            "relate",
+            "partner",
+            "fair",
+            "justice",
+            "beauty",
+            "negotiate",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -406,7 +465,16 @@ class ScorpioCore(ZodiacCore):
         self.depth_capacity = 1.0
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["transform", "audit", "security", "secret", "deep", "investigate", "purge", "regenerate"]
+        keywords = [
+            "transform",
+            "audit",
+            "security",
+            "secret",
+            "deep",
+            "investigate",
+            "purge",
+            "regenerate",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -429,7 +497,14 @@ class ScorpioCore(ZodiacCore):
         return base
 
     def _get_alchemical_stage(self) -> str:
-        stages = ["calcination", "solvent", "separation", "conjunction", "fermentation", "distillation"]
+        stages = [
+            "calcination",
+            "solvent",
+            "separation",
+            "conjunction",
+            "fermentation",
+            "distillation",
+        ]
         return random.choice(stages)
 
     def _generate_wisdom(self, context: dict[str, Any], result: Any) -> str:
@@ -451,7 +526,16 @@ class SagittariusCore(ZodiacCore):
         self.wisdom_accumulation = 0.8
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["explore", "expand", "travel", "teach", "philosophy", "truth", "freedom", "adventure"]
+        keywords = [
+            "explore",
+            "expand",
+            "travel",
+            "teach",
+            "philosophy",
+            "truth",
+            "freedom",
+            "adventure",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -489,7 +573,16 @@ class CapricornCore(ZodiacCore):
         self.mastery_path = True
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["structure", "manage", "goal", "achieve", "discipline", "work", "career", "legacy"]
+        keywords = [
+            "structure",
+            "manage",
+            "goal",
+            "achieve",
+            "discipline",
+            "work",
+            "career",
+            "legacy",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -534,7 +627,16 @@ class AquariusCore(ZodiacCore):
         self.humanitarian_focus = True
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["innovate", "change", "future", "tech", "group", "friend", "rebel", "unique"]
+        keywords = [
+            "innovate",
+            "change",
+            "future",
+            "tech",
+            "group",
+            "friend",
+            "rebel",
+            "unique",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -575,7 +677,16 @@ class PiscesCore(ZodiacCore):
         self.compassion_radius = 1.0
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        keywords = ["dream", "imagine", "feel", "compassion", "art", "music", "spiritual", "vision"]
+        keywords = [
+            "dream",
+            "imagine",
+            "feel",
+            "compassion",
+            "art",
+            "music",
+            "spiritual",
+            "vision",
+        ]
         matches = sum(1 for k in keywords if k in operation or k in intention)
         return matches * 0.1
 
@@ -636,10 +747,10 @@ class ZodiacCores:
 
         # Core relationships and affinities
         self.affinities: dict[str, list[str]] = {
-            "aries": ["leo", "sagittarius"],      # Fire trine
-            "taurus": ["virgo", "capricorn"],      # Earth trine
-            "gemini": ["libra", "aquarius"],       # Air trine
-            "cancer": ["scorpio", "pisces"],       # Water trine
+            "aries": ["leo", "sagittarius"],  # Fire trine
+            "taurus": ["virgo", "capricorn"],  # Earth trine
+            "gemini": ["libra", "aquarius"],  # Air trine
+            "cancer": ["scorpio", "pisces"],  # Water trine
             "leo": ["aries", "sagittarius"],
             "virgo": ["taurus", "capricorn"],
             "libra": ["gemini", "aquarius"],
@@ -675,7 +786,9 @@ class ZodiacCores:
         for name, core in self.cores.items():
             stats[name] = {
                 "activations": core.activation_count,
-                "last_activation": core.last_activation.isoformat() if core.last_activation else None,
+                "last_activation": core.last_activation.isoformat()
+                if core.last_activation
+                else None,
                 "frequency": core.frequency,
                 "element": core.element,
                 "mode": core.mode,
@@ -686,6 +799,7 @@ class ZodiacCores:
 
 # Singleton instance
 _cores_instance: ZodiacCores | None = None
+
 
 def get_zodiac_cores() -> ZodiacCores:
     """Get the global zodiac cores instance"""

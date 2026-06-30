@@ -153,6 +153,7 @@ class CapabilityHarness:
 
         # Give async dispatch time
         import time
+
         time.sleep(0.1)
 
         return {
@@ -187,6 +188,7 @@ class CapabilityHarness:
             from whitemagic.gardens.connection.zodiac_cores import (
                 ZodiacCores,  # type: ignore[attr-defined]
             )
+
             cores = ZodiacCores()
             return {
                 "cores_available": len(cores.cores) if hasattr(cores, "cores") else 0,
@@ -210,6 +212,7 @@ class CapabilityHarness:
             from whitemagic.emergence.detector import (
                 EmergenceDetector,  # type: ignore[import-not-found]
             )
+
             detector = EmergenceDetector()
             return {
                 "emergence_operational": True,
@@ -243,6 +246,7 @@ class CapabilityHarness:
 
         try:
             from whitemagic.core.immune.health_check import HealthCheck
+
             HealthCheck()
             return {
                 "health_check_operational": True,
@@ -263,6 +267,7 @@ class CapabilityHarness:
             from whitemagic.core.memory.neural.gan_ying_integration import (
                 setup_gan_ying_listeners,
             )
+
             setup_gan_ying_listeners()
 
             # Verify listeners are registered
@@ -274,7 +279,7 @@ class CapabilityHarness:
                 "listeners_registered": has_listeners,
             }
         except ImportError as e:
-             return {
+            return {
                 "gan_ying_integration_active": False,
                 "error": str(e),
             }
@@ -341,7 +346,9 @@ class CapabilityHarness:
             result = self.run_combo(name)
             results.append(result)
             status = "✅" if result.success else "❌"
-            logger.info("%s %s: {result.duration_ms:.1f}ms", status, name, exc_info=True)
+            logger.info(
+                "%s %s: {result.duration_ms:.1f}ms", status, name, exc_info=True
+            )
 
         passed = sum(1 for r in results if r.success)
 
@@ -354,7 +361,10 @@ class CapabilityHarness:
 
     def save_report(self, report: HarnessReport, path: Path | None = None) -> Any:
         """Save harness report"""
-        path = path or self.base_path / "reports" / "status" / "CAPABILITY_HARNESS_LATEST.md"
+        path = (
+            path
+            or self.base_path / "reports" / "status" / "CAPABILITY_HARNESS_LATEST.md"
+        )
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(report.to_markdown())
         logger.info("📊 Harness report saved to %s", path, exc_info=True)

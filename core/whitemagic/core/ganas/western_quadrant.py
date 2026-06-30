@@ -37,6 +37,7 @@ Balance is active, not passive.
         """Execute balance logic via Governor."""
         try:
             from whitemagic.core.governor import get_governor
+
             gov = get_governor()
             stats = gov.stats()
 
@@ -57,6 +58,7 @@ Balance is active, not passive.
             "load_distribution": "even",
             "status": "balanced",
         }
+
 
 class MoundGana(BaseGana):
     """Mound (娄 Lou) - Accumulation.
@@ -85,6 +87,7 @@ Gratitude multiplies abundance.
         """Execute accumulation logic: warm cache then report stats."""
         try:
             from whitemagic.optimization.predictive_cache import get_memory_cache
+
             cache = get_memory_cache()
 
             # Warm the cache if it's cold (fewer than 5 entries)
@@ -116,6 +119,7 @@ Gratitude multiplies abundance.
             "status": "accumulating",
         }
 
+
 class StomachGana(BaseGana):
     """Stomach (胃 Wei) - Nourishment.
 
@@ -143,6 +147,7 @@ Digestion turns matter into energy.
         """Execute nourishment logic via TokenEconomy."""
         try:
             from whitemagic.core.consciousness.token_economy import get_token_economy
+
             economy = get_token_economy()
             status = economy.get_budget_status()
 
@@ -164,6 +169,7 @@ Digestion turns matter into energy.
             "energy_allocated": True,
             "status": "nourishing",
         }
+
 
 class HairyHeadGana(BaseGana):
     """Hairy Head (昴 Mao) - Detail.
@@ -192,6 +198,7 @@ God is in the details.
         """Execute validation/debugging logic."""
         if "validate_integrations" in call.task or "debug" in call.task:
             from whitemagic.core.embodiment import get_harmony_monitor
+
             # Also potentially check other integration points
             # For now, we perform a deep health check as proxy for validation
             monitor = get_harmony_monitor()
@@ -202,7 +209,7 @@ God is in the details.
                 "rust_core": True,
                 "mcp_bridge": True,
                 "skyfield": True,
-                "postgres": False, # Mock
+                "postgres": False,  # Mock
             }
 
             return {
@@ -221,6 +228,7 @@ God is in the details.
             "validation": "passed",
             "status": "focused",
         }
+
 
 class NetGana(BaseGana):
     """Net (毕 Bi) - Capture.
@@ -268,6 +276,7 @@ Cast your net wide, catch what matters.
             try:
                 from whitemagic.config import PROJECT_ROOT
                 from whitemagic.optimization.polyglot_router import get_router
+
                 router = get_router()
 
                 mode = call.state_vector.get("mode", "balanced")
@@ -275,12 +284,17 @@ Cast your net wide, catch what matters.
 
                 result = router.cast_heavens_net(root_path, mode=mode)
 
-                limit = call.state_vector.get("concept_limit", 1000000) # Default high for stream
+                limit = call.state_vector.get(
+                    "concept_limit", 1000000
+                )  # Default high for stream
                 stream_mode = call.state_vector.get("stream", False)
-                stream_path = call.state_vector.get("stream_path", "/tmp/heavens_net_stream.jsonl")
+                stream_path = call.state_vector.get(
+                    "stream_path", "/tmp/heavens_net_stream.jsonl"
+                )
 
                 if stream_mode:
                     from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
                     count = 0
                     with open(stream_path, "w") as f_out:
                         # Iterate directly if possible to avoid list creation overhead
@@ -298,16 +312,20 @@ Cast your net wide, catch what matters.
                             count += 1
 
                     captured["internal_net"] = {
-                        "engine": "rust_v6" if router._rust_available else "python_fallback",
+                        "engine": "rust_v6"
+                        if router._rust_available
+                        else "python_fallback",
                         "files_scanned": result.total_files,
                         "concepts_extracted": count,
                         "stream_path": stream_path,
-                        "concepts": [], # Empty to save RAM
+                        "concepts": [],  # Empty to save RAM
                     }
                 else:
                     # Legacy in-memory mode
                     captured["internal_net"] = {
-                        "engine": "rust_v6" if router._rust_available else "python_fallback",
+                        "engine": "rust_v6"
+                        if router._rust_available
+                        else "python_fallback",
                         "files_scanned": result.total_files,
                         "concepts_extracted": len(result.features),
                         "concepts": [
@@ -317,7 +335,8 @@ Cast your net wide, catch what matters.
                                 "confidence": f.confidence,
                                 "file": f.file_path.split("/")[-1],
                                 "file_path": f.file_path,
-                            } for f in result.features[:limit]
+                            }
+                            for f in result.features[:limit]
                         ],
                     }
                 captured["status"] = "introspected"
@@ -337,11 +356,16 @@ Cast your net wide, catch what matters.
 
                 if "broadcast_signal" in call.task:
                     payload = call.state_vector.get("payload", {})
-                    r.publish("ganying", _json_dumps_net({
-                        "event_type": "BROADCAST_REQUEST",
-                        "source": "NetGana",
-                        "data": payload,
-                    }))
+                    r.publish(
+                        "ganying",
+                        _json_dumps_net(
+                            {
+                                "event_type": "BROADCAST_REQUEST",
+                                "source": "NetGana",
+                                "data": payload,
+                            }
+                        ),
+                    )
                     captured["external_net"] = "broadcast_initiated"
 
                 # Check for recent signals
@@ -359,18 +383,26 @@ Cast your net wide, catch what matters.
                 # Pattern detection (simplified example)
                 if isinstance(pred, dict):
                     if pred.get("harmony_score", 0) < 0.5:
-                        captured["anomalies"].append("Low harmony detected in predecessor")
+                        captured["anomalies"].append(
+                            "Low harmony detected in predecessor"
+                        )
 
                     if pred.get("guna") == "Tamas":
                         captured["patterns_detected"].append("System stress pattern")
-                        captured["lessons"].append("Defer heavy processing during Tamas state")
+                        captured["lessons"].append(
+                            "Defer heavy processing during Tamas state"
+                        )
 
                     if "pulse_rate" in pred:
-                        captured["patterns_detected"].append(f"Heartbeat pattern: {pred['pulse_rate']}")
+                        captured["patterns_detected"].append(
+                            f"Heartbeat pattern: {pred['pulse_rate']}"
+                        )
 
             # Check state vector for broader patterns
             if call.state_vector.get("chain_position", 0) > 5:
-                captured["patterns_detected"].append("Extended chain - check for fatigue")
+                captured["patterns_detected"].append(
+                    "Extended chain - check for fatigue"
+                )
 
             # Pattern Engine Integration (Real)
             if call.task in ["detect_patterns", "scan_codebase"]:
@@ -378,6 +410,7 @@ Cast your net wide, catch what matters.
                     from whitemagic.core.intelligence.synthesis.unified_patterns import (
                         get_pattern_api,
                     )
+
                     api = get_pattern_api()
 
                     content = call.state_vector.get("content")
@@ -386,6 +419,7 @@ Cast your net wide, catch what matters.
                         pass
                     else:
                         import asyncio
+
                         loop = asyncio.get_running_loop()
                         stats = await loop.run_in_executor(None, api.get_stats)
                         captured["global_stats"] = stats
@@ -422,11 +456,16 @@ Words have power when precise.
         """Execute precision/validation logic."""
 
         # TitleGenerator integration
-        if call.task in ["generate_title", "fix_untitled_memories", "extract_key_phrases"]:
+        if call.task in [
+            "generate_title",
+            "fix_untitled_memories",
+            "extract_key_phrases",
+        ]:
             try:
                 from whitemagic.core.intelligence.synthesis.title_generator import (
                     get_title_generator,
                 )
+
                 titler = get_title_generator()
 
                 if call.task == "generate_title":
@@ -488,6 +527,7 @@ Words have power when precise.
             "status": "vocal",
         }
 
+
 class ThreeStarsGana(BaseGana):
     """Three Stars (参 Shen) - Judgment.
 
@@ -519,11 +559,13 @@ Judgment requires wisdom and courage.
         )
 
         reasoner = get_reasoner()
-        question = call.state_vector.get("question", "What is the wise course of action?")
+        question = call.state_vector.get(
+            "question", "What is the wise course of action?"
+        )
 
         if "consult_wisdom_council" in call.task:
             source = call.state_vector.get("source", "full_council")
-            lenses = None # All
+            lenses = None  # All
 
             if source == "art_of_war":
                 lenses = [ReasoningLens.ART_OF_WAR]
@@ -545,20 +587,26 @@ Judgment requires wisdom and courage.
         elif "consult_iching" in call.task:
             # Route through PolyglotRouter for Zig acceleration
             from whitemagic.optimization.polyglot_router import get_router
+
             router = get_router()
 
             # Cast hexagram lines (Zig/Python fallback)
             lines = router.cast_iching()
 
             # Use reasoner for analysis of the cast lines
-            result = reasoner.reason(f"I Ching hexagram lines cast: {lines}. Question: {question}", lenses=[ReasoningLens.I_CHING])
+            result = reasoner.reason(
+                f"I Ching hexagram lines cast: {lines}. Question: {question}",
+                lenses=[ReasoningLens.I_CHING],
+            )
 
             return {
                 "mansion": self.mansion.name,
                 "garden": self.garden,
                 "judgment": result.recommendation,
                 "lines": lines,
-                "hexagram": result.perspectives[0].analysis if result.perspectives else "Analyzed",
+                "hexagram": result.perspectives[0].analysis
+                if result.perspectives
+                else "Analyzed",
                 "status": "divined",
             }
 

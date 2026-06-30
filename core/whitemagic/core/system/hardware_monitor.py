@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HardwareProfile:
     """Detected hardware capabilities."""
+
     cpu_count: int
     cpu_threads: int
     total_ram_gb: float
@@ -31,11 +32,7 @@ class HardwareProfile:
     @property
     def is_constrained(self) -> bool:
         """Check if running on constrained hardware."""
-        return (
-            self.cpu_threads <= 8 or
-            self.available_ram_gb < 8 or
-            not self.has_gpu
-        )
+        return self.cpu_threads <= 8 or self.available_ram_gb < 8 or not self.has_gpu
 
     @property
     def resource_tier(self) -> str:
@@ -47,13 +44,14 @@ class HardwareProfile:
         else:
             return "LOW"
 
+
 def detect_hardware() -> HardwareProfile:
     """Detect current hardware capabilities using /proc and standard tools."""
     # CPU - read from /proc/cpuinfo
     try:
-        with open('/proc/cpuinfo') as f:
+        with open("/proc/cpuinfo") as f:
             cpuinfo = f.read()
-        cpu_threads = cpuinfo.count('processor')
+        cpu_threads = cpuinfo.count("processor")
         # Estimate physical cores (rough approximation)
         cpu_count = max(1, cpu_threads // 2)
     except (OSError, FileNotFoundError, PermissionError):
@@ -62,13 +60,13 @@ def detect_hardware() -> HardwareProfile:
 
     # RAM - read from /proc/meminfo
     try:
-        with open('/proc/meminfo') as f:
+        with open("/proc/meminfo") as f:
             meminfo = f.read()
-        for line in meminfo.split('\n'):
-            if line.startswith('MemTotal:'):
+        for line in meminfo.split("\n"):
+            if line.startswith("MemTotal:"):
                 total_ram_kb = int(line.split()[1])
                 total_ram_gb = total_ram_kb / (1024**2)
-            elif line.startswith('MemAvailable:'):
+            elif line.startswith("MemAvailable:"):
                 avail_ram_kb = int(line.split()[1])
                 available_ram_gb = avail_ram_kb / (1024**2)
     except (OSError, UnicodeDecodeError):
@@ -76,16 +74,19 @@ def detect_hardware() -> HardwareProfile:
         available_ram_gb = 4.0
 
     # GPU detection (simple check for nvidia-smi)
-    has_gpu = os.path.exists('/usr/bin/nvidia-smi') or os.path.exists('/usr/local/cuda')
+    has_gpu = os.path.exists("/usr/bin/nvidia-smi") or os.path.exists("/usr/local/cuda")
 
     # Disk - use df command
     try:
         from whitemagic.config.paths import WM_ROOT
-        result = subprocess.run(['df', '-BG', str(WM_ROOT)], capture_output=True, text=True)
-        lines = result.stdout.strip().split('\n')
+
+        result = subprocess.run(
+            ["df", "-BG", str(WM_ROOT)], capture_output=True, text=True
+        )
+        lines = result.stdout.strip().split("\n")
         if len(lines) > 1:
             parts = lines[1].split()
-            disk_free_gb = float(parts[3].rstrip('G'))
+            disk_free_gb = float(parts[3].rstrip("G"))
         else:
             disk_free_gb = 50.0
     except (ImportError, AttributeError):
@@ -120,6 +121,7 @@ def detect_hardware() -> HardwareProfile:
         memory_limit_mb=memory_limit_mb,
     )
 
+
 def get_safe_batch_config(task_type: str = "embedding") -> dict:
     """Get safe batch configuration for task type."""
     hw = detect_hardware()
@@ -153,21 +155,24 @@ def get_safe_batch_config(task_type: str = "embedding") -> dict:
 
     return config
 
+
 def check_resource_headroom() -> dict:
     """Check current resource headroom using /proc."""
     try:
         # Read memory info
-        with open('/proc/meminfo') as f:
+        with open("/proc/meminfo") as f:
             meminfo = f.read()
         total_kb = avail_kb = 0
-        for line in meminfo.split('\n'):
-            if line.startswith('MemTotal:'):
+        for line in meminfo.split("\n"):
+            if line.startswith("MemTotal:"):
                 total_kb = int(line.split()[1])
-            elif line.startswith('MemAvailable:'):
+            elif line.startswith("MemAvailable:"):
                 avail_kb = int(line.split()[1])
 
         ram_available_gb = avail_kb / (1024**2)
-        ram_percent_used = ((total_kb - avail_kb) / total_kb * 100) if total_kb > 0 else 50
+        ram_percent_used = (
+            ((total_kb - avail_kb) / total_kb * 100) if total_kb > 0 else 50
+        )
 
         # CPU usage - read from /proc/stat (simplified)
         cpu_percent = 50.0  # Conservative estimate
@@ -187,8 +192,10 @@ def check_resource_headroom() -> dict:
             "safe_to_proceed": True,
         }
 
+
 # Global hardware profile (cached)
 _HARDWARE_PROFILE: HardwareProfile | None = None
+
 
 def get_hardware_profile() -> HardwareProfile:
     """Get cached hardware profile."""

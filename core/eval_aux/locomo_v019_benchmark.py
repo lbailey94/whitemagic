@@ -245,24 +245,19 @@ class LoCoMoV019Optimizer:
     def retrieve_with_intent(self, query: str, limit: int = 20) -> List[Dict]:
         """Main retrieval pipeline with intent-aware routing."""
         
-        # Phase 3: Classify intent
         intent = self.classify_intent(query)
         print(f"[V019] Query intent: {intent}")
         
-        # Phase 2: Extract entities
         entities = self.extract_entities(query)
         print(f"[V019] Entities: {entities}")
         
         # Base retrieval
         candidates = self._base_retrieve(query, limit * 3)  # Over-fetch for reranking
         
-        # Phase 1: Cross-encoder reranking
         reranked = self.cross_encoder_rerank(query, candidates)
         
-        # Phase 5: Apply diversity
         diverse = self.apply_diversity(reranked, limit)
         
-        # Phase 6: Confidence check
         confident, conf_score, reason = self.check_confidence(diverse)
         print(f"[V019] Confidence: {confident} ({reason}), score={conf_score:.3f}")
         

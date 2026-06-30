@@ -98,11 +98,13 @@ class TestRouterBudgetFeedback(unittest.TestCase):
         router = InferenceRouter(token_budget=1_000, confidence_threshold=0.0)
 
         # Register a mock handler for LOCAL_SMALL
-        mock_handler = MagicMock(return_value={
-            "answer": "test answer",
-            "confidence": 0.95,
-            "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "test answer",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
         router.register_handler(InferenceTier.LOCAL_LARGE, mock_handler)
         router.register_handler(InferenceTier.EDGE_RULES, mock_handler)
@@ -121,11 +123,13 @@ class TestRouterBudgetFeedback(unittest.TestCase):
         """Router should record token usage after each successful route."""
         router = InferenceRouter(token_budget=10_000)
 
-        mock_handler = MagicMock(return_value={
-            "answer": "The answer is forty two",
-            "confidence": 0.95,
-            "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "The answer is forty two",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
 
         initial_used = router.budget_tracker._used_tokens
@@ -136,11 +140,13 @@ class TestRouterBudgetFeedback(unittest.TestCase):
         """Response metadata should include token budget summary."""
         router = InferenceRouter(token_budget=10_000)
 
-        mock_handler = MagicMock(return_value={
-            "answer": "yes",
-            "confidence": 0.95,
-            "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "yes",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.EDGE_RULES, mock_handler)
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
         router.register_handler(InferenceTier.LOCAL_LARGE, mock_handler)
@@ -153,11 +159,13 @@ class TestRouterBudgetFeedback(unittest.TestCase):
         """Router should not downgrade when budget is healthy."""
         router = InferenceRouter(token_budget=100_000)
 
-        mock_handler = MagicMock(return_value={
-            "answer": "test",
-            "confidence": 0.95,
-            "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "test",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
 
         response = router.route("What is 2+2?")
@@ -171,9 +179,13 @@ class TestSelfModelRouterFeedback(unittest.TestCase):
     def test_no_upgrade_when_no_alerts(self) -> None:
         """Router should not upgrade when self-model has no alerts."""
         router = InferenceRouter()
-        mock_handler = MagicMock(return_value={
-            "answer": "test", "confidence": 0.95, "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "test",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
 
         # SelfModel singleton may have alerts from other tests — mock it
@@ -183,16 +195,23 @@ class TestSelfModelRouterFeedback(unittest.TestCase):
             mock_sm.return_value = mock_model
 
             response = router.route("What is 2+2?")
-            self.assertNotIn("self_model_upgrade", response.metadata.get("assessment", {}))
+            self.assertNotIn(
+                "self_model_upgrade", response.metadata.get("assessment", {})
+            )
 
     def test_upgrade_on_critical_error_rate_forecast(self) -> None:
         """Router should upgrade tier when error_rate is forecast critical."""
         from whitemagic.core.intelligence.self_model import Forecast
+
         router = InferenceRouter()
 
-        mock_handler = MagicMock(return_value={
-            "answer": "test", "confidence": 0.95, "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "test",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
         router.register_handler(InferenceTier.LOCAL_LARGE, mock_handler)
 
@@ -222,11 +241,16 @@ class TestSelfModelRouterFeedback(unittest.TestCase):
     def test_no_upgrade_at_cloud_tier(self) -> None:
         """Router should not upgrade beyond CLOUD."""
         from whitemagic.core.intelligence.self_model import Forecast
+
         router = InferenceRouter(cloud_available=True)
 
-        mock_handler = MagicMock(return_value={
-            "answer": "test", "confidence": 0.95, "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "test",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.CLOUD, mock_handler)
 
         critical_forecast = Forecast(
@@ -247,17 +271,27 @@ class TestSelfModelRouterFeedback(unittest.TestCase):
             mock_sm.return_value = mock_model
 
             # Force cloud tier
-            response = router.route("Write a comprehensive research paper on quantum computing", force_tier=InferenceTier.CLOUD)
-            self.assertNotIn("self_model_upgrade", response.metadata.get("assessment", {}))
+            response = router.route(
+                "Write a comprehensive research paper on quantum computing",
+                force_tier=InferenceTier.CLOUD,
+            )
+            self.assertNotIn(
+                "self_model_upgrade", response.metadata.get("assessment", {})
+            )
 
     def test_no_upgrade_when_eta_too_far(self) -> None:
         """Router should not upgrade when threshold_eta > 5 steps."""
         from whitemagic.core.intelligence.self_model import Forecast
+
         router = InferenceRouter()
 
-        mock_handler = MagicMock(return_value={
-            "answer": "test", "confidence": 0.95, "metadata": {},
-        })
+        mock_handler = MagicMock(
+            return_value={
+                "answer": "test",
+                "confidence": 0.95,
+                "metadata": {},
+            }
+        )
         router.register_handler(InferenceTier.LOCAL_SMALL, mock_handler)
 
         far_forecast = Forecast(
@@ -278,7 +312,9 @@ class TestSelfModelRouterFeedback(unittest.TestCase):
             mock_sm.return_value = mock_model
 
             response = router.route("What is 2+2?")
-            self.assertNotIn("self_model_upgrade", response.metadata.get("assessment", {}))
+            self.assertNotIn(
+                "self_model_upgrade", response.metadata.get("assessment", {})
+            )
 
 
 if __name__ == "__main__":

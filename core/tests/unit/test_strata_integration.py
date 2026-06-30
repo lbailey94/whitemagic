@@ -18,6 +18,7 @@ try:
     )
     from whitemagic.tools.strata import Strata, FindingSeverity
     from whitemagic.tools.strata.checkers import get_checkers
+
     _STRATA_AVAILABLE = True
 except ImportError:
     _STRATA_AVAILABLE = False
@@ -109,6 +110,7 @@ class TestKaizenStrataIntegration:
     def test_analyze_codebase_method(self):
         """Test that kaizen engine has _analyze_codebase method."""
         from whitemagic.core.intelligence.synthesis.kaizen_engine import KaizenEngine
+
         engine = KaizenEngine()
         assert hasattr(engine, "_analyze_codebase")
         # Should return a list (possibly empty if STRATA not available)

@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 def setup_dharma_gan_ying() -> Any:
     """Set up Dharma System integration with Gan Ying."""
     import os
+
     if os.environ.get("WM_SILENT_INIT") == "1":
         return
 

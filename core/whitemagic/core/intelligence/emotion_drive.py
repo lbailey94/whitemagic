@@ -45,10 +45,6 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data Structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class DriveSnapshot:
     """Point-in-time snapshot of all drive dimensions."""
@@ -60,7 +56,7 @@ class DriveSnapshot:
     social: float = 0.3
     composite: float = 0.5
     dominant_drive: str = "curiosity"
-    trend: str = "stable"       # "rising", "falling", "stable"
+    trend: str = "stable"  # "rising", "falling", "stable"
     timestamp: str = ""
     event_count: int = 0
 
@@ -85,42 +81,41 @@ class DriveSnapshot:
         }
 
 
-# ---------------------------------------------------------------------------
-# Drive modulation rules
-# ---------------------------------------------------------------------------
-
 # Each event type maps to a dict of {drive: delta} adjustments
 _EVENT_RULES: dict[str, dict[str, float]] = {
     # Positive signals
-    "tool_success":        {"satisfaction": +0.03, "energy": +0.01, "caution": -0.01},
-    "novelty_detected":    {"curiosity": +0.05, "energy": +0.02},
-    "pattern_discovered":  {"curiosity": +0.04, "satisfaction": +0.02},
+    "tool_success": {"satisfaction": +0.03, "energy": +0.01, "caution": -0.01},
+    "novelty_detected": {"curiosity": +0.05, "energy": +0.02},
+    "pattern_discovered": {"curiosity": +0.04, "satisfaction": +0.02},
     "memory_consolidated": {"satisfaction": +0.02, "energy": +0.01},
-    "insight_crystallized":{"curiosity": +0.03, "satisfaction": +0.03},
-    "agent_interaction":   {"social": +0.05, "energy": +0.01},
-    "broker_message":      {"social": +0.03},
-    "mesh_peer_event":     {"social": +0.04, "curiosity": +0.01},
-    "dream_phase_complete":{"curiosity": +0.02, "satisfaction": +0.01, "energy": -0.01},
-
+    "insight_crystallized": {"curiosity": +0.03, "satisfaction": +0.03},
+    "agent_interaction": {"social": +0.05, "energy": +0.01},
+    "broker_message": {"social": +0.03},
+    "mesh_peer_event": {"social": +0.04, "curiosity": +0.01},
+    "dream_phase_complete": {
+        "curiosity": +0.02,
+        "satisfaction": +0.01,
+        "energy": -0.01,
+    },
     # Negative / cautionary signals
-    "tool_error":          {"satisfaction": -0.04, "caution": +0.03, "energy": -0.01},
-    "dharma_violation":    {"caution": +0.06, "satisfaction": -0.02},
-    "circuit_breaker_trip":{"caution": +0.05, "energy": -0.02, "satisfaction": -0.03},
-    "rate_limit_hit":      {"caution": +0.02, "energy": -0.01},
-    "timeout":             {"satisfaction": -0.03, "caution": +0.02},
-
+    "tool_error": {"satisfaction": -0.04, "caution": +0.03, "energy": -0.01},
+    "dharma_violation": {"caution": +0.06, "satisfaction": -0.02},
+    "circuit_breaker_trip": {"caution": +0.05, "energy": -0.02, "satisfaction": -0.03},
+    "rate_limit_hit": {"caution": +0.02, "energy": -0.01},
+    "timeout": {"satisfaction": -0.03, "caution": +0.02},
     # Neutral / decay
-    "idle_tick":           {"curiosity": -0.01, "satisfaction": -0.005,
-                            "energy": -0.01, "social": -0.01, "caution": -0.005},
+    "idle_tick": {
+        "curiosity": -0.01,
+        "satisfaction": -0.005,
+        "energy": -0.01,
+        "social": -0.01,
+        "caution": -0.005,
+    },
 }
 
 # Drive names for iteration
 _DRIVE_NAMES = ["curiosity", "satisfaction", "caution", "energy", "social"]
 
-
-# ---------------------------------------------------------------------------
-# DriveCore
-# ---------------------------------------------------------------------------
 
 class DriveCore:
     """Intrinsic motivation engine tracking 5 drive dimensions.
@@ -151,11 +146,9 @@ class DriveCore:
         self._events_by_type: dict[str, int] = {}
         self._last_event_time: float | None = None
 
-    # ------------------------------------------------------------------
-    # Event processing
-    # ------------------------------------------------------------------
-
-    def on_event(self, event_type: str, data: dict[str, Any] | None = None) -> DriveSnapshot:
+    def on_event(
+        self, event_type: str, data: dict[str, Any] | None = None
+    ) -> DriveSnapshot:
         """Process an event and update drive levels.
 
         Args:
@@ -178,33 +171,37 @@ class DriveCore:
             for drive_name, delta in rules.items():
                 if drive_name in self._drives:
                     self._drives[drive_name] += delta * scale
-                    self._drives[drive_name] = max(0.0, min(1.0, self._drives[drive_name]))
+                    self._drives[drive_name] = max(
+                        0.0, min(1.0, self._drives[drive_name])
+                    )
 
             # Natural decay toward baseline
             for name in _DRIVE_NAMES:
-                baseline = 0.5 if name in ("curiosity", "satisfaction", "energy") else 0.3
+                baseline = (
+                    0.5 if name in ("curiosity", "satisfaction", "energy") else 0.3
+                )
                 current = self._drives[name]
-                self._drives[name] = current * self._decay_rate + baseline * (1 - self._decay_rate)
+                self._drives[name] = current * self._decay_rate + baseline * (
+                    1 - self._decay_rate
+                )
 
             self._event_count += 1
-            self._events_by_type[event_type] = self._events_by_type.get(event_type, 0) + 1
+            self._events_by_type[event_type] = (
+                self._events_by_type.get(event_type, 0) + 1
+            )
             self._last_event_time = time.time()
 
             # Track composite history
             composite = self._compute_composite()
             self._history.append(composite)
             if len(self._history) > self._max_history:
-                self._history = self._history[-self._max_history:]
+                self._history = self._history[-self._max_history :]
 
             snap = self._build_snapshot()
 
         # Emit event OUTSIDE the lock to prevent deadlocks with listeners
         self._emit_event(snap)
         return snap
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def snapshot(self) -> DriveSnapshot:
         """Get current drive state without modifying it."""
@@ -223,7 +220,8 @@ class DriveCore:
                 "decay_rate": self._decay_rate,
                 "last_event_time": (
                     datetime.fromtimestamp(self._last_event_time).isoformat()
-                    if self._last_event_time else None
+                    if self._last_event_time
+                    else None
                 ),
             }
 
@@ -237,15 +235,20 @@ class DriveCore:
         """
         with self._lock:
             return {
-                "explore": round(self._drives["curiosity"] * 0.7 + self._drives["energy"] * 0.3, 4),
-                "safe": round(self._drives["caution"] * 0.8 + (1 - self._drives["energy"]) * 0.2, 4),
-                "coordinate": round(self._drives["social"] * 0.7 + self._drives["curiosity"] * 0.3, 4),
-                "execute": round(self._drives["satisfaction"] * 0.5 + self._drives["energy"] * 0.5, 4),
+                "explore": round(
+                    self._drives["curiosity"] * 0.7 + self._drives["energy"] * 0.3, 4
+                ),
+                "safe": round(
+                    self._drives["caution"] * 0.8 + (1 - self._drives["energy"]) * 0.2,
+                    4,
+                ),
+                "coordinate": round(
+                    self._drives["social"] * 0.7 + self._drives["curiosity"] * 0.3, 4
+                ),
+                "execute": round(
+                    self._drives["satisfaction"] * 0.5 + self._drives["energy"] * 0.5, 4
+                ),
             }
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
 
     def _compute_composite(self) -> float:
         """Weighted composite of all drives."""
@@ -293,10 +296,6 @@ class DriveCore:
             event_count=self._event_count,
         )
 
-    # ------------------------------------------------------------------
-    # Gan Ying integration
-    # ------------------------------------------------------------------
-
     def _emit_event(self, snapshot: DriveSnapshot) -> None:
         """Emit drive state to Gan Ying bus."""
         try:
@@ -305,22 +304,19 @@ class DriveCore:
                 ResonanceEvent,
                 get_bus,
             )
+
             # v20: Use async_dispatch=True to prevent blocking the drive core
             # Map DRIVE_STATE_CHANGED string to a valid EventType if it exists, otherwise fallback
             event = ResonanceEvent(
-                event_type=ResonanceEventType.STATE_CHANGED, # Standard state change event
+                event_type=ResonanceEventType.STATE_CHANGED,  # Standard state change event
                 data=snapshot.to_dict(),
                 source="emotion_drive",
-                confidence=1.0
+                confidence=1.0,
             )
             get_bus().emit(event, async_dispatch=True)  # type: ignore[call-arg]
         except Exception as e:
             logger.debug("Failed to emit emotion event: %s", e, exc_info=True)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _instance: DriveCore | None = None
 _instance_lock = threading.Lock()

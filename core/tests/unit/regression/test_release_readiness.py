@@ -11,7 +11,11 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 # Get repository root (go up from core/tests/unit/regression/ to repo root)
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+REPO_ROOT = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+)
 
 
 class TestC1_RunMcpShim:
@@ -177,6 +181,7 @@ class TestH5_CIConfiguration:
     def test_ci_yaml_parses(self):
         """ci.yml must be parseable YAML."""
         import yaml
+
         ci_path = os.path.join(REPO_ROOT, ".github", "workflows", "ci.yml")
         with open(ci_path) as f:
             doc = yaml.safe_load(f)
@@ -186,6 +191,7 @@ class TestH5_CIConfiguration:
     def test_ci_has_core_and_lint_jobs(self):
         """ci.yml must define the canonical job set."""
         import yaml
+
         ci_path = os.path.join(REPO_ROOT, ".github", "workflows", "ci.yml")
         with open(ci_path) as f:
             doc = yaml.safe_load(f)
@@ -201,12 +207,18 @@ class TestH5_CIConfiguration:
         # Look for the --skip line and ensure B603 isn't in it.
         for line in content.split("\n"):
             stripped = line.strip()
-            if stripped.startswith("--skip") or "bandit" in stripped.lower() and "--skip" in stripped:
+            if (
+                stripped.startswith("--skip")
+                or "bandit" in stripped.lower()
+                and "--skip" in stripped
+            ):
                 # The skip directive itself must not mention B603.
                 # Comments about B603 are fine (e.g., "# B603: audited").
                 if line.lstrip().startswith("#"):
                     continue
-                assert "B603" not in line, f"B603 must not be in bandit skip list: {line!r}"
+                assert "B603" not in line, (
+                    f"B603 must not be in bandit skip list: {line!r}"
+                )
 
 
 class TestM6_XRPLTipOptIn:
@@ -232,22 +244,31 @@ class TestM6_XRPLTipOptIn:
                     for lineno, line in enumerate(f, 1):
                         if MAINTAINER_ADDR in line:
                             # Allow clearly-labeled advisory constants.
-                            if "_UPSTREAM_MAINTAINER" in line or "_EXAMPLE_ADDR" in line:
+                            if (
+                                "_UPSTREAM_MAINTAINER" in line
+                                or "_EXAMPLE_ADDR" in line
+                            ):
                                 continue
                             offenders.append(f"{p}:{lineno}: {line.rstrip()}")
-        assert not offenders, "Hardcoded maintainer address found:\n" + "\n".join(offenders)
+        assert not offenders, "Hardcoded maintainer address found:\n" + "\n".join(
+            offenders
+        )
 
     def test_wallet_manager_disabled_without_env(self):
         """WalletManager must be disabled and have no fallback when WM_XRP_ADDRESS is unset."""
         import importlib
+
         saved = os.environ.pop("WM_XRP_ADDRESS", None)
         try:
             # Re-import to pick up env change
             from whitemagic.core.economy import wallet_manager as wm_mod
+
             importlib.reload(wm_mod)
             w = wm_mod.WalletManager()
             assert w.enabled is False, "Wallet must be disabled without WM_XRP_ADDRESS"
-            assert w.public_address == "", f"Wallet address must be empty, got {w.public_address!r}"
+            assert w.public_address == "", (
+                f"Wallet address must be empty, got {w.public_address!r}"
+            )
         finally:
             if saved is not None:
                 os.environ["WM_XRP_ADDRESS"] = saved
@@ -283,8 +304,12 @@ class TestM11_CodeQualityAttribution:
         """CODE_QUALITY_REVIEW*.md must not claim Google DeepMind or Antigravity AI authorship."""
         # Check both message_board (active) and archive (superseded)
         review_paths = [
-            os.path.join(REPO_ROOT, "docs", "message_board", "CODE_QUALITY_REVIEW_2026-04-15.md"),
-            os.path.join(REPO_ROOT, "docs", "archive", "CODE_QUALITY_REVIEW_2026-04-15.md"),
+            os.path.join(
+                REPO_ROOT, "docs", "message_board", "CODE_QUALITY_REVIEW_2026-04-15.md"
+            ),
+            os.path.join(
+                REPO_ROOT, "docs", "archive", "CODE_QUALITY_REVIEW_2026-04-15.md"
+            ),
         ]
         review_path = next((p for p in review_paths if os.path.exists(p)), None)
         if not review_path:
@@ -292,8 +317,12 @@ class TestM11_CodeQualityAttribution:
         with open(review_path) as f:
             content = f.read()
         # Must not claim Google DeepMind endorsement/involvement
-        assert "Google DeepMind" not in content, "Misleading attribution to Google DeepMind"
-        assert "Antigravity AI" not in content, "Misleading attribution to Antigravity AI"
+        assert "Google DeepMind" not in content, (
+            "Misleading attribution to Google DeepMind"
+        )
+        assert "Antigravity AI" not in content, (
+            "Misleading attribution to Antigravity AI"
+        )
 
 
 class TestL2_CitationCff:
@@ -307,6 +336,7 @@ class TestL2_CitationCff:
     def test_citation_cff_valid_yaml(self):
         """CITATION.cff must be valid YAML with required fields."""
         import yaml
+
         cff_path = os.path.join(REPO_ROOT, "CITATION.cff")
         with open(cff_path) as f:
             data = yaml.safe_load(f)
@@ -327,6 +357,7 @@ class TestL3_FundingYml:
     def test_funding_yml_valid_yaml(self):
         """FUNDING.yml must be valid YAML."""
         import yaml
+
         funding_path = os.path.join(REPO_ROOT, ".github", "FUNDING.yml")
         with open(funding_path) as f:
             data = yaml.safe_load(f)
@@ -375,8 +406,10 @@ class TestH10_RustLicenseAndFeatures:
         cargo_path = os.path.join(REPO_ROOT, "core", "whitemagic-rust", "Cargo.toml")
         with open(cargo_path) as f:
             content = f.read()
-        assert 'iceoryx2 = [' in content or "iceoryx2 = {" in content
-        assert 'default = [' in content
+        assert "iceoryx2 = [" in content or "iceoryx2 = {" in content
+        assert "default = [" in content
         for line in content.split("\n"):
             if line.strip().startswith("default ="):
-                assert "iceoryx2" in line, f"iceoryx2 should be in default features, got: {line}"
+                assert "iceoryx2" in line, (
+                    f"iceoryx2 should be in default features, got: {line}"
+                )

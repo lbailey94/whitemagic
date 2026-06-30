@@ -48,19 +48,23 @@ class AutoActivation:
 
     def _activate_coherence(self) -> None:
         from whitemagic.core.consciousness.coherence import CoherenceMetric
+
         metric = CoherenceMetric()
         metric.measure()
 
     def _activate_gardens(self) -> None:
         from whitemagic.gardens import get_all_gardens
+
         get_all_gardens()
 
     def _activate_resonance(self) -> None:
         from whitemagic.core.resonance.gan_ying_bus import GanYingBus
+
         GanYingBus()
 
     def _activate_memory(self) -> None:
         from whitemagic.core.memory.unified import get_unified_memory
+
         get_unified_memory()
 
     def _activate_dharma(self) -> None:
@@ -68,6 +72,7 @@ class AutoActivation:
 
     def _activate_citta(self) -> None:
         from whitemagic.core.consciousness.citta_stream import get_continuity_context
+
         get_continuity_context()
 
     def status(self) -> dict[str, Any]:

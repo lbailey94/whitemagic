@@ -64,6 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_predictions_category ON predictions(category);
 CREATE INDEX IF NOT EXISTS idx_predictions_source   ON predictions(source_date);
 """
 
+
 def _load_seed_claims() -> list[dict[str, Any]]:
     """Load validated prescience claims from YAML, with inline fallback."""
     yaml_path = Path(__file__).with_suffix("").parent / "prescience_claims.yaml"
@@ -100,9 +101,7 @@ class TemporalForecastDB:
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
             # Migrate: add behavioral_confidence if missing (added in v22.2.1)
-            cols = conn.execute(
-                "PRAGMA table_info(predictions)"
-            ).fetchall()
+            cols = conn.execute("PRAGMA table_info(predictions)").fetchall()
             col_names = {c[1] for c in cols}
             if "behavioral_confidence" not in col_names:
                 conn.execute(
@@ -142,9 +141,7 @@ class TemporalForecastDB:
         yaml_refs = {c["source_ref"] for c in claims}
         with self._conn() as conn:
             # Remove stale claims no longer in YAML
-            for row in conn.execute(
-                "SELECT source_ref FROM predictions"
-            ).fetchall():
+            for row in conn.execute("SELECT source_ref FROM predictions").fetchall():
                 if row["source_ref"] not in yaml_refs:
                     conn.execute(
                         "DELETE FROM predictions WHERE source_ref = ?",
@@ -226,7 +223,9 @@ class TemporalForecastDB:
         if not 0.0 <= confidence <= 1.0:
             raise ValueError(f"confidence must be in [0, 1], got {confidence}")
         pred_id = str(uuid.uuid4())
-        source_str = source_date.isoformat() if isinstance(source_date, date) else source_date
+        source_str = (
+            source_date.isoformat() if isinstance(source_date, date) else source_date
+        )
         with self._conn() as conn:
             conn.execute(
                 """
@@ -236,8 +235,13 @@ class TemporalForecastDB:
                 VALUES (?,?,?,?,?,?,'pending',?,?)
                 """,
                 (
-                    pred_id, claim, source_str, source_ref,
-                    confidence, category, notes,
+                    pred_id,
+                    claim,
+                    source_str,
+                    source_ref,
+                    confidence,
+                    category,
+                    notes,
                     datetime.utcnow().isoformat(),
                 ),
             )
@@ -332,8 +336,12 @@ class TemporalForecastDB:
         falsified = [r for r in rows if r["status"] == "falsified"]
 
         total_points = sum(r["points"] or 0.0 for r in validated)
-        lead_weeks_list = [r["lead_weeks"] for r in validated if r["lead_weeks"] is not None]
-        avg_lead = sum(lead_weeks_list) / len(lead_weeks_list) if lead_weeks_list else 0.0
+        lead_weeks_list = [
+            r["lead_weeks"] for r in validated if r["lead_weeks"] is not None
+        ]
+        avg_lead = (
+            sum(lead_weeks_list) / len(lead_weeks_list) if lead_weeks_list else 0.0
+        )
 
         # Brier score over closed predictions (validated=1, falsified=0)
         closed = validated + falsified
@@ -367,6 +375,7 @@ class TemporalForecastDB:
         ecce_val = None
         if closed:
             from whitemagic.forecasting.scoring import ecce as _ecce
+
             ecce_val = round(_ecce(forecasts, outcomes), 4)
 
         return {
@@ -399,6 +408,7 @@ class TemporalForecastDB:
             return []
 
         from whitemagic.forecasting.brier import calibration_curve as _cc
+
         forecasts = [r["confidence"] for r in rows]
         outcomes = [1 if r["status"] == "validated" else 0 for r in rows]
         return _cc(forecasts, outcomes, n_bins=n_bins)

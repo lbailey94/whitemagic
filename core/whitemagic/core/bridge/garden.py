@@ -7,6 +7,7 @@ from typing import Any
 def garden_list(**kwargs: Any) -> dict[str, Any]:
     """List all gardens."""
     from whitemagic.gardens import list_gardens
+
     gardens = list_gardens()
     return {"gardens": gardens, "count": len(gardens)}
 
@@ -14,6 +15,7 @@ def garden_list(**kwargs: Any) -> dict[str, Any]:
 def garden_activate(garden_name: str, **kwargs: Any) -> dict[str, Any]:
     """Activate a specific garden."""
     from whitemagic.gardens import get_garden
+
     garden = get_garden(garden_name)
     return {
         "name": garden_name,
@@ -25,6 +27,7 @@ def garden_activate(garden_name: str, **kwargs: Any) -> dict[str, Any]:
 def garden_resonance_map(**kwargs: Any) -> dict[str, Any]:
     """Get garden resonance map."""
     from whitemagic.gardens.garden_resonance import get_garden_resonance_map
+
     resonance_map = get_garden_resonance_map()
     return {"resonance_map": resonance_map}
 
@@ -57,7 +60,10 @@ def manage_gardens(
         if not garden_name:
             return {"error": "garden_name is required for trigger_cascade"}
         from whitemagic.gardens.garden_resonance import trigger_garden_cascade
-        cascaded = trigger_garden_cascade(garden_name, f"Cascade triggered from {garden_name}")
+
+        cascaded = trigger_garden_cascade(
+            garden_name, f"Cascade triggered from {garden_name}"
+        )
         return {
             "starting_garden": garden_name,
             "cascaded_gardens": cascaded,
@@ -69,6 +75,7 @@ def manage_gardens(
         if not garden_name:
             return {"error": "garden_name is required for get_memories"}
         from whitemagic.core.memory.manager import MemoryManager
+
         manager = MemoryManager()
         results = manager.search_memories(query=None, tags=[garden_name])
         limited_results = results[:limit] if results else []
@@ -85,6 +92,7 @@ def manage_gardens(
 def validate_integrations(quick_check: bool = True, **kwargs: Any) -> dict[str, Any]:
     """Validate WhiteMagic system integrations."""
     from whitemagic.core.bridge.system import check_integrations_health
+
     return check_integrations_health(component="integrations", quick_check=quick_check)
 
 
@@ -108,13 +116,18 @@ def protect_context(
     if operation == "update_memory":
         if not target_filename:
             return {"error": "filename or memory_id required for update_memory"}
-        return memory_update(filename=target_filename, title=title, content=content, tags=tags)
+        return memory_update(
+            filename=target_filename, title=title, content=content, tags=tags
+        )
     elif operation == "delete_memory":
         if not target_filename:
             return {"error": "filename or memory_id required for delete_memory"}
         return memory_delete(memory_id=target_filename, permanent=permanent)
     elif operation == "windsurf_restore":
-        return {"status": "restore_not_implemented", "message": "Windsurf restore feature coming soon"}
+        return {
+            "status": "restore_not_implemented",
+            "message": "Windsurf restore feature coming soon",
+        }
     return {"error": f"Unknown protect_context operation: {operation}"}
 
 

@@ -40,9 +40,9 @@ _shutdown = False
 def _handle_signal(sig: int, frame: object) -> None:
     global _shutdown
     _shutdown = True
-    print(f"\n{'─'*60}")
+    print(f"\n{'─' * 60}")
     print("☀️  Waking up... graceful shutdown requested.")
-    print(f"{'─'*60}")
+    print(f"{'─' * 60}")
 
 
 signal.signal(signal.SIGINT, _handle_signal)
@@ -55,15 +55,15 @@ def _now() -> str:
 
 def _banner(args: argparse.Namespace) -> None:
     print(f"""
-{'━'*60}
+{"━" * 60}
   🌙  WhiteMagic Overnight Dream Runner  v15.4
-{'━'*60}
+{"━" * 60}
   Interval:  {args.interval}s between phases
-  Max cycles: {'∞ (forever)' if args.forever else args.cycles}
-  Galaxy:    {args.galaxy or '(default — no separate galaxy)'}
+  Max cycles: {"∞ (forever)" if args.forever else args.cycles}
+  Galaxy:    {args.galaxy or "(default — no separate galaxy)"}
   Log file:  {args.log}
   Started:   {_now()}
-{'━'*60}
+{"━" * 60}
 """)
 
 
@@ -71,6 +71,7 @@ def _ensure_dream_galaxy(galaxy_name: str) -> bool:
     """Create the dream galaxy if it doesn't exist."""
     try:
         from whitemagic.core.memory.galaxy import get_galaxy_manager
+
         gm = get_galaxy_manager()
         existing = gm.list_galaxies()
         if galaxy_name not in [g.name for g in existing]:
@@ -92,6 +93,7 @@ def _persist_to_galaxy(galaxy_name: str, report: dict, cycle_num: int) -> None:
     """Store a dream report as a memory in the dream galaxy."""
     try:
         from whitemagic.core.memory.galaxy import get_galaxy_manager
+
         gm = get_galaxy_manager()
         um = gm._get_memory(galaxy_name)
 
@@ -165,12 +167,16 @@ def run(args: argparse.Namespace) -> None:
             phase_idx = total_cycles % len(phases)
 
             if phase_idx == 0:
-                print(f"{'─'*60}")
+                print(f"{'─' * 60}")
                 print(f"  🔄 Full Cycle #{cycle_num}  [{_now()}]")
-                print(f"{'─'*60}")
+                print(f"{'─' * 60}")
 
             start = time.perf_counter()
-            print(f"  [{_now()}] Phase {phase_idx+1}/{len(phases)}: {phase.value:15s} ", end="", flush=True)
+            print(
+                f"  [{_now()}] Phase {phase_idx + 1}/{len(phases)}: {phase.value:15s} ",
+                end="",
+                flush=True,
+            )
 
             try:
                 dc._run_phase()
@@ -223,9 +229,9 @@ def run(args: argparse.Namespace) -> None:
 
     # Final summary
     full_cycles = total_cycles // len(phases)
-    print(f"\n{'━'*60}")
+    print(f"\n{'━' * 60}")
     print(f"  ☀️  Dream session complete")
-    print(f"{'━'*60}")
+    print(f"{'━' * 60}")
     print(f"  Total phases run:  {total_cycles}")
     print(f"  Full cycles:       {full_cycles}")
     print(f"  Phase breakdown:")
@@ -235,7 +241,7 @@ def run(args: argparse.Namespace) -> None:
     if args.galaxy and galaxy_ok:
         print(f"  Dream galaxy:      {args.galaxy}")
     print(f"  Ended:             {_now()}")
-    print(f"{'━'*60}\n")
+    print(f"{'━' * 60}\n")
 
 
 def main() -> None:
@@ -243,23 +249,32 @@ def main() -> None:
         description="WhiteMagic Overnight Dream Runner — continuous dream cycling",
     )
     parser.add_argument(
-        "--cycles", type=int, default=10,
+        "--cycles",
+        type=int,
+        default=10,
         help="Number of full cycles to run (default: 10, each has 8 phases)",
     )
     parser.add_argument(
-        "--interval", type=float, default=45.0,
+        "--interval",
+        type=float,
+        default=45.0,
         help="Seconds between dream phases (default: 45)",
     )
     parser.add_argument(
-        "--galaxy", type=str, default="dreams",
+        "--galaxy",
+        type=str,
+        default="dreams",
         help="Galaxy name to persist dream insights into (default: 'dreams')",
     )
     parser.add_argument(
-        "--log", type=str, default="dream_log.jsonl",
+        "--log",
+        type=str,
+        default="dream_log.jsonl",
         help="Path to JSONL log file (default: dream_log.jsonl)",
     )
     parser.add_argument(
-        "--forever", action="store_true",
+        "--forever",
+        action="store_true",
         help="Run indefinitely until Ctrl+C",
     )
     args = parser.parse_args()

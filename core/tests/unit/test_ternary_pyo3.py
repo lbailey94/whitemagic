@@ -3,10 +3,12 @@
 These tests verify the Python-facing API of the Rust ternary SIMD kernels.
 They skip gracefully if the Rust extension isn't built.
 """
+
 import pytest
 
 try:
     import whitemagic_rust
+
     rust_inference = whitemagic_rust.inference
     _HAS_RUST = True
 except (ImportError, AttributeError):
@@ -57,8 +59,24 @@ class TestPyTernaryGemv:
         # 1x16 matrix, all +1
         weights = [1] * 16
         packed = rust_inference.py_pack_ternary_matrix(weights, 1, 16)
-        activations = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                       9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]
+        activations = [
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+            16.0,
+        ]
         result = rust_inference.py_ternary_gemv(packed, activations, 1, 16)
         assert len(result) == 1
         expected = sum(activations)

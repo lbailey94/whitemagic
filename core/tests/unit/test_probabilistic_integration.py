@@ -1,4 +1,5 @@
 """Tests for probabilistic integration with UnifiedMemory hooks."""
+
 from whitemagic.core.memory.probabilistic_integration import (
     analytics_summary,
     get_analytics,
@@ -28,6 +29,7 @@ class TestProbabilisticIntegration:
     def test_hook_registration(self):
         """Verify that hooks are registered and fire on memory operations."""
         from whitemagic.core.memory.unified import _store_hooks
+
         # init_analytics should have registered a hook
         init_analytics(hll_precision=10, cms_width=256, cms_depth=3)
         # The hook list should contain our function

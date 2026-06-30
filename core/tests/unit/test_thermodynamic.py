@@ -1,4 +1,5 @@
 """Tests for Objective Q — Thermodynamic Resource Allocation."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.thermodynamic import (

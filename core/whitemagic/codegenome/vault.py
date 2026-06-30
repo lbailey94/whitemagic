@@ -26,8 +26,11 @@ def _emit_gan_ying(event_type: str, data: dict[str, Any]) -> None:
     """Emit a Gan Ying event if the bus is available."""
     try:
         from whitemagic.core.resonance import ResonanceEvent, get_bus
+
         bus = get_bus()
-        bus.emit(ResonanceEvent(source="codegenome.vault", event_type=event_type, data=data))  # type: ignore[arg-type]
+        bus.emit(
+            ResonanceEvent(source="codegenome.vault", event_type=event_type, data=data)
+        )  # type: ignore[arg-type]
     except (ImportError, AttributeError):
         pass  # Graceful degradation if Gan Ying is unavailable
 
@@ -66,11 +69,14 @@ class GeneseedVault:
         self._record_usage(template_name, tier, variables)
 
         # Emit audit event
-        _emit_gan_ying("geneseed.render", {
-            "template": template_name,
-            "tier": tier,
-            "variables": list(variables.keys()),
-        })
+        _emit_gan_ying(
+            "geneseed.render",
+            {
+                "template": template_name,
+                "tier": tier,
+                "variables": list(variables.keys()),
+            },
+        )
 
         template = self._engine.get_template(template_name)
         return {
@@ -100,7 +106,6 @@ class GeneseedVault:
         Returns:
             Dict with status, code, template info, patterns, and write result
         """
-        # Step 1: Render template
         render_result = self.vibe_render(prompt, **kwargs)
         if render_result.get("status") != "success":
             return render_result
@@ -109,12 +114,12 @@ class GeneseedVault:
         template_name = render_result["template_name"]
         tier = render_result["tier"]
 
-        # Step 2: Mine git patterns for context (if repo provided)
         patterns_context = ""
         patterns_count = 0
         if repo_path:
             try:
                 from whitemagic.optimization.rust_mining import mine_geneseed_patterns
+
                 patterns = mine_geneseed_patterns(repo_path, 0.3, 50)
                 if patterns:
                     pattern_lines = []
@@ -122,17 +127,22 @@ class GeneseedVault:
                         ptype = getattr(p, "pattern_type", str(p))
                         conf = getattr(p, "confidence", 0.0)
                         files = getattr(p, "files_changed", [])
-                        pattern_lines.append(f"  - {ptype} (confidence={conf:.2f}, files={files})")
-                    patterns_context = "\n\nRelevant optimization patterns from git history:\n" + "\n".join(pattern_lines)
+                        pattern_lines.append(
+                            f"  - {ptype} (confidence={conf:.2f}, files={files})"
+                        )
+                    patterns_context = (
+                        "\n\nRelevant optimization patterns from git history:\n"
+                        + "\n".join(pattern_lines)
+                    )
                     patterns_count = len(patterns)
             except Exception as e:
                 logger.debug("Geneseed pattern mining skipped: %s", e)
 
-        # Step 3: LLM refinement
         llm_refined = False
         final_code = base_code
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if llm.is_available:
                 llm_prompt = (
@@ -151,13 +161,13 @@ class GeneseedVault:
         except Exception as e:
             logger.debug("LLM refinement skipped: %s", e)
 
-        # Step 4: Write via CodeWritingClone (if requested)
         write_result = None
         if write_output:
             try:
                 import os
 
                 from whitemagic.optimization.rust_code_writing import write_file
+
                 base_path = os.path.dirname(write_output) or "."
                 rel_path = os.path.basename(write_output)
                 write_result = write_file(base_path, rel_path, final_code)
@@ -165,13 +175,16 @@ class GeneseedVault:
                 write_result = {"success": False, "error": str(e)}
                 logger.warning("CodeWritingClone write failed: %s", e)
 
-        _emit_gan_ying("geneseed.llm_generate", {
-            "template": template_name,
-            "tier": tier,
-            "llm_refined": llm_refined,
-            "patterns_mined": patterns_count,
-            "written": write_result is not None,
-        })
+        _emit_gan_ying(
+            "geneseed.llm_generate",
+            {
+                "template": template_name,
+                "tier": tier,
+                "llm_refined": llm_refined,
+                "patterns_mined": patterns_count,
+                "written": write_result is not None,
+            },
+        )
 
         return {
             "status": "success",
@@ -185,7 +198,9 @@ class GeneseedVault:
             "variables": render_result.get("variables", {}),
         }
 
-    def fork(self, parent_name: str, new_name: str, body_delta: str = "") -> dict[str, Any]:
+    def fork(
+        self, parent_name: str, new_name: str, body_delta: str = ""
+    ) -> dict[str, Any]:
         """Fork a template and emit an audit event."""
         child = self._engine.fork_template(parent_name, new_name, body_delta)
         if child is None:
@@ -195,11 +210,14 @@ class GeneseedVault:
                 "details": {"parent": parent_name},
             }
 
-        _emit_gan_ying("geneseed.fork", {
-            "parent": parent_name,
-            "child": new_name,
-            "version": child.version,
-        })
+        _emit_gan_ying(
+            "geneseed.fork",
+            {
+                "parent": parent_name,
+                "child": new_name,
+                "version": child.version,
+            },
+        )
 
         return {
             "status": "success",
@@ -223,7 +241,9 @@ class GeneseedVault:
             "usage_stats": dict(self._usage_stats),
         }
 
-    def _record_usage(self, template_name: str, tier: str, variables: dict[str, Any]) -> None:
+    def _record_usage(
+        self, template_name: str, tier: str, variables: dict[str, Any]
+    ) -> None:
         """Track template usage for internal analytics."""
         with self._lock:
             if template_name not in self._usage_stats:
@@ -237,10 +257,6 @@ class GeneseedVault:
             stats["last_render"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             stats["tiers"][tier] = stats["tiers"].get(tier, 0) + 1
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _vault: GeneseedVault | None = None
 _vault_lock = threading.Lock()

@@ -32,7 +32,9 @@ class NoveltyDetector:
         self.pattern_counts: dict[str, int] = {}
         self.novelty_history: list[NoveltyEvent] = []
 
-    def detect(self, content: str, context: dict[str, Any] | None = None) -> NoveltyEvent:
+    def detect(
+        self, content: str, context: dict[str, Any] | None = None
+    ) -> NoveltyEvent:
         """Detect if content is novel."""
         content_hash = hashlib.md5(content.encode()).hexdigest()[:8]
 
@@ -62,12 +64,16 @@ class NoveltyDetector:
             novelty_score = 1.0  # Completely new!
 
         # Store pattern
-        self.pattern_counts[content[:100]] = self.pattern_counts.get(content[:100], 0) + 1
+        self.pattern_counts[content[:100]] = (
+            self.pattern_counts.get(content[:100], 0) + 1
+        )
 
         event = NoveltyEvent(
             content=content[:200],
             novelty_score=novelty_score,
-            category="pattern" if context and context.get("type") == "pattern" else "content",
+            category="pattern"
+            if context and context.get("type") == "pattern"
+            else "content",
             hash_id=content_hash,
         )
         self.novelty_history.append(event)
@@ -107,10 +113,10 @@ class EmergenceScorer:
 
         # Weighted score
         emergence_score: float = (
-            complexity * 0.2 +
-            novelty * 0.3 +
-            integration * 0.25 +
-            self_organization * 0.25
+            complexity * 0.2
+            + novelty * 0.3
+            + integration * 0.25
+            + self_organization * 0.25
         )
 
         result = {

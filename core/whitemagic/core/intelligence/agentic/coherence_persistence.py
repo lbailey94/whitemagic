@@ -6,6 +6,7 @@ v4.3.0 Enhancement: Iteration Tracking for Continuous Execution
 - Integrates with circuit breaker
 - Persists execution state across IDE restarts
 """
+
 import json
 import logging
 from datetime import datetime
@@ -29,6 +30,7 @@ class CoherencePersistence:
 
     def __init__(self) -> None:
         from whitemagic.config import PROJECT_ROOT
+
         self.state_file = PROJECT_ROOT / ".coherence_state.json"
         self.current = self._load()
 
@@ -41,7 +43,11 @@ class CoherencePersistence:
             except (json.JSONDecodeError, ValueError):
                 pass
             except TimeoutError:
-                logger.warning("Coherence state file %s is locked, using stale/default state", self.state_file, exc_info=True)
+                logger.warning(
+                    "Coherence state file %s is locked, using stale/default state",
+                    self.state_file,
+                    exc_info=True,
+                )
         return {
             "level": 100,
             "factors": {},
@@ -99,8 +105,6 @@ class CoherencePersistence:
         self.save(self.current["level"], self.current["factors"])
         return self.current["level"]
 
-    # ===== ITERATION TRACKING (v4.3.0) =====
-
     def record_iteration(self, made_progress: bool = True) -> dict:
         """Record an iteration for rate limiting and tracking.
 
@@ -136,7 +140,9 @@ class CoherencePersistence:
         return {
             "iteration": self.current["iteration_count"],
             "calls_this_hour": self.current["calls_this_hour"],
-            "calls_remaining": max(0, self.DEFAULT_CALLS_PER_HOUR - self.current["calls_this_hour"]),
+            "calls_remaining": max(
+                0, self.DEFAULT_CALLS_PER_HOUR - self.current["calls_this_hour"]
+            ),
             "at_rate_limit": at_limit,
             "total_iterations": self.current["total_iterations"],
         }
@@ -151,7 +157,9 @@ class CoherencePersistence:
         return {
             "iteration_count": self.current.get("iteration_count", 0),
             "calls_this_hour": self.current.get("calls_this_hour", 0),
-            "calls_remaining": max(0, self.DEFAULT_CALLS_PER_HOUR - self.current.get("calls_this_hour", 0)),
+            "calls_remaining": max(
+                0, self.DEFAULT_CALLS_PER_HOUR - self.current.get("calls_this_hour", 0)
+            ),
             "total_iterations": self.current.get("total_iterations", 0),
             "last_progress": self.current.get("last_progress"),
             "coherence_level": self.current.get("level", 100),
@@ -163,7 +171,10 @@ class CoherencePersistence:
         with file_lock(self.state_file):
             atomic_write(self.state_file, _json_dumps(self.current, indent=2))
 
+
 _coherence = None
+
+
 def get_coherence() -> CoherencePersistence:
     """
     Get the coherence.

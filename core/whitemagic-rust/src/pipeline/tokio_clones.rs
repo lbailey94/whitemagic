@@ -27,10 +27,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 /// Strategy that each clone uses for exploration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CloneStrategy {
@@ -151,10 +147,6 @@ pub struct ConsensusResult {
 static TOTAL_DEPLOYMENTS: AtomicU64 = AtomicU64::new(0);
 static TOTAL_CLONES_SPAWNED: AtomicU64 = AtomicU64::new(0);
 
-// ---------------------------------------------------------------------------
-// Core async logic (tokio)
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "tokio")]
 /// Deploy N clones with specified strategies, collect results, vote on consensus.
 /// This is the Rust replacement for Python's AsyncThoughtCloneArmy.
@@ -231,10 +223,6 @@ pub async fn deploy_clones_async(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Synchronous wrapper (for non-async callers)
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "tokio")]
 /// Deploy clones synchronously by running the tokio runtime.
 pub fn deploy_clones_sync(
@@ -275,10 +263,6 @@ fn num_cpus() -> usize {
         .map(|n| n.get())
         .unwrap_or(4)
 }
-
-// ---------------------------------------------------------------------------
-// PyO3 bindings
-// ---------------------------------------------------------------------------
 
 /// Deploy a Rust tokio clone army. Returns JSON with consensus result.
 ///
@@ -343,10 +327,6 @@ pub fn tokio_clone_stats() -> PyResult<String> {
     })
     .to_string())
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 #[cfg(feature = "tokio")]

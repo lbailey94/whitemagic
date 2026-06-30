@@ -1,4 +1,5 @@
 """Tests for Objective X — External Cross-Validation."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -40,6 +41,7 @@ def _make_test_db(db_path: Path, n_outcomes: int = 20) -> None:
     """)
 
     import time
+
     base_time = time.time()
 
     for i in range(n_outcomes):

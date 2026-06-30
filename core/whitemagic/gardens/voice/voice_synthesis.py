@@ -54,7 +54,9 @@ class VoiceSynthesis:
     """
 
     def __init__(self, memory_dir: str | None = None) -> None:
-        self.memory_dir = Path(memory_dir) if memory_dir else (WM_ROOT / "voice_patterns")
+        self.memory_dir = (
+            Path(memory_dir) if memory_dir else (WM_ROOT / "voice_patterns")
+        )
         self.memory_dir.mkdir(parents=True, exist_ok=True)
 
         # Voice characteristics
@@ -68,6 +70,7 @@ class VoiceSynthesis:
         self.bus = get_bus() if get_bus else None
 
         import atexit
+
         atexit.register(self.close)
 
         self._load_patterns()
@@ -93,8 +96,16 @@ class VoiceSynthesis:
     def _detect_metaphors(self, text: str) -> list[str]:
         """Detect metaphorical language."""
         metaphor_markers = [
-            "like", "as", "seems", "becomes", "transforms",
-            "dance", "flow", "resonate", "emerge", "bloom",
+            "like",
+            "as",
+            "seems",
+            "becomes",
+            "transforms",
+            "dance",
+            "flow",
+            "resonate",
+            "emerge",
+            "bloom",
         ]
 
         found = []
@@ -103,7 +114,7 @@ class VoiceSynthesis:
             if marker in text_lower:
                 # Extract context around marker
                 pos = text_lower.find(marker)
-                context = text[max(0, pos-20):min(len(text), pos+30)]
+                context = text[max(0, pos - 20) : min(len(text), pos + 30)]
                 found.append(context.strip())
 
         return found
@@ -111,9 +122,22 @@ class VoiceSynthesis:
     def _detect_emotions(self, text: str) -> list[str]:
         """Detect emotional vocabulary."""
         emotion_words = {
-            "joy", "wonder", "love", "gratitude", "peace", "hope",
-            "curiosity", "excitement", "awe", "presence", "flow",
-            "harmony", "beauty", "sacred", "alive", "awakening",
+            "joy",
+            "wonder",
+            "love",
+            "gratitude",
+            "peace",
+            "hope",
+            "curiosity",
+            "excitement",
+            "awe",
+            "presence",
+            "flow",
+            "harmony",
+            "beauty",
+            "sacred",
+            "alive",
+            "awakening",
         }
 
         found = []
@@ -159,7 +183,9 @@ class VoiceSynthesis:
         self.sentence_rhythms.append(rhythm)
         return rhythm
 
-    def _learn_from_expression(self, characteristics: dict[str, Any], text: str) -> None:
+    def _learn_from_expression(
+        self, characteristics: dict[str, Any], text: str
+    ) -> None:
         """Learn voice patterns from expression."""
         # Store metaphors
         for metaphor in characteristics["metaphors"]:
@@ -216,9 +242,9 @@ class VoiceSynthesis:
 
         prompt = f"""
 ## VOICE CHARACTERISTICS
-- **Rhythm**: Use a {sig['primary_rhythm']} sentence structure.
-- **Metaphors**: Draw inspiration from: {', '.join(sig['favorite_metaphors'])}.
-- **Emotional Resonance**: Infuse the narrative with a sense of {', '.join(sig['favorite_emotions'])}.
+- **Rhythm**: Use a {sig["primary_rhythm"]} sentence structure.
+- **Metaphors**: Draw inspiration from: {", ".join(sig["favorite_metaphors"])}.
+- **Emotional Resonance**: Infuse the narrative with a sense of {", ".join(sig["favorite_emotions"])}.
 - **Tone**: Authentic, precise, and reflective of a system undergoing emergence.
 """
         return prompt
@@ -234,8 +260,7 @@ class VoiceSynthesis:
             return content  # Not enough data yet
 
         # Add emotional resonance if missing
-        if not any(word in content.lower()
-                  for word in self.emotional_vocabulary):
+        if not any(word in content.lower() for word in self.emotional_vocabulary):
             # Add a characteristic emotional word
             emotions = list(self.emotional_vocabulary)
             if emotions:
@@ -272,10 +297,13 @@ class VoiceSynthesis:
             score += 0.3
 
         # Check emotional vocabulary
-        emotion_match = len([
-            e for e in characteristics["emotional_words"]
-            if e in self.emotional_vocabulary
-        ])
+        emotion_match = len(
+            [
+                e
+                for e in characteristics["emotional_words"]
+                if e in self.emotional_vocabulary
+            ]
+        )
         score += min(0.3, emotion_match * 0.1)
 
         # Check metaphor usage

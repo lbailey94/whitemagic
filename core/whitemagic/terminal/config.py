@@ -24,7 +24,7 @@ class TerminalConfig:
         """Add a command to history."""
         self._history.append(command)
         if len(self._history) > self.history_size:
-            self._history = self._history[-self.history_size:]
+            self._history = self._history[-self.history_size :]
 
     def get_history(self, limit: int = 20) -> list[str]:
         """Get command history."""

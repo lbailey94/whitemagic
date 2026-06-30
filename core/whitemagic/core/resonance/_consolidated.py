@@ -34,8 +34,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- GLOBAL ASYNC WORKER (restored from v21.0.0) ---
-
 _GLOBAL_ASYNC_QUEUE: queue.Queue = queue.Queue(maxsize=2000)
 _GLOBAL_WORKER_THREAD: threading.Thread | None = None
 _GLOBAL_WORKER_LOCK = threading.Lock()
@@ -44,6 +42,7 @@ _GLOBAL_WORKER_LOCK = threading.Lock()
 _RUST_EVENT_BUS = False
 try:
     import whitemagic_rs as _rs_bus  # type: ignore[import-not-found]
+
     if hasattr(_rs_bus, "event_bus_try_emit"):
         _RUST_EVENT_BUS = True
         logger.debug("Rust lock-free event bus primitives available")
@@ -78,8 +77,6 @@ def _ensure_global_worker() -> None:
                 _GLOBAL_WORKER_THREAD.start()
 
 
-# --- TYPES ---
-
 class EventType(Enum):
     """EventType: resonance event taxonomy (234 events).
 
@@ -87,6 +84,7 @@ class EventType(Enum):
     memory, patterns, gardens, emotions, governance, coordination, inference,
     and emergence. Restored from v21.0.0 gan_ying_enhanced.py consolidation.
     """
+
     INTERNAL_STATE_CHANGED = "internal_state_changed"
     EMERGENCE_DETECTED = "emergence_detected"
     CASCADE_TRIGGERED = "cascade_triggered"
@@ -235,8 +233,6 @@ class EventType(Enum):
     BREAKTHROUGH_ACHIEVED = "breakthrough_achieved"
     DISCOVERY_MADE = "discovery_made"
 
-    # --- Restored from gan_ying_enhanced.py (v21.0.0) ---
-
     # System events
     SYSTEM_HEALTH_CHANGED = "system_health_changed"
     SYSTEM_TRANSCENDED = "system_transcended"
@@ -384,11 +380,13 @@ class EventType(Enum):
     # Adapter events
     DECISION_REQUESTED = "decision_requested"
 
+
 @dataclass
 class ResonanceEvent:
     """ResonanceEvent: resonance event.
 
     Value object: equality and repr are field-based."""
+
     source: str
     event_type: EventType
     data: dict[str, Any] = field(default_factory=dict)
@@ -397,7 +395,6 @@ class ResonanceEvent:
     cascade_depth: int = 0
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-# --- GAN YING BUS ---
 
 @dataclass
 class CascadeTrigger:
@@ -435,7 +432,9 @@ class GanYingBus:
         self._pyo3_triggers_cache: list | None = None  # Cached PyO3 trigger objects
         self._haskell_backend = None  # Lazy-loaded Haskell cascade verifier
         self._koka_backend = None  # Lazy-loaded Koka garden resonance backend
-        self._rust_cascade_backend = None  # Lazy-loaded Rust cascade backend (JSON stdio)
+        self._rust_cascade_backend = (
+            None  # Lazy-loaded Rust cascade backend (JSON stdio)
+        )
         _ensure_global_worker()
 
     @property
@@ -485,6 +484,7 @@ class GanYingBus:
         # Tier 1: PyO3 (fastest)
         try:
             import wm_cascade as _wc
+
             py_triggers = [
                 _wc.PyCascadeTrigger(
                     t.trigger_event.value,
@@ -554,10 +554,17 @@ class GanYingBus:
             try:
                 import sys
                 from pathlib import Path
-                _bridge_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "bridges" / "python"
+
+                _bridge_path = (
+                    Path(__file__).resolve().parent.parent.parent.parent.parent
+                    / "polyglot"
+                    / "bridges"
+                    / "python"
+                )
                 if str(_bridge_path) not in sys.path:
                     sys.path.insert(0, str(_bridge_path))
                 from whitemagic_polyglot import RustCascadeBackend
+
                 backend = RustCascadeBackend()
                 backend.call("ping", timeout=0.5)
                 self._rust_cascade_backend = backend
@@ -578,7 +585,9 @@ class GanYingBus:
                 for t in self._cascade_triggers
                 if t.condition is None
             ]
-            result = self._rust_cascade_backend.call("is_safe", timeout=5.0, triggers=triggers_json)
+            result = self._rust_cascade_backend.call(
+                "is_safe", timeout=5.0, triggers=triggers_json
+            )
             safe = result.get("result", {}).get("safe", True)
             self._cycle_check_cache = safe
             return True
@@ -603,10 +612,17 @@ class GanYingBus:
             try:
                 import sys
                 from pathlib import Path
-                _bridge_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "bridges" / "python"
+
+                _bridge_path = (
+                    Path(__file__).resolve().parent.parent.parent.parent.parent
+                    / "polyglot"
+                    / "bridges"
+                    / "python"
+                )
                 if str(_bridge_path) not in sys.path:
                     sys.path.insert(0, str(_bridge_path))
                 from whitemagic_polyglot import HaskellCascadeBackend
+
                 backend = HaskellCascadeBackend()
                 backend.call("ping", timeout=0.5)
                 self._haskell_backend = backend
@@ -627,7 +643,9 @@ class GanYingBus:
                 for t in self._cascade_triggers
                 if t.condition is None
             ]
-            result = self._haskell_backend.call("is_safe", timeout=5.0, triggers=triggers_json)
+            result = self._haskell_backend.call(
+                "is_safe", timeout=5.0, triggers=triggers_json
+            )
             safe = result.get("result", {}).get("safe", True)
             self._cycle_check_cache = safe
             return True
@@ -647,6 +665,7 @@ class GanYingBus:
         # Try PyO3 first
         try:
             import wm_cascade as _wc
+
             py_triggers = [
                 _wc.PyCascadeTrigger(
                     t.trigger_event.value,
@@ -720,7 +739,9 @@ class GanYingBus:
                 return list(self._history)
             return list(self._history[-limit:])
 
-    def emit(self, event: ResonanceEvent, cascade: bool = True, async_dispatch: bool = False) -> None:
+    def emit(
+        self, event: ResonanceEvent, cascade: bool = True, async_dispatch: bool = False
+    ) -> None:
         """Emit an event to listeners and process cascade triggers.
 
         When an event matches a cascade trigger, target events are fired
@@ -856,7 +877,9 @@ class GanYingBus:
         if koka_result:
             event.data["_garden_resonance"] = koka_result
 
-    def _try_koka_garden_resonance(self, event: ResonanceEvent) -> dict[str, float] | None:
+    def _try_koka_garden_resonance(
+        self, event: ResonanceEvent
+    ) -> dict[str, float] | None:
         """Compute garden resonance via Koka polyglot bridge.
 
         Delegates garden activation and Wu Xing quadrant balance computation
@@ -876,10 +899,17 @@ class GanYingBus:
             try:
                 import sys
                 from pathlib import Path
-                _bridge_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "bridges" / "python"
+
+                _bridge_path = (
+                    Path(__file__).resolve().parent.parent.parent.parent.parent
+                    / "polyglot"
+                    / "bridges"
+                    / "python"
+                )
                 if str(_bridge_path) not in sys.path:
                     sys.path.insert(0, str(_bridge_path))
                 from whitemagic_polyglot import KokaCascadeBackend
+
                 backend = KokaCascadeBackend()
                 backend.call("ping", timeout=0.5)
                 self._koka_backend = backend
@@ -942,6 +972,7 @@ class GanYingBus:
         if self._cascade_backend is None:
             try:
                 import wm_cascade as _wc
+
                 # Verify the module is functional
                 _wc.is_safe([])
                 self._cascade_backend = _wc
@@ -1013,8 +1044,9 @@ class GanYingBus:
             self._cascade_backend = False
             return False
 
-# --- SINGLETONS ---
+
 _bus: GanYingBus | None = None
+
 
 def get_bus() -> GanYingBus:
     """Get or create the global GanYingBus singleton.
@@ -1029,6 +1061,7 @@ def get_bus() -> GanYingBus:
         # Register cascade protocols on first initialization
         try:
             from whitemagic.core.resonance.cascade_protocols import CascadeProtocols
+
             CascadeProtocols.init_all_cascades()
         except Exception as e:
             logger.debug("Cascade protocols initialization deferred: %s", e)
@@ -1064,17 +1097,21 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
             now = _time.monotonic()
             if _redis_available is None or (now - _redis_check_time) > 30.0:
                 from whitemagic.tools.handlers.broker import _resolve_redis_url
+
                 redis_url = _resolve_redis_url()
                 if redis_url:
                     # URL-based (Railway / cloud) — skip socket probe, just try connecting
                     _redis_available = True
                 else:
                     import socket
+
                     host = "localhost"
                     port = 6379
                     probe_timeout = 0.5
                     try:
-                        socket.create_connection((host, port), timeout=probe_timeout).close()
+                        socket.create_connection(
+                            (host, port), timeout=probe_timeout
+                        ).close()
                         _redis_available = True
                     except OSError:
                         _redis_available = False
@@ -1087,12 +1124,15 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
 
             async def _publish() -> None:
                 broker = await _get_broker()
-                await broker.publish("ganying", {
-                    "event_type": event.event_type.value,
-                    "source": event.source,
-                    "confidence": event.confidence,
-                    "data": event.data,
-                })
+                await broker.publish(
+                    "ganying",
+                    {
+                        "event_type": event.event_type.value,
+                        "source": event.source,
+                        "confidence": event.confidence,
+                        "data": event.data,
+                    },
+                )
 
             coro = _publish()
             try:
@@ -1114,7 +1154,9 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
 
     bus.listen_all(_forward_to_broker)
 
-get_event_bus = get_bus # Compatibility alias
+
+get_event_bus = get_bus  # Compatibility alias
+
 
 def emit_event(*args, **kwargs):
     """

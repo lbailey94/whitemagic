@@ -28,6 +28,7 @@ class BalanceMonitor:
                 self._hv = get_harmony_vector()  # type: ignore[assignment]
             except (ImportError, ModuleNotFoundError) as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return self._hv
 
@@ -39,6 +40,7 @@ class BalanceMonitor:
                 self._loop = get_homeostatic_loop()  # type: ignore[assignment]
             except (ImportError, ModuleNotFoundError) as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return self._loop
 
@@ -88,6 +90,7 @@ class BalanceMonitor:
                 result["homeostatic_loop"] = loop.get_stats()
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         return result

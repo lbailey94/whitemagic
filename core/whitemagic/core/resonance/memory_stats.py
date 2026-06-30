@@ -98,17 +98,27 @@ class MemoryStatsAnalyzer:
 
         # Optimized Python: use bisect for O(log n) zone lookup per distance
         import bisect
-        return [bisect.bisect_right(MemoryStatsAnalyzer.ZONE_BOUNDS, max(0.0, min(0.999, d))) - 1
-                for d in distances]
+
+        return [
+            bisect.bisect_right(
+                MemoryStatsAnalyzer.ZONE_BOUNDS, max(0.0, min(0.999, d))
+            )
+            - 1
+            for d in distances
+        ]
 
     def analyze_importance_distribution(self, scores: list[float]) -> dict[str, Any]:
         """Compute comprehensive statistics for memory importance scores."""
         n = len(scores)
         if n == 0:
             return {
-                "count": 0, "mean": 0.0, "std": 0.0,
-                "skewness": 0.0, "kurtosis": 0.0,
-                "percentiles": {}, "outlier_count": 0,
+                "count": 0,
+                "mean": 0.0,
+                "std": 0.0,
+                "skewness": 0.0,
+                "kurtosis": 0.0,
+                "percentiles": {},
+                "outlier_count": 0,
             }
 
         mu = self._mean(scores)
@@ -183,8 +193,12 @@ class MemoryStatsAnalyzer:
         return {
             "transition_matrix": [[round(p, 4) for p in row] for row in probs],
             "zone_names": self.ZONE_NAMES,
-            "zone_counts_before": [sum(1 for z in zones_before if z == i) for i in range(n)],
-            "zone_counts_after": [sum(1 for z in zones_after if z == i) for i in range(n)],
+            "zone_counts_before": [
+                sum(1 for z in zones_before if z == i) for i in range(n)
+            ],
+            "zone_counts_after": [
+                sum(1 for z in zones_after if z == i) for i in range(n)
+            ],
             "total_memories": len(before),
             "movements": movements,
         }
@@ -205,11 +219,13 @@ class MemoryStatsAnalyzer:
         for i, v in enumerate(values):
             mz = abs(v - med) * mad_scale
             if mz > threshold:
-                outliers.append({
-                    "index": i,
-                    "value": round(v, 6),
-                    "modified_zscore": round(mz, 4),
-                })
+                outliers.append(
+                    {
+                        "index": i,
+                        "value": round(v, 6),
+                        "modified_zscore": round(mz, 4),
+                    }
+                )
 
         return {
             "outliers": outliers,
@@ -246,14 +262,16 @@ class MemoryStatsAnalyzer:
                 z = 0.0
                 p_value = 1.0
 
-            results.append({
-                "cluster_index": i,
-                "size": size,
-                "density_ratio": round(g / max(f, 1e-10), 4),
-                "z_score": round(z, 4),
-                "p_value": round(p_value, 6),
-                "significant": p_value < 0.05,
-            })
+            results.append(
+                {
+                    "cluster_index": i,
+                    "size": size,
+                    "density_ratio": round(g / max(f, 1e-10), 4),
+                    "z_score": round(z, 4),
+                    "p_value": round(p_value, 6),
+                    "significant": p_value < 0.05,
+                }
+            )
 
         return {
             "clusters": results,
@@ -283,7 +301,7 @@ class MemoryStatsAnalyzer:
             weights = [w / total for w in weights]
 
         # Effective sample size
-        sum_sq = sum(w ** 2 for w in weights)
+        sum_sq = sum(w**2 for w in weights)
         ess = 1.0 / sum_sq if sum_sq > 0 else 0.0
 
         return {

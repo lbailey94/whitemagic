@@ -13,6 +13,7 @@ Contention score is used as an exploration boost: improvements where
 both sides make strong arguments are worth more than ones where one
 side dominates.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -22,6 +23,7 @@ from typing import Any
 @dataclass
 class DebateArgument:
     """A single argument in a bicameral debate."""
+
     side: str  # "left" (advocate) or "right" (skeptic)
     claim: str
     strength: float  # 0-1
@@ -31,9 +33,10 @@ class DebateArgument:
 @dataclass
 class DebateResult:
     """Result of a bicameral improvement debate."""
+
     hypothesis_id: str
-    left_score: float       # Advocate's final score (0-1)
-    right_score: float      # Skeptic's final score (0-1, lower = more skeptical)
+    left_score: float  # Advocate's final score (0-1)
+    right_score: float  # Skeptic's final score (0-1, lower = more skeptical)
     left_arguments: list[DebateArgument] = field(default_factory=list)
     right_arguments: list[DebateArgument] = field(default_factory=list)
     agreement: float = 0.0  # 1 - |left - right|
@@ -51,7 +54,9 @@ class DebateResult:
     @property
     def is_high_contention(self) -> bool:
         """True if both sides make strong cases."""
-        return self.contention > 0.3 and self.left_score > 0.5 and self.right_score > 0.5
+        return (
+            self.contention > 0.3 and self.left_score > 0.5 and self.right_score > 0.5
+        )
 
 
 class BicameralDebate:
@@ -65,7 +70,9 @@ class BicameralDebate:
 
     def __init__(self) -> None:
         self._debates: dict[str, DebateResult] = {}
-        self._calibration: list[tuple[float, bool]] = []  # (contention, was_skeptic_right)
+        self._calibration: list[
+            tuple[float, bool]
+        ] = []  # (contention, was_skeptic_right)
 
     def debate(
         self,
@@ -91,7 +98,9 @@ class BicameralDebate:
         """
         # Initial positions
         initial_left = predicted_impact * feasibility
-        initial_right = 1.0 - (risk * 0.5 + historical_failure_rate * 0.3 + opportunity_cost * 0.2)
+        initial_right = 1.0 - (
+            risk * 0.5 + historical_failure_rate * 0.3 + opportunity_cost * 0.2
+        )
 
         # Left (advocate) arguments
         left_args = [
@@ -214,10 +223,13 @@ class BicameralDebate:
     def get_stats(self) -> dict[str, Any]:
         return {
             "total_debates": len(self._debates),
-            "high_contention": sum(1 for d in self._debates.values() if d.is_high_contention),
+            "high_contention": sum(
+                1 for d in self._debates.values() if d.is_high_contention
+            ),
             "avg_contention": (
                 sum(d.contention for d in self._debates.values()) / len(self._debates)
-                if self._debates else 0.0
+                if self._debates
+                else 0.0
             ),
             "calibration_count": len(self._calibration),
         }

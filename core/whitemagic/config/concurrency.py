@@ -22,6 +22,7 @@ def get_safe_cpu_count() -> int:
     except (ImportError, NotImplementedError):
         return 2
 
+
 # Global Limit for Heavy Processes
 # Increased to 4 based on asyncio testing showing CPU headroom (avg 45%, max 92%, system can handle more)
 _env_max_workers = os.environ.get("WHITEMAGIC_MAX_WORKERS")
@@ -57,6 +58,7 @@ def get_max_workers() -> Any:
 
     """
     import os
+
     # Check environment override
     env_workers = os.getenv("WHITEMAGIC_MAX_WORKERS")
     if env_workers:
@@ -73,10 +75,12 @@ def get_max_workers() -> Any:
         return max(1, cpu_count // 2)
     return 1
 
+
 def get_concurrency_config() -> Any:
     """Get complete concurrency configuration."""
     import multiprocessing
     import os
+
     return {
         "max_workers": get_max_workers(),
         "cpu_count": multiprocessing.cpu_count(),

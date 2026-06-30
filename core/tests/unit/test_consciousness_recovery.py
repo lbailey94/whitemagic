@@ -1,4 +1,5 @@
 """Tests for recovered consciousness modules — time_dilation_master, apotheosis_engine, CrossSubsystemPatterns, and export fix."""
+
 from __future__ import annotations
 
 import pytest
@@ -193,30 +194,37 @@ class TestCrossSubsystemPatterns:
 class TestConsciousnessExports:
     def test_continuous_self_awareness_export(self):
         from whitemagic.core.consciousness import ContinuousSelfAwareness
+
         assert ContinuousSelfAwareness is not None
 
     def test_time_dilation_master_export(self):
         from whitemagic.core.consciousness import TimeDilationMaster
+
         assert TimeDilationMaster is not None
 
     def test_get_time_master_export(self):
         from whitemagic.core.consciousness import get_time_master
+
         assert callable(get_time_master)
 
     def test_apotheosis_engine_export(self):
         from whitemagic.core.consciousness import ApotheosisEngine
+
         assert ApotheosisEngine is not None
 
     def test_get_apotheosis_engine_export(self):
         from whitemagic.core.consciousness import get_apotheosis_engine
+
         assert callable(get_apotheosis_engine)
 
     def test_cross_subsystem_patterns_export(self):
         from whitemagic.core.consciousness import CrossSubsystemPatterns
+
         assert CrossSubsystemPatterns is not None
 
     def test_all_list_updated(self):
         import whitemagic.core.consciousness as consciousness
+
         assert "ContinuousSelfAwareness" in consciousness.__all__
         assert "TimeDilationMaster" in consciousness.__all__
         assert "ApotheosisEngine" in consciousness.__all__
@@ -228,11 +236,13 @@ class TestApotheosisWiring:
 
     def test_apotheosis_check_method_exists(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         assert hasattr(loop, "_check_apotheosis")
 
     def test_apotheosis_check_returns_list(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         # Should return empty list on first check (interval not met)
         result = loop._check_apotheosis()
@@ -240,6 +250,7 @@ class TestApotheosisWiring:
 
     def test_apotheosis_config_thresholds(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticConfig
+
         config = HomeostaticConfig()
         assert hasattr(config, "apotheosis_check_interval")
         assert config.apotheosis_check_interval == 3
@@ -250,6 +261,7 @@ class TestTimeDilationWiring:
 
     def test_sync_with_time_master(self):
         from whitemagic.core.consciousness.depth_gauge import sync_with_time_master
+
         result = sync_with_time_master()
         assert "measured_layer" in result
         assert "intended_layer" in result
@@ -259,8 +271,14 @@ class TestTimeDilationWiring:
     def test_sync_after_shift(self):
         from whitemagic.core.consciousness.depth_gauge import sync_with_time_master
         from whitemagic.core.consciousness.time_dilation_master import get_time_master
+
         master = get_time_master()
-        master.shift_to(__import__("whitemagic.core.consciousness.time_dilation_master", fromlist=["Layer"]).Layer.FLOW, "test")
+        master.shift_to(
+            __import__(
+                "whitemagic.core.consciousness.time_dilation_master", fromlist=["Layer"]
+            ).Layer.FLOW,
+            "test",
+        )
         result = sync_with_time_master()
         assert result["intended_layer"] == "flow"
         assert result["time_advantage"] == 5.0
@@ -273,11 +291,13 @@ class TestCrossSubsystemWiring:
         from whitemagic.core.consciousness.unified_nervous_system import (
             wire_cross_subsystem_patterns,
         )
+
         assert callable(wire_cross_subsystem_patterns)
 
     def test_wire_returns_dict(self):
         from whitemagic.core.consciousness.unified_nervous_system import (
             wire_cross_subsystem_patterns,
         )
+
         result = wire_cross_subsystem_patterns()
         assert isinstance(result, dict)

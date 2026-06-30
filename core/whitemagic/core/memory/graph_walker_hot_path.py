@@ -11,9 +11,6 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Polyglot backend detection (Zig SIMD > Rust > NumPy)
-# ---------------------------------------------------------------------------
 _ZIG_BATCH_COSINE = None
 _RUST_RRF = None
 _BACKEND = "numpy"

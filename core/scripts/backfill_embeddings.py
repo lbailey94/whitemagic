@@ -17,7 +17,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 CORE_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(CORE_DIR))
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -27,13 +29,18 @@ def get_db_path() -> Path:
         return Path(os.environ["WM_DB_PATH"])
     try:
         from whitemagic.config.paths import WM_ROOT
+
         return WM_ROOT / "whitemagic_working.db"
     except Exception:
-        state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
+        state_root = os.environ.get(
+            "WM_STATE_ROOT", os.path.expanduser("~/.whitemagic")
+        )
         return Path(state_root) / "whitemagic_working.db"
 
 
-def get_memories_without_embeddings(db_path: Path, limit: int | None = None) -> list[tuple[int, str]]:
+def get_memories_without_embeddings(
+    db_path: Path, limit: int | None = None
+) -> list[tuple[int, str]]:
     """Get memories that don't have embeddings."""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -56,7 +63,9 @@ def get_memories_without_embeddings(db_path: Path, limit: int | None = None) -> 
     return memories
 
 
-def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = None) -> int:
+def batch_backfill(
+    db_path: Path, batch_size: int = 100, limit: int | None = None
+) -> int:
     """Backfill embeddings in batches."""
     memories = get_memories_without_embeddings(db_path, limit)
     total = len(memories)
@@ -68,6 +77,7 @@ def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = Non
     # Try to import embedding engine
     try:
         from whitemagic.core.memory.embeddings import EmbeddingEngine
+
         engine = EmbeddingEngine()
         logger.info("Embedding engine loaded successfully")
     except ImportError as e:
@@ -78,7 +88,9 @@ def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = Non
     processed = 0
     for i in range(0, total, batch_size):
         batch = memories[i : i + batch_size]
-        logger.info(f"Processing batch {i // batch_size + 1}/{(total + batch_size - 1) // batch_size} ({len(batch)} memories)")
+        logger.info(
+            f"Processing batch {i // batch_size + 1}/{(total + batch_size - 1) // batch_size} ({len(batch)} memories)"
+        )
 
         for memory_id, content in batch:
             try:
@@ -102,10 +114,18 @@ def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = Non
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Batch backfill embeddings for memories")
-    parser.add_argument("--batch-size", type=int, default=100, help="Batch size for processing")
-    parser.add_argument("--limit", type=int, default=None, help="Limit number of memories to process")
-    parser.add_argument("--db-path", type=str, default=None, help="Override database path")
+    parser = argparse.ArgumentParser(
+        description="Batch backfill embeddings for memories"
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=100, help="Batch size for processing"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Limit number of memories to process"
+    )
+    parser.add_argument(
+        "--db-path", type=str, default=None, help="Override database path"
+    )
     args = parser.parse_args()
 
     db_path = Path(args.db_path) if args.db_path else get_db_path()

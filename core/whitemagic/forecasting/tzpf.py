@@ -34,13 +34,13 @@ from typing import Any
 # ═══════════════════════════════════════════════════════════════════════════
 
 DEFAULT_IMPACT_WEIGHTS: dict[str, float] = {
-    "ai_governance": 4.5,      # Civilization-scale governance architecture
-    "agent_architecture": 4.0, # Foundational agent design patterns
-    "ai_trends": 4.5,          # Macro civilizational direction
-    "ai_hardware": 3.5,        # Infrastructure & compute
-    "energy": 4.0,             # Energy is civilization substrate
-    "geopolitics": 2.5,        # Political events (narrower scope)
-    "general": 2.0,            # Default
+    "ai_governance": 4.5,  # Civilization-scale governance architecture
+    "agent_architecture": 4.0,  # Foundational agent design patterns
+    "ai_trends": 4.5,  # Macro civilizational direction
+    "ai_hardware": 3.5,  # Infrastructure & compute
+    "energy": 4.0,  # Energy is civilization substrate
+    "geopolitics": 2.5,  # Political events (narrower scope)
+    "general": 2.0,  # Default
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -92,8 +92,7 @@ def directional_foresight_index(
                 "raw_points": round(v["raw_points"], 1),
                 "weighted": round(v["weighted"], 1),
             }
-            for k, v in sorted(by_category.items(), key=lambda x:
-                -x[1]["weighted"])
+            for k, v in sorted(by_category.items(), key=lambda x: -x[1]["weighted"])
         },
     }
 
@@ -157,15 +156,22 @@ def temporal_acceleration_ratio(
         if pred_year and actual_year and pred_year > 0 and actual_year > 0:
             tar = pred_year / actual_year
             ratios.append(tar)
-            breakdown.append({
-                "claim": claim["claim"][:50],
-                "predicted_year": pred_year,
-                "actual_year": actual_year,
-                "tar": round(tar, 2),
-            })
+            breakdown.append(
+                {
+                    "claim": claim["claim"][:50],
+                    "predicted_year": pred_year,
+                    "actual_year": actual_year,
+                    "tar": round(tar, 2),
+                }
+            )
 
     if not ratios:
-        return {"mean_tar": None, "median_tar": None, "claims_scored": 0, "breakdown": []}
+        return {
+            "mean_tar": None,
+            "median_tar": None,
+            "claims_scored": 0,
+            "breakdown": [],
+        }
 
     return {
         "mean_tar": round(sum(ratios) / len(ratios), 2),
@@ -198,13 +204,20 @@ def hyperstition_coefficient(
         hc = 0.0
 
         # Explicit credit → 1.0
-        if any(x in notes for x in ["credited", "ahead of the curve", "ahead", "predated"]):
+        if any(
+            x in notes for x in ["credited", "ahead of the curve", "ahead", "predated"]
+        ):
             hc = 1.0
         # Cited / acknowledged → 0.5-0.7
-        elif any(x in notes for x in ["acknowledged", "resonant", "explicitly uses", "framing"]):
+        elif any(
+            x in notes
+            for x in ["acknowledged", "resonant", "explicitly uses", "framing"]
+        ):
             hc = 0.6
         # Terminology appeared in industry → 0.3-0.5
-        elif any(x in notes for x in ["mainstream", "multiple independent", "converged"]):
+        elif any(
+            x in notes for x in ["mainstream", "multiple independent", "converged"]
+        ):
             hc = 0.4
         # Core concept presciently identified → 0.2-0.3
         elif "prescient" in notes or "ahead" in notes:
@@ -219,10 +232,12 @@ def hyperstition_coefficient(
             hc = min(hc + 0.2, 1.0)
 
         scores.append(hc)
-        breakdown.append({
-            "claim": claim["claim"][:50],
-            "hc": round(hc, 2),
-        })
+        breakdown.append(
+            {
+                "claim": claim["claim"][:50],
+                "hc": round(hc, 2),
+            }
+        )
 
     return {
         "mean_hc": round(sum(scores) / len(scores), 2) if scores else 0.0,
@@ -281,7 +296,9 @@ def behavioral_calibration_index(
     return {
         "stated_gap": round(mean_stated - mean_outcome, 3),
         "behavioral_gap": round(mean_behavioral - mean_outcome, 3),
-        "shyness_gap": round((mean_stated - mean_outcome) - (mean_behavioral - mean_outcome), 3),
+        "shyness_gap": round(
+            (mean_stated - mean_outcome) - (mean_behavioral - mean_outcome), 3
+        ),
         "mean_stated_confidence": round(mean_stated, 3),
         "mean_behavioral_confidence": round(mean_behavioral, 3),
         "mean_outcome": round(mean_outcome, 3),
@@ -322,9 +339,17 @@ def partial_validation_spectrum(
             else:
                 pvs = 0.05
         elif status == "validated":
-            if "full validation" in notes or "product shipping" in notes or "standard adopted" in notes:
+            if (
+                "full validation" in notes
+                or "product shipping" in notes
+                or "standard adopted" in notes
+            ):
                 pvs = 1.0
-            elif "partial validation" in notes or "some layers" in notes or "directionally" in notes:
+            elif (
+                "partial validation" in notes
+                or "some layers" in notes
+                or "directionally" in notes
+            ):
                 # Check if there are percentage-like hints
                 if "photonic" in notes and "superconducting" in notes:
                     pvs = 0.30  # e.g. neurophotonic DC
@@ -338,11 +363,13 @@ def partial_validation_spectrum(
             pvs = 0.0
 
         scores.append(pvs)
-        breakdown.append({
-            "claim": claim["claim"][:50],
-            "status": status,
-            "pvs": round(pvs, 2),
-        })
+        breakdown.append(
+            {
+                "claim": claim["claim"][:50],
+                "status": status,
+                "pvs": round(pvs, 2),
+            }
+        )
 
     return {
         "mean_pvs": round(sum(scores) / len(scores), 2) if scores else 0.0,
@@ -381,14 +408,38 @@ def narrative_resonance_score(
         orgs = set()
         # Common org patterns
         org_patterns = [
-            r"Anthropic", r"OpenAI", r"Google", r"Microsoft", r"Cloudflare",
-            r"NIST", r"Karpathy", r"arXiv", r"Nature", r"Science",
-            r"SemiEngineering", r"Business Insider", r"PURSUE",
-            r"CIE-Scorer", r"CRV", r"CMI", r"AMP", r"AgentMesh",
-            r"MeshRescue", r"HumanMesh", r"x402", r"OpenClaw",
-            r"Moltbook", r"MDPI", r"DoD", r"DoEnergy",
-            r"BrainChip", r"TetraMem", r"Lightmatter", r"Ayar",
-            r"EDGEAI", r"Nvidia",
+            r"Anthropic",
+            r"OpenAI",
+            r"Google",
+            r"Microsoft",
+            r"Cloudflare",
+            r"NIST",
+            r"Karpathy",
+            r"arXiv",
+            r"Nature",
+            r"Science",
+            r"SemiEngineering",
+            r"Business Insider",
+            r"PURSUE",
+            r"CIE-Scorer",
+            r"CRV",
+            r"CMI",
+            r"AMP",
+            r"AgentMesh",
+            r"MeshRescue",
+            r"HumanMesh",
+            r"x402",
+            r"OpenClaw",
+            r"Moltbook",
+            r"MDPI",
+            r"DoD",
+            r"DoEnergy",
+            r"BrainChip",
+            r"TetraMem",
+            r"Lightmatter",
+            r"Ayar",
+            r"EDGEAI",
+            r"Nvidia",
         ]
         for pat in org_patterns:
             if re.search(pat, ref, re.IGNORECASE):
@@ -402,11 +453,13 @@ def narrative_resonance_score(
         nrs = min(nrs, 10)
 
         counts.append(nrs)
-        breakdown.append({
-            "claim": claim["claim"][:50],
-            "nrs": nrs,
-            "sources_found": list(orgs)[:5],
-        })
+        breakdown.append(
+            {
+                "claim": claim["claim"][:50],
+                "nrs": nrs,
+                "sources_found": list(orgs)[:5],
+            }
+        )
 
     return {
         "mean_nrs": round(sum(counts) / len(counts), 1) if counts else 0.0,
@@ -466,7 +519,13 @@ def positioning_index(
         "pi": round(pi, 2),
         "actions_taken": taken,
         "actions_implied": implied,
-        "status": "excellent" if pi >= 0.8 else "good" if pi >= 0.5 else "needs_work" if pi >= 0.2 else "critical",
+        "status": "excellent"
+        if pi >= 0.8
+        else "good"
+        if pi >= 0.5
+        else "needs_work"
+        if pi >= 0.2
+        else "critical",
     }
 
 
@@ -498,12 +557,14 @@ def brier_score(
         p = float(p)
         o = 1 if status == "validated" else 0
         entries.append((p, o))
-        breakdown.append({
-            "claim": claim["claim"][:50],
-            "p": round(p, 3),
-            "o": o,
-            "brier": round((p - o) ** 2, 4),
-        })
+        breakdown.append(
+            {
+                "claim": claim["claim"][:50],
+                "p": round(p, 3),
+                "o": o,
+                "brier": round((p - o) ** 2, 4),
+            }
+        )
 
     if not entries:
         return {
@@ -528,6 +589,7 @@ def brier_score(
 
     # Murphy decomposition (simplified: bucket by confidence rounded to 0.1)
     from collections import defaultdict
+
     buckets: dict[float, list[int]] = defaultdict(list)
     for p, o in entries:
         bucket_p = round(p, 1)
@@ -580,7 +642,9 @@ def compute_tzpf(
         Complete TZPF summary dict with all metrics.
     """
     validated = [c for c in claims if c.get("status") == "validated"]
-    all_closed = [c for c in claims if c.get("status") in ("validated", "falsified", "expired")]
+    all_closed = [
+        c for c in claims if c.get("status") in ("validated", "falsified", "expired")
+    ]
 
     dfi = directional_foresight_index(validated, impact_weights)
     tar = temporal_acceleration_ratio(validated)

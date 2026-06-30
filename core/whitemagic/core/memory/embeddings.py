@@ -190,6 +190,7 @@ class EmbeddingEngine:
         # Fallback to sentence-transformers
         try:
             import sentence_transformers  # noqa: F401
+
             self._available = True
         except ImportError:
             self._available = False
@@ -783,7 +784,6 @@ class EmbeddingEngine:
         if query_vec is None:
             return []
 
-        # --- Hot DB search ---
         results = []
 
         # When filtering by galaxy, over-fetch from HNSW then filter
@@ -821,7 +821,6 @@ class EmbeddingEngine:
                         if sim >= min_similarity:
                             results.append({"memory_id": mid, "similarity": round(sim, 4), "source": "hot"})
 
-        # --- Cold DB search (optional) ---
         if include_cold:
             hot_id_set = {r["memory_id"] for r in results}
 
@@ -1189,10 +1188,6 @@ class EmbeddingEngine:
             }
         except Exception as e:
             return {"status": "error", "error": str(e)}
-
-    # ------------------------------------------------------------------
-    # HRR facade methods (fused from HRREngine + QuantizedHRREngine + HRRCompositionEngine)
-    # ------------------------------------------------------------------
 
     _hrr_engine_instance: Any = None
     _quantized_hrr_engine_instance: Any = None

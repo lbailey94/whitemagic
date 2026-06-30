@@ -60,8 +60,12 @@ class SymbolicEngine:
         """Create a relationship between concepts."""
         if concept_a not in self.concepts or concept_b not in self.concepts:
             return False
-        self.concepts[concept_a]["relations"].append({"to": concept_b, "type": relation})
-        self.concepts[concept_b]["relations"].append({"to": concept_a, "type": relation})
+        self.concepts[concept_a]["relations"].append(
+            {"to": concept_b, "type": relation}
+        )
+        self.concepts[concept_b]["relations"].append(
+            {"to": concept_a, "type": relation}
+        )
         return True
 
     def encode(self, text: str) -> str:

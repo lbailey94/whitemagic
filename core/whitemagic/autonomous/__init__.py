@@ -13,7 +13,6 @@ Modules:
     yin_controller  — Yin-Yang pacing for autonomous loops
 """
 
-
 # Re-export executor subpackage top-level names for convenience
 from .executor import (
     ContinuousExecutor,
@@ -41,12 +40,23 @@ except ImportError:
 
 __all__ = [
     # daemon capabilities
-    "queue_work", "process_queue", "ask_human",
-    "get_diary", "log_hourly", "log_breakthrough",
-    "session_start", "session_end", "DiarySystem",
-    "get_maintenance", "run_maintenance", "auto_heal",
+    "queue_work",
+    "process_queue",
+    "ask_human",
+    "get_diary",
+    "log_hourly",
+    "log_breakthrough",
+    "session_start",
+    "session_end",
+    "DiarySystem",
+    "get_maintenance",
+    "run_maintenance",
+    "auto_heal",
     "AutonomousMaintenance",
     # executor (merged from autonomous_execution)
-    "ContinuousExecutor", "ExecutorConfig", "Objective",
-    "ObjectiveGenerator", "ProgressAssessor",
+    "ContinuousExecutor",
+    "ExecutorConfig",
+    "Objective",
+    "ObjectiveGenerator",
+    "ProgressAssessor",
 ]

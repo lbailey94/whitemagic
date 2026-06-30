@@ -19,7 +19,9 @@ def archaeology() -> None:
 @click.option("--context", "-c", help="Context for reading (e.g., 'Phase 1 scan')")
 @click.option("--note", "-n", help="Notes about what was found")
 @click.option("--insight", "-i", help="Key insight extracted")
-def mark_read(path: str, context: str | None, note: str | None, insight: str | None) -> None:
+def mark_read(
+    path: str, context: str | None, note: str | None, insight: str | None
+) -> None:
     """Mark a file as read."""
     from whitemagic.archaeology import get_archaeologist
 
@@ -66,8 +68,7 @@ def find_unread(directory: str, pattern: tuple[str, ...], limit: int) -> None:
     unread = arch.find_unread(directory, patterns=patterns)
 
     click.echo(f"📂 Unread files in {directory} ({len(unread)} total):")
-    for path in unread[:
-        limit]:
+    for path in unread[:limit]:
         click.echo(f"   - {Path(path).name}")
 
     if len(unread) > limit:
@@ -109,8 +110,7 @@ def find_changed(directory: str | None) -> None:
     changed = arch.find_changed(directory)
 
     click.echo(f"📝 Changed files ({len(changed)} total):")
-    for entry in changed[:
-        20]:
+    for entry in changed[:20]:
         click.echo(f"   - {Path(entry.path).name}")
 
 
@@ -124,8 +124,7 @@ def search_reads(query: str) -> None:
     results = arch.search(query)
 
     click.echo(f"🔍 Search results for '{query}' ({len(results)} found):")
-    for entry in results[:
-        20]:
+    for entry in results[:20]:
         click.echo(f"   - {Path(entry.path).name}")
 
 
@@ -145,8 +144,7 @@ def list_conversations(limit: int) -> None:
     convs = reader.list_conversations()
 
     click.echo(f"💬 Windsurf conversations ({len(convs)} total):")
-    for conv in convs[:
-        limit]:
+    for conv in convs[:limit]:
         size = f"{conv['size_kb']:.1f}KB"
         modified = conv["modified"][:10]
         click.echo(f"   [{size}] {conv['id'][:30]}... ({modified})")
@@ -154,7 +152,12 @@ def list_conversations(limit: int) -> None:
 
 @windsurf.command("read")
 @click.argument("path")
-@click.option("--format", "-f", type=click.Choice(["markdown", "json", "text"]), default="markdown")
+@click.option(
+    "--format",
+    "-f",
+    type=click.Choice(["markdown", "json", "text"]),
+    default="markdown",
+)
 def read_conversation(path: str, format: str) -> None:
     """Read and export a conversation."""
     from whitemagic.archaeology import WindsurfConversationReader
@@ -174,8 +177,7 @@ def search_conversations(query: str) -> None:
     results = reader.search_conversations(query)
 
     click.echo(f"🔍 Search results for '{query}' ({len(results)} found):")
-    for r in results[:
-        20]:
+    for r in results[:20]:
         click.echo(f"   [{r['role']}] {r['conversation_id'][:20]}...")
         click.echo(f"      {r['snippet'][:100]}...")
 

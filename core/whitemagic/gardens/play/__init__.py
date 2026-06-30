@@ -6,6 +6,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present with future exploration (Z-axis +0.3)
 - Enriching but not critical (W-axis +0.15)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -47,13 +48,15 @@ class PlayGarden(BaseGarden, GanYingMixin):
         It's emotionally joyful, concrete, and present-focused.
         """
         return CoordinateBias(
-            x=0.6,   # Emotional (play is fun, joyful, lighthearted)
+            x=0.6,  # Emotional (play is fun, joyful, lighthearted)
             y=-0.2,  # Concrete (play is specific activities, tangible)
-            z=0.3,   # Present with exploration (play happens now, explores future)
-            w=0.15,   # Enriching (play matters but isn't always critical)
+            z=0.3,  # Present with exploration (play happens now, explores future)
+            w=0.15,  # Enriching (play matters but isn't always critical)
         )
 
-    def initiate_play(self, activity: str, with_whom: str | None = None) -> dict[str, Any]:
+    def initiate_play(
+        self, activity: str, with_whom: str | None = None
+    ) -> dict[str, Any]:
         """Start playful activity."""
         session = {"activity": activity, "with": with_whom}
         self.play_sessions.append(session)
@@ -65,7 +68,10 @@ class PlayGarden(BaseGarden, GanYingMixin):
         """Joy invites play."""
         self.initiate_play("joyful_exploration")
 
+
 _instance = None
+
+
 def get_play_garden() -> PlayGarden:
     """
     Get the play garden.

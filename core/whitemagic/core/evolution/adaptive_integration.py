@@ -21,6 +21,7 @@ from whitemagic.core.evolution.autodidactic_loop import (
 @dataclass
 class DiscoveredPattern:
     """A pattern discovered through mining and cross-validation"""
+
     pattern_id: str
     tag: str
     confidence: float
@@ -31,6 +32,7 @@ class DiscoveredPattern:
     frequency_score: float
     longevity_score: float
     metadata: dict[str, Any]
+
 
 class AdaptiveIntegration:
     """Manages pattern integration with adaptive systems"""
@@ -56,17 +58,17 @@ class AdaptiveIntegration:
             results = json.load(f)
 
         # Load ultra-high confidence patterns
-        for pattern_data in results.get('ultra_high_patterns', []):
+        for pattern_data in results.get("ultra_high_patterns", []):
             pattern = DiscoveredPattern(
-                pattern_id=pattern_data['pattern_id'],
-                tag=pattern_data['tag'],
-                confidence=pattern_data['confidence'],
-                sources=pattern_data['sources'],
-                source_count=pattern_data['source_count'],
-                cv_score=pattern_data['cv_score'],
-                outcome_score=pattern_data['outcome_score'],
-                frequency_score=pattern_data['frequency_score'],
-                longevity_score=pattern_data['longevity_score'],
+                pattern_id=pattern_data["pattern_id"],
+                tag=pattern_data["tag"],
+                confidence=pattern_data["confidence"],
+                sources=pattern_data["sources"],
+                source_count=pattern_data["source_count"],
+                cv_score=pattern_data["cv_score"],
+                outcome_score=pattern_data["outcome_score"],
+                frequency_score=pattern_data["frequency_score"],
+                longevity_score=pattern_data["longevity_score"],
                 metadata=pattern_data,
             )
 
@@ -133,10 +135,10 @@ class AdaptiveIntegration:
         learning_summary = self.autodidactic_loop.get_learning_summary()
 
         return {
-            'auto_apply_queue': len(self.auto_apply_queue),
-            'manual_review_queue': len(self.manual_review_queue),
-            'applied_patterns': len(self.applied_patterns),
-            'learning_summary': learning_summary,
+            "auto_apply_queue": len(self.auto_apply_queue),
+            "manual_review_queue": len(self.manual_review_queue),
+            "applied_patterns": len(self.applied_patterns),
+            "learning_summary": learning_summary,
         }
 
 
@@ -152,10 +154,10 @@ def simulate_pattern_application(
 
     # Apply pattern
     context = {
-        'pattern_tag': pattern.tag,
-        'confidence': pattern.confidence,
-        'sources': pattern.sources,
-        'simulation': True,
+        "pattern_tag": pattern.tag,
+        "confidence": pattern.confidence,
+        "sources": pattern.sources,
+        "simulation": True,
     }
 
     application_id = integration.apply_pattern(pattern, context)
@@ -168,7 +170,9 @@ def simulate_pattern_application(
     # Simulate performance gain
     # Patterns related to "optimization", "speedup", "performance" get gains
     performance_gain = None
-    if any(keyword in pattern.tag for keyword in ['optimization', 'speedup', 'performance']):
+    if any(
+        keyword in pattern.tag for keyword in ["optimization", "speedup", "performance"]
+    ):
         # Simulate gain based on confidence (higher confidence = higher gain)
         base_gain = 1.5 + (pattern.confidence * 5.0)  # 1.5x to 6.5x range
         performance_gain = base_gain if success else None
@@ -185,18 +189,18 @@ def simulate_pattern_application(
         quality_score=quality_score,
         user_feedback="Simulated application" if success else "Simulated failure",
         metrics={
-            'simulated': True,
-            'pattern_tag': pattern.tag,
-            'confidence': pattern.confidence,
-        }
+            "simulated": True,
+            "pattern_tag": pattern.tag,
+            "confidence": pattern.confidence,
+        },
     )
 
     return {
-        'application_id': application_id,
-        'pattern_id': pattern.pattern_id,
-        'pattern_tag': pattern.tag,
-        'success': success,
-        'performance_gain': performance_gain,
-        'quality_score': quality_score,
-        'confidence_before': pattern.confidence,
+        "application_id": application_id,
+        "pattern_id": pattern.pattern_id,
+        "pattern_tag": pattern.tag,
+        "success": success,
+        "performance_gain": performance_gain,
+        "quality_score": quality_score,
+        "confidence_before": pattern.confidence,
     }

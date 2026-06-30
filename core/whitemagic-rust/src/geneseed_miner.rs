@@ -9,10 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::process::Command;
 
-// ---------------------------------------------------------------------------
-// Simple UTC date formatter (no chrono — stdlib only)
-// ---------------------------------------------------------------------------
-
 fn unix_ts_to_date(ts: i64) -> String {
     if ts <= 0 {
         return "unknown".to_string();
@@ -36,10 +32,6 @@ fn unix_ts_to_date(ts: i64) -> String {
     let day = rem + 1;
     format!("{}-{:02}-{:02}", year, month, day)
 }
-
-// ---------------------------------------------------------------------------
-// Public types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[pyclass]
@@ -104,10 +96,6 @@ impl GeneseedStats {
         )
     }
 }
-
-// ---------------------------------------------------------------------------
-// Public pyfunction: mine_geneseed_patterns
-// ---------------------------------------------------------------------------
 
 /// Mine optimization patterns from git repository history.
 ///
@@ -231,10 +219,6 @@ pub fn mine_geneseed_patterns(
     Ok(patterns)
 }
 
-// ---------------------------------------------------------------------------
-// Public pyfunction: get_geneseed_stats
-// ---------------------------------------------------------------------------
-
 /// Get high-level statistics for a git repository.
 #[pyfunction]
 pub fn get_geneseed_stats(repo_path: String) -> PyResult<GeneseedStats> {
@@ -347,10 +331,6 @@ pub fn get_geneseed_stats(repo_path: String) -> PyResult<GeneseedStats> {
         avg_commit_age_days: avg_age_days,
     })
 }
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
 
 fn classify_commit(
     hash: String,

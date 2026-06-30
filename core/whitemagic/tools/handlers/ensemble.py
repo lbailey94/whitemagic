@@ -42,13 +42,17 @@ def handle_ensemble(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 
 def _emit(event_type_name: str, data: dict[str, Any]) -> None:
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type_name, data, source="ensemble")
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced ensemble emit error: %s", e, exc_info=True)
@@ -56,6 +60,7 @@ def _emit(event_type_name: str, data: dict[str, Any]) -> None:
 
 def _ensemble_dir() -> Path:
     from whitemagic.config.paths import WM_ROOT
+
     d = cast("Path", WM_ROOT) / "ensemble"
     d.mkdir(parents=True, exist_ok=True)
     return d
@@ -68,13 +73,10 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
     except RuntimeError:
         return asyncio.run(coro)
     from concurrent.futures import ThreadPoolExecutor
+
     with ThreadPoolExecutor(max_workers=1) as pool:
         return pool.submit(asyncio.run, coro).result()
 
-
-# ---------------------------------------------------------------------------
-# Internal: query a single Ollama model
-# ---------------------------------------------------------------------------
 
 async def _query_ollama(model: str, prompt: str, timeout: int = 300) -> dict[str, Any]:
     """Query a single Ollama model and return the result."""
@@ -97,7 +99,8 @@ async def _query_ollama(model: str, prompt: str, timeout: int = 300) -> dict[str
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                url, json=payload,
+                url,
+                json=payload,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
                 resp.raise_for_status()
@@ -138,10 +141,6 @@ def _extract_confidence(text: str) -> int:
                 return val
     return 70  # Default confidence
 
-
-# ---------------------------------------------------------------------------
-# Internal: analyze ensemble results
-# ---------------------------------------------------------------------------
 
 def _analyze_results(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Analyze ensemble results and determine consensus."""
@@ -189,10 +188,6 @@ def _analyze_results(results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: ensemble.query
-# ---------------------------------------------------------------------------
-
 def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     """Query multiple LLM models with the same prompt and synthesize results.
 
@@ -214,6 +209,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
         try:
             from whitemagic.tools.handlers.ollama import _list_models
             from whitemagic.tools.handlers.ollama import _run as ollama_run
+
             available = ollama_run(_list_models())
             models = [m.get("name", "") for m in available[:5]]  # Max 5
         except (ImportError, ModuleNotFoundError):
@@ -272,12 +268,15 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.debug("Silenced ensemble write error: %s", e, exc_info=True)
 
-    _emit("ENSEMBLE_COMPLETE", {
-        "ensemble_id": ensemble_id,
-        "models": models,
-        "consensus": analysis["consensus_strength"],
-        "winner": analysis.get("winner", {}).get("model"),
-    })
+    _emit(
+        "ENSEMBLE_COMPLETE",
+        {
+            "ensemble_id": ensemble_id,
+            "models": models,
+            "consensus": analysis["consensus_strength"],
+            "winner": analysis.get("winner", {}).get("model"),
+        },
+    )
 
     return {
         "status": "success",
@@ -297,10 +296,6 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: ensemble.status
-# ---------------------------------------------------------------------------
-
 def handle_ensemble_status(**kwargs: Any) -> dict[str, Any]:
     """Get the full result of a past ensemble query."""
     ensemble_id = kwargs.get("ensemble_id")
@@ -319,10 +314,6 @@ def handle_ensemble_status(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-# ---------------------------------------------------------------------------
-# Handler: ensemble.history
-# ---------------------------------------------------------------------------
-
 def handle_ensemble_history(**kwargs: Any) -> dict[str, Any]:
     """List past ensemble queries."""
     limit = kwargs.get("limit", 20)
@@ -332,13 +323,15 @@ def handle_ensemble_history(**kwargs: Any) -> dict[str, Any]:
     for f in sorted(edir.glob("ens-*.json"), reverse=True):
         try:
             record = _json_loads(f.read_text(encoding="utf-8"))
-            entries.append({
-                "id": record["id"],
-                "prompt_preview": record.get("prompt", "")[:100],
-                "models": record.get("models", []),
-                "consensus": record.get("analysis", {}).get("consensus_strength"),
-                "created_at": record.get("created_at"),
-            })
+            entries.append(
+                {
+                    "id": record["id"],
+                    "prompt_preview": record.get("prompt", "")[:100],
+                    "models": record.get("models", []),
+                    "consensus": record.get("analysis", {}).get("consensus_strength"),
+                    "created_at": record.get("created_at"),
+                }
+            )
         except (OSError, UnicodeDecodeError):
             continue
         if len(entries) >= limit:

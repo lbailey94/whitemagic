@@ -16,16 +16,18 @@ from enum import Enum
 
 class AttentionState(Enum):
     """States of attention."""
-    FOCUSED = "focused"         # Single-pointed attention
-    DIFFUSE = "diffuse"         # Broad, relaxed awareness
-    DISTRACTED = "distracted"   # Lost in thought
-    DROWSY = "drowsy"           # Dull, sleepy
-    AGITATED = "agitated"       # Restless, scattered
+
+    FOCUSED = "focused"  # Single-pointed attention
+    DIFFUSE = "diffuse"  # Broad, relaxed awareness
+    DISTRACTED = "distracted"  # Lost in thought
+    DROWSY = "drowsy"  # Dull, sleepy
+    AGITATED = "agitated"  # Restless, scattered
 
 
 @dataclass
 class AttentionEvent:
     """A recorded attention event."""
+
     timestamp: datetime
     state: AttentionState
     duration_seconds: float
@@ -36,6 +38,7 @@ class AttentionEvent:
 @dataclass
 class AttentionSession:
     """A session of attention training."""
+
     started_at: datetime
     ended_at: datetime | None = None
     events: list[AttentionEvent] = field(default_factory=list)
@@ -51,8 +54,7 @@ class AttentionSession:
             return 0.0
 
         focused_time = sum(
-            e.duration_seconds for e in self.events
-            if e.state == AttentionState.FOCUSED
+            e.duration_seconds for e in self.events if e.state == AttentionState.FOCUSED
         )
         total_time = sum(e.duration_seconds for e in self.events)
 
@@ -74,7 +76,7 @@ class AttentionSession:
             "focus_percentage": self.focus_percentage(),
             "distraction_count": self.distraction_count(),
             "average_recovery_time": self.average_recovery_time(),
-            "target_object": self.target_object
+            "target_object": self.target_object,
         }
 
 
@@ -82,22 +84,24 @@ class AttentionTracker:
     """Tracks attention during a session."""
 
     def __init__(self, target: str = "breath"):
-        self.session = AttentionSession(
-            started_at=datetime.now(),
-            target_object=target
-        )
+        self.session = AttentionSession(started_at=datetime.now(), target_object=target)
         self.current_state = AttentionState.FOCUSED
         self.state_started = datetime.now()
         self.last_distraction_end: datetime | None = None
 
-    def record_state_change(self, new_state: AttentionState, trigger: str | None = None) -> None:
+    def record_state_change(
+        self, new_state: AttentionState, trigger: str | None = None
+    ) -> None:
         """Record a change in attention state."""
         now = datetime.now()
         duration = (now - self.state_started).total_seconds()
 
         # Calculate recovery time if returning from distraction
         recovery_time = None
-        if self.current_state == AttentionState.DISTRACTED and new_state == AttentionState.FOCUSED:
+        if (
+            self.current_state == AttentionState.DISTRACTED
+            and new_state == AttentionState.FOCUSED
+        ):
             recovery_time = duration
 
         event = AttentionEvent(
@@ -105,7 +109,7 @@ class AttentionTracker:
             state=self.current_state,
             duration_seconds=duration,
             trigger=trigger,
-            recovery_time=recovery_time
+            recovery_time=recovery_time,
         )
         self.session.events.append(event)
 
@@ -131,6 +135,7 @@ class AttentionTracker:
 @dataclass
 class AttentionExercise:
     """An attention training exercise."""
+
     name: str
     description: str
     duration_minutes: int
@@ -144,7 +149,7 @@ class AttentionExercise:
             "description": self.description,
             "duration_minutes": self.duration_minutes,
             "difficulty": self.difficulty,
-            "target": self.target
+            "target": self.target,
         }
 
 
@@ -169,129 +174,143 @@ def list_exercises(difficulty: int | None = None) -> list[AttentionExercise]:
     return list(EXERCISES.values())
 
 
-# === REGISTER EXERCISES ===
+register_exercise(
+    AttentionExercise(
+        name="breath_anchor",
+        description="Use breath as anchor for attention",
+        duration_minutes=10,
+        difficulty=1,
+        target="breath",
+        instructions=[
+            "Sit comfortably with eyes closed",
+            "Focus attention on the sensation of breathing",
+            "Notice the breath at the nostrils, chest, or belly",
+            "When mind wanders, gently return to breath",
+            "Count each distraction without judgment",
+            "Aim to reduce distractions over time",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="breath_anchor",
-    description="Use breath as anchor for attention",
-    duration_minutes=10,
-    difficulty=1,
-    target="breath",
-    instructions=[
-        "Sit comfortably with eyes closed",
-        "Focus attention on the sensation of breathing",
-        "Notice the breath at the nostrils, chest, or belly",
-        "When mind wanders, gently return to breath",
-        "Count each distraction without judgment",
-        "Aim to reduce distractions over time"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="candle_gaze",
+        description="Trataka - steady gaze meditation",
+        duration_minutes=5,
+        difficulty=2,
+        target="candle",
+        instructions=[
+            "Place a candle at eye level, arm's length away",
+            "Gaze steadily at the flame without blinking",
+            "When eyes water, close them and visualize the flame",
+            "Open eyes and repeat",
+            "Builds concentration and visual focus",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="candle_gaze",
-    description="Trataka - steady gaze meditation",
-    duration_minutes=5,
-    difficulty=2,
-    target="candle",
-    instructions=[
-        "Place a candle at eye level, arm's length away",
-        "Gaze steadily at the flame without blinking",
-        "When eyes water, close them and visualize the flame",
-        "Open eyes and repeat",
-        "Builds concentration and visual focus"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="sound_focus",
+        description="Focus on a single sound",
+        duration_minutes=10,
+        difficulty=2,
+        target="sound",
+        instructions=[
+            "Choose a continuous sound (fan, traffic, nature)",
+            "Focus attention entirely on that sound",
+            "Notice its qualities: pitch, rhythm, texture",
+            "When mind wanders, return to the sound",
+            "Practice hearing without labeling",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="sound_focus",
-    description="Focus on a single sound",
-    duration_minutes=10,
-    difficulty=2,
-    target="sound",
-    instructions=[
-        "Choose a continuous sound (fan, traffic, nature)",
-        "Focus attention entirely on that sound",
-        "Notice its qualities: pitch, rhythm, texture",
-        "When mind wanders, return to the sound",
-        "Practice hearing without labeling"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="body_point",
+        description="Focus on a single point in the body",
+        duration_minutes=10,
+        difficulty=2,
+        target="body_point",
+        instructions=[
+            "Choose a point: tip of nose, center of chest, or third eye",
+            "Rest attention there without forcing",
+            "Notice any sensations that arise",
+            "When attention drifts, gently return",
+            "Allow the point to become vivid and clear",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="body_point",
-    description="Focus on a single point in the body",
-    duration_minutes=10,
-    difficulty=2,
-    target="body_point",
-    instructions=[
-        "Choose a point: tip of nose, center of chest, or third eye",
-        "Rest attention there without forcing",
-        "Notice any sensations that arise",
-        "When attention drifts, gently return",
-        "Allow the point to become vivid and clear"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="counting_meditation",
+        description="Count breaths to train sustained attention",
+        duration_minutes=15,
+        difficulty=3,
+        target="counting",
+        instructions=[
+            "Count each exhale from 1 to 10",
+            "If you lose count, start over at 1",
+            "If you go past 10, start over at 1",
+            "The goal is sustained, accurate counting",
+            "Track how many times you complete 1-10",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="counting_meditation",
-    description="Count breaths to train sustained attention",
-    duration_minutes=15,
-    difficulty=3,
-    target="counting",
-    instructions=[
-        "Count each exhale from 1 to 10",
-        "If you lose count, start over at 1",
-        "If you go past 10, start over at 1",
-        "The goal is sustained, accurate counting",
-        "Track how many times you complete 1-10"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="noting_practice",
+        description="Note distractions to build metacognition",
+        duration_minutes=15,
+        difficulty=3,
+        target="breath",
+        instructions=[
+            "Focus on breath as primary object",
+            "When distracted, silently note the type: 'thinking', 'planning', 'remembering'",
+            "Return to breath after noting",
+            "This builds awareness of attention patterns",
+            "Track which types of distraction are most common",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="noting_practice",
-    description="Note distractions to build metacognition",
-    duration_minutes=15,
-    difficulty=3,
-    target="breath",
-    instructions=[
-        "Focus on breath as primary object",
-        "When distracted, silently note the type: 'thinking', 'planning', 'remembering'",
-        "Return to breath after noting",
-        "This builds awareness of attention patterns",
-        "Track which types of distraction are most common"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="expanding_attention",
+        description="Expand and contract attention field",
+        duration_minutes=10,
+        difficulty=4,
+        target="field",
+        instructions=[
+            "Start with narrow focus on breath",
+            "Gradually expand to include body sensations",
+            "Expand further to include sounds",
+            "Expand to include the whole room",
+            "Contract back to breath",
+            "Practice smooth expansion and contraction",
+        ],
+    )
+)
 
-register_exercise(AttentionExercise(
-    name="expanding_attention",
-    description="Expand and contract attention field",
-    duration_minutes=10,
-    difficulty=4,
-    target="field",
-    instructions=[
-        "Start with narrow focus on breath",
-        "Gradually expand to include body sensations",
-        "Expand further to include sounds",
-        "Expand to include the whole room",
-        "Contract back to breath",
-        "Practice smooth expansion and contraction"
-    ]
-))
-
-register_exercise(AttentionExercise(
-    name="dual_attention",
-    description="Hold two objects in attention simultaneously",
-    duration_minutes=10,
-    difficulty=5,
-    target="dual",
-    instructions=[
-        "Focus on breath AND a body sensation simultaneously",
-        "Don't alternate - hold both at once",
-        "This is challenging and builds attention capacity",
-        "Start with brief periods and extend",
-        "Notice when attention collapses to one object"
-    ]
-))
+register_exercise(
+    AttentionExercise(
+        name="dual_attention",
+        description="Hold two objects in attention simultaneously",
+        duration_minutes=10,
+        difficulty=5,
+        target="dual",
+        instructions=[
+            "Focus on breath AND a body sensation simultaneously",
+            "Don't alternate - hold both at once",
+            "This is challenging and builds attention capacity",
+            "Start with brief periods and extend",
+            "Notice when attention collapses to one object",
+        ],
+    )
+)
 
 
 class AttentionMetrics:
@@ -322,7 +341,9 @@ class AttentionMetrics:
         # Compare first half to second half
         mid = len(self.sessions) // 2
         first_half = sum(s.focus_percentage() for s in self.sessions[:mid]) / mid
-        second_half = sum(s.focus_percentage() for s in self.sessions[mid:]) / (len(self.sessions) - mid)
+        second_half = sum(s.focus_percentage() for s in self.sessions[mid:]) / (
+            len(self.sessions) - mid
+        )
 
         return second_half - first_half
 
@@ -331,14 +352,12 @@ class AttentionMetrics:
             "total_sessions": len(self.sessions),
             "total_practice_minutes": self.total_practice_time().total_seconds() / 60,
             "average_focus_percentage": self.average_focus(),
-            "improvement_trend": self.improvement_trend()
+            "improvement_trend": self.improvement_trend(),
         }
 
 
 def generate_training_plan(
-    current_level: int = 1,
-    sessions_per_week: int = 5,
-    weeks: int = 4
+    current_level: int = 1, sessions_per_week: int = 5, weeks: int = 4
 ) -> list[dict]:
     """Generate a progressive attention training plan."""
     plan = []
@@ -352,10 +371,7 @@ def generate_training_plan(
     }
 
     for week in range(1, weeks + 1):
-        week_plan = {
-            "week": week,
-            "sessions": []
-        }
+        week_plan = {"week": week, "sessions": []}
 
         # Gradually increase difficulty
         target_difficulty = min(current_level + (week - 1) // 2, 5)
@@ -366,11 +382,13 @@ def generate_training_plan(
         for session in range(sessions_per_week):
             if available:
                 exercise = random.choice(available)
-                week_plan["sessions"].append({
-                    "day": session + 1,
-                    "exercise": exercise.name,
-                    "duration": exercise.duration_minutes
-                })
+                week_plan["sessions"].append(
+                    {
+                        "day": session + 1,
+                        "exercise": exercise.name,
+                        "duration": exercise.duration_minutes,
+                    }
+                )
 
         plan.append(week_plan)
 

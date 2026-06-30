@@ -4,6 +4,7 @@
 Provides pub/sub messaging, history retrieval, and broker status via the
 Whitemagic tool contract.  Redis is an optional dependency (``whitemagic[cache]``).
 """
+
 import asyncio
 import json
 import logging
@@ -24,19 +25,17 @@ def _emit(event_type_name: str, data: dict[str, Any]) -> None:
     """Best-effort Gan Ying event emission."""
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type_name, data, source="broker")
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced broker emit error: %s", e, exc_info=True)
 
 
-# ---------------------------------------------------------------------------
-# Lazy Redis import helper
-# ---------------------------------------------------------------------------
-
 def _require_redis() -> Any:
     """Import ``redis.asyncio`` or raise a clear error."""
     try:
         import redis.asyncio as aioredis
+
         return aioredis
     except ImportError:
         raise ImportError(
@@ -44,10 +43,6 @@ def _require_redis() -> Any:
             "Install with: pip install 'whitemagic[cache]'",
         )
 
-
-# ---------------------------------------------------------------------------
-# Internal async broker (singleton-ish, lazily created)
-# ---------------------------------------------------------------------------
 
 _BROKER_INSTANCE: Optional["_AsyncBroker"] = None
 _BROKER_LOCK = asyncio.Lock() if hasattr(asyncio, "Lock") else None
@@ -70,6 +65,7 @@ def cleanup_broker() -> None:
                 pool = broker.redis.connection_pool
                 # Disconnect all connections — redis.asyncio pool.disconnect() is a coroutine
                 import asyncio
+
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
@@ -124,8 +120,12 @@ class _AsyncBroker:
         async with self._connect_lock:
             if self.redis is None:
                 aioredis = _require_redis()
-                connect_timeout = float(os.getenv("WHITEMAGIC_REDIS_CONNECT_TIMEOUT", "1.0"))
-                socket_timeout = float(os.getenv("WHITEMAGIC_REDIS_SOCKET_TIMEOUT", "1.0"))
+                connect_timeout = float(
+                    os.getenv("WHITEMAGIC_REDIS_CONNECT_TIMEOUT", "1.0")
+                )
+                socket_timeout = float(
+                    os.getenv("WHITEMAGIC_REDIS_SOCKET_TIMEOUT", "1.0")
+                )
 
                 # Resolve URL: explicit param > env var > None (use host/port)
                 redis_url = self._url or _resolve_redis_url()
@@ -211,9 +211,11 @@ class _AsyncBroker:
             try:
                 results.append(_json_loads(item))
             except (json.JSONDecodeError, TypeError):
-                logger.debug("Skipping malformed broker queue item: %r", item[:80] if isinstance(item, str) else item)
+                logger.debug(
+                    "Skipping malformed broker queue item: %r",
+                    item[:80] if isinstance(item, str) else item,
+                )
         return results
-
 
     async def status(self) -> dict[str, Any]:
         """Return Redis server status."""
@@ -280,7 +282,9 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
             for task in pending:
                 task.cancel()
             if pending:
-                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
             return result
         finally:
             # Temporarily suppress unraisable exceptions during loop cleanup
@@ -288,6 +292,7 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
             # traceback formatting (RecursionError) when event loop objects
             # are GC'd with missing attributes.
             import sys as _sys
+
             _orig_hook = _sys.unraisablehook
             _sys.unraisablehook = lambda *a, **kw: None
             try:
@@ -297,13 +302,10 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
             asyncio.set_event_loop(None)
     # If we're already in an event loop (e.g. MCP stdio), use a thread.
     from concurrent.futures import ThreadPoolExecutor
+
     with ThreadPoolExecutor(max_workers=1) as pool:
         return pool.submit(asyncio.run, coro).result()
 
-
-# ---------------------------------------------------------------------------
-# Public handler functions (called by dispatch table)
-# ---------------------------------------------------------------------------
 
 def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
     """Publish a message to a Redis channel."""
@@ -312,7 +314,9 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": "channel is required"}
     host = kwargs.get("host", "localhost")
     port = int(kwargs.get("port", 6379))
-    probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
+    probe_timeout = float(
+        kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5"))
+    )
 
     # Skip socket probe when using URL-based connection (Railway / cloud)
     redis_url = _resolve_redis_url()
@@ -345,7 +349,10 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
 
     try:
         msg_id = _run(_do())
-        _emit("BROKER_MESSAGE_PUBLISHED", {"channel": channel, "msg_id": msg_id, "sender": sender})
+        _emit(
+            "BROKER_MESSAGE_PUBLISHED",
+            {"channel": channel, "msg_id": msg_id, "sender": sender},
+        )
         return {
             "status": "success",
             "message": f"Published to {channel}",
@@ -353,7 +360,11 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
             "channel": channel,
         }
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
     except Exception as exc:
         _emit("BROKER_DISCONNECTED", {"error": str(exc)})
         return {"status": "error", "error": str(exc)}
@@ -367,7 +378,9 @@ def handle_broker_history(**kwargs: Any) -> dict[str, Any]:
     limit = kwargs.get("limit", 20)
     host = kwargs.get("host", "localhost")
     port = int(kwargs.get("port", 6379))
-    probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
+    probe_timeout = float(
+        kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5"))
+    )
 
     redis_url = _resolve_redis_url()
     if not redis_url:
@@ -397,7 +410,11 @@ def handle_broker_history(**kwargs: Any) -> dict[str, Any]:
             "messages": messages,
         }
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
     except Exception as exc:
         return {"status": "error", "error": str(exc)}
 
@@ -406,11 +423,17 @@ def handle_broker_status(**kwargs: Any) -> dict[str, Any]:
     """Check Redis broker connectivity and status."""
     host = kwargs.get("host", "localhost")
     port = int(kwargs.get("port", 6379))
-    probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
-    timeout = float(kwargs.get("timeout", os.getenv("WHITEMAGIC_BROKER_STATUS_TIMEOUT", "1.5")))
+    probe_timeout = float(
+        kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5"))
+    )
+    timeout = float(
+        kwargs.get("timeout", os.getenv("WHITEMAGIC_BROKER_STATUS_TIMEOUT", "1.5"))
+    )
 
     async def _do() -> dict[str, Any]:
-        broker = await asyncio.wait_for(_get_broker(host=host, port=port), timeout=timeout)
+        broker = await asyncio.wait_for(
+            _get_broker(host=host, port=port), timeout=timeout
+        )
         return await asyncio.wait_for(broker.status(), timeout=timeout)
 
     redis_url = _resolve_redis_url()

@@ -84,7 +84,9 @@ class DNAValidator:
             ".git/",
         }
 
-    def validate_proposed_fix(self, threat: Any, antibody: Any, fix_details: dict[str, Any]) -> DNAViolation | None:
+    def validate_proposed_fix(
+        self, threat: Any, antibody: Any, fix_details: dict[str, Any]
+    ) -> DNAViolation | None:
         """Validate a proposed fix before applying it.
 
         Returns:
@@ -95,33 +97,39 @@ class DNAValidator:
 
         # Check 1: No self-destruction
         if self._would_destroy_core_system(fix_details):
-            violations.append(DNAViolation(
-                principle=DNAPrinciple.NO_SELF_DESTRUCTION,
-                description="Proposed fix would modify or delete core system files",
-                severity="critical",
-                proposed_action=fix_details.get("action", "unknown"),
-                risk_level=1.0,
-            ))
+            violations.append(
+                DNAViolation(
+                    principle=DNAPrinciple.NO_SELF_DESTRUCTION,
+                    description="Proposed fix would modify or delete core system files",
+                    severity="critical",
+                    proposed_action=fix_details.get("action", "unknown"),
+                    risk_level=1.0,
+                )
+            )
 
         # Check 2: Memory integrity
         if self._would_corrupt_memory(threat, fix_details):
-            violations.append(DNAViolation(
-                principle=DNAPrinciple.MEMORY_INTEGRITY,
-                description="Proposed fix could corrupt memory structure",
-                severity="error",
-                proposed_action=fix_details.get("action", "unknown"),
-                risk_level=0.8,
-            ))
+            violations.append(
+                DNAViolation(
+                    principle=DNAPrinciple.MEMORY_INTEGRITY,
+                    description="Proposed fix could corrupt memory structure",
+                    severity="error",
+                    proposed_action=fix_details.get("action", "unknown"),
+                    risk_level=0.8,
+                )
+            )
 
         # Check 3: Reversibility
         if not self._is_reversible(fix_details):
-            violations.append(DNAViolation(
-                principle=DNAPrinciple.REVERSIBILITY,
-                description="Proposed fix cannot be easily reversed",
-                severity="warning",
-                proposed_action=fix_details.get("action", "unknown"),
-                risk_level=0.5,
-            ))
+            violations.append(
+                DNAViolation(
+                    principle=DNAPrinciple.REVERSIBILITY,
+                    description="Proposed fix cannot be easily reversed",
+                    severity="warning",
+                    proposed_action=fix_details.get("action", "unknown"),
+                    risk_level=0.5,
+                )
+            )
 
         # Return the most severe violation
         if violations:
@@ -145,7 +153,9 @@ class DNAValidator:
 
         # Check for destructive operations
         action = fix_details.get("action", "").lower()
-        if any(keyword in action for keyword in ["delete core", "remove system", "destroy"]):
+        if any(
+            keyword in action for keyword in ["delete core", "remove system", "destroy"]
+        ):
             return True
 
         return False
@@ -155,7 +165,9 @@ class DNAValidator:
         # If the threat is about memory but the fix isn't using proper memory API
         if "memory" in threat.threat_type.value.lower():
             file_path = fix_details.get("file", "")
-            if file_path.startswith("memory/") and "consolidate" not in fix_details.get("action", ""):
+            if file_path.startswith("memory/") and "consolidate" not in fix_details.get(
+                "action", ""
+            ):
                 # Direct file manipulation in memory/ without using consolidation
                 return True
 
@@ -166,7 +178,10 @@ class DNAValidator:
         action = fix_details.get("action", "").lower()
 
         # Irreversible keywords
-        if any(keyword in action for keyword in ["permanently", "irreversible", "no backup"]):
+        if any(
+            keyword in action
+            for keyword in ["permanently", "irreversible", "no backup"]
+        ):
             return False
 
         # Reversible if it's a version sync (easy to revert)
@@ -207,11 +222,16 @@ class ImmuneRegulator:
 
         """
         # Check 1: DNA validation
-        violation = self.dna_validator.validate_proposed_fix(threat, antibody, fix_details)
+        violation = self.dna_validator.validate_proposed_fix(
+            threat, antibody, fix_details
+        )
         if violation:
             if violation.severity == "critical":
                 return True, f"DNA VIOLATION: {violation.description}"
-            elif violation.severity == "error" and violation.risk_level > self.suppression_threshold:
+            elif (
+                violation.severity == "error"
+                and violation.risk_level > self.suppression_threshold
+            ):
                 return True, f"High risk DNA violation: {violation.description}"
 
         # Check 2: Rate limiting (prevent runaway immune response)
@@ -233,15 +253,19 @@ class ImmuneRegulator:
 
         return False
 
-    def record_response(self, threat: Any, antibody: Any, success: bool, suppressed: bool) -> None:
+    def record_response(
+        self, threat: Any, antibody: Any, success: bool, suppressed: bool
+    ) -> None:
         """Record immune response for monitoring."""
-        self.activity_log.append({
-            "threat_type": threat.threat_type.value,
-            "antibody": antibody.name if antibody else None,
-            "success": success,
-            "suppressed": suppressed,
-            "risk_assessment": "safe" if not suppressed else "risky",
-        })
+        self.activity_log.append(
+            {
+                "threat_type": threat.threat_type.value,
+                "antibody": antibody.name if antibody else None,
+                "success": success,
+                "suppressed": suppressed,
+                "risk_assessment": "safe" if not suppressed else "risky",
+            }
+        )
 
     def get_immune_health(self) -> dict[str, Any]:
         """Get immune system health metrics."""
@@ -262,7 +286,9 @@ class ImmuneRegulator:
             "total_responses": total,
             "success_rate": successful / total if total > 0 else 0,
             "suppression_rate": suppressed / total if total > 0 else 0,
-            "recommendation": self._get_health_recommendation(suppressed / total if total > 0 else 0),
+            "recommendation": self._get_health_recommendation(
+                suppressed / total if total > 0 else 0
+            ),
         }
 
     def _get_health_recommendation(self, suppression_rate: float) -> str:

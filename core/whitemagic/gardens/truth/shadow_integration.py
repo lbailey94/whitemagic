@@ -22,7 +22,7 @@ class ShadowIntegrator:
             "Times I've been reactive",
             "Patterns I repeat",
             "Truths I avoid",
-            "Growth I resist"
+            "Growth I resist",
         ]
 
     def integrate(self, shadow_aspect: str) -> str:

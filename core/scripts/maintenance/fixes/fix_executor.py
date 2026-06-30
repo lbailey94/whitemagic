@@ -1,11 +1,10 @@
-
 with open("whitemagic/autonomous/executor/continuous_executor.py") as f:
     content = f.read()
 
 # Add rust imports
 content = content.replace(
     "from .objective_generator import ObjectiveGenerator",
-    "from .objective_generator import ObjectiveGenerator\n        try:\n            import whitemagic_rust as rs\n            self._rust_daemon = rs.ContinuousDaemon()\n        except ImportError:\n            self._rust_daemon = None"
+    "from .objective_generator import ObjectiveGenerator\n        try:\n            import whitemagic_rust as rs\n            self._rust_daemon = rs.ContinuousDaemon()\n        except ImportError:\n            self._rust_daemon = None",
 )
 
 # Update run_continuous to start rust daemon
@@ -18,7 +17,7 @@ content = content.replace(
         self.log("🤖 Starting autonomous execution")
         if self._rust_daemon and not self._rust_daemon.is_running():
             self.log("🚀 Starting Rust background daemon")
-            self._rust_daemon.start()"""
+            self._rust_daemon.start()""",
 )
 
 # Stop rust daemon on exit
@@ -34,7 +33,7 @@ content = content.replace(
                     self.log(f"Stopping: {reason}", "WARN")
                     if self._rust_daemon and self._rust_daemon.is_running():
                         self._rust_daemon.stop()
-                    break"""
+                    break""",
 )
 
 with open("whitemagic/autonomous/executor/continuous_executor.py", "w") as f:

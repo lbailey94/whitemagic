@@ -55,6 +55,7 @@ def _results_dir() -> Path:
 def _emit(event_type: str, data: dict) -> None:
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type, data, source="worker_daemon")
     except (ImportError, ModuleNotFoundError):
         pass
@@ -82,10 +83,6 @@ class WorkerDaemon:
         self._tasks_failed = 0
         self._started_at: str | None = None
 
-    # ------------------------------------------------------------------
-    # Main loop
-    # ------------------------------------------------------------------
-
     def run(self) -> None:
         """Main blocking worker loop."""
         self._running = True
@@ -104,8 +101,7 @@ class WorkerDaemon:
                     pending = self._get_pending_tasks()
                     if pending:
                         logger.info("Found %s pending task(s)", len(pending))
-                        for task in pending[:
-                            self.max_concurrent]:
+                        for task in pending[: self.max_concurrent]:
                             self._execute_task(task)
                     time.sleep(self.poll_interval)
 
@@ -126,10 +122,6 @@ class WorkerDaemon:
     def stop(self) -> None:
         """Signal the worker to stop."""
         self._running = False
-
-    # ------------------------------------------------------------------
-    # Task management
-    # ------------------------------------------------------------------
 
     def _get_pending_tasks(self) -> list[dict[str, Any]]:
         """Scan tasks directory for pending tasks."""
@@ -159,7 +151,10 @@ class WorkerDaemon:
         task["started_at"] = datetime.now().isoformat()
         self._save_task(task)
 
-        _emit("TASK_STARTED", {"task_id": task_id, "worker": self.worker_name, "mode": mode})
+        _emit(
+            "TASK_STARTED",
+            {"task_id": task_id, "worker": self.worker_name, "mode": mode},
+        )
 
         result: dict[str, Any]
         try:
@@ -181,22 +176,37 @@ class WorkerDaemon:
         # Save result separately
         result_path = _results_dir() / f"{task_id}.json"
         try:
-            result_path.write_text(_json_dumps({
-                "task_id": task_id,
-                "worker": self.worker_name,
-                "result": result,
-                "completed_at": task["completed_at"],
-            }, indent=2, default=str), encoding="utf-8")
+            result_path.write_text(
+                _json_dumps(
+                    {
+                        "task_id": task_id,
+                        "worker": self.worker_name,
+                        "result": result,
+                        "completed_at": task["completed_at"],
+                    },
+                    indent=2,
+                    default=str,
+                ),
+                encoding="utf-8",
+            )
         except (OSError, PermissionError) as e:
-            logger.warning("Failed to write result for %s: %s", task_id, e, exc_info=True)
+            logger.warning(
+                "Failed to write result for %s: %s", task_id, e, exc_info=True
+            )
 
         if result.get("success"):
             self._tasks_completed += 1
             _emit("TASK_COMPLETED", {"task_id": task_id, "worker": self.worker_name})
         else:
             self._tasks_failed += 1
-            _emit("TASK_FAILED", {"task_id": task_id, "worker": self.worker_name,
-                                   "error": result.get("error", "")[:200]})
+            _emit(
+                "TASK_FAILED",
+                {
+                    "task_id": task_id,
+                    "worker": self.worker_name,
+                    "error": result.get("error", "")[:200],
+                },
+            )
 
         return result
 
@@ -209,6 +219,7 @@ class WorkerDaemon:
         args = task.get("args", {})
         try:
             from whitemagic.tools.unified_api import call_tool
+
             result = call_tool(tool_name, **args)
             return {
                 "success": result.get("status") != "error",
@@ -231,7 +242,10 @@ class WorkerDaemon:
         elif isinstance(command, list) and all(isinstance(p, str) for p in command):
             command_args = command
         else:
-            return {"success": False, "error": "Command must be a string or list of strings"}
+            return {
+                "success": False,
+                "error": "Command must be a string or list of strings",
+            }
 
         if not command_args:
             return {"success": False, "error": "No command specified"}
@@ -242,7 +256,10 @@ class WorkerDaemon:
         if any(p in rendered_command for p in dangerous):
             return {"success": False, "error": "Command rejected for safety"}
         if any(t in command_args for t in {"|", "||", "&&", ";", ">", ">>", "<", "`"}):
-            return {"success": False, "error": "Command rejected: shell metacharacters are not allowed"}
+            return {
+                "success": False,
+                "error": "Command rejected: shell metacharacters are not allowed",
+            }
 
         cwd = task.get("cwd", str(WM_ROOT))
         timeout = task.get("timeout", 300)
@@ -253,7 +270,8 @@ class WorkerDaemon:
                 shell=False,
                 capture_output=True,
                 text=True,
-                cwd=cwd, timeout=timeout,
+                cwd=cwd,
+                timeout=timeout,
             )
             return {
                 "success": result.returncode == 0,
@@ -275,14 +293,11 @@ class WorkerDaemon:
         except Exception as e:
             logger.error("Failed to save task %s: %s", task_id, e, exc_info=True)
 
-    # ------------------------------------------------------------------
-    # Agent registry integration
-    # ------------------------------------------------------------------
-
     def _register(self) -> None:
         """Register this worker in the agent registry."""
         try:
             from whitemagic.tools.handlers.agent_registry import handle_agent_register
+
             handle_agent_register(
                 name=self.worker_name,
                 agent_id=self.worker_name,
@@ -296,25 +311,25 @@ class WorkerDaemon:
         """Send heartbeat to agent registry."""
         try:
             from whitemagic.tools.handlers.agent_registry import handle_agent_heartbeat
+
             handle_agent_heartbeat(
                 agent_id=self.worker_name,
                 workload=self._tasks_completed + self._tasks_failed,
                 current_task=None,
             )
         except Exception as e:
-            logger.debug("Heartbeat failed for %s: %s", self.worker_name, e, exc_info=True)
+            logger.debug(
+                "Heartbeat failed for %s: %s", self.worker_name, e, exc_info=True
+            )
 
     def _deregister(self) -> None:
         """Deregister from agent registry."""
         try:
             from whitemagic.tools.handlers.agent_registry import handle_agent_deregister
+
             handle_agent_deregister(agent_id=self.worker_name)
         except (ImportError, ModuleNotFoundError):
             pass
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -334,10 +349,6 @@ class WorkerDaemon:
         }
 
 
-# ---------------------------------------------------------------------------
-# CLI entrypoint
-# ---------------------------------------------------------------------------
-
 def main() -> None:
     """
     Perform the main operation.
@@ -346,7 +357,10 @@ def main() -> None:
         None
     """
     import argparse
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
 
     parser = argparse.ArgumentParser(description="WhiteMagic Worker Daemon")
     parser.add_argument("--poll-interval", type=float, default=5.0)

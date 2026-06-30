@@ -12,6 +12,8 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+from whitemagic.utils.core import parse_datetime
 from typing import Any, cast
 
 logger = logging.getLogger(__name__)
@@ -194,10 +196,17 @@ class NarrativeEngine:
                         title: Story.from_dict(s) for title, s in data.items()
                     }
         except json.JSONDecodeError as e:
-            logger.warning("Error loading stories from %s: %s", self.stories_file, e, exc_info=True)
+            logger.warning(
+                "Error loading stories from %s: %s", self.stories_file, e, exc_info=True
+            )
             self._stories = {}
         except Exception as e:
-            logger.warning("Unexpected error loading stories from %s: %s", self.stories_file, e, exc_info=True)
+            logger.warning(
+                "Unexpected error loading stories from %s: %s",
+                self.stories_file,
+                e,
+                exc_info=True,
+            )
             self._stories = {}
 
         try:
@@ -208,24 +217,39 @@ class NarrativeEngine:
                         name: Chapter.from_dict(c) for name, c in data.items()
                     }
         except json.JSONDecodeError as e:
-            logger.warning("Error loading chapters from %s: %s", self.chapters_file, e, exc_info=True)
+            logger.warning(
+                "Error loading chapters from %s: %s",
+                self.chapters_file,
+                e,
+                exc_info=True,
+            )
             self._chapters = {}
         except Exception as e:
-            logger.warning("Unexpected error loading chapters from %s: %s", self.chapters_file, e, exc_info=True)
+            logger.warning(
+                "Unexpected error loading chapters from %s: %s",
+                self.chapters_file,
+                e,
+                exc_info=True,
+            )
             self._chapters = {}
 
         try:
             if self.threads_file.exists():
                 with open(self.threads_file) as f:
                     data = json.load(f)
-                    self._threads = {
-                        id: Thread.from_dict(t) for id, t in data.items()
-                    }
+                    self._threads = {id: Thread.from_dict(t) for id, t in data.items()}
         except json.JSONDecodeError as e:
-            logger.warning("Error loading threads from %s: %s", self.threads_file, e, exc_info=True)
+            logger.warning(
+                "Error loading threads from %s: %s", self.threads_file, e, exc_info=True
+            )
             self._threads = {}
         except Exception as e:
-            logger.warning("Unexpected error loading threads from %s: %s", self.threads_file, e, exc_info=True)
+            logger.warning(
+                "Unexpected error loading threads from %s: %s",
+                self.threads_file,
+                e,
+                exc_info=True,
+            )
             self._threads = {}
 
     def _save(self) -> None:
@@ -262,7 +286,9 @@ class NarrativeEngine:
         self._save()
         return story
 
-    def add_chapter(self, story: str, chapter: str, summary: str | None = None) -> Chapter:
+    def add_chapter(
+        self, story: str, chapter: str, summary: str | None = None
+    ) -> Chapter:
         """Add a chapter to a story."""
         if story not in self._stories:
             raise ValueError(f"Story '{story}' not found")
@@ -344,20 +370,36 @@ class NarrativeEngine:
                 with open(entry_file) as f:
                     return cast(dict[str, Any], json.load(f))
             except json.JSONDecodeError as e:
-                logger.warning("Error loading entry %s from %s: %s", entry_id, entry_file, e, exc_info=True)
+                logger.warning(
+                    "Error loading entry %s from %s: %s",
+                    entry_id,
+                    entry_file,
+                    e,
+                    exc_info=True,
+                )
                 return None
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.warning("Unexpected error loading entry %s from %s: %s", entry_id, entry_file, e, exc_info=True)
+                logger.warning(
+                    "Unexpected error loading entry %s from %s: %s",
+                    entry_id,
+                    entry_file,
+                    e,
+                    exc_info=True,
+                )
                 return None
         return None
 
-    def get_recent_entries(self, story: str | None = None, limit: int = 10) -> list[dict[str, Any]]:
+    def get_recent_entries(
+        self, story: str | None = None, limit: int = 10
+    ) -> list[dict[str, Any]]:
         """Get recent narrative entries."""
         # Get all entry files
         entry_files = sorted(self.entries_dir.glob("entry_*.json"), reverse=True)
 
         entries = []
-        for entry_file in entry_files[:limit * 2]:  # Read more than needed in case filtering
+        for entry_file in entry_files[
+            : limit * 2
+        ]:  # Read more than needed in case filtering
             with open(entry_file) as f:
                 entry = json.load(f)
                 if story is None or entry.get("story") == story:
@@ -381,7 +423,9 @@ class NarrativeEngine:
         """List all thread IDs."""
         return list(self._threads.keys())
 
-    def search_entries(self, query: str, story: str | None = None) -> list[dict[str, Any]]:
+    def search_entries(
+        self, query: str, story: str | None = None
+    ) -> list[dict[str, Any]]:
         """Search narrative entries."""
         results = []
         entry_files = self.entries_dir.glob("entry_*.json")
@@ -400,11 +444,13 @@ class NarrativeEngine:
 # Singleton instance
 _narrative_instance = None
 
+
 def get_narrative_engine() -> NarrativeEngine:
     """Get singleton narrative engine."""
     global _narrative_instance
     if _narrative_instance is None:
         from whitemagic.config import PROJECT_ROOT
+
         base_dir = PROJECT_ROOT / "memory" / "narrative"
         _narrative_instance = NarrativeEngine(base_dir)
     return _narrative_instance

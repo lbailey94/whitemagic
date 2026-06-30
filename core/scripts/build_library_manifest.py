@@ -26,18 +26,83 @@ def _resolve_library_root() -> Path:
 
 
 LIBRARY_ROOT = _resolve_library_root()
-OUTPUT = Path("library_manifest.json")  # Copy to ~/Desktop/whitemagic-site/public/ if needed
+OUTPUT = Path(
+    "library_manifest.json"
+)  # Copy to ~/Desktop/whitemagic-site/public/ if needed
 MAX_PREVIEW = 500
 
 CATEGORIES = {
-    "AI and Intelligence": ["AI", "agent", "intelligence", "LLM", "GPT", "model", "training", "neural"],
-    "Consciousness & Philosophy": ["consciousness", "awareness", "qualia", "mind", "spirit", "self", "philosophy", "dharma", "dao"],
-    "Ecology & Systems": ["ecology", "garden", "forest", "ocean", "water", "soil", "plant", "carbon"],
-    "Economics & Governance": ["economic", "govern", "DAO", "commons", "cooperative", "tax", "law", "money"],
-    "Technology & Code": ["code", "software", "API", "protocol", "Rust", "Python", "compiler", "database"],
-    "Society & Culture": ["society", "community", "culture", "education", "art", "poetry", "music", "narrative"],
-    "History & Future": ["history", "future", "utopia", "singularity", "transhuman", "ancient"],
+    "AI and Intelligence": [
+        "AI",
+        "agent",
+        "intelligence",
+        "LLM",
+        "GPT",
+        "model",
+        "training",
+        "neural",
+    ],
+    "Consciousness & Philosophy": [
+        "consciousness",
+        "awareness",
+        "qualia",
+        "mind",
+        "spirit",
+        "self",
+        "philosophy",
+        "dharma",
+        "dao",
+    ],
+    "Ecology & Systems": [
+        "ecology",
+        "garden",
+        "forest",
+        "ocean",
+        "water",
+        "soil",
+        "plant",
+        "carbon",
+    ],
+    "Economics & Governance": [
+        "economic",
+        "govern",
+        "DAO",
+        "commons",
+        "cooperative",
+        "tax",
+        "law",
+        "money",
+    ],
+    "Technology & Code": [
+        "code",
+        "software",
+        "API",
+        "protocol",
+        "Rust",
+        "Python",
+        "compiler",
+        "database",
+    ],
+    "Society & Culture": [
+        "society",
+        "community",
+        "culture",
+        "education",
+        "art",
+        "poetry",
+        "music",
+        "narrative",
+    ],
+    "History & Future": [
+        "history",
+        "future",
+        "utopia",
+        "singularity",
+        "transhuman",
+        "ancient",
+    ],
 }
+
 
 def classify(text: str) -> str:
     lower = text.lower()
@@ -45,6 +110,7 @@ def classify(text: str) -> str:
         if any(t.lower() in lower for t in terms):
             return cat
     return "General"
+
 
 def main():
     if not LIBRARY_ROOT.exists():
@@ -69,14 +135,16 @@ def main():
             if len(title) > 100:
                 title = title[:97] + "..."
 
-            files.append({
-                "id": str(fp.relative_to(LIBRARY_ROOT)),
-                "title": title,
-                "category": classify(title + " " + preview),
-                "preview": preview,
-                "size": size,
-                "ext": fp.suffix.lstrip("."),
-            })
+            files.append(
+                {
+                    "id": str(fp.relative_to(LIBRARY_ROOT)),
+                    "title": title,
+                    "category": classify(title + " " + preview),
+                    "preview": preview,
+                    "size": size,
+                    "ext": fp.suffix.lstrip("."),
+                }
+            )
 
     files.sort(key=lambda f: (-f["size"], f["title"]))
 
@@ -89,13 +157,16 @@ def main():
     }
 
     OUTPUT.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
-    print(f"  📚 LIBRARY Manifest: {len(files)} files, {manifest['total_size']:,} bytes")
+    print(
+        f"  📚 LIBRARY Manifest: {len(files)} files, {manifest['total_size']:,} bytes"
+    )
     print(f"  Categories: {', '.join(manifest['categories'])}")
     print(f"  Written to: {OUTPUT}")
 
     # Top files by size
     for f in files[:10]:
         print(f"    [{f['category']:30s}] {f['title'][:60]} ({f['size']:,} bytes)")
+
 
 if __name__ == "__main__":
     main()

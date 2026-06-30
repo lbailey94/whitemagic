@@ -5,6 +5,7 @@ Run manually:
 
 Not collected by pytest automatically (no test_ functions at module level).
 """
+
 import sqlite3
 import sys
 
@@ -12,15 +13,19 @@ import sys
 def main() -> None:
     try:
         from whitemagic.config.paths import DB_PATH
+
         db_path = str(DB_PATH)
     except ImportError:
         import os
+
         db_path = os.path.expanduser("~/.whitemagic/memory/whitemagic.db")
 
     print(f"Connecting to: {db_path}")
     db = sqlite3.connect(db_path)
     cursor = db.cursor()
-    rows = cursor.execute("SELECT memory_id, embedding FROM memory_embeddings").fetchall()
+    rows = cursor.execute(
+        "SELECT memory_id, embedding FROM memory_embeddings"
+    ).fetchall()
     print(f"Found {len(rows)} embeddings.")
 
     sizes: dict[int, int] = {}

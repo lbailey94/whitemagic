@@ -80,7 +80,9 @@ class TestGHRRAttention(unittest.TestCase):
         # Upper triangle should be ~0
         for i in range(seq_len):
             for j in range(i + 1, seq_len):
-                self.assertLess(weights[i, j], 0.01, "Masked positions should have ~0 weight")
+                self.assertLess(
+                    weights[i, j], 0.01, "Masked positions should have ~0 weight"
+                )
 
     def test_call_alias(self) -> None:
         seq_len = 2

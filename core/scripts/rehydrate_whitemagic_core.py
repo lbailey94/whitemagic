@@ -33,6 +33,7 @@ Usage:
     python scripts/rehydrate_whitemagic_core.py --dry-run
     python scripts/rehydrate_whitemagic_core.py --source /path/to/Whitemagic-Core
 """
+
 from __future__ import annotations
 
 import argparse
@@ -116,9 +117,7 @@ def migrate_dharma_audit(
     return inserted
 
 
-def migrate_audit_cli_logs(
-    target: sqlite3.Connection, audit_dir: Path
-) -> int:
+def migrate_audit_cli_logs(target: sqlite3.Connection, audit_dir: Path) -> int:
     """Migrate daily audit logs (Nov-Dec 2025) into dharma_audit."""
     if not audit_dir.exists():
         return 0
@@ -257,7 +256,11 @@ def main() -> int:
                 print(f"  {p}: {n} entries")
         audit_dir = args.source / "audit"
         if audit_dir.exists():
-            n = sum(sum(1 for _ in open(f)) for f in audit_dir.glob("*.jsonl") if not f.name.endswith(".lock"))
+            n = sum(
+                sum(1 for _ in open(f))
+                for f in audit_dir.glob("*.jsonl")
+                if not f.name.endswith(".lock")
+            )
             print(f"  audit/: {n} CLI commands")
         return 0
 
@@ -279,9 +282,7 @@ def main() -> int:
     grand_total += n
 
     # Migrate depth gauge (dream layer).
-    n = migrate_dharma_audit(
-        target, args.source / "depth_gauge.jsonl", "dream"
-    )
+    n = migrate_dharma_audit(target, args.source / "depth_gauge.jsonl", "dream")
     print(f"  depth_gauge.jsonl -> dharma_audit: {n} rows")
     grand_total += n
 

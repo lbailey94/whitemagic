@@ -13,6 +13,7 @@ Each lieutenant has:
 3. Reporting chain (to central command)
 4. Resource allocation (clone budget management)
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,11 +26,12 @@ logger = logging.getLogger(__name__)
 
 class LieutenantDomain(Enum):
     """Specialized domains for lieutenant sub-agents."""
-    SECURITY = "security"           # SQL injection, vulnerabilities, red team
-    PERFORMANCE = "performance"     # Rust acceleration, SIMD, hot paths
-    INTELLIGENCE = "intelligence"   # Association typing, graph, patterns
-    SYNTHESIS = "synthesis"         # Code merging, redundancy, refactoring
-    DISCOVERY = "discovery"         # Archaeological, feature discovery, analysis
+
+    SECURITY = "security"  # SQL injection, vulnerabilities, red team
+    PERFORMANCE = "performance"  # Rust acceleration, SIMD, hot paths
+    INTELLIGENCE = "intelligence"  # Association typing, graph, patterns
+    SYNTHESIS = "synthesis"  # Code merging, redundancy, refactoring
+    DISCOVERY = "discovery"  # Archaeological, feature discovery, analysis
     INFRASTRUCTURE = "infrastructure"  # System health, monitoring, deployment
 
 
@@ -50,9 +52,16 @@ class Lieutenant:
         """Assign a campaign to this lieutenant."""
         self.campaigns_assigned.append(campaign_code)
         self.clone_budget += clone_count
-        logger.info("Lieutenant %s assigned %s (%s clones)", self.name, campaign_code, clone_count)
+        logger.info(
+            "Lieutenant %s assigned %s (%s clones)",
+            self.name,
+            campaign_code,
+            clone_count,
+        )
 
-    def record_deployment(self, clones: int, findings: int = 0, victory: bool = False) -> None:
+    def record_deployment(
+        self, clones: int, findings: int = 0, victory: bool = False
+    ) -> None:
         """Record deployment results."""
         self.clones_deployed += clones
         self.findings_generated += findings
@@ -67,7 +76,9 @@ class Lieutenant:
             "campaigns": len(self.campaigns_assigned),
             "clone_budget": self.clone_budget,
             "clones_deployed": self.clones_deployed,
-            "efficiency": f"{(self.clones_deployed / self.clone_budget * 100):.1f}%" if self.clone_budget > 0 else "0%",
+            "efficiency": f"{(self.clones_deployed / self.clone_budget * 100):.1f}%"
+            if self.clone_budget > 0
+            else "0%",
             "victories": self.victories_achieved,
             "findings": self.findings_generated,
             "expertise": self.expertise,
@@ -94,7 +105,7 @@ class LieutenantCorps:
                 "Red team penetration testing",
                 "Security audit and compliance",
                 "Threat modeling and risk assessment",
-            ]
+            ],
         )
 
         # Performance Lieutenant — Acceleration & Optimization
@@ -107,7 +118,7 @@ class LieutenantCorps:
                 "Parallel processing and concurrency",
                 "Memory optimization and profiling",
                 "Benchmark design and execution",
-            ]
+            ],
         )
 
         # Intelligence Lieutenant — Graph & Patterns
@@ -120,7 +131,7 @@ class LieutenantCorps:
                 "Pattern mining and emergence detection",
                 "Semantic analysis and entity extraction",
                 "Knowledge graph construction",
-            ]
+            ],
         )
 
         # Synthesis Lieutenant — Code Merging & Refactoring
@@ -133,7 +144,7 @@ class LieutenantCorps:
                 "API unification and consolidation",
                 "Dead code detection and archival",
                 "Import chain analysis and optimization",
-            ]
+            ],
         )
 
         # Discovery Lieutenant — Archaeological & Analysis
@@ -146,7 +157,7 @@ class LieutenantCorps:
                 "Codebase census and mapping",
                 "Historical analysis and timeline reconstruction",
                 "Lost functionality recovery",
-            ]
+            ],
         )
 
         # Infrastructure Lieutenant — System Health & Deployment
@@ -159,12 +170,16 @@ class LieutenantCorps:
                 "Database optimization and maintenance",
                 "Test suite management and coverage",
                 "Build system optimization",
-            ]
+            ],
         )
 
-        logger.info("Lieutenant Corps initialized: %s lieutenants", len(self.lieutenants))
+        logger.info(
+            "Lieutenant Corps initialized: %s lieutenants", len(self.lieutenants)
+        )
 
-    def assign_campaign(self, campaign_code: str, campaign_type: str, clone_count: int) -> Lieutenant | None:
+    def assign_campaign(
+        self, campaign_code: str, campaign_type: str, clone_count: int
+    ) -> Lieutenant | None:
         """Assign a campaign to the appropriate lieutenant based on type."""
 
         # Campaign type to domain mapping
@@ -180,23 +195,29 @@ class LieutenantCorps:
 
         # Campaign code prefix to domain mapping
         prefix_map = {
-            "IL": LieutenantDomain.SECURITY,      # Iron Lotus (security)
-            "S": LieutenantDomain.SYNTHESIS,      # Synthesis
-            "F": LieutenantDomain.PERFORMANCE,    # Foundation (performance)
-            "I": LieutenantDomain.INFRASTRUCTURE, # Infrastructure
-            "V": LieutenantDomain.DISCOVERY,      # Victory (discovery/census)
-            "G": LieutenantDomain.INTELLIGENCE,   # Gemini (intelligence)
-            "C": LieutenantDomain.SYNTHESIS,      # Cleanup (synthesis)
+            "IL": LieutenantDomain.SECURITY,  # Iron Lotus (security)
+            "S": LieutenantDomain.SYNTHESIS,  # Synthesis
+            "F": LieutenantDomain.PERFORMANCE,  # Foundation (performance)
+            "I": LieutenantDomain.INFRASTRUCTURE,  # Infrastructure
+            "V": LieutenantDomain.DISCOVERY,  # Victory (discovery/census)
+            "G": LieutenantDomain.INTELLIGENCE,  # Gemini (intelligence)
+            "C": LieutenantDomain.SYNTHESIS,  # Cleanup (synthesis)
         }
 
         # Determine domain from campaign type or code prefix
         domain = domain_map.get(campaign_type)
         if not domain and campaign_code:
-            prefix = campaign_code.split("0")[0]  # Extract prefix (e.g., "IL" from "IL001")
+            prefix = campaign_code.split("0")[
+                0
+            ]  # Extract prefix (e.g., "IL" from "IL001")
             domain = prefix_map.get(prefix)
 
         if not domain:
-            logger.warning("No lieutenant found for campaign %s (type: %s)", campaign_code, campaign_type)
+            logger.warning(
+                "No lieutenant found for campaign %s (type: %s)",
+                campaign_code,
+                campaign_type,
+            )
             return None
 
         lieutenant = self.lieutenants.get(domain)
@@ -213,15 +234,25 @@ class LieutenantCorps:
         """Get status of entire lieutenant corps."""
         return {
             "total_lieutenants": len(self.lieutenants),
-            "total_campaigns": sum(len(lt.campaigns_assigned) for lt in self.lieutenants.values()),
-            "total_clone_budget": sum(lt.clone_budget for lt in self.lieutenants.values()),
-            "total_clones_deployed": sum(lt.clones_deployed for lt in self.lieutenants.values()),
-            "total_victories": sum(lt.victories_achieved for lt in self.lieutenants.values()),
-            "total_findings": sum(lt.findings_generated for lt in self.lieutenants.values()),
+            "total_campaigns": sum(
+                len(lt.campaigns_assigned) for lt in self.lieutenants.values()
+            ),
+            "total_clone_budget": sum(
+                lt.clone_budget for lt in self.lieutenants.values()
+            ),
+            "total_clones_deployed": sum(
+                lt.clones_deployed for lt in self.lieutenants.values()
+            ),
+            "total_victories": sum(
+                lt.victories_achieved for lt in self.lieutenants.values()
+            ),
+            "total_findings": sum(
+                lt.findings_generated for lt in self.lieutenants.values()
+            ),
             "lieutenants": {
                 domain.value: lt.status_report()
                 for domain, lt in self.lieutenants.items()
-            }
+            },
         }
 
     def generate_report(self) -> str:
@@ -237,7 +268,7 @@ class LieutenantCorps:
         report.append(f"**Findings**: {status['total_findings']}\n")
 
         report.append("## Lieutenant Details\n")
-        for domain_name, lt_status in status['lieutenants'].items():
+        for domain_name, lt_status in status["lieutenants"].items():
             report.append(f"### {lt_status['name']}")
             report.append(f"- **Domain**: {domain_name}")
             report.append(f"- **Campaigns**: {lt_status['campaigns']}")
@@ -245,7 +276,7 @@ class LieutenantCorps:
             report.append(f"- **Victories**: {lt_status['victories']}")
             report.append(f"- **Findings**: {lt_status['findings']}")
             report.append("- **Expertise**:")
-            for expertise in lt_status['expertise']:
+            for expertise in lt_status["expertise"]:
                 report.append(f"  - {expertise}")
             report.append("")
 
@@ -254,6 +285,7 @@ class LieutenantCorps:
 
 # Singleton instance
 _corps: LieutenantCorps | None = None
+
 
 def get_lieutenant_corps() -> LieutenantCorps:
     """Get the singleton lieutenant corps instance."""

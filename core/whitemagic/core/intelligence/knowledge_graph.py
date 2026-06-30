@@ -28,31 +28,32 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- TYPES ---
 
 @dataclass
 class ExtractedEntity:
     """ExtractedEntity: extracted entity.
 
     Value object: equality and repr are field-based."""
+
     name: str
     entity_type: str
     normalized_name: str
     confidence: float
     source_id: str
 
+
 @dataclass
 class ExtractedRelation:
     """ExtractedRelation: extracted relation.
 
     Value object: equality and repr are field-based."""
+
     subject: str
     predicate: str
     obj: str
     confidence: float
     source_id: str
 
-# --- KNOWLEDGE GRAPH ENGINE ---
 
 class KnowledgeGraph:
     """Unified Knowledge Graph with batch extraction and typed edge storage."""
@@ -67,7 +68,7 @@ class KnowledgeGraph:
             return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, '_initialized'):
+        if hasattr(self, "_initialized"):
             return
         self._initialized = True
         self._stats = {"total_processed": 0, "total_entities": 0}
@@ -75,6 +76,7 @@ class KnowledgeGraph:
     def _get_db(self) -> sqlite3.Connection | None:
         try:
             from whitemagic.config.paths import DB_PATH
+
             if not DB_PATH.exists():
                 return None
             conn = sqlite3.connect(str(DB_PATH))
@@ -83,7 +85,9 @@ class KnowledgeGraph:
         except (ImportError, ModuleNotFoundError):
             return None
 
-    def extract_from_text(self, text: str, source_id: str) -> tuple[list[ExtractedEntity], list[ExtractedRelation]]:
+    def extract_from_text(
+        self, text: str, source_id: str
+    ) -> tuple[list[ExtractedEntity], list[ExtractedRelation]]:
         # Simplified extraction logic for consolidation phase
         """
         Mine or extract from text.
@@ -109,7 +113,11 @@ class KnowledgeGraph:
             dict[str, Any]
         """
         entities, relations = self.extract_from_text(text, memory_id)
-        return {"memory_id": memory_id, "entities_extracted": len(entities), "edges_stored": 0}
+        return {
+            "memory_id": memory_id,
+            "entities_extracted": len(entities),
+            "edges_stored": 0,
+        }
 
     def query_entity(self, name: str) -> dict[str, Any]:
         """
@@ -136,15 +144,16 @@ class KnowledgeGraph:
             "version": "1.0",
         }
 
-# --- SINGLETONS & COMPATIBILITY ---
 
 def get_knowledge_graph() -> KnowledgeGraph:
     """Canonical singleton getter."""
     return KnowledgeGraph()
 
+
 def get_kg_v2() -> KnowledgeGraph:
     """V2 compatibility getter."""
     return KnowledgeGraph()
+
 
 def extract_on_store(memory_id: str, text: str) -> dict[str, Any]:
     """Hook for automatic extraction."""

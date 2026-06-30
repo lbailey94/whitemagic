@@ -10,6 +10,7 @@ Replaces 6 separate SIMD modules with one unified bridge:
 
 All operations route through Rust accelerators with Python fallback.
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 _rust_available = False
 _rust_module = None
 
+
 def _init_rust() -> Any:
     """Lazy initialization of Rust SIMD accelerators."""
     global _rust_available, _rust_module
@@ -29,6 +31,7 @@ def _init_rust() -> Any:
 
     try:
         from whitemagic.optimization import rust_accelerators
+
         _rust_module = rust_accelerators
         _rust_available = True
         logger.debug("Rust SIMD accelerators loaded")
@@ -39,10 +42,6 @@ def _init_rust() -> Any:
         return None
 
 
-# ============================================================================
-# COSINE SIMILARITY OPERATIONS
-# ============================================================================
-
 def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     """Compute cosine similarity between two vectors.
 
@@ -50,11 +49,12 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     Python fallback: O(n) standard implementation
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'cosine_similarity'):
+    if rust and hasattr(rust, "cosine_similarity"):
         return float(rust.cosine_similarity(vec_a, vec_b))
 
     # Python fallback
     import math
+
     dot = sum(a * b for a, b in zip(vec_a, vec_b))
     mag_a = math.sqrt(sum(a * a for a in vec_a))
     mag_b = math.sqrt(sum(b * b for b in vec_b))
@@ -68,15 +68,11 @@ def batch_cosine(query: list[float], vectors: list[list[float]]) -> list[float]:
     Python fallback: Sequential computation
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'batch_cosine'):
+    if rust and hasattr(rust, "batch_cosine"):
         return cast(list[float], rust.batch_cosine(query, vectors))
 
     return [cosine_similarity(query, vec) for vec in vectors]
 
-
-# ============================================================================
-# DISTANCE OPERATIONS
-# ============================================================================
 
 def pairwise_distance_matrix(vectors: list[list[float]]) -> list[list[float]]:
     """Compute pairwise distance matrix for all vectors.
@@ -85,7 +81,7 @@ def pairwise_distance_matrix(vectors: list[list[float]]) -> list[list[float]]:
     Python fallback: O(n²) standard implementation
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'pairwise_distance_matrix'):
+    if rust and hasattr(rust, "pairwise_distance_matrix"):
         return cast(list[list[float]], rust.pairwise_distance_matrix(vectors))
 
     # Python fallback
@@ -98,14 +94,16 @@ def pairwise_distance_matrix(vectors: list[list[float]]) -> list[list[float]]:
     return matrix
 
 
-def top_k_nearest(query: list[float], vectors: list[list[float]], k: int = 10) -> list[tuple[int, float]]:
+def top_k_nearest(
+    query: list[float], vectors: list[list[float]], k: int = 10
+) -> list[tuple[int, float]]:
     """Find k nearest vectors to query by cosine similarity.
 
     Rust: Heap-based top-k with SIMD
     Python fallback: Sort-based approach
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'top_k_nearest'):
+    if rust and hasattr(rust, "top_k_nearest"):
         return cast(list[tuple[int, float]], rust.top_k_nearest(query, vectors, k))
 
     # Python fallback
@@ -122,8 +120,9 @@ def cosine_similarity_zig(vec_a: list[float], vec_b: list[float]) -> float:
     # Try Zig first, then Rust, then Python
     try:
         from whitemagic.optimization import rust_accelerators
+
         zig_acc = getattr(rust_accelerators, "zig_accelerators", None)
-        if zig_acc and hasattr(zig_acc, 'cosine_similarity'):
+        if zig_acc and hasattr(zig_acc, "cosine_similarity"):
             return float(zig_acc.cosine_similarity(vec_a, vec_b))
     except (ImportError, AttributeError):
         pass
@@ -131,37 +130,43 @@ def cosine_similarity_zig(vec_a: list[float], vec_b: list[float]) -> float:
     return cosine_similarity(vec_a, vec_b)
 
 
-# ============================================================================
-# HOLOGRAPHIC 5D OPERATIONS
-# ============================================================================
-
-def holographic_5d_distance(coord_a: tuple[float, ...], coord_b: tuple[float, ...]) -> float:
+def holographic_5d_distance(
+    coord_a: tuple[float, ...], coord_b: tuple[float, ...]
+) -> float:
     """Compute 5D holographic distance between coordinates.
 
     Rust: SIMD 5D Euclidean distance
     Python fallback: Standard computation
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'holographic_5d_distance'):
+    if rust and hasattr(rust, "holographic_5d_distance"):
         return float(rust.holographic_5d_distance(list(coord_a), list(coord_b)))
 
     # Python fallback
     import math
+
     return math.sqrt(sum((a - b) ** 2 for a, b in zip(coord_a, coord_b)))
 
 
-def holographic_5d_knn(query: tuple[float, ...], coords: list[tuple[float, ...]], k: int = 10) -> list[int]:
+def holographic_5d_knn(
+    query: tuple[float, ...], coords: list[tuple[float, ...]], k: int = 10
+) -> list[int]:
     """Find k nearest neighbors in 5D holographic space.
 
     Rust: Optimized k-NN with SIMD distance
     Python fallback: Brute force search
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'holographic_5d_knn'):
-        return cast(list[int], rust.holographic_5d_knn(list(query), [list(c) for c in coords], k))
+    if rust and hasattr(rust, "holographic_5d_knn"):
+        return cast(
+            list[int],
+            rust.holographic_5d_knn(list(query), [list(c) for c in coords], k),
+        )
 
     # Python fallback
-    distances = [(i, holographic_5d_distance(query, coord)) for i, coord in enumerate(coords)]
+    distances = [
+        (i, holographic_5d_distance(query, coord)) for i, coord in enumerate(coords)
+    ]
     distances.sort(key=lambda x: x[1])
     return [idx for idx, _ in distances[:k]]
 
@@ -173,7 +178,7 @@ def holographic_5d_centroid(coords: list[tuple[float, ...]]) -> tuple[float, ...
     Python fallback: Standard mean computation
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'holographic_5d_centroid'):
+    if rust and hasattr(rust, "holographic_5d_centroid"):
         result = rust.holographic_5d_centroid([list(c) for c in coords])
         return tuple(result)
 
@@ -189,18 +194,16 @@ def holographic_5d_centroid(coords: list[tuple[float, ...]]) -> tuple[float, ...
     return tuple(s / n for s in sums)
 
 
-# ============================================================================
-# CONSTELLATION GRID OPERATIONS
-# ============================================================================
-
-def grid_density_scan(points: list[tuple[float, float]], grid_size: int = 50) -> list[list[int]]:
+def grid_density_scan(
+    points: list[tuple[float, float]], grid_size: int = 50
+) -> list[list[int]]:
     """Scan 2D point cloud for density grid.
 
     Rust: Parallel grid binning with SIMD
     Python fallback: Standard grid counting
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'grid_density_scan'):
+    if rust and hasattr(rust, "grid_density_scan"):
         return cast(list[list[int]], rust.grid_density_scan(points, grid_size))
 
     # Python fallback
@@ -224,10 +227,6 @@ def grid_density_scan(points: list[tuple[float, float]], grid_size: int = 50) ->
     return grid
 
 
-# ============================================================================
-# KEYWORD EXTRACTION
-# ============================================================================
-
 def extract_keywords(text: str, top_k: int = 10) -> list[tuple[str, float]]:
     """Extract top-k keywords from text using TF-IDF.
 
@@ -235,25 +234,36 @@ def extract_keywords(text: str, top_k: int = 10) -> list[tuple[str, float]]:
     Python fallback: Basic frequency counting
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'extract_keywords'):
+    if rust and hasattr(rust, "extract_keywords"):
         return cast(list[tuple[str, float]], rust.extract_keywords(text, top_k))
 
     # Python fallback - simple word frequency
     import re
     from collections import Counter
 
-    words = re.findall(r'\b\w+\b', text.lower())
+    words = re.findall(r"\b\w+\b", text.lower())
     # Filter stopwords
-    stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
+    stopwords = {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+    }
     words = [w for w in words if w not in stopwords and len(w) > 2]
 
     counter = Counter(words)
     return [(str(word), float(count)) for word, count in counter.most_common(top_k)]
 
-
-# ============================================================================
-# VECTOR BATCH OPERATIONS
-# ============================================================================
 
 def batch_normalize(vectors: list[list[float]]) -> list[list[float]]:
     """Normalize vectors to unit length.
@@ -262,11 +272,12 @@ def batch_normalize(vectors: list[list[float]]) -> list[list[float]]:
     Python fallback: Sequential normalization
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'batch_normalize'):
+    if rust and hasattr(rust, "batch_normalize"):
         return cast(list[list[float]], rust.batch_normalize(vectors))
 
     # Python fallback
     import math
+
     normalized = []
     for vec in vectors:
         mag = math.sqrt(sum(x * x for x in vec))
@@ -284,7 +295,7 @@ def batch_centroid(vectors: list[list[float]]) -> list[float]:
     Python fallback: Standard mean
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'batch_centroid'):
+    if rust and hasattr(rust, "batch_centroid"):
         return cast(list[float], rust.batch_centroid(vectors))
 
     # Python fallback
@@ -299,20 +310,24 @@ def batch_centroid(vectors: list[list[float]]) -> list[float]:
     return [c / len(vectors) for c in centroid]
 
 
-def batch_topk_cosine(query: list[float], vectors: list[list[float]], k: int = 10) -> list[tuple[int, float]]:
+def batch_topk_cosine(
+    query: list[float], vectors: list[list[float]], k: int = 10
+) -> list[tuple[int, float]]:
     """Find top-k most similar vectors by cosine similarity.
 
     Rust: Heap-based top-k with parallel SIMD
     Python fallback: Sort-based approach
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'batch_topk_cosine'):
+    if rust and hasattr(rust, "batch_topk_cosine"):
         return cast(list[tuple[int, float]], rust.batch_topk_cosine(query, vectors, k))
 
     return top_k_nearest(query, vectors, k)
 
 
-def batch_euclidean_distance(query: list[float], vectors: list[list[float]]) -> list[float]:
+def batch_euclidean_distance(
+    query: list[float], vectors: list[list[float]]
+) -> list[float]:
     """Compute Euclidean distance between query and multiple vectors.
 
     Rust: SIMD-accelerated batch Euclidean distance
@@ -321,13 +336,10 @@ def batch_euclidean_distance(query: list[float], vectors: list[list[float]]) -> 
     import math
 
     rust = _init_rust()
-    if rust and hasattr(rust, 'batch_euclidean_distance'):
+    if rust and hasattr(rust, "batch_euclidean_distance"):
         return cast(list[float], rust.batch_euclidean_distance(query, vectors))
 
-    return [
-        math.sqrt(sum((a - b) ** 2 for a, b in zip(query, vec)))
-        for vec in vectors
-    ]
+    return [math.sqrt(sum((a - b) ** 2 for a, b in zip(query, vec))) for vec in vectors]
 
 
 def batch_dot_product(query: list[float], vectors: list[list[float]]) -> list[float]:
@@ -337,18 +349,11 @@ def batch_dot_product(query: list[float], vectors: list[list[float]]) -> list[fl
     Python fallback: Sequential computation
     """
     rust = _init_rust()
-    if rust and hasattr(rust, 'batch_dot_product'):
+    if rust and hasattr(rust, "batch_dot_product"):
         return cast(list[float], rust.batch_dot_product(query, vectors))
 
-    return [
-        sum(a * b for a, b in zip(query, vec))
-        for vec in vectors
-    ]
+    return [sum(a * b for a, b in zip(query, vec)) for vec in vectors]
 
-
-# ============================================================================
-# STATUS FUNCTIONS
-# ============================================================================
 
 def simd_status() -> dict[str, Any]:
     """Get unified SIMD status."""
@@ -356,15 +361,23 @@ def simd_status() -> dict[str, Any]:
     return {
         "rust_available": _rust_available,
         "operations": [
-            "cosine_similarity", "batch_cosine",
-            "pairwise_distance_matrix", "top_k_nearest",
-            "holographic_5d_distance", "holographic_5d_knn", "holographic_5d_centroid",
-            "grid_density_scan", "extract_keywords",
-            "batch_normalize", "batch_centroid", "batch_topk_cosine",
-            "batch_euclidean_distance", "batch_dot_product"
+            "cosine_similarity",
+            "batch_cosine",
+            "pairwise_distance_matrix",
+            "top_k_nearest",
+            "holographic_5d_distance",
+            "holographic_5d_knn",
+            "holographic_5d_centroid",
+            "grid_density_scan",
+            "extract_keywords",
+            "batch_normalize",
+            "batch_centroid",
+            "batch_topk_cosine",
+            "batch_euclidean_distance",
+            "batch_dot_product",
         ],
         "modules_unified": 6,
-        "loc_saved": "~800 LOC"
+        "loc_saved": "~800 LOC",
     }
 
 
@@ -378,6 +391,7 @@ def simd_cosine_status() -> dict[str, Any]:
     """
     return {"module": "cosine", **simd_status()}
 
+
 def simd_distance_status() -> dict[str, Any]:
     """
     Perform the simd distance status operation.
@@ -386,6 +400,7 @@ def simd_distance_status() -> dict[str, Any]:
         dict[str, Any]
     """
     return {"module": "distance", **simd_status()}
+
 
 def simd_holographic_status() -> dict[str, Any]:
     """
@@ -396,6 +411,7 @@ def simd_holographic_status() -> dict[str, Any]:
     """
     return {"module": "holographic", **simd_status()}
 
+
 def simd_constellation_status() -> dict[str, Any]:
     """
     Perform the simd constellation status operation.
@@ -405,6 +421,7 @@ def simd_constellation_status() -> dict[str, Any]:
     """
     return {"module": "constellation", **simd_status()}
 
+
 def simd_keywords_status() -> dict[str, Any]:
     """
     Perform the simd keywords status operation.
@@ -413,6 +430,7 @@ def simd_keywords_status() -> dict[str, Any]:
         dict[str, Any]
     """
     return {"module": "keywords", **simd_status()}
+
 
 def simd_vector_batch_status() -> dict[str, Any]:
     """
@@ -426,20 +444,32 @@ def simd_vector_batch_status() -> dict[str, Any]:
 
 __all__ = [
     # Cosine operations
-    "cosine_similarity", "batch_cosine",
+    "cosine_similarity",
+    "batch_cosine",
     # Distance operations
-    "pairwise_distance_matrix", "top_k_nearest", "cosine_similarity_zig",
+    "pairwise_distance_matrix",
+    "top_k_nearest",
+    "cosine_similarity_zig",
     # Holographic 5D operations
-    "holographic_5d_distance", "holographic_5d_knn", "holographic_5d_centroid",
+    "holographic_5d_distance",
+    "holographic_5d_knn",
+    "holographic_5d_centroid",
     # Constellation operations
     "grid_density_scan",
     # Keyword extraction
     "extract_keywords",
     # Vector batch operations
-    "batch_normalize", "batch_centroid", "batch_topk_cosine",
-    "batch_euclidean_distance", "batch_dot_product",
+    "batch_normalize",
+    "batch_centroid",
+    "batch_topk_cosine",
+    "batch_euclidean_distance",
+    "batch_dot_product",
     # Status functions
     "simd_status",
-    "simd_cosine_status", "simd_distance_status", "simd_holographic_status",
-    "simd_constellation_status", "simd_keywords_status", "simd_vector_batch_status",
+    "simd_cosine_status",
+    "simd_distance_status",
+    "simd_holographic_status",
+    "simd_constellation_status",
+    "simd_keywords_status",
+    "simd_vector_batch_status",
 ]

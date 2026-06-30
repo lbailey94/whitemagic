@@ -44,9 +44,6 @@ class CodexPipeline:
     def __init__(self, config: CodexConfig) -> None:
         self.config = config
 
-    # ------------------------------------------------------------------
-    # Stage 1: extract
-    # ------------------------------------------------------------------
     def extract(self, source_dir: Path | None = None) -> list[dict[str, Any]]:
         """Parse raw source files into normalized documents.
 
@@ -70,9 +67,6 @@ class CodexPipeline:
                 )
         return docs
 
-    # ------------------------------------------------------------------
-    # Stage 2: chunk
-    # ------------------------------------------------------------------
     def chunk(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Split documents into hierarchical chunks.
 
@@ -93,9 +87,6 @@ class CodexPipeline:
                 )
         return chunks
 
-    # ------------------------------------------------------------------
-    # Stage 3: embed
-    # ------------------------------------------------------------------
     def embed(self, chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Generate vector embeddings for each chunk.
 
@@ -106,9 +97,6 @@ class CodexPipeline:
             "Planned: Q3 2026. See docs/architecture/codex/CODEX_SPEC.md."
         )
 
-    # ------------------------------------------------------------------
-    # Stage 4: index
-    # ------------------------------------------------------------------
     def index(self, embedded_chunks: list[dict[str, Any]]) -> dict[str, Any]:
         """Build graph, run Louvain clustering, detect communities.
 
@@ -119,9 +107,6 @@ class CodexPipeline:
             "Planned: Q3 2026. See docs/architecture/codex/CODEX_SPEC.md."
         )
 
-    # ------------------------------------------------------------------
-    # Stage 5: export
-    # ------------------------------------------------------------------
     def export(self, graph_data: dict[str, Any]) -> Path:
         """Produce sphere-nodes.json, Vaya Vida manifest, search indexes.
 
@@ -132,9 +117,6 @@ class CodexPipeline:
             "Planned: Q3 2026. See docs/architecture/codex/CODEX_SPEC.md."
         )
 
-    # ------------------------------------------------------------------
-    # Convenience runner
-    # ------------------------------------------------------------------
     def run_all(self) -> dict[str, Any]:
         """Run the full pipeline end-to-end.
 

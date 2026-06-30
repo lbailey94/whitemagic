@@ -72,12 +72,9 @@ class HealingGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.3, y=0.0, z=0.5, w=0.3)
 
-    # ------------------------------------------------------------------
-    # Galactic sweep — serving galactic_sweep tool
-    # ------------------------------------------------------------------
-
-    def record_sweep(self, zone_counts: dict[str, int],
-                     promoted: int = 0, demoted: int = 0) -> dict[str, Any]:
+    def record_sweep(
+        self, zone_counts: dict[str, int], promoted: int = 0, demoted: int = 0
+    ) -> dict[str, Any]:
         """Record results of a galactic sweep."""
         entry = {
             "zones": zone_counts,
@@ -106,12 +103,12 @@ class HealingGarden(BaseGarden, GanYingMixin):
             "latest_demoted": latest.get("demoted", 0),
         }
 
-    # ------------------------------------------------------------------
-    # Consolidation — serving consolidate_memories, prune_memories tools
-    # ------------------------------------------------------------------
-
-    def record_consolidation(self, count: int, method: str = "standard",
-                              details: dict[str, Any] | None = None) -> dict[str, Any]:
+    def record_consolidation(
+        self,
+        count: int,
+        method: str = "standard",
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Record a memory consolidation run."""
         entry = {
             "count": count,
@@ -123,15 +120,14 @@ class HealingGarden(BaseGarden, GanYingMixin):
             self.consolidation_log.append(entry)
             self._total_consolidated += count
         self.healing_level = min(1.0, self.healing_level + 0.02)
-        self.emit(EventType.HEALING_INITIATED, {"action": "consolidation", "count": count})
+        self.emit(
+            EventType.HEALING_INITIATED, {"action": "consolidation", "count": count}
+        )
         return entry
 
-    # ------------------------------------------------------------------
-    # Cold storage — serving archive_to_cold, cold_storage_query tools
-    # ------------------------------------------------------------------
-
-    def record_archive(self, count: int, criteria: str = "",
-                       size_mb: float = 0) -> dict[str, Any]:
+    def record_archive(
+        self, count: int, criteria: str = "", size_mb: float = 0
+    ) -> dict[str, Any]:
         """Record an archival to cold storage."""
         entry = {
             "count": count,
@@ -145,12 +141,13 @@ class HealingGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.GARDEN_ACTIVITY, {"action": "archive", "count": count})  # type: ignore[attr-defined]
         return entry
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def initiate_healing(self, what: str, approach: str = "gentle") -> dict[str, Any]:
-        process = {"what": what, "approach": approach, "started": datetime.now().isoformat(), "progress": 0.0}
+        process = {
+            "what": what,
+            "approach": approach,
+            "started": datetime.now().isoformat(),
+            "progress": 0.0,
+        }
         self.emit(EventType.HEALING_INITIATED, process)
         return process
 
@@ -159,26 +156,26 @@ class HealingGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.WHOLENESS_RESTORED, restoration)
         return restoration
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "total_swept": self._total_swept,
-            "total_consolidated": self._total_consolidated,
-            "total_archived": self._total_archived,
-            "healing_level": round(self.healing_level, 3),
-            "sweep_summary": self.get_sweep_summary(),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "total_swept": self._total_swept,
+                "total_consolidated": self._total_consolidated,
+                "total_archived": self._total_archived,
+                "healing_level": round(self.healing_level, 3),
+                "sweep_summary": self.get_sweep_summary(),
+            }
+        )
         return base
 
     @listen_for(EventType.GRIEF_FELT)
     def on_grief(self, event: Any) -> None:
-        self.emit(EventType.HEALING_INITIATED, {"source": "grief", "what": "emotional wound"})
+        self.emit(
+            EventType.HEALING_INITIATED, {"source": "grief", "what": "emotional wound"}
+        )
 
     @listen_for(EventType.LOVE_ACTIVATED)
     def on_love(self, event: Any) -> None:
@@ -186,6 +183,8 @@ class HealingGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_healing_garden() -> HealingGarden:
     global _instance
     if _instance is None:

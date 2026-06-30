@@ -4,12 +4,12 @@ The pattern in many handler files:
     import logging
     logger = logging.getLogger(__name__)
     from typing import Any       <-- ruff E402
-    from typing import cast
 
 The fix: move all `from ... import ...` statements to the top of
 the import block, alongside the bare `import ...` statements, before
 any code statement (logger = ..., def ..., class ..., etc.).
 """
+
 import ast
 from pathlib import Path
 
@@ -68,6 +68,7 @@ def fix_file(path: Path) -> bool:
     last_stmt = body[first_code_idx - 1]
     start_line = first_stmt.lineno - 1  # 0-indexed
     end_line = last_stmt.end_lineno  # 1-indexed, exclusive
+
     # Get the original source for each statement
     def stmt_source(stmt):
         if hasattr(stmt, "col_offset") and hasattr(stmt, "end_col_offset"):
@@ -75,6 +76,7 @@ def fix_file(path: Path) -> bool:
             e = stmt.end_lineno
             return "".join(lines[s:e])
         return ""
+
     new_block = ""
     for s in reordered:
         new_block += stmt_source(s)

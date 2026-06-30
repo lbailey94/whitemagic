@@ -30,13 +30,10 @@ logger = logging.getLogger(__name__)
 OMS_VERSION = "1.0"
 
 
-# ---------------------------------------------------------------------------
-# Data types
-# ---------------------------------------------------------------------------
-
 @dataclass
 class OMSManifest:
     """Manifest for a .mem package."""
+
     oms_version: str = OMS_VERSION
     format: str = "whitemagic-galaxy-export"
     topic: str = ""
@@ -87,10 +84,6 @@ class OMSManifest:
         }
 
 
-# ---------------------------------------------------------------------------
-# Merkle tree for verification
-# ---------------------------------------------------------------------------
-
 def _compute_merkle_root(hashes: list[str]) -> str:
     """Compute Merkle root from a list of hex digest strings."""
     if not hashes:
@@ -109,10 +102,6 @@ def _compute_merkle_root(hashes: list[str]) -> str:
 
     return _compute_merkle_root(next_level)
 
-
-# ---------------------------------------------------------------------------
-# OMS Manager
-# ---------------------------------------------------------------------------
 
 class OMSManager:
     """Manages OMS .mem package export, import, and verification."""
@@ -150,6 +139,7 @@ class OMSManager:
 
         if not output_path:
             from whitemagic.config.paths import ARTIFACTS_DIR
+
             output_path = str(ARTIFACTS_DIR / f"{galaxy}_{int(time.time())}.mem")
 
         output = Path(output_path)
@@ -157,6 +147,7 @@ class OMSManager:
 
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             pool = um.backend.pool
         except (ImportError, ModuleNotFoundError) as e:
@@ -190,8 +181,11 @@ class OMSManager:
                         "emotional_valence": row["emotional_valence"] or 0.0,
                         "tags": row["tags"] or "",
                         "galactic_distance": row["galactic_distance"] or 0.5,
-                        "x": row["x"], "y": row["y"], "z": row["z"],
-                        "w": row["w"], "v": row["v"],
+                        "x": row["x"],
+                        "y": row["y"],
+                        "z": row["z"],
+                        "w": row["w"],
+                        "v": row["v"],
                     }
                     line = _json_dumps(entry)
                     memory_lines.append(line)
@@ -234,6 +228,7 @@ class OMSManager:
         wm_version = ""
         try:
             from whitemagic import __version__
+
             wm_version = __version__
         except (ImportError, ModuleNotFoundError):
             pass
@@ -259,12 +254,17 @@ class OMSManager:
                 zf.writestr("manifest.json", _json_dumps(manifest.to_dict(), indent=2))
                 zf.writestr("memories.jsonl", "\n".join(memory_lines))
                 zf.writestr("associations.jsonl", "\n".join(assoc_lines))
-                zf.writestr("verification.json", _json_dumps({
-                    "merkle_root": merkle_root,
-                    "content_hash": content_hash,
-                    "memory_count": len(memory_lines),
-                    "association_count": len(assoc_lines),
-                }))
+                zf.writestr(
+                    "verification.json",
+                    _json_dumps(
+                        {
+                            "merkle_root": merkle_root,
+                            "content_hash": content_hash,
+                            "memory_count": len(memory_lines),
+                            "association_count": len(assoc_lines),
+                        }
+                    ),
+                )
         except Exception as e:
             return {"status": "error", "reason": f"Failed to write .mem file: {e}"}
 
@@ -275,9 +275,13 @@ class OMSManager:
             self._total_exports += 1
 
         logger.info(
-            "📦 OMS export: %s memories + %s associations "
-            "→ %s (%.0fKB, %.0fms)"
-        , len(memory_lines), len(assoc_lines), output.name, file_size / 1024, elapsed)
+            "📦 OMS export: %s memories + %s associations → %s (%.0fKB, %.0fms)",
+            len(memory_lines),
+            len(assoc_lines),
+            output.name,
+            file_size / 1024,
+            elapsed,
+        )
 
         return {
             "status": "ok",
@@ -305,6 +309,7 @@ class OMSManager:
         else:
             # Validate absolute path is allowed
             from whitemagic.security.tool_gating import get_tool_gate
+
             gate = get_tool_gate()
             allowed, reason = gate.path_validator.is_path_allowed(str(mem_path))
             if not allowed:
@@ -317,7 +322,9 @@ class OMSManager:
                 manifest = _json_loads(zf.read("manifest.json"))
                 # Count lines in JSONL files
                 mem_count = len(zf.read("memories.jsonl").decode().strip().split("\n"))
-                assoc_count = len(zf.read("associations.jsonl").decode().strip().split("\n"))
+                assoc_count = len(
+                    zf.read("associations.jsonl").decode().strip().split("\n")
+                )
 
                 return {
                     "status": "ok",
@@ -346,12 +353,17 @@ class OMSManager:
         else:
             # Validate absolute path is allowed
             from whitemagic.security.tool_gating import get_tool_gate
+
             gate = get_tool_gate()
             allowed, reason = gate.path_validator.is_path_allowed(str(mem_path))
             if not allowed:
                 return {"status": "error", "reason": f"Path not allowed: {reason}"}
         if not mem_path.exists():
-            return {"status": "error", "verified": False, "reason": f"File not found: {path}"}
+            return {
+                "status": "error",
+                "verified": False,
+                "reason": f"File not found: {path}",
+            }
 
         try:
             with zipfile.ZipFile(str(mem_path), "r") as zf:
@@ -364,7 +376,9 @@ class OMSManager:
 
                 # Recompute Merkle root
                 lines = memories_data.strip().split("\n")
-                line_hashes = [hashlib.sha256(line.encode()).hexdigest() for line in lines]
+                line_hashes = [
+                    hashlib.sha256(line.encode()).hexdigest() for line in lines
+                ]
                 actual_root = _compute_merkle_root(line_hashes)
                 root_match = actual_root == verification.get("merkle_root", "")
 
@@ -382,7 +396,11 @@ class OMSManager:
                     "memory_count": len(lines),
                 }
         except Exception as e:
-            return {"status": "error", "verified": False, "reason": f"Verification failed: {e}"}
+            return {
+                "status": "error",
+                "verified": False,
+                "reason": f"Verification failed: {e}",
+            }
 
     def import_mem(
         self,
@@ -408,6 +426,7 @@ class OMSManager:
         else:
             # Validate absolute path is allowed
             from whitemagic.security.tool_gating import get_tool_gate
+
             gate = get_tool_gate()
             allowed, reason = gate.path_validator.is_path_allowed(str(mem_path))
             if not allowed:
@@ -420,7 +439,11 @@ class OMSManager:
         if verify_first:
             v_result = self.verify(path)
             if not v_result.get("verified", False):
-                return {"status": "error", "reason": "Verification failed", "details": v_result}
+                return {
+                    "status": "error",
+                    "reason": "Verification failed",
+                    "details": v_result,
+                }
 
         try:
             with zipfile.ZipFile(str(mem_path), "r") as zf:
@@ -431,7 +454,12 @@ class OMSManager:
             return {"status": "error", "reason": f"Failed to read .mem file: {e}"}
 
         if not galaxy:
-            galaxy = manifest.get("meta", {}).get("topic", "imported").replace(" ", "_").lower()
+            galaxy = (
+                manifest.get("meta", {})
+                .get("topic", "imported")
+                .replace(" ", "_")
+                .lower()
+            )
 
         # Import into the active memory system
         imported_memories = 0
@@ -439,6 +467,7 @@ class OMSManager:
 
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
 
             # Import memories
@@ -509,8 +538,13 @@ class OMSManager:
 
         logger.info(
             "📥 OMS import: %s memories + %s associations "
-            "from %s → galaxy '%s' (%.0fms)"
-        , imported_memories, imported_associations, mem_path.name, galaxy, elapsed)
+            "from %s → galaxy '%s' (%.0fms)",
+            imported_memories,
+            imported_associations,
+            mem_path.name,
+            galaxy,
+            elapsed,
+        )
 
         return {
             "status": "ok",
@@ -563,6 +597,7 @@ class OMSManager:
         """List available .mem packages in a directory."""
         if not search_dir:
             from whitemagic.config.paths import WM_ROOT
+
             search_dir = str(WM_ROOT / "exports")
 
         search_path = Path(search_dir)
@@ -575,13 +610,17 @@ class OMSManager:
                 info = self.inspect(str(mem_file))
                 if info.get("status") == "ok":
                     manifest = info.get("manifest", {})
-                    packages.append({
-                        "path": str(mem_file),
-                        "name": mem_file.stem,
-                        "size_bytes": mem_file.stat().st_size,
-                        "topic": manifest.get("meta", {}).get("topic", ""),
-                        "memory_count": manifest.get("meta", {}).get("memory_count", 0),
-                    })
+                    packages.append(
+                        {
+                            "path": str(mem_file),
+                            "name": mem_file.stem,
+                            "size_bytes": mem_file.stat().st_size,
+                            "topic": manifest.get("meta", {}).get("topic", ""),
+                            "memory_count": manifest.get("meta", {}).get(
+                                "memory_count", 0
+                            ),
+                        }
+                    )
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
                 continue
@@ -601,10 +640,6 @@ class OMSManager:
                 "total_imports": self._total_imports,
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _manager: OMSManager | None = None
 _manager_lock = threading.Lock()

@@ -29,7 +29,6 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 _GANA_STATS: dict[str, int] = {}
 
 
-
 @router.get("/status")
 async def get_system_status() -> dict[str, Any]:
     """Get full system status for dashboard."""
@@ -75,7 +74,9 @@ async def get_memory_matrix() -> dict[str, Any]:
             "stats": matrix.stats(),
             "recent_files": [
                 {
-                    "path": e.path.split("/whitemagic/")[-1] if "/whitemagic/" in e.path else e.path,
+                    "path": e.path.split("/whitemagic/")[-1]
+                    if "/whitemagic/" in e.path
+                    else e.path,
                     "type": e.file_type,
                     "times_seen": e.times_seen,
                     "last_seen": e.last_seen,
@@ -166,17 +167,21 @@ async def get_gana_activity() -> dict[str, list[dict[str, Any]]]:
             last_call_age = rep.get("last_call_age_secs")
             last_active = None
             if last_call_age is not None:
-                last_active = datetime.fromtimestamp(time.time() - last_call_age).isoformat()
+                last_active = datetime.fromtimestamp(
+                    time.time() - last_call_age
+                ).isoformat()
 
-            activity_list.append({
-                "mansion": f"{mansion.chinese} ({mansion.pinyin})",
-                "quadrant": mansion.quadrant.lower(),
-                "invocations": current_invocations,
-                "avgExecutionMs": round(rep.get("avg_latency_ms", 0), 2),
-                "lastActive": last_active or datetime.now().isoformat(),
-                "vitality": rep.get("vitality", "unknown"),
-                "successRate": round(rep.get("success_rate", 1.0), 3),
-            })
+            activity_list.append(
+                {
+                    "mansion": f"{mansion.chinese} ({mansion.pinyin})",
+                    "quadrant": mansion.quadrant.lower(),
+                    "invocations": current_invocations,
+                    "avgExecutionMs": round(rep.get("avg_latency_ms", 0), 2),
+                    "lastActive": last_active or datetime.now().isoformat(),
+                    "vitality": rep.get("vitality", "unknown"),
+                    "successRate": round(rep.get("success_rate", 1.0), 3),
+                }
+            )
 
         return {"ganas": activity_list}
     except Exception as e:

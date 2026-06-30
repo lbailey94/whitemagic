@@ -24,7 +24,15 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-HARMONY_DIMENSIONS = ("balance", "throughput", "latency", "error_rate", "dharma", "karma_debt", "energy")
+HARMONY_DIMENSIONS = (
+    "balance",
+    "throughput",
+    "latency",
+    "error_rate",
+    "dharma",
+    "karma_debt",
+    "energy",
+)
 
 
 @dataclass
@@ -37,7 +45,7 @@ class AnomalyAlert:
     std_dev: float
     z_score: float
     direction: str  # "high" or "low"
-    severity: str   # "warning" or "critical"
+    severity: str  # "warning" or "critical"
     timestamp: float = 0.0
 
     def __post_init__(self) -> Any:
@@ -152,14 +160,18 @@ class AnomalyDetector:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                event_type=EventType.ANOMALY_DETECTED,
-                source="harmony_anomaly_detector",
-                data=alert.to_dict(),
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    event_type=EventType.ANOMALY_DETECTED,
+                    source="harmony_anomaly_detector",
+                    data=alert.to_dict(),
+                )
+            )
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     def _active_alerts_unlocked(self) -> list[dict[str, Any]]:
@@ -181,13 +193,17 @@ class AnomalyDetector:
             abs_z = abs(z_score)
 
             if abs_z >= self._warning_z:
-                alerts.append({
-                    "dimension": dim,
-                    "z_score": round(z_score, 2),
-                    "current": round(value, 4),
-                    "mean": round(mean, 4),
-                    "severity": "critical" if abs_z >= self._critical_z else "warning",
-                })
+                alerts.append(
+                    {
+                        "dimension": dim,
+                        "z_score": round(z_score, 2),
+                        "current": round(value, 4),
+                        "mean": round(mean, 4),
+                        "severity": "critical"
+                        if abs_z >= self._critical_z
+                        else "warning",
+                    }
+                )
 
         return alerts
 
@@ -227,10 +243,6 @@ class AnomalyDetector:
                 "active_alerts": self._active_alerts_unlocked(),
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _detector: AnomalyDetector | None = None
 _det_lock = threading.Lock()

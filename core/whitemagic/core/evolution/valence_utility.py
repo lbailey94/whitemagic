@@ -13,6 +13,7 @@ RPE: δ = actual_outcome - predicted_outcome
 Over time, the system develops "preferences" — improvement types that
 consistently produce positive valence.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -22,11 +23,12 @@ from typing import Any
 @dataclass
 class ValenceRecord:
     """A single emotional valence update from an outcome."""
+
     hypothesis_id: str
-    prediction: float       # Predicted outcome (0-1)
-    actual: float           # Actual outcome (0-1, or 0/1 for binary)
-    rpe: float              # Reward prediction error = actual - prediction
-    valence_delta: float    # Change applied to z-coordinate
+    prediction: float  # Predicted outcome (0-1)
+    actual: float  # Actual outcome (0-1, or 0/1 for binary)
+    rpe: float  # Reward prediction error = actual - prediction
+    valence_delta: float  # Change applied to z-coordinate
     timestamp: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -94,7 +96,9 @@ class ValenceUtilityTracker:
 
         # Update category-level valence (with decay)
         cat_current = self._category_valence.get(category, 0.0)
-        self._category_valence[category] = cat_current * self._valence_decay + valence_delta
+        self._category_valence[category] = (
+            cat_current * self._valence_decay + valence_delta
+        )
 
         return record
 
@@ -151,7 +155,8 @@ class ValenceUtilityTracker:
             "hypotheses_tracked": len(self._hypothesis_valence),
             "avg_rpe": (
                 sum(r.rpe for r in self._records) / len(self._records)
-                if self._records else 0.0
+                if self._records
+                else 0.0
             ),
             "top_preferences": list(self.get_preferences().items())[:5],
         }

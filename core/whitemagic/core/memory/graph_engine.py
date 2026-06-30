@@ -176,10 +176,6 @@ class GraphEngine:
             self.rebuild()
         return self._graph
 
-    # ------------------------------------------------------------------
-    # Graph construction
-    # ------------------------------------------------------------------
-
     # Noise memory prefixes/patterns to exclude from graph analysis
     NOISE_TITLE_PREFIXES = (
         "bench_t1", "_bench", "Benchmark test memory",
@@ -349,10 +345,6 @@ class GraphEngine:
          stats['nodes'], stats['edges'], format(elapsed, ".0f"))
         return stats
 
-    # ------------------------------------------------------------------
-    # Centrality metrics
-    # ------------------------------------------------------------------
-
     def eigenvector_centrality(self, max_iter: int = 100) -> dict[str, float]:
         """Compute eigenvector centrality (used for echo chamber detection)."""
         G = self.graph
@@ -425,10 +417,6 @@ class GraphEngine:
             self._current_snapshot = snap
 
         return snap
-
-    # ------------------------------------------------------------------
-    # Bridge detection
-    # ------------------------------------------------------------------
 
     def bridging_centrality(self, node_id: str) -> float:
         """Compute bridging centrality for a single node.
@@ -542,10 +530,6 @@ class GraphEngine:
             logger.debug("Bridge detection failed: %s", e, exc_info=True)
             return []
 
-    # ------------------------------------------------------------------
-    # Community detection
-    # ------------------------------------------------------------------
-
     def detect_communities(self, resolution: float = 1.0) -> list[Community]:
         """Detect communities using greedy modularity.
 
@@ -634,10 +618,6 @@ class GraphEngine:
             return sorted(tag_counts.keys(), key=lambda t: tag_counts[t], reverse=True)[:5]
         except (ImportError, AttributeError):
             return []
-
-    # ------------------------------------------------------------------
-    # Echo chamber detection
-    # ------------------------------------------------------------------
 
     def detect_echo_chambers(
         self,
@@ -753,10 +733,6 @@ class GraphEngine:
         except (ImportError, AttributeError):
             return set()
 
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -784,10 +760,6 @@ class GraphEngine:
             stats["snapshot"] = self._current_snapshot.to_dict()
         return stats
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine: GraphEngine | None = None
 _engine_lock = threading.Lock()

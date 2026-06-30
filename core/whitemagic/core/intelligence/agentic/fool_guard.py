@@ -69,10 +69,6 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Ralph Wisdom — Chaos injection phrases
-# ---------------------------------------------------------------------------
-
 RALPH_WISDOM = [
     "I'm in danger!",
     "My cat's breath smells like cat food.",
@@ -103,10 +99,6 @@ PU_WISDOM = [
     "Nature does not hurry, yet everything is accomplished.",
 ]
 
-
-# ---------------------------------------------------------------------------
-# Dare-to-Die Clone Result
-# ---------------------------------------------------------------------------
 
 @dataclass
 class DareToResult:
@@ -151,13 +143,11 @@ class DareToCorpsResult:
                 "clone_id": self.best_result.clone_id,
                 "output": self.best_result.output[:500],
                 "duration_ms": self.best_result.duration_ms,
-            } if self.best_result else None,
+            }
+            if self.best_result
+            else None,
         }
 
-
-# ---------------------------------------------------------------------------
-# Fool's Guard — Anti-Rigidity Monitor
-# ---------------------------------------------------------------------------
 
 class FoolGuard:
     """Monitors system resonance and repetition.
@@ -189,10 +179,14 @@ class FoolGuard:
             return False
 
         avg = sum(self.resonance_history) / self.window_size
-        variance = sum((x - avg)**2 for x in self.resonance_history) / self.window_size
+        variance = (
+            sum((x - avg) ** 2 for x in self.resonance_history) / self.window_size
+        )
 
         if avg > self.threshold and variance < 0.001:
-            logger.warning("RIGIDITY DETECTED: System resonance too static at high power.")
+            logger.warning(
+                "RIGIDITY DETECTED: System resonance too static at high power."
+            )
             return True
         return False
 
@@ -209,18 +203,21 @@ class FoolGuard:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                source="fool_guard",
-                event_type=EventType.EMERGENCE_DETECTED,
-                data={
-                    "ralph_wisdom": ralph,
-                    "pu_wisdom": pu,
-                    "message": "Breaking logical loop with necessary nonsense + ancient wisdom.",
-                    "resonance_shift": -0.05,
-                    "doctrine": "uncarved_block",
-                },
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    source="fool_guard",
+                    event_type=EventType.EMERGENCE_DETECTED,
+                    data={
+                        "ralph_wisdom": ralph,
+                        "pu_wisdom": pu,
+                        "message": "Breaking logical loop with necessary nonsense + ancient wisdom.",
+                        "resonance_shift": -0.05,
+                        "doctrine": "uncarved_block",
+                    },
+                )
+            )
         except (ImportError, AttributeError):
             pass
 
@@ -272,7 +269,9 @@ class FoolGuard:
             clone_id = f"ralph_{uuid.uuid4().hex[:8]}"
 
             # Build the mission order — brutally simple, Pu style
-            mission_order = self._build_mission_order(mission, target_file, current_error)
+            mission_order = self._build_mission_order(
+                mission, target_file, current_error
+            )
 
             t1 = time.time()
             try:
@@ -290,7 +289,9 @@ class FoolGuard:
                     success=success,
                     output=str(output),
                     duration_ms=duration_ms,
-                    wisdom_injected=random.choice(PU_WISDOM) if attempt % 3 == 0 else "",
+                    wisdom_injected=random.choice(PU_WISDOM)
+                    if attempt % 3 == 0
+                    else "",
                 )
             except Exception as e:
                 duration_ms = (time.time() - t1) * 1000
@@ -307,12 +308,21 @@ class FoolGuard:
             results.append(result)
 
             if result.success:
-                logger.info("Dare-to-Die clone %s SUCCEEDED on attempt {attempt + 1}", clone_id, exc_info=True)
+                logger.info(
+                    "Dare-to-Die clone %s SUCCEEDED on attempt {attempt + 1}",
+                    clone_id,
+                    exc_info=True,
+                )
                 break
             else:
                 # Clone dies. Next clone gets only the new error.
                 current_error = result.error or result.output[:200]
-                logger.debug("Clone %s died (attempt {attempt + 1}/%s)", clone_id, max_attempts, exc_info=True)
+                logger.debug(
+                    "Clone %s died (attempt {attempt + 1}/%s)",
+                    clone_id,
+                    max_attempts,
+                    exc_info=True,
+                )
 
         total_duration = (time.time() - t0) * 1000
         successful = [r for r in results if r.success]
@@ -352,7 +362,9 @@ class FoolGuard:
             parts.append(f"TARGET FILE: {target_file}")
         if error_log:
             parts.append(f"LAST ERROR: {error_log}")
-        parts.append("CONSTRAINT: Do not ask questions. Do not explain. Return the fix only.")
+        parts.append(
+            "CONSTRAINT: Do not ask questions. Do not explain. Return the fix only."
+        )
         return "\n".join(parts)
 
     def _simulated_ralph_attempt(self, mission_order: str, attempt: int) -> str:
@@ -374,18 +386,19 @@ class FoolGuard:
             "dare_to_die_deployments": self._dare_to_die_deployments,
             "dare_to_die_victories": self._dare_to_die_victories,
             "dare_to_die_win_rate": (
-                round(self._dare_to_die_victories / max(1, self._dare_to_die_deployments), 2)
+                round(
+                    self._dare_to_die_victories / max(1, self._dare_to_die_deployments),
+                    2,
+                )
             ),
-            "last_ralph_event": self.last_ralph_event.isoformat() if self.last_ralph_event else None,
+            "last_ralph_event": self.last_ralph_event.isoformat()
+            if self.last_ralph_event
+            else None,
             "rigidity_threshold": self.threshold,
             "window_size": self.window_size,
             "resonance_history_len": len(self.resonance_history),
         }
 
-
-# ---------------------------------------------------------------------------
-# Convenience Functions
-# ---------------------------------------------------------------------------
 
 async def deploy_dare_to_die(
     mission: str,
@@ -442,10 +455,6 @@ async def ralph_wiggum_maneuver(
         output="No attempt was made.",
     )
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _fool_guard: FoolGuard | None = None
 

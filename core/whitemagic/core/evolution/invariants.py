@@ -20,6 +20,7 @@ The self-improvement uncertainty principle:
 You cannot simultaneously know the system's state and measure its improvement
 with arbitrary precision. The act of improving changes the state being measured.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class InvariantSnapshot:
     """A snapshot of invariant metrics at a point in time."""
+
     timestamp: str
     total_memories: int
     total_tags: int
@@ -50,16 +52,12 @@ class InvariantSnapshot:
             "total_memories_delta": float(self.total_memories - other.total_memories),
             "total_tags_delta": float(self.total_tags - other.total_tags),
             "unique_tags_delta": float(self.unique_tags - other.unique_tags),
-            "shannon_entropy_delta": round(self.shannon_entropy - other.shannon_entropy, 6),
-            "test_count_delta": float(
-                (self.test_count or 0) - (other.test_count or 0)
+            "shannon_entropy_delta": round(
+                self.shannon_entropy - other.shannon_entropy, 6
             ),
+            "test_count_delta": float((self.test_count or 0) - (other.test_count or 0)),
         }
 
-
-# ---------------------------------------------------------------------------
-# Non-invariant metrics (acknowledge these change under self-improvement)
-# ---------------------------------------------------------------------------
 
 NON_INVARIANT_METRICS = [
     "memory_quality_score",
@@ -91,6 +89,7 @@ class InvariantTracker:
     def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             from whitemagic.config.paths import DB_PATH
+
             self._db_path = str(DB_PATH)
         else:
             self._db_path = db_path
@@ -288,11 +287,11 @@ class InvariantTracker:
             return {
                 "classification": "invariant",
                 "guidance": "Use for long-term tracking. This metric is preserved "
-                           "under self-improvement and provides reliable signal.",
+                "under self-improvement and provides reliable signal.",
             }
         return {
             "classification": "non_invariant",
             "guidance": "Use for short-term feedback only. This metric changes "
-                       "when the system improves itself — do not use for "
-                       "long-term trend analysis.",
+            "when the system improves itself — do not use for "
+            "long-term trend analysis.",
         }

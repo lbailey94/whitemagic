@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SelfModification:
     """Record of a self-directed modification."""
+
     timestamp: float = field(default_factory=time.time)
     module: str = ""
     parameter: str = ""

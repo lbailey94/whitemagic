@@ -10,6 +10,7 @@ This script:
 2. For each error line, looks at the existing `# type: ignore[X]`
    comment and adds the actual_code if missing
 """
+
 import re
 import subprocess
 from pathlib import Path
@@ -31,7 +32,7 @@ def update_ignore(path: Path, line_no: int, actual_code: str) -> bool:
             return False
         new_codes = existing_codes + [actual_code]
         new_comment = f"# type: ignore[{', '.join(new_codes)}]"
-        new_line = line[:m.start()].rstrip() + "  " + new_comment + "\n"
+        new_line = line[: m.start()].rstrip() + "  " + new_comment + "\n"
     else:
         # No existing comment, just add one
         new_line = f"{line}  # type: ignore[{actual_code}]\n"
@@ -39,6 +40,7 @@ def update_ignore(path: Path, line_no: int, actual_code: str) -> bool:
     new_content = "".join(lines)
     try:
         import ast
+
         ast.parse(new_content)
     except SyntaxError:
         return False
@@ -49,14 +51,14 @@ def update_ignore(path: Path, line_no: int, actual_code: str) -> bool:
 def main() -> None:
     result = subprocess.run(
         [".venv/bin/mypy", "whitemagic/"],
-        capture_output=True, text=True, cwd=ROOT,
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
     )
     output = result.stdout + result.stderr
     errors = []
     for line in output.splitlines():
-        m = re.match(
-            r"^(whitemagic/[^:]+):(\d+):\s*error:.*\[([a-z0-9-]+)\]\s*$", line
-        )
+        m = re.match(r"^(whitemagic/[^:]+):(\d+):\s*error:.*\[([a-z0-9-]+)\]\s*$", line)
         if m:
             errors.append((m.group(1), int(m.group(2)), m.group(3)))
     fixed = 0

@@ -49,8 +49,14 @@ def get_wiki_tool_defs() -> list[dict[str, Any]]:
                     "query": {"type": "string", "description": "Text search"},
                     "category": {
                         "type": "string",
-                        "enum": ["architecture", "module", "pattern",
-                                 "antipattern", "api", "guide"],
+                        "enum": [
+                            "architecture",
+                            "module",
+                            "pattern",
+                            "antipattern",
+                            "api",
+                            "guide",
+                        ],
                     },
                     "tags": {"type": "string", "description": "Comma-separated tags"},
                     "limit": {"type": "integer", "default": 20},
@@ -73,8 +79,14 @@ def get_wiki_tool_defs() -> list[dict[str, Any]]:
                     "content": {"type": "string", "description": "New content"},
                     "category": {
                         "type": "string",
-                        "enum": ["architecture", "module", "pattern",
-                                 "antipattern", "api", "guide"],
+                        "enum": [
+                            "architecture",
+                            "module",
+                            "pattern",
+                            "antipattern",
+                            "api",
+                            "guide",
+                        ],
                         "default": "guide",
                     },
                     "tags": {"type": "string", "description": "Comma-separated"},

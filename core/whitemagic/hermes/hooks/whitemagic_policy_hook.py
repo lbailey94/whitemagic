@@ -6,6 +6,7 @@ Expected event shape:
     {"tool_name": "terminal", "tool_input": {"command": "..."}}
     {"tool_name": "write_file", "tool_input": {"path": "...", "content": "..."}}
 """
+
 from __future__ import annotations
 
 import json
@@ -53,8 +54,18 @@ def main() -> None:
     # ── File operation policy ─────────────────────────────────────────────
     if tool_name in ("write_file", "delete_file", "append_file", "move_file"):
         path = tool_input.get("path", "")
-        system_paths = ("/etc/", "/usr/", "/bin/", "/sbin/", "/lib", "/boot/",
-                        "/dev/sd", "/proc/", "/sys/", "/var/log/")
+        system_paths = (
+            "/etc/",
+            "/usr/",
+            "/bin/",
+            "/sbin/",
+            "/lib",
+            "/boot/",
+            "/dev/sd",
+            "/proc/",
+            "/sys/",
+            "/var/log/",
+        )
         if path.startswith(system_paths):
             result = {
                 "allowed": False,

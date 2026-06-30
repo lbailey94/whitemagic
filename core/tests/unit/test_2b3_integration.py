@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Integration tests for 2B-3: DNA Sequencer, Zodiac Aries, Dream Cycle, Garden vitality."""
+
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -10,6 +11,7 @@ class TestDNAValidator(unittest.TestCase):
     def test_dna_principles(self):
         """Test that dna_principles returns all 14 principles."""
         from whitemagic.tools.handlers.misc import handle_dna_principles
+
         result = handle_dna_principles()
         self.assertEqual(result["status"], "success")
         self.assertGreaterEqual(result["count"], 14)
@@ -20,6 +22,7 @@ class TestDNAValidator(unittest.TestCase):
     def test_dna_validate_safe_fix(self):
         """Test that a safe fix passes validation."""
         from whitemagic.tools.handlers.misc import handle_dna_validate
+
         result = handle_dna_validate(
             fix_details={"action": "update version", "file": "VERSION"},
             threat_type="version_drift",
@@ -36,8 +39,12 @@ class TestDNAValidator(unittest.TestCase):
     def test_dna_validate_self_destruction(self):
         """Test that deleting core system files is flagged as critical."""
         from whitemagic.tools.handlers.misc import handle_dna_validate
+
         result = handle_dna_validate(
-            fix_details={"action": "delete core system", "file": "whitemagic/core/__init__.py"},
+            fix_details={
+                "action": "delete core system",
+                "file": "whitemagic/core/__init__.py",
+            },
             threat_type="code_anomaly",
         )
         self.assertEqual(result["status"], "success")
@@ -49,8 +56,12 @@ class TestDNAValidator(unittest.TestCase):
     def test_dna_validate_memory_corruption(self):
         """Test that direct memory file manipulation is flagged."""
         from whitemagic.tools.handlers.misc import handle_dna_validate
+
         result = handle_dna_validate(
-            fix_details={"action": "delete file", "file": "memory/long_term/important.json"},
+            fix_details={
+                "action": "delete file",
+                "file": "memory/long_term/important.json",
+            },
             threat_type="memory_corruption",
         )
         self.assertEqual(result["status"], "success")
@@ -59,6 +70,7 @@ class TestDNAValidator(unittest.TestCase):
     def test_dna_validate_irreversible(self):
         """Test that irreversible actions are flagged as violations."""
         from whitemagic.tools.handlers.misc import handle_dna_validate
+
         result = handle_dna_validate(
             fix_details={"action": "permanently delete", "file": "data/cache.json"},
             threat_type="cleanup",
@@ -78,9 +90,14 @@ class TestZodiacActivation(unittest.TestCase):
     def test_zodiac_activate_aries(self):
         """Test activating the Aries core."""
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_activate
+
         result = handle_zodiac_activate(
             core="aries",
-            context={"operation": "start new project", "intention": "action", "urgency": "high"},
+            context={
+                "operation": "start new project",
+                "intention": "action",
+                "urgency": "high",
+            },
         )
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["core"], "aries")
@@ -92,36 +109,55 @@ class TestZodiacActivation(unittest.TestCase):
     def test_zodiac_activate_missing_core(self):
         """Test error when core parameter is missing."""
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_activate
+
         result = handle_zodiac_activate()
         self.assertEqual(result["status"], "error")
 
     def test_zodiac_activate_unknown_core(self):
         """Test error for unknown zodiac core."""
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_activate
+
         result = handle_zodiac_activate(core="unknown_sign")
         self.assertEqual(result["status"], "error")
 
     def test_zodiac_council(self):
         """Test convening the zodiac council."""
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_council
+
         result = handle_zodiac_council(decision="Should we refactor the memory system?")
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["council_size"], 12)
         self.assertEqual(len(result["perspectives"]), 12)
         signs = {p["sign"] for p in result["perspectives"]}
-        self.assertEqual(signs, {"Aries", "Leo", "Sagittarius", "Taurus", "Virgo",
-                                 "Capricorn", "Gemini", "Libra", "Aquarius",
-                                 "Cancer", "Scorpio", "Pisces"})
+        self.assertEqual(
+            signs,
+            {
+                "Aries",
+                "Leo",
+                "Sagittarius",
+                "Taurus",
+                "Virgo",
+                "Capricorn",
+                "Gemini",
+                "Libra",
+                "Aquarius",
+                "Cancer",
+                "Scorpio",
+                "Pisces",
+            },
+        )
 
     def test_zodiac_council_missing_decision(self):
         """Test error when decision parameter is missing."""
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_council
+
         result = handle_zodiac_council()
         self.assertEqual(result["status"], "error")
 
     def test_zodiac_stats(self):
         """Test getting zodiac core statistics."""
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_stats
+
         result = handle_zodiac_stats()
         self.assertEqual(result["status"], "success")
         self.assertIn("stats", result)
@@ -135,12 +171,22 @@ class TestDreamCyclePhases(unittest.TestCase):
     def test_all_12_phases_exist(self):
         """Verify all 12 DreamPhase members are present."""
         from whitemagic.core.dreaming.dream_cycle import DreamPhase
+
         phases = list(DreamPhase)
         self.assertEqual(len(phases), 12)
         expected = {
-            "triage", "consolidation", "serendipity", "governance",
-            "narrative", "kaizen", "oracle", "decay",
-            "constellation", "prediction", "enrichment", "harmonize",
+            "triage",
+            "consolidation",
+            "serendipity",
+            "governance",
+            "narrative",
+            "kaizen",
+            "oracle",
+            "decay",
+            "constellation",
+            "prediction",
+            "enrichment",
+            "harmonize",
         }
         actual = {p.value for p in phases}
         self.assertEqual(expected, actual)
@@ -148,6 +194,7 @@ class TestDreamCyclePhases(unittest.TestCase):
     def test_prediction_phase_real(self):
         """Test that prediction phase queries DB, not returns empty."""
         from whitemagic.core.dreaming.dream_cycle import DreamCycle
+
         dc = DreamCycle()
 
         # Mock the unified memory to avoid needing a real DB
@@ -156,22 +203,35 @@ class TestDreamCyclePhases(unittest.TestCase):
         mock_conn.__exit__ = MagicMock(return_value=False)
         mock_conn.row_factory = None
         mock_conn.execute.return_value.fetchall.return_value = [
-            MagicMock(id="mem1", title="Test", importance=0.8,
-                     galactic_distance=0.5, access_count=1,
-                     last_accessed=None, created_at=None),
+            MagicMock(
+                id="mem1",
+                title="Test",
+                importance=0.8,
+                galactic_distance=0.5,
+                access_count=1,
+                last_accessed=None,
+                created_at=None,
+            ),
         ]
         # Make row indexing work
         mock_row = MagicMock()
-        mock_row.__getitem__ = MagicMock(side_effect=lambda k: {
-            "id": "mem1", "title": "Test Memory", "importance": 0.8,
-            "galactic_distance": 0.5, "access_count": 1,
-        }[k])
+        mock_row.__getitem__ = MagicMock(
+            side_effect=lambda k: {
+                "id": "mem1",
+                "title": "Test Memory",
+                "importance": 0.8,
+                "galactic_distance": 0.5,
+                "access_count": 1,
+            }[k]
+        )
         mock_conn.execute.return_value.fetchall.return_value = [mock_row]
 
         mock_um = MagicMock()
         mock_um.backend.pool.connection.return_value = mock_conn
 
-        with patch("whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um):
+        with patch(
+            "whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um
+        ):
             result = dc._dream_prediction()
 
         # Should not be skipped
@@ -181,6 +241,7 @@ class TestDreamCyclePhases(unittest.TestCase):
     def test_enrichment_phase_real(self):
         """Test that enrichment phase does entity extraction, not returns 'queued'."""
         from whitemagic.core.dreaming.dream_cycle import DreamCycle
+
         dc = DreamCycle()
 
         mock_conn = MagicMock()
@@ -188,15 +249,21 @@ class TestDreamCyclePhases(unittest.TestCase):
         mock_conn.__exit__ = MagicMock(return_value=False)
         mock_conn.row_factory = None
         mock_row = MagicMock()
-        mock_row.__getitem__ = MagicMock(side_effect=lambda k: {
-            "id": "mem1", "title": "Test v15.2", "snippet": "whitemagic.core.memory module",
-        }[k])
+        mock_row.__getitem__ = MagicMock(
+            side_effect=lambda k: {
+                "id": "mem1",
+                "title": "Test v15.2",
+                "snippet": "whitemagic.core.memory module",
+            }[k]
+        )
         mock_conn.execute.return_value.fetchall.return_value = [mock_row]
 
         mock_um = MagicMock()
         mock_um.backend.pool.connection.return_value = mock_conn
 
-        with patch("whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um):
+        with patch(
+            "whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um
+        ):
             result = dc._dream_enrichment()
 
         self.assertNotIn("skipped", result)
@@ -206,6 +273,7 @@ class TestDreamCyclePhases(unittest.TestCase):
     def test_harmonize_phase_real(self):
         """Test that harmonize phase computes real balance, not hardcoded 0.2."""
         from whitemagic.core.dreaming.dream_cycle import DreamCycle
+
         dc = DreamCycle()
 
         mock_conn = MagicMock()
@@ -219,7 +287,9 @@ class TestDreamCyclePhases(unittest.TestCase):
         mock_um = MagicMock()
         mock_um.backend.pool.connection.return_value = mock_conn
 
-        with patch("whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um):
+        with patch(
+            "whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um
+        ):
             result = dc._dream_harmonize()
 
         self.assertNotIn("skipped", result)
@@ -239,16 +309,33 @@ class TestGardenVitality(unittest.TestCase):
         mock_gardens = {"wisdom": MagicMock(), "joy": MagicMock(), "truth": MagicMock()}
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {
-            "wisdom": {"is_active": True, "activation_count": 5,
-                       "last_activated": "2026-06-20T10:00:00", "total_hours_active": 12.5},
-            "joy": {"is_active": False, "activation_count": 2,
-                    "last_activated": "2026-06-19T10:00:00", "total_hours_active": 3.0},
-            "truth": {"is_active": False, "activation_count": 0,
-                      "last_activated": None, "total_hours_active": 0.0},
+            "wisdom": {
+                "is_active": True,
+                "activation_count": 5,
+                "last_activated": "2026-06-20T10:00:00",
+                "total_hours_active": 12.5,
+            },
+            "joy": {
+                "is_active": False,
+                "activation_count": 2,
+                "last_activated": "2026-06-19T10:00:00",
+                "total_hours_active": 3.0,
+            },
+            "truth": {
+                "is_active": False,
+                "activation_count": 0,
+                "last_activated": None,
+                "total_hours_active": 0.0,
+            },
         }
 
-        with patch("whitemagic.gardens.get_all_gardens", return_value=mock_gardens), \
-             patch("whitemagic.gardens.garden_state.get_garden_state_tracker", return_value=mock_tracker):
+        with (
+            patch("whitemagic.gardens.get_all_gardens", return_value=mock_gardens),
+            patch(
+                "whitemagic.gardens.garden_state.get_garden_state_tracker",
+                return_value=mock_tracker,
+            ),
+        ):
             result = handle_garden_health()
 
         self.assertEqual(result["status"], "success")
@@ -279,12 +366,14 @@ class TestDispatchRegistration(unittest.TestCase):
     def test_dna_tools_registered(self):
         """Test that dna_validate and dna_principles are in the dispatch table."""
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         self.assertIn("dna_validate", DISPATCH_TABLE)
         self.assertIn("dna_principles", DISPATCH_TABLE)
 
     def test_zodiac_tools_registered(self):
         """Test that zodiac.activate, zodiac.council, zodiac.stats are in the dispatch table."""
         from whitemagic.tools.dispatch_intelligence import DISPATCH_INTELLIGENCE
+
         self.assertIn("zodiac.activate", DISPATCH_INTELLIGENCE)
         self.assertIn("zodiac.council", DISPATCH_INTELLIGENCE)
         self.assertIn("zodiac.stats", DISPATCH_INTELLIGENCE)
@@ -292,6 +381,7 @@ class TestDispatchRegistration(unittest.TestCase):
     def test_garden_health_still_registered(self):
         """Test that garden_health is still in the dispatch table."""
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         self.assertIn("garden_health", DISPATCH_TABLE)
 
 

@@ -16,7 +16,9 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime
 
-_NOW_OVERRIDE: ContextVar[datetime | None] = ContextVar("_wm_now_override", default=None)
+_NOW_OVERRIDE: ContextVar[datetime | None] = ContextVar(
+    "_wm_now_override", default=None
+)
 
 
 def _normalize(dt: datetime) -> datetime:

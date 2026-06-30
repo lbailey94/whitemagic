@@ -1,9 +1,3 @@
-// Embedding SIMD Acceleration - Phase 3
-// ======================================
-// Rust SIMD operations for embedding hot paths:
-// - Batch vector normalization
-// - Batch cosine similarity
-// - Vector operations with AVX2/NEON
 
 use std::arch::x86_64::*;
 

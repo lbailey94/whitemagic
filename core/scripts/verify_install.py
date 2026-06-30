@@ -7,6 +7,7 @@ Usage:
 
 Exit code 0 = all checks passed, 1 = failures detected.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -42,7 +43,9 @@ def check(name: str, fn, required: bool = True):
             results.append({"name": name, "status": "pass", "ms": elapsed})
         else:
             print(f"  {PASS} {name}: {result} ({elapsed:.0f}ms)")
-            results.append({"name": name, "status": "pass", "ms": elapsed, "detail": str(result)})
+            results.append(
+                {"name": name, "status": "pass", "ms": elapsed, "detail": str(result)}
+            )
     except Exception as e:
         elapsed = (time.perf_counter() - t0) * 1000
         marker = FAIL if required else SKIP
@@ -55,18 +58,22 @@ def check(name: str, fn, required: bool = True):
 # CHECK FUNCTIONS
 # ═══════════════════════════════════════════════════════════════
 
+
 def check_import():
     import whitemagic  # noqa: F401
+
     return True
 
 
 def check_version():
     from whitemagic import __version__
+
     return f"v{__version__}"
 
 
 def check_dispatch_table():
     from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
     count = len(DISPATCH_TABLE)
     assert count >= 200, f"Only {count} tools registered (expected 200+)"
     return f"{count} tools"
@@ -74,6 +81,7 @@ def check_dispatch_table():
 
 def check_prat_router():
     from whitemagic.tools.registry_defs import collect
+
     defs = collect()
     gana_tools = [d for d in defs if d.name.startswith("gana_")]
     assert len(gana_tools) == 28, f"Expected 28 Ganas, got {len(gana_tools)}"
@@ -82,6 +90,7 @@ def check_prat_router():
 
 def check_memory_store():
     from whitemagic.core.memory.unified import UnifiedMemory
+
     um = UnifiedMemory()
     mid = um.store("Verification test memory", tags=["_verify_install"])
     assert mid, "store() returned empty ID"
@@ -90,6 +99,7 @@ def check_memory_store():
 
 def check_memory_search():
     from whitemagic.core.memory.unified import UnifiedMemory
+
     um = UnifiedMemory()
     results_list = um.search("verification", limit=5)
     return f"{len(results_list)} results"
@@ -97,6 +107,7 @@ def check_memory_search():
 
 def check_harmony_vector():
     from whitemagic.harmony.vector import HarmonyVector
+
     hv = HarmonyVector()
     snap = hv.snapshot_dict()
     assert "balance" in snap, "Missing 'balance' in HarmonyVector snapshot"
@@ -105,6 +116,7 @@ def check_harmony_vector():
 
 def check_dharma_rules():
     from whitemagic.dharma.rules import DharmaRulesEngine
+
     engine = DharmaRulesEngine()
     decision = engine.evaluate({"tool": "test_action", "declared_safety": "read_only"})
     return f"action={decision.action.value}"
@@ -112,12 +124,14 @@ def check_dharma_rules():
 
 def check_config_paths():
     from whitemagic.config.paths import WM_ROOT
+
     assert WM_ROOT.exists(), f"State root doesn't exist: {WM_ROOT}"
     return str(WM_ROOT)
 
 
 def check_rust_accelerators():
     from whitemagic.optimization import rust_accelerators as ra
+
     available = []
     if ra._RUST_AVAILABLE:
         available.append("base")
@@ -134,13 +148,17 @@ def check_rust_accelerators():
 
 def check_mcp_server_import():
     import whitemagic.run_mcp_lean  # noqa: F401
+
     return True
 
 
 def check_call_tool():
     from whitemagic.tools.unified_api import call_tool
+
     result = call_tool("capabilities")
-    assert result.get("status") == "success", f"capabilities returned: {result.get('status')}"
+    assert result.get("status") == "success", (
+        f"capabilities returned: {result.get('status')}"
+    )
     return True
 
 
@@ -148,8 +166,10 @@ def check_call_tool():
 # BENCHMARK FUNCTIONS (--full mode)
 # ═══════════════════════════════════════════════════════════════
 
+
 def bench_dispatch_speed():
     from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
     iterations = 10000
     t0 = time.perf_counter()
     for _ in range(iterations):
@@ -161,6 +181,7 @@ def bench_dispatch_speed():
 
 def bench_memory_store():
     from whitemagic.core.memory.unified import UnifiedMemory
+
     um = UnifiedMemory()
     iterations = 50
     t0 = time.perf_counter()
@@ -173,6 +194,7 @@ def bench_memory_store():
 
 def bench_memory_search():
     from whitemagic.core.memory.unified import UnifiedMemory
+
     um = UnifiedMemory()
     iterations = 50
     t0 = time.perf_counter()
@@ -185,6 +207,7 @@ def bench_memory_search():
 
 def bench_rust_encode():
     from whitemagic.optimization import rust_accelerators as ra
+
     if not ra._RUST_AVAILABLE:
         raise ImportError("Rust not available")
     iterations = 200
@@ -201,9 +224,12 @@ def bench_rust_encode():
 # MAIN
 # ═══════════════════════════════════════════════════════════════
 
+
 def main():
     parser = argparse.ArgumentParser(description="WhiteMagic Install Verification")
-    parser.add_argument("--full", action="store_true", help="Run full checks including benchmarks")
+    parser.add_argument(
+        "--full", action="store_true", help="Run full checks including benchmarks"
+    )
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     args = parser.parse_args()
 
@@ -253,7 +279,11 @@ def main():
     print("═" * 60)
 
     if args.json:
-        print(json.dumps({"results": results, "passed": passed, "failed": failed}, indent=2))
+        print(
+            json.dumps(
+                {"results": results, "passed": passed, "failed": failed}, indent=2
+            )
+        )
 
     sys.exit(1 if failed > 0 else 0)
 

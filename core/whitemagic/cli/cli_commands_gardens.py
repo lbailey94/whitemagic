@@ -57,10 +57,13 @@ def activate(garden: str) -> None:
             from whitemagic.core.resonance.gan_ying_enhanced import EventType
 
             bus = get_bus()
-            bus.emit(EventType.GARDEN_ACTIVATED, {  # type: ignore[arg-type, call-arg]
-                "garden": garden,
-                "timestamp": "now",
-            })
+            bus.emit(
+                EventType.GARDEN_ACTIVATED,
+                {  # type: ignore[arg-type, call-arg]
+                    "garden": garden,
+                    "timestamp": "now",
+                },
+            )
         except (ImportError, AttributeError):
             pass
 
@@ -148,6 +151,7 @@ def _get_gardens_backend():
 def _is_garden_active(name: str) -> bool:
     """Check if a garden is currently active."""
     from whitemagic.gardens.garden_state import is_garden_active
+
     return is_garden_active(name)
 
 
@@ -167,9 +171,11 @@ def _detect_synergies(active_gardens: list[str]) -> list[dict[str, Any]]:
     synergies = []
     for (g1, g2), effect in synergy_map.items():
         if g1 in active_gardens and g2 in active_gardens:
-            synergies.append({
-                "gardens": [g1, g2],
-                "effect": effect,
-            })
+            synergies.append(
+                {
+                    "gardens": [g1, g2],
+                    "effect": effect,
+                }
+            )
 
     return synergies

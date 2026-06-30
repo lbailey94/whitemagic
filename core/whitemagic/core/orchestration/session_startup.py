@@ -66,7 +66,9 @@ class SessionStartupOrchestrator:
         self.systems[name] = status
         return status
 
-    def _run_with_timeout(self, name: str, fn: Callable[[], None], timeout_s: float = 2.0) -> None:
+    def _run_with_timeout(
+        self, name: str, fn: Callable[[], None], timeout_s: float = 2.0
+    ) -> None:
         """Run a startup action in a daemon thread with a bounded wait."""
         result_queue: queue.Queue[BaseException | None] = queue.Queue(maxsize=1)
 
@@ -77,12 +79,18 @@ class SessionStartupOrchestrator:
             except BaseException as exc:
                 result_queue.put(exc)
 
-        thread = threading.Thread(target=_runner, name=f"wm-startup-{name}", daemon=True)
+        thread = threading.Thread(
+            target=_runner, name=f"wm-startup-{name}", daemon=True
+        )
         thread.start()
         thread.join(timeout_s)
 
         if thread.is_alive():
-            logger.warning("⚠️ %s startup still running after {timeout_s:.1f}s; continuing in background", name, exc_info=True)
+            logger.warning(
+                "⚠️ %s startup still running after {timeout_s:.1f}s; continuing in background",
+                name,
+                exc_info=True,
+            )
             return
 
         if not result_queue.empty():
@@ -104,11 +112,14 @@ class SessionStartupOrchestrator:
             """
             try:
                 import whitemagic_rs
+
                 n = len([f for f in dir(whitemagic_rs) if not f.startswith("_")])
                 logger.info("✅ Rust bridge available (%s functions)", n, exc_info=True)
             except ImportError:
                 if os.getenv("WM_AUTO_BUILD_RUST_BRIDGE", "1") == "0":
-                    logger.info("ℹ️  Rust bridge not available. Set WM_AUTO_BUILD_RUST_BRIDGE=1 to auto-build.")
+                    logger.info(
+                        "ℹ️  Rust bridge not available. Set WM_AUTO_BUILD_RUST_BRIDGE=1 to auto-build."
+                    )
                     return
 
                 logger.info("🔧 Auto-building Rust bridge...")
@@ -117,21 +128,48 @@ class SessionStartupOrchestrator:
                 # Resolve script path relative to project root
                 this_dir = os.path.dirname(os.path.abspath(__file__))
                 candidates = [
-                    os.path.normpath(os.path.join(this_dir, "..", "..", "..", "..", "scripts", "build_rust_bridge.sh")),
-                    os.path.normpath(os.path.join(this_dir, "..", "..", "..", "scripts", "build_rust_bridge.sh")),
+                    os.path.normpath(
+                        os.path.join(
+                            this_dir,
+                            "..",
+                            "..",
+                            "..",
+                            "..",
+                            "scripts",
+                            "build_rust_bridge.sh",
+                        )
+                    ),
+                    os.path.normpath(
+                        os.path.join(
+                            this_dir,
+                            "..",
+                            "..",
+                            "..",
+                            "scripts",
+                            "build_rust_bridge.sh",
+                        )
+                    ),
                 ]
                 script_path = next((p for p in candidates if os.path.exists(p)), None)
                 if not script_path:
-                    logger.warning("⚠️ build_rust_bridge.sh not found, skipping Rust build")
+                    logger.warning(
+                        "⚠️ build_rust_bridge.sh not found, skipping Rust build"
+                    )
                     return
 
-                result = subprocess.run(["bash", script_path], capture_output=True, text=True, timeout=600)
+                result = subprocess.run(
+                    ["bash", script_path], capture_output=True, text=True, timeout=600
+                )
                 if result.returncode != 0:
-                    logger.warning("⚠️ Rust bridge build failed: %s", result.stderr[:500])
+                    logger.warning(
+                        "⚠️ Rust bridge build failed: %s", result.stderr[:500]
+                    )
                     return
                 # Try import again to verify success
                 import whitemagic_rs  # noqa: F401
+
                 logger.info("✅ Rust bridge built successfully")
+
         results.append(self._safe_activate("Rust Bridge", start_rust_bridge))
 
         # 1. Gan Ying Bus (must be first)
@@ -143,9 +181,11 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.resonance.gan_ying import get_bus
+
             bus = get_bus()
             # Verify it works
             assert bus is not None
+
         results.append(self._safe_activate("Gan Ying Bus", start_gan_ying))
 
         # 2. Dharma System (ethical guidance)
@@ -157,7 +197,9 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.dharma.gan_ying_integration import setup_dharma_gan_ying
+
             setup_dharma_gan_ying()
+
         results.append(self._safe_activate("Dharma System", start_dharma))
 
         # 3. Zodiac Council (12 specialized cores)
@@ -171,7 +213,9 @@ class SessionStartupOrchestrator:
             from whitemagic.core.zodiac.gan_ying_integration import (
                 setup_zodiac_gan_ying,
             )
+
             setup_zodiac_gan_ying()
+
         results.append(self._safe_activate("Zodiac Council", start_zodiac))
 
         # 4. Garden Resonance (all gardens wired)
@@ -183,7 +227,9 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.gardens.garden_resonance import setup_garden_resonance
+
             setup_garden_resonance()
+
         results.append(self._safe_activate("Garden Resonance", start_garden_resonance))
 
         # 5. Resonance adapters
@@ -195,7 +241,9 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.resonance.adapters import setup_all_adapters
+
             setup_all_adapters()
+
         results.append(self._safe_activate("Resonance Adapters", start_adapters))
 
         # 6. Redis Bridge (External Event Bridge) - Added v6.0
@@ -209,11 +257,13 @@ class SessionStartupOrchestrator:
             from whitemagic.core.resonance.redis_bridge import (
                 start_redis_bridge as start_bridge,
             )
+
             bridge = start_bridge()
             if bridge:
                 logger.info("✅ Redis Bridge started")
             else:
                 raise Exception("Failed to start Redis Bridge")
+
         results.append(self._safe_activate("Redis Bridge", start_redis_bridge))
 
         return results
@@ -233,7 +283,9 @@ class SessionStartupOrchestrator:
             from whitemagic.core.memory.neural.gan_ying_integration import (
                 setup_gan_ying_listeners,
             )
+
             setup_gan_ying_listeners()
+
         results.append(self._safe_activate("Neural Memory GY", start_neural_gy))
 
         # 2. Decay Daemon (background memory decay)
@@ -245,7 +297,9 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.memory.neural.decay_daemon import start_decay_daemon
+
             start_decay_daemon()
+
         results.append(self._safe_activate("Decay Daemon", start_decay))
 
         # 2.5. Embedding Daemon (background embedding for unembedded memories)
@@ -257,9 +311,15 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.memory.embedding_daemon import get_embedding_daemon
+
             daemon = get_embedding_daemon()
             self._run_with_timeout("embedding_daemon", daemon.start, timeout_s=1.5)
-            logger.info("Embedding Daemon activation triggered (rust=%s)", daemon._stats.rust_available, exc_info=True)
+            logger.info(
+                "Embedding Daemon activation triggered (rust=%s)",
+                daemon._stats.rust_available,
+                exc_info=True,
+            )
+
         results.append(self._safe_activate("Embedding Daemon", start_embedding))
 
         # 3. Predictive Cache (Markov chain pre-warming, 91% accuracy)
@@ -271,8 +331,14 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.optimization.predictive_cache import get_memory_cache
+
             cache = get_memory_cache()
-            logger.info("Predictive cache ready (max_size=%s)", cache.cache.max_size, exc_info=True)
+            logger.info(
+                "Predictive cache ready (max_size=%s)",
+                cache.cache.max_size,
+                exc_info=True,
+            )
+
         results.append(self._safe_activate("Predictive Cache", start_predictive_cache))
 
         return results
@@ -281,11 +347,19 @@ class SessionStartupOrchestrator:
         """Start intelligence/reasoning systems."""
         results: list[SystemStatus] = []
 
-        results.append(self._safe_activate("Pattern Consciousness GY", self.start_pattern_gy))
+        results.append(
+            self._safe_activate("Pattern Consciousness GY", self.start_pattern_gy)
+        )
         results.append(self._safe_activate("Rapid Cognition", self.start_cognition))
 
         # 3. Archived: embedded local-model inference (Ollama/BitNet/etc)
-        if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+
             def start_local_ml() -> None:
                 """
                 Perform the start local ml operation.
@@ -294,10 +368,14 @@ class SessionStartupOrchestrator:
                     None
                 """
                 from whitemagic.local_ml.engine import get_local_ml_engine
+
                 engine = get_local_ml_engine()
                 self._run_with_timeout("local_ml_engine", engine.start, timeout_s=2.0)
                 status = engine.get_status()
-                logger.info("🧠 Local ML Engine active (Default: %s)", status.get('default_backend'))
+                logger.info(
+                    "🧠 Local ML Engine active (Default: %s)",
+                    status.get("default_backend"),
+                )
 
             results.append(self._safe_activate("Local ML Engine", start_local_ml))
 
@@ -310,12 +388,19 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.intelligence.hologram.engine import get_hologram_engine
+
             engine = get_hologram_engine()
             self._run_with_timeout("hologram_engine", engine.start, timeout_s=2.0)
             if engine.enabled:
-                logger.info("🌌 Hologram Engine active with backend: %s", engine.get_stats().get('backend', 'unknown'))
+                logger.info(
+                    "🌌 Hologram Engine active with backend: %s",
+                    engine.get_stats().get("backend", "unknown"),
+                )
             else:
-                logger.warning("🌌 Hologram Engine started in limited mode (no Rust backend)")
+                logger.warning(
+                    "🌌 Hologram Engine started in limited mode (no Rust backend)"
+                )
+
         results.append(self._safe_activate("Hologram Engine", start_hologram))
 
         # 5. Emergence Engine (Insight Synthesis) - Added in Phase Connection
@@ -329,8 +414,10 @@ class SessionStartupOrchestrator:
             from whitemagic.core.intelligence.agentic.emergence_engine import (
                 get_emergence_engine,
             )
+
             engine = get_emergence_engine()
             self._run_with_timeout("emergence_engine", engine.start, timeout_s=2.0)
+
         results.append(self._safe_activate("Emergence Engine", start_emergence))
 
         # 6. Feedback Controller (The Observer that Acts) - Added in Phase Connection
@@ -344,10 +431,13 @@ class SessionStartupOrchestrator:
             from whitemagic.core.intelligence.control.feedback_controller import (
                 get_feedback_controller,
             )
-            controller = get_feedback_controller()
-            self._run_with_timeout("feedback_controller", controller.start, timeout_s=2.0)
-        results.append(self._safe_activate("Feedback Controller", start_feedback))
 
+            controller = get_feedback_controller()
+            self._run_with_timeout(
+                "feedback_controller", controller.start, timeout_s=2.0
+            )
+
+        results.append(self._safe_activate("Feedback Controller", start_feedback))
 
         return results
 
@@ -362,6 +452,7 @@ class SessionStartupOrchestrator:
             from whitemagic.core.patterns.pattern_consciousness.gan_ying_integration import (
                 setup_listeners,
             )
+
             setup_listeners()
         except (ImportError, AttributeError):
             pass  # Optional
@@ -377,6 +468,7 @@ class SessionStartupOrchestrator:
             from whitemagic.core.intelligence.learning.rapid_cognition import (
                 start_rapid_learning,
             )
+
             start_rapid_learning()
         except ImportError:
             pass
@@ -387,9 +479,11 @@ class SessionStartupOrchestrator:
 
         try:
             from whitemagic.gardens import get_garden, list_gardens
+
             gardens = list_gardens()
 
             for garden in gardens:
+
                 def make_activator(g: str) -> Callable[[], None]:
                     """
                     Create a new activator.
@@ -400,6 +494,7 @@ class SessionStartupOrchestrator:
                     Returns:
                         Callable[[], None]
                     """
+
                     def activate() -> None:
                         """
                         Perform the activate operation.
@@ -412,8 +507,12 @@ class SessionStartupOrchestrator:
                         except Exception as e:
                             logger.debug("Operation failed: %s", e)
                             pass
+
                     return activate
-                results.append(self._safe_activate(f"Garden: {garden}", make_activator(garden)))
+
+                results.append(
+                    self._safe_activate(f"Garden: {garden}", make_activator(garden))
+                )
         except Exception as e:
             logger.debug("Operation failed: %s", e)
             pass
@@ -425,7 +524,9 @@ class SessionStartupOrchestrator:
         results: list[SystemStatus] = []
 
         results.append(self._safe_activate("System Monitor", self.start_system_monitor))
-        results.append(self._safe_activate("Continuous Awareness", self.start_awareness))
+        results.append(
+            self._safe_activate("Continuous Awareness", self.start_awareness)
+        )
         results.append(self._safe_activate("Dashboard Systems", self.start_dashboard))
 
         return results
@@ -438,6 +539,7 @@ class SessionStartupOrchestrator:
             None
         """
         from whitemagic.core.monitoring import start_monitoring
+
         start_monitoring()
 
     def start_awareness(self) -> None:
@@ -451,8 +553,11 @@ class SessionStartupOrchestrator:
             from whitemagic.autonomous.continuous_awareness import (
                 get_awareness,  # type: ignore[import-not-found]
             )
+
             awareness = get_awareness()
-            self._run_with_timeout("continuous_awareness", awareness.observe_once, timeout_s=1.0)
+            self._run_with_timeout(
+                "continuous_awareness", awareness.observe_once, timeout_s=1.0
+            )
             logger.info("👁️ Continuous Awareness activation triggered")
         except ImportError:
             pass
@@ -481,7 +586,9 @@ class SessionStartupOrchestrator:
                 except RuntimeError:
                     asyncio.run(activate_all_systems())
 
-            self._run_with_timeout("dashboard_systems", _activate_dashboard, timeout_s=2.0)
+            self._run_with_timeout(
+                "dashboard_systems", _activate_dashboard, timeout_s=2.0
+            )
         except ImportError:
             pass
 
@@ -498,10 +605,12 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.temporal import get_temporal_context_manager
+
             manager = get_temporal_context_manager()
             manager.start_session()
             ctx = manager.get_context()
             logger.info("⏳ Temporal Context: %s", ctx.summary())
+
         results.append(self._safe_activate("Temporal Grounding", init_temporal))
 
         # 1. User Profile Sync (New in Phase 5)
@@ -514,21 +623,36 @@ class SessionStartupOrchestrator:
             """
             from whitemagic.core.resonance.gan_ying import emit_event
             from whitemagic.core.user import get_user_manager
+
             manager = get_user_manager()
             profile = manager.profile
-            logger.info("👤 User Profile Loaded: %s (Style: %s)", profile.name, profile.learning_style, exc_info=True)
+            logger.info(
+                "👤 User Profile Loaded: %s (Style: %s)",
+                profile.name,
+                profile.learning_style,
+                exc_info=True,
+            )
 
             # Emit event to merge into session context
-            emit_event("session.context_update", {
-                "user_preferences": profile.preferences,
-                "learning_style": profile.learning_style,
-                "interests": profile.interests,
-            }, source="session_startup")
+            emit_event(
+                "session.context_update",
+                {
+                    "user_preferences": profile.preferences,
+                    "learning_style": profile.learning_style,
+                    "interests": profile.interests,
+                },
+                source="session_startup",
+            )
+
         results.append(self._safe_activate("User Profile Sync", sync_user_profile))
 
         results.append(self._safe_activate("RESUME Context", self.load_resume_context))
-        results.append(self._safe_activate("Circuit Breaker", self.init_circuit_breaker))
-        results.append(self._safe_activate("Coherence Persistence", self.init_coherence))
+        results.append(
+            self._safe_activate("Circuit Breaker", self.init_circuit_breaker)
+        )
+        results.append(
+            self._safe_activate("Coherence Persistence", self.init_coherence)
+        )
         results.append(self._safe_activate("Session Handoff", self.check_handoff))
 
         return results
@@ -541,6 +665,7 @@ class SessionStartupOrchestrator:
             None
         """
         from whitemagic.config import PROJECT_ROOT
+
         intake_dir = PROJECT_ROOT / "memory" / "intake"
         resume_files = list(intake_dir.glob("RESUME_*.md"))
         if resume_files:
@@ -554,6 +679,7 @@ class SessionStartupOrchestrator:
             None
         """
         from whitemagic.core.intelligence.agentic.anti_loop import get_anti_loop
+
         detector = get_anti_loop()
         # Reset for new session but keep learnings
         detector.reset_session()
@@ -568,9 +694,10 @@ class SessionStartupOrchestrator:
         from whitemagic.core.intelligence.agentic.coherence_persistence import (
             get_coherence,
         )
+
         coherence = get_coherence()
         stats = coherence.get_iteration_stats()
-        logger.info("Coherence level: %s%%", stats['coherence_level'])
+        logger.info("Coherence level: %s%%", stats["coherence_level"])
 
     def check_handoff(self) -> None:
         """
@@ -581,6 +708,7 @@ class SessionStartupOrchestrator:
         """
         try:
             from whitemagic.gardens.sangha.session_handoff import get_handoff
+
             _ = get_handoff()  # Check for active session
         except ImportError:
             pass
@@ -599,9 +727,13 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.harmony.vector import get_harmony_vector
+
             hv = get_harmony_vector()
             snap = hv.snapshot()
-            logger.info("Harmony Vector: composite=%s", format(snap.harmony_score, ".2f"))
+            logger.info(
+                "Harmony Vector: composite=%s", format(snap.harmony_score, ".2f")
+            )
+
         results.append(self._safe_activate("Harmony Vector", init_harmony_vector))
 
         # 2. Dharma Rules Engine — declarative ethical rules
@@ -613,8 +745,14 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.dharma.rules import get_rules_engine
+
             engine = get_rules_engine()
-            logger.info("Dharma Rules: profile=%s, rules=%s", engine.get_profile(), len(engine.get_rules()))
+            logger.info(
+                "Dharma Rules: profile=%s, rules=%s",
+                engine.get_profile(),
+                len(engine.get_rules()),
+            )
+
         results.append(self._safe_activate("Dharma Rules Engine", init_dharma_rules))
 
         # 3. Karma Ledger — side-effect tracking
@@ -626,8 +764,10 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.dharma.karma_ledger import get_karma_ledger
+
             ledger = get_karma_ledger()
             logger.info("Karma Ledger: debt=%s", format(ledger.get_debt(), ".2f"))
+
         results.append(self._safe_activate("Karma Ledger", init_karma_ledger))
 
         # 4. Temporal Scheduler — FAST/MEDIUM/SLOW event lanes
@@ -641,10 +781,16 @@ class SessionStartupOrchestrator:
             from whitemagic.core.resonance.temporal_scheduler import (
                 get_temporal_scheduler,
             )
+
             scheduler = get_temporal_scheduler()
             self._run_with_timeout("temporal_scheduler", scheduler.start, timeout_s=1.5)
-            logger.info("Temporal Scheduler activation triggered (FAST/MEDIUM/SLOW lanes)")
-        results.append(self._safe_activate("Temporal Scheduler", init_temporal_scheduler))
+            logger.info(
+                "Temporal Scheduler activation triggered (FAST/MEDIUM/SLOW lanes)"
+            )
+
+        results.append(
+            self._safe_activate("Temporal Scheduler", init_temporal_scheduler)
+        )
 
         # 5. Homeostatic Loop — self-regulation feedback
         def init_homeostasis() -> None:
@@ -655,9 +801,11 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
             loop = get_homeostatic_loop()
             loop.attach()
             logger.info("Homeostatic Loop attached (graduated corrective actions)")
+
         results.append(self._safe_activate("Homeostatic Loop", init_homeostasis))
 
         # 6. Maturity Gates — developmental stage assessment
@@ -669,9 +817,16 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.core.governance.maturity_gates import get_maturity_engine
+
             engine = get_maturity_engine()
             report = engine.assess()
-            logger.info("Maturity: stage=%s (level %s)", report.current_stage.name, report.current_stage.value, exc_info=True)
+            logger.info(
+                "Maturity: stage=%s (level %s)",
+                report.current_stage.name,
+                report.current_stage.value,
+                exc_info=True,
+            )
+
         results.append(self._safe_activate("Maturity Gates", init_maturity))
 
         # 7. Stoic Circuit Breaker Registry — pre-warm
@@ -683,9 +838,15 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.tools.circuit_breaker import get_breaker_registry
+
             reg = get_breaker_registry()
-            logger.info("Circuit Breaker Registry: %s breakers tracked", len(reg.all_status()))
-        results.append(self._safe_activate("Circuit Breaker Registry", init_breaker_registry))
+            logger.info(
+                "Circuit Breaker Registry: %s breakers tracked", len(reg.all_status())
+            )
+
+        results.append(
+            self._safe_activate("Circuit Breaker Registry", init_breaker_registry)
+        )
 
         # 8. Gratitude Pulse (XRPL Background Scanner)
         def start_pulse() -> None:
@@ -696,13 +857,16 @@ class SessionStartupOrchestrator:
                 None
             """
             from whitemagic.gratitude.pulse import get_pulse
+
             pulse = get_pulse()
             import asyncio
+
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 asyncio.ensure_future(pulse.start())
             else:
                 loop.run_until_complete(pulse.start())
+
         results.append(self._safe_activate("Gratitude Pulse", start_pulse))
 
         return results
@@ -758,10 +922,34 @@ class SessionStartupOrchestrator:
 
                 # Instantiate all Ganas for the chain
                 gana_instances = [
-                    HornGana(), NeckGana(), RootGana(), RoomGana(), HeartGana(), TailGana(), WinnowingBasketGana(),
-                    GhostGana(), WillowGana(), StarGana(), ExtendedNetGana(), WingsGana(), ChariotGana(), AbundanceGana(),
-                    StraddlingLegsGana(), MoundGana(), StomachGana(), HairyHeadGana(), TurtleBeakGana(), ThreeStarsGana(), NetGana(),
-                    DipperGana(), OxGana(), GirlGana(), VoidGana(), RoofGana(), EncampmentGana(), WallGana(),
+                    HornGana(),
+                    NeckGana(),
+                    RootGana(),
+                    RoomGana(),
+                    HeartGana(),
+                    TailGana(),
+                    WinnowingBasketGana(),
+                    GhostGana(),
+                    WillowGana(),
+                    StarGana(),
+                    ExtendedNetGana(),
+                    WingsGana(),
+                    ChariotGana(),
+                    AbundanceGana(),
+                    StraddlingLegsGana(),
+                    MoundGana(),
+                    StomachGana(),
+                    HairyHeadGana(),
+                    TurtleBeakGana(),
+                    ThreeStarsGana(),
+                    NetGana(),
+                    DipperGana(),
+                    OxGana(),
+                    GirlGana(),
+                    VoidGana(),
+                    RoofGana(),
+                    EncampmentGana(),
+                    WallGana(),
                 ]
 
                 chain = GanaChain(ganas=gana_instances)
@@ -791,10 +979,14 @@ class SessionStartupOrchestrator:
                 thread.start()
                 thread.join(1.0)
                 if thread.is_alive():
-                    logger.warning("⚠️ GanaSwarm breath cycle still initializing; continuing in background")
+                    logger.warning(
+                        "⚠️ GanaSwarm breath cycle still initializing; continuing in background"
+                    )
                 logger.info("🫁 GanaSwarm breath cycle activated")
             except ImportError as e:
-                logger.warning("⚠️ GanaSwarm could not be activated: %s", e, exc_info=True)
+                logger.warning(
+                    "⚠️ GanaSwarm could not be activated: %s", e, exc_info=True
+                )
                 raise
 
         results.append(self._safe_activate("Gana Swarm", activate_swarm))
@@ -819,6 +1011,7 @@ class SessionStartupOrchestrator:
             from whitemagic.core.intelligence.insight_pipeline import (
                 get_insight_pipeline,
             )
+
             pipeline = get_insight_pipeline()
             briefing = pipeline.generate_briefing(serendipity_count=3)
 
@@ -830,11 +1023,15 @@ class SessionStartupOrchestrator:
             total = len(briefing.items)
 
             if verbose and total > 0:
-                logger.info("📋 Intelligence Briefing: %s insights "
-                          "(%s critical, %s high priority)", total, critical, high)
+                logger.info(
+                    "📋 Intelligence Briefing: %s insights "
+                    "(%s critical, %s high priority)",
+                    total,
+                    critical,
+                    high,
+                )
                 if critical > 0:
-                    for item in briefing.critical_items[:
-                        3]:
+                    for item in briefing.critical_items[:3]:
                         logger.info("   ‼️ %s", item.title, exc_info=True)
 
         results.append(self._safe_activate("Insight Briefing", run_briefing))
@@ -853,9 +1050,13 @@ class SessionStartupOrchestrator:
 
         def start_dreaming() -> None:
             from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
             dc = get_dream_cycle()
             dc.start()
-            logger.info("Dream Cycle started (idle threshold: %.0fs)", dc._idle_threshold)
+            logger.info(
+                "Dream Cycle started (idle threshold: %.0fs)", dc._idle_threshold
+            )
+
         results.append(self._safe_activate("Dream Cycle", start_dreaming))
         return results
 
@@ -873,52 +1074,42 @@ class SessionStartupOrchestrator:
             if verbose:
                 logger.info("🚀 WhiteMagic Session Startup...")
 
-            # Phase 1: Core
             if verbose:
                 logger.info("\n📡 Phase 1: Core Systems")
             self.start_core_systems()
 
-            # Phase 2: Memory
             if verbose:
                 logger.info("\n🧠 Phase 2: Memory Systems")
             self.start_memory_systems()
 
-            # Phase 3: Intelligence
             if verbose:
                 logger.info("\n🧪 Phase 3: Intelligence Systems")
             self.start_intelligence_systems()
 
-            # Phase 4: Gardens
             if verbose:
                 logger.info("\n🌸 Phase 4: Gardens")
             self.start_garden_systems()
 
-            # Phase 4.5: Ganas (Living Organism)
             if verbose:
                 logger.info("\n🫁 Phase 4.5: Gana Swarm")
             self.start_ganas()
 
-            # Phase 5: Monitoring
             if verbose:
                 logger.info("\n👁️ Phase 5: Monitoring")
             self.start_monitoring_systems()
 
-            # Phase 6: Context Loading (v4.3.0)
             if verbose:
                 logger.info("\n🧠 Phase 6: Memory Context")
             self.start_context_systems()
 
-            # Phase 7: Harmony & Governance (v11+)
             if verbose:
                 logger.info("\n☯️ Phase 7: Harmony & Governance")
             self.start_harmony_governance()
 
-            # Phase 8: Proactive Intelligence Briefing (v14+)
             if verbose:
                 logger.info("\n📋 Phase 8: Intelligence Briefing")
             self.start_insight_briefing(verbose=verbose)
 
-            # Phase 9: Dream Cycle (v23.3: auto-start background dreaming)
             if verbose:
                 logger.info("\n🌙 Phase 9: Dream Cycle")
             self.start_dream_cycle()
@@ -935,12 +1126,19 @@ class SessionStartupOrchestrator:
                 "activated": activated,
                 "failed": failed,
                 "duration_seconds": round(duration, 3),
-                "systems": {k: {"activated": v.activated, "error": v.error}
-                           for k, v in self.systems.items()},
+                "systems": {
+                    k: {"activated": v.activated, "error": v.error}
+                    for k, v in self.systems.items()
+                },
             }
 
             if verbose:
-                logger.info("\n✅ Startup complete: %s systems activated, %s failed in {duration:.2f}s", activated, failed, exc_info=True)
+                logger.info(
+                    "\n✅ Startup complete: %s systems activated, %s failed in {duration:.2f}s",
+                    activated,
+                    failed,
+                    exc_info=True,
+                )
 
             return summary
 
@@ -948,13 +1146,11 @@ class SessionStartupOrchestrator:
         """Get current status of all systems."""
         return {
             "started": self._started,
-            "systems": {k: {"activated": v.activated, "error": v.error}
-                       for k, v in self.systems.items()},
+            "systems": {
+                k: {"activated": v.activated, "error": v.error}
+                for k, v in self.systems.items()
+            },
         }
-
-    # ------------------------------------------------------------------
-    # Cycle Engine methods (fused from CycleEngine)
-    # ------------------------------------------------------------------
 
     def gather_cycle_state(self) -> dict[str, Any]:
         """Gather unified cycle state from all available subsystems."""
@@ -982,17 +1178,19 @@ class SessionStartupOrchestrator:
         """Return full cycle engine status as a dict."""
         return self._get_cycle_engine().status()
 
-    # ------------------------------------------------------------------
-    # Wu Xing Engine methods (fused from WuXingEngine)
-    # ------------------------------------------------------------------
-
     def get_wu_xing_element(self, element: Any) -> dict[str, Any]:
         """Get the current state of a Wu Xing element."""
         eng = self._get_wu_xing_engine()
         state = eng.get_element(element)
-        return {"element": state.element.value, "energy": state.energy, "quality": state.quality}
+        return {
+            "element": state.element.value,
+            "energy": state.energy,
+            "quality": state.quality,
+        }
 
-    def adjust_wu_xing(self, element: Any, energy_change: float, quality: str | None = None) -> None:
+    def adjust_wu_xing(
+        self, element: Any, energy_change: float, quality: str | None = None
+    ) -> None:
         """Adjust the energy of a Wu Xing element."""
         self._get_wu_xing_engine().adjust_element(element, energy_change, quality)
 
@@ -1016,10 +1214,6 @@ class SessionStartupOrchestrator:
         """Describe the current elemental cycle phase."""
         return self._get_wu_xing_engine().get_current_cycle()
 
-    # ------------------------------------------------------------------
-    # Lazy accessors for fused sub-engines
-    # ------------------------------------------------------------------
-
     _cycle_engine_instance = None
     _wu_xing_engine_instance = None
 
@@ -1027,6 +1221,7 @@ class SessionStartupOrchestrator:
         """Get or create the CycleEngine instance."""
         if self._cycle_engine_instance is None:
             from whitemagic.cycle_engine import CycleEngine
+
             self._cycle_engine_instance = CycleEngine()
         return self._cycle_engine_instance
 
@@ -1034,6 +1229,7 @@ class SessionStartupOrchestrator:
         """Get or create the WuXingEngine instance."""
         if self._wu_xing_engine_instance is None:
             from whitemagic.wu_xing import WuXingEngine
+
             self._wu_xing_engine_instance = WuXingEngine()
         return self._wu_xing_engine_instance
 
@@ -1071,12 +1267,14 @@ def session_status() -> dict[str, Any]:
 
 # Backward-compat aliases for fused engines
 
+
 def get_cycle_engine():
     """Backward-compat — get_cycle_engine now returns the SessionStartupOrchestrator singleton.
 
     The CycleEngine has been fused into SessionEngine (slot 0, Horn 角).
     """
     return get_orchestrator()
+
 
 def get_wuxing_engine():
     """Backward-compat — get_wuxing_engine now returns the SessionStartupOrchestrator singleton.

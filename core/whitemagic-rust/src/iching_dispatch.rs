@@ -10,10 +10,6 @@
 
 use crate::iching::Trigram;
 
-// ---------------------------------------------------------------------------
-// Phase 2b: Trigram Compute/I/O Modes
-// ---------------------------------------------------------------------------
-
 /// Compute mode: describes the hardware execution profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ComputeMode {
@@ -128,10 +124,6 @@ pub fn trigram_dispatch(trigram: &Trigram) -> TrigramDispatch {
         },
     }
 }
-
-// ---------------------------------------------------------------------------
-// Phase 2c: Hexagram Dispatch Matrix
-// ---------------------------------------------------------------------------
 
 /// Dispatch decision for a hexagram: combines upper + lower trigram profiles.
 #[derive(Debug, Clone)]
@@ -249,10 +241,6 @@ fn derive_strategy(compute: &ComputeMode, io: IoChannel, fully_simd: bool) -> Di
     }
 }
 
-// ---------------------------------------------------------------------------
-// Full 64-hexagram dispatch table (precomputed for fast lookup)
-// ---------------------------------------------------------------------------
-
 /// Precompute dispatch for all 64 hexagrams.
 /// Index by King Wen number (1-64), returns the dispatch profile.
 pub fn dispatch_for_hexagram(king_wen_num: u32) -> Option<HexagramDispatch> {
@@ -292,10 +280,6 @@ fn king_wen_to_binary(kw: u32) -> u32 {
     }
     0
 }
-
-// ---------------------------------------------------------------------------
-// Phase 4b: Boltzmann Hexagram Selection
-// ---------------------------------------------------------------------------
 
 /// Compute Boltzmann weights for all 64 hexagrams given a temperature.
 /// P(i) ∝ exp(-E_i / T), where E_i is the energy of hexagram i.
@@ -371,10 +355,6 @@ pub fn boltzmann_top_k(temperature: f64, k: usize) -> Vec<(u32, f64)> {
     indexed
 }
 
-// ---------------------------------------------------------------------------
-// Phase 5b: Entropy-Matched Routing
-// ---------------------------------------------------------------------------
-
 /// Route a task to the best hexagram lane by matching system entropy
 /// to the Boltzmann temperature parameter.
 ///
@@ -420,10 +400,6 @@ pub fn temperature_for_ratio(ratio: f64) -> f64 {
     // Exponential mapping: ratio=0.5 → T=1.0, ratio=0 → T=0.01, ratio=1 → T=100
     0.01 * (10000.0_f64).powf(r)
 }
-
-// ---------------------------------------------------------------------------
-// Phase 6c: I/O Channel Gating
-// ---------------------------------------------------------------------------
 
 /// I/O channel gate state: open, throttled, or closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

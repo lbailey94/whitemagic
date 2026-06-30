@@ -10,12 +10,16 @@ from whitemagic.tools.tool_surface import get_surface_counts
 from whitemagic.tools.unified_api import call_tool
 from whitemagic.tools.envelope import is_enveloped
 
+
 @pytest.mark.parametrize("tool_def", TOOL_REGISTRY)
 def test_tool_registered_has_handler(tool_def):
     """Verify EVERY registered tool has a handler or prefix routing."""
     if tool_def.name.startswith("gana_"):
-        return # Handled by prefix routing in dispatch()
-    assert tool_def.name in DISPATCH_TABLE, f"Tool '{tool_def.name}' is registered but missing from DISPATCH_TABLE"
+        return  # Handled by prefix routing in dispatch()
+    assert tool_def.name in DISPATCH_TABLE, (
+        f"Tool '{tool_def.name}' is registered but missing from DISPATCH_TABLE"
+    )
+
 
 @pytest.mark.parametrize("tool_def", TOOL_REGISTRY)
 def test_tool_conforms_to_envelope(tool_def):
@@ -25,18 +29,21 @@ def test_tool_conforms_to_envelope(tool_def):
     """
     # Some tools might fail in CI if they require external services,
     # but the envelope structure should still be checked on success/error.
-    
+
     # We only test tools that support dry_run safely or are pure read.
     # Note: capabilities and manifest are perfect test cases.
     if tool_def.name in ["capabilities", "manifest", "state.paths"]:
         resp = call_tool(tool_def.name)
-        assert is_enveloped(resp), f"Tool '{tool_def.name}' returned non-enveloped response"
+        assert is_enveloped(resp), (
+            f"Tool '{tool_def.name}' returned non-enveloped response"
+        )
         assert resp["status"] == "success"
 
 
 # ---------------------------------------------------------------------------
 # Stability contract tests — Phase 2 hardening
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("gana_name", GANA_NAMES)
 def test_gana_tools_are_stable(gana_name):
@@ -59,7 +66,8 @@ def test_non_gana_tools_not_stable_by_default():
     tools. This test ensures no dispatch-table tool accidentally inherits STABLE.
     """
     violations = [
-        t.name for t in TOOL_REGISTRY
+        t.name
+        for t in TOOL_REGISTRY
         if not t.name.startswith("gana_") and t.stability == ToolStability.STABLE
     ]
     assert violations == [], (

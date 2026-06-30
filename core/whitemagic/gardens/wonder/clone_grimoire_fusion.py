@@ -26,8 +26,7 @@ class CloneGrimoireFusion:
         clones = []
         for i in range(64):
             clone_id = self.coordinator.spawn_agent(
-                AgentRole.ANALYST,
-                f"hexagram_{i+1}"
+                AgentRole.ANALYST, f"hexagram_{i + 1}"
             )
             clones.append(clone_id)
 
@@ -35,7 +34,7 @@ class CloneGrimoireFusion:
             "type": "iching_array",
             "question": question,
             "clones": len(clones),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.active_fusions.append(fusion)
         return fusion
@@ -73,7 +72,7 @@ class CloneGrimoireFusion:
             "decision": decision,
             "squads": {k: len(v["clones"]) for k, v in squads.items()},
             "total_clones": sum(len(v["clones"]) for v in squads.values()),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.active_fusions.append(fusion)
         return fusion
@@ -105,7 +104,7 @@ class CloneGrimoireFusion:
             "teams": {k: len(v["clones"]) for k, v in teams.items()},
             "total_clones": 100,
             "cycle": "wood -> fire -> earth -> metal -> water",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.active_fusions.append(fusion)
         return fusion
@@ -119,8 +118,7 @@ class CloneGrimoireFusion:
         for theme in themes:
             for i in range(50):
                 clone_id = self.coordinator.spawn_agent(
-                    AgentRole.SYNTHESIZER,
-                    f"dreamer_{theme}_{i}"
+                    AgentRole.SYNTHESIZER, f"dreamer_{theme}_{i}"
                 )
                 clones.append(clone_id)
 
@@ -129,7 +127,7 @@ class CloneGrimoireFusion:
             "themes": themes,
             "clones_per_theme": 50,
             "total_clones": len(clones),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.active_fusions.append(fusion)
         return fusion
@@ -143,8 +141,7 @@ class CloneGrimoireFusion:
         for level in range(depth):
             for i in range(20):
                 clone_id = self.coordinator.spawn_agent(
-                    AgentRole.EXPLORER,
-                    f"rabbit_{topic}_L{level}_{i}"
+                    AgentRole.EXPLORER, f"rabbit_{topic}_L{level}_{i}"
                 )
                 clones.append(clone_id)
 
@@ -154,7 +151,7 @@ class CloneGrimoireFusion:
             "depth_levels": depth,
             "clones_per_level": 20,
             "total_clones": len(clones),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.active_fusions.append(fusion)
         return fusion
@@ -162,6 +159,7 @@ class CloneGrimoireFusion:
 
 # Singleton
 _fusion: CloneGrimoireFusion | None = None
+
 
 def get_clone_fusion() -> CloneGrimoireFusion:
     global _fusion

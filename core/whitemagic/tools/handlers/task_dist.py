@@ -1,4 +1,5 @@
 """Task distribution tool handlers."""
+
 # ruff: noqa: BLE001, E402
 import logging
 
@@ -28,6 +29,7 @@ def _emit(event_type_name: str, data: dict) -> None:
     """Best-effort Gan Ying event emission."""
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type_name, data, source="task_dist")
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced task dist emit err: %s", e, exc_info=True)
@@ -93,7 +95,9 @@ def _save_task_file(task: dict[str, Any]) -> None:
     task_id = task.get("id")
     if not task_id:
         return
-    _task_file_path(str(task_id)).write_text(_json_dumps(task, indent=2), encoding="utf-8")
+    _task_file_path(str(task_id)).write_text(
+        _json_dumps(task, indent=2), encoding="utf-8"
+    )
 
 
 def _merge_runtime_state(task: dict[str, Any]) -> dict[str, Any]:
@@ -106,26 +110,18 @@ def _merge_runtime_state(task: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-# ---------------------------------------------------------------------------
-# Task profiles — define optimal execution targets and defaults
-# ---------------------------------------------------------------------------
-
 TASK_PROFILES: dict[str, dict[str, Any]] = {
-    "compilation":      {"target": "auto", "priority": "high",   "timeout": 600},
-    "testing":          {"target": "auto", "priority": "medium", "timeout": 300},
-    "build":            {"target": "auto", "priority": "high",   "timeout": 900},
-    "file_processing":  {"target": "auto", "priority": "low",    "timeout": 600},
-    "ai_inference":     {"target": "auto", "priority": "high",   "timeout": 300},
-    "code_review":      {"target": "auto", "priority": "medium", "timeout": 180},
-    "backup":           {"target": "auto", "priority": "low",    "timeout": 1800},
-    "sync":             {"target": "local", "priority": "medium", "timeout": 600},
-    "general":          {"target": "local", "priority": "medium", "timeout": 300},
+    "compilation": {"target": "auto", "priority": "high", "timeout": 600},
+    "testing": {"target": "auto", "priority": "medium", "timeout": 300},
+    "build": {"target": "auto", "priority": "high", "timeout": 900},
+    "file_processing": {"target": "auto", "priority": "low", "timeout": 600},
+    "ai_inference": {"target": "auto", "priority": "high", "timeout": 300},
+    "code_review": {"target": "auto", "priority": "medium", "timeout": 180},
+    "backup": {"target": "auto", "priority": "low", "timeout": 1800},
+    "sync": {"target": "local", "priority": "medium", "timeout": 600},
+    "general": {"target": "local", "priority": "medium", "timeout": 300},
 }
 
-
-# ---------------------------------------------------------------------------
-# Handler: task.distribute
-# ---------------------------------------------------------------------------
 
 def handle_task_distribute(**kwargs: Any) -> dict[str, Any]:
     """Create and enqueue a new task for distribution."""
@@ -163,16 +159,21 @@ def handle_task_distribute(**kwargs: Any) -> dict[str, Any]:
     _save_queue(queue)
     _save_task_file(task)
 
-    _append_log({
-        "event": "task_created",
-        "task_id": task_id,
-        "task_type": task_type,
-        "target": task["target"],
-        "priority": task["priority"],
-        "timestamp": now,
-    })
+    _append_log(
+        {
+            "event": "task_created",
+            "task_id": task_id,
+            "task_type": task_type,
+            "target": task["target"],
+            "priority": task["priority"],
+            "timestamp": now,
+        }
+    )
 
-    _emit("TASK_CREATED", {"task_id": task_id, "task_type": task_type, "target": task["target"]})
+    _emit(
+        "TASK_CREATED",
+        {"task_id": task_id, "task_type": task_type, "target": task["target"]},
+    )
 
     return {
         "status": "success",
@@ -180,10 +181,6 @@ def handle_task_distribute(**kwargs: Any) -> dict[str, Any]:
         "task": task,
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: task.status
-# ---------------------------------------------------------------------------
 
 def handle_task_status(**kwargs: Any) -> dict[str, Any]:
     """Get the status of a specific task or all tasks."""
@@ -196,7 +193,11 @@ def handle_task_status(**kwargs: Any) -> dict[str, Any]:
         if task is None:
             task = _load_task_file(task_id)
             if task is None:
-                return {"status": "error", "error": f"Task {task_id} not found", "error_code": "not_found"}
+                return {
+                    "status": "error",
+                    "error": f"Task {task_id} not found",
+                    "error_code": "not_found",
+                }
 
         task = _merge_runtime_state(task)
 
@@ -230,10 +231,6 @@ def handle_task_status(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: task.list
-# ---------------------------------------------------------------------------
-
 def handle_task_list(**kwargs: Any) -> dict[str, Any]:
     """List tasks with optional filters."""
     status_filter = kwargs.get("filter_status")
@@ -259,10 +256,6 @@ def handle_task_list(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: task.complete (mark a task as done — used by workers)
-# ---------------------------------------------------------------------------
-
 def handle_task_complete(**kwargs: Any) -> dict[str, Any]:
     """Mark a task as completed with results."""
     task_id = kwargs.get("task_id")
@@ -278,7 +271,11 @@ def handle_task_complete(**kwargs: Any) -> dict[str, Any]:
     if task_entry is None:
         task_entry = _load_task_file(task_id)
         if task_entry is None:
-            return {"status": "error", "error": f"Task {task_id} not found", "error_code": "not_found"}
+            return {
+                "status": "error",
+                "error": f"Task {task_id} not found",
+                "error_code": "not_found",
+            }
         queue.append(task_entry)
 
     completed_at = datetime.now().isoformat()
@@ -301,12 +298,14 @@ def handle_task_complete(**kwargs: Any) -> dict[str, Any]:
     result_file = _results_dir() / f"{task_id}.json"
     result_file.write_text(_json_dumps(result, indent=2), encoding="utf-8")
 
-    _append_log({
-        "event": "task_completed",
-        "task_id": task_id,
-        "success": success,
-        "timestamp": datetime.now().isoformat(),
-    })
+    _append_log(
+        {
+            "event": "task_completed",
+            "task_id": task_id,
+            "success": success,
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
 
     _emit(
         "TASK_COMPLETED" if success else "TASK_FAILED",
@@ -319,10 +318,6 @@ def handle_task_complete(**kwargs: Any) -> dict[str, Any]:
         "result": result,
     }
 
-
-# ---------------------------------------------------------------------------
-# Load-Aware Host Routing (inspired by Tools(copy)/task-distributor.py)
-# ---------------------------------------------------------------------------
 
 # Known hosts — configure via WHITEMAGIC_HOSTS env var (comma-separated user@host)
 # or override per-call.
@@ -365,12 +360,25 @@ def _get_remote_load(ssh_target: str, timeout: int = 5) -> dict[str, Any]:
     """Get remote system load via SSH."""
     try:
         result = subprocess.run(
-            ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
-             ssh_target, "cat /proc/loadavg && nproc"],
-            capture_output=True, text=True, timeout=timeout,
+            [
+                "ssh",
+                "-o",
+                "ConnectTimeout=3",
+                "-o",
+                "StrictHostKeyChecking=no",
+                ssh_target,
+                "cat /proc/loadavg && nproc",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
         if result.returncode != 0:
-            return {"host": ssh_target, "available": False, "error": result.stderr[:100]}
+            return {
+                "host": ssh_target,
+                "available": False,
+                "error": result.stderr[:100],
+            }
 
         lines = result.stdout.strip().split("\n")
         parts = lines[0].split()

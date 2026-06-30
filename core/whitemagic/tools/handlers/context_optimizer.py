@@ -17,7 +17,9 @@ def handle_context_pack(**kwargs: Any) -> dict[str, Any]:
 
     opt = get_context_optimizer()
     if include_wisdom:
-        packed = opt.pack_full_context(query, token_budget=token_budget, memory_limit=limit)
+        packed = opt.pack_full_context(
+            query, token_budget=token_budget, memory_limit=limit
+        )
     else:
         packed = opt.pack_memories(query, token_budget=token_budget, limit=limit)
 
@@ -37,5 +39,6 @@ def handle_context_pack(**kwargs: Any) -> dict[str, Any]:
 def handle_context_status(**kwargs: Any) -> dict[str, Any]:
     """Get Context Optimizer status."""
     from whitemagic.ai.context_optimizer import get_context_optimizer
+
     opt = get_context_optimizer()
     return {"status": "success", **opt.status()}

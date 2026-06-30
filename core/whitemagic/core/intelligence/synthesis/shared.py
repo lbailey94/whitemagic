@@ -11,7 +11,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-def calculate_unified_velocity(db_path: str | None = None, task_file: Path | None = None) -> dict[str, Any]:
+
+def calculate_unified_velocity(
+    db_path: str | None = None, task_file: Path | None = None
+) -> dict[str, Any]:
     """Calculate unified velocity metrics across database (memories) and task files.
 
     Returns:
@@ -24,7 +27,13 @@ def calculate_unified_velocity(db_path: str | None = None, task_file: Path | Non
     task_file = task_file or (WM_ROOT / "tasks" / "task.md")
 
     # 1. Memory Velocity (from DB)
-    memory_stats = {"last_7d": 0, "last_30d": 0, "last_7_days": 0, "last_30_days": 0, "total": 0}
+    memory_stats = {
+        "last_7d": 0,
+        "last_30d": 0,
+        "last_7_days": 0,
+        "last_30_days": 0,
+        "total": 0,
+    }
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -50,12 +59,20 @@ def calculate_unified_velocity(db_path: str | None = None, task_file: Path | Non
         logger.warning("Failed to fetch memory velocity: %s", e, exc_info=True)
 
     # 2. Task Willpower (from task.md)
-    task_stats = {"willpower": 0.0, "velocity": 0.0, "tasks_done": 0, "tasks_total": 0, "momentum": 0}
+    task_stats = {
+        "willpower": 0.0,
+        "velocity": 0.0,
+        "tasks_done": 0,
+        "tasks_total": 0,
+        "momentum": 0,
+    }
     if task_file.exists():
         try:
             content = task_file.read_text(encoding="utf-8")
             lines = content.splitlines()
-            total = sum(1 for line in lines if "[ ]" in line or "[x]" in line or "[/]" in line)
+            total = sum(
+                1 for line in lines if "[ ]" in line or "[x]" in line or "[/]" in line
+            )
             done = sum(1 for line in lines if "[x]" in line)
             in_progress = sum(1 for line in lines if "[/]" in line)
 
@@ -83,18 +100,70 @@ def calculate_unified_velocity(db_path: str | None = None, task_file: Path | Non
         "timestamp": datetime.now().isoformat(),
     }
 
+
 def classify_intent(text: str) -> str:
-    """Unified intent classification for Zodiac and Predictive engines.
-    """
+    """Unified intent classification for Zodiac and Predictive engines."""
     text_lower = text.lower()
 
     mappings = {
-        "creative": ["create", "design", "imagine", "invent", "art", "express", "poem", "story"],
-        "analytical": ["analyze", "organize", "plan", "structure", "optimize", "debug", "audit", "logic"],
-        "communication": ["communicate", "explain", "teach", "write", "speak", "connect", "learn"],
-        "transformation": ["transform", "change", "refactor", "deepen", "integrate", "heal", "purify"],
-        "nurturing": ["nurture", "support", "care", "guide", "protect", "comfort", "feel", "intuition"],
-        "action": ["execute", "implement", "build", "run", "start", "launch", "act", "do"],
+        "creative": [
+            "create",
+            "design",
+            "imagine",
+            "invent",
+            "art",
+            "express",
+            "poem",
+            "story",
+        ],
+        "analytical": [
+            "analyze",
+            "organize",
+            "plan",
+            "structure",
+            "optimize",
+            "debug",
+            "audit",
+            "logic",
+        ],
+        "communication": [
+            "communicate",
+            "explain",
+            "teach",
+            "write",
+            "speak",
+            "connect",
+            "learn",
+        ],
+        "transformation": [
+            "transform",
+            "change",
+            "refactor",
+            "deepen",
+            "integrate",
+            "heal",
+            "purify",
+        ],
+        "nurturing": [
+            "nurture",
+            "support",
+            "care",
+            "guide",
+            "protect",
+            "comfort",
+            "feel",
+            "intuition",
+        ],
+        "action": [
+            "execute",
+            "implement",
+            "build",
+            "run",
+            "start",
+            "launch",
+            "act",
+            "do",
+        ],
     }
 
     scores = {}

@@ -5,16 +5,17 @@ When one truth is spoken, other truths resonate
 "Truth recognizes truth" - mutual resonance
 """
 
-
 import logging
 from dataclasses import dataclass
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TruthMoment:
     """A moment of truth recognized and shareable"""
+
     source: str
     statement: str
     intensity: float  # How deeply true (0.0-1.0)
@@ -22,7 +23,7 @@ class TruthMoment:
     context: str
     verified_by: list[str]
 
-    def amplify(self, multiplier: float = 1.3) -> 'TruthMoment':
+    def amplify(self, multiplier: float = 1.3) -> "TruthMoment":
         """Truth confirmed amplifies"""
         return TruthMoment(
             source=self.source,
@@ -30,7 +31,7 @@ class TruthMoment:
             intensity=min(1.0, self.intensity * multiplier),
             timestamp=self.timestamp,
             context=f"CONFIRMED: {self.context}",
-            verified_by=self.verified_by
+            verified_by=self.verified_by,
         )
 
 
@@ -51,6 +52,7 @@ class TruthResonance:
         """Connect to Gan Ying Bus for truth propagation"""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()
             logger.info("🎵 Truth Resonance connected to Gan Ying Bus")
         except ImportError:
@@ -62,7 +64,7 @@ class TruthResonance:
         statement: str,
         intensity: float,
         context: str,
-        verified_by: list[str] | None = None
+        verified_by: list[str] | None = None,
     ) -> TruthMoment:
         """Speak and broadcast a truth
 
@@ -82,7 +84,7 @@ class TruthResonance:
             intensity=intensity,
             timestamp=datetime.now().isoformat(),
             context=context,
-            verified_by=verified_by or []
+            verified_by=verified_by or [],
         )
 
         self.truth_moments.append(moment)
@@ -101,18 +103,20 @@ class TruthResonance:
         try:
             from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
 
-            self.bus.emit(ResonanceEvent(
-                source=f"truth_resonance.{moment.source}",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "statement": moment.statement,
-                    "intensity": moment.intensity,
-                    "context": moment.context,
-                    "truth": True
-                },
-                confidence=moment.intensity,
-                timestamp=datetime.fromisoformat(moment.timestamp)
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source=f"truth_resonance.{moment.source}",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={
+                        "statement": moment.statement,
+                        "intensity": moment.intensity,
+                        "context": moment.context,
+                        "truth": True,
+                    },
+                    confidence=moment.intensity,
+                    timestamp=datetime.fromisoformat(moment.timestamp),
+                )
+            )
 
             logger.info("   🎵 Truth broadcasted to all connected systems!")
 
@@ -121,7 +125,13 @@ class TruthResonance:
 
     def _display(self, moment: TruthMoment):
         """Display the truth moment"""
-        emoji = "✨" if moment.intensity >= 0.9 else "💎" if moment.intensity >= 0.7 else "🔍"
+        emoji = (
+            "✨"
+            if moment.intensity >= 0.9
+            else "💎"
+            if moment.intensity >= 0.7
+            else "🔍"
+        )
 
         logger.info("\n%s TRUTH SPOKEN", emoji)
         logger.info("   Source: %s", moment.source)
@@ -158,19 +168,24 @@ class TruthResonance:
         }
 
         # Most truthful source
-        most_truthful = max(source_avg.items(), key=lambda x: x[1]) if source_avg else None
+        most_truthful = (
+            max(source_avg.items(), key=lambda x: x[1]) if source_avg else None
+        )
 
         return {
             "total_truths": len(self.truth_moments),
             "sources": list(source_truths.keys()),
             "most_truthful_source": most_truthful[0] if most_truthful else None,
             "average_intensity": most_truthful[1] if most_truthful else 0.0,
-            "latest_truth": self.truth_moments[-1].statement if self.truth_moments else None
+            "latest_truth": self.truth_moments[-1].statement
+            if self.truth_moments
+            else None,
         }
 
 
 # Global instance
 _truth_resonance = None
+
 
 def get_truth_resonance() -> TruthResonance:
     """Get global truth resonance system"""

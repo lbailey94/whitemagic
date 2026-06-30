@@ -16,6 +16,7 @@ from whitemagic.utils.fast_json import dumps_str as _fast_dumps
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MemoryCluster:
     """A cluster of related memories."""
@@ -26,6 +27,7 @@ class MemoryCluster:
     avg_importance: float
     radius: float  # How spread out the cluster is
 
+
 @dataclass
 class ConsolidationResult:
     """Result of consolidation."""
@@ -34,6 +36,7 @@ class ConsolidationResult:
     summaries_created: int
     memories_linked: int
     source_memories_preserved: int
+
 
 class HolographicConsolidator:
     """Consolidate memories by 4D spatial proximity with O(N) Spatial Hashing and Batched Async Synthesis."""
@@ -48,7 +51,10 @@ class HolographicConsolidator:
         if executor is None:
             # Prevent CPU saturation on T480s
             import os
-            executor = ProcessPoolExecutor(max_workers=max(1, (os.cpu_count() or 4) // 2))
+
+            executor = ProcessPoolExecutor(
+                max_workers=max(1, (os.cpu_count() or 4) // 2)
+            )
             self._executor = executor
         return executor
 
@@ -57,6 +63,7 @@ class HolographicConsolidator:
             from .sector_synthesis import (
                 SectorSynthesizer,  # type: ignore[import-not-found]
             )
+
             self.synthesizer = SectorSynthesizer()
         return self.synthesizer
 
@@ -87,7 +94,9 @@ class HolographicConsolidator:
         """Memory-efficient O(N) Spatial Hashing Clustering.
         Optimized for 276K+ memories to prevent OOM/Blackouts.
         """
-        logger.info("🔮 Finding clusters with O(N) Spatial Hashing (radius=%s)...", radius)
+        logger.info(
+            "🔮 Finding clusters with O(N) Spatial Hashing (radius=%s)...", radius
+        )
 
         buckets: dict[tuple[int, int, int, int], list[str]] = {}
         coords_map: dict[str, tuple[float, float, float, float]] = {}
@@ -97,7 +106,10 @@ class HolographicConsolidator:
             for mem_id, coords in batch:
                 coords_map[mem_id] = coords
                 # Bucket key
-                bk = cast("tuple[int, int, int, int]", tuple(int(c / max(radius, 0.01)) for c in coords))
+                bk = cast(
+                    "tuple[int, int, int, int]",
+                    tuple(int(c / max(radius, 0.01)) for c in coords),
+                )
                 if bk not in buckets:
                     buckets[bk] = []
                 buckets[bk].append(mem_id)
@@ -128,53 +140,69 @@ class HolographicConsolidator:
                 # Check neighbors
                 bx, by, bz, bw = bk
                 for dx, dy, dz, dw in neighbor_offsets:
-                    nb_key = (bx+dx, by+dy, bz+dz, bw+dw)
+                    nb_key = (bx + dx, by + dy, bz + dz, bw + dw)
                     if nb_key in buckets:
                         for other_id in buckets[nb_key]:
                             if other_id == mem_id or other_id in used:
                                 continue
 
                             other_coords = coords_map[other_id]
-                            dist_sq = sum((a - b) ** 2 for a, b in zip(current_coords, other_coords))
+                            dist_sq = sum(
+                                (a - b) ** 2
+                                for a, b in zip(current_coords, other_coords)
+                            )
                             if dist_sq <= radius * radius:
                                 neighbors.append(other_id)
 
                 if len(neighbors) >= 3:
-                    center = tuple(sum(coords_map[n][i] for n in neighbors) / len(neighbors) for i in range(4))
-                    clusters.append(MemoryCluster(
-                        center=cast("tuple[float, float, float, float]", center),
-                        memory_ids=neighbors,
-                        titles=[],
-                        avg_importance=0.0,
-                        radius=radius,
-                    ))
+                    center = tuple(
+                        sum(coords_map[n][i] for n in neighbors) / len(neighbors)
+                        for i in range(4)
+                    )
+                    clusters.append(
+                        MemoryCluster(
+                            center=cast("tuple[float, float, float, float]", center),
+                            memory_ids=neighbors,
+                            titles=[],
+                            avg_importance=0.0,
+                            radius=radius,
+                        )
+                    )
                     used.update(neighbors)
 
         print(f"   ✓ Clustering complete: {len(clusters)} clusters found.")
         return clusters
 
-    async def hydrate_clusters(self, clusters: list[MemoryCluster], batch_size: int = 100) -> Any:
+    async def hydrate_clusters(
+        self, clusters: list[MemoryCluster], batch_size: int = 100
+    ) -> Any:
         """Batch-hydrate titles and importance for multiple clusters."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         # N+1 fix: collect all unique IDs across all clusters, fetch in one query per batch
         for i in range(0, len(clusters), batch_size):
-            batch = clusters[i:i+batch_size]
+            batch = clusters[i : i + batch_size]
             all_ids = list({mid for cluster in batch for mid in cluster.memory_ids})
             if not all_ids:
                 continue
             placeholders = ",".join("?" * len(all_ids))
             rows = conn.execute(
-                "SELECT id, title, importance FROM memories WHERE id IN (" + placeholders + ") AND memory_type != 'quarantined'",
+                "SELECT id, title, importance FROM memories WHERE id IN ("
+                + placeholders
+                + ") AND memory_type != 'quarantined'",
                 all_ids,
             ).fetchall()
             row_map = {r["id"]: r for r in rows}
             for cluster in batch:
-                cluster_rows = [row_map[mid] for mid in cluster.memory_ids if mid in row_map]
+                cluster_rows = [
+                    row_map[mid] for mid in cluster.memory_ids if mid in row_map
+                ]
                 cluster.titles = [r["title"] for r in cluster_rows]
                 if cluster_rows:
-                    cluster.avg_importance = sum(r["importance"] for r in cluster_rows) / len(cluster_rows)
+                    cluster.avg_importance = sum(
+                        r["importance"] for r in cluster_rows
+                    ) / len(cluster_rows)
         conn.close()
 
     async def create_summary(self, cluster: MemoryCluster) -> dict[str, Any]:
@@ -186,9 +214,13 @@ class HolographicConsolidator:
         summary_content += f"**Quadrant**: {principle.quadrant.title()}\n"
         summary_content += f"**Density**: {len(cluster.memory_ids)} memories\n\n"
         summary_content += f"## Analysis\n{principle.summary}\n\n"
-        summary_content += "## Core Principles\n" + "\n".join(f"- {p}" for p in principle.principles)
+        summary_content += "## Core Principles\n" + "\n".join(
+            f"- {p}" for p in principle.principles
+        )
 
-        summary_id = hashlib.sha256(f"sector:{':'.join(sorted(cluster.memory_ids))}".encode()).hexdigest()[:16]
+        summary_id = hashlib.sha256(
+            f"sector:{':'.join(sorted(cluster.memory_ids))}".encode()
+        ).hexdigest()[:16]
 
         return {
             "id": summary_id,
@@ -199,7 +231,9 @@ class HolographicConsolidator:
             "source_ids": cluster.memory_ids,
         }
 
-    async def consolidate(self, radius: float = 0.35, dry_run: bool = True) -> ConsolidationResult:
+    async def consolidate(
+        self, radius: float = 0.35, dry_run: bool = True
+    ) -> ConsolidationResult:
         """Run hierarchical consolidation with batched async synthesis."""
         clusters = self.find_clusters(radius)
 
@@ -247,30 +281,44 @@ class HolographicConsolidator:
 
         batch_size = 10
         for i in range(0, len(clusters), batch_size):
-            batch = clusters[i:i+batch_size]
+            batch = clusters[i : i + batch_size]
             summaries = await asyncio.gather(*(process_cluster(c) for c in batch))
 
             for summary in summaries:
                 if summary:
                     # Generic store logic
-                    conn.execute("""
+                    conn.execute(
+                        """
                         INSERT OR REPLACE INTO memories
                         (id, content, memory_type, created_at, accessed_at, title, importance, metadata)
                         VALUES (?, ?, 'PATTERN', ?, ?, ?, ?, ?)
-                    """, (
-                        summary["id"], summary["content"], datetime.now().isoformat(),
-                        datetime.now().isoformat(), summary["title"], summary["importance"],
-                        _fast_dumps({"source_ids": summary["source_ids"]}),
-                    ))
-                    conn.execute("INSERT OR REPLACE INTO holographic_coords (memory_id, x, y, z, w) VALUES (?, ?, ?, ?, ?)",
-                                (summary["id"], *summary["coords"]))
+                    """,
+                        (
+                            summary["id"],
+                            summary["content"],
+                            datetime.now().isoformat(),
+                            datetime.now().isoformat(),
+                            summary["title"],
+                            summary["importance"],
+                            _fast_dumps({"source_ids": summary["source_ids"]}),
+                        ),
+                    )
+                    conn.execute(
+                        "INSERT OR REPLACE INTO holographic_coords (memory_id, x, y, z, w) VALUES (?, ?, ?, ?, ?)",
+                        (summary["id"], *summary["coords"]),
+                    )
                     result.summaries_created += 1
 
             conn.commit()
-            logger.info("✅ Processed batch {i//batch_size + 1}, Total Summaries: %s", result.summaries_created, exc_info=True)
+            logger.info(
+                "✅ Processed batch {i//batch_size + 1}, Total Summaries: %s",
+                result.summaries_created,
+                exc_info=True,
+            )
 
         conn.close()
         return result
+
 
 def get_consolidator() -> HolographicConsolidator:
     """
@@ -280,6 +328,7 @@ def get_consolidator() -> HolographicConsolidator:
         HolographicConsolidator
     """
     return HolographicConsolidator()
+
 
 if __name__ == "__main__":
     # Standard log setup for CLI

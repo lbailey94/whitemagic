@@ -2,6 +2,7 @@
 """Cache Plugin — System-Wide Cache Controller (E4).
 Wraps the CacheRegistry for unified monitoring and flushing.
 """
+
 from __future__ import annotations
 
 import logging
@@ -9,11 +10,15 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class CachePlugin:
     """CachePlugin: cache plugin."""
+
     name = "cache"
     version = "1.0.0"
-    description = "Cache Registry — Centralized control for all system caches and buffers"
+    description = (
+        "Cache Registry — Centralized control for all system caches and buffers"
+    )
 
     def __init__(self) -> None:
         self._registry: Any | None = None
@@ -27,6 +32,7 @@ class CachePlugin:
             None
         """
         from whitemagic.core.memory.cache_registry import get_cache_registry
+
         self._registry = get_cache_registry()
         self._running = True
         logger.info("CachePlugin started")
@@ -58,8 +64,9 @@ class CachePlugin:
         return {
             "name": self.name,
             "running": self._running,
-            "registry_status": self._registry.get_status()
+            "registry_status": self._registry.get_status(),
         }
+
 
 def register():
     """
@@ -67,6 +74,7 @@ def register():
     """
     try:
         from whitemagic.core.plugin import get_registry
+
         get_registry().register(CachePlugin())
     except (ImportError, ModuleNotFoundError):
         pass

@@ -18,15 +18,11 @@ if TYPE_CHECKING:
     pass
 
 
-# ---------------------------------------------------------------------------
-# Command Sanitization
-# ---------------------------------------------------------------------------
-
 _DANGEROUS_PATTERNS = [
-    r'[;&|`$()]',  # Shell metacharacters
-    r'\.\./',  # Path traversal
-    r'/etc/',  # System paths
-    r'\\x[0-9a-f]{2}',  # Hex encoding attempts
+    r"[;&|`$()]",  # Shell metacharacters
+    r"\.\./",  # Path traversal
+    r"/etc/",  # System paths
+    r"\\x[0-9a-f]{2}",  # Hex encoding attempts
 ]
 
 
@@ -102,10 +98,6 @@ def validate_path(path: str | Path, allowed_bases: list[Path] | None = None) -> 
     return resolved
 
 
-# ---------------------------------------------------------------------------
-# Safe Subprocess Execution
-# ---------------------------------------------------------------------------
-
 def safe_run(
     cmd: Sequence[str],
     cwd: str | Path | None = None,
@@ -151,8 +143,15 @@ def safe_run(
     # Filter environment variables (only allow safe prefixes)
     safe_env = {}
     safe_prefixes = [
-        'WM_', 'PATH', 'HOME', 'USER', 'LANG', 'LC_',
-        'PYTHON', 'VIRTUAL_ENV', 'CONDA_'
+        "WM_",
+        "PATH",
+        "HOME",
+        "USER",
+        "LANG",
+        "LC_",
+        "PYTHON",
+        "VIRTUAL_ENV",
+        "CONDA_",
     ]
     if env:
         for k, v in env.items():
@@ -172,10 +171,6 @@ def safe_run(
     )
 
 
-# ---------------------------------------------------------------------------
-# SQL Injection Prevention
-# ---------------------------------------------------------------------------
-
 def validate_sql_identifier(identifier: str) -> str:
     """Validate a SQL identifier (table name, column name, etc).
 
@@ -192,14 +187,29 @@ def validate_sql_identifier(identifier: str) -> str:
         raise ValueError(f"Identifier must be string, got {type(identifier)}")
 
     # Only allow alphanumeric, underscore, and dots for schema.table
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*$', identifier):
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_.]*$", identifier):
         raise ValueError(f"Invalid SQL identifier: {identifier}")
 
     # Prevent SQL keywords
     sql_keywords = {
-        'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE',
-        'ALTER', 'TRUNCATE', 'UNION', 'WHERE', 'FROM', 'JOIN',
-        'EXEC', 'EXECUTE', 'SCRIPT', '--', '/*', '*/'
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "DROP",
+        "CREATE",
+        "ALTER",
+        "TRUNCATE",
+        "UNION",
+        "WHERE",
+        "FROM",
+        "JOIN",
+        "EXEC",
+        "EXECUTE",
+        "SCRIPT",
+        "--",
+        "/*",
+        "*/",
     }
     if identifier.upper() in sql_keywords:
         raise ValueError(f"Identifier cannot be SQL keyword: {identifier}")
@@ -207,7 +217,9 @@ def validate_sql_identifier(identifier: str) -> str:
     return identifier
 
 
-def validate_sql_value(value: str | int | float | bool | None) -> str | int | float | bool | None:
+def validate_sql_value(
+    value: str | int | float | bool | None,
+) -> str | int | float | bool | None:
     """Validate a SQL value (for parameterized queries).
 
     Note: This is a sanity check. Always use parameterized queries!
@@ -232,15 +244,15 @@ def validate_sql_value(value: str | int | float | bool | None) -> str | int | fl
         # Note: Parameterized queries are the real defense. This is a secondary check.
         sql_patterns = [
             r";\s*(DROP|DELETE|UPDATE|INSERT|ALTER|CREATE|EXEC)",  # SQL command injection
-            r'--',  # SQL comment
-            r'/\*',  # Block comment start
-            r'\*/',  # Block comment end
+            r"--",  # SQL comment
+            r"/\*",  # Block comment start
+            r"\*/",  # Block comment end
             r"\bUNION\s+SELECT\b",  # UNION-based injection
             r"'\s*OR\s*'1'\s*=\s*'1",  # Classic tautology
             r"'\s*OR\s*1\s*=\s*1",  # Tautology without quotes
-            r'\b1\s*=\s*1\b',  # Numeric tautology
-            r'\bxp_cmdshell\b',  # SQL Server command execution
-            r'\bexec\b',  # Execute command
+            r"\b1\s*=\s*1\b",  # Numeric tautology
+            r"\bxp_cmdshell\b",  # SQL Server command execution
+            r"\bexec\b",  # Execute command
         ]
         for pattern in sql_patterns:
             if re.search(pattern, value, re.IGNORECASE):
@@ -254,10 +266,6 @@ def validate_sql_value(value: str | int | float | bool | None) -> str | int | fl
 
     raise ValueError(f"Invalid SQL value type: {type(value)}")
 
-
-# ---------------------------------------------------------------------------
-# API Key Handling
-# ---------------------------------------------------------------------------
 
 def get_env_var(
     name: str,

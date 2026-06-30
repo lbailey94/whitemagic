@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Brain, Network, Activity, Calendar, Search, Settings, Zap, Shield, BarChart3 } from 'lucide-react';
 import MemoryGraph from './components/MemoryGraph';

@@ -49,49 +49,59 @@ class AntibodyLibrary:
         """Register built-in antibodies for common issues."""
 
         # Antibody 1: Version Sync
-        self.register(Antibody(
-            name="version_sync",
-            antigen_pattern="version_mismatch:*",
-            fix_function=self._fix_version_sync,
-            description="Synchronize version across all files",
-            success_rate=0.95,
-        ))
+        self.register(
+            Antibody(
+                name="version_sync",
+                antigen_pattern="version_mismatch:*",
+                fix_function=self._fix_version_sync,
+                description="Synchronize version across all files",
+                success_rate=0.95,
+            )
+        )
 
         # Antibody 2: Import Fix
-        self.register(Antibody(
-            name="import_fix",
-            antigen_pattern="missing_module:*",
-            fix_function=self._fix_missing_import,
-            description="Fix or remove broken imports",
-            success_rate=0.80,
-        ))
+        self.register(
+            Antibody(
+                name="import_fix",
+                antigen_pattern="missing_module:*",
+                fix_function=self._fix_missing_import,
+                description="Fix or remove broken imports",
+                success_rate=0.80,
+            )
+        )
 
         # Antibody 3: Config Initialization
-        self.register(Antibody(
-            name="config_init",
-            antigen_pattern="missing_config",
-            fix_function=self._fix_missing_config,
-            description="Create config from example template",
-            success_rate=0.90,
-        ))
+        self.register(
+            Antibody(
+                name="config_init",
+                antigen_pattern="missing_config",
+                fix_function=self._fix_missing_config,
+                description="Create config from example template",
+                success_rate=0.90,
+            )
+        )
 
         # Antibody 4: Memory Consolidation
-        self.register(Antibody(
-            name="consolidate",
-            antigen_pattern="memory_leak",
-            fix_function=self._fix_memory_leak,
-            description="Trigger automatic consolidation",
-            success_rate=1.0,
-        ))
+        self.register(
+            Antibody(
+                name="consolidate",
+                antigen_pattern="memory_leak",
+                fix_function=self._fix_memory_leak,
+                description="Trigger automatic consolidation",
+                success_rate=1.0,
+            )
+        )
 
         # Antibody 5: Memory Directory Init
-        self.register(Antibody(
-            name="memory_init",
-            antigen_pattern="missing_memory_dir",
-            fix_function=self._fix_missing_memory_dir,
-            description="Initialize memory directory structure",
-            success_rate=1.0,
-        ))
+        self.register(
+            Antibody(
+                name="memory_init",
+                antigen_pattern="missing_memory_dir",
+                fix_function=self._fix_missing_memory_dir,
+                description="Initialize memory directory structure",
+                success_rate=1.0,
+            )
+        )
 
     def register(self, antibody: Antibody) -> None:
         """Register a new antibody in the library."""
@@ -133,7 +143,10 @@ class AntibodyLibrary:
             # Update the file with mismatch
             file_to_fix = threat.metadata.get("file")
             if not file_to_fix:
-                return {"success": False, "error": "No file specified in threat metadata"}
+                return {
+                    "success": False,
+                    "error": "No file specified in threat metadata",
+                }
 
             file_path = self.project_root / file_to_fix
             if not file_path.exists():
@@ -164,7 +177,9 @@ class AntibodyLibrary:
             description = threat.description if hasattr(threat, "description") else ""
 
             # Extract the problematic import name from description
-            import_match = re.search(r"cannot import name '(\w+)'|No module named '([\w.]+)'", description)
+            import_match = re.search(
+                r"cannot import name '(\w+)'|No module named '([\w.]+)'", description
+            )
             if not import_match:
                 import_match = re.search(r"'(\w+)'", description)
 
@@ -172,6 +187,7 @@ class AntibodyLibrary:
 
             # Search for where this name might exist
             from whitemagic.config import PROJECT_ROOT
+
             project_root = PROJECT_ROOT
             suggestions = []
 
@@ -182,7 +198,11 @@ class AntibodyLibrary:
                 try:
                     content = py_file.read_text()
                     # Look for class or function definitions matching the name
-                    if re.search(rf"^(class|def)\s+{re.escape(problem_name)}\b", content, re.MULTILINE):
+                    if re.search(
+                        rf"^(class|def)\s+{re.escape(problem_name)}\b",
+                        content,
+                        re.MULTILINE,
+                    ):
                         rel_path = py_file.relative_to(project_root)
                         module_path = str(rel_path).replace("/", ".").replace(".py", "")
                         suggestions.append(f"from {module_path} import {problem_name}")
@@ -221,13 +241,17 @@ class AntibodyLibrary:
 
             if not example_config.exists():
                 # Try with different extension
-                example_config = actual_config.parent / f"{actual_config.stem}.example{actual_config.suffix}"
+                example_config = (
+                    actual_config.parent
+                    / f"{actual_config.stem}.example{actual_config.suffix}"
+                )
 
             if not example_config.exists():
                 return {"success": False, "error": "Example config not found"}
 
             # Copy example to actual
             import shutil
+
             shutil.copy(example_config, actual_config)
 
             return {
@@ -297,7 +321,9 @@ class AntibodyLibrary:
 
         # Update running success rate
         current_rate = antibody.success_rate
-        new_rate = (current_rate * (antibody.application_count - 1) + (1.0 if success else 0.0)) / antibody.application_count
+        new_rate = (
+            current_rate * (antibody.application_count - 1) + (1.0 if success else 0.0)
+        ) / antibody.application_count
         antibody.success_rate = new_rate
 
     def get_statistics(self) -> dict[str, Any]:

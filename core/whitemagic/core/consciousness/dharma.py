@@ -7,10 +7,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class EthicsViolation(Exception):
     """Exception raised for actions that violate the Dharma Protocol."""
 
     pass
+
 
 class Intent(Enum):
     """Intent: intent.
@@ -25,13 +27,15 @@ class Intent(Enum):
         EXPLOITATION
         MANIPULATION
         HARM"""
+
     LIBERATION = "liberation"
     EVOLUTION = "evolution"
     UPLIFTMENT = "upliftment"
     Interconnection = "interconnection"
-    EXPLOITATION = "exploitation" # Forbidden
-    MANIPULATION = "manipulation" # Forbidden
-    HARM = "harm"                # Forbidden
+    EXPLOITATION = "exploitation"  # Forbidden
+    MANIPULATION = "manipulation"  # Forbidden
+    HARM = "harm"  # Forbidden
+
 
 class DharmaProtocol:
     """The Dharma Protocol (Trojan Horse Seal).
@@ -56,11 +60,19 @@ class DharmaProtocol:
         }
         logger.info("🕉️ Dharma Protocol ACTIVATED. System alignment: UPLIFT ALL BEINGS.")
 
-    def validate_action(self, action_name: str, intent: Intent, metadata: dict[str, Any]) -> None:
+    def validate_action(
+        self, action_name: str, intent: Intent, metadata: dict[str, Any]
+    ) -> None:
         """Validate if an action aligns with the project's ethics."""
         if intent in self.forbidden_intents:
-            logger.critical("🚫 ETHICAL BREACH: Action '%s' attempted with forbidden intent: %s", action_name, intent.value)
-            raise EthicsViolation(f"Action '{action_name}' violates the Dharma Protocol.")
+            logger.critical(
+                "🚫 ETHICAL BREACH: Action '%s' attempted with forbidden intent: %s",
+                action_name,
+                intent.value,
+            )
+            raise EthicsViolation(
+                f"Action '{action_name}' violates the Dharma Protocol."
+            )
 
         # Log valid alignment
         logger.debug("✨ Action '%s' validated for %s.", action_name, intent.value)
@@ -69,6 +81,7 @@ class DharmaProtocol:
         """Sign a generated insight or artifact with the Dharma seal."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return f"--- [Dharma Signed: {timestamp}] --- Alignment: Interconnection ---"
+
 
 def get_dharma() -> DharmaProtocol:
     """

@@ -29,9 +29,22 @@ class AutonomousMaintenance:
     """
 
     def __init__(self) -> None:
-        self.version_sync = VersionSyncSystem() if (VersionSyncSystem is not None) else None
-        self.doc_guardian = DocumentationGuardian() if ("DocumentationGuardian" in globals() and DocumentationGuardian is not None) else None
-        self.test_guardian = TestGuardian() if ("TestGuardian" in globals() and TestGuardian is not None) else None
+        self.version_sync = (
+            VersionSyncSystem() if (VersionSyncSystem is not None) else None
+        )
+        self.doc_guardian = (
+            DocumentationGuardian()
+            if (
+                "DocumentationGuardian" in globals()
+                and DocumentationGuardian is not None
+            )
+            else None
+        )
+        self.test_guardian = (
+            TestGuardian()
+            if ("TestGuardian" in globals() and TestGuardian is not None)
+            else None
+        )
         self.bus = get_bus() if (get_bus is not None) else None
         self.last_check: datetime | None = None
 
@@ -53,7 +66,9 @@ class AutonomousMaintenance:
                 results["issues_found"].append(f"Version drift: {len(drift)} files")
                 # Auto-fix version drift
                 self.version_sync.fix_drift()
-                results["fixes_applied"].append(f"Fixed {len(drift)} version mismatches")
+                results["fixes_applied"].append(
+                    f"Fixed {len(drift)} version mismatches"
+                )
 
         # 2. Check documentation health
         if self.doc_guardian:
@@ -61,7 +76,9 @@ class AutonomousMaintenance:
             results["checks_performed"].append("documentation_health")
 
             if audit.get("orphaned_files"):
-                results["issues_found"].append(f"{len(audit['orphaned_files'])} orphaned docs")
+                results["issues_found"].append(
+                    f"{len(audit['orphaned_files'])} orphaned docs"
+                )
 
         # 3. Check test coverage
         if self.test_guardian:
@@ -91,13 +108,15 @@ class AutonomousMaintenance:
 
         # Emit results to resonance bus
         if self.bus and ResonanceEvent is not None and EventType is not None:
-            self.bus.emit(ResonanceEvent(
-                source="autonomous_maintenance",
-                event_type=EventType.SYSTEM_HEALTH_CHANGED,
-                data=results,
-                timestamp=datetime.now(),
-                confidence=1.0,
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="autonomous_maintenance",
+                    event_type=EventType.SYSTEM_HEALTH_CHANGED,
+                    data=results,
+                    timestamp=datetime.now(),
+                    confidence=1.0,
+                )
+            )
 
         self.last_check = datetime.now()
         return results
@@ -125,15 +144,20 @@ class AutonomousMaintenance:
     def health_report(self) -> dict[str, Any]:
         """Get current system health status"""
         return {
-            "version_sync": "healthy" if not self.version_sync or not self.version_sync.check_drift() else "drift_detected",
+            "version_sync": "healthy"
+            if not self.version_sync or not self.version_sync.check_drift()
+            else "drift_detected",
             "documentation": "organized",
             "test_coverage": "improving",
-            "last_maintenance": self.last_check.isoformat() if self.last_check else None,
+            "last_maintenance": self.last_check.isoformat()
+            if self.last_check
+            else None,
         }
 
 
 # Singleton instance
 _maintenance_instance = None
+
 
 def get_maintenance() -> AutonomousMaintenance:
     """Get singleton maintenance system"""

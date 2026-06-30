@@ -73,6 +73,7 @@ def _get_tool_metadata(tool_name: str) -> dict[str, Any]:
     """Fetch tool definition metadata."""
     try:
         from whitemagic.tools.registry import get_tool
+
         tool = get_tool(tool_name)
         if tool:
             return {
@@ -93,6 +94,7 @@ def _evaluate_dharma(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Dry-run Dharma evaluation without actually enforcing."""
     try:
         from whitemagic.dharma.rules import get_rules_engine
+
         engine = get_rules_engine()
         action: dict[str, Any] = {
             "tool": tool_name,
@@ -102,23 +104,35 @@ def _evaluate_dharma(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
             "dry_run": True,
         }
         result = engine.evaluate(action)
-        action_value = result.action.value if hasattr(result.action, "value") else str(result.action)
+        action_value = (
+            result.action.value
+            if hasattr(result.action, "value")
+            else str(result.action)
+        )
         allowed = action_value != "block"
         return {
             "allowed": allowed,
             "action": action_value,
             "rules_fired": list(result.triggered_rules),
             "reason": result.explain,
-            "profile": getattr(result, "profile", getattr(engine, "_active_profile", "default")),
+            "profile": getattr(
+                result, "profile", getattr(engine, "_active_profile", "default")
+            ),
         }
     except Exception as e:
-        return {"allowed": True, "action": "LOG", "rules_fired": [], "note": f"Dharma unavailable: {e}"}
+        return {
+            "allowed": True,
+            "action": "LOG",
+            "rules_fired": [],
+            "note": f"Dharma unavailable: {e}",
+        }
 
 
 def _estimate_resources(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Estimate resource impact based on tool safety and category."""
     try:
         from whitemagic.tools.registry import get_tool
+
         tool = get_tool(tool_name)
         if not tool:
             return {"reads": True, "writes": False, "deletes": False}
@@ -136,16 +150,26 @@ def _estimate_resources(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any
         # Category-specific estimates
         if tool.category.value == "memory":
             if safety == "write":
-                estimate["expected_side_effects"].append("Creates or modifies memory entries")
-                estimate["expected_side_effects"].append("Updates galactic distance and retention scores")
+                estimate["expected_side_effects"].append(
+                    "Creates or modifies memory entries"
+                )
+                estimate["expected_side_effects"].append(
+                    "Updates galactic distance and retention scores"
+                )
             elif safety == "delete":
-                estimate["expected_side_effects"].append("Archives memory to FAR_EDGE (no-delete policy)")
+                estimate["expected_side_effects"].append(
+                    "Archives memory to FAR_EDGE (no-delete policy)"
+                )
         elif tool.category.value == "session":
             if safety == "write":
-                estimate["expected_side_effects"].append("Creates or modifies session state")
+                estimate["expected_side_effects"].append(
+                    "Creates or modifies session state"
+                )
         elif tool.category.value == "dharma":
             if safety == "write":
-                estimate["expected_side_effects"].append("Modifies Dharma enforcement profile")
+                estimate["expected_side_effects"].append(
+                    "Modifies Dharma enforcement profile"
+                )
         elif tool.category.value == "system":
             if safety == "write":
                 estimate["expected_side_effects"].append("System-level mutation")
@@ -160,6 +184,7 @@ def _get_dependency_info(tool_name: str) -> dict[str, Any]:
     """Query the dependency graph for prerequisites and next steps."""
     try:
         from whitemagic.tools.dependency_graph import get_tool_graph
+
         graph = get_tool_graph()
 
         prereqs = graph.prerequisites(tool_name)
@@ -167,19 +192,33 @@ def _get_dependency_info(tool_name: str) -> dict[str, Any]:
 
         return {
             "prerequisites": [
-                {"tool": e.get("source", ""), "type": e.get("type", ""), "weight": e.get("weight", 0)}
+                {
+                    "tool": e.get("source", ""),
+                    "type": e.get("type", ""),
+                    "weight": e.get("weight", 0),
+                }
                 for e in prereqs
-            ] if prereqs else [],
+            ]
+            if prereqs
+            else [],
             "suggested_next": [
-                {"tool": e.get("target", ""), "type": e.get("type", ""), "weight": e.get("weight", 0)}
+                {
+                    "tool": e.get("target", ""),
+                    "type": e.get("type", ""),
+                    "weight": e.get("weight", 0),
+                }
                 for e in next_steps
-            ] if next_steps else [],
-            "has_hard_deps": any(
-                e.get("type") == "requires" for e in (prereqs or [])
-            ),
+            ]
+            if next_steps
+            else [],
+            "has_hard_deps": any(e.get("type") == "requires" for e in (prereqs or [])),
         }
     except Exception as e:
-        return {"prerequisites": [], "suggested_next": [], "note": f"Graph unavailable: {e}"}
+        return {
+            "prerequisites": [],
+            "suggested_next": [],
+            "note": f"Graph unavailable: {e}",
+        }
 
 
 def _assess_risk(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -189,6 +228,7 @@ def _assess_risk(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     # Tool risk level
     try:
         from whitemagic.tools.registry import get_tool
+
         tool = get_tool(tool_name)
         if tool:
             risk_info["level"] = tool.risk_level
@@ -198,6 +238,7 @@ def _assess_risk(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     # Governor dry-run
     try:
         from whitemagic.core.governor import get_governor
+
         gov = get_governor()
         validation = gov.validate_tool_call(tool_name, kwargs)
         risk_info["governor_safe"] = validation.safe
@@ -222,7 +263,9 @@ def _forecast_karma(tool_name: str) -> dict[str, Any]:
 
         # Historical mismatch rate for this tool
         tool_stats = report.get("per_tool", {}).get(tool_name, {})
-        historical_mismatch_rate = tool_stats.get("mismatch_rate", 0.0) if tool_stats else 0.0
+        historical_mismatch_rate = (
+            tool_stats.get("mismatch_rate", 0.0) if tool_stats else 0.0
+        )
 
         forecast = {
             "declared_safety": tool.safety.value if tool else "unknown",
@@ -235,9 +278,13 @@ def _forecast_karma(tool_name: str) -> dict[str, Any]:
             forecast["predicted_debt_delta"] = 0.0
             forecast["note"] = "READ tools accrue zero debt when behaving correctly"
         elif tool and tool.safety.value == "write":
-            forecast["predicted_debt_delta"] = 0.0 if historical_mismatch_rate < 0.1 else 0.2
+            forecast["predicted_debt_delta"] = (
+                0.0 if historical_mismatch_rate < 0.1 else 0.2
+            )
             if historical_mismatch_rate >= 0.1:
-                forecast["note"] = f"Tool has {historical_mismatch_rate:.0%} historical mismatch rate"
+                forecast["note"] = (
+                    f"Tool has {historical_mismatch_rate:.0%} historical mismatch rate"
+                )
         elif tool and tool.safety.value == "delete":
             forecast["predicted_debt_delta"] = 0.0
             forecast["note"] = "DELETE tools redirect to archive (no-delete policy)"
@@ -251,9 +298,13 @@ def _check_maturity(tool_name: str) -> dict[str, Any]:
     """Check if the tool is gated by maturity."""
     try:
         from whitemagic.tools.maturity_check import check_maturity_for_tool
+
         gate_result = check_maturity_for_tool(tool_name)
         if gate_result is not None:
-            return {"gated": True, "reason": gate_result.get("error", "Maturity gate blocked")}
+            return {
+                "gated": True,
+                "reason": gate_result.get("error", "Maturity gate blocked"),
+            }
         return {"gated": False}
     except (ImportError, ModuleNotFoundError):
         return {"gated": False, "note": "Maturity check unavailable"}
@@ -263,6 +314,7 @@ def _check_breaker(tool_name: str) -> dict[str, Any]:
     """Check circuit breaker state for the tool."""
     try:
         from whitemagic.tools.circuit_breaker import get_breaker_registry
+
         breaker = get_breaker_registry().get(tool_name)
         if breaker is None:
             return {"state": "unknown", "is_open": False}
@@ -284,7 +336,9 @@ def _synthesize_recommendation(preview: dict[str, Any]) -> dict[str, Any]:
     # Dharma block
     dharma = preview.get("dharma", {})
     if not dharma.get("allowed", True):
-        blockers.append(f"Dharma: {dharma.get('action', 'BLOCK')} — {dharma.get('reason', 'rule violation')}")
+        blockers.append(
+            f"Dharma: {dharma.get('action', 'BLOCK')} — {dharma.get('reason', 'rule violation')}"
+        )
 
     # Governor block
     risk = preview.get("risk", {})
@@ -294,12 +348,16 @@ def _synthesize_recommendation(preview: dict[str, Any]) -> dict[str, Any]:
     # Circuit breaker
     cb = preview.get("circuit_breaker", {})
     if cb.get("is_open"):
-        blockers.append(f"Circuit breaker OPEN (failures: {cb.get('failure_count', '?')})")
+        blockers.append(
+            f"Circuit breaker OPEN (failures: {cb.get('failure_count', '?')})"
+        )
 
     # Maturity gate
     maturity = preview.get("maturity", {})
     if maturity.get("gated"):
-        blockers.append(f"Maturity gate: {maturity.get('reason', 'insufficient maturity')}")
+        blockers.append(
+            f"Maturity gate: {maturity.get('reason', 'insufficient maturity')}"
+        )
 
     # Risk warnings
     if risk.get("level") in ("DANGEROUS", "FORBIDDEN"):
@@ -318,7 +376,11 @@ def _synthesize_recommendation(preview: dict[str, Any]) -> dict[str, Any]:
     # Missing prerequisites
     deps = preview.get("dependencies", {})
     if deps.get("has_hard_deps"):
-        prereq_names = [p["tool"] for p in deps.get("prerequisites", []) if p.get("type") == "requires"]
+        prereq_names = [
+            p["tool"]
+            for p in deps.get("prerequisites", [])
+            if p.get("type") == "requires"
+        ]
         if prereq_names:
             warnings.append(f"Hard prerequisites: {', '.join(prereq_names)}")
 

@@ -29,11 +29,29 @@ def _categorize(path: str) -> str:
         return "docs"
     if "scripts/" in lowered or lowered.endswith(".sh"):
         return "scripts"
-    if any(lowered.endswith(ext) for ext in (".toml", ".json", ".yaml", ".yml", ".ini", ".cfg")):
+    if any(
+        lowered.endswith(ext)
+        for ext in (".toml", ".json", ".yaml", ".yml", ".ini", ".cfg")
+    ):
         return "config"
-    if any(lowered.endswith(ext) for ext in (
-        ".py", ".rs", ".ts", ".js", ".go", ".jl", ".hs", ".ex", ".zig", ".koka", ".c", ".h", ".cpp"
-    )):
+    if any(
+        lowered.endswith(ext)
+        for ext in (
+            ".py",
+            ".rs",
+            ".ts",
+            ".js",
+            ".go",
+            ".jl",
+            ".hs",
+            ".ex",
+            ".zig",
+            ".koka",
+            ".c",
+            ".h",
+            ".cpp",
+        )
+    ):
         return "code"
     return "other"
 
@@ -62,7 +80,14 @@ class GitRepoStatus:
 
     def categorized_changes(self) -> dict[str, list[str]]:
         """Group changed paths by broad category."""
-        result = {"code": [], "docs": [], "tests": [], "scripts": [], "config": [], "other": []}
+        result = {
+            "code": [],
+            "docs": [],
+            "tests": [],
+            "scripts": [],
+            "config": [],
+            "other": [],
+        }
         for path in self.modified + self.deleted + self.untracked:
             result[_categorize(path)].append(path)
         return result
@@ -98,7 +123,9 @@ class GitHygieneReport:
     @property
     def clean_repos(self) -> int:
         return sum(
-            1 for status in self.statuses if status.is_git_repo and status.total_changes == 0
+            1
+            for status in self.statuses
+            if status.is_git_repo and status.total_changes == 0
         )
 
     @property
@@ -107,15 +134,21 @@ class GitHygieneReport:
 
     @property
     def total_modified(self) -> int:
-        return sum(len(status.modified) for status in self.statuses if status.is_git_repo)
+        return sum(
+            len(status.modified) for status in self.statuses if status.is_git_repo
+        )
 
     @property
     def total_deleted(self) -> int:
-        return sum(len(status.deleted) for status in self.statuses if status.is_git_repo)
+        return sum(
+            len(status.deleted) for status in self.statuses if status.is_git_repo
+        )
 
     @property
     def total_untracked(self) -> int:
-        return sum(len(status.untracked) for status in self.statuses if status.is_git_repo)
+        return sum(
+            len(status.untracked) for status in self.statuses if status.is_git_repo
+        )
 
     @property
     def health_score(self) -> float:
@@ -178,8 +211,14 @@ class GitHygieneReport:
 
     def action_summary(self) -> str:
         """Return a concise, human-readable summary of dirty trees and git errors."""
-        errored = [status for status in self.statuses if status.is_git_repo and status.errors]
-        dirty = [status for status in self.statuses if status.is_git_repo and status.total_changes > 0]
+        errored = [
+            status for status in self.statuses if status.is_git_repo and status.errors
+        ]
+        dirty = [
+            status
+            for status in self.statuses
+            if status.is_git_repo and status.total_changes > 0
+        ]
         if not dirty and not errored:
             return "All git workspaces are clean."
         parts = []
@@ -191,7 +230,11 @@ class GitHygieneReport:
                 f"({len(status.modified)} modified, {len(status.deleted)} deleted, "
                 f"{len(status.untracked)} untracked)"
             )
-        return "Git hygiene issues: " + "; ".join(parts) + ". Run core/scripts/git_hygiene.py."
+        return (
+            "Git hygiene issues: "
+            + "; ".join(parts)
+            + ". Run core/scripts/git_hygiene.py."
+        )
 
 
 def default_workspace_root() -> Path:
@@ -227,7 +270,9 @@ def evaluate_git_hygiene(
     workspace_names: tuple[str, ...] = DEFAULT_GIT_WORKSPACES,
 ) -> GitHygieneReport:
     """Evaluate git hygiene across the configured local workspaces."""
-    root = Path(workspace_root) if workspace_root is not None else default_workspace_root()
+    root = (
+        Path(workspace_root) if workspace_root is not None else default_workspace_root()
+    )
     statuses = [_inspect_repo(root, name) for name in workspace_names]
     return GitHygieneReport(
         root=str(root),

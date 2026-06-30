@@ -35,19 +35,17 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# 1. Memory Decay Model
-# ---------------------------------------------------------------------------
 
 @dataclass
 class DecayParams:
     """Parameters for the memory decay model."""
-    base_decay_rate: float = 0.02      # Daily decay rate (2% per day)
+
+    base_decay_rate: float = 0.02  # Daily decay rate (2% per day)
     importance_protection: float = 0.5  # How much importance slows decay
-    reinforcement_boost: float = 0.3    # How much each access reinforces
-    reinforcement_decay: float = 0.9    # Diminishing returns on reinforcement
-    minimum_retention: float = 0.05     # Floor retention score
-    half_life_base: float = 30.0        # Base half-life in days
+    reinforcement_boost: float = 0.3  # How much each access reinforces
+    reinforcement_decay: float = 0.9  # Diminishing returns on reinforcement
+    minimum_retention: float = 0.05  # Floor retention score
+    half_life_base: float = 30.0  # Base half-life in days
 
 
 class MemoryDecayModel:
@@ -69,7 +67,9 @@ class MemoryDecayModel:
         p = self.params
 
         # Effective decay rate (importance protects against decay)
-        effective_decay = p.base_decay_rate * (1.0 - importance * p.importance_protection)
+        effective_decay = p.base_decay_rate * (
+            1.0 - importance * p.importance_protection
+        )
 
         # Base decay (exponential)
         base_retention = initial_retention * math.exp(-effective_decay * age_days)
@@ -79,7 +79,7 @@ class MemoryDecayModel:
         if access_count > 0:
             # Each access adds reinforcement, but with diminishing returns
             for i in range(access_count):
-                reinforcement += p.reinforcement_boost * (p.reinforcement_decay ** i)
+                reinforcement += p.reinforcement_boost * (p.reinforcement_decay**i)
             # Reinforcement decays based on time since last access
             recency_factor = math.exp(-0.1 * last_access_days_ago)
             reinforcement *= recency_factor
@@ -92,11 +92,17 @@ class MemoryDecayModel:
         retention = max(p.minimum_retention, retention)
 
         # Half-life calculation
-        half_life = math.log(2) / effective_decay if effective_decay > 0 else float('inf')
+        half_life = (
+            math.log(2) / effective_decay if effective_decay > 0 else float("inf")
+        )
 
         # Time to decay below threshold
         if retention > 0.5:
-            time_to_half = (math.log(retention / 0.5)) / effective_decay if effective_decay > 0 else float('inf')
+            time_to_half = (
+                (math.log(retention / 0.5)) / effective_decay
+                if effective_decay > 0
+                else float("inf")
+            )
         else:
             time_to_half = 0.0
 
@@ -107,8 +113,12 @@ class MemoryDecayModel:
             "recall_bonus": round(recall_bonus, 6),
             "effective_decay_rate": round(effective_decay, 6),
             "half_life_days": round(half_life, 2),
-            "time_to_50_percent_days": round(time_to_half, 2) if time_to_half != float('inf') else None,
-            "status": "stable" if retention > 0.7 else ("decaying" if retention > 0.3 else "critical"),
+            "time_to_50_percent_days": round(time_to_half, 2)
+            if time_to_half != float("inf")
+            else None,
+            "status": "stable"
+            if retention > 0.7
+            else ("decaying" if retention > 0.3 else "critical"),
         }
 
     def predict_decay_curve(
@@ -144,13 +154,15 @@ class MemoryDecayModel:
     ) -> dict[str, Any]:
         """Calculate optimal reinforcement schedule to maintain target retention."""
         p = self.params
-        effective_decay = p.base_decay_rate * (1.0 - importance * p.importance_protection)
+        effective_decay = p.base_decay_rate * (
+            1.0 - importance * p.importance_protection
+        )
 
         # Time until retention drops below target
         if effective_decay > 0:
             time_to_drop = math.log(1.0 / target_retention) / effective_decay
         else:
-            time_to_drop = float('inf')
+            time_to_drop = float("inf")
 
         # Recommended review intervals (spaced repetition)
         intervals = []
@@ -161,20 +173,19 @@ class MemoryDecayModel:
             current_interval = int(current_interval * (1.0 + importance * 0.5))
 
         return {
-            "time_to_drop_below_target_days": round(time_to_drop, 2) if time_to_drop != float('inf') else None,
+            "time_to_drop_below_target_days": round(time_to_drop, 2)
+            if time_to_drop != float("inf")
+            else None,
             "recommended_intervals_days": intervals,
             "target_retention": target_retention,
             "importance": importance,
         }
 
 
-# ---------------------------------------------------------------------------
-# 2. Pattern Resonance Detector
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ResonantCluster:
     """A cluster of memories with resonant frequencies."""
+
     cluster_id: int
     member_ids: list[int | str]
     center_frequency: float
@@ -203,16 +214,22 @@ class PatternResonanceDetector:
         for mem in memories:
             resonance = mem.get("resonance", {})
             if resonance.get("frequency"):
-                resonant_mems.append({
-                    "id": mem.get("id"),
-                    "frequency": resonance["frequency"],
-                    "damping": resonance.get("damping", 0.1),
-                    "importance": mem.get("importance", 0.5),
-                    "garden": resonance.get("garden", "core_garden"),
-                })
+                resonant_mems.append(
+                    {
+                        "id": mem.get("id"),
+                        "frequency": resonance["frequency"],
+                        "damping": resonance.get("damping", 0.1),
+                        "importance": mem.get("importance", 0.5),
+                        "garden": resonance.get("garden", "core_garden"),
+                    }
+                )
 
         if not resonant_mems:
-            return {"clusters": [], "total_clusters": 0, "memories_analyzed": len(memories)}
+            return {
+                "clusters": [],
+                "total_clusters": 0,
+                "memories_analyzed": len(memories),
+            }
 
         # Sort by frequency for clustering
         resonant_mems.sort(key=lambda m: m["frequency"])
@@ -221,9 +238,10 @@ class PatternResonanceDetector:
         clusters = []
         current_cluster = [resonant_mems[0]]
 
-        for mem in resonant_mems[1:
-            ]:
-            center_freq = sum(m["frequency"] for m in current_cluster) / len(current_cluster)
+        for mem in resonant_mems[1:]:
+            center_freq = sum(m["frequency"] for m in current_cluster) / len(
+                current_cluster
+            )
             if abs(mem["frequency"] - center_freq) <= self.frequency_tolerance:
                 current_cluster.append(mem)
             else:
@@ -245,17 +263,23 @@ class PatternResonanceDetector:
             # Coherence: how tightly clustered the frequencies are
             coherence = max(0.0, 1.0 - spread / (2 * self.frequency_tolerance))
 
-            result_clusters.append({
-                "cluster_id": i,
-                "member_ids": [m["id"] for m in cluster],
-                "center_frequency": round(center_freq, 4),
-                "frequency_spread": round(spread, 4),
-                "coherence": round(coherence, 4),
-                "avg_importance": round(sum(m["importance"] for m in cluster) / len(cluster), 4),
-                "avg_damping": round(sum(m["damping"] for m in cluster) / len(cluster), 4),
-                "garden": self._dominant_garden(cluster),
-                "size": len(cluster),
-            })
+            result_clusters.append(
+                {
+                    "cluster_id": i,
+                    "member_ids": [m["id"] for m in cluster],
+                    "center_frequency": round(center_freq, 4),
+                    "frequency_spread": round(spread, 4),
+                    "coherence": round(coherence, 4),
+                    "avg_importance": round(
+                        sum(m["importance"] for m in cluster) / len(cluster), 4
+                    ),
+                    "avg_damping": round(
+                        sum(m["damping"] for m in cluster) / len(cluster), 4
+                    ),
+                    "garden": self._dominant_garden(cluster),
+                    "size": len(cluster),
+                }
+            )
 
         # Sort by coherence (most coherent first)
         result_clusters.sort(key=lambda c: c["coherence"], reverse=True)
@@ -293,11 +317,13 @@ class PatternResonanceDetector:
                     g = mem.get("resonance", {}).get("garden", "core_garden")
                     gardens.add(g)
             if len(gardens) > 1:
-                cross_garden.append({
-                    **cluster,
-                    "gardens": list(gardens),
-                    "garden_count": len(gardens),
-                })
+                cross_garden.append(
+                    {
+                        **cluster,
+                        "gardens": list(gardens),
+                        "garden_count": len(gardens),
+                    }
+                )
 
         return {
             "cross_garden_clusters": cross_garden,
@@ -306,13 +332,10 @@ class PatternResonanceDetector:
         }
 
 
-# ---------------------------------------------------------------------------
-# 3. Constellation Merger
-# ---------------------------------------------------------------------------
-
 @dataclass
 class Constellation:
     """A constellation (cluster) of memories in 5D space."""
+
     constellation_id: int
     member_ids: list[int | str]
     center: tuple[float, float, float, float, float]  # (x, y, z, w, v)
@@ -380,11 +403,13 @@ class ConstellationMerger:
 
                 overlap = self._calculate_overlap(constellations[i], constellations[j])
                 if overlap >= self.overlap_threshold:
-                    merges.append({
-                        "constellation_a": constellations[i].constellation_id,
-                        "constellation_b": constellations[j].constellation_id,
-                        "overlap": round(overlap, 4),
-                    })
+                    merges.append(
+                        {
+                            "constellation_a": constellations[i].constellation_id,
+                            "constellation_b": constellations[j].constellation_id,
+                            "overlap": round(overlap, 4),
+                        }
+                    )
                     merged.add(j)
 
         # Create merged constellations
@@ -406,7 +431,8 @@ class ConstellationMerger:
             if c.constellation_id in primary_ids:
                 # Check if this constellation merged with others
                 merged_with = [
-                    m["constellation_b"] for m in merges
+                    m["constellation_b"]
+                    for m in merges
                     if m["constellation_a"] == c.constellation_id
                 ]
 
@@ -419,8 +445,12 @@ class ConstellationMerger:
 
                     for other_id in merged_with:
                         other = next(
-                            (oc for oc in constellations if oc.constellation_id == other_id),
-                            None
+                            (
+                                oc
+                                for oc in constellations
+                                if oc.constellation_id == other_id
+                            ),
+                            None,
                         )
                         if other:
                             all_members.extend(other.member_ids)
@@ -431,21 +461,24 @@ class ConstellationMerger:
                     # New center (weighted by importance)
                     total_imp = sum(all_importance)
                     new_center = tuple(
-                        sum(c[d] * imp for c, imp in zip(all_centers, all_importance)) / total_imp
+                        sum(c[d] * imp for c, imp in zip(all_centers, all_importance))
+                        / total_imp
                         for d in range(5)
                     )
 
                     # New radius (max of all)
                     new_radius = max(all_radii)
 
-                    result.append(Constellation(
-                        constellation_id=c.constellation_id,
-                        member_ids=all_members,
-                        center=new_center,  # type: ignore[arg-type]
-                        radius=new_radius,
-                        avg_importance=sum(all_importance) / len(all_importance),
-                        garden=c.garden,
-                    ))
+                    result.append(
+                        Constellation(
+                            constellation_id=c.constellation_id,
+                            member_ids=all_members,
+                            center=new_center,  # type: ignore[arg-type]
+                            radius=new_radius,
+                            avg_importance=sum(all_importance) / len(all_importance),
+                            garden=c.garden,
+                        )
+                    )
                 else:
                     result.append(c)
 
@@ -472,8 +505,12 @@ class ConstellationMerger:
             for j in range(i + 1, n):
                 overlap = self._calculate_overlap(constellations[i], constellations[j])
                 if overlap > 0:
-                    adj[constellations[i].constellation_id].add(constellations[j].constellation_id)  # type: ignore[index, arg-type]
-                    adj[constellations[j].constellation_id].add(constellations[i].constellation_id)  # type: ignore[index, arg-type]
+                    adj[constellations[i].constellation_id].add(
+                        constellations[j].constellation_id
+                    )  # type: ignore[index, arg-type]
+                    adj[constellations[j].constellation_id].add(
+                        constellations[i].constellation_id
+                    )  # type: ignore[index, arg-type]
 
         # Find connected components
         visited = set()
@@ -497,11 +534,14 @@ class ConstellationMerger:
                         queue.append(neighbor)  # type: ignore[arg-type]
 
             if len(component) > 1:
-                networks.append({
-                    "constellation_ids": component,
-                    "size": len(component),
-                    "total_connections": sum(len(adj[cid]) for cid in component) // 2,  # type: ignore[misc, index]
-                })
+                networks.append(
+                    {
+                        "constellation_ids": component,
+                        "size": len(component),
+                        "total_connections": sum(len(adj[cid]) for cid in component)
+                        // 2,  # type: ignore[misc, index]
+                    }
+                )
 
         return {
             "networks": networks,
@@ -510,26 +550,22 @@ class ConstellationMerger:
         }
 
 
-# ---------------------------------------------------------------------------
-# 4. Garden Resonance Matrix
-# ---------------------------------------------------------------------------
-
 class GardenResonanceMatrix:
     """Calculates inter-garden harmony and resonance patterns."""
 
     # Garden affinity matrix (how well gardens resonate with each other)
     # Based on Wu Xing elemental relationships
     GARDEN_AFFINITY = {
-        ("knowledge_garden", "research_garden"): 0.9,    # Both analytical
-        ("knowledge_garden", "wisdom_garden"): 0.7,      # Knowledge → Wisdom
-        ("wisdom_garden", "core_garden"): 0.8,           # Wisdom is core
-        ("emotion_garden", "dream_garden"): 0.85,        # Emotional/dreamy
-        ("code_garden", "system_garden"): 0.75,          # Technical
-        ("creative_garden", "emotion_garden"): 0.7,      # Creative/emotional
-        ("creative_garden", "dream_garden"): 0.65,       # Creative/dreamy
-        ("core_garden", "ephemeral_garden"): 0.3,        # Core vs fleeting
-        ("knowledge_garden", "emotion_garden"): 0.4,     # Logic vs emotion
-        ("code_garden", "wisdom_garden"): 0.5,           # Technical vs deep
+        ("knowledge_garden", "research_garden"): 0.9,  # Both analytical
+        ("knowledge_garden", "wisdom_garden"): 0.7,  # Knowledge → Wisdom
+        ("wisdom_garden", "core_garden"): 0.8,  # Wisdom is core
+        ("emotion_garden", "dream_garden"): 0.85,  # Emotional/dreamy
+        ("code_garden", "system_garden"): 0.75,  # Technical
+        ("creative_garden", "emotion_garden"): 0.7,  # Creative/emotional
+        ("creative_garden", "dream_garden"): 0.65,  # Creative/dreamy
+        ("core_garden", "ephemeral_garden"): 0.3,  # Core vs fleeting
+        ("knowledge_garden", "emotion_garden"): 0.4,  # Logic vs emotion
+        ("code_garden", "wisdom_garden"): 0.5,  # Technical vs deep
     }
 
     def calculate_inter_garden_harmony(
@@ -567,8 +603,9 @@ class GardenResonanceMatrix:
                 g2 = garden_names[j]
 
                 # Base affinity
-                affinity = self.GARDEN_AFFINITY.get((g1, g2),
-                              self.GARDEN_AFFINITY.get((g2, g1), 0.5))
+                affinity = self.GARDEN_AFFINITY.get(
+                    (g1, g2), self.GARDEN_AFFINITY.get((g2, g1), 0.5)
+                )
 
                 # Frequency resonance (closer frequencies = more harmony)
                 freq1 = gardens[g1].get("avg_frequency", 1.0)
@@ -587,15 +624,19 @@ class GardenResonanceMatrix:
 
                 if i < j:
                     # Only record each pair once
-                    pairs.append({
-                        "garden_a": g1,
-                        "garden_b": g2,
-                        "harmony": round(harmony, 4),
-                        "affinity": affinity,
-                        "frequency_harmony": round(freq_harmony, 4),
-                        "damping_harmony": round(damp_harmony, 4),
-                        "status": "harmonious" if harmony > 0.7 else ("neutral" if harmony > 0.4 else "dissonant"),
-                    })
+                    pairs.append(
+                        {
+                            "garden_a": g1,
+                            "garden_b": g2,
+                            "harmony": round(harmony, 4),
+                            "affinity": affinity,
+                            "frequency_harmony": round(freq_harmony, 4),
+                            "damping_harmony": round(damp_harmony, 4),
+                            "status": "harmonious"
+                            if harmony > 0.7
+                            else ("neutral" if harmony > 0.4 else "dissonant"),
+                        }
+                    )
 
         # Overall harmony
         all_harmonies = [p["harmony"] for p in pairs]
@@ -631,21 +672,33 @@ class GardenResonanceMatrix:
             if other_name == garden_name:
                 continue
 
-            harmony = self._pair_harmony(garden_data, other_data, garden_name, other_name)
-            resonances.append({
-                "garden": other_name,
-                "harmony": round(harmony, 4),
-            })
+            harmony = self._pair_harmony(
+                garden_data, other_data, garden_name, other_name
+            )
+            resonances.append(
+                {
+                    "garden": other_name,
+                    "harmony": round(harmony, 4),
+                }
+            )
 
-        avg_resonance = sum(r["harmony"] for r in resonances) / len(resonances) if resonances else 0.0  # type: ignore[misc]
+        avg_resonance = (
+            sum(r["harmony"] for r in resonances) / len(resonances)
+            if resonances
+            else 0.0
+        )  # type: ignore[misc]
 
         # Internal coherence (based on frequency spread)
         freq_spread = garden_data.get("frequency_spread", 0.0)
         internal_coherence = max(0.0, 1.0 - freq_spread / 2.0)
 
         # System integration score
-        memory_weight = garden_data.get("memory_count", 0) / max(1, sum(g.get("memory_count", 0) for g in all_gardens.values()))
-        integration = avg_resonance * 0.6 + internal_coherence * 0.3 + memory_weight * 0.1
+        memory_weight = garden_data.get("memory_count", 0) / max(
+            1, sum(g.get("memory_count", 0) for g in all_gardens.values())
+        )
+        integration = (
+            avg_resonance * 0.6 + internal_coherence * 0.3 + memory_weight * 0.1
+        )
 
         return {
             "garden": garden_name,
@@ -653,7 +706,9 @@ class GardenResonanceMatrix:
             "internal_coherence": round(internal_coherence, 4),
             "system_integration": round(integration, 4),
             "resonances": sorted(resonances, key=lambda r: r["harmony"], reverse=True),
-            "status": "well_integrated" if integration > 0.7 else ("moderate" if integration > 0.4 else "isolated"),
+            "status": "well_integrated"
+            if integration > 0.7
+            else ("moderate" if integration > 0.4 else "isolated"),
         }
 
     def _pair_harmony(
@@ -664,8 +719,9 @@ class GardenResonanceMatrix:
         name2: str,
     ) -> float:
         """Calculate harmony between two gardens."""
-        affinity = self.GARDEN_AFFINITY.get((name1, name2),
-                      self.GARDEN_AFFINITY.get((name2, name1), 0.5))
+        affinity = self.GARDEN_AFFINITY.get(
+            (name1, name2), self.GARDEN_AFFINITY.get((name2, name1), 0.5)
+        )
 
         freq1 = g1.get("avg_frequency", 1.0)
         freq2 = g2.get("avg_frequency", 1.0)

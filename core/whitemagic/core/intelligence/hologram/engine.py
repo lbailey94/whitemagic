@@ -26,18 +26,22 @@ from whitemagic.core.resonance.gan_ying_enhanced import (
 # Try import Rust backend
 try:
     import whitemagic_rs  # type: ignore[import-untyped]
+
     HAS_RUST_BACKEND = hasattr(whitemagic_rs, "SpatialIndex")
 except ImportError:
     HAS_RUST_BACKEND = False
 
 logger = logging.getLogger(__name__)
 
+
 class HologramEngine:
     """HologramEngine: hologram engine."""
+
     def __init__(self) -> None:
         self.encoder = get_mojo_encoder()
         # Use the unified HolographicMemory wrapper instead of direct Rust SpatialIndex
         from whitemagic.core.memory.holographic import get_holographic_memory
+
         self.memory_index = get_holographic_memory()
 
         # Check if backend is active
@@ -47,7 +51,9 @@ class HologramEngine:
         if self.enabled:
             logger.info("✅ HologramEngine initialized with Unified HolographicMemory")
         else:
-            logger.warning("⚠️ HolographicMemory backend unavailable. Hologram running in limited mode.")
+            logger.warning(
+                "⚠️ HolographicMemory backend unavailable. Hologram running in limited mode."
+            )
 
     def start(self) -> Any:
         """Start listening to the Gan Ying Bus."""
@@ -81,16 +87,24 @@ class HologramEngine:
                 logger.debug("Encoded memory %s to %s", mem_id, coords)
 
         except Exception as e:
-            logger.error("Error processing memory event in Hologram: %s", e, exc_info=True)
+            logger.error(
+                "Error processing memory event in Hologram: %s", e, exc_info=True
+            )
 
     def add_memory(self, memory_id: str, vector: list[float]) -> Any:
         """Add a memory vector to the spatial index directly."""
         if self.enabled and len(vector) == 4:
             self.memory_index.add_memory_with_coords(
-                memory_id, vector[0], vector[1], vector[2], vector[3],
+                memory_id,
+                vector[0],
+                vector[1],
+                vector[2],
+                vector[3],
             )
 
-    def query_similar(self, memory_data: dict[str, Any], limit: int = 5) -> list[tuple[str, float]]:
+    def query_similar(
+        self, memory_data: dict[str, Any], limit: int = 5
+    ) -> list[tuple[str, float]]:
         """Find memories spatially close to the input memory data.
         Returns list of (memory_id, distance_squared).
         """
@@ -100,7 +114,9 @@ class HologramEngine:
         results = self.memory_index.query_nearest(memory_data, k=limit)
         return [(r.memory_id, r.distance) for r in results]
 
-    def query_by_vector(self, vector: list[float], limit: int = 5) -> list[tuple[str, float]]:
+    def query_by_vector(
+        self, vector: list[float], limit: int = 5
+    ) -> list[tuple[str, float]]:
         """Direct vector query."""
         if not self.enabled or len(vector) not in (4, 5):
             return []
@@ -112,8 +128,10 @@ class HologramEngine:
         """Get engine statistics."""
         return self.memory_index.get_stats()
 
+
 # Singleton
 _hologram_engine = None
+
 
 def get_hologram_engine() -> HologramEngine:
     """

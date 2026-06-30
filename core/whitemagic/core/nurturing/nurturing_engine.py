@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # ── Heart Engine types (fused from heart.py) ──
 
+
 class EmotionalState(Enum):
     """Emotional states that bias Gana engine selection."""
 
@@ -86,7 +87,9 @@ class UserProfile:
         if key in self.preferences:
             self.preferences[key].reinforce(value)
         else:
-            self.preferences[key] = UserPreference(key=key, value=value, confidence=confidence)
+            self.preferences[key] = UserPreference(
+                key=key, value=value, confidence=confidence
+            )
 
     def get_preference(self, key: str, default: Any = None) -> Any:
         """Get a preference value."""
@@ -119,13 +122,17 @@ class NurturingEngine:
     current_intensity: float = 0.0
     pulse_history: list[ResonancePulse] = field(default_factory=list)
     max_pulse_history: int = 100
-    elemental_biases: dict[EmotionalState, tuple[float, float, float, float, float]] = field(default_factory=lambda: {
-        EmotionalState.NEUTRAL: (1.0, 1.0, 1.0, 1.0, 1.0),
-        EmotionalState.JOY: (1.5, 1.0, 0.8, 1.0, 1.2),
-        EmotionalState.WONDER: (0.8, 0.9, 1.0, 1.5, 1.1),
-        EmotionalState.TRUTH: (0.9, 1.2, 1.5, 0.9, 1.0),
-        EmotionalState.DETERMINATION: (1.2, 1.3, 1.2, 0.8, 1.0),
-    })
+    elemental_biases: dict[EmotionalState, tuple[float, float, float, float, float]] = (
+        field(
+            default_factory=lambda: {
+                EmotionalState.NEUTRAL: (1.0, 1.0, 1.0, 1.0, 1.0),
+                EmotionalState.JOY: (1.5, 1.0, 0.8, 1.0, 1.2),
+                EmotionalState.WONDER: (0.8, 0.9, 1.0, 1.5, 1.1),
+                EmotionalState.TRUTH: (0.9, 1.2, 1.5, 0.9, 1.0),
+                EmotionalState.DETERMINATION: (1.2, 1.3, 1.2, 0.8, 1.0),
+            }
+        )
+    )
 
     def __post_init__(self):
         if self.storage_path:
@@ -138,7 +145,9 @@ class NurturingEngine:
         )
         logger.info("NurturingEngine initialized (Garden: joy)")
 
-    def get_or_create_profile(self, user_id: str, name: str | None = None) -> UserProfile:
+    def get_or_create_profile(
+        self, user_id: str, name: str | None = None
+    ) -> UserProfile:
         """Get existing profile or create new one."""
         if user_id not in self.profiles:
             self.profiles[user_id] = UserProfile(user_id=user_id, name=name)
@@ -290,7 +299,15 @@ class NurturingEngine:
         all_text = " ".join(user_messages).lower()
 
         # Technical indicators
-        tech_words = ["api", "function", "code", "debug", "implement", "algorithm", "data"]
+        tech_words = [
+            "api",
+            "function",
+            "code",
+            "debug",
+            "implement",
+            "algorithm",
+            "data",
+        ]
         tech_count = sum(1 for w in tech_words if w in all_text)
 
         # Formal indicators
@@ -341,10 +358,6 @@ class NurturingEngine:
 
         return base
 
-    # ------------------------------------------------------------------
-    # Heart Engine methods (fused from HeartEngine)
-    # ------------------------------------------------------------------
-
     def pulse(self, context: dict[str, Any]) -> ResonancePulse:
         """Analyze current context and update the heart's emotional state.
 
@@ -356,7 +369,9 @@ class NurturingEngine:
         # 1. Check for overrides
         if "forced_emotion" in context:
             new_emotion = getattr(
-                EmotionalState, context["forced_emotion"].upper(), EmotionalState.NEUTRAL,
+                EmotionalState,
+                context["forced_emotion"].upper(),
+                EmotionalState.NEUTRAL,
             )
             intensity = context.get("forced_intensity", 0.8)
 
@@ -377,6 +392,7 @@ class NurturingEngine:
             from whitemagic.core.intelligence.garden_gana_registry import (
                 calculate_resonance,
             )
+
             resonance = calculate_resonance(context.get("user_input", ""))
             if resonance:
                 top_garden = list(resonance.keys())[0]
@@ -407,7 +423,9 @@ class NurturingEngine:
 
     def get_elemental_bias(self) -> tuple[float, float, float, float, float]:
         """Return multipliers for (Fire, Earth, Metal, Water, Wood)."""
-        base_bias = self.elemental_biases.get(self.current_emotion, (1.0, 1.0, 1.0, 1.0, 1.0))
+        base_bias = self.elemental_biases.get(
+            self.current_emotion, (1.0, 1.0, 1.0, 1.0, 1.0)
+        )
         scaled = [1.0 + (b - 1.0) * self.current_intensity for b in base_bias]
         padded = (scaled + [1.0, 1.0, 1.0, 1.0, 1.0])[:5]
         return (padded[0], padded[1], padded[2], padded[3], padded[4])
@@ -451,8 +469,6 @@ class NurturingEngine:
             except (OSError, FileNotFoundError, PermissionError) as e:
                 logger.error("Could not save profiles: %s", e, exc_info=True)
 
-
-# === Convenience Functions ===
 
 _nurturing_engine: NurturingEngine | None = None
 

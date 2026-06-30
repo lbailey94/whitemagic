@@ -1,4 +1,5 @@
 """Integration tests: Rust acceleration vs Python fallback."""
+
 import os
 import sys
 from pathlib import Path
@@ -18,7 +19,9 @@ class TestRustAvailability:
         assert_envelope_shape(result)
 
     def test_rust_similarity_returns_envelope(self, tool_caller):
-        result = tool_caller("rust_similarity", text1="hello world", text2="hello there")
+        result = tool_caller(
+            "rust_similarity", text1="hello world", text2="hello there"
+        )
         assert_envelope_shape(result)
 
 
@@ -43,7 +46,9 @@ class TestRustFallback:
         old = os.environ.get("WHITEMAGIC_NO_RUST")
         os.environ["WHITEMAGIC_NO_RUST"] = "1"
         try:
-            result = tool_caller.ok("capabilities", include_tools=False, include_env=False)
+            result = tool_caller.ok(
+                "capabilities", include_tools=False, include_env=False
+            )
             assert_envelope_shape(result)
         finally:
             if old is not None:

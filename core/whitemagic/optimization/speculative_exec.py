@@ -18,6 +18,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class SpeculativeExecutor:
     """
     Validates code/text candidates using a hierarchy of cheap->expensive checks.
@@ -54,7 +55,7 @@ class SpeculativeExecutor:
             issues.append("Potential Hardcoded Secret")
 
         # Dangerous exec
-        if re.search(r'\b(exec|eval)\(', code):
+        if re.search(r"\b(exec|eval)\(", code):
             issues.append("Dangerous usage of exec/eval")
 
         return len(issues) == 0, issues
@@ -75,7 +76,7 @@ class SpeculativeExecutor:
         fixed = self.local_llm.complete(prompt, max_tokens=1024)
 
         # Extract code block
-        match = re.search(r'```python\n(.*?)\n```', fixed, re.DOTALL)
+        match = re.search(r"```python\n(.*?)\n```", fixed, re.DOTALL)
         if match:
             return match.group(1)
         return None
@@ -84,14 +85,10 @@ class SpeculativeExecutor:
         """
         Run full validation pipeline.
         """
-        result = {
-            "valid": True,
-            "checks": [],
-            "errors": []
-        }
+        result = {"valid": True, "checks": [], "errors": []}
 
         if language.lower() == "python":
-    # 1. Syntax
+            # 1. Syntax
             valid_syntax, err = self.check_python_syntax(content)
             checks: list[dict[str, Any]] = list(result.get("checks", []))  # type: ignore
             checks.append({"name": "syntax", "passed": valid_syntax, "error": err})
@@ -101,7 +98,7 @@ class SpeculativeExecutor:
                 errors: list[str] = list(result.get("errors", []))  # type: ignore
                 errors.append(str(err))
                 result["errors"] = errors
-                return result # Fail fast
+                return result  # Fail fast
 
             # 2. Security
             valid_sec, issues = self.check_security_heuristics(content)

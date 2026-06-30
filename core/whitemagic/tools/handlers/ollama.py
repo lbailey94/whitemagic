@@ -8,6 +8,7 @@ v15.5: Context injection pipeline — automatically enriches prompts with
 relevant WhiteMagic memories via hybrid search + graph walk.  Responses
 can optionally be stored back (Memory-Augmented Generation).
 """
+
 # ruff: noqa: BLE001
 import asyncio
 import logging
@@ -21,13 +22,10 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Lazy aiohttp import
-# ---------------------------------------------------------------------------
-
 def _require_aiohttp() -> Any:
     try:
         import aiohttp
+
         return aiohttp
     except ImportError:
         raise ImportError(
@@ -43,6 +41,7 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
     except RuntimeError:
         return asyncio.run(coro)
     from concurrent.futures import ThreadPoolExecutor
+
     with ThreadPoolExecutor(max_workers=1) as pool:
         return pool.submit(asyncio.run, coro).result()
 
@@ -108,10 +107,6 @@ def _ollama_preflight() -> str | None:
         return f"Ollama unavailable at http://{host}:{port} ({exc})"
 
 
-# ---------------------------------------------------------------------------
-# Context injection pipeline (v15.5)
-# ---------------------------------------------------------------------------
-
 def _inject_context(
     prompt: str,
     *,
@@ -130,11 +125,13 @@ def _inject_context(
     memories: list[dict[str, Any]] = []
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
 
         # Sanitize query for FTS5 — strip special chars that break syntax
         import re
-        safe_query = re.sub(r'[^\w\s]', ' ', prompt).strip()
+
+        safe_query = re.sub(r"[^\w\s]", " ", prompt).strip()
         if not safe_query:
             return prompt, []
 
@@ -195,6 +192,7 @@ def _maybe_store_output(
 
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
 
         title = f"Ollama [{model}]: {prompt[:80]}"
@@ -209,10 +207,6 @@ def _maybe_store_output(
         logger.debug("MAG store failed (non-fatal): %s", e, exc_info=True)
         return None
 
-
-# ---------------------------------------------------------------------------
-# Internal async client
-# ---------------------------------------------------------------------------
 
 async def _list_models() -> list[dict[str, Any]]:
     aiohttp = _require_aiohttp()
@@ -274,10 +268,6 @@ async def _chat(model: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
             }
 
 
-# ---------------------------------------------------------------------------
-# Public handlers
-# ---------------------------------------------------------------------------
-
 def handle_ollama_models(**kwargs: Any) -> dict[str, Any]:
     """List available Ollama models."""
     runtime_status = _ollama_runtime_status()
@@ -300,12 +290,14 @@ def handle_ollama_models(**kwargs: Any) -> dict[str, Any]:
         models = _run(_list_models())
         model_list = []
         for m in models:
-            model_list.append({
-                "name": m.get("name", "unknown"),
-                "size_bytes": m.get("size", 0),
-                "size_gb": round(m.get("size", 0) / 1e9, 1),
-                "modified_at": m.get("modified_at", ""),
-            })
+            model_list.append(
+                {
+                    "name": m.get("name", "unknown"),
+                    "size_bytes": m.get("size", 0),
+                    "size_gb": round(m.get("size", 0) / 1e9, 1),
+                    "modified_at": m.get("modified_at", ""),
+                }
+            )
         return {
             "status": "success",
             "count": len(model_list),
@@ -313,7 +305,12 @@ def handle_ollama_models(**kwargs: Any) -> dict[str, Any]:
             **runtime_status,
         }
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency", **runtime_status}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+            **runtime_status,
+        }
     except Exception as exc:
         return {
             "status": "error",
@@ -344,7 +341,11 @@ def handle_ollama_generate(**kwargs: Any) -> dict[str, Any]:
     try:
         _require_aiohttp()
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
 
     preflight_error = _ollama_preflight()
     if preflight_error:
@@ -359,7 +360,8 @@ def handle_ollama_generate(**kwargs: Any) -> dict[str, Any]:
     inject = kwargs.get("context", True)
     strategy = kwargs.get("context_strategy", "hybrid") if inject else "none"
     enriched_prompt, ctx_memories = _inject_context(
-        prompt, strategy=strategy,
+        prompt,
+        strategy=strategy,
         max_memories=int(kwargs.get("max_context", 5)),
     )
 
@@ -377,7 +379,11 @@ def handle_ollama_generate(**kwargs: Any) -> dict[str, Any]:
 
         return {"status": "success", **result}
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
     except Exception as exc:
         return {"status": "error", "error": str(exc)}
 
@@ -397,12 +403,19 @@ def handle_ollama_chat(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": "model is required"}
     messages = kwargs.get("messages")
     if not messages or not isinstance(messages, list):
-        return {"status": "error", "error": "messages is required (array of {role, content})"}
+        return {
+            "status": "error",
+            "error": "messages is required (array of {role, content})",
+        }
 
     try:
         _require_aiohttp()
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
 
     preflight_error = _ollama_preflight()
     if preflight_error:
@@ -426,7 +439,8 @@ def handle_ollama_chat(**kwargs: Any) -> dict[str, Any]:
                 break
         if last_user_msg:
             _, ctx_memories = _inject_context(
-                last_user_msg, strategy=strategy,
+                last_user_msg,
+                strategy=strategy,
                 max_memories=int(kwargs.get("max_context", 5)),
             )
 
@@ -440,8 +454,7 @@ def handle_ollama_chat(**kwargs: Any) -> dict[str, Any]:
             ctx_lines.append(f"- {title}: {content}")
         ctx_block = (
             "You have access to a persistent memory system. "
-            "Here are relevant memories:\n"
-            + "\n".join(ctx_lines)
+            "Here are relevant memories:\n" + "\n".join(ctx_lines)
         )
         # Insert as first system message or prepend
         if enriched_messages and enriched_messages[0].get("role") == "system":
@@ -462,20 +475,22 @@ def handle_ollama_chat(**kwargs: Any) -> dict[str, Any]:
                 (m["content"] for m in reversed(messages) if m.get("role") == "user"),
                 "chat",
             )
-            stored_id = _maybe_store_output(last_user, result.get("response", ""), model)
+            stored_id = _maybe_store_output(
+                last_user, result.get("response", ""), model
+            )
             if stored_id:
                 result["stored_memory_id"] = stored_id
 
         return {"status": "success", **result}
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
     except Exception as exc:
         return {"status": "error", "error": str(exc)}
 
-
-# ---------------------------------------------------------------------------
-# Agent loop wrapper (v22.2)
-# ---------------------------------------------------------------------------
 
 def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     """Run an autonomous agentic loop with a local Ollama model.
@@ -486,7 +501,11 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     model = kwargs.get("model", "llama3.2")
     task = kwargs.get("task", "")
     if not task:
-        return {"status": "error", "error_code": "invalid_params", "message": "task is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "task is required",
+        }
 
     max_iterations = int(kwargs.get("max_iterations", 10))
     context = kwargs.get("context", True)

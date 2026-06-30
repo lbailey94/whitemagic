@@ -59,10 +59,6 @@ from whitemagic.core.memory.constellation_algorithms import (
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class Constellation:
     """A named cluster of semantically related memories in 5D space."""
@@ -132,10 +128,6 @@ class DetectionReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Constellation Detector
-# ---------------------------------------------------------------------------
-
 class ConstellationDetector:
     """Discovers dense clusters in 5D holographic space.
 
@@ -162,10 +154,6 @@ class ConstellationDetector:
         # Each entry: list of (timestamp_iso, centroid_5d) tuples
         self._centroid_history: dict[str, list[tuple[str, tuple[float, ...]]]] = {}
         self._max_history_per_constellation = 100
-
-    # ------------------------------------------------------------------
-    # Detection
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _distance_5d(a: tuple[float, ...], b: tuple[float, ...]) -> float:
@@ -310,10 +298,6 @@ class ConstellationDetector:
          report.memories_scanned, report.duration_ms, report.largest_constellation)
         return report
 
-    # ------------------------------------------------------------------
-    # HDBSCAN detection (preferred)
-    # ------------------------------------------------------------------
-
     def _detect_hdbscan(
         self, coords: list[tuple[float, ...]],
     ) -> tuple[list[list[int]], list[float]]:
@@ -324,10 +308,6 @@ class ConstellationDetector:
         """
         return detect_hdbscan(coords, self._min_size)
 
-    # ------------------------------------------------------------------
-    # Grid-based detection (fallback)
-    # ------------------------------------------------------------------
-
     def _detect_grid(
         self, coords: list[tuple[float, ...]],
     ) -> tuple[list[list[int]], list[float]]:
@@ -336,10 +316,6 @@ class ConstellationDetector:
         Returns (groups, stabilities) — stabilities are always 0.0 for grid.
         """
         return detect_grid(coords, self._bins, self._min_size, self._max_constellations)
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _get_tag_counts(backend: Any, memory_ids: list[str]) -> dict[str, int]:
@@ -410,10 +386,6 @@ class ConstellationDetector:
         fallback = f"{base_name} ({len(used_names)})"
         used_names.add(fallback)
         return fallback
-
-    # ------------------------------------------------------------------
-    # Gap A3 synthesis: Constellations → Knowledge Graph
-    # ------------------------------------------------------------------
 
     def _feed_knowledge_graph(self, constellations: list[Constellation]) -> None:
         """Register constellation entities and membership relations in the KG.
@@ -631,10 +603,6 @@ class ConstellationDetector:
                 return self._last_report
         return self.detect(sample_limit=sample_limit)
 
-    # ------------------------------------------------------------------
-    # Auto-Merge Converging Constellations
-    # ------------------------------------------------------------------
-
     def auto_merge(
         self,
         max_distance: float = 0.5,
@@ -759,10 +727,6 @@ class ConstellationDetector:
              len(merge_log), len(constellations), len(surviving))
         return result
 
-    # ------------------------------------------------------------------
-    # Drift Tracking
-    # ------------------------------------------------------------------
-
     def _record_centroid_history(self, constellations: list[Constellation]) -> None:
         """Record current centroids into drift history."""
         now = datetime.now().isoformat()
@@ -877,10 +841,6 @@ class ConstellationDetector:
         results.sort(key=lambda r: -r["drift_magnitude"])
         return results
 
-    # ------------------------------------------------------------------
-    # Hungarian Optimal Matching
-    # ------------------------------------------------------------------
-
     def _hungarian_match(
         self,
         old_centroids: dict[str, tuple[float, ...]],
@@ -979,10 +939,6 @@ class ConstellationDetector:
             pass  # Gan Ying bus optional
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _detector_instance: ConstellationDetector | None = None
 _detector_lock = threading.Lock()
 
@@ -1003,10 +959,6 @@ def get_constellation_detector(
             )
         return _detector_instance
 
-
-# ---------------------------------------------------------------------------
-# Register with UnifiedMemory hooks to break circular dependency
-# ---------------------------------------------------------------------------
 
 try:
     from whitemagic.core.memory.unified import register_search_hook

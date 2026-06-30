@@ -14,18 +14,21 @@ class TestRustEmbeddingsBridge:
 
     def test_cosine_similarity(self):
         from whitemagic.performance.rust_embeddings import RustEmbeddingsBridge
+
         bridge = RustEmbeddingsBridge()
         score = bridge.cosine_similarity([1, 0, 0], [1, 0, 0])
         assert abs(score - 1.0) < 0.01
 
     def test_cosine_similarity_orthogonal(self):
         from whitemagic.performance.rust_embeddings import RustEmbeddingsBridge
+
         bridge = RustEmbeddingsBridge()
         score = bridge.cosine_similarity([1, 0], [0, 1])
         assert abs(score) < 0.01
 
     def test_batch_similarity(self):
         from whitemagic.performance.rust_embeddings import RustEmbeddingsBridge
+
         bridge = RustEmbeddingsBridge()
         results = bridge.batch_similarity([1, 0], [[1, 0], [0, 1]])
         assert len(results) == 2
@@ -33,6 +36,7 @@ class TestRustEmbeddingsBridge:
 
     def test_benchmark(self):
         from whitemagic.performance.rust_embeddings import RustEmbeddingsBridge
+
         bridge = RustEmbeddingsBridge()
         result = bridge.benchmark(n=10)
         assert result["iterations"] == 10
@@ -43,12 +47,14 @@ class TestBridgeCoordinator:
 
     def test_status(self):
         from whitemagic.performance.bridge_coordinator import BridgeCoordinator
+
         coord = BridgeCoordinator()
         status = coord.status()
         assert "rust_embeddings" in status
 
     def test_summary(self):
         from whitemagic.performance.bridge_coordinator import BridgeCoordinator
+
         coord = BridgeCoordinator()
         summary = coord.summary()
         assert "total_bridges" in summary
@@ -60,6 +66,7 @@ class TestLocalEmbeddings:
 
     def test_add_and_search(self):
         from whitemagic.edge.embeddings import LocalEmbeddings
+
         emb = LocalEmbeddings()
         emb.add("1", "hello world from white magic")
         emb.add("2", "cooking recipes for pasta")
@@ -69,12 +76,14 @@ class TestLocalEmbeddings:
 
     def test_jaccard(self):
         from whitemagic.edge.embeddings import LocalEmbeddings
+
         emb = LocalEmbeddings()
         score = emb.jaccard_similarity("hello world", "hello there world")
         assert score > 0
 
     def test_summary(self):
         from whitemagic.edge.embeddings import LocalEmbeddings
+
         emb = LocalEmbeddings()
         emb.add("1", "test")
         summary = emb.summary()
@@ -86,12 +95,14 @@ class TestFederatedLearning:
 
     def test_register_node(self, tmp_path):
         from whitemagic.edge.federated import FederatedLearning
+
         fed = FederatedLearning(data_dir=tmp_path)
         fed.register_node("node1", ["search", "embed"])
         assert "node1" in fed.nodes
 
     def test_share_pattern(self, tmp_path):
         from whitemagic.edge.federated import FederatedLearning
+
         fed = FederatedLearning(data_dir=tmp_path)
         fed.register_node("node1")
         fed.share_pattern("node1", {"type": "insight", "content": "test"})
@@ -99,6 +110,7 @@ class TestFederatedLearning:
 
     def test_aggregate(self, tmp_path):
         from whitemagic.edge.federated import FederatedLearning
+
         fed = FederatedLearning(data_dir=tmp_path)
         fed.register_node("node1")
         fed.register_node("node2")
@@ -113,18 +125,23 @@ class TestSelfImprovingCascade:
 
     def test_self_critique_good(self, tmp_path):
         from whitemagic.edge.self_improving import SelfImprovingCascade
+
         cascade = SelfImprovingCascade(data_dir=tmp_path)
-        critique = cascade.self_critique("This is a well-formed output with sufficient length.")
+        critique = cascade.self_critique(
+            "This is a well-formed output with sufficient length."
+        )
         assert critique["can_improve"] is False
 
     def test_self_critique_short(self, tmp_path):
         from whitemagic.edge.self_improving import SelfImprovingCascade
+
         cascade = SelfImprovingCascade(data_dir=tmp_path)
         critique = cascade.self_critique("short")
         assert critique["can_improve"] is True
 
     def test_improve(self, tmp_path):
         from whitemagic.edge.self_improving import SelfImprovingCascade
+
         cascade = SelfImprovingCascade(data_dir=tmp_path)
         result = cascade.improve("short output with TODO")
         assert "improved" in result
@@ -136,6 +153,7 @@ class TestEdgeExporter:
 
     def test_export_json(self, tmp_path):
         from whitemagic.edge.export import EdgeExporter
+
         exporter = EdgeExporter(export_dir=tmp_path)
         path = exporter.export_json({"key": "value"}, "test")
         assert path.exists()
@@ -143,6 +161,7 @@ class TestEdgeExporter:
 
     def test_export_javascript(self, tmp_path):
         from whitemagic.edge.export import EdgeExporter
+
         exporter = EdgeExporter(export_dir=tmp_path)
         path = exporter.export_javascript_module({"key": "value"}, "testModule")
         assert path.exists()
@@ -152,6 +171,7 @@ class TestEdgeExporter:
 
     def test_list_exports(self, tmp_path):
         from whitemagic.edge.export import EdgeExporter
+
         exporter = EdgeExporter(export_dir=tmp_path)
         exporter.export_json({"a": 1}, "file1")
         exporter.export_json({"b": 2}, "file2")
@@ -164,6 +184,7 @@ class TestEdgePerformanceBenchmark:
 
     def test_benchmark_cache(self):
         from whitemagic.benchmarks.edge_performance import EdgePerformanceBenchmark
+
         bench = EdgePerformanceBenchmark()
         result = bench.benchmark_cache(n=10)
         assert result["iterations"] == 10
@@ -171,6 +192,7 @@ class TestEdgePerformanceBenchmark:
 
     def test_summary(self):
         from whitemagic.benchmarks.edge_performance import EdgePerformanceBenchmark
+
         bench = EdgePerformanceBenchmark()
         bench.benchmark_cache(n=5)
         summary = bench.summary()
@@ -182,12 +204,14 @@ class TestRustBenchmark:
 
     def test_benchmark_cosine(self):
         from whitemagic.benchmarks.rust_performance import RustBenchmark
+
         bench = RustBenchmark()
         result = bench.benchmark_cosine_similarity(n=10, dim=16)
         assert result["iterations"] == 10
 
     def test_summary(self):
         from whitemagic.benchmarks.rust_performance import RustBenchmark
+
         bench = RustBenchmark()
         bench.benchmark_cosine_similarity(n=5, dim=8)
         summary = bench.summary()
@@ -199,6 +223,7 @@ class TestPerformanceDashboard:
 
     def test_record_and_trend(self, tmp_path):
         from whitemagic.benchmarks.performance_dashboard import PerformanceDashboard
+
         dash = PerformanceDashboard(data_dir=tmp_path)
         dash.record_metric("latency", 5.2, "ms")
         dash.record_metric("latency", 4.8, "ms")
@@ -207,6 +232,7 @@ class TestPerformanceDashboard:
 
     def test_latest(self, tmp_path):
         from whitemagic.benchmarks.performance_dashboard import PerformanceDashboard
+
         dash = PerformanceDashboard(data_dir=tmp_path)
         dash.record_metric("latency", 5.2)
         dash.record_metric("throughput", 100)
@@ -216,6 +242,7 @@ class TestPerformanceDashboard:
 
     def test_summary(self, tmp_path):
         from whitemagic.benchmarks.performance_dashboard import PerformanceDashboard
+
         dash = PerformanceDashboard(data_dir=tmp_path)
         dash.record_metric("a", 1)
         summary = dash.summary()
@@ -227,6 +254,7 @@ class TestParallelMemoryOps:
 
     def test_parallel_search(self):
         from whitemagic.parallel.memory_ops import ParallelMemoryManager
+
         mgr = ParallelMemoryManager(max_workers=2)
 
         def search_fn(query: str) -> list[dict]:
@@ -238,6 +266,7 @@ class TestParallelMemoryOps:
 
     def test_benchmark_search(self):
         from whitemagic.parallel.memory_ops import ParallelMemoryManager
+
         mgr = ParallelMemoryManager(max_workers=2)
 
         def search_fn(query: str) -> list[dict]:
@@ -250,6 +279,7 @@ class TestParallelMemoryOps:
 
     def test_summary(self):
         from whitemagic.parallel.memory_ops import ParallelMemoryManager
+
         mgr = ParallelMemoryManager(max_workers=4)
         summary = mgr.summary()
         assert summary["max_workers"] == 4

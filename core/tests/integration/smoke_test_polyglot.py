@@ -1,4 +1,3 @@
-
 import subprocess
 import json
 import os
@@ -9,6 +8,7 @@ print("=================================")
 # 1. Python Core (Session Engine)
 try:
     from whitemagic.core.ganas.eastern_quadrant import HornGana
+
     gana = HornGana()
     # It's an async method, but we can check attributes
     print(f"   ✅ Gana Instantiated: {gana.mansion.name}")
@@ -19,6 +19,7 @@ except Exception as e:
 print("\n🦀 [2/4] Rust Muscle: Testing PyO3 Bridge...")
 try:
     import whitemagic_rs
+
     print(f"   ✅ Module Imported: {whitemagic_rs.__file__}")
     # Simulating a search/vector op if available, otherwise just presence
     print("   ✅ Rust Bindings Active")
@@ -32,10 +33,10 @@ if os.path.exists(julia_script):
     try:
         input_data = json.dumps({"magnitude": 0.9, "damping": 0.05})
         result = subprocess.run(
-            ["julia", julia_script, input_data], 
-            capture_output=True, 
+            ["julia", julia_script, input_data],
+            capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
         )
         if result.returncode == 0:
             print(f"   ✅ Output: {result.stdout.strip()}")
@@ -54,18 +55,20 @@ haskell_src = "haskell/app/Main.hs"
 if os.path.exists(haskell_src):
     try:
         env = os.environ.copy()
-        env["LD_LIBRARY_PATH"] = f"{os.getcwd()}/whitemagic/lib_shim:{env.get('LD_LIBRARY_PATH', '')}"
-        
+        env["LD_LIBRARY_PATH"] = (
+            f"{os.getcwd()}/whitemagic/lib_shim:{env.get('LD_LIBRARY_PATH', '')}"
+        )
+
         # Try runghc for script usage
         result = subprocess.run(
             ["runghc", "-ihaskell/src", haskell_src],
             capture_output=True,
             text=True,
             timeout=10,
-            env=env
+            env=env,
         )
         if result.returncode == 0:
-            print(f"   ✅ Output: {result.stdout.strip()[:100]}...") 
+            print(f"   ✅ Output: {result.stdout.strip()[:100]}...")
         else:
             # Maybe it needs input or arguments?
             print(f"   message: Haskell ran with code {result.returncode}")

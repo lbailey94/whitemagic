@@ -45,7 +45,9 @@ class CLISuggestionLearner:
                     except Exception:
                         pass
 
-    def record(self, command: str, context: str = "", sequence: list[str] | None = None) -> None:
+    def record(
+        self, command: str, context: str = "", sequence: list[str] | None = None
+    ) -> None:
         """Record a command usage."""
         entry = {
             "command": command,
@@ -59,12 +61,13 @@ class CLISuggestionLearner:
         with open(self.usage_file, "a") as f:
             f.write(json.dumps(entry) + "\n")
 
-    def suggest(self, current_context: str = "", limit: int = 5) -> list[dict[str, Any]]:
+    def suggest(
+        self, current_context: str = "", limit: int = 5
+    ) -> list[dict[str, Any]]:
         """Suggest commands based on usage patterns."""
         sorted_cmds = sorted(self._usage.items(), key=lambda x: -x[1])
         return [
-            {"command": cmd, "frequency": count}
-            for cmd, count in sorted_cmds[:limit]
+            {"command": cmd, "frequency": count} for cmd, count in sorted_cmds[:limit]
         ]
 
     def suggest_next(self, last_command: str) -> list[str]:
@@ -76,6 +79,7 @@ class CLISuggestionLearner:
                     suggestions.append(seq[i + 1])
         # Return most common next commands
         from collections import Counter
+
         counts = Counter(suggestions)
         return [cmd for cmd, _ in counts.most_common(5)]
 

@@ -1,4 +1,3 @@
-
 with open("tests/unit/autonomous/executor/test_continuous_executor.py") as f:
     content = f.read()
 
@@ -20,7 +19,7 @@ def executor(mock_config):
         with patch('whitemagic.autonomous.executor.continuous_executor.rs', create=True):
             pass
 
-        # Mock subsystems to prevent actual execution during tests"""
+        # Mock subsystems to prevent actual execution during tests""",
 )
 
 # Better mock setup in the fixture
@@ -52,7 +51,7 @@ content = content.replace(
             mock_daemon.is_running.return_value = False
             mock_rs.ContinuousDaemon.return_value = mock_daemon
 
-            executor = ContinuousExecutor(mock_config)"""
+            executor = ContinuousExecutor(mock_config)""",
 )
 
 with open("tests/unit/autonomous/executor/test_continuous_executor.py", "w") as f:

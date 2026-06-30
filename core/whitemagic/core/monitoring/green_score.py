@@ -41,10 +41,10 @@ logger = logging.getLogger(__name__)
 class InferenceLocality:
     """Where inference was executed."""
 
-    EDGE = "edge"           # On-device CPU/GPU (Rust, Zig, Mojo accelerators)
+    EDGE = "edge"  # On-device CPU/GPU (Rust, Zig, Mojo accelerators)
     LOCAL_LLM = "local_llm"  # Local Ollama or similar
     LOCAL_NET = "local_net"  # LAN-accessible service
-    CLOUD = "cloud"          # Remote API (OpenAI, Anthropic, etc.)
+    CLOUD = "cloud"  # Remote API (OpenAI, Anthropic, etc.)
 
 
 @dataclass
@@ -115,15 +115,11 @@ class GreenScore:
         self._cloud_calls = 0
         self._tokens_used = 0
         self._tokens_saved = 0
-        self._co2_actual = 0.0   # grams CO2 from actual compute
+        self._co2_actual = 0.0  # grams CO2 from actual compute
         self._co2_avoided = 0.0  # grams CO2 avoided vs all-cloud baseline
         self._history: list[dict[str, Any]] = []
         self._max_history = 1000
         self._session_start = time.time()
-
-    # ------------------------------------------------------------------
-    # Recording
-    # ------------------------------------------------------------------
 
     def record_inference(
         self,
@@ -159,7 +155,8 @@ class GreenScore:
 
             # CO2 accounting
             actual_co2 = (tokens_used / 1000.0) * self.CO2_PER_1K_TOKENS.get(
-                locality, self.CO2_PER_1K_TOKENS[InferenceLocality.CLOUD],
+                locality,
+                self.CO2_PER_1K_TOKENS[InferenceLocality.CLOUD],
             )
             cloud_baseline_co2 = (tokens_used / 1000.0) * self.CO2_PER_1K_TOKENS[
                 InferenceLocality.CLOUD
@@ -184,7 +181,7 @@ class GreenScore:
             }
             self._history.append(entry)
             if len(self._history) > self._max_history:
-                self._history = self._history[-self._max_history:]
+                self._history = self._history[-self._max_history :]
 
     def record_cache_hit(self, tokens_saved: int = 0, tool: str | None = None) -> None:
         """Record a cache hit (avoided inference entirely)."""
@@ -195,10 +192,6 @@ class GreenScore:
             tool=tool,
         )
 
-    # ------------------------------------------------------------------
-    # Scoring
-    # ------------------------------------------------------------------
-
     def _compute_score(self) -> float:
         """Compute the composite green score (0-100).
 
@@ -208,8 +201,10 @@ class GreenScore:
           - CO2 efficiency (30%): actual vs cloud baseline
         """
         total = (
-            self._edge_calls + self._local_llm_calls
-            + self._local_net_calls + self._cloud_calls
+            self._edge_calls
+            + self._local_llm_calls
+            + self._local_net_calls
+            + self._cloud_calls
         )
         if total == 0:
             return 100.0  # No compute = perfectly green
@@ -224,35 +219,29 @@ class GreenScore:
 
         # Token savings score (0-1)
         total_tokens = self._tokens_used + self._tokens_saved
-        savings_score = (
-            self._tokens_saved / total_tokens if total_tokens > 0 else 0.0
-        )
+        savings_score = self._tokens_saved / total_tokens if total_tokens > 0 else 0.0
 
         # CO2 efficiency score (0-1)
         total_co2 = self._co2_actual + self._co2_avoided
         co2_score = self._co2_avoided / total_co2 if total_co2 > 0 else 1.0
 
         # Weighted composite
-        composite = (
-            locality_score * 0.4
-            + savings_score * 0.3
-            + co2_score * 0.3
-        )
+        composite = locality_score * 0.4 + savings_score * 0.3 + co2_score * 0.3
 
         return round(min(100.0, max(0.0, composite * 100)), 1)
-
-    # ------------------------------------------------------------------
-    # Reporting
-    # ------------------------------------------------------------------
 
     def report(self) -> dict[str, Any]:
         """Generate a full green score report."""
         with self._lock:
             total = (
-                self._edge_calls + self._local_llm_calls
-                + self._local_net_calls + self._cloud_calls
+                self._edge_calls
+                + self._local_llm_calls
+                + self._local_net_calls
+                + self._cloud_calls
             )
-            local_calls = self._edge_calls + self._local_llm_calls + self._local_net_calls
+            local_calls = (
+                self._edge_calls + self._local_llm_calls + self._local_net_calls
+            )
             edge_ratio = local_calls / max(1, total)
 
             total_tokens = self._tokens_used + self._tokens_saved
@@ -284,10 +273,14 @@ class GreenScore:
         """Get a lightweight snapshot for Harmony Vector integration."""
         with self._lock:
             total = (
-                self._edge_calls + self._local_llm_calls
-                + self._local_net_calls + self._cloud_calls
+                self._edge_calls
+                + self._local_llm_calls
+                + self._local_net_calls
+                + self._cloud_calls
             )
-            local_calls = self._edge_calls + self._local_llm_calls + self._local_net_calls
+            local_calls = (
+                self._edge_calls + self._local_llm_calls + self._local_net_calls
+            )
             total_tokens = self._tokens_used + self._tokens_saved
 
             return GreenSnapshot(
@@ -305,10 +298,6 @@ class GreenScore:
                 timestamp=datetime.now().isoformat(),
             )
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _green_score: GreenScore | None = None
 _gs_lock = threading.Lock()

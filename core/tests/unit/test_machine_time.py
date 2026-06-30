@@ -1,6 +1,5 @@
 """Tests for MachineTimeEstimator and upgraded PredictionCalibration."""
 
-
 import pytest
 
 from whitemagic.core.consciousness.machine_time import (

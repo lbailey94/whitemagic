@@ -70,13 +70,13 @@ class MysteryGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.0, y=0.5, z=0.0, w=0.2)
 
-    # ------------------------------------------------------------------
-    # Pattern detection — serving detect_patterns tool
-    # ------------------------------------------------------------------
-
-    def record_pattern(self, pattern_type: str, description: str,
-                       confidence: float = 0.7,
-                       evidence: list[str] | None = None) -> dict[str, Any]:
+    def record_pattern(
+        self,
+        pattern_type: str,
+        description: str,
+        confidence: float = 0.7,
+        evidence: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Record a detected pattern."""
         entry = {
             "type": pattern_type,
@@ -88,11 +88,14 @@ class MysteryGarden(BaseGarden, GanYingMixin):
         with self._lock:
             self.detected_patterns.append(entry)
             self._total_patterns += 1
-        self.emit(EventType.PATTERN_DETECTED, {"type": pattern_type, "confidence": confidence})
+        self.emit(
+            EventType.PATTERN_DETECTED, {"type": pattern_type, "confidence": confidence}
+        )
         return entry
 
-    def get_recent_patterns(self, pattern_type: str | None = None,
-                            limit: int = 20) -> list[dict[str, Any]]:
+    def get_recent_patterns(
+        self, pattern_type: str | None = None, limit: int = 20
+    ) -> list[dict[str, Any]]:
         """Get recently detected patterns, optionally filtered by type."""
         with self._lock:
             patterns = list(self.detected_patterns)
@@ -100,12 +103,9 @@ class MysteryGarden(BaseGarden, GanYingMixin):
             patterns = [p for p in patterns if p["type"] == pattern_type]
         return patterns[-limit:]
 
-    # ------------------------------------------------------------------
-    # Association mining — serving mine_associations, filter_associations
-    # ------------------------------------------------------------------
-
-    def record_mining_run(self, count: int, new_associations: int,
-                          method: str = "standard") -> dict[str, Any]:
+    def record_mining_run(
+        self, count: int, new_associations: int, method: str = "standard"
+    ) -> dict[str, Any]:
         """Record an association mining run."""
         entry = {
             "count": count,
@@ -116,7 +116,9 @@ class MysteryGarden(BaseGarden, GanYingMixin):
         with self._lock:
             self.association_results.append(entry)
             self._total_associations_mined += new_associations
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "mine", "new": new_associations})  # type: ignore[attr-defined]
+        self.emit(
+            EventType.GARDEN_ACTIVITY, {"action": "mine", "new": new_associations}
+        )  # type: ignore[attr-defined]
         return entry
 
     def get_mining_summary(self) -> dict[str, Any]:
@@ -129,12 +131,9 @@ class MysteryGarden(BaseGarden, GanYingMixin):
             "latest": runs[-1] if runs else None,
         }
 
-    # ------------------------------------------------------------------
-    # Constellation detection — serving constellation_detect tool
-    # ------------------------------------------------------------------
-
-    def record_constellation(self, name: str, member_count: int,
-                             centroid: dict[str, Any] | None = None) -> dict[str, Any]:
+    def record_constellation(
+        self, name: str, member_count: int, centroid: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Record a detected constellation."""
         entry = {
             "name": name,
@@ -151,30 +150,24 @@ class MysteryGarden(BaseGarden, GanYingMixin):
         with self._lock:
             return list(self.constellations_found)
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def encounter_mystery(self, what: str, depth: str = "unknown") -> dict[str, Any]:
         mystery = {"what": what, "depth": depth}
         self.serendipities.append(mystery)
         self.emit(EventType.MYSTERY_EMBRACED, mystery)
         return mystery
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "total_patterns": self._total_patterns,
-            "total_associations_mined": self._total_associations_mined,
-            "constellations": len(self.constellations_found),
-            "serendipities": len(self.serendipities),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "total_patterns": self._total_patterns,
+                "total_associations_mined": self._total_associations_mined,
+                "constellations": len(self.constellations_found),
+                "serendipities": len(self.serendipities),
+            }
+        )
         return base
 
     @listen_for(EventType.WONDER_SPARKED)
@@ -183,6 +176,8 @@ class MysteryGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_mystery_garden() -> MysteryGarden:
     global _instance
     if _instance is None:

@@ -28,13 +28,13 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- TYPES ---
 
 @dataclass
 class EmergenceInsight:
     """EmergenceInsight: emergence insight.
 
     Value object: equality and repr are field-based."""
+
     id: str
     title: str
     description: str
@@ -53,10 +53,10 @@ class EmergenceInsight:
         """
         return {**self.__dict__, "timestamp": self.timestamp.isoformat()}
 
-# --- ENGINES ---
 
 class EmergenceEngine:
     """Detects emergent patterns across the knowledge graph and memory stream."""
+
     def __init__(self):
         self._insights: list[EmergenceInsight] = []
 
@@ -69,34 +69,44 @@ class EmergenceEngine:
         insights: list[EmergenceInsight] = []
         try:
             from whitemagic.core.intelligence.core_access import get_core_access_layer
+
             cal = get_core_access_layer()
             # Check for constellation convergence
             constellations = cal.query_constellations(active_only=True)
             for const in constellations:
                 member_count = const.get("member_count", 0)
                 if member_count >= 5:
-                    insights.append(EmergenceInsight(
-                        pattern_type="constellation_growth",
-                        description=f"Constellation '{const.get('name', 'unknown')}' reached {member_count} members",
-                        confidence=min(1.0, member_count / 20.0),
-                        metadata={"constellation_id": const.get("id"), "member_count": member_count},
-                    ))
+                    insights.append(
+                        EmergenceInsight(
+                            pattern_type="constellation_growth",
+                            description=f"Constellation '{const.get('name', 'unknown')}' reached {member_count} members",
+                            confidence=min(1.0, member_count / 20.0),
+                            metadata={
+                                "constellation_id": const.get("id"),
+                                "member_count": member_count,
+                            },
+                        )
+                    )
             # Check for novel associations (edges created recently)
             recent_edges = cal.query_recent_associations(limit=20)
             if len(recent_edges) >= 3:
-                insights.append(EmergenceInsight(
-                    pattern_type="association_burst",
-                    description=f"{len(recent_edges)} new associations detected — possible knowledge synthesis",
-                    confidence=min(1.0, len(recent_edges) / 10.0),
-                    metadata={"edge_count": len(recent_edges)},
-                ))
+                insights.append(
+                    EmergenceInsight(
+                        pattern_type="association_burst",
+                        description=f"{len(recent_edges)} new associations detected — possible knowledge synthesis",
+                        confidence=min(1.0, len(recent_edges) / 10.0),
+                        metadata={"edge_count": len(recent_edges)},
+                    )
+                )
         except Exception:
             pass
         self._insights = insights
         return insights
 
+
 class ResonanceAmplifier:
     """Amplifies salient patterns through the Gan Ying bus."""
+
     def amplify(self, pattern: str, strength: float = 1.0) -> dict[str, Any]:
         """
         Perform the amplify operation.
@@ -110,8 +120,10 @@ class ResonanceAmplifier:
         """
         return {"pattern": pattern, "amplified_strength": strength * 1.5}
 
+
 class CoherencePersistence:
     """Ensures long-term identity and goal coherence across sessions."""
+
     def check_coherence(self) -> float:
         """
         Perform the check coherence operation.
@@ -121,10 +133,11 @@ class CoherencePersistence:
         """
         return 1.0
 
-# --- SINGLETONS ---
+
 _emergence: EmergenceEngine | None = None
 _resonance: ResonanceAmplifier | None = None
 _coherence: CoherencePersistence | None = None
+
 
 def get_emergence_engine() -> EmergenceEngine:
     """
@@ -138,6 +151,7 @@ def get_emergence_engine() -> EmergenceEngine:
         _emergence = EmergenceEngine()
     return _emergence
 
+
 def get_resonance_amplifier() -> ResonanceAmplifier:
     """
     Get the resonance amplifier.
@@ -149,6 +163,7 @@ def get_resonance_amplifier() -> ResonanceAmplifier:
     if _resonance is None:
         _resonance = ResonanceAmplifier()
     return _resonance
+
 
 def get_coherence_persistence() -> CoherencePersistence:
     """

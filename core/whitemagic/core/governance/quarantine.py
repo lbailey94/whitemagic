@@ -27,6 +27,7 @@ class QuarantineEntry:
     """QuarantineEntry: quarantine entry.
 
     Value object: equality and repr are field-based."""
+
     session_id: str
     reason: str
     quarantined_at: datetime
@@ -154,10 +155,6 @@ class QuarantineManager:
             del self._entries[sid]
             logger.info("Quarantine entry expired and removed: %s", sid)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _qm_instance: QuarantineManager | None = None
 _qm_lock = threading.Lock()

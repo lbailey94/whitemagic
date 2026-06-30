@@ -39,19 +39,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Maturity Stages
-# ---------------------------------------------------------------------------
-
 class MaturityStage(IntEnum):
     """Developmental milestones, ordered by increasing capability."""
 
-    SEED = 1          # Bare minimum: memory + tools
-    BICAMERAL = 2     # Governor + event bus verified
-    REFLECTIVE = 3    # Consciousness + retention engine
-    RADIANT = 4       # Surplus sharing + coordination
-    COLLECTIVE = 5    # Mesh / guild contracts
-    LOGOS = 6         # Long-horizon foresight
+    SEED = 1  # Bare minimum: memory + tools
+    BICAMERAL = 2  # Governor + event bus verified
+    REFLECTIVE = 3  # Consciousness + retention engine
+    RADIANT = 4  # Surplus sharing + coordination
+    COLLECTIVE = 5  # Mesh / guild contracts
+    LOGOS = 6  # Long-horizon foresight
 
 
 # Capabilities unlocked at each stage
@@ -108,10 +104,6 @@ _STAGE_CAPABILITIES: dict[MaturityStage, set[str]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Safety Gate Checks
-# ---------------------------------------------------------------------------
-
 @dataclass
 class GateResult:
     """Result of a single gate check."""
@@ -129,18 +121,29 @@ def _check_seed() -> list[GateResult]:
     # Memory system
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         get_unified_memory()
         results.append(GateResult("memory_system", True, "UnifiedMemory operational"))
     except Exception as exc:
-        results.append(GateResult("memory_system", False, f"UnifiedMemory failed: {exc}"))
+        results.append(
+            GateResult("memory_system", False, f"UnifiedMemory failed: {exc}")
+        )
 
     # Tool surfaces
     try:
         from whitemagic.tools.tool_surface import get_surface_counts
+
         counts = get_surface_counts()
         count = counts.get("dispatch_tools", 0)
         is_passed = isinstance(count, int) and count > 0
-        results.append(GateResult("tool_surface", is_passed, f"{count} dispatch tools available", details=counts))
+        results.append(
+            GateResult(
+                "tool_surface",
+                is_passed,
+                f"{count} dispatch tools available",
+                details=counts,
+            )
+        )
     except Exception as exc:
         results.append(GateResult("tool_surface", False, f"Tool surface failed: {exc}"))
 
@@ -154,6 +157,7 @@ def _check_bicameral() -> list[GateResult]:
     # Governor
     try:
         from whitemagic.core.governor import get_governor
+
         get_governor()
         results.append(GateResult("governor", True, "Governor active"))
     except Exception as exc:
@@ -162,6 +166,7 @@ def _check_bicameral() -> list[GateResult]:
     # Event bus
     try:
         from whitemagic.core.resonance.gan_ying_enhanced import get_bus
+
         get_bus()
         results.append(GateResult("event_bus", True, "Gan Ying Bus active"))
     except Exception as exc:
@@ -177,24 +182,41 @@ def _check_reflective() -> list[GateResult]:
     # Retention engine
     try:
         from whitemagic.core.memory.mindful_forgetting import get_retention_engine
+
         get_retention_engine()
-        results.append(GateResult("retention_engine", True, "RetentionEngine operational"))
+        results.append(
+            GateResult("retention_engine", True, "RetentionEngine operational")
+        )
     except Exception as exc:
-        results.append(GateResult("retention_engine", False, f"RetentionEngine failed: {exc}"))
+        results.append(
+            GateResult("retention_engine", False, f"RetentionEngine failed: {exc}")
+        )
 
     # Salience arbiter
     try:
         from whitemagic.core.resonance.salience_arbiter import get_salience_arbiter
+
         get_salience_arbiter()
-        results.append(GateResult("salience_arbiter", True, "SalienceArbiter operational"))
+        results.append(
+            GateResult("salience_arbiter", True, "SalienceArbiter operational")
+        )
     except Exception as exc:
-        results.append(GateResult("salience_arbiter", False, f"SalienceArbiter failed: {exc}"))
+        results.append(
+            GateResult("salience_arbiter", False, f"SalienceArbiter failed: {exc}")
+        )
 
     # Unified resonance bus (replaces temporal_scheduler)
     try:
         from whitemagic.core.resonance import get_bus
+
         bus = get_bus()
-        results.append(GateResult("resonance_bus", True, f"GanYingBus ready ({len(bus._listeners)} listeners)"))
+        results.append(
+            GateResult(
+                "resonance_bus",
+                True,
+                f"GanYingBus ready ({len(bus._listeners)} listeners)",
+            )
+        )
     except Exception as exc:
         results.append(GateResult("resonance_bus", False, f"GanYingBus failed: {exc}"))
 
@@ -213,30 +235,42 @@ def _check_radiant() -> list[GateResult]:
     # Usage history gate: require at least 5 memories and 1 session
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         count = um.backend.count() if hasattr(um.backend, "count") else 0
         has_usage = count >= 5
-        results.append(GateResult(
-            "usage_history", has_usage,
-            f"{count} memories stored (need ≥5)",
-            details={"memory_count": count},
-        ))
+        results.append(
+            GateResult(
+                "usage_history",
+                has_usage,
+                f"{count} memories stored (need ≥5)",
+                details={"memory_count": count},
+            )
+        )
     except Exception as exc:
-        results.append(GateResult("usage_history", False, f"Could not check usage: {exc}"))
+        results.append(
+            GateResult("usage_history", False, f"Could not check usage: {exc}")
+        )
 
     # Check homeostasis (system must be self-regulating)
     try:
         from whitemagic.core.homeostasis import HomeostasisSystem
+
         h = HomeostasisSystem()
         metrics = h.assess_health()
         healthy = metrics.coherence >= 0.5
-        results.append(GateResult(
-            "homeostasis", healthy,
-            f"Coherence={metrics.coherence:.2f}",
-            details={"coherence": metrics.coherence},
-        ))
+        results.append(
+            GateResult(
+                "homeostasis",
+                healthy,
+                f"Coherence={metrics.coherence:.2f}",
+                details={"coherence": metrics.coherence},
+            )
+        )
     except Exception as exc:
-        results.append(GateResult("homeostasis", False, f"Homeostasis check failed: {exc}"))
+        results.append(
+            GateResult("homeostasis", False, f"Homeostasis check failed: {exc}")
+        )
 
     return results
 
@@ -248,21 +282,32 @@ def _check_collective() -> list[GateResult]:
     # Check mesh availability (Go mesh binary or gRPC proto)
     try:
         from pathlib import Path
-        mesh_proto = Path(__file__).resolve().parents[3] / "mesh" / "proto" / "mesh.proto"
-        results.append(GateResult(
-            "mesh_proto", mesh_proto.exists(),
-            "Mesh proto available" if mesh_proto.exists() else "Mesh proto not found",
-        ))
+
+        mesh_proto = (
+            Path(__file__).resolve().parents[3] / "mesh" / "proto" / "mesh.proto"
+        )
+        results.append(
+            GateResult(
+                "mesh_proto",
+                mesh_proto.exists(),
+                "Mesh proto available"
+                if mesh_proto.exists()
+                else "Mesh proto not found",
+            )
+        )
     except Exception as exc:
         results.append(GateResult("mesh_proto", False, f"Mesh check failed: {exc}"))
 
     # Zodiac Council
     try:
         from whitemagic.core.governance.zodiac_council import get_council
+
         get_council()
         results.append(GateResult("zodiac_council", True, "ZodiacCouncil available"))
     except Exception as exc:
-        results.append(GateResult("zodiac_council", False, f"Council unavailable: {exc}"))
+        results.append(
+            GateResult("zodiac_council", False, f"Council unavailable: {exc}")
+        )
 
     return results
 
@@ -272,19 +317,26 @@ def _check_logos() -> list[GateResult]:
     results = []
     try:
         from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+
         engine = get_foresight_engine()
         report = engine.analyze()
-        results.append(GateResult(
-            "foresight_engine", True,
-            f"Foresight engine active — {len(report.constellation_projections)} projections, "
-            f"{len(report.decay_predictions)} decay predictions, "
-            f"{len(report.convergence_warnings)} convergence warnings",
-        ))
+        results.append(
+            GateResult(
+                "foresight_engine",
+                True,
+                f"Foresight engine active — {len(report.constellation_projections)} projections, "
+                f"{len(report.decay_predictions)} decay predictions, "
+                f"{len(report.convergence_warnings)} convergence warnings",
+            )
+        )
     except Exception as exc:
-        results.append(GateResult(
-            "foresight_engine", False,
-            f"Foresight engine import failed: {exc}",
-        ))
+        results.append(
+            GateResult(
+                "foresight_engine",
+                False,
+                f"Foresight engine import failed: {exc}",
+            )
+        )
     return results
 
 
@@ -298,10 +350,6 @@ _GATE_CHECKERS: dict[MaturityStage, Callable] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Assessment Report
-# ---------------------------------------------------------------------------
-
 @dataclass
 class MaturityReport:
     """Full assessment of the system's developmental maturity."""
@@ -309,8 +357,8 @@ class MaturityReport:
     current_stage: MaturityStage
     all_gates: dict[str, list[GateResult]]  # stage_name -> gate results
     unlocked_capabilities: set[str]
-    next_gate: str | None                # Name of next stage to unlock
-    next_gate_blockers: list[GateResult]    # What's preventing advancement
+    next_gate: str | None  # Name of next stage to unlock
+    next_gate_blockers: list[GateResult]  # What's preventing advancement
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
@@ -334,10 +382,6 @@ class MaturityReport:
             "timestamp": self.timestamp.isoformat(),
         }
 
-
-# ---------------------------------------------------------------------------
-# Maturity Engine
-# ---------------------------------------------------------------------------
 
 class MaturityEngine:
     """Evaluates the system's developmental maturity by running gate checks
@@ -394,9 +438,13 @@ class MaturityEngine:
         logger.info(
             "🌱 Maturity Assessment #%s: "
             "Stage=%s (%s/6), "
-            "Capabilities=%s"
-            + (", Next gate: %s" if next_gate else " — FULLY MATURE"),
-         self._assessment_count, current_stage.name, current_stage.value, len(unlocked), next_gate)
+            "Capabilities=%s" + (", Next gate: %s" if next_gate else " — FULLY MATURE"),
+            self._assessment_count,
+            current_stage.name,
+            current_stage.value,
+            len(unlocked),
+            next_gate,
+        )
 
         return report
 
@@ -404,13 +452,17 @@ class MaturityEngine:
         """Check if a specific capability is unlocked at the current maturity."""
         if self._last_report is None:
             self.assess()
-        return capability in (self._last_report.unlocked_capabilities if self._last_report else set())
+        return capability in (
+            self._last_report.unlocked_capabilities if self._last_report else set()
+        )
 
     def require_stage(self, minimum: MaturityStage) -> bool:
         """Check if the system has reached at least the given stage."""
         if self._last_report is None:
             self.assess()
-        return (self._last_report.current_stage if self._last_report else MaturityStage.SEED) >= minimum
+        return (
+            self._last_report.current_stage if self._last_report else MaturityStage.SEED
+        ) >= minimum
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -421,14 +473,14 @@ class MaturityEngine:
         """
         return {
             "assessment_count": self._assessment_count,
-            "current_stage": self._last_report.current_stage.name if self._last_report else "NOT_ASSESSED",
-            "capabilities_unlocked": len(self._last_report.unlocked_capabilities) if self._last_report else 0,
+            "current_stage": self._last_report.current_stage.name
+            if self._last_report
+            else "NOT_ASSESSED",
+            "capabilities_unlocked": len(self._last_report.unlocked_capabilities)
+            if self._last_report
+            else 0,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine_instance: MaturityEngine | None = None
 _engine_lock = threading.Lock()

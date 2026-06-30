@@ -25,7 +25,11 @@ def context(ctx, as_json: bool) -> None:
     from whitemagic.cascade.context_synthesizer import get_context_synthesizer
     from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-    json_output = as_json or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = as_json or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
 
     synth = get_context_synthesizer()
 

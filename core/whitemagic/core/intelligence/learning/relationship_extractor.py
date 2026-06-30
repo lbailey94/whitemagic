@@ -39,6 +39,7 @@ def _kdtree_neighbors(
 ) -> list[tuple[str, str, float]]:
     """Use Rust HolographicIndex KD-tree for O(n·k·log n) neighbor search."""
     import whitemagic_rs
+
     index = whitemagic_rs.HolographicIndex()
     for mem_id, (x, y, z, w) in coords_map.items():
         index.add(mem_id, x, y, z, w)
@@ -46,7 +47,9 @@ def _kdtree_neighbors(
     seen: set = set()
     edges: list[tuple[str, str, float]] = []
     for mem_id, (x, y, z, w) in coords_map.items():
-        neighbors = index.query_nearest(x, y, z, w, k + 1)  # +1 because self is included
+        neighbors = index.query_nearest(
+            x, y, z, w, k + 1
+        )  # +1 because self is included
         for nid, d_sq in neighbors:
             if nid == mem_id:
                 continue
@@ -58,7 +61,6 @@ def _kdtree_neighbors(
             seen.add(edge_key)
             edges.append((edge_key[0], edge_key[1], d_sq))
     return edges
-
 
 
 def _numpy_grid_neighbors(
@@ -91,7 +93,7 @@ def _numpy_grid_neighbors(
             int(coord[2] / cell_size),
             int(coord[3] / cell_size),
         )
-        grid[key].append(len(ids) - 1) # Store index
+        grid[key].append(len(ids) - 1)  # Store index
 
     points_arr = np.array(points, dtype=np.float32)
     threshold_sq = threshold * threshold
@@ -104,6 +106,7 @@ def _numpy_grid_neighbors(
     # Precompute neighbor offsets (3^4 = 81 offsets, but we only need half for unique pairs?
     # Actually, simpler to just check all 81 and filter by index i < j to avoid duplicates.
     import itertools
+
     offsets = list(itertools.product([-1, 0, 1], repeat=4))
 
     len(grid)
@@ -130,6 +133,7 @@ def _numpy_grid_neighbors(
         MAX_CANDIDATES = 500
         if len(candidates) > MAX_CANDIDATES:
             import random
+
             candidates = random.sample(candidates, MAX_CANDIDATES)
             # Ensure we include ourselves? Not strictly necessary if we rely on neighbors
             # But better to include some local points.
@@ -146,8 +150,8 @@ def _numpy_grid_neighbors(
         idx_b = np.array(candidates)
 
         # Retrieve coordinates
-        pos_a = points_arr[idx_a] # (Na, 4)
-        pos_b = points_arr[idx_b] # (Nb, 4)
+        pos_a = points_arr[idx_a]  # (Na, 4)
+        pos_b = points_arr[idx_b]  # (Nb, 4)
 
         # Compute distances pairwise?
         # If Na and Nb are small, brute force is fine.
@@ -222,7 +226,9 @@ def extract_relationships(
 
     threshold_sq = threshold * threshold
     total_memories = len(coords_map)
-    logger.info("Loaded %d coords from DB. Computing pairwise distances…", total_memories)
+    logger.info(
+        "Loaded %d coords from DB. Computing pairwise distances…", total_memories
+    )
 
     # 2. Nearest-neighbor search (KD-tree preferred; brute-force fallback)
     try:
@@ -258,30 +264,36 @@ def extract_relationships(
             chunk.append((id_b, id_a, strength))
 
             if len(chunk) >= BATCH_SIZE:
-                 conn.executemany(
+                conn.executemany(
                     "INSERT OR REPLACE INTO associations (source_id, target_id, strength) VALUES (?,?,?)",
                     chunk,
-                 )
-                 conn.commit()
-                 total_persisted += len(chunk)
-                 chunk = []
-                 logger.info("Persisted %s associations...", total_persisted, exc_info=True)
+                )
+                conn.commit()
+                total_persisted += len(chunk)
+                chunk = []
+                logger.info(
+                    "Persisted %s associations...", total_persisted, exc_info=True
+                )
 
         if chunk:
-             conn.executemany(
+            conn.executemany(
                 "INSERT OR REPLACE INTO associations (source_id, target_id, strength) VALUES (?,?,?)",
                 chunk,
-             )
-             conn.commit()
-             total_persisted += len(chunk)
+            )
+            conn.commit()
+            total_persisted += len(chunk)
 
         persisted = len(edges)
     else:
-        for id_a, id_b, d_sq in edges[:
-            20]:
+        for id_a, id_b, d_sq in edges[:20]:
             strength = max(0.1, 1.0 - (d_sq / threshold_sq))
-            logger.info("  [DRY] %s.. <-> %s..  dist_sq=%.4f  strength=%.3f",
-                        id_a[:10], id_b[:10], d_sq, strength)
+            logger.info(
+                "  [DRY] %s.. <-> %s..  dist_sq=%.4f  strength=%.3f",
+                id_a[:10],
+                id_b[:10],
+                d_sq,
+                strength,
+            )
         persisted = 0
 
     conn.close()

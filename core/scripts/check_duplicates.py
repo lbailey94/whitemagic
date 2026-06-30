@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import sys
 from collections import defaultdict
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -125,7 +124,9 @@ def normalize_body(body: list[ast.stmt]) -> ast.AST:
             # Don't recurse into nested functions for body hashing
             return node
 
-        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AsyncFunctionDef:
+        def visit_AsyncFunctionDef(
+            self, node: ast.AsyncFunctionDef
+        ) -> ast.AsyncFunctionDef:
             return node
 
     normalizer = Normalizer()
@@ -175,7 +176,10 @@ def extract_functions(filepath: Path) -> list[FunctionInfo]:
         ):
             continue
         if any(
-            (isinstance(d, ast.Name) and d.id in {"property", "staticmethod", "classmethod"})
+            (
+                isinstance(d, ast.Name)
+                and d.id in {"property", "staticmethod", "classmethod"}
+            )
             for d in node.decorator_list
         ):
             continue
@@ -189,16 +193,18 @@ def extract_functions(filepath: Path) -> list[FunctionInfo]:
         if body_size < MIN_BODY_NODES:
             continue
 
-        functions.append(FunctionInfo(
-            filepath=filepath,
-            lineno=node.lineno,
-            end_lineno=end_lineno,
-            name=node.name,
-            module_path=str(rel_path),
-            body_hash=body_hash,
-            body_size=body_size,
-            arg_count=len(node.args.args),
-        ))
+        functions.append(
+            FunctionInfo(
+                filepath=filepath,
+                lineno=node.lineno,
+                end_lineno=end_lineno,
+                name=node.name,
+                module_path=str(rel_path),
+                body_hash=body_hash,
+                body_size=body_size,
+                arg_count=len(node.args.args),
+            )
+        )
 
     return functions
 
@@ -238,7 +244,9 @@ def main() -> int:
     for i, group in enumerate(duplicates[:30], 1):
         print(f"  Group {i} ({len(group.functions)} copies, {group.file_count} files):")
         for func in sorted(group.functions, key=lambda f: f.module_path):
-            print(f"    {func.module_path}:{func.lineno} {func.name}() [{func.body_size} nodes]")
+            print(
+                f"    {func.module_path}:{func.lineno} {func.name}() [{func.body_size} nodes]"
+            )
         print()
 
     if len(duplicates) > 30:

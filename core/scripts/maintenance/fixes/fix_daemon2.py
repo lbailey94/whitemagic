@@ -1,4 +1,3 @@
-
 with open("whitemagic-rust/src/continuous_daemon.rs") as f:
     content = f.read()
 
@@ -16,7 +15,7 @@ content = content.replace(
     loops: Arc<AtomicU64>,
     tasks: Arc<AtomicU64>,
     errors: Arc<AtomicU64>,
-}"""
+}""",
 )
 
 # Update initialization
@@ -33,7 +32,7 @@ content = content.replace(
             loops: Arc::new(AtomicU64::new(0)),
             tasks: Arc::new(AtomicU64::new(0)),
             errors: Arc::new(AtomicU64::new(0)),
-        })"""
+        })""",
 )
 
 # Update the loop to increment stats
@@ -67,7 +66,7 @@ content = content.replace(
                     loops_clone.fetch_add(1, Ordering::SeqCst);
                 }
             }));
-        }"""
+        }""",
 )
 
 # Update get_stats to use actual stats
@@ -77,7 +76,7 @@ content = content.replace(
         stats.insert("errors".to_string(), 0);""",
     """        stats.insert("loops".to_string(), self.loops.load(Ordering::SeqCst));
         stats.insert("tasks".to_string(), self.tasks.load(Ordering::SeqCst));
-        stats.insert("errors".to_string(), self.errors.load(Ordering::SeqCst));"""
+        stats.insert("errors".to_string(), self.errors.load(Ordering::SeqCst));""",
 )
 
 # Remove unused DaemonStats
@@ -89,7 +88,8 @@ pub struct DaemonStats {
     pub errors: AtomicU64,
 }
 
-""", ""
+""",
+    "",
 )
 
 with open("whitemagic-rust/src/continuous_daemon.rs", "w") as f:

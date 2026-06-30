@@ -64,6 +64,7 @@ _LAZY_MODULES: dict[str, str] = {
 def __getattr__(name: str) -> Any:
     if name == "MemoryManager":
         from whitemagic.core.memory.manager import MemoryManager
+
         globals()[name] = MemoryManager
         return MemoryManager
 
@@ -83,24 +84,44 @@ def __getattr__(name: str) -> Any:
 def bootstrap() -> None:
     """Initialize the Unified Nervous System and register all organs."""
     from whitemagic.core.bootstrap_organs import bootstrap_nervous_system
+
     bootstrap_nervous_system()
 
 
 def __dir__() -> list[str]:
-    return sorted(list(globals().keys()) + list(_LAZY_MODULES.keys()) + ["MemoryManager", "bootstrap"])
+    return sorted(
+        list(globals().keys())
+        + list(_LAZY_MODULES.keys())
+        + ["MemoryManager", "bootstrap"]
+    )
+
 
 __all__ = [
-    'memory', 'resonance', 'patterns', 'consciousness',
-    'MemoryManager',  # Backward compatibility
-    'gardens',
-    'optimization',
-    'cli', 'api', 'dashboard',
-    'wisdom', 'learning',
-    'immune', 'automation',
-    'integration',
-    'edge', 'autonomous',
-    'utils',
-    'bootstrap',
+    "memory",
+    "resonance",
+    "patterns",
+    "consciousness",
+    "MemoryManager",  # Backward compatibility
+    "gardens",
+    "optimization",
+    "cli",
+    "api",
+    "dashboard",
+    "wisdom",
+    "learning",
+    "immune",
+    "automation",
+    "integration",
+    "edge",
+    "autonomous",
+    "utils",
+    "bootstrap",
     # Recovered from v17
-    'parallel', 'plugins', 'cache', 'auth', 'benchmarks', 'search', 'mesh',
+    "parallel",
+    "plugins",
+    "cache",
+    "auth",
+    "benchmarks",
+    "search",
+    "mesh",
 ]

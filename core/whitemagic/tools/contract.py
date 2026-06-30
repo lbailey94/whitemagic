@@ -28,6 +28,7 @@ class EnvVar:
     """EnvVar: env var.
 
     Value object: equality and repr are field-based."""
+
     name: str
     purpose: str
     example: str | None = None
@@ -70,4 +71,3 @@ ENV_VARS: list[EnvVar] = [
         example="true",
     ),
 ]
-

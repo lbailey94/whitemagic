@@ -110,9 +110,6 @@ from typing import Any, cast
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Stop words to ignore during keyword extraction
-# ---------------------------------------------------------------------------
 _STOP_WORDS = frozenset({
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
     "have", "has", "had", "do", "does", "did", "will", "would", "shall",
@@ -132,10 +129,6 @@ _STOP_WORDS = frozenset({
 
 _WORD_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
 
-
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
 
 @dataclass
 class ProposedLink:
@@ -193,10 +186,6 @@ class MiningReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Core miner
-# ---------------------------------------------------------------------------
-
 class AssociationMiner:
     """Discovers hidden semantic connections between memories.
 
@@ -220,10 +209,6 @@ class AssociationMiner:
         self._lock = threading.Lock()
         self._total_runs = 0
         self._total_links_created = 0
-
-    # ------------------------------------------------------------------
-    # Keyword extraction
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _extract_keywords(text: str, max_keywords: int = 50) -> set[str]:
@@ -261,10 +246,6 @@ class AssociationMiner:
 
         return keywords
 
-    # ------------------------------------------------------------------
-    # Overlap scoring
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _compute_overlap(kw_a: set[str], kw_b: set[str]) -> tuple[float, set[str]]:
         """Compute Jaccard-like overlap between two keyword sets."""
@@ -282,10 +263,6 @@ class AssociationMiner:
         count_bonus = min(1.0, len(shared) / 5.0) * 0.3
         score = min(1.0, raw_jaccard + count_bonus)
         return score, shared
-
-    # ------------------------------------------------------------------
-    # Mining
-    # ------------------------------------------------------------------
 
     def mine(self, sample_size: int = 200) -> MiningReport:
         """Run a single association mining pass.
@@ -498,10 +475,6 @@ class AssociationMiner:
          report.links_created, elapsed)
         return report
 
-    # ------------------------------------------------------------------
-    # Gap A3 synthesis: Association Miner → Knowledge Graph
-    # ------------------------------------------------------------------
-
     def _feed_knowledge_graph(self, proposals: list[ProposedLink]) -> None:
         """Create Knowledge Graph edges from strong association discoveries.
 
@@ -538,10 +511,6 @@ class AssociationMiner:
                 logger.info("KG enrichment: %s association edges created", edges_created, exc_info=True)
         except Exception as e:
             logger.debug("KG enrichment skipped: %s", e, exc_info=True)
-
-    # ------------------------------------------------------------------
-    # Semantic mining (Leap 1a — replaces keyword Jaccard)
-    # ------------------------------------------------------------------
 
     def mine_semantic(
         self,
@@ -723,10 +692,6 @@ class AssociationMiner:
         }
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _miner_instance: AssociationMiner | None = None
 _miner_lock = threading.Lock()
 
@@ -776,10 +741,6 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
 
 @dataclass
 class CausalEdge:
@@ -847,10 +808,6 @@ class CausalMiningReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Core miner
-# ---------------------------------------------------------------------------
-
 # Temporal decay: memories more than this many hours apart get rapidly
 # diminishing temporal proximity scores.
 _MAX_CAUSAL_WINDOW_HOURS = 168.0  # 7 days
@@ -883,10 +840,6 @@ class CausalMiner:
         self._lock = threading.Lock()
         self._total_runs: int = 0
         self._total_edges_created: int = 0
-
-    # ------------------------------------------------------------------
-    # Signal computation
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _temporal_proximity(dt_hours: float) -> float:
@@ -934,10 +887,6 @@ class CausalMiner:
             + 0.35 * temporal_prox
             + 0.15 * tag_overlap
         )
-
-    # ------------------------------------------------------------------
-    # Mining
-    # ------------------------------------------------------------------
 
     def mine(self, sample_size: int = 200) -> CausalMiningReport:
         """Run a causal edge mining pass.
@@ -1134,10 +1083,6 @@ class CausalMiner:
          report.edges_created, elapsed)
         return report
 
-    # ------------------------------------------------------------------
-    # Temporal fallback (no embeddings required)
-    # ------------------------------------------------------------------
-
     def _temporal_fallback_pairs(
         self, um: Any, sample_size: int,
     ) -> list[dict[str, Any]]:
@@ -1204,10 +1149,6 @@ class CausalMiner:
 
         return pairs[:self._max_edges * 5]
 
-    # ------------------------------------------------------------------
-    # Stats
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -1223,10 +1164,6 @@ class CausalMiner:
             "max_edges_per_run": self._max_edges,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _miner_instance: CausalMiner | None = None  # type: ignore[no-redef]
 _miner_lock = threading.Lock()

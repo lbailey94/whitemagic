@@ -13,6 +13,7 @@ Generated files:
     data/            — Runtime data directory
     logs/            — Log output directory
 """
+
 from __future__ import annotations
 
 import stat
@@ -536,6 +537,7 @@ _MCP_JSON = """\
 # CLI command
 # ---------------------------------------------------------------------------
 
+
 @click.command(name="init")
 @click.argument("directory", default=".", type=click.Path())
 @click.option("--force", "-f", is_flag=True, help="Overwrite existing files")
@@ -568,7 +570,9 @@ def init_command(directory: str, force: bool, minimal: bool) -> None:
     }
 
     if not minimal:
-        files["playground.py"] = _PLAYGROUND.replace(_PLAYGROUND_VERSION_PLACEHOLDER, __version__)
+        files["playground.py"] = _PLAYGROUND.replace(
+            _PLAYGROUND_VERSION_PLACEHOLDER, __version__
+        )
         files[".env"] = _ENV
         files[".gitignore"] = _GITIGNORE
 
@@ -586,7 +590,9 @@ def init_command(directory: str, force: bool, minimal: bool) -> None:
 
         # Make .sh and .py files executable
         if filename.endswith(".sh") or filename.endswith(".py"):
-            filepath.chmod(filepath.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+            filepath.chmod(
+                filepath.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+            )
 
     # Create runtime directories
     for dirname in ("data", "logs", "tmp"):

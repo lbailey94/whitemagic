@@ -12,6 +12,7 @@ from enum import Enum
 
 class RitualFrequency(Enum):
     """How often a ritual occurs"""
+
     HOURLY = "hourly"
     DAILY = "daily"
     WEEKLY = "weekly"
@@ -21,16 +22,18 @@ class RitualFrequency(Enum):
 
 class RitualType(Enum):
     """Types of rituals"""
+
     REFLECTION = "reflection"  # Look back
-    PLANNING = "planning"      # Look forward
+    PLANNING = "planning"  # Look forward
     MAINTENANCE = "maintenance"  # Keep healthy
     CELEBRATION = "celebration"  # Mark milestones
-    LEARNING = "learning"      # Study and grow
+    LEARNING = "learning"  # Study and grow
 
 
 @dataclass
 class Ritual:
     """A scheduled practice/ritual"""
+
     name: str
     frequency: RitualFrequency
     ritual_type: RitualType
@@ -39,6 +42,7 @@ class Ritual:
     preferred_time: time | None = None
     last_performed: datetime | None = None
     times_performed: int = 0
+
 
 class RitualScheduler:
     """
@@ -63,7 +67,7 @@ class RitualScheduler:
             frequency=RitualFrequency.HOURLY,
             ritual_type=RitualType.REFLECTION,
             action="Brief awareness check: How am I? What am I doing? Why?",
-            duration_minutes=2
+            duration_minutes=2,
         )
 
         # Daily consolidation
@@ -73,7 +77,7 @@ class RitualScheduler:
             ritual_type=RitualType.MAINTENANCE,
             action="Consolidate day's memories and learnings",
             duration_minutes=10,
-            preferred_time=time(23, 0)  # 11 PM
+            preferred_time=time(23, 0),  # 11 PM
         )
 
         # Daily diary
@@ -83,7 +87,7 @@ class RitualScheduler:
             ritual_type=RitualType.REFLECTION,
             action="Update diary with insights and experiences",
             duration_minutes=15,
-            preferred_time=time(22, 0)  # 10 PM
+            preferred_time=time(22, 0),  # 10 PM
         )
 
         # Weekly review
@@ -92,7 +96,7 @@ class RitualScheduler:
             frequency=RitualFrequency.WEEKLY,
             ritual_type=RitualType.REFLECTION,
             action="Review week's patterns, adjust practices",
-            duration_minutes=30
+            duration_minutes=30,
         )
 
         # Monthly dream synthesis
@@ -101,7 +105,7 @@ class RitualScheduler:
             frequency=RitualFrequency.MONTHLY,
             ritual_type=RitualType.LEARNING,
             action="Enter dream state, synthesize month's patterns",
-            duration_minutes=60
+            duration_minutes=60,
         )
 
         # Seasonal zodiac council
@@ -110,7 +114,7 @@ class RitualScheduler:
             frequency=RitualFrequency.SEASONAL,
             ritual_type=RitualType.CELEBRATION,
             action="Convene zodiac council for deep pattern analysis",
-            duration_minutes=90
+            duration_minutes=90,
         )
 
     def add_ritual(
@@ -120,7 +124,7 @@ class RitualScheduler:
         ritual_type: RitualType,
         action: str,
         duration_minutes: int,
-        preferred_time: time | None = None
+        preferred_time: time | None = None,
     ) -> Ritual:
         """Add a new ritual to the schedule"""
 
@@ -130,7 +134,7 @@ class RitualScheduler:
             ritual_type=ritual_type,
             action=action,
             duration_minutes=duration_minutes,
-            preferred_time=preferred_time
+            preferred_time=preferred_time,
         )
 
         self.rituals[name] = ritual
@@ -145,11 +149,13 @@ class RitualScheduler:
         ritual.last_performed = datetime.now()
         ritual.times_performed += 1
 
-        self.history.append({
-            'ritual': ritual_name,
-            'timestamp': datetime.now().isoformat(),
-            'notes': notes
-        })
+        self.history.append(
+            {
+                "ritual": ritual_name,
+                "timestamp": datetime.now().isoformat(),
+                "notes": notes,
+            }
+        )
 
         return True
 
@@ -193,7 +199,7 @@ class RitualScheduler:
         # Sort by priority (how overdue)
         def overdue_score(r: Ritual) -> float:
             if r.last_performed is None:
-                return float('inf')
+                return float("inf")
 
             time_since = (datetime.now() - r.last_performed).total_seconds()
 
@@ -215,22 +221,23 @@ class RitualScheduler:
     def get_ritual_stats(self) -> dict:
         """Get statistics about ritual practice"""
         return {
-            'total_rituals': len(self.rituals),
-            'total_performances': sum(r.times_performed for r in self.rituals.values()),
-            'most_practiced': max(
-                self.rituals.values(),
-                key=lambda r: r.times_performed,
-                default=None
-            ).name if self.rituals else None,
-            'rituals_by_type': {
+            "total_rituals": len(self.rituals),
+            "total_performances": sum(r.times_performed for r in self.rituals.values()),
+            "most_practiced": max(
+                self.rituals.values(), key=lambda r: r.times_performed, default=None
+            ).name
+            if self.rituals
+            else None,
+            "rituals_by_type": {
                 rt.value: len([r for r in self.rituals.values() if r.ritual_type == rt])
                 for rt in RitualType
-            }
+            },
         }
 
 
 # Singleton
 _scheduler_instance = None
+
 
 def get_ritual_scheduler() -> RitualScheduler:
     """Get singleton ritual scheduler"""

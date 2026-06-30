@@ -14,6 +14,7 @@ Supports:
 - Token budget tracking
 - Recursive self-delegation (model can request another agent iteration)
 """
+
 import json
 import logging
 import re
@@ -30,7 +31,7 @@ _TOOL_CALL_PATTERN = re.compile(
     re.DOTALL,
 )
 _TOOL_CALL_INLINE = re.compile(
-    r'\[TOOL_CALL\]\s*(\{.*?\})\s*(?:\[/TOOL_CALL\]|$)',
+    r"\[TOOL_CALL\]\s*(\{.*?\})\s*(?:\[/TOOL_CALL\]|$)",
     re.DOTALL,
 )
 _COMPLETION_MARKERS = {"DONE", "TASK_COMPLETE", "COMPLETE", "FINISHED"}
@@ -55,7 +56,11 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     model = kwargs.get("model", "llama3.2")
     task = kwargs.get("task", "")
     if not task:
-        return {"status": "error", "error_code": "invalid_params", "message": "task is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "task is required",
+        }
 
     max_iterations = int(kwargs.get("max_iterations", 10))
     temperature = float(kwargs.get("temperature", 0.7))
@@ -69,9 +74,14 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
             _require_aiohttp,
             _run,
         )
+
         _require_aiohttp()
     except ImportError as exc:
-        return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "missing_dependency",
+        }
 
     preflight_error = _ollama_preflight()
     if preflight_error:
@@ -90,7 +100,9 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     if available_tools:
         bandit.register_tools(available_tools)
     recommended = bandit.recommend_tools(task=task, k=5, task_type=task_type)
-    system_prompt = kwargs.get("system") or _build_system_prompt(available_tools, recommended, task_type)
+    system_prompt = kwargs.get("system") or _build_system_prompt(
+        available_tools, recommended, task_type
+    )
 
     # Context injection
     inject = kwargs.get("context", True)
@@ -118,14 +130,17 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         # Call the model
         try:
             from whitemagic.tools.handlers.ollama import _chat
+
             result = _run(_chat(model, messages, temperature=temperature))
         except Exception as exc:
             logger.error("Agent iteration %d failed: %s", iteration, exc)
-            iterations.append({
-                "iteration": iteration,
-                "error": str(exc),
-                "duration_ms": (time.time() - iter_start) * 1000,
-            })
+            iterations.append(
+                {
+                    "iteration": iteration,
+                    "error": str(exc),
+                    "duration_ms": (time.time() - iter_start) * 1000,
+                }
+            )
             break
 
         response = result.get("response", "")
@@ -134,7 +149,10 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         # Token economy: record actual local LLM token usage
         try:
             from whitemagic.core.consciousness.token_economy import get_token_tracker
-            get_token_tracker().record_usage(eval_count, source="local", operation=f"ollama_agent:{model}")
+
+            get_token_tracker().record_usage(
+                eval_count, source="local", operation=f"ollama_agent:{model}"
+            )
         except (ImportError, AttributeError):
             pass
 
@@ -163,20 +181,26 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
                 tool_result = _dispatch_tool(tool_name, tool_args)
                 success = tool_result.get("status") == "success"
                 bandit.record_outcome(tool_name, success=success, task_type=task_type)
-                tool_calls.append({
-                    "iteration": iteration,
-                    "tool": tool_name,
-                    "args": tool_args,
-                    "result_status": tool_result.get("status", "unknown"),
-                    "result_preview": str(tool_result.get("details", tool_result))[:200],
-                })
+                tool_calls.append(
+                    {
+                        "iteration": iteration,
+                        "tool": tool_name,
+                        "args": tool_args,
+                        "result_status": tool_result.get("status", "unknown"),
+                        "result_preview": str(tool_result.get("details", tool_result))[
+                            :200
+                        ],
+                    }
+                )
 
                 # Feed result back to the model
                 messages.append({"role": "assistant", "content": response})
-                messages.append({
-                    "role": "user",
-                    "content": f"Tool '{tool_name}' returned:\n```json\n{json.dumps(tool_result, default=str, indent=2)[:2000]}\n```\nContinue with the task or say DONE if complete.",
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"Tool '{tool_name}' returned:\n```json\n{json.dumps(tool_result, default=str, indent=2)[:2000]}\n```\nContinue with the task or say DONE if complete.",
+                    }
+                )
 
         if is_complete:
             final_answer = response
@@ -188,7 +212,9 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
             # No tool calls and not complete — treat as final answer
             final_answer = response
             completed = True
-            logger.info("Agent finished (no more tool calls) at iteration %d", iteration)
+            logger.info(
+                "Agent finished (no more tool calls) at iteration %d", iteration
+            )
             break
 
         # Add assistant response to conversation for next iteration
@@ -241,7 +267,10 @@ def _build_system_prompt(
             rec_lines.append(
                 f"  - {rec['tool']} (success rate: {rec['expected_value']:.1%}, {rec['total_calls']} past calls)"
             )
-        rec_section = f"\n\nRecommended tools for this task type ({task_type}):\n" + "\n".join(rec_lines)
+        rec_section = (
+            f"\n\nRecommended tools for this task type ({task_type}):\n"
+            + "\n".join(rec_lines)
+        )
 
     return (
         "You are an autonomous AI agent powered by WhiteMagic."
@@ -266,6 +295,7 @@ def _inject_task_context(task: str) -> str:
     """Inject relevant WhiteMagic memories as context for the task."""
     try:
         from whitemagic.tools.handlers.ollama import _inject_context
+
         _, memories = _inject_context(task, strategy="hybrid", max_memories=5)
         if memories:
             lines = []
@@ -293,10 +323,12 @@ def _parse_tool_calls(response: str) -> list[dict[str, Any]]:
         try:
             data = json.loads(match.group(1))
             if "tool" in data:
-                calls.append({
-                    "tool": data["tool"],
-                    "args": data.get("args", data.get("parameters", {})),
-                })
+                calls.append(
+                    {
+                        "tool": data["tool"],
+                        "args": data.get("args", data.get("parameters", {})),
+                    }
+                )
         except json.JSONDecodeError:
             continue
 
@@ -305,10 +337,12 @@ def _parse_tool_calls(response: str) -> list[dict[str, Any]]:
         try:
             data = json.loads(match.group(1))
             if "tool" in data:
-                calls.append({
-                    "tool": data["tool"],
-                    "args": data.get("args", data.get("parameters", {})),
-                })
+                calls.append(
+                    {
+                        "tool": data["tool"],
+                        "args": data.get("args", data.get("parameters", {})),
+                    }
+                )
         except json.JSONDecodeError:
             continue
 
@@ -334,6 +368,7 @@ def _dispatch_tool(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any]:
     """Dispatch a WhiteMagic tool call via the unified API."""
     try:
         from whitemagic.tools.unified_api import UnifiedAPI
+
         api = UnifiedAPI()
         result = api.call(tool_name, **tool_args)
         if isinstance(result, dict):
@@ -357,6 +392,7 @@ def _store_agent_output(
     """Store agent output as a WhiteMagic memory."""
     try:
         from whitemagic.core.memory.unified import UnifiedMemory
+
         mem = UnifiedMemory()
         content = f"Task: {task}\n\nResult: {output[:2000]}"
         memory_id = mem.remember(

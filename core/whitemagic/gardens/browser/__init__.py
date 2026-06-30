@@ -25,21 +25,21 @@ from .cdp import CDPConnection, connect_to_chrome
 from .distiller import DOMDistiller, SimplifiedElement
 from .screenshot import capture_element, capture_screenshot
 from .web_research import (
-    BrowserSessionManager,
     BatchSearchResult,
+    BrowserSessionManager,
     DeepFetchResult,
     FetchResult,
     RepoResearchResult,
     SearchResponse,
-    URLResearchResult,
     SearchResult,
-    research_topic,
+    URLResearchResult,
     deep_fetch,
     research_repo,
+    research_topic,
     research_url,
     web_fetch,
-    web_search_batch,
     web_search,
+    web_search_batch,
 )
 
 __all__ = [

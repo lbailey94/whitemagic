@@ -50,10 +50,10 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
     # Pattern to find try/except blocks with bare except
     # We capture the try body and the except body
     pattern = re.compile(
-        r'^(?P<indent>[ \t]*)try:\s*\n'
-        r'(?P<try_body>(?:\1[ \t]+.*\n)+)'
-        r'\1except Exception:\s*\n'
-        r'(?P<except_body>(?:\1[ \t]+.*\n)*)',
+        r"^(?P<indent>[ \t]*)try:\s*\n"
+        r"(?P<try_body>(?:\1[ \t]+.*\n)+)"
+        r"\1except Exception:\s*\n"
+        r"(?P<except_body>(?:\1[ \t]+.*\n)*)",
         re.MULTILINE,
     )
 
@@ -67,7 +67,7 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
         try_text = try_body.lower()
 
         # 1. Optional module import → ImportError/AttributeError
-        if re.search(r'from\s+\S+\s+import', try_text):
+        if re.search(r"from\s+\S+\s+import", try_text):
             new_except = f"{indent}except (ImportError, AttributeError):\n{except_body}"
             fixes += 1
             return match.group(0).replace(
@@ -77,7 +77,9 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
 
         # 2. JSON operations → JSONDecodeError/TypeError
         if "json.loads" in try_text or "json.load" in try_text:
-            new_except = f"{indent}except (json.JSONDecodeError, TypeError):\n{except_body}"
+            new_except = (
+                f"{indent}except (json.JSONDecodeError, TypeError):\n{except_body}"
+            )
             fixes += 1
             return match.group(0).replace(
                 f"{indent}except Exception:\n{except_body}",
@@ -85,8 +87,11 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
             )
 
         # 3. File I/O → OSError/UnicodeDecodeError
-        if any(k in try_text for k in ["read_text", "write_text", "open(", "readlines", "mkdir"]):
-            new_except = f"{indent}except (OSError, UnicodeDecodeError) as e:\n{indent}    logger.debug(\"File operation failed: %s\", e)\n{except_body}"
+        if any(
+            k in try_text
+            for k in ["read_text", "write_text", "open(", "readlines", "mkdir"]
+        ):
+            new_except = f'{indent}except (OSError, UnicodeDecodeError) as e:\n{indent}    logger.debug("File operation failed: %s", e)\n{except_body}'
             fixes += 1
             return match.group(0).replace(
                 f"{indent}except Exception:\n{except_body}",
@@ -95,7 +100,7 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
 
         # 4. Subprocess / process → OSError
         if any(k in try_text for k in ["subprocess", "popen", "terminate", "kill()"]):
-            new_except = f"{indent}except OSError as e:\n{indent}    logger.debug(\"Process operation failed: %s\", e)\n{except_body}"
+            new_except = f'{indent}except OSError as e:\n{indent}    logger.debug("Process operation failed: %s", e)\n{except_body}'
             fixes += 1
             return match.group(0).replace(
                 f"{indent}except Exception:\n{except_body}",
@@ -103,11 +108,14 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
             )
 
         # 5. SQLite / DB → sqlite3.Error
-        if any(k in try_text for k in ["cursor.execute", "conn.execute", "fetchone", "commit()"]):
+        if any(
+            k in try_text
+            for k in ["cursor.execute", "conn.execute", "fetchone", "commit()"]
+        ):
             if "import sqlite3" in content or "sqlite3" in content:
-                new_except = f"{indent}except sqlite3.Error as e:\n{indent}    logger.debug(\"DB operation failed: %s\", e)\n{except_body}"
+                new_except = f'{indent}except sqlite3.Error as e:\n{indent}    logger.debug("DB operation failed: %s", e)\n{except_body}'
             else:
-                new_except = f"{indent}except Exception as e:\n{indent}    logger.debug(\"DB operation failed: %s\", e)\n{except_body}"
+                new_except = f'{indent}except Exception as e:\n{indent}    logger.debug("DB operation failed: %s", e)\n{except_body}'
             fixes += 1
             return match.group(0).replace(
                 f"{indent}except Exception:\n{except_body}",
@@ -116,7 +124,7 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
 
         # 6. HTTP / URL → urllib.error.URLError
         if any(k in try_text for k in ["urllib", "urlopen", "requests.get"]):
-            new_except = f"{indent}except Exception as e:\n{indent}    logger.debug(\"Network request failed: %s\", e)\n{except_body}"
+            new_except = f'{indent}except Exception as e:\n{indent}    logger.debug("Network request failed: %s", e)\n{except_body}'
             fixes += 1
             return match.group(0).replace(
                 f"{indent}except Exception:\n{except_body}",
@@ -126,7 +134,9 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
         # 7. Rust FFI / module attribute → ImportError/AttributeError
         if any(k in try_text for k in ["hasattr", "getattr", "compute_", "batch_"]):
             if "import" in try_text or "_rs" in try_text or "_rust" in try_text:
-                new_except = f"{indent}except (ImportError, AttributeError):\n{except_body}"
+                new_except = (
+                    f"{indent}except (ImportError, AttributeError):\n{except_body}"
+                )
                 fixes += 1
                 return match.group(0).replace(
                     f"{indent}except Exception:\n{except_body}",
@@ -135,7 +145,7 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
 
         # 8. Queue / threading → OSError/ValueError
         if any(k in try_text for k in ["queue.", "threading", "put(", "get("]):
-            new_except = f"{indent}except (OSError, ValueError) as e:\n{indent}    logger.debug(\"Queue/thread operation failed: %s\", e)\n{except_body}"
+            new_except = f'{indent}except (OSError, ValueError) as e:\n{indent}    logger.debug("Queue/thread operation failed: %s", e)\n{except_body}'
             fixes += 1
             return match.group(0).replace(
                 f"{indent}except Exception:\n{except_body}",
@@ -162,7 +172,7 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
         elif "save" in try_text:
             msg = "Save operation failed"
 
-        new_except = f"{indent}except Exception as e:\n{indent}    logger.debug(\"{msg}: %s\", e)\n{except_body}"
+        new_except = f'{indent}except Exception as e:\n{indent}    logger.debug("{msg}: %s", e)\n{except_body}'
         fixes += 1
         return match.group(0).replace(
             f"{indent}except Exception:\n{except_body}",
@@ -198,7 +208,9 @@ def main() -> int:
             files_changed += 1
             print(f"  {pyfile}: {fixes} fixes")
 
-    print(f"\nDone: {total_fixes} bare except blocks fixed across {files_changed} files.")
+    print(
+        f"\nDone: {total_fixes} bare except blocks fixed across {files_changed} files."
+    )
     return 0
 
 

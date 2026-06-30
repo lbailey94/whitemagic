@@ -9,6 +9,7 @@ def handle_foresight_analyze(**kwargs: Any) -> dict[str, Any]:
     horizon_days = int(kwargs.get("horizon_days", 7))
     try:
         from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+
         engine = get_foresight_engine(horizon_days=horizon_days)
         report = engine.analyze()
         return {
@@ -28,6 +29,7 @@ def handle_foresight_constellations(**kwargs: Any) -> dict[str, Any]:
     horizon_days = int(kwargs.get("horizon_days", 7))
     try:
         from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+
         engine = get_foresight_engine(horizon_days=horizon_days)
         projections = engine._project_constellations()
         return {
@@ -48,6 +50,7 @@ def handle_foresight_decay(**kwargs: Any) -> dict[str, Any]:
     horizon_days = int(kwargs.get("horizon_days", 7))
     try:
         from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+
         engine = get_foresight_engine(horizon_days=horizon_days)
         predictions = engine._predict_decay()
         return {
@@ -69,13 +72,16 @@ def handle_foresight_convergence(**kwargs: Any) -> dict[str, Any]:
     horizon_days = int(kwargs.get("horizon_days", 7))
     try:
         from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+
         engine = get_foresight_engine(horizon_days=horizon_days)
         warnings = engine._detect_convergence()
         return {
             "status": "success",
             "warnings": warnings,
             "count": len(warnings),
-            "merge_imminent_count": sum(1 for w in warnings if w.get("severity") == "merge_imminent"),
+            "merge_imminent_count": sum(
+                1 for w in warnings if w.get("severity") == "merge_imminent"
+            ),
         }
     except Exception as exc:
         return {

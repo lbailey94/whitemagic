@@ -388,10 +388,6 @@ class SurpriseGate:
         return stats
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _gate: SurpriseGate | None = None
 _gate_lock = threading.Lock()
 

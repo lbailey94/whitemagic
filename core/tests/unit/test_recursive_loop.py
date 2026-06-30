@@ -1,4 +1,5 @@
 """Tests for RecursiveImprovementLoop."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -15,17 +16,31 @@ from whitemagic.core.evolution.recursive_loop import (
 # and insight pipeline orchestration that take 2-3s per first run_cycle call.
 _mock_kaizen = MagicMock()
 _mock_kaizen.analyze.return_value = MagicMock(
-    proposals=[MagicMock(id="quality_test_1", title="Test proposal",
-                        description="Test description", category="quality",
-                        impact="medium", effort="low", auto_fixable=False,
-                        fix_action=None, metadata={"count": 1})],
+    proposals=[
+        MagicMock(
+            id="quality_test_1",
+            title="Test proposal",
+            description="Test description",
+            category="quality",
+            impact="medium",
+            effort="low",
+            auto_fixable=False,
+            fix_action=None,
+            metadata={"count": 1},
+        )
+    ],
     metrics={"total": 1},
 )
 _mock_predictive = MagicMock()
-_mock_predictive.predict.return_value = MagicMock(predictions=[], patterns_analyzed=0, memories_scanned=0)
+_mock_predictive.predict.return_value = MagicMock(
+    predictions=[], patterns_analyzed=0, memories_scanned=0
+)
 _mock_predictive.get_calibration.return_value = None
 _mock_predictive.apply_calibration.side_effect = lambda x: x
-_mock_predictive.auto_prescience_claims.return_value = {"stored_claims": 0, "total_predictions": 0}
+_mock_predictive.auto_prescience_claims.return_value = {
+    "stored_claims": 0,
+    "total_predictions": 0,
+}
 _mock_emergence = MagicMock()
 _mock_emergence.scan_for_emergence.return_value = []
 _mock_insight = MagicMock()
@@ -35,18 +50,47 @@ _mock_insight.generate_briefing.return_value = MagicMock(items=[])
 def _patch_engines():
     """Return a context manager that patches all heavy engines."""
     return [
-        patch("whitemagic.core.intelligence.synthesis.kaizen_engine.get_kaizen_engine", return_value=_mock_kaizen),
-        patch("whitemagic.core.intelligence.synthesis.predictive_engine.get_predictive_engine", return_value=_mock_predictive),
-        patch("whitemagic.core.intelligence.agentic.emergence_engine.get_emergence_engine", return_value=_mock_emergence),
-        patch("whitemagic.core.intelligence.insight_pipeline.InsightPipeline", return_value=_mock_insight),
+        patch(
+            "whitemagic.core.intelligence.synthesis.kaizen_engine.get_kaizen_engine",
+            return_value=_mock_kaizen,
+        ),
+        patch(
+            "whitemagic.core.intelligence.synthesis.predictive_engine.get_predictive_engine",
+            return_value=_mock_predictive,
+        ),
+        patch(
+            "whitemagic.core.intelligence.agentic.emergence_engine.get_emergence_engine",
+            return_value=_mock_emergence,
+        ),
+        patch(
+            "whitemagic.core.intelligence.insight_pipeline.InsightPipeline",
+            return_value=_mock_insight,
+        ),
         # Skip HRR + embedding operations (loads MiniLM model, ~2-3s)
-        patch("whitemagic.core.memory.hrr.get_hrr_engine", side_effect=ImportError("skipped in tests")),
-        patch("whitemagic.core.memory.embeddings.get_embedding_engine", side_effect=ImportError("skipped in tests")),
+        patch(
+            "whitemagic.core.memory.hrr.get_hrr_engine",
+            side_effect=ImportError("skipped in tests"),
+        ),
+        patch(
+            "whitemagic.core.memory.embeddings.get_embedding_engine",
+            side_effect=ImportError("skipped in tests"),
+        ),
         # Also patch the from-import targets inside recursive_loop
-        patch("whitemagic.core.evolution.recursive_loop.get_hrr_engine", create=True, side_effect=ImportError("skipped in tests")),
-        patch("whitemagic.core.evolution.recursive_loop.get_embedding_engine", create=True, side_effect=ImportError("skipped in tests")),
+        patch(
+            "whitemagic.core.evolution.recursive_loop.get_hrr_engine",
+            create=True,
+            side_effect=ImportError("skipped in tests"),
+        ),
+        patch(
+            "whitemagic.core.evolution.recursive_loop.get_embedding_engine",
+            create=True,
+            side_effect=ImportError("skipped in tests"),
+        ),
         # Skip ActorSupervisor which starts Elixir subprocess (~1s per test)
-        patch("whitemagic.core.evolution.recursive_loop.RecursiveImprovementLoop._get_actor_supervisor", return_value=None),
+        patch(
+            "whitemagic.core.evolution.recursive_loop.RecursiveImprovementLoop._get_actor_supervisor",
+            return_value=None,
+        ),
     ]
 
 
@@ -68,8 +112,14 @@ class TestImprovementHypothesis:
 
     def test_auto_fixable_default(self):
         hyp = ImprovementHypothesis(
-            id="test_2", source="emergence", title="Test", description="Test",
-            category="emergence", predicted_impact=0.5, confidence=0.5, effort="medium",
+            id="test_2",
+            source="emergence",
+            title="Test",
+            description="Test",
+            category="emergence",
+            predicted_impact=0.5,
+            confidence=0.5,
+            effort="medium",
         )
         assert hyp.auto_fixable is False
         assert hyp.fix_action is None
@@ -81,9 +131,11 @@ class TestRecursiveImprovementLoop:
         self.loop = RecursiveImprovementLoop()
         # Reduce MC trials from 5000 to 50 for test speed
         self._orig_run = self.loop._mc_enhancer.run_calibrated
+
         def _fast_run(claims, **kwargs):
-            kwargs['n_trials'] = 50
+            kwargs["n_trials"] = 50
             return self._orig_run(claims, **kwargs)
+
         self.loop._mc_enhancer.run_calibrated = _fast_run
         # Patch heavy engines to avoid SQLite/embedding overhead
         self._patches = _patch_engines()
@@ -91,7 +143,7 @@ class TestRecursiveImprovementLoop:
             p.start()
 
     def teardown_method(self):
-        for p in getattr(self, '_patches', []):
+        for p in getattr(self, "_patches", []):
             p.stop()
 
     def test_init(self):
@@ -254,9 +306,11 @@ class TestAutomatedOutcomeDetection:
         self.loop = RecursiveImprovementLoop()
         # Reduce MC trials for test speed
         self._orig_run = self.loop._mc_enhancer.run_calibrated
+
         def _fast_run(claims, **kwargs):
-            kwargs['n_trials'] = 50
+            kwargs["n_trials"] = 50
             return self._orig_run(claims, **kwargs)
+
         self.loop._mc_enhancer.run_calibrated = _fast_run
         # Patch heavy engines to avoid SQLite/embedding overhead
         self._patches = _patch_engines()
@@ -264,7 +318,7 @@ class TestAutomatedOutcomeDetection:
             p.start()
 
     def teardown_method(self):
-        for p in getattr(self, '_patches', []):
+        for p in getattr(self, "_patches", []):
             p.stop()
 
     def test_hypothesis_has_verification_fields(self):
@@ -285,8 +339,14 @@ class TestAutomatedOutcomeDetection:
 
     def test_hypothesis_verification_defaults_none(self):
         hyp = ImprovementHypothesis(
-            id="test_1", source="kaizen", title="Test", description="Test",
-            category="quality", predicted_impact=0.5, confidence=0.5, effort="low",
+            id="test_1",
+            source="kaizen",
+            title="Test",
+            description="Test",
+            category="quality",
+            predicted_impact=0.5,
+            confidence=0.5,
+            effort="low",
         )
         assert hyp.verification_query is None
         assert hyp.before_count is None
@@ -329,9 +389,11 @@ class TestSurprisalDrivenExploration:
         self.loop = RecursiveImprovementLoop()
         # Reduce MC trials for test speed
         self._orig_run = self.loop._mc_enhancer.run_calibrated
+
         def _fast_run(claims, **kwargs):
-            kwargs['n_trials'] = 50
+            kwargs["n_trials"] = 50
             return self._orig_run(claims, **kwargs)
+
         self.loop._mc_enhancer.run_calibrated = _fast_run
         # Patch heavy engines to avoid SQLite/embedding overhead
         self._patches = _patch_engines()
@@ -339,7 +401,7 @@ class TestSurprisalDrivenExploration:
             p.start()
 
     def teardown_method(self):
-        for p in getattr(self, '_patches', []):
+        for p in getattr(self, "_patches", []):
             p.stop()
 
     def test_surprise_gate_init_none(self):

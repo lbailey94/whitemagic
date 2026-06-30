@@ -1,4 +1,5 @@
 """Tests for Objective T — Karma Ledger as Causal Ledger."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.causal_ledger import (
@@ -28,16 +29,24 @@ class TestCausalLedger:
 
     def test_causal_utility_positive(self):
         ledger = CausalLedger()
-        ledger.record_effect("h1", EffectType.INTENDED, "recall", 0.2, effect_confidence=0.9)
-        ledger.record_effect("h1", EffectType.UNINTENDED, "latency", -0.1, effect_confidence=0.7)
+        ledger.record_effect(
+            "h1", EffectType.INTENDED, "recall", 0.2, effect_confidence=0.9
+        )
+        ledger.record_effect(
+            "h1", EffectType.UNINTENDED, "latency", -0.1, effect_confidence=0.7
+        )
         utility = ledger.get_causal_utility("h1")
         # 0.2*0.9 - 0.1*0.7 = 0.18 - 0.07 = 0.11
         assert utility > 0
 
     def test_causal_utility_negative(self):
         ledger = CausalLedger()
-        ledger.record_effect("h1", EffectType.INTENDED, "recall", 0.05, effect_confidence=0.5)
-        ledger.record_effect("h1", EffectType.UNINTENDED, "latency", -0.5, effect_confidence=0.9)
+        ledger.record_effect(
+            "h1", EffectType.INTENDED, "recall", 0.05, effect_confidence=0.5
+        )
+        ledger.record_effect(
+            "h1", EffectType.UNINTENDED, "latency", -0.5, effect_confidence=0.9
+        )
         utility = ledger.get_causal_utility("h1")
         assert utility < 0
 
@@ -62,10 +71,18 @@ class TestCausalLedger:
         ledger = CausalLedger()
         # Pre-improvement: low values
         for i in range(5):
-            ledger.record_effect("h1", EffectType.INTENDED, "recall", 0.05 * (i + 1), timestamp=float(i))
+            ledger.record_effect(
+                "h1", EffectType.INTENDED, "recall", 0.05 * (i + 1), timestamp=float(i)
+            )
         # Post-improvement: higher values
         for i in range(5):
-            ledger.record_effect("h1", EffectType.INTENDED, "recall", 0.3 + 0.05 * i, timestamp=float(10 + i))
+            ledger.record_effect(
+                "h1",
+                EffectType.INTENDED,
+                "recall",
+                0.3 + 0.05 * i,
+                timestamp=float(10 + i),
+            )
         result = ledger.difference_in_differences("h1", "recall")
         assert "pre_mean" in result
         assert "post_mean" in result

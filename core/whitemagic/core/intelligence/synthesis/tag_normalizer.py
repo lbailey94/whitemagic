@@ -31,6 +31,7 @@ class TagNormalizer:
         from pathlib import Path
 
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = str(Path(db_path)) if db_path else str(DB_PATH)
         self._conn: sqlite3.Connection | None = None
 
@@ -49,7 +50,6 @@ class TagNormalizer:
         conn = self._get_conn()
         cur = conn.cursor()
 
-        # Step 1: Lowercase all tags
         cur.execute("SELECT DISTINCT tag FROM tags WHERE tag != LOWER(tag)")
         upper_tags = [r["tag"] for r in cur.fetchall()]
 
@@ -61,13 +61,17 @@ class TagNormalizer:
                 [(tag,) for tag in upper_tags],
             )
 
-        # Step 2: Merge synonyms — N+1 fix: batch-check all variants in one IN query per canonical
         batch_updates: list[tuple[str, str]] = []
         for canonical, variants in self.SYNONYMS.items():
             if not variants:
                 continue
             ph = ",".join("?" * len(variants))
-            cur.execute("SELECT tag, COUNT(*) as cnt FROM tags WHERE tag IN (" + ph + ") GROUP BY tag", list(variants))
+            cur.execute(
+                "SELECT tag, COUNT(*) as cnt FROM tags WHERE tag IN ("
+                + ph
+                + ") GROUP BY tag",
+                list(variants),
+            )
             variant_counts = {r["tag"]: r["cnt"] for r in cur.fetchall()}
             for variant in variants:
                 count = variant_counts.get(variant, 0)
@@ -107,6 +111,7 @@ class TagNormalizer:
         # Try Rust acceleration
         try:
             from whitemagic.utils.rust_helper import get_rust_module, is_rust_available
+
             if is_rust_available():
                 rs = get_rust_module()
                 synthesis = getattr(rs, "synthesis", None) if rs is not None else None
@@ -131,13 +136,16 @@ class TagNormalizer:
         except ImportError:
             pass
         except Exception as e:
-            logger.debug("Rust string similarity failed, falling back to Python: %s", e, exc_info=True)
+            logger.debug(
+                "Rust string similarity failed, falling back to Python: %s",
+                e,
+                exc_info=True,
+            )
 
         # Python Fallback
         similar_pairs = []
         for i, tag1 in enumerate(tags):
-            for tag2 in tags[i+1:
-                ]:
+            for tag2 in tags[i + 1 :]:
                 similarity = self._levenshtein_similarity(tag1, tag2)
                 if similarity >= threshold and tag1 != tag2:
                     similar_pairs.append((tag1, tag2, similarity))
@@ -163,11 +171,11 @@ class TagNormalizer:
 
         for i in range(1, len1 + 1):
             for j in range(1, len2 + 1):
-                cost = 0 if s1[i-1] == s2[j-1] else 1
+                cost = 0 if s1[i - 1] == s2[j - 1] else 1
                 matrix[i][j] = min(
-                    matrix[i-1][j] + 1,
-                    matrix[i][j-1] + 1,
-                    matrix[i-1][j-1] + cost,
+                    matrix[i - 1][j] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j - 1] + cost,
                 )
 
         distance = matrix[len1][len2]
@@ -245,8 +253,10 @@ class TagNormalizer:
 
         return results
 
+
 # Global instance
 _tag_normalizer = None
+
 
 def get_tag_normalizer() -> TagNormalizer:
     """

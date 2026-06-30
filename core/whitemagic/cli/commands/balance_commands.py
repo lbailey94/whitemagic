@@ -27,8 +27,12 @@ def balance_status() -> None:
         click.echo(f"Balance Score: {report['balance_score']:.2f}/1.00")
         click.echo(f"Burnout Risk: {report['burnout_risk']:.1%}")
         click.echo(f"\nActivity in last {report['window_minutes']} minutes:")
-        click.echo(f"  Yang (Action):     {report['yang_count']} ({report['yang_ratio']:.1%})")
-        click.echo(f"  Yin (Reflection):  {report['yin_count']} ({report['yin_ratio']:.1%})")
+        click.echo(
+            f"  Yang (Action):     {report['yang_count']} ({report['yang_ratio']:.1%})"
+        )
+        click.echo(
+            f"  Yin (Reflection):  {report['yin_count']} ({report['yin_ratio']:.1%})"
+        )
 
         if report["recommendation"]:
             click.echo(f"\n💡 {report['recommendation']}")
@@ -57,10 +61,21 @@ def history(limit: int) -> None:
                 data = _json_loads(line)
                 timestamp = data["timestamp"][:19]
                 activity = data["activity"]
-                activity_type = "Yang" if activity in [
-                    "CREATE", "WRITE", "EXECUTE", "BUILD", "CODE",
-                    "UPDATE", "IMPLEMENT", "DEPLOY",
-                ] else "Yin"
+                activity_type = (
+                    "Yang"
+                    if activity
+                    in [
+                        "CREATE",
+                        "WRITE",
+                        "EXECUTE",
+                        "BUILD",
+                        "CODE",
+                        "UPDATE",
+                        "IMPLEMENT",
+                        "DEPLOY",
+                    ]
+                    else "Yin"
+                )
                 emoji = "⚡" if activity_type == "Yang" else "🌊"
                 click.echo(f"  {timestamp} {emoji} {activity_type:4} - {activity}")
     except Exception as e:

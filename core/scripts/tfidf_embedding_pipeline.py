@@ -22,8 +22,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import logging
 import math
 import os
@@ -52,6 +50,7 @@ EMBEDDING_DIM = 384  # Matches BGE-small for compatibility
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -66,29 +65,140 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 def tokenize(text: str) -> list[str]:
     """Simple tokenizer — lowercase, remove punctuation, filter stopwords."""
     import re
+
     text = text.lower()
-    text = re.sub(r'[^a-z0-9\s]', ' ', text)
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
     words = text.split()
 
     stopwords = {
-        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
-        'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'from', 'this',
-        'that', 'they', 'with', 'will', 'each', 'make', 'like', 'just', 'over',
-        'such', 'more', 'than', 'them', 'very', 'when', 'come', 'could', 'into',
-        'time', 'only', 'its', 'also', 'after', 'some', 'then', 'other', 'what',
-        'which', 'their', 'there', 'about', 'would', 'these', 'should', 'because',
-        'through', 'between', 'during', 'before', 'above', 'below', 'any',
-        'same', 'both', 'few', 'most', 'own', 'while', 'where', 'how', 'who',
-        'whom', 'why', 'did', 'does', 'doing', 'done', 'being', 'is', 'it',
-        'in', 'on', 'at', 'to', 'of', 'by', 'or', 'an', 'as', 'if', 'so',
-        'we', 'he', 'she', 'my', 'his', 'me', 'us', 'am', 'be', 'are', 'was',
-        'were', 'said', 'say', 'says', 'went', 'go', 'get', 'got',
-        'a', 'i', 's', 't', 'm', 're', 'll', 've', 'd', 'don', 'didn',
+        "the",
+        "and",
+        "for",
+        "are",
+        "but",
+        "not",
+        "you",
+        "all",
+        "can",
+        "had",
+        "her",
+        "was",
+        "one",
+        "our",
+        "out",
+        "has",
+        "have",
+        "been",
+        "from",
+        "this",
+        "that",
+        "they",
+        "with",
+        "will",
+        "each",
+        "make",
+        "like",
+        "just",
+        "over",
+        "such",
+        "more",
+        "than",
+        "them",
+        "very",
+        "when",
+        "come",
+        "could",
+        "into",
+        "time",
+        "only",
+        "its",
+        "also",
+        "after",
+        "some",
+        "then",
+        "other",
+        "what",
+        "which",
+        "their",
+        "there",
+        "about",
+        "would",
+        "these",
+        "should",
+        "because",
+        "through",
+        "between",
+        "during",
+        "before",
+        "above",
+        "below",
+        "any",
+        "same",
+        "both",
+        "few",
+        "most",
+        "own",
+        "while",
+        "where",
+        "how",
+        "who",
+        "whom",
+        "why",
+        "did",
+        "does",
+        "doing",
+        "done",
+        "being",
+        "is",
+        "it",
+        "in",
+        "on",
+        "at",
+        "to",
+        "of",
+        "by",
+        "or",
+        "an",
+        "as",
+        "if",
+        "so",
+        "we",
+        "he",
+        "she",
+        "my",
+        "his",
+        "me",
+        "us",
+        "am",
+        "be",
+        "are",
+        "was",
+        "were",
+        "said",
+        "say",
+        "says",
+        "went",
+        "go",
+        "get",
+        "got",
+        "a",
+        "i",
+        "s",
+        "t",
+        "m",
+        "re",
+        "ll",
+        "ve",
+        "d",
+        "don",
+        "didn",
     }
     return [w for w in words if w not in stopwords and len(w) > 2]
 
 
-def build_vocabulary(documents: list[list[str]], max_vocab: int = 5000) -> dict[str, int]:
+def build_vocabulary(
+    documents: list[list[str]], max_vocab: int = 5000
+) -> dict[str, int]:
     """Build vocabulary from documents, keeping top-N terms by document frequency."""
     doc_freq = Counter()
     for doc in documents:
@@ -99,7 +209,9 @@ def build_vocabulary(documents: list[list[str]], max_vocab: int = 5000) -> dict[
     return vocab
 
 
-def compute_tfidf(documents: list[list[str]], vocab: dict[str, int]) -> list[list[float]]:
+def compute_tfidf(
+    documents: list[list[str]], vocab: dict[str, int]
+) -> list[list[float]]:
     """Compute TF-IDF vectors for all documents."""
     n_docs = len(documents)
     n_terms = len(vocab)
@@ -141,7 +253,9 @@ def compute_tfidf(documents: list[list[str]], vocab: dict[str, int]) -> list[lis
     return vectors
 
 
-def reduce_dimensions(vectors: list[list[float]], target_dim: int = EMBEDDING_DIM) -> list[list[float]]:
+def reduce_dimensions(
+    vectors: list[list[float]], target_dim: int = EMBEDDING_DIM
+) -> list[list[float]]:
     """Reduce dimensionality using random projection (fast alternative to SVD)."""
     import random
 
@@ -156,7 +270,9 @@ def reduce_dimensions(vectors: list[list[float]], target_dim: int = EMBEDDING_DI
 
     # Random projection matrix (seeded for reproducibility)
     random.seed(42)
-    projection = [[random.gauss(0, 1) for _ in range(source_dim)] for _ in range(target_dim)]
+    projection = [
+        [random.gauss(0, 1) for _ in range(source_dim)] for _ in range(target_dim)
+    ]
 
     # Normalize projection rows
     for row in projection:
@@ -185,7 +301,8 @@ def reduce_dimensions(vectors: list[list[float]], target_dim: int = EMBEDDING_DI
 def pack_embedding(vec: list[float]) -> bytes:
     """Pack float list to bytes for storage."""
     import struct
-    return struct.pack(f'{len(vec)}f', *vec)
+
+    return struct.pack(f"{len(vec)}f", *vec)
 
 
 def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -> dict:
@@ -259,7 +376,7 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
                             """INSERT OR REPLACE INTO memory_embeddings
                                (memory_id, embedding, model, created_at)
                                VALUES (?, ?, ?, ?)""",
-                            (mem['id'], packed, 'tfidf_384', now)
+                            (mem["id"], packed, "tfidf_384", now),
                         )
                         embedded_count += 1
                     except Exception as e:
@@ -273,7 +390,9 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
                 conn.commit()
             elapsed = time.perf_counter() - start_time
             rate = embedded_count / elapsed if elapsed > 0 else 0
-            log.info(f"  Progress: {batch_end}/{total} ({embedded_count} embedded, {rate:.0f}/sec)")
+            log.info(
+                f"  Progress: {batch_end}/{total} ({embedded_count} embedded, {rate:.0f}/sec)"
+            )
 
     if not dry_run:
         conn.commit()
@@ -281,15 +400,21 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
     elapsed = time.perf_counter() - start_time
     rate = embedded_count / elapsed if elapsed > 0 else 0
 
-    log.info(f"\n  ✅ Embedded {embedded_count} memories in {elapsed:.1f}s ({rate:.0f}/sec)")
+    log.info(
+        f"\n  ✅ Embedded {embedded_count} memories in {elapsed:.1f}s ({rate:.0f}/sec)"
+    )
     log.info(f"  ❌ Failed: {failed_count}")
 
     # Print stats
-    total_embedded = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0]
+    total_embedded = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[
+        0
+    ]
     total_memories = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
 
     log.info(f"\n📊 Embedding Statistics:")
-    log.info(f"  Total embeddings: {total_embedded:,}/{total_memories:,} ({100*total_embedded/total_memories:.1f}%)")
+    log.info(
+        f"  Total embeddings: {total_embedded:,}/{total_memories:,} ({100 * total_embedded / total_memories:.1f}%)"
+    )
 
     conn.close()
     return {

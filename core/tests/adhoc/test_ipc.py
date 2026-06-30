@@ -1,7 +1,7 @@
 import whitemagic_rust
 
-print("IPC Bridge Available:", hasattr(whitemagic_rust, 'ipc_bridge'))
-if hasattr(whitemagic_rust, 'ipc_bridge'):
+print("IPC Bridge Available:", hasattr(whitemagic_rust, "ipc_bridge"))
+if hasattr(whitemagic_rust, "ipc_bridge"):
     print("Methods:", dir(whitemagic_rust.ipc_bridge))
 
     try:

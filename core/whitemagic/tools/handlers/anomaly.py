@@ -13,7 +13,10 @@ def handle_anomaly(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 
@@ -24,6 +27,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
     and thermal anomalies from laptop-optimizer when available.
     """
     from whitemagic.harmony.anomaly_detector import get_anomaly_detector
+
     detector = get_anomaly_detector()
     alerts = detector.check()
 
@@ -32,18 +36,25 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
     strata_anomalies: list[dict[str, Any]] = []
     try:
         from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
         loop = get_homeostatic_loop()
         stats = loop.get_stats()
         # Check if codebase health sensor has recent findings
         recent = stats.get("recent_actions", [])
         for action in recent:
             if action.get("dimension") == "codebase_health":
-                strata_anomalies.append({
-                    "source": "homeostatic_codebase_sensor",
-                    "dimension": "codebase_quality",
-                    "severity": "warning" if action.get("level") == "correct" else "info",
-                    "message": action.get("action_taken", "Codebase health issue detected"),
-                })
+                strata_anomalies.append(
+                    {
+                        "source": "homeostatic_codebase_sensor",
+                        "dimension": "codebase_quality",
+                        "severity": "warning"
+                        if action.get("level") == "correct"
+                        else "info",
+                        "message": action.get(
+                            "action_taken", "Codebase health issue detected"
+                        ),
+                    }
+                )
                 break
     except Exception:
         pass
@@ -52,17 +63,20 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
     thermal_anomalies: list[dict[str, Any]] = []
     try:
         from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+
         source = get_physical_metrics_source()
         anomaly = source.check_thermal_anomaly()
         if anomaly:
-            thermal_anomalies.append({
-                "source": "laptop-optimizer",
-                "dimension": "thermal",
-                "pattern": anomaly.pattern,
-                "current_temp": anomaly.current_temp,
-                "threshold": anomaly.threshold,
-                "message": anomaly.message,
-            })
+            thermal_anomalies.append(
+                {
+                    "source": "laptop-optimizer",
+                    "dimension": "thermal",
+                    "pattern": anomaly.pattern,
+                    "current_temp": anomaly.current_temp,
+                    "threshold": anomaly.threshold,
+                    "message": anomaly.message,
+                }
+            )
     except Exception:
         pass
 
@@ -81,6 +95,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
 def handle_anomaly_history(**kwargs: Any) -> dict[str, Any]:
     """Get recent anomaly alert history."""
     from whitemagic.harmony.anomaly_detector import get_anomaly_detector
+
     limit = int(kwargs.get("limit", 20))
     detector = get_anomaly_detector()
     return {
@@ -92,5 +107,6 @@ def handle_anomaly_history(**kwargs: Any) -> dict[str, Any]:
 def handle_anomaly_status(**kwargs: Any) -> dict[str, Any]:
     """Get anomaly detector status and per-dimension statistics."""
     from whitemagic.harmony.anomaly_detector import get_anomaly_detector
+
     detector = get_anomaly_detector()
     return {"status": "success", **detector.status()}

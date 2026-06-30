@@ -24,6 +24,7 @@ class TemporalLane(Enum):
         FAST
         MEDIUM
         SLOW"""
+
     FAST = "fast"
     MEDIUM = "medium"
     SLOW = "slow"

@@ -67,7 +67,9 @@ Be sharp, decisive, and clear.
 
         # If predecessor provided context, incorporate it
         if call.resonance_hints.predecessor_output:
-            session_state["predecessor_context"] = str(call.resonance_hints.predecessor_output)[:50]
+            session_state["predecessor_context"] = str(
+                call.resonance_hints.predecessor_output
+            )[:50]
 
         return session_state
 
@@ -80,7 +82,9 @@ Be sharp, decisive, and clear.
 
     # Polymorphic Operations - Horn's "Sharp Initiation" Lens
 
-    async def search(self, query: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def search(
+        self, query: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Horn SEARCH: Bootstrap discovery - start fresh exploration.
         Focuses on finding initialization points and entry vectors.
         """
@@ -98,7 +102,9 @@ Be sharp, decisive, and clear.
             "note": "Horn initiates sharp, decisive search",
         }
 
-    async def analyze(self, data: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def analyze(
+        self, data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Horn ANALYZE: Bootstrap analysis - establish baseline understanding.
         Creates initial framework for deeper analysis.
         """
@@ -120,7 +126,9 @@ Be sharp, decisive, and clear.
             "note": "Horn provides decisive initial analysis",
         }
 
-    async def transform(self, data: Any, transformation: str, context: dict[str, Any] | None = None) -> Any:
+    async def transform(
+        self, data: Any, transformation: str, context: dict[str, Any] | None = None
+    ) -> Any:
         """Horn TRANSFORM: Initialize transformation - create clean starting state.
         Resets to clear foundation before applying changes.
         """
@@ -138,7 +146,9 @@ Be sharp, decisive, and clear.
             "note": "Horn creates clean foundation for transformation",
         }
 
-    async def consolidate(self, items: list[Any], context: dict[str, Any] | None = None) -> Any:
+    async def consolidate(
+        self, items: list[Any], context: dict[str, Any] | None = None
+    ) -> Any:
         """Horn CONSOLIDATE: Bootstrap consolidation - establish unified starting point.
         Creates initial synthesis and clear foundation.
         """
@@ -219,8 +229,16 @@ Feel the rhythm, stay attuned to life force.
             return f"{template}\n\n[LUNAR AMPLIFICATION: Heart pulse resonates with Moon! Extra sensitivity to rhythms.]"
 
         # Heart feels all lunar influence, not just its own mansion
-        phase_name = ["New", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
-                     "Full", "Waning Gibbous", "Last Quarter", "Waning Crescent"][int(lunar_phase * 8)]
+        phase_name = [
+            "New",
+            "Waxing Crescent",
+            "First Quarter",
+            "Waxing Gibbous",
+            "Full",
+            "Waning Gibbous",
+            "Last Quarter",
+            "Waning Crescent",
+        ][int(lunar_phase * 8)]
 
         return f"{template}\n\n[Lunar phase: {phase_name} - adjust pulse sensitivity]"
 
@@ -270,10 +288,14 @@ Cast your net wide, catch what matters.
 
                 if pred.get("guna") == "Tamas":
                     captured["patterns_detected"].append("System stress pattern")
-                    captured["lessons"].append("Defer heavy processing during Tamas state")
+                    captured["lessons"].append(
+                        "Defer heavy processing during Tamas state"
+                    )
 
                 if "pulse_rate" in pred:
-                    captured["patterns_detected"].append(f"Heartbeat pattern: {pred['pulse_rate']}")
+                    captured["patterns_detected"].append(
+                        f"Heartbeat pattern: {pred['pulse_rate']}"
+                    )
 
         # Check state vector for broader patterns
         if call.state_vector.get("chain_position", 0) > 5:

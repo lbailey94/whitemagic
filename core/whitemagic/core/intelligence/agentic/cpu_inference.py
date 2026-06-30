@@ -27,7 +27,6 @@ No neural networks, no GPU, no cloud - just smart algorithms.
 """
 
 
-
 @dataclass
 class InferenceResult:
     """Result of a CPU inference operation."""
@@ -75,12 +74,55 @@ class StatisticalAnalyzer:
         """Get most frequent words."""
         words = re.findall(r"\b\w+\b", text.lower())
         # Filter common words
-        stopwords = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
-                     "being", "have", "has", "had", "do", "does", "did", "will",
-                     "would", "could", "should", "may", "might", "must", "shall",
-                     "to", "of", "in", "for", "on", "with", "at", "by", "from",
-                     "and", "or", "but", "if", "then", "else", "when", "where",
-                     "this", "that", "these", "those", "it", "its"}
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "must",
+            "shall",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "and",
+            "or",
+            "but",
+            "if",
+            "then",
+            "else",
+            "when",
+            "where",
+            "this",
+            "that",
+            "these",
+            "those",
+            "it",
+            "its",
+        }
         words = [w for w in words if w not in stopwords and len(w) > 2]
         return Counter(words).most_common(top_n)
 
@@ -125,7 +167,9 @@ class DependencyGraph:
         """Get all nodes that depend on this node."""
         return self._reverse.get(node, set())
 
-    def get_all_dependencies(self, node: str, visited: set[str] | None = None) -> set[str]:
+    def get_all_dependencies(
+        self, node: str, visited: set[str] | None = None
+    ) -> set[str]:
         """Get transitive closure of dependencies."""
         if visited is None:
             visited = set()
@@ -146,7 +190,9 @@ class RuleEngine:
         self._rules: list[tuple[Callable[..., Any], Callable[..., Any]]] = []
         self._facts: set[str] = set()
 
-    def add_rule(self, condition: Callable[..., Any], action: Callable[..., Any]) -> None:
+    def add_rule(
+        self, condition: Callable[..., Any], action: Callable[..., Any]
+    ) -> None:
         """Add inference rule."""
         self._rules.append((condition, action))
 
@@ -203,6 +249,7 @@ class CPUInferenceEngine:
 
     def __init__(self, project_root: Path | None = None) -> None:
         from whitemagic.config import PROJECT_ROOT
+
         self.project_root = project_root or PROJECT_ROOT
 
         self.patterns = PatternMatcher()
@@ -289,8 +336,13 @@ class CPUInferenceEngine:
         """Infer answer for file search queries."""
         # Extract search term
         words = query.lower().split()
-        search_terms = [w for w in words if len(w) > 3 and w not in
-                       {"find", "where", "file", "files", "the", "is", "are", "locate"}]
+        search_terms = [
+            w
+            for w in words
+            if len(w) > 3
+            and w
+            not in {"find", "where", "file", "files", "the", "is", "are", "locate"}
+        ]
 
         if not search_terms:
             return InferenceResult(
@@ -306,7 +358,9 @@ class CPUInferenceEngine:
         matches = list(self.project_root.rglob(f"*{search_term}*"))[:20]
 
         if matches:
-            files_str = "\n".join(f"  - {f.relative_to(self.project_root)}" for f in matches[:10])
+            files_str = "\n".join(
+                f"  - {f.relative_to(self.project_root)}" for f in matches[:10]
+            )
             answer = self.templates.generate(
                 "file_found",
                 count=len(matches),
@@ -347,8 +401,13 @@ class CPUInferenceEngine:
 
         # Count markdown/docs
         if "markdown" in query_lower or "doc" in query_lower or " md " in query_lower:
-            count = len([f for f in self.project_root.rglob("*.md")
-                        if "node_modules" not in str(f)])
+            count = len(
+                [
+                    f
+                    for f in self.project_root.rglob("*.md")
+                    if "node_modules" not in str(f)
+                ]
+            )
             return InferenceResult(
                 query=query,
                 answer=f"There are {count} markdown files.",
@@ -361,6 +420,7 @@ class CPUInferenceEngine:
         if "garden" in query_lower:
             try:
                 from whitemagic.gardens import get_all_gardens
+
                 gardens = get_all_gardens()
                 return InferenceResult(
                     query=query,
@@ -374,8 +434,13 @@ class CPUInferenceEngine:
 
         # Count Python files (general fallback)
         if "python" in query_lower or "file" in query_lower:
-            count = len([f for f in self.project_root.rglob("*.py")
-                        if "node_modules" not in str(f) and "__pycache__" not in str(f)])
+            count = len(
+                [
+                    f
+                    for f in self.project_root.rglob("*.py")
+                    if "node_modules" not in str(f) and "__pycache__" not in str(f)
+                ]
+            )
             return InferenceResult(
                 query=query,
                 answer=f"There are {count} Python files in the project.",
@@ -393,8 +458,6 @@ class CPUInferenceEngine:
             tokens_equivalent=50,
         )
 
-
-# === SINGLETON ===
 
 _engine: CPUInferenceEngine | None = None
 

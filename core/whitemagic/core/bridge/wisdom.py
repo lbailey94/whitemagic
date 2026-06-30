@@ -4,7 +4,9 @@
 from typing import Any
 
 
-def consult_full_council(question: str, urgency: str = "normal", **kwargs: Any) -> dict[str, Any]:
+def consult_full_council(
+    question: str, urgency: str = "normal", **kwargs: Any
+) -> dict[str, Any]:
     """Consult the full wisdom council using MultiSpectralReasoner."""
     from whitemagic.core.intelligence.multi_spectral_reasoning import (
         MultiSpectralReasoner,
@@ -24,7 +26,9 @@ def consult_full_council(question: str, urgency: str = "normal", **kwargs: Any) 
     }
 
 
-def consult_art_of_war(question: str, situation: str = "", urgency: str = "normal", **kwargs: Any) -> dict[str, Any]:
+def consult_art_of_war(
+    question: str, situation: str = "", urgency: str = "normal", **kwargs: Any
+) -> dict[str, Any]:
     """Consult Art of War via the strategic lens in MultiSpectralReasoner."""
     from whitemagic.core.intelligence.multi_spectral_reasoning import (
         MultiSpectralReasoner,
@@ -66,7 +70,9 @@ def consult_iching(
         if not question:
             return {"error": "question is required for cast"}
         consult_fn = getattr(iching.consult, "__wrapped__", iching.consult)
-        result = consult_fn(question=question, context={"urgency": urgency, "method": method})
+        result = consult_fn(
+            question=question, context={"urgency": urgency, "method": method}
+        )
         return {
             "question": question,
             "method": method,
@@ -102,7 +108,9 @@ def consult_iching(
 
     if op == "track_transformations":
         if not original or not transformed:
-            return {"error": "original and transformed are required for track_transformations"}
+            return {
+                "error": "original and transformed are required for track_transformations"
+            }
         original_data = db.get_hexagram(original)
         transformed_data = db.get_hexagram(transformed)
         if not original_data or not transformed_data:
@@ -125,7 +133,9 @@ def consult_iching(
     return {"error": f"Unknown I Ching operation: {operation}"}
 
 
-def synthesize_wisdom(sources: list, urgency: str = "normal", **kwargs: Any) -> dict[str, Any]:
+def synthesize_wisdom(
+    sources: list, urgency: str = "normal", **kwargs: Any
+) -> dict[str, Any]:
     """Synthesize wisdom from multiple sources."""
     from whitemagic.core.intelligence.multi_spectral_reasoning import (
         MultiSpectralReasoner,

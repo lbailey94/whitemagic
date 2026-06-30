@@ -108,7 +108,10 @@ class TestWalletManager:
                 mock_client.__aexit__ = AsyncMock(return_value=None)
                 mock_client.post = AsyncMock(return_value=mock_response)
 
-                with patch("whitemagic.core.economy.wallet_manager.httpx.AsyncClient", return_value=mock_client):
+                with patch(
+                    "whitemagic.core.economy.wallet_manager.httpx.AsyncClient",
+                    return_value=mock_client,
+                ):
                     tip = await wm.check_for_tips()
                     assert tip == 1.0  # 2 - 1 = 1 XRP
                     assert wm.last_balance == 2.0

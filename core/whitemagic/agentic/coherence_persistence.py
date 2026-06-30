@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CoherenceSnapshot:
     """A point-in-time coherence measurement."""
+
     timestamp: float = field(default_factory=time.time)
     composite: float = 0.0
     dimensions: dict[str, float] = field(default_factory=dict)

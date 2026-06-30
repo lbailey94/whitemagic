@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class UnifiedNervousSystem:
     """UnifiedNervousSystem: unified nervous system."""
+
     def __init__(self, workspace, timescale_sync):
         self.workspace = workspace
         self.timescale = timescale_sync
@@ -18,9 +19,13 @@ class UnifiedNervousSystem:
             "metabolism": {"status": "active", "layer": "cerebellum", "load": 0.2},
             "genetic": {"status": "active", "layer": "basal_ganglia", "load": 0.05},
             "dream": {"status": "sleeping", "layer": "limbic", "load": 0.0},
-            "consciousness": {"status": "active", "layer": "occipital_temporal", "load": 0.4},
+            "consciousness": {
+                "status": "active",
+                "layer": "occipital_temporal",
+                "load": 0.4,
+            },
             "resonance": {"status": "active", "layer": "parietal", "load": 0.1},
-            "emergence": {"status": "monitoring", "layer": "logos", "load": 0.05}
+            "emergence": {"status": "monitoring", "layer": "logos", "load": 0.05},
         }
 
         # Wire into timescales
@@ -94,13 +99,19 @@ class UnifiedNervousSystem:
             }
 
         # Sort by priority descending
-        sorted_gating = dict(sorted(gating.items(), key=lambda x: x[1]["priority"], reverse=True))
+        sorted_gating = dict(
+            sorted(gating.items(), key=lambda x: x[1]["priority"], reverse=True)
+        )
 
         # Update consciousness subsystem with current focus
         top_subsystem = next(iter(sorted_gating))
         self.subsystems["consciousness"]["focus"] = top_subsystem
 
-        return {"gating": sorted_gating, "focus": top_subsystem, "error_budget": self._error_budget}
+        return {
+            "gating": sorted_gating,
+            "focus": top_subsystem,
+            "error_budget": self._error_budget,
+        }
 
     def _trigger_dream_cycle(self):
         # 1hr loop - Memory consolidation (hippocampal routing)

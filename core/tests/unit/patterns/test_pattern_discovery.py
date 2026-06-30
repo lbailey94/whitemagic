@@ -10,6 +10,7 @@ class TestPatternDiscovery:
             PatternDiscovery,
             PatternSource,
         )
+
         assert PatternSource is not None
         assert DiscoveryReport is not None
         assert PatternDiscovery is not None

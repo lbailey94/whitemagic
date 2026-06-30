@@ -17,6 +17,7 @@ The α/β/γ weights adapt based on the system's current state:
 - High uncertainty → increase β (explore more)
 - High confidence → increase α (exploit more)
 """
+
 from __future__ import annotations
 
 import logging
@@ -100,10 +101,9 @@ def information_gain(p_success: float, n_prior: int = 10) -> float:
     h_prior = shannon_entropy(p_success)
 
     # Expected entropy after observation
-    h_after = (
-        p_success * shannon_entropy(p_after_success)
-        + (1.0 - p_success) * shannon_entropy(p_after_failure)
-    )
+    h_after = p_success * shannon_entropy(p_after_success) + (
+        1.0 - p_success
+    ) * shannon_entropy(p_after_failure)
 
     return max(0.0, h_prior - h_after)
 
@@ -117,8 +117,9 @@ class AdaptiveWeights:
     - High confidence → increase α (predicted impact weight)
     - Novelty always gets some weight via γ
     """
+
     alpha: float = 0.5  # predicted_impact weight
-    beta: float = 0.3   # information_gain weight
+    beta: float = 0.3  # information_gain weight
     gamma: float = 0.2  # novelty weight
 
     def adapt(self, system_entropy: float, max_entropy: float = 1.0) -> None:
@@ -137,7 +138,7 @@ class AdaptiveWeights:
         # When uncertainty is high, shift toward exploration (β up)
         # When uncertainty is low, shift toward exploitation (α up)
         self.alpha = 0.3 + 0.4 * (1.0 - normalized)  # 0.3-0.7
-        self.beta = 0.1 + 0.5 * normalized            # 0.1-0.6
+        self.beta = 0.1 + 0.5 * normalized  # 0.1-0.6
         self.gamma = 0.2  # Constant
 
         # Normalize to sum to 1.0
@@ -172,11 +173,7 @@ def compute_exploration_score(
     w = weights or AdaptiveWeights()
     ig = information_gain(p_success, n_prior)
 
-    score = (
-        w.alpha * predicted_impact
-        + w.beta * ig
-        + w.gamma * novelty
-    )
+    score = w.alpha * predicted_impact + w.beta * ig + w.gamma * novelty
 
     return {
         "score": round(score, 6),

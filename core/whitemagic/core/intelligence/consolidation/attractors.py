@@ -26,8 +26,9 @@ class Attractor:
     """Attractor: attractor.
 
     Value object: equality and repr are field-based."""
+
     memory_id: str
-    center: tuple[float, float, float, float] # x, y, z, w
+    center: tuple[float, float, float, float]  # x, y, z, w
     mass: float
     event_horizon: float
 
@@ -39,7 +40,8 @@ class Attractor:
         Returns:
             float
         """
-        return self.mass / (self.event_horizon ** 3 + 1e-6)
+        return self.mass / (self.event_horizon**3 + 1e-6)
+
 
 class AttractorManager:
     """Manages the physics of memory consolidation via attractors."""
@@ -93,12 +95,14 @@ class AttractorManager:
                 if coords:
                     # Event horizon scales with mass
                     horizon = 0.2 * importance
-                    attractors.append(Attractor(
-                        memory_id=mem_id,
-                        center=coords,
-                        mass=importance,
-                        event_horizon=horizon,
-                    ))
+                    attractors.append(
+                        Attractor(
+                            memory_id=mem_id,
+                            center=coords,
+                            mass=importance,
+                            event_horizon=horizon,
+                        )
+                    )
 
         return attractors
 
@@ -121,8 +125,9 @@ class AttractorManager:
             logger.debug("Attractor consolidation failed (non-fatal): %s", e)
         return None
 
-
-    def calculate_gravitational_pull(self, attractors: list[Attractor], candidates: list[dict]) -> list[dict]:
+    def calculate_gravitational_pull(
+        self, attractors: list[Attractor], candidates: list[dict]
+    ) -> list[dict]:
         """Calculate which candidates are pulled into which attractors.
         Returns a plan: list of { 'attractor': id, 'captured': [id, id, ...] }.
         """
@@ -158,24 +163,27 @@ class AttractorManager:
                 # We want to capture things spatially close (semantically/temporally),
                 # regardless of importance delta. W delta is expected to be large.
                 dist = math.sqrt(
-                    (ax-cx)**2 + (ay-cy)**2 + (az-cz)**2,
+                    (ax - cx) ** 2 + (ay - cy) ** 2 + (az - cz) ** 2,
                 )
 
                 if dist < attractor.event_horizon:
                     captured.append(mem_id)
 
             if captured:
-                pull_plan.append({
-                    "attractor_id": attractor.memory_id,
-                    "captured_ids": captured,
-                    "mass": attractor.mass,
-                })
+                pull_plan.append(
+                    {
+                        "attractor_id": attractor.memory_id,
+                        "captured_ids": captured,
+                        "mass": attractor.mass,
+                    }
+                )
 
         return pull_plan
 
-    def execute_spaghettification(self, plan: list[dict], dry_run: bool = True) -> dict[str, Any]:
-        """Compress captured memories into the attractor (link + archive).
-        """
+    def execute_spaghettification(
+        self, plan: list[dict], dry_run: bool = True
+    ) -> dict[str, Any]:
+        """Compress captured memories into the attractor (link + archive)."""
         results = {
             "attractors_active": len(plan),
             "memories_absorbed": 0,
@@ -206,7 +214,9 @@ class AttractorManager:
                 self.manager.associate(attractor_id, victim_id, strength=0.9)
 
                 # Add victim content to summary buffer
-                summary_buffer.append(f"- {victim.get('title')}: {str(victim.get('content'))[:100]}...")
+                summary_buffer.append(
+                    f"- {victim.get('title')}: {str(victim.get('content'))[:100]}..."
+                )
 
                 # Archive victim (Soft Delete / Demote)
                 # We tag it as 'absorbed' and lower its priority
@@ -221,7 +231,9 @@ class AttractorManager:
             # Or just strengthen the attractor.
             if summary_buffer:
                 timestamp = datetime.now().isoformat()
-                append_text = f"\n\n## Absorbed Memories ({timestamp})\n" + "\n".join(summary_buffer)
+                append_text = f"\n\n## Absorbed Memories ({timestamp})\n" + "\n".join(
+                    summary_buffer
+                )
                 new_content = attractor_mem.get("content", "") + append_text
                 self.manager.update_memory(attractor_id, content=new_content)
 

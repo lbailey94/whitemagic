@@ -16,6 +16,7 @@ Usage:
         julia_batch_forecast, julia_bridge_status
     )
 """
+
 from __future__ import annotations
 
 import logging
@@ -67,7 +68,9 @@ def _init_julia() -> Any:
         _julia_bin, _JULIA_DIR = _find_julia()
         if _julia_bin and _JULIA_DIR:
             _HAS_JULIA = True
-            logger.info("Julia bridge initialized: bin=%s, dir=%s", _julia_bin, _JULIA_DIR)
+            logger.info(
+                "Julia bridge initialized: bin=%s, dir=%s", _julia_bin, _JULIA_DIR
+            )
         else:
             logger.debug("Julia not found - using Python fallback")
 
@@ -114,10 +117,6 @@ println(JSON3.write(result))
     return None
 
 
-# ---------------------------------------------------------------------------
-# MemoryStats - Statistical memory analysis
-# ---------------------------------------------------------------------------
-
 def julia_importance_distribution(
     scores: list[float],
 ) -> dict[str, Any] | None:
@@ -125,10 +124,13 @@ def julia_importance_distribution(
 
     Returns comprehensive statistics: moments, percentiles, outlier detection.
     """
-    return _call_julia("memory_stats.jl", {
-        "command": "importance_distribution",
-        "scores": scores,
-    })
+    return _call_julia(
+        "memory_stats.jl",
+        {
+            "command": "importance_distribution",
+            "scores": scores,
+        },
+    )
 
 
 def julia_zone_transitions(
@@ -142,11 +144,14 @@ def julia_zone_transitions(
         after: Galactic distances after a sweep.
 
     """
-    return _call_julia("memory_stats.jl", {
-        "command": "zone_transitions",
-        "before": before,
-        "after": after,
-    })
+    return _call_julia(
+        "memory_stats.jl",
+        {
+            "command": "zone_transitions",
+            "before": before,
+            "after": after,
+        },
+    )
 
 
 def julia_detect_outliers(
@@ -154,11 +159,14 @@ def julia_detect_outliers(
     threshold: float = 3.0,
 ) -> dict[str, Any] | None:
     """Detect outliers using modified z-score (MAD-based)."""
-    return _call_julia("memory_stats.jl", {
-        "command": "detect_outliers",
-        "values": values,
-        "threshold": threshold,
-    })
+    return _call_julia(
+        "memory_stats.jl",
+        {
+            "command": "detect_outliers",
+            "values": values,
+            "threshold": threshold,
+        },
+    )
 
 
 def julia_cluster_significance(
@@ -167,12 +175,15 @@ def julia_cluster_significance(
     volume: float,
 ) -> dict[str, Any] | None:
     """Test cluster significance against uniform null model."""
-    return _call_julia("memory_stats.jl", {
-        "command": "cluster_significance",
-        "cluster_sizes": cluster_sizes,
-        "total_points": total_points,
-        "volume": volume,
-    })
+    return _call_julia(
+        "memory_stats.jl",
+        {
+            "command": "cluster_significance",
+            "cluster_sizes": cluster_sizes,
+            "total_points": total_points,
+            "volume": volume,
+        },
+    )
 
 
 def julia_full_memory_analysis(
@@ -180,16 +191,15 @@ def julia_full_memory_analysis(
     distances: list[float],
 ) -> dict[str, Any] | None:
     """Run complete statistical analysis on memory corpus."""
-    return _call_julia("memory_stats.jl", {
-        "command": "full_analysis",
-        "importance": importance,
-        "distances": distances,
-    })
+    return _call_julia(
+        "memory_stats.jl",
+        {
+            "command": "full_analysis",
+            "importance": importance,
+            "distances": distances,
+        },
+    )
 
-
-# ---------------------------------------------------------------------------
-# SelfModelForecast - Time-series forecasting
-# ---------------------------------------------------------------------------
 
 def julia_forecast_metric(
     values: list[float],
@@ -201,13 +211,16 @@ def julia_forecast_metric(
 
     Returns forecasts with 80% and 95% confidence intervals.
     """
-    return _call_julia("self_model_forecast.jl", {
-        "command": "forecast",
-        "values": values,
-        "steps": steps,
-        "alpha": alpha,
-        "beta": beta,
-    })
+    return _call_julia(
+        "self_model_forecast.jl",
+        {
+            "command": "forecast",
+            "values": values,
+            "steps": steps,
+            "alpha": alpha,
+            "beta": beta,
+        },
+    )
 
 
 def julia_detect_anomalies(
@@ -215,21 +228,27 @@ def julia_detect_anomalies(
     threshold: float = 2.5,
 ) -> dict[str, Any] | None:
     """Detect anomalies in a metric time series via residual z-scores."""
-    return _call_julia("self_model_forecast.jl", {
-        "command": "detect_anomalies",
-        "values": values,
-        "threshold": threshold,
-    })
+    return _call_julia(
+        "self_model_forecast.jl",
+        {
+            "command": "detect_anomalies",
+            "values": values,
+            "threshold": threshold,
+        },
+    )
 
 
 def julia_metric_correlations(
     metrics: dict[str, list[float]],
 ) -> dict[str, Any] | None:
     """Compute pairwise Pearson correlations between Self-Model metrics."""
-    return _call_julia("self_model_forecast.jl", {
-        "command": "correlations",
-        "metrics": metrics,
-    })
+    return _call_julia(
+        "self_model_forecast.jl",
+        {
+            "command": "correlations",
+            "metrics": metrics,
+        },
+    )
 
 
 def julia_batch_forecast(
@@ -237,18 +256,19 @@ def julia_batch_forecast(
     steps: int = 5,
 ) -> dict[str, Any] | None:
     """Forecast all Self-Model metrics in one call with alert generation."""
-    return _call_julia("self_model_forecast.jl", {
-        "command": "batch_forecast",
-        "metrics": metrics,
-        "steps": steps,
-    })
+    return _call_julia(
+        "self_model_forecast.jl",
+        {
+            "command": "batch_forecast",
+            "metrics": metrics,
+            "steps": steps,
+        },
+    )
 
 
-# ---------------------------------------------------------------------------
-# GraphRRF — Graph scoring, RRF fusion, PageRank (graph_rrf.jl)
-# ---------------------------------------------------------------------------
-
-def _call_julia_direct(module_file: str, request: dict[str, Any]) -> dict[str, Any] | None:
+def _call_julia_direct(
+    module_file: str, request: dict[str, Any]
+) -> dict[str, Any] | None:
     """Call a Julia module that owns its own main() JSON-stdio entry point."""
     _init_julia()
     if not _julia_bin or not _JULIA_DIR:
@@ -293,12 +313,15 @@ def julia_rrf_fuse(
     Returns:
         Merged list of {id, rrf_score} sorted by score desc, or None.
     """
-    res = _call_julia_direct("graph_rrf.jl", {
-        "command": "rrf_fuse",
-        "lists": ranked_lists,
-        "weights": weights or [1.0] * len(ranked_lists),
-        "k": k,
-    })
+    res = _call_julia_direct(
+        "graph_rrf.jl",
+        {
+            "command": "rrf_fuse",
+            "lists": ranked_lists,
+            "weights": weights or [1.0] * len(ranked_lists),
+            "k": k,
+        },
+    )
     if res is None:
         return None
     if isinstance(res, list):
@@ -321,12 +344,15 @@ def julia_pagerank(
     Returns:
         List of {id, pagerank} sorted descending, or None.
     """
-    res = _call_julia_direct("graph_rrf.jl", {
-        "command": "pagerank",
-        "node_ids": node_ids,
-        "edges": edges,
-        "damping": damping,
-    })
+    res = _call_julia_direct(
+        "graph_rrf.jl",
+        {
+            "command": "pagerank",
+            "node_ids": node_ids,
+            "edges": edges,
+            "damping": damping,
+        },
+    )
     if res is None:
         return None
     if isinstance(res, list):
@@ -347,11 +373,15 @@ def julia_score_walk_paths(
     Returns:
         Paths sorted by score desc with {nodes, score, depth, terminal_id}, or None.
     """
-    res = _call_julia_direct("graph_rrf.jl", {
-        "command": "score_walk_paths",
-        "paths": paths,
-        "weights": weights or {"semantic": 0.4, "gravity": 0.3, "recency": 0.2, "staleness": 0.1},
-    })
+    res = _call_julia_direct(
+        "graph_rrf.jl",
+        {
+            "command": "score_walk_paths",
+            "paths": paths,
+            "weights": weights
+            or {"semantic": 0.4, "gravity": 0.3, "recency": 0.2, "staleness": 0.1},
+        },
+    )
     if res is None:
         return None
     if isinstance(res, list):
@@ -369,12 +399,15 @@ def julia_community_gravity(
     Returns:
         List of {community_id, gravity} sorted descending, or None.
     """
-    res = _call_julia_direct("graph_rrf.jl", {
-        "command": "community_gravity",
-        "vector": memory_vec,
-        "centroids": community_centroids,
-        "community_ids": community_ids,
-    })
+    res = _call_julia_direct(
+        "graph_rrf.jl",
+        {
+            "command": "community_gravity",
+            "vector": memory_vec,
+            "centroids": community_centroids,
+            "community_ids": community_ids,
+        },
+    )
     if res is None:
         return None
     if isinstance(res, list):
@@ -382,17 +415,19 @@ def julia_community_gravity(
     return None
 
 
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
 def julia_bridge_status() -> dict[str, Any]:
     """Get Julia bridge status."""
     _init_julia()
     modules = {}
     if _JULIA_DIR:
-        for f in ["memory_stats.jl", "self_model_forecast.jl", "graph_rrf.jl",
-                  "causal_resonance.jl", "constellations.jl", "gan_ying.jl"]:
+        for f in [
+            "memory_stats.jl",
+            "self_model_forecast.jl",
+            "graph_rrf.jl",
+            "causal_resonance.jl",
+            "constellations.jl",
+            "gan_ying.jl",
+        ]:
             modules[f.replace(".jl", "")] = (_JULIA_DIR / f).exists()
 
     return {
@@ -403,10 +438,6 @@ def julia_bridge_status() -> dict[str, Any]:
         "backend": "julia_scientific" if _HAS_JULIA else "python_fallback",
     }
 
-
-# ---------------------------------------------------------------------------
-# PyJulia direct bindings (spatial / cosine)
-# ---------------------------------------------------------------------------
 
 _jl = None
 
@@ -419,7 +450,11 @@ def _init_pyjulia() -> Any:
     try:
         from julia import Main
 
-        jl_project = Path(__file__).resolve().parent.parent.parent.parent / "polyglot" / "whitemagic-jl"
+        jl_project = (
+            Path(__file__).resolve().parent.parent.parent.parent
+            / "polyglot"
+            / "whitemagic-jl"
+        )
         Main.eval(f'using Pkg; Pkg.activate("{jl_project}")')
         Main.eval("using WhiteMagicSpatial")
         _jl = Main
@@ -433,7 +468,9 @@ def _init_pyjulia() -> Any:
         return None
 
 
-def jl_batch_cosine(query: list[float], corpus: list[list[float]]) -> list[float] | None:
+def jl_batch_cosine(
+    query: list[float], corpus: list[list[float]]
+) -> list[float] | None:
     """Compute batch cosine similarity via Julia PyJulia."""
     jl = _init_pyjulia()
     if jl is None:
@@ -456,11 +493,6 @@ def jl_spatial_status() -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Cache Analytics — KS tests, TTL auto-tuning, efficiency scoring
-# ---------------------------------------------------------------------------
-
-
 def julia_cache_ks_test(x: list[float], y: list[float]) -> dict[str, Any] | None:
     """Two-sample KS test on cache access distributions.
 
@@ -469,11 +501,14 @@ def julia_cache_ks_test(x: list[float], y: list[float]) -> dict[str, Any] | None
 
     Returns (d_statistic, p_value, same_distribution) or None if Julia unavailable.
     """
-    return _call_julia("cache_analytics.jl", {
-        "command": "ks_test",
-        "x": x,
-        "y": y,
-    })
+    return _call_julia(
+        "cache_analytics.jl",
+        {
+            "command": "ks_test",
+            "x": x,
+            "y": y,
+        },
+    )
 
 
 def julia_auto_tune_ttl(
@@ -487,11 +522,14 @@ def julia_auto_tune_ttl(
 
     Returns recommended_ttl, confidence, direction, and statistics.
     """
-    return _call_julia("cache_analytics.jl", {
-        "command": "auto_tune_ttl",
-        "access_times": access_times,
-        "current_ttl": current_ttl,
-    })
+    return _call_julia(
+        "cache_analytics.jl",
+        {
+            "command": "auto_tune_ttl",
+            "access_times": access_times,
+            "current_ttl": current_ttl,
+        },
+    )
 
 
 def julia_cache_efficiency(
@@ -509,15 +547,18 @@ def julia_cache_efficiency(
 
     Returns score, individual metrics, and recommendation (healthy/monitor/tune).
     """
-    return _call_julia("cache_analytics.jl", {
-        "command": "cache_efficiency",
-        "hits": hits,
-        "misses": misses,
-        "evictions": evictions,
-        "expirations": expirations,
-        "size": size,
-        "max_size": max_size,
-    })
+    return _call_julia(
+        "cache_analytics.jl",
+        {
+            "command": "cache_efficiency",
+            "hits": hits,
+            "misses": misses,
+            "evictions": evictions,
+            "expirations": expirations,
+            "size": size,
+            "max_size": max_size,
+        },
+    )
 
 
 def julia_fit_decay_model(
@@ -531,11 +572,14 @@ def julia_fit_decay_model(
 
     Returns lambda, amplitude, half_life, r_squared, recommended_ttl.
     """
-    return _call_julia("cache_analytics.jl", {
-        "command": "fit_decay",
-        "access_ages": access_ages,
-        "hit_counts": hit_counts,
-    })
+    return _call_julia(
+        "cache_analytics.jl",
+        {
+            "command": "fit_decay",
+            "access_ages": access_ages,
+            "hit_counts": hit_counts,
+        },
+    )
 
 
 def julia_recommend_ttl_adjustments(
@@ -548,7 +592,10 @@ def julia_recommend_ttl_adjustments(
 
     Returns per-namespace efficiency scores, TTL tuning results, and actions.
     """
-    return _call_julia("cache_analytics.jl", {
-        "command": "recommend_ttl_adjustments",
-        "namespaces": namespaces,
-    })
+    return _call_julia(
+        "cache_analytics.jl",
+        {
+            "command": "recommend_ttl_adjustments",
+            "namespaces": namespaces,
+        },
+    )

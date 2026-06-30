@@ -62,6 +62,7 @@ def handle_galaxy_list(**kwargs: Any) -> dict[str, Any]:
     # Try cache first
     try:
         from whitemagic.core.memory.query_cache import get_query_cache
+
         cache = get_query_cache()
         cached = cache.get("galaxy_list")
         if cached is not None:
@@ -94,12 +95,15 @@ def handle_galaxy_status(**kwargs: Any) -> dict[str, Any]:
     # Try cache first
     try:
         from whitemagic.core.memory.query_cache import get_query_cache
+
         cache = get_query_cache()
         cached = cache.get("galaxy_status")
         if cached is not None:
             return cached
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Silenced galaxy get_status cache check error: %s", e, exc_info=True)
+        logger.debug(
+            "Silenced galaxy get_status cache check error: %s", e, exc_info=True
+        )
 
     from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
 
@@ -110,7 +114,9 @@ def handle_galaxy_status(**kwargs: Any) -> dict[str, Any]:
     try:
         cache.set("galaxy_status", result, ttl=30)
     except Exception as e:
-        logger.debug("Silenced galaxy get_status cache write error: %s", e, exc_info=True)
+        logger.debug(
+            "Silenced galaxy get_status cache write error: %s", e, exc_info=True
+        )
 
     return result
 
@@ -153,7 +159,10 @@ def handle_galaxy_delete(**kwargs: Any) -> dict[str, Any]:
     try:
         gm = get_galaxy_manager()
         gm.delete_galaxy(name, user_id=kwargs.get("user_id"))
-        return {"status": "success", "message": f"Galaxy '{name}' removed from registry"}
+        return {
+            "status": "success",
+            "message": f"Galaxy '{name}' removed from registry",
+        }
     except ValueError as e:
         return {"status": "error", "error": str(e)}
 
@@ -320,6 +329,7 @@ def handle_galaxy_stats(**kwargs: Any) -> dict[str, Any]:
     try:
         router = get_galaxy_router()
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         stats = router.get_galaxy_stats(galaxy, um)
         return {"status": "success", **stats}
@@ -342,10 +352,14 @@ def handle_galaxy_migrate(**kwargs: Any) -> dict[str, Any]:
     try:
         router = get_galaxy_router()
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         success = router.migrate(memory_id, target_galaxy, um)
         if success:
-            return {"status": "success", "message": f"Migrated {memory_id} to galaxy '{target_galaxy}'"}
+            return {
+                "status": "success",
+                "message": f"Migrated {memory_id} to galaxy '{target_galaxy}'",
+            }
         return {"status": "error", "error": "Migration failed (see logs)"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -380,6 +394,7 @@ async def handle_galaxy_export(params: dict) -> dict:
         import base64
 
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
 
         galaxy = params.get("galaxy", "universal")
@@ -389,6 +404,7 @@ async def handle_galaxy_export(params: dict) -> dict:
         memory_type = None
         if memory_type_str:
             from whitemagic.core.memory.unified_types import MemoryType
+
             try:
                 memory_type = MemoryType[memory_type_str.upper()]
             except (KeyError, ValueError):
@@ -421,6 +437,7 @@ async def handle_galaxy_import(params: dict) -> dict:
         import base64
 
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
 
         ipc_b64 = params.get("ipc_bytes_b64", "")
@@ -444,6 +461,7 @@ def handle_galaxy_canonical_taxonomy(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         stats = um.get_stats()
         galaxy_counts = stats.get("by_galaxy", {}) if isinstance(stats, dict) else {}
@@ -452,11 +470,13 @@ def handle_galaxy_canonical_taxonomy(**kwargs: Any) -> dict[str, Any]:
 
     galaxies = []
     for name in GALAXY_ORDER:
-        galaxies.append({
-            "name": name,
-            "description": GALAXY_DESCRIPTIONS.get(name, ""),
-            "memory_count": galaxy_counts.get(name, 0),
-        })
+        galaxies.append(
+            {
+                "name": name,
+                "description": GALAXY_DESCRIPTIONS.get(name, ""),
+                "memory_count": galaxy_counts.get(name, 0),
+            }
+        )
 
     return {
         "status": "success",
@@ -478,15 +498,19 @@ def handle_galaxy_export_tutorial(**kwargs: Any) -> dict[str, Any]:
 
         tutorials = []
         for m in memories:
-            tutorials.append({
-                "id": m.id if hasattr(m, "id") else str(getattr(m, "id", "")),
-                "title": m.title if hasattr(m, "title") else "",
-                "content": m.content if hasattr(m, "content") else "",
-                "tags": list(m.tags) if hasattr(m, "tags") and m.tags else [],
-                "memory_type": m.memory_type.name if hasattr(m, "memory_type") and hasattr(m.memory_type, "name") else str(getattr(m, "memory_type", "")),
-                "importance": m.importance if hasattr(m, "importance") else 0.5,
-                "galaxy": "tutorial",
-            })
+            tutorials.append(
+                {
+                    "id": m.id if hasattr(m, "id") else str(getattr(m, "id", "")),
+                    "title": m.title if hasattr(m, "title") else "",
+                    "content": m.content if hasattr(m, "content") else "",
+                    "tags": list(m.tags) if hasattr(m, "tags") and m.tags else [],
+                    "memory_type": m.memory_type.name
+                    if hasattr(m, "memory_type") and hasattr(m.memory_type, "name")
+                    else str(getattr(m, "memory_type", "")),
+                    "importance": m.importance if hasattr(m, "importance") else 0.5,
+                    "galaxy": "tutorial",
+                }
+            )
 
         export_path = MEMORY_DIR / "tutorial_export.json"
         export_path.write_text(json.dumps(tutorials, indent=2, ensure_ascii=False))

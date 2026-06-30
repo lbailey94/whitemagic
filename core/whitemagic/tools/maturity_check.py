@@ -58,6 +58,7 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
         # Check category-level requirement
         try:
             from whitemagic.tools.registry import get_tool
+
             tool_def = get_tool(tool_name)
             if tool_def is not None:
                 cat = tool_def.category.name
@@ -72,6 +73,7 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
     try:
         from whitemagic.core.acceleration.haskell_bridge import haskell_maturity_assess
         from whitemagic.core.governance.maturity_gates import get_maturity_engine
+
         engine = get_maturity_engine()
         if engine._last_report:
             hs_result = haskell_maturity_assess(
@@ -92,10 +94,15 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
             MaturityStage,
             get_maturity_engine,
         )
+
         engine = get_maturity_engine()
         if engine._last_report is None:
             engine.assess()
-        current = engine._last_report.current_stage if engine._last_report else MaturityStage.SEED
+        current = (
+            engine._last_report.current_stage
+            if engine._last_report
+            else MaturityStage.SEED
+        )
 
         if current.value >= required:
             return None  # Mature enough
@@ -108,7 +115,12 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
             "Maturity gate blocked %s: "
             "requires %s (stage %s), "
             "current is %s (stage %s)",
-         tool_name, required_name, required, current.name, current.value)
+            tool_name,
+            required_name,
+            required,
+            current.name,
+            current.value,
+        )
 
         return {
             "status": "error",

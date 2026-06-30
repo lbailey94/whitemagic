@@ -15,6 +15,7 @@ Usage:
     from whitemagic.core.acceleration.simd_keywords import extract_keywords, simd_keywords_status
     keywords = extract_keywords("some text content here", max_keywords=50)
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -29,21 +30,122 @@ from whitemagic.core.acceleration.ffi_utils import LibraryLoader
 logger = logging.getLogger(__name__)
 
 # Python fallback stopwords
-_STOP_WORDS = frozenset({
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "shall",
-    "should", "may", "might", "can", "could", "must", "to", "of", "in",
-    "for", "on", "with", "at", "by", "from", "as", "into", "through",
-    "during", "before", "after", "above", "below", "between", "under",
-    "again", "further", "then", "once", "here", "there", "when", "where",
-    "why", "how", "all", "each", "every", "both", "few", "more", "most",
-    "other", "some", "such", "no", "nor", "not", "only", "own", "same",
-    "so", "than", "too", "very", "just", "because", "but", "and", "or",
-    "if", "while", "about", "up", "out", "off", "over", "this", "that",
-    "these", "those", "it", "its", "my", "your", "his", "her", "our",
-    "their", "what", "which", "who", "whom", "me", "him", "them", "we",
-    "you", "they", "i", "he", "she", "us",
-})
+_STOP_WORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "shall",
+        "should",
+        "may",
+        "might",
+        "can",
+        "could",
+        "must",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "nor",
+        "not",
+        "only",
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "just",
+        "because",
+        "but",
+        "and",
+        "or",
+        "if",
+        "while",
+        "about",
+        "up",
+        "out",
+        "off",
+        "over",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "my",
+        "your",
+        "his",
+        "her",
+        "our",
+        "their",
+        "what",
+        "which",
+        "who",
+        "whom",
+        "me",
+        "him",
+        "them",
+        "we",
+        "you",
+        "they",
+        "i",
+        "he",
+        "she",
+        "us",
+    }
+)
 _WORD_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
 
 
@@ -62,17 +164,13 @@ def _setup_ffi(lib: Any) -> None:
 
 # Unified library loader for Zig SIMD
 _zig_loader = LibraryLoader(
-    lib_name='libwhitemagic',
+    lib_name="libwhitemagic",
     base_path=Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-zig",
-    env_var='WM_ZIG_LIB',
-    search_paths=['zig-out/lib/', '', ''],
+    env_var="WM_ZIG_LIB",
+    search_paths=["zig-out/lib/", "", ""],
     setup_function=_setup_ffi,
 )
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def extract_keywords(text: str, max_keywords: int = 50) -> set[str]:
     """Extract keywords from text using SIMD acceleration if available.
@@ -99,8 +197,10 @@ def extract_keywords(text: str, max_keywords: int = 50) -> set[str]:
             out_arr = (ctypes.c_ubyte * out_capacity)()
 
             count = lib.wm_extract_keywords(
-                text_arr, len(text_bytes),
-                out_arr, out_capacity,
+                text_arr,
+                len(text_bytes),
+                out_arr,
+                out_capacity,
                 max_keywords,
             )
 

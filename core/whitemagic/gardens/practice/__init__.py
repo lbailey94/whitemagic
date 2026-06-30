@@ -6,6 +6,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present with future growth (Z-axis +0.4)
 - Important for skill building (W-axis +0.3)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -50,8 +51,8 @@ class PracticeGarden(BaseGarden, GanYingMixin):
         return CoordinateBias(
             x=-0.2,  # Logical (practice is disciplined, methodical)
             y=-0.3,  # Concrete (practice is specific actions, tangible)
-            z=0.4,   # Future-oriented (practice now for future growth)
-            w=0.3,    # Important (practice builds essential skill)
+            z=0.4,  # Future-oriented (practice now for future growth)
+            w=0.3,  # Important (practice builds essential skill)
         )
 
     def deepen_practice(self, what: str, duration: int | None = None) -> dict[str, Any]:
@@ -73,7 +74,6 @@ class PracticeGarden(BaseGarden, GanYingMixin):
         """Grounding enhances practice."""
         self.deepen_practice("grounded_awareness")
 
-    # ===== Metal Garden Integration (S023 Consolidation) =====
     def consult_zodiac(self, sign: str, context: dict[str, Any] | None = None) -> Any:
         """Consult the Zodiac Council for a disciplined perspective.
 
@@ -89,11 +89,15 @@ class PracticeGarden(BaseGarden, GanYingMixin):
         """
         council = get_zodiac_council()
         result = council.activate_core(sign, context or {})  # type: ignore[call-arg,func-returns-value,arg-type]
-        self.emit(EventType.GARDEN_RESONANCE, {"sign": sign, "source": "practice_metal"})
+        self.emit(
+            EventType.GARDEN_RESONANCE, {"sign": sign, "source": "practice_metal"}
+        )
         return result
 
 
 _instance = None
+
+
 def get_practice_garden() -> PracticeGarden:
     """
     Get the practice garden.

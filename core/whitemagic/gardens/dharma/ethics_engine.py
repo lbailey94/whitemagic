@@ -30,14 +30,11 @@ class EthicsEngine:
     _art_of_war_instance: Any = None
     _maturity_engine_instance: Any = None
 
-    # ------------------------------------------------------------------
-    # Art of War facade (fused from ArtOfWarEngine)
-    # ------------------------------------------------------------------
-
     def _get_art_of_war(self):
         """Lazy accessor for the ArtOfWarEngine."""
         if self._art_of_war_instance is None:
             from whitemagic.core.intelligence.wisdom.art_of_war import get_war_engine
+
             self._art_of_war_instance = get_war_engine()
         return self._art_of_war_instance
 
@@ -61,14 +58,11 @@ class EthicsEngine:
         """List recent campaigns."""
         return self._get_art_of_war().list_campaigns(limit)
 
-    # ------------------------------------------------------------------
-    # Maturity facade (fused from MaturityEngine)
-    # ------------------------------------------------------------------
-
     def _get_maturity_engine(self):
         """Lazy accessor for the MaturityEngine."""
         if self._maturity_engine_instance is None:
             from whitemagic.core.governance.maturity_gates import get_maturity_engine
+
             self._maturity_engine_instance = get_maturity_engine()
         return self._maturity_engine_instance
 
@@ -88,10 +82,6 @@ class EthicsEngine:
         """Get maturity engine statistics."""
         return self._get_maturity_engine().get_stats()
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _ethics_engine: EthicsEngine | None = None
 

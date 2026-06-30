@@ -33,21 +33,21 @@ class TaskFrequency(Enum):
     """How often scheduled tasks run."""
 
     CONTINUOUS = "continuous"  # As fast as possible
-    MINUTE = "minute"          # Every minute
-    HOURLY = "hourly"          # Every hour
-    DAILY = "daily"            # Once per day
-    WEEKLY = "weekly"          # Once per week
-    ON_EVENT = "on_event"      # Triggered by Gan Ying
+    MINUTE = "minute"  # Every minute
+    HOURLY = "hourly"  # Every hour
+    DAILY = "daily"  # Once per day
+    WEEKLY = "weekly"  # Once per week
+    ON_EVENT = "on_event"  # Triggered by Gan Ying
 
 
 class TaskPriority(Enum):
     """Task execution priority."""
 
-    CRITICAL = 1   # Run immediately, block others
-    HIGH = 2       # Run soon
-    NORMAL = 3     # Standard priority
-    LOW = 4        # Run when idle
-    BACKGROUND = 5 # Only when nothing else to do
+    CRITICAL = 1  # Run immediately, block others
+    HIGH = 2  # Run soon
+    NORMAL = 3  # Standard priority
+    LOW = 4  # Run when idle
+    BACKGROUND = 5  # Only when nothing else to do
 
 
 @dataclass
@@ -150,145 +150,178 @@ class AutomationDaemon:
     def _register_builtin_tasks(self) -> None:
         """Register built-in automation tasks."""
         # Kaizen continuous improvement
-        self.register_task(AutomationTask(
-            name="kaizen_light",
-            description="Light Kaizen analysis for quick wins",
-            handler=self._task_kaizen_light,
-            frequency=TaskFrequency.HOURLY,
-            priority=TaskPriority.LOW,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="kaizen_light",
+                description="Light Kaizen analysis for quick wins",
+                handler=self._task_kaizen_light,
+                frequency=TaskFrequency.HOURLY,
+                priority=TaskPriority.LOW,
+            )
+        )
 
-        self.register_task(AutomationTask(
-            name="kaizen_deep",
-            description="Deep Kaizen analysis for thorough improvement",
-            handler=self._task_kaizen_deep,
-            frequency=TaskFrequency.DAILY,
-            priority=TaskPriority.NORMAL,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="kaizen_deep",
+                description="Deep Kaizen analysis for thorough improvement",
+                handler=self._task_kaizen_deep,
+                frequency=TaskFrequency.DAILY,
+                priority=TaskPriority.NORMAL,
+            )
+        )
 
         # Serendipity surfacing
-        self.register_task(AutomationTask(
-            name="serendipity_surface",
-            description="Surface dormant knowledge for rediscovery",
-            handler=self._task_serendipity_surface,
-            frequency=TaskFrequency.HOURLY,
-            priority=TaskPriority.LOW,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="serendipity_surface",
+                description="Surface dormant knowledge for rediscovery",
+                handler=self._task_serendipity_surface,
+                frequency=TaskFrequency.HOURLY,
+                priority=TaskPriority.LOW,
+            )
+        )
 
         # Pattern synthesis
-        self.register_task(AutomationTask(
-            name="pattern_synthesis",
-            description="Generate cross-engine pattern insights",
-            handler=self._task_pattern_synthesis,
-            frequency=TaskFrequency.DAILY,
-            priority=TaskPriority.NORMAL,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="pattern_synthesis",
+                description="Generate cross-engine pattern insights",
+                handler=self._task_pattern_synthesis,
+                frequency=TaskFrequency.DAILY,
+                priority=TaskPriority.NORMAL,
+            )
+        )
 
         # Predictive analysis
-        self.register_task(AutomationTask(
-            name="predictive_analysis",
-            description="Generate predictions for future needs",
-            handler=self._task_predictive_analysis,
-            frequency=TaskFrequency.DAILY,
-            priority=TaskPriority.NORMAL,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="predictive_analysis",
+                description="Generate predictions for future needs",
+                handler=self._task_predictive_analysis,
+                frequency=TaskFrequency.DAILY,
+                priority=TaskPriority.NORMAL,
+            )
+        )
 
         # Memory consolidation
-        self.register_task(AutomationTask(
-            name="memory_consolidation",
-            description="Consolidate and optimize memory storage",
-            handler=self._task_memory_consolidation,
-            frequency=TaskFrequency.WEEKLY,
-            priority=TaskPriority.LOW,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="memory_consolidation",
+                description="Consolidate and optimize memory storage",
+                handler=self._task_memory_consolidation,
+                frequency=TaskFrequency.WEEKLY,
+                priority=TaskPriority.LOW,
+            )
+        )
 
         # Holographic reindexing
-        self.register_task(AutomationTask(
-            name="holographic_reindex",
-            description="Ensure all memories have 4D coordinates",
-            handler=self._task_holographic_reindex,
-            frequency=TaskFrequency.DAILY,
-            priority=TaskPriority.LOW,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="holographic_reindex",
+                description="Ensure all memories have 4D coordinates",
+                handler=self._task_holographic_reindex,
+                frequency=TaskFrequency.DAILY,
+                priority=TaskPriority.LOW,
+            )
+        )
 
         # Health check
-        self.register_task(AutomationTask(
-            name="health_check",
-            description="System health and integrity verification",
-            handler=self._task_health_check,
-            frequency=TaskFrequency.HOURLY,
-            priority=TaskPriority.HIGH,
-        ))
+        self.register_task(
+            AutomationTask(
+                name="health_check",
+                description="System health and integrity verification",
+                handler=self._task_health_check,
+                frequency=TaskFrequency.HOURLY,
+                priority=TaskPriority.HIGH,
+            )
+        )
 
         # Session summary (event-driven)
-        self.register_task(AutomationTask(
-            name="session_summary",
-            description="Auto-generate session summary on end",
-            handler=self._task_session_summary,
-            frequency=TaskFrequency.ON_EVENT,
-            priority=TaskPriority.HIGH,
-            trigger_events={"session_end", "context_overflow"},
-        ))
+        self.register_task(
+            AutomationTask(
+                name="session_summary",
+                description="Auto-generate session summary on end",
+                handler=self._task_session_summary,
+                frequency=TaskFrequency.ON_EVENT,
+                priority=TaskPriority.HIGH,
+                trigger_events={"session_end", "context_overflow"},
+            )
+        )
 
         # Milestone detection (event-driven)
-        self.register_task(AutomationTask(
-            name="milestone_detection",
-            description="Detect and record milestones automatically",
-            handler=self._task_milestone_detection,
-            frequency=TaskFrequency.ON_EVENT,
-            priority=TaskPriority.NORMAL,
-            trigger_events={"memory_created", "pattern_detected"},
-        ))
+        self.register_task(
+            AutomationTask(
+                name="milestone_detection",
+                description="Detect and record milestones automatically",
+                handler=self._task_milestone_detection,
+                frequency=TaskFrequency.ON_EVENT,
+                priority=TaskPriority.NORMAL,
+                trigger_events={"memory_created", "pattern_detected"},
+            )
+        )
 
     def _register_builtin_cascades(self) -> None:
         """Register built-in resonance cascades."""
         # When a memory is created, trigger analysis chain
-        self.register_cascade(ResonanceCascade(
-            name="memory_creation_cascade",
-            trigger_event="memory_created",
-            tasks=["holographic_reindex", "milestone_detection"],
-            parallel=True,
-        ))
+        self.register_cascade(
+            ResonanceCascade(
+                name="memory_creation_cascade",
+                trigger_event="memory_created",
+                tasks=["holographic_reindex", "milestone_detection"],
+                parallel=True,
+            )
+        )
 
         # When Kaizen finds issues, trigger fixes
-        self.register_cascade(ResonanceCascade(
-            name="kaizen_fix_cascade",
-            trigger_event="kaizen_proposals_ready",
-            tasks=["kaizen_auto_apply"],
-            parallel=False,
-        ))
+        self.register_cascade(
+            ResonanceCascade(
+                name="kaizen_fix_cascade",
+                trigger_event="kaizen_proposals_ready",
+                tasks=["kaizen_auto_apply"],
+                parallel=False,
+            )
+        )
 
         # Daily improvement cascade
-        self.register_cascade(ResonanceCascade(
-            name="daily_improvement_cascade",
-            trigger_event="daily_trigger",
-            tasks=["kaizen_deep", "pattern_synthesis", "predictive_analysis"],
-            parallel=False,
-        ))
+        self.register_cascade(
+            ResonanceCascade(
+                name="daily_improvement_cascade",
+                trigger_event="daily_trigger",
+                tasks=["kaizen_deep", "pattern_synthesis", "predictive_analysis"],
+                parallel=False,
+            )
+        )
 
         # Session end cascade
-        self.register_cascade(ResonanceCascade(
-            name="session_end_cascade",
-            trigger_event="session_end",
-            tasks=["session_summary", "memory_consolidation"],
-            parallel=False,
-        ))
+        self.register_cascade(
+            ResonanceCascade(
+                name="session_end_cascade",
+                trigger_event="session_end",
+                tasks=["session_summary", "memory_consolidation"],
+                parallel=False,
+            )
+        )
 
-        # ---- BRIDGE TO RESONANCE ORCHESTRATOR ----
         try:
             from whitemagic.core.patterns.pattern_consciousness.resonance_cascade import (
                 get_orchestrator,
             )
+
             orch = get_orchestrator()
             for cascade in self.cascades.values():
                 # Register each cascade as an action in the orchestrator
                 # Use a wrapper that executes the cascade's tasks
-                orch.register_action(cascade.trigger_event, lambda data, c=cascade: self._execute_cascade_wrapper(c, data))
+                orch.register_action(
+                    cascade.trigger_event,
+                    lambda data, c=cascade: self._execute_cascade_wrapper(c, data),
+                )
             logger.info("✅ All Automation Cascades bridged to ResonanceOrchestrator")
         except ImportError:
             logger.warning("ResonanceOrchestrator not found, cascade bridge skipped")
 
-    def _execute_cascade_wrapper(self, cascade: ResonanceCascade, data: dict[str, Any]) -> None:
+    def _execute_cascade_wrapper(
+        self, cascade: ResonanceCascade, data: dict[str, Any]
+    ) -> None:
         """Wrapper to execute legacy cascades through the daemon's logic."""
         logger.info("🌀 EXECUTING BRIDGED CASCADE: %s", cascade.name, exc_info=True)
         # Logic to iterate and run tasks
@@ -319,11 +352,13 @@ class AutomationDaemon:
 
     def _on_event(self, task: AutomationTask, event: Any) -> None:
         """Handle incoming Gan Ying event."""
-        self._event_queue.append({
-            "task": task.name,
-            "event": event,
-            "timestamp": datetime.now(),
-        })
+        self._event_queue.append(
+            {
+                "task": task.name,
+                "event": event,
+                "timestamp": datetime.now(),
+            }
+        )
 
     def register_task(self, task: AutomationTask) -> None:
         """Register an automation task."""
@@ -403,26 +438,27 @@ class AutomationDaemon:
         """Emit event to Gan Ying."""
         try:
             from whitemagic.core.resonance.gan_ying import ResonanceEvent, get_bus
+
             bus = get_bus()
             from whitemagic.core.resonance.gan_ying import EventType as _ET
+
             try:
                 et = _ET(event_type)
             except ValueError:
                 et = _ET.SYSTEM_STATE_CHANGE
-            bus.emit(ResonanceEvent(
-                source="automation_daemon",
-                event_type=et,
-                data=data,
-                confidence=1.0,
-                timestamp=datetime.now(),
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    source="automation_daemon",
+                    event_type=et,
+                    data=data,
+                    confidence=1.0,
+                    timestamp=datetime.now(),
+                )
+            )
         except Exception as e:
             import logging
-            logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
-    # =========================================================================
-    # TASK IMPLEMENTATIONS
-    # =========================================================================
+            logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     def _task_kaizen_light(self) -> dict[str, Any]:
         """Quick Kaizen scan for easy wins."""
@@ -453,11 +489,14 @@ class AutomationDaemon:
         # Auto-apply safe fixes
         applied, skipped, errors = kaizen.apply_auto_fixes()
 
-        self._emit_event("kaizen_proposals_ready", {
-            "total": len(report.proposals),
-            "applied": applied,
-            "skipped": skipped,
-        })
+        self._emit_event(
+            "kaizen_proposals_ready",
+            {
+                "total": len(report.proposals),
+                "applied": applied,
+                "skipped": skipped,
+            },
+        )
 
         return {
             "proposals": len(report.proposals),
@@ -559,18 +598,24 @@ class AutomationDaemon:
 
         for mem in unencoded:
             try:
-                coords = encoder.encode({
-                    "title": mem["title"],
-                    "content": mem["content"],
-                    "created_at": mem["created_at"],
-                })
-                cur.execute("""
+                coords = encoder.encode(
+                    {
+                        "title": mem["title"],
+                        "content": mem["content"],
+                        "created_at": mem["created_at"],
+                    }
+                )
+                cur.execute(
+                    """
                     INSERT INTO holographic_coords (memory_id, x, y, z, w)
                     VALUES (?, ?, ?, ?, ?)
-                """, (mem["id"], coords.x, coords.y, coords.z, coords.w))
+                """,
+                    (mem["id"], coords.x, coords.y, coords.z, coords.w),
+                )
                 encoded += 1
             except (sqlite3.Error, sqlite3.OperationalError) as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         conn.commit()
@@ -604,14 +649,17 @@ class AutomationDaemon:
             conn.close()
         except (sqlite3.Error, sqlite3.OperationalError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             bus = get_bus()
             health["gan_ying_connected"] = bus is not None
         except (ImportError, ModuleNotFoundError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         return health
@@ -689,6 +737,7 @@ if __name__ == "__main__":
 
         elif cmd == "status":
             from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
             logger.info(_json_dumps(daemon.get_status(), indent=2, default=str))
 
         elif cmd == "run":
@@ -697,6 +746,7 @@ if __name__ == "__main__":
                 if task_name in daemon.tasks:
                     result = daemon._execute_task(daemon.tasks[task_name])
                     from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
                     logger.info(_json_dumps(result, indent=2, default=str))
                 else:
                     logger.info("Unknown task: %s", task_name, exc_info=True)

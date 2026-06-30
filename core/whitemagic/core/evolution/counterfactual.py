@@ -7,6 +7,7 @@ system's own pre-improvement trajectory projected forward.
 Estimated causal impact = actual_trajectory - synthetic_control
 Confidence interval from MC bootstrap of the synthetic control.
 """
+
 from __future__ import annotations
 
 import random
@@ -19,6 +20,7 @@ from whitemagic.core.evolution._rust_bridge import call as _rust_call
 @dataclass
 class TrajectoryPoint:
     """A single point in a metric trajectory."""
+
     timestamp: float
     value: float
 
@@ -26,11 +28,12 @@ class TrajectoryPoint:
 @dataclass
 class CounterfactualResult:
     """Result of a counterfactual estimation."""
+
     improvement_id: str
     metric: str
-    actual_post: float          # Actual post-improvement average
-    synthetic_control: float    # Projected baseline
-    causal_impact: float        # actual_post - synthetic_control
+    actual_post: float  # Actual post-improvement average
+    synthetic_control: float  # Projected baseline
+    causal_impact: float  # actual_post - synthetic_control
     confidence_interval: tuple[float, float] = (0.0, 0.0)
     confidence_level: float = 0.0
     n_pre_points: int = 0
@@ -68,10 +71,12 @@ class SyntheticControl:
 
         # Try Rust bridge
         pre_values = [p.value for p in pre_trajectory]
-        result = _rust_call("cf_project_forward",
+        result = _rust_call(
+            "cf_project_forward",
             pre_values=pre_values,
             smoothing_alpha=self._alpha,
-            n_steps=n_steps)
+            n_steps=n_steps,
+        )
         if result is not None and "projections" in result:
             return result["projections"]
 
@@ -119,12 +124,14 @@ class SyntheticControl:
 
         # Try Rust bridge
         pre_values = [p.value for p in pre_trajectory]
-        result = _rust_call("cf_bootstrap_ci",
+        result = _rust_call(
+            "cf_bootstrap_ci",
             pre_values=pre_values,
             smoothing_alpha=self._alpha,
             n_steps=n_steps,
             n_bootstrap=n_bootstrap,
-            confidence=confidence)
+            confidence=confidence,
+        )
         if result is not None and "ci_lower" in result:
             return (result["ci_lower"], result["ci_upper"])
 
@@ -135,8 +142,7 @@ class SyntheticControl:
         for _ in range(n_bootstrap):
             boot = [random.choice(values) for _ in range(len(values))]
             boot_traj = [
-                TrajectoryPoint(timestamp=float(i), value=v)
-                for i, v in enumerate(boot)
+                TrajectoryPoint(timestamp=float(i), value=v) for i, v in enumerate(boot)
             ]
             projection = self.project_forward(boot_traj, n_steps)
             if projection:
@@ -190,12 +196,14 @@ class CounterfactualEstimator:
         # Try Rust bridge for the full estimation
         pre_values = [p.value for p in pre_trajectory]
         post_values = [p.value for p in post_trajectory]
-        rust_result = _rust_call("cf_estimate_impact",
+        rust_result = _rust_call(
+            "cf_estimate_impact",
             pre_values=pre_values,
             post_values=post_values,
             smoothing_alpha=self._sc._alpha,
             n_bootstrap=n_bootstrap,
-            confidence=confidence)
+            confidence=confidence,
+        )
 
         if rust_result is not None and "causal_impact" in rust_result:
             result = CounterfactualResult(
@@ -220,12 +228,17 @@ class CounterfactualEstimator:
         projections = self._sc.project_forward(pre_trajectory, n_post)
         synthetic_control = sum(projections) / len(projections) if projections else 0.0
 
-        actual_post = sum(p.value for p in post_trajectory) / n_post if post_trajectory else 0.0
+        actual_post = (
+            sum(p.value for p in post_trajectory) / n_post if post_trajectory else 0.0
+        )
 
         causal_impact = actual_post - synthetic_control
 
         ci = self._sc.bootstrap_ci(
-            pre_trajectory, n_post, n_bootstrap=n_bootstrap, confidence=confidence,
+            pre_trajectory,
+            n_post,
+            n_bootstrap=n_bootstrap,
+            confidence=confidence,
         )
 
         result = CounterfactualResult(
@@ -243,13 +256,17 @@ class CounterfactualEstimator:
         self._results[f"{improvement_id}_{metric}"] = result
         return result
 
-    def get_result(self, improvement_id: str, metric: str) -> CounterfactualResult | None:
+    def get_result(
+        self, improvement_id: str, metric: str
+    ) -> CounterfactualResult | None:
         return self._results.get(f"{improvement_id}_{metric}")
 
     def get_all_results(self) -> dict[str, CounterfactualResult]:
         return dict(self._results)
 
-    def get_significant_impacts(self, alpha: float = 0.05) -> list[CounterfactualResult]:
+    def get_significant_impacts(
+        self, alpha: float = 0.05
+    ) -> list[CounterfactualResult]:
         """Get improvements with statistically significant causal impact.
 
         Args:

@@ -19,10 +19,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Vibe keyword → template mapping
-# ---------------------------------------------------------------------------
-
 _VIBE_MAP: dict[str, str] = {
     # FastAPI / REST
     "fastapi": "fastapi_endpoint",
@@ -181,8 +177,9 @@ class VibeParser:
 
     def _detect_tier(self, text: str) -> str:
         """Infer tier from adjectives in the prompt."""
-        for keyword, tier in sorted(_TIER_HINTS.items(), key=lambda x:
-            len(x[0]), reverse=True):
+        for keyword, tier in sorted(
+            _TIER_HINTS.items(), key=lambda x: len(x[0]), reverse=True
+        ):
             if keyword in text:
                 return tier
         return "xianfeng"  # Default: fast, cheap reconnaissance
@@ -202,7 +199,21 @@ class VibeParser:
 
     def _extract_keywords(self, text: str) -> list[str]:
         """Return significant keywords for fuzzy matching."""
-        stopwords = {"the", "a", "an", "i", "need", "want", "make", "create", "get", "for", "to", "and", "or"}
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "i",
+            "need",
+            "want",
+            "make",
+            "create",
+            "get",
+            "for",
+            "to",
+            "and",
+            "or",
+        }
         words = re.findall(r"[a-z]+", text)
         return [w for w in words if w not in stopwords and len(w) > 2]
 
@@ -221,10 +232,6 @@ class VibeParser:
             "custom_aliases": custom_count,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _parser: VibeParser | None = None
 _parser_lock = threading.Lock()

@@ -17,16 +17,19 @@ from pathlib import Path
 # 1. Gana Vitality Tests (12.108.20 + 12.108.29)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestGanaVitality:
     """Test per-Gana health monitoring and performance reputation."""
 
     def test_import(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         monitor = GanaVitalityMonitor()
         assert monitor is not None
 
     def test_record_success(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         m.record_call("gana_horn", success=True, latency_ms=50.0)
         rep = m.get_reputation("gana_horn")
@@ -38,6 +41,7 @@ class TestGanaVitality:
 
     def test_record_failure(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         m.record_call("gana_ghost", success=False, latency_ms=100.0)
         rep = m.get_reputation("gana_ghost")
@@ -47,6 +51,7 @@ class TestGanaVitality:
     def test_consecutive_failures_degrade(self):
         """12.108.29: When people stop speaking, defeat shows."""
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         for _ in range(5):
             m.record_call("gana_root", success=False)
@@ -56,6 +61,7 @@ class TestGanaVitality:
 
     def test_success_resets_consecutive_failures(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         for _ in range(4):
             m.record_call("gana_heart", success=False)
@@ -66,6 +72,7 @@ class TestGanaVitality:
 
     def test_latency_tracking(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         m.record_call("gana_tail", success=True, latency_ms=100.0)
         m.record_call("gana_tail", success=True, latency_ms=200.0)
@@ -74,6 +81,7 @@ class TestGanaVitality:
 
     def test_should_route_around_degraded(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         for _ in range(5):
             m.record_call("gana_star", success=False)
@@ -82,6 +90,7 @@ class TestGanaVitality:
 
     def test_get_degraded_ganas(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         for _ in range(5):
             m.record_call("gana_ox", success=False)
@@ -90,6 +99,7 @@ class TestGanaVitality:
 
     def test_vitality_summary(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         m.record_call("gana_horn", success=True)
         m.record_call("gana_neck", success=True)
@@ -102,6 +112,7 @@ class TestGanaVitality:
 
     def test_reset(self):
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         m.record_call("gana_horn", success=True)
         m.reset()
@@ -109,6 +120,7 @@ class TestGanaVitality:
 
     def test_singleton(self):
         from whitemagic.tools.gana_vitality import get_vitality_monitor
+
         m1 = get_vitality_monitor()
         m2 = get_vitality_monitor()
         assert m1 is m2
@@ -116,6 +128,7 @@ class TestGanaVitality:
     def test_unused_gana_not_silent(self):
         """A never-called Gana should not be considered 'silent'."""
         from whitemagic.tools.gana_vitality import GanaVitalityMonitor
+
         m = GanaVitalityMonitor()
         rep = m.get_reputation("gana_void")
         assert rep["is_silent"] is False
@@ -126,15 +139,18 @@ class TestGanaVitality:
 # 2. Gana Sabha Tests (12.108.25)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestGanaSabha:
     """Test cross-quadrant council protocol."""
 
     def test_import(self):
         from whitemagic.tools.gana_sabha import convene_sabha
+
         assert convene_sabha is not None
 
     def test_convene_full_council(self):
         from whitemagic.tools.gana_sabha import convene_sabha
+
         result = convene_sabha(task="Design a new memory architecture")
         assert result["status"] == "success"
         assert result["sabha_type"] == "full_council"
@@ -144,15 +160,16 @@ class TestGanaSabha:
 
     def test_convene_partial_council(self):
         from whitemagic.tools.gana_sabha import convene_sabha
+
         result = convene_sabha(task="Search optimization", quadrants=["East", "South"])
         assert result["sabha_type"] == "partial_council"
         assert set(result["quadrants_represented"]) == {"East", "South"}
 
     def test_convene_with_specific_ganas(self):
         from whitemagic.tools.gana_sabha import convene_sabha
+
         result = convene_sabha(
-            task="Security review",
-            ganas=["gana_room", "gana_wall", "gana_three_stars"]
+            task="Security review", ganas=["gana_room", "gana_wall", "gana_three_stars"]
         )
         assert result["status"] == "success"
         gana_names = [p["gana"] for p in result["perspectives"]]
@@ -161,9 +178,9 @@ class TestGanaSabha:
     def test_east_west_tension_detected(self):
         """12.108.27: quarrels ignored by elders metastasize."""
         from whitemagic.tools.gana_sabha import convene_sabha
+
         result = convene_sabha(
-            task="Should we ship fast or review carefully?",
-            quadrants=["East", "West"]
+            task="Should we ship fast or review carefully?", quadrants=["East", "West"]
         )
         conflicts = result["conflicts"]
         pace_tensions = [c for c in conflicts if c["type"] == "pace_tension"]
@@ -171,9 +188,9 @@ class TestGanaSabha:
 
     def test_south_north_tension_detected(self):
         from whitemagic.tools.gana_sabha import convene_sabha
+
         result = convene_sabha(
-            task="Expand features vs conserve resources",
-            quadrants=["South", "North"]
+            task="Expand features vs conserve resources", quadrants=["South", "North"]
         )
         conflicts = result["conflicts"]
         scope_tensions = [c for c in conflicts if c["type"] == "scope_tension"]
@@ -181,26 +198,31 @@ class TestGanaSabha:
 
     def test_should_convene_sabha(self):
         from whitemagic.tools.gana_sabha import should_convene_sabha
+
         assert should_convene_sabha(["gana_horn", "gana_ghost"]) is True  # East + South
         assert should_convene_sabha(["gana_horn", "gana_neck"]) is False  # both East
 
     def test_handler_convene(self):
         from whitemagic.tools.gana_sabha import handle_sabha_convene
+
         result = handle_sabha_convene(task="Test task")
         assert result["status"] == "success"
 
     def test_handler_convene_requires_task(self):
         from whitemagic.tools.gana_sabha import handle_sabha_convene
+
         result = handle_sabha_convene()
         assert result["status"] == "error"
 
     def test_handler_status(self):
         from whitemagic.tools.gana_sabha import handle_sabha_status
+
         result = handle_sabha_status()
         assert result["status"] in ("success", "no_data")
 
     def test_principle_in_result(self):
         from whitemagic.tools.gana_sabha import convene_sabha
+
         result = convene_sabha(task="Test")
         assert "saṃghātam" in result.get("principle", "")
 
@@ -209,26 +231,31 @@ class TestGanaSabha:
 # 3. Gana Forge Tests (12.108.17)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestGanaForge:
     """Test declarative tool extension protocol."""
 
     def test_import(self):
         from whitemagic.tools.gana_forge import load_extensions
+
         assert load_extensions is not None
 
     def test_discover_empty_dir(self):
         from whitemagic.tools.gana_forge import discover_extensions
+
         with tempfile.TemporaryDirectory() as td:
             result = discover_extensions(Path(td))
             assert result == []
 
     def test_discover_nonexistent_dir(self):
         from whitemagic.tools.gana_forge import discover_extensions
+
         result = discover_extensions(Path("/nonexistent"))
         assert result == []
 
     def test_validate_valid_manifest(self):
         from whitemagic.tools.gana_forge import _validate_manifest
+
         manifest = {
             "tool": {
                 "name": "custom.test",
@@ -243,12 +270,16 @@ class TestGanaForge:
 
     def test_validate_missing_name(self):
         from whitemagic.tools.gana_forge import _validate_manifest
-        manifest = {"tool": {"description": "No name", "gana": "gana_ghost", "handler": "x:y"}}
+
+        manifest = {
+            "tool": {"description": "No name", "gana": "gana_ghost", "handler": "x:y"}
+        }
         errors = _validate_manifest(manifest, Path("test.yaml"))
         assert any("name" in e for e in errors)
 
     def test_validate_invalid_gana(self):
         from whitemagic.tools.gana_forge import _validate_manifest
+
         manifest = {
             "tool": {
                 "name": "x",
@@ -262,6 +293,7 @@ class TestGanaForge:
 
     def test_resolve_builtin_echo(self):
         from whitemagic.tools.gana_forge import _resolve_handler
+
         handler = _resolve_handler("builtin:echo")
         assert handler is not None
         result = handler(test="hello")
@@ -269,6 +301,7 @@ class TestGanaForge:
 
     def test_load_json_manifest(self):
         from whitemagic.tools.gana_forge import discover_extensions
+
         with tempfile.TemporaryDirectory() as td:
             manifest = {
                 "tool": {
@@ -285,17 +318,20 @@ class TestGanaForge:
 
     def test_handler_forge_status(self):
         from whitemagic.tools.gana_forge import handle_forge_status
+
         result = handle_forge_status()
         assert result["status"] == "success"
         assert "extensions_dir" in result
 
     def test_handler_forge_validate(self):
         from whitemagic.tools.gana_forge import handle_forge_validate
+
         result = handle_forge_validate()
         assert result["status"] == "success"
 
     def test_handler_forge_reload(self):
         from whitemagic.tools.gana_forge import handle_forge_reload
+
         result = handle_forge_reload()
         assert result["status"] == "success"
 
@@ -304,34 +340,40 @@ class TestGanaForge:
 # 4. Grimoire Unification Tests (bheda elimination)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestGrimoireUnification:
     """Test that all grimoire systems now speak with one voice."""
 
     def test_chapters_count_28(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         assert len(idx.CHAPTERS) == 28
 
     def test_chapters_numbered_1_to_28(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         numbers = [ch.number for ch in idx.CHAPTERS]
         assert numbers == list(range(1, 29))
 
     def test_every_chapter_has_gana(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS:
             assert ch.gana.startswith("gana_"), f"Chapter {ch.number} missing gana"
 
     def test_every_chapter_has_garden(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS:
             assert ch.garden, f"Chapter {ch.number} missing garden"
 
     def test_every_chapter_has_quadrant(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         valid_quadrants = {"East", "South", "West", "North"}
         for ch in idx.CHAPTERS:
@@ -339,24 +381,28 @@ class TestGrimoireUnification:
 
     def test_eastern_quadrant_chapters_1_to_7(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS[:7]:
             assert ch.quadrant == "East"
 
     def test_southern_quadrant_chapters_8_to_14(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS[7:14]:
             assert ch.quadrant == "South"
 
     def test_western_quadrant_chapters_15_to_21(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS[14:21]:
             assert ch.quadrant == "West"
 
     def test_northern_quadrant_chapters_22_to_28(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS[21:28]:
             assert ch.quadrant == "North"
@@ -365,6 +411,7 @@ class TestGrimoireUnification:
         """Verify chapters use the same gana names as prat_resonance._GANA_META."""
         from whitemagic.grimoire.chapters import ChapterIndex
         from whitemagic.tools.prat_resonance import _GANA_META
+
         idx = ChapterIndex()
         chapter_ganas = {ch.gana for ch in idx.CHAPTERS}
         meta_ganas = set(_GANA_META.keys())
@@ -374,10 +421,13 @@ class TestGrimoireUnification:
         """Verify chapters use the same garden names as prat_resonance._GANA_META."""
         from whitemagic.grimoire.chapters import ChapterIndex
         from whitemagic.tools.prat_resonance import _GANA_META
+
         idx = ChapterIndex()
         for ch in idx.CHAPTERS:
             meta = _GANA_META.get(ch.gana)
-            assert meta is not None, f"Chapter {ch.number} gana '{ch.gana}' not in _GANA_META"
+            assert meta is not None, (
+                f"Chapter {ch.number} gana '{ch.gana}' not in _GANA_META"
+            )
             expected_garden = meta[3].lower()
             assert ch.garden.lower() == expected_garden.lower(), (
                 f"Chapter {ch.number} ({ch.gana}): garden '{ch.garden}' != "
@@ -386,6 +436,7 @@ class TestGrimoireUnification:
 
     def test_by_gana_lookup(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         ch = idx._by_gana.get("gana_horn")
         assert ch is not None
@@ -393,6 +444,7 @@ class TestGrimoireUnification:
 
     def test_find_by_keyword(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         results = idx.find_by_keyword("memory")
         assert len(results) >= 1
@@ -400,12 +452,14 @@ class TestGrimoireUnification:
 
     def test_find_for_task(self):
         from whitemagic.grimoire.chapters import ChapterIndex
+
         idx = ChapterIndex()
         results = idx.find_for_task("search for memories about rust performance")
         assert len(results) >= 1
 
     def test_spells_use_28_chapter_numbers(self):
         from whitemagic.grimoire.spells import SpellBook
+
         sb = SpellBook()
         for spell in sb.list_all():
             assert 1 <= spell.chapter <= 28, (
@@ -414,6 +468,7 @@ class TestGrimoireUnification:
 
     def test_spells_cover_all_quadrants(self):
         from whitemagic.grimoire.spells import SpellBook
+
         sb = SpellBook()
         chapters = {spell.chapter for spell in sb.list_all()}
         # Eastern (1-7), Southern (8-14), Western (15-21), Northern (22-28)
@@ -424,52 +479,63 @@ class TestGrimoireUnification:
 
     def test_core_grimoire_domains_28_chapters(self):
         from whitemagic.grimoire.core import Grimoire
+
         g = Grimoire()
         assert len(g.CHAPTER_DOMAINS) == 28
         for ch_num in range(1, 29):
-            assert ch_num in g.CHAPTER_DOMAINS, f"Chapter {ch_num} missing from Grimoire.CHAPTER_DOMAINS"
+            assert ch_num in g.CHAPTER_DOMAINS, (
+                f"Chapter {ch_num} missing from Grimoire.CHAPTER_DOMAINS"
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 5. Dispatch + PRAT Integration Tests
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestDispatchIntegration:
     """Test that new tools are properly wired into dispatch and PRAT."""
 
     def test_sabha_in_dispatch_table(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         assert "sabha.convene" in DISPATCH_TABLE
         assert "sabha.status" in DISPATCH_TABLE
 
     def test_forge_in_dispatch_table(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         assert "forge.status" in DISPATCH_TABLE
         assert "forge.reload" in DISPATCH_TABLE
         assert "forge.validate" in DISPATCH_TABLE
 
     def test_sabha_in_prat_router(self):
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         assert TOOL_TO_GANA.get("sabha.convene") == "gana_three_stars"
         assert TOOL_TO_GANA.get("sabha.status") == "gana_three_stars"
 
     def test_forge_in_prat_router(self):
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         assert TOOL_TO_GANA.get("forge.status") == "gana_star"
         assert TOOL_TO_GANA.get("forge.reload") == "gana_star"
         assert TOOL_TO_GANA.get("forge.validate") == "gana_star"
 
     def test_sabha_in_gana_to_tools(self):
         from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
+
         assert "sabha.convene" in GANA_TO_TOOLS.get("gana_three_stars", [])
         assert "sabha.status" in GANA_TO_TOOLS.get("gana_three_stars", [])
 
     def test_forge_in_gana_to_tools(self):
         from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
+
         assert "forge.status" in GANA_TO_TOOLS.get("gana_star", [])
 
     def test_registry_defs_governance(self):
         from whitemagic.tools.registry_defs.governance import TOOLS
+
         names = {t.name for t in TOOLS}
         assert "sabha.convene" in names
         assert "sabha.status" in names
@@ -479,6 +545,13 @@ class TestDispatchIntegration:
 
     def test_dispatch_table_handlers_callable(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
-        for tool_name in ["sabha.convene", "sabha.status", "forge.status", "forge.reload", "forge.validate"]:
+
+        for tool_name in [
+            "sabha.convene",
+            "sabha.status",
+            "forge.status",
+            "forge.reload",
+            "forge.validate",
+        ]:
             handler = DISPATCH_TABLE[tool_name]
             assert callable(handler), f"{tool_name} handler is not callable"

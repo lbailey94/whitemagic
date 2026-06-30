@@ -28,7 +28,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- TYPES ---
 
 class LunarMansion(Enum):
     """LunarMansion: lunar mansion.
@@ -64,6 +63,7 @@ class LunarMansion(Enum):
         ROOF
         ENCAMPMENT
         WALL"""
+
     HORN = "horn"
     NECK = "neck"
     ROOT = "root"
@@ -93,29 +93,33 @@ class LunarMansion(Enum):
     ENCAMPMENT = "encampment"
     WALL = "wall"
 
+
 @dataclass
 class GanaCall:
     """GanaCall: gana call.
 
     Value object: equality and repr are field-based."""
+
     task: str
     state_vector: dict[str, Any] = field(default_factory=dict)
     resonance_hints: Any = None
+
 
 @dataclass
 class GanaResult:
     """GanaResult: gana result.
 
     Value object: equality and repr are field-based."""
+
     mansion: LunarMansion
     output: Any
     successor_hint: str | None = None
     karma_trace: dict[str, Any] = field(default_factory=dict)
 
-# --- BASE GANA ---
 
 class BaseGana:
     """Base class for all lunar mansions (Ganas)."""
+
     def __init__(self, mansion: LunarMansion):
         self.mansion = mansion
         self.stats = {"invocations": 0}
@@ -133,29 +137,37 @@ class BaseGana:
         self.stats["invocations"] += 1
         return GanaResult(mansion=self.mansion, output="Execution simulated")
 
-# --- QUADRANT CLASSES (Stubs for consolidation) ---
 
 class EasternGana(BaseGana):
     """Eastern quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+
     pass
+
 
 class SouthernGana(BaseGana):
     """Southern quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+
     pass
+
 
 class WesternGana(BaseGana):
     """Western quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+
     pass
+
 
 class NorthernGana(BaseGana):
     """Northern quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+
     pass
 
-# --- CHAIN & REGISTRY ---
 
 class GanaChain:
     """Executes sequences of Gana calls with resonance."""
-    async def execute_chain(self, mansions: list[LunarMansion], task: str) -> list[GanaResult]:
+
+    async def execute_chain(
+        self, mansions: list[LunarMansion], task: str
+    ) -> list[GanaResult]:
         """
         Run the chain operation.
 
@@ -168,8 +180,9 @@ class GanaChain:
         """
         return [await get_gana(m).invoke(GanaCall(task=task)) for m in mansions]
 
-# --- SINGLETONS ---
+
 _registry: dict[LunarMansion, BaseGana] = {}
+
 
 def get_gana(mansion: LunarMansion) -> BaseGana:
     """
@@ -184,6 +197,7 @@ def get_gana(mansion: LunarMansion) -> BaseGana:
     if mansion not in _registry:
         _registry[mansion] = BaseGana(mansion)
     return _registry[mansion]
+
 
 def get_chain() -> GanaChain:
     """

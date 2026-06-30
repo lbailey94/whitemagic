@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Antibody:
     """A pattern-based solution to a known issue."""
+
     name: str
     antigen: str
     description: str
@@ -29,7 +30,9 @@ class Antibody:
 
     @property
     def success_rate(self) -> float:
-        return self.success_count / self.applied_count if self.applied_count > 0 else 0.0
+        return (
+            self.success_count / self.applied_count if self.applied_count > 0 else 0.0
+        )
 
 
 class AntibodyLibrary:
@@ -45,7 +48,11 @@ class AntibodyLibrary:
                 name="fix_import",
                 antigen="import_failure",
                 description="Fix broken import statements",
-                fix_steps=["Check module path", "Verify __init__.py exists", "Update imports"],
+                fix_steps=[
+                    "Check module path",
+                    "Verify __init__.py exists",
+                    "Update imports",
+                ],
                 auto_apply=False,
                 confidence=0.7,
             ),

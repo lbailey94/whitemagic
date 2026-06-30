@@ -1,4 +1,5 @@
 """Tests for Objective C — Counterfactual Estimation."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.counterfactual import (
@@ -22,7 +23,9 @@ class TestSyntheticControl:
 
     def test_bootstrap_ci(self):
         sc = SyntheticControl()
-        traj = [TrajectoryPoint(timestamp=float(i), value=5.0 + i * 0.1) for i in range(10)]
+        traj = [
+            TrajectoryPoint(timestamp=float(i), value=5.0 + i * 0.1) for i in range(10)
+        ]
         lower, upper = sc.bootstrap_ci(traj, n_steps=1, n_bootstrap=100)
         assert lower <= upper
 

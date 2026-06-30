@@ -134,10 +134,6 @@ class GraphWalker:
         self._pagerank_cache: dict[str, float] = {}
         self._pagerank_cache_time: float = 0.0
 
-    # ------------------------------------------------------------------
-    # Neighbor loading
-    # ------------------------------------------------------------------
-
     def _get_neighbors(self, memory_id: str, pool: Any) -> list[Neighbor]:
         """Load all outgoing association edges for a memory, including target neuro_score."""
         try:
@@ -253,10 +249,6 @@ class GraphWalker:
         pr_normalized = min(1.0, pagerank * 100)
         return w_g * galactic_proximity + w_n * neuro_score + w_p * pr_normalized
 
-    # ------------------------------------------------------------------
-    # Transition probability
-    # ------------------------------------------------------------------
-
     def _transition_score(
         self,
         neighbor: Neighbor,
@@ -332,10 +324,6 @@ class GraphWalker:
             * ((1.0 - staleness) ** self._staleness_beta)
         )
         return float(max(0.0001, score))
-
-    # ------------------------------------------------------------------
-    # Walk
-    # ------------------------------------------------------------------
 
     def walk(
         self,
@@ -486,10 +474,6 @@ class GraphWalker:
          len(seed_ids), hops, len(visited), result.paths_explored, elapsed)
         return result
 
-    # ------------------------------------------------------------------
-    # Hybrid recall: anchor search + graph expansion
-    # ------------------------------------------------------------------
-
     def hybrid_recall(
         self,
         query: str,
@@ -531,14 +515,12 @@ class GraphWalker:
             logger.error("hybrid_recall: could not access memory system: %s", e)
             return []
 
-        # Step 1: Anchor search
         anchors = um.search_hybrid(query=query, limit=anchor_limit)
         if not anchors:
             anchors = um.search(query=query, limit=anchor_limit)
         if not anchors:
             return []
 
-        # Step 1.5: Encode query for semantic walk steering
         query_embedding: list[float] | None = None
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
@@ -550,12 +532,10 @@ class GraphWalker:
 
         anchor_ids = [m.id for m in anchors]
 
-        # Step 2: Graph walk from anchors with semantic steering
-        # Try quantum-accelerated walk if requested
         quantum_nodes: list[Any] = []
         if use_quantum:
             try:
-                from whitemagic.core.intelligence.quantum import QuantumGraphAdapter, QuantumNode
+                from whitemagic.core.intelligence.quantum import QuantumGraphAdapter
                 adapter = QuantumGraphAdapter(classical_walker=self)
 
                 # Build neighbor function for quantum superposition walk
@@ -612,7 +592,6 @@ class GraphWalker:
             )
             discovered_ids = walk_result.discovered_ids()
 
-        # Step 4: Hydrate discovered memories
         discovered_map: dict[str, Any] = {}
         for mid in discovered_ids:
             try:
@@ -622,7 +601,6 @@ class GraphWalker:
             except Exception:
                 pass
 
-        # Step 5: Build result set — anchors first, then graph-discovered
         results: list[dict[str, Any]] = []
         seen: set[str] = set()
 
@@ -680,10 +658,6 @@ class GraphWalker:
             "%s graph-discovered = %s results (%.0fms)",
          query[:50], len(anchors), len(discovered_ids), len(results), elapsed)
         return results
-
-    # ------------------------------------------------------------------
-    # VSA walk context compression
-    # ------------------------------------------------------------------
 
     def compress_walk_context(
         self,
@@ -800,10 +774,6 @@ class GraphWalker:
             "compressed": compressed,
         }
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
     def _get_edge_created_at(
         self, source_id: str, target_id: str, pool: Any,
     ) -> str | None:
@@ -865,10 +835,6 @@ class GraphWalker:
                 },
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _walker: GraphWalker | None = None
 _walker_lock = threading.Lock()

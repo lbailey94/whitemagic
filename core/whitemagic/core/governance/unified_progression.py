@@ -19,24 +19,26 @@ logger = logging.getLogger(__name__)
 
 class YinYangPhase(StrEnum):
     """Yin/Yang phase"""
-    YIN = "yin"    # Receptive, inward, consolidating
+
+    YIN = "yin"  # Receptive, inward, consolidating
     YANG = "yang"  # Creative, outward, expansive
 
 
 class CyclePhase(StrEnum):
     """The 12 phases of the Zodiacal Round (Enochian precessional order)."""
-    DISSOLUTION = "pisces"      # ORO: Begin anew, banish old forms
-    BINDING = "aquarius"        # IBAH: Bind will in patterns
-    STRUCTURING = "capricorn"   # AOZPI: Build towers of will
+
+    DISSOLUTION = "pisces"  # ORO: Begin anew, banish old forms
+    BINDING = "aquarius"  # IBAH: Bind will in patterns
+    STRUCTURING = "capricorn"  # AOZPI: Build towers of will
     ORNAMENTATION = "sagittarius"  # MPH: Fabulous filigrees
-    EMERGENCE = "scorpio"       # ARSL: Seeds of new motion arise
-    BALANCE = "libra"           # GAIOL: Balanced in light/darkness
-    SEEDING = "virgo"           # OIP: Virgin houses await seeds
-    CREATION = "leo"            # TEAA: Lesser creators work
-    WORSHIP = "cancer"          # PDOCE: Living creatures worship
-    BLENDING = "gemini"         # MOR: Thoughts blend
-    BUILDING = "taurus"         # DIAL: Work builds on pattern
-    COMPLETION = "aries"        # HCTGA: Thy Will is done
+    EMERGENCE = "scorpio"  # ARSL: Seeds of new motion arise
+    BALANCE = "libra"  # GAIOL: Balanced in light/darkness
+    SEEDING = "virgo"  # OIP: Virgin houses await seeds
+    CREATION = "leo"  # TEAA: Lesser creators work
+    WORSHIP = "cancer"  # PDOCE: Living creatures worship
+    BLENDING = "gemini"  # MOR: Thoughts blend
+    BUILDING = "taurus"  # DIAL: Work builds on pattern
+    COMPLETION = "aries"  # HCTGA: Thy Will is done
 
 
 # Synthesized mapping of Western Elements to Wu Xing
@@ -60,6 +62,7 @@ PHASE_NATURE = {
 @dataclass
 class UnifiedCycleState:
     """Current state of the Unified Progression Cycle."""
+
     current_phase: CyclePhase
     phase_start: datetime
     cycle_count: int
@@ -158,6 +161,7 @@ class UnifiedProgressionDaemon:
         # Bridge 1: Telemetric Flow of Qi — emit an OTel span per phase
         try:
             from whitemagic.core.monitoring.otel_export import get_otel
+
             otel = get_otel()
             otel.record_tool_span(
                 tool_name=f"zodiac.phase.{phase}",
@@ -174,8 +178,10 @@ class UnifiedProgressionDaemon:
         except (ImportError, AttributeError):
             pass  # OTEL is optional; never block the progression clock
 
+
 # Singleton instance
 _progression_daemon: UnifiedProgressionDaemon | None = None
+
 
 def get_progression_daemon() -> UnifiedProgressionDaemon:
     """

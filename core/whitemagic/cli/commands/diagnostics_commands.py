@@ -11,6 +11,7 @@ import click
 try:
     from rich.console import Console
     from rich.panel import Panel
+
     HAS_RICH = True
     console: Console | None = Console()
 except ImportError:
@@ -33,7 +34,11 @@ def status_command(ctx) -> None:
     state = call_tool("state.summary", include_sizes=True, now=now)
 
     if (ctx.obj or {}).get("json_output"):
-        click.echo(_json_dumps({"capabilities": caps, "state": state}, indent=2, sort_keys=True))
+        click.echo(
+            _json_dumps(
+                {"capabilities": caps, "state": state}, indent=2, sort_keys=True
+            )
+        )
         return
 
     if caps.get("status") == "success":
@@ -68,7 +73,9 @@ def health_command(ctx) -> None:
     """Run comprehensive health check"""
     from whitemagic.mcp_api_bridge import check_system_health
 
-    json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+    json_output = (
+        (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+    )
 
     if json_output:
         result = check_system_health(component="system", deep_scan=False)
@@ -89,9 +96,14 @@ def health_command(ctx) -> None:
 
                     if health_score is None:
                         status_to_score = {
-                            "healthy": 1.0, "good": 0.9, "ok": 0.7,
-                            "degraded": 0.5, "warning": 0.4,
-                            "critical": 0.2, "error": 0.1, "unknown": 0.5,
+                            "healthy": 1.0,
+                            "good": 0.9,
+                            "ok": 0.7,
+                            "degraded": 0.5,
+                            "warning": 0.4,
+                            "critical": 0.2,
+                            "error": 0.1,
+                            "unknown": 0.5,
                         }
                         health_score = status_to_score.get(status_str.lower(), 0.5)
 
@@ -114,10 +126,22 @@ def health_command(ctx) -> None:
                         details = accelerators.get("details", {})
                         if details:
                             for name, info in details.items():
-                                status_icon = "✅" if info.get("status") == "active" else "❌" if info.get("status") == "error" else "⚠️"
+                                status_icon = (
+                                    "✅"
+                                    if info.get("status") == "active"
+                                    else "❌"
+                                    if info.get("status") == "error"
+                                    else "⚠️"
+                                )
                                 version = info.get("version", "unknown")
-                                latency = f" ({info.get('latency_ms', 0):.2f}ms)" if "latency_ms" in info else ""
-                                acc_lines.append(f"  {status_icon} {name}: {info.get('status')} [dim]v{version}{latency}[/dim]")
+                                latency = (
+                                    f" ({info.get('latency_ms', 0):.2f}ms)"
+                                    if "latency_ms" in info
+                                    else ""
+                                )
+                                acc_lines.append(
+                                    f"  {status_icon} {name}: {info.get('status')} [dim]v{version}{latency}[/dim]"
+                                )
 
                     panel_content = (
                         f"[{color}]{display_status}[/{color}]\n\n"
@@ -125,9 +149,17 @@ def health_command(ctx) -> None:
                     )
 
                     if acc_lines:
-                        panel_content += "[bold]Accelerators:[/bold]\n" + "\n".join(acc_lines) + "\n\n"
+                        panel_content += (
+                            "[bold]Accelerators:[/bold]\n"
+                            + "\n".join(acc_lines)
+                            + "\n\n"
+                        )
 
-                    panel_content += ("[bold]Issues:[/bold]\n" + "\n".join(f"  • {i}" for i in issues) if issues else "[green]No issues detected[/green]")
+                    panel_content += (
+                        "[bold]Issues:[/bold]\n" + "\n".join(f"  • {i}" for i in issues)
+                        if issues
+                        else "[green]No issues detected[/green]"
+                    )
 
                     panel = Panel(
                         panel_content,
@@ -154,6 +186,7 @@ def _doctor_fix() -> None:
     click.echo("1. State directory...")
     try:
         from whitemagic.config import paths as cfg_paths
+
         state_root = cfg_paths.get_state_root()  # type: ignore[attr-defined]
         state_root.mkdir(parents=True, exist_ok=True)
         click.echo(f"   ✅ {state_root}")
@@ -163,6 +196,7 @@ def _doctor_fix() -> None:
     click.echo("2. Database schema...")
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         um.backend._init_db()
         click.echo("   ✅ All tables and columns verified")
@@ -177,7 +211,9 @@ def _doctor_fix() -> None:
             mem_count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
             fts_count = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
             if abs(mem_count - fts_count) > 10:
-                click.echo(f"   ⚠️  FTS desync: {fts_count} FTS rows vs {mem_count} memories. Rebuilding...")
+                click.echo(
+                    f"   ⚠️  FTS desync: {fts_count} FTS rows vs {mem_count} memories. Rebuilding..."
+                )
                 conn.execute("DELETE FROM memories_fts")
                 conn.execute("""
                     INSERT INTO memories_fts (id, title, content, tags_text)
@@ -186,7 +222,9 @@ def _doctor_fix() -> None:
                     FROM memories m
                 """)
                 conn.commit()
-                new_fts = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
+                new_fts = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[
+                    0
+                ]
                 click.echo(f"   ✅ FTS rebuilt: {new_fts} rows")
                 fixes_applied += 1
             else:
@@ -247,6 +285,7 @@ def _doctor_fix() -> None:
     click.echo("\n7. Post-fix health check...")
     try:
         from whitemagic.tools.dispatch_table import dispatch
+
         result = dispatch("health_report") or {}
         score = result.get("health_score", 0)
         status = result.get("health_status", "unknown")
@@ -258,13 +297,19 @@ def _doctor_fix() -> None:
 
 
 @click.command(name="doctor")
-@click.option("--fix", is_flag=True, help="Auto-fix common issues (missing tables, stale indexes, orphaned associations)")
+@click.option(
+    "--fix",
+    is_flag=True,
+    help="Auto-fix common issues (missing tables, stale indexes, orphaned associations)",
+)
 @click.pass_context
 def doctor_command(ctx, fix: bool) -> None:
     """Run consolidated system diagnostics via health_report tool"""
     from whitemagic.tools.unified_api import call_tool
 
-    json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+    json_output = (
+        (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+    )
 
     if fix:
         _doctor_fix()
@@ -290,7 +335,9 @@ def doctor_command(ctx, fix: bool) -> None:
             lines.append(f"[bold]Tools:[/bold] {data['tool_count']}")
         if "db" in data:
             db = data["db"]
-            lines.append(f"[bold]DB:[/bold] {db.get('memory_count', '?')} memories, {db.get('size_mb', '?')} MB")
+            lines.append(
+                f"[bold]DB:[/bold] {db.get('memory_count', '?')} memories, {db.get('size_mb', '?')} MB"
+            )
 
         rust_ok = data.get("rust", {}).get("available", False)
         julia_ok = data.get("julia", {}).get("available", False)
@@ -304,14 +351,20 @@ def doctor_command(ctx, fix: bool) -> None:
             garden_count = len(data["gardens"])
             lines.append(f"\n[bold]Gardens:[/bold] {garden_count} registered")
 
-        panel = Panel("\n".join(lines), title="🏥 WhiteMagic Doctor", border_style=color)
+        panel = Panel(
+            "\n".join(lines), title="🏥 WhiteMagic Doctor", border_style=color
+        )
         console.print(panel)
     else:
-        click.echo(f"Health: {data.get('health_status', 'unknown')} ({data.get('health_score', 0):.0%})")
+        click.echo(
+            f"Health: {data.get('health_status', 'unknown')} ({data.get('health_score', 0):.0%})"
+        )
         if "db" in data:
             click.echo(f"DB: {data['db'].get('memory_count', '?')} memories")
         click.echo(f"Rust: {'yes' if data.get('rust', {}).get('available') else 'no'}")
-        click.echo(f"Julia: {'yes' if data.get('julia', {}).get('available') else 'no'}")
+        click.echo(
+            f"Julia: {'yes' if data.get('julia', {}).get('available') else 'no'}"
+        )
 
 
 def register_diagnostics_commands(main_group: click.Group) -> None:

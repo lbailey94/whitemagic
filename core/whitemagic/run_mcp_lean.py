@@ -36,7 +36,6 @@ if str(CORE_SYSTEM_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_SYSTEM_DIR))
 
 
-
 # ── Logging (stderr only — stdout is the MCP transport) ─────────────
 logging.basicConfig(
     level=logging.WARNING,
@@ -44,6 +43,7 @@ logging.basicConfig(
     format="%(levelname)s:%(name)s:%(message)s",
 )
 logger = logging.getLogger("wm_mcp")
+
 
 # ── Lazy MCP SDK wrappers (deferred until first use) ─────────────────
 class _LazyMCPTypes:
@@ -136,6 +136,7 @@ if _VERSION_FILE.exists():
 else:
     try:
         from importlib.metadata import version as _pkg_version
+
         _VERSION = _pkg_version("whitemagic")
     except (ImportError, ModuleNotFoundError):
         _VERSION = "unknown"
@@ -161,14 +162,15 @@ def _ensure_init() -> None:
         import os
 
         from whitemagic.utils.feature_flags import get_all_flags, is_enabled
+
         all_flags = get_all_flags()
         enabled_flags = [name for name, info in all_flags.items() if info["enabled"]]
         if enabled_flags:
             logger.info("Feature flags enabled: %s", ", ".join(enabled_flags))
 
-        # --- RUST ACCELERATION (PSR-001) ---
         try:
             from whitemagic.utils.feature_flags import is_enabled as _ff_is_enabled
+
             _rust_enabled = _ff_is_enabled("RUST_STORE")
         except (ImportError, ModuleNotFoundError):
             _rust_enabled = os.environ.get("WM_FEATURE_RUST_STORE") == "1"
@@ -176,10 +178,13 @@ def _ensure_init() -> None:
         try:
             if _rust_enabled:
                 import whitemagic_rust as _rust
+
                 RustBackend = getattr(_rust, "PySQLiteBackend", None)
                 RUST_AVAILABLE = True if RustBackend is not None else False
                 if RUST_AVAILABLE:
-                    logger.info("WhiteMagic Rust Backend (PSR-001) linked successfully.")
+                    logger.info(
+                        "WhiteMagic Rust Backend (PSR-001) linked successfully."
+                    )
             else:
                 RustBackend = None
                 RUST_AVAILABLE = False
@@ -192,43 +197,50 @@ def _ensure_init() -> None:
             os.environ["WM_OTEL_ENABLED"] = "1"
             try:
                 from whitemagic.core.monitoring.otel_export import get_otel
+
                 get_otel()
                 logger.info("OTEL tracing initialised")
             except ImportError:
-                logger.warning("OTEL requested (WM_FEATURE_OTEL=1) but opentelemetry-sdk not installed")
+                logger.warning(
+                    "OTEL requested (WM_FEATURE_OTEL=1) but opentelemetry-sdk not installed"
+                )
 
         if is_enabled("DREAM_AUTO"):
             try:
                 from whitemagic.core.intelligence.dream_synthesis import (
                     get_dream_synthesizer,
                 )
+
                 get_dream_synthesizer().mount()
                 logger.info("DreamSynthesizer mounted (DREAM_AUTO enabled)")
             except (ImportError, ModuleNotFoundError) as e:
                 logger.debug("DreamSynthesizer auto-mount failed: %s", e)
 
-
         try:
             from importlib.util import find_spec
+
             if find_spec("whitemagic_rs") is not None:
                 logger.info("Rust bridge available")
         except (ImportError, ModuleNotFoundError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Auto-load Gana Forge extensions (12.108.17 — declarative śāstra)
         try:
             from whitemagic.tools.gana_forge import load_extensions
+
             ext_result = load_extensions()
             if ext_result.get("loaded", 0) > 0:
                 logger.info("Forge: loaded %d extension tool(s)", ext_result["loaded"])
         except (ImportError, ModuleNotFoundError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
-        # --- UNIFIED CACHE (v23 token reduction) ---
         try:
             from whitemagic.core.cache import get_unified_cache, is_rust_cache_available
+
             cache = get_unified_cache()
             rust_cache = is_rust_cache_available()
             stats = cache.stats()
@@ -313,34 +325,34 @@ def _schema_for_gana(name: str) -> dict:
 # ══════════════════════════════════════════════════════════════════════
 
 _GANA_ICONS: dict[str, str] = {
-    "gana_horn":             "\u89D2",  # 角
-    "gana_neck":             "\u4EA2",  # 亢
-    "gana_root":             "\u6C10",  # 氐
-    "gana_room":             "\u623F",  # 房
-    "gana_heart":            "\u5FC3",  # 心
-    "gana_tail":             "\u5C3E",  # 尾
-    "gana_winnowing_basket": "\u7B95",  # 箕
-    "gana_ghost":            "\u9B3C",  # 鬼
-    "gana_willow":           "\u67F3",  # 柳
-    "gana_star":             "\u661F",  # 星
-    "gana_extended_net":     "\u5F20",  # 张
-    "gana_wings":            "\u7FFC",  # 翼
-    "gana_chariot":          "\u8F78",  # 轸
-    "gana_abundance":        "\u8C50",  # 豐
-    "gana_straddling_legs":  "\u594E",  # 奎
-    "gana_mound":            "\u5A04",  # 娄
-    "gana_stomach":          "\u80C3",  # 胃
-    "gana_hairy_head":       "\u6634",  # 昴
-    "gana_net":              "\u6BD5",  # 毕
-    "gana_turtle_beak":      "\u89DC",  # 觜
-    "gana_three_stars":      "\u53C2",  # 参
-    "gana_dipper":           "\u6597",  # 斗
-    "gana_ox":               "\u725B",  # 牛
-    "gana_girl":             "\u5973",  # 女
-    "gana_void":             "\u865A",  # 虚
-    "gana_roof":             "\u5371",  # 危
-    "gana_encampment":       "\u5BA4",  # 室
-    "gana_wall":             "\u58C1",  # 壁
+    "gana_horn": "\u89d2",  # 角
+    "gana_neck": "\u4ea2",  # 亢
+    "gana_root": "\u6c10",  # 氐
+    "gana_room": "\u623f",  # 房
+    "gana_heart": "\u5fc3",  # 心
+    "gana_tail": "\u5c3e",  # 尾
+    "gana_winnowing_basket": "\u7b95",  # 箕
+    "gana_ghost": "\u9b3c",  # 鬼
+    "gana_willow": "\u67f3",  # 柳
+    "gana_star": "\u661f",  # 星
+    "gana_extended_net": "\u5f20",  # 张
+    "gana_wings": "\u7ffc",  # 翼
+    "gana_chariot": "\u8f78",  # 轸
+    "gana_abundance": "\u8c50",  # 豐
+    "gana_straddling_legs": "\u594e",  # 奎
+    "gana_mound": "\u5a04",  # 娄
+    "gana_stomach": "\u80c3",  # 胃
+    "gana_hairy_head": "\u6634",  # 昴
+    "gana_net": "\u6bd5",  # 毕
+    "gana_turtle_beak": "\u89dc",  # 觜
+    "gana_three_stars": "\u53c2",  # 参
+    "gana_dipper": "\u6597",  # 斗
+    "gana_ox": "\u725b",  # 牛
+    "gana_girl": "\u5973",  # 女
+    "gana_void": "\u865a",  # 虚
+    "gana_roof": "\u5371",  # 危
+    "gana_encampment": "\u5ba4",  # 室
+    "gana_wall": "\u58c1",  # 壁
 }
 
 
@@ -353,9 +365,10 @@ def _icon_for_gana(name: str) -> list[types.Icon] | None:  # type: ignore[name-d
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">'
         f'<circle cx="20" cy="20" r="18" fill="%23334155"/>'
         f'<text x="20" y="27" text-anchor="middle" font-size="20" fill="white">{char}</text>'
-        f'</svg>'
+        f"</svg>"
     )
     import urllib.parse
+
     data_uri = "data:image/svg+xml," + urllib.parse.quote(svg)
     return [types.Icon(src=data_uri, mimeType="image/svg+xml")]
 
@@ -365,11 +378,11 @@ def _icon_for_gana(name: str) -> list[types.Icon] | None:  # type: ignore[name-d
 # ══════════════════════════════════════════════════════════════════════
 
 _SLOW_GANAS: set[str] = {
-    "gana_abundance",       # dream cycle, lifecycle (2-7s)
-    "gana_three_stars",     # kaizen analysis (3-5s)
-    "gana_extended_net",    # pattern detection (1-2s)
-    "gana_chariot",         # archaeology, KG operations (1-3s)
-    "gana_ghost",           # graph topology rebuild (1s)
+    "gana_abundance",  # dream cycle, lifecycle (2-7s)
+    "gana_three_stars",  # kaizen analysis (3-5s)
+    "gana_extended_net",  # pattern detection (1-2s)
+    "gana_chariot",  # archaeology, KG operations (1-3s)
+    "gana_ghost",  # graph topology rebuild (1s)
 }
 
 
@@ -388,6 +401,7 @@ except FileNotFoundError:
 # ══════════════════════════════════════════════════════════════════════
 # Register handlers on the lazy server proxy
 # ══════════════════════════════════════════════════════════════════════
+
 
 def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
     """Build the 'wm' meta-tool definition — world in a seed."""
@@ -491,15 +505,24 @@ _result_cache: dict[str, Any] = {}
 _CACHE_MAX_SIZE = 64
 
 
-def _cache_key(gana: str, tool_name: str, tool_args: dict[str, Any], operation: str | None) -> str:
+def _cache_key(
+    gana: str, tool_name: str, tool_args: dict[str, Any], operation: str | None
+) -> str:
     """Deterministic cache key for a PRAT call."""
     import hashlib
     import json
-    payload = json.dumps({"g": gana, "t": tool_name, "a": tool_args, "o": operation}, sort_keys=True, default=str)
+
+    payload = json.dumps(
+        {"g": gana, "t": tool_name, "a": tool_args, "o": operation},
+        sort_keys=True,
+        default=str,
+    )
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
-def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], operation: str | None) -> dict[str, Any]:
+def _sync_dispatch(
+    gana: str, tool_name: str | None, tool_args: dict[str, Any], operation: str | None
+) -> dict[str, Any]:
     """Run the PRAT dispatch synchronously — called from a worker thread."""
     _ensure_init()
 
@@ -511,16 +534,18 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
     _original_tool_args = tool_args
     try:
         from whitemagic.tools.prat_compressor import get_prat_compressor
+
         comp = get_prat_compressor()
         if comp.level > 0:
-            dg, dt, da, do = comp.decompress_gana_call(gana, tool_name, tool_args, operation)
+            dg, dt, da, do = comp.decompress_gana_call(
+                gana, tool_name, tool_args, operation
+            )
             if dg != gana or dt != tool_name or da != tool_args or do != operation:
                 _compressed_in = True
                 gana, tool_name, tool_args, operation = dg, dt, da, do
     except (ImportError, AttributeError):
         pass  # Compression is optional; never block dispatch
 
-    # --- Input validation ---
     if not tool_name:
         return {
             "status": "error",
@@ -534,18 +559,22 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
             "error": f"Expected dict for 'args', got {type(tool_args).__name__}.",
         }
 
-    # --- Security: input sanitization (defense-in-depth) ---
     try:
         from whitemagic.tools.input_sanitizer import sanitize_tool_args
+
         sanitized = sanitize_tool_args(tool_name, tool_args)
         if sanitized is not None:
             # Input was blocked by sanitizer
-            logger.warning("Input sanitizer blocked %s/%s: %s", gana, tool_name, sanitized.get("error"))
+            logger.warning(
+                "Input sanitizer blocked %s/%s: %s",
+                gana,
+                tool_name,
+                sanitized.get("error"),
+            )
             return sanitized
     except Exception as exc:
         logger.debug("Input sanitizer error (non-blocking): %s", exc)
 
-    # --- Cache lookup (read-only Ganas only) ---
     _READ_ONLY_GANAS = {"gana_heart", "gana_star", "gana_ghost", "gana_willow"}
     use_cache = gana in _READ_ONLY_GANAS
     if use_cache:
@@ -557,6 +586,7 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
 
     try:
         from whitemagic.tools.prat_router import route_prat_call
+
         result = route_prat_call(
             gana,
             tool=tool_name,
@@ -573,12 +603,20 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
         if _compressed_in:
             try:
                 from whitemagic.tools.prat_compressor import get_prat_compressor
+
                 comp = get_prat_compressor()
-                _sample_payload = {"tool": _original_tool_name, "args": _original_tool_args}
+                _sample_payload = {
+                    "tool": _original_tool_name,
+                    "args": _original_tool_args,
+                }
                 _sample_comp = comp.compress(_sample_payload)
                 st = comp.stats(_sample_payload, _sample_comp)
                 if st["estimated_tokens_saved"] > 0:
-                    logger.debug("PRAT vectorized: saved ~%d tokens (ratio %.2fx)", st["estimated_tokens_saved"], st["ratio"])
+                    logger.debug(
+                        "PRAT vectorized: saved ~%d tokens (ratio %.2fx)",
+                        st["estimated_tokens_saved"],
+                        st["ratio"],
+                    )
             except (ImportError, AttributeError):
                 pass
         return result
@@ -599,7 +637,9 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:  # type: ignore[name-defined]
+async def call_tool(
+    name: str, arguments: dict[str, Any] | None
+) -> list[types.TextContent]:  # type: ignore[name-defined]
     """Dispatch a PRAT Gana call or 'wm' meta-tool call through the full WhiteMagic pipeline."""
     from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
@@ -609,6 +649,7 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.T
     if name == "wm":
         _ensure_init()
         from whitemagic.tools.handlers.meta_tool import handle_wm
+
         wm_kwargs: dict[str, Any] = {}
         if "thought" in args:
             wm_kwargs["thought"] = args["thought"]
@@ -681,12 +722,14 @@ async def list_resources() -> list[types.Resource]:  # type: ignore[name-defined
     ]
     # v14.1.1: Workflow templates
     for wf_name, wf_desc in _WORKFLOW_META.items():
-        resources.append(types.Resource(
-            uri=cast(Any, f"whitemagic://workflow/{wf_name}"),
-            name=f"Workflow: {wf_name.replace('_', ' ').title()}",
-            description=wf_desc,
-            mimeType="text/markdown",
-        ))
+        resources.append(
+            types.Resource(
+                uri=cast(Any, f"whitemagic://workflow/{wf_name}"),
+                name=f"Workflow: {wf_name.replace('_', ' ').title()}",
+                description=wf_desc,
+                mimeType="text/markdown",
+            )
+        )
     # v22.2: Grimoire chapters as dynamic resources
     _GRIMOIRE_CHAPTERS = [
         ("01", "Horn — Session Initiation"),
@@ -719,30 +762,38 @@ async def list_resources() -> list[types.Resource]:  # type: ignore[name-defined
         ("28", "Wall — Boundaries"),
     ]
     for num, title in _GRIMOIRE_CHAPTERS:
-        resources.append(types.Resource(
-            uri=cast(Any, f"whitemagic://grimoire/chapter/{num}"),
-            name=f"Grimoire Ch.{num}: {title}",
-            description=f"WhiteMagic Grimoire Chapter {num} with live system state.",
-            mimeType="text/markdown",
-        ))
+        resources.append(
+            types.Resource(
+                uri=cast(Any, f"whitemagic://grimoire/chapter/{num}"),
+                name=f"Grimoire Ch.{num}: {title}",
+                description=f"WhiteMagic Grimoire Chapter {num} with live system state.",
+                mimeType="text/markdown",
+            )
+        )
     # Quadrant summaries
-    for quad, qtitle in (("eastern", "Eastern — Spring/Wood"),
-                          ("southern", "Southern — Summer/Fire"),
-                          ("western", "Western — Autumn/Metal"),
-                          ("northern", "Northern — Winter/Water")):
-        resources.append(types.Resource(
-            uri=cast(Any, f"whitemagic://grimoire/quadrant/{quad}"),
-            name=f"Grimoire Quadrant: {qtitle}",
-            description=f"Summary of the {quad} quadrant with live resonance data.",
-            mimeType="text/markdown",
-        ))
+    for quad, qtitle in (
+        ("eastern", "Eastern — Spring/Wood"),
+        ("southern", "Southern — Summer/Fire"),
+        ("western", "Western — Autumn/Metal"),
+        ("northern", "Northern — Winter/Water"),
+    ):
+        resources.append(
+            types.Resource(
+                uri=cast(Any, f"whitemagic://grimoire/quadrant/{quad}"),
+                name=f"Grimoire Quadrant: {qtitle}",
+                description=f"Summary of the {quad} quadrant with live resonance data.",
+                mimeType="text/markdown",
+            )
+        )
     # Current most-resonant chapter
-    resources.append(types.Resource(
-        uri=cast(Any, "whitemagic://grimoire/current"),
-        name="Grimoire: Current Chapter",
-        description="The Grimoire chapter most resonant with current system state.",
-        mimeType="text/markdown",
-    ))
+    resources.append(
+        types.Resource(
+            uri=cast(Any, "whitemagic://grimoire/current"),
+            name="Grimoire: Current Chapter",
+            description="The Grimoire chapter most resonant with current system state.",
+            mimeType="text/markdown",
+        )
+    )
     return resources
 
 
@@ -752,6 +803,7 @@ async def read_resource(uri) -> str:
     uri_str = str(uri)
     if "health" in uri_str:
         import json
+
         status = {
             "status": "healthy",
             "version": _VERSION,
@@ -802,6 +854,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
     live_state = {"timestamp": datetime.now().isoformat()}
     try:
         from whitemagic.harmony.vector import get_harmony_vector
+
         hv = get_harmony_vector()
         snap = hv.snapshot()
         live_state["harmony_score"] = round(snap.harmony_score, 3)  # type: ignore[assignment]
@@ -816,6 +869,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
         from whitemagic.core.monitoring.neurotransmitter_vector import (
             get_neurotransmitter_vector,
         )
+
         nt = get_neurotransmitter_vector()
         nt_snap = nt.snapshot()
         live_state["neurotransmitters"] = {  # type: ignore[assignment]
@@ -827,6 +881,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
         logger.debug("Neurotransmitter snapshot failed: %s", e, exc_info=True)
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
         dc = get_dream_cycle()
         live_state["dream_phase"] = dc.status().get("phase", "unknown")
     except Exception as e:
@@ -881,29 +936,53 @@ def _read_grimoire_resource(uri_str: str) -> str:
     if "grimoire/quadrant/" in uri_str:
         quadrant = uri_str.split("quadrant/")[-1].strip("/")
         _QUADRANT_DATA = {
-            "eastern": {"chapters": "1-7", "element": "Wood", "season": "Spring", "theme": "Initiation, growth, foundation"},
-            "southern": {"chapters": "8-14", "element": "Fire/Water/Earth", "season": "Summer", "theme": "Expansion, radiance, creation"},
-            "western": {"chapters": "15-21", "element": "Metal/Earth/Fire", "season": "Autumn", "theme": "Refinement, judgment, precision"},
-            "northern": {"chapters": "22-28", "element": "Fire/Earth/Water", "season": "Winter", "theme": "Depth, integration, completion"},
+            "eastern": {
+                "chapters": "1-7",
+                "element": "Wood",
+                "season": "Spring",
+                "theme": "Initiation, growth, foundation",
+            },
+            "southern": {
+                "chapters": "8-14",
+                "element": "Fire/Water/Earth",
+                "season": "Summer",
+                "theme": "Expansion, radiance, creation",
+            },
+            "western": {
+                "chapters": "15-21",
+                "element": "Metal/Earth/Fire",
+                "season": "Autumn",
+                "theme": "Refinement, judgment, precision",
+            },
+            "northern": {
+                "chapters": "22-28",
+                "element": "Fire/Earth/Water",
+                "season": "Winter",
+                "theme": "Depth, integration, completion",
+            },
         }
         qdata = _QUADRANT_DATA.get(quadrant)
         if qdata:
-            return frontmatter + f"""# {quadrant.title()} Quadrant
+            return (
+                frontmatter
+                + f"""# {quadrant.title()} Quadrant
 
-**Chapters**: {qdata['chapters']}
-**Element**: {qdata['element']}
-**Season**: {qdata['season']}
-**Theme**: {qdata['theme']}
+**Chapters**: {qdata["chapters"]}
+**Element**: {qdata["element"]}
+**Season**: {qdata["season"]}
+**Theme**: {qdata["theme"]}
 
 ## Live Resonance
 {json.dumps(live_state, indent=2)}
 """
+            )
         return f"# Unknown quadrant: {quadrant}"
 
     if "grimoire/current" in uri_str:
         # Pick chapter based on dominant guna
         try:
             from whitemagic.harmony.vector import get_harmony_vector
+
             hv = get_harmony_vector()
             snap = hv.snapshot()
             if snap.guna_rajasic_pct > 0.5:
@@ -924,6 +1003,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
 # ══════════════════════════════════════════════════════════════════════
 # Entry points — stdio (default) or HTTP
 # ══════════════════════════════════════════════════════════════════════
+
 
 async def main_stdio() -> None:
     """Run as stdio MCP server (default, for IDE integration)."""
@@ -947,12 +1027,17 @@ async def main_stdio() -> None:
     # Bridge 3 (Microkernel Mandala): register hot-loadable subsystems
     try:
         from whitemagic.core.plugin.grimoire_plugin import register_grimoire_plugin
+
         register_grimoire_plugin()
     except (ImportError, ModuleNotFoundError):
         pass  # Plugin system is optional; never block MCP startup
 
-    read_stream_writer, read_stream = anyio.create_memory_object_stream[SessionMessage | Exception](0)
-    write_stream, write_stream_reader = anyio.create_memory_object_stream[SessionMessage](0)
+    read_stream_writer, read_stream = anyio.create_memory_object_stream[
+        SessionMessage | Exception
+    ](0)
+    write_stream, write_stream_reader = anyio.create_memory_object_stream[
+        SessionMessage
+    ](0)
 
     # Graceful shutdown mechanism
     shutdown_event = asyncio.Event()
@@ -960,7 +1045,9 @@ async def main_stdio() -> None:
     def signal_handler(signum, frame):
         """Handle SIGTERM/SIGINT for graceful shutdown."""
         sig_name = signal.Signals(signum).name
-        logger.warning("Received %s, initiating graceful shutdown...", sig_name, exc_info=True)
+        logger.warning(
+            "Received %s, initiating graceful shutdown...", sig_name, exc_info=True
+        )
         shutdown_event.set()
 
     # Register signal handlers
@@ -993,7 +1080,9 @@ async def main_stdio() -> None:
                 if shutdown_event.is_set():
                     break
                 try:
-                    payload = session_message.message.model_dump_json(by_alias=True, exclude_none=True)
+                    payload = session_message.message.model_dump_json(
+                        by_alias=True, exclude_none=True
+                    )
                     sys.stdout.write(payload + "\n")
                     sys.stdout.flush()
                 except Exception as exc:
@@ -1009,7 +1098,9 @@ async def main_stdio() -> None:
         try:
             await read_stream_writer.aclose()
         except Exception as e:
-            logger.debug("Shutdown: read_stream_writer.aclose() raised: %s", e, exc_info=True)
+            logger.debug(
+                "Shutdown: read_stream_writer.aclose() raised: %s", e, exc_info=True
+            )
         try:
             await write_stream.aclose()
         except Exception as e:
@@ -1017,7 +1108,11 @@ async def main_stdio() -> None:
         # Cancel the main server task to force exit
         current_task = asyncio.current_task()
         for task in asyncio.all_tasks():
-            if task != current_task and task not in (stdin_task, stdout_task, shutdown_task):
+            if task != current_task and task not in (
+                stdin_task,
+                stdout_task,
+                shutdown_task,
+            ):
                 task.cancel()
 
     stdin_task = asyncio.create_task(stdin_reader())
@@ -1026,7 +1121,9 @@ async def main_stdio() -> None:
 
     try:
         # Run server - it will exit when stdin closes or on error
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+        await server.run(
+            read_stream, write_stream, server.create_initialization_options()
+        )
     except asyncio.CancelledError:
         logger.info("Server task cancelled during shutdown")
     except Exception as exc:
@@ -1040,12 +1137,12 @@ async def main_stdio() -> None:
         shutdown_task.cancel()
         # Give tasks a moment to clean up
         await asyncio.gather(
-            stdin_task, stdout_task, shutdown_task,
-            return_exceptions=True
+            stdin_task, stdout_task, shutdown_task, return_exceptions=True
         )
         # Persist unified cache for cross-session cache hits
         try:
             from whitemagic.core.cache import get_unified_cache
+
             cache = get_unified_cache()
             count = cache.persist()
             logger.info("UnifiedCache persisted %d entries", count)
@@ -1100,7 +1197,9 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     from whitemagic.runtime_status import get_runtime_status
 
     runtime_status = get_runtime_status()
-    logger.warning("WhiteMagic MCP HTTP server starting on http://%s:%s/mcp", host, port)
+    logger.warning(
+        "WhiteMagic MCP HTTP server starting on http://%s:%s/mcp", host, port
+    )
     suffix = " [DEGRADED]" if runtime_status.get("degraded_mode") else ""
     print(f"\n  WhiteMagic MCP Server v{_VERSION}{suffix}", file=sys.stderr)
     print(f"  HTTP endpoint: http://{host}:{port}/mcp", file=sys.stderr)

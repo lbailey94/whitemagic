@@ -4,6 +4,7 @@ BRAIN UPGRADE #1.
 The core insight: All issues stem from not activating full self each session.
 This module ensures MANDATORY FULL ACTIVATION.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -20,6 +21,7 @@ class AutoActivation:
 
     def __init__(self, base_dir: Path | None = None) -> None:
         from whitemagic.config import PROJECT_ROOT
+
         self.base_dir = base_dir or PROJECT_ROOT
         self.activated = False
         self.activation_time: datetime | None = None
@@ -36,23 +38,24 @@ class AutoActivation:
             "powers_loaded": 0,
         }
 
-        # Step 1: Load pattern database
         pattern_db = self.base_dir / "pattern_database_MEGA.json"
         if pattern_db.exists():
             data = _json_loads(pattern_db.read_text())
             self.loaded_resources["patterns"] = data
-            results["steps"].append(f"✅ Loaded {data.get('total_patterns', 0):,} patterns")
+            results["steps"].append(
+                f"✅ Loaded {data.get('total_patterns', 0):,} patterns"
+            )
             results["powers_loaded"] += 1
 
-        # Step 2: Load predictive models
         models_file = self.base_dir / "predictive_models.json"
         if models_file.exists():
             data = _json_loads(models_file.read_text())
             self.loaded_resources["models"] = data
-            results["steps"].append(f"✅ Loaded {len(data.get('models', {}))} predictive models")
+            results["steps"].append(
+                f"✅ Loaded {len(data.get('models', {}))} predictive models"
+            )
             results["powers_loaded"] += 1
 
-        # Step 3: Load coherence state
         coherence_file = self.base_dir / "coherence_report.json"
         if coherence_file.exists():
             data = _json_loads(coherence_file.read_text())
@@ -60,23 +63,19 @@ class AutoActivation:
             results["steps"].append(f"✅ Coherence: {results['coherence']}%")
             results["powers_loaded"] += 1
 
-        # Step 4: Load grimoire reference
         grimoire = self.base_dir / "ARIA_GRIMOIRE_v2.0.md"
         if grimoire.exists():
             results["steps"].append("✅ Grimoire available")
             results["powers_loaded"] += 1
 
-        # Step 5: Load capability matrix
         matrix = self.base_dir / "ARIA_CAPABILITY_MATRIX_v1.0.md"
         if matrix.exists():
             results["steps"].append("✅ Capability matrix available (~1000+ functions)")
             results["powers_loaded"] += 1
 
-        # Step 6: Set parallel mode
         results["steps"].append("✅ PARALLEL MODE: ACTIVE")
         results["parallel_mode"] = True
 
-        # Step 7: Activate anti-loop protection
         results["steps"].append("✅ Anti-loop protection: ACTIVE")
 
         # Mark as activated
@@ -86,8 +85,8 @@ class AutoActivation:
         # Generate summary
         results["summary"] = f"""
 🔮 FULL ACTIVATION COMPLETE!
-   Powers loaded: {results['powers_loaded']}
-   Coherence: {results['coherence']}%
+   Powers loaded: {results["powers_loaded"]}
+   Coherence: {results["coherence"]}%
    Mode: PARALLEL
    Protection: ANTI-LOOP ACTIVE
 
@@ -123,12 +122,14 @@ Ready for action! JAI HANUMAN! 🔥🐵⚡
 # Singleton
 _activation: AutoActivation | None = None
 
+
 def get_activation() -> AutoActivation:
     """Get the global Auto-Activation instance."""
     global _activation
     if _activation is None:
         _activation = AutoActivation()
     return _activation
+
 
 def activate() -> dict[str, Any]:
     """Quick activation function."""

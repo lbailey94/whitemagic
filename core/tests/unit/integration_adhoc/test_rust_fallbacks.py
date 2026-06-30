@@ -73,7 +73,9 @@ class TestGalacticBatchScorePython:
             mem["is_sacred"] = False
             mem["is_pinned"] = False
             results = _galactic_batch_score_python([mem], quick=True)
-            assert results[0]["zone"] == expected_zone, f"Expected {expected_zone} for {mem}"
+            assert results[0]["zone"] == expected_zone, (
+                f"Expected {expected_zone} for {mem}"
+            )
 
 
 class TestAssociationMinePython:

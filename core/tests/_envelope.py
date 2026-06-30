@@ -8,10 +8,22 @@ import`).
 """
 
 ENVELOPE_KEYS = {
-    "status", "tool", "request_id", "idempotency_key", "message",
-    "error_code", "details", "retryable", "writes", "artifacts",
-    "metrics", "side_effects", "warnings", "timestamp",
-    "envelope_version", "tool_contract_version",
+    "status",
+    "tool",
+    "request_id",
+    "idempotency_key",
+    "message",
+    "error_code",
+    "details",
+    "retryable",
+    "writes",
+    "artifacts",
+    "metrics",
+    "side_effects",
+    "warnings",
+    "timestamp",
+    "envelope_version",
+    "tool_contract_version",
 }
 
 
@@ -23,6 +35,7 @@ def assert_envelope_shape(out: dict) -> None:
     JSON-serializable (a common subtle bug source).
     """
     import json
+
     missing = ENVELOPE_KEYS.difference(out.keys())
     assert not missing, f"missing envelope keys: {sorted(missing)}"
     assert isinstance(out["status"], str)

@@ -14,18 +14,19 @@ from enum import Enum
 class ConflictType(Enum):
     """Types of conflicts between cores."""
 
-    ELEMENTAL = "elemental"      # Fire vs Water, etc.
-    MODAL = "modal"              # Cardinal vs Fixed vs Mutable
-    PRIORITY = "priority"         # Which concern is most important
-    APPROACH = "approach"         # How to proceed
-    TIMING = "timing"            # When to act
+    ELEMENTAL = "elemental"  # Fire vs Water, etc.
+    MODAL = "modal"  # Cardinal vs Fixed vs Mutable
+    PRIORITY = "priority"  # Which concern is most important
+    APPROACH = "approach"  # How to proceed
+    TIMING = "timing"  # When to act
 
 
 class Conflict:
     """A disagreement between cores."""
 
-    def __init__(self, sign1: str, sign2: str, conflict_type: ConflictType,
-                 description: str):
+    def __init__(
+        self, sign1: str, sign2: str, conflict_type: ConflictType, description: str
+    ):
         self.sign1 = sign1
         self.sign2 = sign2
         self.conflict_type = conflict_type
@@ -57,8 +58,9 @@ class SynastryGovernor:
         """
         # Check for opposite recommendations
         if "recommendation" in core1_input and "recommendation" in core2_input:
-            if self._are_opposed(core1_input["recommendation"],
-                                core2_input["recommendation"]):
+            if self._are_opposed(
+                core1_input["recommendation"], core2_input["recommendation"]
+            ):
                 return Conflict(
                     core1_input.get("core", "Unknown"),
                     core2_input.get("core", "Unknown"),
@@ -78,8 +80,9 @@ class SynastryGovernor:
 
         return None
 
-    def resolve_through_harmony(self, conflict: Conflict,
-                               core1_input: dict, core2_input: dict) -> dict:
+    def resolve_through_harmony(
+        self, conflict: Conflict, core1_input: dict, core2_input: dict
+    ) -> dict:
         """Find harmonious resolution to conflict.
 
         Not compromise, but synthesis that honors both perspectives.
@@ -161,8 +164,9 @@ class SynastryGovernor:
         rec2_lower = rec2.lower()
 
         for word1, word2 in opposition_pairs:
-            if (word1 in rec1_lower and word2 in rec2_lower) or \
-               (word2 in rec1_lower and word1 in rec2_lower):
+            if (word1 in rec1_lower and word2 in rec2_lower) or (
+                word2 in rec1_lower and word1 in rec2_lower
+            ):
                 return True
 
         return False
@@ -191,8 +195,8 @@ class SynastryGovernor:
         return {
             "total_conflicts": len(self.conflict_history),
             "by_type": by_type,
-            "common_pairings": dict(sorted(sign_pairs.items(),
-                                          key=lambda x: x[1],
-                                          reverse=True)[:5]),
+            "common_pairings": dict(
+                sorted(sign_pairs.items(), key=lambda x: x[1], reverse=True)[:5]
+            ),
             "resolution_rate": 100.0,  # All conflicts get resolved
         }

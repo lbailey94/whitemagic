@@ -13,14 +13,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from whitemagic.wu_xing import (
-    Element,
-    GENERATIVE,
     DESTRUCTIVE,
     ELEMENT_MEANINGS,
+    GENERATIVE,
     ZODIAC_TO_WUXING,
+    Element,
     WuXingEngine,
-    get_wuxing_engine,
     assess_balance,
+    get_wuxing_engine,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WuXingBalance:
     """Balance state of the five elements."""
+
     wood: float = 0.5
     fire: float = 0.5
     earth: float = 0.5
@@ -102,9 +103,7 @@ class WuXingSystem:
 
     def summary(self) -> dict[str, Any]:
         return {
-            "balance": {
-                e.value: getattr(self.balance, e.value) for e in Element
-            },
+            "balance": {e.value: getattr(self.balance, e.value) for e in Element},
             "is_balanced": self.balance.is_balanced(),
             "dominant": self.balance.dominant().value,
         }

@@ -43,10 +43,6 @@ from whitemagic.core.memory.unified_types import Memory, MemoryState, MemoryType
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Retention Signals
-# ---------------------------------------------------------------------------
-
 @dataclass
 class RetentionSignal:
     """One subsystem's vote on whether a memory should be retained."""
@@ -87,10 +83,6 @@ class RetentionVerdict:
             ],
         }
 
-
-# ---------------------------------------------------------------------------
-# Individual Signal Evaluators
-# ---------------------------------------------------------------------------
 
 def _semantic_signal(mem: Memory) -> RetentionSignal:
     """How important is this memory's content to the system's knowledge?"""
@@ -178,10 +170,6 @@ DEFAULT_EVALUATORS = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Retention Engine
-# ---------------------------------------------------------------------------
-
 @dataclass
 class SweepReport:
     """Results from a retention sweep."""
@@ -234,10 +222,6 @@ class RetentionEngine:
         self._total_evaluations: int = 0
         self._total_sweeps: int = 0
 
-    # ------------------------------------------------------------------
-    # Core evaluation
-    # ------------------------------------------------------------------
-
     def evaluate(self, mem: Memory) -> RetentionVerdict:
         """Evaluate a single memory for retention."""
         signals: list[RetentionSignal] = []
@@ -280,10 +264,6 @@ class RetentionEngine:
             state_before=mem.state,
             recommended_action=action,
         )
-
-    # ------------------------------------------------------------------
-    # Batch sweep
-    # ------------------------------------------------------------------
 
     def sweep(self, memories: list[Memory] | None = None, persist: bool = False) -> SweepReport:
         """Evaluate all provided memories (or fetch from UnifiedMemory).
@@ -350,10 +330,6 @@ class RetentionEngine:
          self._total_sweeps, report.total_evaluated, report.retained, report.decayed, report.archived, report.protected)
         return report
 
-    # ------------------------------------------------------------------
-    # Configuration
-    # ------------------------------------------------------------------
-
     def add_evaluator(self, evaluator: Callable) -> None:
         """Add a custom retention signal evaluator."""
         self._evaluators.append(evaluator)
@@ -387,10 +363,6 @@ class RetentionEngine:
             "evaluator_count": len(self._evaluators),
             **self._neuro_score_stats(),
         }
-
-    # ------------------------------------------------------------------
-    # Neuro Score management (fused from NeuroScoreEngine)
-    # ------------------------------------------------------------------
 
     def _neuro_score_stats(self) -> dict[str, Any]:
         """Get neuro_score-specific stats."""
@@ -494,10 +466,6 @@ class RetentionEngine:
             "archive_candidates": len([m for m in memories if m.should_archive()]),
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine_instance: RetentionEngine | None = None
 _engine_lock = threading.Lock()

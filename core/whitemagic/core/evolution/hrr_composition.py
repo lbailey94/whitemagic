@@ -9,6 +9,7 @@ Operations:
 - superposition(A, B, C): Represents doing all three — test for superlinear synergy
 - probe(composite, outcome_db): Tests if composite predicts outcomes better
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CompositeHypothesis:
     """A composite hypothesis created by HRR binding/superposition."""
+
     id: str
     component_ids: list[str]
     operation: str  # "bind" or "superposition"
@@ -51,13 +53,16 @@ class HRRCompositionEngine:
         if self._hrr is None:
             try:
                 from whitemagic.core.memory.hrr import get_hrr_engine
+
                 self._hrr = get_hrr_engine(dim=self._dim)
             except (ImportError, Exception) as e:
                 logger.debug("HRR engine unavailable: %s", e)
                 self._hrr = False
         return self._hrr if self._hrr is not False else None
 
-    def encode_hypothesis(self, hypothesis_id: str, description: str, impact: float = 0.5) -> np.ndarray | None:
+    def encode_hypothesis(
+        self, hypothesis_id: str, description: str, impact: float = 0.5
+    ) -> np.ndarray | None:
         """Encode a hypothesis as an HRR vector.
 
         Uses a deterministic hash-based vector generation from the description.
@@ -71,7 +76,9 @@ class HRRCompositionEngine:
             HRR vector, or None if HRR unavailable.
         """
         # Try Rust bridge first (fast hash-based encoding)
-        result = _rust_call("hrr_encode", description=description, dim=self._dim, impact=impact)
+        result = _rust_call(
+            "hrr_encode", description=description, dim=self._dim, impact=impact
+        )
         if result is not None and "vector" in result:
             vec = np.array(result["vector"], dtype=np.float32)
             self._vectors[hypothesis_id] = vec
@@ -110,8 +117,7 @@ class HRRCompositionEngine:
         composite_id = f"bind_{id_a}_{id_b}"
 
         # Try Rust bridge for the FFT-based circular convolution
-        result = _rust_call("hrr_bind",
-            a=vec_a.tolist(), b=vec_b.tolist())
+        result = _rust_call("hrr_bind", a=vec_a.tolist(), b=vec_b.tolist())
         if result is not None and "vector" in result:
             bound = np.array(result["vector"], dtype=np.float32)
             composite = CompositeHypothesis(
@@ -159,9 +165,11 @@ class HRRCompositionEngine:
             return None
 
         # Try Rust bridge
-        result = _rust_call("hrr_unbind",
+        result = _rust_call(
+            "hrr_unbind",
             composite=composite.vector.tolist(),
-            component=component_vec.tolist())
+            component=component_vec.tolist(),
+        )
         if result is not None and "vector" in result:
             return np.array(result["vector"], dtype=np.float32)
 
@@ -194,8 +202,7 @@ class HRRCompositionEngine:
         composite_id = f"super_{'_'.join(ids)}"
 
         # Try Rust bridge
-        result = _rust_call("hrr_superposition",
-            vectors=[v.tolist() for v in vecs])
+        result = _rust_call("hrr_superposition", vectors=[v.tolist() for v in vecs])
         if result is not None and "vector" in result:
             result_vec = np.array(result["vector"], dtype=np.float32)
             composite = CompositeHypothesis(
@@ -247,9 +254,11 @@ class HRRCompositionEngine:
 
         if composite.vector is not None:
             # Try Rust bridge for magnitude computation
-            result = _rust_call("hrr_synergy",
+            result = _rust_call(
+                "hrr_synergy",
                 composite=composite.vector.tolist(),
-                impacts=individual_impacts)
+                impacts=individual_impacts,
+            )
             if result is not None and "synergy" in result:
                 synergy = result["synergy"]
                 composite.synergy_score = synergy
@@ -299,7 +308,9 @@ class HRRCompositionEngine:
                 comp_successes = sum(1 for o in comp_outcomes if o.get("success"))
                 component_rates.append(comp_successes / len(comp_outcomes))
 
-        avg_component_rate = sum(component_rates) / len(component_rates) if component_rates else 0.0
+        avg_component_rate = (
+            sum(component_rates) / len(component_rates) if component_rates else 0.0
+        )
 
         return {
             "composite_success_rate": success_rate,

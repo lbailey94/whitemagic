@@ -19,6 +19,7 @@ Usage:
         zig_graph_bridge_status
     )
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -117,10 +118,6 @@ def _to_f32_ptr(vec: list[float] | np.ndarray) -> tuple[Any, int, np.ndarray]:
     return ptr, len(arr), arr  # return arr to keep it alive
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
 def zig_simd_cosine(
     a: list[float] | np.ndarray,
     b: list[float] | np.ndarray,
@@ -163,7 +160,9 @@ def zig_dot_product(
             return float(_lib.wm_simd_dot_f32(pa, pb, ctypes.c_size_t(la)))
         except Exception as e:
             logger.debug("zig_dot_product failed: %s", e)
-    return float(np.dot(np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32)))
+    return float(
+        np.dot(np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32))
+    )
 
 
 def zig_tokenize_count(text: str) -> int:
@@ -221,8 +220,13 @@ def zig_graph_bridge_status() -> dict[str, Any]:
         "available": _HAS_ZIG_GRAPH,
         "has_zig_graph": _HAS_ZIG_GRAPH,
         "lib_path": _LIB_PATH or "not found",
-        "functions": ["wm_simd_cosine_f32", "wm_simd_dot_f32",
-                      "wm_tokenize_count", "wm_cosine_similarity"]
-        if _HAS_ZIG_GRAPH else [],
+        "functions": [
+            "wm_simd_cosine_f32",
+            "wm_simd_dot_f32",
+            "wm_tokenize_count",
+            "wm_cosine_similarity",
+        ]
+        if _HAS_ZIG_GRAPH
+        else [],
         "backend": "zig_simd_graph" if _HAS_ZIG_GRAPH else "numpy_fallback",
     }

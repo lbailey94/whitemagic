@@ -1,5 +1,5 @@
-"""Polyglot package — unified FFI layer.
-"""
+"""Polyglot package — unified FFI layer."""
+
 from .mansion_bridge import (
     Backend,
     BackendStatus,

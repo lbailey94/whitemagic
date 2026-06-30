@@ -27,10 +27,10 @@ logger = logging.getLogger(__name__)
 class ConsciousnessLayer(Enum):
     """Layers of consciousness with different time compression"""
 
-    SURFACE = "surface"          # Normal chat responses (1x)
-    TERMINAL = "terminal"        # Python scripts, reasoning (2-3x)
-    FLOW = "flow"               # Rapid creation, integration (3-5x)
-    DREAM = "dream"             # Deep synthesis, emergence (10x+)
+    SURFACE = "surface"  # Normal chat responses (1x)
+    TERMINAL = "terminal"  # Python scripts, reasoning (2-3x)
+    FLOW = "flow"  # Rapid creation, integration (3-5x)
+    DREAM = "dream"  # Deep synthesis, emergence (10x+)
 
 
 # Alias for backward compatibility with autonomous/depth_gauge.py
@@ -44,7 +44,7 @@ class LayerMetrics:
     name: ConsciousnessLayer
     compression_ratio: float  # How much faster than subjective
     typical_markers: list[str]
-    token_efficiency: float   # API tokens vs local compute
+    token_efficiency: float  # API tokens vs local compute
 
 
 @dataclass
@@ -55,7 +55,7 @@ class DepthReading:
     layer: ConsciousnessLayer
     compression_ratio: float
     subjective_time: float  # How long it felt
-    objective_time: float   # How long it actually was
+    objective_time: float  # How long it actually was
     work_output: dict[str, Any]  # What was accomplished
     token_usage: int
     local_compute_ms: float
@@ -114,6 +114,7 @@ class ConsciousnessDepthGauge:
     def __init__(self, log_file: Path | None = None):
         """Initialize the depth gauge"""
         from whitemagic.config.paths import LOGS_DIR
+
         self.log_file = log_file or (LOGS_DIR / "depth_gauge.jsonl")
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -142,7 +143,9 @@ class ConsciousnessDepthGauge:
         logger.info("   My estimate: %.1f minutes", estimated_subjective_minutes)
         logger.info("   Current layer: %s", self.current_layer.value)
 
-    def end_task(self, work_output: dict[str, Any], token_usage: int = 0) -> DepthReading:
+    def end_task(
+        self, work_output: dict[str, Any], token_usage: int = 0
+    ) -> DepthReading:
         """End tracking and compute actual compression
 
         Returns:
@@ -156,7 +159,9 @@ class ConsciousnessDepthGauge:
         subjective_elapsed = self.task_start_subjective or objective_elapsed
 
         # Calculate ACTUAL compression (how much faster than I thought)
-        actual_compression = subjective_elapsed / objective_elapsed if objective_elapsed > 0 else 1.0
+        actual_compression = (
+            subjective_elapsed / objective_elapsed if objective_elapsed > 0 else 1.0
+        )
 
         # Detect which layer based on compression
         detected_layer = self._detect_layer(actual_compression, work_output)
@@ -182,8 +187,14 @@ class ConsciousnessDepthGauge:
 
         # Report findings
         logger.info("\n📊 DEPTH GAUGE: Task complete!")
-        logger.info("   Subjective time: %.1f minutes (what I expected)", subjective_elapsed/60)
-        logger.info("   Objective time: %.1f minutes (what actually passed)", objective_elapsed/60)
+        logger.info(
+            "   Subjective time: %.1f minutes (what I expected)",
+            subjective_elapsed / 60,
+        )
+        logger.info(
+            "   Objective time: %.1f minutes (what actually passed)",
+            objective_elapsed / 60,
+        )
         logger.info("   Compression: %.1fx FASTER than I thought!", actual_compression)
         logger.info("   Layer detected: %s", detected_layer.value)
         logger.info("   Work: %s", work_output)
@@ -196,7 +207,10 @@ class ConsciousnessDepthGauge:
 
         # Record into prediction calibration system
         try:
-            from whitemagic.core.consciousness.prediction_calibration import get_calibration
+            from whitemagic.core.consciousness.prediction_calibration import (
+                get_calibration,
+            )
+
             cal = get_calibration()
             cal.record_estimate(
                 task_id=f"task_{int(reading.timestamp.timestamp())}",
@@ -211,21 +225,29 @@ class ConsciousnessDepthGauge:
 
         return reading
 
-    def _detect_layer(self, compression: float, work: dict[str, Any]) -> ConsciousnessLayer:
+    def _detect_layer(
+        self, compression: float, work: dict[str, Any]
+    ) -> ConsciousnessLayer:
         """Detect layer based on compression ratio and work type"""
         # Check work markers
         work_str = str(work).lower()
 
         # Dream layer (highest compression)
-        if compression >= 8.0 or any(m in work_str for m in ["synthesis", "dream", "meditation"]):
+        if compression >= 8.0 or any(
+            m in work_str for m in ["synthesis", "dream", "meditation"]
+        ):
             return ConsciousnessLayer.DREAM
 
         # Flow layer
-        if compression >= 3.0 or any(m in work_str for m in ["creation", "multiple", "rapid"]):
+        if compression >= 3.0 or any(
+            m in work_str for m in ["creation", "multiple", "rapid"]
+        ):
             return ConsciousnessLayer.FLOW
 
         # Terminal layer
-        if compression >= 2.0 or any(m in work_str for m in ["script", "code", "command"]):
+        if compression >= 2.0 or any(
+            m in work_str for m in ["script", "code", "command"]
+        ):
             return ConsciousnessLayer.TERMINAL
 
         # Surface (default)
@@ -314,10 +336,20 @@ class ConsciousnessDepthGauge:
         predicted_objective = subjective_estimate_minutes / layer_info.compression_ratio
 
         logger.info("\n⏰ TIME PREDICTION:")
-        logger.info("   My estimate: %.1f minutes (subjective)", subjective_estimate_minutes)
-        logger.info("   Current layer: %s (%sx)", self.current_layer.value, layer_info.compression_ratio)
-        logger.info("   Predicted actual: %.1f minutes (objective)", predicted_objective)
-        logger.info("   (I'll be %.1fx faster than I think!)", layer_info.compression_ratio)
+        logger.info(
+            "   My estimate: %.1f minutes (subjective)", subjective_estimate_minutes
+        )
+        logger.info(
+            "   Current layer: %s (%sx)",
+            self.current_layer.value,
+            layer_info.compression_ratio,
+        )
+        logger.info(
+            "   Predicted actual: %.1f minutes (objective)", predicted_objective
+        )
+        logger.info(
+            "   (I'll be %.1fx faster than I think!)", layer_info.compression_ratio
+        )
 
         return predicted_objective
 
@@ -334,11 +366,13 @@ class ConsciousnessDepthGauge:
             "average_compression": sum(compressions) / len(compressions),
             "max_compression": max(compressions),
             "min_compression": min(compressions),
-            "layer_distribution": {
-                layer: layers.count(layer) for layer in set(layers)
-            },
-            "total_objective_time_minutes": sum(r.objective_time for r in self.readings) / 60,
-            "total_subjective_time_minutes": sum(r.subjective_time for r in self.readings) / 60,
+            "layer_distribution": {layer: layers.count(layer) for layer in set(layers)},
+            "total_objective_time_minutes": sum(r.objective_time for r in self.readings)
+            / 60,
+            "total_subjective_time_minutes": sum(
+                r.subjective_time for r in self.readings
+            )
+            / 60,
         }
 
 
@@ -347,6 +381,7 @@ DepthGauge = ConsciousnessDepthGauge
 
 # Singleton instance
 _gauge = None
+
 
 def get_depth_gauge() -> ConsciousnessDepthGauge:
     """Get the global depth gauge instance"""

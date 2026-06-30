@@ -71,7 +71,9 @@ class TestVSAIntegration(unittest.TestCase):
         self.assertGreater(len(ctx), 0)
 
     @patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor")
-    def test_vsa_preserves_relevant_content(self, mock_get_compressor: MagicMock) -> None:
+    def test_vsa_preserves_relevant_content(
+        self, mock_get_compressor: MagicMock
+    ) -> None:
         """VSA summary should preserve content relevant to the query."""
         from whitemagic.ai.vsa_context_compressor import VSACompressedContext
 
@@ -104,7 +106,9 @@ class TestVSAIntegration(unittest.TestCase):
         context = "Paragraph one about topic A.\n\n" * 20
         context += "Paragraph two about topic B.\n\n" * 20
 
-        with patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor") as mock_get:
+        with patch(
+            "whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor"
+        ) as mock_get:
             from whitemagic.ai.vsa_context_compressor import VSACompressedContext
 
             mock_compressor = MagicMock()
@@ -125,7 +129,9 @@ class TestVSAIntegration(unittest.TestCase):
             # Check that compress was called with multiple items
             call_args = mock_compressor.compress.call_args
             items = call_args[0][0]  # First positional arg
-            self.assertGreater(len(items), 1, "Should split context into multiple chunks")
+            self.assertGreater(
+                len(items), 1, "Should split context into multiple chunks"
+            )
 
     def test_cache_still_works_with_vsa(self) -> None:
         """Cache should still work when VSA compression is used."""

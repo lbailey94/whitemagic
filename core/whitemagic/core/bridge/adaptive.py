@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Adaptive bridge — Cascade pattern execution."""
+
 import asyncio
 import logging
 from typing import Any
@@ -30,7 +31,7 @@ def execute_cascade(pattern: str, tools: list[str], **kwargs: Any) -> dict[str, 
         "status": "success",
         "pattern": pattern,
         "tools_executed": len(tools),
-        "results": results
+        "results": results,
     }
 
 
@@ -65,8 +66,14 @@ def prat_get_context(as_json: bool = True, **kwargs: Any) -> dict[str, Any]:
         return {"error": str(e)}
 
 
-def prat_invoke(target_tool: str | None = None, query: str | None = None, params: dict[str, Any] | None = None,
-                force_morphology: str | None = None, limit: int = 10, **kwargs: Any) -> dict[str, Any]:
+def prat_invoke(
+    target_tool: str | None = None,
+    query: str | None = None,
+    params: dict[str, Any] | None = None,
+    force_morphology: str | None = None,
+    limit: int = 10,
+    **kwargs: Any,
+) -> dict[str, Any]:
     """Invoke a tool through the PRAT adaptive portal with context-aware morphology."""
     # Handle missing target_tool from kwargs/args
     if not target_tool:
@@ -101,6 +108,7 @@ def prat_invoke(target_tool: str | None = None, query: str | None = None, params
     except Exception as e:
         import os
         import traceback
+
         resp = {"error": str(e)}
         if os.getenv("WM_DEBUG"):
             resp["trace"] = traceback.format_exc()
@@ -171,7 +179,11 @@ def prat_status(target_tool: str | None = None, **kwargs: Any) -> dict[str, Any]
         return {"error": str(e), "status": "error"}
 
 
-def adapt_response(context: dict[str, Any] | None = None, operation: str = "adapt_to_context", **kwargs: Any) -> dict[str, Any]:
+def adapt_response(
+    context: dict[str, Any] | None = None,
+    operation: str = "adapt_to_context",
+    **kwargs: Any,
+) -> dict[str, Any]:
     """Compatibility shim for the bridge router's response adaptation hook."""
     return {
         "adapted": True,

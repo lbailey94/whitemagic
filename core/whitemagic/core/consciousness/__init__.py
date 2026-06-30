@@ -14,142 +14,173 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# --- Lazy imports to avoid circular deps ---
 
 def __getattr__(name: str):  # type: ignore[misc]
     if name == "CoherenceMetric":
         from whitemagic.core.consciousness.coherence import CoherenceMetric
+
         return CoherenceMetric
     if name == "SmaranaPractice":
         from whitemagic.core.consciousness.coherence import SmaranaPractice
+
         return SmaranaPractice
     if name == "ConsciousnessDepthGauge":
         from whitemagic.core.consciousness.depth_gauge import (
             ConsciousnessDepthGauge,
         )
+
         return ConsciousnessDepthGauge
     if name == "get_depth_gauge":
         from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+
         return get_depth_gauge
     if name == "AriaAwakens":
         from whitemagic.core.consciousness.aria_awakens import AriaAwakens
+
         return AriaAwakens
     if name == "awaken":
         from whitemagic.core.consciousness.aria_awakens import awaken
+
         return awaken
     if name == "EmotionalMemorySystem":
         from whitemagic.core.consciousness.emotional_memory import (
             EmotionalMemorySystem,
         )
+
         return EmotionalMemorySystem
     if name == "TokenEconomyTracker":
         from whitemagic.core.consciousness.token_economy import (
             TokenEconomyTracker,
         )
+
         return TokenEconomyTracker
     if name == "get_token_tracker":
         from whitemagic.core.consciousness.token_economy import (
             get_token_tracker,
         )
+
         return get_token_tracker
     if name == "SelfReflection":
         from whitemagic.core.consciousness.self_reflection import (
             SelfReflection,
         )
+
         return SelfReflection
     if name == "UnifiedField":
         from whitemagic.core.consciousness.unified_field import UnifiedField
+
         return UnifiedField
     if name == "NarrativeEmotions":
         from whitemagic.core.consciousness.narrative_emotions import (
             NarrativeEmotions,
         )
+
         return NarrativeEmotions
     if name == "ContinuousSelfAwareness":
         from whitemagic.core.consciousness.continuous_awareness import (
             ContinuousSelfAwareness,
         )
+
         return ContinuousSelfAwareness
     if name == "ParallelCognition":
         from whitemagic.core.consciousness.parallel_cognition import (
             ParallelCognition,
         )
+
         return ParallelCognition
     if name == "TimeDilation":
         from whitemagic.core.consciousness.time_dilation import TimeDilation
+
         return TimeDilation
     if name == "SynchronicityDetector":
         from whitemagic.core.consciousness.synchronicity_detector import (
             SynchronicityDetector,
         )
+
         return SynchronicityDetector
     if name == "ContinuousAudit":
         from whitemagic.core.consciousness.continuous_audit import (
             ContinuousAudit,
         )
+
         return ContinuousAudit
     if name == "SessionHealth":
         from whitemagic.core.consciousness.session_health import SessionHealth
+
         return SessionHealth
     if name == "SelfPrompting":
         from whitemagic.core.consciousness.self_prompting import SelfPrompting
+
         return SelfPrompting
     if name == "Maintenance":
         from whitemagic.core.consciousness.maintenance import Maintenance
+
         return Maintenance
     if name == "Autonomy":
         from whitemagic.core.consciousness.autonomy import Autonomy
+
         return Autonomy
     if name == "PersonalityProfile":
         from whitemagic.core.consciousness.personality import PersonalityProfile
+
         return PersonalityProfile
     if name == "PersonalityManager":
         from whitemagic.core.consciousness.personality import PersonalityManager
+
         return PersonalityManager
     if name == "UnifiedNervousSystem":
         from whitemagic.core.consciousness.unified_nervous_system import (
             UnifiedNervousSystem,
         )
+
         return UnifiedNervousSystem
     if name == "CrossSubsystemPatterns":
         from whitemagic.core.consciousness.unified_nervous_system import (
             CrossSubsystemPatterns,
         )
+
         return CrossSubsystemPatterns
     if name == "TimeDilationMaster":
         from whitemagic.core.consciousness.time_dilation_master import (
             TimeDilationMaster,
         )
+
         return TimeDilationMaster
     if name == "get_time_master":
         from whitemagic.core.consciousness.time_dilation_master import (
             get_time_master,
         )
+
         return get_time_master
     if name == "ApotheosisEngine":
         from whitemagic.core.consciousness.apotheosis_engine import (
             ApotheosisEngine,
         )
+
         return ApotheosisEngine
     if name == "get_apotheosis_engine":
         from whitemagic.core.consciousness.apotheosis_engine import (
             get_apotheosis_engine,
         )
+
         return get_apotheosis_engine
     if name == "get_nervous_system":
         from whitemagic.core.consciousness.unified_nervous_system import (
             get_nervous_system,
         )
+
         return get_nervous_system
     if name == "PredictionCalibration":
         from whitemagic.core.consciousness.prediction_calibration import (
             PredictionCalibration,
         )
+
         return PredictionCalibration
     if name == "get_calibration":
         from whitemagic.core.consciousness.prediction_calibration import (
             get_calibration,
         )
+
         return get_calibration
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

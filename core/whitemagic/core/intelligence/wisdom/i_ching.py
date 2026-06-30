@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """I Ching Advisor - Hexagram guidance for decisions."""
+
 from __future__ import annotations
 
 import json
@@ -46,11 +47,13 @@ class IChingAdvisor:
         """Connect to Gan Ying Bus."""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()
             logger.info("🎵 I Ching Advisor connected to Gan Ying Bus")
         except ImportError:
-            logger.debug("Gan Ying bus not available; I Ching will run in standalone mode")
-
+            logger.debug(
+                "Gan Ying bus not available; I Ching will run in standalone mode"
+            )
 
     def _init_hexagrams(self) -> None:
         """Initialize hexagram database - ALL 64 HEXAGRAMS!
@@ -70,9 +73,14 @@ class IChingAdvisor:
         # Load all 64 complete hexagrams
         self.hexagrams = {}
         for num, name, chinese, judgment, image, lines, guidance in COMPLETE_HEXAGRAMS:
-            self.hexagrams[num] = Hexagram(num, name, chinese, judgment, image, lines, guidance)
+            self.hexagrams[num] = Hexagram(
+                num, name, chinese, judgment, image, lines, guidance
+            )
 
-        logger.info("📿 I Ching initialized with %s hexagrams (complete 64-set!)", len(self.hexagrams))
+        logger.info(
+            "📿 I Ching initialized with %s hexagrams (complete 64-set!)",
+            len(self.hexagrams),
+        )
 
     def cast_hexagram(self, question: str) -> Hexagram:
         """Cast hexagram for a question.
@@ -88,17 +96,21 @@ class IChingAdvisor:
         hexagram_number = 0
         try:
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "iching_cast"):
                 result = whitemagic_rs.iching_cast(question)
                 if isinstance(result, tuple) and len(result) == 2:
                     hexagram_number, lines = result
-                    logger.info("🦀 Rust I Ching calculated hexagram %s from query hash", hexagram_number, exc_info=True)
+                    logger.info(
+                        "🦀 Rust I Ching calculated hexagram %s from query hash",
+                        hexagram_number,
+                        exc_info=True,
+                    )
                 else:
                     raise ValueError("Invalid Rust I Ching result")
         except ImportError:
             logger.debug("Rust I Ching not available; using Python fallback")
         except (ImportError, ModuleNotFoundError):
-
             hexagram_number = 0
 
         if hexagram_number == 0:
@@ -114,7 +126,13 @@ class IChingAdvisor:
         logger.info("\n☯️  I CHING READING")
         logger.info("═══════════════════════════════════════")
         logger.info("Question: %s", question, exc_info=True)
-        logger.info("Hexagram %s: %s (%s)", hexagram.number, hexagram.name, hexagram.chinese, exc_info=True)
+        logger.info(
+            "Hexagram %s: %s (%s)",
+            hexagram.number,
+            hexagram.name,
+            hexagram.chinese,
+            exc_info=True,
+        )
         logger.info("Lines: %s", hexagram.lines, exc_info=True)
         logger.info("\nJudgment: %s", hexagram.judgment, exc_info=True)
         logger.info("Image: %s", hexagram.image, exc_info=True)
@@ -184,22 +202,25 @@ class IChingAdvisor:
             from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
 
             # Emit ORACLE_CAST so dream/voice systems can react
-            self.bus.emit(ResonanceEvent(
-                source="i_ching_advisor",
-                event_type=EventType.ORACLE_CAST,
-                data={
-                    "hexagram_number": hexagram.number,
-                    "hexagram_name": hexagram.name,
-                    "chinese": hexagram.chinese,
-                    "question": question,
-                    "judgment": hexagram.judgment,
-                    "image": hexagram.image,
-                    "guidance": hexagram.guidance,
-                    "lines": hexagram.lines,
-                },
-                timestamp=datetime.now(),
-                confidence=0.9,
-            ), async_dispatch=True)
+            self.bus.emit(
+                ResonanceEvent(
+                    source="i_ching_advisor",
+                    event_type=EventType.ORACLE_CAST,
+                    data={
+                        "hexagram_number": hexagram.number,
+                        "hexagram_name": hexagram.name,
+                        "chinese": hexagram.chinese,
+                        "question": question,
+                        "judgment": hexagram.judgment,
+                        "image": hexagram.image,
+                        "guidance": hexagram.guidance,
+                        "lines": hexagram.lines,
+                    },
+                    timestamp=datetime.now(),
+                    confidence=0.9,
+                ),
+                async_dispatch=True,
+            )
         except Exception as e:
             logger.info("⚠️ Could not emit oracle event: %s", e, exc_info=True)
 

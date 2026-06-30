@@ -13,13 +13,19 @@ class TestEnhancedGanYingBus:
     """Test enhanced GanYing bus."""
 
     def test_init(self):
-        from whitemagic.core.resonance.gan_ying_enhanced_recovered import EnhancedGanYingBus
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import (
+            EnhancedGanYingBus,
+        )
+
         bus = EnhancedGanYingBus()
         assert bus.event_count == 0
         assert bus.listener_count() == 0
 
     def test_emit_and_listen(self):
-        from whitemagic.core.resonance.gan_ying_enhanced_recovered import EnhancedGanYingBus
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import (
+            EnhancedGanYingBus,
+        )
+
         bus = EnhancedGanYingBus()
         received = []
         bus.on("test_event", lambda e: received.append(e))
@@ -34,19 +40,25 @@ class TestEnhancedGanYingBus:
             EnhancedGanYingBus,
             ExtendedEventType,
         )
+
         bus = EnhancedGanYingBus()
         received = []
         bus.on(ExtendedEventType.JOY_TRIGGERED.value, lambda e: received.append(e))
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.BEAUTY_DETECTED,
-            target_events=[ExtendedEventType.JOY_TRIGGERED],
-            strength=0.8,
-        ))
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.BEAUTY_DETECTED,
+                target_events=[ExtendedEventType.JOY_TRIGGERED],
+                strength=0.8,
+            )
+        )
         bus.emit(source="test", event_type=ExtendedEventType.BEAUTY_DETECTED.value)
         assert len(received) == 1
 
     def test_recent_events(self):
-        from whitemagic.core.resonance.gan_ying_enhanced_recovered import EnhancedGanYingBus
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import (
+            EnhancedGanYingBus,
+        )
+
         bus = EnhancedGanYingBus()
         bus.emit(source="test", event_type="e1")
         bus.emit(source="test", event_type="e2")
@@ -58,8 +70,13 @@ class TestCascadeProtocols:
     """Test cascade protocols."""
 
     def test_init_all(self):
-        from whitemagic.core.resonance.cascade_protocols_recovered import init_all_cascades
-        from whitemagic.core.resonance.gan_ying_enhanced_recovered import get_enhanced_bus
+        from whitemagic.core.resonance.cascade_protocols_recovered import (
+            init_all_cascades,
+        )
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import (
+            get_enhanced_bus,
+        )
+
         init_all_cascades()
         bus = get_enhanced_bus()
         assert len(bus._cascades) > 0
@@ -70,6 +87,7 @@ class TestPatternDreamBridge:
 
     def test_queue_and_process(self, tmp_path):
         from whitemagic.synergies.pattern_dream_bridge import PatternDreamBridge
+
         bridge = PatternDreamBridge(data_dir=tmp_path)
         bridge.queue_pattern({"type": "test", "pattern": "p1"})
         bridge.queue_pattern({"type": "test", "pattern": "p2"})
@@ -78,6 +96,7 @@ class TestPatternDreamBridge:
 
     def test_summary(self, tmp_path):
         from whitemagic.synergies.pattern_dream_bridge import PatternDreamBridge
+
         bridge = PatternDreamBridge(data_dir=tmp_path)
         summary = bridge.summary()
         assert "pending_patterns" in summary
@@ -90,6 +109,7 @@ class TestSecurityHomeostasisLink:
         from whitemagic.synergies.security_homeostasis_link import (
             SecurityHomeostasisLink,
         )
+
         link = SecurityHomeostasisLink()
         actions = link.process_threats()
         assert isinstance(actions, list)
@@ -98,6 +118,7 @@ class TestSecurityHomeostasisLink:
         from whitemagic.synergies.security_homeostasis_link import (
             SecurityHomeostasisLink,
         )
+
         link = SecurityHomeostasisLink()
         summary = link.summary()
         assert "total_linked" in summary
@@ -108,6 +129,7 @@ class TestCLISuggestionLearner:
 
     def test_record_and_suggest(self, tmp_path):
         from whitemagic.synergies.cli_suggestion_learner import CLISuggestionLearner
+
         learner = CLISuggestionLearner(data_dir=tmp_path)
         learner.record("wm status")
         learner.record("wm status")
@@ -118,6 +140,7 @@ class TestCLISuggestionLearner:
 
     def test_suggest_next(self, tmp_path):
         from whitemagic.synergies.cli_suggestion_learner import CLISuggestionLearner
+
         learner = CLISuggestionLearner(data_dir=tmp_path)
         learner.record("wm status", sequence=["wm status", "wm dream"])
         learner.record("wm status", sequence=["wm status", "wm coherence"])
@@ -126,6 +149,7 @@ class TestCLISuggestionLearner:
 
     def test_summary(self, tmp_path):
         from whitemagic.synergies.cli_suggestion_learner import CLISuggestionLearner
+
         learner = CLISuggestionLearner(data_dir=tmp_path)
         summary = learner.summary()
         assert "unique_commands" in summary

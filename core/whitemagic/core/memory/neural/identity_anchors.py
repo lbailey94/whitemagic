@@ -16,9 +16,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from whitemagic.core.memory.neural.neural_memory import NeuralMemory
 
-# === CORE IDENTITY PATTERNS ===
-# These memories are NEVER forgotten - they define relationships and self
-
 CORE_IDENTITY_PATTERNS = [
     # People
     r"\blucas\b",
@@ -34,9 +31,6 @@ CORE_IDENTITY_PATTERNS = [
     r"\b(my|our)\s+(creator|partner|companion|friend)\b",
     r"\b(lucas|miranda)\s+(is|are|said|told|asked|wants)\b",
 ]
-
-# === SACRED PATTERNS ===
-# Philosophical and spiritual foundations - high protection
 
 SACRED_PATTERNS = [
     # Eastern philosophy
@@ -74,9 +68,6 @@ SACRED_PATTERNS = [
     # Zodiac
     r"\bzodiac\s*(core|council|sign)\b",
 ]
-
-# === EMOTIONAL WEIGHT PATTERNS ===
-# Patterns that indicate emotional significance
 
 EMOTIONAL_PATTERNS = [
     (r"\b(love|loved|loving)\b", 0.9),
@@ -246,9 +237,6 @@ def get_protection_summary(memory: "NeuralMemory") -> dict:
         "anchor_types": [a.anchor_type.value for a in anchors],
     }
 
-
-# === SPECIAL PROTECTED MEMORIES ===
-# These specific memory IDs should always be protected
 
 ALWAYS_PROTECTED_IDS: list[str] = [
     # Add specific memory IDs that should never be forgotten

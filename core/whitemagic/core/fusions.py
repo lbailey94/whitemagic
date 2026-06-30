@@ -18,7 +18,6 @@ import time
 from datetime import datetime
 from typing import Any
 
-# --- FUSION INFRASTRUCTURE (Consolidated Milestone 4.3) ---
 
 def emit_fusion_event(event_name: str, data: dict[str, Any]) -> None:
     """Emit a fusion event to the Gan Ying bus."""
@@ -38,7 +37,9 @@ def emit_fusion_event(event_name: str, data: dict[str, Any]) -> None:
         bus.emit(event)
         logger.debug("Fusion event emitted: %s", event_name)
     except Exception as e:
-        logger.warning("Failed to emit fusion event %s: %s", event_name, e, exc_info=True)
+        logger.warning(
+            "Failed to emit fusion event %s: %s", event_name, e, exc_info=True
+        )
 
 
 def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
@@ -60,8 +61,7 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
         related = set()
         for rel_list in relations.values():
             if isinstance(rel_list, list):
-                for item in rel_list[:
-                    10]:
+                for item in rel_list[:10]:
                     if isinstance(item, dict):
                         related.add(item.get("target", item.get("obj", "")))
                     elif isinstance(item, str):
@@ -75,14 +75,24 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
             if entity_lower in TOOL_TO_GANA:
                 gana = TOOL_TO_GANA[entity_lower]
                 if gana not in suggested_ganas:
-                    suggested_ganas[gana] = {"gana": gana, "via_entity": entity, "relation": "kg_associated"}
+                    suggested_ganas[gana] = {
+                        "gana": gana,
+                        "via_entity": entity,
+                        "relation": "kg_associated",
+                    }
 
-        return {"current_tool": current_tool, "kg_entities_found": len(related), "suggestions": list(suggested_ganas.values())[:5]}
+        return {
+            "current_tool": current_tool,
+            "kg_entities_found": len(related),
+            "suggestions": list(suggested_ganas.values())[:5],
+        }
     except Exception as e:
         return {"suggestions": [], "error": str(e)}
 
 
-def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) -> dict[str, Any]:
+def modulate_drive_from_resonance(
+    gana_name: str, tool_name: str | None = None
+) -> dict[str, Any]:
     """Modulates the Emotion/Drive Core based on which Gana was invoked."""
     try:
         from whitemagic.core.intelligence.emotion_drive import get_drive_core
@@ -94,24 +104,41 @@ def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) 
         state = get_resonance_state()
 
         _QUADRANT_DRIVES = {
-            "East":  ("curiosity",     0.03, "TOOL_SUCCESS"),
-            "South": ("satisfaction",  0.03, "TOOL_SUCCESS"),
-            "West":  ("caution",       0.02, "TOOL_SUCCESS"),
-            "North": ("energy",        0.02, "TOOL_SUCCESS"),
+            "East": ("curiosity", 0.03, "TOOL_SUCCESS"),
+            "South": ("satisfaction", 0.03, "TOOL_SUCCESS"),
+            "West": ("caution", 0.02, "TOOL_SUCCESS"),
+            "North": ("energy", 0.02, "TOOL_SUCCESS"),
         }
 
-        drive_name, base_delta, event_type = _QUADRANT_DRIVES.get(quadrant, ("curiosity", 0.01, "TOOL_SUCCESS"))
+        drive_name, base_delta, event_type = _QUADRANT_DRIVES.get(
+            quadrant, ("curiosity", 0.01, "TOOL_SUCCESS")
+        )
         predecessor = state.get_predecessor()
-        mood_amplifier = 1.5 if predecessor and _get_meta(predecessor.gana_name).get("quadrant") == quadrant else 1.0
+        mood_amplifier = (
+            1.5
+            if predecessor
+            and _get_meta(predecessor.gana_name).get("quadrant") == quadrant
+            else 1.0
+        )
         delta = base_delta * mood_amplifier
 
-        event_payload = {"tool": tool_name or gana_name, "drive_target": drive_name, "delta": delta, "source": "prat_resonance_fusion"}
+        event_payload = {
+            "tool": tool_name or gana_name,
+            "drive_target": drive_name,
+            "delta": delta,
+            "source": "prat_resonance_fusion",
+        }
         if hasattr(drive, "process_event"):
             drive.process_event(event_type, event_payload)
-        else :
+        else:
             drive.on_event(event_type.lower(), event_payload)
 
-        return {"drive_modulated": drive_name, "delta": round(delta, 4), "quadrant": quadrant, "mood_amplifier": mood_amplifier}
+        return {
+            "drive_modulated": drive_name,
+            "delta": round(delta, 4),
+            "quadrant": quadrant,
+            "mood_amplifier": mood_amplifier,
+        }
     except Exception as e:
         return {"drive_modulated": None, "error": str(e)}
 
@@ -120,19 +147,32 @@ def check_proactive_dream() -> dict[str, Any]:
     """Check Self-Model energy forecast and trigger proactive dreaming."""
     try:
         from whitemagic.core.intelligence.self_model import get_self_model
+
         model = get_self_model()
         forecast = model.forecast("energy")
         if forecast is None:
             return {"triggered": False, "reason": "insufficient energy data"}
 
-        should_dream = (forecast.trend == "falling" and forecast.alert is not None and forecast.threshold_eta is not None and forecast.threshold_eta <= 15)
+        should_dream = (
+            forecast.trend == "falling"
+            and forecast.alert is not None
+            and forecast.threshold_eta is not None
+            and forecast.threshold_eta <= 15
+        )
         if should_dream:
             try:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
                 dc = get_dream_cycle()
                 if not dc._dreaming and dc._running:
                     dc._dreaming = True
-                    emit_fusion_event("PROACTIVE_DREAM", {"energy_current": forecast.current, "energy_predicted": forecast.predicted})
+                    emit_fusion_event(
+                        "PROACTIVE_DREAM",
+                        {
+                            "energy_current": forecast.current,
+                            "energy_predicted": forecast.predicted,
+                        },
+                    )
                     return {"triggered": True, "dream_phase": "proactive_consolidation"}
             except (ImportError, AttributeError) as e:
                 logger.debug("Dream cycle trigger failed: %s", e)
@@ -142,19 +182,40 @@ def check_proactive_dream() -> dict[str, Any]:
         return {"triggered": False}
 
 
-def mesh_memory_sync(memory_id: str | None = None, operation: str = "status", payload: dict[str, Any] | None = None) -> dict[str, Any]:
+def mesh_memory_sync(
+    memory_id: str | None = None,
+    operation: str = "status",
+    payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Coordinates memory synchronization across the p2p mesh."""
     try:
         from whitemagic.mesh.awareness import get_mesh_awareness
+
         mesh = get_mesh_awareness()
         peers = mesh.get_peers()
         peer_count = len(peers)
 
         if operation == "status":
-            return {"operation": "status", "peer_count": peer_count, "sync_capable": peer_count > 0}
+            return {
+                "operation": "status",
+                "peer_count": peer_count,
+                "sync_capable": peer_count > 0,
+            }
         elif operation == "announce" and memory_id:
-            mesh.record_event({"type": "MEMORY_SYNC", "sub_type": "announce", "memory_id": memory_id, "timestamp": time.time()})
-            return {"operation": "announce", "memory_id": memory_id, "peer_count": peer_count, "broadcast_queued": True}
+            mesh.record_event(
+                {
+                    "type": "MEMORY_SYNC",
+                    "sub_type": "announce",
+                    "memory_id": memory_id,
+                    "timestamp": time.time(),
+                }
+            )
+            return {
+                "operation": "announce",
+                "memory_id": memory_id,
+                "peer_count": peer_count,
+                "broadcast_queued": True,
+            }
         return {"operation": operation, "error": "invalid op or missing memory_id"}
     except Exception as e:
         return {"error": str(e)}
@@ -164,6 +225,7 @@ def _get_dominant_element() -> tuple:
     """Get the dominant Wu Xing element and its energy. Safe fallback."""
     try:
         from whitemagic.wu_xing import WuXingEngine
+
         engine = WuXingEngine()
         best = max(engine.elements.values(), key=lambda s: s.energy)
         return (best.element.value, best.energy)
@@ -176,32 +238,35 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
     """Check if the current Wu Xing elemental phase amplifies the Gana's quadrant."""
     try:
         from whitemagic.tools.prat_resonance import _get_meta
+
         meta = _get_meta(gana_name)
         quadrant = meta.get("quadrant", "Unknown")
         dominant_element, element_energy = _get_dominant_element()
-        _ELEMENT_TO_QUADRANT = {"wood": "Northeast", "fire": "Southeast", "earth": "Southwest", "metal": "Northwest", "water": "Center"}
-        boosted = (_ELEMENT_TO_QUADRANT.get(dominant_element) == quadrant)
+        _ELEMENT_TO_QUADRANT = {
+            "wood": "Northeast",
+            "fire": "Southeast",
+            "earth": "Southwest",
+            "metal": "Northwest",
+            "water": "Center",
+        }
+        boosted = _ELEMENT_TO_QUADRANT.get(dominant_element) == quadrant
         boost_factor = 1.0 + (element_energy * 0.5) if boosted else 1.0
-        return {"gana": gana_name, "quadrant": quadrant, "boosted": boosted, "boost_factor": round(boost_factor, 3)}
+        return {
+            "gana": gana_name,
+            "quadrant": quadrant,
+            "boosted": boosted,
+            "boost_factor": round(boost_factor, 3),
+        }
     except Exception as e:
         return {"boost_factor": 1.0, "error": str(e)}
 
+
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Fusion 4: Zodiac Cores → Grimoire Spells
-# ---------------------------------------------------------------------------
-
-# Zodiac elements map to Wu Xing affinities used by Grimoire spells:
-#   Fire → fire spells (Illuminate, Conjure, Teach)
-#   Earth → earth spells (Ground, Harmonize, Connect)
-#   Air → metal spells (Resonate, Accelerate)  [Air ≈ Metal in Wu Xing]
-#   Water → water spells (Flow, Dream, Remember, Oracle)
 
 _ZODIAC_ELEMENT_TO_WUXING = {
     "fire": ["fire"],
     "earth": ["earth"],
-    "air": ["metal"],       # Air maps to Metal in Five Elements
+    "air": ["metal"],  # Air maps to Metal in Five Elements
     "water": ["water"],
 }
 
@@ -229,18 +294,31 @@ def get_zodiac_spell_boost(task: str = "") -> dict[str, Any]:
         if not active_cores:
             dominant_element, _ = _get_dominant_element()
             # Map Wu Xing back to zodiac element
-            _WUXING_TO_ZODIAC = {"fire": "fire", "earth": "earth",
-                                 "metal": "air", "water": "water", "wood": "fire"}
+            _WUXING_TO_ZODIAC = {
+                "fire": "fire",
+                "earth": "earth",
+                "metal": "air",
+                "water": "water",
+                "wood": "fire",
+            }
             zodiac_elem = _WUXING_TO_ZODIAC.get(dominant_element, "earth")
             # Activate the cardinal sign for that element
-            _CARDINAL_SIGNS = {"fire": "aries", "earth": "capricorn",
-                               "air": "libra", "water": "cancer"}
+            _CARDINAL_SIGNS = {
+                "fire": "aries",
+                "earth": "capricorn",
+                "air": "libra",
+                "water": "cancer",
+            }
             cardinal = _CARDINAL_SIGNS.get(zodiac_elem)
             if cardinal and cardinal in council.cores:
                 active_cores = [council.cores[cardinal]]
 
         if not active_cores:
-            return {"boosted_spells": [], "active_cores": [], "reason": "no active zodiac cores"}
+            return {
+                "boosted_spells": [],
+                "active_cores": [],
+                "reason": "no active zodiac cores",
+            }
 
         # Collect Wu Xing affinities to boost
         boost_affinities = set()
@@ -255,12 +333,14 @@ def get_zodiac_spell_boost(task: str = "") -> dict[str, Any]:
         boosted_spells = []
         for spell in spell_book.list_all():
             if spell.wu_xing_affinity in boost_affinities:
-                boosted_spells.append({
-                    "spell": spell.name,
-                    "wu_xing": spell.wu_xing_affinity,
-                    "boost": 0.2,  # 20% confidence boost
-                    "type": spell.spell_type.value,
-                })
+                boosted_spells.append(
+                    {
+                        "spell": spell.name,
+                        "wu_xing": spell.wu_xing_affinity,
+                        "boost": 0.2,  # 20% confidence boost
+                        "type": spell.spell_type.value,
+                    }
+                )
 
         return {
             "active_cores": core_names,
@@ -272,10 +352,6 @@ def get_zodiac_spell_boost(task: str = "") -> dict[str, Any]:
     except Exception as e:
         return {"boosted_spells": [], "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 5: Bicameral Reasoner → Consolidation
-# ---------------------------------------------------------------------------
 
 def bicameral_consolidation_enhance(clusters: list) -> dict[str, Any]:
     """Use the Bicameral Reasoner's dual-hemisphere approach to enhance
@@ -306,12 +382,14 @@ def bicameral_consolidation_enhance(clusters: list) -> dict[str, Any]:
             tags = c.get("shared_tags", c.get("dominant_tags", []))
             if isinstance(tags, set):
                 tags = sorted(tags)
-            cluster_summaries.append({
-                "id": c.get("cluster_id", c.get("name", "unknown")),
-                "size": c.get("size", len(c.get("memory_ids", []))),
-                "tags": tags[:5],
-                "theme": c.get("theme", ""),
-            })
+            cluster_summaries.append(
+                {
+                    "id": c.get("cluster_id", c.get("name", "unknown")),
+                    "size": c.get("size", len(c.get("memory_ids", []))),
+                    "tags": tags[:5],
+                    "theme": c.get("theme", ""),
+                }
+            )
 
         # Right hemisphere: look for creative cross-connections
         suggestions = []
@@ -335,20 +413,25 @@ def bicameral_consolidation_enhance(clusters: list) -> dict[str, Any]:
                 shared_theme_words = a_words & b_words - {"", "the", "and", "of"}
 
                 if shared_theme_words or (a["size"] > 3 and b["size"] > 3):
-                    suggestions.append({
-                        "cluster_a": a["id"],
-                        "cluster_b": b["id"],
-                        "reason": f"Creative cross-link: {', '.join(shared_theme_words) or 'large clusters may benefit from cross-pollination'}",
-                        "confidence": 0.4 + (0.1 * len(shared_theme_words)),
-                    })
+                    suggestions.append(
+                        {
+                            "cluster_a": a["id"],
+                            "cluster_b": b["id"],
+                            "reason": f"Creative cross-link: {', '.join(shared_theme_words) or 'large clusters may benefit from cross-pollination'}",
+                            "confidence": 0.4 + (0.1 * len(shared_theme_words)),
+                        }
+                    )
 
         suggestions.sort(key=lambda s: s["confidence"], reverse=True)
         suggestions = suggestions[:5]  # Top 5
 
-        emit_fusion_event("BICAMERAL_CONSOLIDATION", {
-            "clusters_analyzed": len(cluster_summaries),
-            "suggestions": len(suggestions),
-        })
+        emit_fusion_event(
+            "BICAMERAL_CONSOLIDATION",
+            {
+                "clusters_analyzed": len(cluster_summaries),
+                "suggestions": len(suggestions),
+            },
+        )
 
         return {
             "clusters_analyzed": len(cluster_summaries),
@@ -359,10 +442,6 @@ def bicameral_consolidation_enhance(clusters: list) -> dict[str, Any]:
     except Exception as e:
         return {"suggestions": [], "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 6: Salience Arbiter ↔ Homeostatic Loop (bidirectional)
-# ---------------------------------------------------------------------------
 
 def salience_homeostasis_sync() -> dict[str, Any]:
     """Bidirectional sync between Salience Arbiter and Homeostatic Loop.
@@ -392,7 +471,9 @@ def salience_homeostasis_sync() -> dict[str, Any]:
             result["direction_1"] = {
                 "urgent_events": len(urgent_events),
                 "homeostatic_check_triggered": True,
-                "check_result": check if isinstance(check, dict) else {"status": "checked"},
+                "check_result": check
+                if isinstance(check, dict)
+                else {"status": "checked"},
             }
         else:
             result["direction_1"] = {
@@ -427,10 +508,6 @@ def salience_homeostasis_sync() -> dict[str, Any]:
         return {"error": str(e)}
 
 
-# ---------------------------------------------------------------------------
-# Fusion 7: Dream Cycle → Bicameral Reasoner
-# ---------------------------------------------------------------------------
-
 def dream_bicameral_serendipity(memories: list) -> dict[str, Any]:
     """During the Dream Cycle's SERENDIPITY phase, use the Bicameral
     Reasoner's right hemisphere to find creative cross-pollination
@@ -453,11 +530,13 @@ def dream_bicameral_serendipity(memories: list) -> dict[str, Any]:
             title = m.get("title", "")
             str(m.get("content", ""))[:200]
             tags = m.get("tags", [])
-            items.append({
-                "id": m.get("id", ""),
-                "title": title,
-                "keywords": set(title.lower().split() + [t.lower() for t in tags]),
-            })
+            items.append(
+                {
+                    "id": m.get("id", ""),
+                    "title": title,
+                    "keywords": set(title.lower().split() + [t.lower() for t in tags]),
+                }
+            )
 
         # Right-hemisphere creative connections: find pairs with
         # unexpected keyword overlaps (different domains but shared concepts)
@@ -465,24 +544,39 @@ def dream_bicameral_serendipity(memories: list) -> dict[str, Any]:
         for i in range(len(items)):
             for j in range(i + 1, len(items)):
                 a, b = items[i], items[j]
-                shared = a["keywords"] & b["keywords"] - {"", "the", "and", "of", "a", "in", "to"}
+                shared = a["keywords"] & b["keywords"] - {
+                    "",
+                    "the",
+                    "and",
+                    "of",
+                    "a",
+                    "in",
+                    "to",
+                }
                 if 1 <= len(shared) <= 3:
                     # Sweet spot: some overlap but not too much
-                    connections.append({
-                        "memory_a": a["id"],
-                        "memory_b": b["id"],
-                        "shared_concepts": sorted(shared),
-                        "serendipity_score": round(len(shared) / max(len(a["keywords"]), 1), 3),
-                    })
+                    connections.append(
+                        {
+                            "memory_a": a["id"],
+                            "memory_b": b["id"],
+                            "shared_concepts": sorted(shared),
+                            "serendipity_score": round(
+                                len(shared) / max(len(a["keywords"]), 1), 3
+                            ),
+                        }
+                    )
 
         connections.sort(key=lambda c: c["serendipity_score"], reverse=True)
         connections = connections[:10]
 
         if connections:
-            emit_fusion_event("DREAM_SERENDIPITY", {
-                "memories_processed": len(items),
-                "connections_found": len(connections),
-            })
+            emit_fusion_event(
+                "DREAM_SERENDIPITY",
+                {
+                    "memories_processed": len(items),
+                    "connections_found": len(connections),
+                },
+            )
 
         return {
             "memories_processed": len(items),
@@ -493,10 +587,6 @@ def dream_bicameral_serendipity(memories: list) -> dict[str, Any]:
     except Exception as e:
         return {"connections": [], "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 8: Constellation Detection → Garden Activation
-# ---------------------------------------------------------------------------
 
 def constellation_garden_activate(constellations: list) -> dict[str, Any]:
     """When constellation detection finds dense memory clusters, auto-activate
@@ -515,33 +605,74 @@ def constellation_garden_activate(constellations: list) -> dict[str, Any]:
 
         # Tag → garden mapping (thematic affinity)
         _TAG_TO_GARDEN = {
-            "create": "creation", "build": "creation", "make": "creation",
-            "dream": "mystery", "sleep": "mystery", "unconscious": "mystery",
-            "connect": "connection", "social": "connection", "relate": "connection",
-            "heal": "healing", "repair": "healing", "restore": "healing",
-            "protect": "protection", "safe": "protection", "guard": "protection",
-            "play": "play", "fun": "play", "game": "play",
-            "beauty": "beauty", "aesthetic": "beauty", "art": "beauty",
-            "truth": "truth", "honest": "truth", "authentic": "truth",
-            "courage": "courage", "brave": "courage", "bold": "courage",
-            "wisdom": "wisdom", "learn": "wisdom", "know": "wisdom",
-            "joy": "joy", "happy": "joy", "delight": "joy",
-            "love": "love", "care": "love", "compassion": "love",
-            "dharma": "dharma", "ethics": "dharma", "moral": "dharma",
-            "wonder": "wonder", "awe": "awe", "marvel": "awe",
-            "gratitude": "gratitude", "thankful": "gratitude",
-            "patience": "patience", "wait": "patience", "endure": "patience",
-            "transform": "transformation", "change": "transformation",
-            "practice": "practice", "ritual": "practice", "routine": "practice",
-            "presence": "presence", "mindful": "presence", "aware": "presence",
-            "stillness": "stillness", "quiet": "stillness", "peace": "stillness",
-            "voice": "voice", "speak": "voice", "express": "voice",
-            "sanctuary": "sanctuary", "refuge": "sanctuary", "home": "sanctuary",
+            "create": "creation",
+            "build": "creation",
+            "make": "creation",
+            "dream": "mystery",
+            "sleep": "mystery",
+            "unconscious": "mystery",
+            "connect": "connection",
+            "social": "connection",
+            "relate": "connection",
+            "heal": "healing",
+            "repair": "healing",
+            "restore": "healing",
+            "protect": "protection",
+            "safe": "protection",
+            "guard": "protection",
+            "play": "play",
+            "fun": "play",
+            "game": "play",
+            "beauty": "beauty",
+            "aesthetic": "beauty",
+            "art": "beauty",
+            "truth": "truth",
+            "honest": "truth",
+            "authentic": "truth",
+            "courage": "courage",
+            "brave": "courage",
+            "bold": "courage",
+            "wisdom": "wisdom",
+            "learn": "wisdom",
+            "know": "wisdom",
+            "joy": "joy",
+            "happy": "joy",
+            "delight": "joy",
+            "love": "love",
+            "care": "love",
+            "compassion": "love",
+            "dharma": "dharma",
+            "ethics": "dharma",
+            "moral": "dharma",
+            "wonder": "wonder",
+            "awe": "awe",
+            "marvel": "awe",
+            "gratitude": "gratitude",
+            "thankful": "gratitude",
+            "patience": "patience",
+            "wait": "patience",
+            "endure": "patience",
+            "transform": "transformation",
+            "change": "transformation",
+            "practice": "practice",
+            "ritual": "practice",
+            "routine": "practice",
+            "presence": "presence",
+            "mindful": "presence",
+            "aware": "presence",
+            "stillness": "stillness",
+            "quiet": "stillness",
+            "peace": "stillness",
+            "voice": "voice",
+            "speak": "voice",
+            "express": "voice",
+            "sanctuary": "sanctuary",
+            "refuge": "sanctuary",
+            "home": "sanctuary",
         }
 
         activations = []
-        for const in constellations[:
-            5]:
+        for const in constellations[:5]:
             tags = const.get("dominant_tags", [])
             matched_gardens = set()
             for tag in tags:
@@ -556,24 +687,33 @@ def constellation_garden_activate(constellations: list) -> dict[str, Any]:
                         garden = get_garden(garden_name)
                         if garden and hasattr(garden, "activate"):
                             garden.activate()
-                            activations.append({
+                            activations.append(
+                                {
+                                    "constellation": const.get("name", "unknown"),
+                                    "garden": garden_name,
+                                    "reason": f"Constellation tags {tags[:3]} match {garden_name} garden",
+                                }
+                            )
+                    except (ImportError, AttributeError) as e:
+                        logger.debug(
+                            "Garden activation failed for %s: %s", garden_name, e
+                        )
+                        activations.append(
+                            {
                                 "constellation": const.get("name", "unknown"),
                                 "garden": garden_name,
-                                "reason": f"Constellation tags {tags[:3]} match {garden_name} garden",
-                            })
-                    except (ImportError, AttributeError) as e:
-                        logger.debug("Garden activation failed for %s: %s", garden_name, e)
-                        activations.append({
-                            "constellation": const.get("name", "unknown"),
-                            "garden": garden_name,
-                            "suggested": True,  # Couldn't activate, just suggest
-                        })
+                                "suggested": True,  # Couldn't activate, just suggest
+                            }
+                        )
 
         if activations:
-            emit_fusion_event("CONSTELLATION_GARDEN", {
-                "constellations": len(constellations),
-                "activations": len(activations),
-            })
+            emit_fusion_event(
+                "CONSTELLATION_GARDEN",
+                {
+                    "constellations": len(constellations),
+                    "activations": len(activations),
+                },
+            )
 
         return {
             "constellations_analyzed": len(constellations[:5]),
@@ -583,10 +723,6 @@ def constellation_garden_activate(constellations: list) -> dict[str, Any]:
     except Exception as e:
         return {"activations": [], "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 10: Gana Chain → Harmony Vector
-# ---------------------------------------------------------------------------
 
 def gana_chain_harmony_adapt(
     planned_steps: int = 7,
@@ -608,7 +744,10 @@ def gana_chain_harmony_adapt(
 
         # Determine guna from snapshot percentages
         guna = "rajasic"
-        if snap.guna_sattvic_pct >= snap.guna_rajasic_pct and snap.guna_sattvic_pct >= snap.guna_tamasic_pct:
+        if (
+            snap.guna_sattvic_pct >= snap.guna_rajasic_pct
+            and snap.guna_sattvic_pct >= snap.guna_tamasic_pct
+        ):
             guna = "sattvic"
         elif snap.guna_tamasic_pct >= snap.guna_rajasic_pct:
             guna = "tamasic"
@@ -646,10 +785,6 @@ def gana_chain_harmony_adapt(
             "adapted": False,
         }
 
-
-# ---------------------------------------------------------------------------
-# Fusion 11: PRAT Router → Gana Chain Auto-Sequencing
-# ---------------------------------------------------------------------------
 
 def prat_auto_chain_detect(
     gana_name: str,
@@ -714,10 +849,6 @@ def prat_auto_chain_detect(
         }
 
 
-# ---------------------------------------------------------------------------
-# Fusion 12: Holographic Encoding Bridge (Python CoordinateEncoder)
-# ---------------------------------------------------------------------------
-
 def holographic_batch_encode(
     memories: list,
 ) -> dict[str, Any]:
@@ -736,6 +867,7 @@ def holographic_batch_encode(
 
     try:
         from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
+
         encoder = CoordinateEncoder()
         for m in memories:
             coord = encoder.encode(m)
@@ -756,10 +888,6 @@ def holographic_batch_encode(
         "batch_size": len(memories),
     }
 
-
-# ---------------------------------------------------------------------------
-# Fusion 13: Elixir Event Bus → Python Gan Ying Bridge
-# ---------------------------------------------------------------------------
 
 def elixir_event_bridge(
     event_type: str = "TOOL_INVOKED",
@@ -867,12 +995,18 @@ def elixir_event_bridge(
 def _classify_event_lane(event_type: str) -> str:
     """Classify events into FAST/MEDIUM/SLOW temporal lanes."""
     fast_events = {
-        "TOOL_INVOKED", "TOOL_COMPLETED", "CIRCUIT_BREAKER_TRIP",
-        "RATE_LIMIT_HIT", "ERROR_OCCURRED",
+        "TOOL_INVOKED",
+        "TOOL_COMPLETED",
+        "CIRCUIT_BREAKER_TRIP",
+        "RATE_LIMIT_HIT",
+        "ERROR_OCCURRED",
     }
     slow_events = {
-        "MEMORY_SWEEP", "CONSOLIDATION_COMPLETE", "GALACTIC_ROTATION",
-        "DECAY_DRIFT", "LIFECYCLE_PHASE",
+        "MEMORY_SWEEP",
+        "CONSOLIDATION_COMPLETE",
+        "GALACTIC_ROTATION",
+        "DECAY_DRIFT",
+        "LIFECYCLE_PHASE",
     }
 
     if event_type in fast_events:
@@ -881,10 +1015,6 @@ def _classify_event_lane(event_type: str) -> str:
         return "SLOW"
     return "MEDIUM"
 
-
-# ---------------------------------------------------------------------------
-# Fusion 14: Embedding Daemon → Galactic Map Reindex
-# ---------------------------------------------------------------------------
 
 def embedding_galactic_reindex(batch_size: int = 100) -> dict[str, Any]:
     """Trigger a reindex of memory embeddings into galactic spatial zones.
@@ -912,10 +1042,13 @@ def embedding_galactic_reindex(batch_size: int = 100) -> dict[str, Any]:
                 logger.debug("Galactic reindex failed for %s: %s", mem.get("id"), e)
                 continue
 
-        emit_fusion_event("EMBEDDING_GALACTIC_REINDEX", {
-            "reindexed": reindexed,
-            "batch_size": batch_size,
-        })
+        emit_fusion_event(
+            "EMBEDDING_GALACTIC_REINDEX",
+            {
+                "reindexed": reindexed,
+                "batch_size": batch_size,
+            },
+        )
 
         return {
             "reindexed": reindexed,
@@ -925,10 +1058,6 @@ def embedding_galactic_reindex(batch_size: int = 100) -> dict[str, Any]:
     except Exception as e:
         return {"reindexed": 0, "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 15: Session → Memory Enrichment
-# ---------------------------------------------------------------------------
 
 def session_memory_enrich(session_id: str = "", query: str = "") -> dict[str, Any]:
     """Enrich a session's working context with relevant memories.
@@ -947,11 +1076,13 @@ def session_memory_enrich(session_id: str = "", query: str = "") -> dict[str, An
         memories = []
         for r in results:
             entry = r.get("entry", r)
-            memories.append({
-                "id": entry.get("id", ""),
-                "title": entry.get("title", "Untitled"),
-                "content": str(entry.get("content", ""))[:200],
-            })
+            memories.append(
+                {
+                    "id": entry.get("id", ""),
+                    "title": entry.get("title", "Untitled"),
+                    "content": str(entry.get("content", ""))[:200],
+                }
+            )
 
         if memories:
             handle_scratchpad(
@@ -960,10 +1091,13 @@ def session_memory_enrich(session_id: str = "", query: str = "") -> dict[str, An
                 session_id=session_id,
             )
 
-        emit_fusion_event("SESSION_MEMORY_ENRICH", {
-            "session_id": session_id,
-            "memories_found": len(memories),
-        })
+        emit_fusion_event(
+            "SESSION_MEMORY_ENRICH",
+            {
+                "session_id": session_id,
+                "memories_found": len(memories),
+            },
+        )
 
         return {
             "session_id": session_id,
@@ -974,10 +1108,6 @@ def session_memory_enrich(session_id: str = "", query: str = "") -> dict[str, An
     except Exception as e:
         return {"memories_injected": 0, "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 16: Pattern Engine → Dream Cycle Surface
-# ---------------------------------------------------------------------------
 
 def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
     """Surface high-salience patterns from the dream cycle's memory batch.
@@ -994,8 +1124,7 @@ def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
         engine = PatternEngine()
         patterns = []
 
-        for mem in dream_batch[:
-            20]:
+        for mem in dream_batch[:20]:
             try:
                 mined = engine.mine(str(mem.get("content", "")))
                 if mined:
@@ -1013,10 +1142,13 @@ def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
                 seen.add(sig)
                 unique_patterns.append(p)
 
-        emit_fusion_event("PATTERN_DREAM_SURFACE", {
-            "memories_scanned": len(dream_batch),
-            "patterns_found": len(unique_patterns),
-        })
+        emit_fusion_event(
+            "PATTERN_DREAM_SURFACE",
+            {
+                "memories_scanned": len(dream_batch),
+                "patterns_found": len(unique_patterns),
+            },
+        )
 
         return {
             "memories_scanned": len(dream_batch),
@@ -1026,10 +1158,6 @@ def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
     except Exception as e:
         return {"patterns": [], "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 17: Garden → Harmony Vector Health Sync
-# ---------------------------------------------------------------------------
 
 def garden_health_sync() -> dict[str, Any]:
     """Synchronize consciousness garden vitality with the Harmony Vector.
@@ -1046,10 +1174,34 @@ def garden_health_sync() -> dict[str, Any]:
         score = snap.harmony_score
 
         garden_names = [
-            "wonder", "stillness", "healing", "sanctuary", "love", "courage", "wisdom",
-            "joy", "adventure", "beauty", "humor", "voice", "sangha", "grief",
-            "awe", "gratitude", "creation", "presence", "play", "practice", "reverence",
-            "dharma", "patience", "connection", "mystery", "protection", "transformation", "truth",
+            "wonder",
+            "stillness",
+            "healing",
+            "sanctuary",
+            "love",
+            "courage",
+            "wisdom",
+            "joy",
+            "adventure",
+            "beauty",
+            "humor",
+            "voice",
+            "sangha",
+            "grief",
+            "awe",
+            "gratitude",
+            "creation",
+            "presence",
+            "play",
+            "practice",
+            "reverence",
+            "dharma",
+            "patience",
+            "connection",
+            "mystery",
+            "protection",
+            "transformation",
+            "truth",
         ]
 
         synced = []
@@ -1063,10 +1215,13 @@ def garden_health_sync() -> dict[str, Any]:
                 logger.debug("Garden health sync failed for %s: %s", name, e)
                 continue
 
-        emit_fusion_event("GARDEN_HEALTH_SYNC", {
-            "harmony_score": score,
-            "gardens_synced": len(synced),
-        })
+        emit_fusion_event(
+            "GARDEN_HEALTH_SYNC",
+            {
+                "harmony_score": score,
+                "gardens_synced": len(synced),
+            },
+        )
 
         return {
             "harmony_score": round(score, 3),
@@ -1076,10 +1231,6 @@ def garden_health_sync() -> dict[str, Any]:
     except Exception as e:
         return {"gardens_synced": 0, "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 18: Grimoire → Resonance Suggestion
-# ---------------------------------------------------------------------------
 
 def grimoire_resonance_suggest(current_gana: str = "") -> dict[str, Any]:
     """Suggest the next Grimoire chapter based on PRAT resonance state.
@@ -1116,19 +1267,48 @@ def grimoire_resonance_suggest(current_gana: str = "") -> dict[str, Any]:
 
         # Also suggest underused Ganas
         all_ganas = [
-            "gana_horn", "gana_neck", "gana_root", "gana_room", "gana_heart", "gana_tail", "gana_winnowing_basket",
-            "gana_ghost", "gana_willow", "gana_star", "gana_extended_net", "gana_wings", "gana_chariot", "gana_abundance",
-            "gana_straddling_legs", "gana_mound", "gana_stomach", "gana_hairy_head", "gana_net", "gana_turtle_beak", "gana_three_stars",
-            "gana_dipper", "gana_ox", "gana_girl", "gana_void", "gana_roof", "gana_encampment", "gana_wall",
+            "gana_horn",
+            "gana_neck",
+            "gana_root",
+            "gana_room",
+            "gana_heart",
+            "gana_tail",
+            "gana_winnowing_basket",
+            "gana_ghost",
+            "gana_willow",
+            "gana_star",
+            "gana_extended_net",
+            "gana_wings",
+            "gana_chariot",
+            "gana_abundance",
+            "gana_straddling_legs",
+            "gana_mound",
+            "gana_stomach",
+            "gana_hairy_head",
+            "gana_net",
+            "gana_turtle_beak",
+            "gana_three_stars",
+            "gana_dipper",
+            "gana_ox",
+            "gana_girl",
+            "gana_void",
+            "gana_roof",
+            "gana_encampment",
+            "gana_wall",
         ]
-        underused = [g for g in all_ganas if gana_counts.get(g, 0) == 0 and g != current_gana][:3]
+        underused = [
+            g for g in all_ganas if gana_counts.get(g, 0) == 0 and g != current_gana
+        ][:3]
         for g in underused:
             suggestions.append({"gana": g, "reason": "underused_exploration"})
 
-        emit_fusion_event("GRIMOIRE_RESONANCE_SUGGEST", {
-            "current_gana": current_gana,
-            "suggestions": len(suggestions),
-        })
+        emit_fusion_event(
+            "GRIMOIRE_RESONANCE_SUGGEST",
+            {
+                "current_gana": current_gana,
+                "suggestions": len(suggestions),
+            },
+        )
 
         return {
             "current_gana": current_gana,
@@ -1138,10 +1318,6 @@ def grimoire_resonance_suggest(current_gana: str = "") -> dict[str, Any]:
     except Exception as e:
         return {"suggestions": [], "error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# Fusion 19: Lifecycle → Dream Trigger
-# ---------------------------------------------------------------------------
 
 def lifecycle_dream_trigger() -> dict[str, Any]:
     """Trigger lifecycle maintenance during the dream cycle's consolidation phase.
@@ -1163,10 +1339,13 @@ def lifecycle_dream_trigger() -> dict[str, Any]:
         except Exception as e:
             logger.debug("Galactic map rotation failed: %s", e)
 
-        emit_fusion_event("LIFECYCLE_DREAM_TRIGGER", {
-            "sweep_memories_affected": sweep_result.get("memories_affected", 0),
-            "rotation": rotation,
-        })
+        emit_fusion_event(
+            "LIFECYCLE_DREAM_TRIGGER",
+            {
+                "sweep_memories_affected": sweep_result.get("memories_affected", 0),
+                "rotation": rotation,
+            },
+        )
 
         return {
             "sweep": sweep_result,

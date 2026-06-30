@@ -8,6 +8,7 @@ them jointly rather than individually.
 - Contagion effect: if one succeeds, posterior for others shifts upward
 - Cluster-level confidence: "this group has 80% joint success probability"
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -17,6 +18,7 @@ from typing import Any
 @dataclass
 class Constellation:
     """A cluster of similar improvement hypotheses."""
+
     id: str
     member_ids: list[str] = field(default_factory=list)
     centroid: float = 0.0  # Semantic centroid (1D projection)
@@ -164,7 +166,9 @@ class ConstellationEvaluator:
     def get_stats(self) -> dict[str, Any]:
         return {
             "total_constellations": len(self._constellations),
-            "total_members": sum(len(c.member_ids) for c in self._constellations.values()),
+            "total_members": sum(
+                len(c.member_ids) for c in self._constellations.values()
+            ),
             "avg_cluster_size": (
                 sum(len(c.member_ids) for c in self._constellations.values())
                 / max(len(self._constellations), 1)

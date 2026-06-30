@@ -33,17 +33,14 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Types
-# ---------------------------------------------------------------------------
-
 class ShelterTier(Enum):
     """Isolation tiers, ordered from lightest to heaviest."""
-    THREAD = "thread"         # Tier 0: existing ToolSandbox resource limits
-    NAMESPACE = "namespace"   # Tier 1: Linux unshare + chroot
-    CONTAINER = "container"   # Tier 2: rootless podman/nerdctl
-    MICROVM = "microvm"       # Tier 3: Firecracker / Cloud Hypervisor
-    WASM = "wasm"             # Tier 4: wasmtime (WASI)
+
+    THREAD = "thread"  # Tier 0: existing ToolSandbox resource limits
+    NAMESPACE = "namespace"  # Tier 1: Linux unshare + chroot
+    CONTAINER = "container"  # Tier 2: rootless podman/nerdctl
+    MICROVM = "microvm"  # Tier 3: Firecracker / Cloud Hypervisor
+    WASM = "wasm"  # Tier 4: wasmtime (WASI)
 
 
 class ShelterState(Enum):
@@ -57,6 +54,7 @@ class ShelterState(Enum):
         COMPLETED
         ERROR
         DESTROYED"""
+
     CREATED = "created"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -67,12 +65,13 @@ class ShelterState(Enum):
 @dataclass
 class ShelterCapabilities:
     """Explicit capability grants for a shelter. Everything else denied."""
-    filesystem_read: list[str] = field(default_factory=list)   # glob patterns
+
+    filesystem_read: list[str] = field(default_factory=list)  # glob patterns
     filesystem_write: list[str] = field(default_factory=list)
-    network: str = "none"      # none | read_only | filtered | full
-    network_allow: list[str] = field(default_factory=list)     # URL patterns
-    tools_allow: list[str] = field(default_factory=list)       # WM tool names
-    system_allow: list[str] = field(default_factory=list)      # syscall groups
+    network: str = "none"  # none | read_only | filtered | full
+    network_allow: list[str] = field(default_factory=list)  # URL patterns
+    tools_allow: list[str] = field(default_factory=list)  # WM tool names
+    system_allow: list[str] = field(default_factory=list)  # syscall groups
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -94,6 +93,7 @@ class ShelterCapabilities:
 @dataclass
 class ShelterLimits:
     """Resource limits for a shelter."""
+
     timeout_s: int = 300
     max_memory_mb: int = 1024
     max_cpu_s: int = 60
@@ -117,6 +117,7 @@ class ShelterLimits:
 @dataclass
 class Shelter:
     """A running or completed shelter instance."""
+
     name: str
     tier: ShelterTier
     state: ShelterState
@@ -154,10 +155,6 @@ class Shelter:
             "duration_ms": round(self.duration_ms, 1),
         }
 
-
-# ---------------------------------------------------------------------------
-# Tier availability detection
-# ---------------------------------------------------------------------------
 
 def _detect_available_tiers() -> dict[str, bool]:
     """Detect which isolation tiers are available on this system."""
@@ -214,14 +211,11 @@ def _get_container_runtime() -> str:
     return "podman"
 
 
-# ---------------------------------------------------------------------------
-# Execution backends
-# ---------------------------------------------------------------------------
-
 def _execute_thread(shelter: Shelter, code: str) -> tuple[str, str, int]:
     """Tier 0: Execute in a sandboxed thread with resource limits."""
     try:
         from whitemagic.execution.sandbox import SafeSandbox
+
         sandbox = SafeSandbox(timeout_seconds=shelter.limits.timeout_s)
         result = sandbox.execute(code)
         if result.success:
@@ -237,14 +231,20 @@ def _execute_namespace(shelter: Shelter, code: str) -> tuple[str, str, int]:
     script_path.write_text(code, encoding="utf-8")
 
     cmd = [
-        "unshare", "--user", "--mount", "--pid", "--fork",
-        "python3", str(script_path),
+        "unshare",
+        "--user",
+        "--mount",
+        "--pid",
+        "--fork",
+        "python3",
+        str(script_path),
     ]
 
     try:
         proc = subprocess.run(
             cmd,
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             timeout=shelter.limits.timeout_s,
             cwd=shelter.work_dir,
         )
@@ -268,21 +268,26 @@ def _execute_container(shelter: Shelter, code: str) -> tuple[str, str, int]:
         network_flag = "--network=host"  # filtered at application level
 
     cmd = [
-        runtime, "run", "--rm",
+        runtime,
+        "run",
+        "--rm",
         "--read-only",
         network_flag,
         f"--memory={shelter.limits.max_memory_mb}m",
         f"--cpus={shelter.limits.max_cpu_s}",
         f"--timeout={shelter.limits.timeout_s}",
-        "-v", f"{shelter.work_dir}:/data:Z",
+        "-v",
+        f"{shelter.work_dir}:/data:Z",
         "python:3.12-slim",
-        "python3", "/data/run.py",
+        "python3",
+        "/data/run.py",
     ]
 
     try:
         proc = subprocess.run(
             cmd,
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             timeout=shelter.limits.timeout_s + 30,  # grace period
         )
         return proc.stdout, proc.stderr, proc.returncode
@@ -297,7 +302,8 @@ def _execute_container(shelter: Shelter, code: str) -> tuple[str, str, int]:
 def _execute_wasm(shelter: Shelter, wasm_module: str) -> tuple[str, str, int]:
     """Tier 4: Execute a WASM module via wasmtime."""
     cmd = [
-        "wasmtime", "run",
+        "wasmtime",
+        "run",
         f"--dir={shelter.work_dir}",
         wasm_module,
     ]
@@ -305,7 +311,8 @@ def _execute_wasm(shelter: Shelter, wasm_module: str) -> tuple[str, str, int]:
     try:
         proc = subprocess.run(
             cmd,
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             timeout=shelter.limits.timeout_s,
         )
         return proc.stdout, proc.stderr, proc.returncode
@@ -316,10 +323,6 @@ def _execute_wasm(shelter: Shelter, wasm_module: str) -> tuple[str, str, int]:
     except Exception as e:
         return "", str(e), 1
 
-
-# ---------------------------------------------------------------------------
-# Shelter Manager
-# ---------------------------------------------------------------------------
 
 class ShelterManager:
     """Manages the lifecycle of isolated execution shelters."""
@@ -363,10 +366,16 @@ class ShelterManager:
             if name in self._shelters:
                 return {"status": "error", "reason": f"Shelter '{name}' already exists"}
 
-            active = sum(1 for s in self._shelters.values()
-                        if s.state in (ShelterState.CREATED, ShelterState.RUNNING))
+            active = sum(
+                1
+                for s in self._shelters.values()
+                if s.state in (ShelterState.CREATED, ShelterState.RUNNING)
+            )
             if active >= self._max_concurrent:
-                return {"status": "error", "reason": f"Max concurrent shelters ({self._max_concurrent}) reached"}
+                return {
+                    "status": "error",
+                    "reason": f"Max concurrent shelters ({self._max_concurrent}) reached",
+                }
 
         # Resolve tier
         if tier == "auto":
@@ -376,7 +385,12 @@ class ShelterManager:
             if not self._available_tiers.get(resolved_tier.value, False):
                 # Graceful degradation
                 resolved_tier = _best_available_tier(self._available_tiers)
-                logger.info("Shelter '%s': requested %s, degraded to %s", name, tier, resolved_tier.value)
+                logger.info(
+                    "Shelter '%s': requested %s, degraded to %s",
+                    name,
+                    tier,
+                    resolved_tier.value,
+                )
 
         # Parse capabilities
         caps = ShelterCapabilities()
@@ -443,7 +457,10 @@ class ShelterManager:
             if not shelter:
                 return {"status": "error", "reason": f"Shelter '{name}' not found"}
             if shelter.state not in (ShelterState.CREATED, ShelterState.COMPLETED):
-                return {"status": "error", "reason": f"Shelter '{name}' in state {shelter.state.value}"}
+                return {
+                    "status": "error",
+                    "reason": f"Shelter '{name}' in state {shelter.state.value}",
+                }
             shelter.state = ShelterState.RUNNING
 
         payload = payload or {}
@@ -460,15 +477,25 @@ class ShelterManager:
         # Dharma check — always on, even inside shelters
         try:
             from whitemagic.dharma.rules import get_rules_engine
+
             engine = get_rules_engine()
-            action = {"tool": "shelter.execute", "args": {"shelter": name, "type": payload_type}}
+            action = {
+                "tool": "shelter.execute",
+                "args": {"shelter": name, "type": payload_type},
+            }
             verdict = engine.evaluate(action)
             if verdict and hasattr(verdict, "blocked") and verdict.blocked:
                 shelter.state = ShelterState.ERROR
-                shelter.error = f"Dharma blocked: {getattr(verdict, 'reason', 'unknown')}"
+                shelter.error = (
+                    f"Dharma blocked: {getattr(verdict, 'reason', 'unknown')}"
+                )
                 return {"status": "blocked", "reason": shelter.error}
         except Exception as e:
-            logger.warning("Dharma check failed, proceeding without governance: %s", e, exc_info=True)
+            logger.warning(
+                "Dharma check failed, proceeding without governance: %s",
+                e,
+                exc_info=True,
+            )
 
         start = time.perf_counter()
         stdout, stderr, exit_code = "", "", 1
@@ -484,7 +511,9 @@ class ShelterManager:
                 stdout, stderr, exit_code = _execute_wasm(shelter, wasm_module)
             elif shelter.tier == ShelterTier.MICROVM:
                 # MicroVM not yet implemented — degrade to container
-                logger.warning("MicroVM tier not implemented, falling back to container isolation")
+                logger.warning(
+                    "MicroVM tier not implemented, falling back to container isolation"
+                )
                 stdout, stderr, exit_code = _execute_container(shelter, code)
         except Exception as e:
             stderr = str(e)
@@ -501,6 +530,7 @@ class ShelterManager:
         # Karma logging
         try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger
+
             ledger = get_karma_ledger()
             ledger.record(
                 tool="shelter.execute",
@@ -516,9 +546,12 @@ class ShelterManager:
             self._cleanup_workdir(shelter)
 
         logger.info(
-            "🏠 Shelter '%s': exit=%s, "
-            "tier=%s, %.0fms",
-         name, exit_code, shelter.tier.value, elapsed)
+            "🏠 Shelter '%s': exit=%s, tier=%s, %.0fms",
+            name,
+            exit_code,
+            shelter.tier.value,
+            elapsed,
+        )
 
         return {
             "status": "ok" if exit_code == 0 else "error",
@@ -593,7 +626,9 @@ class ShelterManager:
             "shelters": shelters,
         }
 
-    def policy(self, name: str, capabilities: dict[str, Any] | None = None) -> dict[str, Any]:
+    def policy(
+        self, name: str, capabilities: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Get or set capability policy for a shelter."""
         with self._lock:
             shelter = self._shelters.get(name)
@@ -623,10 +658,6 @@ class ShelterManager:
             except (OSError, FileNotFoundError, PermissionError):
                 pass
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _manager: ShelterManager | None = None
 _manager_lock = threading.Lock()

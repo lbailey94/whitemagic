@@ -158,8 +158,12 @@ def get_stream_summary() -> dict[str, Any]:
     state = load_citta_state()
     history = state.get("stream_history", [])
 
-    coherence_scores = [h.get("coherence_score", 1.0) for h in history if "coherence_score" in h]
-    avg_coherence = sum(coherence_scores) / len(coherence_scores) if coherence_scores else 1.0
+    coherence_scores = [
+        h.get("coherence_score", 1.0) for h in history if "coherence_score" in h
+    ]
+    avg_coherence = (
+        sum(coherence_scores) / len(coherence_scores) if coherence_scores else 1.0
+    )
 
     depth_distribution: dict[str, int] = {}
     for h in history:

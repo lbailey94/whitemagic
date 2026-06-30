@@ -124,7 +124,9 @@ class AdaptiveToolPortal:
         # 1.5 Inject Holographic Context
         try:
             injector = get_holographic_injector()
-            context.attributes["holographic_system_map"] = injector.generate_system_prompt_injection(str(params))
+            context.attributes["holographic_system_map"] = (
+                injector.generate_system_prompt_injection(str(params))
+            )
         except Exception as e:
             logger.debug("Holographic injection failed: %s", e, exc_info=True)
 
@@ -242,10 +244,6 @@ class AdaptiveToolPortal:
             )
         except Exception as e:
             logger.debug("Resonance emission skipped: %s", e, exc_info=True)
-
-    # =========================================================================
-    # RECALL MORPHOLOGIES
-    # =========================================================================
 
     async def _recall_default(
         self,
@@ -493,10 +491,6 @@ class AdaptiveToolPortal:
             "evolution": self._map_evolution(memories),
         }
 
-    # =========================================================================
-    # REMEMBER MORPHOLOGIES
-    # =========================================================================
-
     async def _remember_default(
         self,
         params: dict[str, Any],
@@ -528,9 +522,8 @@ class AdaptiveToolPortal:
 
         # Extract lessons before storing
         lessons = self._extract_lessons_from_content(content)
-        enhanced_content = (
-            f"{content}\n\n---\nExtracted Lessons:\n"
-            + "\n".join(f"- {lesson}" for lesson in lessons)
+        enhanced_content = f"{content}\n\n---\nExtracted Lessons:\n" + "\n".join(
+            f"- {lesson}" for lesson in lessons
         )
 
         memory_id = await self._store_memory(title, enhanced_content, tags)
@@ -563,10 +556,6 @@ class AdaptiveToolPortal:
             "stored": True,
         }
 
-    # =========================================================================
-    # SEARCH MORPHOLOGIES
-    # =========================================================================
-
     async def _search_default(
         self,
         params: dict[str, Any],
@@ -591,10 +580,6 @@ class AdaptiveToolPortal:
     ) -> dict[str, Any]:
         """Mystery-focused search."""
         return await self._recall_mystery(params, ctx)
-
-    # =========================================================================
-    # HELPER METHODS
-    # =========================================================================
 
     async def _semantic_search(
         self,
@@ -625,35 +610,43 @@ class AdaptiveToolPortal:
                 if results:
                     # Convert grep results to memory format
                     formatted = []
-                    for item in results[:
-                        limit]:
+                    for item in results[:limit]:
                         if isinstance(item, dict):
-                            formatted.append({
-                                "title": item.get("file", "Unknown"),
-                                "content": item.get("match", ""),
-                                "score": 0.8,
-                                "source": "rust_grep",
-                            })
+                            formatted.append(
+                                {
+                                    "title": item.get("file", "Unknown"),
+                                    "content": item.get("match", ""),
+                                    "score": 0.8,
+                                    "source": "rust_grep",
+                                }
+                            )
                         elif isinstance(item, (list, tuple)) and len(item) >= 3:
                             # Rust parallel_grep returns: (filename, line_number, match_text)
-                            formatted.append({
-                                "title": str(item[0]),
-                                "content": str(item[2]),  # match_text is at index 2
-                                "line_number": item[1],
-                                "score": 0.8,
-                                "source": "rust_grep",
-                            })
+                            formatted.append(
+                                {
+                                    "title": str(item[0]),
+                                    "content": str(item[2]),  # match_text is at index 2
+                                    "line_number": item[1],
+                                    "score": 0.8,
+                                    "source": "rust_grep",
+                                }
+                            )
                     if formatted:
                         logger.debug("Rust search found %s results", len(formatted))
                         return formatted
         except ImportError:
             logger.debug("whitemagic_rs not available, falling back to UnifiedMemory")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug("Rust search failed: %s, falling back to UnifiedMemory", e, exc_info=True)
+            logger.debug(
+                "Rust search failed: %s, falling back to UnifiedMemory",
+                e,
+                exc_info=True,
+            )
 
         # Fallback to UnifiedMemory
         try:
             from whitemagic.core.memory.unified import UnifiedMemory
+
             memory = UnifiedMemory()
             results = memory.search(query, limit=limit)
             # Handle both sync and async results
@@ -688,6 +681,7 @@ class AdaptiveToolPortal:
         """Store a memory."""
         try:
             from whitemagic.core.memory.unified import UnifiedMemory
+
             memory = UnifiedMemory()
             stored = memory.store(title=title, content=content, tags=set(tags))
             return str(stored.id)
@@ -698,8 +692,7 @@ class AdaptiveToolPortal:
     def _extract_patterns(self, memories: list[dict]) -> list[str]:
         """Extract patterns from memories."""
         patterns = []
-        for m in memories[:
-            5]:
+        for m in memories[:5]:
             content = m.get("content", "")
             if "pattern" in content.lower():
                 patterns.append(f"Pattern in: {m.get('title', 'Unknown')}")
@@ -709,7 +702,9 @@ class AdaptiveToolPortal:
         """Find connections between memories."""
         if len(memories) < 2:
             return []
-        return [f"Connection: {memories[0].get('title', '?')} ↔ {memories[1].get('title', '?')}"]
+        return [
+            f"Connection: {memories[0].get('title', '?')} ↔ {memories[1].get('title', '?')}"
+        ]
 
     def _extract_lessons(self, memories: list[dict]) -> list[str]:
         """Extract lessons from memories."""
@@ -756,7 +751,9 @@ class AdaptiveToolPortal:
         """Identify challenges."""
         return ["Challenge: integration complexity"]
 
-    def _generate_call_to_action(self, memories: list[dict], ctx: UnifiedContext) -> str:
+    def _generate_call_to_action(
+        self, memories: list[dict], ctx: UnifiedContext
+    ) -> str:
         """Generate a call to action."""
         return f"Act now with {ctx.zodiac_position} courage!"
 
@@ -851,15 +848,17 @@ if __name__ == "__main__":
         # Test recall with auto-morphology
         logger.info("\n📝 Testing recall (auto-morphology):")
         result = await portal.invoke("recall", {"query": "authentication"})
-        logger.info("   Mode: %s", result['mode'])
-        logger.info("   Morphology: %s", result['_meta']['morphology'])
-        logger.info("   Duration: %sms", result['_meta']['duration_ms'])
+        logger.info("   Mode: %s", result["mode"])
+        logger.info("   Morphology: %s", result["_meta"]["morphology"])
+        logger.info("   Duration: %sms", result["_meta"]["duration_ms"])
 
         # Test recall with forced morphology
         logger.info("\n📝 Testing recall (forced: mystery):")
-        result = await portal.invoke("recall", {"query": "patterns"}, force_morphology="mystery")
-        logger.info("   Mode: %s", result['mode'])
-        logger.info("   Questions: %s", result.get('questions', []))
+        result = await portal.invoke(
+            "recall", {"query": "patterns"}, force_morphology="mystery"
+        )
+        logger.info("   Mode: %s", result["mode"])
+        logger.info("   Questions: %s", result.get("questions", []))
 
         logger.info("\n✅ Portal test complete")
 

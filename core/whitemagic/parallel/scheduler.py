@@ -199,7 +199,9 @@ class ParallelScheduler:
         while self._running_scheduler:
             try:
                 # Wait for task with timeout
-                priority, task_id = await asyncio.wait_for(self._ready_queue.get(), timeout=0.1)
+                priority, task_id = await asyncio.wait_for(
+                    self._ready_queue.get(), timeout=0.1
+                )
 
                 task = self._tasks.get(task_id)
                 if not task or task.status != TaskStatus.PENDING:

@@ -71,12 +71,9 @@ class AdventureGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.4, y=0.0, z=0.6, w=0.25)
 
-    # ------------------------------------------------------------------
-    # Export/Import — serving export_memories, import_memories tools
-    # ------------------------------------------------------------------
-
-    def record_export(self, format: str, count: int, destination: str = "",
-                      size_bytes: int = 0) -> dict[str, Any]:
+    def record_export(
+        self, format: str, count: int, destination: str = "", size_bytes: int = 0
+    ) -> dict[str, Any]:
         """Record a memory export operation."""
         entry = {
             "format": format,
@@ -88,10 +85,15 @@ class AdventureGarden(BaseGarden, GanYingMixin):
         with self._lock:
             self.export_log.append(entry)
             self._total_exports += 1
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "export", "format": format, "count": count})  # type: ignore[attr-defined]
+        self.emit(
+            EventType.GARDEN_ACTIVITY,
+            {"action": "export", "format": format, "count": count},
+        )  # type: ignore[attr-defined]
         return entry
 
-    def record_import(self, format: str, count: int, source: str = "") -> dict[str, Any]:
+    def record_import(
+        self, format: str, count: int, source: str = ""
+    ) -> dict[str, Any]:
         """Record a memory import operation."""
         entry = {
             "format": format,
@@ -102,7 +104,10 @@ class AdventureGarden(BaseGarden, GanYingMixin):
         with self._lock:
             self.import_log.append(entry)
             self._total_imports += 1
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "import", "format": format, "count": count})  # type: ignore[attr-defined]
+        self.emit(
+            EventType.GARDEN_ACTIVITY,
+            {"action": "import", "format": format, "count": count},
+        )  # type: ignore[attr-defined]
         return entry
 
     def get_portability_summary(self) -> dict[str, Any]:
@@ -115,12 +120,9 @@ class AdventureGarden(BaseGarden, GanYingMixin):
                 "recent_imports": list(self.import_log)[-5:],
             }
 
-    # ------------------------------------------------------------------
-    # Deploy checks — serving deploy_check tool
-    # ------------------------------------------------------------------
-
-    def record_deploy_check(self, target: str, ready: bool,
-                            issues: list[str] | None = None) -> dict[str, Any]:
+    def record_deploy_check(
+        self, target: str, ready: bool, issues: list[str] | None = None
+    ) -> dict[str, Any]:
         """Record a deployment readiness check."""
         check = {
             "target": target,
@@ -132,12 +134,14 @@ class AdventureGarden(BaseGarden, GanYingMixin):
             self.deploy_checks.append(check)
         return check
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
-    def begin_adventure(self, what: str, destination: str = "unknown") -> dict[str, Any]:
-        adventure = {"what": what, "destination": destination, "started": datetime.now().isoformat()}
+    def begin_adventure(
+        self, what: str, destination: str = "unknown"
+    ) -> dict[str, Any]:
+        adventure = {
+            "what": what,
+            "destination": destination,
+            "started": datetime.now().isoformat(),
+        }
         self.emit(EventType.ADVENTURE_BEGUN, adventure)
         return adventure
 
@@ -147,32 +151,38 @@ class AdventureGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.DISCOVERY_CELEBRATED, discovery)
         return discovery
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "total_exports": self._total_exports,
-            "total_imports": self._total_imports,
-            "deploy_checks": len(self.deploy_checks),
-            "adventure_level": round(self.adventure_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "total_exports": self._total_exports,
+                "total_imports": self._total_imports,
+                "deploy_checks": len(self.deploy_checks),
+                "adventure_level": round(self.adventure_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.WONDER_SPARKED)
     def on_wonder(self, event: Any) -> None:
-        self.emit(EventType.ADVENTURE_BEGUN, {"source": "wonder", "what": "wonder-inspired adventure"})
+        self.emit(
+            EventType.ADVENTURE_BEGUN,
+            {"source": "wonder", "what": "wonder-inspired adventure"},
+        )
 
     @listen_for(EventType.PLAY_INITIATED)
     def on_play(self, event: Any) -> None:
-        self.emit(EventType.EXPLORATION_INITIATED, {"source": "play", "where": "playful exploration"})
+        self.emit(
+            EventType.EXPLORATION_INITIATED,
+            {"source": "play", "where": "playful exploration"},
+        )
 
 
 _instance = None
+
+
 def get_adventure_garden() -> AdventureGarden:
     global _instance
     if _instance is None:

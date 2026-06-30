@@ -37,11 +37,11 @@ class ToolFingerprint:
     """Cryptographic fingerprint of a single tool definition."""
 
     tool_name: str
-    schema_hash: str       # SHA-256 of the canonical JSON of input_schema
+    schema_hash: str  # SHA-256 of the canonical JSON of input_schema
     description_hash: str  # SHA-256 of description string
     safety: str
     category: str
-    composite_hash: str    # SHA-256 of all the above combined
+    composite_hash: str  # SHA-256 of all the above combined
     timestamp: str = ""
 
 
@@ -81,7 +81,9 @@ class McpIntegrity:
         desc_hash = _sha256(str(tool.description or ""))
         safety = str(getattr(tool, "safety", "read"))
         category = str(getattr(tool, "category", "unknown"))
-        composite = _sha256(f"{tool.name}|{schema_hash}|{desc_hash}|{safety}|{category}")
+        composite = _sha256(
+            f"{tool.name}|{schema_hash}|{desc_hash}|{safety}|{category}"
+        )
         return ToolFingerprint(
             tool_name=tool.name,
             schema_hash=schema_hash,
@@ -107,7 +109,8 @@ class McpIntegrity:
         self._persist_baseline()
 
         logger.info(
-            "MCP integrity: snapshot captured (%d tools fingerprinted)", len(fingerprints),
+            "MCP integrity: snapshot captured (%d tools fingerprinted)",
+            len(fingerprints),
         )
         return {
             "status": "success",
@@ -146,11 +149,13 @@ class McpIntegrity:
 
             for name in baseline_names & current_names:
                 if self._baseline[name].composite_hash != current[name].composite_hash:
-                    modified.append({
-                        "tool": name,
-                        "baseline_hash": self._baseline[name].composite_hash[:16],
-                        "current_hash": current[name].composite_hash[:16],
-                    })
+                    modified.append(
+                        {
+                            "tool": name,
+                            "baseline_hash": self._baseline[name].composite_hash[:16],
+                            "current_hash": current[name].composite_hash[:16],
+                        }
+                    )
 
             self._verification_count += 1
 
@@ -181,7 +186,9 @@ class McpIntegrity:
                     self._drift_events = self._drift_events[-500:]
             logger.warning(
                 "MCP integrity DRIFT: +%d added, -%d removed, ~%d modified",
-                len(added), len(removed), len(modified),
+                len(added),
+                len(removed),
+                len(modified),
             )
 
         return result
@@ -244,14 +251,12 @@ class McpIntegrity:
                     category=fp_data["category"],
                     composite_hash=fp_data["composite_hash"],
                 )
-            logger.info("MCP integrity: loaded baseline (%d tools)", len(self._baseline))
+            logger.info(
+                "MCP integrity: loaded baseline (%d tools)", len(self._baseline)
+            )
         except Exception as e:
             logger.debug("MCP integrity load failed: %s", e)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _instance: McpIntegrity | None = None
 _instance_lock = threading.Lock()
@@ -265,6 +270,7 @@ def get_mcp_integrity() -> McpIntegrity:
             if _instance is None:
                 try:
                     from whitemagic.config.paths import WM_ROOT
+
                     storage = WM_ROOT / "security"
                 except (ImportError, ModuleNotFoundError):
                     storage = None

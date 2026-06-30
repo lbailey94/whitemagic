@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 HAS_GRPC = False
 try:
     import grpc  # type: ignore[import-untyped]
+
     HAS_GRPC = True
 except ImportError:
     pass
@@ -46,6 +47,7 @@ except ImportError:
 @dataclass
 class MeshPeer:
     """A discovered mesh peer."""
+
     node_id: str
     address: str
     last_seen: float = 0.0
@@ -67,6 +69,7 @@ class MeshPeer:
 @dataclass
 class SignalResult:
     """Result of a signal broadcast."""
+
     success: bool
     message: str = ""
 
@@ -85,7 +88,9 @@ class MeshClient:
         node_id: str | None = None,
     ) -> None:
         self._address = address or os.environ.get("WM_MESH_ADDRESS", "localhost:50051")
-        self._node_id = node_id or os.environ.get("WM_MESH_NODE_ID", f"node_{os.getpid()}")
+        self._node_id = node_id or os.environ.get(
+            "WM_MESH_NODE_ID", f"node_{os.getpid()}"
+        )
         self._lock = threading.Lock()
         self._connected = False
         self._channel: Any | None = None
@@ -99,7 +104,9 @@ class MeshClient:
         if HAS_GRPC:
             self._try_connect()
 
-    def connect(self, address: str | None = None, node_id: str | None = None) -> dict[str, Any]:
+    def connect(
+        self, address: str | None = None, node_id: str | None = None
+    ) -> dict[str, Any]:
         """Attempt to connect or reconnect the mesh client."""
         if address is not None:
             self._address = address
@@ -133,7 +140,9 @@ class MeshClient:
             self._channel = grpc.insecure_channel(self._address)
             # Try to import generated stubs
             try:
-                mesh_pb2_grpc = cast(Any, importlib.import_module("whitemagic.mesh.mesh_pb2_grpc"))
+                mesh_pb2_grpc = cast(
+                    Any, importlib.import_module("whitemagic.mesh.mesh_pb2_grpc")
+                )
                 self._stub = mesh_pb2_grpc.MeshServiceStub(self._channel)
                 self._connected = True
                 logger.info("Mesh connected to %s as %s", self._address, self._node_id)
@@ -160,11 +169,13 @@ class MeshClient:
         with self._lock:
             self._signal_log.append(record)
             if len(self._signal_log) > self._max_log:
-                self._signal_log = self._signal_log[-self._max_log:]
+                self._signal_log = self._signal_log[-self._max_log :]
 
         if self._connected and self._stub:
             try:
-                mesh_pb2 = cast(Any, importlib.import_module("whitemagic.mesh.mesh_pb2"))
+                mesh_pb2 = cast(
+                    Any, importlib.import_module("whitemagic.mesh.mesh_pb2")
+                )
                 request = mesh_pb2.SignalRequest(
                     source_id=self._node_id,
                     signal_type=signal_type,
@@ -184,17 +195,23 @@ class MeshClient:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                event_type=EventType.SYSTEM_STATE_CHANGE,
-                source=f"mesh:{self._node_id}",
-                data={"signal_type": signal_type, "payload": payload[:500]},
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    event_type=EventType.SYSTEM_STATE_CHANGE,
+                    source=f"mesh:{self._node_id}",
+                    data={"signal_type": signal_type, "payload": payload[:500]},
+                )
+            )
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
-        return SignalResult(success=True, message="local-only broadcast (mesh not connected)")
+        return SignalResult(
+            success=True, message="local-only broadcast (mesh not connected)"
+        )
 
     def broadcast_hologram(
         self,
@@ -206,7 +223,9 @@ class MeshClient:
         """Broadcast holographic coordinates to the mesh."""
         if self._connected and self._stub:
             try:
-                mesh_pb2 = cast(Any, importlib.import_module("whitemagic.mesh.mesh_pb2"))
+                mesh_pb2 = cast(
+                    Any, importlib.import_module("whitemagic.mesh.mesh_pb2")
+                )
                 request = mesh_pb2.HolographicSignal(
                     id=memory_id,
                     coordinates=coordinates,
@@ -226,7 +245,9 @@ class MeshClient:
         """Discover mesh peers."""
         if self._connected and self._stub:
             try:
-                mesh_pb2 = cast(Any, importlib.import_module("whitemagic.mesh.mesh_pb2"))
+                mesh_pb2 = cast(
+                    Any, importlib.import_module("whitemagic.mesh.mesh_pb2")
+                )
                 request = mesh_pb2.DiscoveryRequest(
                     node_id=self._node_id,
                     address=self._address,
@@ -234,7 +255,9 @@ class MeshClient:
                 response = self._stub.DiscoverPeers(request, timeout=5)
                 peers = []
                 for p in response.peers:
-                    peer = MeshPeer(node_id=p.node_id, address=p.address, last_seen=time.time())
+                    peer = MeshPeer(
+                        node_id=p.node_id, address=p.address, last_seen=time.time()
+                    )
                     self._known_peers[p.node_id] = peer
                     peers.append(peer)
                 return peers
@@ -259,10 +282,6 @@ class MeshClient:
             "signal_log_size": len(self._signal_log),
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _client: MeshClient | None = None
 _client_lock = threading.Lock()

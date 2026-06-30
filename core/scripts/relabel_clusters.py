@@ -155,6 +155,7 @@ TOPIC_SIGNALS = [
     {"term": "fusion", "label": "Fusion Patterns"},
 ]
 
+
 def label_cluster(cluster: dict) -> str:
     """Generate a poetic-technical label for a cluster."""
     keywords = [k.lower() for k in cluster.get("keywords", [])]
@@ -232,7 +233,9 @@ def main():
     for c in clusters:
         title = c.get("title", "")
         if title.startswith("Thread:"):
-            topic_counts["Thread (fallback)"] = topic_counts.get("Thread (fallback)", 0) + 1
+            topic_counts["Thread (fallback)"] = (
+                topic_counts.get("Thread (fallback)", 0) + 1
+            )
         else:
             for topic in title.replace("On ", "").split(" & "):
                 topic_counts[topic] = topic_counts.get(topic, 0) + 1

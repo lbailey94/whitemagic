@@ -26,6 +26,7 @@ class EdgePerformanceBenchmark:
     def benchmark_inference(self, n: int = 100) -> dict[str, Any]:
         """Benchmark local inference latency."""
         from whitemagic.agentic.cpu_inference import CPUInferenceEngine
+
         engine = CPUInferenceEngine()
 
         start = time.monotonic()
@@ -45,6 +46,7 @@ class EdgePerformanceBenchmark:
     def benchmark_cache(self, n: int = 100) -> dict[str, Any]:
         """Benchmark query cache efficiency."""
         from whitemagic.agentic.token_optimizer import QueryCache
+
         cache = QueryCache()
 
         # First pass: populate cache

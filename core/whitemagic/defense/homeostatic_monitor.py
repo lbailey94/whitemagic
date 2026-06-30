@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileChange:
     """A detected file change."""
+
     path: str
     change_type: str  # added, removed, modified, moved
     old_hash: str = ""
@@ -69,26 +70,36 @@ class HomeostaticMonitor:
 
         for path, info in current.items():
             if path not in self._last_snapshot:
-                self.changes.append(FileChange(
-                    path=path, change_type="added",
-                    new_hash=info["hash"], new_size=info["size"],
-                ))
+                self.changes.append(
+                    FileChange(
+                        path=path,
+                        change_type="added",
+                        new_hash=info["hash"],
+                        new_size=info["size"],
+                    )
+                )
             elif self._last_snapshot[path]["hash"] != info["hash"]:
-                self.changes.append(FileChange(
-                    path=path, change_type="modified",
-                    old_hash=self._last_snapshot[path]["hash"],
-                    new_hash=info["hash"],
-                    old_size=self._last_snapshot[path]["size"],
-                    new_size=info["size"],
-                ))
+                self.changes.append(
+                    FileChange(
+                        path=path,
+                        change_type="modified",
+                        old_hash=self._last_snapshot[path]["hash"],
+                        new_hash=info["hash"],
+                        old_size=self._last_snapshot[path]["size"],
+                        new_size=info["size"],
+                    )
+                )
 
         for path in self._last_snapshot:
             if path not in current:
-                self.changes.append(FileChange(
-                    path=path, change_type="removed",
-                    old_hash=self._last_snapshot[path]["hash"],
-                    old_size=self._last_snapshot[path]["size"],
-                ))
+                self.changes.append(
+                    FileChange(
+                        path=path,
+                        change_type="removed",
+                        old_hash=self._last_snapshot[path]["hash"],
+                        old_size=self._last_snapshot[path]["size"],
+                    )
+                )
 
         return self.changes
 
@@ -96,12 +107,14 @@ class HomeostaticMonitor:
         """Save current snapshot as baseline."""
         self._last_snapshot = self.snapshot()
         import json
+
         self.snapshot_file.write_text(json.dumps(self._last_snapshot, indent=2))
 
     def load_snapshot(self) -> None:
         """Load saved snapshot as baseline."""
         if self.snapshot_file.exists():
             import json
+
             self._last_snapshot = json.loads(self.snapshot_file.read_text())
 
     def summary(self) -> dict[str, Any]:

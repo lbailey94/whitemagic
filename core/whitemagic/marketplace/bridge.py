@@ -30,10 +30,6 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Types
-# ---------------------------------------------------------------------------
-
 class ListingState(Enum):
     """ListingState: listing state.
 
@@ -44,6 +40,7 @@ class ListingState(Enum):
         PAUSED
         SOLD
         EXPIRED"""
+
     ACTIVE = "active"
     PAUSED = "paused"
     SOLD = "sold"
@@ -61,6 +58,7 @@ class NegotiationState(Enum):
         REJECTED
         COMPLETED
         CANCELLED"""
+
     OFFERED = "offered"
     ACCEPTED = "accepted"
     REJECTED = "rejected"
@@ -71,13 +69,14 @@ class NegotiationState(Enum):
 @dataclass
 class ServiceListing:
     """A service or knowledge package offered on the marketplace."""
+
     listing_id: str
-    service_type: str              # research, compute, memory, oms_package
+    service_type: str  # research, compute, memory, oms_package
     title: str = ""
     description: str = ""
     capabilities: list[str] = field(default_factory=list)
     price_xrp: float = 0.0
-    price_model: str = "fixed"     # fixed | per_query | streaming | negotiate
+    price_model: str = "fixed"  # fixed | per_query | streaming | negotiate
     agent_id: str = ""
     agent_name: str = ""
     state: ListingState = ListingState.ACTIVE
@@ -134,6 +133,7 @@ class ServiceListing:
 @dataclass
 class Negotiation:
     """A negotiation between buyer and seller."""
+
     negotiation_id: str
     listing_id: str
     buyer_id: str
@@ -162,10 +162,6 @@ class Negotiation:
         }
 
 
-# ---------------------------------------------------------------------------
-# Marketplace Bridge
-# ---------------------------------------------------------------------------
-
 class MarketplaceBridge:
     """Local marketplace for agent service discovery and trading."""
 
@@ -178,6 +174,7 @@ class MarketplaceBridge:
     def _get_persist_path(self) -> Path:
         if self._persist_path is None:
             from whitemagic.config.paths import WM_ROOT
+
             self._persist_path = WM_ROOT / "marketplace"
             self._persist_path.mkdir(parents=True, exist_ok=True)
         return self._persist_path
@@ -255,6 +252,7 @@ class MarketplaceBridge:
         agent_name = ""
         try:
             from whitemagic.core.user import get_user_manager
+
             user = get_user_manager()
             agent_name = user.profile.name if user.profile else ""
         except (ImportError, ModuleNotFoundError):
@@ -278,7 +276,9 @@ class MarketplaceBridge:
             self._listings[listing_id] = listing
         self._persist_listings()
 
-        logger.info("🏪 Published listing: %s (%s)", listing.title, listing_id, exc_info=True)
+        logger.info(
+            "🏪 Published listing: %s (%s)", listing.title, listing_id, exc_info=True
+        )
 
         return {"status": "ok", **listing.to_dict()}
 
@@ -392,7 +392,10 @@ class MarketplaceBridge:
         with self._lock:
             neg = self._negotiations.get(negotiation_id)
             if not neg:
-                return {"status": "error", "reason": f"Negotiation '{negotiation_id}' not found"}
+                return {
+                    "status": "error",
+                    "reason": f"Negotiation '{negotiation_id}' not found",
+                }
 
             listing = self._listings.get(neg.listing_id)
 
@@ -409,6 +412,7 @@ class MarketplaceBridge:
         # Trigger ILP payment if configured
         try:
             from whitemagic.payments import get_ilp_manager
+
             ilp = get_ilp_manager()
             if ilp.status().get("configured"):
                 ilp.send(
@@ -436,7 +440,10 @@ class MarketplaceBridge:
         """Remove a listing from the marketplace."""
         with self._lock:
             if listing_id not in self._listings:
-                return {"status": "error", "reason": f"Listing '{listing_id}' not found"}
+                return {
+                    "status": "error",
+                    "reason": f"Listing '{listing_id}' not found",
+                }
             del self._listings[listing_id]
         self._persist_listings()
         return {"status": "ok", "message": f"Listing '{listing_id}' removed"}
@@ -444,7 +451,11 @@ class MarketplaceBridge:
     def status(self) -> dict[str, Any]:
         """Get marketplace status."""
         with self._lock:
-            active = sum(1 for item in self._listings.values() if item.state == ListingState.ACTIVE)
+            active = sum(
+                1
+                for item in self._listings.values()
+                if item.state == ListingState.ACTIVE
+            )
             total = len(self._listings)
             negotiations = len(self._negotiations)
 
@@ -455,10 +466,6 @@ class MarketplaceBridge:
             "total_negotiations": negotiations,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _marketplace: MarketplaceBridge | None = None
 _marketplace_lock = threading.Lock()

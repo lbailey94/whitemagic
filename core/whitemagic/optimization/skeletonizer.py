@@ -27,7 +27,10 @@ class Skeletonizer:
         except SyntaxError:
             # Fallback for invalid syntax or non-Python files
             # For now, just truncate lines
-            return "\n".join(code.splitlines()[:50]) + "\n# ... (syntax error or non-python, truncated)"
+            return (
+                "\n".join(code.splitlines()[:50])
+                + "\n# ... (syntax error or non-python, truncated)"
+            )
 
         transformer = SkeletonTransformer()
         new_tree = transformer.visit(tree)
@@ -48,9 +51,12 @@ class Skeletonizer:
                 # Naive line truncation for non-Python for now
                 lines = content.splitlines()
                 head = lines[:20]
-                return "\n".join(head) + f"\n\n# ... ({len(lines)-20} lines hidden) ..."
+                return (
+                    "\n".join(head) + f"\n\n# ... ({len(lines) - 20} lines hidden) ..."
+                )
         except Exception as e:
             return f"# Error skeletonizing {path}: {e}"
+
 
 class SkeletonTransformer(ast.NodeTransformer):
     """AST Transformer that strips bodies from functions and classes."""
@@ -64,7 +70,7 @@ class SkeletonTransformer(ast.NodeTransformer):
         new_body: list[ast.stmt] = []
         if docstring:
             # Keep first line of docstring
-            summary = docstring.split('\n')[0].strip()
+            summary = docstring.split("\n")[0].strip()
             new_body.append(ast.Expr(value=ast.Constant(value=summary + " ...")))
 
         # Add ellipsis
@@ -73,12 +79,14 @@ class SkeletonTransformer(ast.NodeTransformer):
         node.body = new_body
         return node
 
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AsyncFunctionDef:
+    def visit_AsyncFunctionDef(
+        self, node: ast.AsyncFunctionDef
+    ) -> ast.AsyncFunctionDef:
         """Handle async functions same as sync."""
         docstring = ast.get_docstring(node)
         new_body: list[ast.stmt] = []
         if docstring:
-            summary = docstring.split('\n')[0].strip()
+            summary = docstring.split("\n")[0].strip()
             new_body.append(ast.Expr(value=ast.Constant(value=summary + " ...")))
 
         new_body.append(ast.Expr(value=ast.Constant(value=...)))
@@ -95,13 +103,15 @@ class SkeletonTransformer(ast.NodeTransformer):
 
         # If body is empty after stripping (shouldn't happen with generic_visit on methods), add pass
         if not node.body:
-             node.body = [ast.Pass()]
+            node.body = [ast.Pass()]
 
         return node
+
 
 def skeletonize(code: str) -> str:
     """Convenience function."""
     return Skeletonizer().skeletonize(code)
+
 
 def skeletonize_file(file_path: str | Path) -> str:
     """Convenience function."""

@@ -3,10 +3,17 @@
 import pytest
 from datetime import datetime, timezone
 from whitemagic.oracle.great_year import (
-    GreatYearEngine, TemporalContext, PrecessionalPosition,
-    get_great_year_engine, get_temporal_context,
-    GREAT_YEAR_YEARS, YEARS_PER_AGE, HARMONIC_144K, HARMONIC_72,
-    AGE_THEMES, YUGA_SYSTEM,
+    GreatYearEngine,
+    TemporalContext,
+    PrecessionalPosition,
+    get_great_year_engine,
+    get_temporal_context,
+    GREAT_YEAR_YEARS,
+    YEARS_PER_AGE,
+    HARMONIC_144K,
+    HARMONIC_72,
+    AGE_THEMES,
+    YUGA_SYSTEM,
 )
 
 
@@ -143,7 +150,10 @@ class TestTemporalContext:
     def test_binding_warning_present(self):
         ctx = get_temporal_context()
         assert "NON-BINDING" in ctx.binding_warning
-        assert "does not dictate" in ctx.binding_warning.lower() or "do not dictate" in ctx.binding_warning.lower()
+        assert (
+            "does not dictate" in ctx.binding_warning.lower()
+            or "do not dictate" in ctx.binding_warning.lower()
+        )
 
     def test_aquarius_relevance_if_applicable(self):
         """If we're in or near Aquarius, check for current_relevance."""

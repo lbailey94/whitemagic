@@ -49,7 +49,11 @@ def handle_strata_analyze(**kwargs: Any) -> dict[str, Any]:
 
         strata = Strata(
             path,
-            disabled_categories=disable if isinstance(disable, list) else [disable] if disable else None,
+            disabled_categories=disable
+            if isinstance(disable, list)
+            else [disable]
+            if disable
+            else None,
             since_ref=since_ref,
             diff_base=diff_base,
         )
@@ -147,7 +151,12 @@ def handle_strata_archaeology(**kwargs: Any) -> dict[str, Any]:
             if not layer:
                 return {"status": "error", "error": "layer is required for excavate"}
             result = excavate(project_path, layer, file_filter=kwargs.get("file"))
-            return {"status": "success", "subcommand": "excavate", "layer": layer, "result": result}
+            return {
+                "status": "success",
+                "subcommand": "excavate",
+                "layer": layer,
+                "result": result,
+            }
 
         elif subcommand == "fossil":
             file_path = kwargs.get("file", "")
@@ -155,7 +164,12 @@ def handle_strata_archaeology(**kwargs: Any) -> dict[str, Any]:
                 return {"status": "error", "error": "file is required for fossil"}
             max_commits = int(kwargs.get("commits", 20))
             result = fossil(project_path, file_path, max_commits=max_commits)
-            return {"status": "success", "subcommand": "fossil", "file": file_path, "result": result}
+            return {
+                "status": "success",
+                "subcommand": "fossil",
+                "file": file_path,
+                "result": result,
+            }
 
         elif subcommand == "extinction":
             result = extinction(project_path)
@@ -191,17 +205,25 @@ def handle_strata_list_checks(**kwargs: Any) -> dict[str, Any]:
         checkers_info = []
         for checker in get_checkers():
             name = checker.__name__
-            doc = (checker.__doc__ or "").strip().splitlines()[0] if checker.__doc__ else ""
+            doc = (
+                (checker.__doc__ or "").strip().splitlines()[0]
+                if checker.__doc__
+                else ""
+            )
             try:
                 source = inspect.getsource(checker)
-                categories = sorted(set(re.findall(r'category\s*=\s*"([^"]+)"', source)))
+                categories = sorted(
+                    set(re.findall(r'category\s*=\s*"([^"]+)"', source))
+                )
             except (OSError, TypeError):
                 categories = []
-            checkers_info.append({
-                "name": name,
-                "description": doc,
-                "categories": categories,
-            })
+            checkers_info.append(
+                {
+                    "name": name,
+                    "description": doc,
+                    "categories": categories,
+                }
+            )
         return {
             "status": "success",
             "checkers": checkers_info,

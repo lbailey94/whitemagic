@@ -1,8 +1,8 @@
 import ast
 import hashlib
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set
 
 __all__ = ["FileIndex"]
 
@@ -10,24 +10,52 @@ __all__ = ["FileIndex"]
 class FileIndex:
     """Centralized file discovery with caching, skip logic, and content hash tracking."""
 
-    SKIP_NAMES: Set[str] = {
-        ".venv", "venv", "node_modules", "target", "dist", "build", "build-modern",
-        ".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".tox", "release",
-        "external", "_deps", "vendor", "third_party", "thirdparty", "deps",
-        "lib", "libs", "site-packages", "packages",
-        "out", "cmake-build", "oldFiles", "archive", "archives",
+    SKIP_NAMES: set[str] = {
+        ".venv",
+        "venv",
+        "node_modules",
+        "target",
+        "dist",
+        "build",
+        "build-modern",
+        ".git",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".tox",
+        "release",
+        "external",
+        "_deps",
+        "vendor",
+        "third_party",
+        "thirdparty",
+        "deps",
+        "lib",
+        "libs",
+        "site-packages",
+        "packages",
+        "out",
+        "cmake-build",
+        "oldFiles",
+        "archive",
+        "archives",
     }
 
-    def __init__(self, project_path: Path, extra_skip: Optional[Set[str]] = None, cache_path: Optional[Path] = None):
+    def __init__(
+        self,
+        project_path: Path,
+        extra_skip: set[str] | None = None,
+        cache_path: Path | None = None,
+    ):
         self.project_path = Path(project_path).resolve()
-        self._python_files: List[Path] = []
+        self._python_files: list[Path] = []
         self._file_cache: dict = {}
-        self._ast_cache: Dict[str, Optional[ast.AST]] = {}
-        self._skip_names: Set[str] = self.SKIP_NAMES | (extra_skip or set())
-        self._hashes: Dict[str, str] = {}
-        self._new_hashes: Dict[str, str] = {}
-        self._meta_cache: Dict[str, Dict] = {}
-        self._ext_index: Optional[Dict[str, List[Path]]] = None
+        self._ast_cache: dict[str, ast.AST | None] = {}
+        self._skip_names: set[str] = self.SKIP_NAMES | (extra_skip or set())
+        self._hashes: dict[str, str] = {}
+        self._new_hashes: dict[str, str] = {}
+        self._meta_cache: dict[str, dict] = {}
+        self._ext_index: dict[str, list[Path]] | None = None
         self._cache_file = cache_path or (self.project_path / ".strata-cache.json")
         self.incremental: bool = False
         self._load_hash_cache()
@@ -50,7 +78,9 @@ class FileIndex:
         """Persist current content hashes and file metadata to cache file."""
         try:
             with self._cache_file.open("w", encoding="utf-8") as f:
-                json.dump({"hashes": self._new_hashes, "_meta": self._meta_cache}, f, indent=2)
+                json.dump(
+                    {"hashes": self._new_hashes, "_meta": self._meta_cache}, f, indent=2
+                )
         except OSError:
             pass
 
@@ -96,7 +126,7 @@ class FileIndex:
     def _should_skip(self, path: Path) -> bool:
         return self.should_skip(path)
 
-    def _build_extension_index(self) -> Dict[str, List[Path]]:
+    def _build_extension_index(self) -> dict[str, list[Path]]:
         """Walk the project tree once and group all files by extension.
         This is cached and reused across all files_by_extension calls.
         Uses Rust parallel walker when available (98x faster).
@@ -104,11 +134,12 @@ class FileIndex:
         if self._ext_index is not None:
             return self._ext_index
 
-        index: Dict[str, List[Path]] = {}
+        index: dict[str, list[Path]] = {}
 
         # Try Rust parallel walker first
         try:
             import whitemagic_rs
+
             rust_index = whitemagic_rs.walk_directory(str(self.project_path))
             for ext, paths in rust_index.items():
                 index[ext] = [Path(p) for p in paths]
@@ -140,7 +171,7 @@ class FileIndex:
             yield from cached
             return
         ext_index = self._build_extension_index()
-        results: List[Path] = []
+        results: list[Path] = []
         for ext in extensions:
             for p in ext_index.get(ext, []):
                 if self.incremental and not self.is_modified(p):
@@ -160,7 +191,7 @@ class FileIndex:
     def read_text(self, path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="ignore")
 
-    def get_ast(self, path: Path) -> Optional[ast.AST]:
+    def get_ast(self, path: Path) -> ast.AST | None:
         """Return a cached parsed AST for a Python file, or None if parsing fails."""
         rel = str(path.relative_to(self.project_path))
         if rel in self._ast_cache:
@@ -180,8 +211,8 @@ class FileIndex:
         parts = [p.lower() for p in path.parts]
         name = path.name.lower()
         return (
-            "tests" in parts or
-            "test" in parts or
-            name.startswith("test_") or
-            name.endswith("_test.py")
+            "tests" in parts
+            or "test" in parts
+            or name.startswith("test_")
+            or name.endswith("_test.py")
         )

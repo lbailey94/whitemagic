@@ -30,11 +30,21 @@ class TestMemoryGalaxyField(unittest.TestCase):
         self.assertEqual(mem.galaxy, "universal")
 
     def test_custom_galaxy(self):
-        mem = Memory(id="test-2", content="hello", memory_type=MemoryType.SHORT_TERM, galaxy="oracle")
+        mem = Memory(
+            id="test-2",
+            content="hello",
+            memory_type=MemoryType.SHORT_TERM,
+            galaxy="oracle",
+        )
         self.assertEqual(mem.galaxy, "oracle")
 
     def test_to_dict_includes_galaxy(self):
-        mem = Memory(id="test-3", content="hello", memory_type=MemoryType.SHORT_TERM, galaxy="insight")
+        mem = Memory(
+            id="test-3",
+            content="hello",
+            memory_type=MemoryType.SHORT_TERM,
+            galaxy="insight",
+        )
         data = mem.to_dict()
         self.assertIn("galaxy", data)
         self.assertEqual(data["galaxy"], "insight")
@@ -76,7 +86,9 @@ class TestGalaxyRouter(unittest.TestCase):
 
     def test_route_subsystem_mapping(self):
         # Known subsystems map to correct galaxies
-        self.assertEqual(self.router.route("recursive_improvement_loop"), "self_learning")
+        self.assertEqual(
+            self.router.route("recursive_improvement_loop"), "self_learning"
+        )
         self.assertEqual(self.router.route("emergence_engine"), "self_discovery")
         self.assertEqual(self.router.route("insight_pipeline"), "insight")
         self.assertEqual(self.router.route("dream_cycle"), "creative_solutions")
@@ -138,11 +150,13 @@ class TestGalaxyRouterStats(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         import shutil
+
         shutil.rmtree(cls.tmpdir, ignore_errors=True)
 
     def test_galaxy_stats_returns_dict(self):
         """Test that get_galaxy_stats returns a properly structured dict."""
         router = GalaxyRouter()
+
         # We can't easily get a full UnifiedMemory in unit tests,
         # so we test the stats method handles missing DB gracefully
         class FakeUM:
@@ -150,8 +164,11 @@ class TestGalaxyRouterStats(unittest.TestCase):
                 class FakePool:
                     def connection(self):
                         import sqlite3
+
                         raise sqlite3.Error("no DB")
+
                 pool = FakePool()
+
             backend = FakeBackend()
 
         stats = router.get_galaxy_stats("universal", FakeUM())

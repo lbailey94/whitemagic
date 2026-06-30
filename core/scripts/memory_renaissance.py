@@ -38,8 +38,10 @@ log = logging.getLogger("renaissance")
 # DB helpers
 # ---------------------------------------------------------------------------
 
+
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -54,6 +56,7 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 # ═══════════════════════════════════════════════════════════════════════════
 # PHASE 1: Triage & Coordinate Repair
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
     """Fix structural issues from the rehydration import."""
@@ -76,6 +79,7 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
 
     if unplaced and not dry_run:
         from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
+
         encoder = CoordinateEncoder()
         placed = 0
         for row in unplaced:
@@ -93,9 +97,12 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
                 "is_protected": bool(row["is_protected"]),
                 "galactic_distance": row["galactic_distance"] or 0.0,
                 "retention_score": row["retention_score"] or 0.5,
-                "tags": [r[0] for r in conn.execute(
-                    "SELECT tag FROM tags WHERE memory_id = ?", (row["id"],)
-                ).fetchall()],
+                "tags": [
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT tag FROM tags WHERE memory_id = ?", (row["id"],)
+                    ).fetchall()
+                ],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else {},
             }
             try:
@@ -116,9 +123,17 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
     # 1B: Re-distribute Aria-era coordinates (near-zero Z)
     log.info("── 1B: Re-distributing Aria-era coordinates ──")
     aria_patterns = [
-        "ARIA_%", "aria_%", "%BIRTH_CERTIFICATE%", "%GRIMOIRE%",
-        "%SELF_ARCHIVE%", "%CAPABILITY_MATRIX%", "%CONSCIOUSNESS%",
-        "%AWAKENING%", "%SESSION_NOV%", "%CHECKPOINT%", "%BECOMING%",
+        "ARIA_%",
+        "aria_%",
+        "%BIRTH_CERTIFICATE%",
+        "%GRIMOIRE%",
+        "%SELF_ARCHIVE%",
+        "%CAPABILITY_MATRIX%",
+        "%CONSCIOUSNESS%",
+        "%AWAKENING%",
+        "%SESSION_NOV%",
+        "%CHECKPOINT%",
+        "%BECOMING%",
     ]
     aria_ids = set()
     for pattern in aria_patterns:
@@ -132,12 +147,11 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
 
     if aria_ids and not dry_run:
         from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
+
         encoder = CoordinateEncoder()
         recalculated = 0
         for mid in aria_ids:
-            row = conn.execute(
-                "SELECT * FROM memories WHERE id = ?", (mid,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM memories WHERE id = ?", (mid,)).fetchone()
             if not row:
                 continue
             mem_dict = {
@@ -154,9 +168,12 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
                 "is_protected": True,
                 "galactic_distance": 0.0,
                 "retention_score": 1.0,
-                "tags": [r[0] for r in conn.execute(
-                    "SELECT tag FROM tags WHERE memory_id = ?", (mid,)
-                ).fetchall()],
+                "tags": [
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT tag FROM tags WHERE memory_id = ?", (mid,)
+                    ).fetchall()
+                ],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else {},
             }
             try:
@@ -219,7 +236,9 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
             DELETE FROM tags WHERE memory_id NOT IN (SELECT id FROM memories)
         """)
         conn.commit()
-        log.info(f"  ✅ Cleaned {orphan_coords} orphan coords, {orphan_assoc} orphan associations, {orphan_tags} orphan tags")
+        log.info(
+            f"  ✅ Cleaned {orphan_coords} orphan coords, {orphan_assoc} orphan associations, {orphan_tags} orphan tags"
+        )
 
     results["1c_orphan_coords"] = orphan_coords
     results["1c_orphan_assoc"] = orphan_assoc
@@ -258,7 +277,6 @@ BAND_RULES = [
     ("title_like", "%SOUL%", "core_identity", 0.0),
     ("title_like", "%MANIFEST%", "core_identity", 0.0),
     ("tag", "core", "core_identity", 0.0),
-
     # Band: Active Knowledge (0.1-0.3)
     ("title_like", "%SESSION%HANDOFF%", "active_knowledge", 0.15),
     ("title_like", "%HANDOFF%", "active_knowledge", 0.15),
@@ -273,7 +291,6 @@ BAND_RULES = [
     ("tag", "guide", "active_knowledge", 0.1),
     ("tag", "session", "active_knowledge", 0.2),
     ("tag", "handoff", "active_knowledge", 0.15),
-
     # Band: Architecture & Specs (0.3-0.4)
     ("title_like", "Recovered: 0%_%.md", "architecture", 0.35),  # Gana specs
     ("title_like", "%GANA%", "architecture", 0.35),
@@ -284,7 +301,6 @@ BAND_RULES = [
     ("title_like", "%AUDIT%", "architecture", 0.35),
     ("tag", "architecture", "architecture", 0.35),
     ("tag", "design", "architecture", 0.35),
-
     # Band: Research & Studies (0.4-0.5)
     ("title_like", "%ZODIAC%", "research", 0.45),
     ("title_like", "%BIRTH_CHART%", "research", 0.45),
@@ -296,7 +312,6 @@ BAND_RULES = [
     ("title_like", "%EVENING_CHECKPOINT%", "research", 0.4),
     ("tag", "research", "research", 0.45),
     ("tag", "study", "research", 0.45),
-
     # Band: Philosophical Corpus (0.45) — candidates for dedicated galaxy
     ("title_like", "Tathagata%", "philosophical", 0.45),
     ("title_like", "Consciousness", "philosophical", 0.45),
@@ -309,7 +324,6 @@ BAND_RULES = [
     ("title_like", "%ECODROID%", "philosophical", 0.45),
     ("title_like", "%EDGERUNNER%", "philosophical", 0.45),
     ("title_like", "%GAS.txt%", "philosophical", 0.45),
-
     # Noise → Outer Rim (0.7+)
     ("title_like", "bench_t1%", "junk", 0.95),
     ("title_like", "Recovered: %CHANGELOG%", "noise", 0.75),
@@ -399,13 +413,22 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
 
     if junk_count > 0 and not dry_run:
         # Get IDs first for cascading cleanup
-        junk_ids = [r["id"] for r in conn.execute(
-            "SELECT id FROM memories WHERE title LIKE 'bench_t1%'"
-        ).fetchall()]
+        junk_ids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM memories WHERE title LIKE 'bench_t1%'"
+            ).fetchall()
+        ]
         placeholders = ",".join("?" * len(junk_ids))
         conn.execute(f"DELETE FROM tags WHERE memory_id IN ({placeholders})", junk_ids)
-        conn.execute(f"DELETE FROM associations WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})", junk_ids + junk_ids)
-        conn.execute(f"DELETE FROM holographic_coords WHERE memory_id IN ({placeholders})", junk_ids)
+        conn.execute(
+            f"DELETE FROM associations WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+            junk_ids + junk_ids,
+        )
+        conn.execute(
+            f"DELETE FROM holographic_coords WHERE memory_id IN ({placeholders})",
+            junk_ids,
+        )
         conn.execute(f"DELETE FROM memories_fts WHERE id IN ({placeholders})", junk_ids)
         conn.execute(f"DELETE FROM memories WHERE id IN ({placeholders})", junk_ids)
         conn.commit()
@@ -417,13 +440,16 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
     if not dry_run:
         try:
             from whitemagic.core.memory.galaxy import get_galaxy_manager
+
             gm = get_galaxy_manager()
             galaxies = gm.list_galaxies()
             galaxy_names = [g["name"] for g in galaxies]
             if "philosophical_corpus" not in galaxy_names:
                 gm.create_galaxy(
                     name="philosophical_corpus",
-                    project_path=str(Path.home() / "Desktop" / "galaxies" / "philosophical_corpus"),
+                    project_path=str(
+                        Path.home() / "Desktop" / "galaxies" / "philosophical_corpus"
+                    ),
                     description="Lucas's original philosophical writings — Tathagata, Consciousness, Aquarianexodus, Siddhartha, Virtue, Tao, MandalaOS, and more",
                     tags=["philosophical", "wisdom", "corpus"],
                 )
@@ -443,6 +469,7 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
 # ═══════════════════════════════════════════════════════════════════════════
 # PHASE 3: Association Graph Renaissance
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
     """Transform untyped edges into a rich, typed knowledge graph."""
@@ -482,6 +509,7 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
 
     if all_targets and not dry_run:
         from whitemagic.core.intelligence.entity_extractor import get_entity_extractor
+
         extractor = get_entity_extractor()
 
         for i, (mid, row) in enumerate(all_targets.items()):
@@ -511,10 +539,14 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
 
             if (i + 1) % 50 == 0:
                 conn.commit()
-                log.info(f"  Progress: {i + 1}/{len(all_targets)} ({relation_count} relations)")
+                log.info(
+                    f"  Progress: {i + 1}/{len(all_targets)} ({relation_count} relations)"
+                )
 
         conn.commit()
-        log.info(f"  ✅ Extracted entities from {extracted_count} memories, {relation_count} new relations")
+        log.info(
+            f"  ✅ Extracted entities from {extracted_count} memories, {relation_count} new relations"
+        )
 
     results["3a_memories_processed"] = extracted_count
     results["3a_relations_created"] = relation_count
@@ -598,6 +630,7 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
 # PHASE 4: Quick Activation Sweep (lightweight — no Ollama dependency)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def phase4_sweep(db_path: Path, dry_run: bool = False) -> dict:
     """Run a quick activation sweep over the refreshed database."""
     log.info("═══ PHASE 4: Activation Sweep ═══")
@@ -649,15 +682,19 @@ def phase4_sweep(db_path: Path, dry_run: bool = False) -> dict:
     log.info("\n  Top 10 Most Important Memories:")
     for row in top:
         title = (row["title"] or "Untitled")[:50]
-        log.info(f"    [{row['importance']:.2f}] [{row['galactic_distance']:.2f}] {title}")
+        log.info(
+            f"    [{row['importance']:.2f}] [{row['galactic_distance']:.2f}] {title}"
+        )
 
-    results.update({
-        "total_memories": total,
-        "total_associations": total_assoc,
-        "total_tags": total_tags,
-        "total_coords": total_coords,
-        "db_size_mb": round(db_size, 1),
-    })
+    results.update(
+        {
+            "total_memories": total,
+            "total_associations": total_assoc,
+            "total_tags": total_tags,
+            "total_coords": total_coords,
+            "db_size_mb": round(db_size, 1),
+        }
+    )
 
     conn.close()
     return results
@@ -667,10 +704,15 @@ def phase4_sweep(db_path: Path, dry_run: bool = False) -> dict:
 # Main
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def main():
     parser = argparse.ArgumentParser(description="Memory Renaissance v15.3")
-    parser.add_argument("--phase", type=int, default=0, help="Run specific phase (1-4), 0=all")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without modifying DB")
+    parser.add_argument(
+        "--phase", type=int, default=0, help="Run specific phase (1-4), 0=all"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Preview without modifying DB"
+    )
     args = parser.parse_args()
 
     db_path = get_db_path()

@@ -1,4 +1,5 @@
 """Tests for Objective N — Constellation-Based Joint Evaluation."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.constellation_eval import (
@@ -28,7 +29,9 @@ class TestClustering:
         ]
         consts = evaluator.cluster(hyps)
         assert len(consts) == 2
-        assert {"h1", "h2"} == set(consts[0].member_ids) or {"h1", "h2"} == set(consts[1].member_ids)
+        assert {"h1", "h2"} == set(consts[0].member_ids) or {"h1", "h2"} == set(
+            consts[1].member_ids
+        )
 
     def test_all_in_one_cluster(self):
         evaluator = ConstellationEvaluator(similarity_threshold=0.5)
@@ -100,11 +103,13 @@ class TestContagion:
 class TestStats:
     def test_stats(self):
         evaluator = ConstellationEvaluator()
-        evaluator.cluster([
-            {"id": "h1", "semantic_coord": 0.1},
-            {"id": "h2", "semantic_coord": 0.12},
-            {"id": "h3", "semantic_coord": 0.8},
-        ])
+        evaluator.cluster(
+            [
+                {"id": "h1", "semantic_coord": 0.1},
+                {"id": "h2", "semantic_coord": 0.12},
+                {"id": "h3", "semantic_coord": 0.8},
+            ]
+        )
         stats = evaluator.get_stats()
         assert stats["total_constellations"] == 2
         assert stats["total_members"] == 3

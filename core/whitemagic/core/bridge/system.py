@@ -36,6 +36,7 @@ def check_system_health(
 
     if scan_disk:
         from whitemagic.archaeology import get_archaeologist
+
         disk_stats = get_archaeologist().stats(scan_disk=True)
         result["disk_usage"] = {
             "total_mb": disk_stats.get("disk_usage_mb", 0),
@@ -72,7 +73,9 @@ def check_memory_health(component: str = "memory", **kwargs: Any) -> dict[str, A
     }
 
 
-def check_resonance_health(component: str = "resonance", duration_seconds: int = 60, **kwargs: Any) -> dict[str, Any]:
+def check_resonance_health(
+    component: str = "resonance", duration_seconds: int = 60, **kwargs: Any
+) -> dict[str, Any]:
     """Check resonance (Gan Ying bus) health."""
     from whitemagic.core.health_monitor import HealthMonitor
 
@@ -89,7 +92,9 @@ def check_resonance_health(component: str = "resonance", duration_seconds: int =
     }
 
 
-def check_integrations_health(component: str = "integrations", quick_check: bool = True, **kwargs: Any) -> dict[str, Any]:
+def check_integrations_health(
+    component: str = "integrations", quick_check: bool = True, **kwargs: Any
+) -> dict[str, Any]:
     """Check integrations health."""
     from whitemagic.core.health_monitor import HealthMonitor
 
@@ -106,6 +111,8 @@ def check_integrations_health(component: str = "integrations", quick_check: bool
     }
 
 
-def debug_system(operation: str = "inspect_state", component: str | None = None, **kwargs: Any) -> dict[str, Any]:
+def debug_system(
+    operation: str = "inspect_state", component: str | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Debug system components."""
     return {"operation": operation, "component": component, "status": "healthy"}

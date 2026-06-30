@@ -17,12 +17,15 @@ from whitemagic.core.memory.thought_galaxy import ThoughtGalaxy
 
 logger = logging.getLogger(__name__)
 
+
 class Supervisor:
     """
     Auto-prompting supervisor that triggers SOPs based on context.
     """
 
-    def __init__(self, sop_dir: str | Path, thought_galaxy: ThoughtGalaxy | None = None):
+    def __init__(
+        self, sop_dir: str | Path, thought_galaxy: ThoughtGalaxy | None = None
+    ):
         self.sop_dir = Path(sop_dir)
         self.classifier = PromptClassifier()
         self.thought_galaxy = thought_galaxy
@@ -56,15 +59,15 @@ class Supervisor:
                 "trigger": "file_change",
                 "condition": "changes_count > 0",
                 "prompt_template": "Review the changes in {files}. Look for bugs, security issues, and style violations.",
-                "enabled_by_default": True
+                "enabled_by_default": True,
             },
             {
                 "name": "session_handoff",
                 "trigger": "session_end",
                 "condition": "always",
                 "prompt_template": "Generate a session handoff summary including accomplished tasks, open loops, and next steps.",
-                "enabled_by_default": True
-            }
+                "enabled_by_default": True,
+            },
         ]
         for d in defaults:
             p = self.sop_dir / f"{d['name']}.json"
@@ -114,5 +117,5 @@ class Supervisor:
             "sop_list": [
                 {"name": k, "enabled": self.enabled_sops.get(k, False)}
                 for k in self.sop_cache
-            ]
+            ],
         }

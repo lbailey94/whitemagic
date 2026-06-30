@@ -5,6 +5,7 @@ These tests verify the bridge functions correctly wrap the galactic
 substrate. They run against the live substrate DB at
 ~/.whitemagic/memory/whitemagic.db when available.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -18,6 +19,7 @@ def use_live_substrate(monkeypatch):
     so galactic._resolve_db_path() returns the real DB.
     """
     from pathlib import Path
+
     live = Path.home() / ".whitemagic" / "memory" / "whitemagic.db"
     if live.exists():
         monkeypatch.setenv("WM_MEMORY_DB", str(live))
@@ -110,7 +112,10 @@ def test_galactic_memory_search_empty_query():
 
 
 def test_galactic_memory_by_id_roundtrip():
-    from whitemagic.core.bridge.galactic import galactic_memory_by_id, galactic_memory_recent
+    from whitemagic.core.bridge.galactic import (
+        galactic_memory_by_id,
+        galactic_memory_recent,
+    )
 
     recent = galactic_memory_recent(limit=1)
     if not recent["result"]["memories"]:

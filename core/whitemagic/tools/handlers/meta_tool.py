@@ -914,14 +914,19 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
         # Only apply after we have enough history (3+ calls) to judge coherence
         if stream_len >= 3 and avg_coherence < 0.6:
             _SAFE_GANAS = {
-                "gana_ghost", "gana_neck", "gana_winnowing_basket",
-                "gana_horn", "gana_heart",
+                "gana_ghost",
+                "gana_neck",
+                "gana_winnowing_basket",
+                "gana_horn",
+                "gana_heart",
             }
             if gana_name not in _SAFE_GANAS:
                 _coherence_caution = True
                 logger.info(
                     "Coherence-driven dispatch: avg=%.2f, stream=%d, gana=%s flagged as caution",
-                    avg_coherence, stream_len, gana_name,
+                    avg_coherence,
+                    stream_len,
+                    gana_name,
                 )
     except Exception:
         pass

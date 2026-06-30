@@ -23,10 +23,12 @@ class YinSynthesis:
 
     def observe(self, subject: str, observation: str) -> None:
         """Record an observation without judgment."""
-        self.observations.append({
-            "subject": subject,
-            "observation": observation,
-        })
+        self.observations.append(
+            {
+                "subject": subject,
+                "observation": observation,
+            }
+        )
 
     def synthesize(self) -> dict[str, Any]:
         """Synthesize observations into insights."""
@@ -37,7 +39,9 @@ class YinSynthesis:
         insights: list[str] = []
         for subject, obs_list in by_subject.items():
             if len(obs_list) >= 3:
-                insights.append(f"{subject}: Pattern detected ({len(obs_list)} observations)")
+                insights.append(
+                    f"{subject}: Pattern detected ({len(obs_list)} observations)"
+                )
             if len(obs_list) >= 5:
                 insights.append(f"{subject}: Strong signal — investigate further")
 

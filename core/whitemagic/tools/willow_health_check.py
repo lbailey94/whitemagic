@@ -14,15 +14,18 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class WillowHealthStatus:
     """Health status for Willow tools."""
+
     is_healthy: bool
     circuit_breaker_ok: bool
     koka_responsive: bool
     last_check: float
     error_count: int
     issues: list[str]
+
 
 class WillowHealthChecker:
     """Health monitoring and recovery for Gana Willow."""
@@ -39,10 +42,12 @@ class WillowHealthChecker:
         current_time = time.time()
 
         # Use cache if recent and not forced
-        if (not force and
-            self._health_cache and
-            current_time - self._last_check < self._check_interval and
-            self._health_cache.is_healthy):
+        if (
+            not force
+            and self._health_cache
+            and current_time - self._last_check < self._check_interval
+            and self._health_cache.is_healthy
+        ):
             return self._health_cache
 
         logger.info("🌿 Performing Willow health check...")
@@ -54,12 +59,17 @@ class WillowHealthChecker:
         # 1. Check circuit breaker state
         try:
             from whitemagic.tools.circuit_breaker import get_breaker_registry
+
             registry = get_breaker_registry()
 
             # Check Willow-specific breakers
             willow_breakers = [
-                "grimoire_list", "grimoire_read", "grimoire_cast",
-                "cast_oracle", "fool_guard_ralph", "fool_guard_dare_to_die"
+                "grimoire_list",
+                "grimoire_read",
+                "grimoire_cast",
+                "cast_oracle",
+                "fool_guard_ralph",
+                "fool_guard_dare_to_die",
             ]
 
             for breaker_name in willow_breakers:
@@ -79,6 +89,7 @@ class WillowHealthChecker:
         try:
             # Quick Koka health check
             from whitemagic.core.acceleration.koka_bridge import koka_health_check
+
             koka_result = await koka_health_check()
 
             if koka_result.get("status") not in ("success", "partial"):
@@ -120,13 +131,13 @@ class WillowHealthChecker:
             koka_responsive=bool(koka_ok) if koka_ok is not None else False,
             last_check=current_time,
             error_count=self._error_count,
-            issues=issues
+            issues=issues,
         )
 
         self._health_cache = status
         self._last_check = current_time  # type: ignore[assignment]
 
-        logger.info("🌿 Willow health check complete: %s", '✅' if is_healthy else '❌')
+        logger.info("🌿 Willow health check complete: %s", "✅" if is_healthy else "❌")
         if issues:
             logger.warning("🌿 Issues found: %s", issues, exc_info=True)
 
@@ -141,7 +152,7 @@ class WillowHealthChecker:
             # Quick list operation with timeout
             result = await asyncio.wait_for(
                 asyncio.create_task(asyncio.to_thread(handle_grimoire_list, limit=1)),
-                timeout=5.0
+                timeout=5.0,
             )
 
             return result.get("status") == "success"
@@ -156,25 +167,36 @@ class WillowHealthChecker:
     async def attempt_recovery(self) -> bool:
         """Attempt to recover Willow functionality."""
         self._recovery_attempts += 1
-        logger.info("🌿 Attempting Willow recovery (attempt #%s)", self._recovery_attempts, exc_info=True)
+        logger.info(
+            "🌿 Attempting Willow recovery (attempt #%s)",
+            self._recovery_attempts,
+            exc_info=True,
+        )
 
         recovery_success = False
 
         # 1. Reset circuit breakers
         try:
             from whitemagic.tools.circuit_breaker import get_breaker_registry
+
             registry = get_breaker_registry()
 
             willow_breakers = [
-                "grimoire_list", "grimoire_read", "grimoire_cast",
-                "cast_oracle", "fool_guard_ralph", "fool_guard_dare_to_die"
+                "grimoire_list",
+                "grimoire_read",
+                "grimoire_cast",
+                "cast_oracle",
+                "fool_guard_ralph",
+                "fool_guard_dare_to_die",
             ]
 
             for breaker_name in willow_breakers:
                 breaker = registry.get_breaker(breaker_name)
                 if breaker and breaker.is_open():
                     breaker.reset()
-                    logger.info("🌿 Reset circuit breaker: %s", breaker_name, exc_info=True)
+                    logger.info(
+                        "🌿 Reset circuit breaker: %s", breaker_name, exc_info=True
+                    )
                     recovery_success = True
 
         except (OSError, FileNotFoundError, PermissionError) as e:
@@ -183,6 +205,7 @@ class WillowHealthChecker:
         # 2. Reinitialize Koka bridge
         try:
             from whitemagic.core.acceleration.koka_bridge import reinitialize_koka
+
             koka_result = await reinitialize_koka()
             if koka_result.get("status") == "success":
                 logger.info("🌿 Koka bridge reinitialized")
@@ -211,37 +234,47 @@ class WillowHealthChecker:
         recommendations = []
 
         if not health.circuit_breaker_ok:
-            recommendations.append({
-                "type": "circuit_breaker",
-                "priority": "high",
-                "action": "Reset circuit breakers for Willow tools",
-                "auto_recover": True
-            })
+            recommendations.append(
+                {
+                    "type": "circuit_breaker",
+                    "priority": "high",
+                    "action": "Reset circuit breakers for Willow tools",
+                    "auto_recover": True,
+                }
+            )
 
         if health.koka_responsive is False:
-            recommendations.append({
-                "type": "koka_handler",
-                "priority": "medium",
-                "action": "Reinitialize Koka bridge",
-                "auto_recover": True
-            })
+            recommendations.append(
+                {
+                    "type": "koka_handler",
+                    "priority": "medium",
+                    "action": "Reinitialize Koka bridge",
+                    "auto_recover": True,
+                }
+            )
 
         if health.error_count > 5:
-            recommendations.append({
-                "type": "error_rate",
-                "priority": "medium",
-                "action": "Investigate recurring errors in Willow operations",
-                "auto_recover": False
-            })
+            recommendations.append(
+                {
+                    "type": "error_rate",
+                    "priority": "medium",
+                    "action": "Investigate recurring errors in Willow operations",
+                    "auto_recover": False,
+                }
+            )
 
         return {
             "health": health,
             "recommendations": recommendations,
-            "auto_recovery_available": any(r.get("auto_recover", False) for r in recommendations)
+            "auto_recovery_available": any(
+                r.get("auto_recover", False) for r in recommendations
+            ),
         }
+
 
 # Global health checker
 _willow_health_checker: WillowHealthChecker | None = None
+
 
 def get_willow_health_checker() -> WillowHealthChecker:
     """Get the global Willow health checker."""
@@ -249,6 +282,7 @@ def get_willow_health_checker() -> WillowHealthChecker:
     if _willow_health_checker is None:
         _willow_health_checker = WillowHealthChecker()
     return _willow_health_checker
+
 
 # Integration with unified API
 async def willow_pre_check(tool_name: str) -> bool:
@@ -268,6 +302,7 @@ async def willow_pre_check(tool_name: str) -> bool:
 
     return True
 
+
 # Timeout wrapper for Koka operations
 async def koka_timeout_wrapper(operation: Any, timeout_seconds: float = 5.0) -> Any:
     """Wrap Koka operations with timeout and error handling."""
@@ -275,7 +310,9 @@ async def koka_timeout_wrapper(operation: Any, timeout_seconds: float = 5.0) -> 
         result = await asyncio.wait_for(operation, timeout=timeout_seconds)
         return {"status": "success", "result": result}
     except TimeoutError:
-        logger.warning("🌿 Koka operation timed out after %ss", timeout_seconds, exc_info=True)
+        logger.warning(
+            "🌿 Koka operation timed out after %ss", timeout_seconds, exc_info=True
+        )
         return {"status": "error", "error": "timeout"}
     except Exception as e:
         logger.warning("🌿 Koka operation failed: %s", e, exc_info=True)

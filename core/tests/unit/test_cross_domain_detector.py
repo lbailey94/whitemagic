@@ -39,12 +39,43 @@ def _make_test_db(tmpdir: str) -> str:
 
     # Insert memories with shared tags but different content
     import json
+
     memories = [
-        ("mem_a", "Refactor API", "We need to restructure the REST endpoints", "OBSERVATION", ["refactor", "api", "technical"]),
-        ("mem_b", "Reorganize Garden", "Rearrange the joy garden for better flow", "OBSERVATION", ["refactor", "garden", "emotional"]),
-        ("mem_c", "Debug Router", "Fix the inference router token budget bug", "OBSERVATION", ["debug", "router", "technical"]),
-        ("mem_d", "Debug Dream", "Fix dream cycle phase ordering issue", "OBSERVATION", ["debug", "dream", "emotional"]),
-        ("mem_e", "Unrelated Memory", "Random content about cooking", "REFLECTION", ["cooking", "food"]),
+        (
+            "mem_a",
+            "Refactor API",
+            "We need to restructure the REST endpoints",
+            "OBSERVATION",
+            ["refactor", "api", "technical"],
+        ),
+        (
+            "mem_b",
+            "Reorganize Garden",
+            "Rearrange the joy garden for better flow",
+            "OBSERVATION",
+            ["refactor", "garden", "emotional"],
+        ),
+        (
+            "mem_c",
+            "Debug Router",
+            "Fix the inference router token budget bug",
+            "OBSERVATION",
+            ["debug", "router", "technical"],
+        ),
+        (
+            "mem_d",
+            "Debug Dream",
+            "Fix dream cycle phase ordering issue",
+            "OBSERVATION",
+            ["debug", "dream", "emotional"],
+        ),
+        (
+            "mem_e",
+            "Unrelated Memory",
+            "Random content about cooking",
+            "REFLECTION",
+            ["cooking", "food"],
+        ),
     ]
 
     for mid, title, content, mtype, tags in memories:
@@ -62,7 +93,7 @@ def _make_test_db(tmpdir: str) -> str:
         "mem_b": [0.1, 0.9, 0.05, 0.0] * 96,  # Garden/emotional direction
         "mem_c": [0.05, 0.0, 0.9, 0.1] * 96,  # Router/technical
         "mem_d": [0.05, 0.0, 0.1, 0.9] * 96,  # Dream/emotional
-        "mem_e": [0.5, 0.5, 0.5, 0.5] * 96,   # Neutral
+        "mem_e": [0.5, 0.5, 0.5, 0.5] * 96,  # Neutral
     }
 
     for mid, emb in embeddings.items():
@@ -81,7 +112,9 @@ class TestCrossDomainCollisionDetector:
         """Should find collision pairs with high behavioral, low semantic similarity."""
         db_path = _make_test_db(str(tmp_path))
         detector = CrossDomainCollisionDetector(db_path=db_path)
-        collisions = detector.detect(sample_limit=100, min_behavioral=0.2, max_semantic=0.8, top_n=10)
+        collisions = detector.detect(
+            sample_limit=100, min_behavioral=0.2, max_semantic=0.8, top_n=10
+        )
 
         # Should find at least the refactor pair (mem_a, mem_b) and debug pair (mem_c, mem_d)
         assert len(collisions) > 0
@@ -100,7 +133,9 @@ class TestCrossDomainCollisionDetector:
         detector = CrossDomainCollisionDetector(db_path=db_path)
 
         # High threshold should filter most pairs
-        collisions = detector.detect(sample_limit=100, min_behavioral=0.9, max_semantic=0.9, top_n=10)
+        collisions = detector.detect(
+            sample_limit=100, min_behavioral=0.9, max_semantic=0.9, top_n=10
+        )
         # With Jaccard on 3 tags, 0.9 is very high — likely no pairs
         for c in collisions:
             assert c.behavioral_score >= 0.9
@@ -111,7 +146,9 @@ class TestCrossDomainCollisionDetector:
         detector = CrossDomainCollisionDetector(db_path=db_path)
 
         # Very low max_semantic means only very dissimilar pairs
-        collisions = detector.detect(sample_limit=100, min_behavioral=0.1, max_semantic=0.1, top_n=10)
+        collisions = detector.detect(
+            sample_limit=100, min_behavioral=0.1, max_semantic=0.1, top_n=10
+        )
         for c in collisions:
             assert c.semantic_similarity < 0.1
 
@@ -170,13 +207,19 @@ class TestCrossDomainCollisionDetector:
         assert CrossDomainCollisionDetector._jaccard({"a", "b"}, {"a", "b"}) == 1.0
         assert CrossDomainCollisionDetector._jaccard({"a"}, {"b"}) == 0.0
         assert CrossDomainCollisionDetector._jaccard(set(), set()) == 0.0
-        assert CrossDomainCollisionDetector._jaccard({"a", "b", "c"}, {"a", "b"}) == 2 / 3
+        assert (
+            CrossDomainCollisionDetector._jaccard({"a", "b", "c"}, {"a", "b"}) == 2 / 3
+        )
 
     def test_cosine_sim(self):
         """Cosine similarity should compute correctly."""
         assert CrossDomainCollisionDetector._cosine_sim(None, [1.0]) is None
-        assert CrossDomainCollisionDetector._cosine_sim([1.0, 0.0], [1.0, 0.0]) == pytest.approx(1.0)
-        assert CrossDomainCollisionDetector._cosine_sim([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
+        assert CrossDomainCollisionDetector._cosine_sim(
+            [1.0, 0.0], [1.0, 0.0]
+        ) == pytest.approx(1.0)
+        assert CrossDomainCollisionDetector._cosine_sim(
+            [1.0, 0.0], [0.0, 1.0]
+        ) == pytest.approx(0.0)
 
     def test_get_stats(self, tmp_path):
         """get_stats should return cumulative counters."""

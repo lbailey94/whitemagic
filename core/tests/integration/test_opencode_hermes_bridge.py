@@ -10,6 +10,7 @@ Requires: mcp SDK + anyio installed (skip if unavailable).
 Usage:
     pytest tests/integration/test_opencode_hermes_bridge.py -v
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -46,6 +47,7 @@ pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 
 # ── Simulated External Agent Client ──────────────────────────────────────
 
+
 class _ExternalAgentClient:
     """Simulates an OpenCode or Hermes ACP/MCP client over memory streams."""
 
@@ -59,7 +61,11 @@ class _ExternalAgentClient:
         return self._id
 
     async def request(
-        self, method: str, params: dict | None = None, *, timeout: float = 15.0,
+        self,
+        method: str,
+        params: dict | None = None,
+        *,
+        timeout: float = 15.0,
     ) -> dict:
         """Send a JSON-RPC *request* and wait for the matching response."""
         req_id = self._next_id()
@@ -75,7 +81,8 @@ class _ExternalAgentClient:
                 session_msg = await self._rx.receive()
                 data = json.loads(
                     session_msg.message.model_dump_json(
-                        by_alias=True, exclude_none=True,
+                        by_alias=True,
+                        exclude_none=True,
                     )
                 )
                 if "id" in data:
@@ -93,18 +100,25 @@ class _ExternalAgentClient:
 
     async def initialize(self) -> dict:
         """Perform the full MCP initialize handshake."""
-        resp = await self.request("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "opencode-hermes-bridge-test", "version": "1.0.0"},
-        })
+        resp = await self.request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "opencode-hermes-bridge-test",
+                    "version": "1.0.0",
+                },
+            },
+        )
         await self.notify("notifications/initialized")
         return resp
 
 
 @asynccontextmanager
 async def mcp_session(
-    *, init: bool = True,
+    *,
+    init: bool = True,
 ) -> AsyncGenerator[_ExternalAgentClient, None]:
     """Start an in-process MCP server session."""
     old_prat = os.environ.get("WM_MCP_PRAT")
@@ -117,7 +131,8 @@ async def mcp_session(
 
     server_task = asyncio.create_task(
         server.run(
-            to_server_rx, from_server_tx,
+            to_server_rx,
+            from_server_tx,
             server.create_initialization_options(),
         )
     )
@@ -140,6 +155,7 @@ async def mcp_session(
 
 # ── Test Suites ─────────────────────────────────────────────────────────
 
+
 class TestAgentDiscovery:
     """Verify external agents can discover WhiteMagic governance surface."""
 
@@ -155,13 +171,13 @@ class TestAgentDiscovery:
             tool_names = {t["name"] for t in tools}
             # Governance-critical Ganas that an agent runtime should see
             governance_ganas = {
-                "gana_horn",      # session initiation
-                "gana_neck",      # memory presence
-                "gana_ghost",     # metrics introspection
+                "gana_horn",  # session initiation
+                "gana_neck",  # memory presence
+                "gana_ghost",  # metrics introspection
                 "gana_three_stars",  # wisdom council
-                "gana_dipper",    # governance
-                "gana_chariot",   # codebase navigation
-                "gana_abundance", # resource sharing / forecasting
+                "gana_dipper",  # governance
+                "gana_chariot",  # codebase navigation
+                "gana_abundance",  # resource sharing / forecasting
             }
             for gana in governance_ganas:
                 assert gana in tool_names, f"Missing governance Gana: {gana}"
@@ -192,13 +208,17 @@ class TestGovernanceToolInvocation:
     async def test_gana_ghost_capabilities(self):
         """gana_ghost/capabilities returns metrics introspection surface."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_ghost",
-                "arguments": {
-                    "tool": "capabilities",
-                    "args": {},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_ghost",
+                    "arguments": {
+                        "tool": "capabilities",
+                        "args": {},
+                    },
                 },
-            }, timeout=30.0)
+                timeout=30.0,
+            )
             assert "result" in response, f"Expected result, got: {response}"
             content = response["result"].get("content", [])
             assert len(content) > 0
@@ -208,13 +228,17 @@ class TestGovernanceToolInvocation:
     async def test_gana_root_health(self):
         """gana_root/health_report returns system health for agent calibration."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_root",
-                "arguments": {
-                    "tool": "health_report",
-                    "args": {},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_root",
+                    "arguments": {
+                        "tool": "health_report",
+                        "args": {},
+                    },
                 },
-            }, timeout=60.0)
+                timeout=60.0,
+            )
             assert "result" in response
             content = response["result"].get("content", [])
             assert len(content) > 0
@@ -224,13 +248,17 @@ class TestGovernanceToolInvocation:
     async def test_gana_horn_session_bootstrap(self):
         """gana_horn/session_bootstrap creates a session context for agent onboarding."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_horn",
-                "arguments": {
-                    "tool": "session_bootstrap",
-                    "args": {"mode": "standard"},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_horn",
+                    "arguments": {
+                        "tool": "session_bootstrap",
+                        "args": {"mode": "standard"},
+                    },
                 },
-            }, timeout=30.0)
+                timeout=30.0,
+            )
             assert "result" in response
             content = response["result"].get("content", [])
             assert len(content) > 0
@@ -243,17 +271,21 @@ class TestGovernanceToolInvocation:
         """gana_neck/create_memory + search_memories returns structured envelope."""
         async with mcp_session() as client:
             # Create a memory
-            create_resp = await client.request("tools/call", {
-                "name": "gana_neck",
-                "arguments": {
-                    "tool": "create_memory",
-                    "args": {
-                        "title": "OpenCode integration test",
-                        "content": "OpenCode integration test memory",
-                        "tags": ["integration", "opencode"],
+            create_resp = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_neck",
+                    "arguments": {
+                        "tool": "create_memory",
+                        "args": {
+                            "title": "OpenCode integration test",
+                            "content": "OpenCode integration test memory",
+                            "tags": ["integration", "opencode"],
+                        },
                     },
                 },
-            }, timeout=30.0)
+                timeout=30.0,
+            )
             assert "result" in create_resp
             create_content = create_resp["result"].get("content", [])
             assert len(create_content) > 0
@@ -263,13 +295,20 @@ class TestGovernanceToolInvocation:
             assert create_data["status"] in {"success", "error"}
 
             # Follow-up with remember (valid gana_neck alias) — contract test
-            remember_resp = await client.request("tools/call", {
-                "name": "gana_neck",
-                "arguments": {
-                    "tool": "remember",
-                    "args": {"title": "OpenCode integration test", "content": "remembered"},
+            remember_resp = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_neck",
+                    "arguments": {
+                        "tool": "remember",
+                        "args": {
+                            "title": "OpenCode integration test",
+                            "content": "remembered",
+                        },
+                    },
                 },
-            }, timeout=30.0)
+                timeout=30.0,
+            )
             assert "result" in remember_resp
             remember_content = remember_resp["result"].get("content", [])
             assert len(remember_content) > 0
@@ -284,11 +323,14 @@ class TestAgentClientProtocolCompatibility:
     async def test_initialize_returns_server_info(self):
         """ACP clients expect serverInfo with name and version."""
         async with mcp_session(init=False) as client:
-            response = await client.request("initialize", {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "test-acp-client", "version": "1.0.0"},
-            })
+            response = await client.request(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test-acp-client", "version": "1.0.0"},
+                },
+            )
             assert "result" in response
             result = response["result"]
             assert "serverInfo" in result
@@ -310,12 +352,16 @@ class TestStructuredErrorResponses:
     async def test_missing_tool_name_returns_structured_error(self):
         """Calling a Gana without specifying nested tool returns envelope error."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_root",
-                "arguments": {
-                    "args": {},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_root",
+                    "arguments": {
+                        "args": {},
+                    },
                 },
-            }, timeout=30.0)
+                timeout=30.0,
+            )
             assert "result" in response
             content = response["result"].get("content", [])
             assert len(content) > 0
@@ -326,13 +372,17 @@ class TestStructuredErrorResponses:
     async def test_invalid_gana_returns_error(self):
         """Calling a non-existent Gana returns a clean error envelope."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_nonexistent",
-                "arguments": {
-                    "tool": "foo",
-                    "args": {},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_nonexistent",
+                    "arguments": {
+                        "tool": "foo",
+                        "args": {},
+                    },
                 },
-            }, timeout=30.0)
+                timeout=30.0,
+            )
             assert "result" in response
             content = response["result"].get("content", [])
             assert len(content) > 0
@@ -349,7 +399,11 @@ class TestAllGanasSmoke:
 
     GANA_TESTS = [
         ("gana_horn", "session_bootstrap", {"mode": "standard"}),
-        ("gana_neck", "create_memory", {"title": "Bridge test", "content": "bridge memory", "tags": ["test"]}),
+        (
+            "gana_neck",
+            "create_memory",
+            {"title": "Bridge test", "content": "bridge memory", "tags": ["test"]},
+        ),
         ("gana_heart", "get_session_context", {}),
         ("gana_tail", "token_report", {}),
         ("gana_dipper", "homeostasis", {}),
@@ -381,10 +435,14 @@ class TestAllGanasSmoke:
     @pytest.mark.parametrize("gana,tool,args", GANA_TESTS)
     async def test_gana(self, gana: str, tool: str, args: dict):
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": gana,
-                "arguments": {"tool": tool, "args": args},
-            }, timeout=45.0)
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": gana,
+                    "arguments": {"tool": tool, "args": args},
+                },
+                timeout=45.0,
+            )
             assert "result" in response, f"{gana}/{tool}: no result key"
             content = response["result"].get("content", [])
             assert len(content) > 0, f"{gana}/{tool}: empty content"
@@ -417,41 +475,68 @@ class TestAgentWorkflowSimulation:
             assert "gana_straddling_legs" in tool_names
 
             # 2. AUDIT — check system health before acting
-            health_resp = await client.request("tools/call", {
-                "name": "gana_root",
-                "arguments": {"tool": "health_report", "args": {}},
-            }, timeout=30.0)
+            health_resp = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_root",
+                    "arguments": {"tool": "health_report", "args": {}},
+                },
+                timeout=30.0,
+            )
             assert "result" in health_resp
             health_data = json.loads(health_resp["result"]["content"][0]["text"])
             assert health_data.get("status") in {"success", "ok", "healthy", "error"}
 
             # 3. DECIDE — get dharma guidance before a risky operation
-            guidance_resp = await client.request("tools/call", {
-                "name": "gana_straddling_legs",
-                "arguments": {"tool": "get_dharma_guidance", "args": {"situation": "Should I refactor the production database schema?"}},
-            }, timeout=30.0)
+            guidance_resp = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_straddling_legs",
+                    "arguments": {
+                        "tool": "get_dharma_guidance",
+                        "args": {
+                            "situation": "Should I refactor the production database schema?"
+                        },
+                    },
+                },
+                timeout=30.0,
+            )
             assert "result" in guidance_resp
             guidance_data = json.loads(guidance_resp["result"]["content"][0]["text"])
             assert "status" in guidance_data
 
             # 4. ACT — create a memory of the decision
-            memory_resp = await client.request("tools/call", {
-                "name": "gana_neck",
-                "arguments": {"tool": "create_memory", "args": {
-                    "title": "Governance workflow test",
-                    "content": "Agent checked health, sought guidance, and logged decision.",
-                    "tags": ["governance", "workflow"],
-                }},
-            }, timeout=30.0)
+            memory_resp = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_neck",
+                    "arguments": {
+                        "tool": "create_memory",
+                        "args": {
+                            "title": "Governance workflow test",
+                            "content": "Agent checked health, sought guidance, and logged decision.",
+                            "tags": ["governance", "workflow"],
+                        },
+                    },
+                },
+                timeout=30.0,
+            )
             assert "result" in memory_resp
             memory_data = json.loads(memory_resp["result"]["content"][0]["text"])
             assert "status" in memory_data
 
             # 5. VERIFY — confirm the memory exists via search
-            search_resp = await client.request("tools/call", {
-                "name": "gana_winnowing_basket",
-                "arguments": {"tool": "memory_search", "args": {"query": "governance workflow"}},
-            }, timeout=30.0)
+            search_resp = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_winnowing_basket",
+                    "arguments": {
+                        "tool": "memory_search",
+                        "args": {"query": "governance workflow"},
+                    },
+                },
+                timeout=30.0,
+            )
             assert "result" in search_resp
             search_data = json.loads(search_resp["result"]["content"][0]["text"])
             assert "status" in search_data
@@ -488,6 +573,7 @@ class TestHermesHookScripts:
     @staticmethod
     def _run_hook(script: str, event: dict) -> dict:
         import subprocess  # local import for test isolation
+
         env = os.environ.copy()
         env["PYTHONPATH"] = str(ROOT)
         # Ensure the hook subprocess shares the isolated test state
@@ -506,62 +592,86 @@ class TestHermesHookScripts:
 
     # ── Policy Gate (pre_tool_call) ──────────────────────────────────────
 
-    @pytest.mark.parametrize("cmd", [
-        "rm -rf /home",
-        "rm -rf ~",
-        "rm -rf /",
-        "dd if=/dev/zero of=/dev/sda",
-    ])
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "rm -rf /home",
+            "rm -rf ~",
+            "rm -rf /",
+            "dd if=/dev/zero of=/dev/sda",
+        ],
+    )
     def test_policy_blocks_dangerous_terminal(self, cmd: str):
-        result = self._run_hook(self.POLICY_HOOK, {
-            "tool_name": "terminal",
-            "tool_input": {"command": cmd},
-        })
+        result = self._run_hook(
+            self.POLICY_HOOK,
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": cmd},
+            },
+        )
         assert result.get("allowed") is False
         assert result.get("type") == "block"
         assert "WhiteMagic Dharma Gate" in result.get("message", "")
 
-    @pytest.mark.parametrize("cmd", [
-        "ls -la",
-        "pwd",
-        "git status",
-        "rm -rf /tmp/build",
-    ])
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "ls -la",
+            "pwd",
+            "git status",
+            "rm -rf /tmp/build",
+        ],
+    )
     def test_policy_allows_safe_terminal(self, cmd: str):
-        result = self._run_hook(self.POLICY_HOOK, {
-            "tool_name": "terminal",
-            "tool_input": {"command": cmd},
-        })
+        result = self._run_hook(
+            self.POLICY_HOOK,
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": cmd},
+            },
+        )
         assert result.get("allowed") is True
         assert result.get("type") == "allow"
 
-    @pytest.mark.parametrize("path", [
-        "/etc/passwd",
-        "/usr/bin/python3",
-        "/bin/bash",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/etc/passwd",
+            "/usr/bin/python3",
+            "/bin/bash",
+        ],
+    )
     def test_policy_blocks_system_file_ops(self, path: str):
         for tool in ("write_file", "delete_file"):
-            result = self._run_hook(self.POLICY_HOOK, {
-                "tool_name": tool,
-                "tool_input": {"path": path, "content": "x"},
-            })
+            result = self._run_hook(
+                self.POLICY_HOOK,
+                {
+                    "tool_name": tool,
+                    "tool_input": {"path": path, "content": "x"},
+                },
+            )
             assert result.get("allowed") is False, f"{tool} on {path} should be blocked"
 
     def test_policy_allows_temp_file_ops(self):
-        result = self._run_hook(self.POLICY_HOOK, {
-            "tool_name": "write_file",
-            "tool_input": {"path": "/tmp/test.txt", "content": "hello"},
-        })
+        result = self._run_hook(
+            self.POLICY_HOOK,
+            {
+                "tool_name": "write_file",
+                "tool_input": {"path": "/tmp/test.txt", "content": "hello"},
+            },
+        )
         assert result.get("allowed") is True
 
     # ── Context Injection (pre_llm_call) ───────────────────────────────
 
     def test_context_hook_returns_telemetry(self):
-        result = self._run_hook(self.CONTEXT_HOOK, {
-            "tool_name": "terminal",
-            "tool_input": {"command": "ls"},
-        })
+        result = self._run_hook(
+            self.CONTEXT_HOOK,
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "ls"},
+            },
+        )
         assert "context" in result
         ctx = result["context"]
         assert "WhiteMagic Telemetry" in ctx
@@ -577,11 +687,14 @@ class TestHermesHookScripts:
     # ── Memory Bridge (post_llm_call) ──────────────────────────────────
 
     def test_memory_bridge_stores_hermes_event(self):
-        result = self._run_hook(self.MEMORY_HOOK, {
-            "tool_name": "terminal",
-            "tool_input": {"command": "echo hello"},
-            "output": "hello",
-        })
+        result = self._run_hook(
+            self.MEMORY_HOOK,
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "echo hello"},
+                "output": "hello",
+            },
+        )
         assert result.get("status") == "stored"
         memory_id = result.get("memory_id")
         assert memory_id and memory_id != "unknown"
@@ -593,11 +706,14 @@ class TestHermesHookScripts:
         assert result.get("source") == "whitemagic_memory_bridge"
 
     def test_memory_bridge_returns_valid_memory_id(self):
-        result = self._run_hook(self.MEMORY_HOOK, {
-            "tool_name": "terminal",
-            "tool_input": {"command": "echo round_trip_test"},
-            "output": "round_trip_test",
-        })
+        result = self._run_hook(
+            self.MEMORY_HOOK,
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "echo round_trip_test"},
+                "output": "round_trip_test",
+            },
+        )
         assert result.get("status") == "stored"
         memory_id = result.get("memory_id")
         assert memory_id and memory_id != "unknown"

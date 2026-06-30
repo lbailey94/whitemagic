@@ -356,10 +356,6 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
-// PyO3 module registration
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "python")]
 pub fn register_sqlite_backend(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySQLiteBackend>()?;

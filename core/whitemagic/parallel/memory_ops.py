@@ -29,9 +29,7 @@ class ParallelMemoryManager:
         search_fn: Any,
     ) -> list[list[dict[str, Any]]]:
         """Run multiple searches in parallel."""
-        futures = {
-            self._executor.submit(search_fn, q): q for q in queries
-        }
+        futures = {self._executor.submit(search_fn, q): q for q in queries}
         results: list[list[dict[str, Any]]] = []
         for future in as_completed(futures):
             try:

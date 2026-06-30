@@ -418,10 +418,6 @@ class CloneArmy:
             "results_by_clone_type": dict(clone_type_counts),
         }
 
-    # ------------------------------------------------------------------
-    # Local Reasoning facade (fused from LocalReasoningEngine)
-    # ------------------------------------------------------------------
-
     _local_reasoning_instance: Any = None
     _cpu_inference_instance: Any = None
 
@@ -444,10 +440,6 @@ class CloneArmy:
         """Add a pattern for local matching."""
         self._get_local_reasoning().add_pattern(name, pattern)
 
-    # ------------------------------------------------------------------
-    # CPU Inference facade (fused from CPUInferenceEngine)
-    # ------------------------------------------------------------------
-
     def _get_cpu_inference(self):
         """Lazy accessor for the CPUInferenceEngine."""
         if self._cpu_inference_instance is None:
@@ -460,8 +452,6 @@ class CloneArmy:
         return self._get_cpu_inference().infer(query)
 
 
-# === CONVENIENCE FUNCTIONS ===
-
 def deploy_memory_search(query: str, army_size: int = 1000) -> list[ConsensusResult]:
     """Deploy clone army for memory search."""
     army = CloneArmy(army_size=army_size)
@@ -473,8 +463,6 @@ def deploy_introspection(query: str, army_size: int = 500) -> list[ConsensusResu
     army = CloneArmy(army_size=army_size)
     return army.search_and_deliberate(query)
 
-
-# === ASYNC CONVENIENCE FUNCTIONS (v4.9.0) ===
 
 async def async_deploy_memory_search(query: str, army_size: int = 1000) -> list[ConsensusResult]:
     """Deploy clone army for memory search asynchronously (v4.9.0)."""

@@ -22,10 +22,6 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-// ---------------------------------------------------------------------------
-// Data types
-// ---------------------------------------------------------------------------
-
 /// A single input signal fed to the convergence detector.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[pyclass]
@@ -111,10 +107,6 @@ impl ConvergenceCluster {
         )
     }
 }
-
-// ---------------------------------------------------------------------------
-// Core algorithm
-// ---------------------------------------------------------------------------
 
 /// Compute a keyword fingerprint for a claim string.
 /// Returns a sorted Vec of lowercase alphanumeric words ≥4 chars,
@@ -280,10 +272,6 @@ fn build_cluster(signals: &[ConvergenceSignal], indices: &[usize]) -> Convergenc
     }
 }
 
-// ---------------------------------------------------------------------------
-// Python API
-// ---------------------------------------------------------------------------
-
 /// Detect convergence clusters from a JSON array of signal objects.
 ///
 /// Args:
@@ -344,10 +332,6 @@ pub fn convergence_score(signals_json: &str, threshold: f64) -> PyResult<f64> {
         .and_then(|c| c["convergence_score"].as_f64())
         .unwrap_or(0.0))
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

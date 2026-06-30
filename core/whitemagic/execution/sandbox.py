@@ -44,18 +44,38 @@ class SafeSandbox:
 
     # Allowed imports (whitelist) - SECURITY: Only pure computational modules, NO filesystem access
     ALLOWED_MODULES = {
-        "math", "statistics", "random", "datetime", "json", "uuid",
-        "collections", "itertools", "functools", "re", "string",
-        "dataclasses", "typing",
+        "math",
+        "statistics",
+        "random",
+        "datetime",
+        "json",
+        "uuid",
+        "collections",
+        "itertools",
+        "functools",
+        "re",
+        "string",
+        "dataclasses",
+        "typing",
         # REMOVED: 'pathlib' - enables filesystem access
     }
 
     # Forbidden builtins (blacklist) - SECURITY: Block all dangerous functions
     FORBIDDEN_BUILTINS = {
-        "eval", "exec", "compile", "open", "__import__",
-        "globals", "locals", "vars", "dir", "help",
-        "input", "raw_input",  # Prevent hanging on input
-        "exit", "quit",  # Prevent process termination
+        "eval",
+        "exec",
+        "compile",
+        "open",
+        "__import__",
+        "globals",
+        "locals",
+        "vars",
+        "dir",
+        "help",
+        "input",
+        "raw_input",  # Prevent hanging on input
+        "exit",
+        "quit",  # Prevent process termination
         "breakpoint",  # Prevent debugger
     }
 
@@ -78,7 +98,9 @@ class SafeSandbox:
         safe_builtins = {}
 
         # Add safe builtins to our safe dict
-        builtins_source = __builtins__ if isinstance(__builtins__, dict) else vars(__builtins__)
+        builtins_source = (
+            __builtins__ if isinstance(__builtins__, dict) else vars(__builtins__)
+        )
         for name in builtins_source:
             if name not in self.FORBIDDEN_BUILTINS:
                 safe_builtins[name] = builtins_source[name]
@@ -112,17 +134,20 @@ class SafeSandbox:
         """
         # Check for __import__ in various forms (with whitespace variations)
         import re
-        if re.search(r'__import__\s*\(', code, re.IGNORECASE):
+
+        if re.search(r"__import__\s*\(", code, re.IGNORECASE):
             raise ValueError("Direct use of __import__ not allowed")
 
         # Check for eval/exec with whitespace-insensitive matching
         # Matches: eval(, eval (, eval\t(, eval\n(, etc.
-        if re.search(r'eval\s*\(', code, re.IGNORECASE):
+        if re.search(r"eval\s*\(", code, re.IGNORECASE):
             raise ValueError("Use of eval not allowed")
-        if re.search(r'exec\s*\(', code, re.IGNORECASE):
+        if re.search(r"exec\s*\(", code, re.IGNORECASE):
             raise ValueError("Use of exec not allowed")
 
-    def execute(self, code: str, context: dict[str, Any] | None = None) -> ExecutionResult:
+    def execute(
+        self, code: str, context: dict[str, Any] | None = None
+    ) -> ExecutionResult:
         """Execute code in sandbox with enforced timeout.
 
         SECURITY WARNING: This executes code in-process!
@@ -142,11 +167,12 @@ class SafeSandbox:
                 success=False,
                 output="",
                 error="In-process execution is disabled by default for security. "
-                      "Set WHITEMAGIC_ENABLE_IN_PROCESS_EXEC=true to enable (NOT RECOMMENDED for untrusted input).",
+                "Set WHITEMAGIC_ENABLE_IN_PROCESS_EXEC=true to enable (NOT RECOMMENDED for untrusted input).",
                 execution_time_ms=0.0,
             )
 
         import time
+
         start = time.time()
 
         # Validate code
@@ -194,9 +220,10 @@ class SafeSandbox:
             logger.warning("Timeout enforcement not available on this platform")
 
         try:
-            with contextlib.redirect_stdout(stdout_buffer), \
-                 contextlib.redirect_stderr(stderr_buffer):
-
+            with (
+                contextlib.redirect_stdout(stdout_buffer),
+                contextlib.redirect_stderr(stderr_buffer),
+            ):
                 # Execute with timeout (enforced by signal alarm)
                 exec(code, namespace)
 
@@ -204,7 +231,7 @@ class SafeSandbox:
 
             # Truncate if too long
             if len(output) > self.max_output:
-                output = output[:self.max_output] + "\n... (truncated)"
+                output = output[: self.max_output] + "\n... (truncated)"
 
             execution_time = (time.time() - start) * 1000
 
@@ -217,7 +244,11 @@ class SafeSandbox:
         except (TimeoutError, SystemExit) as e:
             # SECURITY: Catch both TimeoutError (old) and SystemExit (new timeout mechanism)
             execution_time = (time.time() - start) * 1000
-            error_msg = str(e) if "timeout" in str(e).lower() else f"Execution terminated: {e!s}"
+            error_msg = (
+                str(e)
+                if "timeout" in str(e).lower()
+                else f"Execution terminated: {e!s}"
+            )
             return ExecutionResult(
                 success=False,
                 output="",
@@ -250,8 +281,13 @@ class SafeSandbox:
             stdout_buffer.close()
             stderr_buffer.close()
 
-    def execute_function(self, code: str, function_name: str,
-                        args: list[Any] | None = None, kwargs: dict[str, Any] | None = None) -> ExecutionResult:
+    def execute_function(
+        self,
+        code: str,
+        function_name: str,
+        args: list[Any] | None = None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> ExecutionResult:
         """Execute code that defines a function, then call it.
 
         SECURITY WARNING: This executes code in-process!
@@ -273,7 +309,7 @@ class SafeSandbox:
                 success=False,
                 output="",
                 error="In-process execution is disabled by default for security. "
-                      "Set WHITEMAGIC_ENABLE_IN_PROCESS_EXEC=true to enable (NOT RECOMMENDED for untrusted input).",
+                "Set WHITEMAGIC_ENABLE_IN_PROCESS_EXEC=true to enable (NOT RECOMMENDED for untrusted input).",
                 execution_time_ms=0.0,
             )
 
@@ -302,6 +338,7 @@ class SafeSandbox:
 
         # Call the function with timeout enforcement
         import time
+
         start = time.time()
         timeout_triggered = False
 
@@ -326,7 +363,9 @@ class SafeSandbox:
             old_handler = signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(self.timeout)
         except (AttributeError, ValueError):
-            logger.warning("Timeout enforcement not available on this platform for function call")
+            logger.warning(
+                "Timeout enforcement not available on this platform for function call"
+            )
 
         try:
             result_value = func(*args, **kwargs)
@@ -340,7 +379,11 @@ class SafeSandbox:
 
         except (TimeoutError, SystemExit) as e:
             execution_time = (time.time() - start) * 1000
-            error_msg = str(e) if "timeout" in str(e).lower() else f"Function call terminated: {e!s}"
+            error_msg = (
+                str(e)
+                if "timeout" in str(e).lower()
+                else f"Function call terminated: {e!s}"
+            )
             return ExecutionResult(
                 success=False,
                 output="",
@@ -380,9 +423,10 @@ class CodeExecutor:
         self.execution_history.append(result)
 
         logger.info(
-            "Code execution: success=%s, "
-            "time=%.2fms",
-         result.success, result.execution_time_ms)
+            "Code execution: success=%s, time=%.2fms",
+            result.success,
+            result.execution_time_ms,
+        )
 
         return result
 

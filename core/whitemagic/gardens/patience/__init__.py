@@ -66,11 +66,9 @@ class PatienceGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=-0.1, y=0.2, z=0.3, w=0.25)
 
-    # ------------------------------------------------------------------
-    # Ethical evaluation — serving evaluate_ethics, get_ethical_score
-    # ------------------------------------------------------------------
-
-    def evaluate_action(self, action: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def evaluate_action(
+        self, action: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Evaluate an action's ethical implications.
 
         Checks against Dharma rules if available, otherwise uses basic heuristics.
@@ -82,6 +80,7 @@ class PatienceGarden(BaseGarden, GanYingMixin):
         # Try Dharma rules engine
         try:
             from whitemagic.dharma.rules import get_rules_engine
+
             engine = get_rules_engine()
             result = engine.evaluate({"action": action, **(context or {})})
             score = getattr(result, "score", score)
@@ -112,7 +111,10 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             self._ethical_score_accumulator += evaluation["score"]
             self._evaluation_count += 1
 
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "ethical_eval", "score": evaluation["score"]})  # type: ignore[attr-defined]
+        self.emit(
+            EventType.GARDEN_ACTIVITY,
+            {"action": "ethical_eval", "score": evaluation["score"]},
+        )  # type: ignore[attr-defined]
         return evaluation
 
     def get_ethical_score(self) -> dict[str, Any]:
@@ -123,7 +125,13 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             avg = self._ethical_score_accumulator / self._evaluation_count
             recent = list(self.evaluation_history)[-10:]
         recent_avg = sum(e["score"] for e in recent) / max(len(recent), 1)
-        trend = "improving" if recent_avg > avg else "declining" if recent_avg < avg - 0.05 else "stable"
+        trend = (
+            "improving"
+            if recent_avg > avg
+            else "declining"
+            if recent_avg < avg - 0.05
+            else "stable"
+        )
         return {
             "average_score": round(avg, 3),
             "recent_score": round(recent_avg, 3),
@@ -132,17 +140,15 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             "recent_concerns": [c for e in recent for c in e.get("concerns", [])],
         }
 
-    # ------------------------------------------------------------------
-    # Boundary checks — serving check_boundaries tool
-    # ------------------------------------------------------------------
-
-    def check_boundary(self, action: str, resource: str = "",
-                       agent_id: str = "") -> dict[str, Any]:
+    def check_boundary(
+        self, action: str, resource: str = "", agent_id: str = ""
+    ) -> dict[str, Any]:
         """Check if an action crosses any boundaries."""
         violations: list[str] = []
         # Check sandbox limits
         try:
             from whitemagic.gardens.sanctuary import get_sanctuary_garden
+
             sanctuary = get_sanctuary_garden()
             status = sanctuary.get_sandbox_status()
             if status.get("violations_total", 0) > 10:
@@ -162,12 +168,9 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             self.boundary_checks.append(result)
         return result
 
-    # ------------------------------------------------------------------
-    # Consent verification — serving verify_consent tool
-    # ------------------------------------------------------------------
-
-    def verify_consent(self, action: str, agent_id: str,
-                       consent_type: str = "implicit") -> dict[str, Any]:
+    def verify_consent(
+        self, action: str, agent_id: str, consent_type: str = "implicit"
+    ) -> dict[str, Any]:
         """Verify consent for an action."""
         entry = {
             "action": action,
@@ -180,10 +183,6 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             self.consent_log.append(entry)
         return entry
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def practice_waiting(self, for_what: str) -> dict[str, Any]:
         practice = {"for": for_what, "timestamp": datetime.now().isoformat()}
         self.patience_level = min(1.0, self.patience_level + 0.05)
@@ -193,24 +192,24 @@ class PatienceGarden(BaseGarden, GanYingMixin):
     def trust_timing(self, situation: str) -> str:
         return f"Trust the timing of {situation}. Everything unfolds as it should."
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "ethical_score": self.get_ethical_score(),
-            "boundary_checks": len(self.boundary_checks),
-            "consent_verifications": len(self.consent_log),
-            "patience_level": round(self.patience_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "ethical_score": self.get_ethical_score(),
+                "boundary_checks": len(self.boundary_checks),
+                "consent_verifications": len(self.consent_log),
+                "patience_level": round(self.patience_level, 3),
+            }
+        )
         return dict(base)
 
 
 _instance = None
+
+
 def get_patience_garden() -> PatienceGarden:
     global _instance
     if _instance is None:

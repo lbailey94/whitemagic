@@ -16,6 +16,7 @@ Usage:
         mesh_sync_memory, mesh_agent_status, go_mesh_status
     )
 """
+
 from __future__ import annotations
 
 import logging
@@ -45,6 +46,7 @@ def _get_redis() -> Any:
             return _redis_client
         try:
             import redis
+
             url = os.environ.get("REDIS_URL", "redis://localhost:6379")
             client = redis.from_url(url, decode_responses=True)
             client.ping()
@@ -94,10 +96,6 @@ def _send_mesh_command(command: str, payload: dict[str, Any]) -> dict[str, Any] 
     return None
 
 
-# ---------------------------------------------------------------------------
-# Gossip - Memory sync
-# ---------------------------------------------------------------------------
-
 def mesh_sync_memory(
     memory_id: str,
     content: str,
@@ -109,11 +107,14 @@ def mesh_sync_memory(
         Dict with sync status and peer acknowledgments, or None.
 
     """
-    return _send_mesh_command("sync_memory", {
-        "memory_id": memory_id,
-        "content": content,
-        "metadata": metadata or {},
-    })
+    return _send_mesh_command(
+        "sync_memory",
+        {
+            "memory_id": memory_id,
+            "content": content,
+            "metadata": metadata or {},
+        },
+    )
 
 
 def mesh_request_memory(memory_id: str) -> dict[str, Any] | None:
@@ -131,20 +132,19 @@ def mesh_acquire_lock(
         Dict with {acquired, lock_id, expires_at}, or None.
 
     """
-    return _send_mesh_command("acquire_lock", {
-        "resource": resource,
-        "ttl_seconds": ttl_seconds,
-    })
+    return _send_mesh_command(
+        "acquire_lock",
+        {
+            "resource": resource,
+            "ttl_seconds": ttl_seconds,
+        },
+    )
 
 
 def mesh_release_lock(lock_id: str) -> dict[str, Any] | None:
     """Release a distributed lock."""
     return _send_mesh_command("release_lock", {"lock_id": lock_id})
 
-
-# ---------------------------------------------------------------------------
-# Agent Stream - Load-aware task distribution
-# ---------------------------------------------------------------------------
 
 def mesh_agent_status() -> dict[str, Any] | None:
     """Get all registered agents and their load from Go mesh."""
@@ -165,10 +165,13 @@ def mesh_distribute_task(
         Dict with {agent_id, accepted, queue_position}, or None.
 
     """
-    return _send_mesh_command("distribute_task", {
-        "task": task,
-        "strategy": strategy,
-    })
+    return _send_mesh_command(
+        "distribute_task",
+        {
+            "task": task,
+            "strategy": strategy,
+        },
+    )
 
 
 def mesh_peer_list() -> list[dict[str, Any]] | None:
@@ -180,10 +183,6 @@ def mesh_peer_list() -> list[dict[str, Any]] | None:
             return [p for p in peers if isinstance(p, dict)]
     return None
 
-
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
 
 def go_mesh_status() -> dict[str, Any]:
     """Get Go mesh bridge status."""
@@ -200,10 +199,6 @@ def go_mesh_status() -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Go Concurrent Prefetch — goroutine-per-prefetch parallel pipeline warming
-# ---------------------------------------------------------------------------
-
 _go_prefetch_bin: str | None = None
 _go_prefetch_lock = threading.Lock()
 _go_prefetch_checked = False
@@ -218,8 +213,13 @@ def _find_go_prefetch() -> str | None:
         if _go_prefetch_checked:
             return _go_prefetch_bin
         _go_prefetch_checked = True
-        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))))))
+        base = os.path.dirname(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                )
+            )
+        )
         candidates = [
             os.path.join(base, "polyglot", "whitemagic-go", "prefetch_service"),
             os.environ.get("WM_GO_PREFETCH_BIN", ""),

@@ -39,18 +39,16 @@ try:
     from rich.console import Console
     from rich.live import Live
     from rich.table import Table
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
     logger.warning("rich not available - dashboard will use basic logging")
 
 
-# ============================================================================
-# Core Data Structures
-# ============================================================================
-
 class ActionType(Enum):
     """Types of actions an Immortal clone can execute."""
+
     ANALYZE = "analyze"
     EDIT = "edit"
     COMPILE = "compile"
@@ -63,6 +61,7 @@ class ActionType(Enum):
 @dataclass
 class Action:
     """An action to be executed by an Immortal clone."""
+
     type: ActionType
     target: str | Path
     command: list[str] | None = None
@@ -73,6 +72,7 @@ class Action:
 @dataclass
 class ActionResult:
     """Result of executing an action."""
+
     success: bool
     stdout: str = ""
     stderr: str = ""
@@ -84,6 +84,7 @@ class ActionResult:
 @dataclass
 class Task:
     """A task for an Immortal clone to execute."""
+
     id: str
     type: str
     target: str | Path
@@ -95,16 +96,13 @@ class Task:
 @dataclass
 class MEOW:
     """Molecular Expression of Work - granular task unit."""
+
     type: str
     target: str | Path
     dependencies: list[str] = field(default_factory=list)
     estimated_tokens: int = 5000
     priority: int = 1
 
-
-# ============================================================================
-# Tier 1: Campaign Victory Tracker (Shared State)
-# ============================================================================
 
 class CampaignVictoryTracker:
     """Thread-safe shared state for tracking VC completion across all clones.
@@ -122,11 +120,11 @@ class CampaignVictoryTracker:
             victory_conditions: List of VC dicts with 'id' and optional 'description'
         """
         self.vcs = {
-            vc['id']: {
-                'met': False,
-                'clone_id': None,
-                'timestamp': None,
-                'description': vc.get('description', '')
+            vc["id"]: {
+                "met": False,
+                "clone_id": None,
+                "timestamp": None,
+                "description": vc.get("description", ""),
             }
             for vc in victory_conditions
         }
@@ -144,13 +142,15 @@ class CampaignVictoryTracker:
                 logger.warning("Unknown VC: %s", vc_id)
                 return False
 
-            if not self.vcs[vc_id]['met']:
-                self.vcs[vc_id]['met'] = True
-                self.vcs[vc_id]['clone_id'] = clone_id
-                self.vcs[vc_id]['timestamp'] = time.time()
+            if not self.vcs[vc_id]["met"]:
+                self.vcs[vc_id]["met"] = True
+                self.vcs[vc_id]["clone_id"] = clone_id
+                self.vcs[vc_id]["timestamp"] = time.time()
 
                 elapsed = time.time() - self.start_time
-                logger.info("🎉 VC %s MET by clone %s at %ss!", vc_id, clone_id, elapsed)
+                logger.info(
+                    "🎉 VC %s MET by clone %s at %ss!", vc_id, clone_id, elapsed
+                )
                 return True
 
             return False
@@ -158,27 +158,27 @@ class CampaignVictoryTracker:
     def all_vcs_met(self) -> bool:
         """Check if all VCs are complete."""
         with self.lock:
-            return all(vc['met'] for vc in self.vcs.values())
+            return all(vc["met"] for vc in self.vcs.values())
 
     def progress_percentage(self) -> float:
         """Calculate completion percentage."""
         with self.lock:
             if not self.vcs:
                 return 100.0
-            met = sum(1 for vc in self.vcs.values() if vc['met'])
+            met = sum(1 for vc in self.vcs.values() if vc["met"])
             return (met / len(self.vcs)) * 100.0
 
     def get_status(self) -> dict[str, Any]:
         """Get current status snapshot."""
         with self.lock:
-            met_count = sum(1 for vc in self.vcs.values() if vc['met'])
+            met_count = sum(1 for vc in self.vcs.values() if vc["met"])
             return {
-                'total_vcs': len(self.vcs),
-                'vcs_met': met_count,
-                'vcs_remaining': len(self.vcs) - met_count,
-                'percentage': (met_count / len(self.vcs) * 100) if self.vcs else 100.0,
-                'complete': all(vc['met'] for vc in self.vcs.values()),
-                'elapsed_seconds': time.time() - self.start_time
+                "total_vcs": len(self.vcs),
+                "vcs_met": met_count,
+                "vcs_remaining": len(self.vcs) - met_count,
+                "percentage": (met_count / len(self.vcs) * 100) if self.vcs else 100.0,
+                "complete": all(vc["met"] for vc in self.vcs.values()),
+                "elapsed_seconds": time.time() - self.start_time,
             }
 
     def get_vc_details(self) -> list[dict]:
@@ -186,19 +186,15 @@ class CampaignVictoryTracker:
         with self.lock:
             return [
                 {
-                    'id': vc_id,
-                    'description': vc_data['description'],
-                    'met': vc_data['met'],
-                    'clone_id': vc_data['clone_id'],
-                    'timestamp': vc_data['timestamp']
+                    "id": vc_id,
+                    "description": vc_data["description"],
+                    "met": vc_data["met"],
+                    "clone_id": vc_data["clone_id"],
+                    "timestamp": vc_data["timestamp"],
                 }
                 for vc_id, vc_data in self.vcs.items()
             ]
 
-
-# ============================================================================
-# Tier 2: Campaign Dashboard (Live Progress Display)
-# ============================================================================
 
 class CampaignDashboard:
     """Real-time campaign progress dashboard with rich display.
@@ -216,13 +212,15 @@ class CampaignDashboard:
         campaign_name: str,
         total_vcs: int,
         total_clones: int,
-        victory_tracker: CampaignVictoryTracker
+        victory_tracker: CampaignVictoryTracker,
     ):
         self.campaign_name = campaign_name
         self.total_vcs = total_vcs
         self.total_clones = total_clones
         self.victory_tracker = victory_tracker
-        self.clone_progress: dict[int, tuple[int, int]] = {}  # {clone_id: (current_iter, max_iter)}
+        self.clone_progress: dict[
+            int, tuple[int, int]
+        ] = {}  # {clone_id: (current_iter, max_iter)}
         self.start_time = time.time()
         self.console = Console() if RICH_AVAILABLE else None
 
@@ -239,12 +237,12 @@ class CampaignDashboard:
             elapsed = time.time() - self.start_time
             active = len(self.clone_progress)
             return (
-                f"\n{'='*60}\n"
+                f"\n{'=' * 60}\n"
                 f"Campaign: {self.campaign_name}\n"
                 f"VCs: {status['vcs_met']}/{status['total_vcs']} ({status['percentage']:.1f}%)\n"
                 f"Active Clones: {active}/{self.total_clones}\n"
                 f"Elapsed: {elapsed:.1f}s\n"
-                f"{'='*60}\n"
+                f"{'=' * 60}\n"
             )
 
         table = Table(title=f"🎯 {self.campaign_name}")
@@ -252,11 +250,11 @@ class CampaignDashboard:
         table.add_column("Value", style="green")
 
         # Victory conditions
-        vc_percent = status['percentage']
+        vc_percent = status["percentage"]
         vc_bar = "█" * int(vc_percent / 5) + "░" * (20 - int(vc_percent / 5))
         table.add_row(
             "Victory Conditions",
-            f"{status['vcs_met']}/{status['total_vcs']} ({vc_percent:.1f}%) {vc_bar}"
+            f"{status['vcs_met']}/{status['total_vcs']} ({vc_percent:.1f}%) {vc_bar}",
         )
 
         # Active clones
@@ -265,38 +263,35 @@ class CampaignDashboard:
 
         # Average iteration
         if self.clone_progress:
-            avg_iter = sum(i for i, _ in self.clone_progress.values()) / len(self.clone_progress)
-            avg_max = sum(m for _, m in self.clone_progress.values()) / len(self.clone_progress)
+            avg_iter = sum(i for i, _ in self.clone_progress.values()) / len(
+                self.clone_progress
+            )
+            avg_max = sum(m for _, m in self.clone_progress.values()) / len(
+                self.clone_progress
+            )
             table.add_row("Avg Iteration", f"{avg_iter:.0f}/{avg_max:.0f}")
 
         # Elapsed time
         elapsed = time.time() - self.start_time
-        table.add_row("Elapsed Time", f"{elapsed:.1f}s ({elapsed/60:.1f}m)")
+        table.add_row("Elapsed Time", f"{elapsed:.1f}s ({elapsed / 60:.1f}m)")
 
         # Throughput
-        if elapsed > 0 and status['vcs_met'] > 0:
-            vcs_per_min = (status['vcs_met'] / elapsed) * 60
+        if elapsed > 0 and status["vcs_met"] > 0:
+            vcs_per_min = (status["vcs_met"] / elapsed) * 60
             table.add_row("VC Throughput", f"{vcs_per_min:.2f} VCs/min")
 
         # Top 5 most active clones
         if self.clone_progress:
             top_clones = sorted(
-                self.clone_progress.items(),
-                key=lambda x: x[1][0],
-                reverse=True
+                self.clone_progress.items(), key=lambda x: x[1][0], reverse=True
             )[:5]
             clone_status = ", ".join(
-                f"#{cid}:{it}/{mx}"
-                for cid, (it, mx) in top_clones
+                f"#{cid}:{it}/{mx}" for cid, (it, mx) in top_clones
             )
             table.add_row("Top Clones", clone_status)
 
         return table
 
-
-# ============================================================================
-# Enhanced Immortal Clone (with VC awareness)
-# ============================================================================
 
 class ImmortalClone:
     """Shadow clone with persistent execution loops + victory tracking.
@@ -315,14 +310,14 @@ class ImmortalClone:
         victory_tracker: CampaignVictoryTracker,
         max_iterations: int = 200,
         progress_callback: Callable[[int, int, int], None] | None = None,
-        tools: list[str] | None = None
+        tools: list[str] | None = None,
     ):
         self.clone_id = clone_id
         self.task = task
         self.victory_tracker = victory_tracker
         self.max_iterations = max_iterations
         self.progress_callback = progress_callback
-        self.tools = tools or ['read', 'edit', 'bash', 'compile', 'test']
+        self.tools = tools or ["read", "edit", "bash", "compile", "test"]
         self.context: list[dict[str, Any]] = []
         self.iteration = 0
 
@@ -336,12 +331,14 @@ class ImmortalClone:
                 logger.info("🏁 Clone %s stopping: campaign complete", self.clone_id)
                 return ActionResult(
                     success=True,
-                    data={'early_stop': True, 'reason': 'campaign_complete'}
+                    data={"early_stop": True, "reason": "campaign_complete"},
                 )
 
             # Report progress
             if self.progress_callback:
-                self.progress_callback(self.clone_id, self.iteration, self.max_iterations)
+                self.progress_callback(
+                    self.clone_id, self.iteration, self.max_iterations
+                )
 
             try:
                 # 1. Generate action
@@ -351,14 +348,16 @@ class ImmortalClone:
                 result = self.execute_action(action)
 
                 # 3. Feed result into context
-                self.context.append({
-                    'iteration': self.iteration,
-                    'action': action,
-                    'result': result,
-                    'success': result.success,
-                    'error': result.error if not result.success else None,
-                    'timestamp': time.time()
-                })
+                self.context.append(
+                    {
+                        "iteration": self.iteration,
+                        "action": action,
+                        "result": result,
+                        "success": result.success,
+                        "error": result.error if not result.success else None,
+                        "timestamp": time.time(),
+                    }
+                )
 
                 # 4. Check MY victory conditions
                 vcs_met = self.check_victory_conditions()
@@ -369,29 +368,50 @@ class ImmortalClone:
 
                     # If I've met all my VCs, I'm done
                     if len(vcs_met) == len(self.task.victory_conditions):
-                        logger.info("✅ Clone %s achieved all VCs at iteration %s", self.clone_id, self.iteration)
+                        logger.info(
+                            "✅ Clone %s achieved all VCs at iteration %s",
+                            self.clone_id,
+                            self.iteration,
+                        )
                         return ActionResult(
                             success=True,
-                            data={'vcs_met': vcs_met, 'iterations': self.iteration + 1}
+                            data={"vcs_met": vcs_met, "iterations": self.iteration + 1},
                         )
 
                 # 5. If failed, context now includes error for next iteration
                 if not result.success:
-                    logger.debug("🔄 Clone %s iteration %s failed, feeding error back", self.clone_id, self.iteration)
+                    logger.debug(
+                        "🔄 Clone %s iteration %s failed, feeding error back",
+                        self.clone_id,
+                        self.iteration,
+                    )
 
             except Exception as e:
-                logger.error("❌ Clone %s exception at iteration %s: %s", self.clone_id, self.iteration, e, exc_info=True)
-                self.context.append({
-                    'iteration': self.iteration,
-                    'exception': str(e),
-                    'timestamp': time.time()
-                })
+                logger.error(
+                    "❌ Clone %s exception at iteration %s: %s",
+                    self.clone_id,
+                    self.iteration,
+                    e,
+                    exc_info=True,
+                )
+                self.context.append(
+                    {
+                        "iteration": self.iteration,
+                        "exception": str(e),
+                        "timestamp": time.time(),
+                    }
+                )
 
-        logger.warning("⚠️ Clone %s reached max iterations (%s)", self.clone_id, self.max_iterations, exc_info=True)
+        logger.warning(
+            "⚠️ Clone %s reached max iterations (%s)",
+            self.clone_id,
+            self.max_iterations,
+            exc_info=True,
+        )
         return ActionResult(
             success=False,
             error=f"Max iterations ({self.max_iterations}) reached",
-            data={'context': self.context, 'iterations': self.max_iterations}
+            data={"context": self.context, "iterations": self.max_iterations},
         )
 
     def generate_action(self) -> Action:
@@ -421,6 +441,7 @@ class ImmortalClone:
         """Ask LLM which action to take next based on context. Returns None if unavailable."""
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if not llm.is_available:
                 return None
@@ -429,17 +450,21 @@ class ImmortalClone:
             recent = self.context[-5:]
             context_lines = []
             for c in recent:
-                action_type = c.get('action', None)
-                if action_type and hasattr(action_type, 'type'):
+                action_type = c.get("action", None)
+                if action_type and hasattr(action_type, "type"):
                     action_type = action_type.type.value
                 else:
                     action_type = str(action_type)
-                success = c.get('success', False)
-                error = c.get('error', '')
-                context_lines.append(f"  iter={c.get('iteration', '?')}: action={action_type}, success={success}, error={error}")
-            context_summary = "\n".join(context_lines) if context_lines else "  (no previous actions)"
+                success = c.get("success", False)
+                error = c.get("error", "")
+                context_lines.append(
+                    f"  iter={c.get('iteration', '?')}: action={action_type}, success={success}, error={error}"
+                )
+            context_summary = (
+                "\n".join(context_lines) if context_lines else "  (no previous actions)"
+            )
 
-            valid_actions = ', '.join(a.value for a in ActionType)
+            valid_actions = ", ".join(a.value for a in ActionType)
             prompt = (
                 f"You are an immortal clone working on task: {self.task.id}\n"
                 f"Target: {self.task.target}\n"
@@ -467,6 +492,7 @@ class ImmortalClone:
         """
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if not llm.is_available:
                 return None
@@ -476,7 +502,11 @@ class ImmortalClone:
                 return None
             source = target.read_text(encoding="utf-8")
 
-            vcs = ', '.join(self.task.victory_conditions) if self.task.victory_conditions else "(none)"
+            vcs = (
+                ", ".join(self.task.victory_conditions)
+                if self.task.victory_conditions
+                else "(none)"
+            )
             prompt = (
                 f"You are editing: {self.task.target}\n"
                 f"Victory conditions: {vcs}\n\n"
@@ -502,10 +532,14 @@ class ImmortalClone:
                     elif line.startswith("NEW:"):
                         new_text = line[4:].strip()
                 if old_text and new_text and old_text in source:
-                    edits.append({"action": "replace", "old": old_text, "new": new_text})
+                    edits.append(
+                        {"action": "replace", "old": old_text, "new": new_text}
+                    )
 
             if edits:
-                logger.debug("LLM generated %d edits for %s", len(edits), self.task.target)
+                logger.debug(
+                    "LLM generated %d edits for %s", len(edits), self.task.target
+                )
                 return {"edits": edits}
             return None
         except Exception as e:
@@ -548,13 +582,11 @@ class ImmortalClone:
                 return ActionResult(
                     success=False,
                     error=f"Unknown action type: {action.type}",
-                    duration=time.time() - start_time
+                    duration=time.time() - start_time,
                 )
         except Exception as e:
             return ActionResult(
-                success=False,
-                error=str(e),
-                duration=time.time() - start_time
+                success=False, error=str(e), duration=time.time() - start_time
             )
 
     def compile(self, action: Action) -> ActionResult:
@@ -565,25 +597,25 @@ class ImmortalClone:
         # Detect language and compile
         if (target / "Cargo.toml").exists():
             result = subprocess.run(
-                ['cargo', 'build', '--release'],
+                ["cargo", "build", "--release"],
                 cwd=target,
                 capture_output=True,
                 text=True,
-                timeout=action.timeout
+                timeout=action.timeout,
             )
         elif (target / "build.zig").exists():
             result = subprocess.run(
-                ['zig', 'build'],
+                ["zig", "build"],
                 cwd=target,
                 capture_output=True,
                 text=True,
-                timeout=action.timeout
+                timeout=action.timeout,
             )
         else:
             return ActionResult(
                 success=False,
                 error=f"No build system found in {target}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
         return ActionResult(
@@ -591,7 +623,7 @@ class ImmortalClone:
             stdout=result.stdout,
             stderr=result.stderr,
             duration=time.time() - start_time,
-            error=result.stderr if result.returncode != 0 else None
+            error=result.stderr if result.returncode != 0 else None,
         )
 
     def run_tests(self, action: Action) -> ActionResult:
@@ -599,10 +631,10 @@ class ImmortalClone:
         start_time = time.time()
 
         result = subprocess.run(
-            ['pytest', str(action.target), '-v', '--tb=short'],
+            ["pytest", str(action.target), "-v", "--tb=short"],
             capture_output=True,
             text=True,
-            timeout=action.timeout
+            timeout=action.timeout,
         )
 
         return ActionResult(
@@ -612,9 +644,9 @@ class ImmortalClone:
             duration=time.time() - start_time,
             error=result.stderr if result.returncode != 0 else None,
             data={
-                'passed': result.stdout.count(' PASSED'),
-                'failed': result.stdout.count(' FAILED')
-            }
+                "passed": result.stdout.count(" PASSED"),
+                "failed": result.stdout.count(" FAILED"),
+            },
         )
 
     def benchmark(self, action: Action) -> ActionResult:
@@ -623,10 +655,19 @@ class ImmortalClone:
 
         cmd = action.command or [str(action.target)]
         result = subprocess.run(
-            ['hyperfine', '--warmup', '3', '--runs', '30', '--export-json', '/tmp/bench.json'] + cmd,
+            [
+                "hyperfine",
+                "--warmup",
+                "3",
+                "--runs",
+                "30",
+                "--export-json",
+                "/tmp/bench.json",
+            ]
+            + cmd,
             capture_output=True,
             text=True,
-            timeout=action.timeout
+            timeout=action.timeout,
         )
 
         return ActionResult(
@@ -634,7 +675,7 @@ class ImmortalClone:
             stdout=result.stdout,
             stderr=result.stderr,
             duration=time.time() - start_time,
-            error=result.stderr if result.returncode != 0 else None
+            error=result.stderr if result.returncode != 0 else None,
         )
 
     def bash(self, action: Action) -> ActionResult:
@@ -646,7 +687,7 @@ class ImmortalClone:
             shell=isinstance(action.command, str),
             capture_output=True,
             text=True,
-            timeout=action.timeout
+            timeout=action.timeout,
         )
 
         return ActionResult(
@@ -654,7 +695,7 @@ class ImmortalClone:
             stdout=result.stdout,
             stderr=result.stderr,
             duration=time.time() - start_time,
-            error=result.stderr if result.returncode != 0 else None
+            error=result.stderr if result.returncode != 0 else None,
         )
 
     def analyze(self, action: Action) -> ActionResult:
@@ -670,11 +711,18 @@ class ImmortalClone:
 
         try:
             import ast
+
             source = target.read_text(encoding="utf-8")
             tree = ast.parse(source)
 
-            functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
-            classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+            functions = [
+                node.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef)
+            ]
+            classes = [
+                node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
+            ]
             imports: list = []
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
@@ -741,9 +789,16 @@ class ImmortalClone:
                         source = source.replace(old, new, 1)
                         results.append({"status": "success"})
                     else:
-                        results.append({"status": "error", "reason": "old text not found"})
+                        results.append(
+                            {"status": "error", "reason": "old text not found"}
+                        )
                 else:
-                    results.append({"status": "error", "reason": f"unsupported action: {edit_action}"})
+                    results.append(
+                        {
+                            "status": "error",
+                            "reason": f"unsupported action: {edit_action}",
+                        }
+                    )
 
             target.write_text(source, encoding="utf-8")
             return ActionResult(
@@ -764,8 +819,8 @@ class ImmortalClone:
         met = self.check_victory_conditions()
         return ActionResult(
             success=len(met) > 0,
-            data={'victory_conditions_met': met},
-            duration=time.time() - start_time
+            data={"victory_conditions_met": met},
+            duration=time.time() - start_time,
         )
 
     def check_victory_conditions(self) -> list[str]:
@@ -784,13 +839,17 @@ class ImmortalClone:
 
         # Heuristic fallback: success if we've compiled and tested
         has_compile = any(
-            c.get('action') and hasattr(c['action'], 'type') and
-            c['action'].type == ActionType.COMPILE and c.get('success')
+            c.get("action")
+            and hasattr(c["action"], "type")
+            and c["action"].type == ActionType.COMPILE
+            and c.get("success")
             for c in self.context
         )
         has_test = any(
-            c.get('action') and hasattr(c['action'], 'type') and
-            c['action'].type == ActionType.TEST and c.get('success')
+            c.get("action")
+            and hasattr(c["action"], "type")
+            and c["action"].type == ActionType.TEST
+            and c.get("success")
             for c in self.context
         )
 
@@ -804,6 +863,7 @@ class ImmortalClone:
         """Ask LLM to evaluate victory conditions. Returns None if unavailable."""
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if not llm.is_available:
                 return None
@@ -811,16 +871,22 @@ class ImmortalClone:
             recent = self.context[-5:]
             context_lines = []
             for c in recent:
-                action_type = c.get('action', None)
-                if action_type and hasattr(action_type, 'type'):
+                action_type = c.get("action", None)
+                if action_type and hasattr(action_type, "type"):
                     action_type = action_type.type.value
                 else:
                     action_type = str(action_type)
-                success = c.get('success', False)
+                success = c.get("success", False)
                 context_lines.append(f"  action={action_type}, success={success}")
-            context_summary = "\n".join(context_lines) if context_lines else "  (no actions taken)"
+            context_summary = (
+                "\n".join(context_lines) if context_lines else "  (no actions taken)"
+            )
 
-            vcs = ', '.join(self.task.victory_conditions) if self.task.victory_conditions else "(none)"
+            vcs = (
+                ", ".join(self.task.victory_conditions)
+                if self.task.victory_conditions
+                else "(none)"
+            )
             prompt = (
                 f"You are evaluating victory conditions for task: {self.task.id}\n"
                 f"Target: {self.task.target}\n"
@@ -831,7 +897,7 @@ class ImmortalClone:
             )
             response = llm.complete(prompt).strip().lower()
 
-            if response == 'none' or not response:
+            if response == "none" or not response:
                 return []
 
             # Match response to actual VC IDs
@@ -845,10 +911,6 @@ class ImmortalClone:
             logger.debug("LLM VC check unavailable: %s", e)
             return None
 
-
-# ============================================================================
-# Enhanced Gas Town Orchestrator
-# ============================================================================
 
 class GasTownOrchestrator:
     """Kubernetes-style orchestration for Immortal clones with live dashboard.
@@ -865,9 +927,10 @@ class GasTownOrchestrator:
         campaign: dict[str, Any],
         max_workers: int | None = None,
         max_iterations: int = 200,
-        dashboard_enabled: bool = True
+        dashboard_enabled: bool = True,
     ):
         from multiprocessing import cpu_count
+
         self.campaign = campaign
         self.max_workers = max_workers or cpu_count()
         self.max_iterations = max_iterations
@@ -875,15 +938,15 @@ class GasTownOrchestrator:
 
         # Create victory tracker
         self.victory_tracker = CampaignVictoryTracker(
-            campaign.get('victory_conditions', [])
+            campaign.get("victory_conditions", [])
         )
 
         # Create dashboard
         self.dashboard = CampaignDashboard(
-            campaign.get('name', 'Unknown Campaign'),
-            len(campaign.get('victory_conditions', [])),
+            campaign.get("name", "Unknown Campaign"),
+            len(campaign.get("victory_conditions", [])),
             int(max_workers) if max_workers is not None else 4,
-            self.victory_tracker
+            self.victory_tracker,
         )
 
         self.work_queue: list[MEOW] = []
@@ -895,44 +958,52 @@ class GasTownOrchestrator:
         meows = []
 
         # Each victory condition becomes multiple MEOW units
-        for i, vc in enumerate(self.campaign.get('victory_conditions', [])):
-            target = vc.get('target', f'target_{i}')
+        for i, vc in enumerate(self.campaign.get("victory_conditions", [])):
+            target = vc.get("target", f"target_{i}")
 
             # Analyze phase
-            meows.append(MEOW(
-                type='analyze',
-                target=target,
-                dependencies=[],
-                estimated_tokens=5000,
-                priority=1
-            ))
+            meows.append(
+                MEOW(
+                    type="analyze",
+                    target=target,
+                    dependencies=[],
+                    estimated_tokens=5000,
+                    priority=1,
+                )
+            )
 
             # Implement phase (depends on analysis)
-            meows.append(MEOW(
-                type='implement',
-                target=target,
-                dependencies=[f'analyze:{target}'],
-                estimated_tokens=20000,
-                priority=2
-            ))
+            meows.append(
+                MEOW(
+                    type="implement",
+                    target=target,
+                    dependencies=[f"analyze:{target}"],
+                    estimated_tokens=20000,
+                    priority=2,
+                )
+            )
 
             # Test phase (depends on implementation)
-            meows.append(MEOW(
-                type='test',
-                target=target,
-                dependencies=[f'implement:{target}'],
-                estimated_tokens=10000,
-                priority=3
-            ))
+            meows.append(
+                MEOW(
+                    type="test",
+                    target=target,
+                    dependencies=[f"implement:{target}"],
+                    estimated_tokens=10000,
+                    priority=3,
+                )
+            )
 
             # Verify phase (depends on test)
-            meows.append(MEOW(
-                type='verify',
-                target=target,
-                dependencies=[f'test:{target}'],
-                estimated_tokens=5000,
-                priority=4
-            ))
+            meows.append(
+                MEOW(
+                    type="verify",
+                    target=target,
+                    dependencies=[f"test:{target}"],
+                    estimated_tokens=5000,
+                    priority=4,
+                )
+            )
 
         return meows
 
@@ -941,15 +1012,23 @@ class GasTownOrchestrator:
         self.work_queue = self.decompose_to_meow()
         results = []
 
-        logger.info("🏭 Gas Town deploying %s MEOW units with %s workers", len(self.work_queue), self.max_workers)
+        logger.info(
+            "🏭 Gas Town deploying %s MEOW units with %s workers",
+            len(self.work_queue),
+            self.max_workers,
+        )
 
         # Setup live display
         if self.dashboard_enabled and RICH_AVAILABLE:
             try:
-                with Live(self.dashboard.generate_table(), refresh_per_second=2) as live:
+                with Live(
+                    self.dashboard.generate_table(), refresh_per_second=2
+                ) as live:
                     results = self._execute_deployment(live)
             except Exception as e:
-                logger.warning("Dashboard failed, falling back to logging: %s", e, exc_info=True)
+                logger.warning(
+                    "Dashboard failed, falling back to logging: %s", e, exc_info=True
+                )
                 results = self._execute_deployment(None)
         else:
             results = self._execute_deployment(None)
@@ -958,7 +1037,12 @@ class GasTownOrchestrator:
 
         # Log final status
         status = self.victory_tracker.get_status()
-        logger.info("Final status: %s/%s VCs met (%s%%)", status['vcs_met'], status['total_vcs'], status['percentage'])
+        logger.info(
+            "Final status: %s/%s VCs met (%s%%)",
+            status["vcs_met"],
+            status["total_vcs"],
+            status["percentage"],
+        )
 
         return results
 
@@ -968,6 +1052,7 @@ class GasTownOrchestrator:
 
         try:
             from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 futures: dict[Any, tuple[ImmortalClone, MEOW]] = {}
                 clone_id = 0
@@ -975,7 +1060,9 @@ class GasTownOrchestrator:
                 while self.work_queue or futures:
                     # Check for campaign completion (auto-stop)
                     if self.victory_tracker.all_vcs_met():
-                        logger.info("🎉 ALL VICTORY CONDITIONS MET! Stopping deployment.")
+                        logger.info(
+                            "🎉 ALL VICTORY CONDITIONS MET! Stopping deployment."
+                        )
                         # Cancel remaining futures
                         for future in futures:
                             future.cancel()
@@ -983,7 +1070,11 @@ class GasTownOrchestrator:
 
                     # Deploy new clones for available work
                     skipped = 0
-                    while len(futures) < self.max_workers and self.work_queue and skipped < len(self.work_queue):
+                    while (
+                        len(futures) < self.max_workers
+                        and self.work_queue
+                        and skipped < len(self.work_queue)
+                    ):
                         meow = self.work_queue.pop(0)
 
                         # Check dependencies
@@ -998,7 +1089,7 @@ class GasTownOrchestrator:
                             type=meow.type,
                             target=meow.target,
                             victory_conditions=[],
-                            dependencies=meow.dependencies
+                            dependencies=meow.dependencies,
                         )
 
                         clone = ImmortalClone(
@@ -1006,7 +1097,7 @@ class GasTownOrchestrator:
                             task=task,
                             victory_tracker=self.victory_tracker,
                             max_iterations=self.max_iterations,
-                            progress_callback=self.dashboard.update_clone_progress
+                            progress_callback=self.dashboard.update_clone_progress,
                         )
 
                         # Deploy clone
@@ -1016,33 +1107,56 @@ class GasTownOrchestrator:
 
                     # Collect completed work
                     if futures:
-                        done, pending = wait(futures.keys(), timeout=0.5, return_when=FIRST_COMPLETED)
+                        done, pending = wait(
+                            futures.keys(), timeout=0.5, return_when=FIRST_COMPLETED
+                        )
                         for future in done:
                             clone, meow = futures.pop(future)
                             try:
                                 result = future.result()
                                 self.completed_work.append((meow, result))
                                 results.append(result)
-                                logger.debug("✅ MEOW %s:%s completed by clone %s", meow.type, meow.target, clone.clone_id, exc_info=True)
+                                logger.debug(
+                                    "✅ MEOW %s:%s completed by clone %s",
+                                    meow.type,
+                                    meow.target,
+                                    clone.clone_id,
+                                    exc_info=True,
+                                )
                             except Exception as e:
-                                logger.error("❌ Clone %s failed: %s", clone.clone_id, e, exc_info=True)
-                                results.append(ActionResult(success=False, error=str(e)))
+                                logger.error(
+                                    "❌ Clone %s failed: %s",
+                                    clone.clone_id,
+                                    e,
+                                    exc_info=True,
+                                )
+                                results.append(
+                                    ActionResult(success=False, error=str(e))
+                                )
 
                         # Update dashboard
                         if live:
                             try:
                                 live.update(self.dashboard.generate_table())
                             except Exception as e:
-                                logger.debug("Dashboard update failed: %s", e, exc_info=True)
+                                logger.debug(
+                                    "Dashboard update failed: %s", e, exc_info=True
+                                )
                     elif not futures and self.work_queue:
                         # Deadlock: no futures running, all remaining MEOWs blocked
                         # Try retrying failed MEOWs with more iterations
                         failed_meows = self._retry_failed_meows()
                         if failed_meows:
-                            logger.info("🔄 Retrying %d failed MEOWs with escalated iterations", len(failed_meows))
+                            logger.info(
+                                "🔄 Retrying %d failed MEOWs with escalated iterations",
+                                len(failed_meows),
+                            )
                             self.work_queue.extend(failed_meows)
                             continue
-                        logger.warning("⚠️ Deployment deadlock: %d MEOWs blocked by unmet dependencies", len(self.work_queue))
+                        logger.warning(
+                            "⚠️ Deployment deadlock: %d MEOWs blocked by unmet dependencies",
+                            len(self.work_queue),
+                        )
                         break
 
         except KeyboardInterrupt:
@@ -1050,6 +1164,7 @@ class GasTownOrchestrator:
         except Exception as e:
             logger.error("❌ Deployment error: %s", e, exc_info=True)
             import traceback
+
             logger.error(traceback.format_exc())
 
         return results
@@ -1075,21 +1190,17 @@ class GasTownOrchestrator:
         """
         retryable = []
         for meow, result in self.completed_work:
-            if not result.success and not getattr(meow, '_retried', False):
+            if not result.success and not getattr(meow, "_retried", False):
                 meow._retried = True
                 retryable.append(meow)
         return retryable
 
 
-# ============================================================================
-# Public API
-# ============================================================================
-
 def immortal_clone_deploy(
     campaign: dict[str, Any],
     max_clones: int = 50000,
     max_iterations: int = 200,
-    dashboard_enabled: bool = True
+    dashboard_enabled: bool = True,
 ) -> list[ActionResult]:
     """Deploy Immortal clones with enhanced tracking and auto-completion.
 
@@ -1106,6 +1217,6 @@ def immortal_clone_deploy(
         campaign,
         max_workers=min(max_clones, 64),  # Cap at 64 for stability
         max_iterations=max_iterations,
-        dashboard_enabled=dashboard_enabled
+        dashboard_enabled=dashboard_enabled,
     )
     return orchestrator.deploy_gas_town()

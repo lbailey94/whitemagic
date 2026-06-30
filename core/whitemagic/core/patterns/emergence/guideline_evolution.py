@@ -67,18 +67,22 @@ class GuidelineEvolution:
         # Save proposal
         filepath = self.proposals_dir / f"{proposal.id}.json"
         with open(filepath, "w") as f:
-            json.dump({
-                "id": proposal.id,
-                "title": proposal.title,
-                "current": proposal.current_guideline,
-                "proposed": proposal.proposed_change,
-                "rationale": proposal.rationale,
-                "evidence": proposal.evidence,
-                "confidence": proposal.confidence,
-                "proposed_by": proposal.proposed_by,
-                "status": proposal.status,
-                "created": proposal.created.isoformat(),
-            }, f, indent=2)
+            json.dump(
+                {
+                    "id": proposal.id,
+                    "title": proposal.title,
+                    "current": proposal.current_guideline,
+                    "proposed": proposal.proposed_change,
+                    "rationale": proposal.rationale,
+                    "evidence": proposal.evidence,
+                    "confidence": proposal.confidence,
+                    "proposed_by": proposal.proposed_by,
+                    "status": proposal.status,
+                    "created": proposal.created.isoformat(),
+                },
+                f,
+                indent=2,
+            )
 
         return proposal
 
@@ -89,18 +93,20 @@ class GuidelineEvolution:
             with open(file) as f:
                 data = json.load(f)
                 if data["status"] == "proposed":
-                    proposals.append(GuidelineProposal(
-                        id=data["id"],
-                        title=data["title"],
-                        current_guideline=data["current"],
-                        proposed_change=data["proposed"],
-                        rationale=data["rationale"],
-                        evidence=data["evidence"],
-                        confidence=data["confidence"],
-                        proposed_by=data["proposed_by"],
-                        status=data["status"],
-                        created=parse_datetime(data["created"]),
-                    ))
+                    proposals.append(
+                        GuidelineProposal(
+                            id=data["id"],
+                            title=data["title"],
+                            current_guideline=data["current"],
+                            proposed_change=data["proposed"],
+                            rationale=data["rationale"],
+                            evidence=data["evidence"],
+                            confidence=data["confidence"],
+                            proposed_by=data["proposed_by"],
+                            status=data["status"],
+                            created=parse_datetime(data["created"]),
+                        )
+                    )
 
         return sorted(proposals, key=lambda p: p.confidence, reverse=True)
 

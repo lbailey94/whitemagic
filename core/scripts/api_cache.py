@@ -62,6 +62,7 @@ _api_cache = TTLCache(default_ttl=60.0)
 
 def cached(key: str, ttl: float | None = None):
     """Decorator to cache endpoint results."""
+
     def decorator(fn: Callable):
         def wrapper(*args, **kwargs):
             cache_key = f"{key}:{args}:{sorted(kwargs.items())}"
@@ -71,7 +72,9 @@ def cached(key: str, ttl: float | None = None):
             result = fn(*args, **kwargs)
             _api_cache.set(cache_key, result, ttl=ttl)
             return result
+
         return wrapper
+
     return decorator
 
 

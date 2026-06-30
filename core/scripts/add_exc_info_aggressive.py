@@ -9,6 +9,7 @@ For pass 2, the script tracks whether the cursor is inside an
 except block by maintaining a stack of `try/except` contexts.
 This is approximate but works for the typical patterns.
 """
+
 import re
 from pathlib import Path
 
@@ -35,7 +36,7 @@ def convert_fstring_to_percent(line: str) -> tuple[str, list[str]] | None:
         return None
     var_re = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_.]*)\}")
     vars_in_order: list[str] = []
-    new_msg = var_re.sub(lambda m: (vars_in_order.append(m.group(1)) or "%s"), msg)
+    new_msg = var_re.sub(lambda m: vars_in_order.append(m.group(1)) or "%s", msg)
     if not vars_in_order:
         return None
     args = ", ".join(vars_in_order)
@@ -43,7 +44,9 @@ def convert_fstring_to_percent(line: str) -> tuple[str, list[str]] | None:
         # logger.exception already includes exc_info implicitly
         new_line = f"{indent}logger.{level}({quote}{new_msg}{quote}, {args})\n"
     else:
-        new_line = f"{indent}logger.{level}({quote}{new_msg}{quote}, {args}, exc_info=True)\n"
+        new_line = (
+            f"{indent}logger.{level}({quote}{new_msg}{quote}, {args}, exc_info=True)\n"
+        )
     return new_line, vars_in_order
 
 
@@ -92,6 +95,7 @@ def add_exc_info_to_logger_calls(path: Path) -> int:
         new_content = "".join(new_lines)
         try:
             import ast
+
             ast.parse(new_content)
         except SyntaxError as e:
             return 0

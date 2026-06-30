@@ -25,9 +25,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Transition Tracker (Markov chain)
-# ---------------------------------------------------------------------------
 
 class TransitionTracker:
     """Tracks Gana→Gana transition frequencies for prediction."""
@@ -35,7 +32,9 @@ class TransitionTracker:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         # transitions[from_gana][to_gana] = count
-        self._transitions: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self._transitions: dict[str, dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
         self._total_from: dict[str, int] = defaultdict(int)
 
     def record(self, from_gana: str, to_gana: str) -> None:
@@ -56,11 +55,7 @@ class TransitionTracker:
                 return []
 
             ranked = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-            return [
-                (gana, count / total)
-                for gana, count in ranked[:
-                    top_k]
-            ]
+            return [(gana, count / total) for gana, count in ranked[:top_k]]
 
     def stats(self) -> dict[str, Any]:
         """Get transition tracker statistics."""
@@ -78,11 +73,13 @@ class TransitionTracker:
         all_transitions: list[dict[str, int | str]] = []
         for from_g, targets in self._transitions.items():
             for to_g, count in targets.items():
-                all_transitions.append({
-                    "from": from_g,
-                    "to": to_g,
-                    "count": count,
-                })
+                all_transitions.append(
+                    {
+                        "from": from_g,
+                        "to": to_g,
+                        "count": count,
+                    }
+                )
 
         def _count_key(item: dict[str, int | str]) -> int:
             count = item.get("count")
@@ -94,10 +91,6 @@ class TransitionTracker:
         )
         return all_transitions[:n]
 
-
-# ---------------------------------------------------------------------------
-# Prefetch Cache
-# ---------------------------------------------------------------------------
 
 class PrefetchCache:
     """TTL-based cache for prefetched tool results."""
@@ -154,10 +147,6 @@ class PrefetchCache:
             }
 
 
-# ---------------------------------------------------------------------------
-# Speculative Prefetcher
-# ---------------------------------------------------------------------------
-
 # Tool-to-Gana reverse mapping (lazy loaded)
 _GANA_TOOLS: dict[str, list[str]] | None = None
 
@@ -169,6 +158,7 @@ def _get_gana_tools() -> dict[str, list[str]]:
         return _GANA_TOOLS
     try:
         from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+
         gana_tools: dict[str, list[str]] = defaultdict(list)
         for tool, gana in TOOL_TO_GANA.items():
             gana_tools[gana].append(tool)
@@ -202,6 +192,7 @@ class SpeculativePrefetcher:
 
         # Skip prefetch in test environments to prevent thread accumulation
         import os
+
         if os.environ.get("WM_SILENT_INIT") == "1":
             return
 
@@ -232,28 +223,34 @@ class SpeculativePrefetcher:
             from whitemagic.core.acceleration.go_mesh_bridge import (
                 go_concurrent_prefetch,
             )
+
             gana_tools = _get_gana_tools()
             tools_to_prefetch = []
             for gana_name, prob in predictions:
-                for tool_name in gana_tools.get(gana_name, [])[:self._max_prefetch]:
-                    tools_to_prefetch.append({
-                        "name": tool_name,
-                        "gana": gana_name,
-                        "probability": round(prob, 3),
-                    })
+                for tool_name in gana_tools.get(gana_name, [])[: self._max_prefetch]:
+                    tools_to_prefetch.append(
+                        {
+                            "name": tool_name,
+                            "gana": gana_name,
+                            "probability": round(prob, 3),
+                        }
+                    )
             if tools_to_prefetch:
                 result = go_concurrent_prefetch(tools_to_prefetch)
                 if result and result.get("status") == "ok":
                     for r in result.get("results", []):
                         if r.get("prefetched"):
-                            self._cache.put(f"prefetch:{r['tool']}", {
-                                "prefetched": True,
-                                "gana": r.get("gana"),
-                                "tool": r.get("tool"),
-                                "probability": r.get("probability"),
-                                "timestamp": time.time(),
-                                "backend": "go_goroutine",
-                            })
+                            self._cache.put(
+                                f"prefetch:{r['tool']}",
+                                {
+                                    "prefetched": True,
+                                    "gana": r.get("gana"),
+                                    "tool": r.get("tool"),
+                                    "probability": r.get("probability"),
+                                    "timestamp": time.time(),
+                                    "backend": "go_goroutine",
+                                },
+                            )
                             self._prefetch_count += 1
                     logger.debug(
                         "Go prefetch: %d tools in %.2fms (%d goroutines)",
@@ -273,14 +270,17 @@ class SpeculativePrefetcher:
         for gana_name, probability in predictions:
             tools = gana_tools.get(gana_name, [])
             # Prefetch top N tools for this Gana
-            for tool_name in tools[:
-                self._max_prefetch]:
+            for tool_name in tools[: self._max_prefetch]:
                 try:
                     self._prefetch_tool(tool_name, gana_name, probability)
                 except Exception as e:
-                    logger.debug("Prefetch failed for %s: %s", tool_name, e, exc_info=True)
+                    logger.debug(
+                        "Prefetch failed for %s: %s", tool_name, e, exc_info=True
+                    )
 
-    def _prefetch_tool(self, tool_name: str, gana_name: str, probability: float) -> None:
+    def _prefetch_tool(
+        self, tool_name: str, gana_name: str, probability: float
+    ) -> None:
         """Pre-warm the retrieval pipeline for a specific tool.
 
         This runs the search/retrieval that would normally happen
@@ -288,9 +288,14 @@ class SpeculativePrefetcher:
         """
         # Only prefetch tools that involve memory search (the expensive path)
         search_tools = {
-            "search_memories", "vector.search", "read_memory",
-            "list_memories", "fast_read_memory", "batch_read_memories",
-            "pattern_search", "gnosis",
+            "search_memories",
+            "vector.search",
+            "read_memory",
+            "list_memories",
+            "fast_read_memory",
+            "batch_read_memories",
+            "pattern_search",
+            "gnosis",
         }
         if tool_name not in search_tools:
             return
@@ -303,24 +308,36 @@ class SpeculativePrefetcher:
         # Pre-warm: run a lightweight retrieval pipeline probe
         try:
             from whitemagic.optimization.rust_accelerators import retrieval_pipeline
+
             # Create a minimal probe — just warm the Rust pipeline cache
             probe_candidates = [
-                {"id": "probe", "score": 0.5, "importance": 0.5,
-                 "memory_type": "LONG_TERM", "tags": [gana_name],
-                 "age_days": 1.0},
+                {
+                    "id": "probe",
+                    "score": 0.5,
+                    "importance": 0.5,
+                    "memory_type": "LONG_TERM",
+                    "tags": [gana_name],
+                    "age_days": 1.0,
+                },
             ]
-            probe_config = {"query": tool_name, "limit": 1,
-                            "enable_importance_rerank": True}
+            probe_config = {
+                "query": tool_name,
+                "limit": 1,
+                "enable_importance_rerank": True,
+            }
             retrieval_pipeline(probe_candidates, probe_config)  # warm pipeline cache
 
             # Cache the fact that we pre-warmed this path
-            self._cache.put(cache_key, {
-                "prefetched": True,
-                "gana": gana_name,
-                "tool": tool_name,
-                "probability": round(probability, 3),
-                "timestamp": time.time(),
-            })
+            self._cache.put(
+                cache_key,
+                {
+                    "prefetched": True,
+                    "gana": gana_name,
+                    "tool": tool_name,
+                    "probability": round(probability, 3),
+                    "timestamp": time.time(),
+                },
+            )
             self._prefetch_count += 1
         except (ImportError, AttributeError):
             pass
@@ -343,10 +360,6 @@ class SpeculativePrefetcher:
             "cache": self._cache.stats(),
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _prefetcher: SpeculativePrefetcher | None = None
 _prefetcher_lock = threading.Lock()

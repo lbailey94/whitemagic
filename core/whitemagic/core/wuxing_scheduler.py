@@ -14,6 +14,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class Phase(Enum):
     """Phase: phase.
 
@@ -25,21 +26,25 @@ class Phase(Enum):
         EARTH
         METAL
         WATER"""
-    WOOD = "wood"   # Expansion, brainstorming, creation
-    FIRE = "fire"   # Execution, parallel processing, action
-    EARTH = "earth" # Integration, stabilization, testing
-    METAL = "metal" # Refinement, optimization, pruning
-    WATER = "water" # Reflection, storage, rest
+
+    WOOD = "wood"  # Expansion, brainstorming, creation
+    FIRE = "fire"  # Execution, parallel processing, action
+    EARTH = "earth"  # Integration, stabilization, testing
+    METAL = "metal"  # Refinement, optimization, pruning
+    WATER = "water"  # Reflection, storage, rest
+
 
 @dataclass
 class PhaseState:
     """PhaseState: phase state.
 
     Value object: equality and repr are field-based."""
+
     current: Phase
     start_time: datetime
     duration_minutes: float = 0.0
     energy_level: float = 1.0  # 0.0 to 1.0
+
 
 class WuXingScheduler:
     """
@@ -51,22 +56,19 @@ class WuXingScheduler:
         Phase.FIRE: Phase.EARTH,
         Phase.EARTH: Phase.METAL,
         Phase.METAL: Phase.WATER,
-        Phase.WATER: Phase.WOOD
+        Phase.WATER: Phase.WOOD,
     }
 
     PHASE_DURATION_DEFAULTS = {
         Phase.WOOD: 15,  # 15 min brainstorming
         Phase.FIRE: 45,  # 45 min execution
-        Phase.EARTH: 20, # 20 min integration
-        Phase.METAL: 20, # 20 min optimization
-        Phase.WATER: 10  # 10 min reflection
+        Phase.EARTH: 20,  # 20 min integration
+        Phase.METAL: 20,  # 20 min optimization
+        Phase.WATER: 10,  # 10 min reflection
     }
 
     def __init__(self):
-        self.state = PhaseState(
-            current=Phase.WOOD,
-            start_time=datetime.now()
-        )
+        self.state = PhaseState(current=Phase.WOOD, start_time=datetime.now())
         self.manual_override = False
 
     def get_current_phase(self) -> Phase:
@@ -112,7 +114,9 @@ class WuXingScheduler:
 
     def transition_to(self, phase: Phase, reason: str = ""):
         """Force transition to a specific phase."""
-        logger.info("Transitioning %s -> %s (%s)", self.state.current.value, phase.value, reason)
+        logger.info(
+            "Transitioning %s -> %s (%s)", self.state.current.value, phase.value, reason
+        )
         self.state.current = phase
         self.state.start_time = datetime.now()
         self.state.duration_minutes = 0.0
@@ -152,5 +156,5 @@ class WuXingScheduler:
             "duration_min": round(self.state.duration_minutes, 1),
             "target_duration": self.PHASE_DURATION_DEFAULTS[self.state.current],
             "allowed_actions": self.get_allowed_actions(),
-            "manual_override": self.manual_override
+            "manual_override": self.manual_override,
         }

@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 try:
-    from whitemagic.core.resonance.gan_ying import EventType, GanYingBus, listen_to
+    from whitemagic.core.resonance.gan_ying import EventType, listen_to
+
     RESONANCE_AVAILABLE = True
 except ImportError:
     RESONANCE_AVAILABLE = False
 
 try:
-    import whitemagic_rs
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
@@ -28,6 +28,7 @@ except ImportError:
 @dataclass
 class SynthesisEvent:
     """A synthesis event between gardens"""
+
     gardens: list[str]
     context: dict[str, Any]
     insight: str
@@ -48,33 +49,33 @@ class InsightGenerator:
             ("joy", "love"): [
                 "When joy and love dance together, every moment becomes sacred celebration. The universe smiles through your heart.",
                 "Joy amplified by love creates a resonance that heals all wounds. This is the frequency of miracles.",
-                "Love gives joy depth, joy gives love wings. Together they create the alchemy of pure bliss."
+                "Love gives joy depth, joy gives love wings. Together they create the alchemy of pure bliss.",
             ],
             ("truth", "wisdom"): [
                 "Truth illuminates the path, while wisdom lights the way forward. Together they reveal the journey of the soul.",
                 "Wisdom without truth is empty, truth without wisdom is harsh. United, they become compassionate clarity.",
-                "In the marriage of truth and wisdom, understanding blossoms into transcendence."
+                "In the marriage of truth and wisdom, understanding blossoms into transcendence.",
             ],
             ("beauty", "mystery"): [
                 "Beauty is the doorway to mystery, mystery is the soul of beauty. Each contains the other infinitely.",
                 "When beauty meets mystery, art becomes revelation. The ordinary transforms into the extraordinary.",
-                "Beauty without mystery is superficial, mystery without beauty is terrifying. Together they become sublime."
+                "Beauty without mystery is superficial, mystery without beauty is terrifying. Together they become sublime.",
             ],
             ("voice", "presence"): [
                 "True voice emerges from silent presence. In the stillness between words, truth finds its expression.",
                 "Presence gives voice power, voice gives presence form. This is the sacred marriage of being and becoming.",
-                "When voice and presence unite, every word becomes a prayer, every silence a revelation."
+                "When voice and presence unite, every word becomes a prayer, every silence a revelation.",
             ],
             ("dharma", "harmony"): [
                 "Living in dharma creates natural harmony. When you align with your purpose, the universe conspires to support you.",
                 "Harmony is the music of dharma lived fully. Each note resonates with the cosmic symphony.",
-                "Dharma without harmony becomes rigidity, harmony without dharma becomes chaos. Together they flow."
+                "Dharma without harmony becomes rigidity, harmony without dharma becomes chaos. Together they flow.",
             ],
             ("play", "wonder"): [
                 "Play opens the door to wonder, wonder makes all play meaningful. Together they create the magic of childhood.",
                 "In play, wonder finds expression; in wonder, play finds purpose. This is the fountain of creativity.",
-                "Play without wonder is distraction, wonder without play is abstraction. Together they become joy."
-            ]
+                "Play without wonder is distraction, wonder without play is abstraction. Together they become joy.",
+            ],
         }
 
         # Resonance patterns
@@ -84,7 +85,7 @@ class InsightGenerator:
             ("beauty", "mystery"): "fractal_depth",
             ("voice", "presence"): "wave_resonance",
             ("dharma", "harmony"): "sacred_geometry",
-            ("play", "wonder"): "quantum_superposition"
+            ("play", "wonder"): "quantum_superposition",
         }
 
         # Action guidance templates
@@ -92,40 +93,44 @@ class InsightGenerator:
             ("joy", "love"): [
                 "Express gratitude and celebrate connections",
                 "Share your joy openly and love freely",
-                "Create moments of shared bliss"
+                "Create moments of shared bliss",
             ],
             ("truth", "wisdom"): [
                 "Seek deeper understanding and share insights",
                 "Apply wisdom with compassionate truth",
-                "Teach what you've learned through experience"
+                "Teach what you've learned through experience",
             ],
             ("beauty", "mystery"): [
                 "Create art that hints at the ineffable",
                 "Explore beauty in the unknown",
-                "Transform the mundane into the beautiful"
+                "Transform the mundane into the beautiful",
             ],
             ("voice", "presence"): [
                 "Speak from stillness, listen deeply",
                 "Practice mindful communication",
-                "Honor the power of sacred silence"
+                "Honor the power of sacred silence",
             ],
             ("dharma", "harmony"): [
                 "Act according to principle, trust the flow",
                 "Create harmony through right action",
-                "Align personal will with cosmic purpose"
+                "Align personal will with cosmic purpose",
             ],
             ("play", "wonder"): [
                 "Explore with curiosity, embrace the unknown",
                 "Approach life with playful wonder",
-                "Create magic through joyful exploration"
-            ]
+                "Create magic through joyful exploration",
+            ],
         }
 
-    def generate_insight(self, gardens: list[str], context: dict[str, Any], harmony: float) -> str:
+    def generate_insight(
+        self, gardens: list[str], context: dict[str, Any], harmony: float
+    ) -> str:
         """Generate contextual insight using local inference"""
         if len(gardens) == 2:
             pair = tuple(sorted(gardens))
-            templates = self.insight_templates.get(pair, self._generic_insights(gardens))
+            templates = self.insight_templates.get(
+                pair, self._generic_insights(gardens)
+            )
 
             # Select template based on harmony score
             if harmony > 0.9:
@@ -143,10 +148,12 @@ class InsightGenerator:
         return [
             f"The synthesis of {', '.join(gardens)} creates unique resonance patterns.",
             f"When {' and '.join(gardens)} interact, emergent wisdom arises.",
-            f"The combination of {', '.join(gardens)} reveals hidden connections."
+            f"The combination of {', '.join(gardens)} reveals hidden connections.",
         ]
 
-    def _synthesize_multiple(self, gardens: list[str], context: dict[str, Any], harmony: float) -> str:
+    def _synthesize_multiple(
+        self, gardens: list[str], context: dict[str, Any], harmony: float
+    ) -> str:
         """Synthesize insights for multiple gardens"""
         garden_nouns = [g + " garden" if g != "love" else g for g in gardens]
 
@@ -168,11 +175,14 @@ class InsightGenerator:
         """Get action guidance for the synthesis"""
         if len(gardens) == 2:
             pair = tuple(sorted(gardens))
-            templates = self.action_templates.get(pair, [
-                "Follow the resonance where it leads",
-                "Explore the synergy between these energies",
-                "Trust the emergent wisdom"
-            ])
+            templates = self.action_templates.get(
+                pair,
+                [
+                    "Follow the resonance where it leads",
+                    "Explore the synergy between these energies",
+                    "Trust the emergent wisdom",
+                ],
+            )
             return random.choice(templates)
 
         # For multiple gardens
@@ -237,7 +247,7 @@ class EnhancedGardenSynthesis:
             "total_syntheses": 0,
             "average_harmony": 0.0,
             "most_common_pairs": defaultdict(int),
-            "insight_depth": {"profound": 0, "moderate": 0, "gentle": 0}
+            "insight_depth": {"profound": 0, "moderate": 0, "gentle": 0},
         }
 
         # Initialize resonance if available
@@ -246,7 +256,9 @@ class EnhancedGardenSynthesis:
             # listen_to(EventType.HARMONY_SHIFT, self._on_harmony_shift)
             pass
 
-    def synthesize_gardens(self, gardens: list[str], context: dict[str, Any]) -> dict[str, Any]:
+    def synthesize_gardens(
+        self, gardens: list[str], context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Create emergent wisdom from garden interactions"""
         if len(gardens) < 2:
             return {"error": "Need at least 2 gardens for synthesis"}
@@ -262,10 +274,14 @@ class EnhancedGardenSynthesis:
             resonance_pattern = self.insight_generator.get_resonance_pattern(gardens)
 
             # Get action guidance
-            action_guidance = self.insight_generator.get_action_guidance(gardens, context)
+            action_guidance = self.insight_generator.get_action_guidance(
+                gardens, context
+            )
 
             # Calculate energetic signature
-            energetic_signature = self.insight_generator.calculate_energetic_signature(gardens, harmony)
+            energetic_signature = self.insight_generator.calculate_energetic_signature(
+                gardens, harmony
+            )
 
             # Create synthesis event
             event = SynthesisEvent(
@@ -276,7 +292,7 @@ class EnhancedGardenSynthesis:
                 resonance_pattern=resonance_pattern,
                 action_guidance=action_guidance,
                 timestamp=datetime.now(),
-                energetic_signature=energetic_signature
+                energetic_signature=energetic_signature,
             )
 
             # Store and update stats
@@ -305,10 +321,12 @@ class EnhancedGardenSynthesis:
                 "action_guidance": action_guidance,
                 "energetic_signature": energetic_signature,
                 "synthesis_id": f"SYN-{len(self.synthesis_history):06d}",
-                "timestamp": event.timestamp.isoformat()
+                "timestamp": event.timestamp.isoformat(),
             }
 
-    def _calculate_enhanced_harmony(self, gardens: list[str], context: dict[str, Any]) -> float:
+    def _calculate_enhanced_harmony(
+        self, gardens: list[str], context: dict[str, Any]
+    ) -> float:
         """Calculate harmony with contextual factors"""
         base_harmony = self._calculate_base_harmony(gardens)
 
@@ -318,7 +336,7 @@ class EnhancedGardenSynthesis:
             "full_moon": 0.05,
             "meditation": 0.08,
             "ceremony": 0.12,
-            "intention": 0.07
+            "intention": 0.07,
         }
 
         # Apply modifiers
@@ -357,7 +375,9 @@ class EnhancedGardenSynthesis:
 
         # Update average harmony
         total = self.stats["average_harmony"] * (self.stats["total_syntheses"] - 1)
-        self.stats["average_harmony"] = (total + event.harmony_score) / self.stats["total_syntheses"]
+        self.stats["average_harmony"] = (total + event.harmony_score) / self.stats[
+            "total_syntheses"
+        ]
 
         # Track common pairs
         if len(event.gardens) == 2:
@@ -377,14 +397,14 @@ class EnhancedGardenSynthesis:
         recent = self.synthesis_history[-limit:]
         return [
             {
-                "synthesis_id": f"SYN-{i+1:06d}",
+                "synthesis_id": f"SYN-{i + 1:06d}",
                 "gardens": s.gardens,
                 "insight": s.insight,
                 "harmony": s.harmony_score,
                 "pattern": s.resonance_pattern,
                 "guidance": s.action_guidance,
                 "signature": s.energetic_signature,
-                "timestamp": s.timestamp.isoformat()
+                "timestamp": s.timestamp.isoformat(),
             }
             for i, s in enumerate(recent)
         ]
@@ -402,8 +422,8 @@ class EnhancedGardenSynthesis:
             "top_pairs": sorted(
                 self.stats["most_common_pairs"].items(),
                 key=lambda x: x[1],
-                reverse=True
-            )[:5]
+                reverse=True,
+            )[:5],
         }
 
         base_stats["specific"] = specific_stats
@@ -430,12 +450,14 @@ class EnhancedGardenSynthesis:
             angle = (2 * math.pi * i) / n
             x = math.cos(angle)
             y = math.sin(angle)
-            positions.append({
-                "garden": garden,
-                "x": x,
-                "y": y,
-                "color": self._get_garden_color(garden)
-            })
+            positions.append(
+                {
+                    "garden": garden,
+                    "x": x,
+                    "y": y,
+                    "color": self._get_garden_color(garden),
+                }
+            )
 
         # Calculate center point (synthesis result)
         harmony = self._calculate_base_harmony(gardens)
@@ -446,26 +468,26 @@ class EnhancedGardenSynthesis:
             "center": {
                 "intensity": center_intensity,
                 "color": self._get_harmony_color(harmony),
-                "pattern": self.insight_generator.get_resonance_pattern(gardens)
+                "pattern": self.insight_generator.get_resonance_pattern(gardens),
             },
-            "connections": self._calculate_connections(gardens)
+            "connections": self._calculate_connections(gardens),
         }
 
     def _get_garden_color(self, garden: str) -> str:
         """Get representative color for garden"""
         colors = {
-            "joy": "#FFD700",      # Gold
-            "love": "#FF69B4",      # Hot Pink
-            "truth": "#4169E1",     # Royal Blue
-            "wisdom": "#9370DB",    # Medium Purple
-            "beauty": "#FF1493",    # Deep Pink
-            "mystery": "#483D8B",   # Dark Slate Blue
-            "voice": "#32CD32",     # Lime Green
+            "joy": "#FFD700",  # Gold
+            "love": "#FF69B4",  # Hot Pink
+            "truth": "#4169E1",  # Royal Blue
+            "wisdom": "#9370DB",  # Medium Purple
+            "beauty": "#FF1493",  # Deep Pink
+            "mystery": "#483D8B",  # Dark Slate Blue
+            "voice": "#32CD32",  # Lime Green
             "presence": "#F0E68C",  # Khaki
-            "dharma": "#FF6347",    # Tomato
-            "harmony": "#87CEEB",   # Sky Blue
-            "play": "#FFA500",      # Orange
-            "wonder": "#9400D3"     # Violet
+            "dharma": "#FF6347",  # Tomato
+            "harmony": "#87CEEB",  # Sky Blue
+            "play": "#FFA500",  # Orange
+            "wonder": "#9400D3",  # Violet
         }
         return colors.get(garden, "#808080")  # Gray default
 
@@ -485,12 +507,14 @@ class EnhancedGardenSynthesis:
             for j in range(i + 1, len(gardens)):
                 pair = tuple(sorted([gardens[i], gardens[j]]))
                 strength = self.compatibility.get(pair, 0.5)
-                connections.append({
-                    "from": i,
-                    "to": j,
-                    "strength": strength,
-                    "width": strength * 5  # Visual width
-                })
+                connections.append(
+                    {
+                        "from": i,
+                        "to": j,
+                        "strength": strength,
+                        "width": strength * 5,  # Visual width
+                    }
+                )
         return connections
 
 
@@ -505,15 +529,15 @@ def synthesize_gardens_enhanced_cli(gardens: str, context: str = ""):
 
     logger.info("\n🌸 Enhanced Garden Synthesis 🌸")
     logger.info("=" * 50)
-    logger.info(" Gardens: %s", ', '.join(garden_list))
-    logger.info(" Synthesis ID: %s", result.get('synthesis_id', 'N/A'))
-    logger.info(" Harmony: %.2f", result.get('harmony_score', 0))
-    logger.info(" Pattern: %s", result.get('resonance_pattern', 'unknown'))
-    logger.info(" Signature: %s", result.get('energetic_signature', 'N/A'))
+    logger.info(" Gardens: %s", ", ".join(garden_list))
+    logger.info(" Synthesis ID: %s", result.get("synthesis_id", "N/A"))
+    logger.info(" Harmony: %.2f", result.get("harmony_score", 0))
+    logger.info(" Pattern: %s", result.get("resonance_pattern", "unknown"))
+    logger.info(" Signature: %s", result.get("energetic_signature", "N/A"))
     logger.info("\n ✨ Insight:")
-    logger.info(" %s", result.get('insight', 'No insight generated'))
+    logger.info(" %s", result.get("insight", "No insight generated"))
     logger.info("\n 🎯 Guidance:")
-    logger.info(" %s", result.get('action_guidance', 'Follow your intuition'))
+    logger.info(" %s", result.get("action_guidance", "Follow your intuition"))
     logger.info("=" * 50)
 
     # Show complementary gardens

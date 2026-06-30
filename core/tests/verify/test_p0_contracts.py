@@ -19,6 +19,7 @@ import pytest
 # P0-001: Tool Registry Contract
 # =============================================================================
 
+
 class TestToolRegistryContract:
     """P0: Tool registry must maintain internal consistency."""
 
@@ -41,11 +42,11 @@ class TestToolRegistryContract:
 
     def test_all_registry_tools_have_dispatch_handlers(self):
         """Every ToolDefinition in registry must have a dispatch handler.
-        
+
         Note: Gana tools (gana_*) are nested organizational categories and are
         accessed through parent tools, not directly dispatched. They are exempt
         from this requirement.
-"""
+        """
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
         from whitemagic.tools.registry import get_all_tools
 
@@ -101,17 +102,20 @@ class TestToolRegistryContract:
 # P0-002: Path Resolution Contract
 # =============================================================================
 
+
 class TestPathResolutionContract:
     """P0: Path resolution must follow the state-root hygiene policy."""
 
     def test_wm_root_is_absolute_path(self):
         """WM_ROOT must always be an absolute path."""
         from whitemagic.config.paths import WM_ROOT
+
         assert WM_ROOT.is_absolute(), f"WM_ROOT ({WM_ROOT}) is not absolute"
 
     def test_db_path_is_absolute_path(self):
         """DB_PATH must always be an absolute path."""
         from whitemagic.config.paths import DB_PATH
+
         assert DB_PATH.is_absolute(), f"DB_PATH ({DB_PATH}) is not absolute"
 
     def test_state_root_not_in_repo(self):
@@ -140,6 +144,7 @@ class TestPathResolutionContract:
 # =============================================================================
 # P0-003: Tool Dispatch Contract
 # =============================================================================
+
 
 class TestToolDispatchContract:
     """P0: Tool dispatch must maintain stability guarantees."""
@@ -171,7 +176,9 @@ class TestToolDispatchContract:
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 
         assert len(DISPATCH_TABLE) > 0, "DISPATCH_TABLE is empty"
-        assert len(DISPATCH_TABLE) >= 50, f"DISPATCH_TABLE suspiciously small: {len(DISPATCH_TABLE)} tools"
+        assert len(DISPATCH_TABLE) >= 50, (
+            f"DISPATCH_TABLE suspiciously small: {len(DISPATCH_TABLE)} tools"
+        )
 
     def test_core_tools_have_handlers(self):
         """Core tools must have working dispatch handlers."""
@@ -185,12 +192,15 @@ class TestToolDispatchContract:
         ]
 
         for tool_name in core_tools:
-            assert tool_name in DISPATCH_TABLE, f"Core tool {tool_name} not in dispatch table"
+            assert tool_name in DISPATCH_TABLE, (
+                f"Core tool {tool_name} not in dispatch table"
+            )
 
 
 # =============================================================================
 # P0-004: Package Integrity Contract
 # =============================================================================
+
 
 class TestPackageIntegrityContract:
     """P0: Package must be installable and functional."""
@@ -226,6 +236,7 @@ class TestPackageIntegrityContract:
 # P0-005: API Response Contract
 # =============================================================================
 
+
 class TestAPIResponseContract:
     """P0: Tool responses must follow the standard envelope format."""
 
@@ -239,10 +250,14 @@ class TestAPIResponseContract:
         # Verify envelope structure
         assert isinstance(response, dict), "Response must be a dict"
         assert "status" in response, "Response must have 'status' field"
-        assert response["status"] in ("success", "error"), f"Invalid status: {response['status']}"
-        
+        assert response["status"] in ("success", "error"), (
+            f"Invalid status: {response['status']}"
+        )
+
         # Ensure full envelope keys are present
-        missing = {"envelope_version", "tool", "request_id", "timestamp"}.difference(response.keys())
+        missing = {"envelope_version", "tool", "request_id", "timestamp"}.difference(
+            response.keys()
+        )
         assert not missing, f"Missing envelope keys: {sorted(missing)}"
 
     def test_tool_response_includes_details_on_success(self):
@@ -260,6 +275,7 @@ class TestAPIResponseContract:
 # =============================================================================
 # P0-006: Security Contract
 # =============================================================================
+
 
 class TestSecurityContract:
     """P0: Security gating must function correctly."""

@@ -74,7 +74,9 @@ class CittaBridge:
 
         # Emotional shift
         if moment.emotional_tone != self._last_emotional_tone:
-            tone_shift = _tone_distance(self._last_emotional_tone, moment.emotional_tone)
+            tone_shift = _tone_distance(
+                self._last_emotional_tone, moment.emotional_tone
+            )
             if tone_shift >= _EMOTIONAL_SHIFT_THRESHOLD:
                 should_store = True
                 reason = f"emotional_shift:{self._last_emotional_tone}->{moment.emotional_tone}"
@@ -94,7 +96,11 @@ class CittaBridge:
         self._last_coherence = moment.coherence
 
         # High-importance tool call (coherence > 0.9 and non-trivial output)
-        if moment.coherence > 0.9 and len(moment.output_preview) > 50 and not should_store:
+        if (
+            moment.coherence > 0.9
+            and len(moment.output_preview) > 50
+            and not should_store
+        ):
             # Only store if this is a notably high-coherence moment
             if cycle_summary:
                 drift = cycle_summary.get("coherence_drift", 0.0)
@@ -118,6 +124,7 @@ class CittaBridge:
         """
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
         except Exception as e:
             logger.debug("Cannot store citta summary: %s", e)
@@ -167,7 +174,9 @@ class CittaBridge:
             logger.debug("Stored citta session summary: %s", mem_id)
             return mem_id
         except Exception as e:
-            logger.warning("Failed to store citta session summary: %s", e, exc_info=True)
+            logger.warning(
+                "Failed to store citta session summary: %s", e, exc_info=True
+            )
             return None
 
     def _store_moment(
@@ -179,6 +188,7 @@ class CittaBridge:
         """Store a significant citta moment as a memory."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
         except Exception as e:
             logger.debug("Cannot store citta moment: %s", e)
@@ -206,7 +216,13 @@ class CittaBridge:
             )
 
         title = f"Citta: {reason} @ pos={moment.chain_position}"
-        tags = {"citta", "consciousness", "citta_stream", moment.gana, moment.emotional_tone}
+        tags = {
+            "citta",
+            "consciousness",
+            "citta_stream",
+            moment.gana,
+            moment.emotional_tone,
+        }
         tags.discard("")  # Remove empty strings
 
         # Importance based on coherence and reason

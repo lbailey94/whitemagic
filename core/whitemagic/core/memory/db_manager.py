@@ -102,8 +102,6 @@ class ConnectionPool:
             logger.debug("SQLCipher encryption active for %s", self.db_path)
         else:
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        # --- P6: Aggressive PRAGMA tuning (v13.3.3) ---
-        # WAL mode for concurrent readers + single writer
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         # P6a: Memory-mapped I/O — 256MB mmap window for read-heavy workloads
@@ -163,10 +161,6 @@ class ConnectionPool:
             conn = self._pool.get()
             conn.close()
         self._connections_created = 0
-
-    # -----------------------------------------------------------------------
-    # Async versions for PSR-013
-    # -----------------------------------------------------------------------
 
     async def get_connection_async(self) -> sqlite3.Connection:
         """Get a connection from the pool asynchronously."""

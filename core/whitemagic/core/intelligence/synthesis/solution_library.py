@@ -18,6 +18,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Solution:
     """A verified or discovered solution pattern."""
@@ -26,7 +27,7 @@ class Solution:
     title: str
     description: str
     code_snippet: str | None = None
-    pattern_type: str = "solution" # solution, anti_pattern, heuristic
+    pattern_type: str = "solution"  # solution, anti_pattern, heuristic
     confidence: float = 0.5
     tags: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -36,11 +37,13 @@ class Solution:
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
 
+
 class SolutionLibrary:
     """Manages the lifecycle of discovered strategic and technical solutions."""
 
     def __init__(self, db_path: Path | None = None) -> None:
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = db_path or DB_PATH
 
         self._init_db()
@@ -64,17 +67,28 @@ class SolutionLibrary:
         conn.commit()
         conn.close()
 
-    def add_solution(self, solution: Solution, index_holographically: bool = True) -> Any:
+    def add_solution(
+        self, solution: Solution, index_holographically: bool = True
+    ) -> Any:
         """Add a solution to the library and optionally index it in 4D space."""
         conn = sqlite3.connect(str(self.db_path))
-        conn.execute("""
+        conn.execute(
+            """
             INSERT OR REPLACE INTO solutions (id, title, description, code_snippet, pattern_type, confidence, tags, metadata, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            solution.id, solution.title, solution.description, solution.code_snippet,
-            solution.pattern_type, solution.confidence, _json_dumps(solution.tags),
-            _json_dumps(solution.metadata), solution.created_at,
-        ))
+        """,
+            (
+                solution.id,
+                solution.title,
+                solution.description,
+                solution.code_snippet,
+                solution.pattern_type,
+                solution.confidence,
+                _json_dumps(solution.tags),
+                _json_dumps(solution.metadata),
+                solution.created_at,
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -92,7 +106,9 @@ class SolutionLibrary:
         """Retrieve a specific solution."""
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM solutions WHERE id = ?", (solution_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM solutions WHERE id = ?", (solution_id,)
+        ).fetchone()
         conn.close()
 
         if row:
@@ -109,7 +125,9 @@ class SolutionLibrary:
             )
         return None
 
-    def find_nearest_solutions(self, query_context: dict[str, Any], k: int = 5) -> list[Solution]:
+    def find_nearest_solutions(
+        self, query_context: dict[str, Any], k: int = 5
+    ) -> list[Solution]:
         """Find solutions spatially near a given context (uses Holographic Index)."""
         holo = get_holographic_memory()
         results = holo.query_nearest(query_context, k=k)
@@ -137,6 +155,7 @@ class SolutionLibrary:
             from whitemagic.ai_contract import (
                 AIContract,  # type: ignore[import-not-found]
             )
+
             contract = AIContract(capabilities=[sol.pattern_type, f"solution_{sol.id}"])
             if not contract.validate_action(f"apply_{sol.id}"):
                 logger.warning("Solution apply blocked by AI Contract: %s", sol.id)
@@ -154,14 +173,21 @@ class SolutionLibrary:
                 from whitemagic.core.intelligence.synthesis.accelerator_bridge import (
                     get_accelerator_bridge,
                 )
+
                 bridge = get_accelerator_bridge()
                 return bool(bridge.execute_snippet(sol.code_snippet, context or {}))
             except Exception as e:
-                logger.error("Execution of solution %s failed: %s", sol.id, e, exc_info=True)
+                logger.error(
+                    "Execution of solution %s failed: %s", sol.id, e, exc_info=True
+                )
                 return False
 
         # 3. Fallback: Log that solution was validated but had no executable code
-        logger.info("Solution %s validated but contains no executable snippet.", sol.id, exc_info=True)
+        logger.info(
+            "Solution %s validated but contains no executable snippet.",
+            sol.id,
+            exc_info=True,
+        )
         return True
 
     def migrate_from_cluster_patterns(self) -> Any:
@@ -174,6 +200,7 @@ class SolutionLibrary:
         for p in patterns:
             # Generate a stable ID based on cluster and content
             import hashlib
+
             stable_source = f"{p['cluster_id']}{p['content']}"
             sol_id = f"sol_{hashlib.md5(stable_source.encode()).hexdigest()[:8]}"
 
@@ -181,7 +208,9 @@ class SolutionLibrary:
                 id=sol_id,
                 title=f"Cluster {p['cluster_id']} Pattern",
                 description=p["content"],
-                pattern_type="solution" if p["pattern_type"] == "Sol" else "anti_pattern",
+                pattern_type="solution"
+                if p["pattern_type"] == "Sol"
+                else "anti_pattern",
                 metadata={"source_cluster": p["cluster_id"]},
             )
             self.add_solution(sol)
@@ -190,8 +219,10 @@ class SolutionLibrary:
         conn.close()
         return count
 
+
 # Singleton
 _solution_library = None
+
 
 def get_solution_library() -> SolutionLibrary:
     """

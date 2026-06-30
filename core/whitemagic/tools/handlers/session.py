@@ -1,4 +1,5 @@
 """Session tool handlers."""
+
 # ruff: noqa: BLE001, E402
 import logging
 
@@ -17,6 +18,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 def _resolve_base_path(kwargs: dict[str, Any]) -> Path:
     """Import and delegate to unified_api's path resolver."""
     from whitemagic.tools.unified_api import _resolve_base_path as _rbp
+
     return cast("Path", _rbp(kwargs))
 
 
@@ -44,6 +46,7 @@ def _save_session(base_path: Path, session: dict[str, Any]) -> None:
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
@@ -55,6 +58,7 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.orchestration.session_startup import start_session
+
     result = start_session(verbose=False)
     _emit("SYSTEM_STARTED", {"mode": "bootstrap"})
 
@@ -62,6 +66,7 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
     context = {}
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         # Load quickstart guides
         guides = um.search("quickstart guide", limit=5)
@@ -76,12 +81,12 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
         if recent:
             context["recent_memories"] = [
                 {"title": getattr(m, "title", ""), "id": getattr(m, "id", "")}
-                for m in recent[:
-                    3]
+                for m in recent[:3]
             ]
         # Galaxy status
         try:
             from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
             gm = get_galaxy_manager()
             context["active_galaxy"] = gm.get_active().name  # type: ignore[assignment]
             context["galaxy_count"] = len(gm._galaxies)  # type: ignore[assignment]
@@ -93,7 +98,6 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
     return {"status": "success", "result": result, "context": context}
 
 
-
 def handle_session_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a session status event.
@@ -102,6 +106,7 @@ def handle_session_status(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.memory.unified import get_unified_memory
+
     try:
         stats = get_unified_memory().get_stats()
     except Exception as exc:
@@ -118,6 +123,7 @@ def handle_session_handoff_summary(**kwargs: Any) -> dict[str, Any]:
     """
     from whitemagic.core.memory.unified import get_unified_memory
     from whitemagic.utils.time import now_iso
+
     try:
         memory_count = get_unified_memory().get_stats().get("total", 0)
     except Exception as exc:
@@ -160,7 +166,9 @@ def handle_create_session(**kwargs: Any) -> dict[str, Any]:
         "checkpoints": [],
     }
     _save_session(base_path, session)
-    _emit("SYSTEM_STARTED", {"session_id": session_id, "name": name, "status": "active"})
+    _emit(
+        "SYSTEM_STARTED", {"session_id": session_id, "name": name, "status": "active"}
+    )
     return {"status": "success", "session": session}
 
 
@@ -177,7 +185,11 @@ def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
     session_id = kwargs.get("session_id")
     if not session_id:
         session_dir = _session_dir(base_path)
-        sessions = sorted(list(session_dir.glob("*.json")), key=lambda p: p.stat().st_mtime, reverse=True)
+        sessions = sorted(
+            list(session_dir.glob("*.json")),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
         if sessions:
             session_id = sessions[0].stem
         else:
@@ -217,6 +229,7 @@ def handle_resume_session(**kwargs: Any) -> dict[str, Any]:
     _save_session(base_path, session)
     try:
         from whitemagic.core.memory.manager import MemoryManager
+
         manager = MemoryManager(base_dir=str(base_path))
         context_tier = kwargs.get("load_tier", session.get("context_tier", 1))
         context = manager.generate_context_summary(context_tier)
@@ -233,10 +246,6 @@ def handle_resume_session(**kwargs: Any) -> dict[str, Any]:
     )
     return {"status": "success", "session": session, "context": context}
 
-
-# ---------------------------------------------------------------------------
-# Cross-Device Session Handoff (inspired by Tools(copy)/core/session.py)
-# ---------------------------------------------------------------------------
 
 def _handoff_dir(base_path: Path) -> Path:
     d = base_path / "sessions" / "handoffs"
@@ -255,7 +264,10 @@ def handle_session_handoff(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 
@@ -299,12 +311,15 @@ def handle_session_handoff_transfer(**kwargs: Any) -> dict[str, Any]:
     # Generate context summary
     try:
         from whitemagic.core.memory.manager import MemoryManager
+
         manager = MemoryManager(base_dir=str(base_path))
         handoff["context_summary"] = manager.generate_context_summary(
             session.get("context_tier", 1),
         )
     except (ImportError, ModuleNotFoundError):
-        handoff["context_summary"] = f"Session '{session.get('name', session_id)}' with {len(session.get('checkpoints', []))} checkpoints"
+        handoff["context_summary"] = (
+            f"Session '{session.get('name', session_id)}' with {len(session.get('checkpoints', []))} checkpoints"
+        )
 
     # Update session status
     session["status"] = "handed_off"
@@ -316,18 +331,22 @@ def handle_session_handoff_transfer(**kwargs: Any) -> dict[str, Any]:
     # Save handoff package
     hdir = _handoff_dir(base_path)
     (hdir / f"{handoff_id}.json").write_text(
-        _json_dumps(handoff, indent=2), encoding="utf-8",
+        _json_dumps(handoff, indent=2),
+        encoding="utf-8",
     )
 
     # Notify via Redis if available
     _notify_handoff(handoff)
 
-    _emit("SESSION_HANDOFF", {
-        "handoff_id": handoff_id,
-        "session_id": session_id,
-        "source": handoff["source_device"],
-        "target": target_device,
-    })
+    _emit(
+        "SESSION_HANDOFF",
+        {
+            "handoff_id": handoff_id,
+            "session_id": session_id,
+            "source": handoff["source_device"],
+            "target": target_device,
+        },
+    )
 
     return {
         "status": "success",
@@ -371,11 +390,14 @@ def handle_session_accept_handoff(**kwargs: Any) -> dict[str, Any]:
     handoff["accepted_by"] = os.uname().nodename
     hpath.write_text(_json_dumps(handoff, indent=2), encoding="utf-8")
 
-    _emit("SESSION_HANDOFF_ACCEPTED", {
-        "handoff_id": handoff_id,
-        "session_id": session.get("id"),
-        "accepted_by": os.uname().nodename,
-    })
+    _emit(
+        "SESSION_HANDOFF_ACCEPTED",
+        {
+            "handoff_id": handoff_id,
+            "session_id": session.get("id"),
+            "accepted_by": os.uname().nodename,
+        },
+    )
 
     return {
         "status": "success",
@@ -398,15 +420,17 @@ def handle_session_list_handoffs(**kwargs: Any) -> dict[str, Any]:
             h = _json_loads(f.read_text(encoding="utf-8"))
             if status_filter and h.get("status") != status_filter:
                 continue
-            handoffs.append({
-                "id": h["id"],
-                "session_id": h.get("session_id"),
-                "source_device": h.get("source_device"),
-                "target_device": h.get("target_device"),
-                "status": h.get("status"),
-                "message": h.get("message", ""),
-                "created_at": h.get("created_at"),
-            })
+            handoffs.append(
+                {
+                    "id": h["id"],
+                    "session_id": h.get("session_id"),
+                    "source_device": h.get("source_device"),
+                    "target_device": h.get("target_device"),
+                    "status": h.get("status"),
+                    "message": h.get("message", ""),
+                    "created_at": h.get("created_at"),
+                }
+            )
         except (json.JSONDecodeError, OSError, KeyError):
             continue
         if len(handoffs) >= limit:
@@ -423,19 +447,25 @@ def _notify_handoff(handoff: dict[str, Any]) -> None:
     """Best-effort Redis notification for cross-device handoff."""
     try:
         import redis
+
         url = os.environ.get("REDIS_URL", "redis://localhost:6379")
         r = redis.Redis.from_url(url, decode_responses=True, socket_timeout=2)
-        r.publish("ganying", _json_dumps({
-            "event_type": "SESSION_HANDOFF",
-            "source": "session_handler",
-            "data": {
-                "handoff_id": handoff["id"],
-                "session_id": handoff["session_id"],
-                "source_device": handoff["source_device"],
-                "target_device": handoff["target_device"],
-                "message": handoff.get("message", ""),
-            },
-            "timestamp": datetime.now().isoformat(),
-        }))
+        r.publish(
+            "ganying",
+            _json_dumps(
+                {
+                    "event_type": "SESSION_HANDOFF",
+                    "source": "session_handler",
+                    "data": {
+                        "handoff_id": handoff["id"],
+                        "session_id": handoff["session_id"],
+                        "source_device": handoff["source_device"],
+                        "target_device": handoff["target_device"],
+                        "message": handoff.get("message", ""),
+                    },
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+        )
     except Exception as e:
         logger.debug("Silenced session emission err: %s", e, exc_info=True)

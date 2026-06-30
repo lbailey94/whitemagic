@@ -49,17 +49,21 @@ class InjectedContext:
             parts.append("## Session Resume Context\n" + self.resume_context)
 
         if self.short_term_memories:
-            parts.append("## Recent Activity\n" + "\n".join(
-                f"- {m}" for m in self.short_term_memories[:5]
-            ))
+            parts.append(
+                "## Recent Activity\n"
+                + "\n".join(f"- {m}" for m in self.short_term_memories[:5])
+            )
 
         if self.long_term_memories:
-            parts.append("## Relevant Memories\n" + "\n".join(
-                f"- {m}" for m in self.long_term_memories[:5]
-            ))
+            parts.append(
+                "## Relevant Memories\n"
+                + "\n".join(f"- {m}" for m in self.long_term_memories[:5])
+            )
 
         if self.session_state:
-            parts.append(f"## Session State\n- Iteration: {self.session_state.get('iteration', 0)}")
+            parts.append(
+                f"## Session State\n- Iteration: {self.session_state.get('iteration', 0)}"
+            )
 
         return "\n\n".join(parts) if parts else ""
 
@@ -76,6 +80,7 @@ class MemoryInjector:
 
     def __init__(self, base_dir: Path | None = None):
         from whitemagic.config import PROJECT_ROOT
+
         self.base_dir = base_dir or PROJECT_ROOT
         self.memory_dir = self.base_dir / "memory"
         self.intake_dir = self.memory_dir / "intake"
@@ -143,6 +148,7 @@ class MemoryInjector:
             from whitemagic.core.memory.neural.engine import (
                 get_neural_memory,  # type: ignore[import-not-found]
             )
+
             neural = get_neural_memory()
             results = neural.search(query, limit=limit)
             return [r.content[:200] for r in results]
@@ -166,8 +172,7 @@ class MemoryInjector:
         scored_files.sort(key=lambda x: -x[0])
 
         summaries = []
-        for _, f in scored_files[:
-            limit]:
+        for _, f in scored_files[:limit]:
             try:
                 content = f.read_text()
                 # Extract title or first line
@@ -190,6 +195,7 @@ class MemoryInjector:
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 get_coherence,
             )
+
             coherence = get_coherence()
             stats = coherence.get_iteration_stats()
             state["coherence_level"] = stats.get("coherence_level", 100)
@@ -201,6 +207,7 @@ class MemoryInjector:
         # From session handoff
         try:
             from whitemagic.gardens.sangha.session_handoff import get_handoff
+
             handoff = get_handoff()
             current = handoff._load_current_session()
             if current:
@@ -265,12 +272,14 @@ class MemoryInjector:
 # Singleton
 _injector: MemoryInjector | None = None
 
+
 def get_memory_injector() -> MemoryInjector:
     """Get global memory injector instance."""
     global _injector
     if _injector is None:
         _injector = MemoryInjector()
     return _injector
+
 
 def inject_memories(prompt: str, query: str = "") -> str:
     """Quick function to inject memories into a prompt."""

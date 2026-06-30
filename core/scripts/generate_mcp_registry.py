@@ -13,6 +13,7 @@ Usage:
 Add to CI (lint job or packaging job):
     python3 scripts/generate_mcp_registry.py --check
 """
+
 import argparse
 import json
 import sys
@@ -38,10 +39,10 @@ def get_tool_counts() -> dict:
             "agents": len(DISPATCH_AGENTS),
             "security": len(DISPATCH_SECURITY),
             "operational": len(DISPATCH_TABLE)
-                - len(DISPATCH_MEMORY)
-                - len(DISPATCH_INTELLIGENCE)
-                - len(DISPATCH_AGENTS)
-                - len(DISPATCH_SECURITY),
+            - len(DISPATCH_MEMORY)
+            - len(DISPATCH_INTELLIGENCE)
+            - len(DISPATCH_AGENTS)
+            - len(DISPATCH_SECURITY),
         },
     }
 
@@ -71,8 +72,12 @@ def build_registry(counts: dict) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate mcp-registry.json")
-    parser.add_argument("--check", action="store_true", help="Fail if file is stale (CI mode)")
-    parser.add_argument("--stdout", action="store_true", help="Print to stdout instead of writing file")
+    parser.add_argument(
+        "--check", action="store_true", help="Fail if file is stale (CI mode)"
+    )
+    parser.add_argument(
+        "--stdout", action="store_true", help="Print to stdout instead of writing file"
+    )
     args = parser.parse_args()
 
     registry_path = Path(__file__).resolve().parent.parent / "mcp-registry.json"
@@ -92,11 +97,15 @@ def main() -> None:
                 print(f"✅ mcp-registry.json is up to date ({counts['total']} tools)")
                 return
             else:
-                print("❌ mcp-registry.json is STALE — run: python3 scripts/generate_mcp_registry.py")
+                print(
+                    "❌ mcp-registry.json is STALE — run: python3 scripts/generate_mcp_registry.py"
+                )
                 print(f"   Expected nested_tools: {counts['total']}")
                 sys.exit(1)
         else:
-            print("❌ mcp-registry.json does not exist — run: python3 scripts/generate_mcp_registry.py")
+            print(
+                "❌ mcp-registry.json does not exist — run: python3 scripts/generate_mcp_registry.py"
+            )
             sys.exit(1)
 
     registry_path.write_text(registry_json)

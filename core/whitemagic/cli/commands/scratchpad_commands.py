@@ -24,9 +24,13 @@ def create(ctx, name: str, session_id: str | None) -> None:
 
     try:
         now = (ctx.obj or {}).get("now") if isinstance(ctx.obj, dict) else None
-        json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        json_output = (
+            (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        )
 
-        result = call_tool("scratchpad_create", name=name, session_id=session_id, now=now)
+        result = call_tool(
+            "scratchpad_create", name=name, session_id=session_id, now=now
+        )
         if json_output:
             click.echo(_json_dumps(result, indent=2, sort_keys=True))
             return
@@ -52,7 +56,9 @@ def update(ctx, scratchpad_id: str, section: str, content: str) -> None:
 
     try:
         now = (ctx.obj or {}).get("now") if isinstance(ctx.obj, dict) else None
-        json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        json_output = (
+            (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        )
 
         result = call_tool(
             "scratchpad_update",
@@ -82,7 +88,9 @@ def analyze(ctx, scratchpad_id: str) -> None:
     click.echo(f"\n🧠 Analyzing scratchpad: {scratchpad_id}\n")
     try:
         now = (ctx.obj or {}).get("now") if isinstance(ctx.obj, dict) else None
-        json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        json_output = (
+            (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        )
 
         result = call_tool("analyze_scratchpad", scratchpad_id=scratchpad_id, now=now)
         if json_output:
@@ -112,7 +120,9 @@ def analyze(ctx, scratchpad_id: str) -> None:
                 "zodiac": "♈",
             }.get(lens, "🔮")
             guidance = perspective.get("guidance", "")
-            click.echo(f"\n  {emoji} {lens.upper()} (confidence: {perspective.get('confidence', 0):.0%})")
+            click.echo(
+                f"\n  {emoji} {lens.upper()} (confidence: {perspective.get('confidence', 0):.0%})"
+            )
             click.echo(f"     {guidance[:100]}...")
 
         click.echo(f"\n📚 PATTERNS MATCHED: {analysis.get('patterns_matched', 0)}")
@@ -146,7 +156,9 @@ def finalize(ctx, scratchpad_id: str, analyze: bool, memory_type: str) -> None:
 
     try:
         now = (ctx.obj or {}).get("now") if isinstance(ctx.obj, dict) else None
-        json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        json_output = (
+            (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+        )
 
         result = call_tool(
             "scratchpad_finalize",

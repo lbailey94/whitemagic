@@ -4,6 +4,7 @@ WhiteMagic Dream Daemon
 Purpose: Offline processing, memory consolidation, and system maintenance.
 Runs in the background when the system is "idle" (or continuously).
 """
+
 import logging
 import os
 import signal
@@ -17,21 +18,25 @@ from pathlib import Path
 LOG_FILE = os.getenv("WM_DREAM_LOG_FILE", "whitemagic_dream.log")
 MAX_LOG_BYTES = int(os.getenv("WM_DREAM_LOG_MAX_BYTES", str(5 * 1024 * 1024)))
 LOG_BACKUPS = int(os.getenv("WM_DREAM_LOG_BACKUPS", "5"))
-MAX_LOG_TOTAL_BYTES = int(os.getenv("WM_DREAM_LOG_TOTAL_MAX_BYTES", str(50 * 1024 * 1024)))
+MAX_LOG_TOTAL_BYTES = int(
+    os.getenv("WM_DREAM_LOG_TOTAL_MAX_BYTES", str(50 * 1024 * 1024))
+)
 
 # Configure logging for the daemon
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - [DREAM] - %(levelname)s - %(message)s',
+    format="%(asctime)s - [DREAM] - %(levelname)s - %(message)s",
     handlers=[
         RotatingFileHandler(LOG_FILE, maxBytes=MAX_LOG_BYTES, backupCount=LOG_BACKUPS),
-        logging.StreamHandler()
-    ]
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger("dream_daemon")
 
+
 class DreamDaemon:
     """DreamDaemon: dream daemon."""
+
     def __init__(self, interval_seconds: int = 600) -> None:
         self.interval = interval_seconds
         self.running = False
@@ -100,6 +105,7 @@ class DreamDaemon:
         """Move short-term memories to long-term or prune them."""
         try:
             from whitemagic.core.memory.unified import consolidate
+
             consolidated = consolidate()
             logger.info("  - Consolidated memories: %s", consolidated, exc_info=True)
         except (ImportError, ModuleNotFoundError) as e:
@@ -134,6 +140,7 @@ class DreamDaemon:
 
         try:
             from whitemagic.core.memory.manager import MemoryManager
+
             manager = MemoryManager()
             recent = manager.read_recent_memories(limit=5)
             if not recent:
@@ -148,15 +155,25 @@ class DreamDaemon:
                 for tag in tags:
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
             top_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:3]
-            tag_summary = ", ".join([f"{tag}({count})" for tag, count in top_tags]) if top_tags else "none"
-            logger.info("  - Recent memories: {len(recent)} | Top tags: %s", tag_summary, exc_info=True)
+            tag_summary = (
+                ", ".join([f"{tag}({count})" for tag, count in top_tags])
+                if top_tags
+                else "none"
+            )
+            logger.info(
+                "  - Recent memories: {len(recent)} | Top tags: %s",
+                tag_summary,
+                exc_info=True,
+            )
             if titles:
-                logger.info("  - Recent titles: %s", ', '.join(titles[:3]))
+                logger.info("  - Recent titles: %s", ", ".join(titles[:3]))
         except Exception as e:
             logger.warning("  - Insight generation skipped: %s", e, exc_info=True)
 
+
 # Singleton instance
 _daemon: DreamDaemon | None = None
+
 
 def get_daemon() -> DreamDaemon:
     """
@@ -170,6 +187,7 @@ def get_daemon() -> DreamDaemon:
         _daemon = DreamDaemon()
     return _daemon
 
+
 if __name__ == "__main__":
-    daemon = DreamDaemon(interval_seconds=60) # Fast interval for testing
+    daemon = DreamDaemon(interval_seconds=60)  # Fast interval for testing
     daemon.start()

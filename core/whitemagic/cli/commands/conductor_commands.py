@@ -17,7 +17,9 @@ import click
 @click.option("--clones", "-c", default=1000, help="Clones per iteration")
 @click.option("--completion", default="<complete>", help="Completion marker")
 @click.option("--garden", default="practice", help="Garden to align with")
-def conduct(prompt: str, iterations: int, clones: int, completion: str, garden: str) -> None:
+def conduct(
+    prompt: str, iterations: int, clones: int, completion: str, garden: str
+) -> None:
     """Autonomous task orchestration with iterative deepening."""
     click.echo("\n🎼 Conductor - Autonomous Orchestration")
     click.echo("=" * 50)
@@ -66,7 +68,9 @@ def conduct(prompt: str, iterations: int, clones: int, completion: str, garden: 
 @click.option("--cycles", "-n", default=30, help="Maximum ritual cycles")
 @click.option("--threshold", "-t", default=0.85, help="Mastery threshold (0-1)")
 @click.option("--ritual-name", default="unnamed", help="Name for this ritual")
-def conduct_ritual(intention: str, cycles: int, threshold: float, ritual_name: str) -> None:
+def conduct_ritual(
+    intention: str, cycles: int, threshold: float, ritual_name: str
+) -> None:
     """Conduct Practice Garden ritual with autonomous deepening."""
     click.echo("\n🌸 Practice Garden - Ritual Conductor")
     click.echo("=" * 50)
@@ -81,7 +85,9 @@ def conduct_ritual(intention: str, cycles: int, threshold: float, ritual_name: s
         PracticeRitualConductor = ritual_mod.PracticeRitualConductor
         RitualConfig = ritual_mod.RitualConfig
 
-        config = RitualConfig(ritual_name=ritual_name, max_cycles=cycles, deepening_threshold=threshold)
+        config = RitualConfig(
+            ritual_name=ritual_name, max_cycles=cycles, deepening_threshold=threshold
+        )
         conductor = PracticeRitualConductor(config)
         result = asyncio.run(conductor.conduct_ritual(intention))
 
@@ -89,9 +95,13 @@ def conduct_ritual(intention: str, cycles: int, threshold: float, ritual_name: s
             report = conductor.get_ritual_report()
             click.echo("\n✨ Ritual Complete!")
             click.echo(f"Cycles: {report.get('total_iterations', 0)}")
-            click.echo(f"Mastery achieved: {'Yes' if report.get('mastery_achieved') else 'No'}")
+            click.echo(
+                f"Mastery achieved: {'Yes' if report.get('mastery_achieved') else 'No'}"
+            )
             click.echo(f"Final confidence: {report.get('max_confidence', 0):.2f}")
-            click.echo(f"Practice consistency: {report.get('practice_consistency', 0):.2f}")
+            click.echo(
+                f"Practice consistency: {report.get('practice_consistency', 0):.2f}"
+            )
             if conductor.conductor:
                 export_path = conductor.conductor.export_session()
                 click.echo(f"\n📄 Ritual log: {export_path}")
@@ -113,6 +123,7 @@ def fast_cli(ctx: click.Context) -> None:
     """Run fast-mode CLI for quick commands"""
     try:
         from whitemagic.cli.cli_fast import main_fast
+
         main_fast(ctx.args)
     except Exception as exc:
         click.echo(f"❌ Fast mode failed: {exc}")
@@ -120,7 +131,13 @@ def fast_cli(ctx: click.Context) -> None:
 
 @click.command()
 @click.argument("task")
-@click.option("--max-iterations", "-n", default=50, type=click.IntRange(min=1), help="Maximum iterations")
+@click.option(
+    "--max-iterations",
+    "-n",
+    default=50,
+    type=click.IntRange(min=1),
+    help="Maximum iterations",
+)
 def continuous_start(task: str, max_iterations: int) -> None:
     """Start a continuous execution session (v4.3.0)."""
     click.echo("🔄 Starting continuous execution...")
@@ -131,7 +148,9 @@ def continuous_start(task: str, max_iterations: int) -> None:
         ConductorConfig = conductor_mod.ConductorConfig
         ConductorOrchestrator = conductor_mod.ConductorOrchestrator
 
-        conductor = ConductorOrchestrator(ConductorConfig(max_iterations=max_iterations))
+        conductor = ConductorOrchestrator(
+            ConductorConfig(max_iterations=max_iterations)
+        )
         result = asyncio.run(conductor.conduct(task))
         export_path = conductor.export_session()
         report = conductor.get_progress_report()
@@ -155,7 +174,9 @@ def iteration_stats() -> None:
     click.echo("=" * 50)
 
     try:
-        coherence_mod = import_module("whitemagic.core.intelligence.agentic.coherence_persistence")
+        coherence_mod = import_module(
+            "whitemagic.core.intelligence.agentic.coherence_persistence"
+        )
         get_coherence = coherence_mod.get_coherence
         coherence = get_coherence()
         stats_data = coherence.get_iteration_stats()
@@ -175,7 +196,9 @@ def iteration_stats() -> None:
         cb_stats = detector.get_circuit_status()
         state_emoji = {"closed": "🟢", "open": "🔴", "half_open": "🟡"}
         click.echo("\n⚡ Circuit Breaker:")
-        click.echo(f"   State: {cb_stats['state']} {state_emoji.get(cb_stats['state'], '')}")
+        click.echo(
+            f"   State: {cb_stats['state']} {state_emoji.get(cb_stats['state'], '')}"
+        )
         click.echo(f"   Iteration Count: {cb_stats['iteration_count']}")
         click.echo(f"   No Progress Count: {cb_stats['no_progress_count']}")
         if cb_stats.get("recent_errors"):
@@ -184,12 +207,16 @@ def iteration_stats() -> None:
         click.echo("   ⚠️ Circuit breaker not available")
 
     try:
-        token_optimizer_mod = import_module("whitemagic.core.intelligence.agentic.token_optimizer")
+        token_optimizer_mod = import_module(
+            "whitemagic.core.intelligence.agentic.token_optimizer"
+        )
         TokenBudget = token_optimizer_mod.TokenBudget
         budget = TokenBudget()
         tier_emoji = {"safe": "🟢", "wrap_up": "🟡", "checkpoint": "🔴"}
         click.echo("\n💰 Token Budget:")
-        click.echo(f"   Status: {budget.usage_tier.upper()} {tier_emoji.get(budget.usage_tier, '')}")
+        click.echo(
+            f"   Status: {budget.usage_tier.upper()} {tier_emoji.get(budget.usage_tier, '')}"
+        )
         click.echo(f"   Remaining: {budget.remaining:,}")
     except ImportError:
         click.echo("   ⚠️ Token optimizer not available")
@@ -216,11 +243,17 @@ def continuous_status() -> None:
                 click.echo(f"   Started: {live_status['started_at']}")
             if live_status.get("last_update"):
                 click.echo(f"   Last update: {live_status['last_update']}")
-            click.echo(f"   Current iteration: {live_status.get('current_iteration', 0)}")
-            click.echo(f"   Iterations completed: {progress.get('total_iterations', 0)}")
+            click.echo(
+                f"   Current iteration: {live_status.get('current_iteration', 0)}"
+            )
+            click.echo(
+                f"   Iterations completed: {progress.get('total_iterations', 0)}"
+            )
             click.echo(f"   Tokens used: {progress.get('tokens_used', 0)}")
             if live_status.get("current_confidence") is not None:
-                click.echo(f"   Current confidence: {live_status['current_confidence']:.2f}")
+                click.echo(
+                    f"   Current confidence: {live_status['current_confidence']:.2f}"
+                )
             if live_status.get("current_strategy"):
                 click.echo(f"   Current strategy: {live_status['current_strategy']}")
             if live_status.get("current_preview"):
@@ -234,13 +267,18 @@ def continuous_status() -> None:
         latest_session = conductor_mod.get_latest_conductor_session_path()
         if latest_session is None:
             click.echo("ℹ️ No saved conductor sessions found.")
-            click.echo("   Run `wm conduct <prompt>` or `wm continuous-start <task>` first.")
+            click.echo(
+                "   Run `wm conduct <prompt>` or `wm continuous-start <task>` first."
+            )
             return
 
         try:
             data = json.loads(latest_session.read_text(encoding="utf-8"))
         except Exception as exc:
-            click.echo(f"❌ Failed to read latest session {latest_session.name}: {exc}", err=True)
+            click.echo(
+                f"❌ Failed to read latest session {latest_session.name}: {exc}",
+                err=True,
+            )
             return
 
         progress = data.get("progress", {})
@@ -265,7 +303,9 @@ def continuous_status() -> None:
 def inject_context() -> None:
     """Show what memory context would be injected (v4.3.0)."""
     try:
-        memory_injector_mod = import_module("whitemagic.core.intelligence.agentic.memory_injector")
+        memory_injector_mod = import_module(
+            "whitemagic.core.intelligence.agentic.memory_injector"
+        )
         get_memory_injector = memory_injector_mod.get_memory_injector
         injector = get_memory_injector()
         context_data = injector.inject()
@@ -275,12 +315,15 @@ def inject_context() -> None:
 
         if context_data.resume_context:
             click.echo("\n📋 Resume Context:")
-            click.echo(context_data.resume_context[:500] + "..." if len(context_data.resume_context) > 500 else context_data.resume_context)
+            click.echo(
+                context_data.resume_context[:500] + "..."
+                if len(context_data.resume_context) > 500
+                else context_data.resume_context
+            )
 
         if context_data.short_term_memories:
             click.echo("\n📝 Recent Short-term Memories:")
-            for m in context_data.short_term_memories[:
-                5]:
+            for m in context_data.short_term_memories[:5]:
                 click.echo(f"   • {m[:100]}")
 
         if context_data.session_state:

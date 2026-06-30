@@ -37,10 +37,10 @@ logger = logging.getLogger(__name__)
 class ModelTrust:
     """Trust levels for model provenance."""
 
-    VERIFIED = "verified"        # Cryptographically signed, known-good
+    VERIFIED = "verified"  # Cryptographically signed, known-good
     SELF_SIGNED = "self_signed"  # User-attested but no third-party verification
-    UNSIGNED = "unsigned"        # No signature — use at your own risk
-    BLOCKED = "blocked"          # Known-bad or tampered
+    UNSIGNED = "unsigned"  # No signature — use at your own risk
+    BLOCKED = "blocked"  # Known-bad or tampered
 
 
 @dataclass
@@ -48,12 +48,12 @@ class ModelManifest:
     """Signed manifest for a single AI model (OMS-compatible)."""
 
     model_name: str
-    sha256: str                  # SHA-256 of model weights/file
+    sha256: str  # SHA-256 of model weights/file
     trust: str = ModelTrust.UNSIGNED
-    signer: str = ""             # Who signed (e.g., "openssf", "user", "ollama")
-    license: str = ""            # Model license (e.g., "apache-2.0", "llama-community")
+    signer: str = ""  # Who signed (e.g., "openssf", "user", "ollama")
+    license: str = ""  # Model license (e.g., "apache-2.0", "llama-community")
     training_disclosure: str = ""  # Training data provenance summary
-    safety_profile: str = ""     # Safety evaluation result (e.g., "cyberseceval-4-pass")
+    safety_profile: str = ""  # Safety evaluation result (e.g., "cyberseceval-4-pass")
     registered_at: float = 0.0
     last_verified: float = 0.0
     verification_count: int = 0
@@ -67,7 +67,9 @@ class ModelManifest:
         """
         return {
             "model_name": self.model_name,
-            "sha256": self.sha256[:16] + "..." if len(self.sha256) > 16 else self.sha256,
+            "sha256": self.sha256[:16] + "..."
+            if len(self.sha256) > 16
+            else self.sha256,
             "sha256_full": self.sha256,
             "trust": self.trust,
             "signer": self.signer,
@@ -153,7 +155,7 @@ class ModelSigningRegistry:
                 "verified": False,
                 "trust": ModelTrust.UNSIGNED,
                 "reason": f"Model '{model_name}' has no registered manifest. "
-                         "Consider registering it with register_model().",
+                "Consider registering it with register_model().",
                 "action": "warn",
             }
             self._log_verification(model_name, result)
@@ -302,10 +304,6 @@ class ModelSigningRegistry:
             logger.debug("Model manifest load failed: %s", e)
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _registry: ModelSigningRegistry | None = None
 _registry_lock = threading.Lock()
 
@@ -318,6 +316,7 @@ def get_model_registry() -> ModelSigningRegistry:
             if _registry is None:
                 try:
                     from whitemagic.config.paths import WM_ROOT
+
                     storage = WM_ROOT / "security"
                 except (ImportError, ModuleNotFoundError):
                     storage = None

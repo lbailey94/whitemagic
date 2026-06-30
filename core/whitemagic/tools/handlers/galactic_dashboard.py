@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Galactic dashboard handler — real-time galactic map visualization data."""
+
 import logging
 from typing import Any
 
@@ -19,15 +20,16 @@ def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
         distribution = {}
         if total > 0:
             distribution = {
-                zone: round(count / total, 4)
-                for zone, count in zones.items()
+                zone: round(count / total, 4) for zone, count in zones.items()
             }
 
         # Attempt to get constellation and distance stats
         constellations = 0
         avg_distance = 0.0
         try:
-            constellations = len(gm.constellations) if hasattr(gm, "constellations") else 0
+            constellations = (
+                len(gm.constellations) if hasattr(gm, "constellations") else 0
+            )
         except Exception as e:
             logger.debug("Operation failed: %s", e)
             pass
@@ -56,7 +58,13 @@ def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
     except ImportError:
         return {
             "status": "success",
-            "zones": {"core": 0, "inner_rim": 0, "mid_band": 0, "outer_rim": 0, "far_edge": 0},
+            "zones": {
+                "core": 0,
+                "inner_rim": 0,
+                "mid_band": 0,
+                "outer_rim": 0,
+                "far_edge": 0,
+            },
             "total_memories": 0,
             "distribution": {},
             "constellations": 0,
@@ -65,4 +73,8 @@ def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as exc:
         logger.warning("Galactic dashboard error: %s", exc)
-        return {"status": "error", "error": str(exc), "error_code": "galactic_map_failure"}
+        return {
+            "status": "error",
+            "error": str(exc),
+            "error_code": "galactic_map_failure",
+        }

@@ -166,8 +166,7 @@ class PluginBase(ABC):
         return {}
 
     def reload(self) -> None:
-        """Reload plugin configuration and state.
-        """
+        """Reload plugin configuration and state."""
         self.on_unload()
         self.on_load()
 
@@ -197,7 +196,13 @@ class SimplePlugin(PluginBase):
     description: str = "A simple plugin"
     author: str = "Anonymous"
 
-    def __init__(self, name: str | None = None, version: str | None = None, description: str | None = None, author: str | None = None) -> None:
+    def __init__(
+        self,
+        name: str | None = None,
+        version: str | None = None,
+        description: str | None = None,
+        author: str | None = None,
+    ) -> None:
         """Initialize plugin with optional overrides for class attributes."""
         if name is not None:
             self._instance_name = name
@@ -217,15 +222,26 @@ class SimplePlugin(PluginBase):
         Returns:
             PluginInfo
         """
-        name = getattr(self, "_instance_name", None) or getattr(self.__class__, "name", "unnamed_plugin")
+        name = getattr(self, "_instance_name", None) or getattr(
+            self.__class__, "name", "unnamed_plugin"
+        )
         if name == "unnamed_plugin" and hasattr(self, "_decorated_name"):
             name = self._decorated_name
 
         return PluginInfo(
             name=str(name),
-            version=str(getattr(self, "_instance_version", None) or getattr(self.__class__, "version", "1.0.0")),
-            description=str(getattr(self, "_instance_description", None) or getattr(self.__class__, "description", "A simple plugin")),
-            author=str(getattr(self, "_instance_author", None) or getattr(self.__class__, "author", "Anonymous")),
+            version=str(
+                getattr(self, "_instance_version", None)
+                or getattr(self.__class__, "version", "1.0.0")
+            ),
+            description=str(
+                getattr(self, "_instance_description", None)
+                or getattr(self.__class__, "description", "A simple plugin")
+            ),
+            author=str(
+                getattr(self, "_instance_author", None)
+                or getattr(self.__class__, "author", "Anonymous")
+            ),
         )
 
 
@@ -233,13 +249,16 @@ class SimplePlugin(PluginBase):
 _PluginT = TypeVar("_PluginT", bound=SimplePlugin)
 
 
-def plugin(name: str, version: str = "1.0.0", description: str = "", author: str = "") -> Callable[[type[_PluginT]], type[_PluginT]]:
+def plugin(
+    name: str, version: str = "1.0.0", description: str = "", author: str = ""
+) -> Callable[[type[_PluginT]], type[_PluginT]]:
     """Decorator to easily create a plugin from a class.
 
     @plugin("my_plugin", version="1.0.0", description="My awesome plugin")
     class MyPlugin(SimplePlugin):
         pass
     """
+
     def decorator(cls: type[_PluginT]) -> type[_PluginT]:
         """
         Perform the decorator operation.
@@ -255,4 +274,5 @@ def plugin(name: str, version: str = "1.0.0", description: str = "", author: str
         cls.description = description
         cls.author = author
         return cls
+
     return decorator

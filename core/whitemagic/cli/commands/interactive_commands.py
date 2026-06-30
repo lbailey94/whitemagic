@@ -20,9 +20,12 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 # wm repl — Interactive REPL
 # ---------------------------------------------------------------------------
 
+
 @click.command()
 @click.option("--json", "json_mode", is_flag=True, help="Start in JSON output mode")
-@click.option("--dharma", is_flag=True, help="Auto-evaluate Dharma before each tool call")
+@click.option(
+    "--dharma", is_flag=True, help="Auto-evaluate Dharma before each tool call"
+)
 @click.pass_context
 def repl(ctx, json_mode: bool, dharma: bool) -> None:
     """Interactive REPL for AI agents with tab-completion and slash commands.
@@ -39,11 +42,16 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
 
     from whitemagic.tools.unified_api import call_tool
 
-    json_output = json_mode or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = json_mode or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
     dharma_on = dharma
 
     try:
         import readline  # noqa: F401 — enables history/arrow keys
+
         _has_readline = True
     except ImportError:
         _has_readline = False
@@ -51,6 +59,7 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
     # Build command list for completion
     try:
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         tool_names = sorted(DISPATCH_TABLE.keys())
     except ImportError:
         tool_names = []
@@ -91,7 +100,11 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
                     # Show help for specific tool
                     try:
                         result = call_tool(arg, _dry_run=True)
-                        click.echo(_json_dumps(result, indent=2) if json_output else str(result))
+                        click.echo(
+                            _json_dumps(result, indent=2)
+                            if json_output
+                            else str(result)
+                        )
                     except Exception as e:
                         click.echo(f"Error getting help for '{arg}': {e}", err=True)
                 else:
@@ -103,7 +116,9 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
                     for name in tool_names[::20]:
                         click.echo(f"  {name}")
                     if len(tool_names) > 20:
-                        click.echo(f"  ... and {len(tool_names) - 20} more (use /tools for full list)")
+                        click.echo(
+                            f"  ... and {len(tool_names) - 20} more (use /tools for full list)"
+                        )
             elif cmd == "/tools":
                 if json_output:
                     click.echo(_json_dumps({"tools": tool_names}, indent=2))
@@ -168,9 +183,16 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
         # Dharma pre-evaluation
         if dharma_on:
             try:
-                dharma_result = call_tool("evaluate_ethics", action=tool_name, params=kwargs)
-                if isinstance(dharma_result, dict) and dharma_result.get("status") == "error":
-                    click.echo(f"⚠️  Dharma blocked: {dharma_result.get('details', {}).get('reason', 'unknown')}")
+                dharma_result = call_tool(
+                    "evaluate_ethics", action=tool_name, params=kwargs
+                )
+                if (
+                    isinstance(dharma_result, dict)
+                    and dharma_result.get("status") == "error"
+                ):
+                    click.echo(
+                        f"⚠️  Dharma blocked: {dharma_result.get('details', {}).get('reason', 'unknown')}"
+                    )
                     if json_output:
                         click.echo(_json_dumps(dharma_result, indent=2))
                     continue
@@ -185,7 +207,11 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
             else:
                 status = result.get("status", "?") if isinstance(result, dict) else "?"
                 if status == "success":
-                    details = result.get("details", result) if isinstance(result, dict) else result
+                    details = (
+                        result.get("details", result)
+                        if isinstance(result, dict)
+                        else result
+                    )
                     click.echo(_json_dumps(details, indent=2, default=str)[:2000])
                 else:
                     click.echo(_json_dumps(result, indent=2, default=str)[:2000])
@@ -197,15 +223,27 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
 # wm stream — NDJSON Event Streaming
 # ---------------------------------------------------------------------------
 
+
 @click.command()
-@click.argument("source", type=click.Choice([
-    "dream", "observe", "self-improve", "coherence", "events",
-]))
+@click.argument(
+    "source",
+    type=click.Choice(
+        [
+            "dream",
+            "observe",
+            "self-improve",
+            "coherence",
+            "events",
+        ]
+    ),
+)
 @click.option("--interval", "-i", default=2.0, help="Polling interval in seconds")
 @click.option("--max-events", "-n", default=0, help="Max events (0 = unlimited)")
 @click.option("--filter", "-f", help="Filter events by type prefix")
 @click.pass_context
-def stream(ctx, source: str, interval: float, max_events: int, filter: str | None) -> None:
+def stream(
+    ctx, source: str, interval: float, max_events: int, filter: str | None
+) -> None:
     """Stream events as NDJSON (newline-delimited JSON).
 
     Sources:
@@ -220,15 +258,26 @@ def stream(ctx, source: str, interval: float, max_events: int, filter: str | Non
     def emit(event: dict[str, Any]) -> None:
         """Emit one NDJSON line."""
         nonlocal count
-        if filter and not str(event.get("type", event.get("event_type", ""))).startswith(filter):
+        if filter and not str(
+            event.get("type", event.get("event_type", ""))
+        ).startswith(filter):
             return
         click.echo(_json_dumps(event, default=str))
         count += 1
 
     if source == "dream":
         from whitemagic.core.dreaming import get_dream_cycle
+
         cycle = get_dream_cycle()
-        click.echo(_json_dumps({"type": "stream_start", "source": "dream", "phase": cycle.get_status().get("current_phase", "?")}))
+        click.echo(
+            _json_dumps(
+                {
+                    "type": "stream_start",
+                    "source": "dream",
+                    "phase": cycle.get_status().get("current_phase", "?"),
+                }
+            )
+        )
 
         prev_phase = None
         try:
@@ -236,7 +285,13 @@ def stream(ctx, source: str, interval: float, max_events: int, filter: str | Non
                 status = cycle.get_status()
                 current_phase = status.get("current_phase", "?")
                 if current_phase != prev_phase:
-                    emit({"type": "dream_phase", "phase": current_phase, "status": status})
+                    emit(
+                        {
+                            "type": "dream_phase",
+                            "phase": current_phase,
+                            "status": status,
+                        }
+                    )
                     prev_phase = current_phase
                 asyncio.run(asyncio.sleep(interval))
         except KeyboardInterrupt:
@@ -245,41 +300,64 @@ def stream(ctx, source: str, interval: float, max_events: int, filter: str | Non
     elif source == "observe":
         try:
             from whitemagic.core.resonance.gan_ying_async import get_async_bus
+
             bus = get_async_bus()
 
             async def stream_events():
                 nonlocal count
                 click.echo(_json_dumps({"type": "stream_start", "source": "observe"}))
                 queue = asyncio.Queue()
+
                 async def handler(event):
                     await queue.put(event)
+
                 bus.on("*", handler)
                 try:
                     while max_events == 0 or count < max_events:
                         try:
-                            event = await asyncio.wait_for(queue.get(), timeout=interval)
-                            emit({"type": event.event_type, "data": event.data, "source": event.source})
+                            event = await asyncio.wait_for(
+                                queue.get(), timeout=interval
+                            )
+                            emit(
+                                {
+                                    "type": event.event_type,
+                                    "data": event.data,
+                                    "source": event.source,
+                                }
+                            )
                         except TimeoutError:
                             emit({"type": "heartbeat", "ts": _json_dumps(None)})
                 finally:
                     pass
+
             asyncio.run(stream_events())
         except KeyboardInterrupt:
             pass
         except ImportError as e:
-            click.echo(_json_dumps({"type": "error", "error": f"Gan Ying bus not available: {e}"}))
+            click.echo(
+                _json_dumps(
+                    {"type": "error", "error": f"Gan Ying bus not available: {e}"}
+                )
+            )
 
     elif source == "self-improve":
         from whitemagic.core.evolution.recursive_loop import get_improvement_loop
+
         loop = get_improvement_loop()
         click.echo(_json_dumps({"type": "stream_start", "source": "self-improve"}))
 
         try:
             while max_events == 0 or count < max_events:
                 status = loop.get_status()
-                emit({"type": "improve_status", "cycles": status.get("cycle_count", 0),
-                      "distinct": status.get("distinct_improvements", 0)})
+                emit(
+                    {
+                        "type": "improve_status",
+                        "cycles": status.get("cycle_count", 0),
+                        "distinct": status.get("distinct_improvements", 0),
+                    }
+                )
                 import time
+
                 time.sleep(interval)
         except KeyboardInterrupt:
             pass
@@ -289,6 +367,7 @@ def stream(ctx, source: str, interval: float, max_events: int, filter: str | Non
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 get_coherence,
             )
+
             coherence = get_coherence()
             click.echo(_json_dumps({"type": "stream_start", "source": "coherence"}))
 
@@ -299,39 +378,61 @@ def stream(ctx, source: str, interval: float, max_events: int, filter: str | Non
                     event_type = "coherence_ok" if level >= 50 else "coherence_low"
                     emit({"type": event_type, "level": level, "stats": stats})
                     import time
+
                     time.sleep(interval)
             except KeyboardInterrupt:
                 pass
         except ImportError as e:
-            click.echo(_json_dumps({"type": "error", "error": f"Coherence persistence not available: {e}"}))
+            click.echo(
+                _json_dumps(
+                    {
+                        "type": "error",
+                        "error": f"Coherence persistence not available: {e}",
+                    }
+                )
+            )
 
     elif source == "events":
         try:
             from whitemagic.core.resonance.gan_ying_async import get_async_bus
+
             bus = get_async_bus()
 
             async def stream_all():
                 nonlocal count
                 click.echo(_json_dumps({"type": "stream_start", "source": "events"}))
                 queue = asyncio.Queue()
+
                 async def handler(event):
                     await queue.put(event)
+
                 bus.on("*", handler)
                 try:
                     while max_events == 0 or count < max_events:
                         try:
-                            event = await asyncio.wait_for(queue.get(), timeout=interval)
-                            emit({"type": event.event_type, "data": event.data,
-                                  "source": event.source, "ts": str(getattr(event, 'timestamp', ''))})
+                            event = await asyncio.wait_for(
+                                queue.get(), timeout=interval
+                            )
+                            emit(
+                                {
+                                    "type": event.event_type,
+                                    "data": event.data,
+                                    "source": event.source,
+                                    "ts": str(getattr(event, "timestamp", "")),
+                                }
+                            )
                         except TimeoutError:
                             emit({"type": "heartbeat"})
                 finally:
                     pass
+
             asyncio.run(stream_all())
         except KeyboardInterrupt:
             pass
         except ImportError as e:
-            click.echo(_json_dumps({"type": "error", "error": f"Event bus not available: {e}"}))
+            click.echo(
+                _json_dumps({"type": "error", "error": f"Event bus not available: {e}"})
+            )
 
     click.echo(_json_dumps({"type": "stream_end", "events_emitted": count}))
 
@@ -340,10 +441,13 @@ def stream(ctx, source: str, interval: float, max_events: int, filter: str | Non
 # wm pipeline — Tool Call Chaining
 # ---------------------------------------------------------------------------
 
+
 @click.command()
 @click.argument("stages", nargs=-1, required=True)
 @click.option("--dry-run", is_flag=True, help="Show resolved chain without executing")
-@click.option("--json", "json_flag", is_flag=True, help="Emit full chain result as JSON")
+@click.option(
+    "--json", "json_flag", is_flag=True, help="Emit full chain result as JSON"
+)
 @click.pass_context
 def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> None:
     """Chain tool calls, passing details from one stage to the next.
@@ -357,13 +461,20 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
     """
     from whitemagic.tools.unified_api import call_tool
 
-    json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = json_flag or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
 
     # Parse stages
     parsed_stages: list[dict[str, Any]] = []
     for i, stage in enumerate(stages):
         if ":" not in stage:
-            click.echo(f"Stage {i+1} error: expected 'tool_name:key=value,...' but got '{stage}'", err=True)
+            click.echo(
+                f"Stage {i + 1} error: expected 'tool_name:key=value,...' but got '{stage}'",
+                err=True,
+            )
             raise click.Abort()
 
         tool_name, params_str = stage.split(":", 1)
@@ -381,8 +492,14 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
 
     if dry_run:
         preview = {"stages": parsed_stages, "dry_run": True}
-        click.echo(_json_dumps(preview, indent=2) if json_output else
-                   "\n".join(f"  {i+1}. {s['tool']}({_json_dumps(s['kwargs'])})" for i, s in enumerate(parsed_stages)))
+        click.echo(
+            _json_dumps(preview, indent=2)
+            if json_output
+            else "\n".join(
+                f"  {i + 1}. {s['tool']}({_json_dumps(s['kwargs'])})"
+                for i, s in enumerate(parsed_stages)
+            )
+        )
         return
 
     # Execute chain
@@ -397,16 +514,24 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
         for key, val in kwargs.items():
             if isinstance(val, str) and "$_" in val:
                 if prev_details is None:
-                    click.echo(f"Stage {i+1} error: $_ reference but no previous stage output", err=True)
+                    click.echo(
+                        f"Stage {i + 1} error: $_ reference but no previous stage output",
+                        err=True,
+                    )
                     raise click.Abort()
                 # Replace $_ with JSON representation of prev_details
-                kwargs[key] = val.replace("$_", _json_dumps(prev_details) if not isinstance(prev_details, str) else prev_details)
+                kwargs[key] = val.replace(
+                    "$_",
+                    _json_dumps(prev_details)
+                    if not isinstance(prev_details, str)
+                    else prev_details,
+                )
                 # Try to parse as JSON if the whole value is $_
                 if val == "$_" and isinstance(prev_details, (dict, list)):
                     kwargs[key] = prev_details
 
         if not json_output:
-            click.echo(f"  [{i+1}/{len(parsed_stages)}] {tool_name}...")
+            click.echo(f"  [{i + 1}/{len(parsed_stages)}] {tool_name}...")
 
         try:
             result = call_tool(tool_name, **kwargs)
@@ -421,20 +546,30 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
             if not json_output:
                 status = result.get("status", "?") if isinstance(result, dict) else "?"
                 if status != "success":
-                    click.echo(f"  ⚠️  Stage {i+1} returned status: {status}")
+                    click.echo(f"  ⚠️  Stage {i + 1} returned status: {status}")
                     click.echo(f"     {str(result)[:200]}")
                     break
 
         except Exception as e:
             results.append({"tool": tool_name, "error": str(e)})
             if json_output:
-                click.echo(_json_dumps({"stages": results, "error": str(e), "failed_at": i+1}, indent=2, default=str))
+                click.echo(
+                    _json_dumps(
+                        {"stages": results, "error": str(e), "failed_at": i + 1},
+                        indent=2,
+                        default=str,
+                    )
+                )
             else:
-                click.echo(f"  ❌ Stage {i+1} failed: {e}", err=True)
+                click.echo(f"  ❌ Stage {i + 1} failed: {e}", err=True)
             raise click.Abort()
 
     if json_output:
-        click.echo(_json_dumps({"stages": results, "completed": len(results)}, indent=2, default=str))
+        click.echo(
+            _json_dumps(
+                {"stages": results, "completed": len(results)}, indent=2, default=str
+            )
+        )
     else:
         click.echo(f"\n✅ Pipeline complete: {len(results)} stages executed")
         if prev_details is not None:

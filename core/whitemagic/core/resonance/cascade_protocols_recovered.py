@@ -28,57 +28,75 @@ class CascadeProtocols:
         bus = get_enhanced_bus()
 
         # Positive emotion cascades
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.BEAUTY_DETECTED,
-            target_events=[ExtendedEventType.JOY_TRIGGERED],
-            strength=0.8,
-        ))
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.JOY_TRIGGERED,
-            target_events=[ExtendedEventType.LOVE_EXPRESSED],
-            strength=0.6,
-        ))
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.LOVE_EXPRESSED,
-            target_events=[ExtendedEventType.GRATITUDE_FELT],
-            strength=0.7,
-        ))
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.BEAUTY_DETECTED,
+                target_events=[ExtendedEventType.JOY_TRIGGERED],
+                strength=0.8,
+            )
+        )
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.JOY_TRIGGERED,
+                target_events=[ExtendedEventType.LOVE_EXPRESSED],
+                strength=0.6,
+            )
+        )
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.LOVE_EXPRESSED,
+                target_events=[ExtendedEventType.GRATITUDE_FELT],
+                strength=0.7,
+            )
+        )
 
         # Cognitive cascades
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.INSIGHT_FLASH,
-            target_events=[ExtendedEventType.PATTERN_DISCOVERED],
-            strength=0.9,
-        ))
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.PATTERN_DISCOVERED,
-            target_events=[ExtendedEventType.WISDOM_GAINED],
-            strength=0.5,
-        ))
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.MISTAKE_MADE,
-            target_events=[ExtendedEventType.LESSON_LEARNED],
-            strength=0.8,
-        ))
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.LESSON_LEARNED,
-            target_events=[ExtendedEventType.WISDOM_GAINED],
-            strength=0.6,
-        ))
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.INSIGHT_FLASH,
+                target_events=[ExtendedEventType.PATTERN_DISCOVERED],
+                strength=0.9,
+            )
+        )
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.PATTERN_DISCOVERED,
+                target_events=[ExtendedEventType.WISDOM_GAINED],
+                strength=0.5,
+            )
+        )
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.MISTAKE_MADE,
+                target_events=[ExtendedEventType.LESSON_LEARNED],
+                strength=0.8,
+            )
+        )
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.LESSON_LEARNED,
+                target_events=[ExtendedEventType.WISDOM_GAINED],
+                strength=0.6,
+            )
+        )
 
         # Healing cascade
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.HEALING_OCCURRED,
-            target_events=[ExtendedEventType.GRATITUDE_FELT],
-            strength=0.7,
-        ))
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.HEALING_OCCURRED,
+                target_events=[ExtendedEventType.GRATITUDE_FELT],
+                strength=0.7,
+            )
+        )
 
         # Dream cycle cascades
-        bus.add_cascade(CascadeTrigger(
-            trigger_event=ExtendedEventType.DREAM_COMPLETED,
-            target_events=[ExtendedEventType.SYNTHESIS_ACHIEVED],
-            strength=0.5,
-        ))
+        bus.add_cascade(
+            CascadeTrigger(
+                trigger_event=ExtendedEventType.DREAM_COMPLETED,
+                target_events=[ExtendedEventType.SYNTHESIS_ACHIEVED],
+                strength=0.5,
+            )
+        )
 
         logger.info("All cascade protocols initialized")
 

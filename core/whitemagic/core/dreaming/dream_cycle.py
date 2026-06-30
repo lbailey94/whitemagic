@@ -45,19 +45,19 @@ logger = logging.getLogger(__name__)
 class DreamPhase(Enum):
     """Phases of the dream cycle (v17: expanded to 12 phases)."""
 
-    TRIAGE = "triage"          # v15.3: Quick scan — identify memories needing attention
+    TRIAGE = "triage"  # v15.3: Quick scan — identify memories needing attention
     CONSOLIDATION = "consolidation"
     SERENDIPITY = "serendipity"
     GOVERNANCE = "governance"  # v14.0: Echo chamber detection
-    NARRATIVE = "narrative"    # v14.2: Narrative compression
+    NARRATIVE = "narrative"  # v14.2: Narrative compression
     KAIZEN = "kaizen"
     ORACLE = "oracle"
     DECAY = "decay"
     # v17.0: New phases for Intelligence Amplification
     CONSTELLATION = "constellation"  # Auto-merge related constellations
-    PREDICTION = "prediction"        # Predictive drift detection
-    ENRICHMENT = "enrichment"        # Entity extraction & semantic enrichment
-    HARMONIZE = "harmonize"          # Wu Xing balance & harmony tuning
+    PREDICTION = "prediction"  # Predictive drift detection
+    ENRICHMENT = "enrichment"  # Entity extraction & semantic enrichment
+    HARMONIZE = "harmonize"  # Wu Xing balance & harmony tuning
 
 
 @dataclass
@@ -116,10 +116,6 @@ class DreamCycle:
         self._total_cycles = 0
         self._history: deque = deque(maxlen=max_history)
 
-    # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
-
     def start(self) -> None:
         """Start the dream cycle watcher."""
         with self._lock:
@@ -128,17 +124,24 @@ class DreamCycle:
 
             # Polyglot check: If Elixir is the master, delegate dreaming
             import os
+
             if os.environ.get("WHITEMAGIC_ELIXIR_MASTER") == "1":
                 self._running = True
-                logger.info("🌙 Dream Cycle delegating to Elixir Master (OTP Concurrency)")
+                logger.info(
+                    "🌙 Dream Cycle delegating to Elixir Master (OTP Concurrency)"
+                )
                 return
 
             self._running = True
             self._thread = threading.Thread(
-                target=self._run_loop, daemon=True, name="dream-cycle",
+                target=self._run_loop,
+                daemon=True,
+                name="dream-cycle",
             )
             self._thread.start()
-            logger.info("🌙 Dream Cycle started (idle threshold: %.0fs)", self._idle_threshold)
+            logger.info(
+                "🌙 Dream Cycle started (idle threshold: %.0fs)", self._idle_threshold
+            )
 
     def stop(self) -> None:
         """Stop the dream cycle."""
@@ -147,6 +150,7 @@ class DreamCycle:
             self._dreaming = False
 
         import os
+
         if os.environ.get("WHITEMAGIC_ELIXIR_MASTER") == "1":
             logger.info("☀️ Elixir delegation stopped")
             return
@@ -161,6 +165,7 @@ class DreamCycle:
 
         # Notify Elixir Master if active
         import os
+
         if os.environ.get("WHITEMAGIC_ELIXIR_MASTER") == "1":
             try:
                 # Use Redis or a shared state check to notify Elixir
@@ -175,13 +180,10 @@ class DreamCycle:
             self._dreaming = False
             logger.debug("Dream interrupted by activity")
 
-    # ------------------------------------------------------------------
-    # Main loop
-    # ------------------------------------------------------------------
-
     def _run_loop(self) -> None:
         """Background thread: watch for idle → dream."""
         import asyncio
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
@@ -191,7 +193,9 @@ class DreamCycle:
 
                 if idle_seconds >= self._idle_threshold and not self._dreaming:
                     self._dreaming = True
-                    logger.info("🌙 System idle for %.0fs — entering dream state", idle_seconds)
+                    logger.info(
+                        "🌙 System idle for %.0fs — entering dream state", idle_seconds
+                    )
                     self._emit_event("DREAM_STARTED", {"idle_seconds": idle_seconds})
 
                 if self._dreaming and self._running:
@@ -259,14 +263,11 @@ class DreamCycle:
             report.duration_ms,
         )
 
-    # ------------------------------------------------------------------
-    # Dream phases
-    # ------------------------------------------------------------------
-
     def _get_core_access(self) -> Any:
         """Lazy-load the CoreAccessLayer."""
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
+
             return get_core_access()
         except (ImportError, ModuleNotFoundError):
             return None
@@ -284,6 +285,7 @@ class DreamCycle:
 
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             pool = um.backend.pool
 
@@ -309,7 +311,9 @@ class DreamCycle:
                     auto_tags = set()
                     if any(w in combined for w in ["session", "handoff", "checkpoint"]):
                         auto_tags.add("session")
-                    if any(w in combined for w in ["aria", "consciousness", "awakening"]):
+                    if any(
+                        w in combined for w in ["aria", "consciousness", "awakening"]
+                    ):
                         auto_tags.add("aria_era")
                     if any(w in combined for w in ["architecture", "design", "spec"]):
                         auto_tags.add("architecture")
@@ -317,7 +321,9 @@ class DreamCycle:
                         auto_tags.add("planning")
                     if any(w in combined for w in ["wisdom", "philosophy", "dharma"]):
                         auto_tags.add("wisdom")
-                    if any(w in combined for w in ["code", "function", "class", "import"]):
+                    if any(
+                        w in combined for w in ["code", "function", "class", "import"]
+                    ):
                         auto_tags.add("technical")
                     if any(w in combined for w in ["guide", "tutorial", "how to"]):
                         auto_tags.add("guide")
@@ -354,7 +360,11 @@ class DreamCycle:
                 # N+1 fix: batch archive updates with executemany
                 now_iso = datetime.now().isoformat()
                 archive_params = [
-                    (min(0.8, max(row["galactic_distance"] + 0.15, 0.7)), now_iso, row["id"])
+                    (
+                        min(0.8, max(row["galactic_distance"] + 0.15, 0.7)),
+                        now_iso,
+                        row["id"],
+                    )
                     for row in archive_candidates
                 ]
                 archived = 0
@@ -406,13 +416,17 @@ class DreamCycle:
                 # 5. Auto-merge near-duplicates (embedding-based)
                 try:
                     from whitemagic.core.memory.consolidation import get_consolidator
+
                     consolidator = get_consolidator()
                     merge_result = consolidator.resolve_entities(
-                        similarity_threshold=0.92, batch_limit=100,
+                        similarity_threshold=0.92,
+                        batch_limit=100,
                     )
                     result["auto_merge"] = {
                         "duplicates_found": merge_result.get("duplicates_found", 0),
-                        "duplicates_resolved": merge_result.get("duplicates_resolved", 0),
+                        "duplicates_resolved": merge_result.get(
+                            "duplicates_resolved", 0
+                        ),
                         "status": merge_result.get("status", "unknown"),
                     }
                 except Exception as e:
@@ -462,20 +476,24 @@ class DreamCycle:
         # Standard consolidation
         try:
             from whitemagic.core.memory.consolidation import get_consolidator
+
             consolidator = get_consolidator()
             report = consolidator.consolidate()
-            result.update({
-                "memories_analyzed": report.memories_analyzed,
-                "clusters_found": report.clusters_found,
-                "strategies_synthesized": report.strategies_synthesized,
-                "promotions": report.promotions,
-            })
+            result.update(
+                {
+                    "memories_analyzed": report.memories_analyzed,
+                    "clusters_found": report.clusters_found,
+                    "strategies_synthesized": report.strategies_synthesized,
+                    "promotions": report.promotions,
+                }
+            )
         except Exception as e:
             result["consolidation_error"] = str(e)
 
         # Constellation refresh via CoreAccessLayer
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
             detection = detector.detect(sample_limit=10000)
             result["constellations_detected"] = detection.constellations_found
@@ -497,6 +515,7 @@ class DreamCycle:
         # v14.0: Graph-based bridge discovery
         try:
             from whitemagic.core.memory.graph_engine import get_graph_engine
+
             engine = get_graph_engine()
             engine.rebuild(sample_limit=20000)
 
@@ -510,6 +529,7 @@ class DreamCycle:
                     from whitemagic.core.memory.bridge_synthesizer import (
                         get_bridge_synthesizer,
                     )
+
                     synth = get_bridge_synthesizer()
                     insights = synth.synthesize_from_bridges(bridges, top_n=3)
                     result["bridge_insights"] = [i.to_dict() for i in insights]
@@ -522,25 +542,29 @@ class DreamCycle:
         # Standard association mining (fallback + complement)
         try:
             from whitemagic.core.memory.association_miner import get_association_miner
+
             miner = get_association_miner()
             report = miner.mine(sample_size=100)
 
             connections = []
-            for p in report.top_proposals[:
-                10]:
-                connections.append({
-                    "from": p.source_id[:8],
-                    "to": p.target_id[:8],
-                    "score": round(p.overlap_score, 3),
-                    "shared": sorted(p.shared_keywords)[:5],
-                })
+            for p in report.top_proposals[:10]:
+                connections.append(
+                    {
+                        "from": p.source_id[:8],
+                        "to": p.target_id[:8],
+                        "score": round(p.overlap_score, 3),
+                        "shared": sorted(p.shared_keywords)[:5],
+                    }
+                )
 
-            result.update({
-                "connections_surfaced": report.links_proposed,
-                "connections_created": report.links_created,
-                "pairs_evaluated": report.pairs_evaluated,
-                "connections": connections,
-            })
+            result.update(
+                {
+                    "connections_surfaced": report.links_proposed,
+                    "connections_created": report.links_created,
+                    "pairs_evaluated": report.pairs_evaluated,
+                    "connections": connections,
+                }
+            )
         except Exception as e:
             result["mining_error"] = str(e)
 
@@ -553,8 +577,7 @@ class DreamCycle:
                 if bridges_cal:
                     result["bridge_pairs"] = [
                         f"{b['constellation_1']} <-> {b['constellation_2']}"
-                        for b in bridges_cal[:
-                            3]
+                        for b in bridges_cal[:3]
                     ]
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
@@ -566,6 +589,7 @@ class DreamCycle:
             from whitemagic.core.intelligence.synthesis.cross_domain_detector import (
                 get_cross_domain_detector,
             )
+
             detector = get_cross_domain_detector()
             collisions = detector.detect(sample_limit=500, top_n=5)
             if collisions:
@@ -590,6 +614,7 @@ class DreamCycle:
 
         try:
             from whitemagic.core.memory.graph_engine import get_graph_engine
+
             engine = get_graph_engine()
 
             # Take centrality snapshot (stores as T_now, shifts previous to T_prev)
@@ -607,11 +632,14 @@ class DreamCycle:
             if echo_chambers:
                 try:
                     from whitemagic.core.memory.unified import get_unified_memory
+
                     um = get_unified_memory()
                     with um.backend.pool.connection() as conn:
                         with conn:
                             # N+1 fix: executemany instead of per-node UPDATE loop
-                            ec_params = [(ec.node_id, ec.node_id) for ec in echo_chambers[:10]]
+                            ec_params = [
+                                (ec.node_id, ec.node_id) for ec in echo_chambers[:10]
+                            ]
                             conn.executemany(
                                 """UPDATE associations
                                    SET strength = strength * 0.5
@@ -628,6 +656,7 @@ class DreamCycle:
             if echo_chambers:
                 try:
                     from whitemagic.dharma.karma_ledger import get_karma_ledger
+
                     ledger = get_karma_ledger()
                     ledger.record(
                         tool="dream_governance",
@@ -663,6 +692,7 @@ class DreamCycle:
             from whitemagic.core.dreaming.narrative_compressor import (
                 get_narrative_compressor,
             )
+
             nc = get_narrative_compressor()
             result = nc.compress(max_clusters=3, sample_limit=200)
             return cast(dict[str, Any], result.to_dict())
@@ -683,6 +713,7 @@ class DreamCycle:
             from whitemagic.core.intelligence.agentic.emergence_engine import (
                 get_emergence_engine,
             )
+
             ee = get_emergence_engine()
             insights = ee.scan_for_emergence()
             emergence_insights = [i.to_dict() for i in insights[:5]]
@@ -696,6 +727,7 @@ class DreamCycle:
         merge_result: dict[str, Any] = {}
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
             merge_result = detector.auto_merge(max_distance=0.5, min_shared_tags=2)
         except (ImportError, ModuleNotFoundError):
@@ -703,18 +735,27 @@ class DreamCycle:
 
         try:
             from whitemagic.harmony.vector import get_harmony_vector
+
             hv = get_harmony_vector()
             snap = hv.snapshot()
 
             hints = []
             if snap.error_rate > 0.1:
-                hints.append(f"High error rate ({snap.error_rate:.2f}) — check circuit breakers")
+                hints.append(
+                    f"High error rate ({snap.error_rate:.2f}) — check circuit breakers"
+                )
             if snap.energy < 0.3:
-                hints.append(f"Low energy ({snap.energy:.2f}) — consider memory lifecycle sweep")
+                hints.append(
+                    f"Low energy ({snap.energy:.2f}) — consider memory lifecycle sweep"
+                )
             if snap.karma_debt > 0.2:
-                hints.append(f"Karma debt ({snap.karma_debt:.2f}) — review side-effect declarations")
+                hints.append(
+                    f"Karma debt ({snap.karma_debt:.2f}) — review side-effect declarations"
+                )
             if snap.balance < 0.3:
-                hints.append(f"Yin-Yang imbalance ({snap.balance:.2f}) — alternate action/reflection")
+                hints.append(
+                    f"Yin-Yang imbalance ({snap.balance:.2f}) — alternate action/reflection"
+                )
 
             # Check guna distribution
             guna = {
@@ -730,19 +771,35 @@ class DreamCycle:
             try:
                 from whitemagic.core.memory.unified import get_unified_memory
                 from whitemagic.core.scoring import NeuroScoreInput, neuro_score
+
                 um = get_unified_memory()
                 sample = um.list_recent(limit=5)
                 for mem in sample:
-                    days = max(0.0, (time.time() - (mem.last_accessed or mem.created_at).timestamp()) / 86400) if hasattr(mem, "last_accessed") and mem.last_accessed else 30.0
-                    result = neuro_score(NeuroScoreInput(
-                        current_score=getattr(mem, "retention_score", 0.5) or 0.5,
-                        access_count=getattr(mem, "access_count", 0) or 0,
-                        total_memories=100,
-                        days_since_access=days,
-                        importance=getattr(mem, "importance", 0.5) or 0.5,
-                    ))
+                    days = (
+                        max(
+                            0.0,
+                            (
+                                time.time()
+                                - (mem.last_accessed or mem.created_at).timestamp()
+                            )
+                            / 86400,
+                        )
+                        if hasattr(mem, "last_accessed") and mem.last_accessed
+                        else 30.0
+                    )
+                    result = neuro_score(
+                        NeuroScoreInput(
+                            current_score=getattr(mem, "retention_score", 0.5) or 0.5,
+                            access_count=getattr(mem, "access_count", 0) or 0,
+                            total_memories=100,
+                            days_since_access=days,
+                            importance=getattr(mem, "importance", 0.5) or 0.5,
+                        )
+                    )
                     if result.final_score < 0.3:
-                        neuro_hints.append(f"Memory '{(mem.title or mem.id[:8])}' score={result.final_score:.3f} — candidate for galactic drift")
+                        neuro_hints.append(
+                            f"Memory '{(mem.title or mem.id[:8])}' score={result.final_score:.3f} — candidate for galactic drift"
+                        )
             except (ImportError, ModuleNotFoundError):
                 pass
 
@@ -758,9 +815,13 @@ class DreamCycle:
                 **self._run_recursive_improvement(),
             }
         except Exception as e:
-            return {"skipped": True, "reason": str(e), "emergence_insights": emergence_insights,
-                    "dream_insights_persisted": persisted_count,
-                    "constellation_merges": merge_result.get("merges", 0)}
+            return {
+                "skipped": True,
+                "reason": str(e),
+                "emergence_insights": emergence_insights,
+                "dream_insights_persisted": persisted_count,
+                "constellation_merges": merge_result.get("merges", 0),
+            }
 
     def _run_recursive_improvement(self) -> dict[str, Any]:
         """Trigger a RecursiveImprovementLoop cycle from the dream state.
@@ -771,6 +832,7 @@ class DreamCycle:
         """
         try:
             from whitemagic.core.evolution.recursive_loop import get_improvement_loop
+
             loop = get_improvement_loop()
             cycle = loop.run_cycle(max_hypotheses=10)
             return {
@@ -780,7 +842,9 @@ class DreamCycle:
                 "improvement_duration_ms": round(cycle.duration_ms, 1),
             }
         except Exception as e:
-            logger.debug("Recursive improvement loop failed in dream: %s", e, exc_info=True)
+            logger.debug(
+                "Recursive improvement loop failed in dream: %s", e, exc_info=True
+            )
             return {}
 
     def _dream_oracle(self) -> dict[str, Any]:
@@ -797,6 +861,7 @@ class DreamCycle:
             calibration = {}
             try:
                 from whitemagic.forecasting.temporal_db import TemporalForecastDB
+
                 db = TemporalForecastDB()
                 summary = db.summary()
                 calibration = {
@@ -834,14 +899,18 @@ class DreamCycle:
                 for r in results:
                     if r.spell and r.confidence > 0.3:
                         # Apply Bayesian calibration adjustment
-                        adjusted_conf = max(0.01, min(0.99, r.confidence + bayesian_adjustment))
-                        suggestions.append({
-                            "spell": r.spell.name,
-                            "confidence": round(adjusted_conf, 3),
-                            "raw_confidence": round(r.confidence, 3),
-                            "bayesian_adjustment": round(bayesian_adjustment, 3),
-                            "for": prompt,
-                        })
+                        adjusted_conf = max(
+                            0.01, min(0.99, r.confidence + bayesian_adjustment)
+                        )
+                        suggestions.append(
+                            {
+                                "spell": r.spell.name,
+                                "confidence": round(adjusted_conf, 3),
+                                "raw_confidence": round(r.confidence, 3),
+                                "bayesian_adjustment": round(bayesian_adjustment, 3),
+                                "for": prompt,
+                            }
+                        )
 
             caster.deactivate()
             return {
@@ -856,6 +925,7 @@ class DreamCycle:
         """Phase 5: Run mindful forgetting / galactic rotation."""
         try:
             from whitemagic.core.memory.lifecycle import get_lifecycle_manager
+
             mgr = get_lifecycle_manager()
             result = mgr.run_sweep()
             return {
@@ -876,6 +946,7 @@ class DreamCycle:
         result: dict[str, Any] = {"merges": 0, "inspected": 0}
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
 
             # Detect current constellations
@@ -886,8 +957,7 @@ class DreamCycle:
             # Look for merge candidates (simplified logic)
             merge_count = 0
             for i, c1 in enumerate(const_list):
-                for c2 in const_list[i+1:
-                    ]:
+                for c2 in const_list[i + 1 :]:
                     overlap = len(set(c1.member_ids) & set(c2.member_ids))
                     if overlap > len(c1.member_ids) * 0.5:
                         # 50% overlap threshold
@@ -909,6 +979,7 @@ class DreamCycle:
         result: dict[str, Any] = {"predictions": [], "at_risk_count": 0}
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
 
             with um.backend.pool.connection() as conn:
@@ -929,21 +1000,30 @@ class DreamCycle:
 
                 predictions = []
                 for row in at_risk:
-                    drift_risk = min(1.0, row["galactic_distance"] * (1.0 - row["access_count"] * 0.1))
-                    predictions.append({
-                        "memory_id": row["id"],
-                        "title": (row["title"] or "")[:60],
-                        "importance": round(row["importance"], 3),
-                        "current_distance": round(row["galactic_distance"], 3),
-                        "access_count": row["access_count"] or 0,
-                        "drift_risk": round(drift_risk, 3),
-                        "recommendation": "access" if drift_risk > 0.6 else "monitor",
-                    })
+                    drift_risk = min(
+                        1.0,
+                        row["galactic_distance"] * (1.0 - row["access_count"] * 0.1),
+                    )
+                    predictions.append(
+                        {
+                            "memory_id": row["id"],
+                            "title": (row["title"] or "")[:60],
+                            "importance": round(row["importance"], 3),
+                            "current_distance": round(row["galactic_distance"], 3),
+                            "access_count": row["access_count"] or 0,
+                            "drift_risk": round(drift_risk, 3),
+                            "recommendation": "access"
+                            if drift_risk > 0.6
+                            else "monitor",
+                        }
+                    )
 
                 result["predictions"] = predictions
                 result["at_risk_count"] = len(predictions)
                 result["prediction_model"] = "coordinate_velocity_v1"
-                result["high_risk"] = sum(1 for p in predictions if p["drift_risk"] > 0.6)
+                result["high_risk"] = sum(
+                    1 for p in predictions if p["drift_risk"] > 0.6
+                )
             return result
         except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
             return {"skipped": True, "reason": str(e)}
@@ -966,11 +1046,13 @@ class DreamCycle:
 
             # Entity patterns to detect
             entity_patterns = {
-                "file_path": re.compile(r'[\w/]+\.\w{1,5}'),
-                "version": re.compile(r'v?\d+\.\d+(?:\.\d+)?'),
-                "tool_name": re.compile(r'\b(?:fragment|strata|ollama|cargo|maturin|pytest)\b', re.I),
-                "python_module": re.compile(r'\bwhitemagic\.[a-z_.]+\b'),
-                "rust_crate": re.compile(r'\bwhitemagic_rs\b|\bfragment\b'),
+                "file_path": re.compile(r"[\w/]+\.\w{1,5}"),
+                "version": re.compile(r"v?\d+\.\d+(?:\.\d+)?"),
+                "tool_name": re.compile(
+                    r"\b(?:fragment|strata|ollama|cargo|maturin|pytest)\b", re.I
+                ),
+                "python_module": re.compile(r"\bwhitemagic\.[a-z_.]+\b"),
+                "rust_crate": re.compile(r"\bwhitemagic_rs\b|\bfragment\b"),
             }
 
             with um.backend.pool.connection() as conn:
@@ -1035,7 +1117,12 @@ class DreamCycle:
             import shutil
             from pathlib import Path
 
-            seeds_path = Path(__file__).parent.parent.parent.parent / "polyglot" / "seeds" / "seeds.json"
+            seeds_path = (
+                Path(__file__).parent.parent.parent.parent
+                / "polyglot"
+                / "seeds"
+                / "seeds.json"
+            )
             if not seeds_path.exists():
                 return {"skipped": True, "reason": "seeds.json not found"}
             with open(seeds_path) as f:
@@ -1052,9 +1139,14 @@ class DreamCycle:
                 # Check artifact presence (simplified)
                 name = seed["name"]
                 if name == "rust":
-                    has_artifact = bool(list(source_dir.glob("*.so"))) or (source_dir / "target" / "release").exists()
+                    has_artifact = (
+                        bool(list(source_dir.glob("*.so")))
+                        or (source_dir / "target" / "release").exists()
+                    )
                 elif name == "zig":
-                    has_artifact = (source_dir / "zig-out" / "lib" / "libwhitemagic.so").exists()
+                    has_artifact = (
+                        source_dir / "zig-out" / "lib" / "libwhitemagic.so"
+                    ).exists()
                 elif name == "go":
                     has_artifact = (source_dir / "whitemagic-go-mesh").exists()
                 elif name == "elixir":
@@ -1067,7 +1159,9 @@ class DreamCycle:
 
             if dormant:
                 self._emit_event("SEED_DORMANT_FOUND", {"dormant": dormant})
-                logger.info("🌱 Seed scan: %d dormant seed(s) found: %s", len(dormant), dormant)
+                logger.info(
+                    "🌱 Seed scan: %d dormant seed(s) found: %s", len(dormant), dormant
+                )
 
             return {"dormant": dormant, "count": len(dormant)}
         except Exception as e:
@@ -1081,6 +1175,7 @@ class DreamCycle:
             import time as _time
 
             from whitemagic.config.paths import WM_ROOT
+
             state_path = WM_ROOT / "seeds" / "wired.json"
             if not state_path.exists():
                 return {"skipped": True, "reason": "wired.json not found"}
@@ -1090,6 +1185,7 @@ class DreamCycle:
 
             # Simple cosine similarity benchmark
             import random
+
             random.seed(42)
             dim = 256
             vec_a = [random.gauss(0, 1) for _ in range(dim)]
@@ -1115,10 +1211,13 @@ class DreamCycle:
                 if name == "rust":
                     try:
                         import whitemagic_rs
+
                         if hasattr(whitemagic_rs, "simd_cosine_similarity"):
                             start = _time.time()
                             for _ in range(iterations):
-                                _ = float(whitemagic_rs.simd_cosine_similarity(vec_a, vec_b))
+                                _ = float(
+                                    whitemagic_rs.simd_cosine_similarity(vec_a, vec_b)
+                                )
                             native_time = _time.time() - start
                     except Exception:
                         pass
@@ -1127,10 +1226,18 @@ class DreamCycle:
                     speedup = round(py_time / native_time, 2)
                     fitness = s.get("fitness", {})
                     fitness["benchmark_speedup"] = speedup
-                    fitness["last_benchmark_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                    fitness["last_benchmark_at"] = _time.strftime(
+                        "%Y-%m-%dT%H:%M:%SZ", _time.gmtime()
+                    )
                     # Recompute score
                     zone = s.get("zone", "mid_band")
-                    zone_dist = {"core": 0.05, "inner_rim": 0.25, "mid_band": 0.50, "outer_rim": 0.75, "far_edge": 0.95}.get(zone, 1.0)
+                    zone_dist = {
+                        "core": 0.05,
+                        "inner_rim": 0.25,
+                        "mid_band": 0.50,
+                        "outer_rim": 0.75,
+                        "far_edge": 0.95,
+                    }.get(zone, 1.0)
                     zone_score = (1.0 - zone_dist) * 0.4
                     successes = fitness.get("build_successes", 0)
                     failures = fitness.get("build_failures", 0)
@@ -1138,17 +1245,27 @@ class DreamCycle:
                     build_score = (successes / total) * 0.3 if total > 0 else 0.0
                     verify_score = 0.15 if s.get("status") == "verified" else 0.0
                     bench_score = min(float(speedup) / 100.0, 1.0) * 0.15
-                    fitness["score"] = round(zone_score + build_score + verify_score + bench_score, 4)
+                    fitness["score"] = round(
+                        zone_score + build_score + verify_score + bench_score, 4
+                    )
                     s["fitness"] = fitness
                     benchmarked += 1
-                    logger.info("🌱 Seed benchmark: %s = %sx speedup (fitness=%.3f)", name, speedup, fitness["score"])
+                    logger.info(
+                        "🌱 Seed benchmark: %s = %sx speedup (fitness=%.3f)",
+                        name,
+                        speedup,
+                        fitness["score"],
+                    )
 
             if benchmarked > 0:
                 with open(state_path, "w") as f:
                     json.dump(state, f, indent=2)
                 self._emit_event("SEED_BENCHMARKED", {"benchmarked": benchmarked})
 
-            return {"benchmarked": benchmarked, "python_baseline_ms": round(py_time * 1000, 2)}
+            return {
+                "benchmarked": benchmarked,
+                "python_baseline_ms": round(py_time * 1000, 2),
+            }
         except Exception as e:
             return {"skipped": True, "reason": str(e)}
 
@@ -1214,7 +1331,9 @@ class DreamCycle:
                 harmony = max(0.0, min(1.0, harmony))
 
                 # Count adjustments needed (zones that are over/under-represented)
-                adjustments = sum(1 for v in element_balance.values() if abs(v - ideal) > 0.1)
+                adjustments = sum(
+                    1 for v in element_balance.values() if abs(v - ideal) > 0.1
+                )
 
                 result["harmony_score"] = round(harmony, 3)
                 result["element_balance"] = element_balance
@@ -1224,10 +1343,6 @@ class DreamCycle:
             return result
         except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
             return {"skipped": True, "reason": str(e)}
-
-    # ------------------------------------------------------------------
-    # Events
-    # ------------------------------------------------------------------
 
     def _persist_dream_insights(self, insights: list) -> int:
         """Persist emergence insights as dream memories.
@@ -1240,6 +1355,7 @@ class DreamCycle:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             from whitemagic.core.memory.unified_types import MemoryType
+
             um = get_unified_memory()
 
             for insight in insights:
@@ -1286,19 +1402,18 @@ class DreamCycle:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
             # Use REFLECTION_RECORDED as closest existing event type
-            bus.emit(ResonanceEvent(
-                event_type=EventType.REFLECTION_RECORDED,
-                source="dream_cycle",
-                data={"dream_event": event_name, **data},
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    event_type=EventType.REFLECTION_RECORDED,
+                    source="dream_cycle",
+                    data={"dream_event": event_name, **data},
+                )
+            )
         except (ImportError, AttributeError):
             pass
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def status(self) -> dict[str, Any]:
         """Get dream cycle status."""
@@ -1318,10 +1433,6 @@ class DreamCycle:
                 "recent_dreams": recent,
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _dream_cycle: DreamCycle | None = None
 _dc_lock = threading.Lock()

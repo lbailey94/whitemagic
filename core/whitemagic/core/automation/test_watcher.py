@@ -16,9 +16,18 @@ logger = logging.getLogger(__name__)
 class TestWatcher:
     """Watch files and auto-run tests on changes."""
 
-    def __init__(self, watch_dir: Path | None = None, test_cmd: list[str] | None = None) -> None:
+    def __init__(
+        self, watch_dir: Path | None = None, test_cmd: list[str] | None = None
+    ) -> None:
         self.watch_dir = watch_dir or Path(".")
-        self.test_cmd = test_cmd or ["python", "-m", "pytest", "tests/unit/", "-q", "--timeout=10"]
+        self.test_cmd = test_cmd or [
+            "python",
+            "-m",
+            "pytest",
+            "tests/unit/",
+            "-q",
+            "--timeout=10",
+        ]
         self._file_hashes: dict[str, str] = {}
         self._running = False
         self._last_run: float = 0.0

@@ -3,6 +3,7 @@ Part of WhiteMagic v3.0.0.
 
 Like the body's immune system - recognizes and responds to threats.
 """
+
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -17,6 +18,7 @@ class Threat:
     source: str
     resolved: bool = False
 
+
 @dataclass
 class Antibody:
     """A solution pattern for a known threat."""
@@ -26,6 +28,7 @@ class Antibody:
     solution: str
     effectiveness: float  # 0.0 - 1.0
     created_at: datetime
+
 
 class ImmuneSystem:
     """Protects WhiteMagic from harmful patterns.
@@ -53,7 +56,9 @@ class ImmuneSystem:
 
         return results
 
-    def detect_threat(self, pattern: str, source: str, severity: str = "medium") -> Threat:
+    def detect_threat(
+        self, pattern: str, source: str, severity: str = "medium"
+    ) -> Threat:
         """Detect and log a new threat."""
         threat = Threat(
             pattern=pattern,
@@ -121,6 +126,7 @@ class ImmuneSystem:
 
 # Singleton
 _immune = None
+
 
 def get_immune_system() -> ImmuneSystem:
     """Get the global Immune System."""

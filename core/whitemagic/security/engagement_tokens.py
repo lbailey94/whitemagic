@@ -60,6 +60,7 @@ def _get_hmac_key() -> bytes:
             return _HMAC_KEY
         try:
             from whitemagic.config.paths import WM_ROOT
+
             key_path = WM_ROOT / "security" / ".engagement_key"
             key_path.parent.mkdir(parents=True, exist_ok=True)
             if key_path.exists():
@@ -83,15 +84,15 @@ class EngagementToken:
     """A time-bounded, scope-limited authorization for offensive actions."""
 
     token_id: str
-    scope: list[str]           # Target patterns (IP ranges, domains, glob)
-    tools: list[str]           # Authorized tool patterns (fnmatch)
-    issuer: str                # Who authorized
+    scope: list[str]  # Target patterns (IP ranges, domains, glob)
+    tools: list[str]  # Authorized tool patterns (fnmatch)
+    issuer: str  # Who authorized
     issued_at: float
     expires_at: float
-    token_hash: str            # HMAC-SHA256 for tamper detection
+    token_hash: str  # HMAC-SHA256 for tamper detection
     revoked: bool = False
     uses: int = 0
-    max_uses: int = 0          # 0 = unlimited
+    max_uses: int = 0  # 0 = unlimited
 
     def is_expired(self) -> bool:
         """
@@ -109,7 +110,11 @@ class EngagementToken:
         Returns:
             bool
         """
-        return not self.revoked and not self.is_expired() and (self.max_uses == 0 or self.uses < self.max_uses)
+        return (
+            not self.revoked
+            and not self.is_expired()
+            and (self.max_uses == 0 or self.uses < self.max_uses)
+        )
 
     def remaining_seconds(self) -> float:
         """
@@ -142,21 +147,31 @@ class EngagementToken:
         }
 
 
-def _compute_token_hash(token_id: str, scope: list[str], tools: list[str],
-                         issuer: str, expires_at: float) -> str:
+def _compute_token_hash(
+    token_id: str, scope: list[str], tools: list[str], issuer: str, expires_at: float
+) -> str:
     """Compute HMAC-SHA256 of token fields for tamper detection."""
-    payload = _json_dumps({
-        "id": token_id, "scope": sorted(scope), "tools": sorted(tools),
-        "issuer": issuer, "expires_at": expires_at,
-    }, sort_keys=True)
+    payload = _json_dumps(
+        {
+            "id": token_id,
+            "scope": sorted(scope),
+            "tools": sorted(tools),
+            "issuer": issuer,
+            "expires_at": expires_at,
+        },
+        sort_keys=True,
+    )
     return hmac.new(_get_hmac_key(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 def _verify_token_hash(token: EngagementToken) -> bool:
     """Verify the HMAC of a token to detect tampering."""
     expected = _compute_token_hash(
-        token.token_id, token.scope, token.tools,
-        token.issuer, token.expires_at,
+        token.token_id,
+        token.scope,
+        token.tools,
+        token.issuer,
+        token.expires_at,
     )
     return hmac.compare_digest(expected, token.token_hash)
 
@@ -216,7 +231,11 @@ class EngagementTokenManager:
 
         logger.info(
             "Engagement token issued: %s by %s (scope=%s, tools=%s, expires=%dm)",
-            token_id, issuer, scope, tools, duration_minutes,
+            token_id,
+            issuer,
+            scope,
+            tools,
+            duration_minutes,
         )
         return {"status": "success", "token": token.to_dict()}
 
@@ -282,24 +301,31 @@ class EngagementTokenManager:
         if tool and token.tools:
             tool_match = any(fnmatch.fnmatch(tool, pat) for pat in token.tools)
             if not tool_match:
-                self._audit("validate_fail", token_id, reason="tool_not_authorized", tool=tool)
+                self._audit(
+                    "validate_fail", token_id, reason="tool_not_authorized", tool=tool
+                )
                 return {
                     "status": "success",
                     "valid": False,
                     "reason": f"Tool '{tool}' is not authorized by token '{token_id}'. "
-                             f"Authorized patterns: {token.tools}",
+                    f"Authorized patterns: {token.tools}",
                 }
 
         # Check target scope
         if target and token.scope:
             scope_match = any(fnmatch.fnmatch(target, pat) for pat in token.scope)
             if not scope_match:
-                self._audit("validate_fail", token_id, reason="target_out_of_scope", target=target)
+                self._audit(
+                    "validate_fail",
+                    token_id,
+                    reason="target_out_of_scope",
+                    target=target,
+                )
                 return {
                     "status": "success",
                     "valid": False,
                     "reason": f"Target '{target}' is outside the engagement scope. "
-                             f"Authorized scope: {token.scope}",
+                    f"Authorized scope: {token.scope}",
                 }
 
         # Valid — increment uses
@@ -325,7 +351,11 @@ class EngagementTokenManager:
         self._persist()
         self._audit("revoke", token_id)
         logger.info("Engagement token revoked: %s", token_id)
-        return {"status": "success", "message": f"Token '{token_id}' revoked.", "token": token.to_dict()}
+        return {
+            "status": "success",
+            "message": f"Token '{token_id}' revoked.",
+            "token": token.to_dict(),
+        }
 
     def list_tokens(self, include_expired: bool = False) -> dict[str, Any]:
         """List all engagement tokens."""
@@ -356,7 +386,12 @@ class EngagementTokenManager:
         }
 
     def _audit(self, action: str, token_id: str, **extra: Any) -> None:
-        entry = {"action": action, "token_id": token_id, "timestamp": time.time(), **extra}
+        entry = {
+            "action": action,
+            "token_id": token_id,
+            "timestamp": time.time(),
+            **extra,
+        }
         with self._lock:
             self._audit_log.append(entry)
             if len(self._audit_log) > 5000:
@@ -371,10 +406,15 @@ class EngagementTokenManager:
             with self._lock:
                 data = {
                     tid: {
-                        "scope": t.scope, "tools": t.tools, "issuer": t.issuer,
-                        "issued_at": t.issued_at, "expires_at": t.expires_at,
-                        "token_hash": t.token_hash, "revoked": t.revoked,
-                        "uses": t.uses, "max_uses": t.max_uses,
+                        "scope": t.scope,
+                        "tools": t.tools,
+                        "issuer": t.issuer,
+                        "issued_at": t.issued_at,
+                        "expires_at": t.expires_at,
+                        "token_hash": t.token_hash,
+                        "revoked": t.revoked,
+                        "uses": t.uses,
+                        "max_uses": t.max_uses,
                     }
                     for tid, t in self._tokens.items()
                 }
@@ -409,10 +449,6 @@ class EngagementTokenManager:
             logger.debug("Engagement token load failed: %s", e)
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _manager: EngagementTokenManager | None = None
 _manager_lock = threading.Lock()
 
@@ -425,6 +461,7 @@ def get_token_manager() -> EngagementTokenManager:
             if _manager is None:
                 try:
                     from whitemagic.config.paths import WM_ROOT
+
                     storage = WM_ROOT / "security"
                 except (ImportError, ModuleNotFoundError):
                     storage = None

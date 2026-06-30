@@ -15,6 +15,7 @@ from typing import Any
 
 class PhaseGuidance(Enum):
     """Reasoning guidance based on phase"""
+
     YIN_RECEPTIVE = "yin_receptive"
     YANG_CREATIVE = "yang_creative"
 
@@ -22,6 +23,7 @@ class PhaseGuidance(Enum):
 @dataclass
 class PhaseContext:
     """Current phase context from Zodiacal Procession"""
+
     phase: str  # "yin" or "yang"
     sign: str  # Current zodiac sign
     element: str  # Current element
@@ -40,6 +42,7 @@ class PhaseAwareReasoner:
         """Connect to Zodiacal Procession"""
         try:
             from whitemagic.core.orchestration.zodiacal_procession import get_procession
+
             self.procession = get_procession()
         except ImportError:
             pass
@@ -55,7 +58,7 @@ class PhaseAwareReasoner:
             sign=state.current_sign.name_str,
             element=state.current_sign.element,
             is_fixed=state.current_sign.is_fixed,
-            cycle=state.cycle_count
+            cycle=state.cycle_count,
         )
 
     def adapt_reasoning_strategy(self, phase_context: PhaseContext) -> dict[str, Any]:
@@ -75,7 +78,7 @@ class PhaseAwareReasoner:
                     "pattern_matching": "semantic",  # Contextual
                     "lens_priority": ["i_ching", "wu_xing", "zodiac", "art_of_war"],
                 },
-                "guidance": "Receive, analyze, integrate. Let patterns emerge naturally."
+                "guidance": "Receive, analyze, integrate. Let patterns emerge naturally.",
             }
         else:
             # YANG: Creative, active, expressive
@@ -91,7 +94,7 @@ class PhaseAwareReasoner:
                     "pattern_matching": "exact",  # Precise
                     "lens_priority": ["art_of_war", "wu_xing", "zodiac", "i_ching"],
                 },
-                "guidance": "Create, express, manifest. Transform insight into action."
+                "guidance": "Create, express, manifest. Transform insight into action.",
             }
 
     def consult_fixed_sign_wisdom(self, sign: str) -> str | None:
@@ -100,7 +103,7 @@ class PhaseAwareReasoner:
             "taurus": "Build foundations that endure. Value stability and resources.",
             "leo": "Express authentically and boldly. Lead with heart and creativity.",
             "scorpio": "Embrace deep transformation. Go to the depths for truth.",
-            "aquarius": "Think radically, serve collectively. Innovate for the future."
+            "aquarius": "Think radically, serve collectively. Innovate for the future.",
         }
         return fixed_wisdom.get(sign.lower())
 
@@ -111,7 +114,7 @@ class PhaseAwareReasoner:
         if not phase_context:
             return {
                 "phase_enhancement": None,
-                "reason": "Zodiacal Procession not available"
+                "reason": "Zodiacal Procession not available",
             }
 
         strategy = self.adapt_reasoning_strategy(phase_context)
@@ -122,10 +125,10 @@ class PhaseAwareReasoner:
                 "sign": phase_context.sign,
                 "element": phase_context.element,
                 "is_fixed_hub": phase_context.is_fixed,
-                "cycle": phase_context.cycle
+                "cycle": phase_context.cycle,
             },
             "adapted_strategy": strategy,
-            "phase_guidance": strategy["guidance"]
+            "phase_guidance": strategy["guidance"],
         }
 
         # Add fixed sign wisdom if applicable
@@ -139,6 +142,7 @@ class PhaseAwareReasoner:
 
 # Singleton instance
 _phase_aware_reasoner = None
+
 
 def get_phase_aware_reasoner() -> PhaseAwareReasoner:
     """Get global phase-aware reasoner"""

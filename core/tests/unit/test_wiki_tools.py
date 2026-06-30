@@ -192,6 +192,7 @@ class TestExternalRepo:
         from whitemagic.tools.handlers.external_repo import (
             handle_external_wiki_query,
         )
+
         result = handle_external_wiki_query()
         assert result["status"] == "error"
         assert result["error_code"] == "missing_params"
@@ -201,18 +202,23 @@ class TestExternalRepo:
         from whitemagic.tools.handlers.external_repo import (
             handle_external_wiki_query,
         )
+
         result = handle_external_wiki_query(
             repo="modelcontextprotocol/python-sdk",
             question="How does the server work?",
         )
         assert result["status"] == "success"
-        assert result["deepwiki_url"] == "https://deepwiki.com/modelcontextprotocol/python-sdk"
+        assert (
+            result["deepwiki_url"]
+            == "https://deepwiki.com/modelcontextprotocol/python-sdk"
+        )
 
     def test_repo_scan_missing_params(self):
         """External repo scan without repo returns error."""
         from whitemagic.tools.handlers.external_repo import (
             handle_external_repo_scan,
         )
+
         result = handle_external_repo_scan()
         assert result["status"] == "error"
         assert result["error_code"] == "missing_params"
@@ -222,6 +228,7 @@ class TestExternalRepo:
         from whitemagic.tools.handlers.external_repo import (
             handle_external_repo_compare,
         )
+
         result = handle_external_repo_compare()
         assert result["status"] == "error"
         assert result["error_code"] == "missing_params"

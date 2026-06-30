@@ -28,6 +28,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 @dataclass
 class MemoryExport:
     """Memory data structure for export."""
+
     id: str
     title: str
     content: str
@@ -40,6 +41,7 @@ class MemoryExport:
 
 class ExportRequest(BaseModel):
     """Export request model."""
+
     format: str = Field(..., pattern="^(json|csv|markdown|zip)$")
     filters: dict[str, Any] | None = None
     include_metadata: bool = Field(True, description="Include metadata in export")
@@ -48,6 +50,7 @@ class ExportRequest(BaseModel):
 
 class ImportRequest(BaseModel):
     """Import request model."""
+
     format: str = Field(..., pattern="^(json|csv|markdown)$")
     data: str | bytes = Field(..., description="Import data or file path")
     merge_strategy: str = Field("skip", pattern="^(skip|overwrite|merge)$")
@@ -68,9 +71,7 @@ class ExportImportManager:
         return data
 
     def export_memories(
-        self,
-        memories: list[MemoryExport],
-        request: ExportRequest
+        self, memories: list[MemoryExport], request: ExportRequest
     ) -> dict[str, Any]:
         """Export memories in the specified format."""
 
@@ -92,9 +93,7 @@ class ExportImportManager:
         return result
 
     def _apply_filters(
-        self,
-        memories: list[MemoryExport],
-        filters: dict[str, Any] | None
+        self, memories: list[MemoryExport], filters: dict[str, Any] | None
     ) -> list[MemoryExport]:
         """Apply filters to memories."""
         if not filters:
@@ -105,47 +104,36 @@ class ExportImportManager:
         # Filter by tags
         if "tags" in filters:
             required_tags = set(filters["tags"])
-            filtered = [
-                m for m in filtered
-                if required_tags.intersection(set(m.tags))
-            ]
+            filtered = [m for m in filtered if required_tags.intersection(set(m.tags))]
 
         # Filter by memory type
         if "memory_type" in filters:
-            filtered = [
-                m for m in filtered
-                if m.memory_type == filters["memory_type"]
-            ]
+            filtered = [m for m in filtered if m.memory_type == filters["memory_type"]]
 
         # Filter by date range
         if "date_from" in filters:
             date_from = parse_datetime(filters["date_from"])
             filtered = [
-                m for m in filtered
-                if parse_datetime(m.created_at) >= date_from
+                m for m in filtered if parse_datetime(m.created_at) >= date_from
             ]
 
         if "date_to" in filters:
             date_to = parse_datetime(filters["date_to"])
-            filtered = [
-                m for m in filtered
-                if parse_datetime(m.created_at) <= date_to
-            ]
+            filtered = [m for m in filtered if parse_datetime(m.created_at) <= date_to]
 
         # Filter by content search
         if "search" in filters:
             search_term = filters["search"].lower()
             filtered = [
-                m for m in filtered
+                m
+                for m in filtered
                 if search_term in m.title.lower() or search_term in m.content.lower()
             ]
 
         return filtered
 
     def _export_json(
-        self,
-        memories: list[MemoryExport],
-        request: ExportRequest
+        self, memories: list[MemoryExport], request: ExportRequest
     ) -> dict[str, Any]:
         """Export memories as JSON."""
 
@@ -155,7 +143,7 @@ class ExportImportManager:
                 "version": "1.0",
                 "exported_at": datetime.now().isoformat(),
                 "total_memories": len(memories),
-                "include_metadata": request.include_metadata
+                "include_metadata": request.include_metadata,
             },
             "memories": [],
         }
@@ -170,7 +158,7 @@ class ExportImportManager:
         filename = f"whitemagic_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         filepath = self.storage_path / filename
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
         return {
@@ -178,24 +166,30 @@ class ExportImportManager:
             "filepath": str(filepath),
             "size": filepath.stat().st_size,
             "format": "json",
-            "count": len(memories)
+            "count": len(memories),
         }
 
     def _export_csv(
-        self,
-        memories: list[MemoryExport],
-        request: ExportRequest
+        self, memories: list[MemoryExport], request: ExportRequest
     ) -> dict[str, Any]:
         """Export memories as CSV."""
 
         filename = f"whitemagic_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         filepath = self.storage_path / filename
 
-        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
 
             # Write header
-            header = ["id", "title", "content", "memory_type", "tags", "created_at", "updated_at"]
+            header = [
+                "id",
+                "title",
+                "content",
+                "memory_type",
+                "tags",
+                "created_at",
+                "updated_at",
+            ]
             if request.include_metadata:
                 header.append("metadata")
             writer.writerow(header)
@@ -209,7 +203,7 @@ class ExportImportManager:
                     memory.memory_type,
                     ";".join(memory.tags),  # Join tags with semicolon
                     memory.created_at,
-                    memory.updated_at
+                    memory.updated_at,
                 ]
                 if request.include_metadata:
                     row.append(_json_dumps(memory.metadata))
@@ -220,20 +214,18 @@ class ExportImportManager:
             "filepath": str(filepath),
             "size": filepath.stat().st_size,
             "format": "csv",
-            "count": len(memories)
+            "count": len(memories),
         }
 
     def _export_markdown(
-        self,
-        memories: list[MemoryExport],
-        request: ExportRequest
+        self, memories: list[MemoryExport], request: ExportRequest
     ) -> dict[str, Any]:
         """Export memories as Markdown."""
 
         filename = f"whitemagic_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
         filepath = self.storage_path / filename
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             f.write("# WhiteMagic Memory Export\\n\\n")
             f.write(f"**Exported:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\\n")
@@ -249,7 +241,9 @@ class ExportImportManager:
                 f.write(f"**Updated:** {memory.updated_at}\\n")
 
                 if memory.tags:
-                    f.write(f"**Tags:** {', '.join(f'`{tag}`' for tag in memory.tags)}\\n")
+                    f.write(
+                        f"**Tags:** {', '.join(f'`{tag}`' for tag in memory.tags)}\\n"
+                    )
 
                 f.write("\\n### Content\\n\\n")
                 f.write(f"{memory.content}\\n\\n")
@@ -267,20 +261,18 @@ class ExportImportManager:
             "filepath": str(filepath),
             "size": filepath.stat().st_size,
             "format": "markdown",
-            "count": len(memories)
+            "count": len(memories),
         }
 
     def _export_zip(
-        self,
-        memories: list[MemoryExport],
-        request: ExportRequest
+        self, memories: list[MemoryExport], request: ExportRequest
     ) -> dict[str, Any]:
         """Export memories as a ZIP archive with multiple formats."""
 
         filename = f"whitemagic_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         filepath = self.storage_path / filename
 
-        with zipfile.ZipFile(filepath, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(filepath, "w", zipfile.ZIP_DEFLATED) as zf:
             # Export JSON
             json_result = self._export_json(
                 memories,
@@ -321,12 +313,12 @@ class ExportImportManager:
                     "version": "1.0",
                     "exported_at": datetime.now().isoformat(),
                     "total_memories": len(memories),
-                    "formats": ["json", "csv", "markdown"]
+                    "formats": ["json", "csv", "markdown"],
                 }
             }
 
-            with zf.open("metadata.json", 'w') as meta_file:
-                meta_file.write(_json_dumps(metadata, indent=2).encode('utf-8'))
+            with zf.open("metadata.json", "w") as meta_file:
+                meta_file.write(_json_dumps(metadata, indent=2).encode("utf-8"))
 
             # Clean up temporary files
             Path(json_result["filepath"]).unlink()
@@ -338,13 +330,10 @@ class ExportImportManager:
             "filepath": str(filepath),
             "size": filepath.stat().st_size,
             "format": "zip",
-            "count": len(memories)
+            "count": len(memories),
         }
 
-    def import_memories(
-        self,
-        request: ImportRequest
-    ) -> dict[str, Any]:
+    def import_memories(self, request: ImportRequest) -> dict[str, Any]:
         """Import memories from the specified format."""
 
         # Parse based on format
@@ -361,22 +350,19 @@ class ExportImportManager:
         validation_errors = self._validate_memories(memories)
 
         if validation_errors:
-            return {
-                "success": False,
-                "errors": validation_errors,
-                "imported_count": 0
-            }
+            return {"success": False, "errors": validation_errors, "imported_count": 0}
 
         if request.validate_only:
             return {
                 "success": True,
                 "validated_count": len(memories),
-                "imported_count": 0
+                "imported_count": 0,
             }
 
         # Import memories via MemoryManager
         try:
             from whitemagic.core.memory import MemoryManager
+
             mm = MemoryManager()
             for memory in memories:
                 mm.create_memory(
@@ -384,7 +370,7 @@ class ExportImportManager:
                     content=memory.content,
                     memory_type=memory.memory_type,
                     tags=memory.tags,
-                    extra_fields=memory.metadata
+                    extra_fields=memory.metadata,
                 )
         except ImportError:
             pass  # MemoryManager not available, return validation-only result
@@ -392,7 +378,7 @@ class ExportImportManager:
         return {
             "success": True,
             "imported_count": len(memories),
-            "merge_strategy": request.merge_strategy
+            "merge_strategy": request.merge_strategy,
         }
 
     def _import_json(self, data: str | bytes) -> list[MemoryExport]:
@@ -417,7 +403,7 @@ class ExportImportManager:
                     tags=mem_data.get("tags", []),
                     metadata=mem_data.get("metadata", {}),
                     created_at=mem_data.get("created_at", datetime.now().isoformat()),
-                    updated_at=mem_data.get("updated_at", datetime.now().isoformat())
+                    updated_at=mem_data.get("updated_at", datetime.now().isoformat()),
                 )
                 memories.append(memory)
 
@@ -441,7 +427,7 @@ class ExportImportManager:
                 tags=row.get("tags", "").split(";") if row.get("tags") else [],
                 metadata=_json_loads(row.get("metadata") or "{}"),
                 created_at=row.get("created_at", datetime.now().isoformat()),
-                updated_at=row.get("updated_at", datetime.now().isoformat())
+                updated_at=row.get("updated_at", datetime.now().isoformat()),
             )
             memories.append(memory)
 
@@ -466,11 +452,13 @@ class ExportImportManager:
                     "title": line[3:].strip(),
                     "content": "",
                     "tags": [],
-                    "metadata": {}
+                    "metadata": {},
                 }
 
             elif line.startswith("**ID:**"):
-                current_memory["id"] = line.split("`")[1] if "`" in line else str(uuid.uuid4())
+                current_memory["id"] = (
+                    line.split("`")[1] if "`" in line else str(uuid.uuid4())
+                )
 
             elif line.startswith("**Type:**"):
                 current_memory["memory_type"] = line.split(":")[1].strip()
@@ -505,7 +493,7 @@ class ExportImportManager:
             tags=data.get("tags", []),
             metadata=data.get("metadata", {}),
             created_at=datetime.now().isoformat(),
-            updated_at=datetime.now().isoformat()
+            updated_at=datetime.now().isoformat(),
         )
 
     def _validate_memories(self, memories: list[MemoryExport]) -> list[str]:
@@ -514,20 +502,20 @@ class ExportImportManager:
 
         for i, memory in enumerate(memories):
             if not memory.title:
-                errors.append(f"Memory {i+1}: Missing title")
+                errors.append(f"Memory {i + 1}: Missing title")
 
             if not memory.content:
-                errors.append(f"Memory {i+1}: Missing content")
+                errors.append(f"Memory {i + 1}: Missing content")
 
             if memory.memory_type not in ["short_term", "long_term"]:
-                errors.append(f"Memory {i+1}: Invalid memory type")
+                errors.append(f"Memory {i + 1}: Invalid memory type")
 
             # Validate UUID format if provided
             if memory.id:
                 try:
                     uuid.UUID(memory.id)
                 except ValueError:
-                    errors.append(f"Memory {i+1}: Invalid UUID format")
+                    errors.append(f"Memory {i + 1}: Invalid UUID format")
 
         return errors
 
@@ -539,13 +527,13 @@ def create_export_manager(storage_path: Path | None = None) -> ExportImportManag
 
 
 def export_to_json(
-    memories: list[MemoryExport],
-    filepath: Path,
-    include_metadata: bool = True
+    memories: list[MemoryExport], filepath: Path, include_metadata: bool = True
 ) -> None:
     """Quick export to JSON."""
     manager = ExportImportManager()
-    request = ExportRequest(format="json", include_metadata=include_metadata, compress=False)
+    request = ExportRequest(
+        format="json", include_metadata=include_metadata, compress=False
+    )
     result = manager.export_memories(memories, request)
 
     # Move to requested location
@@ -556,7 +544,7 @@ def import_from_json(filepath: Path) -> list[MemoryExport]:
     """Quick import from JSON."""
     manager = ExportImportManager()
 
-    with open(filepath, encoding='utf-8') as f:
+    with open(filepath, encoding="utf-8") as f:
         data = f.read()
 
     request = ImportRequest(

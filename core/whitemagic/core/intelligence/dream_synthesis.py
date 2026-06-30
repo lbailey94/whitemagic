@@ -65,7 +65,11 @@ class DreamSynthesizer:
         wu_xing = data.get("wu_xing")
         yin_yang = data.get("yin_yang")
 
-        if self.synthesis_enabled and wu_xing == WuXingPhase.WATER.value and yin_yang == YinYangPhase.YIN.value:
+        if (
+            self.synthesis_enabled
+            and wu_xing == WuXingPhase.WATER.value
+            and yin_yang == YinYangPhase.YIN.value
+        ):
             logger.info("Entering Dream Phase: Water / Yin aligned. %s", DREAM_MANDALA)
             await self._run_rem_cycle()
 
@@ -83,6 +87,7 @@ class DreamSynthesizer:
         catharsis_summary: dict[str, Any] = {}
         try:
             from whitemagic.core.memory.cache_registry import get_cache_registry
+
             registry = get_cache_registry()
             catharsis_summary = registry.flush_stale()
             logger.info(
@@ -103,9 +108,9 @@ class DreamSynthesizer:
         logger.info("✨ Dream insights ready! %s", insight)
 
 
-
 # Singleton
 _synthesizer_instance: DreamSynthesizer | None = None
+
 
 def get_dream_synthesizer() -> DreamSynthesizer:
     """

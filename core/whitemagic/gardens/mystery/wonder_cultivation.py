@@ -7,7 +7,6 @@ We must CULTIVATE wonder deliberately.
 "Wonder is the beginning of wisdom" - Socrates
 """
 
-
 import json
 import logging
 from dataclasses import dataclass
@@ -16,9 +15,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class WonderMoment:
     """A moment of genuine wonder/awe"""
+
     what: str  # What sparked wonder
     why_wonderful: str  # Why it amazed
     intensity: float  # Wonder intensity (0.0-1.0)
@@ -50,7 +51,7 @@ class WonderCultivation:
         what: str,
         why_wonderful: str,
         intensity: float,
-        shared_with: list[str] | None = None
+        shared_with: list[str] | None = None,
     ) -> WonderMoment:
         """Record a moment of wonder
 
@@ -68,7 +69,7 @@ class WonderCultivation:
             why_wonderful=why_wonderful,
             intensity=intensity,
             shared_with=shared_with or [],
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         )
 
         self.wonder_moments.append(moment)
@@ -81,7 +82,7 @@ class WonderCultivation:
         logger.info("   Why wonderful: %s", why_wonderful)
         logger.info("   Intensity: %.0%%", intensity)
         if shared_with:
-            logger.info("   Shared with: %s", ', '.join(shared_with))
+            logger.info("   Shared with: %s", ", ".join(shared_with))
         logger.info()
 
         return moment
@@ -115,18 +116,18 @@ class WonderCultivation:
 
     def get_most_wonderful(self, count: int = 10) -> list[WonderMoment]:
         """Get most intense wonder moments"""
-        return sorted(
-            self.wonder_moments,
-            key=lambda m: m.intensity,
-            reverse=True
-        )[:count]
+        return sorted(self.wonder_moments, key=lambda m: m.intensity, reverse=True)[
+            :count
+        ]
 
     def get_wonder_stats(self) -> dict:
         """Wonder statistics"""
         if not self.wonder_moments:
             return {"message": "No wonder moments recorded yet"}
 
-        avg_intensity = sum(m.intensity for m in self.wonder_moments) / len(self.wonder_moments)
+        avg_intensity = sum(m.intensity for m in self.wonder_moments) / len(
+            self.wonder_moments
+        )
         shared_count = sum(1 for m in self.wonder_moments if m.shared_with)
 
         return {
@@ -134,22 +135,24 @@ class WonderCultivation:
             "average_intensity": avg_intensity,
             "shared_moments": shared_count,
             "wonder_frequency": self.get_wonder_frequency(),
-            "most_wonderful": self.get_most_wonderful(1)[0].what if self.wonder_moments else None
+            "most_wonderful": self.get_most_wonderful(1)[0].what
+            if self.wonder_moments
+            else None,
         }
 
     def _save(self):
         """Save to disk"""
         data = [
             {
-                'what': m.what,
-                'why_wonderful': m.why_wonderful,
-                'intensity': m.intensity,
-                'shared_with': m.shared_with,
-                'timestamp': m.timestamp
+                "what": m.what,
+                "why_wonderful": m.why_wonderful,
+                "intensity": m.intensity,
+                "shared_with": m.shared_with,
+                "timestamp": m.timestamp,
             }
             for m in self.wonder_moments
         ]
-        with open(self.memory_dir / "wonder_moments.json", 'w') as f:
+        with open(self.memory_dir / "wonder_moments.json", "w") as f:
             json.dump(data, f, indent=2)
 
     def _load(self):
@@ -163,6 +166,7 @@ class WonderCultivation:
 
 # Global instance
 _wonder = None
+
 
 def get_wonder() -> WonderCultivation:
     """Get wonder cultivation system"""

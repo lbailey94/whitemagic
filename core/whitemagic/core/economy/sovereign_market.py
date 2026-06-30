@@ -1,10 +1,11 @@
 import logging
 from typing import Any
 
-from whitemagic.core.polyglot.bittensor_bridge import get_bittensor_bridge
 from whitemagic.core.consciousness.token_economy import get_token_economy
+from whitemagic.core.polyglot.bittensor_bridge import get_bittensor_bridge
 
 logger = logging.getLogger(__name__)
+
 
 class SovereignMarket:
     """Sovereign Market Logic Layer.
@@ -17,9 +18,12 @@ class SovereignMarket:
         self.bridge = get_bittensor_bridge()
         self.economy = get_token_economy()
         from whitemagic.dharma.financial_governance import get_wallet_governor
+
         self.governor = get_wallet_governor()
 
-    async def evaluate_compute_need(self, task_urgency: float, estimated_tokens: int) -> dict[str, Any]:
+    async def evaluate_compute_need(
+        self, task_urgency: float, estimated_tokens: int
+    ) -> dict[str, Any]:
         """Decide whether to bid for extra-local compute based on urgency and budget.
 
         Args:
@@ -33,13 +37,15 @@ class SovereignMarket:
         # 1. Check Dharma Financial Governance
         # Estimate cost in XRP (placeholder mapping: 1M tokens = 0.1 XRP)
         estimated_xrp = (estimated_tokens / 1_000_000) * 0.1
-        allowed, reason = self.governor.check_spend("service_payment", estimated_xrp, "XRP")
+        allowed, reason = self.governor.check_spend(
+            "service_payment", estimated_xrp, "XRP"
+        )
 
         if not allowed:
             return {
                 "decision": "blocked",
                 "reason": f"financial_governance: {reason}",
-                "estimated_cost": estimated_xrp
+                "estimated_cost": estimated_xrp,
             }
 
         status = self.economy.get_budget_status()
@@ -72,7 +78,9 @@ class SovereignMarket:
         else:
             return {"decision": "process_locally", "reason": "low_pressure"}
 
+
 _market: SovereignMarket | None = None
+
 
 def get_market() -> SovereignMarket:
     """
@@ -86,9 +94,13 @@ def get_market() -> SovereignMarket:
         _market = SovereignMarket()
     return _market
 
+
 if __name__ == "__main__":
     import asyncio
+
     market = get_market()
     # High urgency on a saturated system
-    decision = asyncio.run(market.evaluate_compute_need(task_urgency=0.9, estimated_tokens=5000))
+    decision = asyncio.run(
+        market.evaluate_compute_need(task_urgency=0.9, estimated_tokens=5000)
+    )
     print(f"Market Decision: {decision['decision']} - {decision.get('reason')}")

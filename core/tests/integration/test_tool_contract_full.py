@@ -1,4 +1,5 @@
 """Integration tests: every tool category returns a valid envelope."""
+
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from _envelope import assert_envelope_shape
 class TestMemoryCategory:
     def test_create_memory(self, tool_caller):
         from uuid import uuid4
+
         result = tool_caller.ok(
             "create_memory",
             title=f"contract-{uuid4().hex[:8]}",

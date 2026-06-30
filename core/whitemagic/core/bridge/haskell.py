@@ -11,8 +11,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class HaskellBridge:
     """HaskellBridge: haskell bridge."""
+
     def __init__(self):
         self._available = False
 
@@ -28,11 +30,16 @@ class HaskellBridge:
     def calculate_balance(self, inputs: list[float]) -> dict[str, Any]:
         """Proxy symbolic balance logic to Haskell."""
         if not self._available:
-            return {"status": "fallback", "balance": sum(inputs) / len(inputs) if inputs else 0.5}
+            return {
+                "status": "fallback",
+                "balance": sum(inputs) / len(inputs) if inputs else 0.5,
+            }
 
         return {"status": "haskell_balanced", "balance": 0.8}
 
+
 _global_bridge = None
+
 
 def get_haskell_bridge() -> HaskellBridge:
     """

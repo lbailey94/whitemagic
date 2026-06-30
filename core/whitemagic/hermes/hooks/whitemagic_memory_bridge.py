@@ -5,6 +5,7 @@ Reads a JSON event from stdin and attempts to persist it.
 Expected event shape:
     {"tool_name": "...", "tool_input": {...}, "output": "..."}
 """
+
 from __future__ import annotations
 
 import json

@@ -20,9 +20,10 @@ from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
 @dataclass
 class SalienceScore:
     """Salience dimensions for an event."""
-    urgency: float = 0.0      # 0-1, how time-sensitive
-    novelty: float = 0.0      # 0-1, how unexpected
-    confidence: float = 1.0   # 0-1, certainty of the signal
+
+    urgency: float = 0.0  # 0-1, how time-sensitive
+    novelty: float = 0.0  # 0-1, how unexpected
+    confidence: float = 1.0  # 0-1, certainty of the signal
 
     @property
     def composite(self) -> float:
@@ -38,6 +39,7 @@ class SalienceScore:
 @dataclass
 class SpotlightEntry:
     """A single entry in the attention spotlight."""
+
     event: ResonanceEvent
     salience: SalienceScore
     scored_at: float = field(default_factory=time.time)

@@ -15,7 +15,9 @@ class LovingKindness:
     def __init__(self) -> None:
         self._practices: list[dict[str, Any]] = []
 
-    def practice(self, target: str, wish: str = "may you be happy and free") -> dict[str, Any]:
+    def practice(
+        self, target: str, wish: str = "may you be happy and free"
+    ) -> dict[str, Any]:
         """Practice loving-kindness toward a target."""
         entry = {"target": target, "wish": wish}
         self._practices.append(entry)

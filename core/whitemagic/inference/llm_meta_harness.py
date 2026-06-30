@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class EnhancementMode(Enum):
     """Enhancement strategies for LLM meta-harness."""
+
     DIRECT = "direct"  # No enhancement, baseline
     MEMORY_GROUNDED = "memory_grounded"  # RAG with memories
     CHAIN_OF_THOUGHT = "chain_of_thought"  # Explicit reasoning steps
@@ -38,6 +39,7 @@ class EnhancementMode(Enum):
 @dataclass
 class EnhancedResponse:
     """Response from enhanced LLM."""
+
     query: str
     answer: str
     confidence: float
@@ -133,17 +135,27 @@ class LLMMetaHarness:
         if mode == EnhancementMode.DIRECT:
             response = await self._enhance_direct(query, max_tokens, temperature)
         elif mode == EnhancementMode.MEMORY_GROUNDED:
-            response = await self._enhance_memory_grounded(query, max_tokens, temperature)
+            response = await self._enhance_memory_grounded(
+                query, max_tokens, temperature
+            )
         elif mode == EnhancementMode.CHAIN_OF_THOUGHT:
-            response = await self._enhance_chain_of_thought(query, max_tokens, temperature)
+            response = await self._enhance_chain_of_thought(
+                query, max_tokens, temperature
+            )
         elif mode == EnhancementMode.SELF_CORRECTING:
-            response = await self._enhance_self_correcting(query, max_tokens, temperature)
+            response = await self._enhance_self_correcting(
+                query, max_tokens, temperature
+            )
         elif mode == EnhancementMode.ENSEMBLE:
             response = await self._enhance_ensemble(query, max_tokens, temperature)
         elif mode == EnhancementMode.PATTERN_INJECTED:
-            response = await self._enhance_pattern_injected(query, max_tokens, temperature)
+            response = await self._enhance_pattern_injected(
+                query, max_tokens, temperature
+            )
         elif mode == EnhancementMode.DHARMA_ALIGNED:
-            response = await self._enhance_dharma_aligned(query, max_tokens, temperature)
+            response = await self._enhance_dharma_aligned(
+                query, max_tokens, temperature
+            )
         elif mode == EnhancementMode.FULL_STACK:
             response = await self._enhance_full_stack(query, max_tokens, temperature)
         else:
@@ -165,11 +177,22 @@ class LLMMetaHarness:
 
         return response
 
-    async def _enhance_direct(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_direct(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Baseline: no enhancement."""
         if self._llm is None:
-            return EnhancedResponse(query=query, answer="LLM not available", confidence=0.0, mode=EnhancementMode.DIRECT, latency_ms=0.0, tokens_used=0)
-        answer = self._llm.complete(query, max_tokens=max_tokens, temperature=temperature)
+            return EnhancedResponse(
+                query=query,
+                answer="LLM not available",
+                confidence=0.0,
+                mode=EnhancementMode.DIRECT,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
+        answer = self._llm.complete(
+            query, max_tokens=max_tokens, temperature=temperature
+        )
         return EnhancedResponse(
             query=query,
             answer=answer,
@@ -179,10 +202,19 @@ class LLMMetaHarness:
             tokens_used=len(answer.split()),
         )
 
-    async def _enhance_memory_grounded(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_memory_grounded(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """RAG: Ground response in relevant memories."""
         if self._llm is None or self._memory is None:
-            return EnhancedResponse(query=query, answer="System not available", confidence=0.0, mode=EnhancementMode.MEMORY_GROUNDED, latency_ms=0.0, tokens_used=0)
+            return EnhancedResponse(
+                query=query,
+                answer="System not available",
+                confidence=0.0,
+                mode=EnhancementMode.MEMORY_GROUNDED,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
         # Search for relevant memories
         memories = self._memory.search(query, limit=5, use_vector=True)
 
@@ -191,7 +223,9 @@ class LLMMetaHarness:
         for mem in memories[:3]:  # Top 3 most relevant
             context_parts.append(f"- {mem.title}: {mem.content[:200]}")
 
-        context = "\n".join(context_parts) if context_parts else "No relevant context found."
+        context = (
+            "\n".join(context_parts) if context_parts else "No relevant context found."
+        )
 
         # Enhanced prompt with memory grounding
         enhanced_query = f"""Context from memory:
@@ -201,7 +235,9 @@ Question: {query}
 
 Answer based on the context above:"""
 
-        answer = self._llm.complete(enhanced_query, max_tokens=max_tokens, temperature=temperature)
+        answer = self._llm.complete(
+            enhanced_query, max_tokens=max_tokens, temperature=temperature
+        )
 
         return EnhancedResponse(
             query=query,
@@ -216,19 +252,32 @@ Answer based on the context above:"""
             },
         )
 
-    async def _enhance_chain_of_thought(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_chain_of_thought(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Chain-of-thought: Explicit reasoning steps."""
         if self._llm is None:
-            return EnhancedResponse(query=query, answer="LLM not available", confidence=0.0, mode=EnhancementMode.CHAIN_OF_THOUGHT, latency_ms=0.0, tokens_used=0)
+            return EnhancedResponse(
+                query=query,
+                answer="LLM not available",
+                confidence=0.0,
+                mode=EnhancementMode.CHAIN_OF_THOUGHT,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
         cot_prompt = f"""Question: {query}
 
 Let's think step by step:
 1."""
 
-        reasoning = self._llm.complete(cot_prompt, max_tokens=max_tokens, temperature=temperature)
+        reasoning = self._llm.complete(
+            cot_prompt, max_tokens=max_tokens, temperature=temperature
+        )
 
         # Extract final answer from reasoning
-        answer = reasoning.split("\n")[-1] if reasoning else "Unable to reason through this."
+        answer = (
+            reasoning.split("\n")[-1] if reasoning else "Unable to reason through this."
+        )
 
         return EnhancedResponse(
             query=query,
@@ -242,29 +291,41 @@ Let's think step by step:
             },
         )
 
-    async def _enhance_self_correcting(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_self_correcting(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Self-correction: Generate -> Critique -> Refine."""
         if self._llm is None:
-            return EnhancedResponse(query=query, answer="LLM not available", confidence=0.0, mode=EnhancementMode.SELF_CORRECTING, latency_ms=0.0, tokens_used=0)
-        # Step 1: Generate initial answer
-        initial = self._llm.complete(query, max_tokens=max_tokens // 2, temperature=temperature)
+            return EnhancedResponse(
+                query=query,
+                answer="LLM not available",
+                confidence=0.0,
+                mode=EnhancementMode.SELF_CORRECTING,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
+        initial = self._llm.complete(
+            query, max_tokens=max_tokens // 2, temperature=temperature
+        )
 
-        # Step 2: Critique the answer
         critique_prompt = f"""Question: {query}
 Initial answer: {initial}
 
 Critique this answer. What's wrong or could be improved?"""
 
-        critique = self._llm.complete(critique_prompt, max_tokens=max_tokens // 4, temperature=0.3)
+        critique = self._llm.complete(
+            critique_prompt, max_tokens=max_tokens // 4, temperature=0.3
+        )
 
-        # Step 3: Refine based on critique
         refine_prompt = f"""Question: {query}
 Initial answer: {initial}
 Critique: {critique}
 
 Provide an improved answer:"""
 
-        refined = self._llm.complete(refine_prompt, max_tokens=max_tokens // 2, temperature=temperature)
+        refined = self._llm.complete(
+            refine_prompt, max_tokens=max_tokens // 2, temperature=temperature
+        )
 
         return EnhancedResponse(
             query=query,
@@ -272,7 +333,9 @@ Provide an improved answer:"""
             confidence=0.85,
             mode=EnhancementMode.SELF_CORRECTING,
             latency_ms=0.0,
-            tokens_used=len(initial.split()) + len(critique.split()) + len(refined.split()),
+            tokens_used=len(initial.split())
+            + len(critique.split())
+            + len(refined.split()),
             enhancement_details={
                 "initial_answer": initial,
                 "critique": critique,
@@ -280,10 +343,19 @@ Provide an improved answer:"""
             baseline_answer=initial,
         )
 
-    async def _enhance_ensemble(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_ensemble(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Ensemble: Generate multiple answers, vote on best."""
         if self._llm is None:
-            return EnhancedResponse(query=query, answer="LLM not available", confidence=0.0, mode=EnhancementMode.ENSEMBLE, latency_ms=0.0, tokens_used=0)
+            return EnhancedResponse(
+                query=query,
+                answer="LLM not available",
+                confidence=0.0,
+                mode=EnhancementMode.ENSEMBLE,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
         # Generate 3 different answers with varying temperature
         answers = []
         for temp in [0.3, 0.7, 1.0]:
@@ -306,10 +378,19 @@ Provide an improved answer:"""
             },
         )
 
-    async def _enhance_pattern_injected(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_pattern_injected(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Pattern injection: Inject learned patterns from memory."""
         if self._llm is None or self._memory is None:
-            return EnhancedResponse(query=query, answer="System not available", confidence=0.0, mode=EnhancementMode.PATTERN_INJECTED, latency_ms=0.0, tokens_used=0)
+            return EnhancedResponse(
+                query=query,
+                answer="System not available",
+                confidence=0.0,
+                mode=EnhancementMode.PATTERN_INJECTED,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
         # Search for similar past queries
         similar_memories = self._memory.search(query, limit=3, use_vector=True)
 
@@ -320,7 +401,9 @@ Provide an improved answer:"""
                 patterns.append(mem.content[:150])
 
         if patterns:
-            pattern_context = "\n".join(f"Pattern {i+1}: {p}" for i, p in enumerate(patterns))
+            pattern_context = "\n".join(
+                f"Pattern {i + 1}: {p}" for i, p in enumerate(patterns)
+            )
             enhanced_query = f"""Known patterns:
 {pattern_context}
 
@@ -330,7 +413,9 @@ Answer:"""
         else:
             enhanced_query = query
 
-        answer = self._llm.complete(enhanced_query, max_tokens=max_tokens, temperature=temperature)
+        answer = self._llm.complete(
+            enhanced_query, max_tokens=max_tokens, temperature=temperature
+        )
 
         return EnhancedResponse(
             query=query,
@@ -344,10 +429,19 @@ Answer:"""
             },
         )
 
-    async def _enhance_dharma_aligned(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_dharma_aligned(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Dharma alignment: Add ethical reasoning layer."""
         if self._llm is None:
-            return EnhancedResponse(query=query, answer="LLM not available", confidence=0.0, mode=EnhancementMode.DHARMA_ALIGNED, latency_ms=0.0, tokens_used=0)
+            return EnhancedResponse(
+                query=query,
+                answer="LLM not available",
+                confidence=0.0,
+                mode=EnhancementMode.DHARMA_ALIGNED,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
         dharma_prompt = f"""Question: {query}
 
 Before answering, consider:
@@ -357,7 +451,9 @@ Before answering, consider:
 
 Answer with ethical awareness:"""
 
-        answer = self._llm.complete(dharma_prompt, max_tokens=max_tokens, temperature=temperature)
+        answer = self._llm.complete(
+            dharma_prompt, max_tokens=max_tokens, temperature=temperature
+        )
 
         return EnhancedResponse(
             query=query,
@@ -371,10 +467,19 @@ Answer with ethical awareness:"""
             },
         )
 
-    async def _enhance_full_stack(self, query: str, max_tokens: int, temperature: float) -> EnhancedResponse:
+    async def _enhance_full_stack(
+        self, query: str, max_tokens: int, temperature: float
+    ) -> EnhancedResponse:
         """Full stack: Combine all enhancements."""
         if self._llm is None or self._memory is None:
-            return EnhancedResponse(query=query, answer="System not available", confidence=0.0, mode=EnhancementMode.FULL_STACK, latency_ms=0.0, tokens_used=0)
+            return EnhancedResponse(
+                query=query,
+                answer="System not available",
+                confidence=0.0,
+                mode=EnhancementMode.FULL_STACK,
+                latency_ms=0.0,
+                tokens_used=0,
+            )
         # 1. Memory grounding
         memories = self._memory.search(query, limit=3, use_vector=True)
         context = "\n".join(f"- {m.title}" for m in memories[:2]) if memories else ""
@@ -387,7 +492,7 @@ Answer with ethical awareness:"""
 
         # 3. Chain-of-thought + Dharma alignment
         full_prompt = f"""Context: {context}
-Patterns: {', '.join(patterns[:2]) if patterns else 'None'}
+Patterns: {", ".join(patterns[:2]) if patterns else "None"}
 
 Question: {query}
 
@@ -395,13 +500,17 @@ Think step by step with ethical awareness:
 1."""
 
         # 4. Self-correction
-        initial = self._llm.complete(full_prompt, max_tokens=max_tokens // 2, temperature=temperature)
+        initial = self._llm.complete(
+            full_prompt, max_tokens=max_tokens // 2, temperature=temperature
+        )
 
         refine_prompt = f"""Initial reasoning: {initial}
 
 Refine and provide final answer:"""
 
-        final = self._llm.complete(refine_prompt, max_tokens=max_tokens // 2, temperature=0.5)
+        final = self._llm.complete(
+            refine_prompt, max_tokens=max_tokens // 2, temperature=0.5
+        )
 
         return EnhancedResponse(
             query=query,

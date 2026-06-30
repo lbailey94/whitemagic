@@ -1,4 +1,5 @@
 """Tests for Objective H — HRR-Based Improvement Composition."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.hrr_composition import (
@@ -75,7 +76,9 @@ class TestHRRComposition:
 
     def test_probe_no_outcomes(self):
         engine = HRRCompositionEngine(dim=64)
-        composite = CompositeHypothesis(id="test", component_ids=["h1"], operation="bind")
+        composite = CompositeHypothesis(
+            id="test", component_ids=["h1"], operation="bind"
+        )
         result = engine.probe_composite(composite, [])
         assert "error" in result
 

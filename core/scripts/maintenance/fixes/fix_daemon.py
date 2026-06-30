@@ -1,4 +1,3 @@
-
 with open("whitemagic-rust/src/continuous_daemon.rs") as f:
     content = f.read()
 
@@ -60,7 +59,7 @@ pub struct DaemonStats {
 pub fn register_daemon(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ContinuousDaemon>()?;
     Ok(())
-}"""
+}""",
 )
 
 # Remove unused sync::mpsc

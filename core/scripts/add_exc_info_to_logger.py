@@ -24,6 +24,7 @@ Only modifies calls that are *inside* an except block (heuristic:
   ending in 'except ... as e:'). This avoids changing
   legitimate non-except logger.error calls.
 """
+
 import re
 from pathlib import Path
 
@@ -61,16 +62,18 @@ def fix_file(path: Path) -> int:
                         # will be added in the same order they appear)
                         var_re = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_.]*)\}")
                         vars_in_order = []
+
                         def _capture(m: re.Match[str]) -> str:
                             vars_in_order.append(m.group(1))
                             return "%s"
+
                         new_msg = var_re.sub(_capture, msg)
                         if vars_in_order:
                             # Build the new call
                             args = ", ".join(vars_in_order)
                             new_call = (
-                                f'{indent}logger.error({quote}{new_msg}{quote}, '
-                                f'{args}, exc_info=True)\n'
+                                f"{indent}logger.error({quote}{new_msg}{quote}, "
+                                f"{args}, exc_info=True)\n"
                             )
                             new_lines.append(new_call)
                             fixed += 1

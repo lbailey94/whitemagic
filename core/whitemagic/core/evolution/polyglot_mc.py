@@ -17,6 +17,7 @@ Backends:
 The Python MCForecastEnhancer becomes an orchestrator that dispatches
 to the appropriate polyglot backend.
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,34 +33,37 @@ logger = logging.getLogger(__name__)
 
 class MCBackend(Enum):
     """Available MC acceleration backends."""
-    PYTHON = "python"      # Always available
-    RUST = "rust"           # Importance sampling, control variates
-    MOJO = "mojo"           # GPU parallel (100K+ trials)
-    JULIA = "julia"         # Covariance estimation
-    ZIG = "zig"             # Ultra-low-latency single trial
-    ELIXIR = "elixir"       # Streaming outcomes
-    GO = "go"               # Distributed
-    HASKELL = "haskell"     # Formal verification
+
+    PYTHON = "python"  # Always available
+    RUST = "rust"  # Importance sampling, control variates
+    MOJO = "mojo"  # GPU parallel (100K+ trials)
+    JULIA = "julia"  # Covariance estimation
+    ZIG = "zig"  # Ultra-low-latency single trial
+    ELIXIR = "elixir"  # Streaming outcomes
+    GO = "go"  # Distributed
+    HASKELL = "haskell"  # Formal verification
 
 
 @dataclass
 class MCTask:
     """A Monte Carlo task to be dispatched."""
+
     task_id: str
     n_trials: int
     prior_mean: float = 0.5
     prior_variance: float = 0.1
     correlation_structure: bool = False  # True if trials are correlated
-    latency_sensitive: bool = False      # True if <1ms response needed
-    streaming: bool = False              # True if outcomes stream in
-    distribute: bool = False             # True if needs multi-machine
-    verify: bool = False                 # True if formal verification needed
+    latency_sensitive: bool = False  # True if <1ms response needed
+    streaming: bool = False  # True if outcomes stream in
+    distribute: bool = False  # True if needs multi-machine
+    verify: bool = False  # True if formal verification needed
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class MCResult:
     """Result of an MC computation."""
+
     task_id: str
     backend: MCBackend
     mean: float
@@ -97,6 +101,7 @@ class PolyglotMCOrchestrator:
         # Rust
         try:
             from whitemagic.optimization.rust_accelerators import rust_available
+
             if rust_available():
                 self._available_backends.add(MCBackend.RUST)
                 self._backend_performance[MCBackend.RUST] = 100_000.0
@@ -106,6 +111,7 @@ class PolyglotMCOrchestrator:
         # Mojo (check for compiler)
         try:
             import mojo  # noqa: F401
+
             self._available_backends.add(MCBackend.MOJO)
             self._backend_performance[MCBackend.MOJO] = 1_000_000.0
         except ImportError:
@@ -114,6 +120,7 @@ class PolyglotMCOrchestrator:
         # Julia
         try:
             from whitemagic.core.resonance.julia_resonance import julia_available
+
             if julia_available():
                 self._available_backends.add(MCBackend.JULIA)
                 self._backend_performance[MCBackend.JULIA] = 50_000.0
@@ -149,7 +156,11 @@ class PolyglotMCOrchestrator:
         # Priority-ordered selection
 
         # 1. Latency-sensitive single trial → Zig
-        if task.latency_sensitive and task.n_trials <= 1 and MCBackend.ZIG in self._available_backends:
+        if (
+            task.latency_sensitive
+            and task.n_trials <= 1
+            and MCBackend.ZIG in self._available_backends
+        ):
             return MCBackend.ZIG
 
         # 2. Streaming → Elixir
@@ -193,7 +204,9 @@ class PolyglotMCOrchestrator:
 
         # Try Rust bridge for the actual computation
         rust_result = None
-        if backend == MCBackend.RUST or (MCBackend.RUST in self._available_backends and task.n_trials > 100):
+        if backend == MCBackend.RUST or (
+            MCBackend.RUST in self._available_backends and task.n_trials > 100
+        ):
             method = "mc_run_trials"
             if task.metadata.get("variance_reduction") == "importance_sampling":
                 method = "mc_importance_sampling"
@@ -202,7 +215,8 @@ class PolyglotMCOrchestrator:
             elif task.metadata.get("variance_reduction") == "antithetic":
                 method = "mc_antithetic_variates"
 
-            rust_result = _rust_call(method,
+            rust_result = _rust_call(
+                method,
                 n_trials=task.n_trials,
                 prior_mean=task.prior_mean,
                 prior_variance=task.prior_variance,
@@ -232,7 +246,7 @@ class PolyglotMCOrchestrator:
 
         trials = []
         for _ in range(task.n_trials):
-            sample = random.gauss(task.prior_mean, task.prior_variance ** 0.5)
+            sample = random.gauss(task.prior_mean, task.prior_variance**0.5)
             trials.append(max(0.0, min(1.0, sample)))
 
         mean = sum(trials) / len(trials) if trials else 0.0

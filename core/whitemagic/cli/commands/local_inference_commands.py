@@ -5,27 +5,37 @@ try:
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
+
     HAS_RICH = True
     console = Console()
 except ImportError:
     HAS_RICH = False
     console = None  # type: ignore[assignment]
 
-__all__ = ['infer_local_query', 'infer_local_status']
+__all__ = ["infer_local_query", "infer_local_status"]
+
 
 @click.command(name="local-query")
 @click.argument("prompt")
-@click.option("--backend", type=click.Choice(["bitnet", "ollama", "auto"]), default="auto")
+@click.option(
+    "--backend", type=click.Choice(["bitnet", "ollama", "auto"]), default="auto"
+)
 def infer_local_query(prompt: str, backend: str) -> None:
     """Run local ML inference query (BitNet/Ollama)"""
     from whitemagic.mcp_api_bridge import local_ml_infer
 
     try:
         if HAS_RICH and console:
-            with console.status(f"[cyan]Running inference with {backend}...", spinner="dots"):
-                result = local_ml_infer(prompt=prompt, backend=backend if backend != "auto" else None)
+            with console.status(
+                f"[cyan]Running inference with {backend}...", spinner="dots"
+            ):
+                result = local_ml_infer(
+                    prompt=prompt, backend=backend if backend != "auto" else None
+                )
         else:
-            result = local_ml_infer(prompt=prompt, backend=backend if backend != "auto" else None)
+            result = local_ml_infer(
+                prompt=prompt, backend=backend if backend != "auto" else None
+            )
 
         if "error" in result:
             click.echo(f"❌ Error: {result['error']}")
@@ -45,6 +55,8 @@ def infer_local_query(prompt: str, backend: str) -> None:
             click.echo(result.get("response", "N/A"))
     except Exception as e:
         click.echo(f"❌ Error: {e}")
+
+
 @click.command(name="local-status")
 def infer_local_status() -> None:
     """Show local ML engine status"""

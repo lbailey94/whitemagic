@@ -16,9 +16,11 @@ def supervisor_cli() -> None:
     """🤖 Auto-Prompting Supervisor"""
     pass
 
+
 def _get_supervisor():
     sop_dir = paths.get_state_root() / "config" / "sops"
     return Supervisor(sop_dir)
+
 
 @supervisor_cli.command(name="status")
 def status_cmd() -> None:
@@ -30,9 +32,10 @@ def status_cmd() -> None:
     click.echo(f"SOPs Loaded: {st['sops_loaded']}")
     click.echo(f"SOPs Enabled: {st['sops_enabled']}")
     click.echo("\n📋 SOP List:")
-    for sop in st['sop_list']:
-        icon = "✅" if sop['enabled'] else "❌"
+    for sop in st["sop_list"]:
+        icon = "✅" if sop["enabled"] else "❌"
         click.echo(f"  {icon} {sop['name']}")
+
 
 @supervisor_cli.command(name="enable")
 @click.argument("sop_name")
@@ -42,6 +45,7 @@ def enable_cmd(sop_name: str) -> None:
     sup.toggle_sop(sop_name, True)
     # Note: In a real system we'd need to persist this change to disk
     click.echo(f"Enabled SOP: {sop_name} (runtime only)")
+
 
 @supervisor_cli.command(name="disable")
 @click.argument("sop_name")

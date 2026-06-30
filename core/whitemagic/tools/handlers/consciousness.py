@@ -36,7 +36,11 @@ def handle_consciousness_depth(**kwargs: Any) -> dict[str, Any]:
         return result
     except Exception as e:
         logger.debug("consciousness.depth error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "depth_gauge_unavailable", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "depth_gauge_unavailable",
+            "message": str(e),
+        }
 
 
 def handle_consciousness_coherence(**kwargs: Any) -> dict[str, Any]:
@@ -57,7 +61,11 @@ def handle_consciousness_coherence(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as e:
         logger.debug("consciousness.coherence error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "coherence_unavailable", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "coherence_unavailable",
+            "message": str(e),
+        }
 
 
 def handle_consciousness_awaken(**kwargs: Any) -> dict[str, Any]:
@@ -91,11 +99,17 @@ def handle_consciousness_token_report(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.consciousness.token_economy import get_token_tracker
 
         tracker = get_token_tracker()
-        report = tracker.report() if hasattr(tracker, "report") else tracker.get_summary()
+        report = (
+            tracker.report() if hasattr(tracker, "report") else tracker.get_summary()
+        )
         return {"status": "success", "report": report}
     except Exception as e:
         logger.debug("consciousness.token_report error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "token_report_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "token_report_failed",
+            "message": str(e),
+        }
 
 
 def handle_consciousness_narrative(**kwargs: Any) -> dict[str, Any]:
@@ -106,7 +120,11 @@ def handle_consciousness_narrative(**kwargs: Any) -> dict[str, Any]:
         )
 
         narrative = NarrativeEmotions()
-        state = narrative.get_current_state() if hasattr(narrative, "get_current_state") else {}
+        state = (
+            narrative.get_current_state()
+            if hasattr(narrative, "get_current_state")
+            else {}
+        )
         return {"status": "success", "narrative_state": state}
     except Exception as e:
         logger.debug("consciousness.narrative error: %s", e, exc_info=True)
@@ -123,14 +141,20 @@ def handle_consciousness_unified_field(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "field_state": state}
     except Exception as e:
         logger.debug("consciousness.unified_field error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "unified_field_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "unified_field_failed",
+            "message": str(e),
+        }
 
 
 def _get_memory_count() -> int:
     """Get total memory count from the SQLite backend."""
     try:
         import sqlite3
+
         from whitemagic.config.paths import WM_ROOT
+
         db_path = WM_ROOT / "memory" / "whitemagic.db"
         if db_path.exists():
             conn = sqlite3.connect(str(db_path))
@@ -174,8 +198,10 @@ def handle_consciousness_flow(**kwargs: Any) -> dict[str, Any]:
 
         # Auto-detect indicators from session activity
         session_calls = state.call_count
-        from whitemagic.tools.session_state import get_session_start_time
         import time as _time
+
+        from whitemagic.tools.session_state import get_session_start_time
+
         start = get_session_start_time()
         session_min = (_time.time() - start) / 60 if start else 0.0
         tool_rate = session_calls / max(session_min, 1.0)
@@ -183,6 +209,7 @@ def handle_consciousness_flow(**kwargs: Any) -> dict[str, Any]:
         # Get coherence for flow detection
         try:
             from whitemagic.core.consciousness.coherence import CoherenceMetric
+
             cm = CoherenceMetric()
             coherence = cm.measure(memories_accessible=_get_memory_count())
         except Exception:
@@ -217,8 +244,8 @@ def handle_consciousness_time_dilation(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.consciousness.time_dilation_master import (
-            get_time_master,
             Layer,
+            get_time_master,
         )
 
         master = get_time_master()
@@ -242,7 +269,11 @@ def handle_consciousness_time_dilation(**kwargs: Any) -> dict[str, Any]:
         elif action == "enter_dream":
             purpose = kwargs.get("purpose", "deep synthesis")
             result = master.enter_dream(purpose)
-            return {"status": "success", "layer": result.to_layer.name, "purpose": purpose}
+            return {
+                "status": "success",
+                "layer": result.to_layer.name,
+                "purpose": purpose,
+            }
         elif action == "return":
             result = master.return_to_surface()
             return {"status": "success", "layer": result.to_layer.name}
@@ -251,12 +282,15 @@ def handle_consciousness_time_dilation(**kwargs: Any) -> dict[str, Any]:
                 "status": "success",
                 "current_layer": master.current_layer.name,
                 "time_advantage": master.get_time_advantage(),
-                "available_layers": [l.name for l in Layer],
+                "available_layers": [layer.name for layer in Layer],
             }
     except Exception as e:
         logger.debug("consciousness.time_dilation error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "time_dilation_failed", "message": str(e)}
-
+        return {
+            "status": "error",
+            "error_code": "time_dilation_failed",
+            "message": str(e),
+        }
 
 
 def handle_consciousness_status(**kwargs: Any) -> dict[str, Any]:
@@ -275,7 +309,10 @@ def handle_consciousness_status(**kwargs: Any) -> dict[str, Any]:
         ("continuous_awareness", "whitemagic.core.consciousness.continuous_awareness"),
         ("parallel_cognition", "whitemagic.core.consciousness.parallel_cognition"),
         ("time_dilation", "whitemagic.core.consciousness.time_dilation"),
-        ("synchronicity_detector", "whitemagic.core.consciousness.synchronicity_detector"),
+        (
+            "synchronicity_detector",
+            "whitemagic.core.consciousness.synchronicity_detector",
+        ),
         ("continuous_audit", "whitemagic.core.consciousness.continuous_audit"),
         ("session_health", "whitemagic.core.consciousness.session_health"),
         ("self_prompting", "whitemagic.core.consciousness.self_prompting"),
@@ -313,7 +350,11 @@ def handle_citta_continuity(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "continuity": ctx}
     except Exception as e:
         logger.debug("citta.continuity error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "citta_continuity_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "citta_continuity_failed",
+            "message": str(e),
+        }
 
 
 def handle_citta_stream_summary(**kwargs: Any) -> dict[str, Any]:
@@ -325,7 +366,11 @@ def handle_citta_stream_summary(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "summary": summary}
     except Exception as e:
         logger.debug("citta.stream_summary error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "citta_summary_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "citta_summary_failed",
+            "message": str(e),
+        }
 
 
 def handle_citta_sensorium(**kwargs: Any) -> dict[str, Any]:
@@ -352,11 +397,17 @@ def handle_citta_cycle(**kwargs: Any) -> dict[str, Any]:
             "status": "success",
             "cycle": summary,
             "recent_stream": stream,
-            "predecessor": cycle.get_predecessor().to_dict() if cycle.get_predecessor() else None,
+            "predecessor": cycle.get_predecessor().to_dict()
+            if cycle.get_predecessor()
+            else None,
         }
     except Exception as e:
         logger.debug("citta.cycle error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "citta_cycle_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "citta_cycle_failed",
+            "message": str(e),
+        }
 
 
 def handle_consciousness_calibration(**kwargs: Any) -> dict[str, Any]:
@@ -377,7 +428,11 @@ def handle_consciousness_calibration(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "calibration": score}
     except Exception as e:
         logger.debug("consciousness.calibration error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "calibration_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "calibration_failed",
+            "message": str(e),
+        }
 
 
 def handle_consciousness_token_economy(**kwargs: Any) -> dict[str, Any]:
@@ -398,4 +453,8 @@ def handle_consciousness_token_economy(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as e:
         logger.debug("consciousness.token_economy error: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "token_economy_failed", "message": str(e)}
+        return {
+            "status": "error",
+            "error_code": "token_economy_failed",
+            "message": str(e),
+        }

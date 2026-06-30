@@ -11,6 +11,7 @@ Outputs:
     - Terminal summary with speedups and percentiles
     - JSON report to core/reports/benchmark_suite_v22.2.0.json
 """
+
 from __future__ import annotations
 
 import json
@@ -88,6 +89,7 @@ def benchmark_cosine(dim: int = 768, iterations: int = 500) -> dict[str, Any]:
     zig_available = False
     try:
         from whitemagic.core.acceleration.simd_cosine import cosine_similarity
+
         cosine_similarity(a, b)  # warmup
         for _ in range(iterations):
             t0 = time.perf_counter()
@@ -102,6 +104,7 @@ def benchmark_cosine(dim: int = 768, iterations: int = 500) -> dict[str, Any]:
     rust_available = False
     try:
         from whitemagic.rust.optimization import simd_cosine_batch
+
         simd_cosine_batch([a], b)  # warmup
         for _ in range(iterations):
             t0 = time.perf_counter()
@@ -128,7 +131,9 @@ def benchmark_cosine(dim: int = 768, iterations: int = 500) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # 2. Batch Cosine Benchmark
 # ---------------------------------------------------------------------------
-def benchmark_batch_cosine(dim: int = 768, corpus_size: int = 1000, iterations: int = 50) -> dict[str, Any]:
+def benchmark_batch_cosine(
+    dim: int = 768, corpus_size: int = 1000, iterations: int = 50
+) -> dict[str, Any]:
     """Benchmark batch cosine (query vs corpus)."""
     query = _generate_vector(dim)
     corpus = [_generate_vector(dim) for _ in range(corpus_size)]
@@ -142,6 +147,7 @@ def benchmark_batch_cosine(dim: int = 768, corpus_size: int = 1000, iterations: 
             if na == 0 or nb == 0:
                 return 0.0
             return dot / (na * nb)
+
         return [_cos(query, v) for v in corpus]
 
     py_times: list[float] = []
@@ -155,6 +161,7 @@ def benchmark_batch_cosine(dim: int = 768, corpus_size: int = 1000, iterations: 
     zig_available = False
     try:
         from whitemagic.core.acceleration.simd_cosine import batch_cosine
+
         batch_cosine(query, corpus)  # warmup
         for _ in range(iterations):
             t0 = time.perf_counter()
@@ -225,6 +232,7 @@ def benchmark_5d_properties(iterations: int = 10_000) -> dict[str, Any]:
             return 0.0
         cos = max(-1.0, min(1.0, dot / (nu * nv)))
         return math.acos(cos)
+
     prop3_pass = 0
     prop3_fail = 0
     for _ in range(iterations):
@@ -245,9 +253,21 @@ def benchmark_5d_properties(iterations: int = 10_000) -> dict[str, Any]:
 
     return {
         "iterations": iterations,
-        "cosine_idempotent": {"pass": prop1_pass, "fail": prop1_fail, "rate": prop1_pass / iterations},
-        "cosine_symmetric": {"pass": prop2_pass, "fail": prop2_fail, "rate": prop2_pass / iterations},
-        "triangle_inequality": {"pass": prop3_pass, "fail": prop3_fail, "rate": prop3_pass / iterations},
+        "cosine_idempotent": {
+            "pass": prop1_pass,
+            "fail": prop1_fail,
+            "rate": prop1_pass / iterations,
+        },
+        "cosine_symmetric": {
+            "pass": prop2_pass,
+            "fail": prop2_fail,
+            "rate": prop2_pass / iterations,
+        },
+        "triangle_inequality": {
+            "pass": prop3_pass,
+            "fail": prop3_fail,
+            "rate": prop3_pass / iterations,
+        },
         "errors": errors,
         "all_pass": prop1_fail == 0 and prop2_fail == 0 and prop3_fail == 0,
     }
@@ -289,7 +309,9 @@ def benchmark_dispatch(iterations: int = 1000) -> dict[str, Any]:
                 else:
                     err_count += 1
                     if last_error is None and isinstance(resp, dict):
-                        last_error = str(resp.get("error_code") or resp.get("error") or "")
+                        last_error = str(
+                            resp.get("error_code") or resp.get("error") or ""
+                        )
             except Exception as e:  # noqa: BLE001 - capture for transparency
                 times.append(time.perf_counter() - t0)
                 err_count += 1
@@ -302,8 +324,16 @@ def benchmark_dispatch(iterations: int = 1000) -> dict[str, Any]:
 
     return {
         "iterations": iterations,
-        "gnosis_status": {**_summary("gnosis", gnosis_times), "ok": gnosis_ok, "err": gnosis_err},
-        "health_report": {**_summary("health", health_times), "ok": health_ok, "err": health_err},
+        "gnosis_status": {
+            **_summary("gnosis", gnosis_times),
+            "ok": gnosis_ok,
+            "err": gnosis_err,
+        },
+        "health_report": {
+            **_summary("health", health_times),
+            "ok": health_ok,
+            "err": health_err,
+        },
     }
 
 
@@ -325,7 +355,11 @@ def benchmark_prat_compression() -> dict[str, Any]:
         counts = get_surface_counts()
         total_tools = counts.get("callable_tools", 0)
         gana_count = len(GANA_TO_TOOLS)
-        avg_tools_per_gana = sum(len(t) for t in GANA_TO_TOOLS.values()) / gana_count if gana_count > 0 else 0
+        avg_tools_per_gana = (
+            sum(len(t) for t in GANA_TO_TOOLS.values()) / gana_count
+            if gana_count > 0
+            else 0
+        )
 
         # Estimate token savings (heuristic: ~50 tokens/tool description)
         tokens_flat = total_tools * 50
@@ -340,7 +374,9 @@ def benchmark_prat_compression() -> dict[str, Any]:
             "estimated_tokens_flat": tokens_flat,
             "estimated_tokens_prat": int(tokens_prat),
             "estimated_token_savings": int(estimated_savings),
-            "estimated_savings_pct": round(estimated_savings / tokens_flat * 100, 1) if tokens_flat > 0 else 0,
+            "estimated_savings_pct": round(estimated_savings / tokens_flat * 100, 1)
+            if tokens_flat > 0
+            else 0,
             "note": "Full benchmark requires gold task set (see Opus 4.7 review)",
         }
     except Exception as e:
@@ -363,16 +399,31 @@ def main() -> int:
     }
 
     phases = [
-        ("Cosine Similarity", "[1/5] Cosine Similarity (dim=768, n=500)...",
-         lambda: benchmark_cosine(dim=768, iterations=500)),
-        ("Batch Cosine", "[2/5] Batch Cosine (dim=768, corpus=1000, n=50)...",
-         lambda: benchmark_batch_cosine(dim=768, corpus_size=1000, iterations=50)),
-        ("5D Properties", "[3/5] Property-Based 5D Math (n=10,000)...",
-         lambda: benchmark_5d_properties(iterations=10_000)),
-        ("Dispatch", "[4/5] Dispatch Pipeline (n=8, per-tool)...",
-         lambda: benchmark_dispatch(iterations=8)),
-        ("PRAT Scaffold", "[5/5] PRAT Compression Scaffold...",
-         lambda: benchmark_prat_compression()),
+        (
+            "Cosine Similarity",
+            "[1/5] Cosine Similarity (dim=768, n=500)...",
+            lambda: benchmark_cosine(dim=768, iterations=500),
+        ),
+        (
+            "Batch Cosine",
+            "[2/5] Batch Cosine (dim=768, corpus=1000, n=50)...",
+            lambda: benchmark_batch_cosine(dim=768, corpus_size=1000, iterations=50),
+        ),
+        (
+            "5D Properties",
+            "[3/5] Property-Based 5D Math (n=10,000)...",
+            lambda: benchmark_5d_properties(iterations=10_000),
+        ),
+        (
+            "Dispatch",
+            "[4/5] Dispatch Pipeline (n=8, per-tool)...",
+            lambda: benchmark_dispatch(iterations=8),
+        ),
+        (
+            "PRAT Scaffold",
+            "[5/5] PRAT Compression Scaffold...",
+            lambda: benchmark_prat_compression(),
+        ),
     ]
 
     bar = ProgressBar(total=len(phases), label="Suite")
@@ -381,7 +432,13 @@ def main() -> int:
     for i, (label, header, fn) in enumerate(phases):
         bar.set_label(label)
         print(f"\n{header}")
-        results_key = ["cosine", "batch_cosine", "5d_properties", "dispatch", "prat_compression"][i]
+        results_key = [
+            "cosine",
+            "batch_cosine",
+            "5d_properties",
+            "dispatch",
+            "prat_compression",
+        ][i]
         results[results_key] = fn()
         bar.advance()
 

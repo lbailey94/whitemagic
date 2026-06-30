@@ -100,13 +100,21 @@ class DreamConsolidator:
                 last_revisited_str = data.get("last_revisited")
 
                 try:
-                    created_at = datetime.fromisoformat(created_at_str) if created_at_str else now
+                    created_at = (
+                        datetime.fromisoformat(created_at_str)
+                        if created_at_str
+                        else now
+                    )
                 except Exception as e:
                     logger.debug("Operation failed: %s", e)
                     created_at = now
 
                 try:
-                    last_revisited = datetime.fromisoformat(last_revisited_str) if last_revisited_str else created_at
+                    last_revisited = (
+                        datetime.fromisoformat(last_revisited_str)
+                        if last_revisited_str
+                        else created_at
+                    )
                 except Exception as e:
                     logger.debug("Operation failed: %s", e)
                     last_revisited = created_at
@@ -115,18 +123,30 @@ class DreamConsolidator:
                 idle_days = (now - last_revisited).total_seconds() / 86400.0
 
                 if status == "incubating":
-                    if revisit_count >= self.promote_min_revisits and age_days <= self.promote_max_age_days:
+                    if (
+                        revisit_count >= self.promote_min_revisits
+                        and age_days <= self.promote_max_age_days
+                    ):
                         result = promote_dream(dream_id)
                         if result:
                             report.promoted.append(dream_id)
-                            logger.info("Promoted dream %s (revisits=%s)", dream_id, revisit_count, exc_info=True)
+                            logger.info(
+                                "Promoted dream %s (revisits=%s)",
+                                dream_id,
+                                revisit_count,
+                                exc_info=True,
+                            )
                         else:
                             report.errors += 1
                     elif idle_days >= self.archive_after_days:
                         result = archive_dream(dream_id)
                         if result:
                             report.archived.append(dream_id)
-                            logger.info("Archived dream %s (idle={idle_days:.1f}d)", dream_id, exc_info=True)
+                            logger.info(
+                                "Archived dream %s (idle={idle_days:.1f}d)",
+                                dream_id,
+                                exc_info=True,
+                            )
                         else:
                             report.errors += 1
                     else:
@@ -137,7 +157,11 @@ class DreamConsolidator:
                         result = expire_dream(dream_id)
                         if result:
                             report.expired.append(dream_id)
-                            logger.info("Expired dream %s (age={age_days:.1f}d)", dream_id, exc_info=True)
+                            logger.info(
+                                "Expired dream %s (age={age_days:.1f}d)",
+                                dream_id,
+                                exc_info=True,
+                            )
                         else:
                             report.errors += 1
                     else:
@@ -147,7 +171,9 @@ class DreamConsolidator:
                     report.skipped += 1
 
             except Exception as exc:
-                logger.warning("Consolidation error for %s: %s", path.name, exc, exc_info=True)
+                logger.warning(
+                    "Consolidation error for %s: %s", path.name, exc, exc_info=True
+                )
                 report.errors += 1
 
         return report

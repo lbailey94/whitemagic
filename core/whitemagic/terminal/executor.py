@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExecutionResult:
     """Result of a command execution."""
+
     command: str
     exit_code: int
     stdout: str
@@ -67,7 +68,9 @@ class Executor:
                 duration_s=elapsed,
             )
 
-    def execute_safe(self, command: str, allowlist: Any | None = None) -> ExecutionResult:
+    def execute_safe(
+        self, command: str, allowlist: Any | None = None
+    ) -> ExecutionResult:
         """Execute with allowlist check."""
         if allowlist and not allowlist.is_allowed(command):
             return ExecutionResult(

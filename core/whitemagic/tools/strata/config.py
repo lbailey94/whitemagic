@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 __all__ = ["load_config"]
 
 
-def load_config(project_path: Path) -> Dict[str, Any]:
+def load_config(project_path: Path) -> dict[str, Any]:
     """Load [tool.strata] section from pyproject.toml if present."""
     config_path = project_path / "pyproject.toml"
     if not config_path.exists():

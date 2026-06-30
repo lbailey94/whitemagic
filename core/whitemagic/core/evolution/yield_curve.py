@@ -12,6 +12,7 @@ Value function models:
 Portfolio duration: weighted average time to value realization.
 Term structure: choose improvements with different durations based on time horizon.
 """
+
 from __future__ import annotations
 
 import math
@@ -24,22 +25,26 @@ from whitemagic.core.evolution._julia_yield_bridge import call as _julia_call
 
 class YieldType(Enum):
     """Type of yield curve for an improvement."""
-    DECAYING = "decaying"       # Tamasic: cleanup, debt reduction
+
+    DECAYING = "decaying"  # Tamasic: cleanup, debt reduction
     COMPOUNDING = "compounding"  # Sattvic: foundational, naming, architecture
     APPRECIATING = "appreciating"  # Rajasic: optimization, acceleration
-    TRANSIENT = "transient"     # Rise and fall
+    TRANSIENT = "transient"  # Rise and fall
 
 
 @dataclass
 class YieldCurve:
     """Yield curve for a single improvement."""
+
     improvement_id: str
     yield_type: YieldType
     v0: float = 1.0  # Initial value
     lambda_: float = 0.1  # Decay rate (for decaying/transient)
-    r: float = 0.05       # Growth rate (for compounding)
-    tau: float = 10.0     # Time constant (for appreciating/transient)
-    observations: list[tuple[float, float]] = field(default_factory=list)  # (time, observed_value)
+    r: float = 0.05  # Growth rate (for compounding)
+    tau: float = 10.0  # Time constant (for appreciating/transient)
+    observations: list[tuple[float, float]] = field(
+        default_factory=list
+    )  # (time, observed_value)
 
     def value_at(self, t: float) -> float:
         """Compute V(t) at time t.
@@ -50,9 +55,15 @@ class YieldCurve:
         Returns:
             Value at time t.
         """
-        result = _julia_call("value_at",
-            yield_type=self.yield_type.value, t=t,
-            v0=self.v0, **{"lambda": self.lambda_}, r=self.r, tau=self.tau)
+        result = _julia_call(
+            "value_at",
+            yield_type=self.yield_type.value,
+            t=t,
+            v0=self.v0,
+            **{"lambda": self.lambda_},
+            r=self.r,
+            tau=self.tau,
+        )
         if result is not None:
             return result["value"]
         # Python fallback
@@ -74,9 +85,13 @@ class YieldCurve:
         For appreciating: τ · (e - 1) (time to reach ~63% of asymptotic value)
         For transient: peak time = ln(λτ + 1) / (λ - 1/τ) if λ ≠ 1/τ
         """
-        result = _julia_call("duration",
+        result = _julia_call(
+            "duration",
             yield_type=self.yield_type.value,
-            **{"lambda": self.lambda_}, r=self.r, tau=self.tau)
+            **{"lambda": self.lambda_},
+            r=self.r,
+            tau=self.tau,
+        )
         if result is not None:
             return result["duration"]
         # Python fallback
@@ -89,7 +104,9 @@ class YieldCurve:
         elif self.yield_type == YieldType.TRANSIENT:
             if abs(self.lambda_ - 1.0 / self.tau) < 1e-6:
                 return self.tau
-            return math.log(self.lambda_ * self.tau + 1) / (self.lambda_ - 1.0 / self.tau)
+            return math.log(self.lambda_ * self.tau + 1) / (
+                self.lambda_ - 1.0 / self.tau
+            )
         return 0.0
 
     def add_observation(self, t: float, value: float) -> None:
@@ -108,9 +125,11 @@ class YieldCurve:
             return {"v0": self.v0, "lambda": self.lambda_, "r": self.r, "tau": self.tau}
 
         # Try Julia bridge first
-        result = _julia_call("fit_parameters",
+        result = _julia_call(
+            "fit_parameters",
             yield_type=self.yield_type.value,
-            observations=[[t, val] for t, val in self.observations])
+            observations=[[t, val] for t, val in self.observations],
+        )
         if result is not None:
             self.v0 = result["v0"]
             self.lambda_ = result["lambda"]
@@ -120,7 +139,12 @@ class YieldCurve:
 
         # Python fallback: simple parameter estimation: minimize squared error
         best_error = float("inf")
-        best_params = {"v0": self.v0, "lambda": self.lambda_, "r": self.r, "tau": self.tau}
+        best_params = {
+            "v0": self.v0,
+            "lambda": self.lambda_,
+            "r": self.r,
+            "tau": self.tau,
+        }
 
         for v0 in [0.5, 1.0, 1.5, 2.0]:
             for lam in [0.01, 0.05, 0.1, 0.2, 0.5]:
@@ -171,7 +195,13 @@ class YieldPortfolio:
             return 0.0
         # Try Julia bridge
         curves_data = [
-            {"yield_type": c.yield_type.value, "v0": c.v0, "lambda": c.lambda_, "r": c.r, "tau": c.tau}
+            {
+                "yield_type": c.yield_type.value,
+                "v0": c.v0,
+                "lambda": c.lambda_,
+                "r": c.r,
+                "tau": c.tau,
+            }
             for c in self._curves.values()
         ]
         result = _julia_call("portfolio_duration", curves=curves_data)
@@ -205,12 +235,19 @@ class YieldPortfolio:
             curve = self._curves.get(imp_id)
             if curve is None:
                 continue
-            curves_data.append({
-                "improvement_id": imp_id,
-                "yield_type": curve.yield_type.value,
-                "v0": curve.v0, "lambda": curve.lambda_, "r": curve.r, "tau": curve.tau,
-            })
-        result = _julia_call("select_by_horizon", curves=curves_data, time_horizon=time_horizon)
+            curves_data.append(
+                {
+                    "improvement_id": imp_id,
+                    "yield_type": curve.yield_type.value,
+                    "v0": curve.v0,
+                    "lambda": curve.lambda_,
+                    "r": curve.r,
+                    "tau": curve.tau,
+                }
+            )
+        result = _julia_call(
+            "select_by_horizon", curves=curves_data, time_horizon=time_horizon
+        )
         if result is not None:
             return [(s["improvement_id"], s["value"]) for s in result["selections"]]
         # Python fallback
@@ -241,11 +278,16 @@ class YieldPortfolio:
             return False
 
         # Try Julia bridge
-        result = _julia_call("detect_regime_change",
+        result = _julia_call(
+            "detect_regime_change",
             yield_type=curve.yield_type.value,
             observations=[[t, val] for t, val in curve.observations],
-            v0=curve.v0, **{"lambda": curve.lambda_}, r=curve.r, tau=curve.tau,
-            window=window)
+            v0=curve.v0,
+            **{"lambda": curve.lambda_},
+            r=curve.r,
+            tau=curve.tau,
+            window=window,
+        )
         if result is not None:
             return result["regime_change"]
 

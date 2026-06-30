@@ -50,7 +50,11 @@ class Entity:
         Returns:
             dict[str, Any]
         """
-        return {"name": self.name, "type": self.entity_type, "confidence": self.confidence}
+        return {
+            "name": self.name,
+            "type": self.entity_type,
+            "confidence": self.confidence,
+        }
 
 
 @dataclass
@@ -144,6 +148,7 @@ class EntityExtractor:
             return self._ollama_available
         try:
             import urllib.request
+
             req = urllib.request.Request(
                 f"{self._ollama_url}/api/tags",
                 method="GET",
@@ -195,13 +200,15 @@ class EntityExtractor:
 
             prompt = _EXTRACTION_PROMPT + text
 
-            payload = _json_dumps({
-                "model": self._model,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                "options": {"temperature": 0.1, "num_predict": 1024},
-            }).encode("utf-8")
+            payload = _json_dumps(
+                {
+                    "model": self._model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                    "options": {"temperature": 0.1, "num_predict": 1024},
+                }
+            ).encode("utf-8")
 
             req = urllib.request.Request(
                 f"{self._ollama_url}/api/generate",
@@ -250,21 +257,29 @@ class EntityExtractor:
         seen_names: set[str] = set()
 
         # Pattern 1: Capitalized multi-word phrases (likely proper nouns)
-        for match in re.finditer(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b', text):
+        for match in re.finditer(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", text):
             name = match.group(1).strip()
             if name not in seen_names and len(name) > 3:
-                entities.append(Entity(name=name, entity_type="CONCEPT", confidence=0.5))
+                entities.append(
+                    Entity(name=name, entity_type="CONCEPT", confidence=0.5)
+                )
                 seen_names.add(name)
 
         # Pattern 2: ALL_CAPS words (likely acronyms/constants)
-        for match in re.finditer(r'\b([A-Z]{2,}(?:_[A-Z]+)*)\b', text):
+        for match in re.finditer(r"\b([A-Z]{2,}(?:_[A-Z]+)*)\b", text):
             name = match.group(1).strip()
-            if name not in seen_names and len(name) > 1 and name not in {"THE", "AND", "FOR", "WITH", "FROM", "THIS", "THAT"}:
-                entities.append(Entity(name=name, entity_type="CONCEPT", confidence=0.4))
+            if (
+                name not in seen_names
+                and len(name) > 1
+                and name not in {"THE", "AND", "FOR", "WITH", "FROM", "THIS", "THAT"}
+            ):
+                entities.append(
+                    Entity(name=name, entity_type="CONCEPT", confidence=0.4)
+                )
                 seen_names.add(name)
 
         # Pattern 3: CamelCase identifiers (code entities)
-        for match in re.finditer(r'\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b', text):
+        for match in re.finditer(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b", text):
             name = match.group(1).strip()
             if name not in seen_names:
                 entities.append(Entity(name=name, entity_type="TOOL", confidence=0.4))
@@ -276,21 +291,23 @@ class EntityExtractor:
         # Simple relation extraction: "X created/uses/extends Y" patterns
         relations: list[Relation] = []
         relation_patterns = [
-            (r'(\w+)\s+created\s+(\w+)', "CREATED"),
-            (r'(\w+)\s+uses?\s+(\w+)', "USES"),
-            (r'(\w+)\s+extends?\s+(\w+)', "EXTENDS"),
-            (r'(\w+)\s+implements?\s+(\w+)', "IMPLEMENTS"),
-            (r'(\w+)\s+contains?\s+(\w+)', "CONTAINS"),
-            (r'(\w+)\s+causes?\s+(\w+)', "CAUSES"),
+            (r"(\w+)\s+created\s+(\w+)", "CREATED"),
+            (r"(\w+)\s+uses?\s+(\w+)", "USES"),
+            (r"(\w+)\s+extends?\s+(\w+)", "EXTENDS"),
+            (r"(\w+)\s+implements?\s+(\w+)", "IMPLEMENTS"),
+            (r"(\w+)\s+contains?\s+(\w+)", "CONTAINS"),
+            (r"(\w+)\s+causes?\s+(\w+)", "CAUSES"),
         ]
         for pattern, predicate in relation_patterns:
             for match in re.finditer(pattern, text, re.IGNORECASE):
-                relations.append(Relation(
-                    subject=match.group(1),
-                    predicate=predicate,
-                    object=match.group(2),
-                    confidence=0.3,
-                ))
+                relations.append(
+                    Relation(
+                        subject=match.group(1),
+                        predicate=predicate,
+                        object=match.group(2),
+                        confidence=0.3,
+                    )
+                )
             if len(relations) >= 10:
                 break
 
@@ -301,7 +318,9 @@ class EntityExtractor:
         )
 
     def extract_and_store(
-        self, memory_id: str, text: str,
+        self,
+        memory_id: str,
+        text: str,
     ) -> ExtractionResult:
         """Extract entities/relations and store them as typed associations.
 
@@ -314,10 +333,12 @@ class EntityExtractor:
 
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             pool = um.backend.pool
 
             from datetime import datetime
+
             now = datetime.now().isoformat()
 
             with pool.connection() as conn:
@@ -346,7 +367,9 @@ class EntityExtractor:
 
             logger.info(
                 "Stored %s extracted relations for %s",
-             len(result.relations), memory_id[:8])
+                len(result.relations),
+                memory_id[:8],
+            )
         except Exception as e:
             logger.debug("Failed to store extracted relations: %s", e, exc_info=True)
 
@@ -369,10 +392,6 @@ class EntityExtractor:
             }
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _extractor: EntityExtractor | None = None
 _extractor_lock = threading.Lock()
 
@@ -386,10 +405,6 @@ def get_entity_extractor(**kwargs: Any) -> EntityExtractor:
                 _extractor = EntityExtractor(**kwargs)
     return _extractor
 
-
-# ---------------------------------------------------------------------------
-# Register with UnifiedMemory hooks to break circular dependency
-# ---------------------------------------------------------------------------
 
 try:
     from whitemagic.core.memory.unified import register_store_hook

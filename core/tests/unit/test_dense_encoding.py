@@ -1,4 +1,5 @@
 """Tests for vectorized scratchpad (VSA) and Chinese-dense working memory encoding."""
+
 from __future__ import annotations
 
 from whitemagic.ai.dense_encoding import (
@@ -34,7 +35,9 @@ class TestDenseEncoding:
     def test_unmapped_words_preserved(self):
         result = encode_dense("The flibbertigibbet jumped over the moon")
         # Unmapped words should remain in English
-        assert "flibbertigibbet" in result.encoded or "flibbertigibbet" in result.original
+        assert (
+            "flibbertigibbet" in result.encoded or "flibbertigibbet" in result.original
+        )
 
     def test_token_reduction(self):
         """Chinese-dense encoding should reduce token estimates."""
@@ -164,11 +167,24 @@ class TestVSAContextCompressor:
 
     def test_compress_basic(self):
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
         items = [
-            {"content": "The memory system needs consolidation", "source": "memory", "id": "1"},
-            {"content": "Working memory capacity is important", "source": "memory", "id": "2"},
-            {"content": "The dispatch pipeline routes tools", "source": "tool_result", "id": "3"},
+            {
+                "content": "The memory system needs consolidation",
+                "source": "memory",
+                "id": "1",
+            },
+            {
+                "content": "Working memory capacity is important",
+                "source": "memory",
+                "id": "2",
+            },
+            {
+                "content": "The dispatch pipeline routes tools",
+                "source": "tool_result",
+                "id": "3",
+            },
         ]
         result = compressor.compress(items)
         assert result.item_count > 0
@@ -178,6 +194,7 @@ class TestVSAContextCompressor:
 
     def test_compress_empty(self):
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
         result = compressor.compress([])
         assert result.item_count == 0
@@ -185,15 +202,17 @@ class TestVSAContextCompressor:
 
     def test_compress_single_item(self):
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
-        result = compressor.compress([
-            {"content": "Single test item", "source": "memory", "id": "1"}
-        ])
+        result = compressor.compress(
+            [{"content": "Single test item", "source": "memory", "id": "1"}]
+        )
         assert result.item_count >= 1
         assert len(result.vector) == 384
 
     def test_probe(self):
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
         items = [
             {"content": "Memory consolidation event", "source": "memory", "id": "1"},
@@ -206,16 +225,30 @@ class TestVSAContextCompressor:
     def test_compression_ratio_scales(self):
         """More items should yield higher compression ratios."""
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
 
-        few_items = [{"content": f"Test content item {i}", "source": "memory", "id": str(i)} for i in range(3)]
-        many_items = [{"content": f"Test content item {i} with more text for better compression", "source": "memory", "id": str(i)} for i in range(10)]
+        few_items = [
+            {"content": f"Test content item {i}", "source": "memory", "id": str(i)}
+            for i in range(3)
+        ]
+        many_items = [
+            {
+                "content": f"Test content item {i} with more text for better compression",
+                "source": "memory",
+                "id": str(i),
+            }
+            for i in range(10)
+        ]
 
         few_result = compressor.compress(few_items)
         many_result = compressor.compress(many_items)
 
         # More items → higher compression ratio (more original tokens, same compressed size)
-        if few_result.method == "hrr_superposition" and many_result.method == "hrr_superposition":
+        if (
+            few_result.method == "hrr_superposition"
+            and many_result.method == "hrr_superposition"
+        ):
             assert many_result.compression_ratio >= few_result.compression_ratio
 
 
@@ -233,19 +266,31 @@ class TestScratchpadVSAIntegration:
 
         manager = ScratchpadManager(scratch_dir=tmp_path / "scratchpads")
         pad = manager.create("test-vsa")
-        manager.write_to("test-vsa", "Memory system needs consolidation", tag="analysis")
-        manager.write_to("test-vsa", "Working memory capacity is important", tag="focus")
-        manager.write_to("test-vsa", "Dispatch pipeline requires optimization", tag="action")
+        manager.write_to(
+            "test-vsa", "Memory system needs consolidation", tag="analysis"
+        )
+        manager.write_to(
+            "test-vsa", "Working memory capacity is important", tag="focus"
+        )
+        manager.write_to(
+            "test-vsa", "Dispatch pipeline requires optimization", tag="action"
+        )
 
         # Verify entries exist
         assert len(pad.entries) == 3
 
         # The VSA compression should work on these entries
         from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+
         compressor = get_vsa_context_compressor()
         items = [
-            {"content": e.get("content", ""), "source": "scratchpad", "id": e.get("tag", "")}
-            for e in pad.entries if e.get("content")
+            {
+                "content": e.get("content", ""),
+                "source": "scratchpad",
+                "id": e.get("tag", ""),
+            }
+            for e in pad.entries
+            if e.get("content")
         ]
         result = compressor.compress(items, max_text_items=3)
         assert result.item_count == 3

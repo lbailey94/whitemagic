@@ -14,6 +14,7 @@ v4.3.0 Enhancement: Circuit Breaker Pattern
 - Auto-opens circuit to prevent runaway loops
 - Gradual recovery with half-open state
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
@@ -23,8 +24,8 @@ from typing import Any
 class CircuitState(Enum):
     """Circuit breaker states."""
 
-    CLOSED = "closed"      # Normal operation
-    OPEN = "open"          # Blocking execution (detected stuck)
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Blocking execution (detected stuck)
     HALF_OPEN = "half_open"  # Testing if recovered
 
 
@@ -38,6 +39,7 @@ class LoopWarning:
     severity: str  # "low", "medium", "high", "critical"
     timestamp: datetime = field(default_factory=datetime.now)
 
+
 class AntiLoopDetector:
     """Catches cognitive loops before they happen.
     The guardian against the 3 warning patterns.
@@ -50,10 +52,10 @@ class AntiLoopDetector:
     """
 
     # Circuit breaker thresholds (inspired by Ralph)
-    NO_PROGRESS_THRESHOLD = 3      # Open after 3 iterations with no file changes
-    SAME_ERROR_THRESHOLD = 5       # Open after 5 iterations with same error
+    NO_PROGRESS_THRESHOLD = 3  # Open after 3 iterations with no file changes
+    SAME_ERROR_THRESHOLD = 5  # Open after 5 iterations with same error
     OUTPUT_DECLINE_THRESHOLD = 0.7  # Open if output declines by >70%
-    RECOVERY_SUCCESSES = 2         # Successes needed to close from half-open
+    RECOVERY_SUCCESSES = 2  # Successes needed to close from half-open
 
     def __init__(self) -> None:
         self.files_read: set[str] = set()
@@ -121,9 +123,9 @@ class AntiLoopDetector:
         # For now, assume no dependencies unless obvious
         return False
 
-    # ===== CIRCUIT BREAKER (v4.3.0) =====
-
-    def record_iteration(self, files_modified: list[str], error: str | None = None) -> LoopWarning | None:
+    def record_iteration(
+        self, files_modified: list[str], error: str | None = None
+    ) -> LoopWarning | None:
         """Record an iteration's results for circuit breaker analysis.
         Call this after each execution cycle.
 
@@ -142,8 +144,10 @@ class AntiLoopDetector:
         if not current_files or current_files == self.last_files_modified:
             self.no_progress_count += 1
             if self.no_progress_count >= self.NO_PROGRESS_THRESHOLD:
-                return self._open_circuit("no_progress",
-                    f"No file changes for {self.no_progress_count} iterations")
+                return self._open_circuit(
+                    "no_progress",
+                    f"No file changes for {self.no_progress_count} iterations",
+                )
         else:
             self.no_progress_count = 0
             self.last_files_modified = current_files
@@ -153,11 +157,13 @@ class AntiLoopDetector:
             self.error_history.append(error)
             # Check if same error repeated
             if len(self.error_history) >= self.SAME_ERROR_THRESHOLD:
-                recent = self.error_history[-self.SAME_ERROR_THRESHOLD:]
+                recent = self.error_history[-self.SAME_ERROR_THRESHOLD :]
                 if len(set(recent)) == 1:
                     # All same error
-                    return self._open_circuit("error_repeat",
-                        f"Same error repeated {self.SAME_ERROR_THRESHOLD} times: {error[:100]}")
+                    return self._open_circuit(
+                        "error_repeat",
+                        f"Same error repeated {self.SAME_ERROR_THRESHOLD} times: {error[:100]}",
+                    )
 
         # If half-open, check for recovery
         if self.circuit_state == CircuitState.HALF_OPEN:
@@ -225,7 +231,9 @@ class AntiLoopDetector:
             "iteration_count": self.iteration_count,
             "no_progress_count": self.no_progress_count,
             "recent_errors": self.error_history[-3:] if self.error_history else [],
-            "opened_at": self.circuit_opened_at.isoformat() if self.circuit_opened_at else None,
+            "opened_at": self.circuit_opened_at.isoformat()
+            if self.circuit_opened_at
+            else None,
         }
 
     def get_stats(self) -> dict:
@@ -238,8 +246,7 @@ class AntiLoopDetector:
             "circuit_breaker": self.get_circuit_status(),
             "recent_warnings": [
                 {"type": w.type, "suggestion": w.suggestion}
-                for w in self.warnings_issued[-5:
-                    ]
+                for w in self.warnings_issued[-5:]
             ],
         }
 
@@ -258,12 +265,14 @@ class AntiLoopDetector:
 # Singleton
 _detector = None
 
+
 def get_anti_loop() -> AntiLoopDetector:
     """Get the global Anti-Loop Detector."""
     global _detector
     if _detector is None:
         _detector = AntiLoopDetector()
     return _detector
+
 
 def check_loop(action_type: str, target: str) -> str | None:
     """Quick check function - returns warning message or None."""

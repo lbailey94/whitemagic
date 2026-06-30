@@ -26,7 +26,8 @@ class GrimoireChecker:
         if not self.grimoire_dir.exists():
             return []
         return sorted(
-            f.stem for f in self.grimoire_dir.glob("*.md")
+            f.stem
+            for f in self.grimoire_dir.glob("*.md")
             if not f.name.startswith("00_")
         )
 
@@ -39,10 +40,12 @@ class GrimoireChecker:
             try:
                 content = chapter.read_text()
                 for match in re.finditer(r"###\s+(.+)", content):
-                    tools.append({
-                        "chapter": chapter.stem,
-                        "section": match.group(1).strip(),
-                    })
+                    tools.append(
+                        {
+                            "chapter": chapter.stem,
+                            "section": match.group(1).strip(),
+                        }
+                    )
             except Exception:
                 pass
         return tools

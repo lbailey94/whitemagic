@@ -20,6 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import os
+
 os.environ["WM_SILENT_INIT"] = "1"
 
 from whitemagic.config.paths import DB_PATH
@@ -42,6 +43,7 @@ def get_conn() -> sqlite3.Connection:
 # Test Results Tracker
 # ---------------------------------------------------------------------------
 
+
 class TestResults:
     def __init__(self):
         self.passed = 0
@@ -59,8 +61,10 @@ class TestResults:
 
     def summary(self):
         total = self.passed + self.failed
-        log.info(f"\n{'='*50}")
-        log.info("Test Results: %s/%s passed, %s failed", self.passed, total, self.failed)
+        log.info(f"\n{'=' * 50}")
+        log.info(
+            "Test Results: %s/%s passed, %s failed", self.passed, total, self.failed
+        )
         if self.errors:
             log.info(f"\nFailed tests:")
             for name, error in self.errors:
@@ -74,6 +78,7 @@ results = TestResults()
 # ---------------------------------------------------------------------------
 # 1. Julia Resonance Ports
 # ---------------------------------------------------------------------------
+
 
 def test_julia_resonance():
     log.info("\n═══ 1. Julia Resonance Ports ═══")
@@ -93,6 +98,7 @@ def test_julia_resonance():
 
         # Test find_neighbors with simple points
         import numpy as np
+
         points = np.array([[0.0, 0.0, 0.0, 0.5, 0.3], [0.1, 0.1, 0.1, 0.5, 0.3]])
         try:
             neighbors = engine.find_neighbors(points, radius=0.2)
@@ -109,6 +115,7 @@ def test_julia_resonance():
 # 2. Self-Model Forecast
 # ---------------------------------------------------------------------------
 
+
 def test_self_model_forecast():
     log.info("\n═══ 2. Self-Model Forecast ═══")
 
@@ -119,25 +126,31 @@ def test_self_model_forecast():
 
         # Test forecast
         fc = f.forecast_metric([0.5, 0.6, 0.55, 0.7, 0.65, 0.75], steps=3)
-        results.record("forecast_metric", "forecasts" in fc and len(fc["forecasts"]) == 3)
+        results.record(
+            "forecast_metric", "forecasts" in fc and len(fc["forecasts"]) == 3
+        )
 
         # Test anomaly detection
         anomalies = f.detect_anomalies([0.5, 0.6, 0.55, 0.7, 0.65, 2.5, 0.7])
         results.record("detect_anomalies", "count" in anomalies)
 
         # Test correlation
-        corr = f.correlation_matrix({
-            "a": [1, 2, 3, 4, 5],
-            "b": [1, 2, 3, 4, 5],
-            "c": [5, 4, 3, 2, 1],
-        })
+        corr = f.correlation_matrix(
+            {
+                "a": [1, 2, 3, 4, 5],
+                "b": [1, 2, 3, 4, 5],
+                "c": [5, 4, 3, 2, 1],
+            }
+        )
         results.record("correlation_matrix", "strong_correlations" in corr)
 
         # Test batch forecast
-        batch = f.batch_forecast({
-            "energy": [0.5, 0.6, 0.7, 0.8],
-            "error_rate": [0.1, 0.2, 0.15, 0.25],
-        })
+        batch = f.batch_forecast(
+            {
+                "energy": [0.5, 0.6, 0.7, 0.8],
+                "error_rate": [0.1, 0.2, 0.15, 0.25],
+            }
+        )
         results.record("batch_forecast", "forecasts" in batch and "alerts" in batch)
 
     except Exception as e:
@@ -147,6 +160,7 @@ def test_self_model_forecast():
 # ---------------------------------------------------------------------------
 # 3. Memory Stats
 # ---------------------------------------------------------------------------
+
 
 def test_memory_stats():
     log.info("\n═══ 3. Memory Stats ═══")
@@ -158,7 +172,9 @@ def test_memory_stats():
 
         # Test importance distribution
         imp = a.analyze_importance_distribution([0.5, 0.6, 0.7, 0.8, 0.9])
-        results.record("importance_distribution", "mean" in imp and "percentiles" in imp)
+        results.record(
+            "importance_distribution", "mean" in imp and "percentiles" in imp
+        )
 
         # Test zone transitions
         trans = a.zone_transition_matrix([0.1, 0.5, 0.9], [0.2, 0.6, 0.95])
@@ -188,6 +204,7 @@ def test_memory_stats():
 # 4. Resonance Models
 # ---------------------------------------------------------------------------
 
+
 def test_resonance_models():
     log.info("\n═══ 4. Resonance Models ═══")
 
@@ -195,7 +212,8 @@ def test_resonance_models():
         from whitemagic.core.resonance.resonance_models import (
             MemoryDecayModel,
             PatternResonanceDetector,
-            ConstellationMerger, Constellation,
+            ConstellationMerger,
+            Constellation,
             GardenResonanceMatrix,
         )
 
@@ -208,14 +226,33 @@ def test_resonance_models():
         results.record("MemoryDecayModel.decay_curve", len(curve["curve"]) > 0)
 
         schedule = decay.calculate_reinforcement_schedule(importance=0.7)
-        results.record("MemoryDecayModel.reinforcement_schedule", "recommended_intervals_days" in schedule)
+        results.record(
+            "MemoryDecayModel.reinforcement_schedule",
+            "recommended_intervals_days" in schedule,
+        )
 
         # Test Pattern Resonance Detector
         detector = PatternResonanceDetector()
         memories = [
-            {"id": 1, "importance": 0.8, "resonance": {"frequency": 2.5, "damping": 0.1, "garden": "knowledge"}},
-            {"id": 2, "importance": 0.7, "resonance": {"frequency": 2.55, "damping": 0.12, "garden": "knowledge"}},
-            {"id": 3, "importance": 0.6, "resonance": {"frequency": 4.0, "damping": 0.05, "garden": "wisdom"}},
+            {
+                "id": 1,
+                "importance": 0.8,
+                "resonance": {"frequency": 2.5, "damping": 0.1, "garden": "knowledge"},
+            },
+            {
+                "id": 2,
+                "importance": 0.7,
+                "resonance": {
+                    "frequency": 2.55,
+                    "damping": 0.12,
+                    "garden": "knowledge",
+                },
+            },
+            {
+                "id": 3,
+                "importance": 0.6,
+                "resonance": {"frequency": 4.0, "damping": 0.05, "garden": "wisdom"},
+            },
         ]
         patterns = detector.find_resonant_patterns(memories)
         results.record("PatternResonanceDetector", "clusters" in patterns)
@@ -226,9 +263,11 @@ def test_resonance_models():
         # Test Constellation Merger
         merger = ConstellationMerger(overlap_threshold=0.3)
         constellations = [
-            Constellation(1, [1,2], (0.1, 0.2, 0.3, 0.8, 0.5), 0.3, 0.7, "knowledge"),
-            Constellation(2, [3,4], (0.15, 0.25, 0.35, 0.85, 0.55), 0.25, 0.6, "knowledge"),
-            Constellation(3, [5,6], (0.8, 0.9, 0.1, 0.3, 0.2), 0.2, 0.5, "wisdom"),
+            Constellation(1, [1, 2], (0.1, 0.2, 0.3, 0.8, 0.5), 0.3, 0.7, "knowledge"),
+            Constellation(
+                2, [3, 4], (0.15, 0.25, 0.35, 0.85, 0.55), 0.25, 0.6, "knowledge"
+            ),
+            Constellation(3, [5, 6], (0.8, 0.9, 0.1, 0.3, 0.2), 0.2, 0.5, "wisdom"),
         ]
         merge_result = merger.merge_overlapping(constellations)
         results.record("ConstellationMerger.merge", "merged" in merge_result)
@@ -239,13 +278,19 @@ def test_resonance_models():
         # Test Garden Resonance Matrix
         matrix = GardenResonanceMatrix()
         gardens = {
-            "knowledge": {"memory_count": 100, "avg_frequency": 2.5, "avg_damping": 0.1},
+            "knowledge": {
+                "memory_count": 100,
+                "avg_frequency": 2.5,
+                "avg_damping": 0.1,
+            },
             "wisdom": {"memory_count": 50, "avg_frequency": 1.5, "avg_damping": 0.05},
         }
         harmony = matrix.calculate_inter_garden_harmony(gardens)
         results.record("GardenResonanceMatrix.harmony", "overall_harmony" in harmony)
 
-        score = matrix.calculate_garden_resonance_score("knowledge", gardens["knowledge"], gardens)
+        score = matrix.calculate_garden_resonance_score(
+            "knowledge", gardens["knowledge"], gardens
+        )
         results.record("GardenResonanceMatrix.score", "system_integration" in score)
 
     except Exception as e:
@@ -255,6 +300,7 @@ def test_resonance_models():
 # ---------------------------------------------------------------------------
 # 5. Dream Cycle Daemon
 # ---------------------------------------------------------------------------
+
 
 def test_dream_cycle():
     log.info("\n═══ 5. Dream Cycle Daemon ═══")
@@ -284,6 +330,7 @@ def test_dream_cycle():
 # 6. REST API Endpoints (via direct function calls)
 # ---------------------------------------------------------------------------
 
+
 def test_rest_api():
     log.info("\n═══ 6. REST API Endpoints ═══")
 
@@ -298,7 +345,9 @@ def test_rest_api():
 
         # Test /memories
         mem_result = list_memories(limit=5)
-        results.record("/memories", "memories" in mem_result and len(mem_result["memories"]) > 0)
+        results.record(
+            "/memories", "memories" in mem_result and len(mem_result["memories"]) > 0
+        )
 
         # Test /memories with coords
         mem_coords = list_memories(limit=5, include_coords=True)
@@ -324,6 +373,7 @@ def test_rest_api():
 # ---------------------------------------------------------------------------
 # 7. Resonance REST Endpoints
 # ---------------------------------------------------------------------------
+
 
 def test_resonance_api():
     log.info("\n═══ 7. Resonance REST Endpoints ═══")
@@ -371,6 +421,7 @@ def test_resonance_api():
 # 8. Database Integrity
 # ---------------------------------------------------------------------------
 
+
 def test_db_integrity():
     log.info("\n═══ 8. Database Integrity ═══")
 
@@ -383,21 +434,31 @@ def test_db_integrity():
 
         # Check associations
         assoc_count = conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
-        results.record("association_count", assoc_count > 10000, f"Only {assoc_count} associations")
+        results.record(
+            "association_count", assoc_count > 10000, f"Only {assoc_count} associations"
+        )
 
         # Check embeddings
-        embed_count = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0]
+        embed_count = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[
+            0
+        ]
         results.record("embedding_coverage", embed_count > 10000, f"Only {embed_count}")
 
         # Check holographic coords
-        coord_count = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[0]
-        results.record("holographic_coords", coord_count == count, f"{coord_count}/{count}")
+        coord_count = conn.execute(
+            "SELECT COUNT(*) FROM holographic_coords"
+        ).fetchone()[0]
+        results.record(
+            "holographic_coords", coord_count == count, f"{coord_count}/{count}"
+        )
 
         # Check resonance params in metadata
         resonance_count = conn.execute(
             "SELECT COUNT(*) FROM memories WHERE json_extract(metadata, '$.resonance') IS NOT NULL"
         ).fetchone()[0]
-        results.record("resonance_params", resonance_count > 0, f"Only {resonance_count}")
+        results.record(
+            "resonance_params", resonance_count > 0, f"Only {resonance_count}"
+        )
 
         # Check DB size
         db_size = Path(DB_PATH).stat().st_size / (1024 * 1024)
@@ -412,6 +473,7 @@ def test_db_integrity():
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     log.info("WhiteMagic Comprehensive Test Suite")

@@ -67,17 +67,30 @@ class ZodiacalProcession:
 
     # Yang order (forward through zodiac)
     YANG_ORDER = [
-        ZodiacSign.ARIES, ZodiacSign.TAURUS, ZodiacSign.GEMINI,
-        ZodiacSign.CANCER, ZodiacSign.LEO, ZodiacSign.VIRGO,
-        ZodiacSign.LIBRA, ZodiacSign.SCORPIO, ZodiacSign.SAGITTARIUS,
-        ZodiacSign.CAPRICORN, ZodiacSign.AQUARIUS, ZodiacSign.PISCES,
+        ZodiacSign.ARIES,
+        ZodiacSign.TAURUS,
+        ZodiacSign.GEMINI,
+        ZodiacSign.CANCER,
+        ZodiacSign.LEO,
+        ZodiacSign.VIRGO,
+        ZodiacSign.LIBRA,
+        ZodiacSign.SCORPIO,
+        ZodiacSign.SAGITTARIUS,
+        ZodiacSign.CAPRICORN,
+        ZodiacSign.AQUARIUS,
+        ZodiacSign.PISCES,
     ]
 
     # Yin order (reverse through zodiac)
     YIN_ORDER = list(reversed(YANG_ORDER))
 
     # Fixed signs - bidirectional hubs
-    FIXED_SIGNS = {ZodiacSign.TAURUS, ZodiacSign.LEO, ZodiacSign.SCORPIO, ZodiacSign.AQUARIUS}
+    FIXED_SIGNS = {
+        ZodiacSign.TAURUS,
+        ZodiacSign.LEO,
+        ZodiacSign.SCORPIO,
+        ZodiacSign.AQUARIUS,
+    }
 
     # Fixed sign meanings (from notes)
     FIXED_MEANINGS = {
@@ -123,7 +136,9 @@ class ZodiacalProcession:
             "on_cycle_complete": [],
         }
 
-    def register_callback(self, event: str, callback: Callable[[dict[str, Any]], None]) -> None:
+    def register_callback(
+        self, event: str, callback: Callable[[dict[str, Any]], None]
+    ) -> None:
         """Register a callback for procession events."""
         if event in self.callbacks:
             self.callbacks[event].append(callback)
@@ -140,20 +155,27 @@ class ZodiacalProcession:
         # Also emit to Gan Ying Bus
         try:
             from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
+
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                source="orchestration.zodiacal_procession",
-                event_type=EventType.PHASE_TRANSITION,
-                data=data,
-                timestamp=datetime.now(),
-                confidence=0.9,
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    source="orchestration.zodiacal_procession",
+                    event_type=EventType.PHASE_TRANSITION,
+                    data=data,
+                    timestamp=datetime.now(),
+                    confidence=0.9,
+                )
+            )
         except ImportError:
             pass
 
     def get_current_order(self) -> list[ZodiacSign]:
         """Get the sign order for current phase."""
-        return self.YANG_ORDER if self.state.current_phase == Phase.YANG else self.YIN_ORDER
+        return (
+            self.YANG_ORDER
+            if self.state.current_phase == Phase.YANG
+            else self.YIN_ORDER
+        )
 
     def next_sign(self) -> ZodiacSign:
         """Move to the next sign in the procession."""
@@ -178,21 +200,27 @@ class ZodiacalProcession:
         self.cores[new_sign].last_activation = datetime.now()
 
         # Emit sign change event
-        self._emit_event("on_sign_change", {
-            "from_sign": old_sign.name_str,
-            "to_sign": new_sign.name_str,
-            "phase": self.state.current_phase.value,
-            "is_fixed": new_sign.is_fixed,
-        })
+        self._emit_event(
+            "on_sign_change",
+            {
+                "from_sign": old_sign.name_str,
+                "to_sign": new_sign.name_str,
+                "phase": self.state.current_phase.value,
+                "is_fixed": new_sign.is_fixed,
+            },
+        )
 
         # Special handling for fixed signs
         if new_sign.is_fixed:
-            self._emit_event("on_fixed_sign", {
-                "sign": new_sign.name_str,
-                "symbol": new_sign.symbol,
-                "meaning": self.FIXED_MEANINGS.get(new_sign, ""),
-                "bidirectional": True,
-            })
+            self._emit_event(
+                "on_fixed_sign",
+                {
+                    "sign": new_sign.name_str,
+                    "symbol": new_sign.symbol,
+                    "meaning": self.FIXED_MEANINGS.get(new_sign, ""),
+                    "bidirectional": True,
+                },
+            )
 
         return new_sign
 
@@ -211,18 +239,26 @@ class ZodiacalProcession:
             self.state.cycle_count += 1
 
             # Emit cycle complete
-            self._emit_event("on_cycle_complete", {
-                "cycle_number": self.state.cycle_count,
-                "signs_visited": len(self.state.signs_visited),
-                "duration_seconds": (datetime.now() - self.state.started_at).total_seconds(),
-            })
+            self._emit_event(
+                "on_cycle_complete",
+                {
+                    "cycle_number": self.state.cycle_count,
+                    "signs_visited": len(self.state.signs_visited),
+                    "duration_seconds": (
+                        datetime.now() - self.state.started_at
+                    ).total_seconds(),
+                },
+            )
 
         # Emit phase change
-        self._emit_event("on_phase_change", {
-            "from_phase": old_phase.value,
-            "to_phase": self.state.current_phase.value,
-            "cycle_count": self.state.cycle_count,
-        })
+        self._emit_event(
+            "on_phase_change",
+            {
+                "from_phase": old_phase.value,
+                "to_phase": self.state.current_phase.value,
+                "cycle_count": self.state.cycle_count,
+            },
+        )
 
         return self.state.current_sign
 
@@ -244,8 +280,10 @@ class ZodiacalProcession:
         # Layer 2: Wu Xing Balance
         # Map zodiac element to Wu Xing element
         _ELEMENT_MAP = {
-            "fire": "fire", "earth": "earth",
-            "air": "metal", "water": "water",
+            "fire": "fire",
+            "earth": "earth",
+            "air": "metal",
+            "water": "water",
         }
         wu_xing_element = _ELEMENT_MAP.get(element, "earth")
 
@@ -257,17 +295,27 @@ class ZodiacalProcession:
         iching_guidance = ""
         try:
             from whitemagic.oracle.quantum_iching import QuantumIChing
+
             qic = QuantumIChing()
             question = f"Guidance for {phase.value} phase, {sign.name_str} ({element}/{modality})"
-            iching_result = qic.consult(question, context={
-                "sign": sign.name_str,
-                "element": element,
-                "phase": phase.value,
-            })
+            iching_result = qic.consult(
+                question,
+                context={
+                    "sign": sign.name_str,
+                    "element": element,
+                    "phase": phase.value,
+                },
+            )
             iching_num = iching_result.primary_hexagram
             iching_name = iching_result.primary_name
-            iching_judgment = iching_result.primary_judgment[:200] if iching_result.primary_judgment else ""
-            iching_guidance = iching_result.guidance[:200] if iching_result.guidance else ""
+            iching_judgment = (
+                iching_result.primary_judgment[:200]
+                if iching_result.primary_judgment
+                else ""
+            )
+            iching_guidance = (
+                iching_result.guidance[:200] if iching_result.guidance else ""
+            )
         except Exception as e:
             logger.debug("I Ching consultation skipped: %s", e)
             iching_num = random.randint(1, 64)
@@ -282,6 +330,7 @@ class ZodiacalProcession:
         ifa_osogbo = ""
         try:
             from whitemagic.oracle.ifa_cast import cast_ifa
+
             ifa_result = cast_ifa(
                 question=f"Guidance for {phase.value} phase transition at {sign.name_str}",
                 context={
@@ -307,9 +356,15 @@ class ZodiacalProcession:
         tarot_summary = ""
         try:
             from whitemagic.oracle.tarot_cast import cast_tarot
+
             tarot_reading = cast_tarot(
                 question=f"Guidance for {phase.value} phase at {sign.name_str}",
-                context={"sign": sign.name_str, "element": element, "iching": iching_num, "ifa": ifa_odu_number},
+                context={
+                    "sign": sign.name_str,
+                    "element": element,
+                    "iching": iching_num,
+                    "ifa": ifa_odu_number,
+                },
                 spread="three_card",
             )
             tarot_summary = tarot_reading.summary[:200]
@@ -319,9 +374,13 @@ class ZodiacalProcession:
                     "reversed": dc.is_reversed,
                     "position": dc.position,
                     "position_meaning": dc.position_meaning,
-                    "meaning": dc.card.reversed_meaning if dc.is_reversed else dc.card.upright_meaning,
+                    "meaning": dc.card.reversed_meaning
+                    if dc.is_reversed
+                    else dc.card.upright_meaning,
                     "keywords": dc.card.keywords,
-                    "suit": "major" if hasattr(dc.card, "hebrew_name") else dc.card.suit,
+                    "suit": "major"
+                    if hasattr(dc.card, "hebrew_name")
+                    else dc.card.suit,
                 }
                 if hasattr(dc.card, "hebrew_name"):
                     d["number"] = dc.card.number
@@ -334,6 +393,7 @@ class ZodiacalProcession:
         great_year_ctx = {}
         try:
             from whitemagic.oracle.great_year import get_temporal_context
+
             gy = get_temporal_context()
             great_year_ctx = {
                 "current_age": gy.precessional.current_age,
@@ -398,12 +458,14 @@ class ZodiacalProcession:
             transitions += 1
 
             if callback:
-                callback({
-                    "sign": sign.name_str,
-                    "symbol": sign.symbol,
-                    "phase": self.state.current_phase.value,
-                    "transition": transitions,
-                })
+                callback(
+                    {
+                        "sign": sign.name_str,
+                        "symbol": sign.symbol,
+                        "phase": self.state.current_phase.value,
+                        "transition": transitions,
+                    }
+                )
 
             # Safety limit
             if transitions > 30:
@@ -418,12 +480,12 @@ class ZodiacalProcession:
 
         return f"""
 ☯️ ZODIACAL PROCESSION STATUS
-{'='*40}
+{"=" * 40}
 Phase: {s.current_phase.value.upper()}
 Sign: {s.current_sign.symbol} {s.current_sign.name_str.title()}
 Element: {s.current_sign.element.title()}
 Modality: {s.current_sign.modality.title()}
-Fixed Hub: {'Yes ⭐' if s.current_sign.is_fixed else 'No'}
+Fixed Hub: {"Yes ⭐" if s.current_sign.is_fixed else "No"}
 
 Core: {core.name} | Mode: {core.mode} | Element: {core.element}
 
@@ -434,6 +496,7 @@ Signs Visited: {len(s.signs_visited)}
 
 # Singleton for global access
 _procession: ZodiacalProcession | None = None
+
 
 def get_procession() -> ZodiacalProcession:
     """Get the global zodiacal procession instance."""
@@ -466,6 +529,7 @@ def wire_to_cognitive_modes() -> bool:
     """
     try:
         from whitemagic.core.intelligence.cognitive_modes import get_cognitive_modes
+
         cm = get_cognitive_modes()
         proc = get_procession()
         proc.register_callback("on_phase_change", cm.from_procession_event)
@@ -485,10 +549,12 @@ if __name__ == "__main__":
     logger.info("\n🌀 Running partial cycle...")
     for i in range(6):
         sign = proc.next_sign()
-        logger.info("  %s %s (%s)", sign.symbol, sign.name_str, proc.state.current_phase.value)
+        logger.info(
+            "  %s %s (%s)", sign.symbol, sign.name_str, proc.state.current_phase.value
+        )
 
     logger.info("\n🔮 Consulting oracle...")
     oracle = proc.consult_oracle()
-    logger.info("  Hexagram: #%s", oracle['hexagram'])
-    logger.info("  Element: %s", oracle['element'])
-    logger.info("  Guidance: %s", oracle['guidance'])
+    logger.info("  Hexagram: #%s", oracle["hexagram"])
+    logger.info("  Element: %s", oracle["element"])
+    logger.info("  Guidance: %s", oracle["guidance"])

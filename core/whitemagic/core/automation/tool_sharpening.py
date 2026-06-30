@@ -44,6 +44,7 @@ class ToolSharpening:
         """Check MCP tool registry is up to date."""
         try:
             from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
             return {"status": "ok", "tools": len(DISPATCH_TABLE)}
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -52,8 +53,12 @@ class ToolSharpening:
         """Check dispatch table consistency."""
         try:
             from whitemagic.tools.registry import get_registry
+
             reg = get_registry()
-            return {"status": "ok", "registered": len(reg) if hasattr(reg, "__len__") else "unknown"}
+            return {
+                "status": "ok",
+                "registered": len(reg) if hasattr(reg, "__len__") else "unknown",
+            }
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
@@ -61,6 +66,7 @@ class ToolSharpening:
         """Check grimoire chapters are accessible."""
         try:
             from whitemagic.agentic.grimoire_check import get_grimoire_checker
+
             checker = get_grimoire_checker()
             result = checker.check_available()
             return {"status": "ok", "chapters": result["total_chapters"]}
@@ -71,6 +77,7 @@ class ToolSharpening:
         """Check test suite is accessible."""
         try:
             from whitemagic.config.paths import get_project_root
+
             test_dir = get_project_root() / "core" / "tests"
             if test_dir.exists():
                 return {"status": "ok", "test_dir_exists": True}

@@ -1,11 +1,10 @@
-
 with open("whitemagic-rust/src/continuous_daemon.rs") as f:
     content = f.read()
 
 # Make the daemon actually wire to the consolidation engine
 content = content.replace(
     "use tokio::runtime::Runtime;",
-    "use tokio::runtime::Runtime;\nuse crate::consolidation::ConsolidationEngine;"
+    "use tokio::runtime::Runtime;\nuse crate::consolidation::ConsolidationEngine;",
 )
 
 content = content.replace(
@@ -24,7 +23,7 @@ content = content.replace(
     loops: Arc<AtomicU64>,
     tasks: Arc<AtomicU64>,
     errors: Arc<AtomicU64>,
-}"""
+}""",
 )
 
 # No easy way to instantiate ConsolidationEngine directly in the daemon without pyo3 context,
@@ -54,7 +53,7 @@ content = content.replace(
                     loops_clone.fetch_add(1, Ordering::SeqCst);
 
                     // Simple simulation of task execution
-                    tasks_clone.fetch_add(1, Ordering::SeqCst);"""
+                    tasks_clone.fetch_add(1, Ordering::SeqCst);""",
 )
 
 with open("whitemagic-rust/src/continuous_daemon.rs", "w") as f:

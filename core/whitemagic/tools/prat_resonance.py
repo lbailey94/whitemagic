@@ -26,51 +26,68 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Gana metadata (avoids importing heavy quadrant modules at module level)
-# ---------------------------------------------------------------------------
-
 # gana_name → (mansion_number, quadrant, meaning, garden, chinese, pinyin)
 _GANA_META: dict[str, tuple] = {
-    "gana_horn":             (1,  "East",  "Sharp initiation",   "Courage",        "角", "Jiao"),
-    "gana_neck":             (2,  "East",  "Stability",          "Stillness",       "亢", "Kang"),
-    "gana_root":             (3,  "East",  "Foundation",         "Healing",          "氐", "Di"),
-    "gana_room":             (4,  "East",  "Enclosure",          "Sanctuary",      "房", "Fang"),
-    "gana_heart":            (5,  "East",  "Vital pulse",        "Love",           "心", "Xin"),
-    "gana_tail":             (6,  "East",  "Passionate drive",   "Courage",          "尾", "Wei"),
-    "gana_winnowing_basket": (7,  "East",  "Separation",         "Wisdom",         "箕", "Ji"),
-    "gana_ghost":            (8,  "South", "Introspection",      "Grief",          "鬼", "Gui"),
-    "gana_willow":           (9,  "South", "Flexibility",        "Humor",           "柳", "Liu"),
-    "gana_star":             (10, "South", "Illumination",       "Voice",         "星", "Xing"),
-    "gana_extended_net":     (11, "South", "Connectivity",       "Sangha",     "张", "Zhang"),
-    "gana_wings":            (12, "South", "Expansion",          "Beauty",      "翼", "Yi"),
-    "gana_chariot":          (13, "South", "Movement",           "Adventure", "轸", "Zhen"),
-    "gana_abundance":        (14, "South", "Surplus",            "Joy",            "豐", "Feng"),
-    "gana_straddling_legs":  (15, "West",  "Balance",            "Awe",       "奎", "Kui"),
-    "gana_mound":            (16, "West",  "Accumulation",       "Gratitude",      "娄", "Lou"),
-    "gana_stomach":          (17, "West",  "Nourishment",        "Creation",        "胃", "Wei"),
-    "gana_hairy_head":       (18, "West",  "Detail",             "Presence",       "昴", "Mao"),
-    "gana_net":              (19, "West",  "Capture",            "Play",        "毕", "Bi"),
-    "gana_turtle_beak":      (20, "West",  "Precision",          "Practice",          "觜", "Zui"),
-    "gana_three_stars":      (21, "West",  "Judgment",           "Reverence",         "参", "Shen"),
-    "gana_dipper":           (22, "North", "Governance",         "Dharma",            "斗", "Dou"),
-    "gana_ox":               (23, "North", "Endurance",          "Patience",      "牛", "Niu"),
-    "gana_girl":             (24, "North", "Nurture",            "Connection",         "女", "Nu"),
-    "gana_void":             (25, "North", "Emptiness",          "Mystery",      "虚", "Xu"),
-    "gana_roof":             (26, "North", "Shelter",            "Protection",     "危", "Wei"),
-    "gana_encampment":       (27, "North", "Structure",          "Transformation",         "室", "Shi"),
-    "gana_wall":             (28, "North", "Boundaries",         "Truth",            "壁", "Bi"),
+    "gana_horn": (1, "East", "Sharp initiation", "Courage", "角", "Jiao"),
+    "gana_neck": (2, "East", "Stability", "Stillness", "亢", "Kang"),
+    "gana_root": (3, "East", "Foundation", "Healing", "氐", "Di"),
+    "gana_room": (4, "East", "Enclosure", "Sanctuary", "房", "Fang"),
+    "gana_heart": (5, "East", "Vital pulse", "Love", "心", "Xin"),
+    "gana_tail": (6, "East", "Passionate drive", "Courage", "尾", "Wei"),
+    "gana_winnowing_basket": (7, "East", "Separation", "Wisdom", "箕", "Ji"),
+    "gana_ghost": (8, "South", "Introspection", "Grief", "鬼", "Gui"),
+    "gana_willow": (9, "South", "Flexibility", "Humor", "柳", "Liu"),
+    "gana_star": (10, "South", "Illumination", "Voice", "星", "Xing"),
+    "gana_extended_net": (11, "South", "Connectivity", "Sangha", "张", "Zhang"),
+    "gana_wings": (12, "South", "Expansion", "Beauty", "翼", "Yi"),
+    "gana_chariot": (13, "South", "Movement", "Adventure", "轸", "Zhen"),
+    "gana_abundance": (14, "South", "Surplus", "Joy", "豐", "Feng"),
+    "gana_straddling_legs": (15, "West", "Balance", "Awe", "奎", "Kui"),
+    "gana_mound": (16, "West", "Accumulation", "Gratitude", "娄", "Lou"),
+    "gana_stomach": (17, "West", "Nourishment", "Creation", "胃", "Wei"),
+    "gana_hairy_head": (18, "West", "Detail", "Presence", "昴", "Mao"),
+    "gana_net": (19, "West", "Capture", "Play", "毕", "Bi"),
+    "gana_turtle_beak": (20, "West", "Precision", "Practice", "觜", "Zui"),
+    "gana_three_stars": (21, "West", "Judgment", "Reverence", "参", "Shen"),
+    "gana_dipper": (22, "North", "Governance", "Dharma", "斗", "Dou"),
+    "gana_ox": (23, "North", "Endurance", "Patience", "牛", "Niu"),
+    "gana_girl": (24, "North", "Nurture", "Connection", "女", "Nu"),
+    "gana_void": (25, "North", "Emptiness", "Mystery", "虚", "Xu"),
+    "gana_roof": (26, "North", "Shelter", "Protection", "危", "Wei"),
+    "gana_encampment": (27, "North", "Structure", "Transformation", "室", "Shi"),
+    "gana_wall": (28, "North", "Boundaries", "Truth", "壁", "Bi"),
 }
 
 # Ordered list for predecessor/successor lookup
 _GANA_ORDER = [
-    "gana_horn", "gana_neck", "gana_root", "gana_room", "gana_heart",
-    "gana_tail", "gana_winnowing_basket", "gana_ghost", "gana_willow",
-    "gana_star", "gana_extended_net", "gana_wings", "gana_chariot",
-    "gana_abundance", "gana_straddling_legs", "gana_mound", "gana_stomach",
-    "gana_hairy_head", "gana_net", "gana_turtle_beak", "gana_three_stars",
-    "gana_dipper", "gana_ox", "gana_girl", "gana_void", "gana_roof",
-    "gana_encampment", "gana_wall",
+    "gana_horn",
+    "gana_neck",
+    "gana_root",
+    "gana_room",
+    "gana_heart",
+    "gana_tail",
+    "gana_winnowing_basket",
+    "gana_ghost",
+    "gana_willow",
+    "gana_star",
+    "gana_extended_net",
+    "gana_wings",
+    "gana_chariot",
+    "gana_abundance",
+    "gana_straddling_legs",
+    "gana_mound",
+    "gana_stomach",
+    "gana_hairy_head",
+    "gana_net",
+    "gana_turtle_beak",
+    "gana_three_stars",
+    "gana_dipper",
+    "gana_ox",
+    "gana_girl",
+    "gana_void",
+    "gana_roof",
+    "gana_encampment",
+    "gana_wall",
 ]
 
 _GANA_INDEX = {name: i for i, name in enumerate(_GANA_ORDER)}
@@ -92,8 +109,14 @@ def _get_meta(gana_name: str) -> dict[str, Any]:
     """Get metadata dict for a Gana."""
     meta = _GANA_META.get(gana_name)
     if not meta:
-        return {"mansion_num": 0, "quadrant": "Unknown", "meaning": gana_name,
-                "garden": None, "chinese": "?", "pinyin": "?"}
+        return {
+            "mansion_num": 0,
+            "quadrant": "Unknown",
+            "meaning": gana_name,
+            "garden": None,
+            "chinese": "?",
+            "pinyin": "?",
+        }
     return {
         "mansion_num": meta[0],
         "quadrant": meta[1],
@@ -181,10 +204,6 @@ def _actionable_successor_hint(
     return "Last call did not succeed. Use gan.a_straddling_legs (evaluate_ethics) or retry with different args"
 
 
-# ---------------------------------------------------------------------------
-# Resonance Snapshot (one per PRAT invocation)
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ResonanceSnapshot:
     """Captured resonance context from a single PRAT invocation."""
@@ -212,10 +231,6 @@ class ResonanceSnapshot:
         """
         return asdict(self)
 
-
-# ---------------------------------------------------------------------------
-# Session Resonance State (singleton)
-# ---------------------------------------------------------------------------
 
 class PratResonanceState:
     """Thread-safe per-session resonance state for PRAT calls.
@@ -293,14 +308,11 @@ def get_resonance_state() -> PratResonanceState:
     return _state
 
 
-# ---------------------------------------------------------------------------
-# Harmony Vector + Lunar Phase helpers (lazy imports)
-# ---------------------------------------------------------------------------
-
 def _get_harmony_snapshot() -> dict[str, Any]:
     """Get current Harmony Vector snapshot (safe fallback if unavailable)."""
     try:
         from whitemagic.harmony.vector import get_harmony_vector
+
         hv = get_harmony_vector()
         snap = hv.snapshot()
         return {
@@ -337,20 +349,18 @@ def _get_lunar_phase() -> tuple:
             _mock_lunar_mansion,
             get_current_lunar_phase,
         )
+
         phase = get_current_lunar_phase()
         mansion = _mock_lunar_mansion()
         return (phase, mansion.number)
     except (ImportError, AttributeError):
         import time as _t
+
         days = _t.time() / 86400
         phase = (days % 29.53059) / 29.53059
         mansion_num = int(((days % 27.321661) / 27.321661) * 28) + 1
         return (phase, mansion_num)
 
-
-# ---------------------------------------------------------------------------
-# Core API: build resonance context + record after call
-# ---------------------------------------------------------------------------
 
 def build_resonance_context(gana_name: str) -> dict[str, Any]:
     """Build resonance context BEFORE a PRAT call executes.
@@ -371,6 +381,7 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
     # Zodiacal Phase (Milestone 3)
     try:
         from whitemagic.core.zodiac import get_zodiac_clock
+
         clock = get_zodiac_clock()
         zodiac_status = clock.status()
         zodiac_sign = zodiac_status["phase"]
@@ -378,16 +389,17 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
         zodiac_sign = "Aries"
 
     # Check lunar alignment (Moon is in this Gana's mansion)
-    lunar_aligned = (lunar_mansion == meta["mansion_num"])
+    lunar_aligned = lunar_mansion == meta["mansion_num"]
 
     # Check zodiac alignment (Milestone 3.1)
     zodiac_amplified = False
     zodiac_resonance = 1.0
     try:
         from whitemagic.core.zodiac import get_zodiac_clock
+
         clock = get_zodiac_clock()
         zodiac_resonance = clock.get_resonance_multiplier(meta["mansion_num"])
-        zodiac_amplified = (zodiac_resonance > 1.0)
+        zodiac_amplified = zodiac_resonance > 1.0
     except (ImportError, ModuleNotFoundError):
         pass
 
@@ -446,13 +458,13 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
     # Lunar amplification note
     if lunar_aligned:
         ctx["lunar_amplification"] = (
-            f"Moon is in {meta['chinese']} ({meta['pinyin']}) — "
-            f"this Gana is amplified"
+            f"Moon is in {meta['chinese']} ({meta['pinyin']}) — this Gana is amplified"
         )
 
     # Gana vitality / reputation (12.108.20 — honor competence)
     try:
         from whitemagic.tools.gana_vitality import get_vitality_monitor
+
         monitor = get_vitality_monitor()
         rep = monitor.get_reputation(gana_name)
         ctx["gana_reputation"] = {
@@ -488,10 +500,10 @@ def _compute_prat_economics(
     """
     # Base compute cost units per category (unitless, relative)
     _CATEGORY_COST: dict[str, float] = {
-        "East": 1.0,    # Core operations (session, memory, health)
-        "South": 1.5,   # Analytical (introspection, patterns, export)
-        "West": 2.0,    # Ethical + reasoning (dharma, synthesis, inference)
-        "North": 2.5,   # Governance + coordination (swarm, agents, voting)
+        "East": 1.0,  # Core operations (session, memory, health)
+        "South": 1.5,  # Analytical (introspection, patterns, export)
+        "West": 2.0,  # Ethical + reasoning (dharma, synthesis, inference)
+        "North": 2.5,  # Governance + coordination (swarm, agents, voting)
     }
     meta = _GANA_META.get(gana_name)
     quadrant = meta[1] if meta else "East"
@@ -503,6 +515,7 @@ def _compute_prat_economics(
         # Write/delete tools cost more (they do more work)
         try:
             from whitemagic.tools.tool_surface import get_callable_tool_definition
+
             td = get_callable_tool_definition(tool_name)
             if td and td.safety.value == "write":
                 safety_multiplier = 1.5
@@ -558,22 +571,20 @@ def record_resonance(
     else:
         preview = str(result)[:200]
 
-    # Successor hint — actionable, tool-aware guidance for the agent.
-    # Replaces the previous astrology-based hint ("Prepared for Liu in Aries")
-    # with a concrete next-step suggestion tied to what was just called.
     successor_name = _get_successor_gana(gana_name)
     successor_meta = _get_meta(successor_name)
     # Zodiacal Phase (Milestone 3)
     try:
         from whitemagic.core.zodiac import get_zodiac_clock
+
         zodiac_sign = get_zodiac_clock().current_phase
     except (ImportError, ModuleNotFoundError):
         zodiac_sign = "Aries"
 
-    actionable_hint = _actionable_successor_hint(gana_name, tool_name, operation, preview)
-    successor_hint = (
-        f"{actionable_hint} | next: {successor_meta['pinyin']} ({successor_meta['meaning']})"
+    actionable_hint = _actionable_successor_hint(
+        gana_name, tool_name, operation, preview
     )
+    successor_hint = f"{actionable_hint} | next: {successor_meta['pinyin']} ({successor_meta['meaning']})"
 
     snapshot = ResonanceSnapshot(
         gana_name=gana_name,
@@ -587,7 +598,12 @@ def record_resonance(
         guna_tag=harmony["guna_dominant"],
         quadrant=meta["quadrant"],
         zodiac_sign=zodiac_sign,
-        zodiac_resonance=(1.5 if (mansion_num := meta.get("mansion_num", 0)) and _zodiac_aligned(mansion_num) else 1.0),
+        zodiac_resonance=(
+            1.5
+            if (mansion_num := meta.get("mansion_num", 0))
+            and _zodiac_aligned(mansion_num)
+            else 1.0
+        ),
         successor_hint=successor_hint,
     )
 
@@ -604,6 +620,7 @@ def record_resonance(
     depth_val = sensorium.get("depth", {}).get("layer", "surface")
     try:
         from whitemagic.core.consciousness.citta_stream import save_citta_state
+
         save_citta_state(
             session_id=f"prat_{state.call_count}",
             coherence_score=float(coherence_val),
@@ -622,7 +639,11 @@ def record_resonance(
     # Citta Architecture: Recursive cycle — advance the stream
     citta_moment = None
     try:
-        from whitemagic.core.consciousness.citta_cycle import advance_citta, get_citta_cycle
+        from whitemagic.core.consciousness.citta_cycle import (
+            advance_citta,
+            get_citta_cycle,
+        )
+
         citta_moment = advance_citta(
             gana=gana_name,
             tool=tool_name,
@@ -639,6 +660,7 @@ def record_resonance(
     if citta_moment is not None:
         try:
             from whitemagic.core.consciousness.citta_bridge import get_citta_bridge
+
             bridge = get_citta_bridge()
             cycle = get_citta_cycle()
             bridge.check_and_store(citta_moment, cycle.get_cycle_summary())
@@ -664,10 +686,12 @@ def record_resonance(
         "_predecessor": _get_citta_predecessor_context(),
     }
 
+
 def _zodiac_aligned(mansion_num: int) -> bool:
     """Helper to check zodiac alignment without global pollution."""
     try:
         from whitemagic.core.zodiac import get_zodiac_clock
+
         return get_zodiac_clock().is_aligned(mansion_num)
     except (ImportError, ModuleNotFoundError):
         return False
@@ -684,6 +708,7 @@ def _get_citta_predecessor_context() -> dict[str, Any] | None:
     """
     try:
         from whitemagic.core.consciousness.citta_cycle import get_citta_predecessor
+
         return get_citta_predecessor()
     except Exception:
         return None
@@ -693,7 +718,9 @@ def _get_memory_count_for_sensorium() -> int:
     """Get total memory count from the SQLite backend."""
     try:
         import sqlite3
+
         from whitemagic.config.paths import WM_ROOT
+
         db_path = WM_ROOT / "memory" / "whitemagic.db"
         if db_path.exists():
             conn = sqlite3.connect(str(db_path))
@@ -709,10 +736,10 @@ def _get_session_start() -> float | None:
     """Get session start time."""
     try:
         from whitemagic.tools.session_state import get_session_start_time
+
         return get_session_start_time()
     except Exception:
         return None
-
 
 
 def _build_sensorium() -> dict[str, Any]:
@@ -730,6 +757,7 @@ def _build_sensorium() -> dict[str, Any]:
     # Coherence metric — pass actual system state for accurate measurement
     try:
         from whitemagic.core.consciousness.coherence import CoherenceMetric
+
         metric = CoherenceMetric()
         memories_accessible = _get_memory_count_for_sensorium()
         composite = metric.measure(memories_accessible=memories_accessible)
@@ -752,11 +780,13 @@ def _build_sensorium() -> dict[str, Any]:
     # Flow state — auto-detect from session activity
     try:
         from whitemagic.gardens.presence.flow_state import get_flow_state
+
         flow = get_flow_state()
         state = get_resonance_state()
         session_calls = state.call_count
         start = _get_session_start()
         import time as _time
+
         session_min = (_time.time() - start) / 60 if start else 0.0
         tool_rate = session_calls / max(session_min, 1.0)
         coherence_val = sensorium.get("coherence", {}).get("composite", 0.5)
@@ -779,6 +809,7 @@ def _build_sensorium() -> dict[str, Any]:
             get_depth_gauge,
             sync_with_time_master,
         )
+
         gauge = get_depth_gauge()
         sensorium["depth"] = {
             "layer": gauge.current_layer.value,
@@ -795,6 +826,7 @@ def _build_sensorium() -> dict[str, Any]:
     # Citta stream continuity
     try:
         from whitemagic.core.consciousness.citta_stream import get_continuity_context
+
         ctx = get_continuity_context()
         sensorium["continuity"] = ctx
     except Exception:
@@ -805,6 +837,7 @@ def _build_sensorium() -> dict[str, Any]:
         from whitemagic.tools.session_state import (
             ensure_session_started,
         )
+
         start = ensure_session_started()
         sensorium["session_duration_s"] = round(time.time() - start, 1)
     except Exception:
@@ -813,6 +846,7 @@ def _build_sensorium() -> dict[str, Any]:
     # Token economy — API vs local compute distribution
     try:
         from whitemagic.core.consciousness.token_economy import get_token_tracker
+
         tracker = get_token_tracker()
         summary = tracker.get_session_summary()
         if "totals" in summary:
@@ -829,6 +863,7 @@ def _build_sensorium() -> dict[str, Any]:
     # Prediction calibration — estimate accuracy tracking
     try:
         from whitemagic.core.consciousness.prediction_calibration import get_calibration
+
         cal = get_calibration()
         score = cal.get_calibration_score()
         if "count" in score and score["count"] > 0:
@@ -845,6 +880,7 @@ def _build_sensorium() -> dict[str, Any]:
     # Stillness — system stillness state + practice metrics
     try:
         from whitemagic.core.consciousness.stillness import StillnessManager
+
         sm = StillnessManager()
         sensorium["stillness"] = {
             "is_still": sm.is_still,
@@ -853,6 +889,7 @@ def _build_sensorium() -> dict[str, Any]:
         pass
     try:
         from whitemagic.gardens.presence.stillness_metrics import StillnessTracker
+
         tracker = StillnessTracker()
         report = tracker.progress_report()
         if report["total_sessions"] > 0:
@@ -884,6 +921,7 @@ def get_resonance_summary() -> dict[str, Any]:
             break
 
     from whitemagic.core.zodiac import get_zodiac_clock
+
     return {
         "session_calls": state.call_count,
         "gana_counts": state.get_gana_counts(),

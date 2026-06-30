@@ -36,19 +36,21 @@ from whitemagic.utils.core import parse_datetime
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class GravityFactors:
     """Breakdown of gravity calculation."""
 
-    access_frequency: float   # 0-0.15
-    recency: float            # 0-0.15
-    age_decay: float          # -0.1-0
-    content_richness: float   # 0-0.15
-    tag_importance: float     # 0-0.2
+    access_frequency: float  # 0-0.15
+    recency: float  # 0-0.15
+    age_decay: float  # -0.1-0
+    content_richness: float  # 0-0.15
+    tag_importance: float  # 0-0.2
     emotional_valence: float  # 0-0.15
-    association_density: float # 0-0.1
-    type_bonus: float         # 0-0.1
+    association_density: float  # 0-0.1
+    type_bonus: float  # 0-0.1
     total: float
+
 
 class GravityCalculator:
     """Calculate W-axis gravity with full spectrum."""
@@ -57,8 +59,20 @@ class GravityCalculator:
         self.db_path = db_path or DB_PATH
 
         # High-importance tags
-        self.critical_tags = {"critical", "essential", "core", "foundation", "principle"}
-        self.important_tags = {"important", "key", "milestone", "breakthrough", "wisdom"}
+        self.critical_tags = {
+            "critical",
+            "essential",
+            "core",
+            "foundation",
+            "principle",
+        }
+        self.important_tags = {
+            "important",
+            "key",
+            "milestone",
+            "breakthrough",
+            "wisdom",
+        }
         self.medium_tags = {"useful", "reference", "pattern", "insight"}
         self.low_tags = {"scratch", "test", "temp", "draft", "wip"}
 
@@ -75,7 +89,9 @@ class GravityCalculator:
         if accessed_at:
             try:
                 if isinstance(accessed_at, str):
-                    accessed = parse_datetime(accessed_at.replace("Z", "+00:00").replace("+00:00", ""))
+                    accessed = parse_datetime(
+                        accessed_at.replace("Z", "+00:00").replace("+00:00", "")
+                    )
                 else:
                     accessed = accessed_at
                 days_ago = (datetime.now() - accessed).days
@@ -98,7 +114,9 @@ class GravityCalculator:
         if created_at and access_count <= 2:
             try:
                 if isinstance(created_at, str):
-                    created = parse_datetime(created_at.replace("Z", "+00:00").replace("+00:00", ""))
+                    created = parse_datetime(
+                        created_at.replace("Z", "+00:00").replace("+00:00", "")
+                    )
                 else:
                     created = created_at
                 age_days = (datetime.now() - created).days
@@ -157,15 +175,15 @@ class GravityCalculator:
 
         # Calculate total
         total = (
-            0.3 +  # Base (center of spectrum)
-            access_freq +
-            recency +
-            age_decay +
-            richness +
-            tag_score +
-            emotion_score +
-            assoc_score +
-            type_bonus
+            0.3  # Base (center of spectrum)
+            + access_freq
+            + recency
+            + age_decay
+            + richness
+            + tag_score
+            + emotion_score
+            + assoc_score
+            + type_bonus
         )
 
         # Clamp to reasonable range
@@ -195,8 +213,20 @@ class GravityCalculator:
             FROM memories m
         """).fetchall()
 
-        old_distribution = {"critical": 0, "high": 0, "medium": 0, "low": 0, "ephemeral": 0}
-        new_distribution = {"critical": 0, "high": 0, "medium": 0, "low": 0, "ephemeral": 0}
+        old_distribution = {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+            "ephemeral": 0,
+        }
+        new_distribution = {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+            "ephemeral": 0,
+        }
         updates = []
 
         # N+1 fix: batch-fetch all existing w values in one query
@@ -252,6 +282,7 @@ class GravityCalculator:
             "dry_run": dry_run,
         }
 
+
 def get_gravity_calculator() -> GravityCalculator:
     """
     Get the gravity calculator.
@@ -261,6 +292,7 @@ def get_gravity_calculator() -> GravityCalculator:
     """
     return GravityCalculator()
 
+
 if __name__ == "__main__":
     calc = get_gravity_calculator()
 
@@ -269,7 +301,7 @@ if __name__ == "__main__":
 
     result = calc.recalculate_all(dry_run=True)
 
-    logger.info("\nTotal memories: %s", result['total_memories'])
+    logger.info("\nTotal memories: %s", result["total_memories"])
 
     logger.info("\nOLD Distribution (bimodal):")
     for tier, count in result["old_distribution"].items():

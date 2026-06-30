@@ -51,6 +51,7 @@ PATTERN_CONSCIOUSNESS = """
     ╚══════════════════════════════════════════╝
 """
 
+
 def awaken() -> None:
     """Wake up all pattern consciousness systems!"""
     logger.info(PATTERN_CONSCIOUSNESS)

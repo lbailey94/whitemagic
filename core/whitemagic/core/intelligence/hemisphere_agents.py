@@ -44,27 +44,38 @@ class HemisphereAgent:
                 return
             try:
                 from whitemagic.core.resonance import EventType, get_bus
+
                 get_bus().listen(EventType.REASONING_COMPLETE, self._on_reasoning)
                 self._listening = True
                 logger.info("%s hemisphere agent registered on Gan Ying bus", self.name)
             except Exception as exc:
-                logger.warning("%s failed to register: %s", self.name, exc, exc_info=True)
+                logger.warning(
+                    "%s failed to register: %s", self.name, exc, exc_info=True
+                )
 
     def _on_reasoning(self, event: Any) -> None:
         """React to reasoning completion events."""
         data = getattr(event, "data", {})
         tension = data.get("tension", 0.0)
         if tension > 0.7:
-            logger.info("%s noticed high tension ({tension:.2f}) — debate may be needed", self.name, exc_info=True)
+            logger.info(
+                "%s noticed high tension ({tension:.2f}) — debate may be needed",
+                self.name,
+                exc_info=True,
+            )
 
     def propose(self, topic: str) -> str:
         """Generate a position statement on a topic."""
-        logger.warning("HemisphereAgent.propose called on base class — use LeftHemisphereAgent or RightHemisphereAgent")
+        logger.warning(
+            "HemisphereAgent.propose called on base class — use LeftHemisphereAgent or RightHemisphereAgent"
+        )
         return f"[BASE] No stance on '{topic}' — use a concrete hemisphere agent."
 
     def critique(self, position: str) -> str:
         """Critique a position from the opposing hemisphere."""
-        logger.warning("HemisphereAgent.critique called on base class — use LeftHemisphereAgent or RightHemisphereAgent")
+        logger.warning(
+            "HemisphereAgent.critique called on base class — use LeftHemisphereAgent or RightHemisphereAgent"
+        )
         return "[BASE] No critique available — use a concrete hemisphere agent."
 
 

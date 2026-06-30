@@ -11,6 +11,7 @@ Usage:
 
 Run periodically or in CI with continue-on-error for style-only checks.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -52,8 +53,12 @@ def count_errors(stdout: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="WhiteMagic style hygiene")
-    parser.add_argument("--check-only", action="store_true", help="Report only, do not fix")
-    parser.add_argument("--ci", action="store_true", help="Exit 1 if high-signal rules fail")
+    parser.add_argument(
+        "--check-only", action="store_true", help="Report only, do not fix"
+    )
+    parser.add_argument(
+        "--ci", action="store_true", help="Exit 1 if high-signal rules fail"
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -64,11 +69,19 @@ def main() -> int:
 
     # 1. High-signal rules (must be zero)
     print(f"\n[1/3] High-signal rules ({HIGH_SIGNAL})...")
-    high_result = run([
-        sys.executable, "-m", "ruff", "check", "whitemagic/",
-        "--select", HIGH_SIGNAL,
-        "--ignore", "E501",
-    ])
+    high_result = run(
+        [
+            sys.executable,
+            "-m",
+            "ruff",
+            "check",
+            "whitemagic/",
+            "--select",
+            HIGH_SIGNAL,
+            "--ignore",
+            "E501",
+        ]
+    )
     high_count = count_errors(high_result.stdout)
     if high_count == 0:
         print("  ✅ Clean")
@@ -80,12 +93,21 @@ def main() -> int:
     # 2. Auto-fix safe issues
     if not args.check_only:
         print(f"\n[2/3] Auto-fixing safe issues ({SAFE_AUTO_FIX})...")
-        fix_result = run([
-            sys.executable, "-m", "ruff", "check", "whitemagic/",
-            "--select", SAFE_AUTO_FIX,
-            "--ignore", "E501",
-            "--fix", "--unsafe-fixes",
-        ])
+        fix_result = run(
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "check",
+                "whitemagic/",
+                "--select",
+                SAFE_AUTO_FIX,
+                "--ignore",
+                "E501",
+                "--fix",
+                "--unsafe-fixes",
+            ]
+        )
         fix_count = count_errors(fix_result.stdout)
         if fix_count == 0:
             print("  ✅ All fixable issues resolved")
@@ -96,11 +118,19 @@ def main() -> int:
 
     # 3. Style-only remainder (non-blocking)
     print(f"\n[3/3] Style-only remainder (E701, E402, etc. — non-blocking)...")
-    style_result = run([
-        sys.executable, "-m", "ruff", "check", "whitemagic/",
-        "--select", ALL_STYLE,
-        "--ignore", "E501",
-    ])
+    style_result = run(
+        [
+            sys.executable,
+            "-m",
+            "ruff",
+            "check",
+            "whitemagic/",
+            "--select",
+            ALL_STYLE,
+            "--ignore",
+            "E501",
+        ]
+    )
     style_count = count_errors(style_result.stdout)
     if style_count == 0:
         print("  ✅ All style rules clean")

@@ -1,9 +1,11 @@
 """Brain Upgrade #7: Resonance Amplifier - Cascade patterns through Gan Ying."""
+
 from datetime import datetime
 
 
 class ResonanceAmplifier:
     """ResonanceAmplifier: resonance amplifier."""
+
     def __init__(self) -> None:
         self.amplification_factor = 1.5
         self.cascades_triggered = 0
@@ -48,7 +50,10 @@ class ResonanceAmplifier:
             "factor": self.amplification_factor,
         }
 
+
 _amp = None
+
+
 def get_amplifier() -> ResonanceAmplifier:
     """
     Get the amplifier.

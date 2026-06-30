@@ -25,17 +25,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import logging
 import os
 import sqlite3
 import sys
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -53,6 +50,7 @@ log = logging.getLogger("assoc_builder")
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -68,28 +66,129 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 def extract_keywords(text: str, max_words: int = 50) -> list[str]:
     """Extract meaningful keywords from text."""
     import re
+
     # Remove markdown, code, URLs
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    text = re.sub(r'http\S+', '', text)
-    text = re.sub(r'[#*`_\[\]()]', ' ', text)
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    text = re.sub(r"http\S+", "", text)
+    text = re.sub(r"[#*`_\[\]()]", " ", text)
 
     # Tokenize
-    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+    words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
 
     # Remove stopwords
     stopwords = {
-        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
-        'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'from', 'this',
-        'that', 'they', 'with', 'will', 'each', 'make', 'like', 'just', 'over',
-        'such', 'more', 'than', 'them', 'very', 'when', 'come', 'could', 'into',
-        'time', 'only', 'its', 'also', 'after', 'some', 'then', 'other', 'what',
-        'which', 'their', 'there', 'about', 'would', 'these', 'should', 'because',
-        'through', 'between', 'during', 'before', 'after', 'above', 'below', 'any',
-        'same', 'both', 'few', 'most', 'own', 'while', 'where', 'how', 'who',
-        'whom', 'why', 'did', 'does', 'doing', 'done', 'being', 'is', 'it',
-        'in', 'on', 'at', 'to', 'of', 'by', 'or', 'an', 'as', 'if', 'so',
-        'we', 'he', 'she', 'my', 'his', 'me', 'us', 'am', 'be', 'are', 'was',
-        'were', 'said', 'say', 'says', 'went', 'go', 'get', 'got', 'get',
+        "the",
+        "and",
+        "for",
+        "are",
+        "but",
+        "not",
+        "you",
+        "all",
+        "can",
+        "had",
+        "her",
+        "was",
+        "one",
+        "our",
+        "out",
+        "has",
+        "have",
+        "been",
+        "from",
+        "this",
+        "that",
+        "they",
+        "with",
+        "will",
+        "each",
+        "make",
+        "like",
+        "just",
+        "over",
+        "such",
+        "more",
+        "than",
+        "them",
+        "very",
+        "when",
+        "come",
+        "could",
+        "into",
+        "time",
+        "only",
+        "its",
+        "also",
+        "after",
+        "some",
+        "then",
+        "other",
+        "what",
+        "which",
+        "their",
+        "there",
+        "about",
+        "would",
+        "these",
+        "should",
+        "because",
+        "through",
+        "between",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "any",
+        "same",
+        "both",
+        "few",
+        "most",
+        "own",
+        "while",
+        "where",
+        "how",
+        "who",
+        "whom",
+        "why",
+        "did",
+        "does",
+        "doing",
+        "done",
+        "being",
+        "is",
+        "it",
+        "in",
+        "on",
+        "at",
+        "to",
+        "of",
+        "by",
+        "or",
+        "an",
+        "as",
+        "if",
+        "so",
+        "we",
+        "he",
+        "she",
+        "my",
+        "his",
+        "me",
+        "us",
+        "am",
+        "be",
+        "are",
+        "was",
+        "were",
+        "said",
+        "say",
+        "says",
+        "went",
+        "go",
+        "get",
+        "got",
+        "get",
     }
     words = [w for w in words if w not in stopwords]
 
@@ -107,7 +206,9 @@ def jaccard_similarity(set1: set, set2: set) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def engine_jaccard(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) -> dict:
+def engine_jaccard(
+    conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False
+) -> dict:
     """Association mining via keyword Jaccard overlap."""
     log.info("═══ Engine: Jaccard Keyword Overlap ═══")
 
@@ -130,7 +231,7 @@ def engine_jaccard(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fal
         text = f"{mem['title'] or ''} {mem['content'] or ''}"
         keywords = set(extract_keywords(text, max_words=30))
         if keywords:
-            keyword_map[mem['id']] = keywords
+            keyword_map[mem["id"]] = keywords
 
     log.info(f"  Extracted keywords for {len(keyword_map)} memories")
 
@@ -149,7 +250,7 @@ def engine_jaccard(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fal
                 # Check if association exists
                 existing = conn.execute(
                     "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                    (id_a, id_b)
+                    (id_a, id_b),
                 ).fetchone()[0]
 
                 if existing == 0 and not dry_run:
@@ -158,7 +259,7 @@ def engine_jaccard(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fal
                             """INSERT INTO associations
                                (source_id, target_id, association_type, strength)
                                VALUES (?, ?, ?, ?)""",
-                            (id_a, id_b, "semantic_overlap", round(sim, 3))
+                            (id_a, id_b, "semantic_overlap", round(sim, 3)),
                         )
                         new_assoc += 1
                     except sqlite3.IntegrityError:
@@ -166,19 +267,26 @@ def engine_jaccard(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fal
 
         if (i + 1) % 100 == 0:
             conn.commit()
-            log.info(f"  Progress: {i + 1}/{len(mem_ids)} ({new_assoc} new associations)")
+            log.info(
+                f"  Progress: {i + 1}/{len(mem_ids)} ({new_assoc} new associations)"
+            )
 
     conn.commit()
-    log.info(f"  ✅ Jaccard: {new_assoc} new associations from {total_compared} comparisons")
+    log.info(
+        f"  ✅ Jaccard: {new_assoc} new associations from {total_compared} comparisons"
+    )
     return {"new_associations": new_assoc, "compared": total_compared}
 
 
-def engine_causal(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) -> dict:
+def engine_causal(
+    conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False
+) -> dict:
     """Causal edge discovery via temporal + semantic signals."""
     log.info("═══ Engine: Causal Miner ═══")
 
     try:
         from whitemagic.core.memory.causal_miner import CausalMiner
+
         miner = CausalMiner()
     except Exception as e:
         log.warning(f"  CausalMiner unavailable: {e}")
@@ -206,7 +314,7 @@ def engine_causal(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
                 # Try to find target memory by content overlap
                 target_keywords = set(extract_keywords(link.get("effect", ""), 10))
                 for other in memories:
-                    if other['id'] == mem['id']:
+                    if other["id"] == mem["id"]:
                         continue
                     other_text = f"{other['title'] or ''} {other['content'] or ''}"
                     other_keywords = set(extract_keywords(other_text, 30))
@@ -215,7 +323,7 @@ def engine_causal(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
                     if overlap >= 0.1 and not dry_run:
                         existing = conn.execute(
                             "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                            (mem['id'], other['id'])
+                            (mem["id"], other["id"]),
                         ).fetchone()[0]
 
                         if existing == 0:
@@ -224,7 +332,12 @@ def engine_causal(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
                                     """INSERT INTO associations
                                        (source_id, target_id, association_type, strength)
                                        VALUES (?, ?, ?, ?)""",
-                                    (mem['id'], other['id'], link.get("relation", "causal"), round(overlap, 3))
+                                    (
+                                        mem["id"],
+                                        other["id"],
+                                        link.get("relation", "causal"),
+                                        round(overlap, 3),
+                                    ),
                                 )
                                 new_assoc += 1
                             except sqlite3.IntegrityError:
@@ -234,19 +347,24 @@ def engine_causal(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
 
         if (i + 1) % 100 == 0:
             conn.commit()
-            log.info(f"  Progress: {i + 1}/{len(memories)} ({new_assoc} new associations)")
+            log.info(
+                f"  Progress: {i + 1}/{len(memories)} ({new_assoc} new associations)"
+            )
 
     conn.commit()
     log.info(f"  ✅ Causal: {new_assoc} new associations")
     return {"new_associations": new_assoc}
 
 
-def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) -> dict:
+def engine_knowledge_graph(
+    conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False
+) -> dict:
     """Knowledge graph extraction via LightNER patterns."""
     log.info("═══ Engine: Knowledge Graph V2 ═══")
 
     try:
         from whitemagic.core.intelligence.knowledge_graph_v2 import KnowledgeGraphV2
+
         kg = KnowledgeGraphV2()
     except Exception as e:
         log.warning(f"  KnowledgeGraphV2 unavailable: {e}")
@@ -289,9 +407,14 @@ def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bo
                                 """INSERT OR IGNORE INTO memories
                                    (id, title, content, memory_type, importance, created_at)
                                    VALUES (?, ?, ?, ?, ?, ?)""",
-                                (entity_id, f"Entity: {entity.get('name')}",
-                                 f"Extracted entity of type {entity.get('type')}",
-                                 "LONG_TERM", 0.3, datetime.now().isoformat())
+                                (
+                                    entity_id,
+                                    f"Entity: {entity.get('name')}",
+                                    f"Extracted entity of type {entity.get('type')}",
+                                    "LONG_TERM",
+                                    0.3,
+                                    datetime.now().isoformat(),
+                                ),
                             )
                         except sqlite3.IntegrityError:
                             pass
@@ -309,7 +432,7 @@ def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bo
                     if not dry_run:
                         existing = conn.execute(
                             "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                            (source_id, target_id)
+                            (source_id, target_id),
                         ).fetchone()[0]
 
                         if existing == 0:
@@ -318,7 +441,7 @@ def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bo
                                     """INSERT INTO associations
                                        (source_id, target_id, association_type, strength)
                                        VALUES (?, ?, ?, ?)""",
-                                    (source_id, target_id, predicate, 0.5)
+                                    (source_id, target_id, predicate, 0.5),
                                 )
                                 new_assoc += 1
                             except sqlite3.IntegrityError:
@@ -330,7 +453,7 @@ def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bo
                 if not dry_run:
                     existing = conn.execute(
                         "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                        (mem['id'], entity_id)
+                        (mem["id"], entity_id),
                     ).fetchone()[0]
 
                     if existing == 0:
@@ -339,7 +462,7 @@ def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bo
                                 """INSERT INTO associations
                                    (source_id, target_id, association_type, strength)
                                    VALUES (?, ?, ?, ?)""",
-                                (mem['id'], entity_id, "mentions", 0.6)
+                                (mem["id"], entity_id, "mentions", 0.6),
                             )
                             new_assoc += 1
                         except sqlite3.IntegrityError:
@@ -349,19 +472,24 @@ def engine_knowledge_graph(conn: sqlite3.Connection, limit: int = 0, dry_run: bo
 
         if (i + 1) % 50 == 0:
             conn.commit()
-            log.info(f"  Progress: {i + 1}/{len(memories)} ({new_assoc} new associations)")
+            log.info(
+                f"  Progress: {i + 1}/{len(memories)} ({new_assoc} new associations)"
+            )
 
     conn.commit()
     log.info(f"  ✅ KG: {new_assoc} new associations")
     return {"new_associations": new_assoc}
 
 
-def engine_entity(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) -> dict:
+def engine_entity(
+    conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False
+) -> dict:
     """Entity-relation extraction via LLM/regex."""
     log.info("═══ Engine: Entity Extractor ═══")
 
     try:
         from whitemagic.core.intelligence.entity_extractor import get_entity_extractor
+
         extractor = get_entity_extractor()
     except Exception as e:
         log.warning(f"  EntityExtractor unavailable: {e}")
@@ -391,7 +519,7 @@ def engine_entity(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
                 if not dry_run:
                     existing = conn.execute(
                         "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                        (mem['id'], target_entity)
+                        (mem["id"], target_entity),
                     ).fetchone()[0]
 
                     if existing == 0:
@@ -400,7 +528,12 @@ def engine_entity(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
                                 """INSERT INTO associations
                                    (source_id, target_id, association_type, strength)
                                    VALUES (?, ?, ?, ?)""",
-                                (mem['id'], target_entity, rel.predicate, round(rel.confidence, 3))
+                                (
+                                    mem["id"],
+                                    target_entity,
+                                    rel.predicate,
+                                    round(rel.confidence, 3),
+                                ),
                             )
                             new_assoc += 1
                         except sqlite3.IntegrityError:
@@ -410,14 +543,18 @@ def engine_entity(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = Fals
 
         if (i + 1) % 100 == 0:
             conn.commit()
-            log.info(f"  Progress: {i + 1}/{len(memories)} ({new_assoc} new associations)")
+            log.info(
+                f"  Progress: {i + 1}/{len(memories)} ({new_assoc} new associations)"
+            )
 
     conn.commit()
     log.info(f"  ✅ Entity: {new_assoc} new associations")
     return {"new_associations": new_assoc}
 
 
-def engine_holographic(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) -> dict:
+def engine_holographic(
+    conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False
+) -> dict:
     """Association via 5D holographic proximity."""
     log.info("═══ Engine: Holographic Proximity ═══")
 
@@ -443,7 +580,7 @@ def engine_holographic(conn: sqlite3.Connection, limit: int = 0, dry_run: bool =
     # Build coordinate map
     coord_map = {}
     for row in rows:
-        coord_map[row['id']] = (row['x'], row['y'], row['z'], row['w'], row['v'])
+        coord_map[row["id"]] = (row["x"], row["y"], row["z"], row["w"], row["v"])
 
     # Find neighbors within threshold
     mem_ids = list(coord_map.keys())
@@ -465,7 +602,7 @@ def engine_holographic(conn: sqlite3.Connection, limit: int = 0, dry_run: bool =
                 if not dry_run:
                     existing = conn.execute(
                         "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                        (id_a, id_b)
+                        (id_a, id_b),
                     ).fetchone()[0]
 
                     if existing == 0:
@@ -474,7 +611,12 @@ def engine_holographic(conn: sqlite3.Connection, limit: int = 0, dry_run: bool =
                                 """INSERT INTO associations
                                    (source_id, target_id, association_type, strength)
                                    VALUES (?, ?, ?, ?)""",
-                                (id_a, id_b, "holographic_proximity", round(strength, 3))
+                                (
+                                    id_a,
+                                    id_b,
+                                    "holographic_proximity",
+                                    round(strength, 3),
+                                ),
                             )
                             new_assoc += 1
                         except sqlite3.IntegrityError:
@@ -482,7 +624,9 @@ def engine_holographic(conn: sqlite3.Connection, limit: int = 0, dry_run: bool =
 
         if (i + 1) % 200 == 0:
             conn.commit()
-            log.info(f"  Progress: {i + 1}/{len(mem_ids)} ({new_assoc} new associations)")
+            log.info(
+                f"  Progress: {i + 1}/{len(mem_ids)} ({new_assoc} new associations)"
+            )
 
     conn.commit()
     log.info(f"  ✅ Holographic: {new_assoc} new associations")
@@ -507,14 +651,27 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
 
     # Extract FTS terms (simple tokenization)
     import re
+
     term_map = {}
     for mem in memories:
         text = f"{mem['title'] or ''} {mem['content'] or ''}".lower()
-        terms = set(re.findall(r'\b[a-z]{4,}\b', text))
+        terms = set(re.findall(r"\b[a-z]{4,}\b", text))
         # Remove common words
-        terms -= {'this', 'that', 'with', 'from', 'have', 'been', 'were', 'will', 'would', 'could', 'should'}
+        terms -= {
+            "this",
+            "that",
+            "with",
+            "from",
+            "have",
+            "been",
+            "were",
+            "will",
+            "would",
+            "could",
+            "should",
+        }
         if terms:
-            term_map[mem['id']] = terms
+            term_map[mem["id"]] = terms
 
     # Find co-occurrence associations
     mem_ids = list(term_map.keys())
@@ -532,7 +689,7 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
                     if not dry_run:
                         existing = conn.execute(
                             "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                            (id_a, id_b)
+                            (id_a, id_b),
                         ).fetchone()[0]
 
                         if existing == 0:
@@ -541,7 +698,7 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
                                     """INSERT INTO associations
                                        (source_id, target_id, association_type, strength)
                                        VALUES (?, ?, ?, ?)""",
-                                    (id_a, id_b, "fts_overlap", round(sim, 3))
+                                    (id_a, id_b, "fts_overlap", round(sim, 3)),
                                 )
                                 new_assoc += 1
                             except sqlite3.IntegrityError:
@@ -549,7 +706,9 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
 
         if (i + 1) % 100 == 0:
             conn.commit()
-            log.info(f"  Progress: {i + 1}/{len(mem_ids)} ({new_assoc} new associations)")
+            log.info(
+                f"  Progress: {i + 1}/{len(mem_ids)} ({new_assoc} new associations)"
+            )
 
     conn.commit()
     log.info(f"  ✅ FTS: {new_assoc} new associations")
@@ -603,14 +762,22 @@ def print_final_stats(conn):
     """).fetchone()[0]
 
     total_mems = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-    log.info(f"\n  Memories with associations: {mems_with_assoc:,}/{total_mems:,} ({100*mems_with_assoc/total_mems:.1f}%)")
+    log.info(
+        f"\n  Memories with associations: {mems_with_assoc:,}/{total_mems:,} ({100 * mems_with_assoc / total_mems:.1f}%)"
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Association Graph Builder")
-    parser.add_argument("--engine", choices=["jaccard", "causal", "kg", "entity", "holo", "fts", "all"],
-                       default="all", help="Run specific engine")
-    parser.add_argument("--limit", type=int, default=0, help="Limit memories per engine")
+    parser.add_argument(
+        "--engine",
+        choices=["jaccard", "causal", "kg", "entity", "holo", "fts", "all"],
+        default="all",
+        help="Run specific engine",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Limit memories per engine"
+    )
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     args = parser.parse_args()
 

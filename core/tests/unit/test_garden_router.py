@@ -1,4 +1,5 @@
 """Tests for Objective L — Garden-Routed Improvement Evaluation."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.garden_router import GardenRouter
@@ -44,11 +45,15 @@ class TestGardenPriors:
 
     def test_confidence_threshold(self):
         router = GardenRouter()
-        assert router.get_confidence_threshold("courage") > router.get_confidence_threshold("wisdom")
+        assert router.get_confidence_threshold(
+            "courage"
+        ) > router.get_confidence_threshold("wisdom")
 
     def test_mc_trial_multiplier(self):
         router = GardenRouter()
-        assert router.get_mc_trial_multiplier("mystery") > router.get_mc_trial_multiplier("wisdom")
+        assert router.get_mc_trial_multiplier(
+            "mystery"
+        ) > router.get_mc_trial_multiplier("wisdom")
 
 
 class TestCalibration:
@@ -70,8 +75,10 @@ class TestPortfolioBalance:
     def test_balance(self):
         router = GardenRouter()
         hyps = [
-            {"garden": "courage"}, {"garden": "courage"},
-            {"garden": "wisdom"}, {"garden": "wisdom"},
+            {"garden": "courage"},
+            {"garden": "courage"},
+            {"garden": "wisdom"},
+            {"garden": "wisdom"},
             {"garden": "play"},
         ]
         balance = router.get_portfolio_balance(hyps)
@@ -90,7 +97,13 @@ class TestPortfolioBalance:
 
     def test_check_balance(self):
         router = GardenRouter()
-        current = {"courage": 0.1, "wisdom": 0.7, "play": 0.1, "grief": 0.05, "mystery": 0.05}
+        current = {
+            "courage": 0.1,
+            "wisdom": 0.7,
+            "play": 0.1,
+            "grief": 0.05,
+            "mystery": 0.05,
+        }
         targets = router.get_portfolio_targets("balanced")
         result = router.check_balance(current, targets)
         assert isinstance(result["balanced"], bool)

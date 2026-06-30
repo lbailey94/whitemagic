@@ -48,8 +48,7 @@ class SystemMonitor:
         """Generate a comprehensive health report."""
         metrics = self.collect_metrics()
         healthy_count = sum(
-            1 for m in metrics.values()
-            if isinstance(m, dict) and "error" not in m
+            1 for m in metrics.values() if isinstance(m, dict) and "error" not in m
         )
         total = len(metrics)
 
@@ -78,7 +77,9 @@ class SystemMonitor:
         return {
             "registered_subsystems": len(self.subsystems),
             "health_checks": len(self.health_history),
-            "current_status": self.health_history[-1]["status"] if self.health_history else "unknown",
+            "current_status": self.health_history[-1]["status"]
+            if self.health_history
+            else "unknown",
         }
 
 

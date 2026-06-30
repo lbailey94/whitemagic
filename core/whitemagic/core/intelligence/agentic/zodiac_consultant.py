@@ -7,6 +7,7 @@ Refactored to use the canonical zodiac_cores from gardens/connection.
 
 class ZodiacConsultant:
     """ZodiacConsultant: zodiac consultant."""
+
     def __init__(self):
         # Try to load from canonical source, fall back to static if unavailable
         self.cores = self._load_cores()
@@ -17,6 +18,7 @@ class ZodiacConsultant:
             from whitemagic.gardens.connection.zodiac_cores import (
                 ALL_CORES,  # type: ignore[attr-defined]
             )
+
             return {
                 core.name.lower(): {
                     "domain": core.domain,
@@ -27,18 +29,48 @@ class ZodiacConsultant:
         except ImportError:
             # Fallback static data
             return {
-                "virgo": {"domain": "analysis", "advice": "Analyze details, find patterns"},
-                "leo": {"domain": "creative", "advice": "Express boldly, lead with heart"},
-                "capricorn": {"domain": "structure", "advice": "Build foundations, honor ethics"},
-                "sagittarius": {"domain": "strategy", "advice": "See the big picture, aim high"},
-                "scorpio": {"domain": "depth", "advice": "Go deep, transform, find truth"},
-                "pisces": {"domain": "synthesis", "advice": "Dream, synthesize, transcend"},
+                "virgo": {
+                    "domain": "analysis",
+                    "advice": "Analyze details, find patterns",
+                },
+                "leo": {
+                    "domain": "creative",
+                    "advice": "Express boldly, lead with heart",
+                },
+                "capricorn": {
+                    "domain": "structure",
+                    "advice": "Build foundations, honor ethics",
+                },
+                "sagittarius": {
+                    "domain": "strategy",
+                    "advice": "See the big picture, aim high",
+                },
+                "scorpio": {
+                    "domain": "depth",
+                    "advice": "Go deep, transform, find truth",
+                },
+                "pisces": {
+                    "domain": "synthesis",
+                    "advice": "Dream, synthesize, transcend",
+                },
                 "aries": {"domain": "action", "advice": "Move fast, be bold, initiate"},
-                "gemini": {"domain": "communication", "advice": "Connect, communicate, integrate"},
+                "gemini": {
+                    "domain": "communication",
+                    "advice": "Connect, communicate, integrate",
+                },
                 "cancer": {"domain": "memory", "advice": "Nurture, remember, protect"},
-                "libra": {"domain": "balance", "advice": "Harmonize, weigh options, be fair"},
-                "taurus": {"domain": "resources", "advice": "Be practical, manage resources"},
-                "aquarius": {"domain": "innovation", "advice": "Innovate, look to future, be unique"},
+                "libra": {
+                    "domain": "balance",
+                    "advice": "Harmonize, weigh options, be fair",
+                },
+                "taurus": {
+                    "domain": "resources",
+                    "advice": "Be practical, manage resources",
+                },
+                "aquarius": {
+                    "domain": "innovation",
+                    "advice": "Innovate, look to future, be unique",
+                },
             }
 
     def consult(self, task_type: str) -> dict:
@@ -56,7 +88,9 @@ class ZodiacConsultant:
         return {
             "task": task_type,
             "consultants": relevant,
-            "consensus": relevant[0]["advice"] if relevant else "Proceed with awareness",
+            "consensus": relevant[0]["advice"]
+            if relevant
+            else "Proceed with awareness",
         }
 
     def quick_consult(self, domain: str) -> str:
@@ -74,7 +108,10 @@ class ZodiacConsultant:
                 return f"♈ {sign.title()}: {info['advice']}"
         return "♏ Scorpio: Go deep, find truth"
 
+
 _consultant = None
+
+
 def get_consultant() -> ZodiacConsultant:
     """
     Get the consultant.

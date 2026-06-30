@@ -27,8 +27,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .tarot_data import (
-    MajorArcanaCard, MinorArcanaCard,
-    MAJOR_ARCANA, MINOR_ARCANA,
+    MAJOR_ARCANA,
+    MINOR_ARCANA,
+    MajorArcanaCard,
+    MinorArcanaCard,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,6 +39,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DrawnCard:
     """A card drawn in a reading, with orientation and position."""
+
     card: MajorArcanaCard | MinorArcanaCard
     is_reversed: bool
     position: str  # e.g. "past", "present", "future", or slot number
@@ -46,6 +49,7 @@ class DrawnCard:
 @dataclass
 class TarotReading:
     """A complete Tarot reading result."""
+
     spread_type: str
     question: str
     cards: list[DrawnCard]
@@ -60,7 +64,9 @@ class TarotReading:
     @property
     def is_triple_arc_reading(self) -> bool:
         """Check if the Magician/Wheel/World triple arc appeared."""
-        numbers = {c.card.number for c in self.cards if isinstance(c.card, MajorArcanaCard)}
+        numbers = {
+            c.card.number for c in self.cards if isinstance(c.card, MajorArcanaCard)
+        }
         return {1, 10, 21}.issubset(numbers)
 
     def to_dict(self) -> dict[str, Any]:
@@ -78,7 +84,9 @@ class TarotReading:
                     "upright_meaning": d.card.upright_meaning,
                     "reversed_meaning": d.card.reversed_meaning,
                     "keywords": d.card.keywords,
-                    "meaning": d.card.reversed_meaning if d.is_reversed else d.card.upright_meaning,
+                    "meaning": d.card.reversed_meaning
+                    if d.is_reversed
+                    else d.card.upright_meaning,
                 }
                 for d in self.cards
             ],
@@ -134,25 +142,33 @@ class TarotCaster:
             deck[i], deck[j] = deck[j], deck[i]
         return deck
 
-    def draw_single(self, question: str = "", context: dict[str, Any] | None = None) -> TarotReading:
+    def draw_single(
+        self, question: str = "", context: dict[str, Any] | None = None
+    ) -> TarotReading:
         """Draw a single card for quick insight."""
         entropy = self._gather_entropy(question, context)
         deck = self._shuffle(entropy)
         card = deck[0]
         is_reversed = self.rng.random() < 0.5
         drawn = DrawnCard(
-            card=card, is_reversed=is_reversed,
-            position="the_card", position_meaning="The central message",
+            card=card,
+            is_reversed=is_reversed,
+            position="the_card",
+            position_meaning="The central message",
         )
         meaning = card.reversed_meaning if is_reversed else card.upright_meaning
         summary = f"{card.name} ({'reversed' if is_reversed else 'upright'}): {meaning}"
         return TarotReading(
-            spread_type="single", question=question,
-            cards=[drawn], summary=summary,
+            spread_type="single",
+            question=question,
+            cards=[drawn],
+            summary=summary,
         )
 
     def draw_three_card(
-        self, question: str = "", context: dict[str, Any] | None = None,
+        self,
+        question: str = "",
+        context: dict[str, Any] | None = None,
         layout: str = "past_present_future",
     ) -> TarotReading:
         """Draw a three-card spread.
@@ -187,25 +203,36 @@ class TarotCaster:
         for i, pos in enumerate(positions):
             card = deck[i]
             is_reversed = self.rng.random() < 0.5
-            drawn_cards.append(DrawnCard(
-                card=card, is_reversed=is_reversed,
-                position=pos,
-                position_meaning=position_meanings.get(pos, pos),
-            ))
+            drawn_cards.append(
+                DrawnCard(
+                    card=card,
+                    is_reversed=is_reversed,
+                    position=pos,
+                    position_meaning=position_meanings.get(pos, pos),
+                )
+            )
 
         card_summaries = []
         for d in drawn_cards:
-            meaning = d.card.reversed_meaning if d.is_reversed else d.card.upright_meaning
-            card_summaries.append(f"{d.position.capitalize()} — {d.card.name} ({'reversed' if d.is_reversed else 'upright'}): {meaning[:80]}")
+            meaning = (
+                d.card.reversed_meaning if d.is_reversed else d.card.upright_meaning
+            )
+            card_summaries.append(
+                f"{d.position.capitalize()} — {d.card.name} ({'reversed' if d.is_reversed else 'upright'}): {meaning[:80]}"
+            )
 
         summary = " | ".join(card_summaries)
         return TarotReading(
-            spread_type=f"three_card_{layout}", question=question,
-            cards=drawn_cards, summary=summary,
+            spread_type=f"three_card_{layout}",
+            question=question,
+            cards=drawn_cards,
+            summary=summary,
         )
 
     def draw_celtic_cross(
-        self, question: str = "", context: dict[str, Any] | None = None,
+        self,
+        question: str = "",
+        context: dict[str, Any] | None = None,
     ) -> TarotReading:
         """Draw the traditional 10-card Celtic Cross spread.
 
@@ -241,27 +268,43 @@ class TarotCaster:
         for i, (pos, meaning) in enumerate(positions):
             card = deck[i]
             is_reversed = self.rng.random() < 0.5
-            drawn_cards.append(DrawnCard(
-                card=card, is_reversed=is_reversed,
-                position=pos, position_meaning=meaning,
-            ))
+            drawn_cards.append(
+                DrawnCard(
+                    card=card,
+                    is_reversed=is_reversed,
+                    position=pos,
+                    position_meaning=meaning,
+                )
+            )
 
         # Build summary with key highlights
         major_drawn = [d for d in drawn_cards if isinstance(d.card, MajorArcanaCard)]
-        major_names = ", ".join(d.card.name for d in major_drawn) if major_drawn else "no Major Arcana"
+        major_names = (
+            ", ".join(d.card.name for d in major_drawn)
+            if major_drawn
+            else "no Major Arcana"
+        )
         summary = f"Celtic Cross reading. Major Arcana present: {major_names}. "
         # Highlight the outcome card
         outcome = drawn_cards[9]
-        outcome_meaning = outcome.card.reversed_meaning if outcome.is_reversed else outcome.card.upright_meaning
+        outcome_meaning = (
+            outcome.card.reversed_meaning
+            if outcome.is_reversed
+            else outcome.card.upright_meaning
+        )
         summary += f"Outcome: {outcome.card.name} — {outcome_meaning[:80]}"
 
         return TarotReading(
-            spread_type="celtic_cross", question=question,
-            cards=drawn_cards, summary=summary,
+            spread_type="celtic_cross",
+            question=question,
+            cards=drawn_cards,
+            summary=summary,
         )
 
     def draw_fools_journey(
-        self, question: str = "", context: dict[str, Any] | None = None,
+        self,
+        question: str = "",
+        context: dict[str, Any] | None = None,
     ) -> TarotReading:
         """Draw 3-7 Major Arcana cards representing stages of the Fool's Journey.
 
@@ -279,7 +322,13 @@ class TarotCaster:
 
         # Draw 5 cards representing stages
         num_cards = 5
-        stage_names = ["origin", "challenge", "transformation", "integration", "completion"]
+        stage_names = [
+            "origin",
+            "challenge",
+            "transformation",
+            "integration",
+            "completion",
+        ]
         stage_meanings = [
             "Origin — where the journey begins, the initial impulse",
             "Challenge — the first major obstacle or test",
@@ -292,25 +341,36 @@ class TarotCaster:
         for i in range(num_cards):
             card = deck[i]
             is_reversed = self.rng.random() < 0.5
-            drawn_cards.append(DrawnCard(
-                card=card, is_reversed=is_reversed,
-                position=stage_names[i],
-                position_meaning=stage_meanings[i],
-            ))
+            drawn_cards.append(
+                DrawnCard(
+                    card=card,
+                    is_reversed=is_reversed,
+                    position=stage_names[i],
+                    position_meaning=stage_meanings[i],
+                )
+            )
 
         card_summaries = []
         for d in drawn_cards:
-            meaning = d.card.reversed_meaning if d.is_reversed else d.card.upright_meaning
-            card_summaries.append(f"{d.position.capitalize()}: {d.card.name} (#{d.card.number}, {d.card.hebrew_name}) — {meaning[:60]}")
+            meaning = (
+                d.card.reversed_meaning if d.is_reversed else d.card.upright_meaning
+            )
+            card_summaries.append(
+                f"{d.position.capitalize()}: {d.card.name} (#{d.card.number}, {d.card.hebrew_name}) — {meaning[:60]}"
+            )
 
         summary = "Fool's Journey: " + " → ".join(card_summaries)
         return TarotReading(
-            spread_type="fools_journey", question=question,
-            cards=drawn_cards, summary=summary,
+            spread_type="fools_journey",
+            question=question,
+            cards=drawn_cards,
+            summary=summary,
         )
 
     def consult(
-        self, question: str = "", context: dict[str, Any] | None = None,
+        self,
+        question: str = "",
+        context: dict[str, Any] | None = None,
         spread: str = "three_card",
     ) -> TarotReading:
         """Consult the Tarot with a question.
@@ -332,10 +392,6 @@ class TarotCaster:
         else:
             return self.draw_three_card(question, context)
 
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
 
 def cast_tarot(
     question: str = "",

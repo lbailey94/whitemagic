@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ToolPrediction:
     """A predicted next tool with confidence."""
+
     tool_name: str
     confidence: float
     reasoning: str
@@ -55,10 +56,12 @@ class ToolRecommender:
 
     def record_tool_call(self, tool_name: str):
         """Record a tool call to update the model."""
-        self.tool_history.append({
-            "tool": tool_name,
-            "timestamp": datetime.now(),
-        })
+        self.tool_history.append(
+            {
+                "tool": tool_name,
+                "timestamp": datetime.now(),
+            }
+        )
 
         self.tool_frequency[tool_name] += 1
 
@@ -75,7 +78,9 @@ class ToolRecommender:
 
         self.sequences_seen += 1
 
-    def predict_next_tools(self, top_k: int = 5, min_confidence: float = 0.1) -> list[ToolPrediction]:
+    def predict_next_tools(
+        self, top_k: int = 5, min_confidence: float = 0.1
+    ) -> list[ToolPrediction]:
         """
         Predict the most likely next tools.
 
@@ -101,8 +106,7 @@ class ToolRecommender:
             matching_trigrams = {
                 trigram: count
                 for trigram, count in self.trigram_counts.items()
-                if trigram[:
-                    2] == trigram_prefix
+                if trigram[:2] == trigram_prefix
             }
 
             if matching_trigrams:
@@ -112,12 +116,15 @@ class ToolRecommender:
                     next_tool = trigram[2]
                     confidence = count / total_count
 
-                    if next_tool not in predictions or predictions[next_tool].confidence < confidence:
+                    if (
+                        next_tool not in predictions
+                        or predictions[next_tool].confidence < confidence
+                    ):
                         predictions[next_tool] = ToolPrediction(
                             tool_name=next_tool,
                             confidence=confidence,
                             reasoning=f"Trigram pattern: {prev_prev_tool} → {prev_tool} → {next_tool}",
-                            pattern_support=count
+                            pattern_support=count,
                         )
 
         # Use bigram model
@@ -142,29 +149,28 @@ class ToolRecommender:
                     if next_tool in predictions:
                         # Average the confidences (weighted by pattern length)
                         predictions[next_tool].confidence = (
-                            predictions[next_tool].confidence * 0.7 +  # Trigram weight
-                            confidence * 0.3  # Bigram weight
+                            predictions[next_tool].confidence * 0.7  # Trigram weight
+                            + confidence * 0.3  # Bigram weight
                         )
-                        predictions[next_tool].reasoning += f" + Bigram: {prev_tool} → {next_tool}"
+                        predictions[
+                            next_tool
+                        ].reasoning += f" + Bigram: {prev_tool} → {next_tool}"
                         predictions[next_tool].pattern_support += count
                     else:
                         predictions[next_tool] = ToolPrediction(
                             tool_name=next_tool,
                             confidence=confidence,
                             reasoning=f"Bigram pattern: {prev_tool} → {next_tool}",
-                            pattern_support=count
+                            pattern_support=count,
                         )
 
         # Filter by confidence and sort
         filtered = [
-            pred for pred in predictions.values()
-            if pred.confidence >= min_confidence
+            pred for pred in predictions.values() if pred.confidence >= min_confidence
         ]
 
         sorted_predictions = sorted(
-            filtered,
-            key=lambda x: (x.confidence, x.pattern_support),
-            reverse=True
+            filtered, key=lambda x: (x.confidence, x.pattern_support), reverse=True
         )
 
         return sorted_predictions[:top_k]
@@ -177,9 +183,7 @@ class ToolRecommender:
             "bigram_patterns": len(self.bigram_counts),
             "trigram_patterns": len(self.trigram_counts),
             "most_common_tools": sorted(
-                self.tool_frequency.items(),
-                key=lambda x: x[1],
-                reverse=True
+                self.tool_frequency.items(), key=lambda x: x[1], reverse=True
             )[:10],
         }
 
@@ -205,20 +209,16 @@ class ToolRecommender:
     def export_model(self, filepath: str):
         """Export the learned model to JSON."""
         model_data = {
-            "bigrams": {
-                f"{k[0]}→{k[1]}": v
-                for k, v in self.bigram_counts.items()
-            },
+            "bigrams": {f"{k[0]}→{k[1]}": v for k, v in self.bigram_counts.items()},
             "trigrams": {
-                f"{k[0]}→{k[1]}→{k[2]}": v
-                for k, v in self.trigram_counts.items()
+                f"{k[0]}→{k[1]}→{k[2]}": v for k, v in self.trigram_counts.items()
             },
             "tool_frequency": dict(self.tool_frequency),
             "sequences_seen": self.sequences_seen,
             "exported_at": datetime.now().isoformat(),
         }
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(model_data, f, indent=2)
 
         logger.info("💾 Model exported to %s", filepath)
@@ -261,9 +261,7 @@ class AutocastEnhancer:
         self.cache_ttl_seconds = 60
 
     def get_smart_suggestions(
-        self,
-        current_context: dict[str, Any],
-        top_k: int = 3
+        self, current_context: dict[str, Any], top_k: int = 3
     ) -> list[dict[str, Any]]:
         """
         Get smart tool suggestions based on context and ML predictions.
@@ -281,13 +279,15 @@ class AutocastEnhancer:
         # Format for autocast
         suggestions = []
         for pred in predictions:
-            suggestions.append({
-                "tool_name": pred.tool_name,
-                "confidence": pred.confidence,
-                "reasoning": pred.reasoning,
-                "source": "ml_prediction",
-                "pattern_support": pred.pattern_support,
-            })
+            suggestions.append(
+                {
+                    "tool_name": pred.tool_name,
+                    "confidence": pred.confidence,
+                    "reasoning": pred.reasoning,
+                    "source": "ml_prediction",
+                    "pattern_support": pred.pattern_support,
+                }
+            )
 
         return suggestions
 

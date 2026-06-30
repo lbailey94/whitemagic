@@ -15,6 +15,7 @@ warnings.warn(
     stacklevel=2,
 )
 
+
 # Backward-compatibility mixin that delegates to the real GanYingBus
 class GanYingMixin:
     """Deprecated: Use whitemagic.core.resonance.get_bus() directly.
@@ -34,10 +35,13 @@ class GanYingMixin:
     def emit(self, event_type, data=None, **kwargs):
         """Emit a resonance event via the global bus."""
         from whitemagic.core.resonance import ResonanceEvent
+
         if data is None:
             data = kwargs.get("data", {})
         source = kwargs.get("source", getattr(self, "__class__", type(self)).__name__)
-        self._gan_ying_bus.emit(ResonanceEvent(source=source, event_type=event_type, data=data))
+        self._gan_ying_bus.emit(
+            ResonanceEvent(source=source, event_type=event_type, data=data)
+        )
 
     def listen(self, event_type, callback):
         """Register a listener on the global bus."""
@@ -68,6 +72,7 @@ def listen_for(event_type):
         DeprecationWarning,
         stacklevel=2,
     )
+
     def decorator(callback):
         """
         Perform the decorator operation.
@@ -76,6 +81,8 @@ def listen_for(event_type):
             callback: Parameter description.
         """
         return get_bus().listen(event_type, callback)
+
     return decorator
+
 
 __all__ = ["GanYingMixin", "init_listeners", "listen_for"]

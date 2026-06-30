@@ -64,13 +64,13 @@ class CourageGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.2, y=0.0, z=0.4, w=0.3)
 
-    # ------------------------------------------------------------------
-    # Session lifecycle — serving Horn Gana tools
-    # ------------------------------------------------------------------
-
-    def create_session(self, session_id: str, name: str = "Untitled",
-                       goals: list[str] | None = None,
-                       agent_id: str = "default") -> dict[str, Any]:
+    def create_session(
+        self,
+        session_id: str,
+        name: str = "Untitled",
+        goals: list[str] | None = None,
+        agent_id: str = "default",
+    ) -> dict[str, Any]:
         """Create a new session — called by session_bootstrap / create_session tools."""
         now = datetime.now().isoformat()
         session = {
@@ -87,7 +87,9 @@ class CourageGarden(BaseGarden, GanYingMixin):
             self.sessions[session_id] = session
             self._total_sessions += 1
         self.courage_level = min(1.0, self.courage_level + 0.05)
-        self.emit(EventType.COURAGE_SHOWN, {"action": "session_created", "session": name})
+        self.emit(
+            EventType.COURAGE_SHOWN, {"action": "session_created", "session": name}
+        )
         return session
 
     def resume_session(self, session_id: str) -> dict[str, Any] | None:
@@ -100,8 +102,9 @@ class CourageGarden(BaseGarden, GanYingMixin):
                 return dict(session)
         return None
 
-    def checkpoint_session(self, session_id: str, label: str = "",
-                           state: dict[str, Any] | None = None) -> dict[str, Any]:
+    def checkpoint_session(
+        self, session_id: str, label: str = "", state: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Save a checkpoint for the current session."""
         now = datetime.now().isoformat()
         checkpoint = {"label": label, "timestamp": now, "state": state or {}}
@@ -110,7 +113,11 @@ class CourageGarden(BaseGarden, GanYingMixin):
             if session:
                 session["checkpoints"].append(checkpoint)
                 session["updated_at"] = now
-                return {"session_id": session_id, "checkpoint": checkpoint, "total": len(session["checkpoints"])}
+                return {
+                    "session_id": session_id,
+                    "checkpoint": checkpoint,
+                    "total": len(session["checkpoints"]),
+                }
         return {"error": f"Session {session_id} not found"}
 
     def end_session(self, session_id: str) -> dict[str, Any]:
@@ -129,10 +136,6 @@ class CourageGarden(BaseGarden, GanYingMixin):
         with self._lock:
             return [dict(s) for s in self.sessions.values() if s["status"] == "active"]
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def take_brave_action(self, what: str, fear: str) -> dict[str, Any]:
         act = {"what": what, "fear": fear, "timestamp": datetime.now().isoformat()}
         self.brave_acts.append(act)
@@ -143,26 +146,26 @@ class CourageGarden(BaseGarden, GanYingMixin):
     def encourage(self, task: str) -> str:
         return f"You have the courage to {task}. Trust yourself."
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
         with self._lock:
             active = sum(1 for s in self.sessions.values() if s["status"] == "active")
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "active_sessions": active,
-            "total_sessions": self._total_sessions,
-            "courage_level": round(self.courage_level, 3),
-            "brave_acts": len(self.brave_acts),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "active_sessions": active,
+                "total_sessions": self._total_sessions,
+                "courage_level": round(self.courage_level, 3),
+                "brave_acts": len(self.brave_acts),
+            }
+        )
         return base
 
 
 _instance = None
+
+
 def get_courage_garden() -> CourageGarden:
     global _instance
     if _instance is None:

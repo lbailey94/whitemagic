@@ -1,4 +1,5 @@
 """Unit tests for Ollama agent loop — tool call parsing, completion detection, system prompt."""
+
 from unittest.mock import patch
 
 from whitemagic.tools.handlers.ollama_agent import (
@@ -74,7 +75,12 @@ class TestCheckCompletion:
 
     def test_no_marker_no_calls_long_response(self):
         # Long response with no tool calls = completion
-        assert _check_completion("This is a long response that has no tool calls in it.", []) is True
+        assert (
+            _check_completion(
+                "This is a long response that has no tool calls in it.", []
+            )
+            is True
+        )
 
     def test_no_marker_with_calls_not_complete(self):
         calls = [{"tool": "search", "args": {}}]
@@ -126,8 +132,15 @@ class TestHandleOllamaAgent:
 
     def test_ollama_unavailable(self):
         """When Ollama is not running, should return service_unavailable."""
-        with patch("whitemagic.tools.handlers.ollama._require_aiohttp", return_value=True), \
-             patch("whitemagic.tools.handlers.ollama._ollama_preflight", return_value="connection refused"):
+        with (
+            patch(
+                "whitemagic.tools.handlers.ollama._require_aiohttp", return_value=True
+            ),
+            patch(
+                "whitemagic.tools.handlers.ollama._ollama_preflight",
+                return_value="connection refused",
+            ),
+        ):
             result = handle_ollama_agent(
                 model="llama3.2",
                 task="test task",

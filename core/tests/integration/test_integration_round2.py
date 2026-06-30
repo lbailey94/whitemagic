@@ -8,13 +8,15 @@ Vote Outcome Tracking, Pipelines, Temporal classification, Circuit Breaker overr
 # Agent Registry Tests
 # ---------------------------------------------------------------------------
 
-class TestAgentRegistry:
 
+class TestAgentRegistry:
     def test_register_agent(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import handle_agent_register
+
         result = handle_agent_register(
             name="Claude",
             capabilities=["code_review", "testing", "inference"],
@@ -27,32 +29,41 @@ class TestAgentRegistry:
 
     def test_register_updates_existing(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import handle_agent_register
+
         r1 = handle_agent_register(name="Claude", agent_id="agent-claude")
         assert r1["new"] is True
 
-        r2 = handle_agent_register(name="Claude v2", agent_id="agent-claude", capabilities=["testing"])
+        r2 = handle_agent_register(
+            name="Claude v2", agent_id="agent-claude", capabilities=["testing"]
+        )
         assert r2["new"] is False
         assert r2["agent"]["name"] == "Claude v2"
         assert "testing" in r2["agent"]["capabilities"]
 
     def test_register_requires_name(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import handle_agent_register
+
         result = handle_agent_register()
         assert result["status"] == "error"
 
     def test_heartbeat(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register, handle_agent_heartbeat
+            handle_agent_register,
+            handle_agent_heartbeat,
         )
+
         reg = handle_agent_register(name="Test", agent_id="agent-test")
         assert reg["agent"]["heartbeat_count"] == 0
 
@@ -65,22 +76,31 @@ class TestAgentRegistry:
 
     def test_heartbeat_not_found(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import handle_agent_heartbeat
+
         result = handle_agent_heartbeat(agent_id="nonexistent")
         assert result["status"] == "error"
 
     def test_list_agents(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register, handle_agent_list
+            handle_agent_register,
+            handle_agent_list,
         )
-        handle_agent_register(name="Claude", agent_id="a1", capabilities=["code_review"])
+
+        handle_agent_register(
+            name="Claude", agent_id="a1", capabilities=["code_review"]
+        )
         handle_agent_register(name="GPT-4", agent_id="a2", capabilities=["testing"])
-        handle_agent_register(name="Phi-3", agent_id="a3", capabilities=["inference", "code_review"])
+        handle_agent_register(
+            name="Phi-3", agent_id="a3", capabilities=["inference", "code_review"]
+        )
 
         result = handle_agent_list()
         assert result["count"] == 3
@@ -91,23 +111,32 @@ class TestAgentRegistry:
 
     def test_agent_capabilities(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register, handle_agent_capabilities
+            handle_agent_register,
+            handle_agent_capabilities,
         )
-        handle_agent_register(name="Claude", agent_id="a1", capabilities=["code_review", "testing"])
+
+        handle_agent_register(
+            name="Claude", agent_id="a1", capabilities=["code_review", "testing"]
+        )
         result = handle_agent_capabilities(agent_id="a1")
         assert result["status"] == "success"
         assert result["capabilities"] == ["code_review", "testing"]
 
     def test_deregister(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register, handle_agent_deregister, handle_agent_list
+            handle_agent_register,
+            handle_agent_deregister,
+            handle_agent_list,
         )
+
         handle_agent_register(name="Temp", agent_id="temp-1")
         assert handle_agent_list()["count"] == 1
 
@@ -117,9 +146,11 @@ class TestAgentRegistry:
 
     def test_deregister_not_found(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import handle_agent_deregister
+
         result = handle_agent_deregister(agent_id="ghost")
         assert result["status"] == "error"
 
@@ -128,62 +159,87 @@ class TestAgentRegistry:
 # Vote Outcome Tracking Tests
 # ---------------------------------------------------------------------------
 
-class TestVoteOutcome:
 
+class TestVoteOutcome:
     def test_record_outcome_success(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create, handle_vote_cast, handle_vote_analyze,
-            handle_vote_record_outcome
+            handle_vote_create,
+            handle_vote_cast,
+            handle_vote_analyze,
+            handle_vote_record_outcome,
         )
+
         session = handle_vote_create(problem="Best DB?")
         sid = session["session_id"]
-        handle_vote_cast(session_id=sid, voter="claude", confidence=90, solution="PostgreSQL")
-        handle_vote_cast(session_id=sid, voter="gpt4", confidence=80, solution="MongoDB")
+        handle_vote_cast(
+            session_id=sid, voter="claude", confidence=90, solution="PostgreSQL"
+        )
+        handle_vote_cast(
+            session_id=sid, voter="gpt4", confidence=80, solution="MongoDB"
+        )
         handle_vote_analyze(session_id=sid, close=True)
 
-        result = handle_vote_record_outcome(session_id=sid, success=True, notes="PostgreSQL worked great")
+        result = handle_vote_record_outcome(
+            session_id=sid, success=True, notes="PostgreSQL worked great"
+        )
         assert result["status"] == "success"
         assert "voter_accuracy" in result
         assert result["outcome"]["success"] is True
 
     def test_record_outcome_failure(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create, handle_vote_cast, handle_vote_analyze,
-            handle_vote_record_outcome
+            handle_vote_create,
+            handle_vote_cast,
+            handle_vote_analyze,
+            handle_vote_record_outcome,
         )
+
         session = handle_vote_create(problem="Caching strategy?")
         sid = session["session_id"]
-        handle_vote_cast(session_id=sid, voter="phi3", confidence=75, solution="Redis cache")
+        handle_vote_cast(
+            session_id=sid, voter="phi3", confidence=75, solution="Redis cache"
+        )
         handle_vote_analyze(session_id=sid, close=True)
 
-        result = handle_vote_record_outcome(session_id=sid, success=False, notes="Cache invalidation issues")
+        result = handle_vote_record_outcome(
+            session_id=sid, success=False, notes="Cache invalidation issues"
+        )
         assert result["status"] == "success"
         assert result["outcome"]["success"] is False
 
     def test_accuracy_tracking_accumulates(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create, handle_vote_cast, handle_vote_analyze,
-            handle_vote_record_outcome
+            handle_vote_create,
+            handle_vote_cast,
+            handle_vote_analyze,
+            handle_vote_record_outcome,
         )
 
         # Session 1: claude wins, outcome success
         s1 = handle_vote_create(problem="Q1")
-        handle_vote_cast(session_id=s1["session_id"], voter="claude", confidence=90, solution="A")
+        handle_vote_cast(
+            session_id=s1["session_id"], voter="claude", confidence=90, solution="A"
+        )
         handle_vote_analyze(session_id=s1["session_id"], close=True)
         handle_vote_record_outcome(session_id=s1["session_id"], success=True)
 
         # Session 2: claude wins again, outcome failure
         s2 = handle_vote_create(problem="Q2")
-        handle_vote_cast(session_id=s2["session_id"], voter="claude", confidence=85, solution="B")
+        handle_vote_cast(
+            session_id=s2["session_id"], voter="claude", confidence=85, solution="B"
+        )
         handle_vote_analyze(session_id=s2["session_id"], close=True)
         r2 = handle_vote_record_outcome(session_id=s2["session_id"], success=False)
 
@@ -192,9 +248,11 @@ class TestVoteOutcome:
 
     def test_record_outcome_not_found(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import handle_vote_record_outcome
+
         result = handle_vote_record_outcome(session_id="nonexistent")
         assert result["status"] == "error"
 
@@ -203,17 +261,22 @@ class TestVoteOutcome:
 # Pipeline Tests
 # ---------------------------------------------------------------------------
 
-class TestPipeline:
 
+class TestPipeline:
     def test_create_and_execute_pipeline(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import handle_pipeline_create
+
         result = handle_pipeline_create(
             name="test-pipe",
             steps=[
-                {"tool": "task.distribute", "args": {"command": "echo hello", "task_type": "general"}},
+                {
+                    "tool": "task.distribute",
+                    "args": {"command": "echo hello", "task_type": "general"},
+                },
                 {"tool": "task.list"},
             ],
         )
@@ -227,18 +290,23 @@ class TestPipeline:
 
     def test_pipeline_with_variable_substitution(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import handle_pipeline_create
+
         result = handle_pipeline_create(
             steps=[
                 {"tool": "vote.create", "args": {"problem": "Test pipeline vars"}},
-                {"tool": "vote.cast", "args": {
-                    "session_id": "$prev.session_id",
-                    "voter": "pipeline-agent",
-                    "solution": "Automated vote",
-                    "confidence": 80,
-                }},
+                {
+                    "tool": "vote.cast",
+                    "args": {
+                        "session_id": "$prev.session_id",
+                        "voter": "pipeline-agent",
+                        "solution": "Automated vote",
+                        "confidence": 80,
+                    },
+                },
             ],
         )
         assert result["status"] == "success"
@@ -247,17 +315,24 @@ class TestPipeline:
         step2 = result["results"][1]
         assert step2["status"] == "success"
         # total_votes may be at top level or inside details (envelope wrapping)
-        total_votes = step2.get("total_votes") or step2.get("details", {}).get("total_votes")
+        total_votes = step2.get("total_votes") or step2.get("details", {}).get(
+            "total_votes"
+        )
         assert total_votes == 1
 
     def test_pipeline_stops_on_error(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import handle_pipeline_create
+
         result = handle_pipeline_create(
             steps=[
-                {"tool": "vote.cast", "args": {"session_id": "nonexistent", "voter": "x"}},
+                {
+                    "tool": "vote.cast",
+                    "args": {"session_id": "nonexistent", "voter": "x"},
+                },
                 {"tool": "task.list"},  # Should not execute
             ],
         )
@@ -266,12 +341,18 @@ class TestPipeline:
 
     def test_pipeline_continue_on_error(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import handle_pipeline_create
+
         result = handle_pipeline_create(
             steps=[
-                {"tool": "vote.cast", "args": {"session_id": "bad", "voter": "x"}, "continue_on_error": True},
+                {
+                    "tool": "vote.cast",
+                    "args": {"session_id": "bad", "voter": "x"},
+                    "continue_on_error": True,
+                },
                 {"tool": "task.list"},
             ],
         )
@@ -282,9 +363,11 @@ class TestPipeline:
 
     def test_pipeline_create_no_execute(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import handle_pipeline_create
+
         result = handle_pipeline_create(
             steps=[{"tool": "task.list"}],
             execute=False,
@@ -294,11 +377,14 @@ class TestPipeline:
 
     def test_pipeline_status(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import (
-            handle_pipeline_create, handle_pipeline_status
+            handle_pipeline_create,
+            handle_pipeline_status,
         )
+
         created = handle_pipeline_create(steps=[{"tool": "task.list"}])
         pid = created["pipeline_id"]
 
@@ -308,11 +394,14 @@ class TestPipeline:
 
     def test_pipeline_list(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import (
-            handle_pipeline_create, handle_pipeline_list
+            handle_pipeline_create,
+            handle_pipeline_list,
         )
+
         handle_pipeline_create(name="p1", steps=[{"tool": "task.list"}])
         handle_pipeline_create(name="p2", steps=[{"tool": "vote.list"}])
 
@@ -321,9 +410,11 @@ class TestPipeline:
 
     def test_pipeline_requires_steps(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.pipeline import handle_pipeline_create
+
         result = handle_pipeline_create()
         assert result["status"] == "error"
 
@@ -332,20 +423,26 @@ class TestPipeline:
 # Variable Substitution Engine Tests
 # ---------------------------------------------------------------------------
 
-class TestVariableSubstitution:
 
+class TestVariableSubstitution:
     def test_prev_full_reference(self):
         from whitemagic.tools.handlers.pipeline import _resolve_vars
+
         results = [{"details": {"session_id": "vote-abc", "problem": "test"}}]
-        assert _resolve_vars("$prev", results) == {"session_id": "vote-abc", "problem": "test"}
+        assert _resolve_vars("$prev", results) == {
+            "session_id": "vote-abc",
+            "problem": "test",
+        }
 
     def test_prev_key_reference(self):
         from whitemagic.tools.handlers.pipeline import _resolve_vars
+
         results = [{"details": {"session_id": "vote-abc"}}]
         assert _resolve_vars("$prev.session_id", results) == "vote-abc"
 
     def test_step_reference(self):
         from whitemagic.tools.handlers.pipeline import _resolve_vars
+
         results = [
             {"details": {"id": "first"}},
             {"details": {"id": "second"}},
@@ -355,12 +452,16 @@ class TestVariableSubstitution:
 
     def test_nested_dict_resolution(self):
         from whitemagic.tools.handlers.pipeline import _resolve_vars
+
         results = [{"details": {"task_id": "t-123"}}]
-        resolved = _resolve_vars({"task_id": "$prev.task_id", "other": "static"}, results)
+        resolved = _resolve_vars(
+            {"task_id": "$prev.task_id", "other": "static"}, results
+        )
         assert resolved == {"task_id": "t-123", "other": "static"}
 
     def test_no_results_passthrough(self):
         from whitemagic.tools.handlers.pipeline import _resolve_vars
+
         assert _resolve_vars("$prev.key", []) == "$prev.key"
 
 
@@ -368,41 +469,69 @@ class TestVariableSubstitution:
 # Temporal Scheduler Classification Tests
 # ---------------------------------------------------------------------------
 
-class TestTemporalClassification:
 
+class TestTemporalClassification:
     def test_broker_disconnect_is_fast(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.BROKER_DISCONNECTED) == TemporalLane.FAST
 
     def test_task_failed_is_fast(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.TASK_FAILED) == TemporalLane.FAST
 
     def test_agent_deregistered_is_fast(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.AGENT_DEREGISTERED) == TemporalLane.FAST
 
     def test_vote_consensus_is_slow(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.VOTE_CONSENSUS_REACHED) == TemporalLane.SLOW
 
     def test_vote_session_closed_is_slow(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.VOTE_SESSION_CLOSED) == TemporalLane.SLOW
 
     def test_task_created_is_medium(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.TASK_CREATED) == TemporalLane.MEDIUM
 
     def test_broker_message_is_medium(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
-        from whitemagic.core.resonance.temporal_scheduler import classify_event, TemporalLane
+        from whitemagic.core.resonance.temporal_scheduler import (
+            classify_event,
+            TemporalLane,
+        )
+
         assert classify_event(EventType.BROKER_MESSAGE_PUBLISHED) == TemporalLane.MEDIUM
 
 
@@ -410,10 +539,11 @@ class TestTemporalClassification:
 # Circuit Breaker Override Tests
 # ---------------------------------------------------------------------------
 
-class TestCircuitBreakerOverrides:
 
+class TestCircuitBreakerOverrides:
     def test_ollama_tools_have_custom_config(self):
         from whitemagic.tools.circuit_breaker import _TOOL_BREAKER_OVERRIDES
+
         assert "ollama.models" in _TOOL_BREAKER_OVERRIDES
         assert "ollama.generate" in _TOOL_BREAKER_OVERRIDES
         cfg = _TOOL_BREAKER_OVERRIDES["ollama.models"]
@@ -422,6 +552,7 @@ class TestCircuitBreakerOverrides:
 
     def test_broker_tools_have_custom_config(self):
         from whitemagic.tools.circuit_breaker import _TOOL_BREAKER_OVERRIDES
+
         assert "broker.publish" in _TOOL_BREAKER_OVERRIDES
         cfg = _TOOL_BREAKER_OVERRIDES["broker.publish"]
         assert cfg.failure_threshold == 3
@@ -429,6 +560,7 @@ class TestCircuitBreakerOverrides:
 
     def test_registry_uses_overrides(self):
         from whitemagic.tools.circuit_breaker import BreakerRegistry
+
         reg = BreakerRegistry()
         ollama_breaker = reg.get("ollama.generate")
         assert ollama_breaker.config.failure_threshold == 2
@@ -441,13 +573,15 @@ class TestCircuitBreakerOverrides:
 # call_tool Integration Tests for new tools
 # ---------------------------------------------------------------------------
 
-class TestCallToolRound2:
 
+class TestCallToolRound2:
     def test_agent_register_via_call_tool(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.unified_api import call_tool
+
         result = call_tool("agent.register", name="TestAgent", capabilities=["testing"])
         assert result["status"] == "success"
         assert result["tool"] == "agent.register"
@@ -455,33 +589,45 @@ class TestCallToolRound2:
 
     def test_agent_list_via_underscore(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.unified_api import call_tool
+
         result = call_tool("agent_list")
         assert result["status"] == "success"
         assert result["tool"] == "agent.list"
 
     def test_pipeline_create_via_call_tool(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.unified_api import call_tool
-        result = call_tool("pipeline.create", name="test-pipeline", steps=[{"tool": "task.list"}])
+
+        result = call_tool(
+            "pipeline.create", name="test-pipeline", steps=[{"tool": "task.list"}]
+        )
         assert result["status"] == "success"
         assert result["tool"] == "pipeline.create"
 
     def test_vote_record_outcome_via_call_tool(self, tmp_path, monkeypatch):
         import whitemagic.config.paths as paths_mod
+
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.unified_api import call_tool
+
         session = call_tool("vote.create", problem="Integration test")
-        sid = session.get("details", session).get("session_id", session.get("session_id"))
+        sid = session.get("details", session).get(
+            "session_id", session.get("session_id")
+        )
         if not sid:
             sid = session.get("session_id")
 
-        call_tool("vote.cast", session_id=sid, voter="test", confidence=80, solution="ok")
+        call_tool(
+            "vote.cast", session_id=sid, voter="test", confidence=80, solution="ok"
+        )
         call_tool("vote.analyze", session_id=sid, close=True)
 
         result = call_tool("vote.record_outcome", session_id=sid, success=True)
@@ -494,7 +640,12 @@ class TestCircuitBreakerStateMachine:
     def test_closed_to_open_after_threshold(self):
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
-        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=3, window_seconds=10.0, cooldown_seconds=0.1))
+        breaker = CircuitBreaker(
+            "test_tool",
+            config=BreakerConfig(
+                failure_threshold=3, window_seconds=10.0, cooldown_seconds=0.1
+            ),
+        )
         assert breaker.is_open() is False
 
         # Record 3 failures
@@ -509,7 +660,12 @@ class TestCircuitBreakerStateMachine:
         import time
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
-        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05))
+        breaker = CircuitBreaker(
+            "test_tool",
+            config=BreakerConfig(
+                failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05
+            ),
+        )
         breaker.record_failure()
         breaker.record_failure()
         assert breaker.is_open() is True
@@ -523,7 +679,12 @@ class TestCircuitBreakerStateMachine:
         import time
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
-        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05))
+        breaker = CircuitBreaker(
+            "test_tool",
+            config=BreakerConfig(
+                failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05
+            ),
+        )
         breaker.record_failure()
         breaker.record_failure()
         time.sleep(0.06)
@@ -538,7 +699,12 @@ class TestCircuitBreakerStateMachine:
         import time
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
-        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05))
+        breaker = CircuitBreaker(
+            "test_tool",
+            config=BreakerConfig(
+                failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05
+            ),
+        )
         breaker.record_failure()
         breaker.record_failure()
         time.sleep(0.06)
@@ -551,7 +717,12 @@ class TestCircuitBreakerStateMachine:
     def test_calm_response_structure(self):
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
-        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=1, window_seconds=10.0, cooldown_seconds=60.0))
+        breaker = CircuitBreaker(
+            "test_tool",
+            config=BreakerConfig(
+                failure_threshold=1, window_seconds=10.0, cooldown_seconds=60.0
+            ),
+        )
         breaker.record_failure()
         resp = breaker.calm_response()
 
@@ -565,7 +736,12 @@ class TestCircuitBreakerStateMachine:
         import time
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
-        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=3, window_seconds=0.1, cooldown_seconds=60.0))
+        breaker = CircuitBreaker(
+            "test_tool",
+            config=BreakerConfig(
+                failure_threshold=3, window_seconds=0.1, cooldown_seconds=60.0
+            ),
+        )
         breaker.record_failure()
         breaker.record_failure()
         time.sleep(0.12)  # Old failures expire

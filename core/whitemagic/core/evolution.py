@@ -27,21 +27,23 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- ADAPTIVE SYSTEM ---
 
 @dataclass
 class AdaptiveRules:
     """AdaptiveRules: adaptive rules.
 
     Value object: equality and repr are field-based."""
+
     enabled: bool = False
     min_confidence: float = 0.8
     min_frequency: int = 5
     max_impact_score: float = 0.3
     require_approval: bool = True
 
+
 class AdaptiveSystem:
     """Core logic for system-wide adaptations and self-optimization."""
+
     def __init__(self, rules: AdaptiveRules | None = None):
         self.rules = rules or AdaptiveRules()
         self.applied_adaptations = []
@@ -57,10 +59,10 @@ class AdaptiveSystem:
         self.rules.enabled = True
         self.rules.require_approval = require_approval
 
-# --- THOUGHT GALAXY ---
 
 class ThoughtGalaxy:
     """Stores and mines emergent meta-patterns and 'thoughts'."""
+
     def __init__(self):
         self._patterns = []
 
@@ -84,9 +86,10 @@ class ThoughtGalaxy:
         ]
         return results
 
-# --- SINGLETONS ---
+
 _adaptive: AdaptiveSystem | None = None
 _galaxy: ThoughtGalaxy | None = None
+
 
 def get_adaptive_system() -> AdaptiveSystem:
     """
@@ -100,6 +103,7 @@ def get_adaptive_system() -> AdaptiveSystem:
         _adaptive = AdaptiveSystem()
     return _adaptive
 
+
 def get_thought_galaxy() -> ThoughtGalaxy:
     """
     Get the thought galaxy.
@@ -111,6 +115,7 @@ def get_thought_galaxy() -> ThoughtGalaxy:
     if _galaxy is None:
         _galaxy = ThoughtGalaxy()
     return _galaxy
+
 
 def enable_full_recursion(require_approval: bool = True):
     """

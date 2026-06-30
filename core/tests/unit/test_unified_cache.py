@@ -1,4 +1,5 @@
 """Tests for the Unified Cache Bridge — Rust and Python backends."""
+
 from __future__ import annotations
 
 import json
@@ -57,7 +58,7 @@ class TestPyUnifiedCache:
         # Add k4 — should evict k2 (least recently used)
         cache.set("ns", "k4", "v4", ttl_seconds=60)
         assert cache.get("ns", "k1") == "v1"  # Still cached
-        assert cache.get("ns", "k2") is None   # Evicted
+        assert cache.get("ns", "k2") is None  # Evicted
         assert cache.get("ns", "k4") == "v4"
 
     def test_invalidate(self):
@@ -97,7 +98,7 @@ class TestPyUnifiedCache:
     def test_stats(self):
         cache = PyUnifiedCache(max_size=100)
         cache.set("ns", "k1", "v1", ttl_seconds=60)
-        cache.get("ns", "k1")   # Hit
+        cache.get("ns", "k1")  # Hit
         cache.get("ns", "miss")  # Miss
         stats = cache.stats()
         assert stats["hits"] == 1
@@ -229,11 +230,13 @@ class TestSemanticCacheUnifiedIntegration:
 
         cache = UnifiedCacheBridge(max_size=100, persist=False)
         key = _cache_key("ollama.chat", {"prompt": "test unified cache"})
-        payload = json.dumps({
-            "result": "unified cache answer",
-            "tokens_saved": 42,
-            "tool": "ollama.chat",
-        })
+        payload = json.dumps(
+            {
+                "result": "unified cache answer",
+                "tokens_saved": 42,
+                "tool": "ollama.chat",
+            }
+        )
         cache.set("semantic", key, payload, ttl_seconds=3600)
 
         dispatched = False

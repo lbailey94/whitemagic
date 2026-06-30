@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DiscoveryReport:
     """Report from a pattern discovery run."""
+
     timestamp: float = field(default_factory=time.time)
     sources_run: int = 0
     total_patterns: int = 0

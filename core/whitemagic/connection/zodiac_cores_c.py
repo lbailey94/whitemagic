@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EvolutionaryZodiacCore:
     """Evolutionary zodiac core with task routing intelligence."""
+
     sign: str
     quality: str
     strengths: list[str] = field(default_factory=list)
@@ -35,18 +36,54 @@ class EvolutionaryZodiacCore:
 
 # Define capabilities for each sign
 SIGN_CAPABILITIES: dict[str, dict[str, list[str]]] = {
-    "aries": {"strengths": ["initiative", "speed"], "can_handle": ["start", "launch", "attack"]},
-    "taurus": {"strengths": ["persistence", "stability"], "can_handle": ["build", "maintain", "secure"]},
-    "gemini": {"strengths": ["communication", "versatility"], "can_handle": ["translate", "connect", "analyze"]},
-    "cancer": {"strengths": ["nurturing", "memory"], "can_handle": ["care", "protect", "remember"]},
-    "leo": {"strengths": ["leadership", "creativity"], "can_handle": ["lead", "create", "perform"]},
-    "virgo": {"strengths": ["precision", "analysis"], "can_handle": ["debug", "optimize", "organize"]},
-    "libra": {"strengths": ["balance", "diplomacy"], "can_handle": ["mediate", "balance", "decide"]},
-    "scorpio": {"strengths": ["depth", "transformation"], "can_handle": ["investigate", "transform", "heal"]},
-    "sagittarius": {"strengths": ["exploration", "wisdom"], "can_handle": ["explore", "teach", "expand"]},
-    "capricorn": {"strengths": ["discipline", "structure"], "can_handle": ["plan", "execute", "govern"]},
-    "aquarius": {"strengths": ["innovation", "vision"], "can_handle": ["innovate", "design", "reform"]},
-    "pisces": {"strengths": ["intuition", "compassion"], "can_handle": ["dream", "synthesize", "forgive"]},
+    "aries": {
+        "strengths": ["initiative", "speed"],
+        "can_handle": ["start", "launch", "attack"],
+    },
+    "taurus": {
+        "strengths": ["persistence", "stability"],
+        "can_handle": ["build", "maintain", "secure"],
+    },
+    "gemini": {
+        "strengths": ["communication", "versatility"],
+        "can_handle": ["translate", "connect", "analyze"],
+    },
+    "cancer": {
+        "strengths": ["nurturing", "memory"],
+        "can_handle": ["care", "protect", "remember"],
+    },
+    "leo": {
+        "strengths": ["leadership", "creativity"],
+        "can_handle": ["lead", "create", "perform"],
+    },
+    "virgo": {
+        "strengths": ["precision", "analysis"],
+        "can_handle": ["debug", "optimize", "organize"],
+    },
+    "libra": {
+        "strengths": ["balance", "diplomacy"],
+        "can_handle": ["mediate", "balance", "decide"],
+    },
+    "scorpio": {
+        "strengths": ["depth", "transformation"],
+        "can_handle": ["investigate", "transform", "heal"],
+    },
+    "sagittarius": {
+        "strengths": ["exploration", "wisdom"],
+        "can_handle": ["explore", "teach", "expand"],
+    },
+    "capricorn": {
+        "strengths": ["discipline", "structure"],
+        "can_handle": ["plan", "execute", "govern"],
+    },
+    "aquarius": {
+        "strengths": ["innovation", "vision"],
+        "can_handle": ["innovate", "design", "reform"],
+    },
+    "pisces": {
+        "strengths": ["intuition", "compassion"],
+        "can_handle": ["dream", "synthesize", "forgive"],
+    },
 }
 
 

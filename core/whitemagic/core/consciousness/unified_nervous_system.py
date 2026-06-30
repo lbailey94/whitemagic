@@ -61,30 +61,37 @@ class UnifiedNervousSystem:
         """Load a subsystem by name."""
         if name == "dream":
             from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
             return get_dream_cycle()
         if name == "resonance":
             from whitemagic.core.resonance.gan_ying_async import get_async_bus
+
             return get_async_bus()
         if name == "evolution":
             from whitemagic.core.intelligence.learning.rapid_cognition import (
                 RapidCognition,
             )
+
             return RapidCognition()
         if name == "consciousness":
             from whitemagic.core.consciousness.coherence import CoherenceMetric
+
             return CoherenceMetric()
         if name == "emergence":
             from whitemagic.core.consciousness.synchronicity_detector import (
                 SynchronicityDetector,
             )
+
             return SynchronicityDetector()
         if name == "metabolism":
             from whitemagic.core.consciousness.token_economy import (
                 get_token_tracker,
             )
+
             return get_token_tracker()
         if name == "immune":
             from whitemagic.security.tool_gating import get_tool_gate
+
             return get_tool_gate()
         return None
 
@@ -156,7 +163,6 @@ class UnifiedNervousSystem:
         return health
 
 
-
 class CrossSubsystemPatterns:
     """Common patterns for cross-subsystem communication.
 
@@ -166,20 +172,26 @@ class CrossSubsystemPatterns:
     """
 
     @staticmethod
-    def coherence_cascade(nervous_system: UnifiedNervousSystem, coherence_score: float) -> None:
+    def coherence_cascade(
+        nervous_system: UnifiedNervousSystem, coherence_score: float
+    ) -> None:
         """When coherence drops, notify multiple subsystems to take corrective action."""
         if coherence_score < 0.6:
-            nervous_system.route_signal({
-                "type": "consciousness",
-                "event": "coherence.critical",
-                "coherence": coherence_score,
-                "action": "trigger_dream",
-            })
-            nervous_system.route_signal({
-                "type": "resonance",
-                "event": "harmony.check",
-                "coherence": coherence_score,
-            })
+            nervous_system.route_signal(
+                {
+                    "type": "consciousness",
+                    "event": "coherence.critical",
+                    "coherence": coherence_score,
+                    "action": "trigger_dream",
+                }
+            )
+            nervous_system.route_signal(
+                {
+                    "type": "resonance",
+                    "event": "harmony.check",
+                    "coherence": coherence_score,
+                }
+            )
 
     @staticmethod
     def emergence_detected(
@@ -188,18 +200,22 @@ class CrossSubsystemPatterns:
         details: dict[str, Any],
     ) -> None:
         """When emergence is detected, propagate to consciousness and evolution."""
-        nervous_system.route_signal({
-            "type": "emergence",
-            "event": "emergence.record",
-            "emergence_type": emergence_type,
-            "details": details,
-        })
-        nervous_system.route_signal({
-            "type": "consciousness",
-            "event": "coherence.adjust",
-            "adjustment": 0.05,
-            "reason": emergence_type,
-        })
+        nervous_system.route_signal(
+            {
+                "type": "emergence",
+                "event": "emergence.record",
+                "emergence_type": emergence_type,
+                "details": details,
+            }
+        )
+        nervous_system.route_signal(
+            {
+                "type": "consciousness",
+                "event": "coherence.adjust",
+                "adjustment": 0.05,
+                "reason": emergence_type,
+            }
+        )
 
     @staticmethod
     def security_threat(
@@ -208,18 +224,22 @@ class CrossSubsystemPatterns:
         severity: str,
     ) -> None:
         """Security threats trigger immune response and notify consciousness."""
-        nervous_system.route_signal({
-            "type": "immune",
-            "event": "immune.activate",
-            "threat": threat_type,
-            "severity": severity,
-        })
-        nervous_system.route_signal({
-            "type": "consciousness",
-            "event": "threat_awareness",
-            "threat": threat_type,
-            "immune_response": "active",
-        })
+        nervous_system.route_signal(
+            {
+                "type": "immune",
+                "event": "immune.activate",
+                "threat": threat_type,
+                "severity": severity,
+            }
+        )
+        nervous_system.route_signal(
+            {
+                "type": "consciousness",
+                "event": "threat_awareness",
+                "threat": threat_type,
+                "immune_response": "active",
+            }
+        )
 
     @staticmethod
     def dream_cycle_complete(
@@ -227,16 +247,20 @@ class CrossSubsystemPatterns:
         cycle_results: dict[str, Any],
     ) -> None:
         """When dream cycle completes, update consciousness and trigger metabolism."""
-        nervous_system.route_signal({
-            "type": "consciousness",
-            "event": "coherence.restore",
-            "dream_results": cycle_results,
-        })
-        nervous_system.route_signal({
-            "type": "metabolism",
-            "event": "metabolism.consolidate",
-            "constellations": cycle_results.get("constellations", []),
-        })
+        nervous_system.route_signal(
+            {
+                "type": "consciousness",
+                "event": "coherence.restore",
+                "dream_results": cycle_results,
+            }
+        )
+        nervous_system.route_signal(
+            {
+                "type": "metabolism",
+                "event": "metabolism.consolidate",
+                "constellations": cycle_results.get("constellations", []),
+            }
+        )
 
     @staticmethod
     def memory_pressure(
@@ -244,13 +268,14 @@ class CrossSubsystemPatterns:
         usage_percent: float,
     ) -> None:
         """When memory pressure is high, trigger metabolism."""
-        nervous_system.route_signal({
-            "type": "metabolism",
-            "event": "forgetting_sweep",
-            "pressure": usage_percent,
-            "strategy": "gentle",
-        })
-
+        nervous_system.route_signal(
+            {
+                "type": "metabolism",
+                "event": "forgetting_sweep",
+                "pressure": usage_percent,
+                "strategy": "gentle",
+            }
+        )
 
 
 def wire_cross_subsystem_patterns() -> dict[str, bool]:
@@ -265,22 +290,35 @@ def wire_cross_subsystem_patterns() -> dict[str, bool]:
     results: dict[str, bool] = {}
     try:
         from whitemagic.core.resonance.gan_ying_async import get_async_bus
+
         bus = get_async_bus()
         uns = get_nervous_system()
 
         def _on_coherence_check(event):
-            coherence = event.data.get("coherence", 1.0) if hasattr(event, "data") else 1.0
+            coherence = (
+                event.data.get("coherence", 1.0) if hasattr(event, "data") else 1.0
+            )
             CrossSubsystemPatterns.coherence_cascade(uns, coherence)
             results["coherence_cascade_wired"] = True
 
         def _on_emergence(event):
-            etype = event.data.get("emergence_type", "unknown") if hasattr(event, "data") else "unknown"
+            etype = (
+                event.data.get("emergence_type", "unknown")
+                if hasattr(event, "data")
+                else "unknown"
+            )
             CrossSubsystemPatterns.emergence_detected(uns, etype, {})
             results["emergence_wired"] = True
 
         def _on_security_threat(event):
-            threat = event.data.get("threat", "unknown") if hasattr(event, "data") else "unknown"
-            severity = event.data.get("severity", "high") if hasattr(event, "data") else "high"
+            threat = (
+                event.data.get("threat", "unknown")
+                if hasattr(event, "data")
+                else "unknown"
+            )
+            severity = (
+                event.data.get("severity", "high") if hasattr(event, "data") else "high"
+            )
             CrossSubsystemPatterns.security_threat(uns, threat, severity)
             results["security_wired"] = True
 
@@ -289,7 +327,9 @@ def wire_cross_subsystem_patterns() -> dict[str, bool]:
             results["dream_wired"] = True
 
         def _on_memory_pressure(event):
-            pressure = event.data.get("pressure", 50.0) if hasattr(event, "data") else 50.0
+            pressure = (
+                event.data.get("pressure", 50.0) if hasattr(event, "data") else 50.0
+            )
             CrossSubsystemPatterns.memory_pressure(uns, pressure)
             results["memory_wired"] = True
 

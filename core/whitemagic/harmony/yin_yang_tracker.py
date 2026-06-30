@@ -64,7 +64,7 @@ class BalanceMetrics:
     yang_ratio: float = 0.5
     yin_ratio: float = 0.5
     balance_score: float = 1.0  # 1.0 = perfect balance, 0.0 = severe imbalance
-    burnout_risk: float = 0.0   # 0.0-1.0, higher = more risk
+    burnout_risk: float = 0.0  # 0.0-1.0, higher = more risk
     recommendation: str | None = None
     window_start: datetime = field(default_factory=datetime.now)
     last_activity: ActivityType | None = None
@@ -94,6 +94,7 @@ class YinYangBalanceTracker:
         """Connect to Gan Ying event bus"""
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import get_bus
+
             self.bus = get_bus()
         except ImportError:
             pass
@@ -130,7 +131,15 @@ class YinYangBalanceTracker:
             activity_type = ActivityType[activity.upper()]
         except KeyError:
             # Unknown activity - try to infer
-            if activity.lower() in ["create", "write", "execute", "build", "deploy", "code", "update"]:
+            if activity.lower() in [
+                "create",
+                "write",
+                "execute",
+                "build",
+                "deploy",
+                "code",
+                "update",
+            ]:
                 activity_type = ActivityType.CREATE
             else:
                 activity_type = ActivityType.READ
@@ -227,21 +236,25 @@ class YinYangBalanceTracker:
                 ResonanceEvent,
             )
 
-            event_type = getattr(EventType, "BALANCE_CHECK", EventType.INTERNAL_STATE_CHANGED)
+            event_type = getattr(
+                EventType, "BALANCE_CHECK", EventType.INTERNAL_STATE_CHANGED
+            )
 
-            self.bus.emit(ResonanceEvent(
-                source="yin_yang_tracker",
-                event_type=event_type,
-                data={
-                    "yang_ratio": metrics.yang_ratio,
-                    "yin_ratio": metrics.yin_ratio,
-                    "balance_score": metrics.balance_score,
-                    "burnout_risk": metrics.burnout_risk,
-                    "recommendation": metrics.recommendation,
-                },
-                confidence=1.0 - metrics.balance_score,
-                timestamp=datetime.now(),
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="yin_yang_tracker",
+                    event_type=event_type,
+                    data={
+                        "yang_ratio": metrics.yang_ratio,
+                        "yin_ratio": metrics.yin_ratio,
+                        "balance_score": metrics.balance_score,
+                        "burnout_risk": metrics.burnout_risk,
+                        "recommendation": metrics.recommendation,
+                    },
+                    confidence=1.0 - metrics.balance_score,
+                    timestamp=datetime.now(),
+                )
+            )
         except (ImportError, AttributeError):
             # Fail silently if Gan Ying not available
             pass
@@ -250,10 +263,15 @@ class YinYangBalanceTracker:
         """Persist activity to history"""
         history_file = self.storage_dir / "activity_log.jsonl"
         with open(history_file, "a") as f:
-            f.write(_json_dumps({
-                "timestamp": timestamp.isoformat(),
-                "activity": activity.name,
-            }) + "\n")
+            f.write(
+                _json_dumps(
+                    {
+                        "timestamp": timestamp.isoformat(),
+                        "activity": activity.name,
+                    }
+                )
+                + "\n"
+            )
 
     def get_report(self) -> dict[str, Any]:
         """Get comprehensive balance report"""
@@ -268,8 +286,9 @@ class YinYangBalanceTracker:
             "yin_ratio": metrics.yin_ratio,
             "recommendation": metrics.recommendation,
             "window_minutes": self.window_minutes,
-            "activity_count": len([t for t, _ in self.activity_log
-                                   if t >= metrics.window_start]),
+            "activity_count": len(
+                [t for t, _ in self.activity_log if t >= metrics.window_start]
+            ),
             "status": self._get_status(metrics.balance_score),
             "status_emoji": metrics.status_emoji,
         }

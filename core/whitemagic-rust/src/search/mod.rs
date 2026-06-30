@@ -41,10 +41,6 @@ use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
-// Tokenization & stopwords
-// ---------------------------------------------------------------------------
-
 const STOPWORDS: &[&str] = &[
     "a", "an", "the", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
     "do", "does", "did", "will", "would", "could", "should", "may", "might", "shall", "can", "to",
@@ -104,10 +100,6 @@ fn edit_distance(a: &str, b: &str) -> usize {
     }
     dp[m][n]
 }
-
-// ---------------------------------------------------------------------------
-// Inverted index
-// ---------------------------------------------------------------------------
 
 /// A document stored in the index.
 #[derive(Debug, Clone)]
@@ -328,17 +320,9 @@ impl InvertedIndex {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Thread-safe global index (singleton for Python usage)
-// ---------------------------------------------------------------------------
-
 lazy_static::lazy_static! {
     static ref GLOBAL_INDEX: Arc<RwLock<Option<InvertedIndex>>> = Arc::new(RwLock::new(None));
 }
-
-// ---------------------------------------------------------------------------
-// Python bindings
-// ---------------------------------------------------------------------------
 
 /// Build a search index from a list of (id, title, content) tuples.
 /// Returns (doc_count, vocab_size).
@@ -434,10 +418,6 @@ pub fn search_stats() -> PyResult<String> {
         None => Ok(r#"{"doc_count": 0, "vocab_size": 0, "avg_doc_len": 0.0}"#.to_string()),
     }
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

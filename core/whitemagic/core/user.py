@@ -17,15 +17,18 @@ class UserProfile:
     """UserProfile: user profile.
 
     Value object: equality and repr are field-based."""
+
     name: str = "User"
     preferences: dict[str, Any] = field(default_factory=dict)
-    learning_style: str = "visual" # visual, textual, practical
+    learning_style: str = "visual"  # visual, textual, practical
     interests: list[str] = field(default_factory=list)
     adaptation_history: list[dict[str, Any]] = field(default_factory=list)
     last_active: str = ""
 
+
 class UserManager:
     """UserManager: user manager."""
+
     def __init__(self) -> None:
         self.profile_path = USER_PROFILE_PATH
         self.profile_path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,6 +61,7 @@ class UserManager:
                 "last_active": datetime.now().isoformat(),
             }
             from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
             f.write(_json_dumps(data, indent=2))
 
     def update_preference(self, key: str, value: Any) -> Any:
@@ -85,11 +89,13 @@ class UserManager:
         Returns:
             Any
         """
-        self.profile.adaptation_history.append({
-            "adaptation": adaptation,
-            "context": context,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self.profile.adaptation_history.append(
+            {
+                "adaptation": adaptation,
+                "context": context,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         # Keep history manageable
         if len(self.profile.adaptation_history) > 100:
             self.profile.adaptation_history.pop(0)
@@ -108,7 +114,9 @@ class UserManager:
         """
         return self.profile.preferences.get(key, default)
 
+
 _user_manager = None
+
 
 def get_user_manager() -> UserManager:
     """

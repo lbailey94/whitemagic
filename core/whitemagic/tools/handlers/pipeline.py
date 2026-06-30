@@ -1,4 +1,5 @@
 """Pipeline tool handlers."""
+
 # ruff: noqa: BLE001, E402
 import logging
 
@@ -33,13 +34,17 @@ def handle_pipeline(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 
 def _emit(event_type_name: str, data: dict[str, Any]) -> None:
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type_name, data, source="pipeline")
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced pipeline emit error: %s", e, exc_info=True)
@@ -75,10 +80,6 @@ def _save_pipeline(pipeline: dict[str, Any]) -> None:
     p.write_text(_json_dumps(pipeline, indent=2), encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# Variable substitution engine
-# ---------------------------------------------------------------------------
-
 def _resolve_vars(value: Any, results: list[dict[str, Any]]) -> Any:
     """Resolve $prev and $step[N] references in args.
 
@@ -101,7 +102,11 @@ def _resolve_vars(value: Any, results: list[dict[str, Any]]) -> Any:
             idx = int(m.group(1))
             if idx < len(results):
                 step_details = results[idx].get("details", {})
-                return step_details.get(m.group(2), step_details) if m.group(2) else step_details
+                return (
+                    step_details.get(m.group(2), step_details)
+                    if m.group(2)
+                    else step_details
+                )
             return value
 
         # Inline substitution within a larger string
@@ -126,19 +131,19 @@ def _resolve_vars(value: Any, results: list[dict[str, Any]]) -> Any:
     return value
 
 
-# ---------------------------------------------------------------------------
-# Dependency Graph ↔ Pipeline validation (A2 Synthesis)
-# ---------------------------------------------------------------------------
-
 def _validate_pipeline_deps(steps: list[dict[str, Any]]) -> dict[str, Any]:
     """Validate pipeline step ordering against the Tool Dependency Graph.
     Returns warnings for ordering violations and missing prerequisites.
     """
     try:
         from whitemagic.tools.dependency_graph import get_tool_graph
+
         graph = get_tool_graph()
     except (ImportError, ModuleNotFoundError):
-        return {"valid": True, "note": "Dependency graph unavailable — skipping validation"}
+        return {
+            "valid": True,
+            "note": "Dependency graph unavailable — skipping validation",
+        }
 
     tool_names = [s.get("tool", "") for s in steps]
     tool_positions = {name: i for i, name in enumerate(tool_names)}
@@ -188,10 +193,6 @@ def _validate_pipeline_deps(steps: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: pipeline.create
-# ---------------------------------------------------------------------------
-
 def handle_pipeline_create(**kwargs: Any) -> dict[str, Any]:
     """Create and optionally execute a tool pipeline."""
     steps = kwargs.get("steps")
@@ -215,7 +216,6 @@ def handle_pipeline_create(**kwargs: Any) -> dict[str, Any]:
         "current_step": 0,
     }
 
-    # --- Dependency Graph validation (A2 synthesis) ---
     validation = _validate_pipeline_deps(steps)
 
     if not execute:
@@ -308,10 +308,6 @@ def _execute_pipeline(pipeline: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: pipeline.status
-# ---------------------------------------------------------------------------
-
 def handle_pipeline_status(**kwargs: Any) -> dict[str, Any]:
     """Get the status of a pipeline."""
     pipeline_id = kwargs.get("pipeline_id")
@@ -321,15 +317,17 @@ def handle_pipeline_status(**kwargs: Any) -> dict[str, Any]:
         for f in sorted(pdir.glob("*.json"), reverse=True):
             try:
                 p = _json_loads(f.read_text(encoding="utf-8"))
-                pipelines.append({
-                    "id": p["id"],
-                    "name": p.get("name", ""),
-                    "pipeline_status": p.get("status"),
-                    "current_step": p.get("current_step", 0),
-                    "total_steps": len(p.get("steps", [])),
-                    "created_at": p.get("created_at"),
-                    "completed_at": p.get("completed_at"),
-                })
+                pipelines.append(
+                    {
+                        "id": p["id"],
+                        "name": p.get("name", ""),
+                        "pipeline_status": p.get("status"),
+                        "current_step": p.get("current_step", 0),
+                        "total_steps": len(p.get("steps", [])),
+                        "created_at": p.get("created_at"),
+                        "completed_at": p.get("completed_at"),
+                    }
+                )
             except (json.JSONDecodeError, OSError, KeyError):
                 continue
 
@@ -348,7 +346,11 @@ def handle_pipeline_status(**kwargs: Any) -> dict[str, Any]:
 
     pipeline_data = _load_pipeline(pipeline_id)
     if not pipeline_data:
-        return {"status": "error", "error": f"Pipeline {pipeline_id} not found", "error_code": "not_found"}
+        return {
+            "status": "error",
+            "error": f"Pipeline {pipeline_id} not found",
+            "error_code": "not_found",
+        }
 
     return {
         "status": "success",
@@ -365,10 +367,6 @@ def handle_pipeline_status(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: pipeline.list
-# ---------------------------------------------------------------------------
-
 def handle_pipeline_list(**kwargs: Any) -> dict[str, Any]:
     """List pipelines."""
     limit = kwargs.get("limit", 20)
@@ -381,14 +379,16 @@ def handle_pipeline_list(**kwargs: Any) -> dict[str, Any]:
             p = _json_loads(f.read_text(encoding="utf-8"))
             if status_filter and p.get("status") != status_filter:
                 continue
-            pipelines.append({
-                "id": p["id"],
-                "name": p.get("name", ""),
-                "status": p.get("status"),
-                "steps": len(p.get("steps", [])),
-                "current_step": p.get("current_step", 0),
-                "created_at": p.get("created_at"),
-            })
+            pipelines.append(
+                {
+                    "id": p["id"],
+                    "name": p.get("name", ""),
+                    "status": p.get("status"),
+                    "steps": len(p.get("steps", [])),
+                    "current_step": p.get("current_step", 0),
+                    "created_at": p.get("created_at"),
+                }
+            )
         except (json.JSONDecodeError, OSError, KeyError):
             continue
         if len(pipelines) >= limit:

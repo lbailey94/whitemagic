@@ -12,6 +12,7 @@ Usage:
     python scripts/bench_inference.py
     python scripts/bench_inference.py --size 1024 --iterations 1000
 """
+
 from __future__ import annotations
 
 import argparse
@@ -60,6 +61,7 @@ def benchmark_ternary_gemv_rust(m: int, k: int, iterations: int) -> dict | None:
     """Benchmark Rust ternary GEMV via PyO3 (if available)."""
     try:
         import whitemagic_rust
+
         rust_inference = whitemagic_rust.inference
     except (ImportError, AttributeError):
         return None
@@ -159,7 +161,9 @@ def benchmark_routing(n: int = 10000) -> dict:
         # Simulate routing a request
         prompt = f"test prompt {i} with some complexity"
         tier = classifier.classify(prompt).tier
-        metrics.record_routing(tier, latency_ms=1.0, confidence=0.9, success=True, reason="bench")
+        metrics.record_routing(
+            tier, latency_ms=1.0, confidence=0.9, success=True, reason="bench"
+        )
     elapsed = time.perf_counter() - start
 
     summary = metrics.summary()
@@ -203,12 +207,18 @@ def benchmark_memory_analytics(n: int = 50000) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Inference acceleration benchmarks")
-    parser.add_argument("--size", type=int, default=256, help="Matrix dimension (m=k=size)")
+    parser.add_argument(
+        "--size", type=int, default=256, help="Matrix dimension (m=k=size)"
+    )
     parser.add_argument("--iterations", type=int, default=1000, help="GEMV iterations")
     parser.add_argument("--hll-n", type=int, default=10000, help="HLL item count")
     parser.add_argument("--cms-n", type=int, default=50000, help="CMS increment count")
-    parser.add_argument("--routing-n", type=int, default=10000, help="Routing decisions")
-    parser.add_argument("--analytics-n", type=int, default=50000, help="Analytics observations")
+    parser.add_argument(
+        "--routing-n", type=int, default=10000, help="Routing decisions"
+    )
+    parser.add_argument(
+        "--analytics-n", type=int, default=50000, help="Analytics observations"
+    )
     args = parser.parse_args()
 
     print("=" * 70)
@@ -219,13 +229,17 @@ def main() -> None:
     print(f"\n1. Ternary GEMV ({args.size}x{args.size}, {args.iterations} iterations)")
     print("-" * 50)
     py_result = benchmark_ternary_gemv_python(args.size, args.size, args.iterations)
-    print(f"  Python scalar: {py_result['ops_per_sec']:>10,} ops/sec  "
-          f"({py_result['avg_latency_us']:.1f} µs/op)")
+    print(
+        f"  Python scalar: {py_result['ops_per_sec']:>10,} ops/sec  "
+        f"({py_result['avg_latency_us']:.1f} µs/op)"
+    )
 
     rust_result = benchmark_ternary_gemv_rust(args.size, args.size, args.iterations)
     if rust_result:
-        print(f"  Rust AVX2:     {rust_result['ops_per_sec']:>10,} ops/sec  "
-              f"({rust_result['avg_latency_us']:.1f} µs/op)")
+        print(
+            f"  Rust AVX2:     {rust_result['ops_per_sec']:>10,} ops/sec  "
+            f"({rust_result['avg_latency_us']:.1f} µs/op)"
+        )
         speedup = rust_result["ops_per_sec"] / py_result["ops_per_sec"]
         print(f"  Speedup:       {speedup:>10.1f}x")
     else:
@@ -235,7 +249,9 @@ def main() -> None:
     print(f"\n2. HyperLogLog ({args.hll_n} items, p=14)")
     print("-" * 50)
     hll_result = benchmark_hll(args.hll_n)
-    print(f"  Estimate:      {hll_result['estimate']:>10,} (error: {hll_result['error_pct']:.2f}%)")
+    print(
+        f"  Estimate:      {hll_result['estimate']:>10,} (error: {hll_result['error_pct']:.2f}%)"
+    )
     print(f"  Memory:        {hll_result['memory_bytes']:>10,} bytes")
     print(f"  Throughput:    {hll_result['ingest_ops_per_sec']:>10,} ops/sec")
 
@@ -245,7 +261,9 @@ def main() -> None:
     cms_result = benchmark_cms(args.cms_n)
     print(f"  Memory:        {cms_result['memory_bytes']:>10,} bytes")
     print(f"  Throughput:    {cms_result['ingest_ops_per_sec']:>10,} ops/sec")
-    print(f"  Hot key sample: {dict(list(cms_result['hot_key_estimates'].items())[:3])}")
+    print(
+        f"  Hot key sample: {dict(list(cms_result['hot_key_estimates'].items())[:3])}"
+    )
 
     # 4. Routing
     print(f"\n4. Routing Metrics ({args.routing_n} decisions)")
@@ -261,8 +279,10 @@ def main() -> None:
     analytics_result = benchmark_memory_analytics(args.analytics_n)
     print(f"  Throughput:    {analytics_result['ops_per_sec']:>10,} ops/sec")
     print(f"  Memory:        {analytics_result['memory_bytes']:>10,} bytes")
-    print(f"  Distinct est:  {analytics_result['distinct_estimate']:>10,} "
-          f"(error: {analytics_result['error_pct']:.2f}%)")
+    print(
+        f"  Distinct est:  {analytics_result['distinct_estimate']:>10,} "
+        f"(error: {analytics_result['error_pct']:.2f}%)"
+    )
 
     print("\n" + "=" * 70)
     print("Benchmarks complete.")

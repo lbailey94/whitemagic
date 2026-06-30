@@ -9,6 +9,7 @@ Tests are designed to be fast: they use Click's CliRunner which invokes
 commands in-process without spawning a subprocess. Each command is invoked
 with --json and minimal arguments (or --help where arguments are required).
 """
+
 import json
 
 import pytest
@@ -19,6 +20,7 @@ from click.testing import CliRunner
 def cli():
     """Import the main CLI group once per module."""
     from whitemagic.cli.cli_app import main
+
     return main
 
 
@@ -75,8 +77,9 @@ class TestCLIJsonContract:
             output = result.output.strip()
             if output:
                 parsed = json.loads(output)
-                assert isinstance(parsed, (dict, list)), \
+                assert isinstance(parsed, (dict, list)), (
                     f"--json output for '{cmd}' is not a dict/list: {type(parsed)}"
+                )
 
     @pytest.mark.parametrize("cmd", JSON_NO_ARG_COMMANDS)
     def test_json_global_flag(self, runner, cli, cmd):
@@ -93,7 +96,9 @@ class TestCLIJsonContract:
                 except json.JSONDecodeError:
                     # Some commands may not support global --json yet — that's OK,
                     # but we log it for awareness.
-                    pytest.skip(f"'{cmd}' doesn't produce JSON with global --json flag yet")
+                    pytest.skip(
+                        f"'{cmd}' doesn't produce JSON with global --json flag yet"
+                    )
 
     @pytest.mark.parametrize("cmd", REQUIRES_ARGS)
     def test_command_registered(self, runner, cli, cmd):
@@ -101,8 +106,9 @@ class TestCLIJsonContract:
         args = cmd.split() + ["--help"]
         result = runner.invoke(cli, args)
         # --help should always exit 0 if the command is registered
-        assert result.exit_code == 0, \
+        assert result.exit_code == 0, (
             f"Command '{cmd}' not registered or --help failed: exit={result.exit_code}, output={result.output[:200]}"
+        )
 
     def test_cli_has_json_option(self, runner, cli):
         """Verify the main CLI group has --json option."""
@@ -127,8 +133,9 @@ class TestCLIJsonContract:
             if "capabilities" in parsed:
                 caps = parsed["capabilities"]
                 if isinstance(caps, dict) and "status" in caps:
-                    assert caps["status"] in ("success", "error"), \
+                    assert caps["status"] in ("success", "error"), (
                         f"Unexpected capabilities status: {caps['status']}"
+                    )
 
     def test_tools_json_structure(self, runner, cli):
         """Tools command --json should return categorized command list."""
@@ -137,5 +144,6 @@ class TestCLIJsonContract:
             parsed = json.loads(result.output.strip())
             assert isinstance(parsed, dict), "Tools --json output should be a dict"
             # Should have command categories
-            assert "core_commands" in parsed or "commands" in parsed, \
+            assert "core_commands" in parsed or "commands" in parsed, (
                 f"Tools --json missing command categories: {list(parsed.keys())}"
+            )

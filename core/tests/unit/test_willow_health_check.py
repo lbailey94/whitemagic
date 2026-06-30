@@ -57,6 +57,7 @@ class TestWillowHealthChecker:
             issues=[],
         )
         import time
+
         checker._last_check = time.time()
         # Cached healthy result should be returned without re-checking
         # (but async method, so we just verify state)

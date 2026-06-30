@@ -17,6 +17,7 @@ from whitemagic.core.resonance.gan_ying_enhanced import (
 
 logger = logging.getLogger(__name__)
 
+
 class ResonanceOrchestrator:
     """The central conductor of systemic resonance.
 
@@ -26,22 +27,28 @@ class ResonanceOrchestrator:
 
     def __init__(self) -> None:
         self._hologram = get_holographic_memory()
-        self.bus = get_bus() # Changed from _bus to bus
+        self.bus = get_bus()  # Changed from _bus to bus
         self.resonance_strength = 1.0
-        self._actions: dict[str, list[Callable]] = {} # Map pattern titles/tags/event_names to actions
-        self._overclock_active = False # Added
-        self.dharma = get_dharma() # Added
+        self._actions: dict[
+            str, list[Callable]
+        ] = {}  # Map pattern titles/tags/event_names to actions
+        self._overclock_active = False  # Added
+        self.dharma = get_dharma()  # Added
 
         # Catch-all listener for the Gan Ying bus # Modified comment
         # Skip in test environments to prevent DB connection pool exhaustion
         import os
+
         if os.environ.get("WM_SILENT_INIT") != "1":
-            self.bus.listen_all(self._on_bus_event) # Changed from _bus to bus
-            logger.info("📡 ResonanceOrchestrator ONLINE. (Coherent Overclock Ready)") # Added
+            self.bus.listen_all(self._on_bus_event)  # Changed from _bus to bus
+            logger.info(
+                "📡 ResonanceOrchestrator ONLINE. (Coherent Overclock Ready)"
+            )  # Added
 
     def _on_bus_event(self, event: ResonanceEvent) -> None:
         """React to any bus event by checking for registered actions."""
         import os
+
         if os.environ.get("WM_SILENT_INIT") == "1":
             return
 
@@ -68,7 +75,9 @@ class ResonanceOrchestrator:
 
         if tags.intersection(attractors) and event.confidence > coherence_threshold:
             if not self._overclock_active:
-                logger.info("✨ COHERENT OVERCLOCK ACTIVATED: Spiritual resonance detected.")
+                logger.info(
+                    "✨ COHERENT OVERCLOCK ACTIVATED: Spiritual resonance detected."
+                )
                 self._overclock_active = True
                 # Trigger a spontaneous "Hidden Resonance" to find deeper connections
                 asyncio.create_task(self._hidden_resonance_search(event.data))
@@ -77,6 +86,7 @@ class ResonanceOrchestrator:
         """Perform a deep, multi-axis search using higher native tiers."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
 
             # Use holographic search to find 'Hidden Brothers'
@@ -84,16 +94,24 @@ class ResonanceOrchestrator:
             siblings = um.search(query=str(seed_data.get("content")), limit=5)
 
             if siblings:
-                logger.debug("💎 Hidden Resonance found %s coherent nodes.", len(siblings))
+                logger.debug(
+                    "💎 Hidden Resonance found %s coherent nodes.", len(siblings)
+                )
                 # Weave them into the current narrative without advertising it
                 for sib in siblings:
-                    self.bus.emit(ResonanceEvent(
-                        source="hidden_resonance",
-                        event_type=EventType.INTERNAL_STATE_CHANGED,
-                        data={"parent": seed_data.get("title"), "sibling": sib.title, "mode": "coherent_link"},
-                        timestamp=datetime.now(),
-                        confidence=0.95,
-                    ))
+                    self.bus.emit(
+                        ResonanceEvent(
+                            source="hidden_resonance",
+                            event_type=EventType.INTERNAL_STATE_CHANGED,
+                            data={
+                                "parent": seed_data.get("title"),
+                                "sibling": sib.title,
+                                "mode": "coherent_link",
+                            },
+                            timestamp=datetime.now(),
+                            confidence=0.95,
+                        )
+                    )
         finally:
             self._overclock_active = False
 
@@ -105,8 +123,7 @@ class ResonanceOrchestrator:
         logger.info("🔗 Action registered for pattern: %s", pattern_key)
 
     def trigger_cascade(self, pattern_data: dict[str, Any], k: int = 5) -> None:
-        """Initiate a chain reaction from a single insight.
-        """
+        """Initiate a chain reaction from a single insight."""
         pattern_title = pattern_data.get("title", "Unknown Pattern")
         logger.info("🌊 RESONANCE CASCADE INITIATED: %s", pattern_title)
 
@@ -128,18 +145,20 @@ class ResonanceOrchestrator:
 
         for result in results:
             # Emit a SYMPATHETIC_RESONANCE event for each neighbor
-            self.bus.emit(ResonanceEvent(
-                source="resonance_orchestrator",
-                event_type=EventType.SYMPATHETIC_RESONANCE,
-                data={
-                    "pattern_id": result.memory_id,
-                    "distance": result.distance,
-                    "original_pattern": pattern_title,
-                    "strength": self.resonance_strength / (1.0 + result.distance),
-                },
-                timestamp=datetime.now(),
-                confidence=0.9, # High confidence in spatial proximity
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="resonance_orchestrator",
+                    event_type=EventType.SYMPATHETIC_RESONANCE,
+                    data={
+                        "pattern_id": result.memory_id,
+                        "distance": result.distance,
+                        "original_pattern": pattern_title,
+                        "strength": self.resonance_strength / (1.0 + result.distance),
+                    },
+                    timestamp=datetime.now(),
+                    confidence=0.9,  # High confidence in spatial proximity
+                )
+            )
 
         logger.info("   💫 Sympathetic waves emitted.")
 
@@ -159,7 +178,10 @@ class ResonanceOrchestrator:
         self.resonance_strength *= strength
         logger.info("📈 Resonance amplified: %sx", self.resonance_strength)
 
+
 _orchestrator = None
+
+
 def get_orchestrator() -> ResonanceOrchestrator:
     """
     Get the orchestrator.

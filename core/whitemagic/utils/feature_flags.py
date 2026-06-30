@@ -23,6 +23,7 @@ Environment variable format:
     WM_FEATURE_<NAME>=0   # explicitly disable (overrides default)
     (unset)               # use default from registry
 """
+
 from __future__ import annotations
 
 import os
@@ -44,16 +45,13 @@ class FeatureDisabledError(RuntimeError):
 @dataclass(frozen=True)
 class FeatureFlag:
     """Registry entry for a single feature flag."""
+
     name: str
     description: str
     default: bool = False
     stable: bool = False  # True = production-ready; False = experimental
 
 
-# ---------------------------------------------------------------------------
-# Feature Registry
-# ---------------------------------------------------------------------------
-# To add a flag: append a FeatureFlag entry here and update CONFIGURATION.md.
 FEATURE_REGISTRY: list[FeatureFlag] = [
     FeatureFlag(
         name="OTEL",

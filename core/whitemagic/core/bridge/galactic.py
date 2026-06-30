@@ -15,6 +15,7 @@ etc.) — lazy import with graceful degradation if the substrate is
 unreachable (returns ``{"status": "unavailable", ...}`` so the
 librarian can recover instead of crashing).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -35,6 +36,7 @@ def _get_galactic():
             memory_search,
             substrate_health,
         )
+
         return {
             "GalaxyStats": GalaxyStats,
             "associations_for": associations_for,
@@ -56,9 +58,6 @@ def _unavailable(name: str) -> dict[str, Any]:
         "status": "unavailable",
         "error": f"whitemagic.core.galactic not importable — {name} cannot run",
     }
-
-
-# ─── Public bridge functions ──────────────────────────────────────
 
 
 def galactic_galaxy_stats(**kwargs: Any) -> dict[str, Any]:
@@ -88,7 +87,9 @@ def galactic_galaxy_stats(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-def galactic_memory_recent(limit: int = 10, memory_type: str | None = None, **kwargs: Any) -> dict[str, Any]:
+def galactic_memory_recent(
+    limit: int = 10, memory_type: str | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Most recently updated memories, optionally filtered by type.
 
     Args:
@@ -114,7 +115,13 @@ def galactic_memory_recent(limit: int = 10, memory_type: str | None = None, **kw
         return {"status": "error", "error": str(e)}
 
 
-def galactic_memory_search(query: str, limit: int = 10, memory_type: str | None = None, galaxy: str | None = None, **kwargs: Any) -> dict[str, Any]:
+def galactic_memory_search(
+    query: str,
+    limit: int = 10,
+    memory_type: str | None = None,
+    galaxy: str | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
     """FTS5 search across memory content, with LIKE fallback.
 
     Returns a list of matching memories ranked by relevance.
@@ -124,7 +131,9 @@ def galactic_memory_search(query: str, limit: int = 10, memory_type: str | None 
     if api is None:
         return _unavailable("galactic_memory_search")
     try:
-        results = api["memory_search"](query=query, limit=int(limit), memory_type=memory_type, galaxy=galaxy)
+        results = api["memory_search"](
+            query=query, limit=int(limit), memory_type=memory_type, galaxy=galaxy
+        )
         return {
             "status": "ok",
             "function": "galactic_memory_search",
@@ -161,7 +170,9 @@ def galactic_memory_by_id(memory_id: str, **kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-def galactic_associations(memory_id: str, direction: str = "outgoing", limit: int = 25, **kwargs: Any) -> dict[str, Any]:
+def galactic_associations(
+    memory_id: str, direction: str = "outgoing", limit: int = 25, **kwargs: Any
+) -> dict[str, Any]:
     """Return associations touching a memory (with the other endpoint).
 
     Args:

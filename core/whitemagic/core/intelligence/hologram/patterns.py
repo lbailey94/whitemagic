@@ -21,6 +21,7 @@ from whitemagic.config.paths import DB_PATH
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Pattern:
     """A detected pattern in memory space."""
@@ -31,6 +32,7 @@ class Pattern:
     evidence: list[str] = field(default_factory=list)
     location: tuple[float, float, float, float] | None = None
 
+
 @dataclass
 class Insight:
     """An actionable insight derived from patterns."""
@@ -40,6 +42,7 @@ class Insight:
     related_patterns: list[str]
     actionable: bool = True
     priority: float = 0.5
+
 
 class HolographicPatternEngine:
     """Detect patterns in 4D memory space."""
@@ -97,12 +100,14 @@ class HolographicPatternEngine:
             if loc[3] > 0.7:
                 axis_desc.append("important")
 
-            patterns.append(Pattern(
-                pattern_type="density",
-                description=f"High concentration of {' '.join(axis_desc)} memories ({density} items)",
-                confidence=min(1.0, density / 20),
-                location=loc,
-            ))
+            patterns.append(
+                Pattern(
+                    pattern_type="density",
+                    description=f"High concentration of {' '.join(axis_desc)} memories ({density} items)",
+                    confidence=min(1.0, density / 20),
+                    location=loc,
+                )
+            )
         conn.close()
         return patterns
 
@@ -123,17 +128,21 @@ class HolographicPatternEngine:
         past, _present, future = counts[0] or 0, counts[1] or 0, counts[2] or 0
 
         if past > future * 2 and past > 10:
-            patterns.append(Pattern(
-                pattern_type="flow",
-                description=f"Memory bias toward past ({past} past vs {future} future)",
-                confidence=0.8,
-            ))
+            patterns.append(
+                Pattern(
+                    pattern_type="flow",
+                    description=f"Memory bias toward past ({past} past vs {future} future)",
+                    confidence=0.8,
+                )
+            )
         elif future > past * 2 and future > 10:
-            patterns.append(Pattern(
-                pattern_type="flow",
-                description=f"Memory bias toward future planning ({future} future-oriented)",
-                confidence=0.8,
-            ))
+            patterns.append(
+                Pattern(
+                    pattern_type="flow",
+                    description=f"Memory bias toward future planning ({future} future-oriented)",
+                    confidence=0.8,
+                )
+            )
 
         return patterns
 
@@ -147,12 +156,16 @@ class HolographicPatternEngine:
         high_importance = [m for m in memories if m["w"] > 0.8]
 
         if avg_importance > 0.7:
-            patterns.append(Pattern(
-                pattern_type="gradient",
-                description=f"High average importance ({avg_importance:.2f}) - may need priority filtering",
-                confidence=0.7,
-                evidence=[(m["title"] or "Untitled")[:40] for m in high_importance[:5]],
-            ))
+            patterns.append(
+                Pattern(
+                    pattern_type="gradient",
+                    description=f"High average importance ({avg_importance:.2f}) - may need priority filtering",
+                    confidence=0.7,
+                    evidence=[
+                        (m["title"] or "Untitled")[:40] for m in high_importance[:5]
+                    ],
+                )
+            )
 
         # Check for importance clusters by topic
         type_importance: dict[str, list[float]] = {}
@@ -166,11 +179,13 @@ class HolographicPatternEngine:
             if len(imps) > 10:
                 avg = sum(imps) / len(imps)
                 if avg > 0.8:
-                    patterns.append(Pattern(
-                        pattern_type="gradient",
-                        description=f"{mem_type} memories have high importance ({avg:.2f} avg)",
-                        confidence=0.75,
-                    ))
+                    patterns.append(
+                        Pattern(
+                            pattern_type="gradient",
+                            description=f"{mem_type} memories have high importance ({avg:.2f} avg)",
+                            confidence=0.75,
+                        )
+                    )
 
         return patterns
 
@@ -188,14 +203,22 @@ class HolographicPatternEngine:
             avg_emotion_importance = sum(m["w"] for m in emotional) / len(emotional)
 
             if abs(avg_logic_importance - avg_emotion_importance) > 0.15:
-                higher = "logical" if avg_logic_importance > avg_emotion_importance else "emotional"
-                patterns.append(Pattern(
-                    pattern_type="correlation",
-                    description=f"{higher.title()} memories rated higher importance on average",
-                    confidence=0.7,
-                    evidence=[f"Logical avg: {avg_logic_importance:.2f}",
-                             f"Emotional avg: {avg_emotion_importance:.2f}"],
-                ))
+                higher = (
+                    "logical"
+                    if avg_logic_importance > avg_emotion_importance
+                    else "emotional"
+                )
+                patterns.append(
+                    Pattern(
+                        pattern_type="correlation",
+                        description=f"{higher.title()} memories rated higher importance on average",
+                        confidence=0.7,
+                        evidence=[
+                            f"Logical avg: {avg_logic_importance:.2f}",
+                            f"Emotional avg: {avg_emotion_importance:.2f}",
+                        ],
+                    )
+                )
 
         return patterns
 
@@ -205,32 +228,38 @@ class HolographicPatternEngine:
 
         density_patterns = [p for p in patterns if p.pattern_type == "density"]
         if len(density_patterns) >= 3:
-            insights.append(Insight(
-                title="Memory Clustering Opportunity",
-                description=f"Found {len(density_patterns)} high-density regions. Consider creating topic summaries.",
-                related_patterns=[p.description[:50] for p in density_patterns[:3]],
-                priority=0.8,
-            ))
+            insights.append(
+                Insight(
+                    title="Memory Clustering Opportunity",
+                    description=f"Found {len(density_patterns)} high-density regions. Consider creating topic summaries.",
+                    related_patterns=[p.description[:50] for p in density_patterns[:3]],
+                    priority=0.8,
+                )
+            )
 
         flow_patterns = [p for p in patterns if p.pattern_type == "flow"]
         for p in flow_patterns:
             if "past" in p.description.lower():
-                insights.append(Insight(
-                    title="Balance Time Perspective",
-                    description="Memory collection is past-heavy. Consider adding future goals and plans.",
-                    related_patterns=[p.description],
-                    priority=0.6,
-                ))
+                insights.append(
+                    Insight(
+                        title="Balance Time Perspective",
+                        description="Memory collection is past-heavy. Consider adding future goals and plans.",
+                        related_patterns=[p.description],
+                        priority=0.6,
+                    )
+                )
 
         gradient_patterns = [p for p in patterns if p.pattern_type == "gradient"]
         for p in gradient_patterns:
             if "high average" in p.description.lower():
-                insights.append(Insight(
-                    title="Importance Inflation",
-                    description="Most memories rated high importance. Consider recalibrating or tiering.",
-                    related_patterns=[p.description],
-                    priority=0.5,
-                ))
+                insights.append(
+                    Insight(
+                        title="Importance Inflation",
+                        description="Most memories rated high importance. Consider recalibrating or tiering.",
+                        related_patterns=[p.description],
+                        priority=0.5,
+                    )
+                )
 
         return insights
 
@@ -252,6 +281,7 @@ class HolographicPatternEngine:
             "insights": insights,
         }
 
+
 def get_pattern_engine() -> HolographicPatternEngine:
     """
     Get the pattern engine.
@@ -261,14 +291,15 @@ def get_pattern_engine() -> HolographicPatternEngine:
     """
     return HolographicPatternEngine()
 
+
 if __name__ == "__main__":
     engine = get_pattern_engine()
     result = engine.analyze()
 
     logger.info("Holographic Pattern Analysis")
     logger.info("=" * 50)
-    logger.info("Patterns found: %s", result['total_patterns'])
-    logger.info("Insights generated: %s", result['total_insights'])
+    logger.info("Patterns found: %s", result["total_patterns"])
+    logger.info("Insights generated: %s", result["total_insights"])
 
     logger.info("\n--- Patterns ---")
     for p in result["patterns"]:

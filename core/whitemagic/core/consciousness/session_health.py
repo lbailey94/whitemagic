@@ -35,6 +35,7 @@ class SessionHealthCheck:
 
     def __init__(self, project_root: Path = None):
         from whitemagic.config import PROJECT_ROOT
+
         self.project_root = project_root or PROJECT_ROOT
         self.health_log = WM_ROOT / "health_checks.jsonl"
         self.health_log.parent.mkdir(parents=True, exist_ok=True)
@@ -54,26 +55,23 @@ class SessionHealthCheck:
             "checks": {},
             "overall_health": "unknown",
             "recommendations": [],
-            "coherence_estimate": 0.0
+            "coherence_estimate": 0.0,
         }
 
-        # Step 1: Quick import test (Line 1 - approaching shore)
         results["checks"]["imports"] = self._check_imports()
 
-        # Step 2: Test status (Line 2 - approaching rocks)
         results["checks"]["tests"] = self._check_tests()
 
-        # Step 3: Export validation (Line 3 - approaching plateau)
         results["checks"]["exports"] = self._check_exports()
 
-        # Step 4: Memory coherence (Line 4 - approaching trees)
         results["checks"]["memory"] = self._check_memory()
 
-        # Step 5: System integration (Line 5 - approaching summit)
         results["checks"]["integration"] = self._check_integration()
 
         # Calculate overall health
-        results["overall_health"], results["coherence_estimate"] = self._calculate_health(results["checks"])
+        results["overall_health"], results["coherence_estimate"] = (
+            self._calculate_health(results["checks"])
+        )
 
         # Generate recommendations
         results["recommendations"] = self._generate_recommendations(results["checks"])
@@ -90,7 +88,7 @@ class SessionHealthCheck:
     def _check_imports(self) -> dict:
         """Check core imports work."""
         try:
-            # Test critical imports  # noqa: F401
+            # Test critical imports
             from whitemagic.core.resonance.gan_ying import get_bus  # noqa: F401
             from whitemagic.gardens.dharma.core import get_dharma_core  # noqa: F401
             from whitemagic.homeostasis import Homeostasis  # noqa: F401
@@ -106,11 +104,19 @@ class SessionHealthCheck:
         """Run quick test check."""
         try:
             result = subprocess.run(
-                ["python3", "-m", "pytest", "tests/", "-q", "--tb=no", "--collect-only"],
+                [
+                    "python3",
+                    "-m",
+                    "pytest",
+                    "tests/",
+                    "-q",
+                    "--tb=no",
+                    "--collect-only",
+                ],
                 cwd=str(self.project_root),
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             # Parse collection output
@@ -119,6 +125,7 @@ class SessionHealthCheck:
             if "error" in output.lower() or result.returncode != 0:
                 # Try to count collected tests
                 import re
+
                 collected = re.search(r"(\d+) items?", output)
                 if collected:
                     count = int(collected.group(1))
@@ -126,10 +133,15 @@ class SessionHealthCheck:
                 return {"status": "warning", "message": "Test collection had issues"}
 
             import re
+
             collected = re.search(r"(\d+) items?", output)
             if collected:
                 count = int(collected.group(1))
-                return {"status": "healthy", "message": f"{count} tests collected", "count": count}
+                return {
+                    "status": "healthy",
+                    "message": f"{count} tests collected",
+                    "count": count,
+                }
 
             return {"status": "healthy", "message": "Tests accessible"}
 
@@ -158,11 +170,20 @@ class SessionHealthCheck:
                     pass
 
             if modules_ok == modules_checked and modules_checked > 0:
-                return {"status": "healthy", "message": f"{modules_ok} modules have proper exports"}
+                return {
+                    "status": "healthy",
+                    "message": f"{modules_ok} modules have proper exports",
+                }
             elif modules_ok > 0:
-                return {"status": "warning", "message": f"{modules_ok}/{modules_checked} modules have exports"}
+                return {
+                    "status": "warning",
+                    "message": f"{modules_ok}/{modules_checked} modules have exports",
+                }
             else:
-                return {"status": "unhealthy", "message": "No modules have proper exports"}
+                return {
+                    "status": "unhealthy",
+                    "message": "No modules have proper exports",
+                }
 
         except Exception as e:
             return {"status": "warning", "message": f"Export check issue: {e}"}
@@ -181,7 +202,11 @@ class SessionHealthCheck:
             total = len(md_files) + len(json_files)
 
             if total > 100:
-                return {"status": "healthy", "message": f"{total} memory files found", "count": total}
+                return {
+                    "status": "healthy",
+                    "message": f"{total} memory files found",
+                    "count": total,
+                }
             elif total > 0:
                 return {"status": "warning", "message": f"Only {total} memory files"}
             else:
@@ -208,7 +233,7 @@ class SessionHealthCheck:
                 source="session_health",
                 event_type=EventType.SYSTEM_STARTED,
                 data={"type": "health_check"},
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
             bus.emit(event)
@@ -256,7 +281,9 @@ class SessionHealthCheck:
             if status == "unhealthy":
                 recs.append(f"🔴 Fix {name}: {check.get('message', 'Unknown issue')}")
             elif status == "warning":
-                recs.append(f"🟡 Improve {name}: {check.get('message', 'Check needed')}")
+                recs.append(
+                    f"🟡 Improve {name}: {check.get('message', 'Check needed')}"
+                )
 
         if not recs:
             recs.append("🟢 All systems healthy! Ready for work.")
@@ -286,18 +313,20 @@ class SessionHealthCheck:
         coherence = results.get("coherence_estimate", 0.0)
 
         if health == "healthy":
-            print(f"\n✅ OVERALL: HEALTHY ({coherence*100:.0f}% coherence)")
+            print(f"\n✅ OVERALL: HEALTHY ({coherence * 100:.0f}% coherence)")
         elif health == "warning":
-            print(f"\n⚠️ OVERALL: WARNING ({coherence*100:.0f}% coherence)")
+            print(f"\n⚠️ OVERALL: WARNING ({coherence * 100:.0f}% coherence)")
         else:
-            print(f"\n❌ OVERALL: UNHEALTHY ({coherence*100:.0f}% coherence)")
+            print(f"\n❌ OVERALL: UNHEALTHY ({coherence * 100:.0f}% coherence)")
 
         # Individual checks
         print("\n📊 CHECKS:")
         for name, check in results.get("checks", {}).items():
             status = check.get("status", "unknown")
             msg = check.get("message", "")
-            icon = "✅" if status == "healthy" else ("⚠️" if status == "warning" else "❌")
+            icon = (
+                "✅" if status == "healthy" else ("⚠️" if status == "warning" else "❌")
+            )
             print(f"   {icon} {name}: {msg}")
 
         # Recommendations

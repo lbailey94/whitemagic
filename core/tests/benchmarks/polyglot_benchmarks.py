@@ -17,6 +17,7 @@ from typing import Callable
 @dataclass
 class BenchmarkResult:
     """Result of a single benchmark run."""
+
     name: str
     iterations: int
     total_time_ms: float
@@ -130,10 +131,12 @@ class BenchmarkSuite:
         comparison = next((r for r in self.results if r.name == comparison_name), None)
 
         if not baseline or not comparison:
-            raise ValueError(f"Could not find benchmarks: {baseline_name}, {comparison_name}")
+            raise ValueError(
+                f"Could not find benchmarks: {baseline_name}, {comparison_name}"
+            )
 
         if baseline.mean_time_ms == 0:
-            return float('inf')
+            return float("inf")
 
         return baseline.mean_time_ms / comparison.mean_time_ms
 
@@ -141,6 +144,7 @@ class BenchmarkSuite:
 # ---------------------------------------------------------------------------
 # Benchmark Functions
 # ---------------------------------------------------------------------------
+
 
 def benchmark_string_processing():
     """Benchmark string processing operations."""
@@ -157,7 +161,8 @@ def benchmark_string_processing():
 
     # Python regex
     import re
-    pattern = re.compile(r'\b\w+\b')
+
+    pattern = re.compile(r"\b\w+\b")
 
     def python_regex():
         return pattern.findall(test_text)
@@ -266,4 +271,6 @@ if __name__ == "__main__":
     for suite_name, suite in all_results.items():
         print(f"\n{suite_name}:")
         for result in suite.results:
-            print(f"  {result.name}: {result.mean_time_ms:.4f}ms mean, {result.ops_per_second:.2f} ops/s")
+            print(
+                f"  {result.name}: {result.mean_time_ms:.4f}ms mean, {result.ops_per_second:.2f} ops/s"
+            )

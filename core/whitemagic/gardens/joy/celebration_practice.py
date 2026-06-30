@@ -54,6 +54,7 @@ class CelebrationPractice:
             "Celebrate simply being here",
         ]
         import random
+
         return random.choice(suggestions)
 
     @property

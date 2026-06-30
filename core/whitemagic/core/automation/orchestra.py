@@ -94,7 +94,9 @@ class AutomationOrchestra:
         health_report["systems"]["immune"] = {
             "health_score": immune_health["health_score"],
             "threats_found": len(threats),
-            "critical_threats": sum(1 for t in threats if t.level == ThreatLevel.CRITICAL),
+            "critical_threats": sum(
+                1 for t in threats if t.level == ThreatLevel.CRITICAL
+            ),
         }
 
         # 2. Memory System Health
@@ -102,7 +104,9 @@ class AutomationOrchestra:
         try:
             stats = self.memory_manager.stats()
             short_term_count = stats.get("short_term", 0)
-            memory_health_score = 100 - min(50, (short_term_count / 40) * 50)  # Degrade as we approach 40
+            memory_health_score = 100 - min(
+                50, (short_term_count / 40) * 50
+            )  # Degrade as we approach 40
 
             health_report["systems"]["memory"] = {
                 "health_score": memory_health_score,
@@ -117,13 +121,17 @@ class AutomationOrchestra:
             }
 
         # 3. Calculate Overall Health
-        system_scores = [s.get("health_score", 50) for s in health_report["systems"].values()]
+        system_scores = [
+            s.get("health_score", 50) for s in health_report["systems"].values()
+        ]
         overall_score = sum(system_scores) / len(system_scores) if system_scores else 50
         health_report["overall_health"] = self._score_to_status(overall_score)
         health_report["overall_score"] = overall_score
 
         # 4. Coordinate Actions (the magic happens here!)
-        coordinated_actions = self._coordinate_actions(health_report, threats, auto_heal)
+        coordinated_actions = self._coordinate_actions(
+            health_report, threats, auto_heal
+        )
         health_report["coordinated_actions"] = coordinated_actions
 
         # 5. Generate Recommendations
@@ -131,7 +139,9 @@ class AutomationOrchestra:
 
         return health_report
 
-    def _coordinate_actions(self, health_report: dict, threats: list, auto_heal: bool) -> list[dict]:
+    def _coordinate_actions(
+        self, health_report: dict, threats: list, auto_heal: bool
+    ) -> list[dict]:
         """Coordinate actions across systems based on health status.
 
         This is where system integration creates emergent intelligence!
@@ -142,46 +152,61 @@ class AutomationOrchestra:
         critical_threats = [t for t in threats if t.level == ThreatLevel.CRITICAL]
         if critical_threats and auto_heal:
             logger.info("\n⚠️  CRITICAL THREATS DETECTED - Triggering immune response")
-            outcomes = self.immune_response.respond_to_threats(critical_threats, auto_heal=True)
-            actions.append({
-                "system": "immune",
-                "action": "auto_heal_critical",
-                "threats_addressed": len(critical_threats),
-                "success_rate": sum(1 for o in outcomes if o.success) / len(outcomes) if outcomes else 0,
-            })
+            outcomes = self.immune_response.respond_to_threats(
+                critical_threats, auto_heal=True
+            )
+            actions.append(
+                {
+                    "system": "immune",
+                    "action": "auto_heal_critical",
+                    "threats_addressed": len(critical_threats),
+                    "success_rate": sum(1 for o in outcomes if o.success)
+                    / len(outcomes)
+                    if outcomes
+                    else 0,
+                }
+            )
 
         # Rule 2: Memory overflow + immune threats → Consolidate first, then heal
         memory_status = health_report["systems"].get("memory", {})
         if memory_status.get("status") == "needs_consolidation" and len(threats) > 10:
             logger.info("\n🔄 Memory overflow + many threats → Consolidating first")
             # Consolidation might fix some threats (e.g., memory leak)
-            consolidation_results = self.consolidation.auto_consolidate(dry_run=not auto_heal)
-            actions.append({
-                "system": "consolidation",
-                "action": "auto_consolidate",
-                "triggered_by": "memory_overflow_with_threats",
-                "results": consolidation_results.get("metrics", {}),
-            })
+            consolidation_results = self.consolidation.auto_consolidate(
+                dry_run=not auto_heal
+            )
+            actions.append(
+                {
+                    "system": "consolidation",
+                    "action": "auto_consolidate",
+                    "triggered_by": "memory_overflow_with_threats",
+                    "results": consolidation_results.get("metrics", {}),
+                }
+            )
 
         # Rule 3: Low overall health → Trigger full maintenance cycle
         if health_report.get("overall_score", 100) < 60:
             logger.info("\n🏥 Low overall health → Full maintenance cycle")
-            actions.append({
-                "system": "orchestra",
-                "action": "full_maintenance",
-                "triggered_by": "low_health_score",
-                "recommendation": "Run all automated systems in sequence",
-            })
+            actions.append(
+                {
+                    "system": "orchestra",
+                    "action": "full_maintenance",
+                    "triggered_by": "low_health_score",
+                    "recommendation": "Run all automated systems in sequence",
+                }
+            )
 
         # Rule 4: High threat count → Check if consolidation would help
         if len(threats) > 15:
             # Many threats might indicate systemic issues
-            actions.append({
-                "system": "analysis",
-                "action": "threat_pattern_analysis",
-                "threat_count": len(threats),
-                "recommendation": "Analyze threat patterns for systemic issues",
-            })
+            actions.append(
+                {
+                    "system": "analysis",
+                    "action": "threat_pattern_analysis",
+                    "threat_count": len(threats),
+                    "recommendation": "Analyze threat patterns for systemic issues",
+                }
+            )
 
         return actions
 
@@ -205,11 +230,15 @@ class AutomationOrchestra:
         overall_score = health_report.get("overall_score", 50)
 
         if overall_score < 60:
-            recommendations.append("🔧 Run 'whitemagic.systems.immune heal --no-dry-run' to fix threats")
+            recommendations.append(
+                "🔧 Run 'whitemagic.systems.immune heal --no-dry-run' to fix threats"
+            )
 
         memory_system = health_report["systems"].get("memory", {})
         if memory_system.get("status") == "needs_consolidation":
-            recommendations.append("📦 Run 'whitemagic consolidate --no-dry-run' to clean memory")
+            recommendations.append(
+                "📦 Run 'whitemagic consolidate --no-dry-run' to clean memory"
+            )
 
         immune_system = health_report["systems"].get("immune", {})
         if immune_system.get("critical_threats", 0) > 0:
@@ -236,41 +265,47 @@ class AutomationOrchestra:
             "steps": [],
         }
 
-        # Step 1: Immune Scan
         logger.info("\n1️⃣  Immune System Scan...")
         threats = self.threat_detector.scan_system()
-        results["steps"].append({
-            "step": "immune_scan",
-            "threats_found": len(threats),
-            "critical": sum(1 for t in threats if t.level == ThreatLevel.CRITICAL),
-        })
+        results["steps"].append(
+            {
+                "step": "immune_scan",
+                "threats_found": len(threats),
+                "critical": sum(1 for t in threats if t.level == ThreatLevel.CRITICAL),
+            }
+        )
 
-        # Step 2: Heal Critical Threats
         critical_threats = [t for t in threats if t.level == ThreatLevel.CRITICAL]
         if critical_threats:
             logger.info("\n2️⃣  Healing %s critical threats...", len(critical_threats))
-            outcomes = self.immune_response.respond_to_threats(critical_threats, auto_heal=not dry_run)
-            results["steps"].append({
-                "step": "heal_critical",
-                "addressed": len(outcomes),
-                "successful": sum(1 for o in outcomes if o.success),
-            })
+            outcomes = self.immune_response.respond_to_threats(
+                critical_threats, auto_heal=not dry_run
+            )
+            results["steps"].append(
+                {
+                    "step": "heal_critical",
+                    "addressed": len(outcomes),
+                    "successful": sum(1 for o in outcomes if o.success),
+                }
+            )
         else:
             logger.info("\n2️⃣  No critical threats - skipping")
             results["steps"].append({"step": "heal_critical", "skipped": True})
 
-        # Step 3: Consolidate Memories
         logger.info("\n3️⃣  Memory Consolidation...")
         consolidation_results = self.consolidation.auto_consolidate(dry_run=dry_run)
-        results["steps"].append({
-            "step": "consolidation",
-            "archived": len(consolidation_results.get("archived", [])),
-            "promoted": len(consolidation_results.get("promoted", [])),
-            "merged": len(consolidation_results.get("merged", [])),
-            "scratchpads_cleaned": len(consolidation_results.get("scratchpads_cleaned", [])),
-        })
+        results["steps"].append(
+            {
+                "step": "consolidation",
+                "archived": len(consolidation_results.get("archived", [])),
+                "promoted": len(consolidation_results.get("promoted", [])),
+                "merged": len(consolidation_results.get("merged", [])),
+                "scratchpads_cleaned": len(
+                    consolidation_results.get("scratchpads_cleaned", [])
+                ),
+            }
+        )
 
-        # Step 4: Final Health Check
         logger.info("\n4️⃣  Final Health Check...")
         final_health = self.threat_detector.generate_health_report()
         results["final_health"] = final_health
@@ -279,7 +314,7 @@ class AutomationOrchestra:
 
         logger.info("\n" + "=" * 60)
         logger.info("✅ Maintenance cycle complete")
-        logger.info("   Final Health Score: %s/100", final_health['health_score'])
+        logger.info("   Final Health Score: %s/100", final_health["health_score"])
 
         return results
 

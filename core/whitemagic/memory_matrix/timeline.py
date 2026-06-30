@@ -41,11 +41,15 @@ class ChronologicalTimeline:
         with open(self.timeline_file, "a") as f:
             f.write(json.dumps(entry) + "\n")
 
-    def get_events(self, limit: int = 50, event_type: str | None = None) -> list[dict[str, Any]]:
+    def get_events(
+        self, limit: int = 50, event_type: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get recent events, optionally filtered by type."""
-        events = self._events if not event_type else [
-            e for e in self._events if e["event_type"] == event_type
-        ]
+        events = (
+            self._events
+            if not event_type
+            else [e for e in self._events if e["event_type"] == event_type]
+        )
         return events[-limit:]
 
     def get_range(self, start: float, end: float) -> list[dict[str, Any]]:
@@ -55,9 +59,11 @@ class ChronologicalTimeline:
     def get_by_date(self, date_str: str) -> list[dict[str, Any]]:
         """Get events for a specific date (YYYY-MM-DD)."""
         import datetime
+
         target = datetime.date.fromisoformat(date_str)
         return [
-            e for e in self._events
+            e
+            for e in self._events
             if datetime.date.fromtimestamp(e["timestamp"]) == target
         ]
 

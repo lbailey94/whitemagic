@@ -8,6 +8,7 @@ Special modes:
     - wm(thought='help') or wm(route='discover') → full Gana catalog
     - wm(route='schema:gana_name') → nested tools for a specific Gana
 """
+
 from whitemagic.tools.tool_types import (
     ToolCategory,
     ToolDefinition,

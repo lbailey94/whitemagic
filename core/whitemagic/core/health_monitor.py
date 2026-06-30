@@ -55,6 +55,7 @@ class HealthMonitor:
         # 1. Rust Extension (whitemagic_rs)
         try:
             import whitemagic_rs
+
             start = datetime.now()
             # Perform a tiny SIMD operation
             whitemagic_rs.rust_similarity("health", "check")
@@ -73,7 +74,11 @@ class HealthMonitor:
         # 2. FastMCP
         try:
             import fastmcp
-            details["fastmcp"] = {"status": "active", "version": getattr(fastmcp, "__version__", "unknown")}
+
+            details["fastmcp"] = {
+                "status": "active",
+                "version": getattr(fastmcp, "__version__", "unknown"),
+            }
         except ImportError:
             details["fastmcp"] = {"status": "missing", "reason": "install with .[mcp]"}
             issues.append("FastMCP missing (MCP server will not run)")
@@ -96,12 +101,15 @@ class HealthMonitor:
 
         try:
             from whitemagic.core.memory.manager import MemoryManager
+
             # Just try to instantiate, don't necessarily need to operate
             manager = MemoryManager()
             details["initialized"] = True
 
             # Simple check if we can access the DB path (abstracted)
-            details["db_path"] = str(manager.db_path) if hasattr(manager, "db_path") else "unknown"
+            details["db_path"] = (
+                str(manager.db_path) if hasattr(manager, "db_path") else "unknown"
+            )
 
         except Exception as e:
             status = "unhealthy"
@@ -123,6 +131,7 @@ class HealthMonitor:
 
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             bus = get_bus()
             details["connected"] = True
             details["queue_size"] = bus.queue.qsize() if hasattr(bus, "queue") else 0

@@ -1,4 +1,5 @@
 """Tests for Objective W — Observer Effect & Self-Reference Invariants."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.invariants import (
@@ -24,12 +25,18 @@ class TestInvariantSnapshot:
 
     def test_delta_from(self):
         before = InvariantSnapshot(
-            timestamp="t1", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=3.5,
+            timestamp="t1",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.5,
         )
         after = InvariantSnapshot(
-            timestamp="t2", total_memories=110, total_tags=220,
-            unique_tags=55, shannon_entropy=3.6,
+            timestamp="t2",
+            total_memories=110,
+            total_tags=220,
+            unique_tags=55,
+            shannon_entropy=3.6,
         )
         deltas = after.delta_from(before)
         assert deltas["total_memories_delta"] == 10.0
@@ -45,7 +52,9 @@ class TestInvariantTracker:
 
     def test_classify_metric_non_invariant(self):
         assert InvariantTracker.classify_metric("brier_score") == "non_invariant"
-        assert InvariantTracker.classify_metric("kaizen_proposal_count") == "non_invariant"
+        assert (
+            InvariantTracker.classify_metric("kaizen_proposal_count") == "non_invariant"
+        )
         assert InvariantTracker.classify_metric("novelty_score") == "non_invariant"
 
     def test_is_godel_undecidable_true(self):
@@ -57,12 +66,20 @@ class TestInvariantTracker:
 
     def test_check_invariants_held(self):
         before = InvariantSnapshot(
-            timestamp="t1", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=3.5, test_count=1470,
+            timestamp="t1",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.5,
+            test_count=1470,
         )
         after = InvariantSnapshot(
-            timestamp="t2", total_memories=110, total_tags=220,
-            unique_tags=55, shannon_entropy=3.6, test_count=1470,
+            timestamp="t2",
+            total_memories=110,
+            total_tags=220,
+            unique_tags=55,
+            shannon_entropy=3.6,
+            test_count=1470,
         )
         tracker = InvariantTracker()
         result = tracker.check_invariants(before, after)
@@ -71,12 +88,18 @@ class TestInvariantTracker:
 
     def test_check_invariants_violated_memories_decrease(self):
         before = InvariantSnapshot(
-            timestamp="t1", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=3.5,
+            timestamp="t1",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.5,
         )
         after = InvariantSnapshot(
-            timestamp="t2", total_memories=90, total_tags=200,
-            unique_tags=50, shannon_entropy=3.5,
+            timestamp="t2",
+            total_memories=90,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.5,
         )
         tracker = InvariantTracker()
         result = tracker.check_invariants(before, after)
@@ -85,12 +108,20 @@ class TestInvariantTracker:
 
     def test_check_invariants_violated_tests_decrease(self):
         before = InvariantSnapshot(
-            timestamp="t1", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=3.5, test_count=1470,
+            timestamp="t1",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.5,
+            test_count=1470,
         )
         after = InvariantSnapshot(
-            timestamp="t2", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=3.5, test_count=1400,
+            timestamp="t2",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.5,
+            test_count=1400,
         )
         tracker = InvariantTracker()
         result = tracker.check_invariants(before, after)
@@ -99,12 +130,18 @@ class TestInvariantTracker:
 
     def test_check_invariants_entropy_drop(self):
         before = InvariantSnapshot(
-            timestamp="t1", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=4.0,
+            timestamp="t1",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=4.0,
         )
         after = InvariantSnapshot(
-            timestamp="t2", total_memories=100, total_tags=200,
-            unique_tags=50, shannon_entropy=3.0,
+            timestamp="t2",
+            total_memories=100,
+            total_tags=200,
+            unique_tags=50,
+            shannon_entropy=3.0,
         )
         tracker = InvariantTracker()
         result = tracker.check_invariants(before, after)

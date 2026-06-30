@@ -24,6 +24,7 @@ try:
     import redis
     from redis.asyncio import Redis as AsyncRedis
     from redis.exceptions import RedisError
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -32,12 +33,13 @@ from whitemagic.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @dataclass
 class CacheConfig:
     """Redis cache configuration."""
+
     host: str = "localhost"
     port: int = 6379
     db: int = 0
@@ -81,7 +83,7 @@ class RedisCache:
                 "socket_connect_timeout": self.config.socket_connect_timeout,
                 "retry_on_timeout": self.config.retry_on_timeout,
                 "health_check_interval": self.config.health_check_interval,
-                "decode_responses": False
+                "decode_responses": False,
             }
 
             # Only add SSL args if enabled to avoid library compatibility issues
@@ -101,7 +103,9 @@ class RedisCache:
             # Test connection
             self._client.ping()
             self._connected = True
-            logger.info("Connected to Redis at %s:%s", self.config.host, self.config.port)
+            logger.info(
+                "Connected to Redis at %s:%s", self.config.host, self.config.port
+            )
 
         except Exception as e:
             logger.error("Failed to connect to Redis: %s", e, exc_info=True)
@@ -132,7 +136,7 @@ class RedisCache:
     def _serialize(self, value: Any) -> bytes:
         """Serialize value for storage."""
         if self.config.serializer == "json":
-            return json.dumps(value, default=str).encode('utf-8')
+            return json.dumps(value, default=str).encode("utf-8")
         elif self.config.serializer == "pickle":
             return pickle.dumps(value)
         else:
@@ -141,7 +145,7 @@ class RedisCache:
     def _deserialize(self, value: bytes) -> Any:
         """Deserialize value from storage."""
         if self.config.serializer == "json":
-            return json.loads(value.decode('utf-8'))
+            return json.loads(value.decode("utf-8"))
         elif self.config.serializer == "pickle":
             # Restricted unpickling for security
             import io
@@ -153,9 +157,21 @@ class RedisCache:
                 def find_class(self, module: str, name: str) -> type:  # type: ignore[override]
                     """Resolve a class name to its type, allowing only safe built-in modules."""
                     # Only allow safe classes
-                    if module == "builtins" and name in ("dict", "list", "str", "int", "float", "bool", "None"):
+                    if module == "builtins" and name in (
+                        "dict",
+                        "list",
+                        "str",
+                        "int",
+                        "float",
+                        "bool",
+                        "None",
+                    ):
                         return type(getattr(__builtins__, name))
-                    if module == "collections" and name in ("defaultdict", "OrderedDict", "Counter"):
+                    if module == "collections" and name in (
+                        "defaultdict",
+                        "OrderedDict",
+                        "Counter",
+                    ):
                         return type(getattr(__import__(module), name))
                     if module == "datetime" and name in ("datetime", "timedelta"):
                         return type(getattr(__import__(module), name))
@@ -327,8 +343,10 @@ class RedisCache:
     # Cache decorators
     def cache(self, ttl: int | None = None, key_prefix: str = "") -> Callable:
         """Decorator to cache function results."""
+
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
             """Build a cached wrapper for the given function."""
+
             @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> T:
                 """Cached proxy: read-through to Redis with TTL, populate on miss."""
@@ -347,7 +365,9 @@ class RedisCache:
                 result = func(*args, **kwargs)
                 self.set(cache_key, result, ttl)
                 return result
+
             return wrapper
+
         return decorator
 
 

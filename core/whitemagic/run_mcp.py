@@ -6,6 +6,7 @@ The historical module ``whitemagic.run_mcp`` was replaced by
 compatibility for documented entrypoints, CLI scaffolding, and tests.
 New code should import from ``whitemagic.run_mcp_lean`` directly.
 """
+
 from __future__ import annotations
 
 from whitemagic.run_mcp_lean import *  # noqa: F401,F403

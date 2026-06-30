@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class OptimizationMetrics:
     """Track optimization performance metrics."""
+
     optimization_name: str
     calls_optimized: int = 0
     cache_hits: int = 0
@@ -45,7 +46,11 @@ class OptimizationMetrics:
         Returns:
             float
         """
-        return self.total_latency_saved_ms / self.calls_optimized if self.calls_optimized > 0 else 0.0
+        return (
+            self.total_latency_saved_ms / self.calls_optimized
+            if self.calls_optimized > 0
+            else 0.0
+        )
 
 
 class MemoryWorkflowOptimizer:
@@ -66,14 +71,18 @@ class MemoryWorkflowOptimizer:
 
         # Caches
         self.link_cache: dict[str, list[str]] = {}  # memory_id -> similar_memory_ids
-        self.consolidation_cache: dict[str, dict[str, Any]] = {}  # memory_id -> consolidation_data
+        self.consolidation_cache: dict[
+            str, dict[str, Any]
+        ] = {}  # memory_id -> consolidation_data
 
         # Metrics
         self.metrics = OptimizationMetrics("MemoryWorkflow")
 
         logger.info("🚀 MemoryWorkflowOptimizer initialized")
 
-    def pre_compute_semantic_links(self, memory_id: str, memory_data: dict[str, Any]) -> list[str] | None:
+    def pre_compute_semantic_links(
+        self, memory_id: str, memory_data: dict[str, Any]
+    ) -> list[str] | None:
         """
         Pre-compute semantic links for a newly created memory.
 
@@ -113,7 +122,12 @@ class MemoryWorkflowOptimizer:
             self.metrics.calls_optimized += 1
 
             elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
-            logger.debug("🔗 Pre-computed %s semantic links for %s in %sms", len(similar_ids), memory_id[:8], format(elapsed_ms, ".2f"))
+            logger.debug(
+                "🔗 Pre-computed %s semantic links for %s in %sms",
+                len(similar_ids),
+                memory_id[:8],
+                format(elapsed_ms, ".2f"),
+            )
 
             return similar_ids
 
@@ -121,7 +135,9 @@ class MemoryWorkflowOptimizer:
             logger.error("Error pre-computing semantic links: %s", e, exc_info=True)
             return None
 
-    def pre_warm_consolidation(self, memory_id: str, memory_data: dict[str, Any]) -> bool:
+    def pre_warm_consolidation(
+        self, memory_id: str, memory_data: dict[str, Any]
+    ) -> bool:
         """
         Pre-warm consolidation cache for high-importance memories.
 
@@ -134,7 +150,7 @@ class MemoryWorkflowOptimizer:
 
         try:
             # Only pre-warm for high-importance memories (93.3% of consolidations)
-            importance = memory_data.get('importance', 0.0)
+            importance = memory_data.get("importance", 0.0)
             if importance < 0.7:
                 return False
 
@@ -154,7 +170,11 @@ class MemoryWorkflowOptimizer:
             elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
             self.metrics.total_latency_saved_ms += elapsed_ms
 
-            logger.debug("🔥 Pre-warmed consolidation for %s (importance=%s)", memory_id[:8], format(importance, ".2f"))
+            logger.debug(
+                "🔥 Pre-warmed consolidation for %s (importance=%s)",
+                memory_id[:8],
+                format(importance, ".2f"),
+            )
             return True
 
         except Exception as e:
@@ -219,7 +239,9 @@ class PatternLearningOptimizer:
 
         logger.info("🚀 PatternLearningOptimizer initialized")
 
-    def pre_warm_confirmation_ui(self, pattern_id: str, pattern_data: dict[str, Any]) -> bool:
+    def pre_warm_confirmation_ui(
+        self, pattern_id: str, pattern_data: dict[str, Any]
+    ) -> bool:
         """
         Pre-warm confirmation UI components when pattern is detected.
 
@@ -283,7 +305,10 @@ class PatternLearningOptimizer:
             # 2. Search for related patterns in batch
             # 3. Return new pattern detections
 
-            logger.info("🔄 Batch processed %s patterns for related detection", len(confirmed_patterns))
+            logger.info(
+                "🔄 Batch processed %s patterns for related detection",
+                len(confirmed_patterns),
+            )
 
             self.pending_confirmations.clear()
             self.metrics.calls_optimized += len(confirmed_patterns)

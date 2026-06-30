@@ -26,6 +26,7 @@ def _load_tools() -> list:
     """Collect all ToolDefinitions from registry_defs + dispatch table stubs."""
     from whitemagic.tools.registry_defs import collect
     from whitemagic.tools.tool_types import ToolDefinition, ToolCategory, ToolSafety
+
     tools = collect()
     known = {t.name for t in tools}
 
@@ -33,16 +34,19 @@ def _load_tools() -> list:
     try:
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         for name in sorted(DISPATCH_TABLE.keys()):
             if name not in known:
                 gana = TOOL_TO_GANA.get(name, "uncategorized")
-                tools.append(ToolDefinition(
-                    name=name,
-                    description=f"({gana}) — dispatch-registered tool",
-                    category=ToolCategory.SYSTEM,
-                    safety=ToolSafety.READ,
-                    input_schema={},
-                ))
+                tools.append(
+                    ToolDefinition(
+                        name=name,
+                        description=f"({gana}) — dispatch-registered tool",
+                        category=ToolCategory.SYSTEM,
+                        safety=ToolSafety.READ,
+                        input_schema={},
+                    )
+                )
     except ImportError:
         pass
 
@@ -53,6 +57,7 @@ def _load_prat_mapping() -> dict[str, str]:
     """Load tool→gana mapping from PRAT router."""
     try:
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         return dict(TOOL_TO_GANA)
     except ImportError:
         return {}
@@ -248,6 +253,7 @@ _LINKS = """
 
 # ── Generators ───────────────────────────────────────────────────────
 
+
 def generate_llms_txt(tools: list, prat: dict[str, str], version: str) -> str:
     """Generate the compact llms.txt (overview + tool listing by category)."""
     tool_count = len(tools)
@@ -284,7 +290,9 @@ def generate_llms_full_txt(tools: list, prat: dict[str, str], version: str) -> s
     for category, cat_tools in grouped.items():
         tool_lines.append(f"### {category.upper()} ({len(cat_tools)} tools)\n")
         for t in cat_tools:
-            safety_tag = f" [{t.safety.value.upper()}]" if t.safety.value != "read" else ""
+            safety_tag = (
+                f" [{t.safety.value.upper()}]" if t.safety.value != "read" else ""
+            )
             gana = prat.get(t.name, "")
             gana_tag = f" (→ {gana})" if gana else ""
             tool_lines.append(f"- **{t.name}**{safety_tag}{gana_tag}: {t.description}")
@@ -325,19 +333,27 @@ def generate_llms_full_txt(tools: list, prat: dict[str, str], version: str) -> s
 
 # ── Main ─────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate llms.txt and llms-full.txt")
-    parser.add_argument("--dry-run", action="store_true", help="Print to stdout instead of writing files")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print to stdout instead of writing files",
+    )
     args = parser.parse_args()
 
     import os
+
     os.environ["WM_SILENT_INIT"] = "1"
 
     tools = _load_tools()
     prat = _load_prat_mapping()
     version = _load_version()
 
-    print(f"Loaded {len(tools)} tool definitions, {len(prat)} PRAT mappings, version {version}")
+    print(
+        f"Loaded {len(tools)} tool definitions, {len(prat)} PRAT mappings, version {version}"
+    )
 
     llms_txt = generate_llms_txt(tools, prat, version)
     llms_full = generate_llms_full_txt(tools, prat, version)

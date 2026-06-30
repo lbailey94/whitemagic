@@ -94,10 +94,10 @@ class GanaOperation(Enum):
     - Net (Capture) CONSOLIDATE → Pattern extraction
     """
 
-    SEARCH = "search"           # Find and retrieve information
-    ANALYZE = "analyze"         # Examine and understand patterns
-    TRANSFORM = "transform"     # Modify and evolve data
-    CONSOLIDATE = "consolidate" # Merge and unify information
+    SEARCH = "search"  # Find and retrieve information
+    ANALYZE = "analyze"  # Examine and understand patterns
+    TRANSFORM = "transform"  # Modify and evolve data
+    CONSOLIDATE = "consolidate"  # Merge and unify information
 
 
 @dataclass
@@ -182,7 +182,9 @@ class BaseGana(ABC):
 
     # Polymorphic Operation Methods (Override for Gana-specific behavior)
 
-    async def search(self, query: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def search(
+        self, query: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """SEARCH operation - Find and retrieve information.
         Default: Basic search through this Gana's lens.
         Override for mansion-specific search behavior.
@@ -195,7 +197,9 @@ class BaseGana(ABC):
             "note": f"{self.mansion.meaning} perspective on search",
         }
 
-    async def analyze(self, data: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def analyze(
+        self, data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """ANALYZE operation - Examine and understand patterns.
         Default: Basic analysis through this Gana's lens.
         Override for mansion-specific analysis.
@@ -208,7 +212,9 @@ class BaseGana(ABC):
             "note": f"{self.mansion.meaning} perspective on analysis",
         }
 
-    async def transform(self, data: Any, transformation: str, context: dict[str, Any] | None = None) -> Any:
+    async def transform(
+        self, data: Any, transformation: str, context: dict[str, Any] | None = None
+    ) -> Any:
         """TRANSFORM operation - Modify and evolve data.
         Default: Pass-through with metadata.
         Override for mansion-specific transformations.
@@ -222,7 +228,9 @@ class BaseGana(ABC):
             "note": f"{self.mansion.meaning} transformation",
         }
 
-    async def consolidate(self, items: list[Any], context: dict[str, Any] | None = None) -> Any:
+    async def consolidate(
+        self, items: list[Any], context: dict[str, Any] | None = None
+    ) -> Any:
         """CONSOLIDATE operation - Merge and unify information.
         Default: Basic merging strategy.
         Override for mansion-specific consolidation.
@@ -315,9 +323,15 @@ class BaseGana(ABC):
             karma_trace={
                 "mansion": self.mansion.name,
                 "timestamp": start_time,
-                "guna": call.resonance_hints.guna_tag if call.resonance_hints else "Rajas",
-                "harmony": call.resonance_hints.harmony_score if call.resonance_hints else 0.5,
-                "lunar_phase": call.resonance_hints.lunar_phase if call.resonance_hints else 0.5,
+                "guna": call.resonance_hints.guna_tag
+                if call.resonance_hints
+                else "Rajas",
+                "harmony": call.resonance_hints.harmony_score
+                if call.resonance_hints
+                else 0.5,
+                "lunar_phase": call.resonance_hints.lunar_phase
+                if call.resonance_hints
+                else 0.5,
             },
         )
 
@@ -364,7 +378,11 @@ class BaseGana(ABC):
     @property
     def stats(self) -> dict[str, Any]:
         """Get performance statistics."""
-        avg_time = self.total_time_ms / self.invocation_count if self.invocation_count > 0 else 0
+        avg_time = (
+            self.total_time_ms / self.invocation_count
+            if self.invocation_count > 0
+            else 0
+        )
         return {
             "mansion": self.mansion.name,
             "invocations": self.invocation_count,

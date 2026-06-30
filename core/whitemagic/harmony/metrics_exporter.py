@@ -38,24 +38,30 @@ class MetricsExporter:
         # Tool dispatch metrics
         try:
             from whitemagic.tools.unified_api import get_dispatch_stats
+
             stats = get_dispatch_stats()
-            lines.append("# HELP whitemagic_tool_dispatches_total Total tool dispatches")
+            lines.append(
+                "# HELP whitemagic_tool_dispatches_total Total tool dispatches"
+            )
             lines.append("# TYPE whitemagic_tool_dispatches_total counter")
-            lines.append(f'whitemagic_tool_dispatches_total {stats.get("total_dispatches", 0)}')
+            lines.append(
+                f"whitemagic_tool_dispatches_total {stats.get('total_dispatches', 0)}"
+            )
 
             lines.append("# HELP whitemagic_tool_errors_total Total tool errors")
             lines.append("# TYPE whitemagic_tool_errors_total counter")
-            lines.append(f'whitemagic_tool_errors_total {stats.get("total_errors", 0)}')
+            lines.append(f"whitemagic_tool_errors_total {stats.get('total_errors', 0)}")
 
             lines.append("# HELP whitemagic_active_tools Number of active tools")
             lines.append("# TYPE whitemagic_active_tools gauge")
-            lines.append(f'whitemagic_active_tools {stats.get("active_tools", 0)}')
+            lines.append(f"whitemagic_active_tools {stats.get('active_tools', 0)}")
         except Exception:
             pass
 
         # Harmony vector metrics
         try:
             from whitemagic.harmony.vector import get_harmony_vector
+
             snap = get_harmony_vector().snapshot()
             lines.append("# HELP whitemagic_harmony_score Composite harmony score")
             lines.append("# TYPE whitemagic_harmony_score gauge")
@@ -86,15 +92,24 @@ class MetricsExporter:
         # Homeostatic loop metrics
         try:
             from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
             loop = get_homeostatic_loop()
             stats = loop.get_stats()
-            lines.append("# HELP whitemagic_homeostatic_checks_total Total homeostatic checks")
+            lines.append(
+                "# HELP whitemagic_homeostatic_checks_total Total homeostatic checks"
+            )
             lines.append("# TYPE whitemagic_homeostatic_checks_total counter")
-            lines.append(f'whitemagic_homeostatic_checks_total {stats.get("total_checks", 0)}')
+            lines.append(
+                f"whitemagic_homeostatic_checks_total {stats.get('total_checks', 0)}"
+            )
 
-            lines.append("# HELP whitemagic_homeostatic_actions_total Total corrective actions")
+            lines.append(
+                "# HELP whitemagic_homeostatic_actions_total Total corrective actions"
+            )
             lines.append("# TYPE whitemagic_homeostatic_actions_total counter")
-            lines.append(f'whitemagic_homeostatic_actions_total {stats.get("total_actions", 0)}')
+            lines.append(
+                f"whitemagic_homeostatic_actions_total {stats.get('total_actions', 0)}"
+            )
         except Exception:
             pass
 
@@ -103,6 +118,7 @@ class MetricsExporter:
             import sqlite3
 
             from whitemagic.config.paths import DB_PATH
+
             conn = sqlite3.connect(str(DB_PATH))
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM memories")
@@ -129,13 +145,16 @@ class MetricsExporter:
 
         try:
             from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+
             source = get_physical_metrics_source()
             metrics = source.get_metrics()
             if not metrics.is_available:
                 return lines
 
             if metrics.cpu_temp is not None:
-                lines.append("# HELP whitemagic_cpu_temp_celsius CPU package temperature")
+                lines.append(
+                    "# HELP whitemagic_cpu_temp_celsius CPU package temperature"
+                )
                 lines.append("# TYPE whitemagic_cpu_temp_celsius gauge")
                 lines.append(f"whitemagic_cpu_temp_celsius {metrics.cpu_temp:.1f}")
 
@@ -145,9 +164,13 @@ class MetricsExporter:
                 lines.append(f"whitemagic_cpu_usage_percent {metrics.cpu_usage:.1f}")
 
             if metrics.battery_percent is not None:
-                lines.append("# HELP whitemagic_battery_percent Battery charge percentage")
+                lines.append(
+                    "# HELP whitemagic_battery_percent Battery charge percentage"
+                )
                 lines.append("# TYPE whitemagic_battery_percent gauge")
-                lines.append(f"whitemagic_battery_percent {metrics.battery_percent:.1f}")
+                lines.append(
+                    f"whitemagic_battery_percent {metrics.battery_percent:.1f}"
+                )
 
             if metrics.memory_percent is not None:
                 lines.append("# HELP whitemagic_memory_percent Memory usage percentage")
@@ -160,14 +183,20 @@ class MetricsExporter:
                 lines.append(f"whitemagic_swap_percent {metrics.swap_percent:.1f}")
 
             if metrics.disk_usage is not None:
-                lines.append("# HELP whitemagic_disk_usage_percent Disk usage percentage")
+                lines.append(
+                    "# HELP whitemagic_disk_usage_percent Disk usage percentage"
+                )
                 lines.append("# TYPE whitemagic_disk_usage_percent gauge")
                 lines.append(f"whitemagic_disk_usage_percent {metrics.disk_usage:.1f}")
 
             if metrics.power_draw is not None:
-                lines.append("# HELP whitemagic_power_draw_microwatts Power draw in microwatts")
+                lines.append(
+                    "# HELP whitemagic_power_draw_microwatts Power draw in microwatts"
+                )
                 lines.append("# TYPE whitemagic_power_draw_microwatts gauge")
-                lines.append(f"whitemagic_power_draw_microwatts {metrics.power_draw:.0f}")
+                lines.append(
+                    f"whitemagic_power_draw_microwatts {metrics.power_draw:.0f}"
+                )
 
             if metrics.fan_rpm is not None:
                 lines.append("# HELP whitemagic_fan_rpm Fan speed in RPM")
@@ -175,25 +204,41 @@ class MetricsExporter:
                 lines.append(f"whitemagic_fan_rpm {metrics.fan_rpm:.0f}")
 
             if metrics.thermal_throttling > 0:
-                lines.append("# HELP whitemagic_thermal_throttling_cores Cores throttling")
+                lines.append(
+                    "# HELP whitemagic_thermal_throttling_cores Cores throttling"
+                )
                 lines.append("# TYPE whitemagic_thermal_throttling_cores gauge")
-                lines.append(f"whitemagic_thermal_throttling_cores {metrics.thermal_throttling}")
+                lines.append(
+                    f"whitemagic_thermal_throttling_cores {metrics.thermal_throttling}"
+                )
 
             if metrics.health_score is not None:
-                lines.append("# HELP whitemagic_physical_health_score Laptop-optimizer health score")
+                lines.append(
+                    "# HELP whitemagic_physical_health_score Laptop-optimizer health score"
+                )
                 lines.append("# TYPE whitemagic_physical_health_score gauge")
-                lines.append(f"whitemagic_physical_health_score {metrics.health_score:.1f}")
+                lines.append(
+                    f"whitemagic_physical_health_score {metrics.health_score:.1f}"
+                )
 
             # Thermal forecast
             forecast = source.get_thermal_forecast()
             if forecast:
-                lines.append("# HELP whitemagic_thermal_forecast_5min Predicted CPU temp in 5 minutes")
+                lines.append(
+                    "# HELP whitemagic_thermal_forecast_5min Predicted CPU temp in 5 minutes"
+                )
                 lines.append("# TYPE whitemagic_thermal_forecast_5min gauge")
-                lines.append(f"whitemagic_thermal_forecast_5min {forecast.predicted_5min:.1f}")
+                lines.append(
+                    f"whitemagic_thermal_forecast_5min {forecast.predicted_5min:.1f}"
+                )
 
-                lines.append("# HELP whitemagic_thermal_forecast_15min Predicted CPU temp in 15 minutes")
+                lines.append(
+                    "# HELP whitemagic_thermal_forecast_15min Predicted CPU temp in 15 minutes"
+                )
                 lines.append("# TYPE whitemagic_thermal_forecast_15min gauge")
-                lines.append(f"whitemagic_thermal_forecast_15min {forecast.predicted_15min:.1f}")
+                lines.append(
+                    f"whitemagic_thermal_forecast_15min {forecast.predicted_15min:.1f}"
+                )
 
         except Exception:
             pass
@@ -224,15 +269,19 @@ class MetricsExporter:
 
             lines.append("# HELP whitemagic_strata_errors_total STRATA ERROR findings")
             lines.append("# TYPE whitemagic_strata_errors_total gauge")
-            lines.append(f'whitemagic_strata_errors_total {severity_counts["error"]}')
+            lines.append(f"whitemagic_strata_errors_total {severity_counts['error']}")
 
-            lines.append("# HELP whitemagic_strata_warnings_total STRATA WARNING findings")
+            lines.append(
+                "# HELP whitemagic_strata_warnings_total STRATA WARNING findings"
+            )
             lines.append("# TYPE whitemagic_strata_warnings_total gauge")
-            lines.append(f'whitemagic_strata_warnings_total {severity_counts["warning"]}')
+            lines.append(
+                f"whitemagic_strata_warnings_total {severity_counts['warning']}"
+            )
 
             lines.append("# HELP whitemagic_strata_info_total STRATA INFO findings")
             lines.append("# TYPE whitemagic_strata_info_total gauge")
-            lines.append(f'whitemagic_strata_info_total {severity_counts["info"]}')
+            lines.append(f"whitemagic_strata_info_total {severity_counts['info']}")
 
             for category, count in sorted(category_counts.items()):
                 safe_cat = category.replace("-", "_").replace(".", "_")
@@ -245,10 +294,6 @@ class MetricsExporter:
 
         return lines
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _exporter: MetricsExporter | None = None
 

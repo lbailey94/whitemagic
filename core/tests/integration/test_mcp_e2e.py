@@ -8,6 +8,7 @@ Requires: mcp SDK + anyio installed (skip if unavailable).
 Usage:
     pytest tests/integration/test_mcp_e2e.py -v
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -43,6 +44,7 @@ pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 
 # ── In-process MCP session ──────────────────────────────────────────────
 
+
 class _InProcessClient:
     """Sends JSON-RPC messages through anyio memory streams."""
 
@@ -56,7 +58,11 @@ class _InProcessClient:
         return self._id
 
     async def request(
-        self, method: str, params: dict | None = None, *, timeout: float = 15.0,
+        self,
+        method: str,
+        params: dict | None = None,
+        *,
+        timeout: float = 15.0,
     ) -> dict:
         """Send a JSON-RPC *request* and wait for the matching response."""
         req_id = self._next_id()
@@ -72,7 +78,8 @@ class _InProcessClient:
                 session_msg = await self._rx.receive()
                 data = json.loads(
                     session_msg.message.model_dump_json(
-                        by_alias=True, exclude_none=True,
+                        by_alias=True,
+                        exclude_none=True,
                     )
                 )
                 # Skip server-initiated notifications (no "id" field)
@@ -91,18 +98,22 @@ class _InProcessClient:
 
     async def initialize(self) -> dict:
         """Perform the full MCP initialize handshake."""
-        resp = await self.request("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "test-e2e", "version": "1.0.0"},
-        })
+        resp = await self.request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test-e2e", "version": "1.0.0"},
+            },
+        )
         await self.notify("notifications/initialized")
         return resp
 
 
 @asynccontextmanager
 async def mcp_session(
-    *, init: bool = True,
+    *,
+    init: bool = True,
 ) -> AsyncGenerator[_InProcessClient, None]:
     """Start an in-process MCP server session.
 
@@ -120,7 +131,8 @@ async def mcp_session(
 
     server_task = asyncio.create_task(
         server.run(
-            to_server_rx, from_server_tx,
+            to_server_rx,
+            from_server_tx,
             server.create_initialization_options(),
         )
     )
@@ -143,17 +155,21 @@ async def mcp_session(
 
 # ── Tests ────────────────────────────────────────────────────────────────
 
+
 class TestMCPInitialize:
     """Test MCP initialization handshake."""
 
     async def test_initialize(self):
         """Server responds to initialize with capabilities."""
         async with mcp_session(init=False) as client:
-            response = await client.request("initialize", {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "test-client", "version": "1.0.0"},
-            })
+            response = await client.request(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test-client", "version": "1.0.0"},
+                },
+            )
 
             assert "result" in response, f"Expected result, got: {response}"
             result = response["result"]
@@ -165,11 +181,14 @@ class TestMCPInitialize:
     async def test_initialized_notification(self):
         """Server accepts initialized notification without error."""
         async with mcp_session(init=False) as client:
-            resp = await client.request("initialize", {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "test-client", "version": "1.0.0"},
-            })
+            resp = await client.request(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test-client", "version": "1.0.0"},
+                },
+            )
             assert "result" in resp
             # Fire-and-forget notification — must not raise
             await client.notify("notifications/initialized")
@@ -211,7 +230,9 @@ class TestMCPResourcesList:
 
             # v14.1.1 workflow templates
             workflow_uris = [u for u in uris if "workflow/" in u]
-            assert len(workflow_uris) >= 6, f"Expected ≥6 workflows, got {len(workflow_uris)}"
+            assert len(workflow_uris) >= 6, (
+                f"Expected ≥6 workflows, got {len(workflow_uris)}"
+            )
 
 
 class TestMCPToolCall:
@@ -220,13 +241,17 @@ class TestMCPToolCall:
     async def test_call_gana_root_health(self):
         """Invoke gana_root with health_report tool."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_root",
-                "arguments": {
-                    "tool": "health_report",
-                    "args": {},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_root",
+                    "arguments": {
+                        "tool": "health_report",
+                        "args": {},
+                    },
                 },
-            }, timeout=60.0)
+                timeout=60.0,
+            )
             assert "result" in response, f"Expected result, got: {response}"
 
             content = response["result"].get("content", [])
@@ -240,13 +265,16 @@ class TestMCPToolCall:
     async def test_call_gana_ghost_capabilities(self):
         """Invoke gana_ghost with capabilities tool."""
         async with mcp_session() as client:
-            response = await client.request("tools/call", {
-                "name": "gana_ghost",
-                "arguments": {
-                    "tool": "capabilities",
-                    "args": {},
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": "gana_ghost",
+                    "arguments": {
+                        "tool": "capabilities",
+                        "args": {},
+                    },
                 },
-            })
+            )
             assert "result" in response, f"Expected result, got: {response}"
 
             content = response["result"].get("content", [])
@@ -259,9 +287,12 @@ class TestMCPResourceRead:
     async def test_read_server_instructions(self):
         """Read the server-instructions resource."""
         async with mcp_session() as client:
-            response = await client.request("resources/read", {
-                "uri": "whitemagic://orientation/server-instructions",
-            })
+            response = await client.request(
+                "resources/read",
+                {
+                    "uri": "whitemagic://orientation/server-instructions",
+                },
+            )
             assert "result" in response, f"Expected result, got: {response}"
 
             contents = response["result"].get("contents", [])
@@ -272,9 +303,12 @@ class TestMCPResourceRead:
     async def test_read_workflow_template(self):
         """Read a workflow template resource."""
         async with mcp_session() as client:
-            response = await client.request("resources/read", {
-                "uri": "whitemagic://workflow/new_session",
-            })
+            response = await client.request(
+                "resources/read",
+                {
+                    "uri": "whitemagic://workflow/new_session",
+                },
+            )
             assert "result" in response, f"Expected result, got: {response}"
 
             contents = response["result"].get("contents", [])

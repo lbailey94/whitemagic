@@ -12,6 +12,7 @@ from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
 class LazyToolRegistry(list[ToolDefinition]):
     """LazyToolRegistry: lazy tool registry."""
+
     def __init__(self, loader: Callable[[], list[ToolDefinition]]) -> None:
         super().__init__()
         self._loader = loader
@@ -83,7 +84,6 @@ def get_all_tools() -> list[ToolDefinition]:
     return TOOL_REGISTRY.copy()
 
 
-
 def get_authored_tools() -> list[ToolDefinition]:
     """
     Get the authored tools.
@@ -92,7 +92,6 @@ def get_authored_tools() -> list[ToolDefinition]:
         list[ToolDefinition]
     """
     return list(AUTHORED_TOOL_REGISTRY)
-
 
 
 def refresh_tool_registry() -> list[ToolDefinition]:
@@ -105,7 +104,6 @@ def refresh_tool_registry() -> list[ToolDefinition]:
     global AUTHORED_TOOL_REGISTRY
     AUTHORED_TOOL_REGISTRY = collect_authored_tool_definitions()
     return TOOL_REGISTRY.refresh()
-
 
 
 def get_tool(name: str) -> ToolDefinition | None:
@@ -124,7 +122,6 @@ def get_tool(name: str) -> ToolDefinition | None:
     return None
 
 
-
 def get_tools_by_category(category: ToolCategory) -> list[ToolDefinition]:
     """
     Get the tools by category.
@@ -136,7 +133,6 @@ def get_tools_by_category(category: ToolCategory) -> list[ToolDefinition]:
         list[ToolDefinition]
     """
     return [t for t in TOOL_REGISTRY if t.category == category]
-
 
 
 def get_tools_by_safety(safety: ToolSafety) -> list[ToolDefinition]:
@@ -152,7 +148,6 @@ def get_tools_by_safety(safety: ToolSafety) -> list[ToolDefinition]:
     return [t for t in TOOL_REGISTRY if t.safety == safety]
 
 
-
 def get_safe_tools() -> list[ToolDefinition]:
     """
     Get the safe tools.
@@ -161,7 +156,6 @@ def get_safe_tools() -> list[ToolDefinition]:
         list[ToolDefinition]
     """
     return get_tools_by_safety(ToolSafety.READ)
-
 
 
 def to_openai_tools() -> list[dict[str, Any]]:
@@ -174,7 +168,6 @@ def to_openai_tools() -> list[dict[str, Any]]:
     return [t.to_openai_function() for t in TOOL_REGISTRY]
 
 
-
 def to_mcp_tools() -> list[dict[str, Any]]:
     """
     Convert to/from mcp tools.
@@ -183,7 +176,6 @@ def to_mcp_tools() -> list[dict[str, Any]]:
         list[dict[str, Any]]
     """
     return [t.to_mcp_tool() for t in TOOL_REGISTRY]
-
 
 
 def get_tool_names() -> list[str]:

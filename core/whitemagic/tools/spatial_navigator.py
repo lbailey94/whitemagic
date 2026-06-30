@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 try:
     from whitemagic.tools.coordinate_explainer import interpret_memory
 except ImportError:
+
     def interpret_memory(_data: dict[str, Any]) -> dict[str, str]:  # type: ignore[misc]
         """
         Perform the interpret memory operation.
@@ -98,21 +99,23 @@ def find_by_zone(zone: str, limit: int = 20) -> list[dict[str, Any]]:
         ).fetchall()
 
         for row in rows:
-            results.append({
-                "id": row[0],
-                "title": row[1],
-                "content_preview": row[2][:200] if row[2] else None,
-                "type": row[3],
-                "coordinates": {
-                    "x": round(row[4], 3) if row[4] else None,
-                    "y": round(row[5], 3) if row[5] else None,
-                    "z": round(row[6], 3) if row[6] else None,
-                    "w": round(row[7], 3) if row[7] else None,
-                    "v": round(row[8], 3) if row[8] else None,
-                },
-                "galactic_distance": round(row[9], 3) if row[9] else None,
-                "zone": zone,
-            })
+            results.append(
+                {
+                    "id": row[0],
+                    "title": row[1],
+                    "content_preview": row[2][:200] if row[2] else None,
+                    "type": row[3],
+                    "coordinates": {
+                        "x": round(row[4], 3) if row[4] else None,
+                        "y": round(row[5], 3) if row[5] else None,
+                        "z": round(row[6], 3) if row[6] else None,
+                        "w": round(row[7], 3) if row[7] else None,
+                        "v": round(row[8], 3) if row[8] else None,
+                    },
+                    "galactic_distance": round(row[9], 3) if row[9] else None,
+                    "zone": zone,
+                }
+            )
 
     return results
 
@@ -181,25 +184,32 @@ def search_by_coordinates(
         ).fetchall()
 
         for row in rows:
-            results.append({
-                "id": row[0],
-                "title": row[1],
-                "content_preview": row[2][:200] if row[2] else None,
-                "type": row[3],
-                "coordinates": {
-                    "x": round(row[4], 3) if row[4] else None,
-                    "y": round(row[5], 3) if row[5] else None,
-                    "z": round(row[6], 3) if row[6] else None,
-                    "w": round(row[7], 3) if row[7] else None,
-                    "v": round(row[8], 3) if row[8] else None,
-                },
-                "galactic_distance": round(row[9], 3) if row[9] else None,
-            })
+            results.append(
+                {
+                    "id": row[0],
+                    "title": row[1],
+                    "content_preview": row[2][:200] if row[2] else None,
+                    "type": row[3],
+                    "coordinates": {
+                        "x": round(row[4], 3) if row[4] else None,
+                        "y": round(row[5], 3) if row[5] else None,
+                        "z": round(row[6], 3) if row[6] else None,
+                        "w": round(row[7], 3) if row[7] else None,
+                        "v": round(row[8], 3) if row[8] else None,
+                    },
+                    "galactic_distance": round(row[9], 3) if row[9] else None,
+                }
+            )
 
     return results
 
 
-def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weights: dict[str, float] | None = None) -> list[dict[str, Any]]:
+def find_neighbors(
+    memory_id: str,
+    k: int = 5,
+    radius: float | None = None,
+    weights: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
     """Find nearest neighbors of a memory in 5D space.
 
     Args:
@@ -223,6 +233,7 @@ def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weig
     # Use holographic index for efficient search if available
     try:
         from whitemagic.core.memory.holographic import get_holographic_memory
+
         holo = get_holographic_memory()
     except (ImportError, AttributeError):
         return []
@@ -233,7 +244,9 @@ def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weig
     if radius:
         raw_results = holo.query_radius(query_data, radius=radius, weights=weights)
     else:
-        raw_results = holo.query_nearest(query_data, k=k + 1, weights=weights)  # +1 to exclude self
+        raw_results = holo.query_nearest(
+            query_data, k=k + 1, weights=weights
+        )  # +1 to exclude self
 
     # Filter out self and fetch details
     results = []
@@ -244,13 +257,15 @@ def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weig
         neighbor = um.recall(result.memory_id)
         if neighbor:
             interp = interpret_memory(neighbor.to_dict())
-            results.append({
-                "id": result.memory_id,
-                "title": neighbor.title,
-                "distance": round(result.distance, 4),
-                "interpretation": interp["summary"],
-                "zone": interp["zone"],
-            })
+            results.append(
+                {
+                    "id": result.memory_id,
+                    "title": neighbor.title,
+                    "distance": round(result.distance, 4),
+                    "interpretation": interp["summary"],
+                    "zone": interp["zone"],
+                }
+            )
 
     return results[:k]
 
@@ -332,16 +347,24 @@ def discover_related(
                 diff = abs(ref_val - mem_val)
                 diff_score += diff
                 if diff > 0.3:
-                    axis_names = {"x": "resonance", "y": "abstraction", "z": "time", "w": "gravity", "v": "vitality"}
+                    axis_names = {
+                        "x": "resonance",
+                        "y": "abstraction",
+                        "z": "time",
+                        "w": "gravity",
+                        "v": "vitality",
+                    }
                     diff_explanation.append(f"different {axis_names.get(axis, axis)}")
 
-        filtered.append({
-            **mem,
-            "difference_score": round(diff_score, 3),
-            "varied_axes": vary_axes,
-            "preserved_axes": preserve,
-            "key_differences": diff_explanation,
-        })
+        filtered.append(
+            {
+                **mem,
+                "difference_score": round(diff_score, 3),
+                "varied_axes": vary_axes,
+                "preserved_axes": preserve,
+                "key_differences": diff_explanation,
+            }
+        )
 
     # Sort by difference score (most interesting variations first)
     filtered.sort(key=lambda x: x["difference_score"], reverse=True)

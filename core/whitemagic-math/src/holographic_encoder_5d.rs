@@ -7,10 +7,6 @@
 use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Signal keywords for X-axis (Logic ↔ Emotion)
-// ---------------------------------------------------------------------------
-
 const LOGIC_KEYWORDS: &[&str] = &[
     "algorithm", "function", "class", "method", "variable", "parameter",
     "return", "import", "module", "interface", "struct", "enum", "type",
@@ -28,10 +24,6 @@ const EMOTION_KEYWORDS: &[&str] = &[
     "wisdom", "insight", "revelation", "epiphany", "grateful", "wonder",
     "meaning", "purpose", "destiny", "journey", "growth", "transform",
 ];
-
-// ---------------------------------------------------------------------------
-// Signal keywords for Y-axis (Micro ↔ Macro)
-// ---------------------------------------------------------------------------
 
 const MICRO_KEYWORDS: &[&str] = &[
     "byte", "bit", "char", "pixel", "cell", "atom", "detail", "specific",

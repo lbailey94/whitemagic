@@ -5,9 +5,6 @@
 
 use pyo3::prelude::*;
 
-// ---------------------------------------------------------------------------
-// Mirrored C structs
-// ---------------------------------------------------------------------------
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct WmCoordinate {
@@ -23,10 +20,6 @@ impl IntoPy<pyo3::Py<pyo3::PyAny>> for WmCoordinate {
         (self.x, self.y, self.z, self.w).into_py(py)
     }
 }
-
-// ---------------------------------------------------------------------------
-// Stub implementations (Zig library not linked)
-// ---------------------------------------------------------------------------
 
 /// Initialise the Zig memory manager. Stub when Zig not available.
 pub fn zig_memory_init() {
@@ -87,10 +80,6 @@ pub fn zig_iching_cast() -> [u8; 6] {
     [0u8; 6] // Stub: Zig library not available
 }
 
-// ---------------------------------------------------------------------------
-// PyO3 exposure — thin wrappers callable from Python
-// ---------------------------------------------------------------------------
-
 #[pyfunction]
 /// Initialise Zig memory manager from Python.
 pub fn zig_py_init() {
@@ -133,10 +122,6 @@ pub fn zig_py_genomics_flux(rate: f32, concentration: f32) -> f32 {
 pub fn zig_py_iching_cast() -> Vec<u8> {
     zig_iching_cast().to_vec()
 }
-
-// ---------------------------------------------------------------------------
-// PyO3 module registration
-// ---------------------------------------------------------------------------
 
 #[cfg(feature = "python")]
 pub fn register_zig_ffi(m: &Bound<'_, PyModule>) -> PyResult<()> {

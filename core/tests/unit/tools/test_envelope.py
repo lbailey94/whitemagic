@@ -1,4 +1,5 @@
 """Tests for whitemagic.tools.envelope — envelope construction & coercion."""
+
 import json
 from datetime import date, datetime
 from enum import Enum
@@ -16,6 +17,7 @@ from whitemagic.tools.envelope import (
 # ---------------------------------------------------------------------------
 # coerce_jsonable
 # ---------------------------------------------------------------------------
+
 
 class _Color(Enum):
     RED = "red"
@@ -54,6 +56,7 @@ def test_coerce_bytes():
     result = coerce_jsonable(b"hello")
     assert result["_type"] == "bytes"
     import base64
+
     assert base64.b64decode(result["b64"]) == b"hello"
 
 
@@ -75,6 +78,7 @@ def test_coerce_set_sorted():
 # ---------------------------------------------------------------------------
 # ok() / err()
 # ---------------------------------------------------------------------------
+
 
 def test_ok_shape():
     result = ok(tool="test_tool", request_id="r1", message="done")
@@ -115,6 +119,7 @@ def test_ok_details_coerced():
 # is_enveloped()
 # ---------------------------------------------------------------------------
 
+
 def test_is_enveloped_true():
     envelope = ok(tool="t", request_id="r")
     assert is_enveloped(envelope) is True
@@ -130,6 +135,7 @@ def test_is_enveloped_false_missing_keys():
 # ---------------------------------------------------------------------------
 # normalize_raw()
 # ---------------------------------------------------------------------------
+
 
 def test_normalize_raw_legacy_success():
     raw = {"status": "success", "data": [1, 2, 3]}

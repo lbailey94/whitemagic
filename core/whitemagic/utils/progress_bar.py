@@ -31,9 +31,18 @@ class ProgressBar:
     """
 
     __slots__ = (
-        "total", "completed", "label", "counters", "start_time",
-        "stream", "_bar_width", "_lock", "_timer", "_stopped",
-        "_last_label", "update_interval",
+        "total",
+        "completed",
+        "label",
+        "counters",
+        "start_time",
+        "stream",
+        "_bar_width",
+        "_lock",
+        "_timer",
+        "_stopped",
+        "_last_label",
+        "update_interval",
     )
 
     def __init__(
@@ -113,7 +122,9 @@ class ProgressBar:
             eta_str = "ETA   --"
 
         # Bar
-        filled = int(self._bar_width * self.completed / self.total) if self.total > 0 else 0
+        filled = (
+            int(self._bar_width * self.completed / self.total) if self.total > 0 else 0
+        )
         bar = "\u2588" * filled + "\u2591" * (self._bar_width - filled)
 
         # Counters
@@ -124,8 +135,10 @@ class ProgressBar:
         if len(name) > 45:
             name = "..." + name[-42:]
 
-        line = (f"\r  [{bar}] {pct:6.2f}% | {self.completed}/{self.total} | "
-                f"{elapsed:6.1f}s | {eta_str}")
+        line = (
+            f"\r  [{bar}] {pct:6.2f}% | {self.completed}/{self.total} | "
+            f"{elapsed:6.1f}s | {eta_str}"
+        )
         if counter_str:
             line += f" | {counter_str}"
         if name:
@@ -161,11 +174,11 @@ def progress_range(
 ) -> tuple[ProgressBar, range]:
     """Convenience: returns (bar, range) so you can do:
 
-        bar, items = progress_range(100, "Processing")
-        for i in items:
-            do_work(i)
-            bar.advance()
-        bar.finish()
+    bar, items = progress_range(100, "Processing")
+    for i in items:
+        do_work(i)
+        bar.advance()
+    bar.finish()
     """
     bar = ProgressBar(total=total, label=label, counters=counters)
     bar.start()

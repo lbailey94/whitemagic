@@ -41,6 +41,7 @@ except ImportError:
 
 def _state_root() -> Path:
     from whitemagic.config.paths import get_state_root
+
     return get_state_root()
 
 
@@ -75,6 +76,7 @@ class AuditSigner:
             cls._instance._public_key: Any = None  # type: ignore[misc,has-type]
             cls._instance._key_id: str = ""  # type: ignore[misc,has-type]
             import threading
+
             cls._lock = threading.Lock()
         return cls._instance
 
@@ -93,7 +95,9 @@ class AuditSigner:
             if priv_path.exists():
                 try:
                     priv_pem = priv_path.read_bytes()
-                    self._private_key = serialization.load_pem_private_key(priv_pem, password=None)
+                    self._private_key = serialization.load_pem_private_key(
+                        priv_pem, password=None
+                    )
                     self._public_key = self._private_key.public_key()
                 except Exception as exc:
                     logger.warning("Failed to load audit key: %s", exc)
@@ -126,6 +130,7 @@ class AuditSigner:
                 format=serialization.PublicFormat.SubjectPublicKeyInfo,
             )
             import hashlib
+
             self._key_id = hashlib.sha256(pub_der).hexdigest()[:16]
             return True
 
@@ -160,7 +165,9 @@ class AuditSigner:
             logger.warning("Audit sign failed: %s", exc)
             return None
 
-    def verify(self, payload: str | bytes, signature_b64: str, key_id: str | None = None) -> bool:
+    def verify(
+        self, payload: str | bytes, signature_b64: str, key_id: str | None = None
+    ) -> bool:
         """Verify a signature against this signer's public key.
 
         If *key_id* is supplied and doesn't match the current key,

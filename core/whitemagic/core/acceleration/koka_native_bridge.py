@@ -11,6 +11,7 @@ Usage:
 
     result = koka_dispatch("prat", "route", {"tool": "memory.create"})
 """
+
 from __future__ import annotations
 
 import json
@@ -30,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 # Build paths
 # From core/whitemagic/core/acceleration/ → up 5 parents to repo root → polyglot/whitemagic-koka/
-_BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "whitemagic-koka"
+_BASE_DIR = (
+    Path(__file__).resolve().parent.parent.parent.parent.parent
+    / "polyglot"
+    / "whitemagic-koka"
+)
 _BUILD_DIR = _BASE_DIR  # Binaries are in root, not .koka_build/native
 _DISPATCHER_BIN = _BASE_DIR / "orchestrator"  # Use orchestrator as dispatcher
 
@@ -55,15 +60,15 @@ _MODULE_BINS = {
 }
 
 
-
 class KokaCircuitBreaker:
     """KokaCircuitBreaker: koka circuit breaker."""
+
     def __init__(self, failure_threshold: int = 3, reset_timeout: float = 30.0):
         self.failures = 0
         self.failure_threshold = failure_threshold
         self.reset_timeout = reset_timeout
         self.last_failure_time = 0.0
-        self.state = "CLOSED" # CLOSED (ok), OPEN (failing), HALF_OPEN (testing)
+        self.state = "CLOSED"  # CLOSED (ok), OPEN (failing), HALF_OPEN (testing)
         self.lock = threading.Lock()
 
     def record_failure(self):
@@ -75,7 +80,9 @@ class KokaCircuitBreaker:
             self.last_failure_time = time.time()
             if self.failures >= self.failure_threshold:
                 self.state = "OPEN"
-                logger.warning("Koka circuit breaker OPENED after %s failures", self.failures)
+                logger.warning(
+                    "Koka circuit breaker OPENED after %s failures", self.failures
+                )
 
     def record_success(self):
         """
@@ -104,6 +111,7 @@ class KokaCircuitBreaker:
                 return False
             # HALF_OPEN allows 1 request through
             return True
+
 
 class KokaNativeBridge:
     """High-performance bridge to compiled Koka native binaries.
@@ -150,7 +158,9 @@ class KokaNativeBridge:
         with self._lock:
             # Check for dead processes and prune them
             if module in self._processes:
-                dead_procs = [p for p in self._processes[module] if p.poll() is not None]
+                dead_procs = [
+                    p for p in self._processes[module] if p.poll() is not None
+                ]
                 for p in dead_procs:
                     self._processes[module].remove(p)
                     if module in self._available and p in self._available[module]:
@@ -173,12 +183,13 @@ class KokaNativeBridge:
             # Check if we can create more
             # Clean dead processes from total tracked
             if module in self._processes:
-                self._processes[module] = [p for p in self._processes[module] if p.poll() is None]
+                self._processes[module] = [
+                    p for p in self._processes[module] if p.poll() is None
+                ]
 
             current = len(self._processes.get(module, []))
             if current >= self._max_connections:
                 return None  # Pool exhausted
-
 
             # Create new process
             binary = self._binaries.get(module)
@@ -187,12 +198,12 @@ class KokaNativeBridge:
 
             try:
                 proc = subprocess.Popen(
-                    ['stdbuf', '-o0', '-i0', str(binary)],
+                    ["stdbuf", "-o0", "-i0", str(binary)],
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    bufsize=1  # Line buffered
+                    bufsize=1,  # Line buffered
                 )
 
                 # Consume initialization line with timeout
@@ -206,7 +217,6 @@ class KokaNativeBridge:
                 if module not in self._processes:
                     self._processes[module] = []
                 self._processes[module].append(proc)
-
 
                 return proc
             except Exception as e:
@@ -236,7 +246,9 @@ class KokaNativeBridge:
             except (ProcessLookupError, OSError):
                 pass
 
-    def _readline_with_timeout(self, proc: subprocess.Popen, timeout: float) -> str | None:
+    def _readline_with_timeout(
+        self, proc: subprocess.Popen, timeout: float
+    ) -> str | None:
         """Read a single line from a process stdout with a hard timeout."""
         if proc.stdout is None:
             return None
@@ -255,7 +267,7 @@ class KokaNativeBridge:
                 logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
-        thread = threading.Thread(target=_reader, name='wm-koka-readline', daemon=True)
+        thread = threading.Thread(target=_reader, name="wm-koka-readline", daemon=True)
         thread.start()
         # Add thread join with a slightly longer timeout just to avoid leaking threads
         try:
@@ -267,11 +279,7 @@ class KokaNativeBridge:
             return None
 
     def dispatch(
-        self,
-        module: str,
-        operation: str,
-        args: dict[str, Any],
-        timeout: float = 5.0
+        self, module: str, operation: str, args: dict[str, Any], timeout: float = 5.0
     ) -> dict[str, Any] | None:
         """Dispatch a call to a Koka native module.
 
@@ -291,9 +299,10 @@ class KokaNativeBridge:
 
         breaker = self._breakers.get(module)
         if breaker and not breaker.allow_request():
-            logger.warning("Koka circuit breaker OPEN for %s - skipping dispatch", module)
+            logger.warning(
+                "Koka circuit breaker OPEN for %s - skipping dispatch", module
+            )
             return None
-
 
         proc = self._get_process(module)
         if not proc:
@@ -306,7 +315,7 @@ class KokaNativeBridge:
                 "module": module,
                 "operation": operation,
                 "args": args,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
             # Send request
@@ -324,7 +333,11 @@ class KokaNativeBridge:
             elapsed = time.time() - start
 
             if not response_line:
-                logger.error("Koka process timed out or returned no response for %s.%s", module, operation)
+                logger.error(
+                    "Koka process timed out or returned no response for %s.%s",
+                    module,
+                    operation,
+                )
                 if breaker:
                     breaker.record_failure()
                 self._discard_process(module, proc)
@@ -348,22 +361,19 @@ class KokaNativeBridge:
         except subprocess.TimeoutExpired:
             logger.error("Koka call timed out: %s.%s", module, operation)
             if breaker:
-                    breaker.record_failure()
+                breaker.record_failure()
             return None
         except Exception as e:
             logger.error("Koka dispatch error: %s", e)
             if breaker:
-                    breaker.record_failure()
+                breaker.record_failure()
             return None
         finally:
             if proc.poll() is None:
                 self._return_process(module, proc)
 
     def dispatch_line(
-        self,
-        module: str,
-        command: str,
-        timeout: float = 5.0
+        self, module: str, command: str, timeout: float = 5.0
     ) -> str | None:
         """Dispatch a line-protocol command to a Koka native module.
 
@@ -381,7 +391,9 @@ class KokaNativeBridge:
 
         breaker = self._breakers.get(module)
         if breaker and not breaker.allow_request():
-            logger.warning("Koka circuit breaker OPEN for %s - skipping dispatch", module)
+            logger.warning(
+                "Koka circuit breaker OPEN for %s - skipping dispatch", module
+            )
             return None
 
         proc = self._get_process(module)
@@ -431,10 +443,6 @@ class KokaNativeBridge:
                         proc.kill()
             self._processes.clear()
             self._available.clear()
-
-    # -----------------------------------------------------------------------
-    # High-level effect dispatch wrappers (line protocol)
-    # -----------------------------------------------------------------------
 
     def backpressure_admit(self, priority: int = 0) -> bool | None:
         """Request admission under backpressure control."""
@@ -524,9 +532,13 @@ class KokaNativeBridge:
                 return None
         return None
 
-    def retry_set_strategy(self, strategy: str, base_ms: int = 100, max_ms: int = 30000) -> bool:
+    def retry_set_strategy(
+        self, strategy: str, base_ms: int = 100, max_ms: int = 30000
+    ) -> bool:
         """Set the backoff strategy (e.g., 'exponential', 'linear')."""
-        resp = self.dispatch_line("retry", f"set-strategy:{strategy}:{base_ms}:{max_ms}")
+        resp = self.dispatch_line(
+            "retry", f"set-strategy:{strategy}:{base_ms}:{max_ms}"
+        )
         return resp == "ok:set"
 
     def transaction_begin(self) -> str | None:
@@ -573,7 +585,7 @@ def koka_dispatch(
     module: str,
     operation: str,
     args: dict[str, Any] | None = None,
-    timeout: float = 5.0
+    timeout: float = 5.0,
 ) -> dict[str, Any] | None:
     """Convenience function to dispatch to Koka.
 
@@ -602,6 +614,7 @@ def koka_native_status() -> dict[str, Any]:
     hybrid_status = {}
     try:
         from whitemagic.core.acceleration.hybrid_dispatcher_v2 import get_dispatcher
+
         dispatcher = get_dispatcher()
         hybrid_status = {
             "available": True,
@@ -617,7 +630,7 @@ def koka_native_status() -> dict[str, Any]:
             "process_pools": {
                 name: {
                     "total": len(procs),
-                    "available": len(bridge._available.get(name, []))
+                    "available": len(bridge._available.get(name, [])),
                 }
                 for name, procs in bridge._processes.items()
             },
@@ -642,10 +655,7 @@ class KokaPratRouter:
         self._bridge = get_koka_bridge()
 
     def route_via_koka(
-        self,
-        gana_name: str,
-        tool_name: str,
-        args: dict[str, Any]
+        self, gana_name: str, tool_name: str, args: dict[str, Any]
     ) -> dict[str, Any] | None:
         """Route a PRAT call through Koka handlers.
 
@@ -657,11 +667,7 @@ class KokaPratRouter:
         return koka_dispatch(
             "prat",
             "route-prat-call",
-            {
-                "gana": gana_name,
-                "tool": tool_name,
-                "args": args
-            }
+            {"gana": gana_name, "tool": tool_name, "args": args},
         )
 
     def get_resonance_via_koka(self, gana_name: str) -> dict[str, Any] | None:
@@ -669,19 +675,12 @@ class KokaPratRouter:
         if not self._bridge.is_available("resonance"):
             return None
 
-        return koka_dispatch(
-            "resonance",
-            "generate-hints",
-            {"gana": gana_name}
-        )
+        return koka_dispatch("resonance", "generate-hints", {"gana": gana_name})
 
 
 # Benchmark utilities
 def benchmark_koka_dispatch(
-    module: str,
-    operation: str,
-    args: dict[str, Any],
-    iterations: int = 1000
+    module: str, operation: str, args: dict[str, Any], iterations: int = 1000
 ) -> dict[str, Any]:
     """Benchmark Koka dispatch latency.
 
@@ -817,7 +816,9 @@ class KokaCircuitDispatch:
         resp = self._send(f"reset:{name}")
         return resp == "ok:reset"
 
-    def configure(self, name: str, threshold: int, timeout_ms: int, half_open_max: int) -> bool:
+    def configure(
+        self, name: str, threshold: int, timeout_ms: int, half_open_max: int
+    ) -> bool:
         resp = self._send(f"configure:{name}:{threshold}:{timeout_ms}:{half_open_max}")
         return resp == "ok:configured"
 

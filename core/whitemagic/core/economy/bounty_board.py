@@ -16,9 +16,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Bounty:
     """A task bounty backed by an XRPL Escrow."""
+
     id: str
     task_description: str
     amount: float
@@ -41,11 +43,13 @@ class Bounty:
         """
         return asdict(self)
 
+
 class BountyBoard:
     """Manages the lifecycle of Dharmic Bounties."""
 
     def __init__(self) -> None:
         from whitemagic.config.paths import ECONOMY_DIR
+
         self._path = ECONOMY_DIR / "bounties.jsonl"
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._bounties: dict[str, Bounty] = {}
@@ -56,6 +60,7 @@ class BountyBoard:
         if not self._path.exists():
             return
         from whitemagic.utils.fast_json import loads as _json_loads
+
         try:
             with open(self._path, encoding="utf-8") as f:
                 for line in f:
@@ -66,15 +71,18 @@ class BountyBoard:
         except Exception as e:
             logger.warning("Failed to load bounty board: %s", e, exc_info=True)
 
-    def create_bounty(self, task: str, amount: float, expires_in: int = 86400) -> Bounty:
+    def create_bounty(
+        self, task: str, amount: float, expires_in: int = 86400
+    ) -> Bounty:
         """Create a new bounty record (link to XRPL Escrow happens later)."""
         import uuid
+
         bounty_id = str(uuid.uuid4())[:8]
         bounty = Bounty(
             id=bounty_id,
             task_description=task,
             amount=amount,
-            expires_at=time.time() + expires_in
+            expires_at=time.time() + expires_in,
         )
         self._bounties[bounty_id] = bounty
         self._persist(bounty)
@@ -92,7 +100,7 @@ class BountyBoard:
 
         payload = {
             "method": "tx",
-            "params": [{"transaction": tx_hash, "binary": False}]
+            "params": [{"transaction": tx_hash, "binary": False}],
         }
 
         async with httpx.AsyncClient() as client:
@@ -107,14 +115,21 @@ class BountyBoard:
                             from whitemagic.core.economy.wallet_manager import (
                                 get_wallet,
                             )
+
                             wallet = get_wallet()
 
                             amount_drops = int(result.get("Amount", "0"))
                             if amount_drops / 1_000_000 < bounty.amount:
-                                return {"status": "error", "message": "Escrow amount too low"}
+                                return {
+                                    "status": "error",
+                                    "message": "Escrow amount too low",
+                                }
 
                             if result.get("Destination") != wallet.public_address:
-                                return {"status": "error", "message": "Escrow destination mismatch"}
+                                return {
+                                    "status": "error",
+                                    "message": "Escrow destination mismatch",
+                                }
 
                             bounty.tx_hash = tx_hash
                             bounty.escrow_seq = result.get("Sequence")
@@ -130,6 +145,7 @@ class BountyBoard:
     def _persist(self, bounty: Bounty) -> None:
         """Append bounty to the ledger."""
         from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
         try:
             with open(self._path, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(bounty.to_dict()) + "\n")
@@ -160,7 +176,9 @@ class BountyBoard:
         """
         return [b for b in self._bounties.values() if b.status == status]
 
+
 _board: BountyBoard | None = None
+
 
 def get_bounty_board() -> BountyBoard:
     """

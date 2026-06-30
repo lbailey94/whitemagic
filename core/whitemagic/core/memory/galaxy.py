@@ -27,15 +27,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# --- CONSTELLATIONS ---
-
 class Constellation:
     """A cluster of semantically related memories forming a conceptual unit."""
     def __init__(self, name: str):
         self.name = name
         self.members: list = []
-
-# --- GALAXY MANAGER ---
 
 class GalaxyManager:
     """Manages multiple constellation clusters and their spatial relationships."""
@@ -51,7 +47,6 @@ class GalaxyManager:
         """
         self.constellations[constellation.name] = constellation
 
-# --- SINGLETONS ---
 _galaxy: GalaxyManager | None = None
 
 def get_galaxy_manager() -> GalaxyManager:

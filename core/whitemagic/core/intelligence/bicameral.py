@@ -41,15 +41,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data Structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class HemisphereResult:
     """Output from a single hemisphere."""
 
-    hemisphere: str          # "left" or "right"
+    hemisphere: str  # "left" or "right"
     content: str
     confidence: float
     strategy: str
@@ -62,11 +58,11 @@ class HemisphereResult:
 class CrossCritique:
     """Result of one hemisphere critiquing the other."""
 
-    critic: str              # Which hemisphere is critiquing
-    target: str              # Which hemisphere is being critiqued
-    agreements: list[str]    # Points of agreement
-    challenges: list[str]    # Points of disagreement / concern
-    suggestions: list[str]   # Constructive modifications
+    critic: str  # Which hemisphere is critiquing
+    target: str  # Which hemisphere is being critiqued
+    agreements: list[str]  # Points of agreement
+    challenges: list[str]  # Points of disagreement / concern
+    suggestions: list[str]  # Constructive modifications
     confidence_adjustment: float  # How much the critique adjusts confidence (-1 to +1)
 
 
@@ -80,8 +76,8 @@ class BicameralResult:
     cross_critique: list[CrossCritique]
     synthesis: str
     final_confidence: float
-    dominant_hemisphere: str   # Which hemisphere "won" this round
-    tension_score: float       # 0=agreement, 1=maximum disagreement
+    dominant_hemisphere: str  # Which hemisphere "won" this round
+    tension_score: float  # 0=agreement, 1=maximum disagreement
     duration_ms: float = 0.0
     timestamp: datetime = field(default_factory=datetime.now)
 
@@ -114,26 +110,28 @@ class BicameralResult:
         }
 
 
-# ---------------------------------------------------------------------------
-# Hemisphere Strategies
-# ---------------------------------------------------------------------------
-
 # Left hemisphere: precise, analytical strategies
 LEFT_STRATEGIES = [
-    "analytical", "systematic", "factual", "cautious",
-    "logical", "sequential", "deductive",
+    "analytical",
+    "systematic",
+    "factual",
+    "cautious",
+    "logical",
+    "sequential",
+    "deductive",
 ]
 
 # Right hemisphere: creative, holistic strategies
 RIGHT_STRATEGIES = [
-    "creative", "intuitive", "optimistic", "theoretical",
-    "holistic", "associative", "divergent",
+    "creative",
+    "intuitive",
+    "optimistic",
+    "theoretical",
+    "holistic",
+    "associative",
+    "divergent",
 ]
 
-
-# ---------------------------------------------------------------------------
-# Bicameral Reasoner
-# ---------------------------------------------------------------------------
 
 class BicameralReasoner:
     """Dual-hemisphere reasoning engine.
@@ -162,11 +160,9 @@ class BicameralReasoner:
         self._ties: int = 0
         self._avg_tension: float = 0.0
 
-    # ------------------------------------------------------------------
-    # Core reasoning
-    # ------------------------------------------------------------------
-
-    async def reason(self, query: str, context: dict[str, Any] | None = None) -> BicameralResult:
+    async def reason(
+        self, query: str, context: dict[str, Any] | None = None
+    ) -> BicameralResult:
         """Run bicameral reasoning on a query.
 
         1. Left hemisphere explores with precision strategies
@@ -177,13 +173,13 @@ class BicameralReasoner:
         start = time.perf_counter()
         context = context or {}
 
-        # Phase 1: Parallel hemisphere exploration
         left_result, right_result = await asyncio.gather(
             self._explore_hemisphere("left", query, LEFT_STRATEGIES, self._left_clones),
-            self._explore_hemisphere("right", query, RIGHT_STRATEGIES, self._right_clones),
+            self._explore_hemisphere(
+                "right", query, RIGHT_STRATEGIES, self._right_clones
+            ),
         )
 
-        # Phase 2: Multi-round cross-critique (corpus callosum)
         all_critiques: list[CrossCritique] = []
         if self._cross_critique_enabled:
             for round_num in range(self._max_debate_rounds):
@@ -193,12 +189,16 @@ class BicameralReasoner:
                 # On subsequent rounds, refine hemisphere results based on critiques
                 if round_num < self._max_debate_rounds - 1 and all_critiques:
                     left_result, right_result = await self._refine_hemispheres(
-                        query, left_result, right_result, round_critiques,
+                        query,
+                        left_result,
+                        right_result,
+                        round_critiques,
                     )
 
-        # Phase 3: Synthesis
         synthesis, final_conf, dominant, tension = self._synthesize(
-            left_result, right_result, all_critiques,
+            left_result,
+            right_result,
+            all_critiques,
         )
 
         # Stats
@@ -211,9 +211,8 @@ class BicameralReasoner:
             self._ties += 1
         # Running average tension
         self._avg_tension = (
-            (self._avg_tension * (self._total_reasonings - 1) + tension)
-            / self._total_reasonings
-        )
+            self._avg_tension * (self._total_reasonings - 1) + tension
+        ) / self._total_reasonings
 
         elapsed_ms = (time.perf_counter() - start) * 1000
 
@@ -250,6 +249,7 @@ class BicameralReasoner:
         """
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if not llm.is_available:
                 return left, right
@@ -257,10 +257,16 @@ class BicameralReasoner:
             critique_summary = []
             for c in critiques:
                 if c.target == "left" and c.challenges:
-                    critique_summary.append(f"Left challenged on: {'; '.join(c.challenges[:2])}")
+                    critique_summary.append(
+                        f"Left challenged on: {'; '.join(c.challenges[:2])}"
+                    )
                 if c.target == "right" and c.challenges:
-                    critique_summary.append(f"Right challenged on: {'; '.join(c.challenges[:2])}")
-            critique_text = "\n".join(critique_summary) if critique_summary else "(no challenges)"
+                    critique_summary.append(
+                        f"Right challenged on: {'; '.join(c.challenges[:2])}"
+                    )
+            critique_text = (
+                "\n".join(critique_summary) if critique_summary else "(no challenges)"
+            )
 
             def _refine(hemisphere: HemisphereResult, side: str) -> HemisphereResult:
                 prompt = (
@@ -288,10 +294,6 @@ class BicameralReasoner:
         except Exception as e:
             logger.debug("Hemisphere refinement unavailable: %s", e)
             return left, right
-
-    # ------------------------------------------------------------------
-    # Hemisphere exploration
-    # ------------------------------------------------------------------
 
     async def _explore_hemisphere(
         self,
@@ -348,10 +350,6 @@ class BicameralReasoner:
             },
         )
 
-    # ------------------------------------------------------------------
-    # Corpus Callosum (cross-critique)
-    # ------------------------------------------------------------------
-
     def _compute_semantic_similarity(self, text_a: str, text_b: str) -> float | None:
         """Compute cosine similarity between embeddings of two texts.
 
@@ -362,6 +360,7 @@ class BicameralReasoner:
             import numpy as np
 
             from whitemagic.core.memory.embeddings import get_embedding_engine
+
             engine = get_embedding_engine()
             emb_a = engine.encode(text_a)
             emb_b = engine.encode(text_b)
@@ -411,6 +410,7 @@ class BicameralReasoner:
         """
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if not llm.is_available:
                 return None
@@ -454,7 +454,9 @@ class BicameralReasoner:
             return None
 
     @staticmethod
-    def _parse_llm_critique(critic: str, target: str, text: str) -> CrossCritique | None:
+    def _parse_llm_critique(
+        critic: str, target: str, text: str
+    ) -> CrossCritique | None:
         """Parse LLM critique response into CrossCritique."""
         agreements = []
         challenges = []
@@ -490,7 +492,9 @@ class BicameralReasoner:
             confidence_adjustment=conf_adj,
         )
 
-    def _left_critiques_right(self, left: HemisphereResult, right: HemisphereResult) -> CrossCritique:
+    def _left_critiques_right(
+        self, left: HemisphereResult, right: HemisphereResult
+    ) -> CrossCritique:
         """Left hemisphere checks Right for logical consistency."""
         agreements = []
         challenges = []
@@ -511,23 +515,57 @@ class BicameralReasoner:
             left_words = set(left.content.lower().split())
             right_words = set(right.content.lower().split())
             overlap = left_words & right_words
-            stopwords = {"the", "a", "an", "is", "are", "was", "were", "to", "of", "and", "in", "for", "on", "with", "that", "this", "it"}
+            stopwords = {
+                "the",
+                "a",
+                "an",
+                "is",
+                "are",
+                "was",
+                "were",
+                "to",
+                "of",
+                "and",
+                "in",
+                "for",
+                "on",
+                "with",
+                "that",
+                "this",
+                "it",
+            }
             meaningful_overlap = overlap - stopwords
             if len(meaningful_overlap) > 3:
-                agreements.append(f"Shared focus on: {', '.join(list(meaningful_overlap)[:5])}")
+                agreements.append(
+                    f"Shared focus on: {', '.join(list(meaningful_overlap)[:5])}"
+                )
                 conf_adj += 0.05
 
         # Challenge: right hemisphere may be too speculative
         right_words = set(right.content.lower().split())
-        speculative_markers = {"maybe", "perhaps", "possibly", "could", "might", "imagine", "creative", "unconventional", "novel"}
+        speculative_markers = {
+            "maybe",
+            "perhaps",
+            "possibly",
+            "could",
+            "might",
+            "imagine",
+            "creative",
+            "unconventional",
+            "novel",
+        }
         right_speculation = right_words & speculative_markers
         if len(right_speculation) > 1:
-            challenges.append(f"High speculation detected: {', '.join(right_speculation)}")
+            challenges.append(
+                f"High speculation detected: {', '.join(right_speculation)}"
+            )
             conf_adj -= 0.05
 
         # Suggestion: ground creative ideas in specifics
         if right.confidence < left.confidence:
-            suggestions.append("Consider grounding creative insights with concrete evidence or examples")
+            suggestions.append(
+                "Consider grounding creative insights with concrete evidence or examples"
+            )
 
         return CrossCritique(
             critic="left",
@@ -538,7 +576,9 @@ class BicameralReasoner:
             confidence_adjustment=conf_adj,
         )
 
-    def _right_critiques_left(self, left: HemisphereResult, right: HemisphereResult) -> CrossCritique:
+    def _right_critiques_left(
+        self, left: HemisphereResult, right: HemisphereResult
+    ) -> CrossCritique:
         """Right hemisphere checks Left for creative breadth."""
         agreements = []
         challenges = []
@@ -559,23 +599,55 @@ class BicameralReasoner:
             left_words = set(left.content.lower().split())
             right_words = set(right.content.lower().split())
             overlap = left_words & right_words
-            stopwords = {"the", "a", "an", "is", "are", "was", "were", "to", "of", "and", "in", "for", "on", "with", "that", "this", "it"}
+            stopwords = {
+                "the",
+                "a",
+                "an",
+                "is",
+                "are",
+                "was",
+                "were",
+                "to",
+                "of",
+                "and",
+                "in",
+                "for",
+                "on",
+                "with",
+                "that",
+                "this",
+                "it",
+            }
             meaningful_overlap = overlap - stopwords
             if len(meaningful_overlap) > 3:
-                agreements.append(f"Common ground on: {', '.join(list(meaningful_overlap)[:5])}")
+                agreements.append(
+                    f"Common ground on: {', '.join(list(meaningful_overlap)[:5])}"
+                )
                 conf_adj += 0.05
 
         # Challenge: left hemisphere may be too narrow
         left_words = set(left.content.lower().split())
-        narrow_markers = {"only", "must", "always", "never", "precisely", "exactly", "systematic"}
+        narrow_markers = {
+            "only",
+            "must",
+            "always",
+            "never",
+            "precisely",
+            "exactly",
+            "systematic",
+        }
         left_narrowness = left_words & narrow_markers
         if len(left_narrowness) > 1:
-            challenges.append(f"Potentially over-constrained thinking: {', '.join(left_narrowness)}")
+            challenges.append(
+                f"Potentially over-constrained thinking: {', '.join(left_narrowness)}"
+            )
             conf_adj -= 0.03
 
         # Suggestion: explore adjacent possibilities
         if left.confidence > right.confidence + 0.2:
-            suggestions.append("High precision may miss novel approaches — consider exploring adjacent solution spaces")
+            suggestions.append(
+                "High precision may miss novel approaches — consider exploring adjacent solution spaces"
+            )
 
         return CrossCritique(
             critic="right",
@@ -585,10 +657,6 @@ class BicameralReasoner:
             suggestions=suggestions,
             confidence_adjustment=conf_adj,
         )
-
-    # ------------------------------------------------------------------
-    # Synthesis
-    # ------------------------------------------------------------------
 
     def _synthesize(
         self,
@@ -647,16 +715,24 @@ class BicameralReasoner:
 
         # Heuristic fallback: build synthesis text
         parts = []
-        parts.append(f"[LEFT ({left.strategy}, conf={adj_left_conf:.2f})] {left.content}")
-        parts.append(f"[RIGHT ({right.strategy}, conf={adj_right_conf:.2f})] {right.content}")
+        parts.append(
+            f"[LEFT ({left.strategy}, conf={adj_left_conf:.2f})] {left.content}"
+        )
+        parts.append(
+            f"[RIGHT ({right.strategy}, conf={adj_right_conf:.2f})] {right.content}"
+        )
 
         if critiques:
             critique_notes = []
             for c in critiques:
                 if c.challenges:
-                    critique_notes.append(f"{c.critic}→{c.target}: {'; '.join(c.challenges)}")
+                    critique_notes.append(
+                        f"{c.critic}→{c.target}: {'; '.join(c.challenges)}"
+                    )
                 if c.suggestions:
-                    critique_notes.append(f"{c.critic} suggests: {'; '.join(c.suggestions)}")
+                    critique_notes.append(
+                        f"{c.critic} suggests: {'; '.join(c.suggestions)}"
+                    )
             if critique_notes:
                 parts.append(f"[CORPUS CALLOSUM] {' | '.join(critique_notes)}")
 
@@ -679,6 +755,7 @@ class BicameralReasoner:
         """Use LLM to synthesize bicameral output. Returns None if unavailable."""
         try:
             from whitemagic.inference.local_llm import LocalLLM
+
             llm = LocalLLM()
             if not llm.is_available:
                 return None
@@ -686,9 +763,13 @@ class BicameralReasoner:
             critique_text = ""
             for c in critiques:
                 if c.challenges:
-                    critique_text += f"\n{c.critic}→{c.target} challenges: {'; '.join(c.challenges)}"
+                    critique_text += (
+                        f"\n{c.critic}→{c.target} challenges: {'; '.join(c.challenges)}"
+                    )
                 if c.suggestions:
-                    critique_text += f"\n{c.critic} suggests: {'; '.join(c.suggestions)}"
+                    critique_text += (
+                        f"\n{c.critic} suggests: {'; '.join(c.suggestions)}"
+                    )
 
             prompt = (
                 f"Synthesize two perspectives into one concise answer.\n\n"
@@ -711,10 +792,6 @@ class BicameralReasoner:
         if not wa or not wb:
             return 0.0
         return len(wa & wb) / len(wa | wb)
-
-    # ------------------------------------------------------------------
-    # Event emission
-    # ------------------------------------------------------------------
 
     def _emit_event(self, result: BicameralResult) -> None:
         """Emit reasoning result to the Gan Ying bus."""
@@ -756,11 +833,9 @@ class BicameralReasoner:
                 },
             )
         except Exception as e:
-            logger.debug("Bicameral low-confidence emission error: %s", e, exc_info=True)
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
+            logger.debug(
+                "Bicameral low-confidence emission error: %s", e, exc_info=True
+            )
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -780,10 +855,6 @@ class BicameralReasoner:
             "cross_critique_enabled": self._cross_critique_enabled,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _reasoner_instance: BicameralReasoner | None = None
 _reasoner_lock = threading.Lock()

@@ -13,6 +13,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class LiberatingTruth:
     """Track truths that liberate vs truths that bind
 
@@ -38,11 +39,11 @@ class LiberatingTruth:
             freed_from: What bondage this releases
         """
         moment = {
-            'truth': truth,
-            'why_liberating': why_liberating,
-            'freed_from': freed_from,
-            'timestamp': datetime.now().isoformat(),
-            'type': 'liberating'
+            "truth": truth,
+            "why_liberating": why_liberating,
+            "freed_from": freed_from,
+            "timestamp": datetime.now().isoformat(),
+            "type": "liberating",
         }
 
         self.liberating_truths.append(moment)
@@ -62,11 +63,11 @@ class LiberatingTruth:
             binds_to: What this attaches us to
         """
         moment = {
-            'truth': truth,
-            'why_binding': why_binding,
-            'binds_to': binds_to,
-            'timestamp': datetime.now().isoformat(),
-            'type': 'binding'
+            "truth": truth,
+            "why_binding": why_binding,
+            "binds_to": binds_to,
+            "timestamp": datetime.now().isoformat(),
+            "type": "binding",
         }
 
         self.binding_truths.append(moment)
@@ -87,7 +88,7 @@ class LiberatingTruth:
         # Find binding truth
         binding = None
         for b in self.binding_truths:
-            if binding_truth.lower() in b['truth'].lower():
+            if binding_truth.lower() in b["truth"].lower():
                 binding = b
                 break
 
@@ -99,11 +100,11 @@ class LiberatingTruth:
         self.recognize_liberating(
             truth=reframe,
             why_liberating=f"Transforms: {binding['truth']}",
-            freed_from=binding['binds_to']
+            freed_from=binding["binds_to"],
         )
 
         logger.info("✨ TRANSFORMATION COMPLETE!")
-        logger.info("   From: %s", binding['truth'])
+        logger.info("   From: %s", binding["truth"])
         logger.info("   To: %s", reframe)
 
     def get_liberation_ratio(self) -> float:
@@ -119,11 +120,8 @@ class LiberatingTruth:
 
     def _save(self):
         """Save to disk"""
-        data = {
-            'liberating': self.liberating_truths,
-            'binding': self.binding_truths
-        }
-        with open(self.memory_dir / "liberation.json", 'w') as f:
+        data = {"liberating": self.liberating_truths, "binding": self.binding_truths}
+        with open(self.memory_dir / "liberation.json", "w") as f:
             json.dump(data, f, indent=2)
 
     def _load(self):
@@ -132,12 +130,13 @@ class LiberatingTruth:
         if lib_file.exists():
             with open(lib_file) as f:
                 data = json.load(f)
-                self.liberating_truths = data.get('liberating', [])
-                self.binding_truths = data.get('binding', [])
+                self.liberating_truths = data.get("liberating", [])
+                self.binding_truths = data.get("binding", [])
 
 
 # Global instance
 _lib_truth = None
+
 
 def get_liberating() -> LiberatingTruth:
     """Get global liberating truth system"""

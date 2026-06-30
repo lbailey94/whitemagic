@@ -19,10 +19,12 @@ def ensure_initialized():
     """Ensure UnifiedMemory is initialized to populate the index"""
     get_unified_memory()
 
+
 @click.group(name="holo")
 def holo_cli():
     """🌌 Holographic 4D Memory Commands"""
     pass
+
 
 @holo_cli.command(name="status")
 def status():
@@ -34,10 +36,11 @@ def status():
     click.echo("\n🌌 Holographic Memory Status")
     click.echo("=" * 40)
     click.echo(f"Status: {stats.get('status', 'unknown')}")
-    if stats.get('status') == 'active':
+    if stats.get("status") == "active":
         click.echo(f"Indexed Memories: {stats.get('count', 0)}")
     else:
         click.echo("⚠️  Rust backend required for holographic memory")
+
 
 @holo_cli.command(name="query")
 @click.argument("content")
@@ -65,12 +68,19 @@ def query(content, limit):
     for i, res in enumerate(results, 1):
         mem = unified.recall(res.memory_id)
         if mem:
-            preview = str(mem.content)[:60] + "..." if len(str(mem.content)) > 60 else str(mem.content)
+            preview = (
+                str(mem.content)[:60] + "..."
+                if len(str(mem.content)) > 60
+                else str(mem.content)
+            )
             click.echo(f"\n{i}. {preview}")
             click.echo(f"   ID: {res.memory_id} | Dist: {res.distance:.4f}")
             click.echo(f"   Type: {mem.memory_type.name} | Tags: {', '.join(mem.tags)}")
         else:
-            click.echo(f"\n{i}. [Missing Memory {res.memory_id}] Dist: {res.distance:.4f}")
+            click.echo(
+                f"\n{i}. [Missing Memory {res.memory_id}] Dist: {res.distance:.4f}"
+            )
+
 
 @holo_cli.command(name="radius")
 @click.argument("content")
@@ -95,15 +105,25 @@ def radius(content, radius):
     for i, res in enumerate(results[:10], 1):
         mem = unified.recall(res.memory_id)
         if mem:
-            preview = str(mem.content)[:60] + "..." if len(str(mem.content)) > 60 else str(mem.content)
+            preview = (
+                str(mem.content)[:60] + "..."
+                if len(str(mem.content)) > 60
+                else str(mem.content)
+            )
             click.echo(f"  {i}. [{res.distance:.4f}] {preview}")
 
 
 # ==================== Phase 5: Visualization Commands ====================
 
+
 @holo_cli.command(name="map")
-@click.option("--axis", "-a", default="xy", type=click.Choice(["xy", "xz", "xw", "yz", "yw", "zw"]),
-              help="Which 2D projection to show (default: xy = Logic/Emotion vs Micro/Macro)")
+@click.option(
+    "--axis",
+    "-a",
+    default="xy",
+    type=click.Choice(["xy", "xz", "xw", "yz", "yw", "zw"]),
+    help="Which 2D projection to show (default: xy = Logic/Emotion vs Micro/Macro)",
+)
 @click.option("--width", "-w", default=60, help="Map width in characters")
 @click.option("--height", "-h", default=20, help="Map height in characters")
 def map_view(axis, width, height):
@@ -134,7 +154,7 @@ def map_view(axis, width, height):
         "x": "Logic ← → Emotion",
         "y": "Micro ← → Macro",
         "z": "Past ← → Future",
-        "w": "Low ← → High Importance"
+        "w": "Low ← → High Importance",
     }
 
     click.echo(f"\n🌌 HOLOGRAPHIC MEMORY MAP ({len(coords)} points)")
@@ -143,7 +163,7 @@ def map_view(axis, width, height):
     click.echo("=" * (width + 4))
 
     # Create ASCII grid
-    grid = [[' ' for _ in range(width)] for _ in range(height)]
+    grid = [[" " for _ in range(width)] for _ in range(height)]
     point_data = {}  # (row, col) -> memory_id
 
     for mem_id, (x, y, z, w) in coords.items():
@@ -160,11 +180,11 @@ def map_view(axis, width, height):
         # Place marker based on importance (w)
         importance = coord_tuple[3]
         if importance > 0.8:
-            marker = '★'
+            marker = "★"
         elif importance > 0.5:
-            marker = '●'
+            marker = "●"
         else:
-            marker = '·'
+            marker = "·"
 
         grid[row][col] = marker
         point_data[(row, col)] = mem_id[:8]
@@ -182,9 +202,13 @@ def map_view(axis, width, height):
 
 @holo_cli.command(name="coords")
 @click.option("--limit", "-n", default=20, help="Number of memories to show")
-@click.option("--sort", "-s", default="importance",
-              type=click.Choice(["importance", "time", "logic", "macro"]),
-              help="Sort by axis")
+@click.option(
+    "--sort",
+    "-s",
+    default="importance",
+    type=click.Choice(["importance", "time", "logic", "macro"]),
+    help="Sort by axis",
+)
 def coords(limit, sort):
     """📍 List memory coordinates in 4D space"""
     ensure_initialized()
@@ -198,18 +222,24 @@ def coords(limit, sort):
 
     # Sort by specified axis
     sort_idx = {"logic": 0, "macro": 1, "time": 2, "importance": 3}[sort]
-    sorted_items = sorted(all_coords.items(), key=lambda x: x[1][sort_idx], reverse=True)
+    sorted_items = sorted(
+        all_coords.items(), key=lambda x: x[1][sort_idx], reverse=True
+    )
 
     click.echo(f"\n📍 HOLOGRAPHIC COORDINATES (sorted by {sort})")
     click.echo("=" * 80)
-    click.echo(f"{'ID':<12} {'X(Logic)':<10} {'Y(Macro)':<10} {'Z(Time)':<10} {'W(Importance)':<12} Title")
+    click.echo(
+        f"{'ID':<12} {'X(Logic)':<10} {'Y(Macro)':<10} {'Z(Time)':<10} {'W(Importance)':<12} Title"
+    )
     click.echo("-" * 80)
 
     for mem_id, (x, y, z, w) in sorted_items[:limit]:
         mem = unified.recall(mem_id)
         title = (mem.title or str(mem.content)[:20]) if mem else "[deleted]"
         title = title[:25] + "..." if len(title) > 25 else title
-        click.echo(f"{mem_id[:10]:<12} {x:>+8.3f}  {y:>+8.3f}  {z:>+8.3f}  {w:>10.3f}    {title}")
+        click.echo(
+            f"{mem_id[:10]:<12} {x:>+8.3f}  {y:>+8.3f}  {z:>+8.3f}  {w:>10.3f}    {title}"
+        )
 
     if len(all_coords) > limit:
         click.echo(f"\n... and {len(all_coords) - limit} more memories")
@@ -229,6 +259,7 @@ def constellation(query, radius, limit):
 
     try:
         from whitemagic.core.intelligence.multi_spectral_reasoning import get_reasoner
+
         reasoner = get_reasoner()
 
         click.echo(f"\n✨ CONSTELLATION SEARCH: '{query}'")
@@ -245,10 +276,16 @@ def constellation(query, radius, limit):
         click.echo(f"\n🌟 Found {len(results)} memories in constellation:\n")
 
         for i, mem in enumerate(results, 1):
-            dist_bar = "█" * int((1 - mem['distance']) * 10) + "░" * int(mem['distance'] * 10)
+            dist_bar = "█" * int((1 - mem["distance"]) * 10) + "░" * int(
+                mem["distance"] * 10
+            )
             click.echo(f"{i}. [{dist_bar}] {mem['title']}")
-            click.echo(f"   Distance: {mem['distance']:.4f} | Importance: {mem['importance']:.2f}")
-            click.echo(f"   Tags: {', '.join(mem['tags'][:5]) if mem['tags'] else 'none'}")
+            click.echo(
+                f"   Distance: {mem['distance']:.4f} | Importance: {mem['importance']:.2f}"
+            )
+            click.echo(
+                f"   Tags: {', '.join(mem['tags'][:5]) if mem['tags'] else 'none'}"
+            )
             click.echo(f"   Preview: {mem['content'][:80]}...")
             click.echo()
 
@@ -258,8 +295,13 @@ def constellation(query, radius, limit):
 
 @holo_cli.command(name="export")
 @click.argument("output", type=click.Path())
-@click.option("--format", "-f", default="json", type=click.Choice(["json", "csv"]),
-              help="Export format")
+@click.option(
+    "--format",
+    "-f",
+    default="json",
+    type=click.Choice(["json", "csv"]),
+    help="Export format",
+)
 def export(output, format):
     """📤 Export holographic coordinates for external visualization
 
@@ -288,29 +330,35 @@ def export(output, format):
             "title": mem.title if mem else None,
             "type": mem.memory_type.name if mem else None,
             "tags": list(mem.tags) if mem else [],
-            "content_preview": str(mem.content)[:100] if mem else None
+            "content_preview": str(mem.content)[:100] if mem else None,
         }
         export_data.append(entry)
 
     if format == "json":
-        with open(output, 'w') as f:
-            json.dump({
-                "axis_definitions": {
-                    "x": "Logic (-1) to Emotion (+1)",
-                    "y": "Micro (-1) to Macro (+1)",
-                    "z": "Past (-1) to Future (+1)",
-                    "w": "Importance (0 to 1)"
+        with open(output, "w") as f:
+            json.dump(
+                {
+                    "axis_definitions": {
+                        "x": "Logic (-1) to Emotion (+1)",
+                        "y": "Micro (-1) to Macro (+1)",
+                        "z": "Past (-1) to Future (+1)",
+                        "w": "Importance (0 to 1)",
+                    },
+                    "point_count": len(export_data),
+                    "points": export_data,
                 },
-                "point_count": len(export_data),
-                "points": export_data
-            }, f, indent=2)
+                f,
+                indent=2,
+            )
     else:  # CSV
-        with open(output, 'w') as f:
+        with open(output, "w") as f:
             f.write("id,x,y,z,w,title,type,tags\n")
             for entry in export_data:
                 tags_str = "|".join(entry["tags"])
                 title = (entry["title"] or "").replace(",", ";")
-                f.write(f"{entry['id']},{entry['x']:.4f},{entry['y']:.4f},{entry['z']:.4f},{entry['w']:.4f},{title},{entry['type']},{tags_str}\n")
+                f.write(
+                    f"{entry['id']},{entry['x']:.4f},{entry['y']:.4f},{entry['z']:.4f},{entry['w']:.4f},{title},{entry['type']},{tags_str}\n"
+                )
 
     click.echo(f"✅ Exported {len(export_data)} points to {output}")
 
@@ -374,8 +422,8 @@ def sectors():
         click.echo(f"{sector:<45} {bar} {count:>3} ({pct:.0f}%)")
 
 
-
 # === DHARMA DASHBOARD COMMAND ===
+
 
 @holo_cli.command(name="dharma")
 @click.option("--limit", "-n", default=10, help="Number of audit entries to show")
@@ -409,11 +457,11 @@ def dharma_dashboard(limit: int):
             click.echo(f"📜 RECENT AUDITS (last {len(log)}):")
             click.echo("─" * 60)
             for entry in log:
-                ts = entry.get('timestamp', 'N/A')[:19]
-                action = entry.get('action', 'unknown')[:30]
-                eth = entry.get('ethical_score', 0)
-                harm = entry.get('harmony_score', 0)
-                decision = entry.get('decision', 'N/A')
+                ts = entry.get("timestamp", "N/A")[:19]
+                action = entry.get("action", "unknown")[:30]
+                eth = entry.get("ethical_score", 0)
+                harm = entry.get("harmony_score", 0)
+                decision = entry.get("decision", "N/A")
 
                 # Color code by ethical score
                 if eth >= 0.8:
@@ -424,7 +472,9 @@ def dharma_dashboard(limit: int):
                     status = "❌"
 
                 click.echo(f"{status} [{ts}] {action:<30}")
-                click.echo(f"   Ethics: {eth:.2f} | Harmony: {harm:.2f} | Decision: {decision}")
+                click.echo(
+                    f"   Ethics: {eth:.2f} | Harmony: {harm:.2f} | Decision: {decision}"
+                )
         else:
             click.echo("   No audit entries yet.")
     except Exception as e:

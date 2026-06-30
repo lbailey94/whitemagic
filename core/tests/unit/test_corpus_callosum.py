@@ -1,6 +1,5 @@
 """Tests for Corpus Callosum Bus."""
 
-
 from unittest.mock import MagicMock, patch
 
 from whitemagic.core.intelligence.corpus_callosum import (

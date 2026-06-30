@@ -26,12 +26,12 @@ T = TypeVar("T")
 class ParallelTier(Enum):
     """I Ching-aligned parallelism tiers."""
 
-    TIER_0_TRIGRAMS = 8      # 八卦 (8 trigrams) - Minimal
-    TIER_1_BASIC = 16         # Basic parallelism
-    TIER_2_MEDIUM = 32        # Medium parallelism
-    TIER_3_HEXAGRAMS = 64     # 六十四卦 (64 hexagrams) - Sweet spot!
-    TIER_4_HIGH = 128         # High parallelism
-    TIER_5_EXTREME = 256      # Extreme parallelism
+    TIER_0_TRIGRAMS = 8  # 八卦 (8 trigrams) - Minimal
+    TIER_1_BASIC = 16  # Basic parallelism
+    TIER_2_MEDIUM = 32  # Medium parallelism
+    TIER_3_HEXAGRAMS = 64  # 六十四卦 (64 hexagrams) - Sweet spot!
+    TIER_4_HIGH = 128  # High parallelism
+    TIER_5_EXTREME = 256  # Extreme parallelism
     TIER_6_RALPH_WIGGUM = 1024  # Ralph Wiggum level (asyncio only)
 
 
@@ -133,7 +133,9 @@ class AdaptiveParallelExecutor:
 
         # Conservative default: enough parallelism for I/O-ish sync work,
         # but capped to avoid creating an excessive number of threads.
-        max_workers = self.max_workers or min(len(tasks), max(4, (os.cpu_count() or 4) * 2))
+        max_workers = self.max_workers or min(
+            len(tasks), max(4, (os.cpu_count() or 4) * 2)
+        )
 
         async_tasks: list[tuple[int, asyncio.Task[Any]]] = []
         sync_futures: list[tuple[int, Future[Any]]] = []
@@ -153,7 +155,9 @@ class AdaptiveParallelExecutor:
                     coro = task.func(*task.args, **kwargs)
                     async_tasks.append((idx, asyncio.create_task(coro)))
                 else:
-                    sync_futures.append((idx, pool.submit(task.func, *task.args, **kwargs)))
+                    sync_futures.append(
+                        (idx, pool.submit(task.func, *task.args, **kwargs))
+                    )
 
             pending_async = {t for _, t in async_tasks}
             pending_sync = {f for _, f in sync_futures}
@@ -196,7 +200,7 @@ class AdaptiveParallelExecutor:
         results = []
 
         for i in range(0, len(tasks), batch_size):
-            batch = tasks[i:i + batch_size]
+            batch = tasks[i : i + batch_size]
             batch_results = await self._execute_async(batch)
             results.extend(batch_results)
 
@@ -205,7 +209,8 @@ class AdaptiveParallelExecutor:
     def get_stats(self) -> dict[str, Any]:
         """Get execution statistics."""
         avg_duration = (
-            self.stats["total_duration_ms"] / self.stats["tier_usage"][ParallelTier.TIER_3_HEXAGRAMS.name]
+            self.stats["total_duration_ms"]
+            / self.stats["tier_usage"][ParallelTier.TIER_3_HEXAGRAMS.name]
             if self.stats["tier_usage"][ParallelTier.TIER_3_HEXAGRAMS.name] > 0
             else 0
         )
@@ -283,8 +288,7 @@ class RustInspiredPipeline:
             result = initial
             start_idx = 0
 
-        for item in collected[start_idx:
-            ]:
+        for item in collected[start_idx:]:
             result = func(result, item)
 
         return result
@@ -300,8 +304,7 @@ async def par_map(data: list[T], func: Callable[[T], Any]) -> list[Any]:
     """
     executor = AdaptiveParallelExecutor()
     tasks = [
-        ParallelTask(id=str(i), func=func, args=(item,))
-        for i, item in enumerate(data)
+        ParallelTask(id=str(i), func=func, args=(item,)) for i, item in enumerate(data)
     ]
     return await executor.execute_parallel(tasks)
 

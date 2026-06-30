@@ -21,24 +21,27 @@ logger = logging.getLogger(__name__)
 
 class MilitaryClassic(Enum):
     """The Seven Military Classics"""
-    ART_OF_WAR = "art_of_war"           # 孫子兵法 - Sun Tzu
-    WUZI = "wuzi"                        # 吳子 - Wu Qi
+
+    ART_OF_WAR = "art_of_war"  # 孫子兵法 - Sun Tzu
+    WUZI = "wuzi"  # 吳子 - Wu Qi
     METHODS_OF_SIMA = "methods_of_sima"  # 司馬法
     SIX_SECRET_TEACHINGS = "six_teachings"  # 六韜 - Jiang Ziya
-    WEI_LIAOZI = "wei_liaozi"           # 尉繚子
+    WEI_LIAOZI = "wei_liaozi"  # 尉繚子
     THREE_STRATEGIES = "three_strategies"  # 三略 - Huang Shigong
     QUESTIONS_REPLIES = "questions_replies"  # 唐太宗與李衛公問對
 
 
 class StrategyLevel(Enum):
     """Three Strategies of Huang Shigong"""
-    UPPER = "upper"    # 上略 - Win without fighting (Wu Wei)
+
+    UPPER = "upper"  # 上略 - Win without fighting (Wu Wei)
     MIDDLE = "middle"  # 中略 - Diplomacy, alliances
-    LOWER = "lower"    # 下略 - Direct action
+    LOWER = "lower"  # 下略 - Direct action
 
 
 class WuXingElement(Enum):
     """Five Elements with military correspondences"""
+
     WOOD = ("wood", "🌳", "Six Secret Teachings", "Planning, growth")
     FIRE = ("fire", "🔥", "Wei Liaozi", "Action, discipline")
     EARTH = ("earth", "🌍", "Wuzi", "Foundation, organization")
@@ -49,17 +52,23 @@ class WuXingElement(Enum):
 @dataclass
 class StrategicAssessment:
     """Sun Tzu's five factors assessment"""
-    dao: float = 0.0      # 道 - Moral influence, alignment with values
-    tian: float = 0.0     # 天 - Heaven, timing
-    di: float = 0.0       # 地 - Earth, terrain/resources
-    jiang: float = 0.0    # 將 - Leadership, capability
-    fa: float = 0.0       # 法 - Method, discipline
+
+    dao: float = 0.0  # 道 - Moral influence, alignment with values
+    tian: float = 0.0  # 天 - Heaven, timing
+    di: float = 0.0  # 地 - Earth, terrain/resources
+    jiang: float = 0.0  # 將 - Leadership, capability
+    fa: float = 0.0  # 法 - Method, discipline
 
     @property
     def total_score(self) -> float:
         """Calculate weighted total (Dao weighted highest)"""
-        return (self.dao * 0.3 + self.tian * 0.2 + self.di * 0.2 +
-                self.jiang * 0.15 + self.fa * 0.15)
+        return (
+            self.dao * 0.3
+            + self.tian * 0.2
+            + self.di * 0.2
+            + self.jiang * 0.15
+            + self.fa * 0.15
+        )
 
     @property
     def recommendation(self) -> StrategyLevel:
@@ -100,7 +109,7 @@ class SevenClassicsWisdom:
             MilitaryClassic.SIX_SECRET_TEACHINGS: "Plan strategically. Use appropriate tactics for situation.",
             MilitaryClassic.WEI_LIAOZI: "Execute with discipline. Clear rewards and consequences.",
             MilitaryClassic.THREE_STRATEGIES: "Choose appropriate level: Wu Wei > Diplomacy > Action.",
-            MilitaryClassic.QUESTIONS_REPLIES: "Synthesize all wisdom. Apply practically."
+            MilitaryClassic.QUESTIONS_REPLIES: "Synthesize all wisdom. Apply practically.",
         }
 
 
@@ -152,10 +161,10 @@ class SevenClassicsSystem:
     def assess_situation(
         self,
         aligned_with_values: float,  # Dao
-        good_timing: float,          # Tian
-        resources_available: float,   # Di
-        capable_leadership: float,    # Jiang
-        clear_methodology: float      # Fa
+        good_timing: float,  # Tian
+        resources_available: float,  # Di
+        capable_leadership: float,  # Jiang
+        clear_methodology: float,  # Fa
     ) -> StrategicAssessment:
         """
         Perform Sun Tzu's Five Factors assessment.
@@ -168,7 +177,7 @@ class SevenClassicsSystem:
             tian=good_timing,
             di=resources_available,
             jiang=capable_leadership,
-            fa=clear_methodology
+            fa=clear_methodology,
         )
 
         self.wisdom.recommended_strategy = self.assessment.recommendation
@@ -200,7 +209,9 @@ class SevenClassicsSystem:
             "reflection": MilitaryClassic.QUESTIONS_REPLIES,
         }
 
-        recommended = situation_map.get(situation.lower(), MilitaryClassic.THREE_STRATEGIES)
+        recommended = situation_map.get(
+            situation.lower(), MilitaryClassic.THREE_STRATEGIES
+        )
         self.wisdom.recommended_classic = recommended
         self.wisdom.current_element = self.CLASSIC_TO_ELEMENT.get(recommended)
 
@@ -213,7 +224,9 @@ class SevenClassicsSystem:
     def get_guidance(self, classic: MilitaryClassic | None = None) -> str:
         """Get wisdom guidance from a specific classic or recommended one."""
         if classic is None:
-            classic = self.wisdom.recommended_classic or MilitaryClassic.THREE_STRATEGIES
+            classic = (
+                self.wisdom.recommended_classic or MilitaryClassic.THREE_STRATEGIES
+            )
         return self.wisdom.guidance.get(classic, "Proceed with wisdom and caution.")
 
     def get_zodiac_core(self, classic: MilitaryClassic | None = None) -> str:
@@ -229,7 +242,7 @@ class SevenClassicsSystem:
 
         return f"""
 ⚔️ STRATEGIC REPORT (Seven Classics Integration)
-{'='*50}
+{"=" * 50}
 
 📊 FIVE FACTORS ASSESSMENT (Sun Tzu):
    道 Dao (Values):      {assessment.dao:.2f}
@@ -241,8 +254,8 @@ class SevenClassicsSystem:
    Total Score:          {assessment.total_score:.2f}
 
 📜 RECOMMENDED STRATEGY: {wisdom.recommended_strategy.value.upper()}
-   Classic: {wisdom.recommended_classic.value if wisdom.recommended_classic else 'N/A'}
-   Element: {wisdom.current_element.value[1] if wisdom.current_element else '☯️'} {wisdom.current_element.value[0] if wisdom.current_element else 'Balance'}
+   Classic: {wisdom.recommended_classic.value if wisdom.recommended_classic else "N/A"}
+   Element: {wisdom.current_element.value[1] if wisdom.current_element else "☯️"} {wisdom.current_element.value[0] if wisdom.current_element else "Balance"}
    Hexagram: #{wisdom.hexagram_number} {wisdom.hexagram_name}
 
 💡 GUIDANCE:
@@ -259,7 +272,7 @@ def strategic_assess(
     resources: float = 0.8,
     leadership: float = 0.9,
     methodology: float = 0.8,
-    situation: str = "strategy"
+    situation: str = "strategy",
 ) -> str:
     """
     Quick strategic assessment using Seven Classics wisdom.
@@ -294,28 +307,33 @@ def emit_strategy_event(classic: MilitaryClassic, strategy: StrategyLevel):
             ResonanceEvent,
             get_bus,
         )
+
         bus = get_bus()
-        bus.emit(ResonanceEvent(
-            source="wisdom.seven_classics",
-            event_type=EventType.DECISION_MADE,
-            data={
-                "classic": classic.value,
-                "strategy_level": strategy.value,
-                "timestamp": datetime.now().isoformat()
-            },
-            confidence=0.85
-        ))
+        bus.emit(
+            ResonanceEvent(
+                source="wisdom.seven_classics",
+                event_type=EventType.DECISION_MADE,
+                data={
+                    "classic": classic.value,
+                    "strategy_level": strategy.value,
+                    "timestamp": datetime.now().isoformat(),
+                },
+                confidence=0.85,
+            )
+        )
     except ImportError:
         pass
 
 
 if __name__ == "__main__":
     # Demo
-    logger.info(strategic_assess(
-        values=0.9,      # Well aligned
-        timing=0.7,      # Decent timing
-        resources=0.8,   # Good resources
-        leadership=0.9,  # Strong capability
-        methodology=0.8, # Clear approach
-        situation="strategy"
-    ))
+    logger.info(
+        strategic_assess(
+            values=0.9,  # Well aligned
+            timing=0.7,  # Decent timing
+            resources=0.8,  # Good resources
+            leadership=0.9,  # Strong capability
+            methodology=0.8,  # Clear approach
+            situation="strategy",
+        )
+    )

@@ -4,16 +4,21 @@
 Extracted from cli_app.py as part of B1 decomposition (v22 roadmap).
 All commands were previously defined inline in the 786-line cli_app.py.
 """
+
 from __future__ import annotations
 
 import click
 
 
-def register_session_matrix_commands(main: click.Group, get_memory_fn, status_command, json_dumps_fn) -> None:
+def register_session_matrix_commands(
+    main: click.Group, get_memory_fn, status_command, json_dumps_fn
+) -> None:
     """Register session, matrix, graph, and observe commands onto the main group."""
 
     @main.command()
-    @click.option("--output", "-o", default="memory_graph.html", help="Output file for the graph")
+    @click.option(
+        "--output", "-o", default="memory_graph.html", help="Output file for the graph"
+    )
     def graph(output: str) -> None:
         """Generate relationship graph for memories (v4.5.0)."""
         try:
@@ -22,8 +27,14 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
             links = []
             all_memories = memory.search(limit=200)
             for i, mem in enumerate(all_memories):
-                nodes.append({"id": mem.id, "title": mem.title or "Untitled", "group": str(mem.memory_type)})
-                for tag in (mem.tags or set()):
+                nodes.append(
+                    {
+                        "id": mem.id,
+                        "title": mem.title or "Untitled",
+                        "group": str(mem.memory_type),
+                    }
+                )
+                for tag in mem.tags or set():
                     links.append({"source": mem.id, "target": f"tag:{tag}", "value": 1})
             html_content = f"""<!DOCTYPE html>
 <html>
@@ -54,7 +65,9 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
 </html>"""
             with open(output, "w") as f:
                 f.write(html_content)
-            click.echo(f"✅ Graph generated: {output} ({len(nodes)} nodes, {len(links)} links)")
+            click.echo(
+                f"✅ Graph generated: {output} ({len(nodes)} nodes, {len(links)} links)"
+            )
         except Exception as e:
             click.echo(f"❌ Failed to generate graph: {e}", err=True)
 
@@ -65,10 +78,13 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
         click.echo("=" * 40)
         try:
             from whitemagic.maintenance.capability_harness import run_harness
+
             report = run_harness()
             passed = getattr(report, "passed", 0)
             failed = getattr(report, "failed", 0)
-            click.echo(f"\n✅ Session initialized with {passed}/{passed + failed} capabilities")
+            click.echo(
+                f"\n✅ Session initialized with {passed}/{passed + failed} capabilities"
+            )
         except (ImportError, ModuleNotFoundError) as e:
             click.echo(f"⚠️  Warning: {e}")
         click.echo("\n📚 Use 'wm tools' to see available commands")
@@ -108,7 +124,9 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
                 preview = str(mem.content)
                 if len(preview) > 80:
                     preview = preview[:77] + "..."
-                click.echo(f"{mem.accessed_at.isoformat()} | {mem.memory_type.name:<10} | {mem.id} | tags={list(mem.tags)}")
+                click.echo(
+                    f"{mem.accessed_at.isoformat()} | {mem.memory_type.name:<10} | {mem.id} | tags={list(mem.tags)}"
+                )
                 click.echo(f"  {preview}")
         except Exception as e:
             click.echo(f"⚠️  Matrix not available: {e}")
@@ -127,7 +145,9 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
                 preview = str(mem.content)
                 if len(preview) > 120:
                     preview = preview[:117] + "..."
-                click.echo(f"{mem.memory_type.name:<10} | {mem.id} | tags={list(mem.tags)}")
+                click.echo(
+                    f"{mem.memory_type.name:<10} | {mem.id} | tags={list(mem.tags)}"
+                )
                 click.echo(f"  {preview}")
             if not results:
                 click.echo("No matches found.")
@@ -201,21 +221,27 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
             table.add_column("Source", style="green")
             table.add_column("Data", style="white")
             table.add_column("Conf", justify="right", style="yellow")
-            for e in sorted(list(events), key=lambda ev:
-                ev.timestamp, reverse=True):
+            for e in sorted(list(events), key=lambda ev: ev.timestamp, reverse=True):
                 data_str = str(e.data)
                 if len(data_str) > 50:
                     data_str = data_str[:47] + "..."
                 table.add_row(
                     e.timestamp.strftime("%H:%M:%S.%f")[:-3],
-                    e.event_type.name if hasattr(e.event_type, "name") else str(e.event_type),
-                    e.source, data_str, f"{e.confidence:.2f}",
+                    e.event_type.name
+                    if hasattr(e.event_type, "name")
+                    else str(e.event_type),
+                    e.source,
+                    data_str,
+                    f"{e.confidence:.2f}",
                 )
             return table
 
         import importlib
+
         console = importlib.import_module("rich.console").Console()
-        console.print("[bold green]Starting observer... Press Ctrl+C to stop.[/bold green]")
+        console.print(
+            "[bold green]Starting observer... Press Ctrl+C to stop.[/bold green]"
+        )
         try:
             with Live(generate_table(), refresh_per_second=4, console=console) as live:
                 while True:

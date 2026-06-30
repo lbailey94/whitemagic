@@ -36,7 +36,9 @@ class TestModeDetection(unittest.TestCase):
         self.assertEqual(_detect_mode("", time_window="7d"), "temporal")
 
     def test_spatial_mode_when_coords_provided(self):
-        self.assertEqual(_detect_mode("test", coords=(0.1, 0.2, 0.3, 0.4, 0.5)), "spatial")
+        self.assertEqual(
+            _detect_mode("test", coords=(0.1, 0.2, 0.3, 0.4, 0.5)), "spatial"
+        )
 
     def test_hybrid_mode_default(self):
         self.assertEqual(_detect_mode("memory consolidation"), "hybrid")
@@ -120,32 +122,39 @@ class TestHandleWmRead(unittest.TestCase):
 
     def test_auto_mode_with_path_selects_codebase(self):
         """Auto mode with path should route to codebase."""
-        with patch(
-            "whitemagic.tools.handlers.wm_read._read_codebase"
-        ) as mock_cb:
-            mock_cb.return_value = {"status": "success", "mode": "codebase", "count": 0, "results": []}
+        with patch("whitemagic.tools.handlers.wm_read._read_codebase") as mock_cb:
+            mock_cb.return_value = {
+                "status": "success",
+                "mode": "codebase",
+                "count": 0,
+                "results": [],
+            }
             result = handle_wm_read(query="rust", mode="auto", path="/repo")
             self.assertEqual(result["mode"], "codebase")
             mock_cb.assert_called_once()
 
     def test_auto_mode_with_mem_id_selects_id(self):
         """Auto mode with mem_ prefix should route to id lookup."""
-        with patch(
-            "whitemagic.tools.handlers.wm_read._read_by_id"
-        ) as mock_id:
-            mock_id.return_value = {"status": "success", "mode": "id", "count": 0, "results": []}
+        with patch("whitemagic.tools.handlers.wm_read._read_by_id") as mock_id:
+            mock_id.return_value = {
+                "status": "success",
+                "mode": "id",
+                "count": 0,
+                "results": [],
+            }
             result = handle_wm_read(query="mem_abc123", mode="auto")
             self.assertEqual(result["mode"], "id")
             mock_id.assert_called_once()
 
     def test_auto_mode_default_selects_hybrid(self):
         """Auto mode with plain text query should route to hybrid."""
-        with patch(
-            "whitemagic.tools.handlers.wm_read._read_hybrid"
-        ) as mock_hybrid:
+        with patch("whitemagic.tools.handlers.wm_read._read_hybrid") as mock_hybrid:
             mock_hybrid.return_value = {
-                "status": "success", "mode": "hybrid", "count": 0,
-                "results": [], "strategy": "test",
+                "status": "success",
+                "mode": "hybrid",
+                "count": 0,
+                "results": [],
+                "strategy": "test",
             }
             result = handle_wm_read(query="memory consolidation", mode="auto")
             self.assertEqual(result["mode"], "hybrid")
@@ -153,12 +162,13 @@ class TestHandleWmRead(unittest.TestCase):
 
     def test_explicit_mode_is_respected(self):
         """Explicit mode should bypass auto-detection."""
-        with patch(
-            "whitemagic.tools.handlers.wm_read._read_lexical"
-        ) as mock_lex:
+        with patch("whitemagic.tools.handlers.wm_read._read_lexical") as mock_lex:
             mock_lex.return_value = {
-                "status": "success", "mode": "lexical", "count": 0,
-                "results": [], "strategy": "FTS5",
+                "status": "success",
+                "mode": "lexical",
+                "count": 0,
+                "results": [],
+                "strategy": "FTS5",
             }
             result = handle_wm_read(query="test", mode="lexical")
             self.assertEqual(result["mode"], "lexical")
@@ -185,8 +195,17 @@ class TestHandleWmReadStatus(unittest.TestCase):
     def test_status_lists_all_modes(self):
         result = handle_wm_read_status()
         expected_modes = [
-            "auto", "hybrid", "graph_walk", "semantic", "lexical",
-            "spatial", "constellation", "temporal", "codebase", "strata", "id",
+            "auto",
+            "hybrid",
+            "graph_walk",
+            "semantic",
+            "lexical",
+            "spatial",
+            "constellation",
+            "temporal",
+            "codebase",
+            "strata",
+            "id",
         ]
         self.assertEqual(result["modes"], expected_modes)
 

@@ -69,17 +69,17 @@ class KarmaEntry:
     """A single karma ledger entry with Merkle hash chain."""
 
     tool: str
-    declared_safety: str       # READ, WRITE, DELETE
-    actual_writes: int         # count of writes in the response
+    declared_safety: str  # READ, WRITE, DELETE
+    actual_writes: int  # count of writes in the response
     success: bool
     mismatch: bool
-    debt_delta: float          # karma debt change from this entry
+    debt_delta: float  # karma debt change from this entry
     timestamp: str
-    prev_hash: str = ""        # hash of previous entry (Merkle chain)
-    entry_hash: str = ""       # hash of this entry
-    ops_class: str = ""        # Edgerunner Violet: "red-ops", "blue-ops", or "" (normal)
-    signature: str = ""        # Ed25519 signature (base64)
-    key_id: str = ""           # signing key fingerprint
+    prev_hash: str = ""  # hash of previous entry (Merkle chain)
+    entry_hash: str = ""  # hash of this entry
+    ops_class: str = ""  # Edgerunner Violet: "red-ops", "blue-ops", or "" (normal)
+    signature: str = ""  # Ed25519 signature (base64)
+    key_id: str = ""  # signing key fingerprint
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -128,10 +128,6 @@ class KarmaLedger:
             self._storage_dir.mkdir(parents=True, exist_ok=True)
             self._load_recent()
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def record(
         self,
         tool: str,
@@ -162,7 +158,9 @@ class KarmaLedger:
 
         ts = datetime.now().isoformat()
         prev_hash = self._chain_head
-        payload = f"{tool}:{declared}:{actual_writes}:{success}:{mismatch}:{debt_delta}:{ts}"
+        payload = (
+            f"{tool}:{declared}:{actual_writes}:{success}:{mismatch}:{debt_delta}:{ts}"
+        )
         entry_hash = _hash_entry(payload, prev_hash)
 
         # ── Ed25519 signing (GAR Level 1 non-suppressibility) ──
@@ -210,6 +208,7 @@ class KarmaLedger:
         if debt_delta > 0:
             try:
                 from whitemagic.harmony.vector import get_harmony_vector
+
                 get_harmony_vector()  # debt is tracked inside the vector via record_call
             except (ImportError, ModuleNotFoundError):
                 pass
@@ -225,7 +224,9 @@ class KarmaLedger:
 
             # Top offenders
             offenders = sorted(
-                self._tool_debt.items(), key=lambda x: x[1], reverse=True,
+                self._tool_debt.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )[:10]
 
             return {
@@ -240,7 +241,8 @@ class KarmaLedger:
                         "calls": self._tool_calls.get(t, 0),
                         "mismatches": self._tool_mismatches.get(t, 0),
                     }
-                    for t, d in offenders if d > 0
+                    for t, d in offenders
+                    if d > 0
                 ],
                 "recent_entries": [e.to_dict() for e in recent[-20:]],
             }
@@ -351,10 +353,6 @@ class KarmaLedger:
             self._total_debt = max(0.0, self._total_debt - amount)
             return self._total_debt
 
-    # ------------------------------------------------------------------
-    # Persistence
-    # ------------------------------------------------------------------
-
     def _persist(self, entry: KarmaEntry) -> None:
         if not self._storage_dir:
             return
@@ -402,7 +400,12 @@ class KarmaLedger:
         # Rotate current → .1
         rotated = ledger_file.parent / "karma_ledger.1.jsonl"
         ledger_file.rename(rotated)
-        logger.info("Karma ledger rotated: %s → %s", ledger_file.name, rotated.name, exc_info=True)
+        logger.info(
+            "Karma ledger rotated: %s → %s",
+            ledger_file.name,
+            rotated.name,
+            exc_info=True,
+        )
         return True
 
     def rotation_stats(self) -> dict[str, Any]:
@@ -414,7 +417,9 @@ class KarmaLedger:
         try:
             if ledger_file.exists():
                 stats["current_size_bytes"] = ledger_file.stat().st_size
-                stats["current_size_mb"] = round(stats["current_size_bytes"] / 1024 / 1024, 2)
+                stats["current_size_mb"] = round(
+                    stats["current_size_bytes"] / 1024 / 1024, 2
+                )
             else:
                 stats["current_size_bytes"] = 0
         except OSError:
@@ -424,10 +429,12 @@ class KarmaLedger:
         for i in range(1, 10):
             rf = self._storage_dir / f"karma_ledger.{i}.jsonl"
             if rf.exists():
-                rotated_files.append({
-                    "file": rf.name,
-                    "size_bytes": rf.stat().st_size,
-                })
+                rotated_files.append(
+                    {
+                        "file": rf.name,
+                        "size_bytes": rf.stat().st_size,
+                    }
+                )
             else:
                 break
         stats["rotated_files"] = rotated_files
@@ -445,8 +452,7 @@ class KarmaLedger:
             lines = ledger_file.read_text(encoding="utf-8").strip().split("\n")
             # Only load last 1000 entries
             loaded = 0
-            for line in lines[-1000:
-                ]:
+            for line in lines[-1000:]:
                 if not line.strip():
                     continue
                 try:
@@ -464,14 +470,14 @@ class KarmaLedger:
             # Fix: restore chain head so new entries link correctly
             if self._entries:
                 self._chain_head = self._entries[-1].entry_hash
-            logger.info("Karma ledger: loaded %s entries, debt={self._total_debt:.1f}, head={self._chain_head[:16]}", loaded, exc_info=True)
+            logger.info(
+                "Karma ledger: loaded %s entries, debt={self._total_debt:.1f}, head={self._chain_head[:16]}",
+                loaded,
+                exc_info=True,
+            )
         except Exception as e:
             logger.debug("Karma ledger load failed: %s", e, exc_info=True)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _ledger: KarmaLedger | None = None
 _ledger_lock = threading.Lock()
@@ -485,6 +491,7 @@ def get_karma_ledger() -> KarmaLedger:
             if _ledger is None:
                 try:
                     from whitemagic.config.paths import WM_ROOT
+
                     storage = WM_ROOT / "dharma"
                 except (ImportError, ModuleNotFoundError):
                     storage = None

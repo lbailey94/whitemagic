@@ -22,7 +22,6 @@ class CommandNotAllowedError(Exception):
     """Raised when attempting to execute a non-allowed command."""
 
 
-
 class SafeExecutor:
     """Secure subprocess execution with validation.
 
@@ -39,20 +38,40 @@ class SafeExecutor:
         # Version control
         "git",
         # Python
-        "python", "python3", "pip", "pip3",
+        "python",
+        "python3",
+        "pip",
+        "pip3",
         # Node.js
-        "node", "npm", "npx", "yarn",
+        "node",
+        "npm",
+        "npx",
+        "yarn",
         # WhiteMagic CLI
-        "wm", "whitemagic",
+        "wm",
+        "whitemagic",
         # Common utilities (read-only)
-        "ls", "cat", "grep", "find", "echo", "pwd",
-        "head", "tail", "wc", "sort", "uniq",
+        "ls",
+        "cat",
+        "grep",
+        "find",
+        "echo",
+        "pwd",
+        "head",
+        "tail",
+        "wc",
+        "sort",
+        "uniq",
         # Safe file creation (no overwrites/moves)
-        "mkdir", "touch",
+        "mkdir",
+        "touch",
         # Testing
-        "pytest", "jest", "mocha",
+        "pytest",
+        "jest",
+        "mocha",
         # Sandboxing
-        "firejail", "bwrap",
+        "firejail",
+        "bwrap",
     }
 
     # Commands that require explicit opt-in via additional_allowed.
@@ -63,13 +82,29 @@ class SafeExecutor:
 
     # Commands that should NEVER be allowed
     BLOCKED_COMMANDS = {
-        "rm", "rmdir", "del", "deltree",  # Deletion
-        "dd", "mkfs", "fdisk",  # Disk operations
-        "chmod", "chown", "chgrp",  # Permission changes
-        "sudo", "su", "doas",  # Privilege escalation
-        "curl", "wget", "nc", "netcat",  # Network (can be dangerous)
-        "eval", "exec", "source",  # Code execution
-        "shutdown", "reboot", "halt",  # System control
+        "rm",
+        "rmdir",
+        "del",
+        "deltree",  # Deletion
+        "dd",
+        "mkfs",
+        "fdisk",  # Disk operations
+        "chmod",
+        "chown",
+        "chgrp",  # Permission changes
+        "sudo",
+        "su",
+        "doas",  # Privilege escalation
+        "curl",
+        "wget",
+        "nc",
+        "netcat",  # Network (can be dangerous)
+        "eval",
+        "exec",
+        "source",  # Code execution
+        "shutdown",
+        "reboot",
+        "halt",  # System control
     }
 
     def __init__(
@@ -98,7 +133,8 @@ class SafeExecutor:
         # Log initialization
         logger.info(
             "SafeExecutor initialized with %s allowed commands",
-         len(self.allowed_commands))
+            len(self.allowed_commands),
+        )
 
     def _parse_command(self, command: str | list[str]) -> list[str]:
         """Parse command into argument array.
@@ -192,11 +228,12 @@ class SafeExecutor:
         exec_env = None
         if env is not None:
             import os
+
             exec_env = os.environ.copy()
             exec_env.update(env)
 
         # Log execution
-        logger.info("Executing: %s", ' '.join(cmd_array))
+        logger.info("Executing: %s", " ".join(cmd_array))
         if cwd:
             logger.debug("  Working directory: %s", cwd)
 
@@ -217,10 +254,18 @@ class SafeExecutor:
             return result
 
         except subprocess.TimeoutExpired:
-            logger.warning("Command timed out after %ss: {' '.join(cmd_array)}", timeout, exc_info=True)
+            logger.warning(
+                "Command timed out after %ss: {' '.join(cmd_array)}",
+                timeout,
+                exc_info=True,
+            )
             raise
         except subprocess.CalledProcessError as e:
-            logger.error("Command failed with code %s: {' '.join(cmd_array)}", e.returncode, exc_info=True)
+            logger.error(
+                "Command failed with code %s: {' '.join(cmd_array)}",
+                e.returncode,
+                exc_info=True,
+            )
             raise
         except Exception as e:
             logger.error("Command execution error: %s", e, exc_info=True)
@@ -251,10 +296,11 @@ class SafeExecutor:
         exec_env = None
         if env is not None:
             import os
+
             exec_env = os.environ.copy()
             exec_env.update(env)
 
-        logger.info("Starting async: %s", ' '.join(cmd_array))
+        logger.info("Starting async: %s", " ".join(cmd_array))
 
         # Start process
         return subprocess.Popen(

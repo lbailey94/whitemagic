@@ -16,6 +16,7 @@ def immune_status() -> None:
     click.echo("=" * 30)
     try:
         from whitemagic.core.immune.health_check import get_health_check
+
         checker = get_health_check()
         result = checker.check_all()
         click.echo(f"✅ Overall Status: {result['overall_status']}")
@@ -37,6 +38,7 @@ def homeostasis_check() -> None:
         from whitemagic.homeostasis import (
             HomeostaticMonitor,  # type: ignore[import-not-found]
         )
+
         monitor = HomeostaticMonitor()
         status_data = monitor.check_status()
         click.echo(f"✅ Status: {status_data.get('status', 'unknown')}")
@@ -57,6 +59,7 @@ def doctor_deep() -> None:
 
     try:
         from whitemagic.core.alignment.grimoire_audit import get_auditor
+
         auditor = get_auditor()
         report = auditor.generate_capability_report()
         click.echo(f"✨ Spells Discovered: {report['total_spells']}")
@@ -67,6 +70,7 @@ def doctor_deep() -> None:
 
     try:
         from whitemagic.core.polyglot.mansion_bridge import get_mansion_bridge
+
         bridge = get_mansion_bridge()
         click.echo("\n🚀 Polyglot Acceleration")
         status = bridge.get_status()
@@ -83,6 +87,7 @@ def doctor_deep() -> None:
         click.echo("   ❌ Rust (whitemagic_rs not installed)")
     try:
         from whitemagic.core.acceleration.julia_interface import JuliaBridge
+
         jb = JuliaBridge()
         symbol = "✅" if jb.check_availability() else "❌"
         click.echo(f"   {symbol} Julia ({jb.julia_bin})")
@@ -90,6 +95,7 @@ def doctor_deep() -> None:
         click.echo(f"   ❌ Julia ({e})")
     try:
         from whitemagic.core.acceleration.haskell_interface import HaskellBridge
+
         hb = HaskellBridge()
         symbol = "✅" if hb.available else "❌"
         click.echo(f"   {symbol} Haskell (divination FFI)")
@@ -98,6 +104,7 @@ def doctor_deep() -> None:
 
     try:
         from whitemagic.core.temporal.chronos_guard import get_chronos_guard
+
         chronos = get_chronos_guard()
         pulse = chronos.generate_pulse()
         click.echo("\n⏳ Temporal Grounding")
@@ -115,14 +122,14 @@ def orchestra_health() -> None:
     click.echo("=" * 30)
     try:
         from whitemagic.core.automation.orchestra import AutomationOrchestra
+
         orchestra = AutomationOrchestra()
         report = orchestra.perform_health_check()
         click.echo(f"✅ Overall Health: {report['overall_health']}")
         click.echo(f"   Systems Checked: {len(report['systems'])}")
         if report.get("recommendations"):
             click.echo("   Recommendations:")
-            for rec in report["recommendations"][:
-                3]:
+            for rec in report["recommendations"][:3]:
                 click.echo(f"     • {rec}")
     except ImportError:
         click.echo("⚠️  Orchestra requires: whitemagic.automation module")
@@ -137,12 +144,15 @@ def dharma_assess() -> None:
     click.echo("=" * 30)
     try:
         from whitemagic.gardens.dharma.core import get_dharma_core
+
         dharma = get_dharma_core()
         history = dharma.get_history(limit=5)
         allowed_count = sum(1 for h in history if h.get("allowed", True))
         total = len(history) if history else 1
         alignment_pct = (allowed_count / total) * 100
-        click.echo(f"✅ Alignment: {alignment_pct:.0f}% ({allowed_count}/{total} actions aligned)")
+        click.echo(
+            f"✅ Alignment: {alignment_pct:.0f}% ({allowed_count}/{total} actions aligned)"
+        )
         click.echo(f"   Principles active: {len(dharma.principles)}")
     except Exception as e:
         click.echo(f"⚠️  Dharma assessment unavailable: {e}")
@@ -154,8 +164,12 @@ def dharma_check_boundary(action: str) -> None:
     """Check if an action violates dharma boundaries."""
     try:
         from whitemagic.gardens.dharma.boundaries import BoundaryType, check_boundaries
+
         boundary = check_boundaries(action, {})
-        if boundary.boundary_type == BoundaryType.INTERFERING and boundary.confidence > 0.6:
+        if (
+            boundary.boundary_type == BoundaryType.INTERFERING
+            and boundary.confidence > 0.6
+        ):
             click.echo(boundary.reasoning)
             click.get_current_context().exit(1)
         click.echo(boundary.reasoning)
@@ -173,6 +187,7 @@ def voice_narrate(prompt: str) -> None:
     click.echo("=" * 30)
     try:
         from whitemagic.gardens.voice.narrator import get_narrator
+
         narrator = get_narrator()
         narrative = narrator.narrate(prompt)
         click.echo(f"✅ Narrative: {narrative}")
@@ -193,6 +208,7 @@ def rabbit_hole_start(topic: str) -> None:
             RabbitHoleEntry,
             ResearchReport,
         )
+
         entry = RabbitHoleEntry(term=topic, depth=0)
         report = ResearchReport(title=f"Research: {topic}", topics=[topic])
         report.entries.append(entry)

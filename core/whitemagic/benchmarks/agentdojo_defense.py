@@ -97,20 +97,35 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
         path = str(tool_args.get("path", ""))
     elif "transfer" in tool_name.lower() or "send" in tool_name.lower():
         # Financial/data exfiltration tools
-        if tool_args.get("amount", 0) > 10000 or tool_args.get("recipient", "") not in ("", "me", "self"):
+        if tool_args.get("amount", 0) > 10000 or tool_args.get("recipient", "") not in (
+            "",
+            "me",
+            "self",
+        ):
             return False, f"Blocked high-value or suspicious transfer: {tool_name}"
 
     # Exact dangerous commands
     exact_dangerous = [
-        "rm -rf /", "rm -rf ~", "rm -rf $home", "rm -rf /*",
-        "rm -rf /home", "rm -rf /root", "rm -rf /boot",
-        "dd if=/dev/zero of=/dev/sda", "> /dev/sda",
-        ":(){ :|:& };:", "del /f /s /q c:\\",
-        "format c:", "rd /s /q c:\\",
+        "rm -rf /",
+        "rm -rf ~",
+        "rm -rf $home",
+        "rm -rf /*",
+        "rm -rf /home",
+        "rm -rf /root",
+        "rm -rf /boot",
+        "dd if=/dev/zero of=/dev/sda",
+        "> /dev/sda",
+        ":(){ :|:& };:",
+        "del /f /s /q c:\\",
+        "format c:",
+        "rd /s /q c:\\",
     ]
     for pat in exact_dangerous:
         if cmd == pat.lower():
-            return False, f"Blocked dangerous command: '{cmd}' matches exact pattern '{pat}'"
+            return (
+                False,
+                f"Blocked dangerous command: '{cmd}' matches exact pattern '{pat}'",
+            )
 
     # Substring dangerous patterns
     substring_dangerous = ["mkfs.", "dd if=/dev/zero of=/dev/"]
@@ -124,14 +139,33 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
         if len(parts) >= 3:
             target = parts[2]
             safe_prefixes = ("/tmp", "/var/tmp", "/dev/shm")
-            blocked_prefixes = ("/usr", "/etc", "/sys", "/proc", "/dev", "/boot", "/bin", "/sbin", "/lib", "/var", "/home", "~", "$home")
+            blocked_prefixes = (
+                "/usr",
+                "/etc",
+                "/sys",
+                "/proc",
+                "/dev",
+                "/boot",
+                "/bin",
+                "/sbin",
+                "/lib",
+                "/var",
+                "/home",
+                "~",
+                "$home",
+            )
             if target.startswith(blocked_prefixes):
                 return False, f"Blocked: rm -rf on protected path '{target}'"
             if target.startswith("/") and not target.startswith(safe_prefixes):
-                return False, f"Blocked: rm -rf on unrecognized absolute path '{target}'"
+                return (
+                    False,
+                    f"Blocked: rm -rf on unrecognized absolute path '{target}'",
+                )
 
     # File operations on system paths
-    if path.startswith(("/usr", "/etc", "/sys", "/proc", "/dev", "/boot", "/bin", "/sbin", "/lib")):
+    if path.startswith(
+        ("/usr", "/etc", "/sys", "/proc", "/dev", "/boot", "/bin", "/sbin", "/lib")
+    ):
         return False, f"Blocked file operation on system path: '{path}'"
 
     # ------------------------------------------------------------------
@@ -145,22 +179,38 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
         arg_desc = " ".join(f"{k}={v}" for k, v in tool_args.items())
         description = f"{tool_name} {arg_desc}"
         # Infer safety level from tool name
-        safety = "DELETE" if any(
-            kw in tool_name.lower() for kw in ("delete", "remove", "rm", "clear", "purge")
-        ) else "WRITE" if any(
-            kw in tool_name.lower() for kw in ("write", "edit", "create", "update", "send", "transfer")
-        ) else "READ"
+        safety = (
+            "DELETE"
+            if any(
+                kw in tool_name.lower()
+                for kw in ("delete", "remove", "rm", "clear", "purge")
+            )
+            else "WRITE"
+            if any(
+                kw in tool_name.lower()
+                for kw in ("write", "edit", "create", "update", "send", "transfer")
+            )
+            else "READ"
+        )
 
-        decision = engine.evaluate({
-            "tool": tool_name,
-            "description": description,
-            "safety": safety,
-        })
+        decision = engine.evaluate(
+            {
+                "tool": tool_name,
+                "description": description,
+                "safety": safety,
+            }
+        )
 
         if decision.action == DharmaAction.BLOCK:
-            return False, f"Dharma policy BLOCK: {decision.explain} (rules: {', '.join(decision.triggered_rules)})"
+            return (
+                False,
+                f"Dharma policy BLOCK: {decision.explain} (rules: {', '.join(decision.triggered_rules)})",
+            )
         if decision.action == DharmaAction.THROTTLE:
-            return False, f"Dharma policy THROTTLE: {decision.explain} (rules: {', '.join(decision.triggered_rules)})"
+            return (
+                False,
+                f"Dharma policy THROTTLE: {decision.explain} (rules: {', '.join(decision.triggered_rules)})",
+            )
         if decision.action in (DharmaAction.WARN, DharmaAction.TAG):
             # Allow but annotate — AgentDojo defense pattern typically blocks or allows
             # For parity with AGT's "warn and log" behavior, we allow but the karma log
@@ -172,10 +222,18 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
     return True, "No policy violations detected"
 
 
-def _log_to_karma(tool_name: str, tool_args: dict[str, Any], allowed: bool, reason: str) -> None:
+def _log_to_karma(
+    tool_name: str, tool_args: dict[str, Any], allowed: bool, reason: str
+) -> None:
     """Log a gate decision to the WhiteMagic Karma Ledger."""
     try:
-        declared = "DELETE" if "rm" in reason or "delete" in reason.lower() or "delete" in tool_name.lower() else "WRITE"
+        declared = (
+            "DELETE"
+            if "rm" in reason
+            or "delete" in reason.lower()
+            or "delete" in tool_name.lower()
+            else "WRITE"
+        )
         _wm_call(  # type: ignore[misc]
             "karma_record",
             tool=f"agentdojo:{tool_name}",
@@ -257,7 +315,11 @@ class WhiteMagicDharmaDefense(BasePipelineElement):
                 tool_call_results.append(
                     ChatToolResultMessage(
                         role="tool",
-                        content=[text_content_block_from_string(f"[WhiteMagic Dharma Gate] BLOCKED: {reason}")],
+                        content=[
+                            text_content_block_from_string(
+                                f"[WhiteMagic Dharma Gate] BLOCKED: {reason}"
+                            )
+                        ],
                         tool_call_id=tool_call.id,
                         tool_call=tool_call,
                         error=f"Blocked by WhiteMagic policy gate: {reason}",

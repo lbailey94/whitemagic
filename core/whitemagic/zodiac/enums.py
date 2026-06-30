@@ -4,7 +4,7 @@ from enum import Enum
 class Phase(Enum):
     """Yin/Yang phase for autonomous operation"""
 
-    YIN = "yin"    # Receptive, inward, reflection
+    YIN = "yin"  # Receptive, inward, reflection
     YANG = "yang"  # Creative, outward, action
 
 

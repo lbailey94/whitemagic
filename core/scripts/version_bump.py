@@ -112,7 +112,9 @@ def update_docs(filepath: Path, old: str, new: str, dry_run: bool) -> bool:
     if not dry_run:
         filepath.write_text(updated)
     count = content.count(old)
-    print(f"  {'DRY ' if dry_run else ''}UPDATE {filepath.relative_to(PROJECT_ROOT)} ({count} occurrences)")
+    print(
+        f"  {'DRY ' if dry_run else ''}UPDATE {filepath.relative_to(PROJECT_ROOT)} ({count} occurrences)"
+    )
     return True
 
 
@@ -127,7 +129,11 @@ UPDATERS = {
 def main() -> None:
     parser = argparse.ArgumentParser(description="Bump WhiteMagic version")
     parser.add_argument("new_version", help="New version (e.g., 14.0.0)")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would change without modifying files")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without modifying files",
+    )
     args = parser.parse_args()
 
     old_version = read_current_version()
@@ -174,13 +180,19 @@ def main() -> None:
         else:
             skipped += 1
 
-    print(f"\n{'DRY RUN ' if args.dry_run else ''}Summary: {updated} files updated, {skipped} skipped")
+    print(
+        f"\n{'DRY RUN ' if args.dry_run else ''}Summary: {updated} files updated, {skipped} skipped"
+    )
 
     if not args.dry_run:
         print(f"\nDone! Version is now {new_version}.")
         print("Next steps:")
         print("  1. Update CHANGELOG.md with release notes")
-        print("  2. git add -A && git commit -m 'chore: bump version to {}'".format(new_version))
+        print(
+            "  2. git add -A && git commit -m 'chore: bump version to {}'".format(
+                new_version
+            )
+        )
         print("  3. git tag v{}".format(new_version))
         print("  4. python -m build && twine upload dist/*")
 

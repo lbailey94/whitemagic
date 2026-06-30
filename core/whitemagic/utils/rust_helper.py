@@ -24,6 +24,7 @@ def is_rust_available() -> bool:
     if _rust_available is None:
         try:
             import whitemagic_rs
+
             _rust_available = True
             _rust_module = whitemagic_rs
             logger.debug("✅ Rust bridge available")
@@ -40,6 +41,7 @@ def get_rust_module() -> Any | None:
     if _rust_module is None:
         if is_rust_available():
             import whitemagic_rs
+
             _rust_module = whitemagic_rs
     return _rust_module
 
@@ -66,7 +68,12 @@ def require_rust(feature_name: str = "this feature") -> Any:
     return module
 
 
-def rust_fallback(rust_fn: Callable[..., Any], python_fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+def rust_fallback(
+    rust_fn: Callable[..., Any],
+    python_fn: Callable[..., Any],
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
     """Execute Rust function if available, fallback to Python.
 
     Args:
@@ -82,7 +89,11 @@ def rust_fallback(rust_fn: Callable[..., Any], python_fn: Callable[..., Any], *a
         try:
             return rust_fn(*args, **kwargs)
         except Exception as e:
-            logger.warning("Rust implementation failed: %s, falling back to Python", e, exc_info=True)
+            logger.warning(
+                "Rust implementation failed: %s, falling back to Python",
+                e,
+                exc_info=True,
+            )
             return python_fn(*args, **kwargs)
     else:
         return python_fn(*args, **kwargs)

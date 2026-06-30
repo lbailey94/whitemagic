@@ -1,4 +1,5 @@
 """Tests for Objective K — Emotional Valence as Utility Signal."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.valence_utility import ValenceUtilityTracker
@@ -24,7 +25,9 @@ class TestRPE:
 class TestValenceTracker:
     def test_record_outcome(self):
         tracker = ValenceUtilityTracker()
-        record = tracker.record_outcome("h1", prediction=0.3, actual=0.8, category="quality")
+        record = tracker.record_outcome(
+            "h1", prediction=0.3, actual=0.8, category="quality"
+        )
         assert record.rpe == 0.5
         assert record.valence_delta > 0
 
@@ -60,7 +63,9 @@ class TestValenceTracker:
         for _ in range(5):
             tracker.record_outcome("h1", prediction=0.2, actual=1.0, category="quality")
         for _ in range(5):
-            tracker.record_outcome("h2", prediction=0.8, actual=0.0, category="performance")
+            tracker.record_outcome(
+                "h2", prediction=0.8, actual=0.0, category="performance"
+            )
         prefs = tracker.get_preferences()
         # Quality should be preferred over performance
         assert prefs["quality"] > prefs["performance"]

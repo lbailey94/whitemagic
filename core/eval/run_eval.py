@@ -67,7 +67,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--state-root", help="Override WM_STATE_ROOT for this run.")
     p.add_argument("--silent-init", action="store_true", help="Set WM_SILENT_INIT=1.")
     p.add_argument("--now", help="ISO timestamp override for deterministic runs.")
-    p.add_argument("--out", help="Write report.json into this directory (default: $WM_STATE_ROOT/artifacts/eval/<ts>/).")
+    p.add_argument(
+        "--out",
+        help="Write report.json into this directory (default: $WM_STATE_ROOT/artifacts/eval/<ts>/).",
+    )
     return p.parse_args(argv)
 
 
@@ -129,7 +132,9 @@ def main(argv: list[str]) -> int:
         if out.get("status") != "error":
             raise RuntimeError("manifest(invalid) expected status=error")
         if out.get("error_code") != "invalid_params":
-            raise RuntimeError(f"manifest(invalid) expected error_code=invalid_params got {out.get('error_code')}")
+            raise RuntimeError(
+                f"manifest(invalid) expected error_code=invalid_params got {out.get('error_code')}"
+            )
         return out
 
     run("invalid_params_manifest", _invalid_params_manifest_scenario)
@@ -165,7 +170,9 @@ def main(argv: list[str]) -> int:
         if mem_id_1 != mem_id_2:
             raise RuntimeError(f"idempotency mismatch: {mem_id_1} != {mem_id_2}")
         if (second.get("side_effects") or {}).get("idempotency_replay") is not True:
-            raise RuntimeError("missing side_effects.idempotency_replay == true on replay")
+            raise RuntimeError(
+                "missing side_effects.idempotency_replay == true on replay"
+            )
 
         return second, {"first": first, "second": second}
 
@@ -191,7 +198,9 @@ def main(argv: list[str]) -> int:
         ts = now or "2026-01-01T00:00:00Z"
         out = call_tool("capabilities", include_tools=False, include_env=False, now=ts)
         if out.get("timestamp") != ts:
-            raise RuntimeError(f"timestamp mismatch: expected {ts} got {out.get('timestamp')}")
+            raise RuntimeError(
+                f"timestamp mismatch: expected {ts} got {out.get('timestamp')}"
+            )
         return out
 
     run("now_override_timestamp", _now_scenario)
@@ -203,7 +212,10 @@ def main(argv: list[str]) -> int:
         out_dir = ARTIFACTS_DIR / "eval" / (now or time.strftime("%Y%m%dT%H%M%S"))
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "report.json"
-    out_path.write_text(json.dumps(report, indent=2, sort_keys=True, ensure_ascii=True) + "\n", encoding="utf-8")
+    out_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True, ensure_ascii=True) + "\n",
+        encoding="utf-8",
+    )
 
     print(str(out_path))
     return 0 if report.get("ok") else 2

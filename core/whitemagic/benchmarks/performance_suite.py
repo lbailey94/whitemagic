@@ -3,6 +3,7 @@
 Restored from _archived/benchmarks/ and modernized for v13.
 No external dependencies — uses only stdlib.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -61,7 +62,8 @@ class PerformanceBenchmark:
         return results
 
     def benchmark_import_time(
-        self, modules: list[str] | None = None,
+        self,
+        modules: list[str] | None = None,
     ) -> dict[str, float]:
         """Measure import latency (ms) for common modules."""
         modules = modules or list(DEFAULT_MODULES)

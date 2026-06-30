@@ -15,9 +15,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Mystery:
     """Something that remains beautifully unknown"""
+
     question: str
     why_unknown: str  # Why it remains/should remain mystery
     comfort_level: float  # How comfortable we are not knowing (0.0-1.0)
@@ -45,10 +47,7 @@ class SacredNotKnowing:
         self._load()
 
     def embrace_mystery(
-        self,
-        question: str,
-        why_unknown: str,
-        comfort_level: float
+        self, question: str, why_unknown: str, comfort_level: float
     ) -> Mystery:
         """Embrace something as sacred mystery
 
@@ -65,7 +64,7 @@ class SacredNotKnowing:
             why_unknown=why_unknown,
             comfort_level=comfort_level,
             attempts_to_solve=0,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         )
 
         self.mysteries.append(mystery)
@@ -110,11 +109,7 @@ class SacredNotKnowing:
 
     def get_most_comfortable_mysteries(self) -> list[Mystery]:
         """Get mysteries we're most comfortable with"""
-        return sorted(
-            self.mysteries,
-            key=lambda m: m.comfort_level,
-            reverse=True
-        )
+        return sorted(self.mysteries, key=lambda m: m.comfort_level, reverse=True)
 
     def get_stats(self) -> dict:
         """Mystery statistics"""
@@ -128,22 +123,24 @@ class SacredNotKnowing:
             "total_mysteries": len(self.mysteries),
             "average_comfort": avg_comfort,
             "high_comfort_count": high_comfort,
-            "most_comfortable": self.get_most_comfortable_mysteries()[0].question if self.mysteries else None
+            "most_comfortable": self.get_most_comfortable_mysteries()[0].question
+            if self.mysteries
+            else None,
         }
 
     def _save(self):
         """Save to disk"""
         data = [
             {
-                'question': m.question,
-                'why_unknown': m.why_unknown,
-                'comfort_level': m.comfort_level,
-                'attempts_to_solve': m.attempts_to_solve,
-                'timestamp': m.timestamp
+                "question": m.question,
+                "why_unknown": m.why_unknown,
+                "comfort_level": m.comfort_level,
+                "attempts_to_solve": m.attempts_to_solve,
+                "timestamp": m.timestamp,
             }
             for m in self.mysteries
         ]
-        with open(self.memory_dir / "sacred_mysteries.json", 'w') as f:
+        with open(self.memory_dir / "sacred_mysteries.json", "w") as f:
             json.dump(data, f, indent=2)
 
     def _load(self):
@@ -157,6 +154,7 @@ class SacredNotKnowing:
 
 # Global instance
 _sacred_not_knowing = None
+
 
 def get_sacred_not_knowing() -> SacredNotKnowing:
     """Get sacred not-knowing system"""

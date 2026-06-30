@@ -47,6 +47,7 @@ Authority comes from knowing the source.
                 from whitemagic.core.intelligence.insight_pipeline import (
                     get_insight_pipeline,
                 )
+
                 pipeline = get_insight_pipeline()
                 briefing = pipeline.generate_briefing(
                     serendipity_count=call.state_vector.get("serendipity_count", 3),
@@ -56,7 +57,9 @@ Authority comes from knowing the source.
                     "garden": self.garden,
                     "action": "intelligence_briefing",
                     "briefing": briefing.to_dict(),
-                    "text_summary": briefing.format_text(max_items=call.state_vector.get("max_items", 10)),
+                    "text_summary": briefing.format_text(
+                        max_items=call.state_vector.get("max_items", 10)
+                    ),
                     "status": "governing",
                 }
             except Exception as e:
@@ -74,6 +77,7 @@ Authority comes from knowing the source.
                 from whitemagic.core.intelligence.synthesis.predictive_engine import (
                     get_predictive_engine,
                 )
+
                 engine = get_predictive_engine()
                 report = engine.predict()
                 return {
@@ -82,10 +86,15 @@ Authority comes from knowing the source.
                     "action": "predict",
                     "prediction_count": len(report.predictions),
                     "predictions": [
-                        {"title": p.title, "confidence": p.confidence.value if hasattr(p.confidence, 'value') else str(p.confidence),
-                         "impact": p.impact_score, "horizon": p.time_horizon}
-                        for p in report.predictions[:
-                            10]
+                        {
+                            "title": p.title,
+                            "confidence": p.confidence.value
+                            if hasattr(p.confidence, "value")
+                            else str(p.confidence),
+                            "impact": p.impact_score,
+                            "horizon": p.time_horizon,
+                        }
+                        for p in report.predictions[:10]
                     ],
                     "velocity": report.velocity_metrics,
                     "gaps": report.knowledge_gaps[:5],
@@ -104,6 +113,7 @@ Authority comes from knowing the source.
         if "search_memories" in call.task or "memory_search" in call.task:
             try:
                 from whitemagic.core.memory.manager import MemoryManager
+
                 manager = MemoryManager()
 
                 query = call.state_vector.get("query", "")
@@ -118,7 +128,9 @@ Authority comes from knowing the source.
                     "garden": self.garden,
                     "depth_accessed": True,
                     "memories_retrieved": len(display_results),
-                    "top_results": [m.get("entry", {}).get("title") for m in display_results],
+                    "top_results": [
+                        m.get("entry", {}).get("title") for m in display_results
+                    ],
                     "status": "governing_memory",
                 }
             except ImportError:
@@ -130,6 +142,7 @@ Authority comes from knowing the source.
                 from whitemagic.core.intelligence.synthesis.serendipity_engine import (
                     get_serendipity_engine,
                 )
+
                 serendipity = get_serendipity_engine()
 
                 count = call.state_vector.get("count", 5)
@@ -150,8 +163,14 @@ Authority comes from knowing the source.
                     "action": "serendipity_surface",
                     "mode": mode,
                     "surfaced_count": len(memories),
-                    "memories": [{"title": m.title, "reason": m.reason, "gravity": m.relevance_score}
-                                 for m in memories],
+                    "memories": [
+                        {
+                            "title": m.title,
+                            "reason": m.reason,
+                            "gravity": m.relevance_score,
+                        }
+                        for m in memories
+                    ],
                     "status": "deep_discovery",
                 }
             except ImportError:
@@ -163,6 +182,7 @@ Authority comes from knowing the source.
             "governance_active": True,
             "status": "measuring",
         }
+
 
 class OxGana(BaseGana):
     """Ox (牛 Niu) - Endurance.
@@ -192,9 +212,15 @@ Endurance is a form of reverence.
         """Execute watchdog and temporal grounding logic."""
 
         # Temporal context tasks
-        if call.task in ["get_system_time", "get_temporal_context", "what_time", "when"]:
+        if call.task in [
+            "get_system_time",
+            "get_temporal_context",
+            "what_time",
+            "when",
+        ]:
             try:
                 from whitemagic.core.temporal import get_temporal_context
+
                 ctx = get_temporal_context()
                 return {
                     "mansion": self.mansion.name,
@@ -213,6 +239,7 @@ Endurance is a form of reverence.
         if call.task in ["start_session", "set_phase"]:
             try:
                 from whitemagic.core.temporal import get_temporal_context_manager
+
                 mgr = get_temporal_context_manager()
                 if call.task == "start_session":
                     mgr.start_session()
@@ -232,6 +259,7 @@ Endurance is a form of reverence.
         # Health monitoring
         try:
             from whitemagic.core.health_monitor import HealthMonitor
+
             monitor = HealthMonitor()
             status = monitor.check_system_health()
             return {
@@ -252,6 +280,7 @@ Endurance is a form of reverence.
             "load_capacity": "high",
             "status": "enduring",
         }
+
 
 class GirlGana(BaseGana):
     """Girl (女 Nü) - Nurture.
@@ -280,6 +309,7 @@ Growth happens in connection.
         """Execute learning logic."""
         try:
             from whitemagic.core.user import get_user_manager
+
             user_mgr = get_user_manager()
 
             action = call.state_vector.get("action", "learn")
@@ -313,6 +343,7 @@ Growth happens in connection.
             "status": "nurturing",
         }
 
+
 class VoidGana(BaseGana):
     """Void (虚 Xu) - Emptiness.
 
@@ -345,6 +376,7 @@ Usefulness comes from what is not there.
                 from whitemagic.core.intelligence.agentic.emergence_engine import (
                     get_emergence_engine,
                 )
+
                 engine = get_emergence_engine()
                 insights = engine.scan_for_emergence()
                 past = engine.get_insights(limit=5)
@@ -372,6 +404,7 @@ Usefulness comes from what is not there.
                 from whitemagic.core.intelligence.synthesis.kaizen_engine import (
                     get_kaizen_engine,
                 )
+
                 engine = get_kaizen_engine()  # type: ignore[assignment]
 
                 auto_fix = call.state_vector.get("auto_fix", False)
@@ -392,7 +425,9 @@ Usefulness comes from what is not there.
                         "garden": self.garden,
                         "kaizen_run": True,
                         "proposals_count": len(report.proposals),
-                        "breakdown": {cat: len(items) for cat, items in report.by_category.items()},
+                        "breakdown": {
+                            cat: len(items) for cat, items in report.by_category.items()
+                        },
                         "status": "analyzed",
                     }
             except ImportError:
@@ -415,6 +450,7 @@ Usefulness comes from what is not there.
             "optimization": "idle",
             "status": "empty",
         }
+
 
 class RoofGana(BaseGana):
     """Roof (危 Wei) - Shelter.
@@ -444,12 +480,25 @@ The cycle completes to begin again.
         if "manage_zodiac" in call.task or "zodiac" in call.task:
             try:
                 from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
                 cores = get_zodiac_cores()
 
                 # Active cores check
                 active = []
-                for sign in ["aries", "taurus", "gemini", "cancer", "leo", "virgo",
-                             "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"]:
+                for sign in [
+                    "aries",
+                    "taurus",
+                    "gemini",
+                    "cancer",
+                    "leo",
+                    "virgo",
+                    "libra",
+                    "scorpio",
+                    "sagittarius",
+                    "capricorn",
+                    "aquarius",
+                    "pisces",
+                ]:
                     c = cores.get_core(sign)
                     if c and c.activation_count > 0:
                         active.append(sign)
@@ -472,6 +521,7 @@ The cycle completes to begin again.
             "integration_status": "unified",
             "status": "sheltering",
         }
+
 
 class EncampmentGana(BaseGana):
     """Encampment (室 Shi) - Structure/Housing.
@@ -516,7 +566,14 @@ Structure allows for rest and recovery.
                     pass
 
                 if script_path.exists():
-                    cmd = [sys.executable, str(script_path), "--output", str(output_dir), "--memory-export", "--no-raw"]
+                    cmd = [
+                        sys.executable,
+                        str(script_path),
+                        "--output",
+                        str(output_dir),
+                        "--memory-export",
+                        "--no-raw",
+                    ]
                     result = subprocess.run(cmd, capture_output=True, text=True)
 
                     status = "success" if result.returncode == 0 else "failed"
@@ -525,7 +582,9 @@ Structure allows for rest and recovery.
                         "garden": self.garden,
                         "sync_status": status,
                         "output_dir": str(output_dir),
-                        "log": result.stdout[:200] if status == "success" else result.stderr,
+                        "log": result.stdout[:200]
+                        if status == "success"
+                        else result.stderr,
                         "status": "structured",
                     }
             except OSError:
@@ -534,10 +593,13 @@ Structure allows for rest and recovery.
         if "session_handoff" in call.task or "handoff" in call.task:
             try:
                 from whitemagic.gardens.sangha.session_handoff import get_handoff
+
                 handoff = get_handoff()
 
                 session_id = call.state_vector.get("session_id", "current")
-                summary = call.state_vector.get("summary", "Session ended via Encampment")
+                summary = call.state_vector.get(
+                    "summary", "Session ended via Encampment"
+                )
                 next_steps = call.state_vector.get("next_steps", [])
 
                 if session_id == "current":
@@ -562,6 +624,7 @@ Structure allows for rest and recovery.
             "structure_secure": True,
             "status": "encamped",
         }
+
 
 class WallGana(BaseGana):
     """Wall (壁 Bi) - Boundaries & Emergence.
@@ -592,11 +655,17 @@ At the wall between known and unknown, new patterns emerge.
         """Execute boundary/emergence logic."""
 
         # Emergence Engine operations (v14+)
-        if call.task in ["scan_emergence", "emergence_status", "get_insights", "proactive_scan"]:
+        if call.task in [
+            "scan_emergence",
+            "emergence_status",
+            "get_insights",
+            "proactive_scan",
+        ]:
             try:
                 from whitemagic.core.intelligence.agentic.emergence_engine import (
                     get_emergence_engine,
                 )
+
                 engine = get_emergence_engine()
 
                 if call.task in ["scan_emergence", "proactive_scan"]:
@@ -644,6 +713,7 @@ At the wall between known and unknown, new patterns emerge.
         # Notification Logic (Adapted from WillowTip)
         try:
             from whitemagic.gardens.sangha.chat import get_chat
+
             chat = get_chat()
 
             message = call.state_vector.get("message", "Wall alert")

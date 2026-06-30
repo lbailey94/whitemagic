@@ -26,8 +26,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# --- EMBEDDINGS ---
-
 class EmbeddingEngine:
     """Generates and manages vector embeddings for memories.
 
@@ -126,8 +124,6 @@ class EmbeddingEngine:
             return engine.index_memories(memory_type=memory_type, batch_size=batch_size)
         return 0
 
-# --- VECTOR SEARCH ---
-
 class VectorSearch:
     """Performs similarity search across embedded memories.
 
@@ -179,8 +175,6 @@ class VectorSearch:
         if search:
             return search.search_by_text(query, limit=limit)
         return []
-
-# --- HNSW INDEX ---
 
 class HNSWIndex:
     """In-memory HNSW index for fast vector retrieval.
@@ -240,8 +234,6 @@ class HNSWIndex:
                 scores.append((mid, dot / (norm_a * norm_b)))
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores[:k]
-
-# --- SINGLETONS ---
 
 _embeddings: EmbeddingEngine | None = None
 _search: VectorSearch | None = None

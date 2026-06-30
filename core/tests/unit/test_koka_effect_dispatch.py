@@ -4,6 +4,7 @@ Tests verify the high-level wrapper methods correctly format line-protocol
 commands and parse responses. Uses mock dispatch_line to avoid needing
 compiled Koka binaries.
 """
+
 from unittest.mock import patch
 
 from whitemagic.core.acceleration.koka_native_bridge import KokaNativeBridge

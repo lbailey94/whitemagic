@@ -565,7 +565,6 @@ class UnifiedMemory:
         rrf_scores: dict[str, float] = defaultdict(float)
         all_memories: dict[str, Memory] = {}
 
-        # --- Channel 1: Lexical (BM25 via Rust, FTS fallback) ---
         lexical_results = []
         try:
             from whitemagic.optimization.rust_accelerators import (
@@ -604,7 +603,6 @@ class UnifiedMemory:
         for rank, mem in enumerate(lexical_results):
             rrf_scores[mem.id] += lexical_weight / (rrf_k + rank + 1)
 
-        # --- Channel 2: Semantic (Embedding cosine) ---
         semantic_results = []
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
@@ -630,7 +628,6 @@ class UnifiedMemory:
             mid = hit["memory_id"]
             rrf_scores[mid] += semantic_weight / (rrf_k + rank + 1)
 
-        # --- Channel 3: 5D Spatial (Holographic Index) [v15.1 Enhancement] ---
         spatial_results = []
         if self.holographic:
             try:
@@ -649,12 +646,9 @@ class UnifiedMemory:
             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
                 logger.debug("Holographic query failed: %s", _e, exc_info=True)
 
-        # --- Fuse and rank ---
         if not rrf_scores:
             return []
 
-        # --- Channel 3: Constellation Boost (v14.3) ---
-        # Find query's closest constellation, then boost results from same cluster
         query_constellation_name: str | None = None
         constellation_boost = 0.3
         diversity_bonus = 0.05

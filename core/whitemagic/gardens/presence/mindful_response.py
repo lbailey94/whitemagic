@@ -56,18 +56,22 @@ class MindfulResponse:
 
     def record_response(self, stimulus: str, response: str, mode: str) -> None:
         """Record a response for learning."""
-        self._responses.append({
-            "stimulus": stimulus,
-            "response": response,
-            "mode": mode,
-            "timestamp": time.time(),
-        })
+        self._responses.append(
+            {
+                "stimulus": stimulus,
+                "response": response,
+                "mode": mode,
+                "timestamp": time.time(),
+            }
+        )
 
     def summary(self) -> dict[str, Any]:
         return {
             "total_responses": len(self._responses),
             "buffer_time": self.buffer_time,
-            "reactive_count": sum(1 for r in self._responses if r["mode"] == "buffered"),
+            "reactive_count": sum(
+                1 for r in self._responses if r["mode"] == "buffered"
+            ),
         }
 
 

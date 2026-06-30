@@ -49,16 +49,25 @@ class PatternWeather:
     def _coherence_condition(self) -> dict[str, Any]:
         try:
             from whitemagic.core.consciousness.coherence import CoherenceMetric
+
             metric = CoherenceMetric()
             scores = metric.measure()
-            composite = metric.composite_score(scores) if hasattr(metric, "composite_score") else 0.0
-            return {"score": round(composite, 3), "condition": "clear" if composite > 0.7 else "cloudy"}
+            composite = (
+                metric.composite_score(scores)
+                if hasattr(metric, "composite_score")
+                else 0.0
+            )
+            return {
+                "score": round(composite, 3),
+                "condition": "clear" if composite > 0.7 else "cloudy",
+            }
         except Exception:
             return {"score": 0.0, "condition": "unknown"}
 
     def _resonance_condition(self) -> dict[str, Any]:
         try:
             from whitemagic.core.resonance.gan_ying_bus import GanYingBus
+
             bus = GanYingBus()
             return {"active": True, "listeners": len(getattr(bus, "_listeners", {}))}
         except Exception:
@@ -67,6 +76,7 @@ class PatternWeather:
     def _memory_condition(self) -> dict[str, Any]:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             count = mem.count() if hasattr(mem, "count") else 0
             return {"total_memories": count, "condition": "stable"}
@@ -76,6 +86,7 @@ class PatternWeather:
     def _garden_condition(self) -> dict[str, Any]:
         try:
             from whitemagic.gardens import get_all_gardens
+
             gardens = get_all_gardens()
             return {"count": len(gardens), "names": list(gardens.keys())[:5]}
         except Exception:

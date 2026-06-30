@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Living Graph handlers — Graph topology and analysis."""
+
 import logging
 from typing import Any
 
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Graph Topology
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def handle_graph_topology(**kwargs: Any) -> dict[str, Any]:
     """Get graph topology statistics."""
@@ -26,7 +28,7 @@ def handle_graph_topology(**kwargs: Any) -> dict[str, Any]:
                 "communities": stats.get("community_count", 0),
                 "density": stats.get("density", 0.0),
                 "avg_degree": stats.get("avg_degree", 0.0),
-            }
+            },
         }
     except ImportError:
         return {
@@ -38,7 +40,7 @@ def handle_graph_topology(**kwargs: Any) -> dict[str, Any]:
                 "density": 0.0,
                 "avg_degree": 0.0,
             },
-            "note": "GraphEngine archived - no topology data available"
+            "note": "GraphEngine archived - no topology data available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -47,6 +49,7 @@ def handle_graph_topology(**kwargs: Any) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Community Operations
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def handle_community_propagate(**kwargs: Any) -> dict[str, Any]:
     """Propagate information through graph communities."""
@@ -63,7 +66,7 @@ def handle_community_propagate(**kwargs: Any) -> dict[str, Any]:
         return {
             "status": "success",
             "propagated": False,
-            "note": "GraphEngine archived - propagation not available"
+            "note": "GraphEngine archived - propagation not available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -80,14 +83,14 @@ def handle_community_status(**kwargs: Any) -> dict[str, Any]:
         return {
             "status": "success",
             "community_count": len(communities),
-            "communities": communities[:10]
+            "communities": communities[:10],
         }
     except ImportError:
         return {
             "status": "success",
             "community_count": 0,
             "communities": [],
-            "note": "GraphEngine archived - no community data available"
+            "note": "GraphEngine archived - no community data available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -106,7 +109,7 @@ def handle_community_health(**kwargs: Any) -> dict[str, Any]:
         return {
             "status": "success",
             "health": {},
-            "note": "GraphEngine archived - health analysis not available"
+            "note": "GraphEngine archived - health analysis not available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -115,6 +118,7 @@ def handle_community_health(**kwargs: Any) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Hybrid Recall
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
     """Perform hybrid recall combining FTS, vector, and graph search.
@@ -136,6 +140,7 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
     if path:
         try:
             from whitemagic.tools.handlers.fragment import fragment_accelerated_search
+
             accel = fragment_accelerated_search(query, path=path, top=int(limit))
             if accel is not None:
                 return {
@@ -164,6 +169,7 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
                 for c in candidates
             ]
             import json as _json
+
             whitemagic_rs.search_build_index(_json.dumps(docs))
             raw_results = whitemagic_rs.search_query(query, int(limit))
 
@@ -181,18 +187,22 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
                     rid = r.get("id", "")
                     if rid in candidate_map:
                         mem_obj = candidate_map[rid]
-                        results.append({
-                            "id": mem_obj.id,
-                            "content": mem_obj.content,
-                            "title": mem_obj.title,
-                            "created_at": mem_obj.created_at.isoformat() if hasattr(mem_obj.created_at, 'isoformat') else str(mem_obj.created_at),
-                            "tags": list(mem_obj.tags) if mem_obj.tags else [],
-                            "importance": mem_obj.importance,
-                            "neuro_score": mem_obj.neuro_score,
-                            "novelty_score": mem_obj.novelty_score,
-                            "recall_count": mem_obj.recall_count,
-                            "metadata": {"bm25_score": r.get("score", 0.0)},
-                        })
+                        results.append(
+                            {
+                                "id": mem_obj.id,
+                                "content": mem_obj.content,
+                                "title": mem_obj.title,
+                                "created_at": mem_obj.created_at.isoformat()
+                                if hasattr(mem_obj.created_at, "isoformat")
+                                else str(mem_obj.created_at),
+                                "tags": list(mem_obj.tags) if mem_obj.tags else [],
+                                "importance": mem_obj.importance,
+                                "neuro_score": mem_obj.neuro_score,
+                                "novelty_score": mem_obj.novelty_score,
+                                "recall_count": mem_obj.recall_count,
+                                "metadata": {"bm25_score": r.get("score", 0.0)},
+                            }
+                        )
                 if results:
                     return {
                         "status": "success",
@@ -207,6 +217,7 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.intelligence.core_access import get_core_access
+
         cal = get_core_access()
         results = cal.hybrid_recall(
             query=query,
@@ -228,6 +239,7 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
 # Graph Walk & Surprise Stats
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def handle_graph_walk(**kwargs: Any) -> dict[str, Any]:
     """Walk the knowledge graph from a starting node."""
     try:
@@ -246,7 +258,7 @@ def handle_graph_walk(**kwargs: Any) -> dict[str, Any]:
             "status": "success",
             "start_node": start_node,
             "steps": steps,
-            "path": path
+            "path": path,
         }
     except ImportError:
         return {
@@ -254,7 +266,7 @@ def handle_graph_walk(**kwargs: Any) -> dict[str, Any]:
             "start_node": kwargs.get("start_node"),
             "steps": kwargs.get("steps", 10),
             "path": [],
-            "note": "GraphEngine archived - graph walk not available"
+            "note": "GraphEngine archived - graph walk not available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -264,17 +276,15 @@ def handle_surprise_stats(**kwargs: Any) -> dict[str, Any]:
     """Get surprise detection statistics."""
     try:
         from whitemagic.core.intelligence.surprise import SurpriseDetector
+
         detector = SurpriseDetector()
-        return {
-            "status": "success",
-            **detector.get_stats()
-        }
+        return {"status": "success", **detector.get_stats()}
     except ImportError:
         return {
             "status": "success",
             "surprise_events": 0,
             "average_surprise": 0.0,
-            "note": "Surprise detector archived"
+            "note": "Surprise detector archived",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -284,6 +294,7 @@ def handle_entity_resolve(**kwargs: Any) -> dict[str, Any]:
     """Resolve entity mentions to canonical entities."""
     try:
         from whitemagic.core.intelligence.entity_resolver import EntityResolver
+
         resolver = EntityResolver()
 
         mentions = kwargs.get("mentions", [])
@@ -293,17 +304,13 @@ def handle_entity_resolve(**kwargs: Any) -> dict[str, Any]:
             return {"status": "error", "error": "mentions required"}
 
         resolved = resolver.resolve(mentions=mentions, context=context)
-        return {
-            "status": "success",
-            "mentions": len(mentions),
-            "resolved": resolved
-        }
+        return {"status": "success", "mentions": len(mentions), "resolved": resolved}
     except ImportError:
         return {
             "status": "success",
             "mentions": len(kwargs.get("mentions", [])),
             "resolved": {},
-            "note": "Entity resolver archived"
+            "note": "Entity resolver archived",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}

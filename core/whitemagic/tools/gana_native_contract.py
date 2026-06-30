@@ -25,7 +25,6 @@ STANDARD_NATIVE_DETAIL_ORDER = [
 ]
 
 
-
 def build_native_gana_details(
     gana_name: str,
     *,
@@ -82,7 +81,6 @@ def build_native_gana_details(
             elif details[key] is None:
                 details[key] = value
     return {key: value for key, value in details.items() if value is not None}
-
 
 
 def normalize_native_gana_result(

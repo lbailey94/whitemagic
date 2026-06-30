@@ -27,12 +27,13 @@ class ZodiacEntry:
     """ZodiacEntry: zodiac entry.
 
     Value object: equality and repr are field-based."""
+
     entry_id: str
     timestamp: float
-    actor_id: str          # e.g., "clone_alpha_01" or "user"
-    action_type: str       # e.g., "memory_create", "file_write", "tool_call"
+    actor_id: str  # e.g., "clone_alpha_01" or "user"
+    action_type: str  # e.g., "memory_create", "file_write", "tool_call"
     payload: dict[str, Any]
-    parent_hash: str       # Link to previous entry in chain
+    parent_hash: str  # Link to previous entry in chain
     context_id: str | None = None
     consent_token: str | None = None
     hash_signature: str = field(init=False)
@@ -50,10 +51,10 @@ class ZodiacEntry:
             _json_dumps(self.payload),
             self.parent_hash,
             str(self.context_id),
-            str(self.consent_token)
+            str(self.consent_token),
         ]
         hasher = hashlib.sha256()
-        hasher.update("||".join(components).encode('utf-8'))
+        hasher.update("||".join(components).encode("utf-8"))
         return hasher.hexdigest()
 
     def to_dict(self) -> dict[str, Any]:
@@ -72,8 +73,9 @@ class ZodiacEntry:
             "parent_hash": self.parent_hash,
             "context_id": self.context_id,
             "consent_token": self.consent_token,
-            "hash_signature": self.hash_signature
+            "hash_signature": self.hash_signature,
         }
+
 
 class ZodiacLedger:
     """In-memory and persistent cryptographic ledger."""
@@ -82,8 +84,8 @@ class ZodiacLedger:
         self._chain: list[ZodiacEntry] = []
         self._genesis_hash = hashlib.sha256(b"WHITEMAGIC_GENESIS_v16").hexdigest()
         self._current_tail = self._genesis_hash
-        self._db = db_manager # Hook for SQLite persistence
-        self._lock = __import__('threading').Lock()
+        self._db = db_manager  # Hook for SQLite persistence
+        self._lock = __import__("threading").Lock()
 
     def record_action(
         self,
@@ -91,7 +93,7 @@ class ZodiacLedger:
         action_type: str,
         payload: dict[str, Any],
         context_id: str | None = None,
-        consent_token: str | None = None
+        consent_token: str | None = None,
     ) -> ZodiacEntry:
         """Record an action in the cryptographic ledger."""
         with self._lock:
@@ -103,7 +105,7 @@ class ZodiacLedger:
                 payload=payload,
                 parent_hash=self._current_tail,
                 context_id=context_id,
-                consent_token=consent_token
+                consent_token=consent_token,
             )
 
             self._chain.append(entry)
@@ -114,19 +116,31 @@ class ZodiacLedger:
                 pool = get_db_pool(str(DB_PATH))
                 with pool.connection() as conn:
                     with conn:
-                        conn.execute("""
+                        conn.execute(
+                            """
                             INSERT INTO zodiac_ledger (
                                 entry_id, timestamp, actor_id, action_type,
                                 payload, parent_hash, context_id, consent_token, hash_signature
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (
-                            entry.entry_id, entry.timestamp, entry.actor_id, entry.action_type,
-                            _json_dumps(entry.payload), entry.parent_hash,
-                            entry.context_id, entry.consent_token, entry.hash_signature
-                        ))
+                        """,
+                            (
+                                entry.entry_id,
+                                entry.timestamp,
+                                entry.actor_id,
+                                entry.action_type,
+                                _json_dumps(entry.payload),
+                                entry.parent_hash,
+                                entry.context_id,
+                                entry.consent_token,
+                                entry.hash_signature,
+                            ),
+                        )
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).error("Failed to persist zodiac entry: %s", e)
+
+                logging.getLogger(__name__).error(
+                    "Failed to persist zodiac entry: %s", e
+                )
 
             return entry
 
@@ -147,8 +161,10 @@ class ZodiacLedger:
 
             return True
 
+
 # Global singleton accessor
 _ledger_instance = None
+
 
 def get_ledger() -> ZodiacLedger:
     """

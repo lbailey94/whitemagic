@@ -53,15 +53,18 @@ class CacheStats:
         Returns:
             float
         """
-        return (self.prediction_hits / self.predictions
-                if self.predictions > 0 else 0.0)
+        return self.prediction_hits / self.predictions if self.predictions > 0 else 0.0
 
 
 class PredictiveCache:
     """LRU cache with Markov chain prediction."""
 
-    def __init__(self, max_size: int = 1000, prediction_depth: int = 3,
-                 state_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        max_size: int = 1000,
+        prediction_depth: int = 3,
+        state_path: Path | None = None,
+    ) -> None:
         self.max_size = max_size
         self.prediction_depth = prediction_depth
         self.state_path = state_path or _DEFAULT_STATE_PATH
@@ -74,7 +77,9 @@ class PredictiveCache:
         self.max_history = 100
 
         # Markov transition probabilities: access_patterns[a][b] = P(b | a)
-        self.access_patterns: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        self.access_patterns: dict[str, dict[str, float]] = defaultdict(
+            lambda: defaultdict(float)
+        )
 
         # Pre-warmed keys (predicted to be accessed soon)
         self.prewarmed: set[str] = set()
@@ -162,7 +167,7 @@ class PredictiveCache:
             transitions.items(),
             key=lambda x: x[1],
             reverse=True,
-        )[:self.prediction_depth]
+        )[: self.prediction_depth]
 
         # Pre-warm cache with predictions
         for next_key, probability in likely_next:
@@ -191,15 +196,12 @@ class PredictiveCache:
         self.access_history.clear()
         self.access_patterns.clear()
 
-    # ------------------------------------------------------------------
-    # State persistence — keeps Markov model alive across restarts
-    # ------------------------------------------------------------------
     def save_state(self) -> None:
         """Persist access_history and access_patterns to disk."""
         try:
             self.state_path.parent.mkdir(parents=True, exist_ok=True)
             state = {
-                "access_history": self.access_history[-self.max_history:],
+                "access_history": self.access_history[-self.max_history :],
                 "access_patterns": {
                     k: dict(v) for k, v in self.access_patterns.items()
                 },
@@ -221,9 +223,10 @@ class PredictiveCache:
                 for next_k, prob in transitions.items():
                     self.access_patterns[k][next_k] = prob
             logger.info(
-                "Restored cache state: %s history entries, "
-                "%s transition keys",
-             len(self.access_history), len(self.access_patterns))
+                "Restored cache state: %s history entries, %s transition keys",
+                len(self.access_history),
+                len(self.access_patterns),
+            )
         except Exception as e:
             logger.warning("Failed to load cache state: %s", e, exc_info=True)
 
@@ -246,10 +249,13 @@ class PredictiveCache:
         """Get most frequently accessed keys."""
         # Count accesses in history
         from collections import Counter
+
         access_counts = Counter(self.access_history)
         return access_counts.most_common(top_n)
 
-    def get_likely_next(self, current_key: str, top_n: int = 5) -> list[tuple[str, float]]:
+    def get_likely_next(
+        self, current_key: str, top_n: int = 5
+    ) -> list[tuple[str, float]]:
         """Get most likely next accesses given current key."""
         if current_key not in self.access_patterns:
             return []
@@ -276,6 +282,7 @@ class MemoryCache:
         memory_system = self._memory_system
         if memory_system is None:
             from whitemagic.core.memory.neural_system import get_neural_system
+
             memory_system = get_neural_system()
             self._memory_system = memory_system
 
@@ -298,6 +305,7 @@ class MemoryCache:
         if memory_system is None:
             try:
                 from whitemagic.core.memory.neural_system import get_neural_system
+
                 memory_system = get_neural_system()
                 self._memory_system = memory_system
             except ImportError:
@@ -327,6 +335,7 @@ class MemoryCache:
         if memory_system is None:
             try:
                 from whitemagic.core.memory.neural_system import get_neural_system
+
                 memory_system = get_neural_system()
                 self._memory_system = memory_system
             except ImportError:
@@ -334,7 +343,9 @@ class MemoryCache:
 
         try:
             # Pull recent memories (broad window) as the seed set
-            candidates = memory_system.get_recent_memories(minutes=1440, limit=limit * 2)
+            candidates = memory_system.get_recent_memories(
+                minutes=1440, limit=limit * 2
+            )
 
             # Sort by neuro_score (strongest first), take top N
             candidates.sort(key=lambda m: getattr(m, "neuro_score", 0.5), reverse=True)
@@ -354,7 +365,9 @@ class MemoryCache:
             if warmed_ids:
                 self.cache.access_history.extend(warmed_ids)
                 if len(self.cache.access_history) > self.cache.max_history:
-                    self.cache.access_history = self.cache.access_history[-self.cache.max_history:]
+                    self.cache.access_history = self.cache.access_history[
+                        -self.cache.max_history :
+                    ]
                 # Rebuild transitions from the seeded history
                 for i in range(1, len(self.cache.access_history)):
                     prev = self.cache.access_history[i - 1]

@@ -42,6 +42,7 @@ GARDEN_EVENTS = {
 def setup_garden_resonance() -> None:
     """Set up resonance integration for all gardens."""
     import os
+
     if os.environ.get("WM_SILENT_INIT") == "1":
         return
 
@@ -59,6 +60,7 @@ def setup_garden_resonance() -> None:
 
 def _setup_beauty_cascades(bus: Any) -> None:
     """Beauty cascades to Joy and Love."""
+
     def on_beauty(event: Any) -> None:
         # Beauty triggers joy
         """
@@ -86,6 +88,7 @@ def _setup_beauty_cascades(bus: Any) -> None:
 
 def _setup_joy_cascades(bus: Any) -> None:
     """Joy cascades to Love and Play."""
+
     def on_joy(event: Any) -> None:
         # Joy amplifies love
         """
@@ -125,6 +128,7 @@ def _setup_joy_cascades(bus: Any) -> None:
 
 def _setup_love_cascades(bus: Any) -> None:
     """Love cascades to Connection and Compassion."""
+
     def on_love(event: Any) -> None:
         # Love deepens connection
         """
@@ -164,6 +168,7 @@ def _setup_love_cascades(bus: Any) -> None:
 
 def _setup_wisdom_cascades(bus: Any) -> None:
     """Wisdom cascades to Teaching and Integration."""
+
     def on_wisdom(event: Any) -> None:
         # Wisdom leads to teaching
         """
@@ -191,6 +196,7 @@ def _setup_wisdom_cascades(bus: Any) -> None:
 
 def _setup_mystery_cascades(bus: Any) -> None:
     """Mystery cascades to Wonder and Curiosity."""
+
     def on_mystery(event: Any) -> None:
         # Mystery sparks wonder
         """
@@ -254,7 +260,9 @@ def emit_garden_event(garden_name: str, event_data: dict[str, Any]) -> None:
     logger.debug("Garden event emitted: %s -> %s", garden_name, event_type.value)
 
 
-def trigger_garden_cascade(starting_garden: str, description: str = "", resonance_energy: float = 1.0) -> list[str]:
+def trigger_garden_cascade(
+    starting_garden: str, description: str = "", resonance_energy: float = 1.0
+) -> list[str]:
     """Trigger a resonant cascade starting from a specific garden.
     A resonant cascade can propagate across multiple stages based on energy.
 
@@ -282,26 +290,34 @@ def trigger_garden_cascade(starting_garden: str, description: str = "", resonanc
     }
 
     # Emit initial event
-    emit_garden_event(starting_garden, {
-        "cascade_trigger": True,
-        "energy": resonance_energy,
-        "description": description or f"Resonant cascade initiated from {starting_garden}",
-    })
+    emit_garden_event(
+        starting_garden,
+        {
+            "cascade_trigger": True,
+            "energy": resonance_energy,
+            "description": description
+            or f"Resonant cascade initiated from {starting_garden}",
+        },
+    )
 
     # Multi-stage chain reaction logic (Resonant Cascade v7.4)
     import random
+
     if starting_garden in cascades:
         # Each target has a probability of being activated based on current energy
         for target in cascades[starting_garden]:
             # Probability decreases as energy decays
             if random.random() < (resonance_energy * 0.8):
                 # Trigger this target
-                emit_garden_event(target, {
-                    "triggered_by": starting_garden,
-                    "cascade": True,
-                    "energy": resonance_energy * 0.7, # Energy decay
-                    "description": f"Resonating with {starting_garden}",
-                })
+                emit_garden_event(
+                    target,
+                    {
+                        "triggered_by": starting_garden,
+                        "cascade": True,
+                        "energy": resonance_energy * 0.7,  # Energy decay
+                        "description": f"Resonating with {starting_garden}",
+                    },
+                )
 
                 # Recursive call for deeper cascade (limit depth by energy)
                 sub_cascaded = trigger_garden_cascade(
@@ -322,7 +338,11 @@ def trigger_garden_cascade(starting_garden: str, description: str = "", resonanc
             seen.add(g)
 
     if len(unique_cascaded) > 1:
-        logger.info("✨ Resonant Cascade: %s (Final Energy: %s)", ' → '.join(unique_cascaded), format(resonance_energy, ".2f"))
+        logger.info(
+            "✨ Resonant Cascade: %s (Final Energy: %s)",
+            " → ".join(unique_cascaded),
+            format(resonance_energy, ".2f"),
+        )
 
     return unique_cascaded
 

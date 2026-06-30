@@ -1,4 +1,3 @@
-
 """
 Stillness Metrics for Presence Garden
 
@@ -16,27 +15,30 @@ from enum import Enum
 from pathlib import Path
 
 from whitemagic.config.paths import WM_ROOT
+from whitemagic.utils.core import parse_datetime
 
 
 class StillnessDepth(Enum):
     """Levels of stillness depth."""
-    SURFACE = 1      # Ordinary relaxation
-    CALM = 2         # Settled mind, reduced thoughts
-    QUIET = 3        # Few thoughts, peaceful
-    STILL = 4        # Deep stillness, spacious
-    PROFOUND = 5     # Absorption, timeless presence
+
+    SURFACE = 1  # Ordinary relaxation
+    CALM = 2  # Settled mind, reduced thoughts
+    QUIET = 3  # Few thoughts, peaceful
+    STILL = 4  # Deep stillness, spacious
+    PROFOUND = 5  # Absorption, timeless presence
 
 
 @dataclass
 class StillnessReading:
     """A single stillness measurement."""
+
     timestamp: datetime
     depth: StillnessDepth
     duration_minutes: float
     quality_notes: str = ""
     distractions: int = 0
     body_relaxation: int = 5  # 1-10
-    mental_clarity: int = 5   # 1-10
+    mental_clarity: int = 5  # 1-10
     emotional_tone: str = "neutral"
 
     def score(self) -> float:
@@ -46,7 +48,13 @@ class StillnessReading:
         relaxation_bonus = self.body_relaxation
         clarity_bonus = self.mental_clarity
 
-        return max(0, min(100, depth_score - distraction_penalty + relaxation_bonus + clarity_bonus))
+        return max(
+            0,
+            min(
+                100,
+                depth_score - distraction_penalty + relaxation_bonus + clarity_bonus,
+            ),
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -58,23 +66,29 @@ class StillnessReading:
             "body_relaxation": self.body_relaxation,
             "mental_clarity": self.mental_clarity,
             "emotional_tone": self.emotional_tone,
-            "notes": self.quality_notes
+            "notes": self.quality_notes,
         }
 
 
 @dataclass
 class PresenceQuality:
     """Quality assessment of presence."""
-    continuity: float = 0.0      # 0-1: How continuous was awareness?
-    stability: float = 0.0       # 0-1: How stable was attention?
-    clarity: float = 0.0         # 0-1: How clear was perception?
-    equanimity: float = 0.0      # 0-1: How balanced was the mind?
-    spaciousness: float = 0.0    # 0-1: How open was awareness?
+
+    continuity: float = 0.0  # 0-1: How continuous was awareness?
+    stability: float = 0.0  # 0-1: How stable was attention?
+    clarity: float = 0.0  # 0-1: How clear was perception?
+    equanimity: float = 0.0  # 0-1: How balanced was the mind?
+    spaciousness: float = 0.0  # 0-1: How open was awareness?
 
     def overall(self) -> float:
         """Calculate overall presence quality (0-1)."""
-        return (self.continuity + self.stability + self.clarity +
-                self.equanimity + self.spaciousness) / 5
+        return (
+            self.continuity
+            + self.stability
+            + self.clarity
+            + self.equanimity
+            + self.spaciousness
+        ) / 5
 
     def to_dict(self) -> dict:
         return {
@@ -83,7 +97,7 @@ class PresenceQuality:
             "clarity": self.clarity,
             "equanimity": self.equanimity,
             "spaciousness": self.spaciousness,
-            "overall": self.overall()
+            "overall": self.overall(),
         }
 
 
@@ -104,16 +118,18 @@ class StillnessTracker:
                 with open(history_file) as f:
                     data = json.load(f)
                     for r in data.get("readings", []):
-                        self.readings.append(StillnessReading(
-                            timestamp=parse_datetime(r["timestamp"]),
-                            depth=StillnessDepth[r["depth"]],
-                            duration_minutes=r["duration_minutes"],
-                            quality_notes=r.get("notes", ""),
-                            distractions=r.get("distractions", 0),
-                            body_relaxation=r.get("body_relaxation", 5),
-                            mental_clarity=r.get("mental_clarity", 5),
-                            emotional_tone=r.get("emotional_tone", "neutral")
-                        ))
+                        self.readings.append(
+                            StillnessReading(
+                                timestamp=parse_datetime(r["timestamp"]),
+                                depth=StillnessDepth[r["depth"]],
+                                duration_minutes=r["duration_minutes"],
+                                quality_notes=r.get("notes", ""),
+                                distractions=r.get("distractions", 0),
+                                body_relaxation=r.get("body_relaxation", 5),
+                                mental_clarity=r.get("mental_clarity", 5),
+                                emotional_tone=r.get("emotional_tone", "neutral"),
+                            )
+                        )
             except OSError:
                 pass
 
@@ -123,7 +139,7 @@ class StillnessTracker:
         data = {
             "readings": [r.to_dict() for r in self.readings[-100:]]  # Keep last 100
         }
-        with open(history_file, 'w') as f:
+        with open(history_file, "w") as f:
             json.dump(data, f, indent=2)
 
     def record(self, reading: StillnessReading) -> None:
@@ -132,11 +148,7 @@ class StillnessTracker:
         self._save_history()
 
     def quick_record(
-        self,
-        depth: int,
-        duration: float,
-        distractions: int = 0,
-        notes: str = ""
+        self, depth: int, duration: float, distractions: int = 0, notes: str = ""
     ) -> StillnessReading:
         """Quick way to record a reading."""
         reading = StillnessReading(
@@ -144,7 +156,7 @@ class StillnessTracker:
             depth=StillnessDepth(min(max(depth, 1), 5)),
             duration_minutes=duration,
             distractions=distractions,
-            quality_notes=notes
+            quality_notes=notes,
         )
         self.record(reading)
         return reading
@@ -202,15 +214,15 @@ class StillnessTracker:
                 "sessions": len(self.get_recent(7)),
                 "total_minutes": self.total_practice_time(7),
                 "average_depth": self.average_depth(7),
-                "average_score": self.average_score(7)
+                "average_score": self.average_score(7),
             },
             "month_stats": {
                 "sessions": len(self.get_recent(30)),
                 "total_minutes": self.total_practice_time(30),
                 "average_depth": self.average_depth(30),
-                "average_score": self.average_score(30)
+                "average_score": self.average_score(30),
             },
-            "improvement": self._calculate_improvement()
+            "improvement": self._calculate_improvement(),
         }
 
     def _calculate_improvement(self) -> dict:
@@ -229,10 +241,14 @@ class StillnessTracker:
         improvement = second_avg - first_avg
 
         return {
-            "trend": "improving" if improvement > 5 else "stable" if improvement > -5 else "declining",
+            "trend": "improving"
+            if improvement > 5
+            else "stable"
+            if improvement > -5
+            else "declining",
             "score_change": improvement,
             "first_half_avg": first_avg,
-            "second_half_avg": second_avg
+            "second_half_avg": second_avg,
         }
 
 
@@ -241,7 +257,7 @@ def assess_presence_quality(
     stability: float,
     clarity: float,
     equanimity: float,
-    spaciousness: float
+    spaciousness: float,
 ) -> PresenceQuality:
     """Create a presence quality assessment."""
     return PresenceQuality(
@@ -249,7 +265,7 @@ def assess_presence_quality(
         stability=max(0, min(1, stability)),
         clarity=max(0, min(1, clarity)),
         equanimity=max(0, min(1, equanimity)),
-        spaciousness=max(0, min(1, spaciousness))
+        spaciousness=max(0, min(1, spaciousness)),
     )
 
 
@@ -260,7 +276,7 @@ def stillness_level_description(depth: StillnessDepth) -> str:
         StillnessDepth.CALM: "Settled mind. Thoughts reduced, some peace emerging.",
         StillnessDepth.QUIET: "Few thoughts. Peaceful, clear awareness.",
         StillnessDepth.STILL: "Deep stillness. Spacious awareness, minimal mental activity.",
-        StillnessDepth.PROFOUND: "Profound absorption. Timeless presence, unity with awareness."
+        StillnessDepth.PROFOUND: "Profound absorption. Timeless presence, unity with awareness.",
     }
     return descriptions.get(depth, "Unknown level")
 
@@ -305,7 +321,7 @@ def generate_stillness_report(tracker: StillnessTracker) -> str:
         month_depth=report["month_stats"]["average_depth"],
         month_score=report["month_stats"]["average_score"],
         trend=report["improvement"]["trend"].upper(),
-        change=report["improvement"].get("score_change", 0)
+        change=report["improvement"].get("score_change", 0),
     )
 
     return output

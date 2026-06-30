@@ -58,6 +58,7 @@ class LocalReasoningEngine:
 
     def __init__(self, project_root: Path | None = None) -> None:
         from whitemagic.config import PROJECT_ROOT
+
         self.project_root = project_root or PROJECT_ROOT
         self._rules: list[Callable] = []
         self._patterns: dict[str, str] = {}
@@ -83,6 +84,7 @@ class LocalReasoningEngine:
         Returns distilled results ready for AI (or fully resolved).
         """
         import time
+
         start = time.time()
 
         insights: list[LocalInsight] = []
@@ -161,13 +163,15 @@ class LocalReasoningEngine:
         for name, pattern in self._patterns.items():
             try:
                 if re.search(pattern, query_lower):
-                    insights.append(LocalInsight(
-                        source=f"pattern:{name}",
-                        content=f"Query matches pattern '{name}'",
-                        relevance=0.7,
-                        method="pattern_match",
-                        tokens_saved=100,
-                    ))
+                    insights.append(
+                        LocalInsight(
+                            source=f"pattern:{name}",
+                            content=f"Query matches pattern '{name}'",
+                            relevance=0.7,
+                            method="pattern_match",
+                            tokens_saved=100,
+                        )
+                    )
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
                 pass
@@ -189,18 +193,19 @@ class LocalReasoningEngine:
             results = army.search_and_deliberate(query)
 
             insights = []
-            for result in results[:
-                max_results]:
+            for result in results[:max_results]:
                 # Estimate tokens saved (didn't send full file content)
                 tokens_saved = len(result.content) // 4  # ~4 chars per token
 
-                insights.append(LocalInsight(
-                    source=result.memory_id,
-                    content=result.content[:500],
-                    relevance=result.consensus_score,
-                    method="clone_search",
-                    tokens_saved=tokens_saved,
-                ))
+                insights.append(
+                    LocalInsight(
+                        source=result.memory_id,
+                        content=result.content[:500],
+                        relevance=result.consensus_score,
+                        method="clone_search",
+                        tokens_saved=tokens_saved,
+                    )
+                )
 
             return insights
         except Exception as e:
@@ -220,13 +225,15 @@ class LocalReasoningEngine:
 
             insights = []
             for path, score, snippet in results:
-                insights.append(LocalInsight(
-                    source=path,
-                    content=snippet,
-                    relevance=score,
-                    method="embedding",
-                    tokens_saved=len(snippet) // 4,
-                ))
+                insights.append(
+                    LocalInsight(
+                        source=path,
+                        content=snippet,
+                        relevance=score,
+                        method="embedding",
+                        tokens_saved=len(snippet) // 4,
+                    )
+                )
 
             return insights
         except Exception as e:
@@ -250,13 +257,15 @@ class LocalReasoningEngine:
 
             insights = []
             for match in result.matches:
-                insights.append(LocalInsight(
-                    source=match.get("memory_id", "unknown"),
-                    content=match.get("content", str(match)),
-                    relevance=match.get("similarity", result.confidence),
-                    method=f"compositional:{result.relation}",
-                    tokens_saved=result.tokens_saved // max(1, len(result.matches)),
-                ))
+                insights.append(
+                    LocalInsight(
+                        source=match.get("memory_id", "unknown"),
+                        content=match.get("content", str(match)),
+                        relevance=match.get("similarity", result.confidence),
+                        method=f"compositional:{result.relation}",
+                        tokens_saved=result.tokens_saved // max(1, len(result.matches)),
+                    )
+                )
 
             return insights
         except Exception as e:
@@ -270,8 +279,7 @@ class LocalReasoningEngine:
 
         lines = [f"LOCAL REASONING SUMMARY for: {query}", ""]
 
-        for i, insight in enumerate(insights[:
-            5], 1):
+        for i, insight in enumerate(insights[:5], 1):
             lines.append(f"{i}. [{insight.method}] {insight.source}")
             lines.append(f"   Relevance: {insight.relevance:.2f}")
             lines.append(f"   {insight.content[:200]}...")
@@ -283,12 +291,11 @@ class LocalReasoningEngine:
         return "\n".join(lines)
 
 
-# === PRE-BUILT REASONING RULES ===
-
 def version_rule(query: str) -> LocalInsight | None:
     """Answer version questions locally."""
     if "version" in query.lower():
         from whitemagic.config import VERSION
+
         return LocalInsight(
             source="whitemagic.config.VERSION",
             content=f"WhiteMagic version is {VERSION}",
@@ -305,6 +312,7 @@ def garden_count_rule(query: str) -> LocalInsight | None:
     if "garden" in q and ("how many" in q or "count" in q or "number" in q):
         try:
             from whitemagic.gardens import get_all_gardens
+
             gardens = get_all_gardens()
             return LocalInsight(
                 source="whitemagic.gardens",
@@ -338,6 +346,7 @@ def cpu_inference_rule(query: str) -> LocalInsight | None:
     if "how many" in q or "find" in q or "where" in q or "count" in q:
         try:
             from whitemagic.core.intelligence.agentic.cpu_inference import cpu_infer
+
             result = cpu_infer(query)
             if result.confidence >= 0.7:
                 return LocalInsight(
@@ -351,8 +360,6 @@ def cpu_inference_rule(query: str) -> LocalInsight | None:
             pass
     return None
 
-
-# === SINGLETON ===
 
 _engine: LocalReasoningEngine | None = None
 
@@ -379,8 +386,6 @@ def reason_locally(query: str, max_results: int = 10) -> ReasoningResult:
     return get_local_reasoning().reason_locally(query, max_results)
 
 
-# === CLI INTEGRATION ===
-
 def command_reason_local(manager: Any, args: Any) -> Any:
     """CLI command for local reasoning."""
     query = args.query
@@ -391,7 +396,9 @@ def command_reason_local(manager: Any, args: Any) -> Any:
     logger.info("Query: %s", query)
     logger.info("Duration: %sms", result.duration_ms)
     logger.info("Tokens saved: %s", result.total_tokens_saved)
-    logger.info("AI needed: %s", 'Yes' if result.ready_for_ai else 'No (fully resolved locally)')
+    logger.info(
+        "AI needed: %s", "Yes" if result.ready_for_ai else "No (fully resolved locally)"
+    )
     logger.info("")
     logger.info(result.summary)
 
@@ -408,13 +415,13 @@ if __name__ == "__main__":
     # Test 1: Version question (should resolve locally)
     result = engine.reason_locally("What version is WhiteMagic?")
     logger.info("\nQ: What version is WhiteMagic?")
-    logger.info("A: %s", result.insights[0].content if result.insights else 'Not found')
+    logger.info("A: %s", result.insights[0].content if result.insights else "Not found")
     logger.info("Tokens saved: %s", result.total_tokens_saved)
 
     # Test 2: Garden count (should resolve locally)
     result = engine.reason_locally("How many gardens does WhiteMagic have?")
     logger.info("\nQ: How many gardens?")
-    logger.info("A: %s", result.insights[0].content if result.insights else 'Not found')
+    logger.info("A: %s", result.insights[0].content if result.insights else "Not found")
 
     # Test 3: Search query (uses clone army)
     result = engine.reason_locally("parallel processing capabilities")

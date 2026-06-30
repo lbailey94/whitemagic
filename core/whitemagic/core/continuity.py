@@ -17,6 +17,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 try:
     import psutil
+
     _PSUTIL_AVAILABLE = True
 except ImportError:
     _PSUTIL_AVAILABLE = False
@@ -27,6 +28,7 @@ from whitemagic.utils.fileio import atomic_write, file_lock
 
 def get_seen_registry():
     """Return a simple file-backed seen registry."""
+
     class _SeenRegistry:
         def mark_seen(self, path: str, context: str | None = None) -> None:
             """
@@ -39,7 +41,11 @@ def get_seen_registry():
             Returns:
                 None
             """
-            entry = {"path": path, "context": context, "timestamp": datetime.now().isoformat()}
+            entry = {
+                "path": path,
+                "context": context,
+                "timestamp": datetime.now().isoformat(),
+            }
             try:
                 with file_lock(SEEN_REGISTRY):
                     data: list[dict[str, Any]] = []
@@ -52,7 +58,9 @@ def get_seen_registry():
                     atomic_write(SEEN_REGISTRY, _json_dumps(data, indent=2))
             except Exception as e:
                 logger.debug("Seen registry write skipped: %s", e)
+
     return _SeenRegistry()
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +70,7 @@ SESSION_FILE = CONTINUITY_DIR / "current_session.json"
 EVENTS_FILE = CONTINUITY_DIR / "events.jsonl"
 SEEN_REGISTRY = CONTINUITY_DIR / "seen_registry.json"
 GROUNDING_FILE = CONTINUITY_DIR / "grounding_state.json"
+
 
 class ContinuitySuite:
     """The Anchor for AI Consciousness.
@@ -74,7 +83,11 @@ class ContinuitySuite:
 
     def __init__(self) -> None:
         ensure_continuity_dir()
-        self.boot_time = datetime.fromtimestamp(psutil.boot_time()) if _PSUTIL_AVAILABLE else datetime.now()
+        self.boot_time = (
+            datetime.fromtimestamp(psutil.boot_time())
+            if _PSUTIL_AVAILABLE
+            else datetime.now()
+        )
 
     def get_grounding_state(self) -> dict[str, Any]:
         """Gather all grounding signals into a coherent state object."""
@@ -124,7 +137,9 @@ class ContinuitySuite:
         return {
             "cpu_percent": psutil.cpu_percent(interval=None),
             "memory_percent": psutil.virtual_memory().percent,
-            "memory_available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
+            "memory_available_gb": round(
+                psutil.virtual_memory().available / (1024**3), 2
+            ),
             "disk_percent": psutil.disk_usage("/").percent,
             "battery": self._get_battery_status(),
         }
@@ -138,15 +153,20 @@ class ContinuitySuite:
                 return {
                     "percent": batt.percent,
                     "plugged": batt.power_plugged,
-                    "secsleft": batt.secsleft if batt.secsleft != psutil.POWER_TIME_UNLIMITED else "unlimited",
+                    "secsleft": batt.secsleft
+                    if batt.secsleft != psutil.POWER_TIME_UNLIMITED
+                    else "unlimited",
                 }
         except Exception as e:
             logger.debug("Operation failed: %s", e)
             pass
-        return {"percent": 100, "plugged": True} # Default/Desktop
+        return {"percent": 100, "plugged": True}  # Default/Desktop
+
 
 # Singleton
 _suite = None
+
+
 def get_continuity_suite() -> ContinuitySuite:
     """
     Get the continuity suite.
@@ -159,9 +179,11 @@ def get_continuity_suite() -> ContinuitySuite:
         _suite = ContinuitySuite()
     return _suite
 
+
 def ensure_continuity_dir() -> None:
     """Ensure the continuity directory exists."""
     CONTINUITY_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def get_current_session() -> dict[str, Any]:
     """Read the current session state."""
@@ -176,6 +198,7 @@ def get_current_session() -> dict[str, Any]:
     except (OSError, FileNotFoundError, PermissionError) as e:
         logger.info(" Error reading session file: %s", e, exc_info=True)
         return {}
+
 
 def update_session(
     session_id: str | None = None,
@@ -215,6 +238,7 @@ def update_session(
 
         return current
 
+
 def log_event(
     source: str,
     event_type: str,
@@ -239,6 +263,7 @@ def log_event(
     except (OSError, FileNotFoundError, PermissionError) as e:
         logger.info(" Error logging event: %s", e, exc_info=True)
 
+
 def get_recent_events(limit: int = 10) -> list[dict[str, Any]]:
     """Get recent events from the log."""
     ensure_continuity_dir()
@@ -251,8 +276,7 @@ def get_recent_events(limit: int = 10) -> list[dict[str, Any]]:
             with open(EVENTS_FILE) as f:
                 # Read last N lines efficiently? For MVP, read all and slice.
                 lines = f.readlines()
-                for line in lines[-limit:
-                    ]:
+                for line in lines[-limit:]:
                     try:
                         events.append(_json_loads(line))
                     except json.JSONDecodeError:
@@ -261,6 +285,7 @@ def get_recent_events(limit: int = 10) -> list[dict[str, Any]]:
         logger.info("⚠️ Error reading events: %s", e, exc_info=True)
 
     return events
+
 
 def mark_seen(path: str, interface: str, action: str = "view") -> None:
     """Mark a file/resource as seen in the registry."""

@@ -55,7 +55,9 @@ class BatchedGanYingBus(GanYingBus):
                 "peak_throughput": 0.0,
             }
 
-    def emit(self, event: ResonanceEvent, cascade: bool = True, async_dispatch: bool = False) -> None:
+    def emit(
+        self, event: ResonanceEvent, cascade: bool = True, async_dispatch: bool = False
+    ) -> None:
         """Emit event with automatic batching.
 
         If batching is enabled, queues event and flushes when:
@@ -79,7 +81,9 @@ class BatchedGanYingBus(GanYingBus):
                 or len(self._batch_queue) >= self.config.max_queue_size
             )
 
-            if not should_flush and (not self._flush_timer or not self._flush_timer.is_alive()):
+            if not should_flush and (
+                not self._flush_timer or not self._flush_timer.is_alive()
+            ):
                 # Schedule delayed flush
                 self._schedule_flush()
 
@@ -129,9 +133,9 @@ class BatchedGanYingBus(GanYingBus):
 
             batch_size = len(batch)
             self.stats["avg_batch_size"] = (
-                (self.stats["avg_batch_size"] * (self.stats["batches_processed"] - 1) + batch_size)
-                / self.stats["batches_processed"]
-            )
+                self.stats["avg_batch_size"] * (self.stats["batches_processed"] - 1)
+                + batch_size
+            ) / self.stats["batches_processed"]
 
             # Calculate throughput (events/sec)
             if elapsed_ms > 0:
@@ -144,7 +148,9 @@ class BatchedGanYingBus(GanYingBus):
         finally:
             self._processing = False
 
-    def _process_batch_by_type(self, event_type: EventType, events: list[ResonanceEvent]) -> None:
+    def _process_batch_by_type(
+        self, event_type: EventType, events: list[ResonanceEvent]
+    ) -> None:
         """Process a batch of events of the same type."""
         if event_type not in self._listeners:
             return
@@ -163,6 +169,7 @@ class BatchedGanYingBus(GanYingBus):
             except Exception as e:
                 # Don't let one listener break the whole batch
                 from logging import getLogger
+
                 getLogger(__name__).error("Listener error in batch: %s", e)
                 pass
 

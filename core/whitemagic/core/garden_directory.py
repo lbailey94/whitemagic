@@ -48,115 +48,383 @@ class FileGardenMapping:
 # Garden affinity keywords for automatic classification
 GARDEN_KEYWORDS: dict[str, dict[str, list[str]]] = {
     "wonder": {
-        "keywords": ["curiosity", "explore", "discover", "begin", "start", "init", "wonder", "question", "seek"],
+        "keywords": [
+            "curiosity",
+            "explore",
+            "discover",
+            "begin",
+            "start",
+            "init",
+            "wonder",
+            "question",
+            "seek",
+        ],
         "paths": ["wonder", "discovery", "curiosity", "search/", "query"],
     },
     "stillness": {
-        "keywords": ["calm", "pause", "reflect", "stable", "remember", "still", "quiet", "meditat", "rest"],
+        "keywords": [
+            "calm",
+            "pause",
+            "reflect",
+            "stable",
+            "remember",
+            "still",
+            "quiet",
+            "meditat",
+            "rest",
+        ],
         "paths": ["stillness", "memory/", "cache", "stable", "persist"],
     },
     "healing": {
-        "keywords": ["heal", "fix", "repair", "restore", "health", "recover", "remedy", "cure", "wellness"],
+        "keywords": [
+            "heal",
+            "fix",
+            "repair",
+            "restore",
+            "health",
+            "recover",
+            "remedy",
+            "cure",
+            "wellness",
+        ],
         "paths": ["healing", "health", "repair", "fix", "recovery", "immune/"],
     },
     "sanctuary": {
-        "keywords": ["safe", "home", "refuge", "protect", "secure", "shelter", "guard", "sanctuary", "lock"],
+        "keywords": [
+            "safe",
+            "home",
+            "refuge",
+            "protect",
+            "secure",
+            "shelter",
+            "guard",
+            "sanctuary",
+            "lock",
+        ],
         "paths": ["sanctuary", "safe", "protect", "security/", "guard", "shelter/"],
     },
     "love": {
-        "keywords": ["love", "care", "connect", "heart", "compassion", "affection", "embrace", "cherish"],
+        "keywords": [
+            "love",
+            "care",
+            "connect",
+            "heart",
+            "compassion",
+            "affection",
+            "embrace",
+            "cherish",
+        ],
         "paths": ["love", "heart", "care", "compassion", "emotion"],
     },
     "courage": {
-        "keywords": ["brave", "push", "accelerate", "challenge", "dare", "courage", "risk", "bold", "venture"],
+        "keywords": [
+            "brave",
+            "push",
+            "accelerate",
+            "challenge",
+            "dare",
+            "courage",
+            "risk",
+            "bold",
+            "venture",
+        ],
         "paths": ["courage", "accelerat", "challenge", "risk", "venture", "bold"],
     },
     "wisdom": {
-        "keywords": ["wisdom", "discern", "filter", "separate", "judge", "insight", "knowledge", "learn", "teach"],
+        "keywords": [
+            "wisdom",
+            "discern",
+            "filter",
+            "separate",
+            "judge",
+            "insight",
+            "knowledge",
+            "learn",
+            "teach",
+        ],
         "paths": ["wisdom", "knowledge", "learn", "teach", "filter", "discern"],
     },
     "dharma": {
-        "keywords": ["guide", "strategy", "govern", "ethics", "dharma", "rule", "law", "principle", "doctrine"],
+        "keywords": [
+            "guide",
+            "strategy",
+            "govern",
+            "ethics",
+            "dharma",
+            "rule",
+            "law",
+            "principle",
+            "doctrine",
+        ],
         "paths": ["dharma", "govern", "strategy", "doctrine", "policy", "rule"],
     },
     "patience": {
-        "keywords": ["wait", "patient", "endure", "persist", "time", "steady", "persevere", "tolerance"],
+        "keywords": [
+            "wait",
+            "patient",
+            "endure",
+            "persist",
+            "time",
+            "steady",
+            "persevere",
+            "tolerance",
+        ],
         "paths": ["patience", "endurance", "persist", "temporal/", "time"],
     },
     "connection": {
-        "keywords": ["connect", "nurture", "relationship", "bond", "community", "link", "network", "bridge"],
+        "keywords": [
+            "connect",
+            "nurture",
+            "relationship",
+            "bond",
+            "community",
+            "link",
+            "network",
+            "bridge",
+        ],
         "paths": ["connection", "bridge/", "network", "link", "relation", "gan_ying"],
     },
     "mystery": {
-        "keywords": ["mystery", "void", "empty", "optimize", "unknown", "hidden", "secret", "occult", "dream"],
+        "keywords": [
+            "mystery",
+            "void",
+            "empty",
+            "optimize",
+            "unknown",
+            "hidden",
+            "secret",
+            "occult",
+            "dream",
+        ],
         "paths": ["mystery", "dream/", "void", "hidden", "secret", "occult"],
     },
     "protection": {
-        "keywords": ["protect", "shelter", "guard", "shield", "defend", "secure", "safety", "armor"],
+        "keywords": [
+            "protect",
+            "shelter",
+            "guard",
+            "shield",
+            "defend",
+            "secure",
+            "safety",
+            "armor",
+        ],
         "paths": ["protection", "guard", "shield", "defend", "security/", "armor"],
     },
     "transformation": {
-        "keywords": ["transform", "change", "transition", "evolve", "handoff", "convert", "morph", "shift"],
+        "keywords": [
+            "transform",
+            "change",
+            "transition",
+            "evolve",
+            "handoff",
+            "convert",
+            "morph",
+            "shift",
+        ],
         "paths": ["transform", "evolution/", "change", "convert", "morph"],
     },
     "truth": {
-        "keywords": ["truth", "boundary", "limit", "alert", "verify", "fact", "real", "honest", "authentic"],
+        "keywords": [
+            "truth",
+            "boundary",
+            "limit",
+            "alert",
+            "verify",
+            "fact",
+            "real",
+            "honest",
+            "authentic",
+        ],
         "paths": ["truth", "boundary", "verify", "validat", "alert", "audit"],
     },
     "awe": {
-        "keywords": ["awe", "balance", "equilibrium", "stand", "marvel", "wonder", "amaz", "stun", "breath"],
+        "keywords": [
+            "awe",
+            "balance",
+            "equilibrium",
+            "stand",
+            "marvel",
+            "wonder",
+            "amaz",
+            "stun",
+            "breath",
+        ],
         "paths": ["awe", "balance", "equilibrium", "marvel"],
     },
     "gratitude": {
-        "keywords": ["thank", "grateful", "harvest", "gather", "abundance", "appreciate", "bless", "gift"],
+        "keywords": [
+            "thank",
+            "grateful",
+            "harvest",
+            "gather",
+            "abundance",
+            "appreciate",
+            "bless",
+            "gift",
+        ],
         "paths": ["gratitude", "harvest", "gather", "abundance", "bless"],
     },
     "creation": {
-        "keywords": ["create", "make", "build", "digest", "process", "generat", "construct", "forge"],
+        "keywords": [
+            "create",
+            "make",
+            "build",
+            "digest",
+            "process",
+            "generat",
+            "construct",
+            "forge",
+        ],
         "paths": ["creation", "build", "generat", "construct", "forge", "synthesis/"],
     },
     "presence": {
-        "keywords": ["focus", "present", "attention", "detail", "here", "now", "mindful", "aware"],
+        "keywords": [
+            "focus",
+            "present",
+            "attention",
+            "detail",
+            "here",
+            "now",
+            "mindful",
+            "aware",
+        ],
         "paths": ["presence", "focus", "attention", "mindful", "aware"],
     },
     "play": {
-        "keywords": ["play", "fun", "game", "capture", "explore", "toy", "experiment", "toy", "demo"],
+        "keywords": [
+            "play",
+            "fun",
+            "game",
+            "capture",
+            "explore",
+            "toy",
+            "experiment",
+            "toy",
+            "demo",
+        ],
         "paths": ["play", "game", "toy", "demo", "experiment"],
     },
     "practice": {
-        "keywords": ["practice", "train", "discipline", "precise", "skill", "drill", "exercise", "repeat"],
+        "keywords": [
+            "practice",
+            "train",
+            "discipline",
+            "precise",
+            "skill",
+            "drill",
+            "exercise",
+            "repeat",
+        ],
         "paths": ["practice", "train", "discipline", "skill", "drill", "agent"],
     },
     "reverence": {
-        "keywords": ["revere", "sacred", "honor", "respect", "renew", "worship", "holy", "divine", "grail"],
+        "keywords": [
+            "revere",
+            "sacred",
+            "honor",
+            "respect",
+            "renew",
+            "worship",
+            "holy",
+            "divine",
+            "grail",
+        ],
         "paths": ["reverence", "sacred", "honor", "grail", "divine", "grimoire/"],
     },
     "joy": {
-        "keywords": ["joy", "happy", "celebrate", "abundant", "overflow", "delight", "bliss", "cheer"],
+        "keywords": [
+            "joy",
+            "happy",
+            "celebrate",
+            "abundant",
+            "overflow",
+            "delight",
+            "bliss",
+            "cheer",
+        ],
         "paths": ["joy", "celebrate", "delight", "bliss", "happy"],
     },
     "adventure": {
-        "keywords": ["adventure", "journey", "travel", "move", "discover", "expedition", "quest", "roam"],
+        "keywords": [
+            "adventure",
+            "journey",
+            "travel",
+            "move",
+            "discover",
+            "expedition",
+            "quest",
+            "roam",
+        ],
         "paths": ["adventure", "journey", "travel", "quest", "expedition"],
     },
     "beauty": {
-        "keywords": ["beauty", "aesthetic", "fly", "expand", "soar", "grace", "elegant", "art", "style"],
+        "keywords": [
+            "beauty",
+            "aesthetic",
+            "fly",
+            "expand",
+            "soar",
+            "grace",
+            "elegant",
+            "art",
+            "style",
+        ],
         "paths": ["beauty", "aesthetic", "style", "art", "grace", "elegant"],
     },
     "humor": {
-        "keywords": ["humor", "laugh", "flexible", "resilient", "bend", "joke", "wit", "comic", "fun"],
+        "keywords": [
+            "humor",
+            "laugh",
+            "flexible",
+            "resilient",
+            "bend",
+            "joke",
+            "wit",
+            "comic",
+            "fun",
+        ],
         "paths": ["humor", "laugh", "joke", "wit", "comic", "resilien"],
     },
     "voice": {
-        "keywords": ["voice", "speak", "express", "illuminate", "shine", "say", "tell", "announce", "cli"],
+        "keywords": [
+            "voice",
+            "speak",
+            "express",
+            "illuminate",
+            "shine",
+            "say",
+            "tell",
+            "announce",
+            "cli",
+        ],
         "paths": ["voice", "cli/", "speak", "express", "announce", "command"],
     },
     "sangha": {
-        "keywords": ["community", "together", "sangha", "collective", "network", "group", "team", "collab"],
+        "keywords": [
+            "community",
+            "together",
+            "sangha",
+            "collective",
+            "network",
+            "group",
+            "team",
+            "collab",
+        ],
         "paths": ["sangha", "community", "collective", "team", "group", "collab"],
     },
     "grief": {
-        "keywords": ["grief", "loss", "mourn", "remember", "honor", "sad", "sorrow", "farewell", "passing"],
+        "keywords": [
+            "grief",
+            "loss",
+            "mourn",
+            "remember",
+            "honor",
+            "sad",
+            "sorrow",
+            "farewell",
+            "passing",
+        ],
         "paths": ["grief", "mourn", "loss", "sorrow", "farewell"],
     },
 }
@@ -246,7 +514,9 @@ class GardenDirectory:
     def __init__(self, registry_path: Path | None = None):
         self.registry_path = registry_path or GARDEN_REGISTRY_PATH
         self._file_mappings: dict[str, FileGardenMapping] = {}
-        self._garden_files: dict[str, list[str]] = {g: [] for g in GARDEN_KEYWORDS.keys()}
+        self._garden_files: dict[str, list[str]] = {
+            g: [] for g in GARDEN_KEYWORDS.keys()
+        }
         self._loaded = False
 
     def load(self) -> bool:
@@ -336,7 +606,9 @@ class GardenDirectory:
             stats["file_types"][ext] = stats["file_types"].get(ext, 0) + 1
         return stats
 
-    def search_files(self, query: str, gardens: list[str] | None = None) -> list[FileGardenMapping]:
+    def search_files(
+        self, query: str, gardens: list[str] | None = None
+    ) -> list[FileGardenMapping]:
         """Search for files by name/path within gardens."""
         results = []
         query_lower = query.lower()
@@ -402,7 +674,9 @@ def analyze_file_for_garden(
                 garden_scores[garden] = score
 
         # Use resonance calculation from registry
-        resonance = calculate_resonance(content[:1000] if len(content) > 1000 else content)
+        resonance = calculate_resonance(
+            content[:1000] if len(content) > 1000 else content
+        )
         for garden, res_data in resonance.items():
             if garden in garden_scores:
                 garden_scores[garden] += res_data.get("score", 0) * 0.5
@@ -464,7 +738,13 @@ def analyze_file_for_garden(
     # Count LOC if content available
     loc_count = 0
     if content:
-        loc_count = len([line for line in content.split("\n") if line.strip() and not line.strip().startswith("#")])
+        loc_count = len(
+            [
+                line
+                for line in content.split("\n")
+                if line.strip() and not line.strip().startswith("#")
+            ]
+        )
 
     return FileGardenMapping(
         file_path=file_path,
@@ -513,7 +793,6 @@ if __name__ == "__main__":
     print(f"Path hints: {len(PATH_GARDEN_HINTS)}")
     print()
     print("Garden → Gana → Element mapping:")
-    for entry in GARDEN_GANA_REGISTRY[:
-        7]:
+    for entry in GARDEN_GANA_REGISTRY[:7]:
         print(f"  {entry.garden:15} → {entry.gana:25} [{entry.element.value}]")
     print("  ...")

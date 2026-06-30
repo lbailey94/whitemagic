@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 
 from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
@@ -7,11 +6,13 @@ from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 
 @register
-def check_archive_reconnaissance(project_path: Path, file_index: FileIndex, findings: List[Finding]):
+def check_archive_reconnaissance(
+    project_path: Path, file_index: FileIndex, findings: list[Finding]
+):
     """Check if archive directories exist and compare with current code."""
     # Use file_index's cached tree walk to find archive directories
     # instead of doing separate rglob walks
-    archive_dirs: List[Path] = []
+    archive_dirs: list[Path] = []
     seen_dirs: set = set()
     ext_index = file_index._build_extension_index()
     for files in ext_index.values():
@@ -34,11 +35,13 @@ def check_archive_reconnaissance(project_path: Path, file_index: FileIndex, find
                 if current_size == 0:
                     continue
                 if archived_size > current_size * 1.5:
-                    findings.append(Finding(
-                        severity=FindingSeverity.WARNING,
-                        category="archive_drift",
-                        file=str(current_file.relative_to(project_path)),
-                        line=None,
-                        message=f"Archive version is {archived_size/current_size:.1f}x larger than current version.",
-                        suggestion=f"Review {archived_file} — the archive may contain more complete code."
-                    ))
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.WARNING,
+                            category="archive_drift",
+                            file=str(current_file.relative_to(project_path)),
+                            line=None,
+                            message=f"Archive version is {archived_size / current_size:.1f}x larger than current version.",
+                            suggestion=f"Review {archived_file} — the archive may contain more complete code.",
+                        )
+                    )

@@ -54,7 +54,9 @@ class ImmuneResponse:
             result["applied"] = applied
             result["healed"] = applied
         elif threat.level in (ThreatLevel.CRITICAL, ThreatLevel.HIGH):
-            logger.warning("Threat requires manual intervention: %s", threat.description)
+            logger.warning(
+                "Threat requires manual intervention: %s", threat.description
+            )
             result["error"] = "Manual intervention required"
         else:
             result["error"] = "Antibody requires manual approval"

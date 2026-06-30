@@ -51,6 +51,7 @@ class ConsolidationTriggers:
             elif config["type"] == "threshold":
                 try:
                     from whitemagic.core.memory.unified import get_unified_memory
+
                     mem = get_unified_memory()
                     if hasattr(mem, "count") and mem.count() >= config["value"]:
                         active.append(name)

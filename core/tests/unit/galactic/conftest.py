@@ -9,6 +9,7 @@ at ~/.whitemagic/memory/whitemagic.db.
 This conftest sets WM_MEMORY_DB to the live path for tests in this
 directory so galactic._resolve_db_path() resolves to the real DB.
 """
+
 import os
 from pathlib import Path
 

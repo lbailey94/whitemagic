@@ -62,7 +62,12 @@ def load_plugins() -> list[PluginBase]:
                 _registry.register(plugin)
 
     # 2. Example plugins (opt-in; avoid surprising side effects/noise in OSS builds)
-    if os.getenv("WHITEMAGIC_LOAD_EXAMPLE_PLUGINS", "").strip().lower() in {"1", "true", "yes", "on"}:
+    if os.getenv("WHITEMAGIC_LOAD_EXAMPLE_PLUGINS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
         examples_dir = Path(__file__).parent / "examples"
         if examples_dir.exists():
             for plugin_file in examples_dir.glob("*.py"):
@@ -91,7 +96,9 @@ def load_plugins() -> list[PluginBase]:
                     loaded.append(plugin)
                     _registry.register(plugin)
             except Exception as e:
-                logger.info("Failed to load plugin %s: %s", entry_point.name, e, exc_info=True)
+                logger.info(
+                    "Failed to load plugin %s: %s", entry_point.name, e, exc_info=True
+                )
     except ImportError:
         pass
 
@@ -102,7 +109,8 @@ def _load_plugin_file(plugin_path: Path) -> PluginBase | None:
     """Load a plugin from a Python file."""
     try:
         spec = importlib.util.spec_from_file_location(
-            plugin_path.stem, plugin_path,
+            plugin_path.stem,
+            plugin_path,
         )
         if spec is None or spec.loader is None:
             logger.info("Failed to create import spec for plugin %s", plugin_path)
@@ -114,10 +122,12 @@ def _load_plugin_file(plugin_path: Path) -> PluginBase | None:
         # Find PluginBase subclass (but not SimplePlugin itself)
         plugin_classes = []
         for name, obj in inspect.getmembers(module):
-            if (inspect.isclass(obj) and
-                issubclass(obj, PluginBase) and
-                obj != PluginBase and
-                obj.__name__ != "SimplePlugin"):
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, PluginBase)
+                and obj != PluginBase
+                and obj.__name__ != "SimplePlugin"
+            ):
                 plugin_classes.append(obj)
 
         # Return the first plugin class found
@@ -168,6 +178,7 @@ def unload_plugin(name: str) -> bool:
 def register_commands(cli_group: Any) -> None:
     """Register all plugin commands with CLI."""
     import click
+
     for plugin in _registry.plugins.values():
         commands = plugin.register_commands()
         if commands:
@@ -177,6 +188,7 @@ def register_commands(cli_group: Any) -> None:
                 elif isinstance(cmd, tuple) and len(cmd) >= 3:
                     # Handle tuple (name, help, callback)
                     name, help_text, callback = cmd[:3]
+
                     # Wrap in a click command
                     @click.command(name=name, help=help_text)
                     @click.argument("args", nargs=-1)
@@ -194,9 +206,12 @@ def register_commands(cli_group: Any) -> None:
                         Returns:
                             None
                         """
+
                         class Args:
                             """Args: args."""
+
                             pass
+
                         parsed_args = Args()
                         # This is very basic and won't handle named args well without proper parsing
                         # But it prevents the crash
@@ -204,7 +219,11 @@ def register_commands(cli_group: Any) -> None:
 
                     cli_group.add_command(wrapper)
                 else:
-                    logger.info("Warning: Skipping invalid command format in plugin %s: %s", getattr(plugin, 'name', 'unknown'), cmd)
+                    logger.info(
+                        "Warning: Skipping invalid command format in plugin %s: %s",
+                        getattr(plugin, "name", "unknown"),
+                        cmd,
+                    )
 
 
 def register_gardens(garden_manager: Any) -> None:

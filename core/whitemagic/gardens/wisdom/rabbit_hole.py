@@ -34,109 +34,518 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Web page chrome / boilerplate that should never be extracted as "terms"
-_CHROME_STOPWORDS = frozenset({
-    # Navigation / UI
-    "cookie", "privacy", "policy", "terms", "service", "sign", "menu",
-    "search", "navigation", "footer", "header", "sidebar", "subscribe",
-    "newsletter", "contact", "about", "home", "page", "next", "previous",
-    "read", "more", "share", "follow", "twitter", "facebook", "linkedin",
-    "github", "youtube", "instagram", "download", "view", "click", "here",
-    "learn", "discover", "started", "free", "trial", "accept", "reject",
-    "close", "dismiss", "skip", "main", "content", "up", "log", "in", "out",
-    "sign up", "log in", "read more", "view all", "see all", "back to",
-    "skip to", "main content", "estimated", "read time", "view next",
-    "view previous", "explore", "topics", "resources", "insider",
-    "interviews", "infographics", "basics", "latest", "week", "report",
-    "comment", "leave", "reply", "must be", "logged in", "post",
-    # GitHub UI
-    "reload", "copy", "blame", "commits", "license", "copying", "gnu",
-    "lesser", "forked", "fork", "star", "stars", "watch", "watching",
-    "pull", "request", "merge", "branch", "tags", "releases", "actions",
-    "workflow", "pipeline", "ci", "cd", "build", "deploy", "status",
-    "checks", "passed", "failed", "pending", "running", "queued",
-    "permalink", "raw", "history", "tree", "blob", "commit", "diff",
-    "patch", "clone", "ssh", "https", "url", "mirror", "origin",
-    "public", "private", "archived", "template", "settings", "insights",
-    "graph", "network", "members", "collaborators", "contributors",
-    "dependents", "dependencies", "packages", "deployments", "environments",
-    "loc", "files", "file", "directory", "folder", "path", "src", "dist",
-    "bin", "lib", "test", "tests", "docs", "config", "conf", "ini", "env",
-    "requirements", "setup", "install", "uninstall", "upgrade", "update",
-    "changelog", "release", "version", "v1", "v2", "v3",
-    # StackOverflow UI
-    "add", "edit", "delete", "remove", "save", "cancel", "confirm",
-    "overflow", "stack", "exchange", "ask", "answer", "answers", "question",
-    "questions", "tagged", "tags", "badge", "badges", "reputation", "score",
-    "upvote", "downvote", "vote", "voting", "accepted", "marked", "correct",
-    "helpful", "useful", "not useful", "flag", "close", "reopen", "protect",
-    "bounty", "edited", "commented", "asked", "answered", "viewed",
-    "provide", "details", "share", "improve", "follow", "edited",
-    "add comment", "show", "hide", "expand", "collapse",
-    # dev.to / blog UI
-    "copy", "javascript", "js", "css", "html", "doctype", "dom",
-    "enter", "exit", "example", "examples", "demo", "demos",
-    "key points", "this", "that", "there", "they", "them", "their",
-    "what", "when", "where", "why", "how", "which", "who", "whom",
-    "over", "under", "above", "below", "between", "within", "without",
-    # TechCrunch / news UI
-    "image credits", "join", "june", "july", "april", "march", "may",
-    "founder summit", "apps", "report",
-    # Hacker News UI
-    "points", "discuss", "hack", "show hn", "ask hn", "comments",
-    "front page", "new", "past", "jobs", "submit",
-    # Generic web actions
-    "create", "update", "delete", "toggle", "select", "deselect",
-    "enable", "disable", "activate", "deactivate", "start", "stop",
-    "pause", "resume", "reset", "clear", "refresh", "sync", "async",
-    "apply", "submit", "cancel", "confirm", "continue", "back",
-    # Common acronyms that are web chrome, not content
-    "api", "sdk", "cli", "gui", "ui", "ux", "css", "html", "json",
-    "xml", "yaml", "toml", "sql", "nosql", "rest", "graphql",
-    "pdf", "csv", "tsv", "txt", "md", "rst",
-    # Single common words that slip through as "capitalized"
-    "please", "there", "this", "over", "some", "most", "tell", "when",
-    "maybe", "like", "also", "just", "only", "even", "still", "well",
-    "will", "can", "may", "might", "must", "should", "could", "would",
-    "has", "have", "had", "been", "being", "does", "did", "done",
-    "yes", "no", "not", "nor", "but", "and", "or", "yet", "so",
-    "true", "false", "none", "null", "void", "type", "types",
-    "data", "value", "values", "key", "keys", "pair", "pairs",
-    "item", "items", "list", "array", "object", "objects",
-    "figure", "table", "chart", "graph", "plot", "image", "fig",
-    "subject", "subjects", "topic", "topics", "theme", "themes",
-    "however", "although", "therefore", "moreover", "furthermore",
-    "nevertheless", "nonetheless", "thus", "hence", "whereas",
-    "results", "whole", "hand", "high", "best", "first", "second",
-    "binary", "notes", "extensions", "plugin", "cited", "verified",
-    "co-authors", "university", "department", "institute",
-    # README / doc chrome
-    "readme", "changelog", "license", "authors", "credits", "faq",
-    "installation", "usage", "configuration", "development", "testing",
-    "contributing", "guidelines", "prerequisites", "requirements",
-    "description", "overview", "introduction", "background", "summary",
-    "conclusion", "references", "bibliography", "appendix",
-})
+_CHROME_STOPWORDS = frozenset(
+    {
+        # Navigation / UI
+        "cookie",
+        "privacy",
+        "policy",
+        "terms",
+        "service",
+        "sign",
+        "menu",
+        "search",
+        "navigation",
+        "footer",
+        "header",
+        "sidebar",
+        "subscribe",
+        "newsletter",
+        "contact",
+        "about",
+        "home",
+        "page",
+        "next",
+        "previous",
+        "read",
+        "more",
+        "share",
+        "follow",
+        "twitter",
+        "facebook",
+        "linkedin",
+        "github",
+        "youtube",
+        "instagram",
+        "download",
+        "view",
+        "click",
+        "here",
+        "learn",
+        "discover",
+        "started",
+        "free",
+        "trial",
+        "accept",
+        "reject",
+        "close",
+        "dismiss",
+        "skip",
+        "main",
+        "content",
+        "up",
+        "log",
+        "in",
+        "out",
+        "sign up",
+        "log in",
+        "read more",
+        "view all",
+        "see all",
+        "back to",
+        "skip to",
+        "main content",
+        "estimated",
+        "read time",
+        "view next",
+        "view previous",
+        "explore",
+        "topics",
+        "resources",
+        "insider",
+        "interviews",
+        "infographics",
+        "basics",
+        "latest",
+        "week",
+        "report",
+        "comment",
+        "leave",
+        "reply",
+        "must be",
+        "logged in",
+        "post",
+        # GitHub UI
+        "reload",
+        "copy",
+        "blame",
+        "commits",
+        "license",
+        "copying",
+        "gnu",
+        "lesser",
+        "forked",
+        "fork",
+        "star",
+        "stars",
+        "watch",
+        "watching",
+        "pull",
+        "request",
+        "merge",
+        "branch",
+        "tags",
+        "releases",
+        "actions",
+        "workflow",
+        "pipeline",
+        "ci",
+        "cd",
+        "build",
+        "deploy",
+        "status",
+        "checks",
+        "passed",
+        "failed",
+        "pending",
+        "running",
+        "queued",
+        "permalink",
+        "raw",
+        "history",
+        "tree",
+        "blob",
+        "commit",
+        "diff",
+        "patch",
+        "clone",
+        "ssh",
+        "https",
+        "url",
+        "mirror",
+        "origin",
+        "public",
+        "private",
+        "archived",
+        "template",
+        "settings",
+        "insights",
+        "graph",
+        "network",
+        "members",
+        "collaborators",
+        "contributors",
+        "dependents",
+        "dependencies",
+        "packages",
+        "deployments",
+        "environments",
+        "loc",
+        "files",
+        "file",
+        "directory",
+        "folder",
+        "path",
+        "src",
+        "dist",
+        "bin",
+        "lib",
+        "test",
+        "tests",
+        "docs",
+        "config",
+        "conf",
+        "ini",
+        "env",
+        "requirements",
+        "setup",
+        "install",
+        "uninstall",
+        "upgrade",
+        "update",
+        "changelog",
+        "release",
+        "version",
+        "v1",
+        "v2",
+        "v3",
+        # StackOverflow UI
+        "add",
+        "edit",
+        "delete",
+        "remove",
+        "save",
+        "cancel",
+        "confirm",
+        "overflow",
+        "stack",
+        "exchange",
+        "ask",
+        "answer",
+        "answers",
+        "question",
+        "questions",
+        "tagged",
+        "tags",
+        "badge",
+        "badges",
+        "reputation",
+        "score",
+        "upvote",
+        "downvote",
+        "vote",
+        "voting",
+        "accepted",
+        "marked",
+        "correct",
+        "helpful",
+        "useful",
+        "not useful",
+        "flag",
+        "close",
+        "reopen",
+        "protect",
+        "bounty",
+        "edited",
+        "commented",
+        "asked",
+        "answered",
+        "viewed",
+        "provide",
+        "details",
+        "share",
+        "improve",
+        "follow",
+        "edited",
+        "add comment",
+        "show",
+        "hide",
+        "expand",
+        "collapse",
+        # dev.to / blog UI
+        "copy",
+        "javascript",
+        "js",
+        "css",
+        "html",
+        "doctype",
+        "dom",
+        "enter",
+        "exit",
+        "example",
+        "examples",
+        "demo",
+        "demos",
+        "key points",
+        "this",
+        "that",
+        "there",
+        "they",
+        "them",
+        "their",
+        "what",
+        "when",
+        "where",
+        "why",
+        "how",
+        "which",
+        "who",
+        "whom",
+        "over",
+        "under",
+        "above",
+        "below",
+        "between",
+        "within",
+        "without",
+        # TechCrunch / news UI
+        "image credits",
+        "join",
+        "june",
+        "july",
+        "april",
+        "march",
+        "may",
+        "founder summit",
+        "apps",
+        "report",
+        # Hacker News UI
+        "points",
+        "discuss",
+        "hack",
+        "show hn",
+        "ask hn",
+        "comments",
+        "front page",
+        "new",
+        "past",
+        "jobs",
+        "submit",
+        # Generic web actions
+        "create",
+        "update",
+        "delete",
+        "toggle",
+        "select",
+        "deselect",
+        "enable",
+        "disable",
+        "activate",
+        "deactivate",
+        "start",
+        "stop",
+        "pause",
+        "resume",
+        "reset",
+        "clear",
+        "refresh",
+        "sync",
+        "async",
+        "apply",
+        "submit",
+        "cancel",
+        "confirm",
+        "continue",
+        "back",
+        # Common acronyms that are web chrome, not content
+        "api",
+        "sdk",
+        "cli",
+        "gui",
+        "ui",
+        "ux",
+        "css",
+        "html",
+        "json",
+        "xml",
+        "yaml",
+        "toml",
+        "sql",
+        "nosql",
+        "rest",
+        "graphql",
+        "pdf",
+        "csv",
+        "tsv",
+        "txt",
+        "md",
+        "rst",
+        # Single common words that slip through as "capitalized"
+        "please",
+        "there",
+        "this",
+        "over",
+        "some",
+        "most",
+        "tell",
+        "when",
+        "maybe",
+        "like",
+        "also",
+        "just",
+        "only",
+        "even",
+        "still",
+        "well",
+        "will",
+        "can",
+        "may",
+        "might",
+        "must",
+        "should",
+        "could",
+        "would",
+        "has",
+        "have",
+        "had",
+        "been",
+        "being",
+        "does",
+        "did",
+        "done",
+        "yes",
+        "no",
+        "not",
+        "nor",
+        "but",
+        "and",
+        "or",
+        "yet",
+        "so",
+        "true",
+        "false",
+        "none",
+        "null",
+        "void",
+        "type",
+        "types",
+        "data",
+        "value",
+        "values",
+        "key",
+        "keys",
+        "pair",
+        "pairs",
+        "item",
+        "items",
+        "list",
+        "array",
+        "object",
+        "objects",
+        "figure",
+        "table",
+        "chart",
+        "graph",
+        "plot",
+        "image",
+        "fig",
+        "subject",
+        "subjects",
+        "topic",
+        "topics",
+        "theme",
+        "themes",
+        "however",
+        "although",
+        "therefore",
+        "moreover",
+        "furthermore",
+        "nevertheless",
+        "nonetheless",
+        "thus",
+        "hence",
+        "whereas",
+        "results",
+        "whole",
+        "hand",
+        "high",
+        "best",
+        "first",
+        "second",
+        "binary",
+        "notes",
+        "extensions",
+        "plugin",
+        "cited",
+        "verified",
+        "co-authors",
+        "university",
+        "department",
+        "institute",
+        # README / doc chrome
+        "readme",
+        "changelog",
+        "license",
+        "authors",
+        "credits",
+        "faq",
+        "installation",
+        "usage",
+        "configuration",
+        "development",
+        "testing",
+        "contributing",
+        "guidelines",
+        "prerequisites",
+        "requirements",
+        "description",
+        "overview",
+        "introduction",
+        "background",
+        "summary",
+        "conclusion",
+        "references",
+        "bibliography",
+        "appendix",
+    }
+)
 
 
 # Domains that are web infrastructure / developer tools, not content sources.
 # These get deprioritized during rabbit hole exploration to keep research on-topic.
-_LOW_QUALITY_DOMAINS = frozenset({
-    "github.com", "gitlab.com", "stackoverflow.com", "stackexchange.com",
-    "dev.to", "medium.com", "hackernoon.com",
-    "news.ycombinator.com", "reddit.com", "twitter.com", "x.com",
-    "youtube.com", "wikipedia.org", "wikimedia.org",
-    "npmjs.com", "pypi.org", "crates.io", "rubygems.org",
-    "docker.com", "hub.docker.com",
-    "linkedin.com", "facebook.com", "instagram.com",
-    "amazon.com", "ebay.com",
-    "archive.org", "web.archive.org",
-    # Academic index sites — return researcher profiles, not primary content
-    "scholar.google.com", "semanticscholar.org", "pdfs.semanticscholar.org",
-    # Documentation sites — not primary content
-    "readthedocs.io", "docs.python.org", "docs.rs",
-    # News aggregators that pollute term extraction
-    "bbc.co.uk", "bbc.com", "techcrunch.com",
-})
+_LOW_QUALITY_DOMAINS = frozenset(
+    {
+        "github.com",
+        "gitlab.com",
+        "stackoverflow.com",
+        "stackexchange.com",
+        "dev.to",
+        "medium.com",
+        "hackernoon.com",
+        "news.ycombinator.com",
+        "reddit.com",
+        "twitter.com",
+        "x.com",
+        "youtube.com",
+        "wikipedia.org",
+        "wikimedia.org",
+        "npmjs.com",
+        "pypi.org",
+        "crates.io",
+        "rubygems.org",
+        "docker.com",
+        "hub.docker.com",
+        "linkedin.com",
+        "facebook.com",
+        "instagram.com",
+        "amazon.com",
+        "ebay.com",
+        "archive.org",
+        "web.archive.org",
+        # Academic index sites — return researcher profiles, not primary content
+        "scholar.google.com",
+        "semanticscholar.org",
+        "pdfs.semanticscholar.org",
+        # Documentation sites — not primary content
+        "readthedocs.io",
+        "docs.python.org",
+        "docs.rs",
+        # News aggregators that pollute term extraction
+        "bbc.co.uk",
+        "bbc.com",
+        "techcrunch.com",
+    }
+)
 
 
 def _is_low_quality_url(url: str) -> bool:
@@ -192,45 +601,57 @@ class ResearchReport:
         ]
 
         for entry in self.entries:
-            lines.extend([
-                f"### {entry.term}",
-                f"**Source**: {entry.source}",
-                f"**Depth**: {entry.depth}",
-                "",
-                entry.definition,
-                "",
-                f"**Related**: {', '.join(entry.related_terms)}" if entry.related_terms else "",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"### {entry.term}",
+                    f"**Source**: {entry.source}",
+                    f"**Depth**: {entry.depth}",
+                    "",
+                    entry.definition,
+                    "",
+                    f"**Related**: {', '.join(entry.related_terms)}"
+                    if entry.related_terms
+                    else "",
+                    "",
+                ]
+            )
 
         if self.synthesis:
-            lines.extend([
-                "---",
-                "",
-                "## ✨ Synthesis",
-                "",
-                self.synthesis,
-                "",
-            ])
+            lines.extend(
+                [
+                    "---",
+                    "",
+                    "## ✨ Synthesis",
+                    "",
+                    self.synthesis,
+                    "",
+                ]
+            )
 
         if self.connections:
-            lines.extend([
-                "---",
-                "",
-                "## 🔗 Connections Found",
-                "",
-            ])
+            lines.extend(
+                [
+                    "---",
+                    "",
+                    "## 🔗 Connections Found",
+                    "",
+                ]
+            )
             for conn in self.connections:
-                lines.append(f"- **{conn.get('from', '?')}** ↔ **{conn.get('to', '?')}**: {conn.get('relation', '')}")
+                lines.append(
+                    f"- **{conn.get('from', '?')}** ↔ **{conn.get('to', '?')}**: {conn.get('relation', '')}"
+                )
             lines.append("")
 
         if self.new_holes:
-            lines.extend([
-                "---",
-                "",
-                "## 🐇 New Rabbit Holes Spawned",
-                "",
-            ])
+            lines.extend(
+                [
+                    "---",
+                    "",
+                    "## 🐇 New Rabbit Holes Spawned",
+                    "",
+                ]
+            )
             for hole in self.new_holes:
                 lines.append(f"- [ ] {hole}")
 
@@ -285,7 +706,11 @@ class RabbitHoleExplorer:
         caps_pattern = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}\b"
         for match in re.findall(caps_pattern, text):
             lower = match.lower()
-            if lower not in known_terms and lower not in _CHROME_STOPWORDS and len(lower) > 3:
+            if (
+                lower not in known_terms
+                and lower not in _CHROME_STOPWORDS
+                and len(lower) > 3
+            ):
                 term_freq[match] = term_freq.get(match, 0) + 1
 
         # Acronyms (2-7 uppercase letters, optionally with numbers)
@@ -297,7 +722,11 @@ class RabbitHoleExplorer:
         # Hyphenated technical terms
         tech_pattern = r"\b[a-z]+(?:-[a-z]+){1,3}\b"
         for match in re.findall(tech_pattern, text, re.IGNORECASE):
-            if len(match) > 5 and match.lower() not in known_terms and match.lower() not in _CHROME_STOPWORDS:
+            if (
+                len(match) > 5
+                and match.lower() not in known_terms
+                and match.lower() not in _CHROME_STOPWORDS
+            ):
                 term_freq[match] = term_freq.get(match, 0) + 1
 
         # Parenthetical content (definitions/translations) — only at higher temps
@@ -314,7 +743,8 @@ class RabbitHoleExplorer:
 
         # Sort by frequency (most frequent first), then alphabetically
         filtered = [
-            term for term, freq in sorted(term_freq.items(), key=lambda x: (-x[1], x[0]))
+            term
+            for term, freq in sorted(term_freq.items(), key=lambda x: (-x[1], x[0]))
             if freq >= freq_threshold
             and "\n" not in term  # Skip multi-line UI artifacts
             and term.strip()
@@ -337,30 +767,35 @@ class RabbitHoleExplorer:
         connections = []
 
         for i, entry1 in enumerate(entries):
-            for entry2 in entries[i+1:
-                ]:
+            for entry2 in entries[i + 1 :]:
                 # Check for shared related terms
                 shared = set(entry1.related_terms) & set(entry2.related_terms)
                 if shared:
-                    connections.append({
-                        "from": entry1.term,
-                        "to": entry2.term,
-                        "relation": f"Shared concepts: {', '.join(shared)}",
-                    })
+                    connections.append(
+                        {
+                            "from": entry1.term,
+                            "to": entry2.term,
+                            "relation": f"Shared concepts: {', '.join(shared)}",
+                        }
+                    )
 
                 # Check if one mentions the other
                 if entry1.term.lower() in entry2.definition.lower():
-                    connections.append({
-                        "from": entry1.term,
-                        "to": entry2.term,
-                        "relation": f"{entry1.term} appears in definition of {entry2.term}",
-                    })
+                    connections.append(
+                        {
+                            "from": entry1.term,
+                            "to": entry2.term,
+                            "relation": f"{entry1.term} appears in definition of {entry2.term}",
+                        }
+                    )
                 elif entry2.term.lower() in entry1.definition.lower():
-                    connections.append({
-                        "from": entry2.term,
-                        "to": entry1.term,
-                        "relation": f"{entry2.term} appears in definition of {entry1.term}",
-                    })
+                    connections.append(
+                        {
+                            "from": entry2.term,
+                            "to": entry1.term,
+                            "relation": f"{entry2.term} appears in definition of {entry1.term}",
+                        }
+                    )
 
         return connections
 
@@ -389,8 +824,16 @@ class RabbitHoleExplorer:
         for depth in sorted(by_depth.keys()):
             depth_entries = by_depth[depth]
             terms = [e.term for e in depth_entries]
-            temp = temperature_curve[depth] if temperature_curve and depth < len(temperature_curve) else 0.0
-            novelty = novelty_by_level[depth] if novelty_by_level and depth < len(novelty_by_level) else 0.0
+            temp = (
+                temperature_curve[depth]
+                if temperature_curve and depth < len(temperature_curve)
+                else 0.0
+            )
+            novelty = (
+                novelty_by_level[depth]
+                if novelty_by_level and depth < len(novelty_by_level)
+                else 0.0
+            )
             depth_lines.append(
                 f"- **Depth {depth}** ({len(depth_entries)} entries, temp={temp:.2f}, novelty={novelty:.2f}): "
                 f"{', '.join(terms[:8])}"
@@ -401,7 +844,7 @@ class RabbitHoleExplorer:
         if all_content:
             all_terms = {e.term.lower() for e in entries if len(e.term) > 3}
             for content in all_content[:6]:
-                sentences = re.split(r'(?<=[.!?])\s+', content)
+                sentences = re.split(r"(?<=[.!?])\s+", content)
                 for sent in sentences:
                     sent = sent.strip()
                     if 40 < len(sent) < 300:
@@ -431,7 +874,9 @@ class RabbitHoleExplorer:
         if connections:
             parts.extend(["", "### Connections Found"])
             for conn in connections[:10]:
-                parts.append(f"- **{conn.get('from', '?')}** ↔ **{conn.get('to', '?')}**: {conn.get('relation', '')}")
+                parts.append(
+                    f"- **{conn.get('from', '?')}** ↔ **{conn.get('to', '?')}**: {conn.get('relation', '')}"
+                )
 
         return "\n".join(parts)
 
@@ -521,7 +966,21 @@ class RabbitHoleExplorer:
         depth0_queries = [topic]
         # Generate sub-queries by taking pairs of adjacent words
         # Only keep pairs that contain a domain keyword to stay on-topic
-        _domain_keywords = frozenset({"nuclear", "reactor", "reactors", "atomic", "fission", "fusion", "energy", "power", "fuel", "radiation", "isotope"})
+        _domain_keywords = frozenset(
+            {
+                "nuclear",
+                "reactor",
+                "reactors",
+                "atomic",
+                "fission",
+                "fusion",
+                "energy",
+                "power",
+                "fuel",
+                "radiation",
+                "isotope",
+            }
+        )
         if len(topic_words) >= 4:
             for i in range(0, len(topic_words) - 1, 2):
                 pair = " ".join(topic_words[i : i + 2])
@@ -537,7 +996,9 @@ class RabbitHoleExplorer:
 
         category = get_depth_category(0)
         batch = await web_search_batch(
-            depth0_queries, num_results_per_query=num_search_results, category=category,
+            depth0_queries,
+            num_results_per_query=num_search_results,
+            category=category,
         )
         batch_sizer.record_response(batch.duration_ms, bool(batch.errors))
 
@@ -552,13 +1013,17 @@ class RabbitHoleExplorer:
                 if _is_low_quality_url(url):
                     continue
                 fetched_urls.add(url)
-                fetch_result = await cached_deep_fetch(url, max_chars=max_chars_per_fetch)
+                fetch_result = await cached_deep_fetch(
+                    url, max_chars=max_chars_per_fetch
+                )
                 if fetch_result.success and fetch_result.content:
                     level_content.append(fetch_result.content)
                     all_content.append(fetch_result.content)
                     # Extract related terms from the content
                     related = self.extract_unfamiliar_terms(
-                        fetch_result.content[:5000], frozenset({topic.lower()}), temperature=0.5
+                        fetch_result.content[:5000],
+                        frozenset({topic.lower()}),
+                        temperature=0.5,
                     )[:5]
                     entry = RabbitHoleEntry(
                         term=query if query != topic else topic,
@@ -568,7 +1033,9 @@ class RabbitHoleExplorer:
                         depth=0,
                         explored=True,
                         novelty_score=1.0,
-                        content_snippet=fetch_result.content[:200].replace("\n", " ").strip(),
+                        content_snippet=fetch_result.content[:200]
+                        .replace("\n", " ")
+                        .strip(),
                     )
                     all_entries.append(entry)
 
@@ -579,9 +1046,13 @@ class RabbitHoleExplorer:
             temperature_curve.append(temperature)
 
             # Extract unfamiliar terms from current level content
-            combined_text = " ".join(level_content) if level_content else " ".join(all_content[-3:])
+            combined_text = (
+                " ".join(level_content) if level_content else " ".join(all_content[-3:])
+            )
             new_terms = self.extract_unfamiliar_terms(
-                combined_text, frozenset(known_terms | explored_terms), temperature=temperature,
+                combined_text,
+                frozenset(known_terms | explored_terms),
+                temperature=temperature,
             )
 
             # Filter out already-explored terms
@@ -614,7 +1085,9 @@ class RabbitHoleExplorer:
 
             # Batch search all terms in parallel
             batch = await web_search_batch(
-                search_queries, num_results_per_query=num_search_results, category=category,
+                search_queries,
+                num_results_per_query=num_search_results,
+                category=category,
             )
             batch_sizer.record_response(batch.duration_ms, bool(batch.errors))
 
@@ -625,14 +1098,18 @@ class RabbitHoleExplorer:
 
             for idx, term in enumerate(terms_to_search):
                 query = search_queries[idx]
-                results = batch.results_by_query.get(query, batch.results_by_query.get(term, []))
+                results = batch.results_by_query.get(
+                    query, batch.results_by_query.get(term, [])
+                )
                 # Limit to 2 entries per term at depth > 0 to encourage diversity
                 max_per_term = 2 if level > 0 else fetch_top_results
                 for r in results[:max_per_term]:
                     url = r.get("url", "")
                     if url and url not in fetched_urls and not _is_low_quality_url(url):
                         fetched_urls.add(url)
-                        fetch_tasks.append(cached_deep_fetch(url, max_chars=max_chars_per_fetch))
+                        fetch_tasks.append(
+                            cached_deep_fetch(url, max_chars=max_chars_per_fetch)
+                        )
                         term_url_map.append((term, url))
 
             if fetch_tasks:
@@ -649,7 +1126,9 @@ class RabbitHoleExplorer:
                         novelty = self._score_novelty(result.content, all_content[:-1])
                         # Extract related terms
                         related = self.extract_unfamiliar_terms(
-                            result.content[:5000], frozenset({term.lower()}), temperature=temperature,
+                            result.content[:5000],
+                            frozenset({term.lower()}),
+                            temperature=temperature,
                         )[:5]
                         entry = RabbitHoleEntry(
                             term=term,
@@ -659,13 +1138,17 @@ class RabbitHoleExplorer:
                             depth=level,
                             explored=True,
                             novelty_score=novelty,
-                            content_snippet=result.content[:200].replace("\n", " ").strip(),
+                            content_snippet=result.content[:200]
+                            .replace("\n", " ")
+                            .strip(),
                         )
                         all_entries.append(entry)
 
             # Score novelty for this level
             if level_content:
-                level_novelty = self._score_novelty(level_content, all_content[: -len(level_content)])
+                level_novelty = self._score_novelty(
+                    level_content, all_content[: -len(level_content)]
+                )
             else:
                 level_novelty = 0.0
             novelty_by_level.append(level_novelty)
@@ -676,7 +1159,9 @@ class RabbitHoleExplorer:
                 if low_novelty_streak >= 2:
                     logger.debug(
                         "Rabbit hole: low novelty (%.2f) for %d levels at depth %d, stopping",
-                        level_novelty, low_novelty_streak, level,
+                        level_novelty,
+                        low_novelty_streak,
+                        level,
                     )
                     break
                 # Extra temperature boost to escape echo chamber
@@ -693,7 +1178,11 @@ class RabbitHoleExplorer:
 
         # Generate synthesis with content and curves
         synthesis = self.generate_synthesis(
-            all_entries, connections, all_content, temperature_curve, novelty_by_level,
+            all_entries,
+            connections,
+            all_content,
+            temperature_curve,
+            novelty_by_level,
         )
 
         # Find new rabbit holes from related terms that weren't explored
@@ -718,6 +1207,7 @@ class RabbitHoleExplorer:
         if store_memories and all_content:
             try:
                 from whitemagic.core.memory.unified import get_unified_memory
+
                 mem = get_unified_memory()
                 combined = "\n\n---\n\n".join(all_content[:10])
                 mem.store(
@@ -735,17 +1225,22 @@ class RabbitHoleExplorer:
                 pass
 
         # Emit to Gan Ying
-        emit_research_event(topic, {
-            "entries": len(all_entries),
-            "depth": max_depth,
-            "connections": len(connections),
-            "new_holes": len(new_holes),
-            "final_temperature": temperature,
-        })
+        emit_research_event(
+            topic,
+            {
+                "entries": len(all_entries),
+                "depth": max_depth,
+                "connections": len(connections),
+                "new_holes": len(new_holes),
+                "final_temperature": temperature,
+            },
+        )
 
         return report
 
-    def _score_novelty(self, new_content: str | list[str], existing_content: list[str]) -> float:
+    def _score_novelty(
+        self, new_content: str | list[str], existing_content: list[str]
+    ) -> float:
         """Score how novel new content is vs already-seen content.
 
         Uses word-set Jaccard distance to measure information overlap.
@@ -764,19 +1259,58 @@ class RabbitHoleExplorer:
 
         # Common English words to exclude from novelty scoring
         # (different from chrome stopwords — these are just common English)
-        _common = frozenset({
-            "that", "this", "with", "from", "have", "been", "were", "they",
-            "will", "would", "could", "should", "their", "there", "which",
-            "about", "after", "before", "between", "through", "during",
-            "above", "below", "other", "some", "many", "more", "most",
-            "such", "only", "also", "than", "then", "these", "those",
-            "what", "when", "where", "while", "each", "both", "just",
-        })
+        _common = frozenset(
+            {
+                "that",
+                "this",
+                "with",
+                "from",
+                "have",
+                "been",
+                "were",
+                "they",
+                "will",
+                "would",
+                "could",
+                "should",
+                "their",
+                "there",
+                "which",
+                "about",
+                "after",
+                "before",
+                "between",
+                "through",
+                "during",
+                "above",
+                "below",
+                "other",
+                "some",
+                "many",
+                "more",
+                "most",
+                "such",
+                "only",
+                "also",
+                "than",
+                "then",
+                "these",
+                "those",
+                "what",
+                "when",
+                "where",
+                "while",
+                "each",
+                "both",
+                "just",
+            }
+        )
 
         # Build word sets (lowercase, alpha-only, 4+ chars, excluding common words)
         def word_set(text: str) -> set[str]:
             return {
-                w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", text)
+                w.lower()
+                for w in re.findall(r"\b[a-zA-Z]{4,}\b", text)
                 if w.lower() not in _common
             }
 
@@ -827,7 +1361,8 @@ class SourceComparator:
     class SourceInfo:
         """SourceInfo: source info.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         url: str
         content: str
         key_points: list[str] = field(default_factory=list)
@@ -835,13 +1370,17 @@ class SourceComparator:
     def __init__(self) -> None:
         self.sources: list[SourceComparator.SourceInfo] = []
 
-    def add_source(self, url: str, content: str, key_points: list[str] | None = None) -> None:
+    def add_source(
+        self, url: str, content: str, key_points: list[str] | None = None
+    ) -> None:
         """Add a source to compare."""
-        self.sources.append(self.SourceInfo(
-            url=url,
-            content=content,
-            key_points=key_points or [],
-        ))
+        self.sources.append(
+            self.SourceInfo(
+                url=url,
+                content=content,
+                key_points=key_points or [],
+            )
+        )
 
     def find_agreements(self) -> list[str]:
         """Find points that appear across multiple sources."""
@@ -855,6 +1394,7 @@ class SourceComparator:
 
         # Count occurrences
         from collections import Counter
+
         point_counts = Counter(all_points)
 
         # Points appearing in multiple sources
@@ -937,17 +1477,20 @@ def emit_research_event(topic: str, findings: dict[str, Any]) -> None:
             ResonanceEvent,
             get_bus,
         )
+
         bus = get_bus()
-        bus.emit(ResonanceEvent(
-            source="wisdom.rabbit_hole",
-            event_type=EventType.PATTERN_DETECTED,
-            data={
-                "topic": topic,
-                "findings": findings,
-                "timestamp": datetime.now().isoformat(),
-            },
-            confidence=0.8,
-        ))
+        bus.emit(
+            ResonanceEvent(
+                source="wisdom.rabbit_hole",
+                event_type=EventType.PATTERN_DETECTED,
+                data={
+                    "topic": topic,
+                    "findings": findings,
+                    "timestamp": datetime.now().isoformat(),
+                },
+                confidence=0.8,
+            )
+        )
     except ImportError:
         pass  # Gan Ying not available, continue silently
 

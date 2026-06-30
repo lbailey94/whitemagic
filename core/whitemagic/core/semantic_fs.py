@@ -19,6 +19,7 @@ Integration points:
 
 Requires: pip install watchdog (optional dependency)
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -84,15 +85,47 @@ class WatchConfig:
 
     path: str = ""
     recursive: bool = True
-    patterns: list[str] = field(default_factory=lambda: ["*.py", "*.md", "*.json", "*.yaml", "*.yml", "*.ts", "*.js"])
-    ignore_patterns: list[str] = field(default_factory=lambda: ["__pycache__", ".git", "node_modules", ".pytest_cache", "*.pyc"])
+    patterns: list[str] = field(
+        default_factory=lambda: [
+            "*.py",
+            "*.md",
+            "*.json",
+            "*.yaml",
+            "*.yml",
+            "*.ts",
+            "*.js",
+        ]
+    )
+    ignore_patterns: list[str] = field(
+        default_factory=lambda: [
+            "__pycache__",
+            ".git",
+            "node_modules",
+            ".pytest_cache",
+            "*.pyc",
+        ]
+    )
     auto_track_archaeology: bool = True
     emit_gan_ying: bool = True
     extract_themes: bool = True
 
     # Default patterns for static access (tuples prevent accidental mutation)
-    DEFAULT_PATTERNS: ClassVar[tuple[str, ...]] = ("*.py", "*.md", "*.json", "*.yaml", "*.yml", "*.ts", "*.js")
-    DEFAULT_IGNORE: ClassVar[tuple[str, ...]] = ("__pycache__", ".git", "node_modules", ".pytest_cache", "*.pyc")
+    DEFAULT_PATTERNS: ClassVar[tuple[str, ...]] = (
+        "*.py",
+        "*.md",
+        "*.json",
+        "*.yaml",
+        "*.yml",
+        "*.ts",
+        "*.js",
+    )
+    DEFAULT_IGNORE: ClassVar[tuple[str, ...]] = (
+        "__pycache__",
+        ".git",
+        "node_modules",
+        ".pytest_cache",
+        "*.pyc",
+    )
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -151,6 +184,7 @@ class SemanticFileWatcher:
         """Check if watchdog is available."""
         try:
             from importlib.util import find_spec
+
             return find_spec("watchdog") is not None
         except ImportError:
             return False
@@ -170,13 +204,11 @@ class SemanticFileWatcher:
         data = {
             "version": "1.0",
             "updated": datetime.now(UTC).isoformat(),
-            "watches": {path: config.to_dict() for path, config in self._watches.items()},
+            "watches": {
+                path: config.to_dict() for path, config in self._watches.items()
+            },
         }
         self.config_path.write_text(_json_dumps(data, indent=2))
-
-    # =========================================================================
-    # Watch Management
-    # =========================================================================
 
     def add_watch(
         self,
@@ -241,13 +273,8 @@ class SemanticFileWatcher:
     def list_watches(self) -> list[dict[str, Any]]:
         """List all configured watches."""
         return [
-            {"path": path, **config.to_dict()}
-            for path, config in self._watches.items()
+            {"path": path, **config.to_dict()} for path, config in self._watches.items()
         ]
-
-    # =========================================================================
-    # Event Handling
-    # =========================================================================
 
     def _extract_metadata(self, path: str) -> dict[str, Any]:
         """Extract metadata from a file."""
@@ -269,7 +296,9 @@ class SemanticFileWatcher:
                 try:
                     content = p.read_bytes()
                     metadata["content_hash"] = hashlib.sha256(content).hexdigest()[:16]
-                    metadata["line_count"] = len(content.decode("utf-8", errors="ignore").splitlines())
+                    metadata["line_count"] = len(
+                        content.decode("utf-8", errors="ignore").splitlines()
+                    )
                 except Exception as e:
                     logger.debug("Operation failed: %s", e)
                     pass
@@ -283,6 +312,7 @@ class SemanticFileWatcher:
         """Detect themes/topics from file content."""
         try:
             from whitemagic.archaeology import get_wisdom_extractor
+
             extractor = get_wisdom_extractor()
 
             # Read file content
@@ -317,9 +347,13 @@ class SemanticFileWatcher:
             return
 
         # Track in archaeology
-        if config.auto_track_archaeology and event.event_type in (FileEventType.CREATED, FileEventType.MODIFIED):
+        if config.auto_track_archaeology and event.event_type in (
+            FileEventType.CREATED,
+            FileEventType.MODIFIED,
+        ):
             try:
                 from whitemagic.archaeology import get_archaeologist
+
                 arch = get_archaeologist()
                 arch.mark_read(
                     event.path,
@@ -330,7 +364,10 @@ class SemanticFileWatcher:
                 pass
 
         # Detect themes
-        if config.extract_themes and event.event_type in (FileEventType.CREATED, FileEventType.MODIFIED):
+        if config.extract_themes and event.event_type in (
+            FileEventType.CREATED,
+            FileEventType.MODIFIED,
+        ):
             themes = self._detect_themes(event.path)
             event.metadata["themes"] = themes
 
@@ -342,6 +379,7 @@ class SemanticFileWatcher:
                     ResonanceEvent,
                     get_bus,
                 )
+
                 bus = get_bus()
 
                 event_type_map = {
@@ -354,7 +392,9 @@ class SemanticFileWatcher:
                 bus.emit(
                     ResonanceEvent(
                         source="semantic_fs",
-                        event_type=event_type_map.get(event.event_type, EventType.MEMORY_ACCESSED),
+                        event_type=event_type_map.get(
+                            event.event_type, EventType.MEMORY_ACCESSED
+                        ),
                         data=event.to_dict(),
                         confidence=1.0,
                         timestamp=datetime.now(),
@@ -372,17 +412,15 @@ class SemanticFileWatcher:
                 logger.debug("Operation failed: %s", e)
                 pass
 
-    # =========================================================================
-    # Watcher Control
-    # =========================================================================
-
     def start(self) -> bool:
         """Start the file watcher."""
         if self._running:
             return True
 
         if not self._watchdog_available:
-            logger.warning("Warning: watchdog not installed. Install with: pip install watchdog")
+            logger.warning(
+                "Warning: watchdog not installed. Install with: pip install watchdog"
+            )
             return False
 
         if not self._watches:
@@ -395,12 +433,19 @@ class SemanticFileWatcher:
 
             class Handler(FileSystemEventHandler):
                 """Handler: handler."""
+
                 def __init__(self, watcher: SemanticFileWatcher) -> None:
                     self.watcher = watcher
 
                 def _should_ignore(self, path: str) -> bool:
                     """Check if path should be ignored."""
-                    for pattern in ["__pycache__", ".git", "node_modules", ".pytest_cache", ".pyc"]:
+                    for pattern in [
+                        "__pycache__",
+                        ".git",
+                        "node_modules",
+                        ".pytest_cache",
+                        ".pyc",
+                    ]:
                         if pattern in path:
                             return True
                     return False
@@ -408,11 +453,15 @@ class SemanticFileWatcher:
                 def _should_include(self, path: str) -> bool:
                     """Check if path matches watch patterns."""
                     import fnmatch
+
                     for watch_path, config in self.watcher._watches.items():
                         if path.startswith(watch_path):
                             # Check ignore patterns first
                             for pattern in config.ignore_patterns:
-                                if fnmatch.fnmatch(Path(path).name, pattern) or pattern in path:
+                                if (
+                                    fnmatch.fnmatch(Path(path).name, pattern)
+                                    or pattern in path
+                                ):
                                     return False
                             # Check include patterns
                             for pattern in config.patterns:
@@ -543,10 +592,6 @@ class SemanticFileWatcher:
         """Check if watcher is running."""
         return self._running
 
-    # =========================================================================
-    # Callbacks
-    # =========================================================================
-
     def add_callback(self, callback: Callable[[FileEvent], None]) -> None:
         """Add a callback to be called on file events."""
         self._callbacks.append(callback)
@@ -557,10 +602,6 @@ class SemanticFileWatcher:
             self._callbacks.remove(callback)
             return True
         return False
-
-    # =========================================================================
-    # Statistics and Status
-    # =========================================================================
 
     def status(self) -> dict[str, Any]:
         """Get watcher status."""
@@ -600,10 +641,6 @@ def get_watcher() -> SemanticFileWatcher:
             _watcher_instance = SemanticFileWatcher()
         return _watcher_instance
 
-
-# =========================================================================
-# Convenience Functions
-# =========================================================================
 
 def watch_directory(path: str, **kwargs: Any) -> bool:
     """Add a directory to watch."""

@@ -28,13 +28,6 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Phrase mapping table — common WhiteMagic domain terms
-# ---------------------------------------------------------------------------
-# Maps English phrases (lowercase) to dense Chinese equivalents.
-# These are domain-specific: memory, cognition, dispatch, governance.
-# Each Chinese phrase is 2-6 characters, typically 1-3 tokens.
-
 _PHRASE_MAP: dict[str, str] = {
     # Memory operations
     "memory": "记忆",
@@ -59,7 +52,6 @@ _PHRASE_MAP: dict[str, str] = {
     "prune": "修剪",
     "forget": "遗忘",
     "remember": "记忆",
-
     # Cognitive systems
     "cognitive": "认知",
     "reasoning": "推理",
@@ -79,7 +71,6 @@ _PHRASE_MAP: dict[str, str] = {
     "narrative": "叙事",
     "reflection": "反思",
     "contemplation": "冥想",
-
     # Dispatch / tools
     "dispatch": "调度",
     "pipeline": "管道",
@@ -98,7 +89,6 @@ _PHRASE_MAP: dict[str, str] = {
     "audit": "审计",
     "sandbox": "沙箱",
     "quarantine": "隔离",
-
     # Working memory / scratchpad
     "working memory": "工作记忆",
     "scratchpad": "草稿",
@@ -113,7 +103,6 @@ _PHRASE_MAP: dict[str, str] = {
     "token": "词元",
     "budget": "预算",
     "compression": "压缩",
-
     # System / state
     "system": "系统",
     "status": "状态",
@@ -135,7 +124,6 @@ _PHRASE_MAP: dict[str, str] = {
     "parallel": "并行",
     "async": "异步",
     "sync": "同步",
-
     # Evolution
     "evolution": "进化",
     "hypothesis": "假设",
@@ -149,7 +137,6 @@ _PHRASE_MAP: dict[str, str] = {
     "self-model": "自模型",
     "homeostasis": "稳态",
     "harmony": "和谐",
-
     # Common verbs / connectors
     "create": "创建",
     "update": "更新",
@@ -193,7 +180,6 @@ _PHRASE_MAP: dict[str, str] = {
     "running": "运行中",
     "stopped": "已停止",
     "failed": "已失败",
-
     # Common adjectives
     "critical": "关键",
     "high": "高",
@@ -215,7 +201,6 @@ _PHRASE_MAP: dict[str, str] = {
     "full": "满",
     "partial": "部分",
     "whole": "完整",
-
     # Connectors (dense punctuation)
     " and ": "·",
     " or ": "·",
@@ -363,6 +348,12 @@ def get_encoding_stats() -> dict[str, int]:
     """Get statistics about the phrase mapping table."""
     return {
         "total_phrases": len(_PHRASE_MAP),
-        "chinese_mappings": sum(1 for v in _PHRASE_MAP.values() if any("\u4e00" <= c <= "\u9fff" for c in v)),
-        "symbol_mappings": sum(1 for v in _PHRASE_MAP.values() if not any("\u4e00" <= c <= "\u9fff" for c in v)),
+        "chinese_mappings": sum(
+            1 for v in _PHRASE_MAP.values() if any("\u4e00" <= c <= "\u9fff" for c in v)
+        ),
+        "symbol_mappings": sum(
+            1
+            for v in _PHRASE_MAP.values()
+            if not any("\u4e00" <= c <= "\u9fff" for c in v)
+        ),
     }

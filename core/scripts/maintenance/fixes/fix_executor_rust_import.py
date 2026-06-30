@@ -1,4 +1,3 @@
-
 with open("whitemagic/autonomous/executor/continuous_executor.py") as f:
     content = f.read()
 
@@ -15,7 +14,7 @@ content = content.replace(
         \"\"\"Get runtime stats from the Rust background daemon.\"\"\"
         if self._rust_daemon and self._rust_daemon.is_running():
             return self._rust_daemon.get_stats()
-        return {}"""
+        return {}""",
 )
 
 with open("whitemagic/autonomous/executor/continuous_executor.py", "w") as f:

@@ -85,10 +85,7 @@ def mean_crps(
     if sigmas is None:
         sigmas = [max(abs(p) * 0.2, 0.001) for p in predictions]
 
-    total = sum(
-        crps_gaussian(p, a, s)
-        for p, a, s in zip(predictions, actuals, sigmas)
-    )
+    total = sum(crps_gaussian(p, a, s) for p, a, s in zip(predictions, actuals, sigmas))
     return total / len(predictions)
 
 
@@ -164,8 +161,7 @@ def crps_decomposition(
 
     n = len(predictions)
     crps_values = [
-        crps_gaussian(p, a, s)
-        for p, a, s in zip(predictions, actuals, sigmas)
+        crps_gaussian(p, a, s) for p, a, s in zip(predictions, actuals, sigmas)
     ]
     mean_crps_val = sum(crps_values) / n
 
@@ -177,9 +173,9 @@ def crps_decomposition(
     std_actual = statistics.stdev(actuals) if len(actuals) > 1 else 0.001
     if std_actual == 0:
         std_actual = 0.001
-    crps_climatology = sum(
-        crps_gaussian(median_actual, a, std_actual) for a in actuals
-    ) / n
+    crps_climatology = (
+        sum(crps_gaussian(median_actual, a, std_actual) for a in actuals) / n
+    )
 
     # Discrimination: how much better than climatology
     dsc = max(0.0, unc - crps_climatology)
@@ -251,8 +247,12 @@ def weighted_interval_score(
     Returns:
         WIS score (lower is better). Approximates CRPS.
     """
-    if len(lower_bounds) != len(upper_bounds) or len(lower_bounds) != len(quantile_levels):
-        raise ValueError("lower_bounds, upper_bounds, and quantile_levels must have the same length")
+    if len(lower_bounds) != len(upper_bounds) or len(lower_bounds) != len(
+        quantile_levels
+    ):
+        raise ValueError(
+            "lower_bounds, upper_bounds, and quantile_levels must have the same length"
+        )
 
     k = len(quantile_levels)
     if k == 0:
@@ -264,10 +264,10 @@ def weighted_interval_score(
     # Interval components
     for i in range(k):
         alpha = quantile_levels[i]
-        l = lower_bounds[i]
+        lower = lower_bounds[i]
         u = upper_bounds[i]
-        if actual < l:
-            wis += (2 / k) * alpha * (l - actual)
+        if actual < lower:
+            wis += (2 / k) * alpha * (lower - actual)
         elif actual > u:
             wis += (2 / k) * alpha * (actual - u)
 
@@ -346,7 +346,9 @@ def log_score(
     """
     if sigma <= 0:
         sigma = 0.001
-    return 0.5 * math.log(2 * math.pi * sigma * sigma) + (actual - prediction) ** 2 / (2 * sigma * sigma)
+    return 0.5 * math.log(2 * math.pi * sigma * sigma) + (actual - prediction) ** 2 / (
+        2 * sigma * sigma
+    )
 
 
 def mean_log_score(
@@ -361,8 +363,7 @@ def mean_log_score(
     if sigmas is None:
         sigmas = [max(abs(p) * 0.2, 0.001) for p in predictions]
     return sum(
-        log_score(p, a, s)
-        for p, a, s in zip(predictions, actuals, sigmas)
+        log_score(p, a, s) for p, a, s in zip(predictions, actuals, sigmas)
     ) / len(predictions)
 
 
@@ -403,33 +404,26 @@ def dagstuhl_score(
 
     # Per-prediction CRPS
     per_pred_crps = [
-        crps_gaussian(p, a, s)
-        for p, a, s in zip(predictions, actuals, sigmas)
+        crps_gaussian(p, a, s) for p, a, s in zip(predictions, actuals, sigmas)
     ]
 
     # Quantile scores at p50 (median)
-    qs_50 = [
-        quantile_score(p, a, 0.5)
-        for p, a in zip(predictions, actuals)
-    ]
+    qs_50 = [quantile_score(p, a, 0.5) for p, a in zip(predictions, actuals)]
     mean_qs50 = sum(qs_50) / n
 
     # Quantile scores at p90
     p90_preds = [p + 1.2816 * s for p, s in zip(predictions, sigmas)]  # 90th percentile
-    qs_90 = [
-        quantile_score(p90, a, 0.9)
-        for p90, a in zip(p90_preds, actuals)
-    ]
+    qs_90 = [quantile_score(p90, a, 0.9) for p90, a in zip(p90_preds, actuals)]
     mean_qs90 = sum(qs_90) / n
 
     # Mean absolute error (MAE) — CRPS for point forecasts
     mae = sum(abs(p - a) for p, a in zip(predictions, actuals)) / n
 
     # Mean absolute percentage error (MAPE)
-    mape = sum(
-        abs(p - a) / max(abs(a), 0.001) * 100
-        for p, a in zip(predictions, actuals)
-    ) / n
+    mape = (
+        sum(abs(p - a) / max(abs(a), 0.001) * 100 for p, a in zip(predictions, actuals))
+        / n
+    )
 
     # Bias: mean prediction - mean actual
     bias = statistics.mean(predictions) - statistics.mean(actuals)

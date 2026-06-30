@@ -22,10 +22,13 @@ import requests  # type: ignore
 
 logger = logging.getLogger(__name__)
 
+
 class LocalLLM:
     """Interface for local LLM inference."""
 
-    def __init__(self, base_url: str = "http://localhost:11434", model: str | None = None):
+    def __init__(
+        self, base_url: str = "http://localhost:11434", model: str | None = None
+    ):
         self.base_url = base_url.rstrip("/")
         self._requested_model = model
         self.model = model or os.environ.get("WM_LLM_MODEL", "phi3:mini")
@@ -38,13 +41,15 @@ class LocalLLM:
             resp = requests.get(f"{self.base_url}/api/tags", timeout=1.0)
             if resp.status_code == 200:
                 self._available = True
-                models = [m['name'] for m in resp.json().get('models', [])]
+                models = [m["name"] for m in resp.json().get("models", [])]
                 if self.model not in models and f"{self.model}:latest" not in models:
                     if models:
                         self.model = models[0]
                         logger.info("Auto-selected Ollama model: %s", self.model)
                     else:
-                        logger.warning("Model %s not found and no models available", self.model)
+                        logger.warning(
+                            "Model %s not found and no models available", self.model
+                        )
             else:
                 self._available = False
         except Exception as e:
@@ -61,7 +66,13 @@ class LocalLLM:
         """
         return self._available
 
-    def complete(self, prompt: str, stop: list[str] | None = None, max_tokens: int = 512, temperature: float = 0.7) -> str:
+    def complete(
+        self,
+        prompt: str,
+        stop: list[str] | None = None,
+        max_tokens: int = 512,
+        temperature: float = 0.7,
+    ) -> str:
         """Generate a completion."""
         if not self._available:
             return "Error: Local LLM (Ollama) not available. Run 'ollama serve'."
@@ -74,8 +85,8 @@ class LocalLLM:
             "options": {
                 "num_predict": max_tokens,
                 "temperature": temperature,
-                "stop": stop or []
-            }
+                "stop": stop or [],
+            },
         }
 
         try:
@@ -101,9 +112,7 @@ class LocalLLM:
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {
-                "temperature": temperature
-            }
+            "options": {"temperature": temperature},
         }
 
         try:
@@ -123,7 +132,7 @@ class LocalLLM:
         """
         prompt = (
             f"Classify the following text into exactly one of these categories: {', '.join(categories)}.\n"
-            f"Text: \"{text[:500]}\"\n"
+            f'Text: "{text[:500]}"\n'
             f"Category:"
         )
         response = self.complete(prompt, stop=["\n"], max_tokens=10, temperature=0.0)

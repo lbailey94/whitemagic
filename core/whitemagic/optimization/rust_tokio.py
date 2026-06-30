@@ -13,10 +13,6 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Rust availability check
-# ---------------------------------------------------------------------------
-
 _RUST_TOKIO_CLONES = False
 _RUST_IPC = False
 _rs: Any = None
@@ -24,10 +20,12 @@ _ipc_bridge: Any = None  # submodule reference (may be nested or flat)
 
 try:
     import whitemagic_rust as _rs_mod
+
     _rs = _rs_mod
 except ImportError:
     try:
         import whitemagic_rs as _rs_mod
+
         _rs = _rs_mod
     except ImportError:
         pass
@@ -48,10 +46,6 @@ if _rs is not None:
 if _RUST_IPC:
     logger.debug("Rust IPC bridge available")
 
-
-# ---------------------------------------------------------------------------
-# Tokio Clone Army (massively parallel exploration)
-# ---------------------------------------------------------------------------
 
 def tokio_clones_available() -> bool:
     """Check if Rust Tokio Clone Army is available."""
@@ -106,10 +100,6 @@ def tokio_clone_stats() -> dict[str, Any] | None:
         logger.debug("Rust tokio_clone_stats failed: %s", e, exc_info=True)
         return None
 
-
-# ---------------------------------------------------------------------------
-# IPC Bridge (Iceoryx2 shared memory)
-# ---------------------------------------------------------------------------
 
 def ipc_available() -> bool:
     """Check if Rust IPC bridge is available."""

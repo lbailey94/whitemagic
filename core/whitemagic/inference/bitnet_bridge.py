@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 ENABLED = os.environ.get("WHITEMAGIC_ENABLE_BITNET", "").strip() in ("1", "true", "yes")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 CHANNEL = os.environ.get("BITNET_CHANNEL", "ganying")
-MODEL_PATH = os.environ.get("BITNET_MODEL_PATH", "models/bitnet_b1_58-3B/ggml-model-tl2.gguf")
+MODEL_PATH = os.environ.get(
+    "BITNET_MODEL_PATH", "models/bitnet_b1_58-3B/ggml-model-tl2.gguf"
+)
 LLAMA_CLI = os.environ.get("BITNET_LLAMA_CLI", "build/bin/llama-cli")
 TIMEOUT = int(os.environ.get("BITNET_TIMEOUT", "60"))
 
@@ -41,6 +43,7 @@ def is_available() -> bool:
     # Check if we can reach Redis (for bus mode) or llama-cli (for direct mode)
     try:
         import redis
+
         r = redis.Redis.from_url(REDIS_URL, socket_timeout=1)
         r.ping()
         return True
@@ -50,8 +53,9 @@ def is_available() -> bool:
     return Path(LLAMA_CLI).exists()
 
 
-def infer(prompt: str, n_predict: int = 128, temp: float = 0.8,
-          mode: str = "auto") -> dict[str, Any]:
+def infer(
+    prompt: str, n_predict: int = 128, temp: float = 0.8, mode: str = "auto"
+) -> dict[str, Any]:
     """
     Run BitNet inference.
 
@@ -65,7 +69,10 @@ def infer(prompt: str, n_predict: int = 128, temp: float = 0.8,
         Dict with text, duration_seconds, model, and mode.
     """
     if not ENABLED:
-        return {"status": "error", "message": "BitNet not enabled. Set WHITEMAGIC_ENABLE_BITNET=1"}
+        return {
+            "status": "error",
+            "message": "BitNet not enabled. Set WHITEMAGIC_ENABLE_BITNET=1",
+        }
 
     if mode == "auto":
         mode = "redis" if _redis_available() else "direct"
@@ -79,6 +86,7 @@ def infer(prompt: str, n_predict: int = 128, temp: float = 0.8,
 def _redis_available() -> bool:
     try:
         import redis
+
         r = redis.Redis.from_url(REDIS_URL, socket_timeout=1)
         r.ping()
         return True
@@ -98,14 +106,19 @@ def _infer_redis(prompt: str, n_predict: int, temp: float) -> dict[str, Any]:
     pubsub.subscribe(CHANNEL)
 
     # Publish request
-    r.publish(CHANNEL, _json_dumps({
-        "event_type": "INFERENCE_REQUEST",
-        "target": "bitnet",
-        "request_id": request_id,
-        "data": {"prompt": prompt, "n_predict": n_predict, "temp": temp},
-        "source": "whitemagic-bridge",
-        "timestamp": time.time(),
-    }))
+    r.publish(
+        CHANNEL,
+        _json_dumps(
+            {
+                "event_type": "INFERENCE_REQUEST",
+                "target": "bitnet",
+                "request_id": request_id,
+                "data": {"prompt": prompt, "n_predict": n_predict, "temp": temp},
+                "source": "whitemagic-bridge",
+                "timestamp": time.time(),
+            }
+        ),
+    )
 
     # Wait for response
     deadline = time.time() + TIMEOUT
@@ -114,8 +127,10 @@ def _infer_redis(prompt: str, n_predict: int, temp: float) -> dict[str, Any]:
         if msg and msg["type"] == "message":
             try:
                 data = _json_loads(msg["data"])
-                if (data.get("event_type") == "INFERENCE_RESULT" and
-                        data.get("request_id") == request_id):
+                if (
+                    data.get("event_type") == "INFERENCE_RESULT"
+                    and data.get("request_id") == request_id
+                ):
                     pubsub.unsubscribe()
                     result = data.get("data", {})
                     return {
@@ -129,7 +144,10 @@ def _infer_redis(prompt: str, n_predict: int, temp: float) -> dict[str, Any]:
                 continue
 
     pubsub.unsubscribe()
-    return {"status": "error", "message": f"Timeout after {TIMEOUT}s waiting for BitNet response"}
+    return {
+        "status": "error",
+        "message": f"Timeout after {TIMEOUT}s waiting for BitNet response",
+    }
 
 
 def _infer_direct(prompt: str, n_predict: int, temp: float) -> dict[str, Any]:
@@ -140,19 +158,28 @@ def _infer_direct(prompt: str, n_predict: int, temp: float) -> dict[str, Any]:
 
     command = [
         executable,
-        "-m", MODEL_PATH,
-        "-n", str(n_predict),
-        "-p", prompt,
-        "-ngl", "0",
-        "-c", "2048",
-        "--temp", str(temp),
-        "-b", "1",
+        "-m",
+        MODEL_PATH,
+        "-n",
+        str(n_predict),
+        "-p",
+        prompt,
+        "-ngl",
+        "0",
+        "-c",
+        "2048",
+        "--temp",
+        str(temp),
+        "-b",
+        "1",
         "--log-disable",
     ]
 
     start = time.time()
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=TIMEOUT)
+        result = subprocess.run(
+            command, capture_output=True, text=True, check=True, timeout=TIMEOUT
+        )
         duration = time.time() - start
         return {
             "status": "success",
@@ -169,8 +196,6 @@ def _infer_direct(prompt: str, n_predict: int, temp: float) -> dict[str, Any]:
         return {"status": "error", "message": f"llama-cli not found at {executable}"}
 
 
-# --- Gan Ying event emission ---
-
 def _emit_inference_event(result: dict[str, Any], prompt: str) -> Any:
     """Emit inference result to Gan Ying bus."""
     try:
@@ -179,18 +204,23 @@ def _emit_inference_event(result: dict[str, Any], prompt: str) -> Any:
             ResonanceEvent,
             get_bus,
         )
+
         bus = get_bus()
-        inference_event = getattr(EventType, "INFERENCE_COMPLETE", EventType.PATTERN_DETECTED)
-        bus.emit(ResonanceEvent(
-            event_type=inference_event,
-            source="bitnet_bridge",
-            data={
-                "model": result.get("model"),
-                "mode": result.get("mode"),
-                "duration": result.get("duration_seconds"),
-                "prompt_length": len(prompt),
-                "status": result.get("status"),
-            },
-        ))
+        inference_event = getattr(
+            EventType, "INFERENCE_COMPLETE", EventType.PATTERN_DETECTED
+        )
+        bus.emit(
+            ResonanceEvent(
+                event_type=inference_event,
+                source="bitnet_bridge",
+                data={
+                    "model": result.get("model"),
+                    "mode": result.get("mode"),
+                    "duration": result.get("duration_seconds"),
+                    "prompt_length": len(prompt),
+                    "status": result.get("status"),
+                },
+            )
+        )
     except (ImportError, AttributeError):
         pass

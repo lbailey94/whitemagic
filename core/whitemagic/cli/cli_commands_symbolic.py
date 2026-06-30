@@ -53,6 +53,7 @@ def meaning(number: int) -> None:
         return
 
     from whitemagic.oracle.quantum_iching import HexagramDatabase
+
     db = HexagramDatabase()
     data = db.get_hexagram(number)
     if data is not None:
@@ -106,6 +107,7 @@ def _get_hexagram_name(number: int) -> str:
     """Get hexagram name (fallback)."""
     try:
         from whitemagic.oracle.quantum_iching import HexagramDatabase
+
         result = HexagramDatabase().get_hexagram(number)
         return str((result or {}).get("name", "Unknown"))
     except (ImportError, ModuleNotFoundError):

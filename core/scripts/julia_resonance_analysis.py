@@ -44,6 +44,7 @@ log = logging.getLogger("julia_resonance")
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -90,7 +91,9 @@ def run_resonance_analysis(limit: int = 0) -> dict:
     conn.close()
 
     # Stats
-    avg_resonance = sum(r.total_resonance for r in results) / len(results) if results else 0
+    avg_resonance = (
+        sum(r.total_resonance for r in results) / len(results) if results else 0
+    )
     avg_half_life = sum(r.half_life for r in results) / len(results) if results else 0
     avg_peak = sum(r.peak_amplitude for r in results) / len(results) if results else 0
 
@@ -103,7 +106,9 @@ def run_resonance_analysis(limit: int = 0) -> dict:
     top5 = sorted(results, key=lambda r: r.total_resonance, reverse=True)[:5]
     log.info(f"\n  Top 5 Most Resonant Memories:")
     for r in top5:
-        log.info(f"    {r.memory_id[:20]}... resonance={r.total_resonance:.4f}, half_life={r.half_life:.4f}")
+        log.info(
+            f"    {r.memory_id[:20]}... resonance={r.total_resonance:.4f}, half_life={r.half_life:.4f}"
+        )
 
     return {
         "memories_analyzed": len(results),
@@ -128,7 +133,9 @@ def run_causal_verification(limit: int = 0) -> dict:
     )
 
     log.info(f"\n📊 Causal Verification Statistics:")
-    log.info(f"  Associations verified: {result['associations_verified']}/{result['total_associations']}")
+    log.info(
+        f"  Associations verified: {result['associations_verified']}/{result['total_associations']}"
+    )
     log.info(f"  Total nodes: {result['total_nodes']}")
     log.info(f"  Total energy: {result['total_energy']:.4f}")
 
@@ -168,7 +175,9 @@ def run_neighbor_analysis(limit: int = 0) -> dict:
             max_neighbors_mem = mem["id"]
 
         if (i + 1) % 100 == 0:
-            log.info(f"  Progress: {i + 1}/{len(memories)} (avg neighbors: {total_neighbors/(i+1):.1f})")
+            log.info(
+                f"  Progress: {i + 1}/{len(memories)} (avg neighbors: {total_neighbors / (i + 1):.1f})"
+            )
 
     conn.close()
 
@@ -187,7 +196,9 @@ def run_neighbor_analysis(limit: int = 0) -> dict:
     }
 
 
-def run_build_associations(radius: float = 0.2, limit: int = 5000, dry_run: bool = False) -> dict:
+def run_build_associations(
+    radius: float = 0.2, limit: int = 5000, dry_run: bool = False
+) -> dict:
     """Build holographic proximity associations."""
     from whitemagic.core.resonance.julia_resonance import get_resonance_engine
 
@@ -247,10 +258,16 @@ def print_final_stats():
 
 def main():
     parser = argparse.ArgumentParser(description="Julia Resonance Analysis")
-    parser.add_argument("--mode", choices=["resonance", "causal", "neighbors", "build", "all"],
-                       default="all", help="Analysis mode")
+    parser.add_argument(
+        "--mode",
+        choices=["resonance", "causal", "neighbors", "build", "all"],
+        default="all",
+        help="Analysis mode",
+    )
     parser.add_argument("--limit", type=int, default=0, help="Limit memories")
-    parser.add_argument("--radius", type=float, default=0.2, help="Neighbor search radius")
+    parser.add_argument(
+        "--radius", type=float, default=0.2, help="Neighbor search radius"
+    )
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     args = parser.parse_args()
 
@@ -264,13 +281,19 @@ def main():
     results = {}
 
     if args.mode in ("resonance", "all"):
-        results["resonance"] = run_resonance_analysis(limit=args.limit if args.limit > 0 else 200)
+        results["resonance"] = run_resonance_analysis(
+            limit=args.limit if args.limit > 0 else 200
+        )
 
     if args.mode in ("causal", "all"):
-        results["causal"] = run_causal_verification(limit=args.limit if args.limit > 0 else 200)
+        results["causal"] = run_causal_verification(
+            limit=args.limit if args.limit > 0 else 200
+        )
 
     if args.mode in ("neighbors", "all"):
-        results["neighbors"] = run_neighbor_analysis(limit=args.limit if args.limit > 0 else 200)
+        results["neighbors"] = run_neighbor_analysis(
+            limit=args.limit if args.limit > 0 else 200
+        )
 
     if args.mode in ("build", "all"):
         results["build"] = run_build_associations(

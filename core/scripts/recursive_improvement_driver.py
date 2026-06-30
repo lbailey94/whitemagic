@@ -23,6 +23,7 @@ from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, G
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("RecursiveDriver")
 
+
 class RecursiveImprovementDriver:
     def __init__(self, findings_file: Path):
         self.findings_file = findings_file
@@ -30,14 +31,15 @@ class RecursiveImprovementDriver:
         self.forge = get_skill_forge()
         # SET TO CREATIVE MODE PER USER REQUEST
         from whitemagic.dharma.rules import get_rules_engine
+
         get_rules_engine().set_profile("creative")
         self.karma_threshold = 0.0
 
     def run(self):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("RECURSIVE SELF-IMPROVEMENT: SYNTHESIS PHASE")
-        print("="*60)
-        
+        print("=" * 60)
+
         if not self.findings_file.exists():
             print(f"❌ Findings file not found: {self.findings_file}")
             return
@@ -53,29 +55,29 @@ class RecursiveImprovementDriver:
                     continue
 
         print(f"Loaded {len(findings)} High-Confidence (Score >= 6) candidates.")
-        
+
         for f in findings:
             self._process_finding(f)
 
     def _process_finding(self, finding: dict):
         name = finding.get("name") or finding.get("id") or "Unknown"
         print(f"\nEvaluating: {name}")
-        
+
         # 1. Autodidactic Assessment (Simulated historical context)
         # In a real run, we'd look up historical outcomes.
         # Here we use the archaeology "score" as initial confidence.
         chapters = finding.get("anthropology", {}).get("chapters", [])
         initial_confidence = chapters[0]["score"] / 10.0 if chapters else 0.5
-        
+
         # 2. Dharma Gatekeeping
         action_dict = {
             "tool": "skill_forge.forge",
             "description": f"Forging recovered legacy skill: {name}",
             "intent": "recursive_improvement",
-            "safety": "WRITE"
+            "safety": "WRITE",
         }
         ethical_score, concerns = evaluate_ethics(action_dict)
-        
+
         print(f"  Ethical Score: {ethical_score:.2f}")
         if ethical_score < self.karma_threshold:
             print(f"  ⚠️ REJECTED by Dharma: {', '.join(concerns)}")
@@ -85,18 +87,24 @@ class RecursiveImprovementDriver:
         # Mocking a chain based on the finding's Gana
         gana = finding.get("anthropology", {}).get("gana", "Star")
         steps = [
-            GanaStep(mansion=gana, operation="activate", context_key="system_state", parameters={})
+            GanaStep(
+                mansion=gana,
+                operation="activate",
+                context_key="system_state",
+                parameters={},
+            )
         ]
         chain = ExecutionChain(
             intent=f"Execute {name} protocol",
             steps=steps,
             estimated_complexity=len(steps),
-            required_capabilities=[]
+            required_capabilities=[],
         )
 
         # 4. Forging
         print(f"  ✅ Approved. Forging skill: '{name}'")
         self.forge.forge(chain, name.replace(".py", "").replace(".", "_"))
+
 
 if __name__ == "__main__":
     findings_path = REPO_ROOT / "scripts/archaeology_results/recovered_memories.jsonl"

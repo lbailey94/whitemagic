@@ -34,10 +34,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- EVENT BUS TYPES ---
 
 class EventType(Enum):
     """Standardized event types for biological communication."""
+
     DREAM_PHASE_COMPLETE = "dream_phase_complete"
     IMMUNE_ALERT = "immune_alert"
     MEMORY_DECAY = "memory_decay"
@@ -47,16 +47,17 @@ class EventType(Enum):
     SELECTION_PRESSURE = "selection_pressure"
     PATTERN_IMMUNITY = "pattern_immunity"
 
+
 @dataclass
 class BiologicalEvent:
     """Single biological event with metadata."""
+
     event_type: EventType
     data: dict[str, Any]
     source_subsystem: str
     timestamp: float = field(default_factory=time.time)
     priority: int = 1
 
-# --- BIOLOGICAL EVENT BUS ---
 
 class BiologicalEventBus:
     """High-performance event bus for biological subsystem coordination."""
@@ -66,7 +67,9 @@ class BiologicalEventBus:
         self._subscribers: dict[EventType, list[Callable]] = {}
         self._event_queue: asyncio.Queue = asyncio.Queue(maxsize=10000)
         self._stats = {"events_published": 0, "events_processed": 0, "errors": 0}
-        self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="bio_event")
+        self._executor = ThreadPoolExecutor(
+            max_workers=4, thread_name_prefix="bio_event"
+        )
 
     async def start(self) -> None:
         """
@@ -89,7 +92,9 @@ class BiologicalEventBus:
         self.is_active = False
         self._executor.shutdown(wait=True)
 
-    def subscribe(self, event_type: EventType, handler: Callable, subsystem: str) -> None:
+    def subscribe(
+        self, event_type: EventType, handler: Callable, subsystem: str
+    ) -> None:
         """
         Perform the subscribe operation.
 
@@ -114,15 +119,25 @@ class BiologicalEventBus:
             try:
                 if asyncio.iscoroutinefunction(handler):
                     await handler(event)
-                else :
-                    await asyncio.get_event_loop().run_in_executor(self._executor, handler, event)
+                else:
+                    await asyncio.get_event_loop().run_in_executor(
+                        self._executor, handler, event
+                    )
             except Exception as e:
                 self._stats["errors"] += 1
-                logger.error("Event handler error in %s: %s", subsystem, e, exc_info=True)
+                logger.error(
+                    "Event handler error in %s: %s", subsystem, e, exc_info=True
+                )
 
         self._subscribers[event_type].append(safe_handler)
 
-    async def publish(self, event_type: EventType, data: dict[str, Any], source: str, priority: int = 1) -> bool:
+    async def publish(
+        self,
+        event_type: EventType,
+        data: dict[str, Any],
+        source: str,
+        priority: int = 1,
+    ) -> bool:
         """
         Perform the publish operation.
 
@@ -137,7 +152,9 @@ class BiologicalEventBus:
         """
         if not self.is_active:
             return False
-        event = BiologicalEvent(event_type=event_type, data=data, source_subsystem=source, priority=priority)
+        event = BiologicalEvent(
+            event_type=event_type, data=data, source_subsystem=source, priority=priority
+        )
         await self._event_queue.put(event)
         self._stats["events_published"] += 1
         return True
@@ -163,9 +180,11 @@ class BiologicalEventBus:
         Returns:
             dict[str, Any]
         """
-        return {**self._stats, "subscribers_count": sum(len(h) for h in self._subscribers.values())}
+        return {
+            **self._stats,
+            "subscribers_count": sum(len(h) for h in self._subscribers.values()),
+        }
 
-# --- UNIFIED NERVOUS SYSTEM ---
 
 class UnifiedNervousSystem:
     """Central coordinator for all 7 biological subsystems."""
@@ -213,12 +232,17 @@ class UnifiedNervousSystem:
         if not self.is_active:
             return {"status": "inactive"}
         self._stats["pulses"] += 1
-        return {"status": "ok", "pulses": self._stats["pulses"], "timestamp": time.time()}
+        return {
+            "status": "ok",
+            "pulses": self._stats["pulses"],
+            "timestamp": time.time(),
+        }
 
-# --- SINGLETONS ---
+
 _event_bus: BiologicalEventBus | None = None
 _nervous_system: UnifiedNervousSystem | None = None
 _lock = asyncio.Lock()
+
 
 async def get_event_bus() -> BiologicalEventBus:
     """
@@ -235,6 +259,7 @@ async def get_event_bus() -> BiologicalEventBus:
                 await _event_bus.start()
     return _event_bus
 
+
 async def get_nervous_system() -> UnifiedNervousSystem:
     """
     Get the nervous system.
@@ -249,6 +274,7 @@ async def get_nervous_system() -> UnifiedNervousSystem:
                 _nervous_system = UnifiedNervousSystem()
                 await _nervous_system.start()
     return _nervous_system
+
 
 # Legacy compatibility
 def get_nervous_system_sync() -> UnifiedNervousSystem:

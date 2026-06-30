@@ -18,14 +18,16 @@ from typing import Any
 
 class ToolStability(StrEnum):
     """Tool stability classification."""
-    STABLE = "stable"           # Core contract - never break
+
+    STABLE = "stable"  # Core contract - never break
     EXPERIMENTAL = "experimental"  # May change
-    DEPRECATED = "deprecated"   # Will be removed
+    DEPRECATED = "deprecated"  # Will be removed
 
 
 @dataclass
 class StableTool:
     """Definition of a stable public tool."""
+
     name: str
     description: str
     stability: ToolStability
@@ -36,12 +38,7 @@ class StableTool:
     response_schema: dict[str, Any]
 
 
-# =============================================================================
-# STABLE PUBLIC TOOL CONTRACT (v21.0.0)
-# =============================================================================
-
 STABLE_TOOLS: dict[str, StableTool] = {
-    # --- Memory Tools (Core) ---
     "create_memory": StableTool(
         name="create_memory",
         description="Create a new memory entry with content and metadata",
@@ -52,7 +49,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["tags", "source", "importance", "galaxy", "idempotency_key"],
         response_schema={"status": "success", "memory_id": "uuid", "writes": []},
     ),
-
     "search_memories": StableTool(
         name="search_memories",
         description="Search for memories by query, tags, or metadata",
@@ -63,7 +59,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["query", "tags", "galaxy", "limit", "offset"],
         response_schema={"status": "success", "results": [], "total": 0},
     ),
-
     "batch_read_memories": StableTool(
         name="batch_read_memories",
         description="Read multiple memories by their IDs",
@@ -74,8 +69,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "memories": []},
     ),
-
-    # --- Introspection Tools (Core) ---
     "capabilities": StableTool(
         name="capabilities",
         description="Get the complete list of available tools and their schemas",
@@ -86,7 +79,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "tools": [], "count": 0},
     ),
-
     "manifest": StableTool(
         name="manifest",
         description="Get the system manifest with version and health info",
@@ -97,7 +89,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "version": "", "health": {}},
     ),
-
     "state.paths": StableTool(
         name="state.paths",
         description="Get all state directory paths (WM_ROOT, DB_PATH, etc.)",
@@ -108,7 +99,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "paths": {}},
     ),
-
     "state.summary": StableTool(
         name="state.summary",
         description="Get summary of current system state",
@@ -119,7 +109,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "summary": {}},
     ),
-
     "ship.check": StableTool(
         name="ship.check",
         description="Validate ship surface hygiene and configuration",
@@ -130,8 +119,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "details": {}},
     ),
-
-    # --- Garden Tools (Core) ---
     "garden.status": StableTool(
         name="garden.status",
         description="Get status of a specific garden or all gardens",
@@ -142,7 +129,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["garden_name"],
         response_schema={"status": "success", "gardens": []},
     ),
-
     "garden.list_files": StableTool(
         name="garden.list_files",
         description="List files in a garden's virtual filesystem",
@@ -153,8 +139,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["path"],
         response_schema={"status": "success", "files": []},
     ),
-
-    # --- Session Tools (Core) ---
     "session.status": StableTool(
         name="session.status",
         description="Get current session status and context",
@@ -165,7 +149,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "session": {}},
     ),
-
     "session.bootstrap": StableTool(
         name="session.bootstrap",
         description="Initialize a new session with context",
@@ -176,8 +159,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["context", "galaxy"],
         response_schema={"status": "success", "session_id": "uuid"},
     ),
-
-    # --- Health & Diagnostics (Core) ---
     "health_report": StableTool(
         name="health_report",
         description="Get comprehensive system health report",
@@ -188,7 +169,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "health": {}},
     ),
-
     "gnosis": StableTool(
         name="gnosis",
         description="Get system self-knowledge and architecture info",
@@ -199,8 +179,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "gnosis": {}},
     ),
-
-    # --- Dharma/Ethics Tools (Core) ---
     "evaluate_ethics": StableTool(
         name="evaluate_ethics",
         description="Evaluate an action against Dharma principles",
@@ -211,7 +189,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "evaluation": {}},
     ),
-
     "check_boundaries": StableTool(
         name="check_boundaries",
         description="Check if an action respects system boundaries",
@@ -222,8 +199,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "allowed": False, "reason": ""},
     ),
-
-    # --- Galaxy Tools (Core) ---
     "galaxy.status": StableTool(
         name="galaxy.status",
         description="Get status of a memory galaxy",
@@ -234,7 +209,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["galaxy_name"],
         response_schema={"status": "success", "galaxies": []},
     ),
-
     "galaxy.list": StableTool(
         name="galaxy.list",
         description="List all available galaxies",
@@ -245,8 +219,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "galaxies": []},
     ),
-
-    # --- Export/Import (Core) ---
     "export_memories": StableTool(
         name="export_memories",
         description="Export memories to JSON or other formats",
@@ -257,7 +229,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["galaxy", "tags", "format", "destination"],
         response_schema={"status": "success", "export_path": ""},
     ),
-
     "import_memories": StableTool(
         name="import_memories",
         description="Import memories from JSON or other formats",
@@ -268,8 +239,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["galaxy", "tags", "format"],
         response_schema={"status": "success", "imported_count": 0},
     ),
-
-    # --- Knowledge Graph (Core) ---
     "kg.status": StableTool(
         name="kg.status",
         description="Get knowledge graph status",
@@ -280,7 +249,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "entities": 0, "edges": 0},
     ),
-
     "kg.query": StableTool(
         name="kg.query",
         description="Query the knowledge graph",
@@ -291,8 +259,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=["limit"],
         response_schema={"status": "success", "results": []},
     ),
-
-    # --- PRAT Ganas (Core - representative sample) ---
     "prat_status": StableTool(
         name="prat_status",
         description="Get PRAT Ganas system status",
@@ -303,8 +269,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "ganas": []},
     ),
-
-    # --- Tool Introspection (Core) ---
     "tool.graph": StableTool(
         name="tool.graph",
         description="Get tool dependency graph",
@@ -315,7 +279,6 @@ STABLE_TOOLS: dict[str, StableTool] = {
         optional_params=[],
         response_schema={"status": "success", "graph": {}},
     ),
-
     "tool.graph_full": StableTool(
         name="tool.graph_full",
         description="Get full tool dependency graph with all edges",

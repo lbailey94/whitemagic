@@ -21,6 +21,7 @@ class AutonomousLearner:
         self.mistakes_made: list[str] = []
         self.wisdom_gained: list[dict[str, str]] = []
         from whitemagic.core.memory.unified import get_unified_memory
+
         self._memory = get_unified_memory()
 
     def learn_from_mistake(self, mistake: str, lesson: str) -> None:
@@ -40,10 +41,12 @@ class AutonomousLearner:
 
     def learn_from_success(self, success: str, principle: str) -> None:
         """Extract wisdom from victories."""
-        self.wisdom_gained.append({
-            "success": success,
-            "principle": principle,
-        })
+        self.wisdom_gained.append(
+            {
+                "success": success,
+                "principle": principle,
+            }
+        )
         logger.info("💎 Wisdom: %s", principle)
 
         # Persist to Unified Memory
@@ -72,12 +75,14 @@ class AutonomousLearner:
 # Singleton instance
 _learner = None
 
+
 def get_autonomous_learner() -> AutonomousLearner:
     """Get the global autonomous learner."""
     global _learner
     if _learner is None:
         _learner = AutonomousLearner()
     return _learner
+
 
 # Learning cycle! 📚
 LEARNING_CYCLE = """

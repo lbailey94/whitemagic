@@ -1,12 +1,10 @@
-
 with open("whitemagic/core/acceleration/hybrid_dispatcher_v2.py") as f:
     content = f.read()
 
 # Replace PythonFastPath methods to use Rust
 # First import rs
 content = content.replace(
-    "import subprocess",
-    "import subprocess\nimport whitemagic_rust as rs"
+    "import subprocess", "import subprocess\nimport whitemagic_rust as rs"
 )
 
 # Fix prat_route
@@ -19,7 +17,7 @@ content = content.replace(
         try:
             return rs.prat_route(tool)
         except Exception:
-            return cls.TOOL_TO_GANA.get(tool, "gana_ghost")"""
+            return cls.TOOL_TO_GANA.get(tool, "gana_ghost")""",
 )
 
 # Fix get_predecessor
@@ -34,7 +32,7 @@ content = content.replace(
             return rs.resonance_predecessor(gana)
         except Exception:
             idx = cls.GANA_INDEX.get(gana, 0)
-            return cls.GANA_ORDER[(idx - 1) % 28]"""
+            return cls.GANA_ORDER[(idx - 1) % 28]""",
 )
 
 # Fix get_successor
@@ -49,7 +47,7 @@ content = content.replace(
             return rs.resonance_successor(gana)
         except Exception:
             idx = cls.GANA_INDEX.get(gana, 0)
-            return cls.GANA_ORDER[(idx + 1) % 28]"""
+            return cls.GANA_ORDER[(idx + 1) % 28]""",
 )
 
 # Replace HybridDispatcherV2 methods
@@ -81,7 +79,7 @@ content = content.replace(
 
         latency = (time.perf_counter() - start) * 1_000_000
         self._record_latency(False, latency, operation)
-        return result"""
+        return result""",
 )
 
 # Fix prat_route_batch instance method
@@ -107,7 +105,7 @@ content = content.replace(
 
         latency = (time.perf_counter() - start) * 1_000_000
         self._record_latency(False, latency / max(1, len(tools)), "prat_route")
-        return results"""
+        return results""",
 )
 
 with open("whitemagic/core/acceleration/hybrid_dispatcher_v2.py", "w") as f:

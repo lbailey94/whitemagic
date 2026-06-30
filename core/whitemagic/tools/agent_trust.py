@@ -35,6 +35,7 @@ def get_agent_trust_scores(agent_id: str | None = None) -> dict[str, Any]:
     """
     try:
         from whitemagic.dharma.karma_ledger import get_karma_ledger
+
         ledger = get_karma_ledger()
         report = ledger.report()
     except (ImportError, ModuleNotFoundError) as e:

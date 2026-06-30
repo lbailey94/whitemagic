@@ -12,10 +12,6 @@
 use pyo3::prelude::*;
 use std::collections::{HashMap, HashSet};
 
-// ---------------------------------------------------------------------------
-// Data Structures
-// ---------------------------------------------------------------------------
-
 /// A named cluster of semantically related memories in 5D space.
 #[derive(Debug, Clone)]
 pub struct Constellation {
@@ -40,10 +36,6 @@ pub struct DetectionResult {
     pub algorithm: String,
     pub constellations: Vec<Constellation>,
 }
-
-// ---------------------------------------------------------------------------
-// 5D Distance Functions
-// ---------------------------------------------------------------------------
 
 /// Compute Euclidean distance in 5D space.
 #[inline]
@@ -75,10 +67,6 @@ pub fn compute_centroid(points: &[[f64; 5]]) -> [f64; 5] {
     }
     [sum[0] / n, sum[1] / n, sum[2] / n, sum[3] / n, sum[4] / n]
 }
-
-// ---------------------------------------------------------------------------
-// Grid-Based Detection
-// ---------------------------------------------------------------------------
 
 /// Grid-based density scan for clustering.
 pub struct GridDetector {
@@ -199,10 +187,6 @@ impl GridDetector {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Hungarian Algorithm for Optimal Matching
-// ---------------------------------------------------------------------------
-
 /// Hungarian algorithm for optimal assignment (minimization).
 /// Returns (row_indices, col_indices) for the optimal assignment.
 pub fn hungarian_algorithm(cost_matrix: &[Vec<f64>]) -> Vec<(usize, usize)> {
@@ -306,10 +290,6 @@ pub fn hungarian_match(
     (matched, novel, forgotten)
 }
 
-// ---------------------------------------------------------------------------
-// Python FFI Module
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "python")]
 #[pymodule]
 pub fn constellations(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -385,10 +365,6 @@ fn py_merge_adjacent_cells(
     let groups = detector.merge_adjacent(&cells);
     Ok(groups)
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

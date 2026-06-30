@@ -6,6 +6,7 @@ import psutil
 
 logger = logging.getLogger(__name__)
 
+
 class TzimtzumManager:
     """Tzimtzum Manager — The Physics of Humility.
     Ensures the system 'makes space' (vacant space) by limiting its own intensity.
@@ -13,7 +14,7 @@ class TzimtzumManager:
 
     def __init__(self) -> None:
         self.is_vacant_space_active = False
-        self.intensity_cap = 1.0 # 0.0 to 1.0
+        self.intensity_cap = 1.0  # 0.0 to 1.0
         self.last_adjustment = datetime.now()
 
     def make_space(self, intensity: float = 0.5) -> Any:
@@ -21,7 +22,9 @@ class TzimtzumManager:
         self.is_vacant_space_active = True
         self.intensity_cap = max(0.1, min(1.0, intensity))
         self.last_adjustment = datetime.now()
-        logger.info("🌌 Tzimtzum: Created Vacant Space (Intensity Cap: %s)", self.intensity_cap)
+        logger.info(
+            "🌌 Tzimtzum: Created Vacant Space (Intensity Cap: %s)", self.intensity_cap
+        )
 
     def release_space(self) -> Any:
         """Deactivate 'Vacant Space' mode."""
@@ -41,7 +44,7 @@ class TzimtzumManager:
 
         # If we are in vacant space mode, we want to keep our footprint below the cap
         if cpu_usage > self.intensity_cap:
-            return 0.5 * self.intensity_cap # Heavier throttle if exceeding cap
+            return 0.5 * self.intensity_cap  # Heavier throttle if exceeding cap
 
         return self.intensity_cap
 
@@ -59,8 +62,10 @@ class TzimtzumManager:
             "timestamp": self.last_adjustment.isoformat(),
         }
 
+
 # Singleton
 _tzimtzum = None
+
 
 def get_tzimtzum() -> TzimtzumManager:
     """

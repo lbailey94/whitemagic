@@ -1,10 +1,12 @@
 """Marketplace Bridge tool handlers (v15.2)."""
+
 from typing import Any
 
 
 def handle_marketplace_publish(**kwargs: Any) -> dict[str, Any]:
     """Publish a service listing on the marketplace."""
     from whitemagic.marketplace import get_marketplace
+
     mp = get_marketplace()
     return mp.publish(
         service_type=kwargs.get("service_type", "general"),
@@ -21,6 +23,7 @@ def handle_marketplace_publish(**kwargs: Any) -> dict[str, Any]:
 def handle_marketplace_discover(**kwargs: Any) -> dict[str, Any]:
     """Search for services on the marketplace."""
     from whitemagic.marketplace import get_marketplace
+
     mp = get_marketplace()
     return mp.discover(
         query=kwargs.get("query", ""),
@@ -34,6 +37,7 @@ def handle_marketplace_discover(**kwargs: Any) -> dict[str, Any]:
 def handle_marketplace_negotiate(**kwargs: Any) -> dict[str, Any]:
     """Make an offer on a marketplace listing."""
     from whitemagic.marketplace import get_marketplace
+
     mp = get_marketplace()
     listing_id = kwargs.get("listing_id", "")
     if not listing_id:
@@ -48,6 +52,7 @@ def handle_marketplace_negotiate(**kwargs: Any) -> dict[str, Any]:
 def handle_marketplace_complete(**kwargs: Any) -> dict[str, Any]:
     """Complete an exchange and rate it."""
     from whitemagic.marketplace import get_marketplace
+
     mp = get_marketplace()
     negotiation_id = kwargs.get("negotiation_id", "")
     if not negotiation_id:
@@ -61,12 +66,14 @@ def handle_marketplace_complete(**kwargs: Any) -> dict[str, Any]:
 def handle_marketplace_my_listings(**kwargs: Any) -> dict[str, Any]:
     """List all my published services."""
     from whitemagic.marketplace import get_marketplace
+
     return get_marketplace().my_listings()
 
 
 def handle_marketplace_remove(**kwargs: Any) -> dict[str, Any]:
     """Remove a listing from the marketplace."""
     from whitemagic.marketplace import get_marketplace
+
     listing_id = kwargs.get("listing_id", "")
     if not listing_id:
         return {"status": "error", "reason": "listing_id is required"}
@@ -76,4 +83,5 @@ def handle_marketplace_remove(**kwargs: Any) -> dict[str, Any]:
 def handle_marketplace_status(**kwargs: Any) -> dict[str, Any]:
     """Get marketplace status."""
     from whitemagic.marketplace import get_marketplace
+
     return get_marketplace().status()

@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 HAS_PROMETHEUS = False
 try:
     from prometheus_client import Counter, Gauge, Histogram, start_http_server
+
     HAS_PROMETHEUS = True
 except ImportError:
     pass
@@ -65,16 +66,12 @@ class PrometheusMetrics:
         try:
             # Tool invocation counter
             self._tool_calls = Counter(
-                "whitemagic_tool_calls_total",
-                "Total tool invocations",
-                ["tool"]
+                "whitemagic_tool_calls_total", "Total tool invocations", ["tool"]
             )
 
             # Tool error counter
             self._tool_errors = Counter(
-                "whitemagic_tool_errors_total",
-                "Total tool errors",
-                ["tool"]
+                "whitemagic_tool_errors_total", "Total tool errors", ["tool"]
             )
 
             # Tool duration histogram
@@ -82,33 +79,42 @@ class PrometheusMetrics:
                 "whitemagic_tool_duration_seconds",
                 "Tool execution duration",
                 ["tool"],
-                buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+                buckets=(
+                    0.001,
+                    0.005,
+                    0.01,
+                    0.025,
+                    0.05,
+                    0.1,
+                    0.25,
+                    0.5,
+                    1.0,
+                    2.5,
+                    5.0,
+                    10.0,
+                ),
             )
 
             # Memory count gauge
             self._memory_count = Gauge(
-                "whitemagic_memory_count",
-                "Memory count by type",
-                ["type"]
+                "whitemagic_memory_count", "Memory count by type", ["type"]
             )
 
             # Cold start gauge
             self._cold_start = Gauge(
-                "whitemagic_cold_start_seconds",
-                "Cold start duration"
+                "whitemagic_cold_start_seconds", "Cold start duration"
             )
 
             # DB connections gauge
             self._db_connections = Gauge(
-                "whitemagic_db_connections_active",
-                "Active database connections"
+                "whitemagic_db_connections_active", "Active database connections"
             )
 
             # Circuit breaker state gauge
             self._circuit_breaker_state = Gauge(
                 "whitemagic_circuit_breaker_state",
                 "Circuit breaker state (0=closed, 1=open, 2=half_open)",
-                ["tool"]
+                ["tool"],
             )
 
             logger.info("Prometheus metrics initialized")
@@ -133,7 +139,9 @@ class PrometheusMetrics:
             logger.warning("Failed to start Prometheus server: %s", e)
             return False
 
-    def record_tool_call(self, tool_name: str, duration_seconds: float, status: str) -> None:
+    def record_tool_call(
+        self, tool_name: str, duration_seconds: float, status: str
+    ) -> None:
         """Record a tool invocation."""
         if not self._enabled or not HAS_PROMETHEUS:
             return
@@ -145,7 +153,12 @@ class PrometheusMetrics:
                     self._tool_errors.labels(tool=tool_name).inc()
                 self._tool_duration.labels(tool=tool_name).observe(duration_seconds)
             except Exception as e:
-                logger.debug("Prometheus metric record failed for %s: %s", tool_name, e, exc_info=True)
+                logger.debug(
+                    "Prometheus metric record failed for %s: %s",
+                    tool_name,
+                    e,
+                    exc_info=True,
+                )
 
     def set_memory_count(self, memory_type: str, count: int) -> None:
         """Set memory count gauge."""
@@ -184,7 +197,9 @@ class PrometheusMetrics:
 
         state_map = {"closed": 0, "open": 1, "half_open": 2}
         try:
-            self._circuit_breaker_state.labels(tool=tool_name).set(state_map.get(state, 0))
+            self._circuit_breaker_state.labels(tool=tool_name).set(
+                state_map.get(state, 0)
+            )
         except Exception as e:
             logger.debug("Prometheus circuit_breaker set failed: %s", e, exc_info=True)
 
@@ -197,10 +212,6 @@ class PrometheusMetrics:
             "port": self._port,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _prom: PrometheusMetrics | None = None
 _prom_lock = threading.Lock()

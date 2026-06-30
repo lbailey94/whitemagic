@@ -8,6 +8,7 @@ Compares four context injection strategies:
 
 Measures: token count, compression ratio, latency.
 """
+
 from __future__ import annotations
 
 import sys
@@ -15,7 +16,9 @@ import time
 from typing import Any
 
 # Add core to path for direct imports
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent.parent))
+sys.path.insert(
+    0, str(__import__("pathlib").Path(__file__).resolve().parent.parent.parent)
+)
 
 from whitemagic.ai.dense_encoding import encode_dense, get_encoding_stats
 from whitemagic.core.intelligence.working_memory import WorkingMemory
@@ -31,16 +34,56 @@ def _estimate_tokens(text: str) -> int:
 def _build_sample_contexts() -> dict[str, list[dict[str, Any]]]:
     """Build sample context sets of varying sizes."""
     base_items = [
-        {"content": "The memory system needs consolidation scheduling to maintain galactic lifecycle zones", "source": "memory", "id": "1"},
-        {"content": "Working memory capacity is important for the cognitive system and dispatch pipeline", "source": "memory", "id": "2"},
-        {"content": "The dispatch pipeline routes tools through middleware including governor and rate limiter", "source": "tool_result", "id": "3"},
-        {"content": "Cognitive modes enforce tool restrictions in the dispatch pipeline for safety", "source": "memory", "id": "4"},
-        {"content": "The bicameral reasoner uses dual hemisphere processing for synthesis and critique", "source": "memory", "id": "5"},
-        {"content": "Holographic reduced representations enable compositional reasoning via circular convolution", "source": "memory", "id": "6"},
-        {"content": "The scratchpad system auto-commits to long-term memory with multi-spectral analysis", "source": "scratchpad", "id": "7"},
-        {"content": "The dream cycle processes twelve phases including consolidation serendipity and kaizen", "source": "memory", "id": "8"},
-        {"content": "Galactic map zones manage memory lifecycle from core to far edge with archival", "source": "memory", "id": "9"},
-        {"content": "The self-model tracks latency error rate and energy for homeostasis loop feedback", "source": "memory", "id": "10"},
+        {
+            "content": "The memory system needs consolidation scheduling to maintain galactic lifecycle zones",
+            "source": "memory",
+            "id": "1",
+        },
+        {
+            "content": "Working memory capacity is important for the cognitive system and dispatch pipeline",
+            "source": "memory",
+            "id": "2",
+        },
+        {
+            "content": "The dispatch pipeline routes tools through middleware including governor and rate limiter",
+            "source": "tool_result",
+            "id": "3",
+        },
+        {
+            "content": "Cognitive modes enforce tool restrictions in the dispatch pipeline for safety",
+            "source": "memory",
+            "id": "4",
+        },
+        {
+            "content": "The bicameral reasoner uses dual hemisphere processing for synthesis and critique",
+            "source": "memory",
+            "id": "5",
+        },
+        {
+            "content": "Holographic reduced representations enable compositional reasoning via circular convolution",
+            "source": "memory",
+            "id": "6",
+        },
+        {
+            "content": "The scratchpad system auto-commits to long-term memory with multi-spectral analysis",
+            "source": "scratchpad",
+            "id": "7",
+        },
+        {
+            "content": "The dream cycle processes twelve phases including consolidation serendipity and kaizen",
+            "source": "memory",
+            "id": "8",
+        },
+        {
+            "content": "Galactic map zones manage memory lifecycle from core to far edge with archival",
+            "source": "memory",
+            "id": "9",
+        },
+        {
+            "content": "The self-model tracks latency error rate and energy for homeostasis loop feedback",
+            "source": "memory",
+            "id": "10",
+        },
     ]
 
     return {
@@ -76,7 +119,9 @@ def _benchmark_dense(items: list[dict[str, Any]]) -> dict[str, Any]:
         "tokens": result.encoded_tokens,
         "compression_ratio": result.compression_ratio,
         "latency_ms": round(elapsed, 3),
-        "output_preview": result.encoded[:120] + "..." if len(result.encoded) > 120 else result.encoded,
+        "output_preview": result.encoded[:120] + "..."
+        if len(result.encoded) > 120
+        else result.encoded,
     }
 
 
@@ -85,6 +130,7 @@ def _benchmark_vsa(items: list[dict[str, Any]]) -> dict[str, Any]:
     start = time.time()
     try:
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
         result = compressor.compress(items, max_text_items=3)
         elapsed = (time.time() - start) * 1000
@@ -94,7 +140,9 @@ def _benchmark_vsa(items: list[dict[str, Any]]) -> dict[str, Any]:
             "compression_ratio": result.compression_ratio,
             "latency_ms": round(elapsed, 3),
             "method": result.method,
-            "output_preview": result.summary[:120] + "..." if len(result.summary) > 120 else result.summary,
+            "output_preview": result.summary[:120] + "..."
+            if len(result.summary) > 120
+            else result.summary,
         }
     except Exception as e:
         elapsed = (time.time() - start) * 1000
@@ -190,14 +238,19 @@ def _benchmark_all_tactics(items: list[dict[str, Any]]) -> dict[str, Any]:
 
     # Apply dense encoding first
     from whitemagic.ai.dense_encoding import encode_dense
+
     dense_result = encode_dense(text)
     dense_tokens = dense_result.encoded_tokens
 
     # Then VSA compress the dense output
     try:
         from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+
         compressor = VSAContextCompressor()
-        vsa_items = [{"content": dense_result.encoded, "source": "memory", "id": str(i)} for i in range(1)]
+        vsa_items = [
+            {"content": dense_result.encoded, "source": "memory", "id": str(i)}
+            for i in range(1)
+        ]
         vsa_result = compressor.compress(vsa_items, max_text_items=3)
         vsa_tokens = vsa_result.compressed_tokens
     except Exception:
@@ -226,8 +279,10 @@ def run_benchmark() -> None:
 
     # Print encoding stats
     stats = get_encoding_stats()
-    print(f"\n  Phrase mapping table: {stats['total_phrases']} entries "
-          f"({stats['chinese_mappings']} Chinese, {stats['symbol_mappings']} symbols)")
+    print(
+        f"\n  Phrase mapping table: {stats['total_phrases']} entries "
+        f"({stats['chinese_mappings']} Chinese, {stats['symbol_mappings']} symbols)"
+    )
 
     contexts = _build_sample_contexts()
 
@@ -242,24 +297,40 @@ def run_benchmark() -> None:
         draft_rev = _benchmark_draft_review(items)
         all_tactics = _benchmark_all_tactics(items)
 
-        print(f"  {'Strategy':<20} {'Tokens':>8} {'Ratio':>8} {'Latency(ms)':>12}  Preview")
+        print(
+            f"  {'Strategy':<20} {'Tokens':>8} {'Ratio':>8} {'Latency(ms)':>12}  Preview"
+        )
         print(f"  {'─' * 85}")
 
-        for result in [baseline, dense, vsa, wm_dense, sem_cache, draft_rev, all_tactics]:
+        for result in [
+            baseline,
+            dense,
+            vsa,
+            wm_dense,
+            sem_cache,
+            draft_rev,
+            all_tactics,
+        ]:
             tokens = result["tokens"]
             ratio = result["compression_ratio"]
             latency = result["latency_ms"]
             preview = result.get("output_preview", "")[:40].replace("\n", " ")
             ratio_str = f"{ratio:.2f}" if ratio != float("inf") else "  inf"
-            print(f"  {result['strategy']:<20} {tokens:>8} {ratio_str:>8} {latency:>12.3f}  {preview}")
+            print(
+                f"  {result['strategy']:<20} {tokens:>8} {ratio_str:>8} {latency:>12.3f}  {preview}"
+            )
 
     # Summary
     print(f"\n  ── Summary ──────────────────────────────────────────────")
-    print(f"  T1 (local routing):     Already in mw_inference_router (0 tokens for simple queries)")
+    print(
+        f"  T1 (local routing):     Already in mw_inference_router (0 tokens for simple queries)"
+    )
     print(f"  T2 (prompt compress):   VSA for large, dense for small (1.3x-2.1x)")
     print(f"  T3 (semantic cache):    Zero tokens on cache hit (mw_semantic_cache)")
     print(f"  T4 (draft-review):      Local drafts, cloud reviews (mw_draft_review)")
-    print(f"  Combined:               Dense → VSA → draft-review → cache = maximum savings")
+    print(
+        f"  Combined:               Dense → VSA → draft-review → cache = maximum savings"
+    )
     print("=" * 90 + "\n")
 
 

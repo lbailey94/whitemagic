@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 # Unified library loader for Zig
 _zig_loader = LibraryLoader(
-    lib_name='libwhitemagic',
+    lib_name="libwhitemagic",
     base_path=Path(__file__).parent.parent.parent.parent / "whitemagic-zig",
-    env_var='WM_ZIG_LIB',
-    search_paths=['zig-out/lib/', ''],
+    env_var="WM_ZIG_LIB",
+    search_paths=["zig-out/lib/", ""],
 )
 
 ZIG_AVAILABLE = _zig_loader.available
@@ -60,7 +60,7 @@ class ZigStringProcessor:
         if not self.available:
             raise RuntimeError("Zig SIMD library not available")
 
-        text_bytes = text.encode('utf-8')
+        text_bytes = text.encode("utf-8")
         text_len = len(text_bytes)
         out_capacity = 65536  # 64KB output buffer
 
@@ -85,10 +85,10 @@ class ZigStringProcessor:
         keywords = []
         offset = 0
         for _ in range(keyword_count):
-            end = out_buffer.raw.find(b'\x00', offset)
+            end = out_buffer.raw.find(b"\x00", offset)
             if end == -1:
                 break
-            keyword = out_buffer.raw[offset:end].decode('utf-8')
+            keyword = out_buffer.raw[offset:end].decode("utf-8")
             keywords.append(keyword)
             offset = end + 1
 
@@ -112,6 +112,7 @@ class ZigStringProcessor:
 
         # Python fallback since wm_simd_tokenize is not exported
         import re
+
         lowered = text.lower()
         tokens = []
         for match in re.finditer(r"\b\w+\b", lowered):
@@ -125,6 +126,7 @@ class ZigStringProcessor:
 
 # Singleton instance
 _zig_processor = None
+
 
 def get_zig_processor() -> ZigStringProcessor:
     """Get the Zig string processor singleton"""

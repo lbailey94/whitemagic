@@ -32,12 +32,18 @@ try:
     from rich.live import Live
     from rich.panel import Panel
     from rich.progress import (
-        BarColumn, MofNCompleteColumn, Progress,
-        SpinnerColumn, TaskProgressColumn, TextColumn, TimeElapsedColumn,
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TaskProgressColumn,
+        TextColumn,
+        TimeElapsedColumn,
     )
     from rich.table import Table
     from rich.text import Text
     from rich import box
+
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
@@ -47,6 +53,7 @@ except ImportError:
 # Data models
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class SuiteResult:
     name: str
@@ -55,7 +62,7 @@ class SuiteResult:
     skipped: int = 0
     errors: list[str] = field(default_factory=list)
     duration_s: float = 0.0
-    status: str = "pending"   # pending | running | ok | fail | skip
+    status: str = "pending"  # pending | running | ok | fail | skip
 
     @property
     def total(self) -> int:
@@ -63,12 +70,19 @@ class SuiteResult:
 
     @property
     def icon(self) -> str:
-        return {"ok": "✅", "fail": "❌", "skip": "⏭️", "running": "🔄", "pending": "⏳"}.get(self.status, "❓")
+        return {
+            "ok": "✅",
+            "fail": "❌",
+            "skip": "⏭️",
+            "running": "🔄",
+            "pending": "⏳",
+        }.get(self.status, "❓")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Individual test suites
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def suite_import_health() -> SuiteResult:
     """Verify core modules can be imported without error."""
@@ -106,7 +120,9 @@ def suite_path_hygiene() -> SuiteResult:
     try:
         proc = subprocess.run(
             [sys.executable, str(hygiene_script)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
             env={**os.environ, "PYTHONPATH": str(REPO_ROOT)},
         )
         if proc.returncode == 0:
@@ -134,6 +150,7 @@ def suite_tool_registry() -> SuiteResult:
     t0 = time.monotonic()
     try:
         from whitemagic.tools.tool_surface import get_callable_tool_definitions
+
         tool_defs = get_callable_tool_definitions()
         count = len(list(tool_defs))
         if count > 0:
@@ -157,14 +174,23 @@ def suite_mcp_boot() -> SuiteResult:
     t0 = time.monotonic()
     try:
         proc = subprocess.run(
-            [sys.executable, "-c",
-             "import sys; sys.path.insert(0, '.'); "
-             "from whitemagic.run_mcp import lifecycle, register_resources, register_tools; "
-             "lifecycle.startup(); register_resources(); register_tools(); print('OK')"],
-            capture_output=True, text=True, timeout=20,
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.path.insert(0, '.'); "
+                "from whitemagic.run_mcp import lifecycle, register_resources, register_tools; "
+                "lifecycle.startup(); register_resources(); register_tools(); print('OK')",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
             cwd=str(REPO_ROOT),
-            env={**os.environ, "PYTHONPATH": str(REPO_ROOT),
-                 "WM_SILENT_INIT": "1", "WM_MCP_LITE": "1"},
+            env={
+                **os.environ,
+                "PYTHONPATH": str(REPO_ROOT),
+                "WM_SILENT_INIT": "1",
+                "WM_MCP_LITE": "1",
+            },
         )
         if "OK" in proc.stdout or proc.returncode == 0:
             result.passed = 1
@@ -191,15 +217,19 @@ def suite_rust_bridge() -> SuiteResult:
     t0 = time.monotonic()
     try:
         import importlib.util
+
         spec = importlib.util.find_spec("whitemagic_rust")
         if spec is not None:
             import whitemagic_rust  # noqa: F401
+
             result.passed = 1
             result.status = "ok"
         else:
             result.skipped = 1
             result.status = "skip"
-            result.errors.append("whitemagic_rust not built — run: cd whitemagic-rust && maturin develop")
+            result.errors.append(
+                "whitemagic_rust not built — run: cd whitemagic-rust && maturin develop"
+            )
     except Exception as exc:
         result.skipped = 1
         result.status = "skip"
@@ -213,22 +243,39 @@ def suite_unit_tests(quick: bool = False) -> SuiteResult:
     result = SuiteResult("Unit Tests")
     t0 = time.monotonic()
     cmd = [
-        sys.executable, "-m", "pytest", "tests/unit/", "-q", "--tb=no",
-        "--no-header", "-x" if quick else "",
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests/unit/",
+        "-q",
+        "--tb=no",
+        "--no-header",
+        "-x" if quick else "",
     ]
     cmd = [c for c in cmd if c]  # strip empty flags
     try:
         proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=120,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120,
             cwd=str(REPO_ROOT),
-            env={**os.environ, "PYTHONPATH": str(REPO_ROOT),
-                 "WM_SILENT_INIT": "1", "WM_STATE_ROOT": "/tmp/wm_omega_test"},
+            env={
+                **os.environ,
+                "PYTHONPATH": str(REPO_ROOT),
+                "WM_SILENT_INIT": "1",
+                "WM_STATE_ROOT": "/tmp/wm_omega_test",
+            },
         )
         # Parse pytest summary line: "X passed, Y failed, Z skipped"
         for line in (proc.stdout + proc.stderr).splitlines():
             if "passed" in line or "failed" in line or "error" in line:
                 import re
-                nums = {m[1]: int(m[0]) for m in re.findall(r"(\d+) (passed|failed|skipped|error)", line)}
+
+                nums = {
+                    m[1]: int(m[0])
+                    for m in re.findall(r"(\d+) (passed|failed|skipped|error)", line)
+                }
                 result.passed = nums.get("passed", 0)
                 result.failed = nums.get("failed", 0) + nums.get("error", 0)
                 result.skipped = nums.get("skipped", 0)
@@ -259,18 +306,37 @@ def suite_integration_tests(quick: bool = False) -> SuiteResult:
         result.errors.append("Skipped in --quick mode")
         return result
     t0 = time.monotonic()
-    cmd = [sys.executable, "-m", "pytest", "tests/integration/", "-q", "--tb=no", "--no-header"]
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests/integration/",
+        "-q",
+        "--tb=no",
+        "--no-header",
+    ]
     try:
         proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=180,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=180,
             cwd=str(REPO_ROOT),
-            env={**os.environ, "PYTHONPATH": str(REPO_ROOT),
-                 "WM_SILENT_INIT": "1", "WM_STATE_ROOT": "/tmp/wm_omega_test"},
+            env={
+                **os.environ,
+                "PYTHONPATH": str(REPO_ROOT),
+                "WM_SILENT_INIT": "1",
+                "WM_STATE_ROOT": "/tmp/wm_omega_test",
+            },
         )
         for line in (proc.stdout + proc.stderr).splitlines():
             if "passed" in line or "failed" in line:
                 import re
-                nums = {m[1]: int(m[0]) for m in re.findall(r"(\d+) (passed|failed|skipped|error)", line)}
+
+                nums = {
+                    m[1]: int(m[0])
+                    for m in re.findall(r"(\d+) (passed|failed|skipped|error)", line)
+                }
                 result.passed = nums.get("passed", 0)
                 result.failed = nums.get("failed", 0) + nums.get("error", 0)
                 result.skipped = nums.get("skipped", 0)
@@ -296,7 +362,9 @@ def suite_ship_check() -> SuiteResult:
     try:
         proc = subprocess.run(
             [sys.executable, str(ship_script)],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True,
+            text=True,
+            timeout=120,
             env={**os.environ, "PYTHONPATH": str(REPO_ROOT), "WM_SILENT_INIT": "1"},
         )
         if proc.returncode == 0:
@@ -321,9 +389,15 @@ def suite_ship_check() -> SuiteResult:
 # Rich rendering
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def render_results_table(results: list[SuiteResult], total_s: float) -> Table:
-    table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan",
-                  title="[bold]WhiteMagic Omega Test — Results[/bold]", expand=True)
+    table = Table(
+        box=box.ROUNDED,
+        show_header=True,
+        header_style="bold cyan",
+        title="[bold]WhiteMagic Omega Test — Results[/bold]",
+        expand=True,
+    )
     table.add_column("Suite", style="white", no_wrap=True)
     table.add_column("Status", justify="center", width=6)
     table.add_column("Passed", justify="right", style="green")
@@ -333,8 +407,13 @@ def render_results_table(results: list[SuiteResult], total_s: float) -> Table:
 
     total_p = total_f = total_s_count = 0
     for r in results:
-        status_color = {"ok": "green", "fail": "red", "skip": "yellow",
-                        "pending": "dim", "running": "cyan"}.get(r.status, "white")
+        status_color = {
+            "ok": "green",
+            "fail": "red",
+            "skip": "yellow",
+            "pending": "dim",
+            "running": "cyan",
+        }.get(r.status, "white")
         table.add_row(
             r.name,
             f"[{status_color}]{r.icon}[/{status_color}]",
@@ -349,7 +428,8 @@ def render_results_table(results: list[SuiteResult], total_s: float) -> Table:
 
     table.add_section()
     table.add_row(
-        "[bold]TOTAL[/bold]", "",
+        "[bold]TOTAL[/bold]",
+        "",
         f"[bold green]{total_p}[/bold green]",
         f"[bold red]{total_f}[/bold red]" if total_f else "[dim]0[/dim]",
         str(total_s_count) if total_s_count else "[dim]0[/dim]",
@@ -371,14 +451,14 @@ def print_errors(results: list[SuiteResult], console: "Console") -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 SUITES = [
-    ("Import Health",        suite_import_health),
-    ("Path Hygiene",         suite_path_hygiene),
-    ("Tool Registry",        suite_tool_registry),
-    ("MCP Server Boot",      suite_mcp_boot),
-    ("Rust Bridge",          suite_rust_bridge),
-    ("Unit Tests",           suite_unit_tests),
-    ("Integration Tests",    suite_integration_tests),
-    ("Ship Surface Check",   suite_ship_check),
+    ("Import Health", suite_import_health),
+    ("Path Hygiene", suite_path_hygiene),
+    ("Tool Registry", suite_tool_registry),
+    ("MCP Server Boot", suite_mcp_boot),
+    ("Rust Bridge", suite_rust_bridge),
+    ("Unit Tests", suite_unit_tests),
+    ("Integration Tests", suite_integration_tests),
+    ("Ship Surface Check", suite_ship_check),
 ]
 
 
@@ -389,7 +469,7 @@ def run_plain(quick: bool) -> tuple[list[SuiteResult], float]:
     for name, fn in SUITES:
         print(f"  ▸ {name} ...", end="", flush=True)
         kwargs: dict = {}
-        if fn.__code__.co_varnames[:fn.__code__.co_argcount]:
+        if fn.__code__.co_varnames[: fn.__code__.co_argcount]:
             kwargs = {"quick": quick} if "quick" in fn.__code__.co_varnames else {}
         r = fn(**kwargs)  # type: ignore[call-arg]
         results.append(r)
@@ -422,9 +502,12 @@ def run_rich(quick: bool) -> tuple[list[SuiteResult], float]:
             r: SuiteResult = fn(**kwargs)  # type: ignore[call-arg]
             r.name = name
             results.append(r)
-            color = {"ok": "green", "fail": "red", "skip": "yellow"}.get(r.status, "white")
-            progress.update(task, completed=1,
-                            description=f"[{color}]{r.icon} {name}[/{color}]")
+            color = {"ok": "green", "fail": "red", "skip": "yellow"}.get(
+                r.status, "white"
+            )
+            progress.update(
+                task, completed=1, description=f"[{color}]{r.icon} {name}[/{color}]"
+            )
 
     elapsed = time.monotonic() - t_total
     console.print()
@@ -435,9 +518,15 @@ def run_rich(quick: bool) -> tuple[list[SuiteResult], float]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="WhiteMagic Omega Test Runner")
-    parser.add_argument("--quick", action="store_true", help="Skip slow tests (integration, network)")
-    parser.add_argument("--json", action="store_true", help="Output JSON report to stdout")
-    parser.add_argument("--ci", action="store_true", help="Exit with code 1 on any failure")
+    parser.add_argument(
+        "--quick", action="store_true", help="Skip slow tests (integration, network)"
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Output JSON report to stdout"
+    )
+    parser.add_argument(
+        "--ci", action="store_true", help="Exit with code 1 on any failure"
+    )
     args = parser.parse_args()
 
     if args.json or not HAS_RICH:
@@ -447,11 +536,14 @@ def main() -> int:
         results, elapsed = run_plain(args.quick)
     else:
         from rich.console import Console
-        Console().print(Panel.fit(
-            "[bold cyan]WhiteMagic Omega Test[/bold cyan]\n"
-            "[dim]Comprehensive project health verification[/dim]",
-            border_style="cyan",
-        ))
+
+        Console().print(
+            Panel.fit(
+                "[bold cyan]WhiteMagic Omega Test[/bold cyan]\n"
+                "[dim]Comprehensive project health verification[/dim]",
+                border_style="cyan",
+            )
+        )
         results, elapsed = run_rich(args.quick)
 
     failed_count = sum(r.failed for r in results)
@@ -463,16 +555,26 @@ def main() -> int:
             "failed": failed_count,
             "skipped": sum(r.skipped for r in results),
             "suites": [
-                {"name": r.name, "status": r.status,
-                 "passed": r.passed, "failed": r.failed, "skipped": r.skipped,
-                 "duration_s": round(r.duration_s, 2), "errors": r.errors}
+                {
+                    "name": r.name,
+                    "status": r.status,
+                    "passed": r.passed,
+                    "failed": r.failed,
+                    "skipped": r.skipped,
+                    "duration_s": round(r.duration_s, 2),
+                    "errors": r.errors,
+                }
                 for r in results
             ],
         }
         print(json.dumps(report, indent=2))
 
     if not args.json:
-        overall = "✅ ALL SYSTEMS GO" if failed_count == 0 else f"❌ {failed_count} failure(s) detected"
+        overall = (
+            "✅ ALL SYSTEMS GO"
+            if failed_count == 0
+            else f"❌ {failed_count} failure(s) detected"
+        )
         print(f"\n{overall}  ({elapsed:.1f}s total)\n")
 
     if args.ci and failed_count > 0:

@@ -87,10 +87,33 @@ def _capabilities_base(*, include_env: bool, include_schemas: bool) -> dict[str,
             "batch_read_memories.max_batch_size": 50,
         },
         "tool_groups": {
-            "memory": ["create_memory", "search_memories", "read_memory", "list_memories", "update_memory", "delete_memory"],
-            "session": ["create_session", "checkpoint_session", "resume_session", "session_bootstrap"],
-            "scratchpad": ["scratchpad_create", "scratchpad_update", "scratchpad_finalize"],
-            "introspection": ["capabilities", "manifest", "state.paths", "state.summary", "repo.summary", "ship.check"],
+            "memory": [
+                "create_memory",
+                "search_memories",
+                "read_memory",
+                "list_memories",
+                "update_memory",
+                "delete_memory",
+            ],
+            "session": [
+                "create_session",
+                "checkpoint_session",
+                "resume_session",
+                "session_bootstrap",
+            ],
+            "scratchpad": [
+                "scratchpad_create",
+                "scratchpad_update",
+                "scratchpad_finalize",
+            ],
+            "introspection": [
+                "capabilities",
+                "manifest",
+                "state.paths",
+                "state.summary",
+                "repo.summary",
+                "ship.check",
+            ],
         },
     }
     if include_env:
@@ -182,7 +205,9 @@ def state_summary(*, include_sizes: bool = True) -> dict[str, Any]:
     return summary
 
 
-def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[str, Any]:
+def manifest(
+    *, format: str = "summary", include_schemas: bool = False
+) -> dict[str, Any]:
     """
     Perform the manifest operation.
 
@@ -220,7 +245,9 @@ def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[
         return {"format": "whitemagic", "tools": whitemagic_tools}
 
     if format == "mcp":
-        mcp_tools: list[dict[str, Any]] = [tool_def.to_mcp_tool() for tool_def in callable_tools]
+        mcp_tools: list[dict[str, Any]] = [
+            tool_def.to_mcp_tool() for tool_def in callable_tools
+        ]
         if not include_schemas:
             for tool_item in mcp_tools:
                 tool_item.pop("inputSchema", None)
@@ -236,6 +263,7 @@ def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[
                     tool_item["function"].pop("parameters", None)
                 except Exception as e:
                     import logging
+
                     logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return {"format": "openai", "tools": openai_tools}
 
@@ -243,7 +271,12 @@ def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[
     return {"error": f"unknown format: {format}"}
 
 
-def capabilities(*, include_tools: bool = True, include_schemas: bool = False, include_env: bool = True) -> dict[str, Any]:
+def capabilities(
+    *,
+    include_tools: bool = True,
+    include_schemas: bool = False,
+    include_env: bool = True,
+) -> dict[str, Any]:
     """
     Perform the capabilities operation.
 
@@ -260,6 +293,7 @@ def telemetry_summary() -> dict[str, Any]:
     """Get summarized performance and error metrics."""
     try:
         from whitemagic.core.monitoring.telemetry import get_telemetry
+
         return dict(get_telemetry().get_summary())
     except (ImportError, ModuleNotFoundError) as e:
         return {"error": str(e)}
@@ -289,6 +323,7 @@ _DEFAULT_SKIP_DIRS = {
     "_build",
 }
 
+
 def _git_list_files() -> list[Path] | None:
     """Best-effort: list tracked + untracked (non-ignored) files via git."""
     if not (PROJECT_ROOT / ".git").exists():
@@ -312,7 +347,9 @@ def _git_list_files() -> list[Path] | None:
     return paths
 
 
-def _iter_repo_files(*, max_files: int, skip_dirs: set[str] | None = None) -> Iterator[Path]:
+def _iter_repo_files(
+    *, max_files: int, skip_dirs: set[str] | None = None
+) -> Iterator[Path]:
     git_paths = _git_list_files()
     if git_paths is not None:
         yield from git_paths[:max_files]
@@ -488,7 +525,9 @@ def ship_check(
     large_files = large_files[:max_large_files]
 
     if large_files:
-        issues.append({"kind": "large_files", "threshold_bytes": threshold, "files": large_files})
+        issues.append(
+            {"kind": "large_files", "threshold_bytes": threshold, "files": large_files}
+        )
 
     if abs_path_hits:
         issues.append({"kind": "absolute_path_literals", "hits": abs_path_hits})

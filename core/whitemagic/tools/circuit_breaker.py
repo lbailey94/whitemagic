@@ -54,6 +54,7 @@ class BreakerState(StrEnum):
         CLOSED
         OPEN
         HALF_OPEN"""
+
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
@@ -63,9 +64,9 @@ class BreakerState(StrEnum):
 class BreakerConfig:
     """Configuration for a single circuit breaker."""
 
-    failure_threshold: int = 5       # failures before opening
-    window_seconds: float = 60.0     # time window for counting failures
-    cooldown_seconds: float = 1.0    # how long to stay open before half-open (reduced from 30s for responsiveness)
+    failure_threshold: int = 5  # failures before opening
+    window_seconds: float = 60.0  # time window for counting failures
+    cooldown_seconds: float = 1.0  # how long to stay open before half-open (reduced from 30s for responsiveness)
 
 
 class CircuitBreaker:
@@ -106,9 +107,10 @@ class CircuitBreaker:
                 if elapsed >= self.config.cooldown_seconds:
                     self._state = BreakerState.HALF_OPEN
                     logger.info(
-                        "Circuit breaker [%s]: OPEN → HALF_OPEN "
-                        "(cooldown %ss elapsed)",
-                     self.tool_name, self.config.cooldown_seconds)
+                        "Circuit breaker [%s]: OPEN → HALF_OPEN (cooldown %ss elapsed)",
+                        self.tool_name,
+                        self.config.cooldown_seconds,
+                    )
                     self._sync_to_board()
                     return False  # Allow one probe call
                 return True
@@ -139,7 +141,8 @@ class CircuitBreaker:
                 self._opened_at = now
                 logger.warning(
                     "Circuit breaker [%s]: HALF_OPEN → OPEN (probe failed)",
-                 self.tool_name)
+                    self.tool_name,
+                )
                 self._sync_to_board()
             elif len(self._failure_timestamps) >= self.config.failure_threshold:
                 self._state = BreakerState.OPEN
@@ -149,7 +152,11 @@ class CircuitBreaker:
                     "Circuit breaker [%s]: CLOSED → OPEN "
                     "(%s failures in "
                     "%ss, trip #%s)",
-                 self.tool_name, len(self._failure_timestamps), self.config.window_seconds, self._total_trips)
+                    self.tool_name,
+                    len(self._failure_timestamps),
+                    self.config.window_seconds,
+                    self._total_trips,
+                )
                 self._sync_to_board()
 
     def record_success(self) -> None:
@@ -167,7 +174,8 @@ class CircuitBreaker:
                 self._failure_timestamps.clear()
                 logger.info(
                     "Circuit breaker [%s]: HALF_OPEN → CLOSED (probe succeeded)",
-                 self.tool_name)
+                    self.tool_name,
+                )
                 self._sync_to_board()
             elif self._state == BreakerState.CLOSED:
                 # Successful calls don't clear the failure window, but that's fine;
@@ -192,8 +200,14 @@ class CircuitBreaker:
             ),
             "retryable": True,
             "degraded_mode": True,
-            "degraded_reasons": ["circuit_breaker_open", *runtime_status.get("degraded_reasons", [])],
-            "resolution": {"suggested_action": "retry_after_cooldown_or_enable_debug", "debug_hint": "Set WM_DEBUG=1 for verbose diagnostics"},
+            "degraded_reasons": [
+                "circuit_breaker_open",
+                *runtime_status.get("degraded_reasons", []),
+            ],
+            "resolution": {
+                "suggested_action": "retry_after_cooldown_or_enable_debug",
+                "debug_hint": "Set WM_DEBUG=1 for verbose diagnostics",
+            },
             "circuit_breaker": {
                 "state": self._state.value,
                 "cooldown_remaining_s": round(remaining, 1),
@@ -214,6 +228,7 @@ class CircuitBreaker:
             from whitemagic.core.acceleration.state_board_bridge import (
                 get_state_board,
             )
+
             slot = _tool_to_engine_slot(self.tool_name)
             if slot is None:
                 return
@@ -245,6 +260,7 @@ class CircuitBreaker:
             from whitemagic.core.acceleration.state_board_bridge import (
                 get_state_board,
             )
+
             slot = _tool_to_engine_slot(self.tool_name)
             if slot is None:
                 return
@@ -276,42 +292,83 @@ class CircuitBreaker:
             }
 
 
-# ---------------------------------------------------------------------------
-# Tool → Engine Slot mapping (for StateBoard integration)
-# ---------------------------------------------------------------------------
-
 # Maps PRAT Gana prefixes and common tool names to engine slots (0-27).
 # This allows the circuit breaker to write state to the StateBoard slot
 # that the Zig dispatch core reads.
 _GANA_PREFIX_TO_SLOT: dict[str, int] = {
-    "gana_horn": 0, "session": 0,
-    "gana_neck": 1, "consolidat": 1, "memory.consolidat": 1,
-    "gana_root": 2, "boundary": 2, "health": 2,
-    "gana_room": 3, "circuit": 3,
-    "gana_heart": 4, "nurtur": 4,
-    "gana_tail": 5, "accelerat": 5, "rust_": 5,
-    "gana_basket": 6, "serendipit": 6,
-    "gana_ghost": 7, "gnosis": 7, "capabilit": 7, "manifest": 7,
-    "gana_willow": 8, "resilien": 8,
-    "gana_star": 9, "govern": 9, "dharma": 9,
-    "gana_net": 10, "associat": 10,
-    "gana_wings": 11, "export": 11, "import": 11,
-    "gana_chariot": 12, "archaeolog": 12,
-    "gana_abundance": 13, "dream": 13, "resonanc": 13,
-    "gana_legs": 14, "solver": 14, "ethic": 14,
-    "gana_mound": 15, "embedding": 15, "vector.": 15,
-    "gana_stomach": 16, "lifecycle": 16, "memory.lifecycle": 16,
-    "gana_head": 17, "kaizen": 17,
-    "gana_bi": 18, "pattern": 18,
-    "gana_beak": 19, "voice": 19, "narrat": 19,
-    "gana_stars": 20, "evaluate_ethics": 20, "karma": 20,
-    "gana_dipper": 21, "predict": 21,
-    "gana_ox": 22, "galactic": 22,
-    "gana_girl": 23, "clone": 23, "agent": 23,
-    "gana_void": 24, "forget": 24, "stillness": 24,
-    "gana_roof": 25, "sanitiz": 25, "permission": 25,
-    "gana_camp": 26, "swarm": 26, "sangha": 26,
-    "gana_wall": 27, "emerge": 27,
+    "gana_horn": 0,
+    "session": 0,
+    "gana_neck": 1,
+    "consolidat": 1,
+    "memory.consolidat": 1,
+    "gana_root": 2,
+    "boundary": 2,
+    "health": 2,
+    "gana_room": 3,
+    "circuit": 3,
+    "gana_heart": 4,
+    "nurtur": 4,
+    "gana_tail": 5,
+    "accelerat": 5,
+    "rust_": 5,
+    "gana_basket": 6,
+    "serendipit": 6,
+    "gana_ghost": 7,
+    "gnosis": 7,
+    "capabilit": 7,
+    "manifest": 7,
+    "gana_willow": 8,
+    "resilien": 8,
+    "gana_star": 9,
+    "govern": 9,
+    "dharma": 9,
+    "gana_net": 10,
+    "associat": 10,
+    "gana_wings": 11,
+    "export": 11,
+    "import": 11,
+    "gana_chariot": 12,
+    "archaeolog": 12,
+    "gana_abundance": 13,
+    "dream": 13,
+    "resonanc": 13,
+    "gana_legs": 14,
+    "solver": 14,
+    "ethic": 14,
+    "gana_mound": 15,
+    "embedding": 15,
+    "vector.": 15,
+    "gana_stomach": 16,
+    "lifecycle": 16,
+    "memory.lifecycle": 16,
+    "gana_head": 17,
+    "kaizen": 17,
+    "gana_bi": 18,
+    "pattern": 18,
+    "gana_beak": 19,
+    "voice": 19,
+    "narrat": 19,
+    "gana_stars": 20,
+    "evaluate_ethics": 20,
+    "karma": 20,
+    "gana_dipper": 21,
+    "predict": 21,
+    "gana_ox": 22,
+    "galactic": 22,
+    "gana_girl": 23,
+    "clone": 23,
+    "agent": 23,
+    "gana_void": 24,
+    "forget": 24,
+    "stillness": 24,
+    "gana_roof": 25,
+    "sanitiz": 25,
+    "permission": 25,
+    "gana_camp": 26,
+    "swarm": 26,
+    "sangha": 26,
+    "gana_wall": 27,
+    "emerge": 27,
 }
 
 
@@ -324,19 +381,27 @@ def _tool_to_engine_slot(tool_name: str) -> int | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Per-tool config overrides for external/fragile services
-# ---------------------------------------------------------------------------
-
 _TOOL_BREAKER_OVERRIDES: dict[str, BreakerConfig] = {
     # Ollama may restart frequently — fail fast, retry quickly
-    "ollama.models":    BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0),
-    "ollama.generate":  BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0),
-    "ollama.chat":      BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0),
+    "ollama.models": BreakerConfig(
+        failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0
+    ),
+    "ollama.generate": BreakerConfig(
+        failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0
+    ),
+    "ollama.chat": BreakerConfig(
+        failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0
+    ),
     # Redis broker — slightly more tolerant but still fast-fail
-    "broker.publish":   BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0),
-    "broker.history":   BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0),
-    "broker.status":    BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0),
+    "broker.publish": BreakerConfig(
+        failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0
+    ),
+    "broker.history": BreakerConfig(
+        failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0
+    ),
+    "broker.status": BreakerConfig(
+        failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0
+    ),
 }
 
 
@@ -354,7 +419,8 @@ class BreakerRegistry:
             if tool_name not in self._breakers:
                 config = _TOOL_BREAKER_OVERRIDES.get(tool_name, self._default_config)
                 self._breakers[tool_name] = CircuitBreaker(
-                    tool_name, config=config,
+                    tool_name,
+                    config=config,
                 )
                 # Configure Koka native circuit handler if available
                 koka = get_koka_circuit_dispatch()
@@ -378,10 +444,7 @@ class BreakerRegistry:
     def tripped(self) -> list[dict[str, Any]]:
         """Return only breakers that have tripped at least once."""
         with self._lock:
-            return [
-                b.status() for b in self._breakers.values()
-                if b._total_trips > 0
-            ]
+            return [b.status() for b in self._breakers.values() if b._total_trips > 0]
 
     def reset_all(self) -> int:
         """Reset all circuit breakers to CLOSED state. Returns count of reset breakers.
@@ -403,6 +466,7 @@ class BreakerRegistry:
             # Reset StateBoard via Rust PyO3 (authoritative native state)
             try:
                 import whitemagic_rs
+
                 whitemagic_rs.board_reset()
                 logger.info("StateBoard reset via Rust PyO3 (board_reset)")
             except ImportError:
@@ -431,11 +495,15 @@ class BreakerRegistry:
         tightened = []
         try:
             from whitemagic.core.intelligence.self_model import get_self_model
+
             model = get_self_model()
             alerts = model.get_alerts()
 
             for alert in alerts:
-                if alert.metric in ("error_rate", "breaker_trips") and alert.threshold_eta is not None:
+                if (
+                    alert.metric in ("error_rate", "breaker_trips")
+                    and alert.threshold_eta is not None
+                ):
                     # If critical threshold is predicted within 5 steps,
                     # tighten all active breakers' failure threshold by 1
                     if alert.threshold_eta <= 5:
@@ -448,7 +516,10 @@ class BreakerRegistry:
                             "Predictive breaker tightening: %s forecast "
                             "to breach in ~%s steps, "
                             "tightened %s breakers",
-                         alert.metric, alert.threshold_eta, len(tightened))
+                            alert.metric,
+                            alert.threshold_eta,
+                            len(tightened),
+                        )
         except Exception as e:
             logger.debug("Predictive check skipped: %s", e, exc_info=True)
 
@@ -457,10 +528,6 @@ class BreakerRegistry:
             "tightened_count": len(tightened),
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _registry: BreakerRegistry | None = None
 _reg_lock = threading.Lock()
@@ -474,15 +541,16 @@ def get_breaker_registry() -> BreakerRegistry:
             if _registry is None:
                 _registry = BreakerRegistry()
                 # R&D mode: reset all breakers on startup for clean development session
-                if os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
+                if os.getenv("WM_RD_MODE", "").strip().lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                ):
                     _registry.reset_all()
                     logger.info("WM_RD_MODE=1: circuit breakers reset on startup")
     return _registry
 
-
-# ---------------------------------------------------------------------------
-# Koka native circuit breaker (optional accelerator)
-# ---------------------------------------------------------------------------
 
 _koka_circuit: Any = None
 _koka_lock = threading.Lock()
@@ -501,6 +569,7 @@ def get_koka_circuit_dispatch():
                     from whitemagic.core.acceleration.koka_native_bridge import (
                         KokaCircuitDispatch,
                     )
+
                     inst = KokaCircuitDispatch()
                     if inst._ensure_running():
                         _koka_circuit = inst

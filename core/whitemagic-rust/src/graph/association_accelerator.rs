@@ -14,10 +14,6 @@ use rayon::prelude::*;
 use serde::Serialize;
 use std::collections::HashSet;
 
-// ---------------------------------------------------------------------------
-// Stop words (minimal English set matching Python's _STOP_WORDS)
-// ---------------------------------------------------------------------------
-
 const STOP_WORDS: &[&str] = &[
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
     "of", "with", "by", "from", "is", "it", "this", "that", "was", "are",
@@ -37,10 +33,6 @@ lazy_static::lazy_static! {
         STOP_WORDS.iter().copied().collect()
     };
 }
-
-// ---------------------------------------------------------------------------
-// Keyword extraction
-// ---------------------------------------------------------------------------
 
 /// Extract meaningful keywords from text.
 /// Matches Python's AssociationMiner._extract_keywords().
@@ -70,10 +62,6 @@ pub fn extract_keywords(text: &str, max_keywords: usize) -> HashSet<String> {
 
     keywords
 }
-
-// ---------------------------------------------------------------------------
-// Jaccard overlap scoring
-// ---------------------------------------------------------------------------
 
 /// Result of comparing two memory keyword sets.
 #[derive(Debug, Clone, Serialize)]
@@ -108,10 +96,6 @@ fn compute_overlap(kw_a: &HashSet<String>, kw_b: &HashSet<String>) -> (f64, Vec<
 
     (score, shared)
 }
-
-// ---------------------------------------------------------------------------
-// Batch pairwise comparison (parallel)
-// ---------------------------------------------------------------------------
 
 /// Compare all pairs of keyword sets and return strong overlaps.
 /// This is the N² hot path — Rayon parallelizes the outer loop.
@@ -160,10 +144,6 @@ pub fn batch_pairwise_overlap(
     all_results.truncate(max_results);
     all_results
 }
-
-// ---------------------------------------------------------------------------
-// Python bindings
-// ---------------------------------------------------------------------------
 
 /// Extract keywords from a list of texts (parallel).
 /// Input: list of (id, text) tuples as JSON.

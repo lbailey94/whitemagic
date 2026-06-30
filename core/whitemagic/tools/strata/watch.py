@@ -1,7 +1,7 @@
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict
 
 __all__ = ["FileWatcher"]
 
@@ -12,17 +12,28 @@ class FileWatcher:
     def __init__(self, project_path: Path, interval: float = 1.0):
         self.project_path = Path(project_path).resolve()
         self.interval = interval
-        self._snapshots: Dict[str, float] = {}
+        self._snapshots: dict[str, float] = {}
 
-    def _take_snapshot(self) -> Dict[str, float]:
-        snap: Dict[str, float] = {}
+    def _take_snapshot(self) -> dict[str, float]:
+        snap: dict[str, float] = {}
         for root, dirs, files in os.walk(self.project_path):
             # Skip common non-project directories
             dirs[:] = [
-                d for d in dirs
-                if d not in {
-                    ".venv", "venv", "node_modules", "target", "dist", "build",
-                    ".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".tox",
+                d
+                for d in dirs
+                if d
+                not in {
+                    ".venv",
+                    "venv",
+                    "node_modules",
+                    "target",
+                    "dist",
+                    "build",
+                    ".git",
+                    "__pycache__",
+                    ".pytest_cache",
+                    ".mypy_cache",
+                    ".tox",
                 }
             ]
             for f in files:

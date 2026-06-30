@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConversationMessage:
     """A single message in a conversation."""
+
     role: str  # 'user', 'assistant', 'system'
     content: str
     timestamp: str | None = None
@@ -40,6 +41,7 @@ class ConversationMessage:
 @dataclass
 class Conversation:
     """A full conversation from Windsurf."""
+
     id: str
     path: str
     messages: list[ConversationMessage] = field(default_factory=list)
@@ -65,11 +67,13 @@ class Conversation:
             f"**Messages**: {self.message_count()}",
             "",
             "---",
-            ""
+            "",
         ]
 
         for i, msg in enumerate(self.messages, 1):
-            role_emoji = "👤" if msg.role == "user" else "🤖" if msg.role == "assistant" else "⚙️"
+            role_emoji = (
+                "👤" if msg.role == "user" else "🤖" if msg.role == "assistant" else "⚙️"
+            )
             lines.append(f"## {role_emoji} {msg.role.title()} ({i})")
             lines.append("")
             lines.append(msg.content)
@@ -97,7 +101,7 @@ class Conversation:
             "messages": [
                 {"role": m.role, "content": m.content, "timestamp": m.timestamp}
                 for m in self.messages
-            ]
+            ],
         }
 
 
@@ -149,14 +153,16 @@ class WindsurfConversationReader:
                 stat = pb_file.stat()
                 conv_id = pb_file.stem
 
-                conversations.append({
-                    "id": conv_id,
-                    "path": str(pb_file),
-                    "size_bytes": stat.st_size,
-                    "size_kb": round(stat.st_size / 1024, 2),
-                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                })
+                conversations.append(
+                    {
+                        "id": conv_id,
+                        "path": str(pb_file),
+                        "size_bytes": stat.st_size,
+                        "size_kb": round(stat.st_size / 1024, 2),
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                    }
+                )
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
                 continue
@@ -196,18 +202,20 @@ class WindsurfConversationReader:
                 elif wire_type == 2:
                     # Length-delimited (string/bytes/embedded)
                     length, pos = self._read_varint(data, pos)
-                    content = data[pos:pos + length]
+                    content = data[pos : pos + length]
                     pos += length
 
                     # Try to decode as UTF-8 string
                     try:
-                        text = content.decode('utf-8')
+                        text = content.decode("utf-8")
                         if len(text) > 10 and text.isprintable():
-                            messages.append({
-                                "field": field_num,
-                                "content": text,
-                                "length": len(text)
-                            })
+                            messages.append(
+                                {
+                                    "field": field_num,
+                                    "content": text,
+                                    "length": len(text),
+                                }
+                            )
                     except UnicodeDecodeError:
                         pass
                 elif wire_type == 5:
@@ -228,7 +236,7 @@ class WindsurfConversationReader:
         while pos < len(data):
             byte = data[pos]
             pos += 1
-            result |= (byte & 0x7f) << shift
+            result |= (byte & 0x7F) << shift
             if not (byte & 0x80):
                 break
             shift += 7
@@ -271,10 +279,12 @@ class WindsurfConversationReader:
                 continue
 
             # This looks like actual message content
-            messages.append(ConversationMessage(
-                role=current_role,
-                content=content,
-            ))
+            messages.append(
+                ConversationMessage(
+                    role=current_role,
+                    content=content,
+                )
+            )
 
             # Alternate role assumption
             current_role = "assistant" if current_role == "user" else "user"
@@ -321,20 +331,26 @@ class WindsurfConversationReader:
                 matches = []
                 for i, msg in enumerate(conv.messages):
                     if query_lower in msg.content.lower():
-                        matches.append({
-                            "message_index": i,
-                            "role": msg.role,
-                            "preview": msg.content[:200] + "..." if len(msg.content) > 200 else msg.content
-                        })
+                        matches.append(
+                            {
+                                "message_index": i,
+                                "role": msg.role,
+                                "preview": msg.content[:200] + "..."
+                                if len(msg.content) > 200
+                                else msg.content,
+                            }
+                        )
 
                 if matches:
-                    results.append({
-                        "id": conv.id,
-                        "path": conv.path,
-                        "title": conv.title,
-                        "match_count": len(matches),
-                        "matches": matches
-                    })
+                    results.append(
+                        {
+                            "id": conv.id,
+                            "path": conv.path,
+                            "title": conv.title,
+                            "match_count": len(matches),
+                            "matches": matches,
+                        }
+                    )
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
                 continue

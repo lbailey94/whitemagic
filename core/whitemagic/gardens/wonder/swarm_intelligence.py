@@ -23,10 +23,11 @@ except ImportError:
 
 class SwarmBehavior(Enum):
     """Types of swarm behaviors"""
-    EXPLORE = "explore"        # Spread out and search
-    CONVERGE = "converge"      # Come together on solution
-    FOLLOW = "follow"          # Follow successful paths
-    AVOID = "avoid"           # Avoid failures
+
+    EXPLORE = "explore"  # Spread out and search
+    CONVERGE = "converge"  # Come together on solution
+    FOLLOW = "follow"  # Follow successful paths
+    AVOID = "avoid"  # Avoid failures
     COLLABORATE = "collaborate"  # Work together
 
 
@@ -36,7 +37,7 @@ class SwarmParticle:
     def __init__(self, particle_id: str, position: dict):
         self.particle_id = particle_id
         self.position = position  # Current solution/state
-        self.velocity = {}        # Direction of exploration
+        self.velocity = {}  # Direction of exploration
         self.best_position = position.copy()
         self.best_score = 0.0
         self.neighbors: list[str] = []
@@ -67,9 +68,9 @@ class SwarmIntelligence:
         self.iteration = 0
 
         # Swarm parameters
-        self.inertia = 0.7          # Tendency to continue current direction
-        self.cognitive = 1.5        # Attraction to personal best
-        self.social = 1.5           # Attraction to swarm best
+        self.inertia = 0.7  # Tendency to continue current direction
+        self.cognitive = 1.5  # Attraction to personal best
+        self.social = 1.5  # Attraction to swarm best
 
         # Connect to Gan Ying Bus
         self.bus = get_bus() if get_bus else None
@@ -86,12 +87,13 @@ class SwarmIntelligence:
         for i, particle in enumerate(particle_list):
             # Connect to adjacent particles
             if i > 0:
-                particle.neighbors.append(particle_list[i-1].particle_id)
+                particle.neighbors.append(particle_list[i - 1].particle_id)
             if i < len(particle_list) - 1:
-                particle.neighbors.append(particle_list[i+1].particle_id)
+                particle.neighbors.append(particle_list[i + 1].particle_id)
 
-    def evaluate_position(self, position: dict,
-                         fitness_fn: Callable[[dict], float]) -> float:
+    def evaluate_position(
+        self, position: dict, fitness_fn: Callable[[dict], float]
+    ) -> float:
         """Evaluate quality of a position"""
         return fitness_fn(position)
 
@@ -129,28 +131,33 @@ class SwarmIntelligence:
 
         # Emit iteration complete
         if self.bus and ResonanceEvent and EventType:
-            self.bus.emit(ResonanceEvent(
-                source="swarm_intelligence",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "event": "swarm_iteration",
-                    "iteration": self.iteration,
-                    "best_score": self.global_best_score,
-                    "improvement": improvement
-                },
-                confidence=min(1.0, self.global_best_score)
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="swarm_intelligence",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={
+                        "event": "swarm_iteration",
+                        "iteration": self.iteration,
+                        "best_score": self.global_best_score,
+                        "improvement": improvement,
+                    },
+                    confidence=min(1.0, self.global_best_score),
+                )
+            )
 
         return {
-            'iteration': self.iteration,
-            'global_best_score': self.global_best_score,
-            'global_best_position': self.global_best_position,
-            'improvement': improvement
+            "iteration": self.iteration,
+            "global_best_score": self.global_best_score,
+            "global_best_position": self.global_best_position,
+            "improvement": improvement,
         }
 
-    def run_swarm(self, fitness_fn: Callable[[dict], float],
-                 max_iterations: int = 50,
-                 convergence_threshold: float = 0.01) -> dict:
+    def run_swarm(
+        self,
+        fitness_fn: Callable[[dict], float],
+        max_iterations: int = 50,
+        convergence_threshold: float = 0.01,
+    ) -> dict:
         """
         Run swarm until convergence or max iterations.
 
@@ -160,31 +167,34 @@ class SwarmIntelligence:
             result = self.iterate_swarm(fitness_fn)
 
             # Check convergence
-            if result['improvement'] < convergence_threshold:
+            if result["improvement"] < convergence_threshold:
                 break
 
         # Emit completion
         if self.bus and ResonanceEvent and EventType:
-            self.bus.emit(ResonanceEvent(
-                source="swarm_intelligence",
-                event_type=EventType.SOLUTION_FOUND,
-                data={
-                    "event": "swarm_converged",
-                    "iterations": self.iteration,
-                    "final_score": self.global_best_score
-                },
-                confidence=self.global_best_score
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="swarm_intelligence",
+                    event_type=EventType.SOLUTION_FOUND,
+                    data={
+                        "event": "swarm_converged",
+                        "iterations": self.iteration,
+                        "final_score": self.global_best_score,
+                    },
+                    confidence=self.global_best_score,
+                )
+            )
 
         return {
-            'iterations': self.iteration,
-            'best_position': self.global_best_position,
-            'best_score': self.global_best_score,
-            'particles': len(self.particles)
+            "iterations": self.iteration,
+            "best_position": self.global_best_position,
+            "best_score": self.global_best_score,
+            "particles": len(self.particles),
         }
 
-    def collaborative_exploration(self, search_space: list[dict],
-                                 objective: str) -> list[dict]:
+    def collaborative_exploration(
+        self, search_space: list[dict], objective: str
+    ) -> list[dict]:
         """
         Multiple particles explore space collaboratively.
 
@@ -205,11 +215,13 @@ class SwarmIntelligence:
             for position in assigned_area:
                 # Simple exploration - real version would be more sophisticated
                 if self._is_promising(position):
-                    discoveries.append({
-                        'position': position,
-                        'discovered_by': particle.particle_id,
-                        'timestamp': datetime.now().isoformat()
-                    })
+                    discoveries.append(
+                        {
+                            "position": position,
+                            "discovered_by": particle.particle_id,
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
 
         return discoveries
 
@@ -230,21 +242,21 @@ class SwarmIntelligence:
 
         if len(clusters) > 1:
             return {
-                'pattern_type': 'multi_cluster',
-                'cluster_count': len(clusters),
-                'interpretation': 'Swarm found multiple promising areas'
+                "pattern_type": "multi_cluster",
+                "cluster_count": len(clusters),
+                "interpretation": "Swarm found multiple promising areas",
             }
         elif len(clusters) == 1 and len(clusters[0]) > len(self.particles) * 0.7:
             return {
-                'pattern_type': 'convergence',
-                'cluster_size': len(clusters[0]),
-                'interpretation': 'Swarm converging on solution'
+                "pattern_type": "convergence",
+                "cluster_size": len(clusters[0]),
+                "interpretation": "Swarm converging on solution",
             }
         else:
             return {
-                'pattern_type': 'exploration',
-                'dispersion': len(clusters),
-                'interpretation': 'Swarm still exploring'
+                "pattern_type": "exploration",
+                "dispersion": len(clusters),
+                "interpretation": "Swarm still exploring",
             }
 
     def _update_particle_velocity(self, particle: SwarmParticle):
@@ -256,20 +268,27 @@ class SwarmIntelligence:
             inertia_component = self.inertia * current_v
 
             # Cognitive component (personal best)
-            cognitive_component = self.cognitive * random.random() * \
-                                (particle.best_position.get(key, 0) -
-                                 particle.position.get(key, 0))
+            cognitive_component = (
+                self.cognitive
+                * random.random()
+                * (particle.best_position.get(key, 0) - particle.position.get(key, 0))
+            )
 
             # Social component (global best)
             social_component = 0.0
             if self.global_best_position:
-                social_component = self.social * random.random() * \
-                                 (self.global_best_position.get(key, 0) -
-                                  particle.position.get(key, 0))
+                social_component = (
+                    self.social
+                    * random.random()
+                    * (
+                        self.global_best_position.get(key, 0)
+                        - particle.position.get(key, 0)
+                    )
+                )
 
-            particle.velocity[key] = (inertia_component +
-                                     cognitive_component +
-                                     social_component)
+            particle.velocity[key] = (
+                inertia_component + cognitive_component + social_component
+            )
 
     def _update_particle_position(self, particle: SwarmParticle):
         """Move particle based on velocity"""

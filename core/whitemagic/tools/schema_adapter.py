@@ -11,10 +11,10 @@ from typing import Any
 
 # Client name patterns → adapter keys
 _CLIENT_PATTERNS = {
-    "gemini":   re.compile(r"gemini|google", re.I),
+    "gemini": re.compile(r"gemini|google", re.I),
     "deepseek": re.compile(r"deepseek", re.I),
-    "qwen":     re.compile(r"qwen|alibaba", re.I),
-    "kimi":     re.compile(r"kimi|moonshot", re.I),
+    "qwen": re.compile(r"qwen|alibaba", re.I),
+    "kimi": re.compile(r"kimi|moonshot", re.I),
 }
 
 
@@ -65,14 +65,16 @@ def _adapt_kimi(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 _ADAPTERS = {
-    "gemini":   _adapt_gemini,
+    "gemini": _adapt_gemini,
     "deepseek": _adapt_deepseek,
-    "qwen":     _adapt_qwen,
-    "kimi":     _adapt_kimi,
+    "qwen": _adapt_qwen,
+    "kimi": _adapt_kimi,
 }
 
 
-def adapt_schema(schema: dict[str, Any], client_name: str | None = None) -> dict[str, Any]:
+def adapt_schema(
+    schema: dict[str, Any], client_name: str | None = None
+) -> dict[str, Any]:
     """Return a client-safe copy of the input schema.
 
     Args:

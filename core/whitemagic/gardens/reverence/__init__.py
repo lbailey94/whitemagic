@@ -71,12 +71,9 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.3, y=0.5, z=-0.2, w=0.35)
 
-    # ------------------------------------------------------------------
-    # Swarm task management — serving swarm.* tools
-    # ------------------------------------------------------------------
-
-    def decompose_task(self, task_id: str, description: str,
-                       subtasks: list[dict] | None = None) -> dict[str, Any]:
+    def decompose_task(
+        self, task_id: str, description: str, subtasks: list[dict] | None = None
+    ) -> dict[str, Any]:
         """Decompose a task into subtasks for swarm processing."""
         now = datetime.now().isoformat()
         task = {
@@ -91,11 +88,14 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
         with self._lock:
             self.swarm_tasks[task_id] = task
             self._total_tasks += 1
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "task_decomposed", "task": task_id})  # type: ignore[attr-defined]
+        self.emit(
+            EventType.GARDEN_ACTIVITY, {"action": "task_decomposed", "task": task_id}
+        )  # type: ignore[attr-defined]
         return task
 
-    def route_subtask(self, task_id: str, subtask_idx: int,
-                      worker_id: str) -> dict[str, Any]:
+    def route_subtask(
+        self, task_id: str, subtask_idx: int, worker_id: str
+    ) -> dict[str, Any]:
         """Route a subtask to a specific worker."""
         with self._lock:
             task = self.swarm_tasks.get(task_id)
@@ -107,10 +107,16 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
             task["subtasks"][subtask_idx]["worker"] = worker_id
             task["subtasks"][subtask_idx]["status"] = "assigned"
             task["updated_at"] = datetime.now().isoformat()
-            return {"routed": True, "task_id": task_id, "subtask": subtask_idx, "worker": worker_id}
+            return {
+                "routed": True,
+                "task_id": task_id,
+                "subtask": subtask_idx,
+                "worker": worker_id,
+            }
 
-    def complete_subtask(self, task_id: str, subtask_idx: int,
-                         result: Any = None) -> dict[str, Any]:
+    def complete_subtask(
+        self, task_id: str, subtask_idx: int, result: Any = None
+    ) -> dict[str, Any]:
         """Mark a subtask as complete."""
         with self._lock:
             task = self.swarm_tasks.get(task_id)
@@ -129,20 +135,23 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
     def get_swarm_status(self) -> dict[str, Any]:
         """Get overall swarm status."""
         with self._lock:
-            active = {k: v for k, v in self.swarm_tasks.items() if v["status"] != "completed"}
+            active = {
+                k: v for k, v in self.swarm_tasks.items() if v["status"] != "completed"
+            }
             return {
                 "active_tasks": len(active),
                 "total_tasks": self._total_tasks,
                 "completed_tasks": len(self.completed_tasks),
                 "workers": len(self.workers),
-                "tasks": {k: {"status": v["status"], "subtasks": len(v["subtasks"])} for k, v in active.items()},
+                "tasks": {
+                    k: {"status": v["status"], "subtasks": len(v["subtasks"])}
+                    for k, v in active.items()
+                },
             }
 
-    # ------------------------------------------------------------------
-    # Worker management — serving worker.status tool
-    # ------------------------------------------------------------------
-
-    def register_worker(self, worker_id: str, capabilities: list[str] | None = None) -> dict[str, Any]:
+    def register_worker(
+        self, worker_id: str, capabilities: list[str] | None = None
+    ) -> dict[str, Any]:
         """Register a worker in the swarm."""
         worker = {
             "id": worker_id,
@@ -165,15 +174,16 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
                 return {"alive": True, "worker": worker_id}
         return {"alive": False, "error": f"Worker {worker_id} not registered"}
 
-    # ------------------------------------------------------------------
-    # Vote/consensus — serving swarm.vote, swarm.resolve tools
-    # ------------------------------------------------------------------
-
-    def cast_vote(self, topic_id: str, voter: str, choice: str,
-                  confidence: float = 1.0) -> dict[str, Any]:
+    def cast_vote(
+        self, topic_id: str, voter: str, choice: str, confidence: float = 1.0
+    ) -> dict[str, Any]:
         """Cast a vote on a topic."""
-        vote = {"voter": voter, "choice": choice, "confidence": confidence,
-                "timestamp": datetime.now().isoformat()}
+        vote = {
+            "voter": voter,
+            "choice": choice,
+            "confidence": confidence,
+            "timestamp": datetime.now().isoformat(),
+        }
         with self._lock:
             if topic_id not in self.votes:
                 self.votes[topic_id] = []
@@ -190,31 +200,34 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
         for v in votes:
             tally[v["choice"]] = tally.get(v["choice"], 0) + v["confidence"]
         winner = max(tally, key=tally.get)  # type: ignore
-        return {"topic": topic_id, "resolved": True, "winner": winner,
-                "tally": tally, "total_votes": len(votes)}
-
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
+        return {
+            "topic": topic_id,
+            "resolved": True,
+            "winner": winner,
+            "tally": tally,
+            "total_votes": len(votes),
+        }
 
     def feel_reverence(self, for_what: str, depth: float = 0.8) -> dict[str, Any]:
-        moment = {"for": for_what, "depth": depth, "timestamp": datetime.now().isoformat()}
+        moment = {
+            "for": for_what,
+            "depth": depth,
+            "timestamp": datetime.now().isoformat(),
+        }
         self.reverence_level = min(1.0, self.reverence_level + depth * 0.1)
         self.emit(EventType.REVERENCE_FELT, moment)
         return moment
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "swarm": self.get_swarm_status(),
-            "reverence_level": round(self.reverence_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "swarm": self.get_swarm_status(),
+                "reverence_level": round(self.reverence_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.AWE_FELT)
@@ -223,10 +236,14 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
 
     @listen_for(EventType.WISDOM_INTEGRATED)
     def on_wisdom(self, event: Any) -> None:
-        self.emit(EventType.REVERENCE_FELT, {"source": "wisdom", "for": "ancient wisdom"})
+        self.emit(
+            EventType.REVERENCE_FELT, {"source": "wisdom", "for": "ancient wisdom"}
+        )
 
 
 _instance = None
+
+
 def get_reverence_garden() -> ReverenceGarden:
     global _instance
     if _instance is None:

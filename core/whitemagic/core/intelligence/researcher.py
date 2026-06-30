@@ -121,10 +121,6 @@ class JITResearcher:
         self._total_sessions = 0
         self._total_evidence_found = 0
 
-    # ------------------------------------------------------------------
-    # Core research loop
-    # ------------------------------------------------------------------
-
     def research(
         self,
         query: str,
@@ -203,14 +199,13 @@ class JITResearcher:
 
         logger.info(
             "🔬 JIT Research: '%s' → %d rounds, %d evidence, %d unique memories (%.0fms)",
-            query[:50], result.rounds_completed, result.total_evidence,
-            result.unique_memories, result.duration_ms,
+            query[:50],
+            result.rounds_completed,
+            result.total_evidence,
+            result.unique_memories,
+            result.duration_ms,
         )
         return result
-
-    # ------------------------------------------------------------------
-    # Plan: Decompose query into sub-questions
-    # ------------------------------------------------------------------
 
     def _plan(self, query: str) -> list[str]:
         """Decompose a query into searchable sub-questions.
@@ -244,24 +239,108 @@ class JITResearcher:
         """Extract key phrases from text."""
         try:
             from whitemagic.optimization.rust_accelerators import keyword_extract
+
             return list(keyword_extract(text, max_keywords=5))  # type: ignore[arg-type]
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Keyword extraction failed: %s", e, exc_info=True)
 
         # Fallback: simple word extraction
         stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "being", "have", "has", "had", "do", "does", "did", "will",
-            "would", "could", "should", "may", "might", "can", "shall",
-            "in", "on", "at", "to", "for", "of", "with", "by", "from",
-            "as", "into", "through", "during", "before", "after", "above",
-            "below", "between", "out", "off", "over", "under", "again",
-            "further", "then", "once", "here", "there", "when", "where",
-            "why", "how", "all", "both", "each", "few", "more", "most",
-            "other", "some", "such", "no", "nor", "not", "only", "own",
-            "same", "so", "than", "too", "very", "what", "which", "who",
-            "this", "that", "these", "those", "it", "its", "and", "but",
-            "or", "if", "our", "we", "my", "me", "i", "you", "your",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "can",
+            "shall",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "out",
+            "off",
+            "over",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "here",
+            "there",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "both",
+            "each",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "what",
+            "which",
+            "who",
+            "this",
+            "that",
+            "these",
+            "those",
+            "it",
+            "its",
+            "and",
+            "but",
+            "or",
+            "if",
+            "our",
+            "we",
+            "my",
+            "me",
+            "i",
+            "you",
+            "your",
         }
         words = text.lower().split()
         keywords = [w.strip(".,!?;:\"'()[]{}") for w in words if len(w) > 2]
@@ -297,16 +376,16 @@ class JITResearcher:
 
         return facets
 
-    # ------------------------------------------------------------------
-    # Search: Execute hybrid recall
-    # ------------------------------------------------------------------
-
     def _search(
-        self, sub_question: str, limit: int = 5, hops: int = 2,
+        self,
+        sub_question: str,
+        limit: int = 5,
+        hops: int = 2,
     ) -> list[dict[str, Any]]:
         """Search the memory store using hybrid recall."""
         try:
             from whitemagic.core.memory.graph_walker import get_graph_walker
+
             walker = get_graph_walker()
             results = walker.hybrid_recall(
                 query=sub_question,
@@ -322,6 +401,7 @@ class JITResearcher:
         # Fallback to basic search
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             memories = um.search(query=sub_question, limit=limit)
             return [
@@ -337,10 +417,6 @@ class JITResearcher:
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Research search failed: %s", e, exc_info=True)
             return []
-
-    # ------------------------------------------------------------------
-    # Reflect: Evaluate coverage and identify gaps
-    # ------------------------------------------------------------------
 
     def _reflect(
         self,
@@ -400,12 +476,10 @@ class JITResearcher:
 
         return gaps[:3]  # Cap at 3 gap-filling questions per round
 
-    # ------------------------------------------------------------------
-    # Synthesize: Compose findings
-    # ------------------------------------------------------------------
-
     def _synthesize(
-        self, query: str, evidence: list[dict[str, Any]],
+        self,
+        query: str,
+        evidence: list[dict[str, Any]],
     ) -> str:
         """Synthesize accumulated evidence into a coherent summary.
 
@@ -423,13 +497,16 @@ class JITResearcher:
         return self._template_synthesize(query, evidence)
 
     def _ollama_synthesize(
-        self, query: str, evidence: list[dict[str, Any]],
+        self,
+        query: str,
+        evidence: list[dict[str, Any]],
     ) -> str | None:
         """Attempt LLM-based synthesis via Ollama."""
         try:
             from whitemagic.tools.handlers.ollama import (
                 handle_ollama_generate as _ollama_generate,
             )
+
             evidence_text = "\n".join(
                 f"- [{e.get('title', 'untitled')}]: {e.get('content', '')[:200]}"
                 for e in evidence[:10]
@@ -447,7 +524,9 @@ class JITResearcher:
         return None
 
     def _template_synthesize(
-        self, query: str, evidence: list[dict[str, Any]],
+        self,
+        query: str,
+        evidence: list[dict[str, Any]],
     ) -> str:
         """Template-based synthesis when LLM is unavailable."""
         # Sort by importance
@@ -472,10 +551,6 @@ class JITResearcher:
 
         return "\n".join(lines)
 
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """Get researcher statistics."""
         with self._lock:
@@ -487,10 +562,6 @@ class JITResearcher:
                 "saturation_threshold": self._saturation_threshold,
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _researcher: JITResearcher | None = None
 _researcher_lock = threading.Lock()

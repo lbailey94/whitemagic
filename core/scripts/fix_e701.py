@@ -27,6 +27,7 @@ continue, raise, expression). Doesn't touch:
 - try/except on one line (not E701)
 - with/for on one line (E701)
 """
+
 import ast
 import re
 from pathlib import Path

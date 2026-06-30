@@ -199,7 +199,14 @@ def seed_tutorial_galaxy(db_path: str | None = None) -> dict:
                 """INSERT OR REPLACE INTO holographic_coords
                    (memory_id, x, y, z, w, v)
                    VALUES (?, ?, ?, ?, ?, ?)""",
-                (memory_id, coords["x"], coords["y"], coords["z"], coords["w"], coords["v"]),
+                (
+                    memory_id,
+                    coords["x"],
+                    coords["y"],
+                    coords["z"],
+                    coords["w"],
+                    coords["v"],
+                ),
             )
 
             # Insert tags

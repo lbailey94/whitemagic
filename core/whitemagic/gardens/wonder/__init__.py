@@ -6,6 +6,7 @@ Holographic Integration:
 - Future-oriented (Z-axis +0.5) — wonder looks forward
 - Enriching (W-axis +0.2) — wonder opens doors
 """
+
 from __future__ import annotations
 
 import logging
@@ -65,7 +66,9 @@ class WonderGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.WONDER_SPARKED, moment)
         return moment
 
-    def record_curiosity(self, question: str, domain: str = "general") -> dict[str, Any]:
+    def record_curiosity(
+        self, question: str, domain: str = "general"
+    ) -> dict[str, Any]:
         """Record a curiosity spark — a question that wants exploring."""
         spark = {
             "question": question,
@@ -85,12 +88,14 @@ class WonderGarden(BaseGarden, GanYingMixin):
 
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "wonder_moments": len(self.wonder_moments),
-            "curiosity_sparks": len(self.curiosity_sparks),
-            "explorations_triggered": self.explorations_triggered,
-            "wonder_level": round(self.wonder_level, 3),
-        })
+        base.update(
+            {
+                "wonder_moments": len(self.wonder_moments),
+                "curiosity_sparks": len(self.curiosity_sparks),
+                "explorations_triggered": self.explorations_triggered,
+                "wonder_level": round(self.wonder_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.MYSTERY_EMBRACED)
@@ -110,6 +115,8 @@ class WonderGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_wonder_garden() -> WonderGarden:
     global _instance
     if _instance is None:

@@ -31,6 +31,7 @@ class PatternType(Enum):
         FLOW
         QUERY_RULE
         TOOL_CHAIN"""
+
     SOLUTION = "solution"
     ANTI_PATTERN = "anti_pattern"
     HEURISTIC = "heuristic"
@@ -39,6 +40,7 @@ class PatternType(Enum):
     FLOW = "flow"
     QUERY_RULE = "query_rule"
     TOOL_CHAIN = "tool_chain"
+
 
 @dataclass
 class UnifiedPattern:
@@ -52,6 +54,7 @@ class UnifiedPattern:
     confidence: float
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 class UnifiedPatternAPI:
     """Unified interface to all pattern engines."""
 
@@ -59,6 +62,7 @@ class UnifiedPatternAPI:
         from pathlib import Path
 
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = str(Path(db_path)) if db_path else str(DB_PATH)
         self._engines: dict[str, Any] = {}
 
@@ -70,6 +74,7 @@ class UnifiedPatternAPI:
         # Try to load each engine with correct paths
         try:
             from whitemagic.core.memory.pattern_engine import PatternEngine
+
             self._engines["core"] = PatternEngine()
         except ImportError:
             pass
@@ -78,6 +83,7 @@ class UnifiedPatternAPI:
             from whitemagic.core.intelligence.hologram.patterns import (
                 HolographicPatternEngine,
             )
+
             self._engines["holographic"] = HolographicPatternEngine()
         except ImportError:
             pass
@@ -85,10 +91,13 @@ class UnifiedPatternAPI:
         # Load Rust similarity for cross-correlation
         self._rust_available = find_spec("whitemagic_rs") is not None
 
-    def search(self, query: str | None = None,
-               engines: list[str] | None = None,
-               pattern_types: list[PatternType] | None = None,
-               min_confidence: float = 0.5) -> list[UnifiedPattern]:
+    def search(
+        self,
+        query: str | None = None,
+        engines: list[str] | None = None,
+        pattern_types: list[PatternType] | None = None,
+        min_confidence: float = 0.5,
+    ) -> list[UnifiedPattern]:
         """Search patterns across all engines."""
         self._load_engines()
 
@@ -113,7 +122,9 @@ class UnifiedPatternAPI:
 
                 results.extend(patterns)
             except Exception as e:
-                logger.debug("Pattern engine {engine_name!r} search failed: %s", e, exc_info=True)
+                logger.debug(
+                    "Pattern engine {engine_name!r} search failed: %s", e, exc_info=True
+                )
                 continue
 
         # Filter by pattern type if specified
@@ -125,8 +136,9 @@ class UnifiedPatternAPI:
 
         return results
 
-    def _search_core(self, engine: Any, query: str | None,
-                     min_confidence: float) -> list[UnifiedPattern]:
+    def _search_core(
+        self, engine: Any, query: str | None, min_confidence: float
+    ) -> list[UnifiedPattern]:
         """Search core pattern engine."""
         patterns = []
 
@@ -134,55 +146,67 @@ class UnifiedPatternAPI:
             report = engine.extract_patterns(min_confidence=min_confidence)
 
             for p in report.solutions:
-                patterns.append(UnifiedPattern(
-                    id=f"core_sol_{hash(p.title)}",
-                    pattern_type=PatternType.SOLUTION,
-                    title=p.title[:100] if p.title else "Untitled",
-                    description=p.description[:200] if p.description else "",
-                    source_engine="core",
-                    confidence=p.confidence,
-                    metadata={"frequency": p.frequency, "examples": p.examples[:3] if p.examples else []},
-                ))
+                patterns.append(
+                    UnifiedPattern(
+                        id=f"core_sol_{hash(p.title)}",
+                        pattern_type=PatternType.SOLUTION,
+                        title=p.title[:100] if p.title else "Untitled",
+                        description=p.description[:200] if p.description else "",
+                        source_engine="core",
+                        confidence=p.confidence,
+                        metadata={
+                            "frequency": p.frequency,
+                            "examples": p.examples[:3] if p.examples else [],
+                        },
+                    )
+                )
 
             for p in report.anti_patterns:
-                patterns.append(UnifiedPattern(
-                    id=f"core_anti_{hash(p.title)}",
-                    pattern_type=PatternType.ANTI_PATTERN,
-                    title=p.title[:100] if p.title else "Untitled",
-                    description=p.description[:200] if p.description else "",
-                    source_engine="core",
-                    confidence=p.confidence,
-                    metadata={"frequency": p.frequency},
-                ))
+                patterns.append(
+                    UnifiedPattern(
+                        id=f"core_anti_{hash(p.title)}",
+                        pattern_type=PatternType.ANTI_PATTERN,
+                        title=p.title[:100] if p.title else "Untitled",
+                        description=p.description[:200] if p.description else "",
+                        source_engine="core",
+                        confidence=p.confidence,
+                        metadata={"frequency": p.frequency},
+                    )
+                )
 
             for p in report.heuristics:
-                patterns.append(UnifiedPattern(
-                    id=f"core_heur_{hash(p.title)}",
-                    pattern_type=PatternType.HEURISTIC,
-                    title=p.title[:100] if p.title else "Untitled",
-                    description=p.description[:200] if p.description else "",
-                    source_engine="core",
-                    confidence=p.confidence,
-                    metadata={"frequency": p.frequency},
-                ))
+                patterns.append(
+                    UnifiedPattern(
+                        id=f"core_heur_{hash(p.title)}",
+                        pattern_type=PatternType.HEURISTIC,
+                        title=p.title[:100] if p.title else "Untitled",
+                        description=p.description[:200] if p.description else "",
+                        source_engine="core",
+                        confidence=p.confidence,
+                        metadata={"frequency": p.frequency},
+                    )
+                )
 
             for p in report.optimizations:
-                patterns.append(UnifiedPattern(
-                    id=f"core_opt_{hash(p.title)}",
-                    pattern_type=PatternType.OPTIMIZATION,
-                    title=p.title[:100] if p.title else "Untitled",
-                    description=p.description[:200] if p.description else "",
-                    source_engine="core",
-                    confidence=p.confidence,
-                    metadata={"frequency": p.frequency},
-                ))
+                patterns.append(
+                    UnifiedPattern(
+                        id=f"core_opt_{hash(p.title)}",
+                        pattern_type=PatternType.OPTIMIZATION,
+                        title=p.title[:100] if p.title else "Untitled",
+                        description=p.description[:200] if p.description else "",
+                        source_engine="core",
+                        confidence=p.confidence,
+                        metadata={"frequency": p.frequency},
+                    )
+                )
         except Exception as e:
             logger.debug("Core pattern search failed: %s", e, exc_info=True)
 
         return patterns
 
-    def _search_holographic(self, engine: Any, query: str | None,
-                            min_confidence: float) -> list[UnifiedPattern]:
+    def _search_holographic(
+        self, engine: Any, query: str | None, min_confidence: float
+    ) -> list[UnifiedPattern]:
         """Search holographic pattern engine."""
         patterns = []
 
@@ -202,25 +226,30 @@ class UnifiedPatternAPI:
                     else:
                         pattern_type = PatternType.DENSITY
 
-                    patterns.append(UnifiedPattern(
-                        id=f"holo_{ptype}_{hash(getattr(p, 'description', ''))}",
-                        pattern_type=pattern_type,
-                        title=getattr(p, "description", "Holographic Pattern")[:100],
-                        description=f"Location: {getattr(p, 'location', 'unknown')}",
-                        source_engine="holographic",
-                        confidence=conf,
-                        metadata={
-                            "location": getattr(p, "location", None),
-                            "evidence": getattr(p, "evidence", [])[:3],
-                        },
-                    ))
+                    patterns.append(
+                        UnifiedPattern(
+                            id=f"holo_{ptype}_{hash(getattr(p, 'description', ''))}",
+                            pattern_type=pattern_type,
+                            title=getattr(p, "description", "Holographic Pattern")[
+                                :100
+                            ],
+                            description=f"Location: {getattr(p, 'location', 'unknown')}",
+                            source_engine="holographic",
+                            confidence=conf,
+                            metadata={
+                                "location": getattr(p, "location", None),
+                                "evidence": getattr(p, "evidence", [])[:3],
+                            },
+                        )
+                    )
         except Exception as e:
             logger.debug("Holographic pattern search failed: %s", e, exc_info=True)
 
         return patterns
 
-    def _search_edge(self, engine: Any, query: str | None,
-                     min_confidence: float) -> list[UnifiedPattern]:
+    def _search_edge(
+        self, engine: Any, query: str | None, min_confidence: float
+    ) -> list[UnifiedPattern]:
         """Search edge pattern learning."""
         patterns = []
 
@@ -229,15 +258,17 @@ class UnifiedPatternAPI:
 
             for rule in rules:
                 if min_confidence <= rule.get("confidence", 0.5):
-                    patterns.append(UnifiedPattern(
-                        id=f"edge_{hash(rule.get('pattern', ''))}",
-                        pattern_type=PatternType.QUERY_RULE,
-                        title=rule.get("pattern", "Edge Rule"),
-                        description=rule.get("action", ""),
-                        source_engine="edge",
-                        confidence=rule.get("confidence", 0.5),
-                        metadata=rule,
-                    ))
+                    patterns.append(
+                        UnifiedPattern(
+                            id=f"edge_{hash(rule.get('pattern', ''))}",
+                            pattern_type=PatternType.QUERY_RULE,
+                            title=rule.get("pattern", "Edge Rule"),
+                            description=rule.get("action", ""),
+                            source_engine="edge",
+                            confidence=rule.get("confidence", 0.5),
+                            metadata=rule,
+                        )
+                    )
         except Exception as e:
             logger.debug("Edge pattern search failed: %s", e, exc_info=True)
 
@@ -250,8 +281,7 @@ class UnifiedPatternAPI:
 
         # Group by similar titles/descriptions
         for i, p1 in enumerate(all_patterns):
-            for p2 in all_patterns[i+1:
-                ]:
+            for p2 in all_patterns[i + 1 :]:
                 if p1.source_engine != p2.source_engine:
                     similarity = self._text_similarity(
                         f"{p1.title} {p1.description}",
@@ -259,15 +289,18 @@ class UnifiedPatternAPI:
                     )
 
                     if similarity > 0.3:
-                        correlations.append({
-                            "pattern1_id": p1.id,
-                            "pattern2_id": p2.id,
-                            "pattern1_title": p1.title[:50],
-                            "pattern2_title": p2.title[:50],
-                            "engines": [p1.source_engine, p2.source_engine],
-                            "similarity": similarity,
-                            "combined_confidence": (p1.confidence + p2.confidence) / 2,
-                        })
+                        correlations.append(
+                            {
+                                "pattern1_id": p1.id,
+                                "pattern2_id": p2.id,
+                                "pattern1_title": p1.title[:50],
+                                "pattern2_title": p2.title[:50],
+                                "engines": [p1.source_engine, p2.source_engine],
+                                "similarity": similarity,
+                                "combined_confidence": (p1.confidence + p2.confidence)
+                                / 2,
+                            }
+                        )
 
         return sorted(correlations, key=lambda c: -c["similarity"])
 
@@ -295,8 +328,7 @@ class UnifiedPatternAPI:
         if "core" in self._engines:
             try:
                 report = self._engines["core"].extract_patterns(min_confidence=0.3)
-                for p in report.solutions[:
-                    100]:
+                for p in report.solutions[:100]:
                     core_titles[p.title[:50]] = p
             except Exception as e:
                 logger.debug("Core pattern title fetch failed: %s", e, exc_info=True)
@@ -310,12 +342,16 @@ class UnifiedPatternAPI:
                     evidence_words = set(evidence_title.lower().split()[:10])
                     overlap = core_words & evidence_words
                     if len(overlap) >= 2:
-                        overlaps.append({
-                            "holographic_pattern": holo_desc,
-                            "core_pattern": core_title,
-                            "shared_terms": list(overlap),
-                            "connection_strength": len(overlap) / len(core_words) if core_words else 0,
-                        })
+                        overlaps.append(
+                            {
+                                "holographic_pattern": holo_desc,
+                                "core_pattern": core_title,
+                                "shared_terms": list(overlap),
+                                "connection_strength": len(overlap) / len(core_words)
+                                if core_words
+                                else 0,
+                            }
+                        )
                         break
 
         return sorted(overlaps, key=lambda x: -x["connection_strength"])
@@ -329,6 +365,7 @@ class UnifiedPatternAPI:
         if getattr(self, "_rust_available", False):
             try:
                 import whitemagic_rs
+
                 return float(whitemagic_rs.fast_similarity(text1, text2))
             except ImportError:
                 pass
@@ -363,18 +400,25 @@ class UnifiedPatternAPI:
             "by_engine": by_engine,
             "by_type": by_type,
             "engines_loaded": list(self._engines.keys()),
-            "avg_confidence": sum(p.confidence for p in all_patterns) / len(all_patterns) if all_patterns else 0,
+            "avg_confidence": sum(p.confidence for p in all_patterns)
+            / len(all_patterns)
+            if all_patterns
+            else 0,
         }
 
-    def search_tag_cooccurrence(self, min_count: int = 5, limit: int = 20) -> list[dict[str, Any]]:
+    def search_tag_cooccurrence(
+        self, min_count: int = 5, limit: int = 20
+    ) -> list[dict[str, Any]]:
         """Search for frequently co-occurring tags in the database."""
         import sqlite3
+
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT t1.tag as tag1, t2.tag as tag2, COUNT(*) as co_count
                 FROM tags t1
                 JOIN tags t2 ON t1.memory_id = t2.memory_id AND t1.tag < t2.tag
@@ -382,15 +426,19 @@ class UnifiedPatternAPI:
                 HAVING co_count >= ?
                 ORDER BY co_count DESC
                 LIMIT ?
-            """, (min_count, limit))
+            """,
+                (min_count, limit),
+            )
             return [dict(row) for row in cur.fetchall()]
         except sqlite3.Error:
             return []
         finally:
             conn.close()
 
+
 # Global instance
 _pattern_api = None
+
 
 def get_pattern_api() -> UnifiedPatternAPI:
     """

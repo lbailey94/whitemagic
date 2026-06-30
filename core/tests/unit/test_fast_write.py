@@ -1,4 +1,5 @@
 """Tests for fast_write handler — atomic file writing with syntax validation."""
+
 import os
 import tempfile
 from pathlib import Path
@@ -48,7 +49,9 @@ class TestWrite:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "test.py")
             Path(path).write_text("old = 1\n")
-            result = handle_fast_write_write(path=path, content="new = 2\n", backup=True)
+            result = handle_fast_write_write(
+                path=path, content="new = 2\n", backup=True
+            )
             assert result["status"] == "success"
             assert result["backup"] is not None
             assert Path(result["backup"]).read_text() == "old = 1\n"
@@ -164,7 +167,13 @@ class TestValidate:
 class TestRegistry:
     def test_tools_registered(self):
         from whitemagic.tools.registry import get_tool
-        for name in ("fast_write.write", "fast_write.append", "fast_write.batch", "fast_write.validate"):
+
+        for name in (
+            "fast_write.write",
+            "fast_write.append",
+            "fast_write.batch",
+            "fast_write.validate",
+        ):
             tool = get_tool(name)
             assert tool is not None, f"{name} not found in registry"
             assert tool.name == name

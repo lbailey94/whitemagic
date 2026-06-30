@@ -1,13 +1,13 @@
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, List
 
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding
 
-CheckerFunc = Callable[[Path, FileIndex, List[Finding]], None]
+CheckerFunc = Callable[[Path, FileIndex, list[Finding]], None]
 
 
-_checkers: List[CheckerFunc] = []
+_checkers: list[CheckerFunc] = []
 
 
 def register(func: CheckerFunc) -> CheckerFunc:
@@ -15,7 +15,7 @@ def register(func: CheckerFunc) -> CheckerFunc:
     return func
 
 
-def get_checkers() -> List[CheckerFunc]:
+def get_checkers() -> list[CheckerFunc]:
     return _checkers[:]
 
 

@@ -15,6 +15,7 @@ Usage:
         batch_topk_cosine, batch_normalize, simd_vector_batch_status
     )
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -34,6 +35,7 @@ _HAS_ZIG = False
 def _find_zig_lib() -> str | None:
     """Locate the compiled Zig shared library."""
     import os
+
     base = Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-zig"
     candidates = [
         os.environ.get("WM_ZIG_LIB", ""),
@@ -57,12 +59,16 @@ def _load_lib() -> Any:
             return _lib
         path = _find_zig_lib()
         if not path:
-            logger.debug("Zig SIMD library not found — using Python fallback for vector batch")
+            logger.debug(
+                "Zig SIMD library not found — using Python fallback for vector batch"
+            )
             return None
         try:
             lib = ctypes.CDLL(path)
             if not hasattr(lib, "wm_batch_topk_cosine"):
-                logger.debug("Zig library missing vector batch symbols — using Python fallback")
+                logger.debug(
+                    "Zig library missing vector batch symbols — using Python fallback"
+                )
                 return None
 
             # wm_batch_topk_cosine(query_ptr, corpus_ptr, n, dim, k, out_indices, out_scores) -> count
@@ -85,10 +91,6 @@ def _load_lib() -> Any:
             logger.debug("Failed to load Zig vector batch: %s", e)
             return None
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def batch_topk_cosine(
     query: list[float],
@@ -125,8 +127,13 @@ def batch_topk_cosine(
             out_scores = (ctypes.c_float * k)()
 
             count = lib.wm_batch_topk_cosine(
-                query_arr, corpus_arr, n, dim, k,
-                out_indices, out_scores,
+                query_arr,
+                corpus_arr,
+                n,
+                dim,
+                k,
+                out_indices,
+                out_scores,
             )
 
             if count > 0:

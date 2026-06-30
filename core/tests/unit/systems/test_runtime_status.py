@@ -13,7 +13,6 @@ def test_runtime_status_exposes_canonical_surface_counts():
     assert "debug_enabled" in status
 
 
-
 def test_health_report_includes_runtime_and_degraded_fields():
     report = handle_health_report()
     assert report["status"] == "success"
@@ -25,9 +24,9 @@ def test_health_report_includes_runtime_and_degraded_fields():
     assert report["health_status"] in {"healthy", "degraded", "critical"}
 
 
-
 def test_unknown_tool_returns_resolution_envelope():
     from whitemagic.tools.unified_api import call_tool
+
     result = call_tool("totally_nonexistent_tool_xyz_12345")
     assert result is not None
     assert result["status"] == "error"

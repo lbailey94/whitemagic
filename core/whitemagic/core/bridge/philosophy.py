@@ -30,9 +30,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- DHARMA (Ethics) ---
 
-def verify_consent(action: dict[str, Any], consent_type: str = "general") -> dict[str, Any]:
+def verify_consent(
+    action: dict[str, Any], consent_type: str = "general"
+) -> dict[str, Any]:
     """
     Validate the consent.
 
@@ -43,8 +44,14 @@ def verify_consent(action: dict[str, Any], consent_type: str = "general") -> dic
     Returns:
         dict[str, Any]
     """
-    consent_granted = action.get('user_requested', False) or action.get('consent_granted', False)
-    return {'consent_granted': consent_granted, 'recommendation': 'Proceed' if consent_granted else 'Request consent'}
+    consent_granted = action.get("user_requested", False) or action.get(
+        "consent_granted", False
+    )
+    return {
+        "consent_granted": consent_granted,
+        "recommendation": "Proceed" if consent_granted else "Request consent",
+    }
+
 
 def get_dharma_guidance(situation: str) -> dict[str, Any]:
     """
@@ -57,12 +64,13 @@ def get_dharma_guidance(situation: str) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.dharma import get_dharma_system
+
     return get_dharma_system().get_guidance(situation)
 
-# --- SUTRA (Kernel) ---
 
 class SutraKernelBridge:
     """SutraKernelBridge: sutra kernel bridge."""
+
     def evaluate_action(self, action_type: str) -> str:
         """
         Perform the evaluate action operation.
@@ -75,6 +83,7 @@ class SutraKernelBridge:
         """
         return "Observe"
 
+
 def get_sutra_kernel() -> SutraKernelBridge:
     """
     Get the sutra kernel.
@@ -84,7 +93,6 @@ def get_sutra_kernel() -> SutraKernelBridge:
     """
     return SutraKernelBridge()
 
-# --- ZODIAC ---
 
 def list_zodiac_cores() -> dict[str, Any]:
     """
@@ -94,10 +102,10 @@ def list_zodiac_cores() -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
     get_zodiac_cores()
     return {"cores": [sign for sign in ["aries", "taurus", "gemini", "cancer"]]}
 
-# --- MEDITATION & KAIZEN ---
 
 def trigger_meditation(duration: int = 60) -> dict[str, Any]:
     """
@@ -110,6 +118,7 @@ def trigger_meditation(duration: int = 60) -> dict[str, Any]:
         dict[str, Any]
     """
     return {"status": "meditating", "duration": duration}
+
 
 def record_improvement(category: str, detail: str) -> dict[str, Any]:
     """

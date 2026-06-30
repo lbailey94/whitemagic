@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -73,6 +74,7 @@ _VAR_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 @dataclass
 class CodeTemplate:
     """A single code template with lineage tracking."""
+
     name: str
     description: str = ""
     version: int = 1
@@ -140,19 +142,13 @@ class CodeTemplate:
         }
 
 
-# ---------------------------------------------------------------------------
-# Built-in templates
-# ---------------------------------------------------------------------------
-
 _BUILTIN_TEMPLATES: list[CodeTemplate] = [
     CodeTemplate(
         name="fastapi_endpoint",
         description="Minimal FastAPI GET endpoint",
         version=1,
         default=(
-            '@router.get("/{{path}}")\n'
-            "def get_{{name}}():\n"
-            '    return {"ok": True}\n'
+            '@router.get("/{{path}}")\ndef get_{{name}}():\n    return {"ok": True}\n'
         ),
         tier_variants={
             "xianfeng": (
@@ -193,9 +189,7 @@ _BUILTIN_TEMPLATES: list[CodeTemplate] = [
         ),
         tier_variants={
             "xianfeng": (
-                "@pytest.fixture\n"
-                "def {{name}}_fixture():\n"
-                "    return {{name}}()\n"
+                "@pytest.fixture\ndef {{name}}_fixture():\n    return {{name}}()\n"
             ),
             "wei_wuzu": (
                 "@pytest.fixture\n"
@@ -205,7 +199,7 @@ _BUILTIN_TEMPLATES: list[CodeTemplate] = [
                 "    cleanup(instance)\n"
             ),
             "huben": (
-                "@pytest.fixture(scope=\"session\")\n"
+                '@pytest.fixture(scope="session")\n'
                 "def {{name}}_fixture():\n"
                 "    with create_{{name}}() as instance:\n"
                 "        yield instance\n"
@@ -220,20 +214,11 @@ _BUILTIN_TEMPLATES: list[CodeTemplate] = [
         name="pydantic_model",
         description="Pydantic base model with validation",
         version=1,
-        default=(
-            "class {{name}}(BaseModel):\n"
-            "    id: int\n"
-            '    label: str = ""\n'
-        ),
+        default=('class {{name}}(BaseModel):\n    id: int\n    label: str = ""\n'),
         tier_variants={
-            "xianfeng": (
-                "class {{name}}(BaseModel):\n"
-                "    id: int\n"
-            ),
+            "xianfeng": ("class {{name}}(BaseModel):\n    id: int\n"),
             "wei_wuzu": (
-                "class {{name}}(BaseModel):\n"
-                "    id: int\n"
-                '    label: str = ""\n'
+                'class {{name}}(BaseModel):\n    id: int\n    label: str = ""\n'
             ),
             "huben": (
                 "class {{name}}(BaseModel):\n"
@@ -424,12 +409,11 @@ _BUILTIN_TEMPLATES: list[CodeTemplate] = [
         default=(
             "class Settings(BaseSettings):\n"
             "    app_name: str = '{{app_name}}'\n"
-            '    debug: bool = False\n'
+            "    debug: bool = False\n"
         ),
         tier_variants={
             "xianfeng": (
-                "class Settings(BaseSettings):\n"
-                "    app_name: str = '{{app_name}}'\n"
+                "class Settings(BaseSettings):\n    app_name: str = '{{app_name}}'\n"
             ),
             "wei_wuzu": (
                 "class Settings(BaseSettings):\n"
@@ -481,6 +465,7 @@ class CodeGenomeEngine:
 
         # Load from disk
         from whitemagic.config.paths import WM_ROOT
+
         self._codegenome_dir = codegenome_dir or str(WM_ROOT / "codegenome")
         self._load_from_disk()
 
@@ -493,7 +478,9 @@ class CodeGenomeEngine:
         if not cg_path.is_dir():
             return
 
-        for yaml_file in sorted(list(cg_path.glob("*.yaml")) + list(cg_path.glob("*.yml"))):
+        for yaml_file in sorted(
+            list(cg_path.glob("*.yaml")) + list(cg_path.glob("*.yml"))
+        ):
             try:
                 with open(yaml_file) as f:
                     data = yaml.safe_load(f)
@@ -516,7 +503,9 @@ class CodeGenomeEngine:
                     source=str(yaml_file),
                 )
                 self._templates[template.name] = template
-                logger.debug("Loaded code template: %s from %s", template.name, yaml_file)
+                logger.debug(
+                    "Loaded code template: %s from %s", template.name, yaml_file
+                )
             except Exception as e:
                 logger.warning("Failed to load code template %s: %s", yaml_file, e)
 
@@ -545,7 +534,9 @@ class CodeGenomeEngine:
         with self._lock:
             self._templates[template.name] = template
 
-    def fork_template(self, name: str, new_name: str, body_delta: str = "") -> CodeTemplate | None:
+    def fork_template(
+        self, name: str, new_name: str, body_delta: str = ""
+    ) -> CodeTemplate | None:
         """Fork an existing template into a new one."""
         parent = self._templates.get(name)
         if parent is None:
@@ -566,17 +557,21 @@ class CodeGenomeEngine:
         """Get engine status."""
         return {
             "total_templates": len(self._templates),
-            "builtin_count": sum(1 for t in self._templates.values() if t.source == "builtin"),
-            "disk_count": sum(1 for t in self._templates.values() if t.source not in ("builtin", "forked")),
-            "forked_count": sum(1 for t in self._templates.values() if t.source == "forked"),
+            "builtin_count": sum(
+                1 for t in self._templates.values() if t.source == "builtin"
+            ),
+            "disk_count": sum(
+                1
+                for t in self._templates.values()
+                if t.source not in ("builtin", "forked")
+            ),
+            "forked_count": sum(
+                1 for t in self._templates.values() if t.source == "forked"
+            ),
             "codegenome_dir": self._codegenome_dir,
             "yaml_available": HAS_YAML,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine: CodeGenomeEngine | None = None
 _engine_lock = threading.Lock()

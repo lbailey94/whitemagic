@@ -53,8 +53,8 @@ for ref in REFERENCES:
     # File-specific checks
     if ref == "core/pyproject.toml":
         # Only check the version = line, not dependencies
-        for line in content.split('\n'):
-            if line.strip().startswith('version =') and 'dependencies' not in line:
+        for line in content.split("\n"):
+            if line.strip().startswith("version =") and "dependencies" not in line:
                 version_match = re.search(r'"(\d+\.\d+\.\d+)"', line)
                 if version_match:
                     version = version_match.group(1)
@@ -63,98 +63,104 @@ for ref in REFERENCES:
     elif ref in {"core/whitemagic-rust/Cargo.toml", "core/whitemagic-math/Cargo.toml"}:
         # Only check the package version line, not dependencies
         in_package = False
-        for line in content.split('\n'):
-            if line.strip().startswith('[package]'):
+        for line in content.split("\n"):
+            if line.strip().startswith("[package]"):
                 in_package = True
-            elif line.strip().startswith('[') and in_package:
+            elif line.strip().startswith("[") and in_package:
                 in_package = False
-            elif in_package and line.strip().startswith('version ='):
+            elif in_package and line.strip().startswith("version ="):
                 version_match = re.search(r'"(\d+\.\d+\.\d+)"', line)
                 if version_match:
                     version = version_match.group(1)
                     if version != CANONICAL:
                         mismatches.append((ref, version, line.strip()))
     elif ref.endswith("Cargo.lock"):
-        pattern = r'\[\[package\]\]\nname = "(whitemagic-[^"]+)"\nversion = "(\d+\.\d+\.\d+)"'
+        pattern = (
+            r'\[\[package\]\]\nname = "(whitemagic-[^"]+)"\nversion = "(\d+\.\d+\.\d+)"'
+        )
         for match in re.finditer(pattern, content):
             version = match.group(2)
             if version != CANONICAL:
-                mismatches.append((ref, version, f'{match.group(1)} version field'))
+                mismatches.append((ref, version, f"{match.group(1)} version field"))
     elif ref.endswith("package.json") or ref.endswith("package-lock.json"):
         matches = list(re.finditer(r'"version"\s*:\s*"(\d+\.\d+\.\d+)"', content))
         max_checks = 2 if ref.endswith("package-lock.json") else 1
         for match in matches[:max_checks]:
             version = match.group(1)
             if version != CANONICAL:
-                mismatches.append((ref, version, 'version field'))
+                mismatches.append((ref, version, "version field"))
     elif ref.endswith(".cabal"):
-        version_match = re.search(r'^version:\s*(\d+\.\d+\.\d+)', content, re.MULTILINE)
+        version_match = re.search(r"^version:\s*(\d+\.\d+\.\d+)", content, re.MULTILINE)
         if version_match:
             version = version_match.group(1)
             if version != CANONICAL:
-                mismatches.append((ref, version, 'version field'))
+                mismatches.append((ref, version, "version field"))
     elif ref.endswith("pixi.toml") or ref.endswith("Project.toml"):
-        version_match = re.search(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', content, re.MULTILINE)
+        version_match = re.search(
+            r'^version\s*=\s*"(\d+\.\d+\.\d+)"', content, re.MULTILINE
+        )
         if version_match:
             version = version_match.group(1)
             if version != CANONICAL:
-                mismatches.append((ref, version, 'version field'))
+                mismatches.append((ref, version, "version field"))
     elif ref.endswith("Manifest.toml"):
-        pattern = r'\[\[deps\.(WhiteMagic[^\]]+)\]\][\s\S]*?^version\s*=\s*"(\d+\.\d+\.\d+)"'
+        pattern = (
+            r'\[\[deps\.(WhiteMagic[^\]]+)\]\][\s\S]*?^version\s*=\s*"(\d+\.\d+\.\d+)"'
+        )
         for match in re.finditer(pattern, content, re.MULTILINE):
             version = match.group(2)
             if version != CANONICAL:
-                mismatches.append((ref, version, f'{match.group(1)} version field'))
+                mismatches.append((ref, version, f"{match.group(1)} version field"))
     elif ref == "core/.well-known/agent.json":
         # Check JSON version field
         version_match = re.search(r'"version"\s*:\s*"(\d+\.\d+\.\d+)"', content)
         if version_match:
             version = version_match.group(1)
             if version != CANONICAL:
-                mismatches.append((ref, version, 'version field'))
+                mismatches.append((ref, version, "version field"))
     else:
         # For markdown files, check for vXX.X.X or XX.X.X patterns
         # but exclude changelog history sections and URLs
-        lines = content.split('\n')
+        lines = content.split("\n")
         in_changelog_history = False
         for i, line in enumerate(lines):
             # Detect changelog history sections
-            if '## [' in line or '### [' in line:
+            if "## [" in line or "### [" in line:
                 in_changelog_history = True
-            elif line.startswith('##') and not line.startswith('###'):
+            elif line.startswith("##") and not line.startswith("###"):
                 in_changelog_history = False
 
             if in_changelog_history:
                 continue
 
             # Skip lines with URLs (http, https, www)
-            if 'http' in line or 'www.' in line:
+            if "http" in line or "www." in line:
                 continue
 
             # Skip lines with dependency version patterns
-            if '>=' in line or '<' in line or '~=' in line:
+            if ">=" in line or "<" in line or "~=" in line:
                 continue
 
             # Skip historical / creation references
-            if 'Initial manifest creation' in line or 'creation (v' in line:
+            if "Initial manifest creation" in line or "creation (v" in line:
                 continue
 
             # Skip table rows referencing prior release baselines
-            if 'release baseline' in line.lower() and 'current' not in line.lower():
+            if "release baseline" in line.lower() and "current" not in line.lower():
                 continue
 
             # Check for version patterns
-            for match in re.finditer(r'v?(\d+\.\d+\.\d+)', line):
+            for match in re.finditer(r"v?(\d+\.\d+\.\d+)", line):
                 version = match.group(1)
                 if version != CANONICAL:
                     # Allow specific historical references
-                    if 'v21.0.0' in line and ('Initial' in line or 'creation' in line):
+                    if "v21.0.0" in line and ("Initial" in line or "creation" in line):
                         continue
                     # Allow historical release baseline references (e.g., "v23.0.0 release baseline")
-                    if 'release baseline' in line:
+                    if "release baseline" in line:
                         continue
                     # Allow historical changelog entries (e.g., "## [23.1.0]")
-                    if version == "23.1.0" and ('## [' in line or 'v23.1.0' in line):
+                    if version == "23.1.0" and ("## [" in line or "v23.1.0" in line):
                         continue
                     mismatches.append((ref, version, line.strip()))
 

@@ -32,13 +32,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- SHARED INFRASTRUCTURE ---
-
 _rust_lib = None
 _zig_lib = None
 _lock = threading.Lock()
 _rust_available = False
 _zig_available = False
+
 
 def _find_lib(name: str) -> str | None:
     """Find a compiled shared library."""
@@ -51,6 +50,7 @@ def _find_lib(name: str) -> str | None:
     if path.exists():
         return str(path)
     return os.environ.get(f"WM_{name.upper()}_LIB")
+
 
 def _init_libs():
     """Lazy initialization of SIMD backends."""
@@ -75,52 +75,51 @@ def _init_libs():
             except OSError:
                 pass
 
-# --- COSINE & DISTANCE OPS ---
 
 def cosine_similarity(v1: list[float], v2: list[float]) -> float:
     """Compute cosine similarity between two vectors."""
-    dot = sum(a*b for a, b in zip(v1, v2))
-    n1 = math.sqrt(sum(a*a for a in v1))
-    n2 = math.sqrt(sum(a*a for a in v2))
+    dot = sum(a * b for a, b in zip(v1, v2))
+    n1 = math.sqrt(sum(a * a for a in v1))
+    n2 = math.sqrt(sum(a * a for a in v2))
     return dot / (n1 * n2) if n1 * n2 > 1e-10 else 0.0
+
 
 def batch_cosine(query: list[float], corpus: list[list[float]]) -> list[float]:
     """Compute cosine similarity between query and multiple corpus vectors."""
     return [cosine_similarity(query, v) for v in corpus]
 
-# --- HOLOGRAPHIC 5D OPS ---
 
 def holographic_5d_distance(v1: list[float], v2: list[float]) -> float:
     """Compute distance in 5D holographic space."""
-    return math.sqrt(sum((a-b)**2 for a, b in zip(v1[:5], v2[:5])))
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(v1[:5], v2[:5])))
 
-# --- KEYWORD EXTRACTION ---
 
 def extract_keywords(text: str, limit: int = 10) -> list[str]:
     """Extract keywords from text using SIMD-accelerated frequency analysis."""
-    words = re.findall(r'\w+', text.lower())
+    words = re.findall(r"\w+", text.lower())
     freq: dict = {}
     for w in words:
         if len(w) > 3:
             freq[w] = freq.get(w, 0) + 1
     return sorted(freq.keys(), key=lambda x: freq[x], reverse=True)[:limit]
 
-# --- VECTOR BATCH OPS ---
 
 def batch_normalize(vectors: list[list[float]]) -> list[list[float]]:
     """L2-normalize a batch of vectors."""
     res = []
     for v in vectors:
-        n = math.sqrt(sum(a*a for a in v))
-        res.append([a/n for a in v] if n > 1e-10 else v)
+        n = math.sqrt(sum(a * a for a in v))
+        res.append([a / n for a in v] if n > 1e-10 else v)
     return res
 
-def batch_topk_cosine(query: list[float], corpus: list[list[float]], k: int = 10) -> list[tuple[int, float]]:
+
+def batch_topk_cosine(
+    query: list[float], corpus: list[list[float]], k: int = 10
+) -> list[tuple[int, float]]:
     """Find top-K most similar vectors."""
     scores = [(i, cosine_similarity(query, v)) for i, v in enumerate(corpus)]
     return sorted(scores, key=lambda x: x[1], reverse=True)[:k]
 
-# --- STATUS ---
 
 def simd_status() -> dict[str, Any]:
     """
@@ -133,27 +132,58 @@ def simd_status() -> dict[str, Any]:
     return {
         "rust_available": _rust_available,
         "zig_available": _zig_available,
-        "ops": ["cosine", "batch", "holographic", "keywords", "normalize", "topk_cosine"]
+        "ops": [
+            "cosine",
+            "batch",
+            "holographic",
+            "keywords",
+            "normalize",
+            "topk_cosine",
+        ],
     }
+
 
 # Legacy stubs
 """
 Perform the simd cosine status operation.
 """
-def simd_cosine_status(): return simd_status()
+
+
+def simd_cosine_status():
+    return simd_status()
+
+
 """
 Perform the simd distance status operation.
 """
-def simd_distance_status(): return simd_status()
+
+
+def simd_distance_status():
+    return simd_status()
+
+
 """
 Perform the simd holographic status operation.
 """
-def simd_holographic_status(): return simd_status()
+
+
+def simd_holographic_status():
+    return simd_status()
+
+
 """
 Perform the simd keywords status operation.
 """
-def simd_keywords_status(): return simd_status()
+
+
+def simd_keywords_status():
+    return simd_status()
+
+
 """
 Perform the simd vector batch status operation.
 """
-def simd_vector_batch_status(): return simd_status()
+
+
+def simd_vector_batch_status():
+    return simd_status()

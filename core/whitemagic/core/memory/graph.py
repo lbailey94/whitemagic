@@ -33,7 +33,6 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-# --- NETWORKX & ACCELERATION LOADING ---
 try:
     import networkx as nx  # type: ignore[import-untyped]
     _NX_AVAILABLE = True
@@ -48,8 +47,6 @@ try:
 except ImportError:
     _rust_graph = None
     _RUST_AVAILABLE = False
-
-# --- DATA CLASSES ---
 
 @dataclass
 class CentralitySnapshot:
@@ -155,8 +152,6 @@ class Neighbor:
     last_traversed_at: str | None
     neuro_score: float = 1.0
 
-# --- GRAPH ENGINE ---
-
 class GraphEngine:
     """Graph topology engine backed by networkx."""
 
@@ -242,8 +237,6 @@ class GraphEngine:
             logger.debug("Pagerank computation failed: %s", e)
             return {}
 
-# --- GRAPH WALKER ---
-
 class GraphWalker:
     """Multi-hop weighted graph traversal engine."""
 
@@ -272,7 +265,6 @@ class GraphWalker:
         """
         return WalkResult(seed_ids=seed_ids, hops=hops)
 
-# --- SINGLETONS ---
 _engine: GraphEngine | None = None
 _walker: GraphWalker | None = None
 

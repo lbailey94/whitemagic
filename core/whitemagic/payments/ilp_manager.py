@@ -33,10 +33,6 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Types
-# ---------------------------------------------------------------------------
-
 class PaymentState(Enum):
     """PaymentState: payment state.
 
@@ -48,6 +44,7 @@ class PaymentState(Enum):
         COMPLETED
         FAILED
         EXPIRED"""
+
     PENDING = "pending"
     STREAMING = "streaming"
     COMPLETED = "completed"
@@ -58,9 +55,10 @@ class PaymentState(Enum):
 @dataclass
 class PaymentRecord:
     """A single payment or micro-payment stream."""
+
     payment_id: str
     destination: str
-    amount: int                  # in smallest unit (drops for XRP)
+    amount: int  # in smallest unit (drops for XRP)
     asset_code: str = "XRP"
     asset_scale: int = 6
     state: PaymentState = PaymentState.PENDING
@@ -69,7 +67,7 @@ class PaymentRecord:
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     completed_at: str = ""
     memo: str = ""
-    service_type: str = ""       # e.g., "oms_purchase", "shelter_compute", "research"
+    service_type: str = ""  # e.g., "oms_purchase", "shelter_compute", "research"
     receipt_hash: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,6 +97,7 @@ class PaymentRecord:
 @dataclass
 class ILPConfig:
     """ILP connector configuration."""
+
     payment_pointer: str = ""
     connector_url: str = ""
     auth_token: str = ""
@@ -115,10 +114,6 @@ class ILPConfig:
         return bool(self.payment_pointer or self.connector_url)
 
 
-# ---------------------------------------------------------------------------
-# SPSP Resolution (Simple Payment Setup Protocol)
-# ---------------------------------------------------------------------------
-
 def _resolve_spsp(pointer: str, timeout_s: int = 10) -> dict[str, Any]:
     """Resolve a payment pointer via SPSP to get connection details.
 
@@ -134,12 +129,19 @@ def _resolve_spsp(pointer: str, timeout_s: int = 10) -> dict[str, Any]:
     host = parts[0]
     path = parts[1] if len(parts) > 1 else ""
 
-    url = f"https://{host}/{path}/.well-known/pay" if path else f"https://{host}/.well-known/pay"
+    url = (
+        f"https://{host}/{path}/.well-known/pay"
+        if path
+        else f"https://{host}/.well-known/pay"
+    )
 
     try:
-        req = urllib.request.Request(url, headers={
-            "Accept": "application/spsp4+json",
-        })
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/spsp4+json",
+            },
+        )
         with urllib.request.urlopen(req, timeout=timeout_s) as resp:
             payload = _json_loads(resp.read().decode())
             if isinstance(payload, dict):
@@ -148,10 +150,6 @@ def _resolve_spsp(pointer: str, timeout_s: int = 10) -> dict[str, Any]:
     except (OSError, FileNotFoundError, PermissionError) as e:
         return {"error": str(e)}
 
-
-# ---------------------------------------------------------------------------
-# ILP Manager
-# ---------------------------------------------------------------------------
 
 class ILPManager:
     """Manages ILP streaming payments for agent services."""
@@ -166,6 +164,7 @@ class ILPManager:
     def _load_env_config(self) -> None:
         """Load configuration from environment variables."""
         import os
+
         self._config.payment_pointer = os.environ.get("WM_ILP_POINTER", "")
         self._config.connector_url = os.environ.get("WM_ILP_CONNECTOR_URL", "")
         self._config.auth_token = os.environ.get("WM_ILP_AUTH_TOKEN", "")
@@ -276,6 +275,7 @@ class ILPManager:
             # Karma logging
             try:
                 from whitemagic.dharma.karma_ledger import get_karma_ledger
+
                 get_karma_ledger().record(
                     tool="ilp.send",
                     declared_safety="WRITE",
@@ -284,6 +284,7 @@ class ILPManager:
                 )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
             return {
@@ -304,7 +305,14 @@ class ILPManager:
         with self._lock:
             self._payments[payment_id] = record
 
-        logger.info("💸 ILP payment initiated: %s → %s (%s %s)", payment_id, destination, amount, asset_code, exc_info=True)
+        logger.info(
+            "💸 ILP payment initiated: %s → %s (%s %s)",
+            payment_id,
+            destination,
+            amount,
+            asset_code,
+            exc_info=True,
+        )
 
         return {
             "status": "ok",
@@ -315,7 +323,9 @@ class ILPManager:
             "destination": destination,
             "spsp": {
                 "destination_account": spsp.get("destination_account", ""),
-                "shared_secret": "(present)" if spsp.get("shared_secret") else "(missing)",
+                "shared_secret": "(present)"
+                if spsp.get("shared_secret")
+                else "(missing)",
             },
         }
 
@@ -352,8 +362,7 @@ class ILPManager:
 
             lines = history_file.read_text(encoding="utf-8").strip().split("\n")
             records = []
-            for line in lines[-limit:
-                ]:
+            for line in lines[-limit:]:
                 if line.strip():
                     try:
                         records.append(_json_loads(line))
@@ -372,7 +381,11 @@ class ILPManager:
         total_sent = sum(p.amount_sent for p in payments)
         total_delivered = sum(p.amount_delivered for p in payments)
         completed = sum(1 for p in payments if p.state == PaymentState.COMPLETED)
-        pending = sum(1 for p in payments if p.state in (PaymentState.PENDING, PaymentState.STREAMING))
+        pending = sum(
+            1
+            for p in payments
+            if p.state in (PaymentState.PENDING, PaymentState.STREAMING)
+        )
         failed = sum(1 for p in payments if p.state == PaymentState.FAILED)
 
         return {
@@ -397,16 +410,13 @@ class ILPManager:
             "payment_pointer": self._config.payment_pointer or "(not set)",
             "connector_url": self._config.connector_url or "(not set)",
             "active_payments": sum(
-                1 for p in self._payments.values()
+                1
+                for p in self._payments.values()
                 if p.state in (PaymentState.PENDING, PaymentState.STREAMING)
             ),
             "total_payments": len(self._payments),
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _manager: ILPManager | None = None
 _manager_lock = threading.Lock()

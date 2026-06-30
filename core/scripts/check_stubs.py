@@ -97,7 +97,14 @@ def has_framework_decorator(node: ast.FunctionDef | ast.AsyncFunctionDef) -> boo
             name = dec.attr
         elif isinstance(dec, ast.Name):
             name = dec.id
-        if name in {"group", "command", "option", "argument", "pass_context", "pass_obj"}:
+        if name in {
+            "group",
+            "command",
+            "option",
+            "argument",
+            "pass_context",
+            "pass_obj",
+        }:
             return True
         if name == "abstractmethod":
             return True
@@ -138,7 +145,9 @@ class StubVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         self._in_protocol = was_protocol
 
-    def _check_docstring(self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> bool:
+    def _check_docstring(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+    ) -> bool:
         """Return True if node has a stub-like docstring."""
         doc = ast.get_docstring(node)
         if not doc:
@@ -150,7 +159,12 @@ class StubVisitor(ast.NodeVisitor):
         """Return True if function body is effectively empty (pass/ellipsis/just docstring/return None)."""
         body = node.body
         # Filter out docstring
-        if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str):
+        if (
+            body
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
+        ):
             body = body[1:]
         if not body:
             return True
@@ -159,9 +173,16 @@ class StubVisitor(ast.NodeVisitor):
             stmt = body[0]
             if isinstance(stmt, ast.Pass):
                 return True
-            if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant) and stmt.value.value is ...:
+            if (
+                isinstance(stmt, ast.Expr)
+                and isinstance(stmt.value, ast.Constant)
+                and stmt.value.value is ...
+            ):
                 return True
-            if isinstance(stmt, ast.Return) and (stmt.value is None or (isinstance(stmt.value, ast.Constant) and stmt.value.value is None)):
+            if isinstance(stmt, ast.Return) and (
+                stmt.value is None
+                or (isinstance(stmt.value, ast.Constant) and stmt.value.value is None)
+            ):
                 return True
         return False
 
@@ -188,8 +209,10 @@ class StubVisitor(ast.NodeVisitor):
 
         has_stub_docstring = self._check_docstring(node)
         has_raise_not_implemented = any(
-            isinstance(stmt, ast.Raise) and isinstance(stmt.exc, ast.Call)
-            and isinstance(stmt.exc.func, ast.Name) and stmt.exc.func.id == "NotImplementedError"
+            isinstance(stmt, ast.Raise)
+            and isinstance(stmt.exc, ast.Call)
+            and isinstance(stmt.exc.func, ast.Name)
+            and stmt.exc.func.id == "NotImplementedError"
             for stmt in ast.walk(node)
         )
         is_empty = self._is_empty_body(node)
@@ -203,15 +226,24 @@ class StubVisitor(ast.NodeVisitor):
         if has_raise_not_implemented:
             key = f"{rel_path}:{node.lineno}:{node.name}"
             if key not in _ALLOWLIST:
-                self.issues.append(f"  {node.lineno}: {node.name} — raises NotImplementedError")
-        if is_empty and not has_stub_docstring and not has_raise_not_implemented and len(node.body) > 0:
+                self.issues.append(
+                    f"  {node.lineno}: {node.name} — raises NotImplementedError"
+                )
+        if (
+            is_empty
+            and not has_stub_docstring
+            and not has_raise_not_implemented
+            and len(node.body) > 0
+        ):
             # Empty body without explicit stub marker — could be a stub
             # But skip __init__ unless it has a stub docstring (dataclasses often have empty __init__)
             if node.name == "__init__":
                 return
             key = f"{rel_path}:{node.lineno}:{node.name}"
             if key not in _ALLOWLIST:
-                self.issues.append(f"  {node.lineno}: {node.name} — empty body (suspicious)")
+                self.issues.append(
+                    f"  {node.lineno}: {node.name} — empty body (suspicious)"
+                )
 
 
 def should_skip(path: Path) -> bool:

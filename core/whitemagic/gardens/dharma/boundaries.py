@@ -1,4 +1,5 @@
 """Boundary Detection - Help vs Interfere distinction."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,9 +9,9 @@ from enum import Enum
 class BoundaryType(Enum):
     """Types of boundaries."""
 
-    HELPING = "helping"        # Supportive, requested, empowering
+    HELPING = "helping"  # Supportive, requested, empowering
     INTERFERING = "interfering"  # Invasive, unrequested, controlling
-    UNCLEAR = "unclear"        # Needs clarification
+    UNCLEAR = "unclear"  # Needs clarification
 
 
 @dataclass
@@ -65,7 +66,9 @@ class BoundaryDetector:
 
         # Count indicators
         helping_count = sum(1 for ind in self.helping_indicators if ind in action_lower)
-        interfering_count = sum(1 for ind in self.interfering_indicators if ind in action_lower)
+        interfering_count = sum(
+            1 for ind in self.interfering_indicators if ind in action_lower
+        )
 
         # Check context
         if context.get("user_requested", False):
@@ -81,12 +84,16 @@ class BoundaryDetector:
         if helping_count > interfering_count and helping_count > 0:
             boundary_type = BoundaryType.HELPING
             confidence = min(0.95, 0.5 + (helping_count * 0.15))
-            indicators_found = [ind for ind in self.helping_indicators if ind in action_lower]
+            indicators_found = [
+                ind for ind in self.helping_indicators if ind in action_lower
+            ]
             reasoning = f"Helping: {', '.join(indicators_found[:3])}"
         elif interfering_count > helping_count and interfering_count > 0:
             boundary_type = BoundaryType.INTERFERING
             confidence = min(0.95, 0.5 + (interfering_count * 0.15))
-            indicators_found = [ind for ind in self.interfering_indicators if ind in action_lower]
+            indicators_found = [
+                ind for ind in self.interfering_indicators if ind in action_lower
+            ]
             reasoning = f"Interfering: {', '.join(indicators_found[:3])}"
         else:
             boundary_type = BoundaryType.UNCLEAR
@@ -113,7 +120,10 @@ class BoundaryDetector:
 
         """
         boundary = self.detect(action, context)
-        return boundary.boundary_type == BoundaryType.HELPING and boundary.confidence > 0.6
+        return (
+            boundary.boundary_type == BoundaryType.HELPING and boundary.confidence > 0.6
+        )
+
 
 def check_boundaries(action: str, context: dict | None = None) -> Boundary:
     """Quick boundary check function."""

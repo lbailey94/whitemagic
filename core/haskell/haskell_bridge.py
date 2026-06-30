@@ -70,7 +70,9 @@ class HaskellDivination:
         ghc_lib_dir = None
         # Try to find GHC library directory
         for candidate in [
-            glob.glob(os.path.expanduser("~/.ghcup/ghc/*/lib/ghc-*/lib/x86_64-linux-ghc-*")),
+            glob.glob(
+                os.path.expanduser("~/.ghcup/ghc/*/lib/ghc-*/lib/x86_64-linux-ghc-*")
+            ),
             glob.glob("/usr/lib/ghc-*/lib/x86_64-linux-ghc-*"),
         ]:
             if candidate:
@@ -80,8 +82,12 @@ class HaskellDivination:
             return  # Best-effort; if not found, CDLL will fail with a clear error
         # Load RTS and key base libs with RTLD_GLOBAL so symbols are visible
         rts_libs = sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSrts-*-ghc*.so")))
-        base_libs = sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSghc-prim-*-ghc*.so")))
-        base_libs += sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSghc-bignum-*-ghc*.so")))
+        base_libs = sorted(
+            glob.glob(os.path.join(ghc_lib_dir, "libHSghc-prim-*-ghc*.so"))
+        )
+        base_libs += sorted(
+            glob.glob(os.path.join(ghc_lib_dir, "libHSghc-bignum-*-ghc*.so"))
+        )
         base_libs += sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSbase-*-ghc*.so")))
         for lib_path in rts_libs + base_libs:
             try:
@@ -89,9 +95,6 @@ class HaskellDivination:
             except OSError:
                 pass  # Non-fatal; the main load will fail with a clear error
 
-    # ------------------------------------------------------------------
-    # Signature declarations (mirrors FFI.hs exports)
-    # ------------------------------------------------------------------
     def _setup_signatures(self) -> Any:
         lib = self._lib
 
@@ -100,8 +103,12 @@ class HaskellDivination:
 
         lib.c_create_hexagram.restype = ctypes.c_void_p
         lib.c_create_hexagram.argtypes = [
-            ctypes.c_int, ctypes.c_int, ctypes.c_int,
-            ctypes.c_int, ctypes.c_int, ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
         ]
 
         lib.c_hexagram_to_number.restype = ctypes.c_int
@@ -120,20 +127,22 @@ class HaskellDivination:
         lib.c_free_hexagram.restype = None
         lib.c_free_hexagram.argtypes = [ctypes.c_void_p]
 
-        # --- DharmaRules FFI (v0.2) ---
         lib.c_dharma_evaluate.restype = ctypes.c_char_p
         lib.c_dharma_evaluate.argtypes = [
-            ctypes.c_char_p, ctypes.c_char_p,
-            ctypes.c_char_p, ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
         ]
 
         lib.c_dharma_evaluate_all.restype = ctypes.c_char_p
         lib.c_dharma_evaluate_all.argtypes = [
-            ctypes.c_char_p, ctypes.c_char_p,
-            ctypes.c_char_p, ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
         ]
 
-        # --- DepGraph FFI (v0.2) ---
         lib.c_depgraph_plan.restype = ctypes.c_char_p
         lib.c_depgraph_plan.argtypes = [ctypes.c_char_p]
 
@@ -146,9 +155,6 @@ class HaskellDivination:
         lib.c_free_string.restype = None
         lib.c_free_string.argtypes = [ctypes.c_char_p]
 
-    # ------------------------------------------------------------------
-    # High-level helpers
-    # ------------------------------------------------------------------
     def create_hexagram(self, lines: List[int]) -> ctypes.c_void_p:
         """Create a hexagram from 6 line values (0=Yin, 1=Yang, bottom to top).
 
@@ -175,9 +181,6 @@ class HaskellDivination:
         """Release memory allocated by create_hexagram / transition."""
         self._lib.c_free_hexagram(ptr)
 
-    # ------------------------------------------------------------------
-    # Convenience: create + number + free in one call
-    # ------------------------------------------------------------------
     def create_and_number(self, lines: List[int]) -> int:
         """Create a hexagram, get its King Wen number, and free immediately."""
         ptr = self.create_hexagram(lines)
@@ -185,44 +188,54 @@ class HaskellDivination:
         self.free_hexagram(ptr)
         return num
 
-    # ------------------------------------------------------------------
-    # Dharma Rules (v0.2)
-    # ------------------------------------------------------------------
     def dharma_evaluate(
-        self, tool: str, description: str = "",
-        safety: str = "", profile: str = "default",
+        self,
+        tool: str,
+        description: str = "",
+        safety: str = "",
+        profile: str = "default",
     ) -> Dict[str, Any]:
         """Evaluate an action against Dharma rules.
 
         Returns dict with: action, severity, explain, rule.
         """
         result = self._lib.c_dharma_evaluate(
-            tool.encode(), description.encode(),
-            safety.encode(), profile.encode(),
+            tool.encode(),
+            description.encode(),
+            safety.encode(),
+            profile.encode(),
         )
-        return json.loads(result.decode()) if result else {"action": "log", "severity": 0.0}
+        return (
+            json.loads(result.decode())
+            if result
+            else {"action": "log", "severity": 0.0}
+        )
 
     def dharma_evaluate_all(
-        self, tool: str, description: str = "",
-        safety: str = "", profile: str = "default",
+        self,
+        tool: str,
+        description: str = "",
+        safety: str = "",
+        profile: str = "default",
     ) -> List[Dict[str, Any]]:
         """Return ALL matching Dharma rule decisions."""
         result = self._lib.c_dharma_evaluate_all(
-            tool.encode(), description.encode(),
-            safety.encode(), profile.encode(),
+            tool.encode(),
+            description.encode(),
+            safety.encode(),
+            profile.encode(),
         )
         return json.loads(result.decode()) if result else []
 
-    # ------------------------------------------------------------------
-    # Dependency Graph (v0.2)
-    # ------------------------------------------------------------------
     def depgraph_plan(self, goal_tool: str) -> Dict[str, Any]:
         """Plan execution chain for a goal tool.
 
         Returns dict with: chain (list), suggestions (list of {tool, weight}).
         """
         result = self._lib.c_depgraph_plan(goal_tool.encode())
-        return json.loads(result.decode()) if result else {"chain": [], "suggestions": []}
+        return (
+            json.loads(result.decode()) if result else {"chain": [], "suggestions": []}
+        )
 
     def depgraph_next_steps(self, tool: str) -> List[Dict[str, Any]]:
         """Get suggested next tools after a given tool."""
@@ -251,9 +264,6 @@ class HaskellDivination:
         return result
 
 
-# ---------------------------------------------------------------------------
-# Quick smoke-test when run directly
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         div = HaskellDivination()

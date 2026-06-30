@@ -3,7 +3,10 @@ from whitemagic.core.memory.models import Memory
 import pytest
 
 # Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
-pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
+pytest.skip(
+    "whitemagic.core.memory.sqlite_backend module removed in v22",
+    allow_module_level=True,
+)
 
 from whitemagic.core.memory.sqlite_backend import SQLiteMemoryBackend
 
@@ -22,7 +25,11 @@ print("\nMocking sutra kernel violation...")
 from whitemagic.core.bridge.sutra_bridge import get_sutra_kernel  # noqa: E402
 
 original_eval = get_sutra_kernel().evaluate_action
-get_sutra_kernel().evaluate_action = lambda action_type, **kwargs: "Panic: VIOLATION_SATYA: Memory fabrication is strictly forbidden." if action_type == "fabricate_memory" else original_eval(action_type, **kwargs)
+get_sutra_kernel().evaluate_action = lambda action_type, **kwargs: (
+    "Panic: VIOLATION_SATYA: Memory fabrication is strictly forbidden."
+    if action_type == "fabricate_memory"
+    else original_eval(action_type, **kwargs)
+)
 
 try:
     sutra = get_sutra_kernel()
@@ -32,4 +39,3 @@ try:
         raise RuntimeError(v)
 except Exception as e:
     print(f"Kernel correctly panicked: {e}")
-

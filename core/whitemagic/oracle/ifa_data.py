@@ -23,17 +23,17 @@ from typing import Any
 class OduMeji:
     """A principal (Meji) Odu -- one of the 16 fundamental figures."""
 
-    number: int          # 1-16, traditional ordering
-    name: str            # Yoruba name (e.g., "Eji Ogbe")
-    short_name: str      # Short form (e.g., "ogbe")
-    binary: str          # 4-bit string, read bottom-to-top (e.g., "0000")
-    decimal: int         # Integer value of binary
-    element: str         # Wu Xing element association
-    polarity: str        # "yang" or "yin" dominant
-    meaning: str         # Core meaning
-    wisdom: str          # Guidance for this Odu
-    ire: str             # Blessing (positive outcome)
-    osogbo: str          # Warning (negative outcome)
+    number: int  # 1-16, traditional ordering
+    name: str  # Yoruba name (e.g., "Eji Ogbe")
+    short_name: str  # Short form (e.g., "ogbe")
+    binary: str  # 4-bit string, read bottom-to-top (e.g., "0000")
+    decimal: int  # Integer value of binary
+    element: str  # Wu Xing element association
+    polarity: str  # "yang" or "yin" dominant
+    meaning: str  # Core meaning
+    wisdom: str  # Guidance for this Odu
+    ire: str  # Blessing (positive outcome)
+    osogbo: str  # Warning (negative outcome)
     prescriptions: list[str] = field(default_factory=list)
     prohibitions: list[str] = field(default_factory=list)
 
@@ -42,13 +42,6 @@ class OduMeji:
         """Visual representation: | = open (0), || = closed (1)."""
         return " ".join("||" if b == "1" else "|" for b in self.binary)
 
-
-# ---------------------------------------------------------------------------
-# The 16 Principal Odu (Meji)
-# ---------------------------------------------------------------------------
-# Traditional ordering follows the Ifa corpus convention.
-# Binary values follow the standard opele/ikin casting convention.
-# Element mappings connect to Wu Xing phases for cross-system integration.
 
 PRINCIPAL_ODU: list[OduMeji] = [
     OduMeji(
@@ -63,8 +56,14 @@ PRINCIPAL_ODU: list[OduMeji] = [
         wisdom="Honesty and gentle character open the way. Begin with clarity and let light guide expansion.",
         ire="Abundance, long life, success through integrity",
         osogbo="Arrogance, overconfidence, neglect of foundations",
-        prescriptions=["Be truthful in all dealings", "Start new ventures with clean intention"],
-        prohibitions=["Do not lie or deceive", "Do not rush expansion without foundation"],
+        prescriptions=[
+            "Be truthful in all dealings",
+            "Start new ventures with clean intention",
+        ],
+        prohibitions=[
+            "Do not lie or deceive",
+            "Do not rush expansion without foundation",
+        ],
     ),
     OduMeji(
         number=2,
@@ -79,7 +78,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         ire="Spiritual awakening, ancestral guidance, successful transition",
         osogbo="Untimely loss, stagnation, fear of change",
         prescriptions=["Honor ancestors and transitions", "Embrace necessary endings"],
-        prohibitions=["Do not cling to what must pass", "Do not ignore ancestral wisdom"],
+        prohibitions=[
+            "Do not cling to what must pass",
+            "Do not ignore ancestral wisdom",
+        ],
     ),
     OduMeji(
         number=3,
@@ -93,7 +95,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         wisdom="Look inward for answers. Patience reveals what impulse conceals.",
         ire="Insight, discovery, spiritual vision, patience rewarded",
         osogbo="Confusion, deception, impulsive decisions",
-        prescriptions=["Meditate and reflect before acting", "Trust intuition over appearances"],
+        prescriptions=[
+            "Meditate and reflect before acting",
+            "Trust intuition over appearances",
+        ],
         prohibitions=["Do not act impulsively", "Do not ignore inner warnings"],
     ),
     OduMeji(
@@ -139,7 +144,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         ire="Successful transition, favorable movement, new opportunities",
         osogbo="Instability, restlessness, destructive change",
         prescriptions=["Embrace change adaptively", "Stay grounded during transitions"],
-        prohibitions=["Do not resist necessary change", "Do not create instability through restlessness"],
+        prohibitions=[
+            "Do not resist necessary change",
+            "Do not create instability through restlessness",
+        ],
     ),
     OduMeji(
         number=7,
@@ -168,8 +176,14 @@ PRINCIPAL_ODU: list[OduMeji] = [
         wisdom="Challenges forge strength. Meet conflict with patience; character is the ultimate victory.",
         ire="Growth through adversity, character proven, conflict resolved",
         osogbo="Destructive conflict, impulsive reactions, character failure",
-        prescriptions=["Meet challenges with patience", "Let adversity build character"],
-        prohibitions=["Do not react impulsively to provocation", "Do not avoid necessary conflict"],
+        prescriptions=[
+            "Meet challenges with patience",
+            "Let adversity build character",
+        ],
+        prohibitions=[
+            "Do not react impulsively to provocation",
+            "Do not avoid necessary conflict",
+        ],
     ),
     OduMeji(
         number=9,
@@ -183,7 +197,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         wisdom="Progress requires effort and the right tools. Break through obstacles with disciplined action.",
         ire="Breakthrough, technological success, victory through effort",
         osogbo="Injury, conflict, destruction through force",
-        prescriptions=["Use the right tools for the job", "Persist through obstacles with discipline"],
+        prescriptions=[
+            "Use the right tools for the job",
+            "Persist through obstacles with discipline",
+        ],
         prohibitions=["Do not use force carelessly", "Do not neglect proper tools"],
     ),
     OduMeji(
@@ -213,7 +230,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         wisdom="Hardship tests character. Discipline transforms suffering into wisdom.",
         ire="Character strengthened, discipline rewarded, moral victory",
         osogbo="Arrogance, recklessness, misuse of power, prolonged hardship",
-        prescriptions=["Embrace discipline as a path to growth", "Maintain morality under pressure"],
+        prescriptions=[
+            "Embrace discipline as a path to growth",
+            "Maintain morality under pressure",
+        ],
         prohibitions=["Do not become arrogant through hardship", "Do not misuse power"],
     ),
     OduMeji(
@@ -273,7 +293,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         wisdom="Kindness and generosity open the way for blessings. Nurture what you wish to see grow.",
         ire="Love, fertility, prosperity, vitality, harmonious relationships",
         osogbo="Bitterness, infertility, broken relationships, neglect",
-        prescriptions=["Practice kindness and generosity", "Nurture relationships and projects"],
+        prescriptions=[
+            "Practice kindness and generosity",
+            "Nurture relationships and projects",
+        ],
         prohibitions=["Do not become bitter", "Do not neglect those who depend on you"],
     ),
     OduMeji(
@@ -289,7 +312,10 @@ PRINCIPAL_ODU: list[OduMeji] = [
         ire="Destiny fulfilled, legacy established, completion, spiritual maturity",
         osogbo="Impurity, incomplete cycles, moral failure, destiny blocked",
         prescriptions=["Maintain moral integrity", "See cycles through to completion"],
-        prohibitions=["Do not abandon projects before completion", "Do not compromise ethics"],
+        prohibitions=[
+            "Do not abandon projects before completion",
+            "Do not compromise ethics",
+        ],
     ),
 ]
 
@@ -316,22 +342,6 @@ def get_meji_by_short_name(name: str) -> OduMeji | None:
     return ODU_BY_SHORT_NAME.get(name.lower())
 
 
-# ---------------------------------------------------------------------------
-# I Ching Cross-Reference
-# ---------------------------------------------------------------------------
-# Ifa's 256 = 4 x I Ching's 64. Each I Ching hexagram (6-bit) maps to 4 Ifa Odus.
-# The mapping works by treating the I Ching hexagram's 6 bits as the upper
-# 3 bits of the Ifa Odu's 8-bit value, with the lower 2 bits distinguishing
-# the 4 variants.
-#
-# I Ching hexagram binary (6 bits, bottom-to-top) -> Ifa Odu (8 bits):
-#   ic_binary (6 bits) + variant (2 bits) = ifa_binary (8 bits)
-#   right_leg (4 bits) = ic_binary[0:4]  (lower trigram)
-#   left_leg  (4 bits) = ic_binary[4:6] + variant (2 bits)
-#
-# This preserves the trigram structure: right leg = lower trigram,
-# left leg = upper trigram + variant disambiguation.
-
 def ifa_to_iching(right_binary: str, left_binary: str) -> int:
     """Map an Ifa Odu (two 4-bit legs) to an I Ching hexagram number (1-64).
 
@@ -341,7 +351,7 @@ def ifa_to_iching(right_binary: str, left_binary: str) -> int:
     # Extract lower trigram from right leg (bottom 3 bits of the 4-bit leg)
     # and upper trigram from left leg (bottom 3 bits of the 4-bit leg)
     lower_tri = int(right_binary[1:], 2)  # bits 1-3 of right leg
-    upper_tri = int(left_binary[1:], 2)   # bits 1-3 of left leg
+    upper_tri = int(left_binary[1:], 2)  # bits 1-3 of left leg
 
     # Build 6-bit hexagram: lower trigram (3 bits) + upper trigram (3 bits)
     hex_binary = f"{lower_tri:03b}{upper_tri:03b}"
@@ -350,14 +360,70 @@ def ifa_to_iching(right_binary: str, left_binary: str) -> int:
     # Convert from Fu Xi sequence to King Wen sequence
     # Fu Xi 0-63 -> King Wen 1-64
     _FUXI_TO_KINGWEN = [
-        2, 23, 8, 20, 16, 35, 45, 12,  # 000-007
-        15, 52, 39, 53, 62, 56, 31, 33,  # 008-015
-        7, 4, 29, 59, 40, 64, 47, 6,     # 016-023
-        46, 18, 48, 57, 32, 50, 28, 44,  # 024-031
-        24, 27, 3, 42, 51, 21, 17, 25,   # 032-039
-        36, 22, 63, 37, 55, 30, 49, 13,  # 040-047
-        19, 41, 60, 61, 54, 38, 58, 10,  # 048-055
-        11, 26, 5, 34, 43, 9, 14, 1,     # 056-063
+        2,
+        23,
+        8,
+        20,
+        16,
+        35,
+        45,
+        12,  # 000-007
+        15,
+        52,
+        39,
+        53,
+        62,
+        56,
+        31,
+        33,  # 008-015
+        7,
+        4,
+        29,
+        59,
+        40,
+        64,
+        47,
+        6,  # 016-023
+        46,
+        18,
+        48,
+        57,
+        32,
+        50,
+        28,
+        44,  # 024-031
+        24,
+        27,
+        3,
+        42,
+        51,
+        21,
+        17,
+        25,  # 032-039
+        36,
+        22,
+        63,
+        37,
+        55,
+        30,
+        49,
+        13,  # 040-047
+        19,
+        41,
+        60,
+        61,
+        54,
+        38,
+        58,
+        10,  # 048-055
+        11,
+        26,
+        5,
+        34,
+        43,
+        9,
+        14,
+        1,  # 056-063
     ]
 
     if 0 <= hex_decimal < 64:
@@ -372,14 +438,70 @@ def iching_to_ifa(hexagram_number: int) -> list[tuple[str, str]]:
     """
     # King Wen to Fu Xi
     _KINGWEN_TO_FUXI = {
-        2: 0, 23: 1, 8: 2, 20: 3, 16: 4, 35: 5, 45: 6, 12: 7,
-        15: 8, 52: 9, 39: 10, 53: 11, 62: 12, 56: 13, 31: 14, 33: 15,
-        7: 16, 4: 17, 29: 18, 59: 19, 40: 20, 64: 21, 47: 22, 6: 23,
-        46: 24, 18: 25, 48: 26, 57: 27, 32: 28, 50: 29, 28: 30, 44: 31,
-        24: 32, 27: 33, 3: 34, 42: 35, 51: 36, 21: 37, 17: 38, 25: 39,
-        36: 40, 22: 41, 63: 42, 37: 43, 55: 44, 30: 45, 49: 46, 13: 47,
-        19: 48, 41: 49, 60: 50, 61: 51, 54: 52, 38: 53, 58: 54, 10: 55,
-        11: 56, 26: 57, 5: 58, 34: 59, 43: 60, 9: 61, 14: 62, 1: 63,
+        2: 0,
+        23: 1,
+        8: 2,
+        20: 3,
+        16: 4,
+        35: 5,
+        45: 6,
+        12: 7,
+        15: 8,
+        52: 9,
+        39: 10,
+        53: 11,
+        62: 12,
+        56: 13,
+        31: 14,
+        33: 15,
+        7: 16,
+        4: 17,
+        29: 18,
+        59: 19,
+        40: 20,
+        64: 21,
+        47: 22,
+        6: 23,
+        46: 24,
+        18: 25,
+        48: 26,
+        57: 27,
+        32: 28,
+        50: 29,
+        28: 30,
+        44: 31,
+        24: 32,
+        27: 33,
+        3: 34,
+        42: 35,
+        51: 36,
+        21: 37,
+        17: 38,
+        25: 39,
+        36: 40,
+        22: 41,
+        63: 42,
+        37: 43,
+        55: 44,
+        30: 45,
+        49: 46,
+        13: 47,
+        19: 48,
+        41: 49,
+        60: 50,
+        61: 51,
+        54: 52,
+        38: 53,
+        58: 54,
+        10: 55,
+        11: 56,
+        26: 57,
+        5: 58,
+        34: 59,
+        43: 60,
+        9: 61,
+        14: 62,
+        1: 63,
     }
 
     fuxi_num = _KINGWEN_TO_FUXI.get(hexagram_number, 0)
@@ -395,23 +517,19 @@ def iching_to_ifa(hexagram_number: int) -> list[tuple[str, str]]:
     for v_right in variants:
         for v_left in variants:
             right_leg = v_right + lower_tri  # 4-bit right leg
-            left_leg = v_left + upper_tri    # 4-bit left leg
+            left_leg = v_left + upper_tri  # 4-bit left leg
             result.append((right_leg, left_leg))
 
     return result
 
 
-# ---------------------------------------------------------------------------
-# Amulu (Combined Odu) Generation
-# ---------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class OduAmulu:
     """A combined (Amulu) Odu -- two different Meji figures paired."""
 
-    right_leg: OduMeji   # Right leg (cast first, active/yang)
-    left_leg: OduMeji    # Left leg (cast second, receptive/yin)
-    number: int          # Position in the 256 (17-256)
+    right_leg: OduMeji  # Right leg (cast first, active/yang)
+    left_leg: OduMeji  # Left leg (cast second, receptive/yin)
+    number: int  # Position in the 256 (17-256)
 
     @property
     def name(self) -> str:
@@ -465,11 +583,13 @@ def generate_all_amulu() -> list[OduAmulu]:
     for right in PRINCIPAL_ODU:
         for left in PRINCIPAL_ODU:
             if right.number != left.number:
-                amulu.append(OduAmulu(
-                    right_leg=right,
-                    left_leg=left,
-                    number=number,
-                ))
+                amulu.append(
+                    OduAmulu(
+                        right_leg=right,
+                        left_leg=left,
+                        number=number,
+                    )
+                )
                 number += 1
 
     return amulu

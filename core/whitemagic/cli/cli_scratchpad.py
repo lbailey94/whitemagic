@@ -10,6 +10,7 @@ from whitemagic.core.automation.scratchpad import get_active_scratchpad
 def scratch():
     """Ram's Horn Scratchpad commands"""
 
+
 @scratch.command(name="add")
 @click.argument("text")
 @click.option("--tags", help="Comma-separated tags")
@@ -19,6 +20,7 @@ def scratch_add(text, tags):
     tag_list = tags.split(",") if tags else []
     pad.add_entry(text, tag_list)
 
+
 @scratch.command(name="list")
 def scratch_list():
     """List all entries in the current scratchpad."""
@@ -27,6 +29,7 @@ def scratch_list():
     click.echo("-" * 40)
     pad.list_entries()
     click.echo("")
+
 
 @scratch.command(name="finalize")
 def scratch_finalize():

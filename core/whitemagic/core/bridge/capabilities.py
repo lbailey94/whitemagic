@@ -29,7 +29,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- GANA TOOLS ---
 
 async def invoke_gana(gana_name: str, task: str, **kwargs) -> dict[str, Any]:
     """Unified entry point for Gana invocations."""
@@ -39,7 +38,6 @@ async def invoke_gana(gana_name: str, task: str, **kwargs) -> dict[str, Any]:
     except Exception as e:
         return {"error": str(e)}
 
-# --- COLLABORATION & FEDERATION ---
 
 def manage_federation(operation: str = "status") -> dict[str, Any]:
     """
@@ -53,7 +51,6 @@ def manage_federation(operation: str = "status") -> dict[str, Any]:
     """
     return {"status": "ok", "operation": operation, "peers": []}
 
-# --- EXTERNAL INTERFACES ---
 
 def search_web(query: str) -> dict[str, Any]:
     """
@@ -66,6 +63,7 @@ def search_web(query: str) -> dict[str, Any]:
         dict[str, Any]
     """
     return {"query": query, "results": []}
+
 
 def process_voice(audio_data: Any) -> str:
     """

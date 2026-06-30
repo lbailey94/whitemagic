@@ -29,7 +29,10 @@ def apply_reasoning_methods(
             lens_map = {lens.value: lens for lens in ReasoningLens}
             lenses = [lens_map[m] for m in methods if m in lens_map]
 
-        result = reasoner.reason(question=problem or objective or "Apply multi-spectral reasoning", lenses=lenses)
+        result = reasoner.reason(
+            question=problem or objective or "Apply multi-spectral reasoning",
+            lenses=lenses,
+        )
         return {
             "question": getattr(result, "question", problem),
             "synthesis": getattr(result, "synthesis", ""),
@@ -64,9 +67,13 @@ def apply_reasoning_methods(
     if method == "synthesize":
         if not clone_results:
             return {"error": "clone_results are required for synthesize"}
-        ranked = sorted(clone_results, key=lambda item: item.get("confidence", 0.0), reverse=True)
+        ranked = sorted(
+            clone_results, key=lambda item: item.get("confidence", 0.0), reverse=True
+        )
         top = ranked[:3]
-        synthesis = "\n".join(item.get("content", "") for item in top if item.get("content"))
+        synthesis = "\n".join(
+            item.get("content", "") for item in top if item.get("content")
+        )
         return {
             "summary": synthesis,
             "top_results": top,
@@ -77,7 +84,10 @@ def apply_reasoning_methods(
         try:
             from whitemagic.ai.safety import BiasDetector
         except ImportError:
-            return {"error": "BiasDetector unavailable", "reason": "whitemagic.ai.safety module not yet implemented"}
+            return {
+                "error": "BiasDetector unavailable",
+                "reason": "whitemagic.ai.safety module not yet implemented",
+            }
         detector = BiasDetector()
         return cast(dict[str, Any], detector.analyze(reasoning_text or ""))
 

@@ -20,7 +20,11 @@ def handle_codegenome_generate(**kwargs: Any) -> dict[str, Any]:
 
     prompt = kwargs.get("prompt", "")
     if not prompt:
-        return {"status": "error", "error_code": "prompt_required", "message": "prompt is required"}
+        return {
+            "status": "error",
+            "error_code": "prompt_required",
+            "message": "prompt is required",
+        }
 
     # If tier is specified, use direct vault render; otherwise use full God-Kit pipeline
     forced_tier = kwargs.get("tier")
@@ -30,6 +34,7 @@ def handle_codegenome_generate(**kwargs: Any) -> dict[str, Any]:
         if result.get("status") == "success":
             # Re-render with forced tier
             from whitemagic.codegenome.engine import get_codegenome_engine
+
             engine = get_codegenome_engine()
             template = engine.get_template(result["template_name"])
             if template:
@@ -46,8 +51,11 @@ def handle_codegenome_generate(**kwargs: Any) -> dict[str, Any]:
 
     # Full three-tier God-Kit pipeline
     import asyncio
+
     try:
-        result = asyncio.run(god_kit_generate(prompt, num_clones=kwargs.get("num_clones")))
+        result = asyncio.run(
+            god_kit_generate(prompt, num_clones=kwargs.get("num_clones"))
+        )
         return result
     except Exception as e:
         return {"status": "error", "error_code": "generation_failed", "message": str(e)}
@@ -86,7 +94,11 @@ def handle_codegenome_fork(**kwargs: Any) -> dict[str, Any]:
     parent = kwargs.get("parent", "")
     name = kwargs.get("name", "")
     if not parent or not name:
-        return {"status": "error", "error_code": "missing_params", "message": "parent and name are required"}
+        return {
+            "status": "error",
+            "error_code": "missing_params",
+            "message": "parent and name are required",
+        }
 
     vault = get_geneseed_vault()
     result = vault.fork(parent, name, body_delta=kwargs.get("body_delta", ""))

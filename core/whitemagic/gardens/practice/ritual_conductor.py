@@ -1,6 +1,7 @@
 """Practice Garden + Conductor Integration
 Autonomous ritual execution with iterative deepening.
 """
+
 from __future__ import annotations
 
 import logging
@@ -99,7 +100,10 @@ class PracticeRitualConductor:
                 return True
 
             # Or explicit completion marker
-            if self.ritual_config.completion_marker.lower() in thought_path.content.lower():
+            if (
+                self.ritual_config.completion_marker.lower()
+                in thought_path.content.lower()
+            ):
                 return True
 
             return False
@@ -116,8 +120,13 @@ class PracticeRitualConductor:
 
         # Update practice consistency
         if self._mastery_achieved:
-            self.practice_garden.consistency = min(1.0, self.practice_garden.consistency + 0.1)
-            logger.info("✨ Mastery achieved! Practice consistency: %s", self.practice_garden.consistency)
+            self.practice_garden.consistency = min(
+                1.0, self.practice_garden.consistency + 0.1
+            )
+            logger.info(
+                "✨ Mastery achieved! Practice consistency: %s",
+                self.practice_garden.consistency,
+            )
 
         # Emit completion
         emit_event(
@@ -126,7 +135,9 @@ class PracticeRitualConductor:
             data={
                 "ritual": self.ritual_config.ritual_name,
                 "mastery_achieved": self._mastery_achieved,
-                "cycles_completed": len(self.conductor.iterations) if self.conductor else 0,
+                "cycles_completed": len(self.conductor.iterations)
+                if self.conductor
+                else 0,
                 "final_confidence": result.thought_path.confidence,
             },
         )
@@ -165,8 +176,6 @@ Begin the practice.
             "deepening_threshold": self.ritual_config.deepening_threshold,
         }
 
-
-# === Convenience Functions ===
 
 async def conduct_daily_practice(
     practice: str,

@@ -30,23 +30,29 @@ terminal tabs/sessions.
 try:
     from whitemagic.utils.fileio import atomic_write as _atomic_write
     from whitemagic.utils.fileio import file_lock as _file_lock
+
     FILEIO_AVAILABLE = True
 except ImportError:
     FILEIO_AVAILABLE = False
 
     @contextmanager
-    def _file_lock(filepath: str | Path, timeout: float = 5.0) -> Generator[None, None, None]:
+    def _file_lock(
+        filepath: str | Path, timeout: float = 5.0
+    ) -> Generator[None, None, None]:
         _ = timeout
         yield
 
     def _atomic_write(filepath: str | Path, content: str) -> None:
         Path(filepath).write_text(content, encoding="utf-8")
 
+
 file_lock = _file_lock
 atomic_write = _atomic_write
 _gan_ying_enhanced_mod: Any | None
 try:
-    _gan_ying_enhanced_mod = importlib.import_module("whitemagic.core.resonance.gan_ying_enhanced")
+    _gan_ying_enhanced_mod = importlib.import_module(
+        "whitemagic.core.resonance.gan_ying_enhanced"
+    )
 except ImportError:
     _gan_ying_enhanced_mod = None
 EventType = getattr(_gan_ying_enhanced_mod, "EventType", None)
@@ -58,6 +64,7 @@ except ImportError:
     _gan_ying_mod = None
 GanYingBus = getattr(_gan_ying_mod, "GanYingBus", None)
 GAN_YING_AVAILABLE = GanYingBus is not None
+
 
 @dataclass
 class ChatMessage:
@@ -76,7 +83,9 @@ class ChatMessage:
         """Convert to readable markdown format."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         tags_str = " ".join(f"#{t}" for t in self.tags)
-        priority_str = f"[Priority: {self.priority.upper()}]" if self.priority != "normal" else ""
+        priority_str = (
+            f"[Priority: {self.priority.upper()}]" if self.priority != "normal" else ""
+        )
 
         md = f"### [{time_str}] **{self.sender_id}** {priority_str}"
         if self.tags:
@@ -151,9 +160,17 @@ class Task:
         """Convert to readable markdown format."""
         time_str = self.created_at.strftime("%Y-%m-%d %H:%M:%S")
         status_str = f"Status: {self.status.upper()}"
-        priority_str = f"Priority: {self.priority.upper()}" if self.priority != "normal" else ""
-        assigned_str = f"Assigned to: {self.assigned_to}" if self.assigned_to else "Unassigned"
-        due_str = f"Due: {self.due_date.strftime('%Y-%m-%d')}" if self.due_date else "No due date"
+        priority_str = (
+            f"Priority: {self.priority.upper()}" if self.priority != "normal" else ""
+        )
+        assigned_str = (
+            f"Assigned to: {self.assigned_to}" if self.assigned_to else "Unassigned"
+        )
+        due_str = (
+            f"Due: {self.due_date.strftime('%Y-%m-%d')}"
+            if self.due_date
+            else "No due date"
+        )
 
         md = f"### Task [{self.id}] **{self.title}** ({time_str})\n"
         md += f"- {status_str}\n"
@@ -223,7 +240,8 @@ class Task:
                     "timestamp": update["timestamp"].isoformat(),
                     "sender": update["sender"],
                     "content": update["content"],
-                } for update in self.updates or []
+                }
+                for update in self.updates or []
             ],
         }
 
@@ -326,15 +344,20 @@ class SanghaChat:
             with file_lock(tasks_file):
                 if not tasks_file.exists():
                     atomic_write(tasks_file, "")
-                    atomic_write(tasks_md, f"# Sangha Tasks\n\nCreated: {datetime.now().isoformat()}\n\n---\n\n")
+                    atomic_write(
+                        tasks_md,
+                        f"# Sangha Tasks\n\nCreated: {datetime.now().isoformat()}\n\n---\n\n",
+                    )
 
-    def send_message(self,
-                     sender_id: str,
-                     content: str,
-                     channel: str = "general",
-                     tags: list[str] | None = None,
-                     priority: str = "normal",
-                     reply_to: str | None = None) -> ChatMessage:
+    def send_message(
+        self,
+        sender_id: str,
+        content: str,
+        channel: str = "general",
+        tags: list[str] | None = None,
+        priority: str = "normal",
+        reply_to: str | None = None,
+    ) -> ChatMessage:
         """Send a message to a channel."""
         self._ensure_channel(channel)
 
@@ -363,11 +386,13 @@ class SanghaChat:
 
         return msg
 
-    def read_messages(self,
-                      channel: str = "general",
-                      limit: int = 50,
-                      since: datetime | None = None,
-                      priority_filter: str | None = None) -> list[ChatMessage]:
+    def read_messages(
+        self,
+        channel: str = "general",
+        limit: int = 50,
+        since: datetime | None = None,
+        priority_filter: str | None = None,
+    ) -> list[ChatMessage]:
         """Read recent messages from a channel, optionally filter by priority."""
         channel_jsonl = self.chat_dir / f"{channel}.jsonl"
         if not channel_jsonl.exists():
@@ -380,8 +405,7 @@ class SanghaChat:
             with open(channel_jsonl) as f:
                 lines = f.readlines()
 
-            for line in lines[-limit:
-                ]:
+            for line in lines[-limit:]:
                 try:
                     data = _json_loads(line)
                     msg = ChatMessage.from_dict(data)
@@ -416,7 +440,17 @@ class SanghaChat:
         except Exception as e:
             logger.warning("Failed to archive channel %s: %s", channel, e)
 
-    def create_task(self, title: str, description: str, created_by: str, assigned_to: str | None = None, status: str = "open", priority: str = "normal", due_date: datetime | None = None, channel: str | None = None) -> Task:
+    def create_task(
+        self,
+        title: str,
+        description: str,
+        created_by: str,
+        assigned_to: str | None = None,
+        status: str = "open",
+        priority: str = "normal",
+        due_date: datetime | None = None,
+        channel: str | None = None,
+    ) -> Task:
         """Create a new task for coordination."""
         task_id = f"task_{datetime.now().strftime('%Y%m%d%H%M%S')}_{created_by[:4]}"
         task = Task(
@@ -445,6 +479,7 @@ class SanghaChat:
     def propose_to_council(self, sender_id: str, title: str, description: str) -> str:
         """Create a proposal in the #council channel."""
         from whitemagic.core.governance.zodiac_council import get_council
+
         council = get_council()
         prop_id = council.create_proposal(title, description, sender_id)
 
@@ -461,7 +496,16 @@ class SanghaChat:
         )
         return prop_id
 
-    def update_task(self, task_id: str, sender: str, content: str | None = None, status: str | None = None, assigned_to: str | None = None, priority: str | None = None, due_date: datetime | None = None) -> Task | None:
+    def update_task(
+        self,
+        task_id: str,
+        sender: str,
+        content: str | None = None,
+        status: str | None = None,
+        assigned_to: str | None = None,
+        priority: str | None = None,
+        due_date: datetime | None = None,
+    ) -> Task | None:
         """Update a task's status or add a comment."""
         tasks = self.list_tasks()
         target_task = None
@@ -476,11 +520,13 @@ class SanghaChat:
         if content:
             if not target_task.updates:
                 target_task.updates = []
-            target_task.updates.append({
-                "timestamp": datetime.now(),
-                "sender": sender,
-                "content": content,
-            })
+            target_task.updates.append(
+                {
+                    "timestamp": datetime.now(),
+                    "sender": sender,
+                    "content": content,
+                }
+            )
         if status:
             target_task.status = status
         if assigned_to is not None:
@@ -499,12 +545,19 @@ class SanghaChat:
                     f.write(_json_dumps(t.to_dict()) + "\n")
         with file_lock(tasks_md):
             with open(tasks_md, "w") as f:
-                f.write(f"# Sangha Tasks\n\nCreated: {datetime.now().isoformat()}\n\n---\n\n")
+                f.write(
+                    f"# Sangha Tasks\n\nCreated: {datetime.now().isoformat()}\n\n---\n\n"
+                )
                 for t in tasks:
                     f.write(t.to_markdown())
         return target_task
 
-    def list_tasks(self, status: str | None = None, channel: str | None = None, assigned_to: str | None = None) -> list[Task]:
+    def list_tasks(
+        self,
+        status: str | None = None,
+        channel: str | None = None,
+        assigned_to: str | None = None,
+    ) -> list[Task]:
         """List all tasks, optionally filtered by status, channel, or assignee."""
         tasks_jsonl = self.tasks_dir / "tasks.jsonl"
         if not tasks_jsonl.exists():
@@ -531,11 +584,19 @@ class SanghaChat:
             logger.info("Error reading tasks: %s", e, exc_info=True)
         return tasks
 
-    def generate_summary(self, channel: str = "general", days: int = 1, priority_filter: str | None = None) -> str:
+    def generate_summary(
+        self,
+        channel: str = "general",
+        days: int = 1,
+        priority_filter: str | None = None,
+    ) -> str:
         """Generate a summary of recent chat history and tasks for onboarding new agents."""
         from datetime import timedelta
+
         since = datetime.now() - timedelta(days=days)
-        messages = self.read_messages(channel=channel, limit=1000, since=since, priority_filter=priority_filter)
+        messages = self.read_messages(
+            channel=channel, limit=1000, since=since, priority_filter=priority_filter
+        )
         tasks = self.list_tasks()
 
         summary = f"# Sangha Chat Summary for #{channel} (Last {days} Day{'s' if days > 1 else ''})\n\n"
@@ -546,24 +607,26 @@ class SanghaChat:
             high_priority = [m for m in messages if m.priority in ["high", "urgent"]]
             if high_priority:
                 summary += f"- High Priority Messages: {len(high_priority)}\n"
-                for msg in high_priority[:
-                    5]:
+                for msg in high_priority[:5]:
                     summary += f"  - [{msg.timestamp.strftime('%H:%M')}] {msg.sender_id} ({msg.priority.upper()}): {msg.content[:100]}...\n"
             normal_msgs = [m for m in messages if m.priority not in ["high", "urgent"]]
             if normal_msgs:
                 summary += f"- Other Notable Messages: {len(normal_msgs)}\n"
-                for msg in normal_msgs[:
-                    3]:
+                for msg in normal_msgs[:3]:
                     summary += f"  - [{msg.timestamp.strftime('%H:%M')}] {msg.sender_id}: {msg.content[:100]}...\n"
         else:
             summary += "No messages found in this period.\n"
 
         summary += "\n## Active Tasks\n"
-        open_tasks = [t for t in tasks if t.status in ["open", "in_progress"] and (t.channel == channel or t.channel is None)]
+        open_tasks = [
+            t
+            for t in tasks
+            if t.status in ["open", "in_progress"]
+            and (t.channel == channel or t.channel is None)
+        ]
         if open_tasks:
             summary += f"Total active tasks: {len(open_tasks)}\n"
-            for task in open_tasks[:
-                5]:
+            for task in open_tasks[:5]:
                 assigned = task.assigned_to if task.assigned_to else "Unassigned"
                 summary += f"- {task.id}: {task.title} ({task.status}, {assigned}, Priority: {task.priority})\n"
         else:
@@ -575,10 +638,17 @@ class SanghaChat:
 
         return summary
 
-    def save_summary(self, channel: str = "general", days: int = 1, priority_filter: str | None = None) -> Path:
+    def save_summary(
+        self,
+        channel: str = "general",
+        days: int = 1,
+        priority_filter: str | None = None,
+    ) -> Path:
         """Generate and save a summary report to file."""
         summary_content = self.generate_summary(channel, days, priority_filter)
-        summary_file = self.chat_dir / f"summary_{channel}_{datetime.now().strftime('%Y%m%d')}.md"
+        summary_file = (
+            self.chat_dir / f"summary_{channel}_{datetime.now().strftime('%Y%m%d')}.md"
+        )
         with file_lock(summary_file):
             atomic_write(summary_file, summary_content)
         return summary_file
@@ -586,6 +656,7 @@ class SanghaChat:
 
 # Global instance
 _chat: SanghaChat | None = None
+
 
 def get_chat() -> SanghaChat:
     """

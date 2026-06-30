@@ -14,11 +14,13 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 logger = logging.getLogger(__name__)
 
+
 class Telemetry:
     """Unified telemetry for monitoring tool performance and reliability."""
 
     def __init__(self, log_path: Path | None = None) -> None:
         from whitemagic.config.paths import WM_ROOT
+
         self.log_path = log_path or (WM_ROOT / "logs" / "telemetry.jsonl")
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -50,7 +52,9 @@ class Telemetry:
         else:
             self.stats["context_reuse_misses"] += 1
 
-    def record_call(self, tool: str, duration: float, status: str, error_code: str | None = None) -> None:
+    def record_call(
+        self, tool: str, duration: float, status: str, error_code: str | None = None
+    ) -> None:
         """Record a tool execution event."""
         event = {
             "timestamp": datetime.now().isoformat(),
@@ -110,11 +114,19 @@ class Telemetry:
 
         # Top 5 most-called tools with percentiles
         per_tool = cast("dict[str, dict[str, Any]]", self.stats["per_tool"])
-        top_tools = sorted(per_tool.items(), key=lambda x: x[1]["calls"], reverse=True)[:5]
+        top_tools = sorted(per_tool.items(), key=lambda x: x[1]["calls"], reverse=True)[
+            :5
+        ]
 
         top_tools_enriched = []
         for name, stats in top_tools:
-            entry = {"tool": name, "calls": stats["calls"], "avg_ms": round(stats["total_latency"] / max(1, stats["calls"]) * 1000, 2)}
+            entry = {
+                "tool": name,
+                "calls": stats["calls"],
+                "avg_ms": round(
+                    stats["total_latency"] / max(1, stats["calls"]) * 1000, 2
+                ),
+            }
             # Add percentiles from duration history
             durations = list(self._tool_durations.get(name, []))
             if durations:
@@ -162,14 +174,18 @@ class Telemetry:
             "avg_ms": round(stats["total_latency"] / max(1, stats["calls"]) * 1000, 2),
         }
         if durations:
-            profile.update({
-                "p50_ms": round(self._percentile(durations, 50) * 1000, 2),
-                "p90_ms": round(self._percentile(durations, 90) * 1000, 2),
-                "p99_ms": round(self._percentile(durations, 99) * 1000, 2),
-                "min_ms": round(durations[0] * 1000, 2),
-                "max_ms": round(durations[-1] * 1000, 2),
-                "stdev_ms": round(statistics.stdev(durations) * 1000, 2) if len(durations) > 1 else 0.0,
-            })
+            profile.update(
+                {
+                    "p50_ms": round(self._percentile(durations, 50) * 1000, 2),
+                    "p90_ms": round(self._percentile(durations, 90) * 1000, 2),
+                    "p99_ms": round(self._percentile(durations, 99) * 1000, 2),
+                    "min_ms": round(durations[0] * 1000, 2),
+                    "max_ms": round(durations[-1] * 1000, 2),
+                    "stdev_ms": round(statistics.stdev(durations) * 1000, 2)
+                    if len(durations) > 1
+                    else 0.0,
+                }
+            )
         return profile
 
     def get_all_tool_profiles(self) -> dict[str, Any]:
@@ -208,8 +224,10 @@ class Telemetry:
             return 0.0
         return len(self._call_timestamps) / span
 
+
 # Global instance
 _telemetry = None
+
 
 def get_telemetry() -> Telemetry:
     """

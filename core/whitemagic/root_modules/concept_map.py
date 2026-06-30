@@ -25,14 +25,18 @@ class ConceptMap:
         """Add a concept node."""
         self._nodes[concept] = metadata or {}
 
-    def add_edge(self, source: str, target: str, relation: str = "related", weight: float = 1.0) -> None:
+    def add_edge(
+        self, source: str, target: str, relation: str = "related", weight: float = 1.0
+    ) -> None:
         """Add a relationship edge between concepts."""
-        self._edges.append({
-            "source": source,
-            "target": target,
-            "relation": relation,
-            "weight": weight,
-        })
+        self._edges.append(
+            {
+                "source": source,
+                "target": target,
+                "relation": relation,
+                "weight": weight,
+            }
+        )
 
     def get_node(self, concept: str) -> dict[str, Any] | None:
         return self._nodes.get(concept)

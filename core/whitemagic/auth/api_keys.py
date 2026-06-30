@@ -13,10 +13,12 @@ from whitemagic.config.paths import WM_ROOT
 
 logger = logging.getLogger(__name__)
 
+
 class APIKeyMetadata(BaseModel):
     """APIKeyMetadata: api key metadata.
 
     Pydantic data model: validation and serialization via Pydantic v2."""
+
     key_id: str
     name: str
     owner: str
@@ -24,6 +26,7 @@ class APIKeyMetadata(BaseModel):
     expires_at: datetime | None = None
     scopes: list[str] = ["*"]
     is_active: bool = True
+
 
 class APIKeySystem:
     """
@@ -42,13 +45,17 @@ class APIKeySystem:
         if self.storage_path.parent:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._keys: dict[str, str] = {}  # hashed_key -> metadata_json (legacy/unused in new persistence)
+        self._keys: dict[
+            str, str
+        ] = {}  # hashed_key -> metadata_json (legacy/unused in new persistence)
         self._metadata: dict[str, APIKeyMetadata] = {}
 
         # Load keys from storage
         self._load()
 
-    def generate_key(self, name: str, owner: str, expires_days: int | None = None) -> tuple[str, APIKeyMetadata]:
+    def generate_key(
+        self, name: str, owner: str, expires_days: int | None = None
+    ) -> tuple[str, APIKeyMetadata]:
         """Generate a new API key."""
         # Create a prefix for identification (wm_ for WhiteMagic)
         raw_key = f"wm_{secrets.token_urlsafe(32)}"
@@ -63,7 +70,7 @@ class APIKeySystem:
             name=name,
             owner=owner,
             created_at=datetime.now(UTC),
-            expires_at=expires_at
+            expires_at=expires_at,
         )
 
         # Store metadata
@@ -118,10 +125,9 @@ class APIKeySystem:
         try:
             data = {
                 "keys": self._keys,
-                "metadata": {
-                    k: v.dict() for k, v in self._metadata.items()
-                }
+                "metadata": {k: v.dict() for k, v in self._metadata.items()},
             }
+
             # Handle datetime serialization
             def json_serial(obj: object) -> str:
                 """
@@ -137,11 +143,11 @@ class APIKeySystem:
                     return obj.isoformat()
                 raise TypeError(f"Type {type(obj)} not serializable")
 
-            with open(self.storage_path, 'w') as f:
+            with open(self.storage_path, "w") as f:
                 json.dump(data, f, default=json_serial, indent=2)
 
             # Set restrictive permissions (Unix)
-            if hasattr(os, 'chmod'):
+            if hasattr(os, "chmod"):
                 os.chmod(self.storage_path, 0o600)
 
         except Exception as e:
@@ -166,12 +172,19 @@ class APIKeySystem:
                     # Pydantic usually handles this if passed to constructor/parse_obj
                     self._metadata[k] = APIKeyMetadata.parse_obj(v)
                 except Exception as e:
-                    logger.error("Failed to parse metadata for key %s: %s", k, e, exc_info=True)
+                    logger.error(
+                        "Failed to parse metadata for key %s: %s", k, e, exc_info=True
+                    )
 
-            logger.info("Loaded {len(self._metadata)} API keys from %s", self.storage_path, exc_info=True)
+            logger.info(
+                "Loaded {len(self._metadata)} API keys from %s",
+                self.storage_path,
+                exc_info=True,
+            )
 
         except Exception as e:
             logger.error("Failed to load API keys: %s", e, exc_info=True)
+
 
 # Global instance for shared use
 api_key_system = APIKeySystem()

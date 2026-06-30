@@ -4,6 +4,7 @@ Verifies the closed-form damped harmonic oscillator matches the
 numerical scipy RK45 solution within tolerance, and tests all
 three damping regimes (underdamped, critically damped, overdamped).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -165,8 +166,9 @@ class TestAnalyticalVsNumerical:
             x, v = state
             return [v, -damping * v - frequency**2 * x]
 
-        sol = solve_ivp(oscillator, (0, 50), [0.0, impulse],
-                        t_eval=t, method="RK45", max_step=0.5)
+        sol = solve_ivp(
+            oscillator, (0, 50), [0.0, impulse], t_eval=t, method="RK45", max_step=0.5
+        )
         assert sol.success
 
         # Compare (tolerance accounts for RK45 step error + analytical precision)
@@ -193,16 +195,16 @@ class TestGalacticZoneFrequency:
 
     def test_zone_boundaries(self, engine: ResonanceEngine) -> None:
         """Test all zone boundary frequencies."""
-        assert engine.galactic_zone_frequency(0.0) == 8.0    # CORE
-        assert engine.galactic_zone_frequency(0.14) == 8.0   # CORE
-        assert engine.galactic_zone_frequency(0.15) == 4.0   # INNER_RIM
-        assert engine.galactic_zone_frequency(0.39) == 4.0   # INNER_RIM
-        assert engine.galactic_zone_frequency(0.40) == 2.0   # MID_BAND
-        assert engine.galactic_zone_frequency(0.64) == 2.0   # MID_BAND
-        assert engine.galactic_zone_frequency(0.65) == 1.0   # OUTER_RIM
-        assert engine.galactic_zone_frequency(0.84) == 1.0   # OUTER_RIM
-        assert engine.galactic_zone_frequency(0.85) == 0.5   # FAR_EDGE
-        assert engine.galactic_zone_frequency(1.0) == 0.5    # FAR_EDGE
+        assert engine.galactic_zone_frequency(0.0) == 8.0  # CORE
+        assert engine.galactic_zone_frequency(0.14) == 8.0  # CORE
+        assert engine.galactic_zone_frequency(0.15) == 4.0  # INNER_RIM
+        assert engine.galactic_zone_frequency(0.39) == 4.0  # INNER_RIM
+        assert engine.galactic_zone_frequency(0.40) == 2.0  # MID_BAND
+        assert engine.galactic_zone_frequency(0.64) == 2.0  # MID_BAND
+        assert engine.galactic_zone_frequency(0.65) == 1.0  # OUTER_RIM
+        assert engine.galactic_zone_frequency(0.84) == 1.0  # OUTER_RIM
+        assert engine.galactic_zone_frequency(0.85) == 0.5  # FAR_EDGE
+        assert engine.galactic_zone_frequency(1.0) == 0.5  # FAR_EDGE
 
     def test_clamping(self, engine: ResonanceEngine) -> None:
         """Values outside [0,1] should be clamped."""
@@ -241,11 +243,17 @@ class TestGalacticZoneFrequency:
     def test_galactic_overrides_explicit_params(self, engine: ResonanceEngine) -> None:
         """When galactic_distance is provided, it overrides frequency/damping."""
         result_galactic = engine.calculate_resonance(
-            "test", importance=0.5, galactic_distance=0.05,
-            frequency=1.0, damping=0.1,  # should be overridden
+            "test",
+            importance=0.5,
+            galactic_distance=0.05,
+            frequency=1.0,
+            damping=0.1,  # should be overridden
         )
         result_explicit = engine.calculate_resonance(
-            "test", importance=0.5, frequency=1.0, damping=0.1,
+            "test",
+            importance=0.5,
+            frequency=1.0,
+            damping=0.1,
         )
         # Should differ because galactic overrides
         assert result_galactic.total_resonance != result_explicit.total_resonance

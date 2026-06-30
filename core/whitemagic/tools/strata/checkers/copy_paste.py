@@ -1,7 +1,6 @@
 import hashlib
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
@@ -12,7 +11,9 @@ _DUPLICATE_BLOCK_SIZE = 75
 
 
 @register
-def check_copy_paste(project_path: Path, file_index: FileIndex, findings: List[Finding]):
+def check_copy_paste(
+    project_path: Path, file_index: FileIndex, findings: list[Finding]
+):
     """Detect identical code blocks across files using a sliding window hash.
 
     Skips false positives:
@@ -22,7 +23,7 @@ def check_copy_paste(project_path: Path, file_index: FileIndex, findings: List[F
     # Directories with intentional repetitive patterns
     _REPETITIVE_DIRS = {"grimoire", "harmony", "handlers", "registry_defs"}
 
-    window_hashes: Dict[str, Tuple[Path, int]] = {}
+    window_hashes: dict[str, tuple[Path, int]] = {}
 
     for py_file in file_index.python_files():
         if FileIndex.is_test_file(py_file):
@@ -39,7 +40,7 @@ def check_copy_paste(project_path: Path, file_index: FileIndex, findings: List[F
         # Find the first function or class definition to skip module headers
         start_offset = 0
         for idx, line in enumerate(lines):
-            if re.search(r'\b(def |class )', line):
+            if re.search(r"\b(def |class )", line):
                 start_offset = idx
                 break
 
@@ -48,7 +49,7 @@ def check_copy_paste(project_path: Path, file_index: FileIndex, findings: List[F
             continue
 
         for i in range(len(effective_lines) - _DUPLICATE_BLOCK_SIZE + 1):
-            block = effective_lines[i:i + _DUPLICATE_BLOCK_SIZE]
+            block = effective_lines[i : i + _DUPLICATE_BLOCK_SIZE]
             normalized = _normalize_block(block)
             h = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
             if h in window_hashes:
@@ -57,24 +58,26 @@ def check_copy_paste(project_path: Path, file_index: FileIndex, findings: List[F
                 if first_file != py_file:
                     rel_first = str(first_file.relative_to(project_path))
                     rel_second = str(py_file.relative_to(project_path))
-                    findings.append(Finding(
-                        severity=FindingSeverity.INFO,
-                        category="copy_paste",
-                        file=rel_second,
-                        line=i + 1,
-                        message=f"Potential copy-paste block matches {rel_first}:{first_line}.",
-                        suggestion="Extract shared logic into a reusable function or module."
-                    ))
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.INFO,
+                            category="copy_paste",
+                            file=rel_second,
+                            line=i + 1,
+                            message=f"Potential copy-paste block matches {rel_first}:{first_line}.",
+                            suggestion="Extract shared logic into a reusable function or module.",
+                        )
+                    )
                     # Remove hash to avoid duplicate findings for same block
                     del window_hashes[h]
             else:
                 window_hashes[h] = (py_file, i + 1)
 
 
-def _normalize_block(lines: List[str]) -> str:
+def _normalize_block(lines: list[str]) -> str:
     """Strip comments, whitespace, and lowercase for robust comparison.
     Returns empty string if the block is mostly boilerplate (imports, blanks, docstrings)."""
-    result: List[str] = []
+    result: list[str] = []
     meaningful = 0
     in_docstring = False
     for line in lines:
@@ -89,7 +92,7 @@ def _normalize_block(lines: List[str]) -> str:
         if "#" in stripped:
             stripped = stripped.split("#", 1)[0].strip()
         # Collapse multiple whitespace
-        stripped = re.sub(r'\s+', ' ', stripped)
+        stripped = re.sub(r"\s+", " ", stripped)
         # Skip pure import boilerplate lines and blanks
         if not stripped or stripped.startswith(("import ", "from ")):
             continue

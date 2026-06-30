@@ -6,11 +6,13 @@ from typing import Any
 
 try:
     import httpx  # For XRPL API calls
+
     _HTTPX_AVAILABLE = True
 except ImportError:
     _HTTPX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
 
 class WalletManager:
     """Secure, Receive-Only Wallet Manager for WhiteMagic (Phase 23).
@@ -21,18 +23,26 @@ class WalletManager:
         # Priority: explicit arg > WM_XRP_ADDRESS env var. NO fallback default:
         # shipping an upstream maintainer address as a fallback would silently
         # route user tips to the project maintainer, which is unethical.
-        self.public_address = public_address or os.environ.get("WM_XRP_ADDRESS", "") or ""
+        self.public_address = (
+            public_address or os.environ.get("WM_XRP_ADDRESS", "") or ""
+        )
         self.enabled = bool(self.public_address)
         self.last_balance = 0.0
         self.xrpl_node = "https://xrplcluster.com"  # Public high-availability node
         from whitemagic.config.paths import ECONOMY_DIR
+
         self.config_path = ECONOMY_DIR / "economies.json"
         self.beneficiaries = self._load_beneficiaries()
 
         if self.enabled:
-            logger.info("💳 Wallet Manager Active. Receive-Only Address: %s", self.public_address)
+            logger.info(
+                "💳 Wallet Manager Active. Receive-Only Address: %s",
+                self.public_address,
+            )
         else:
-            logger.debug("💳 Wallet Manager disabled. Set WM_XRP_ADDRESS to enable tipping.")
+            logger.debug(
+                "💳 Wallet Manager disabled. Set WM_XRP_ADDRESS to enable tipping."
+            )
 
     def _load_beneficiaries(self) -> dict[str, Any]:
         """Load beneficiary configuration from economies.json."""
@@ -54,20 +64,25 @@ class WalletManager:
         for key, beneficiary in self.beneficiaries.items():
             split = beneficiary.get("default_split", 0.05)
             shares = amount * split
-            proposals.append({
-                "target": beneficiary["name"],
-                "address": beneficiary["address"],
-                "amount": round(shares, 6),
-                "reason": f"Dharmic Resonance Split ({int(split*100)}%)",
-            })
+            proposals.append(
+                {
+                    "target": beneficiary["name"],
+                    "address": beneficiary["address"],
+                    "amount": round(shares, 6),
+                    "reason": f"Dharmic Resonance Split ({int(split * 100)}%)",
+                }
+            )
             remaining -= shares
 
-        proposals.insert(0, {
-            "target": "Local Node Owner",
-            "address": self.public_address,
-            "amount": round(remaining, 6),
-            "reason": "Primary Utility Retainment",
-        })
+        proposals.insert(
+            0,
+            {
+                "target": "Local Node Owner",
+                "address": self.public_address,
+                "amount": round(remaining, 6),
+                "reason": "Primary Utility Retainment",
+            },
+        )
 
         return {
             "total_resonance": amount,
@@ -81,7 +96,9 @@ class WalletManager:
         Returns the amount of the latest tip in XRP if found, else None.
         """
         if not self.enabled:
-            logger.debug("Wallet not configured — set WM_XRP_ADDRESS to enable tip scanning")
+            logger.debug(
+                "Wallet not configured — set WM_XRP_ADDRESS to enable tip scanning"
+            )
             return None
         if not _HTTPX_AVAILABLE:
             logger.debug("httpx not installed — XRPL tip scanning disabled")
@@ -103,7 +120,9 @@ class WalletManager:
                 if response.status_code == 200:
                     data = response.json()
                     if "result" in data and "account_data" in data["result"]:
-                        new_balance = float(data["result"]["account_data"]["Balance"]) / 1_000_000
+                        new_balance = (
+                            float(data["result"]["account_data"]["Balance"]) / 1_000_000
+                        )
                         if new_balance > self.last_balance:
                             tip = new_balance - self.last_balance
                             self.last_balance = new_balance
@@ -122,7 +141,9 @@ class WalletManager:
             "emotional_valence": 1.0,
         }
 
+
 _wallet_manager: WalletManager | None = None
+
 
 def get_wallet() -> WalletManager:
     """

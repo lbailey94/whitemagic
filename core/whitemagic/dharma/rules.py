@@ -43,10 +43,6 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Haskell FFI bridge (lazy-loaded singleton)
-# ---------------------------------------------------------------------------
-
 _haskell_bridge = None
 _haskell_lock = threading.Lock()
 _haskell_available = None  # None = not checked, True/False = cached
@@ -66,6 +62,7 @@ def _get_haskell_bridge() -> Any:
             return _haskell_bridge
         try:
             from haskell.haskell_bridge import HaskellDivination
+
             bridge = HaskellDivination()
             _haskell_bridge = bridge
             _haskell_available = True
@@ -77,18 +74,14 @@ def _get_haskell_bridge() -> Any:
             return None
 
 
-# ---------------------------------------------------------------------------
-# Action spectrum (Gevurah → Chesed)
-# ---------------------------------------------------------------------------
-
 class DharmaAction(StrEnum):
     """Graduated action spectrum from MandalaOS's Yama engine."""
 
-    LOG = "log"            # Record the event silently
-    TAG = "tag"            # Apply a dharma tag (influences scheduling)
-    WARN = "warn"          # Proceed but emit a warning
+    LOG = "log"  # Record the event silently
+    TAG = "tag"  # Apply a dharma tag (influences scheduling)
+    WARN = "warn"  # Proceed but emit a warning
     THROTTLE = "throttle"  # Rate-limit the action
-    BLOCK = "block"        # Deny the action entirely
+    BLOCK = "block"  # Deny the action entirely
     TRANSFORM = "transform"  # Rewrite parameters, then proceed (Phase 1)
 
 
@@ -101,10 +94,6 @@ class DharmaTier(int, Enum):
     L3 = 3  # Strict: + formal verification intent + kernel sandboxing
 
 
-# ---------------------------------------------------------------------------
-# Rule definition
-# ---------------------------------------------------------------------------
-
 @dataclass
 class DharmaRule:
     """A single declarative Dharma rule."""
@@ -112,29 +101,28 @@ class DharmaRule:
     name: str
     description: str
     action: DharmaAction
-    severity: float               # 0.0 – 1.0
-    explain: str                  # Human-readable reason (Gnosis link)
-    profile: str = "default"      # Which profile this rule belongs to
+    severity: float  # 0.0 – 1.0
+    explain: str  # Human-readable reason (Gnosis link)
+    profile: str = "default"  # Which profile this rule belongs to
 
     # Match conditions (all optional; rule matches if ANY condition hits)
-    tool_patterns: list[str] = field(default_factory=list)     # fnmatch on tool name
-    keyword_patterns: list[str] = field(default_factory=list)  # substring match on description
-    safety_levels: list[str] = field(default_factory=list)     # "WRITE", "DELETE", etc.
-    regex_patterns: list[str] = field(default_factory=list)    # regex on full action string
+    tool_patterns: list[str] = field(default_factory=list)  # fnmatch on tool name
+    keyword_patterns: list[str] = field(
+        default_factory=list
+    )  # substring match on description
+    safety_levels: list[str] = field(default_factory=list)  # "WRITE", "DELETE", etc.
+    regex_patterns: list[str] = field(
+        default_factory=list
+    )  # regex on full action string
 
-    # Phase 1: transform action — parameter rewriting / redaction
     transform: dict[str, Any] = field(default_factory=dict)
 
-    # Phase 2: evaluation tier (L0-L3 progressive assurance)
     tier: DharmaTier = DharmaTier.L1
 
-    # Phase 2: taint tracking — mark data from untrusted sources
     taint_sources: list[str] = field(default_factory=list)
 
-    # Phase 2: egress policy for network-bound actions
     egress_policy: str = "allow"  # "allow" | "deny" | "prompt"
 
-    # Phase 2: kernel sandboxing profile (eBPF-style seccomp)
     seccomp_profile: str = "none"  # "none" | "minimal" | "strict"
 
     # Compiled regex cache
@@ -146,7 +134,13 @@ class DharmaRule:
             try:
                 self._compiled_regex.append(re.compile(pat, re.IGNORECASE))
             except re.error as e:
-                logger.warning("Dharma rule '%s': invalid regex '%s': %s", self.name, pat, e, exc_info=True)
+                logger.warning(
+                    "Dharma rule '%s': invalid regex '%s': %s",
+                    self.name,
+                    pat,
+                    e,
+                    exc_info=True,
+                )
 
     def matches(self, action: dict[str, Any]) -> bool:
         """Check if this rule matches the given action dict.
@@ -180,8 +174,6 @@ class DharmaRule:
             if rx.search(full_text):
                 return True
 
-        # Phase 2: Taint tracking — match if action carries taint from sources
-        # this rule is designed to guard against
         if self.taint_sources:
             action_taint = action.get("taint", [])
             if isinstance(action_taint, list):
@@ -192,25 +184,18 @@ class DharmaRule:
         return False
 
 
-# ---------------------------------------------------------------------------
-# Evaluation result
-# ---------------------------------------------------------------------------
-
 @dataclass
 class DharmaDecision:
     """Result of evaluating an action against the Dharma rules."""
 
     action: DharmaAction
-    score: float               # Effective ethical score after all rules
-    triggered_rules: list[str] # Names of rules that fired
-    explain: str               # Combined explanation
-    profile: str               # Active profile
+    score: float  # Effective ethical score after all rules
+    triggered_rules: list[str]  # Names of rules that fired
+    explain: str  # Combined explanation
+    profile: str  # Active profile
     timestamp: datetime = field(default_factory=datetime.now)
-    # Phase 2: evaluation tier applied to this decision
     tier: DharmaTier = DharmaTier.L1
-    # Phase 2: egress policy result (allow / deny / prompt)
     egress: str = "allow"
-    # Phase 2: seccomp profile applied
     seccomp: str = "none"
 
     def to_dict(self) -> dict[str, Any]:
@@ -232,10 +217,6 @@ class DharmaDecision:
             "seccomp": self.seccomp,
         }
 
-
-# ---------------------------------------------------------------------------
-# Rules Engine
-# ---------------------------------------------------------------------------
 
 # Default rules shipped with Whitemagic (no external file needed)
 _DEFAULT_RULES_YAML = """
@@ -324,7 +305,6 @@ rules:
     profile: default
     tool_patterns: ["create_memory", "update_memory", "delete_memory"]
 
-  # === Creative Sandbox (relaxed) ===
   - name: creative_allow_writes
     description: Relax write warnings in creative mode
     action: log
@@ -333,7 +313,6 @@ rules:
     profile: creative
     safety_levels: ["WRITE"]
 
-  # === Secure Transaction (strict) ===
   - name: secure_block_writes
     description: Block all writes in secure mode
     action: block
@@ -350,7 +329,6 @@ rules:
     profile: secure
     keyword_patterns: ["external", "http", "url", "network", "remote"]
 
-  # === Research Profile (R&D mode — relaxed for memory CRUD, audit trail intact) ===
   - name: research_allow_memory_writes
     description: Allow memory CRUD operations in research mode without privacy blocking
     action: log
@@ -369,7 +347,6 @@ rules:
     profile: research
     keyword_patterns: ["personal", "private", "sensitive"]
 
-  # === Violet Profile (Edgerunner Violet — purple-team security) ===
   - name: violet_require_engagement_token
     description: Block offensive security tools without a valid engagement token
     action: block
@@ -413,7 +390,6 @@ rules:
     profile: violet
     keyword_patterns: ["nmap", "recon", "enumerate", "discover", "fingerprint", "portscan"]
 
-  # === Phase 2: Progressive Assurance (tiered evaluation) ===
   - name: tier2_block_untrusted_taint
     description: Block actions carrying untrusted taint at L2+
     action: block
@@ -468,10 +444,6 @@ class DharmaRulesEngine:
         # Load rules
         self._load_rules()
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     # Profiles that are only defined in the Python rules engine (not Haskell)
     _PYTHON_ONLY_PROFILES = frozenset({"violet", "research"})
 
@@ -484,21 +456,21 @@ class DharmaRulesEngine:
         """
         profile = self._active_profile
 
-        # --- Primary: Haskell FFI path (skip for Python-only profiles) ---
         decision = None
         if profile not in self._PYTHON_ONLY_PROFILES:
             decision = self._try_haskell_evaluate(action, profile)
 
-        # --- Fallback: Python rules engine ---
         if decision is None:
             decision = self._python_evaluate(action, profile)
 
         # Karmic trace (immutable audit trail)
-        self._karmic_trace.append({
-            "action": action,
-            "decision": decision.to_dict(),
-            "timestamp": datetime.now().isoformat(),
-        })
+        self._karmic_trace.append(
+            {
+                "action": action,
+                "decision": decision.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         # Keep trace bounded
         if len(self._karmic_trace) > 5000:
             self._karmic_trace = self._karmic_trace[-2500:]
@@ -506,7 +478,9 @@ class DharmaRulesEngine:
         return decision
 
     def _try_haskell_evaluate(
-        self, action: dict[str, Any], profile: str,
+        self,
+        action: dict[str, Any],
+        profile: str,
     ) -> DharmaDecision | None:
         """Try evaluating via the Haskell FFI bridge. Returns None on failure."""
         bridge = _get_haskell_bridge()
@@ -536,11 +510,15 @@ class DharmaRulesEngine:
                 profile=profile,
             )
         except Exception as e:
-            logger.debug("Haskell Dharma evaluation failed, falling back to Python: %s", e)
+            logger.debug(
+                "Haskell Dharma evaluation failed, falling back to Python: %s", e
+            )
             return None
 
     def _python_evaluate(
-        self, action: dict[str, Any], profile: str,
+        self,
+        action: dict[str, Any],
+        profile: str,
     ) -> DharmaDecision:
         """Pure-Python rules evaluation (fallback).
 
@@ -549,7 +527,6 @@ class DharmaRulesEngine:
         """
         triggered: list[DharmaRule] = []
 
-        # Phase 2: Determine effective tier from action or default to L1
         effective_tier = DharmaTier(action.get("tier", 1))
 
         with self._lock:
@@ -557,7 +534,6 @@ class DharmaRulesEngine:
                 # Rule applies if it's in the active profile OR "default"
                 if rule.profile not in (profile, "default"):
                     continue
-                # Phase 2: Skip rules above effective tier
                 if rule.tier.value > effective_tier.value:
                     continue
                 if rule.matches(action):
@@ -573,10 +549,14 @@ class DharmaRulesEngine:
                 tier=effective_tier,
             )
 
-        # Worst action wins (most restrictive)
-        # Phase 1: transform is least restrictive (rewrites params, proceeds)
-        action_order = [DharmaAction.TRANSFORM, DharmaAction.LOG, DharmaAction.TAG,
-                        DharmaAction.WARN, DharmaAction.THROTTLE, DharmaAction.BLOCK]
+        action_order = [
+            DharmaAction.TRANSFORM,
+            DharmaAction.LOG,
+            DharmaAction.TAG,
+            DharmaAction.WARN,
+            DharmaAction.THROTTLE,
+            DharmaAction.BLOCK,
+        ]
         worst_action = max(triggered, key=lambda r: action_order.index(r.action))
         worst_severity = max(r.severity for r in triggered)
         score = max(0.0, 1.0 - worst_severity)
@@ -584,8 +564,6 @@ class DharmaRulesEngine:
         explanations = list(dict.fromkeys(r.explain for r in triggered))
         combined_explain = " | ".join(explanations)
 
-        # Phase 2: Aggregate egress and seccomp from triggered rules
-        # Most restrictive egress wins: deny > prompt > allow
         egress_order = {"allow": 0, "prompt": 1, "deny": 2}
         worst_egress = max(
             triggered, key=lambda r: egress_order.get(r.egress_policy, 0)
@@ -608,7 +586,9 @@ class DharmaRulesEngine:
         )
 
     def apply_transforms(
-        self, action: dict[str, Any], triggered_rules: list[DharmaRule],
+        self,
+        action: dict[str, Any],
+        triggered_rules: list[DharmaRule],
     ) -> dict[str, Any]:
         """Apply transform rules to an action dict.
 
@@ -627,8 +607,7 @@ class DharmaRulesEngine:
             if tx_type == "redact" and field:
                 parts = field.split(".")
                 target = transformed
-                for part in parts[:
-                    -1]:
+                for part in parts[:-1]:
                     target = target.setdefault(part, {})
                 if isinstance(target, dict) and parts:
                     target[parts[-1]] = "[REDACTED]"
@@ -636,8 +615,7 @@ class DharmaRulesEngine:
                 max_val = tx.get("max", 100)
                 parts = field.split(".")
                 target = transformed
-                for part in parts[:
-                    -1]:
+                for part in parts[:-1]:
                     target = target.setdefault(part, {})
                 if isinstance(target, dict) and parts:
                     val = target.get(parts[-1])
@@ -661,12 +639,9 @@ class DharmaRulesEngine:
         """
         return self._active_profile
 
-    # ------------------------------------------------------------------
-    # Phase 2: Default-deny egress + kernel sandboxing
-    # ------------------------------------------------------------------
-
     def evaluate_with_egress(
-        self, action: dict[str, Any],
+        self,
+        action: dict[str, Any],
     ) -> DharmaDecision:
         """Evaluate with default-deny egress for network-bound actions.
 
@@ -692,7 +667,8 @@ class DharmaRulesEngine:
         return decision
 
     def kernel_sandbox(
-        self, action: dict[str, Any],
+        self,
+        action: dict[str, Any],
     ) -> dict[str, Any]:
         """Return sandbox constraints for an action (eBPF-style seccomp).
 
@@ -715,14 +691,18 @@ class DharmaRulesEngine:
             return {
                 "mode": "filter",
                 "allowed": ["read", "write", "exit", "exit_group", "fstat"],
-                "denied": ["connect", "socket", "execve", "fork", "clone",
-                           "openat", "mmap", "mprotect"],
+                "denied": [
+                    "connect",
+                    "socket",
+                    "execve",
+                    "fork",
+                    "clone",
+                    "openat",
+                    "mmap",
+                    "mprotect",
+                ],
             }
         return {"mode": "unknown", "allowed": [], "denied": []}
-
-    # ------------------------------------------------------------------
-    # Phase 3: Formal verification + external backends
-    # ------------------------------------------------------------------
 
     def verify_rules(self) -> list[dict[str, Any]]:
         """Formal verification intent — detect contradictions and gaps.
@@ -737,23 +717,28 @@ class DharmaRulesEngine:
 
         # Check 1: Contradictory rules (same pattern, different actions)
         for i, r1 in enumerate(rules):
-            for r2 in rules[i + 1:
-                ]:
+            for r2 in rules[i + 1 :]:
                 if r1.profile != r2.profile:
                     continue
                 # Heuristic: same keywords + same tools = potential contradiction
                 if set(r1.keyword_patterns) & set(r2.keyword_patterns):
-                    if r1.action != r2.action and r1.severity > 0.5 and r2.severity > 0.5:
-                        findings.append({
-                            "type": "contradiction",
-                            "severity": "high",
-                            "rules": [r1.name, r2.name],
-                            "detail": (
-                                f"Rules '{r1.name}' ({r1.action.value}) and "
-                                f"'{r2.name}' ({r2.action.value}) match overlapping "
-                                f"keywords but prescribe different actions."
-                            ),
-                        })
+                    if (
+                        r1.action != r2.action
+                        and r1.severity > 0.5
+                        and r2.severity > 0.5
+                    ):
+                        findings.append(
+                            {
+                                "type": "contradiction",
+                                "severity": "high",
+                                "rules": [r1.name, r2.name],
+                                "detail": (
+                                    f"Rules '{r1.name}' ({r1.action.value}) and "
+                                    f"'{r2.name}' ({r2.action.value}) match overlapping "
+                                    f"keywords but prescribe different actions."
+                                ),
+                            }
+                        )
 
         # Check 2: Unreachable rules (BLOCK rule shadowed by earlier BLOCK)
         # Simplified: if two rules have identical patterns and both BLOCK,
@@ -761,28 +746,36 @@ class DharmaRulesEngine:
         seen_block_patterns: set[str] = set()
         for rule in rules:
             if rule.action == DharmaAction.BLOCK:
-                sig = "|".join(sorted(rule.keyword_patterns)) + "::" + "|".join(sorted(rule.tool_patterns))
+                sig = (
+                    "|".join(sorted(rule.keyword_patterns))
+                    + "::"
+                    + "|".join(sorted(rule.tool_patterns))
+                )
                 if sig in seen_block_patterns and sig:
-                    findings.append({
-                        "type": "redundancy",
-                        "severity": "medium",
-                        "rule": rule.name,
-                        "detail": f"Rule '{rule.name}' is redundant — identical patterns already blocked.",
-                    })
+                    findings.append(
+                        {
+                            "type": "redundancy",
+                            "severity": "medium",
+                            "rule": rule.name,
+                            "detail": f"Rule '{rule.name}' is redundant — identical patterns already blocked.",
+                        }
+                    )
                 seen_block_patterns.add(sig)
 
         # Check 3: Missing taint coverage for egress-deny rules
         for rule in rules:
             if rule.egress_policy == "deny" and not rule.taint_sources:
-                findings.append({
-                    "type": "gap",
-                    "severity": "medium",
-                    "rule": rule.name,
-                    "detail": (
-                        f"Rule '{rule.name}' denies egress but has no taint_sources. "
-                        f"Without taint tracking, this may block legitimate traffic."
-                    ),
-                })
+                findings.append(
+                    {
+                        "type": "gap",
+                        "severity": "medium",
+                        "rule": rule.name,
+                        "detail": (
+                            f"Rule '{rule.name}' denies egress but has no taint_sources. "
+                            f"Without taint tracking, this may block legitimate traffic."
+                        ),
+                    }
+                )
 
         return findings
 
@@ -807,7 +800,9 @@ class DharmaRulesEngine:
             rules = list(self._rules)
 
         for rule in rules:
-            lines.append(f"# Rule: {rule.name} (profile={rule.profile}, tier={rule.tier.value})")
+            lines.append(
+                f"# Rule: {rule.name} (profile={rule.profile}, tier={rule.tier.value})"
+            )
             lines.append(f"# {rule.description}")
             # Keyword conditions
             conds = []
@@ -824,7 +819,13 @@ class DharmaRulesEngine:
                 body = "\n    ".join(conds)
             else:
                 body = "true"
-            rego_action = "allow" if rule.action == DharmaAction.LOG else "warn" if rule.action == DharmaAction.WARN else "deny"
+            rego_action = (
+                "allow"
+                if rule.action == DharmaAction.LOG
+                else "warn"
+                if rule.action == DharmaAction.WARN
+                else "deny"
+            )
             lines.append(f"{rego_action} if {{")
             lines.append(f"    {body}")
             lines.append("}")
@@ -851,7 +852,9 @@ class DharmaRulesEngine:
 
         for idx, rule in enumerate(rules, 1):
             lines.append(f"// Rule {idx}: {rule.name}")
-            lines.append(f"// Profile: {rule.profile} | Tier: {rule.tier.value} | Severity: {rule.severity}")
+            lines.append(
+                f"// Profile: {rule.profile} | Tier: {rule.tier.value} | Severity: {rule.severity}"
+            )
             lines.append("permit(")
             lines.append("  principal,")
             lines.append("  action,")
@@ -882,9 +885,11 @@ class DharmaRulesEngine:
     def get_rules(self, profile: str | None = None) -> list[dict[str, Any]]:
         """List rules, optionally filtered by profile."""
         with self._lock:
-            rules = self._rules if profile is None else [
-                r for r in self._rules if r.profile == profile
-            ]
+            rules = (
+                self._rules
+                if profile is None
+                else [r for r in self._rules if r.profile == profile]
+            )
             return [
                 {
                     "name": r.name,
@@ -918,10 +923,6 @@ class DharmaRulesEngine:
             with self._lock:
                 self._rules.append(rule)
             logger.info("Dharma rule added at runtime: %s", rule.name, exc_info=True)
-
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
 
     def check_reload(self) -> bool:
         """Check if any rule files changed on disk; reload if so. Returns True if reloaded."""
@@ -975,8 +976,8 @@ class DharmaRulesEngine:
         # 3. Rules directory (drop-in .yaml/.yml files)
         if self._rules_dir and self._rules_dir.is_dir():
             files = sorted(
-                list(self._rules_dir.glob("*.yaml")) +
-                list(self._rules_dir.glob("*.yml")),
+                list(self._rules_dir.glob("*.yaml"))
+                + list(self._rules_dir.glob("*.yml")),
             )
             for f in files:
                 self._load_yaml_file(f, all_entries, new_mtimes)
@@ -1005,10 +1006,15 @@ class DharmaRulesEngine:
         if not sources:
             sources.append("built-in defaults")
 
-        logger.info("Dharma rules engine: %s rules loaded from %s", len(rules), ', '.join(sources))
+        logger.info(
+            "Dharma rules engine: %s rules loaded from %s",
+            len(rules),
+            ", ".join(sources),
+        )
 
     def _load_yaml_file(
-        self, path: Path,
+        self,
+        path: Path,
         entries: list[dict[str, Any]],
         mtimes: dict[str, float],
     ) -> None:
@@ -1017,23 +1023,29 @@ class DharmaRulesEngine:
             raw = path.read_text(encoding="utf-8")
             data = yaml.safe_load(raw)
             if isinstance(data, dict):
-                # Phase 1: schema version validation
                 spec_version = data.get("dharma_spec_version")
                 if spec_version and spec_version not in ("0.1.0", "0.2.0"):
                     logger.warning(
                         "Dharma rules %s: unknown spec version %r. "
                         "Expected 0.1.0 or 0.2.0",
-                        path.name, spec_version,
+                        path.name,
+                        spec_version,
                     )
-                # Phase 1: extends inheritance (store for future resolution)
                 extends = data.get("extends")
                 if extends:
-                    logger.debug("Dharma rules %s: extends profile '%s'", path.name, extends, exc_info=True)
+                    logger.debug(
+                        "Dharma rules %s: extends profile '%s'",
+                        path.name,
+                        extends,
+                        exc_info=True,
+                    )
                 entries.extend(data.get("rules", []))
             mtimes[str(path)] = path.stat().st_mtime
             logger.debug("Dharma rules: loaded %s", path.name, exc_info=True)
         except Exception as e:
-            logger.warning("Failed to load Dharma rules from %s: %s", path, e, exc_info=True)
+            logger.warning(
+                "Failed to load Dharma rules from %s: %s", path, e, exc_info=True
+            )
 
     def _parse_rule(self, entry: dict[str, Any]) -> DharmaRule | None:
         """Parse a single rule dict into a DharmaRule."""
@@ -1044,7 +1056,6 @@ class DharmaRulesEngine:
             except ValueError:
                 action = DharmaAction.LOG
 
-            # Phase 2: Parse tier
             tier_raw = entry.get("tier", 1)
             try:
                 tier = DharmaTier(int(tier_raw))
@@ -1073,10 +1084,6 @@ class DharmaRulesEngine:
             return None
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _engine: DharmaRulesEngine | None = None
 _engine_lock = threading.Lock()
 
@@ -1088,6 +1095,7 @@ def get_rules_engine(rules_path: Path | None = None) -> DharmaRulesEngine:
         with _engine_lock:
             if _engine is None:
                 from whitemagic.config.paths import WM_ROOT
+
                 # Check for user-provided single rules file
                 if rules_path is None:
                     candidate = WM_ROOT / "dharma_rules.yaml"
@@ -1102,7 +1110,12 @@ def get_rules_engine(rules_path: Path | None = None) -> DharmaRulesEngine:
                     rules_dir=rules_dir,
                 )
                 # R&D mode: auto-switch to research profile
-                if os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
+                if os.getenv("WM_RD_MODE", "").strip().lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                ):
                     _engine.set_profile("research")
                     logger.info("WM_RD_MODE=1: Dharma profile set to 'research'")
     return _engine

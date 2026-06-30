@@ -44,7 +44,8 @@ class GardenSynthesis:
 
         # Find dominant themes
         active_gardens = [
-            name for name, state in garden_states.items()
+            name
+            for name, state in garden_states.items()
             if isinstance(state, dict) and "error" not in state
         ]
 

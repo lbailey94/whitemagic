@@ -56,6 +56,7 @@ EVENT_NAMES = {v: k for k, v in EVENT_TYPES.items()}
 @dataclass
 class RingEvent:
     """An event read from the ring buffer."""
+
     sequence: int
     event_type: str
     source_id: int
@@ -73,6 +74,7 @@ class RingEvent:
 @dataclass
 class _FallbackSlot:
     """A slot in the Python fallback ring."""
+
     sequence: int = 0
     event_type: int = 0
     source_id: int = 0
@@ -93,7 +95,9 @@ class _FallbackRing:
         self._total_published = 0
         self._total_consumed = 0
 
-    def publish(self, event_type: int, source_id: int, confidence: float, data: bytes) -> int:
+    def publish(
+        self, event_type: int, source_id: int, confidence: float, data: bytes
+    ) -> int:
         with self._lock:
             self._sequence += 1
             slot = _FallbackSlot(
@@ -161,6 +165,7 @@ class EventRingBridge:
     def _try_rust(self) -> None:
         try:
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "ring_publish"):
                 self._rust_available = True
                 logger.info("🦀 EventRing: Rust LMAX path active")
@@ -183,7 +188,10 @@ class EventRingBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                sequence = getattr(whitemagic_rs, "ring_publish")(type_id, source, confidence, data)
+
+                sequence = getattr(whitemagic_rs, "ring_publish")(
+                    type_id, source, confidence, data
+                )
                 if isinstance(sequence, (int, float)):
                     return int(sequence)
             except Exception:
@@ -198,6 +206,7 @@ class EventRingBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 consumer_id = getattr(whitemagic_rs, "ring_register_consumer")()
                 if isinstance(consumer_id, (int, float)):
                     return int(consumer_id)
@@ -213,6 +222,7 @@ class EventRingBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 raw = getattr(whitemagic_rs, "ring_poll")(consumer_id, max_events)
                 return [
                     RingEvent(
@@ -248,6 +258,7 @@ class EventRingBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 stats = getattr(whitemagic_rs, "ring_stats")()
                 if isinstance(stats, dict):
                     return stats

@@ -1,5 +1,5 @@
-"""NurturingEngine package.
-"""
+"""NurturingEngine package."""
+
 from .nurturing_engine import (
     NurturingEngine,
     UserPreference,

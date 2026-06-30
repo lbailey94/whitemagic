@@ -18,13 +18,30 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Galaxy name (alphanumeric, hyphens, underscores)", "default": "main"},
-                "path": {"type": "string", "description": "Optional project directory this galaxy is associated with"},
-                "description": {"type": "string", "description": "Human-readable description"},
-                "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for categorization"},
+                "name": {
+                    "type": "string",
+                    "description": "Galaxy name (alphanumeric, hyphens, underscores)",
+                    "default": "main",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional project directory this galaxy is associated with",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Human-readable description",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tags for categorization",
+                },
             },
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.switch",
@@ -37,10 +54,17 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Galaxy name to switch to", "default": "main"},
+                "name": {
+                    "type": "string",
+                    "description": "Galaxy name to switch to",
+                    "default": "main",
+                },
             },
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.list",
@@ -48,7 +72,10 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYSTEM,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.status",
@@ -56,7 +83,10 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYSTEM,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.ingest",
@@ -69,14 +99,37 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Galaxy name to ingest into", "default": "main"},
-                "source_path": {"type": "string", "description": "Directory path to ingest from", "default": "."},
-                "pattern": {"type": "string", "default": "**/*.md", "description": "Glob pattern for files"},
-                "max_files": {"type": "integer", "default": 500, "description": "Max files to ingest"},
-                "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags to apply to all ingested memories"},
+                "name": {
+                    "type": "string",
+                    "description": "Galaxy name to ingest into",
+                    "default": "main",
+                },
+                "source_path": {
+                    "type": "string",
+                    "description": "Directory path to ingest from",
+                    "default": ".",
+                },
+                "pattern": {
+                    "type": "string",
+                    "default": "**/*.md",
+                    "description": "Glob pattern for files",
+                },
+                "max_files": {
+                    "type": "integer",
+                    "default": 500,
+                    "description": "Max files to ingest",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tags to apply to all ingested memories",
+                },
             },
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.delete",
@@ -86,10 +139,17 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Galaxy name to remove", "default": ""},
+                "name": {
+                    "type": "string",
+                    "description": "Galaxy name to remove",
+                    "default": "",
+                },
             },
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     # ── v23.1: 6D Holographic Galaxy Router ──────────────────────────
     ToolDefinition(
@@ -103,12 +163,21 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "subsystem": {"type": "string", "description": "Name of the cognitive subsystem (e.g. 'dream_cycle', 'emergence_engine')"},
-                "metadata": {"type": "object", "description": "Optional metadata with explicit galaxy override"},
+                "subsystem": {
+                    "type": "string",
+                    "description": "Name of the cognitive subsystem (e.g. 'dream_cycle', 'emergence_engine')",
+                },
+                "metadata": {
+                    "type": "object",
+                    "description": "Optional metadata with explicit galaxy override",
+                },
             },
             "required": ["subsystem"],
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.stats",
@@ -121,10 +190,17 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "galaxy": {"type": "string", "description": "Galaxy name (e.g. 'universal', 'self_learning', 'oracle')", "default": "universal"},
+                "galaxy": {
+                    "type": "string",
+                    "description": "Galaxy name (e.g. 'universal', 'self_learning', 'oracle')",
+                    "default": "universal",
+                },
             },
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.migrate",
@@ -137,12 +213,21 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "memory_id": {"type": "string", "description": "ID of the memory to migrate"},
-                "target_galaxy": {"type": "string", "description": "Destination galaxy name"},
+                "memory_id": {
+                    "type": "string",
+                    "description": "ID of the memory to migrate",
+                },
+                "target_galaxy": {
+                    "type": "string",
+                    "description": "Destination galaxy name",
+                },
             },
             "required": ["memory_id", "target_galaxy"],
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.list_types",
@@ -153,7 +238,10 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYSTEM,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.export",
@@ -167,12 +255,24 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "galaxy": {"type": "string", "description": "Galaxy to export (default: universal)"},
-                "memory_type": {"type": "string", "description": "Filter by memory type (optional)"},
-                "limit": {"type": "integer", "description": "Max memories to export (default: 10000)"},
+                "galaxy": {
+                    "type": "string",
+                    "description": "Galaxy to export (default: universal)",
+                },
+                "memory_type": {
+                    "type": "string",
+                    "description": "Filter by memory type (optional)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max memories to export (default: 10000)",
+                },
             },
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
     ToolDefinition(
         name="galaxy.import",
@@ -186,10 +286,16 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "ipc_bytes_b64": {"type": "string", "description": "Base64-encoded Arrow IPC bytes"},
+                "ipc_bytes_b64": {
+                    "type": "string",
+                    "description": "Base64-encoded Arrow IPC bytes",
+                },
             },
             "required": ["ipc_bytes_b64"],
         },
-        gana="Void", garden="stillness", quadrant="northern", element="water",
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
     ),
 ]

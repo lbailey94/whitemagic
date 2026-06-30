@@ -19,6 +19,7 @@ Mapping:
 | Enrichment    | Posterior refinement    | P(θ | e) ← P(θ | e, new_evidence)       |
 | Harmonize     | Convergence check       | ‖P(θ_t) - P(θ_{t-1})‖ < ε               |
 """
+
 from __future__ import annotations
 
 import math
@@ -109,6 +110,7 @@ BAYESIAN_ROLE_MAP: dict[str, dict[str, str]] = {
 @dataclass
 class PhaseResult:
     """Result of a single dream phase execution."""
+
     phase: str
     bayesian_role: str
     math: str
@@ -121,6 +123,7 @@ class PhaseResult:
 @dataclass
 class BayesianDreamResult:
     """Result of a complete Bayesian dream cycle."""
+
     cycle_id: str
     phases: list[PhaseResult] = field(default_factory=list)
     converged: bool = False
@@ -260,7 +263,9 @@ def run_bayesian_dream(
             elif phase_name == "kaizen":
                 # Action selection: pick action with highest expected utility
                 phase_result.posterior_value = prior
-                phase_result.metadata["selected_action"] = "improve" if prior > 0.5 else "observe"
+                phase_result.metadata["selected_action"] = (
+                    "improve" if prior > 0.5 else "observe"
+                )
 
             elif phase_name == "oracle":
                 # Expert prior injection: blend with grimoire prior (0.5 default)
@@ -271,7 +276,7 @@ def run_bayesian_dream(
 
             elif phase_name == "decay":
                 # Posterior forgetting: P(θ) ← P(θ)^γ
-                prior = prior ** decay_gamma
+                prior = prior**decay_gamma
                 # Renormalize: if prior was 0.5, 0.5^0.9 ≈ 0.536, need to recenter
                 prior = max(0.01, min(0.99, prior))
                 phase_result.prior_update = prior
@@ -293,7 +298,9 @@ def run_bayesian_dream(
 
             elif phase_name == "harmonize":
                 # Convergence check
-                converged, delta = check_convergence(prior, prev_posterior, convergence_epsilon)
+                converged, delta = check_convergence(
+                    prior, prev_posterior, convergence_epsilon
+                )
                 phase_result.posterior_value = prior
                 phase_result.metadata["delta"] = delta
                 phase_result.metadata["converged"] = converged

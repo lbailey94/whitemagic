@@ -12,6 +12,7 @@ Layers:
 Each layer sends prediction errors upward and predictions downward.
 Anomalies at each level have different implications.
 """
+
 from __future__ import annotations
 
 import math
@@ -22,6 +23,7 @@ from typing import Any
 @dataclass
 class PredictionError:
     """A single prediction error at a specific layer."""
+
     layer: int
     layer_name: str
     predicted: float
@@ -35,6 +37,7 @@ class PredictionError:
 @dataclass
 class LayerState:
     """State of a single predictive coding layer."""
+
     layer: int
     name: str
     predicted_value: float = 0.0
@@ -53,7 +56,9 @@ class LayerState:
         if len(self.error_history) < 2:
             return 0.0
         mean = self.mean_error
-        return sum((e.error - mean) ** 2 for e in self.error_history) / (len(self.error_history) - 1)
+        return sum((e.error - mean) ** 2 for e in self.error_history) / (
+            len(self.error_history) - 1
+        )
 
     @property
     def is_anomalous(self) -> bool:
@@ -72,10 +77,24 @@ class PredictiveCodingModel:
 
     def __init__(self) -> None:
         self._layers: dict[int, LayerState] = {
-            1: LayerState(layer=1, name="operational", predicted_value=0.0, anomaly_threshold=2.0),
-            2: LayerState(layer=2, name="strategic", predicted_value=0.0, anomaly_threshold=2.0),
-            3: LayerState(layer=3, name="meta_cognitive", predicted_value=0.2, anomaly_threshold=1.5),
-            4: LayerState(layer=4, name="self_referential", predicted_value=0.0, anomaly_threshold=2.0),
+            1: LayerState(
+                layer=1, name="operational", predicted_value=0.0, anomaly_threshold=2.0
+            ),
+            2: LayerState(
+                layer=2, name="strategic", predicted_value=0.0, anomaly_threshold=2.0
+            ),
+            3: LayerState(
+                layer=3,
+                name="meta_cognitive",
+                predicted_value=0.2,
+                anomaly_threshold=1.5,
+            ),
+            4: LayerState(
+                layer=4,
+                name="self_referential",
+                predicted_value=0.0,
+                anomaly_threshold=2.0,
+            ),
         }
 
     def set_prediction(self, layer: int, value: float, confidence: float = 0.5) -> None:
@@ -90,7 +109,9 @@ class PredictiveCodingModel:
             self._layers[layer].predicted_value = value
             self._layers[layer].confidence = confidence
 
-    def compute_error(self, layer: int, actual: float, timestamp: float = 0.0) -> PredictionError:
+    def compute_error(
+        self, layer: int, actual: float, timestamp: float = 0.0
+    ) -> PredictionError:
         """Compute prediction error for a layer.
 
         Args:
@@ -104,20 +125,25 @@ class PredictiveCodingModel:
         state = self._layers.get(layer)
         if state is None:
             return PredictionError(
-                layer=layer, layer_name="unknown",
-                predicted=0.0, actual=actual,
-                error=actual, squared_error=actual**2,
+                layer=layer,
+                layer_name="unknown",
+                predicted=0.0,
+                actual=actual,
+                error=actual,
+                squared_error=actual**2,
             )
 
         error = actual - state.predicted_value
-        squared = error ** 2
+        squared = error**2
 
         # Check for anomaly using z-score
         anomaly = False
         if state.error_variance > 0:
             z_score = abs(error) / math.sqrt(state.error_variance)
             anomaly = z_score > state.anomaly_threshold
-        elif abs(error) > state.anomaly_threshold * 0.1:  # No history → use raw threshold
+        elif (
+            abs(error) > state.anomaly_threshold * 0.1
+        ):  # No history → use raw threshold
             anomaly = True
 
         pe = PredictionError(

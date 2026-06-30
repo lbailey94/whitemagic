@@ -129,15 +129,17 @@ def find_constellation_for_memory(memory_id: str) -> dict[str, Any] | None:
     memberships = []
     for c in constellations:
         if memory_id in c.member_ids:
-            memberships.append({
-                "name": c.name,
-                "size": len(c.member_ids),
-                "centroid": {
-                    "x": round(c.centroid[0], 3),
-                    "y": round(c.centroid[1], 3),
-                    "z": round(c.centroid[2], 3),
-                },
-            })
+            memberships.append(
+                {
+                    "name": c.name,
+                    "size": len(c.member_ids),
+                    "centroid": {
+                        "x": round(c.centroid[0], 3),
+                        "y": round(c.centroid[1], 3),
+                        "z": round(c.centroid[2], 3),
+                    },
+                }
+            )
 
     if not memberships:
         return None
@@ -183,16 +185,18 @@ def list_constellations_in_region(
             in_range = False
 
         if in_range:
-            results.append({
-                "name": c.name,
-                "size": len(c.member_ids),
-                "centroid": {
-                    "x": round(x, 3),
-                    "y": round(y, 3),
-                    "z": round(z, 3),
-                },
-                "dominant_tags": c.dominant_tags[:3],
-            })
+            results.append(
+                {
+                    "name": c.name,
+                    "size": len(c.member_ids),
+                    "centroid": {
+                        "x": round(x, 3),
+                        "y": round(y, 3),
+                        "z": round(z, 3),
+                    },
+                    "dominant_tags": c.dominant_tags[:3],
+                }
+            )
 
     return results
 
@@ -230,7 +234,13 @@ def compare_constellations(name1: str, name2: str) -> dict[str, Any]:
     x1, y1, z1, w1, v1 = c1.centroid
     x2, y2, z2, w2, v2 = c2.centroid
 
-    distance = ((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2 + (w1-w2)**2 + (v1-v2)**2) ** 0.5
+    distance = (
+        (x1 - x2) ** 2
+        + (y1 - y2) ** 2
+        + (z1 - z2) ** 2
+        + (w1 - w2) ** 2
+        + (v1 - v2) ** 2
+    ) ** 0.5
 
     # Differences per axis
     axis_diffs = {
@@ -301,12 +311,14 @@ def get_constellation_summary() -> dict[str, Any]:
         zones[zone] = zones.get(zone, 0) + 1
         total_memories += len(c.member_ids)
 
-        summaries.append({
-            "name": c.name,
-            "size": len(c.member_ids),
-            "zone": zone,
-            "summary": interp["summary"],
-        })
+        summaries.append(
+            {
+                "name": c.name,
+                "size": len(c.member_ids),
+                "zone": zone,
+                "summary": interp["summary"],
+            }
+        )
 
     return {
         "constellation_count": len(constellations),

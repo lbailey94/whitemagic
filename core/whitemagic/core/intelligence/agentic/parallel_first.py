@@ -5,6 +5,7 @@ BRAIN UPGRADE #5.
 Old: Sequential by default, parallel optional
 New: PARALLEL by default, sequential only when necessary
 """
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
@@ -20,6 +21,7 @@ class TaskResult:
     result: Any
     duration_ms: float
 
+
 class ParallelFirst:
     """Parallel execution by default.
     Sequential only when dependencies require it.
@@ -27,6 +29,7 @@ class ParallelFirst:
 
     def __init__(self, max_workers: int | None = None):
         from whitemagic.config.concurrency import IO_WORKERS
+
         self.max_workers = max_workers or IO_WORKERS
         self.mode = "PARALLEL"  # Always start parallel!
         self.tasks_run = 0
@@ -75,19 +78,23 @@ class ParallelFirst:
                 start = datetime.now()
                 try:
                     result = future.result()
-                    results.append(TaskResult(
-                        task_id=task_id,
-                        success=True,
-                        result=result,
-                        duration_ms=(datetime.now() - start).total_seconds() * 1000,
-                    ))
+                    results.append(
+                        TaskResult(
+                            task_id=task_id,
+                            success=True,
+                            result=result,
+                            duration_ms=(datetime.now() - start).total_seconds() * 1000,
+                        )
+                    )
                 except Exception as e:
-                    results.append(TaskResult(
-                        task_id=task_id,
-                        success=False,
-                        result=str(e),
-                        duration_ms=(datetime.now() - start).total_seconds() * 1000,
-                    ))
+                    results.append(
+                        TaskResult(
+                            task_id=task_id,
+                            success=False,
+                            result=str(e),
+                            duration_ms=(datetime.now() - start).total_seconds() * 1000,
+                        )
+                    )
 
         self.tasks_run += len(tasks)
         return results
@@ -108,20 +115,24 @@ class ParallelFirst:
             start = datetime.now()
             try:
                 result = task["func"](*task.get("args", ()))
-                results.append(TaskResult(
-                    task_id=task["id"],
-                    success=True,
-                    result=result,
-                    duration_ms=(datetime.now() - start).total_seconds() * 1000,
-                ))
+                results.append(
+                    TaskResult(
+                        task_id=task["id"],
+                        success=True,
+                        result=result,
+                        duration_ms=(datetime.now() - start).total_seconds() * 1000,
+                    )
+                )
                 completed.add(task["id"])
             except Exception as e:
-                results.append(TaskResult(
-                    task_id=task["id"],
-                    success=False,
-                    result=str(e),
-                    duration_ms=(datetime.now() - start).total_seconds() * 1000,
-                ))
+                results.append(
+                    TaskResult(
+                        task_id=task["id"],
+                        success=False,
+                        result=str(e),
+                        duration_ms=(datetime.now() - start).total_seconds() * 1000,
+                    )
+                )
 
         self.tasks_run += len(tasks)
         return results
@@ -143,12 +154,14 @@ class ParallelFirst:
 # Singleton
 _parallel = None
 
+
 def get_parallel_first() -> ParallelFirst:
     """Get the global Parallel-First executor."""
     global _parallel
     if _parallel is None:
         _parallel = ParallelFirst()
     return _parallel
+
 
 # Convenience function
 def parallel_do(tasks: list[dict]) -> list[TaskResult]:

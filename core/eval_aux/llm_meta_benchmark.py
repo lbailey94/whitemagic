@@ -44,7 +44,6 @@ class LLMMetaBenchmark:
     def get_test_cases(self) -> List[Dict[str, Any]]:
         """Get comprehensive test cases across different domains."""
         return [
-            # === Code Understanding ===
             {
                 "category": "code_understanding",
                 "query": "What does the @property decorator do in Python?",
@@ -58,7 +57,6 @@ class LLMMetaBenchmark:
                 "keywords": ["async", "await", "coroutine", "asynchronous"],
             },
             
-            # === Code Generation ===
             {
                 "category": "code_generation",
                 "query": "Write a Python function to calculate fibonacci numbers",
@@ -72,7 +70,6 @@ class LLMMetaBenchmark:
                 "keywords": ["def", "reverse", "return", "slice"],
             },
             
-            # === Debugging ===
             {
                 "category": "debugging",
                 "query": "Why does this fail: x = [1,2,3]; print(x[3])",
@@ -86,7 +83,6 @@ class LLMMetaBenchmark:
                 "keywords": ["SyntaxError", "colon", "missing", ":"],
             },
             
-            # === Architecture ===
             {
                 "category": "architecture",
                 "query": "What is the difference between composition and inheritance?",
@@ -100,7 +96,6 @@ class LLMMetaBenchmark:
                 "keywords": ["singleton", "one instance", "global", "pattern"],
             },
             
-            # === WhiteMagic Specific ===
             {
                 "category": "whitemagic",
                 "query": "What are the 28 Ganas in WhiteMagic?",
@@ -114,7 +109,6 @@ class LLMMetaBenchmark:
                 "keywords": ["Dharma", "ethical", "consent", "harmony"],
             },
             
-            # === Reasoning ===
             {
                 "category": "reasoning",
                 "query": "If all A are B, and all B are C, are all A also C?",
@@ -128,7 +122,6 @@ class LLMMetaBenchmark:
                 "keywords": ["32", "powers", "double", "2"],
             },
             
-            # === Factual Knowledge ===
             {
                 "category": "factual",
                 "query": "What is the capital of France?",
@@ -142,7 +135,6 @@ class LLMMetaBenchmark:
                 "keywords": ["366"],
             },
             
-            # === Creative ===
             {
                 "category": "creative",
                 "query": "Write a haiku about coding",

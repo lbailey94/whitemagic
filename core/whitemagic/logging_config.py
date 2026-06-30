@@ -19,10 +19,12 @@ _jsonlogger: ModuleType | None = None
 _jsonlogger_imported: ModuleType | None = None
 try:
     from pythonjsonlogger import json as _jsonlogger_json
+
     _jsonlogger_imported = _jsonlogger_json
 except ImportError:
     try:
         from pythonjsonlogger import jsonlogger as _jsonlogger_legacy  # <3.0 fallback
+
         _jsonlogger_imported = _jsonlogger_legacy
     except ImportError:
         # Optional dependency
@@ -34,6 +36,7 @@ jsonlogger: ModuleType | None = _jsonlogger
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
 
 class WhiteMagicLogger:
     """Centralized logging configuration for WhiteMagic"""
@@ -48,7 +51,7 @@ class WhiteMagicLogger:
         self,
         level: str = "INFO",
         environment: str = "development",
-        log_to_file: bool = True
+        log_to_file: bool = True,
     ) -> None:
         """Setup logging configuration"""
 
@@ -76,37 +79,35 @@ class WhiteMagicLogger:
                 "json": json_formatter,
                 "detailed": {
                     "format": "%(asctime)s [%(levelname)8s] %(name)s: %(message)s (%(filename)s:%(lineno)d)",
-                    "datefmt": "%Y-%m-%d %H:%M:%S"
+                    "datefmt": "%Y-%m-%d %H:%M:%S",
                 },
-                "simple": {
-                    "format": "%(levelname)s - %(message)s"
-                }
+                "simple": {"format": "%(levelname)s - %(message)s"},
             },
             "handlers": {
                 "console": {
                     "class": "logging.StreamHandler",
                     "level": level,
                     "formatter": "json" if environment == "production" else "detailed",
-                    "stream": sys.stderr
+                    "stream": sys.stderr,
                 }
             },
             "loggers": {
                 "": {  # Root logger
                     "level": level,
                     "handlers": ["console"],
-                    "propagate": False
+                    "propagate": False,
                 },
                 "whitemagic": {
                     "level": level,
                     "handlers": ["console"],
-                    "propagate": False
+                    "propagate": False,
                 },
                 "uvicorn": {
                     "level": "INFO",
                     "handlers": ["console"],
-                    "propagate": False
-                }
-            }
+                    "propagate": False,
+                },
+            },
         }
 
         # Add file handlers if enabled
@@ -119,7 +120,7 @@ class WhiteMagicLogger:
                 "filename": str(self.log_dir / "whitemagic.log"),
                 "maxBytes": 10485760,  # 10MB
                 "backupCount": 5,
-                "encoding": "utf8"
+                "encoding": "utf8",
             }
 
             # Error log
@@ -130,7 +131,7 @@ class WhiteMagicLogger:
                 "filename": self.log_dir / "errors.log",
                 "maxBytes": 10485760,  # 10MB
                 "backupCount": 5,
-                "encoding": "utf8"
+                "encoding": "utf8",
             }
 
             # Add file handlers to loggers
@@ -159,8 +160,10 @@ class WhiteMagicLogger:
             self.setup_logging()
         return logging.getLogger(name)
 
+
 # Singleton instance
 _logger_instance: WhiteMagicLogger | None = None
+
 
 def get_logger(name: str | None = None) -> logging.Logger:
     """Get a logger instance"""
@@ -172,6 +175,7 @@ def get_logger(name: str | None = None) -> logging.Logger:
         return _logger_instance.get_logger(name)
     return _logger_instance.get_logger("whitemagic")
 
+
 def setup_logging(**kwargs: Any) -> None:
     """Setup logging configuration"""
     global _logger_instance
@@ -179,17 +183,22 @@ def setup_logging(**kwargs: Any) -> None:
         _logger_instance = WhiteMagicLogger()
     _logger_instance.setup_logging(**kwargs)
 
+
 # Convenience decorators
 def log_function_call(
     logger: logging.Logger | None = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator to log function calls"""
+
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         """Build a wrapper that logs entry/exit and re-raises exceptions with stack info."""
+
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             log = logger or get_logger(func.__module__)
-            log.debug("Calling %s", func.__name__, extra={"args": args, "kwargs": kwargs})
+            log.debug(
+                "Calling %s", func.__name__, extra={"args": args, "kwargs": kwargs}
+            )
             try:
                 result = func(*args, **kwargs)
                 log.debug("Completed %s", func.__name__)
@@ -198,8 +207,11 @@ def log_function_call(
                 logger.debug("Operation failed: %s", e)  # type: ignore[union-attr]
                 log.error("Error in %s", func.__name__, exc_info=True)
                 raise
+
         return wrapper
+
     return decorator
+
 
 def log_performance(
     logger: logging.Logger | None = None,
@@ -209,6 +221,7 @@ def log_performance(
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         """Build a wrapper that times the wrapped call and logs the duration in seconds."""
+
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             log = logger or get_logger(func.__module__)
@@ -222,8 +235,8 @@ def log_performance(
                     extra={
                         "function": func.__name__,
                         "duration_ms": duration * 1000,
-                        "success": True
-                    }
+                        "success": True,
+                    },
                 )
                 return result
             except Exception as e:
@@ -235,12 +248,15 @@ def log_performance(
                         "function": func.__name__,
                         "duration_ms": duration * 1000,
                         "success": False,
-                        "error": str(e)
-                    }
+                        "error": str(e),
+                    },
                 )
                 raise
+
         return wrapper
+
     return decorator
+
 
 # Context manager for logging operations
 class LogContext:
@@ -262,6 +278,7 @@ class LogContext:
         exc_tb: Any,
     ) -> None:
         self.adapter = None
+
 
 # Example usage:
 if __name__ == "__main__":
@@ -286,6 +303,7 @@ if __name__ == "__main__":
     def slow_function() -> str:
         """Demo function used in __main__ to exercise the log_performance decorator."""
         import time
+
         time.sleep(0.1)
         return "done"
 

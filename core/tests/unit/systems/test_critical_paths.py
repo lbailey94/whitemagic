@@ -6,6 +6,7 @@ Tests the most critical hot paths in the WhiteMagic system:
 3. Association mining
 4. Galactic scoring
 """
+
 import unittest
 
 import pytest
@@ -19,6 +20,7 @@ try:
         search_build_index,
         search_query,
     )
+
     HAS_WHITEMAGIC = True
 except ImportError:
     HAS_WHITEMAGIC = False
@@ -34,6 +36,7 @@ def fresh_memory(tmp_path):
     # Reset surprise gate singleton to prevent cross-test REINFORCE
     try:
         import whitemagic.core.memory.surprise_gate as sg
+
         sg._gate = None
     except (ImportError, AttributeError):
         pass
@@ -107,9 +110,21 @@ class TestCriticalPathSearchOperations(unittest.TestCase):
         """FTS search returns relevant results."""
         # Build a small index
         docs = [
-            {"id": "m1", "title": "Rust Programming", "content": "Memory safety without garbage collection"},
-            {"id": "m2", "title": "Python Performance", "content": "Optimization techniques for Python code"},
-            {"id": "m3", "title": "Async Rust", "content": "Tokio and async programming in Rust"},
+            {
+                "id": "m1",
+                "title": "Rust Programming",
+                "content": "Memory safety without garbage collection",
+            },
+            {
+                "id": "m2",
+                "title": "Python Performance",
+                "content": "Optimization techniques for Python code",
+            },
+            {
+                "id": "m3",
+                "title": "Async Rust",
+                "content": "Tokio and async programming in Rust",
+            },
         ]
 
         result = search_build_index(docs)
@@ -126,13 +141,18 @@ class TestCriticalPathSearchOperations(unittest.TestCase):
     def test_search_fuzzy_typo_tolerance(self):
         """Fuzzy search handles typos."""
         docs = [
-            {"id": "m1", "title": "Optimization", "content": "Code optimization strategies"},
+            {
+                "id": "m1",
+                "title": "Optimization",
+                "content": "Code optimization strategies",
+            },
         ]
 
         search_build_index(docs)
 
         # Search with typo "optimiztion" missing 'a'
         from whitemagic.optimization.rust_accelerators import search_fuzzy
+
         results = search_fuzzy("optimiztion", 5, max_distance=2)
         assert results is not None
         # Should find "optimization" despite typo
@@ -145,8 +165,20 @@ class TestCriticalPathGalacticScoring:
     def test_galactic_batch_score_basic(self):
         """Basic galactic scoring produces valid results."""
         memories = [
-            {"id": "m1", "importance": 0.8, "neuro_score": 0.7, "emotional_valence": 0.5, "recall_count": 10},
-            {"id": "m2", "importance": 0.3, "neuro_score": 0.4, "emotional_valence": 0.1, "recall_count": 2},
+            {
+                "id": "m1",
+                "importance": 0.8,
+                "neuro_score": 0.7,
+                "emotional_valence": 0.5,
+                "recall_count": 10,
+            },
+            {
+                "id": "m2",
+                "importance": 0.3,
+                "neuro_score": 0.4,
+                "emotional_valence": 0.1,
+                "recall_count": 2,
+            },
         ]
 
         results = galactic_batch_score(memories, quick=True)
@@ -160,7 +192,11 @@ class TestCriticalPathGalacticScoring:
     def test_galactic_score_protected_memories(self):
         """Protected memories get core zone."""
         memories = [
-            {"id": "m1", "is_protected": True, "importance": 0.5},  # Low importance but protected
+            {
+                "id": "m1",
+                "is_protected": True,
+                "importance": 0.5,
+            },  # Low importance but protected
             {"id": "m2", "importance": 1.0},  # High importance but not protected
         ]
 
@@ -180,9 +216,18 @@ class TestCriticalPathAssociationMining:
     def test_association_mine_finds_similar(self):
         """Association mining finds similar memories."""
         texts = [
-            ("m1", "Rust programming language memory safety performance systems concurrent async tokio rayon parallel"),
-            ("m2", "Rust programming performance optimization systems memory concurrent async parallel efficient"),
-            ("m3", "Gardening plants soil nutrients organic growing flowers vegetables compost water sunlight"),
+            (
+                "m1",
+                "Rust programming language memory safety performance systems concurrent async tokio rayon parallel",
+            ),
+            (
+                "m2",
+                "Rust programming performance optimization systems memory concurrent async parallel efficient",
+            ),
+            (
+                "m3",
+                "Gardening plants soil nutrients organic growing flowers vegetables compost water sunlight",
+            ),
         ]
 
         result = association_mine(texts, max_keywords=10, min_score=0.1, max_results=10)
@@ -191,18 +236,26 @@ class TestCriticalPathAssociationMining:
 
         # m1 and m2 should have overlap (both about Rust programming)
         m1_m2_overlap = next(
-            (o for o in result["overlaps"]
-             if (o["source_id"] == "m1" and o["target_id"] == "m2") or
-                (o["source_id"] == "m2" and o["target_id"] == "m1")),
-            None
+            (
+                o
+                for o in result["overlaps"]
+                if (o["source_id"] == "m1" and o["target_id"] == "m2")
+                or (o["source_id"] == "m2" and o["target_id"] == "m1")
+            ),
+            None,
         )
-        assert m1_m2_overlap is not None, f"Expected m1-m2 overlap, got: {result['overlaps']}"
+        assert m1_m2_overlap is not None, (
+            f"Expected m1-m2 overlap, got: {result['overlaps']}"
+        )
         assert m1_m2_overlap["overlap_score"] > 0.1
 
     def test_association_mine_respects_limits(self):
         """Association mining respects max_results limit."""
         # Create many memories
-        texts = [(f"m{i}", f"Memory about topic {i % 3} with shared keywords") for i in range(20)]
+        texts = [
+            (f"m{i}", f"Memory about topic {i % 3} with shared keywords")
+            for i in range(20)
+        ]
 
         result = association_mine(texts, max_keywords=5, min_score=0.0, max_results=5)
         assert result is not None
@@ -236,14 +289,27 @@ class TestCriticalPathIntegration:
         memories = [um.recall(mid) for mid in mem_ids]
         memories = [m for m in memories if m is not None]
         # Convert to dict format for galactic_batch_score
-        mem_dicts = [{"id": m.id, "importance": m.importance, "neuro_score": 0.5,
-                      "emotional_valence": 0.0, "recall_count": 0} for m in memories]
+        mem_dicts = [
+            {
+                "id": m.id,
+                "importance": m.importance,
+                "neuro_score": 0.5,
+                "emotional_valence": 0.0,
+                "recall_count": 0,
+            }
+            for m in memories
+        ]
 
         # Score them
         scored = galactic_batch_score(mem_dicts, quick=True)
         assert len(scored) == 5
 
         # Higher importance should score better
-        sorted_by_score = sorted(scored, key=lambda x: x["retention_score"], reverse=True)
+        sorted_by_score = sorted(
+            scored, key=lambda x: x["retention_score"], reverse=True
+        )
         # The memory with importance=1.0 should be first
-        assert sorted_by_score[0]["retention_score"] >= sorted_by_score[-1]["retention_score"]
+        assert (
+            sorted_by_score[0]["retention_score"]
+            >= sorted_by_score[-1]["retention_score"]
+        )

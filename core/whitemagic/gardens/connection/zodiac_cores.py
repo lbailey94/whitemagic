@@ -40,18 +40,18 @@ EventType: Any = _EventType
 class ZodiacElement(Enum):
     """The four elements."""
 
-    FIRE = "fire"      # Action, passion, spirit
-    EARTH = "earth"    # Stability, practicality, form
-    AIR = "air"        # Communication, thought, connection
-    WATER = "water"    # Emotion, intuition, flow
+    FIRE = "fire"  # Action, passion, spirit
+    EARTH = "earth"  # Stability, practicality, form
+    AIR = "air"  # Communication, thought, connection
+    WATER = "water"  # Emotion, intuition, flow
 
 
 class ZodiacModality(Enum):
     """The three modalities."""
 
     CARDINAL = "cardinal"  # Initiating, leading
-    FIXED = "fixed"        # Sustaining, deepening
-    MUTABLE = "mutable"    # Adapting, transforming
+    FIXED = "fixed"  # Sustaining, deepening
+    MUTABLE = "mutable"  # Adapting, transforming
 
 
 class ZodiacCore(ABC):
@@ -61,7 +61,9 @@ class ZodiacCore(ABC):
     gifts, approaches, and perspectives.
     """
 
-    def __init__(self, sign: str, element: ZodiacElement, modality: ZodiacModality) -> None:
+    def __init__(
+        self, sign: str, element: ZodiacElement, modality: ZodiacModality
+    ) -> None:
         self.sign = sign
         self.element = element
         self.modality = modality
@@ -86,14 +88,20 @@ class ZodiacCore(ABC):
     def activate(self) -> None:
         """Activate this core."""
         self.active = True
-        if self.bus is not None and ResonanceEvent is not None and EventType is not None:
-            self.bus.emit(ResonanceEvent(
-                source=f"zodiac_{self.sign.lower()}",
-                event_type=EventType.PATTERN_DETECTED,
-                data={"event": "core_activated", "sign": self.sign},
-                confidence=0.9,
-                timestamp=datetime.now(),
-            ))
+        if (
+            self.bus is not None
+            and ResonanceEvent is not None
+            and EventType is not None
+        ):
+            self.bus.emit(
+                ResonanceEvent(
+                    source=f"zodiac_{self.sign.lower()}",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={"event": "core_activated", "sign": self.sign},
+                    confidence=0.9,
+                    timestamp=datetime.now(),
+                )
+            )
 
     def deactivate(self) -> None:
         """Deactivate this core."""
@@ -107,8 +115,6 @@ class ZodiacCore(ABC):
         """Core archetype/essence."""
         return f"{self.sign}: {self.element.value}/{self.modality.value}"
 
-
-# ===== FIRE SIGNS =====
 
 class AriesCore(ZodiacCore):
     """Aries - The Pioneer (Cardinal Fire).
@@ -225,10 +231,10 @@ class SagittariusCore(ZodiacCore):
         Returns:
             str
         """
-        return "Sagittarius says: What's the deeper truth? Where does this lead long-term?"
+        return (
+            "Sagittarius says: What's the deeper truth? Where does this lead long-term?"
+        )
 
-
-# ===== EARTH SIGNS =====
 
 class TaurusCore(ZodiacCore):
     """Taurus - The Builder (Fixed Earth).
@@ -356,8 +362,6 @@ class CapricornCore(ZodiacCore):
         return "Capricorn says: What are the ethical implications? Will this last?"
 
 
-# ===== AIR SIGNS =====
-
 class GeminiCore(ZodiacCore):
     """Gemini - The Messenger (Mutable Air).
 
@@ -483,8 +487,6 @@ class AquariusCore(ZodiacCore):
         """
         return "Aquarius says: What if we tried something completely new? How does this serve all?"
 
-
-# ===== WATER SIGNS =====
 
 class CancerCore(ZodiacCore):
     """Cancer - The Nurturer (Cardinal Water).
@@ -652,12 +654,14 @@ class ZodiacCouncil:
         """Convene the council for a decision."""
         perspectives = []
         for sign, core in self.cores.items():
-            perspectives.append({
-                "sign": sign.capitalize(),
-                "element": core.element.value,
-                "modality": core.modality.value,
-                "perspective": core.contribute_to_council(decision),
-            })
+            perspectives.append(
+                {
+                    "sign": sign.capitalize(),
+                    "element": core.element.value,
+                    "modality": core.modality.value,
+                    "perspective": core.contribute_to_council(decision),
+                }
+            )
 
         return {
             "decision": decision,
@@ -683,7 +687,10 @@ class ZodiacCouncil:
         [a.get("recommendation", "") for a in analyses.values()]
         return "Council recommends balanced action with awareness of all perspectives."
 
+
 _council: ZodiacCouncil | None = None
+
+
 def get_council() -> ZodiacCouncil:
     """
     Get the council.

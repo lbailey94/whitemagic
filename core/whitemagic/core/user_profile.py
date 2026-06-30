@@ -168,7 +168,8 @@ class LocalProfileManager:
     def list_profiles(self) -> list[dict[str, Any]]:
         """List all known user profiles."""
         return [
-            p.to_dict() for p in sorted(self._profiles.values(), key=lambda x: x.user_id)
+            p.to_dict()
+            for p in sorted(self._profiles.values(), key=lambda x: x.user_id)
         ]
 
     def get_profile(self, user_id: str) -> UserProfile | None:

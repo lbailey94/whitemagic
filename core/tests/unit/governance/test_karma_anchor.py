@@ -67,13 +67,21 @@ class TestAnchorSnapshot:
         from whitemagic.dharma.karma_anchor import AnchorSnapshot
 
         snap1 = AnchorSnapshot(
-            merkle_root="abc123", chain_head="x", total_debt=0,
-            total_entries=0, chain_valid=True, version="1",
+            merkle_root="abc123",
+            chain_head="x",
+            total_debt=0,
+            total_entries=0,
+            chain_valid=True,
+            version="1",
             timestamp="2026-02-11T00:00:00Z",
         )
         snap2 = AnchorSnapshot(
-            merkle_root="xyz789", chain_head="x", total_debt=0,
-            total_entries=0, chain_valid=True, version="1",
+            merkle_root="xyz789",
+            chain_head="x",
+            total_debt=0,
+            total_entries=0,
+            chain_valid=True,
+            version="1",
             timestamp="2026-02-11T00:00:00Z",
         )
         assert snap1.canonical_hash() != snap2.canonical_hash()
@@ -91,7 +99,10 @@ class TestAnchorHistory:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("whitemagic.dharma.karma_anchor._get_anchor_dir", return_value=Path(tmpdir)):
+            with patch(
+                "whitemagic.dharma.karma_anchor._get_anchor_dir",
+                return_value=Path(tmpdir),
+            ):
                 snap = AnchorSnapshot(
                     merkle_root="test_root",
                     chain_head="test_head",
@@ -134,11 +145,18 @@ class TestSubmitAnchorStub:
         """If XRPL is available but no wallet seed, should error cleanly."""
         from whitemagic.dharma.karma_anchor import submit_anchor
 
-        with patch("whitemagic.dharma.karma_anchor._XRPL_AVAILABLE", True), \
-             patch("whitemagic.dharma.karma_anchor._load_wallet_seed", return_value=None):
+        with (
+            patch("whitemagic.dharma.karma_anchor._XRPL_AVAILABLE", True),
+            patch(
+                "whitemagic.dharma.karma_anchor._load_wallet_seed", return_value=None
+            ),
+        ):
             result = submit_anchor(merkle_root="test")
             assert result["status"] == "error"
-            assert "wallet" in result["reason"].lower() or "seed" in result["reason"].lower()
+            assert (
+                "wallet" in result["reason"].lower()
+                or "seed" in result["reason"].lower()
+            )
 
 
 class TestVerifyAnchorStub:
@@ -200,7 +218,9 @@ class TestWalletSeed:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             seed_dir = Path(tmpdir) / "dharma"
-            with patch("whitemagic.dharma.karma_anchor.Path.home", return_value=Path(tmpdir)):
+            with patch(
+                "whitemagic.dharma.karma_anchor.Path.home", return_value=Path(tmpdir)
+            ):
                 # Force the path resolution to use tmpdir
                 seed_file = seed_dir / "xrpl_seed.txt"
                 seed_dir.mkdir(parents=True, exist_ok=True)
@@ -208,6 +228,8 @@ class TestWalletSeed:
                 seed_file.chmod(0o600)
 
                 # Patch _load_wallet_seed to use our temp path
-                with patch("whitemagic.dharma.karma_anchor._load_wallet_seed") as mock_load:
+                with patch(
+                    "whitemagic.dharma.karma_anchor._load_wallet_seed"
+                ) as mock_load:
                     mock_load.return_value = "sEdVtest123"
                     assert mock_load() == "sEdVtest123"

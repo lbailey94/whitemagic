@@ -6,6 +6,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present gathering (Z-axis 0.0)
 - Fundamental to flourishing (W-axis +0.35)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -59,10 +60,10 @@ class SanghaGarden(BaseGarden, GanYingMixin):
         the space between individuals, fundamental to flourishing.
         """
         return CoordinateBias(
-            x=0.4,   # Warmly relational (sangha is emotionally connecting)
-            y=0.3,   # Relational space (between individuals, collective)
-            z=0.0,   # Present (sangha gathers in the now)
-            w=0.35,   # Fundamental (community enables human flourishing)
+            x=0.4,  # Warmly relational (sangha is emotionally connecting)
+            y=0.3,  # Relational space (between individuals, collective)
+            z=0.0,  # Present (sangha gathers in the now)
+            w=0.35,  # Fundamental (community enables human flourishing)
         )
 
     def gather(self, members: Any, intention: Any = None) -> dict[str, Any]:
@@ -88,7 +89,10 @@ class SanghaGarden(BaseGarden, GanYingMixin):
         """Wisdom shared with sangha."""
         self.share_wisdom(event.data, "collective")
 
+
 _instance = None
+
+
 def get_sangha_garden() -> SanghaGarden:
     """
     Get the sangha garden.
@@ -100,6 +104,7 @@ def get_sangha_garden() -> SanghaGarden:
     if _instance is None:
         _instance = SanghaGarden()
     return _instance
+
 
 __all__ = [
     "CollectiveMemory",

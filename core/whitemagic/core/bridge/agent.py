@@ -71,16 +71,28 @@ def manage_agent_collaboration(
             return {"error": "name, model, and specialty are required"}
         agents = load_registry()
         agents = [a for a in agents if a.get("name") != name]
-        agents.append({
-            "name": name,
-            "model": model,
-            "specialty": specialty,
-            "description": description or "",
-            "channels": channels or [],
-        })
+        agents.append(
+            {
+                "name": name,
+                "model": model,
+                "specialty": specialty,
+                "description": description or "",
+                "channels": channels or [],
+            }
+        )
         save_registry(agents)
-        _emit_resonance_event("COLLABORATION_STARTED", {"agent": name, "specialty": specialty})
-        return {"status": "registered", "agent": {"name": name, "model": model, "specialty": specialty, "channels": len(channels or [])}}
+        _emit_resonance_event(
+            "COLLABORATION_STARTED", {"agent": name, "specialty": specialty}
+        )
+        return {
+            "status": "registered",
+            "agent": {
+                "name": name,
+                "model": model,
+                "specialty": specialty,
+                "channels": len(channels or []),
+            },
+        }
 
     if op == "list_agents":
         agents = load_registry()
@@ -99,7 +111,9 @@ def manage_agent_collaboration(
         }
         with channel_path.open("a") as handle:
             handle.write(json.dumps(message) + "\n")
-        _emit_resonance_event("COLLABORATION_BROADCAST", {"channel": channel, "sender": message["sender"]})
+        _emit_resonance_event(
+            "COLLABORATION_BROADCAST", {"channel": channel, "sender": message["sender"]}
+        )
         return {"status": "broadcasted", "channel": channel, "message": message}
 
     if op == "delegate_task":
@@ -107,7 +121,12 @@ def manage_agent_collaboration(
             return {"error": "task is required for delegate_task"}
 
         # Local-model delegation is archived/disabled by default.
-        if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() not in {"1", "true", "yes", "on"}:
+        if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
             return {
                 "error": "delegate_task requires archived local-model support (disabled by default).",
                 "archived": True,
@@ -117,7 +136,9 @@ def manage_agent_collaboration(
         agents = load_registry()
         selected: dict[str, Any] | None = None
         if preferred_specialty:
-            selected = next((a for a in agents if a.get("specialty") == preferred_specialty), None)
+            selected = next(
+                (a for a in agents if a.get("specialty") == preferred_specialty), None
+            )
         if not selected and agents:
             selected = agents[0]
         if not selected:
@@ -137,7 +158,9 @@ def manage_agent_collaboration(
             "result": str(result_text),
             "method": "direct",
         }
-        _emit_resonance_event("COLLABORATION_DELEGATED", {"task": task, "agent": result.get("agent")})
+        _emit_resonance_event(
+            "COLLABORATION_DELEGATED", {"task": task, "agent": result.get("agent")}
+        )
         return result
 
     return {"error": f"Unknown collaboration operation: {operation}"}

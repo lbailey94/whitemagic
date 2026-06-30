@@ -13,8 +13,10 @@ from __future__ import annotations
 
 from whitemagic.core.intelligence.wisdom.i_ching import (
     Hexagram,
-    IChingAdvisor as IChingSystem,
     get_i_ching,
+)
+from whitemagic.core.intelligence.wisdom.i_ching import (
+    IChingAdvisor as IChingSystem,
 )
 
 __all__ = ["Hexagram", "IChingSystem", "get_i_ching"]

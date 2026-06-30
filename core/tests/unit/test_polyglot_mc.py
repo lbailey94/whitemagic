@@ -1,4 +1,5 @@
 """Tests for Objective S — Polyglot MC Acceleration."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.polyglot_mc import (

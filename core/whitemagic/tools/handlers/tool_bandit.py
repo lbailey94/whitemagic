@@ -17,6 +17,7 @@ Usage:
     # After tool execution:
     bandit.record_outcome("memory.search", success=True)
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,6 +36,7 @@ _RECOMMENDATION_K = 5
 @dataclass
 class ToolStats:
     """Beta posterior parameters for a single tool."""
+
     alpha: float = _DEFAULT_PRIOR_ALPHA
     beta: float = _DEFAULT_PRIOR_BETA
     total_calls: int = 0
@@ -47,6 +49,7 @@ class ToolStats:
         """Sample from Beta(alpha, beta) using numpy if available, else Python."""
         try:
             import numpy as np
+
             return float(np.random.beta(self.alpha, self.beta))
         except ImportError:
             return random.betavariate(self.alpha, self.beta)
@@ -73,7 +76,11 @@ class ToolBandit:
     agent to learn which tools work best for different kinds of tasks.
     """
 
-    def __init__(self, prior_alpha: float = _DEFAULT_PRIOR_ALPHA, prior_beta: float = _DEFAULT_PRIOR_BETA) -> None:
+    def __init__(
+        self,
+        prior_alpha: float = _DEFAULT_PRIOR_ALPHA,
+        prior_beta: float = _DEFAULT_PRIOR_BETA,
+    ) -> None:
         self._prior_alpha = prior_alpha
         self._prior_beta = prior_beta
         self._tools: dict[str, ToolStats] = {}
@@ -132,7 +139,7 @@ class ToolBandit:
             # Quality-weighted Beta update: use fractional alpha/beta increments
             if quality is not None and 0.0 <= quality <= 1.0:
                 stats.alpha += quality
-                stats.beta += (1.0 - quality)
+                stats.beta += 1.0 - quality
             elif success:
                 stats.alpha += 1.0
             else:
@@ -141,10 +148,16 @@ class ToolBandit:
             # Per-task-type tracking
             if task_type:
                 if task_type not in stats.task_type_stats:
-                    stats.task_type_stats[task_type] = (self._prior_alpha, self._prior_beta)
+                    stats.task_type_stats[task_type] = (
+                        self._prior_alpha,
+                        self._prior_beta,
+                    )
                 a, b = stats.task_type_stats[task_type]
                 if quality is not None and 0.0 <= quality <= 1.0:
-                    stats.task_type_stats[task_type] = (a + quality, b + (1.0 - quality))
+                    stats.task_type_stats[task_type] = (
+                        a + quality,
+                        b + (1.0 - quality),
+                    )
                 elif success:
                     stats.task_type_stats[task_type] = (a + 1.0, b)
                 else:
@@ -177,6 +190,7 @@ class ToolBandit:
                     a, b = stats.task_type_stats[task_type]
                     try:
                         import numpy as np
+
                         sample = float(np.random.beta(a, b))
                     except ImportError:
                         sample = random.betavariate(a, b)
@@ -185,12 +199,14 @@ class ToolBandit:
                     sample = stats.sample()
                     ev = stats.expected_value()
 
-                samples.append({
-                    "tool": tool_name,
-                    "sample": round(sample, 4),
-                    "expected_value": round(ev, 4),
-                    "total_calls": stats.total_calls,
-                })
+                samples.append(
+                    {
+                        "tool": tool_name,
+                        "sample": round(sample, 4),
+                        "expected_value": round(ev, 4),
+                        "total_calls": stats.total_calls,
+                    }
+                )
 
             samples.sort(key=lambda x: x["sample"], reverse=True)
             return samples[:k]
@@ -274,10 +290,15 @@ class ToolBandit:
         # If quality not provided, try to extract from metadata
         if quality is None and metadata:
             quality = metadata.get("confidence")
-        self.record_outcome(tool_name, success=success, task_type=task_type, quality=quality)
+        self.record_outcome(
+            tool_name, success=success, task_type=task_type, quality=quality
+        )
         logger.debug(
             "Recorded clone outcome: %s success=%s quality=%s task_type=%s",
-            tool_name, success, quality, task_type,
+            tool_name,
+            success,
+            quality,
+            task_type,
         )
 
     def recommend_clone_strategies(
@@ -304,12 +325,13 @@ class ToolBandit:
             for tool_name, stats in self._tools.items():
                 if not tool_name.startswith(prefix):
                     continue
-                strategy = tool_name[len(prefix):]
+                strategy = tool_name[len(prefix) :]
 
                 if task_type and task_type in stats.task_type_stats:
                     a, b = stats.task_type_stats[task_type]
                     try:
                         import numpy as np
+
                         sample = float(np.random.beta(a, b))
                     except ImportError:
                         sample = random.betavariate(a, b)
@@ -318,12 +340,14 @@ class ToolBandit:
                     sample = stats.sample()
                     ev = stats.expected_value()
 
-                samples.append({
-                    "strategy": strategy,
-                    "sample": round(sample, 4),
-                    "expected_value": round(ev, 4),
-                    "total_calls": stats.total_calls,
-                })
+                samples.append(
+                    {
+                        "strategy": strategy,
+                        "sample": round(sample, 4),
+                        "expected_value": round(ev, 4),
+                        "total_calls": stats.total_calls,
+                    }
+                )
 
             samples.sort(key=lambda x: x["sample"], reverse=True)
             return samples[:k]
@@ -341,10 +365,6 @@ class ToolBandit:
                 "top_tools": self.get_top_tools(5),
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _bandit: ToolBandit | None = None
 _bandit_lock = threading.Lock()

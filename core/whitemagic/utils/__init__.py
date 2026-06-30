@@ -1,4 +1,5 @@
 """WhiteMagic Utilities Package."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -25,16 +26,19 @@ _METRICS_EXPORTS = {"get_tracker", "track_metric"}
 def __getattr__(name: str) -> Any:
     if name in _CORE_EXPORTS:
         from . import core as _core
+
         value = getattr(_core, name)
         globals()[name] = value
         return value
     if name in _FILEIO_EXPORTS:
         from . import fileio as _fileio
+
         value = getattr(_fileio, name)
         globals()[name] = value
         return value
     if name in _METRICS_EXPORTS:
         from .. import metrics as _metrics
+
         value = getattr(_metrics, name)
         globals()[name] = value
         return value

@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConsolidationResult:
     """Result of a consolidation run."""
+
     consolidated: int = 0
     duplicates_removed: int = 0
     archived: int = 0
@@ -50,11 +51,15 @@ class ConsolidationEngine:
         """Check if consolidation should run."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             if hasattr(mem, "count"):
                 count = mem.count()
                 if count > self.short_term_threshold:
-                    return True, f"count={count} > threshold={self.short_term_threshold}"
+                    return (
+                        True,
+                        f"count={count} > threshold={self.short_term_threshold}",
+                    )
         except Exception:
             pass
         return False, "not needed"
@@ -71,10 +76,13 @@ class ConsolidationEngine:
 
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             if hasattr(mem, "consolidate"):
                 consolidated = mem.consolidate()
-                result.consolidated = consolidated if isinstance(consolidated, int) else 0
+                result.consolidated = (
+                    consolidated if isinstance(consolidated, int) else 0
+                )
         except Exception as e:
             result.errors.append(str(e))
             logger.debug("Consolidation error: %s", e)

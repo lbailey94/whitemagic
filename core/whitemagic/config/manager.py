@@ -167,7 +167,9 @@ class WhiteMagicConfig(BaseModel):
     security: SecurityConfig
     cache: CacheConfig = Field(
         default_factory=lambda: CacheConfig(
-            backend="redis", ttl=300, key_prefix="whitemagic:",
+            backend="redis",
+            ttl=300,
+            key_prefix="whitemagic:",
         ),
     )
     monitoring: MonitoringConfig = Field(
@@ -192,7 +194,8 @@ class WhiteMagicConfig(BaseModel):
     @field_validator("security")
     @classmethod
     def validate_security(
-        cls, v: dict[str, Any] | SecurityConfig,
+        cls,
+        v: dict[str, Any] | SecurityConfig,
     ) -> dict[str, Any] | SecurityConfig:
         # Generate secret key if not provided in development
         """
@@ -325,7 +328,11 @@ class ConfigManager:
         except ImportError:
             # Fallback if yaml is not installed
             if filename.endswith(".yaml") or filename.endswith(".yml"):
-                logger.info("Warning: PyYAML not installed, skipping %s", filename, exc_info=True)
+                logger.info(
+                    "Warning: PyYAML not installed, skipping %s",
+                    filename,
+                    exc_info=True,
+                )
                 return None
         except (ImportError, ModuleNotFoundError) as e:
             logger.info("Error loading config file %s: %s", filename, e, exc_info=True)
@@ -390,7 +397,9 @@ class ConfigManager:
         return merged
 
     def _deep_merge(
-        self, base: dict[str, Any], update: dict[str, Any],
+        self,
+        base: dict[str, Any],
+        update: dict[str, Any],
     ) -> dict[str, Any]:
         """Deep merge two dictionaries."""
         result = base.copy()

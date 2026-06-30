@@ -45,10 +45,6 @@ from whitemagic.utils.fast_regex import compile as re_compile
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Abstraction markers
-# ---------------------------------------------------------------------------
-
 # Concrete indicators (lower abstraction)
 _CONCRETE_PATTERNS: list[re.Pattern[str]] = [
     re_compile(r"\b\d{4}[-/]\d{2}[-/]\d{2}\b"),        # dates
@@ -75,10 +71,6 @@ _ABSTRACT_WORDS: frozenset[str] = frozenset({
     "enables", "facilitates", "provides", "supports", "ensures",
 })
 
-
-# ---------------------------------------------------------------------------
-# Result types
-# ---------------------------------------------------------------------------
 
 @dataclass
 class EntropyResult:
@@ -144,20 +136,12 @@ class EntropySweepReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Core scorer
-# ---------------------------------------------------------------------------
-
 class EntropyScorer:
     """Computes entropy and abstraction scores for memory content."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._total_scored: int = 0
-
-    # ------------------------------------------------------------------
-    # Single-text scoring
-    # ------------------------------------------------------------------
 
     def score(self, text: str) -> EntropyResult:
         """Score a single text for entropy and abstraction."""
@@ -173,7 +157,6 @@ class EntropyScorer:
         word_count = len(words)
         unique_words = len(set(words))
 
-        # --- Entropy (normalized Shannon entropy over word frequencies) ---
         freq = Counter(words)
         total = sum(freq.values())
         if total <= 1:
@@ -190,8 +173,6 @@ class EntropyScorer:
         length_factor = min(1.0, word_count / 20.0)
         entropy = min(1.0, entropy * length_factor)
 
-        # --- Vocabulary richness (type-token ratio, adjusted for length) ---
-        # Yule's K approximation: less sensitive to text length than raw TTR
         if word_count > 0:
             vocab_richness = unique_words / word_count
             # Adjust: longer texts naturally have lower TTR
@@ -200,7 +181,6 @@ class EntropyScorer:
         else:
             vocab_richness = 0.0
 
-        # --- Abstraction level ---
         concrete_count = sum(
             len(pat.findall(text)) for pat in _CONCRETE_PATTERNS
         )
@@ -230,10 +210,6 @@ class EntropyScorer:
             concrete_markers=concrete_count,
             abstract_markers=abstract_count,
         )
-
-    # ------------------------------------------------------------------
-    # Batch sweep
-    # ------------------------------------------------------------------
 
     def sweep(self, persist: bool = True, limit: int = 10000) -> EntropySweepReport:
         """Score all memories in the hot DB and optionally persist to metadata.
@@ -300,10 +276,6 @@ class EntropyScorer:
          report.duration_ms)
         return report
 
-    # ------------------------------------------------------------------
-    # Retention evaluator plugin
-    # ------------------------------------------------------------------
-
     def as_retention_evaluator(self) -> Callable[[Any], object]:
         """Return a callable compatible with RetentionEngine evaluators.
 
@@ -326,10 +298,6 @@ class EntropyScorer:
 
         return _entropy_evaluator
 
-    # ------------------------------------------------------------------
-    # Stats
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -339,10 +307,6 @@ class EntropyScorer:
         """
         return {"total_scored": self._total_scored}
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _scorer_instance: EntropyScorer | None = None
 _scorer_lock = threading.Lock()

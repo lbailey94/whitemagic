@@ -1,4 +1,5 @@
 """Tests for Objective Z — Zen Meta-Strategy."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.zen_meta import (

@@ -123,7 +123,14 @@ class PluginRegistry:
         result = []
 
         for plugin in self.plugins.values():
-            if plugin_type == "garden" and plugin.register_gardens() or plugin_type == "synergy" and plugin.register_synergies() or plugin_type == "command" and plugin.register_commands():
+            if (
+                plugin_type == "garden"
+                and plugin.register_gardens()
+                or plugin_type == "synergy"
+                and plugin.register_synergies()
+                or plugin_type == "command"
+                and plugin.register_commands()
+            ):
                 result.append(plugin)
 
         return result

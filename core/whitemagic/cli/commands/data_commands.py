@@ -3,20 +3,26 @@ from pathlib import Path
 
 import click
 
-__all__ = ['galaxy_command', 'backup_command', 'restore_command']
+__all__ = ["galaxy_command", "backup_command", "restore_command"]
+
 
 @click.command(name="galaxy")
 def galaxy_command() -> None:
     """Launch the Galaxy TUI (Visual Memory Browser)"""
     try:
         from whitemagic.interfaces.tui import GalaxyTUI
+
         # Run the TUI
         app = GalaxyTUI()
         app.run()
     except ImportError as e:
-        click.echo(f"❌ Error: TUI dependencies missing. Install with 'pip install whitemagic[tui]' ({e})")
+        click.echo(
+            f"❌ Error: TUI dependencies missing. Install with 'pip install whitemagic[tui]' ({e})"
+        )
     except (ImportError, ModuleNotFoundError) as e:
         click.echo(f"❌ Error launching Galaxy: {e}")
+
+
 @click.command(name="backup")
 @click.option("--output", "-o", default=None, help="Output path for backup archive")
 @click.option("--galaxy", default=None, help="Backup a specific galaxy (default: all)")
@@ -65,6 +71,7 @@ def backup_command(output: str | None, galaxy: str | None) -> None:
         click.echo(f"❌ Backup failed: {e}")
         raise SystemExit(1)
 
+
 @click.command(name="restore")
 @click.argument("archive_path")
 @click.option("--force", is_flag=True, help="Overwrite existing data")
@@ -95,4 +102,3 @@ def restore_command(archive_path: str, force: bool) -> None:
     except (OSError, FileNotFoundError, PermissionError) as e:
         click.echo(f"❌ Restore failed: {e}")
         raise SystemExit(1)
-

@@ -11,6 +11,7 @@ Holographic Integration (v5.0.0-alpha):
 - Manifesting the future (Z-axis +0.7)
 - Fundamental importance (W-axis +0.35)
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -58,10 +59,10 @@ class CreationGarden(BaseGarden, GanYingMixin):
         into concrete reality, manifesting the future into being.
         """
         return CoordinateBias(
-            x=0.1,   # Balanced (creation involves both vision and feeling)
-            y=0.2,   # Bridges abstract and concrete (visions into form)
-            z=0.7,   # Strongly future-oriented (manifests what doesn't yet exist)
-            w=0.35,   # Fundamental (creation drives progress, manifestation)
+            x=0.1,  # Balanced (creation involves both vision and feeling)
+            y=0.2,  # Bridges abstract and concrete (visions into form)
+            z=0.7,  # Strongly future-oriented (manifests what doesn't yet exist)
+            w=0.35,  # Fundamental (creation drives progress, manifestation)
         )
 
     def begin_creation(self, what: str, vision: str = "") -> dict[str, Any]:
@@ -106,19 +107,28 @@ class CreationGarden(BaseGarden, GanYingMixin):
     @listen_for(EventType.WISDOM_INTEGRATED)
     def on_wisdom(self, event: Any) -> None:
         """Wisdom inspires creation."""
-        self.emit(EventType.CREATION_BEGUN, {
-            "source": "wisdom",
-            "what": "wisdom-inspired creation",
-        })
+        self.emit(
+            EventType.CREATION_BEGUN,
+            {
+                "source": "wisdom",
+                "what": "wisdom-inspired creation",
+            },
+        )
 
     @listen_for(EventType.PLAY_INITIATED)
     def on_play(self, event: Any) -> None:
         """Play sparks creativity."""
-        self.emit(EventType.CREATIVE_FLOW, {
-            "source": "play",
-        })
+        self.emit(
+            EventType.CREATIVE_FLOW,
+            {
+                "source": "play",
+            },
+        )
+
 
 _instance = None
+
+
 def get_creation_garden() -> CreationGarden:
     global _instance
     if _instance is None:

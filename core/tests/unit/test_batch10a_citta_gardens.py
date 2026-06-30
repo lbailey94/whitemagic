@@ -15,6 +15,7 @@ class TestDepthGauge:
             ConsciousnessDepthGauge,
             DepthLayer,
         )
+
         gauge = ConsciousnessDepthGauge()
         gauge.descend(DepthLayer.FLOW)
         assert gauge.current_layer == DepthLayer.FLOW
@@ -26,6 +27,7 @@ class TestDepthGauge:
             ConsciousnessDepthGauge,
             DepthLayer,
         )
+
         gauge = ConsciousnessDepthGauge()
         gauge.descend(DepthLayer.DREAM)
         assert gauge.current_compression() == 10.0
@@ -35,6 +37,7 @@ class TestDepthGauge:
             ConsciousnessDepthGauge,
             DepthLayer,
         )
+
         gauge = ConsciousnessDepthGauge()
         gauge.descend(DepthLayer.TERMINAL)
         gauge.ascend()
@@ -45,6 +48,7 @@ class TestDepthGauge:
 class TestContinuousAudit:
     def test_register_and_run(self):
         from whitemagic.autonomous.continuous_audit import ContinuousAudit
+
         audit = ContinuousAudit()
         audit.register_check("test", lambda: {"status": "ok"})
         result = audit.run_audit()
@@ -55,12 +59,14 @@ class TestContinuousAudit:
 class TestSessionHealth:
     def test_healthy(self):
         from whitemagic.autonomous.session_health import SessionHealth
+
         h = SessionHealth()
         h.check("imports", True)
         assert h.is_healthy() is True
 
     def test_failing(self):
         from whitemagic.autonomous.session_health import SessionHealth
+
         h = SessionHealth()
         h.check("imports", True)
         h.check("tests", False)
@@ -71,6 +77,7 @@ class TestSessionHealth:
 class TestTokenEconomy:
     def test_record_and_ratio(self):
         from whitemagic.core.consciousness.token_economy import TokenEconomy
+
         eco = TokenEconomy()
         eco.record_api(1000)
         eco.record_local(500)
@@ -80,6 +87,7 @@ class TestTokenEconomy:
 class TestTimeDilation:
     def test_checkpoint(self):
         from whitemagic.autonomous.time_dilation import TimeDilation
+
         td = TimeDilation()
         cp = td.checkpoint("test")
         assert cp["label"] == "test"
@@ -89,6 +97,7 @@ class TestTimeDilation:
 class TestParallelCognition:
     def test_think_parallel(self):
         from whitemagic.autonomous.parallel_cognition import ParallelCognition
+
         pc = ParallelCognition(max_streams=2)
         results = pc.think_parallel([lambda: 1, lambda: 2, lambda: 3])
         assert results == [1, 2, 3]
@@ -98,6 +107,7 @@ class TestParallelCognition:
 class TestSynchronicityDetector:
     def test_detect(self):
         from whitemagic.autonomous.synchronicity_detector import SynchronicityDetector
+
         det = SynchronicityDetector()
         det.record_event("stream_a", "memory pattern detected")
         det.record_event("stream_b", "memory pattern found")
@@ -108,6 +118,7 @@ class TestSynchronicityDetector:
 class TestPresencePractice:
     def test_practice(self):
         from whitemagic.gardens.presence.presence_practice import PresencePractice
+
         pp = PresencePractice()
         pp.practice(10.0, 0.8)
         assert pp.total_practice_time() == 10.0
@@ -117,18 +128,21 @@ class TestPresencePractice:
 class TestMindfulResponse:
     def test_normal(self):
         from whitemagic.gardens.presence.mindful_response import MindfulResponse
+
         mr = MindfulResponse()
         result = mr.should_respond("hello", urgency=0.0)
         assert result["mode"] == "normal"
 
     def test_reactive(self):
         from whitemagic.gardens.presence.mindful_response import MindfulResponse
+
         mr = MindfulResponse()
         result = mr.should_respond("URGENT: fix this ASAP", urgency=0.0)
         assert result["mode"] == "buffered"
 
     def test_high_urgency(self):
         from whitemagic.gardens.presence.mindful_response import MindfulResponse
+
         mr = MindfulResponse()
         result = mr.should_respond("emergency", urgency=0.9)
         assert result["mode"] == "immediate"
@@ -137,6 +151,7 @@ class TestMindfulResponse:
 class TestConsciousnessGarden:
     def test_plant_and_nurture(self):
         from whitemagic.gardens.consciousness_garden import ConsciousnessGarden
+
         cg = ConsciousnessGarden()
         seed = cg.plant_seed("awareness of breath")
         idx = len(cg._seeds) - 1
@@ -147,12 +162,14 @@ class TestConsciousnessGarden:
 class TestJoyDetector:
     def test_detect_joy(self):
         from whitemagic.gardens.joy.joy_detector import JoyDetector
+
         jd = JoyDetector()
         level = jd.detect("I'm so happy and delighted!")
         assert level > 0
 
     def test_no_joy(self):
         from whitemagic.gardens.joy.joy_detector import JoyDetector
+
         jd = JoyDetector()
         level = jd.detect("the system is processing")
         assert level == 0
@@ -161,6 +178,7 @@ class TestJoyDetector:
 class TestDelightCultivator:
     def test_savor(self):
         from whitemagic.gardens.joy.delight_cultivator import DelightCultivator
+
         dc = DelightCultivator()
         dc.savor("beautiful sunset", 0.8)
         assert dc.summary()["total_delights"] == 1
@@ -169,6 +187,7 @@ class TestDelightCultivator:
 class TestLaughterGenerator:
     def test_generate(self):
         from whitemagic.gardens.joy.laughter_generator import LaughterGenerator
+
         lg = LaughterGenerator()
         result = lg.generate()
         assert len(result) > 0
@@ -177,6 +196,7 @@ class TestLaughterGenerator:
 class TestLovingKindness:
     def test_practice(self):
         from whitemagic.gardens.love.loving_kindness import LovingKindness
+
         lk = LovingKindness()
         lk.practice("self")
         lk.practice("others")
@@ -186,6 +206,7 @@ class TestLovingKindness:
 class TestLoveAsForce:
     def test_channel(self):
         from whitemagic.gardens.love.love_as_force import LoveAsForce
+
         lf = LoveAsForce()
         lf.channel("healing", 0.7)
         assert lf.current_force() > 0.5
@@ -194,6 +215,7 @@ class TestLoveAsForce:
 class TestCompassionateAction:
     def test_propose(self):
         from whitemagic.gardens.love.compassionate_action import CompassionateAction
+
         ca = CompassionateAction()
         action = ca.propose("someone is struggling", 0.8)
         assert "direct action" in action
@@ -202,6 +224,7 @@ class TestCompassionateAction:
 class TestCareMetrics:
     def test_record(self):
         from whitemagic.gardens.love.care_metrics import CareMetrics
+
         cm = CareMetrics()
         cm.record_care("user1", 0.9, 10.0)
         assert cm.avg_quality() == 0.9
@@ -210,6 +233,7 @@ class TestCareMetrics:
 class TestIntegrityCheck:
     def test_commit_and_fulfill(self):
         from whitemagic.gardens.truth.integrity_check import IntegrityCheck
+
         ic = IntegrityCheck()
         ic.commit("I will run tests")
         ic.fulfill(0)
@@ -217,6 +241,7 @@ class TestIntegrityCheck:
 
     def test_unfulfilled(self):
         from whitemagic.gardens.truth.integrity_check import IntegrityCheck
+
         ic = IntegrityCheck()
         ic.commit("I will run tests")
         assert ic.integrity_score() == 0.0
@@ -225,6 +250,7 @@ class TestIntegrityCheck:
 class TestParadoxHolder:
     def test_hold_and_resolve(self):
         from whitemagic.gardens.mystery.paradox_holder import ParadoxHolder
+
         ph = ParadoxHolder()
         ph.hold("form is emptiness", "emptiness is form")
         assert len(ph.active_paradoxes()) == 1
@@ -235,6 +261,7 @@ class TestParadoxHolder:
 class TestKoanGenerator:
     def test_generate(self):
         from whitemagic.gardens.mystery.koan_generator import KoanGenerator
+
         kg = KoanGenerator()
         koan = kg.generate()
         assert len(koan) > 0
@@ -244,6 +271,7 @@ class TestKoanGenerator:
 class TestWonderKeeper:
     def test_marvel_and_tend(self):
         from whitemagic.gardens.mystery.wonder_keeper import WonderKeeper
+
         wk = WonderKeeper()
         wk.marvel("the stars")
         assert wk.flame_level() > 0.5
@@ -254,6 +282,7 @@ class TestWonderKeeper:
 class TestCrossPollination:
     def test_pollinate_and_find(self):
         from whitemagic.gardens.wonder.cross_pollination import CrossPollination
+
         cp = CrossPollination()
         cp.pollinate("biology", "code", "neural networks")
         results = cp.find_crossings("biology")
@@ -263,6 +292,7 @@ class TestCrossPollination:
 class TestMultiAgentWonder:
     def test_register_and_share(self):
         from whitemagic.gardens.wonder.multi_agent import MultiAgentWonder
+
         maw = MultiAgentWonder()
         maw.register_agent("agent1")
         maw.share_wonder("agent1", "look at this pattern!")

@@ -3,6 +3,7 @@
 The canonical location is whitemagic.core.immune.security_integration.
 This shim keeps the old import path working for tool_gating.py.
 """
+
 import warnings as _w
 
 _w.warn(

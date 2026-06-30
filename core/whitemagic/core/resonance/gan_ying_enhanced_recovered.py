@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class ExtendedEventType(Enum):
     """Extended event types beyond v23's base set."""
+
     # Emotional events
     BEAUTY_DETECTED = "beauty_detected"
     JOY_TRIGGERED = "joy_triggered"
@@ -52,6 +53,7 @@ class ExtendedEventType(Enum):
 @dataclass
 class CascadeTrigger:
     """Defines a cascade: when X happens, trigger Y."""
+
     trigger_event: ExtendedEventType
     target_events: list[ExtendedEventType]
     condition: Callable[[dict[str, Any]], bool] | None = None
@@ -74,6 +76,7 @@ class EnhancedGanYingBus:
         """Try to connect to v23 GanYingBus."""
         try:
             from whitemagic.core.resonance.gan_ying_bus import GanYingBus
+
             self._v23_bus = GanYingBus()
         except Exception:
             logger.debug("v23 GanYingBus not available, running standalone")

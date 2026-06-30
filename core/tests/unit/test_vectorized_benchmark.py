@@ -1,16 +1,55 @@
 """Benchmark: VectorizedDispatcher compression on realistic tool call patterns."""
+
 import pytest
 from whitemagic.tools.vectorized import VectorizedDispatcher, decode_call, encode_call
 
 BENCHMARK_CASES = [
-    ("search_memories", {"query": "consciousness", "limit": 10, "sort_by": "importance", "order": "desc"}),
-    ("search_memories", {"query": "karma ledger", "limit": 5, "tags": ["ethics", "governance"], "threshold": 0.7}),
+    (
+        "search_memories",
+        {
+            "query": "consciousness",
+            "limit": 10,
+            "sort_by": "importance",
+            "order": "desc",
+        },
+    ),
+    (
+        "search_memories",
+        {
+            "query": "karma ledger",
+            "limit": 5,
+            "tags": ["ethics", "governance"],
+            "threshold": 0.7,
+        },
+    ),
     ("read_memory", {"id": "abc123", "compact": True}),
-    ("create_memory", {"content": "Dream cycle insight", "title": "REM", "memory_type": "SHORT_TERM", "auto_embed": True}),
-    ("update_memory", {"id": "mem_456", "content": "Updated", "tags": ["dream", "pattern"]}),
+    (
+        "create_memory",
+        {
+            "content": "Dream cycle insight",
+            "title": "REM",
+            "memory_type": "SHORT_TERM",
+            "auto_embed": True,
+        },
+    ),
+    (
+        "update_memory",
+        {"id": "mem_456", "content": "Updated", "tags": ["dream", "pattern"]},
+    ),
     ("batch_read_memories", {"ids": ["a", "b", "c"], "include_metadata": True}),
-    ("hybrid_recall", {"query": "agentic governance", "limit": 20, "ground_in_memory": True}),
-    ("list_memories", {"limit": 50, "memory_type": "LONG_TERM", "sort_by": "accessed", "order": "desc"}),
+    (
+        "hybrid_recall",
+        {"query": "agentic governance", "limit": 20, "ground_in_memory": True},
+    ),
+    (
+        "list_memories",
+        {
+            "limit": 50,
+            "memory_type": "LONG_TERM",
+            "sort_by": "accessed",
+            "order": "desc",
+        },
+    ),
     ("gnosis", {"query": "What is the current system state?"}),
     ("capabilities", {"compact": True}),
     ("get_telemetry_summary", {}),
@@ -68,10 +107,14 @@ class TestCompressionBenchmark:
             m = vd.measure(tool_name, args)
             ratios.append(m["ratio"])
             if m["encoded_bytes"] >= m["raw_bytes"]:
-                unmapped.append((tool_name, m["encoded"], m["raw_bytes"], m["encoded_bytes"]))
+                unmapped.append(
+                    (tool_name, m["encoded"], m["raw_bytes"], m["encoded_bytes"])
+                )
         avg = sum(ratios) / len(ratios)
-        print(f"\n{'='*60}")
-        print(f"Benchmark ({len(BENCHMARK_CASES)} cases) | avg={avg:.1%} min={min(ratios):.1%} max={max(ratios):.1%}")
+        print(f"\n{'=' * 60}")
+        print(
+            f"Benchmark ({len(BENCHMARK_CASES)} cases) | avg={avg:.1%} min={min(ratios):.1%} max={max(ratios):.1%}"
+        )
         print(f"  Expanded: {len(unmapped)}")
         for t, enc, raw_b, enc_b in unmapped:
             print(f"    {t:35s} raw={raw_b:3d}b enc={enc_b:3d}b -> {enc}")

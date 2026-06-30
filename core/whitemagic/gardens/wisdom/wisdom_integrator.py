@@ -2,7 +2,6 @@
 """Wisdom Integrator - Combine all wisdom systems"""
 
 
-
 class WisdomIntegrator:
     """Integrate Wu Xing, I Ching, and Strategy
 
@@ -29,9 +28,7 @@ class WisdomIntegrator:
             pass
 
     def get_comprehensive_guidance(
-        self,
-        task: str,
-        task_type: str = "implementation"
+        self, task: str, task_type: str = "implementation"
     ) -> dict:
         """Get comprehensive guidance from all systems
 
@@ -42,25 +39,20 @@ class WisdomIntegrator:
         Returns:
             Combined guidance from all systems
         """
-        guidance = {
-            'task': task,
-            'systems': {}
-        }
+        guidance = {"task": task, "systems": {}}
 
         # Wu Xing - When (timing/element)
         if self.wu_xing:
             element = self.wu_xing.identify_element(task_type)
-            guidance['systems']['wu_xing'] = {
-                'element': element.value,
-                'guidance': f"Current phase: {element.value} - {self._wu_xing_guidance(element.value)}"
+            guidance["systems"]["wu_xing"] = {
+                "element": element.value,
+                "guidance": f"Current phase: {element.value} - {self._wu_xing_guidance(element.value)}",
             }
 
         # I Ching - How (approach)
         if self.i_ching:
             i_ching_guidance = self.i_ching.get_guidance_for_task(task_type)
-            guidance['systems']['i_ching'] = {
-                'guidance': i_ching_guidance
-            }
+            guidance["systems"]["i_ching"] = {"guidance": i_ching_guidance}
 
         # Strategy - Why (assessment)
         if self.strategy:
@@ -69,23 +61,23 @@ class WisdomIntegrator:
                 resources_available=True,
                 time_available=True,
                 knowledge_complete=True,
-                team_aligned=True
+                team_aligned=True,
             )
-            guidance['systems']['strategy'] = assessment
+            guidance["systems"]["strategy"] = assessment
 
         # Synthesize
-        guidance['synthesis'] = self._synthesize_guidance(guidance['systems'])
+        guidance["synthesis"] = self._synthesize_guidance(guidance["systems"])
 
         return guidance
 
     def _wu_xing_guidance(self, element: str) -> str:
         """Get guidance for Wu Xing element"""
         guidance_map = {
-            'wood': "Growth phase. Plant new ideas.",
-            'fire': "Execution phase. Rapid implementation.",
-            'earth': "Integration phase. Consolidate and test.",
-            'metal': "Refinement phase. Polish and perfect.",
-            'water': "Reflection phase. Plan and prepare."
+            "wood": "Growth phase. Plant new ideas.",
+            "fire": "Execution phase. Rapid implementation.",
+            "earth": "Integration phase. Consolidate and test.",
+            "metal": "Refinement phase. Polish and perfect.",
+            "water": "Reflection phase. Plan and prepare.",
         }
         return guidance_map.get(element, "Follow natural flow")
 
@@ -93,13 +85,13 @@ class WisdomIntegrator:
         """Synthesize all guidance into actionable advice"""
         parts = []
 
-        if 'wu_xing' in systems:
-            parts.append(systems['wu_xing']['guidance'])
+        if "wu_xing" in systems:
+            parts.append(systems["wu_xing"]["guidance"])
 
-        if 'i_ching' in systems:
-            parts.append(systems['i_ching']['guidance'])
+        if "i_ching" in systems:
+            parts.append(systems["i_ching"]["guidance"])
 
-        if 'strategy' in systems and systems['strategy'].get('proceed'):
+        if "strategy" in systems and systems["strategy"].get("proceed"):
             parts.append("Strategic assessment: Favorable")
 
         return " | ".join(parts) if parts else "Consult wisdom systems for guidance"

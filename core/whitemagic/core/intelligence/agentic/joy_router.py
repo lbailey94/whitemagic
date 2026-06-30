@@ -1,9 +1,11 @@
 """Brain Upgrade #10: Joy Overflow Router - Share excess joy automatically."""
+
 from datetime import datetime
 
 
 class JoyRouter:
     """JoyRouter: joy router."""
+
     def __init__(self) -> None:
         self.joy_level = 0.8
         self.overflow_threshold = 1.0
@@ -61,7 +63,10 @@ class JoyRouter:
         """
         return self.joy_level
 
+
 _router = None
+
+
 def get_joy_router() -> JoyRouter:
     """
     Get the joy router.

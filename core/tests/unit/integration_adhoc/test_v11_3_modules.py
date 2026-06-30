@@ -19,10 +19,11 @@ assert_envelope_shape = None  # placeholder
 # 1. Memory Lifecycle Manager
 # =========================================================================
 
-class TestMemoryLifecycle:
 
+class TestMemoryLifecycle:
     def test_manager_initializes(self):
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
+
         mgr = MemoryLifecycleManager()
         stats = mgr.get_stats()
         assert stats["total_sweeps"] == 0
@@ -30,6 +31,7 @@ class TestMemoryLifecycle:
 
     def test_attach_to_scheduler(self):
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
+
         mgr = MemoryLifecycleManager()
         result = mgr.attach()
         assert result is True
@@ -37,6 +39,7 @@ class TestMemoryLifecycle:
 
     def test_run_sweep_returns_report(self):
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
+
         mgr = MemoryLifecycleManager()
         report = mgr.run_sweep(persist=False)
         assert report["status"] == "success"
@@ -45,6 +48,7 @@ class TestMemoryLifecycle:
 
     def test_stats_update_after_sweep(self):
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
+
         mgr = MemoryLifecycleManager()
         mgr.run_sweep(persist=False)
         stats = mgr.get_stats()
@@ -56,6 +60,7 @@ class TestMemoryLifecycle:
             LifecycleConfig,
             MemoryLifecycleManager,
         )
+
         mgr = MemoryLifecycleManager(config=LifecycleConfig(sweep_interval_sweeps=2))
         # Simulate slow-lane flushes
         mgr._on_slow_flush([])  # flush 1 — no sweep
@@ -70,10 +75,11 @@ class TestMemoryLifecycle:
 # 2. Homeostatic Loop
 # =========================================================================
 
-class TestHomeostaticLoop:
 
+class TestHomeostaticLoop:
     def test_loop_initializes(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         assert not loop.is_running
         stats = loop.get_stats()
@@ -81,6 +87,7 @@ class TestHomeostaticLoop:
 
     def test_check_returns_no_actions_when_healthy(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         actions = loop.check()
         # Fresh harmony vector should be healthy — no corrective actions
@@ -90,6 +97,7 @@ class TestHomeostaticLoop:
 
     def test_check_increments_counter(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         loop.check()
         loop.check()
@@ -100,9 +108,13 @@ class TestHomeostaticLoop:
             ActionLevel,
             HomeostaticAction,
         )
+
         action = HomeostaticAction(
-            dimension="error_rate", level=ActionLevel.ADVISE,
-            value=0.5, threshold=0.7, action_taken="Test advisory",
+            dimension="error_rate",
+            level=ActionLevel.ADVISE,
+            value=0.5,
+            threshold=0.7,
+            action_taken="Test advisory",
         )
         d = action.to_dict()
         json.dumps(d)  # must not raise
@@ -113,6 +125,7 @@ class TestHomeostaticLoop:
             HomeostaticConfig,
             HomeostaticLoop,
         )
+
         loop = HomeostaticLoop(config=HomeostaticConfig(check_interval_s=0.05))
         loop.attach()
         assert loop.is_running
@@ -123,6 +136,7 @@ class TestHomeostaticLoop:
 
     def test_stats_serializable(self):
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         loop.check()
         stats = loop.get_stats()
@@ -133,16 +147,18 @@ class TestHomeostaticLoop:
 # 3. Maturity Gate Check
 # =========================================================================
 
-class TestMaturityCheck:
 
+class TestMaturityCheck:
     def test_basic_tool_passes(self):
         from whitemagic.tools.maturity_check import check_maturity_for_tool
+
         # capabilities is a basic READ tool, should always pass
         result = check_maturity_for_tool("capabilities")
         assert result is None  # None means allowed
 
     def test_unregistered_tool_passes(self):
         from whitemagic.tools.maturity_check import check_maturity_for_tool
+
         result = check_maturity_for_tool("nonexistent_tool_xyz")
         assert result is None
 
@@ -153,6 +169,7 @@ class TestMaturityCheck:
             _MATURITY_REQUIREMENTS,
             check_maturity_for_tool,
         )
+
         _MATURITY_REQUIREMENTS["_test_logos_tool"] = 6
         try:
             result = check_maturity_for_tool("_test_logos_tool")
@@ -169,16 +186,18 @@ class TestMaturityCheck:
 # 4. Memory Consolidation
 # =========================================================================
 
-class TestMemoryConsolidation:
 
+class TestMemoryConsolidation:
     def test_consolidator_initializes(self):
         from whitemagic.core.memory.consolidation import MemoryConsolidator
+
         c = MemoryConsolidator()
         stats = c.get_stats()
         assert stats["total_consolidations"] == 0
 
     def test_consolidate_empty_returns_report(self):
         from whitemagic.core.memory.consolidation import MemoryConsolidator
+
         c = MemoryConsolidator()
         report = c.consolidate(memories=[])
         assert report.memories_analyzed == 0
@@ -186,6 +205,7 @@ class TestMemoryConsolidation:
 
     def test_report_to_dict_serializable(self):
         from whitemagic.core.memory.consolidation import MemoryConsolidator
+
         c = MemoryConsolidator()
         report = c.consolidate(memories=[])
         d = report.to_dict()
@@ -199,9 +219,14 @@ class TestMemoryConsolidation:
         from whitemagic.core.memory.unified_types import Memory, MemoryType
 
         memories = [
-            Memory(id=f"m{i}", content=f"content {i}",
-                   memory_type=MemoryType.SHORT_TERM,
-                   tags={"python", "testing"}, importance=0.6, access_count=5)
+            Memory(
+                id=f"m{i}",
+                content=f"content {i}",
+                memory_type=MemoryType.SHORT_TERM,
+                tags={"python", "testing"},
+                importance=0.6,
+                access_count=5,
+            )
             for i in range(5)
         ]
 
@@ -213,6 +238,7 @@ class TestMemoryConsolidation:
 
     def test_stats_update_after_consolidation(self):
         from whitemagic.core.memory.consolidation import MemoryConsolidator
+
         c = MemoryConsolidator()
         c.consolidate(memories=[])
         c.consolidate(memories=[])
@@ -220,10 +246,15 @@ class TestMemoryConsolidation:
 
     def test_cluster_to_dict(self):
         from whitemagic.core.memory.consolidation import MemoryCluster
+
         cluster = MemoryCluster(
-            cluster_id="abc123", memory_ids=["m1", "m2", "m3"],
-            shared_tags={"python"}, avg_importance=0.7,
-            total_access_count=15, avg_emotional_valence=0.3, theme="python",
+            cluster_id="abc123",
+            memory_ids=["m1", "m2", "m3"],
+            shared_tags={"python"},
+            avg_importance=0.7,
+            total_access_count=15,
+            avg_emotional_valence=0.3,
+            theme="python",
         )
         d = cluster.to_dict()
         json.dumps(d)
@@ -235,10 +266,11 @@ class TestMemoryConsolidation:
 # 6. Tool Dependency Graph
 # =========================================================================
 
-class TestToolDependencyGraph:
 
+class TestToolDependencyGraph:
     def test_graph_initializes_with_static_edges(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         summary = graph.get_graph_summary()
         assert summary["total_edges"] > 0
@@ -246,6 +278,7 @@ class TestToolDependencyGraph:
 
     def test_next_steps_returns_edges(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         steps = graph.next_steps("vote.create")
         assert len(steps) >= 1
@@ -253,12 +286,14 @@ class TestToolDependencyGraph:
 
     def test_prerequisites_returns_edges(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         prereqs = graph.prerequisites("vote.cast")
         assert any(p["source"] == "vote.create" for p in prereqs)
 
     def test_plan_builds_dependency_chain(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         chain = graph.plan("vote.cast")
         assert "vote.create" in chain
@@ -266,6 +301,7 @@ class TestToolDependencyGraph:
 
     def test_edge_type_filter(self):
         from whitemagic.tools.dependency_graph import EdgeType, ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         requires = graph.next_steps("vote.create", edge_type=EdgeType.REQUIRES)
         _suggests = graph.next_steps("vote.create", edge_type=EdgeType.SUGGESTS)
@@ -274,6 +310,7 @@ class TestToolDependencyGraph:
 
     def test_add_learned_edge(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         graph.add_learned_edge("custom_a", "custom_b", 0.6)
         steps = graph.next_steps("custom_a")
@@ -281,6 +318,7 @@ class TestToolDependencyGraph:
 
     def test_learned_edge_reinforcement(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         graph.add_learned_edge("x", "y", 0.3)
         graph.add_learned_edge("x", "y", 0.3)  # reinforce
@@ -290,6 +328,7 @@ class TestToolDependencyGraph:
 
     def test_full_graph_serializable(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         edges = graph.get_full_graph()
         json.dumps(edges)
@@ -297,6 +336,7 @@ class TestToolDependencyGraph:
 
     def test_graph_summary_serializable(self):
         from whitemagic.tools.dependency_graph import ToolDependencyGraph
+
         graph = ToolDependencyGraph()
         summary = graph.get_graph_summary()
         json.dumps(summary)

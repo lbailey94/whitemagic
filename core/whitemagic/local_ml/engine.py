@@ -10,13 +10,12 @@ from typing import Any
 
 
 def _disabled_error() -> RuntimeError:
-    return RuntimeError(
-        "Local ML Engine is archived and no longer available."
-    )
+    return RuntimeError("Local ML Engine is archived and no longer available.")
 
 
 class LocalMLEngine:  # pragma: no cover - legacy shim
     """LocalMLEngine: local ml engine."""
+
     def __init__(self, *_: Any, **__: Any) -> None:
         raise _disabled_error()
 

@@ -24,6 +24,7 @@ class HolographicCoord:
     """HolographicCoord: holographic coord.
 
     Value object: equality and repr are field-based."""
+
     x: float
     y: float
     z: float
@@ -43,16 +44,78 @@ class FastBatchEncoder:
     """Optimized encoder for batch processing with null safety."""
 
     # Pre-computed tag sets for O(1) lookup
-    LOGIC_TAGS = frozenset({"logic", "strategy", "code", "architecture", "plan", "analysis",
-                            "algorithm", "proof", "calculation", "optimization", "debug"})
-    EMOTION_TAGS = frozenset({"joy", "love", "wonder", "beauty", "truth", "grief", "hope",
-                              "compassion", "gratitude", "fear", "anger", "serenity"})
-    MICRO_TAGS = frozenset({"detail", "bug", "typo", "line", "character", "atom", "bit",
-                            "byte", "function", "variable", "specific"})
-    MACRO_TAGS = frozenset({"architecture", "system", "design", "overview", "strategy",
-                            "roadmap", "vision", "ecosystem", "universe"})
-    IMPORTANT_TAGS = frozenset({"critical", "important", "key", "core", "essential",
-                                 "milestone", "breakthrough", "wisdom", "principle"})
+    LOGIC_TAGS = frozenset(
+        {
+            "logic",
+            "strategy",
+            "code",
+            "architecture",
+            "plan",
+            "analysis",
+            "algorithm",
+            "proof",
+            "calculation",
+            "optimization",
+            "debug",
+        }
+    )
+    EMOTION_TAGS = frozenset(
+        {
+            "joy",
+            "love",
+            "wonder",
+            "beauty",
+            "truth",
+            "grief",
+            "hope",
+            "compassion",
+            "gratitude",
+            "fear",
+            "anger",
+            "serenity",
+        }
+    )
+    MICRO_TAGS = frozenset(
+        {
+            "detail",
+            "bug",
+            "typo",
+            "line",
+            "character",
+            "atom",
+            "bit",
+            "byte",
+            "function",
+            "variable",
+            "specific",
+        }
+    )
+    MACRO_TAGS = frozenset(
+        {
+            "architecture",
+            "system",
+            "design",
+            "overview",
+            "strategy",
+            "roadmap",
+            "vision",
+            "ecosystem",
+            "universe",
+        }
+    )
+    IMPORTANT_TAGS = frozenset(
+        {
+            "critical",
+            "important",
+            "key",
+            "core",
+            "essential",
+            "milestone",
+            "breakthrough",
+            "wisdom",
+            "principle",
+        }
+    )
 
     def __init__(self) -> None:
         self._base_time = int(time.time())
@@ -83,7 +146,11 @@ class FastBatchEncoder:
                 coord = self._encode_single(mem)
                 results.append(coord)
             except Exception as e:
-                logger.debug("Batch encode single memory failed, using neutral: %s", e, exc_info=True)
+                logger.debug(
+                    "Batch encode single memory failed, using neutral: %s",
+                    e,
+                    exc_info=True,
+                )
                 results.append(HolographicCoord(0.0, 0.0, 0.0, 0.5))
         return results
 
@@ -147,7 +214,9 @@ class FastBatchEncoder:
             score = 0.0
 
         # Future keywords
-        if any(w in content for w in ["will ", "plan to", "next step", "future", "goal"]):
+        if any(
+            w in content for w in ["will ", "plan to", "next step", "future", "goal"]
+        ):
             score += 0.3
 
         return max(-1.0, min(1.0, score))

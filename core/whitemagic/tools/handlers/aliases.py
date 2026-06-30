@@ -14,6 +14,7 @@ from typing import Any
 def handle_remember(**kwargs: Any) -> dict[str, Any]:
     """Shorthand: create a memory. Equivalent to gana_neck → create_memory."""
     from whitemagic.tools.unified_api import call_tool
+
     content = kwargs.get("content")
     if not content:
         # Fallback for verifier or no-arg calls
@@ -30,6 +31,7 @@ def handle_remember(**kwargs: Any) -> dict[str, Any]:
 def handle_recall(**kwargs: Any) -> dict[str, Any]:
     """Shorthand: search memories. Equivalent to gana_winnowing_basket → hybrid_recall."""
     from whitemagic.tools.unified_api import call_tool
+
     query = kwargs.get("query") or kwargs.get("content") or kwargs.get("q")
     if not query:
         # Fallback for verifier or no-arg calls
@@ -44,6 +46,7 @@ def handle_recall(**kwargs: Any) -> dict[str, Any]:
 def handle_think(**kwargs: Any) -> dict[str, Any]:
     """Shorthand: bicameral reasoning. Equivalent to gana_three_stars → reasoning.bicameral."""
     from whitemagic.tools.unified_api import call_tool
+
     topic = kwargs.get("topic") or kwargs.get("question") or kwargs.get("content")
     if not topic:
         # Fallback for verifier or no-arg calls
@@ -59,10 +62,12 @@ def handle_think(**kwargs: Any) -> dict[str, Any]:
 def handle_check(**kwargs: Any) -> dict[str, Any]:
     """Shorthand: system health check. Equivalent to gana_root → health_report."""
     from whitemagic.tools.unified_api import call_tool
+
     return call_tool("health_report")
 
 
 def handle_dream(**kwargs: Any) -> dict[str, Any]:
     """Shorthand: run dream cycle. Equivalent to gana_abundance → dream."""
     from whitemagic.tools.unified_api import call_tool
+
     return call_tool("dream")

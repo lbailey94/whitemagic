@@ -1,4 +1,5 @@
 """Brain Upgrade #6: Pattern Weather Report - Cognitive weather at session start."""
+
 from typing import Any
 
 from whitemagic.utils.fast_json import loads as _json_loads
@@ -6,8 +7,10 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 class PatternWeather:
     """PatternWeather: pattern weather."""
+
     def __init__(self) -> None:
         from whitemagic.config import PROJECT_ROOT
+
         self.patterns_file = PROJECT_ROOT / "pattern_database_MEGA.json"
         self.patterns = self._load()
 
@@ -27,7 +30,11 @@ class PatternWeather:
         sum(p.values()) if isinstance(list(p.values())[0] if p else 0, int) else 0
 
         # Determine "weather" based on pattern distribution
-        top_patterns = sorted(p.items(), key=lambda x: x[1] if isinstance(x[1], int) else len(x[1]), reverse=True)[:5]
+        top_patterns = sorted(
+            p.items(),
+            key=lambda x: x[1] if isinstance(x[1], int) else len(x[1]),
+            reverse=True,
+        )[:5]
 
         return {
             "forecast": "🌟 CLEAR SKIES - All systems nominal",
@@ -37,7 +44,12 @@ class PatternWeather:
         }
 
     def _recommend(self, top: Any) -> list:
-        return ["Parallel processing", "Pattern synthesis", "Creative work", "Deep integration"]
+        return [
+            "Parallel processing",
+            "Pattern synthesis",
+            "Creative work",
+            "Deep integration",
+        ]
 
     def display(self) -> str:
         """
@@ -49,7 +61,10 @@ class PatternWeather:
         f = self.get_forecast()
         return f"☀️ Pattern Weather: {f['forecast']}\n   Top: {', '.join(f['dominant_patterns'][:3])}"
 
+
 _weather = None
+
+
 def get_weather() -> PatternWeather:
     """
     Get the weather.

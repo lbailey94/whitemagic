@@ -23,6 +23,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 class RubedoSynthesizer:
     """Synthesizes clusters into Golden Rules."""
 
@@ -31,7 +32,9 @@ class RubedoSynthesizer:
         if LocalLLM is not None:
             self.llm = LocalLLM()
             if self.llm is not None and not self.llm.is_available:
-                logger.warning("Local LLM not available. Rubedo will use heuristic synthesis.")
+                logger.warning(
+                    "Local LLM not available. Rubedo will use heuristic synthesis."
+                )
                 self.llm = None
 
     def synthesize(self, clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -51,12 +54,12 @@ class RubedoSynthesizer:
         """
         Generate a rule for a single cluster.
         """
-        items = cluster.get('items', [])
+        items = cluster.get("items", [])
         if not items:
             return None
 
         # Extract common terms for title
-        all_text = " ".join([m.get('title', '') for m in items])
+        all_text = " ".join([m.get("title", "") for m in items])
         common_words = [w for w in all_text.split() if len(w) > 4]
         top_words = [w for w, c in Counter(common_words).most_common(3)]
 
@@ -67,7 +70,7 @@ class RubedoSynthesizer:
         if self.llm:
             try:
                 # Sample content
-                samples = [m.get('content', '')[:300] for m in items[:5]]
+                samples = [m.get("content", "")[:300] for m in items[:5]]
                 prompt = (
                     "Synthesize a single 'Golden Rule' or principle from these memory excerpts.\n"
                     "The rule should be a concise actionable instruction.\n\n"
@@ -78,7 +81,14 @@ class RubedoSynthesizer:
                 if response and not response.startswith("Error"):
                     rule_body = response.strip()
                     # Improve title based on body
-                    rule_title = self.llm.complete(f"Generate a 3-5 word title for this rule: {rule_body}", max_tokens=10).strip().strip('"')
+                    rule_title = (
+                        self.llm.complete(
+                            f"Generate a 3-5 word title for this rule: {rule_body}",
+                            max_tokens=10,
+                        )
+                        .strip()
+                        .strip('"')
+                    )
             except Exception as e:
                 logger.warning("LLM synthesis failed: %s", e, exc_info=True)
 
@@ -86,6 +96,6 @@ class RubedoSynthesizer:
             "id": f"rule_{cluster['cluster_id']}",
             "title": rule_title,
             "description": rule_body,
-            "support_count": cluster['size'],
-            "example_ids": [m['id'] for m in items[:3]]
+            "support_count": cluster["size"],
+            "example_ids": [m["id"] for m in items[:3]],
         }

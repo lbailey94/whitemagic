@@ -12,6 +12,7 @@ Gardens:
 
 Portfolio balance ensures improvements span multiple gardens.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -60,6 +61,7 @@ GARDEN_CONFIG: dict[str, dict[str, Any]] = {
 @dataclass
 class GardenCalibration:
     """Per-garden calibration tracking."""
+
     garden: str
     brier_score: float = 0.25  # Starting Brier score
     outcome_count: int = 0
@@ -110,15 +112,30 @@ class GardenRouter:
         desc_lower = description.lower()
 
         # Check description keywords first (more specific)
-        if any(kw in desc_lower for kw in ["refactor", "architecture", "rewrite", "restructure"]):
+        if any(
+            kw in desc_lower
+            for kw in ["refactor", "architecture", "rewrite", "restructure"]
+        ):
             return "courage"
-        elif any(kw in desc_lower for kw in ["doc", "documentation", "naming", "organize", "quality"]):
+        elif any(
+            kw in desc_lower
+            for kw in ["doc", "documentation", "naming", "organize", "quality"]
+        ):
             return "wisdom"
-        elif any(kw in desc_lower for kw in ["experiment", "novel", "creative", "new feature", "prototype"]):
+        elif any(
+            kw in desc_lower
+            for kw in ["experiment", "novel", "creative", "new feature", "prototype"]
+        ):
             return "play"
-        elif any(kw in desc_lower for kw in ["debt", "deprecat", "cleanup", "remove", "delete"]):
+        elif any(
+            kw in desc_lower
+            for kw in ["debt", "deprecat", "cleanup", "remove", "delete"]
+        ):
             return "grief"
-        elif any(kw in desc_lower for kw in ["research", "explore", "unknown", "discover", "investigate"]):
+        elif any(
+            kw in desc_lower
+            for kw in ["research", "explore", "unknown", "discover", "investigate"]
+        ):
             return "mystery"
         else:
             # Fall back to category
@@ -191,13 +208,37 @@ class GardenRouter:
             Target fractions per garden.
         """
         if system_state == "high_debt":
-            return {"courage": 0.1, "wisdom": 0.1, "play": 0.1, "grief": 0.6, "mystery": 0.1}
+            return {
+                "courage": 0.1,
+                "wisdom": 0.1,
+                "play": 0.1,
+                "grief": 0.6,
+                "mystery": 0.1,
+            }
         elif system_state == "stagnation":
-            return {"courage": 0.3, "wisdom": 0.1, "play": 0.3, "grief": 0.1, "mystery": 0.2}
+            return {
+                "courage": 0.3,
+                "wisdom": 0.1,
+                "play": 0.3,
+                "grief": 0.1,
+                "mystery": 0.2,
+            }
         elif system_state == "chaos":
-            return {"courage": 0.1, "wisdom": 0.5, "play": 0.1, "grief": 0.2, "mystery": 0.1}
+            return {
+                "courage": 0.1,
+                "wisdom": 0.5,
+                "play": 0.1,
+                "grief": 0.2,
+                "mystery": 0.1,
+            }
         else:  # balanced
-            return {"courage": 0.2, "wisdom": 0.3, "play": 0.2, "grief": 0.15, "mystery": 0.15}
+            return {
+                "courage": 0.2,
+                "wisdom": 0.3,
+                "play": 0.2,
+                "grief": 0.15,
+                "mystery": 0.15,
+            }
 
     def check_balance(
         self,

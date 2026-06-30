@@ -9,6 +9,7 @@ Path definitions are centralized in paths.py:
 - WM_ROOT: user state location (configurable, defaults to ~/.whitemagic)
 - MEMORY_DIR, DATA_DIR, CACHE_DIR: subdirs of WM_ROOT
 """
+
 from __future__ import annotations
 
 import logging
@@ -65,11 +66,13 @@ _MANAGER_EXPORTS = {
 
 def _load_concurrency_attr(name: str) -> Any:
     from whitemagic.config import concurrency as _concurrency
+
     return getattr(_concurrency, name)
 
 
 def _load_manager_attr(name: str) -> Any:
     from whitemagic.config import manager as _manager
+
     if name == "config":
         cfg = _manager.get_config()
         _manager.setup_config_environment(cfg)

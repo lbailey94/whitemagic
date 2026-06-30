@@ -82,16 +82,13 @@ class TruthGarden(BaseGarden, GanYingMixin):
         """
         return CoordinateBias(x=-0.5, y=0.3, z=0.0, w=0.35)
 
-    # ------------------------------------------------------------------
-    # Accelerator status — serving rust_status, rust_similarity tools
-    # ------------------------------------------------------------------
-
     def check_accelerators(self, force: bool = False) -> dict[str, Any]:
         """Check availability of all polyglot accelerators.
 
         Results are cached for 60 seconds unless forced.
         """
         import time
+
         now = time.time()
         if not force and self._accelerator_cache and (now - self._cache_time) < 60:
             return dict(self._accelerator_cache)
@@ -101,6 +98,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
         # Rust (PyO3)
         try:
             import whitemagic_rs  # noqa: F401
+
             status["rust"] = True
         except ImportError:
             status["rust"] = False
@@ -110,7 +108,8 @@ class TruthGarden(BaseGarden, GanYingMixin):
             from whitemagic.optimization import (
                 zig_accelerators,  # type: ignore[attr-defined]
             )
-            status["zig"] = hasattr(zig_accelerators, '_lib') or True
+
+            status["zig"] = hasattr(zig_accelerators, "_lib") or True
         except ImportError:
             status["zig"] = False
 
@@ -119,6 +118,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
             from whitemagic.haskell import (
                 haskell_bridge,  # type: ignore[import-not-found]  # noqa: F401
             )
+
             status["haskell"] = True
         except ImportError:
             status["haskell"] = False
@@ -128,6 +128,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
             from whitemagic.elixir import (
                 elixir_bridge,  # type: ignore[import-not-found]  # noqa: F401
             )
+
             status["elixir"] = True
         except ImportError:
             status["elixir"] = False
@@ -138,28 +139,31 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
         return status
 
-    # ------------------------------------------------------------------
-    # State paths — serving state.paths, state.summary tools
-    # ------------------------------------------------------------------
-
     def get_state_paths(self) -> dict[str, Any]:
         """Report all WhiteMagic state paths and their status."""
         from whitemagic.config import paths as cfg_paths
+
         state_root = cfg_paths.WM_ROOT
 
         paths: dict[str, Any] = {}
         key_dirs = {
-            'memory': cfg_paths.MEMORY_DIR,
-            'dharma': cfg_paths.DHARMA_DIR,
-            'cache': cfg_paths.CACHE_DIR,
-            'logs': cfg_paths.LOGS_DIR,
-            'security': cfg_paths.SECURITY_DIR
+            "memory": cfg_paths.MEMORY_DIR,
+            "dharma": cfg_paths.DHARMA_DIR,
+            "cache": cfg_paths.CACHE_DIR,
+            "logs": cfg_paths.LOGS_DIR,
+            "security": cfg_paths.SECURITY_DIR,
         }
         for name, p in key_dirs.items():
             paths[name] = {
                 "path": str(p),
                 "exists": p.exists(),
-                "size_mb": round(sum(f.stat().st_size for f in p.rglob('*') if f.is_file()) / 1048576, 2) if p.exists() else 0,
+                "size_mb": round(
+                    sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+                    / 1048576,
+                    2,
+                )
+                if p.exists()
+                else 0,
             }
 
         # Hot DB
@@ -167,7 +171,9 @@ class TruthGarden(BaseGarden, GanYingMixin):
         paths["hot_db"] = {
             "path": str(hot_db),
             "exists": hot_db.exists(),
-            "size_mb": round(hot_db.stat().st_size / 1048576, 2) if hot_db.exists() else 0,
+            "size_mb": round(hot_db.stat().st_size / 1048576, 2)
+            if hot_db.exists()
+            else 0,
         }
 
         # Cold DB
@@ -175,14 +181,12 @@ class TruthGarden(BaseGarden, GanYingMixin):
         paths["cold_db"] = {
             "path": str(cold_db),
             "exists": cold_db.exists(),
-            "size_mb": round(cold_db.stat().st_size / 1048576, 2) if cold_db.exists() else 0,
+            "size_mb": round(cold_db.stat().st_size / 1048576, 2)
+            if cold_db.exists()
+            else 0,
         }
 
         return {"state_root": str(state_root), "paths": paths}
-
-    # ------------------------------------------------------------------
-    # Health report — serving health_report tool
-    # ------------------------------------------------------------------
 
     def health_report(self, deep: bool = False) -> dict[str, Any]:
         """Generate a comprehensive health report."""
@@ -197,6 +201,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
         # Python environment
         import sys
+
         report["python"] = {
             "version": sys.version.split()[0],
             "venv": os.environ.get("VIRTUAL_ENV", "none"),
@@ -207,6 +212,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
             from whitemagic.core.memory.sqlite_backend import (
                 get_pool,  # type: ignore[attr-defined]
             )
+
             pool = get_pool()
             with pool.connection() as conn:
                 count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
@@ -219,10 +225,6 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
         self.emit(EventType.GARDEN_ACTIVITY, {"action": "health_report", "deep": deep})  # type: ignore[attr-defined]
         return report
-
-    # ------------------------------------------------------------------
-    # Ship check — serving ship.check tool
-    # ------------------------------------------------------------------
 
     def ship_check(self) -> dict[str, Any]:
         """Check if the system is ready to ship / deploy."""
@@ -255,10 +257,6 @@ class TruthGarden(BaseGarden, GanYingMixin):
             "accelerators": accel,
         }
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def discover_truth(self, what: str, evidence: Any = None) -> dict[str, Any]:
         """
         Discover or mine truth.
@@ -286,7 +284,10 @@ class TruthGarden(BaseGarden, GanYingMixin):
         Returns:
             None
         """
-        self.emit(EventType.TRUTH_SPOKEN, {"source": "wisdom", "note": "Wisdom illuminates truth"})
+        self.emit(
+            EventType.TRUTH_SPOKEN,
+            {"source": "wisdom", "note": "Wisdom illuminates truth"},
+        )
 
     @listen_for(EventType.PATTERN_DETECTED)
     def on_pattern(self, event: Any) -> None:
@@ -301,10 +302,6 @@ class TruthGarden(BaseGarden, GanYingMixin):
         """
         self.discover_truth(f"Pattern reveals truth: {event.data}")
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         """
         Get the status.
@@ -313,17 +310,21 @@ class TruthGarden(BaseGarden, GanYingMixin):
             dict[str, Any]
         """
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "truths_discovered": len(self.truths_discovered),
-            "health_reports_taken": len(self.health_history),
-            "accelerators": self.check_accelerators(),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "truths_discovered": len(self.truths_discovered),
+                "health_reports_taken": len(self.health_history),
+                "accelerators": self.check_accelerators(),
+            }
+        )
         return base
 
 
 _instance = None
+
+
 def get_truth_garden() -> TruthGarden:
     """
     Get the truth garden.

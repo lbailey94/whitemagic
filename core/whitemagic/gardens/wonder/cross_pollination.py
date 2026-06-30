@@ -28,14 +28,19 @@ class CrossPollination:
     def find_crossings(self, domain: str) -> list[dict[str, Any]]:
         """Find all cross-pollinations involving a domain."""
         return [
-            p for p in self._pollinations
+            p
+            for p in self._pollinations
             if p["domain_a"] == domain or p["domain_b"] == domain
         ]
 
     def summary(self) -> dict[str, Any]:
         return {
             "total_pollinations": len(self._pollinations),
-            "unique_domains": len(set(
-                d for p in self._pollinations for d in (p["domain_a"], p["domain_b"])
-            )),
+            "unique_domains": len(
+                set(
+                    d
+                    for p in self._pollinations
+                    for d in (p["domain_a"], p["domain_b"])
+                )
+            ),
         }

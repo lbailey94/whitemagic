@@ -1,5 +1,4 @@
-"""System Monitoring - Listens for system events and tracks health.
-"""
+"""System Monitoring - Listens for system events and tracks health."""
 
 from __future__ import annotations
 
@@ -19,6 +18,7 @@ class SystemMonitor:
 
     def __init__(self) -> None:
         from whitemagic.core.resonance.integration_helpers import init_listeners
+
         self.bus = get_bus()
         self.start_time = datetime.now()
         self.systems_started: list[str] = []
@@ -63,7 +63,11 @@ class SystemMonitor:
 
             self.events_received.append(event_record)
 
-            logger.info("📊 SystemMonitor: Memory consolidated - %s archived, %s promoted", event.data.get('archived_count', 0), event.data.get('promoted_count', 0))
+            logger.info(
+                "📊 SystemMonitor: Memory consolidated - %s archived, %s promoted",
+                event.data.get("archived_count", 0),
+                event.data.get("promoted_count", 0),
+            )
 
         @listen_for(EventType.BEAUTY_DETECTED)
         def on_beauty_detected(event: Any) -> None:
@@ -76,7 +80,10 @@ class SystemMonitor:
                 "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
             self.events_received.append(event_record)
-            logger.info("📊 SystemMonitor: Beauty detected - %s", event.data.get('subject', 'Unknown'))
+            logger.info(
+                "📊 SystemMonitor: Beauty detected - %s",
+                event.data.get("subject", "Unknown"),
+            )
 
         @listen_for(EventType.JOY_TRIGGERED)
         def on_joy_triggered(event: Any) -> None:
@@ -89,7 +96,10 @@ class SystemMonitor:
                 "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
             self.events_received.append(event_record)
-            logger.info("📊 SystemMonitor: Joy triggered - %s", event.data.get('reason', 'Unknown'))
+            logger.info(
+                "📊 SystemMonitor: Joy triggered - %s",
+                event.data.get("reason", "Unknown"),
+            )
 
         @listen_for(EventType.LOVE_ACTIVATED)
         def on_love_activated(event: Any) -> None:
@@ -102,7 +112,11 @@ class SystemMonitor:
                 "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
             self.events_received.append(event_record)
-            logger.info("📊 SystemMonitor: Love activated - %s for %s", event.data.get('form', 'Unknown'), event.data.get('to', 'Unknown'))
+            logger.info(
+                "📊 SystemMonitor: Love activated - %s for %s",
+                event.data.get("form", "Unknown"),
+                event.data.get("to", "Unknown"),
+            )
 
     def get_status(self) -> dict[str, Any]:
         """Get current monitoring status."""
@@ -119,12 +133,14 @@ class SystemMonitor:
 # Global monitor instance
 _monitor = None
 
+
 def get_monitor() -> SystemMonitor:
     """Get the global system monitor instance."""
     global _monitor
     if _monitor is None:
         _monitor = SystemMonitor()
     return _monitor
+
 
 def start_monitoring() -> SystemMonitor:
     """Start the system monitor."""

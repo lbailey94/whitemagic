@@ -72,6 +72,7 @@ class PatternDiscovery:
         else:
             try:
                 from whitemagic.config.paths import WM_STATE_ROOT
+
                 self.base_dir = Path(WM_STATE_ROOT)
             except (ImportError, AttributeError):
                 self.base_dir = Path(".")
@@ -94,94 +95,114 @@ class PatternDiscovery:
         """Register all pattern extraction systems (v22 module paths)."""
 
         # 1. Memory pattern engine
-        self.sources.append(PatternSource(
-            name="memory_pattern_engine",
-            module_path="whitemagic.core.memory.constellation_algorithms",
-            function_name="detect_grid",
-            description="Detects patterns in memory constellations (grid detection)",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="memory_pattern_engine",
+                module_path="whitemagic.core.memory.constellation_algorithms",
+                function_name="detect_grid",
+                description="Detects patterns in memory constellations (grid detection)",
+                parameters={},
+            )
+        )
 
         # 2. Dream cycle synthesis
-        self.sources.append(PatternSource(
-            name="dream_cycle",
-            module_path="whitemagic.core.dreaming.dream_cycle",
-            function_name="get_recent_dreams",
-            description="Random pattern combination for creative insights",
-            parameters={"limit": 10},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="dream_cycle",
+                module_path="whitemagic.core.dreaming.dream_cycle",
+                function_name="get_recent_dreams",
+                description="Random pattern combination for creative insights",
+                parameters={"limit": 10},
+            )
+        )
 
         # 3. Emergence detector
-        self.sources.append(PatternSource(
-            name="emergence_detector",
-            module_path="whitemagic.core.patterns.emergence.novelty_detector",
-            function_name="get_novelty_detector",
-            description="Detects genuinely novel patterns",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="emergence_detector",
+                module_path="whitemagic.core.patterns.emergence.novelty_detector",
+                function_name="get_novelty_detector",
+                description="Detects genuinely novel patterns",
+                parameters={},
+            )
+        )
 
         # 4. Wu Xing system
-        self.sources.append(PatternSource(
-            name="wu_xing",
-            module_path="whitemagic.core.intelligence.wisdom.wu_xing",
-            function_name="check_balance",
-            description="Five Elements workflow intelligence",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="wu_xing",
+                module_path="whitemagic.core.intelligence.wisdom.wu_xing",
+                function_name="check_balance",
+                description="Five Elements workflow intelligence",
+                parameters={},
+            )
+        )
 
         # 5. I Ching advisor
-        self.sources.append(PatternSource(
-            name="i_ching",
-            module_path="whitemagic.core.intelligence.wisdom.i_ching",
-            function_name="get_advisor",
-            description="Hexagram guidance for current situation",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="i_ching",
+                module_path="whitemagic.core.intelligence.wisdom.i_ching",
+                function_name="get_advisor",
+                description="Hexagram guidance for current situation",
+                parameters={},
+            )
+        )
 
         # 6. Causal pattern mining
-        self.sources.append(PatternSource(
-            name="causal_miner",
-            module_path="whitemagic.core.intelligence.synthesis.causal_net",
-            function_name="get_stats",
-            description="Causal pattern statistics (edges, chains)",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="causal_miner",
+                module_path="whitemagic.core.intelligence.synthesis.causal_net",
+                function_name="get_stats",
+                description="Causal pattern statistics (edges, chains)",
+                parameters={},
+            )
+        )
 
         # 7. Pattern engine (delegating wrapper)
-        self.sources.append(PatternSource(
-            name="pattern_engine",
-            module_path="whitemagic.core.intelligence.synthesis.pattern_engine",
-            function_name="PatternEngine",
-            description="Pattern detection and analysis engine",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="pattern_engine",
+                module_path="whitemagic.core.intelligence.synthesis.pattern_engine",
+                function_name="PatternEngine",
+                description="Pattern detection and analysis engine",
+                parameters={},
+            )
+        )
 
         # 8. Unified pattern API
-        self.sources.append(PatternSource(
-            name="unified_patterns",
-            module_path="whitemagic.core.intelligence.synthesis.unified_patterns",
-            function_name="get_pattern_api",
-            description="Unified pattern search across engines",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="unified_patterns",
+                module_path="whitemagic.core.intelligence.synthesis.unified_patterns",
+                function_name="get_pattern_api",
+                description="Unified pattern search across engines",
+                parameters={},
+            )
+        )
 
         # 9. Resonance patterns
-        self.sources.append(PatternSource(
-            name="resonance_patterns",
-            module_path="whitemagic.core.resonance.gan_ying",
-            function_name="get_bus",
-            description="GanYing resonance event bus",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="resonance_patterns",
+                module_path="whitemagic.core.resonance.gan_ying",
+                function_name="get_bus",
+                description="GanYing resonance event bus",
+                parameters={},
+            )
+        )
 
         # 10. Karma ledger patterns
-        self.sources.append(PatternSource(
-            name="karma_patterns",
-            module_path="whitemagic.dharma.karma_ledger",
-            function_name="get_karma_ledger",
-            description="Karma ledger patterns (ethical governance)",
-            parameters={},
-        ))
+        self.sources.append(
+            PatternSource(
+                name="karma_patterns",
+                module_path="whitemagic.dharma.karma_ledger",
+                function_name="get_karma_ledger",
+                description="Karma ledger patterns (ethical governance)",
+                parameters={},
+            )
+        )
 
     def discover_all(self, save_report: bool = True) -> DiscoveryReport:
         """Run ALL pattern discovery sources and synthesize results."""
@@ -237,9 +258,12 @@ class PatternDiscovery:
 
         logger.info("=" * 60)
         logger.info(
-            "DISCOVERY COMPLETE: %s patterns from "
-            "%s/%s sources in %.2fs"
-        , total_patterns, sources_run, sources_attempted, duration)
+            "DISCOVERY COMPLETE: %s patterns from %s/%s sources in %.2fs",
+            total_patterns,
+            sources_run,
+            sources_attempted,
+            duration,
+        )
         logger.info("=" * 60)
 
         if save_report:
@@ -348,18 +372,14 @@ class PatternDiscovery:
         insights: list[str] = []
         try:
             if hasattr(result, "insights"):
-                for insight in result.insights[:
-                    5]:
+                for insight in result.insights[:5]:
                     text = (
-                        insight.insight
-                        if hasattr(insight, "insight")
-                        else str(insight)
+                        insight.insight if hasattr(insight, "insight") else str(insight)
                     )
                     insights.append(f"[{source_name}] {text}")
             elif isinstance(result, dict):
                 if "solutions" in result:
-                    for sol in result["solutions"][:
-                        3]:
+                    for sol in result["solutions"][:3]:
                         title = sol.get("title", sol.get("description", str(sol)))
                         insights.append(f"[{source_name}] Solution: {title}")
                 if "guidance" in result:
@@ -373,16 +393,21 @@ class PatternDiscovery:
         """Append report to log; also save full report as markdown."""
         try:
             with open(self.discovery_log, "a") as f:
-                f.write(json.dumps({
-                    "timestamp": report.timestamp,
-                    "sources_run": report.sources_run,
-                    "sources_attempted": report.sources_attempted,
-                    "total_patterns": report.total_patterns,
-                    "by_source": report.by_source,
-                    "duration_seconds": report.duration_seconds,
-                    "insight_count": len(report.insights),
-                    "errors": report.errors,
-                }) + "\n")
+                f.write(
+                    json.dumps(
+                        {
+                            "timestamp": report.timestamp,
+                            "sources_run": report.sources_run,
+                            "sources_attempted": report.sources_attempted,
+                            "total_patterns": report.total_patterns,
+                            "by_source": report.by_source,
+                            "duration_seconds": report.duration_seconds,
+                            "insight_count": len(report.insights),
+                            "errors": report.errors,
+                        }
+                    )
+                    + "\n"
+                )
         except Exception as e:
             logger.debug("Could not write JSONL log: %s", e, exc_info=True)
 

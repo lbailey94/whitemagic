@@ -9,19 +9,21 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Vote:
     """Vote: vote.
 
     Value object: equality and repr are field-based."""
+
     agent: str
-    decision: str # "APPROVE", "BLOCK", "ABSTAIN"
+    decision: str  # "APPROVE", "BLOCK", "ABSTAIN"
     reason: str
     weight: float
 
+
 class Council:
-    """The Council balances conflicting drives (Creativity vs Safety).
-    """
+    """The Council balances conflicting drives (Creativity vs Safety)."""
 
     def __init__(self):
         self.agents = ["Logic (Root)", "Ethics (Dharma)", "Creative (Leo)"]
@@ -45,8 +47,15 @@ class Council:
 
         # 2. Ethics Vote (Dharma) - Checks harmony
         # Simulation: if 'delete' in action, block
-        if "delete" in action_description.lower() or "destroy" in action_description.lower():
-            votes.append(Vote("Ethics", "BLOCK", "Destructive action requires high clearance", 1.5))
+        if (
+            "delete" in action_description.lower()
+            or "destroy" in action_description.lower()
+        ):
+            votes.append(
+                Vote(
+                    "Ethics", "BLOCK", "Destructive action requires high clearance", 1.5
+                )
+            )
         else:
             votes.append(Vote("Ethics", "APPROVE", "Harmony maintained", 1.0))
 
@@ -63,8 +72,11 @@ class Council:
                 score -= v.weight
 
         decision = score > 0
-        logger.info("⚖️  Verdict: %s (Score: %s)", 'GRANTED' if decision else 'DENIED', score)
+        logger.info(
+            "⚖️  Verdict: %s (Score: %s)", "GRANTED" if decision else "DENIED", score
+        )
         return decision
+
 
 if __name__ == "__main__":
     council = Council()

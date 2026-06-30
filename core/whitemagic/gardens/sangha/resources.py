@@ -23,17 +23,21 @@ from .workspace import get_sangha_base_dir
 try:
     from whitemagic.utils.fileio import atomic_write as _atomic_write
     from whitemagic.utils.fileio import file_lock as _file_lock
+
     FILEIO_AVAILABLE = True
 except ImportError:
     FILEIO_AVAILABLE = False
 
     @contextmanager
-    def _file_lock(filepath: str | Path, timeout: float = 5.0) -> Generator[None, None, None]:
+    def _file_lock(
+        filepath: str | Path, timeout: float = 5.0
+    ) -> Generator[None, None, None]:
         _ = timeout
         yield
 
     def _atomic_write(filepath: str | Path, content: str) -> None:
         Path(filepath).write_text(content, encoding="utf-8")
+
 
 file_lock = _file_lock
 atomic_write = _atomic_write
@@ -70,9 +74,7 @@ class ResourceManager:
             with file_lock(self.registry_file):
                 loaded = _json_loads(self.registry_file.read_text())
                 if isinstance(loaded, dict):
-                    return {
-                        str(k): v for k, v in loaded.items() if isinstance(v, dict)
-                    }
+                    return {str(k): v for k, v in loaded.items() if isinstance(v, dict)}
                 return {}
         except (json.JSONDecodeError, FileNotFoundError):
             return {}
@@ -82,11 +84,9 @@ class ResourceManager:
         with file_lock(self.registry_file):
             atomic_write(self.registry_file, _json_dumps(registry, indent=2))
 
-    def acquire_lock(self,
-                     resource_id: str,
-                     agent_id: str,
-                     reason: str,
-                     ttl_seconds: int = 300) -> bool:
+    def acquire_lock(
+        self, resource_id: str, agent_id: str, reason: str, ttl_seconds: int = 300
+    ) -> bool:
         """Attempt to acquire a lock on a resource.
         Supports automatic renewal if the agent already holds the lock.
         """
@@ -124,7 +124,9 @@ class ResourceManager:
             atomic_write(self.registry_file, _json_dumps(registry, indent=2))
             return True
 
-    def heartbeat(self, resource_id: str, agent_id: str, ttl_seconds: int = 300) -> bool:
+    def heartbeat(
+        self, resource_id: str, agent_id: str, ttl_seconds: int = 300
+    ) -> bool:
         """Extend lock lifetime (heartbeat) if owned by agent."""
         resource_id = str(resource_id)
         with file_lock(self.registry_file):
@@ -132,7 +134,10 @@ class ResourceManager:
                 return False
 
             registry = _json_loads(self.registry_file.read_text())
-            if resource_id in registry and registry[resource_id]["locked_by"] == agent_id:
+            if (
+                resource_id in registry
+                and registry[resource_id]["locked_by"] == agent_id
+            ):
                 now = datetime.now()
                 expires_at = now + timedelta(seconds=ttl_seconds)
                 registry[resource_id]["expires_at"] = expires_at.isoformat()
@@ -187,16 +192,20 @@ class ResourceManager:
         for data in registry.values():
             expires_at = parse_datetime(data["expires_at"])
             if now < expires_at:
-                locks.append(ResourceLock(
-                    resource_id=data["resource_id"],
-                    locked_by=data["locked_by"],
-                    acquired_at=parse_datetime(data["acquired_at"]),
-                    expires_at=expires_at,
-                    reason=data["reason"],
-                ))
+                locks.append(
+                    ResourceLock(
+                        resource_id=data["resource_id"],
+                        locked_by=data["locked_by"],
+                        acquired_at=parse_datetime(data["acquired_at"]),
+                        expires_at=expires_at,
+                        reason=data["reason"],
+                    )
+                )
         return locks
 
-    def _clean_expired_locks(self, registry: dict[str, dict[str, Any]], now: datetime) -> None:
+    def _clean_expired_locks(
+        self, registry: dict[str, dict[str, Any]], now: datetime
+    ) -> None:
         """Remove expired locks from the registry."""
         expired = []
         for resource_id, lock_data in registry.items():
@@ -211,6 +220,7 @@ class ResourceManager:
 
 # Global instance
 _resources: ResourceManager | None = None
+
 
 def get_resources() -> ResourceManager:
     """

@@ -30,7 +30,9 @@ class FederatedLearning:
         self.nodes: dict[str, dict[str, Any]] = {}
         self.shared_patterns: list[dict[str, Any]] = []
 
-    def register_node(self, node_id: str, capabilities: list[str] | None = None) -> None:
+    def register_node(
+        self, node_id: str, capabilities: list[str] | None = None
+    ) -> None:
         """Register a federated node."""
         self.nodes[node_id] = {
             "capabilities": capabilities or [],
@@ -61,11 +63,13 @@ class FederatedLearning:
         aggregated: list[dict[str, Any]] = []
         for ptype, entries in by_type.items():
             if len(entries) >= 2:
-                aggregated.append({
-                    "type": ptype,
-                    "node_count": len(set(e["node_id"] for e in entries)),
-                    "total_patterns": len(entries),
-                })
+                aggregated.append(
+                    {
+                        "type": ptype,
+                        "node_count": len(set(e["node_id"] for e in entries)),
+                        "total_patterns": len(entries),
+                    }
+                )
         return aggregated
 
     def summary(self) -> dict[str, Any]:

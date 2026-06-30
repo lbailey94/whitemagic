@@ -125,10 +125,6 @@ fn now_ms() -> u64 {
         .as_millis() as u64
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 /// Record a rate check event in shared memory.
 pub fn record_check(allowed: bool) {
     init_mmap();
@@ -159,10 +155,6 @@ pub fn record_pipeline_call() {
         ts.store(now_ms(), Ordering::Relaxed);
     }
 }
-
-// ---------------------------------------------------------------------------
-// PyO3 bindings
-// ---------------------------------------------------------------------------
 
 /// Get shared state statistics as JSON.
 /// Returns counters visible to ALL processes sharing the mmap file.

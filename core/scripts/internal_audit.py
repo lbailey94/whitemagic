@@ -34,6 +34,7 @@ IDENTITY_MAP = {
     "Persephone": "Analyst",
 }
 
+
 def scrub_content(content: str, keywords: list[str]) -> str:
     """Replace private keywords with generic placeholders."""
     for kw in keywords:
@@ -41,12 +42,13 @@ def scrub_content(content: str, keywords: list[str]) -> str:
         content = re.sub(rf"\b{kw}\b", placeholder, content)
     return content
 
+
 def audit_file(file_path: Path, args):
     if file_path.suffix not in [".py", ".rs", ".ex", ".sh", ".md", ".json"]:
         return
 
     print(f"  Auditing: {file_path.relative_to(args.root)}")
-    
+
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -58,7 +60,9 @@ def audit_file(file_path: Path, args):
             if "MIT License" in content or "MIT" in content[:200]:
                 print(f"    [LICENSE] Switching to Apache 2.0")
                 # Remove common MIT headers if they exist
-                content = re.sub(r"#.*?MIT License.*?\n", "", content, flags=re.IGNORECASE)
+                content = re.sub(
+                    r"#.*?MIT License.*?\n", "", content, flags=re.IGNORECASE
+                )
                 content = LICENSE_BOILERPLATE + content
                 changed = True
 
@@ -80,29 +84,43 @@ def audit_file(file_path: Path, args):
     except Exception as e:
         print(f"    ❌ Error: {e}")
 
+
 def run_audit():
-    parser = argparse.ArgumentParser(description="WhiteMagic Internal Audit & Sanitization")
-    parser.add_argument("--root", type=Path, default=Path("."), help="Project root to scan")
+    parser = argparse.ArgumentParser(
+        description="WhiteMagic Internal Audit & Sanitization"
+    )
+    parser.add_argument(
+        "--root", type=Path, default=Path("."), help="Project root to scan"
+    )
     parser.add_argument("--license", choices=["Apache2.0"], help="License to enforce")
     parser.add_argument("--scrub", help="Comma-separated keywords to scrub")
     parser.add_argument("--apply", action="store_true", help="Actually modify files")
     args = parser.parse_args()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("WHITE MAGIC INTERNAL AUDIT: STRATEGIC PREPARATION")
-    print("="*60)
+    print("=" * 60)
 
     # Folders to skip (The "Private Vault")
-    SKIP_FOLDERS = ["_aria", "_archives", "_memories", "venv", ".git", "__pycache__", "auxiliary"]
+    SKIP_FOLDERS = [
+        "_aria",
+        "_archives",
+        "_memories",
+        "venv",
+        ".git",
+        "__pycache__",
+        "auxiliary",
+    ]
 
     for root, dirs, files in os.walk(args.root):
         # In-place skip folders
         dirs[:] = [d for d in dirs if d not in SKIP_FOLDERS]
-        
+
         for file in files:
             audit_file(Path(root) / file, args)
 
     print("\n✅ Audit complete.")
+
 
 if __name__ == "__main__":
     run_audit()

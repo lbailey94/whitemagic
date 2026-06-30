@@ -23,10 +23,26 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "The research question to investigate.", "default": "current system state"},
-                "max_rounds": {"type": "integer", "description": "Maximum iteration rounds (default 3).", "default": 3},
-                "evidence_limit": {"type": "integer", "description": "Evidence items per sub-question (default 5).", "default": 5},
-                "hops": {"type": "integer", "description": "Graph walk depth (default 2).", "default": 2},
+                "query": {
+                    "type": "string",
+                    "description": "The research question to investigate.",
+                    "default": "current system state",
+                },
+                "max_rounds": {
+                    "type": "integer",
+                    "description": "Maximum iteration rounds (default 3).",
+                    "default": 3,
+                },
+                "evidence_limit": {
+                    "type": "integer",
+                    "description": "Evidence items per sub-question (default 5).",
+                    "default": 5,
+                },
+                "hops": {
+                    "type": "integer",
+                    "description": "Graph walk depth (default 2).",
+                    "default": 2,
+                },
             },
         },
     ),
@@ -38,7 +54,6 @@ TOOLS: list[ToolDefinition] = [
         gana="gana_winnowing_basket",
         input_schema={"type": "object", "properties": {}},
     ),
-
     # ═══ Narrative Compression ═══
     ToolDefinition(
         name="narrative.compress",
@@ -49,9 +64,21 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "max_clusters": {"type": "integer", "description": "Maximum clusters to process (default 5).", "default": 5},
-                "sample_limit": {"type": "integer", "description": "How many recent memories to scan (default 500).", "default": 500},
-                "dry_run": {"type": "boolean", "description": "Preview without persisting narratives.", "default": False},
+                "max_clusters": {
+                    "type": "integer",
+                    "description": "Maximum clusters to process (default 5).",
+                    "default": 5,
+                },
+                "sample_limit": {
+                    "type": "integer",
+                    "description": "How many recent memories to scan (default 500).",
+                    "default": 500,
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "Preview without persisting narratives.",
+                    "default": False,
+                },
             },
         },
     ),
@@ -63,7 +90,6 @@ TOOLS: list[ToolDefinition] = [
         gana="gana_abundance",
         input_schema={"type": "object", "properties": {}},
     ),
-
     # ═══ Hermit Crab Mode ═══
     ToolDefinition(
         name="hermit.status",
@@ -99,7 +125,11 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "reason": {"type": "string", "description": "Reason for manual withdrawal.", "default": "manual"},
+                "reason": {
+                    "type": "string",
+                    "description": "Reason for manual withdrawal.",
+                    "default": "manual",
+                },
             },
         },
     ),
@@ -120,8 +150,16 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "approved": {"type": "boolean", "description": "Whether to approve the unlock.", "default": True},
-                "resolver": {"type": "string", "description": "Who is resolving (default: system).", "default": "system"},
+                "approved": {
+                    "type": "boolean",
+                    "description": "Whether to approve the unlock.",
+                    "default": True,
+                },
+                "resolver": {
+                    "type": "string",
+                    "description": "Who is resolving (default: system).",
+                    "default": "system",
+                },
             },
         },
     ),
@@ -142,11 +180,14 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "operation": {"type": "string", "description": "Operation type: read, write, search, recall.", "default": "read"},
+                "operation": {
+                    "type": "string",
+                    "description": "Operation type: read, write, search, recall.",
+                    "default": "read",
+                },
             },
         },
     ),
-
     # ═══ Green Score Telemetry ═══
     ToolDefinition(
         name="green.report",
@@ -165,16 +206,35 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "locality": {"type": "string", "enum": ["edge", "local_llm", "local_net", "cloud"], "description": "Where inference ran.", "default": "edge"},
-                "tokens_used": {"type": "integer", "description": "Tokens consumed.", "default": 0},
-                "tokens_saved": {"type": "integer", "description": "Tokens avoided via caching/compression.", "default": 0},
+                "locality": {
+                    "type": "string",
+                    "enum": ["edge", "local_llm", "local_net", "cloud"],
+                    "description": "Where inference ran.",
+                    "default": "edge",
+                },
+                "tokens_used": {
+                    "type": "integer",
+                    "description": "Tokens consumed.",
+                    "default": 0,
+                },
+                "tokens_saved": {
+                    "type": "integer",
+                    "description": "Tokens avoided via caching/compression.",
+                    "default": 0,
+                },
                 "model": {"type": "string", "description": "Model name if applicable."},
-                "tool": {"type": "string", "description": "Tool that triggered the inference."},
-                "duration_ms": {"type": "number", "description": "Operation duration in ms.", "default": 0},
+                "tool": {
+                    "type": "string",
+                    "description": "Tool that triggered the inference.",
+                },
+                "duration_ms": {
+                    "type": "number",
+                    "description": "Operation duration in ms.",
+                    "default": 0,
+                },
             },
         },
     ),
-
     # ═══ Cognitive Modes ═══
     ToolDefinition(
         name="cognitive.mode",
@@ -193,7 +253,12 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "mode": {"type": "string", "enum": ["explorer", "executor", "reflector", "balanced", "auto"], "description": "Cognitive mode to activate.", "default": "balanced"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["explorer", "executor", "reflector", "balanced", "auto"],
+                    "description": "Cognitive mode to activate.",
+                    "default": "balanced",
+                },
             },
         },
     ),

@@ -43,11 +43,13 @@ class ConsciousnessGarden:
         if current < len(stages) - 1:
             seed["stage"] = stages[current + 1]
             if seed["stage"] == "bloom":
-                self._blooms.append({
-                    "intention": seed["intention"],
-                    "quality": seed["quality"],
-                    "bloomed": time.time(),
-                })
+                self._blooms.append(
+                    {
+                        "intention": seed["intention"],
+                        "quality": seed["quality"],
+                        "bloomed": time.time(),
+                    }
+                )
             return True
         return False
 

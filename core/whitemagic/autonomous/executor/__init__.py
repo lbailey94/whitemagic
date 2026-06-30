@@ -8,6 +8,7 @@ Key classes:
     ProgressAssessor     — progress evaluation
     ResourceLimits       — execution resource caps
 """
+
 from __future__ import annotations
 
 from .assessor import ProgressAssessor

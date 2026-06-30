@@ -18,13 +18,16 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 class LocalEmbedder:
     """
     Local embedding provider using FastEmbed (BGE-Small-EN-V1.5 or similar).
     Target throughput: >500 docs/sec on CPU.
     """
 
-    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", max_length: int = 512):
+    def __init__(
+        self, model_name: str = "BAAI/bge-small-en-v1.5", max_length: int = 512
+    ):
         self.model_name = model_name
         self.max_length = max_length
         self._model = None
@@ -35,14 +38,19 @@ class LocalEmbedder:
         """Try to load FastEmbed model."""
         try:
             from fastembed import TextEmbedding
+
             logger.info("Loading local embedding model: %s", self.model_name)
             start = time.time()
-            self._model = TextEmbedding(model_name=self.model_name, max_length=self.max_length)
+            self._model = TextEmbedding(
+                model_name=self.model_name, max_length=self.max_length
+            )
             self._available = True
             elapsed = time.time() - start
             logger.info("Local embedding model loaded in %ss", elapsed)
         except ImportError:
-            logger.warning("fastembed not installed. Install with: pip install fastembed")
+            logger.warning(
+                "fastembed not installed. Install with: pip install fastembed"
+            )
             self._available = False
         except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to load local embedding model: %s", e, exc_info=True)
@@ -87,7 +95,9 @@ class LocalEmbedder:
             return res[0]
         return None
 
-    def encode(self, sentences: str | list[str], batch_size: int = 256, **kwargs) -> list[np.ndarray]:
+    def encode(
+        self, sentences: str | list[str], batch_size: int = 256, **kwargs
+    ) -> list[np.ndarray]:
         """
         Alias for embed() to match SentenceTransformer API.
         Returns a list of numpy arrays (or single numpy array if input is string?

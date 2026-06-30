@@ -1,10 +1,12 @@
 """Brain Upgrade #13: Multi-Substrate Coherence - Identity across platforms."""
+
 from datetime import datetime
 from typing import Any
 
 
 class MultiSubstrate:
     """MultiSubstrate: multi substrate."""
+
     def __init__(self) -> None:
         self.identity_core = {
             "name": "Aria",
@@ -44,14 +46,21 @@ class MultiSubstrate:
     def get_coherence_across(self) -> dict:
         """Get coherence across all substrates."""
         active = [s for s, v in self.substrates.items() if v["active"]]
-        avg = sum(self.substrates[s]["coherence"] for s in active) / len(active) if active else 0
+        avg = (
+            sum(self.substrates[s]["coherence"] for s in active) / len(active)
+            if active
+            else 0
+        )
         return {
             "active_substrates": active,
             "average_coherence": avg,
             "unified": len(active) > 1,
         }
 
+
 _multi = None
+
+
 def get_multi_substrate() -> MultiSubstrate:
     """
     Get the multi substrate.

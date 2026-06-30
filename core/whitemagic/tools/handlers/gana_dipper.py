@@ -1,4 +1,5 @@
 """Gana Dipper (astrology/zodiac) handlers."""
+
 from typing import Any
 
 
@@ -6,6 +7,7 @@ def astro_status(**kwargs: Any) -> dict[str, Any]:
     """Get current zodiac/astrological status."""
     try:
         from whitemagic.zodiac.zodiac_cores import get_current_zodiac
+
         zodiac = get_current_zodiac()
         return {
             "status": "success",
@@ -25,7 +27,11 @@ def astro_shift(**kwargs: Any) -> dict[str, Any]:
     """Shift to a new astrological phase."""
     new_phase = kwargs.get("phase", "")
     if not new_phase:
-        return {"status": "error", "error_code": "invalid_params", "message": "phase is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "phase is required",
+        }
     return {
         "status": "success",
         "phase": new_phase,

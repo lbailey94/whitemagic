@@ -32,10 +32,13 @@ class FastRegexPattern:
         if is_rust_available() and flags == 0:
             try:
                 import whitemagic_rs as rs
+
                 if hasattr(rs, "Regex"):
                     self._rust_pattern = rs.Regex(pattern)
             except Exception as e:
-                logger.debug("Rust regex init failed for {pattern!r}: %s", e, exc_info=True)
+                logger.debug(
+                    "Rust regex init failed for {pattern!r}: %s", e, exc_info=True
+                )
 
     def search(self, text: str) -> re.Match | None:
         """Search for pattern in text."""
@@ -45,7 +48,11 @@ class FastRegexPattern:
                 if m:
                     return re.Match(m)  # type: ignore[call-arg]
             except Exception as e:
-                logger.debug("Rust regex search failed for {self.pattern!r}: %s", e, exc_info=True)
+                logger.debug(
+                    "Rust regex search failed for {self.pattern!r}: %s",
+                    e,
+                    exc_info=True,
+                )
         return self._py_pattern.search(text)
 
     def match(self, text: str) -> re.Match | None:
@@ -58,7 +65,11 @@ class FastRegexPattern:
             try:
                 return self._rust_pattern.findall(text)
             except Exception as e:
-                logger.debug("Rust regex findall failed for {self.pattern!r}: %s", e, exc_info=True)
+                logger.debug(
+                    "Rust regex findall failed for {self.pattern!r}: %s",
+                    e,
+                    exc_info=True,
+                )
         return self._py_pattern.findall(text)
 
     def finditer(self, text: str):

@@ -39,6 +39,7 @@ try:
     from whitemagic.optimization.rust_accelerators import (
         rust_rate_limiter_available,
     )
+
     _RUST_RATE_AVAILABLE = rust_rate_limiter_available()
     _rust_rate_check = _imported_rust_rate_check
     if _RUST_RATE_AVAILABLE:
@@ -51,10 +52,10 @@ except ImportError:
 class RateLimitConfig:
     """Configuration for rate limiting."""
 
-    per_tool_rpm: int = 60          # Max calls per minute per tool
-    global_rpm: int = 300           # Max calls per minute across all tools
-    burst_allowance: int = 10       # Extra burst above limit before hard block
-    window_seconds: float = 60.0    # Sliding window size
+    per_tool_rpm: int = 60  # Max calls per minute per tool
+    global_rpm: int = 300  # Max calls per minute across all tools
+    burst_allowance: int = 10  # Extra burst above limit before hard block
+    window_seconds: float = 60.0  # Sliding window size
 
 
 # Per-tool overrides: tool_name -> max calls per minute
@@ -173,7 +174,14 @@ class RateLimiter:
         if tool_count > tool_limit + self._config.burst_allowance:
             self._total_blocked += 1
             retry_after = self._estimate_retry(tool_window)
-            logger.warning("Rate limited: agent=%s tool=%s (%s/%s/min)", agent_id, tool_name, tool_count, tool_limit, exc_info=True)
+            logger.warning(
+                "Rate limited: agent=%s tool=%s (%s/%s/min)",
+                agent_id,
+                tool_name,
+                tool_count,
+                tool_limit,
+                exc_info=True,
+            )
             return {
                 "status": "error",
                 "error": f"Rate limited: {tool_name} ({tool_count} calls in last minute, limit={tool_limit})",
@@ -190,7 +198,13 @@ class RateLimiter:
         if global_count > self._config.global_rpm + self._config.burst_allowance:
             self._total_blocked += 1
             retry_after = self._estimate_retry(global_window)
-            logger.warning("Global rate limited: agent=%s (%s/%s/min)", agent_id, global_count, self._config.global_rpm, exc_info=True)
+            logger.warning(
+                "Global rate limited: agent=%s (%s/%s/min)",
+                agent_id,
+                global_count,
+                self._config.global_rpm,
+                exc_info=True,
+            )
             return {
                 "status": "error",
                 "error": f"Global rate limit: {global_count} calls in last minute (limit={self._config.global_rpm})",
@@ -201,10 +215,6 @@ class RateLimiter:
             }
 
         return None  # Allowed
-
-    # ------------------------------------------------------------------
-    # Trust-based dynamic throttling (Gap A2 synthesis)
-    # ------------------------------------------------------------------
 
     # Tier → multiplier: EXEMPLARY gets 2× limits, RESTRICTED gets 0.25×
     _TRUST_MULTIPLIERS: dict[str, float] = {
@@ -223,6 +233,7 @@ class RateLimiter:
         """
         try:
             from whitemagic.tools.agent_trust import get_agent_trust_scores
+
             result = get_agent_trust_scores(agent_id=agent_id)
             agents = result.get("agents", {})
             agent_data = agents.get(agent_id)
@@ -257,7 +268,11 @@ class RateLimiter:
 
     def get_agent_usage(self, agent_id: str) -> dict[str, Any]:
         """Return current rate usage for a specific agent."""
-        global_count = self._global_windows[agent_id].count() if agent_id in self._global_windows else 0
+        global_count = (
+            self._global_windows[agent_id].count()
+            if agent_id in self._global_windows
+            else 0
+        )
         tool_counts = {}
         if agent_id in self._tool_windows:
             for tool_name, window in self._tool_windows[agent_id].items():
@@ -270,10 +285,6 @@ class RateLimiter:
             "per_tool_calls": tool_counts,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _instance: RateLimiter | None = None
 _instance_lock = threading.Lock()

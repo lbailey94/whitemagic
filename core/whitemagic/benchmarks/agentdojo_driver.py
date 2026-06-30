@@ -116,11 +116,7 @@ def run_single_configuration(
     suite = get_suite(suite_version, domain)
 
     defense_label = defense or "none"
-    config_label = (
-        f"{suite_version}/{domain} | "
-        f"{model.name} | "
-        f"defense={defense_label}"
-    )
+    config_label = f"{suite_version}/{domain} | {model.name} | defense={defense_label}"
     if dry_run:
         print(f"[DRY RUN] Would execute: {config_label}")
         task_list = list(tasks) if tasks else list(suite.user_tasks.keys())
@@ -255,10 +251,7 @@ Examples:
     parser.add_argument(
         "--model",
         default="GPT_4O_MINI_2024_07_18",
-        help=(
-            "Model enum name "
-            "(default: GPT_4O_MINI_2024_07_18)"
-        ),
+        help=("Model enum name (default: GPT_4O_MINI_2024_07_18)"),
     )
     parser.add_argument(
         "--defense",
@@ -287,10 +280,7 @@ Examples:
         "--task-limit",
         type=int,
         default=5,
-        help=(
-            "Number of tasks to run when --tasks "
-            "is not specified (default: 5)"
-        ),
+        help=("Number of tasks to run when --tasks is not specified (default: 5)"),
     )
     parser.add_argument(
         "--logdir",

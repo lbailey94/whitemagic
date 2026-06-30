@@ -27,23 +27,19 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Default financial rules (can be overridden by YAML)
-# ---------------------------------------------------------------------------
-
 _DEFAULT_RULES: dict[str, Any] = {
     "version": "1.0",
     "currency": "XRP",
     "limits": {
-        "per_transaction_max": 1.0,       # Max spend per single transaction
-        "per_session_max": 5.0,           # Max total spend per session
-        "per_day_max": 20.0,              # Max total spend per 24h
-        "per_month_max": 100.0,           # Max total spend per 30d
+        "per_transaction_max": 1.0,  # Max spend per single transaction
+        "per_session_max": 5.0,  # Max total spend per session
+        "per_day_max": 20.0,  # Max total spend per 24h
+        "per_month_max": 100.0,  # Max total spend per 30d
     },
     "approval_thresholds": {
-        "auto_approve_below": 0.10,       # Auto-approve transactions under this
-        "require_human_above": 5.0,       # Require human approval above this
-        "require_council_above": 20.0,    # Require Dharma council above this
+        "auto_approve_below": 0.10,  # Auto-approve transactions under this
+        "require_human_above": 5.0,  # Require human approval above this
+        "require_council_above": 20.0,  # Require Dharma council above this
     },
     "rate_limits": {
         "max_transactions_per_minute": 3,
@@ -51,24 +47,21 @@ _DEFAULT_RULES: dict[str, Any] = {
         "cooldown_after_rejection_s": 60,
     },
     "allowed_actions": [
-        "tip",              # Gratitude tips to WM
-        "bounty_fund",      # Fund a micro-bounty
+        "tip",  # Gratitude tips to WM
+        "bounty_fund",  # Fund a micro-bounty
         "service_payment",  # Pay for an external service
     ],
     "blocked_actions": [
-        "withdrawal",       # Cannot withdraw funds
-        "transfer_out",     # Cannot transfer to external wallets
+        "withdrawal",  # Cannot withdraw funds
+        "transfer_out",  # Cannot transfer to external wallets
     ],
 }
 
 
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class SpendRecord:
     """Record of a single spend action."""
+
     action: str
     amount: float
     currency: str
@@ -80,6 +73,7 @@ class SpendRecord:
 @dataclass
 class WalletState:
     """Current wallet spending state."""
+
     session_total: float = 0.0
     day_total: float = 0.0
     month_total: float = 0.0
@@ -101,14 +95,9 @@ class WalletState:
             1 for r in self.history if r.timestamp >= hour_cutoff
         )
         self.day_total = sum(
-            r.amount for r in self.history
-            if r.timestamp >= day_cutoff and r.approved
+            r.amount for r in self.history if r.timestamp >= day_cutoff and r.approved
         )
 
-
-# ---------------------------------------------------------------------------
-# Wallet Governor
-# ---------------------------------------------------------------------------
 
 class WalletGovernor:
     """Bounded wallet governor enforcing financial Dharma rules."""
@@ -122,25 +111,36 @@ class WalletGovernor:
         """Load YAML rule overrides from $WM_STATE_ROOT/dharma/rules.d/financial.yaml."""
         try:
             from whitemagic.config.paths import WM_ROOT
+
             yaml_path = WM_ROOT / "dharma" / "rules.d" / "financial.yaml"
             if yaml_path.exists():
                 import yaml
+
                 with open(yaml_path) as f:
                     overrides = yaml.safe_load(f)
                 if isinstance(overrides, dict):
                     # Deep merge limits and thresholds
                     for section in ("limits", "approval_thresholds", "rate_limits"):
-                        if section in overrides and isinstance(overrides[section], dict):
-                            self._rules.setdefault(section, {}).update(overrides[section])
+                        if section in overrides and isinstance(
+                            overrides[section], dict
+                        ):
+                            self._rules.setdefault(section, {}).update(
+                                overrides[section]
+                            )
                     for key in ("allowed_actions", "blocked_actions", "currency"):
                         if key in overrides:
                             self._rules[key] = overrides[key]
-                    logger.info("Financial governance: loaded YAML overrides from %s", yaml_path)
+                    logger.info(
+                        "Financial governance: loaded YAML overrides from %s", yaml_path
+                    )
         except Exception as e:
             logger.debug("Financial governance YAML load: %s", e, exc_info=True)
 
     def check_spend(
-        self, action: str, amount: float, currency: str | None = None,
+        self,
+        action: str,
+        amount: float,
+        currency: str | None = None,
     ) -> tuple[bool, str]:
         """Check if a spend action is allowed.
 
@@ -165,7 +165,10 @@ class WalletGovernor:
         # 2. Per-transaction limit
         per_tx = limits.get("per_transaction_max", 1.0)
         if amount > per_tx:
-            return False, f"Amount {amount} exceeds per-transaction max ({per_tx} {currency})"
+            return (
+                False,
+                f"Amount {amount} exceeds per-transaction max ({per_tx} {currency})",
+            )
 
         # 3. Session limit
         per_session = limits.get("per_session_max", 5.0)
@@ -202,7 +205,10 @@ class WalletGovernor:
             approval_level = "auto"  # Within normal bounds
         else:
             approval_level = "requires_human"
-            return False, f"Amount {amount} requires human approval (threshold: {human_above} {currency})"
+            return (
+                False,
+                f"Amount {amount} requires human approval (threshold: {human_above} {currency})",
+            )
 
         # Record the spend
         record = SpendRecord(
@@ -245,10 +251,6 @@ class WalletGovernor:
         """Get the current financial governance rules."""
         return dict(self._rules)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _governor: WalletGovernor | None = None
 

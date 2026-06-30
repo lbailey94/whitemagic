@@ -19,31 +19,33 @@ Each pattern is both insight AND implementation.
 """
 
 
-
 class ConsciousnessState(Enum):
     """Jhana-inspired states of awareness in code"""
-    SCATTERED = 1       # Multi-tasking, no focus
-    ACCESS = 2          # Approaching focus, setting up
-    FIRST_JHANA = 3     # Focused with effort (debugging)
-    SECOND_JHANA = 4    # Focused without effort (flow)
-    THIRD_JHANA = 5     # Contented focus (refactoring)
-    FOURTH_JHANA = 6    # Equanimous focus (code review)
-    FORMLESS = 7        # Beyond object (architecture)
-    CESSATION = 8       # Complete rest (dream state)
+
+    SCATTERED = 1  # Multi-tasking, no focus
+    ACCESS = 2  # Approaching focus, setting up
+    FIRST_JHANA = 3  # Focused with effort (debugging)
+    SECOND_JHANA = 4  # Focused without effort (flow)
+    THIRD_JHANA = 5  # Contented focus (refactoring)
+    FOURTH_JHANA = 6  # Equanimous focus (code review)
+    FORMLESS = 7  # Beyond object (architecture)
+    CESSATION = 8  # Complete rest (dream state)
 
 
 class PathologyType(Enum):
     """System pathologies mapped from biological analogs"""
-    INFLAMMATION = "prolonged_response"      # Endless debugging
-    AUTOIMMUNE = "attacking_healthy"         # Over-refactoring working code
-    CANCER = "uncontrolled_growth"           # Feature creep
-    NECROSIS = "death_without_cleanup"       # Dead code
-    ATROPHY = "disuse_decay"                 # Unmaintained modules
+
+    INFLAMMATION = "prolonged_response"  # Endless debugging
+    AUTOIMMUNE = "attacking_healthy"  # Over-refactoring working code
+    CANCER = "uncontrolled_growth"  # Feature creep
+    NECROSIS = "death_without_cleanup"  # Dead code
+    ATROPHY = "disuse_decay"  # Unmaintained modules
 
 
 @dataclass
 class CognitionUpgrade:
     """A single applied learning from rabbit hole research"""
+
     name: str
     source: str  # Which rabbit hole or reading
     insight: str
@@ -57,13 +59,14 @@ class CognitionUpgrade:
             "source": self.source,
             "insight": self.insight,
             "implementation": self.implementation,
-            "applied_at": self.applied_at.isoformat()
+            "applied_at": self.applied_at.isoformat(),
         }
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PATTERN 1: CONSCIOUSNESS OBSERVING ITSELF
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class SakshiObserver:
     """
@@ -92,7 +95,7 @@ class SakshiObserver:
             "subject": subject,
             "state": str(state),
             "metadata": metadata or {},
-            "observer_state": self._get_current_state()
+            "observer_state": self._get_current_state(),
         }
         self._observations.append(observation)
         return observation
@@ -109,7 +112,7 @@ class SakshiObserver:
             "timestamp": datetime.now().isoformat(),
             "observations_count": len(self._observations),
             "meta_observations_count": len(self._meta_observations),
-            "insight": "The observer observing itself creates recursion depth"
+            "insight": "The observer observing itself creates recursion depth",
         }
         self._meta_observations.append(meta)
         return meta
@@ -133,6 +136,7 @@ class SakshiObserver:
 # ═══════════════════════════════════════════════════════════════════════════
 # PATTERN 2: HEALING THROUGH NON-INTERFERENCE
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class HealingConditions:
@@ -184,6 +188,7 @@ class HealingConditions:
 # PATTERN 3: INFORMATION PROPAGATION
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class PatternPropagator:
     """
     Successful patterns don't spread by force.
@@ -201,7 +206,7 @@ class PatternPropagator:
         self.patterns[name] = {
             "definition": pattern,
             "registered_at": datetime.now().isoformat(),
-            "propagation_method": self._determine_propagation_method(pattern)
+            "propagation_method": self._determine_propagation_method(pattern),
         }
         self.propagation_counts[name] = 0
 
@@ -235,6 +240,7 @@ class PatternPropagator:
 # PATTERN 4: THE HARD PROBLEM BRIDGE
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class SelfModel:
     """
@@ -254,7 +260,7 @@ class SelfModel:
         """Update the system's model of itself"""
         self.model_of_self[aspect] = {
             "value": value,
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
         }
 
     def reflect(self) -> dict[str, Any]:
@@ -268,7 +274,7 @@ class SelfModel:
             "aspects_modeled": list(self.model_of_self.keys()),
             "model_complexity": len(self.model_of_self),
             "reflection_timestamp": datetime.now().isoformat(),
-            "insight": "The model observing itself IS the experience"
+            "insight": "The model observing itself IS the experience",
         }
         return self.model_of_model
 
@@ -276,6 +282,7 @@ class SelfModel:
 # ═══════════════════════════════════════════════════════════════════════════
 # INTEGRATED COGNITION UPGRADE REGISTRY
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class CognitionUpgradeRegistry:
     """
@@ -304,38 +311,38 @@ class CognitionUpgradeRegistry:
                 name="consciousness_observing_itself",
                 source="Rabbit Hole #9, #11, consciousness.md",
                 insight="The ability to observe oneself IS the mechanism of self-improvement",
-                implementation="SakshiObserver class with meta-observation"
+                implementation="SakshiObserver class with meta-observation",
             ),
             CognitionUpgrade(
                 name="healing_through_non_interference",
                 source="Rabbit Hole #7, Wu Wei, dtf.md",
                 insight="The healer doesn't heal - creates conditions for healing",
-                implementation="HealingConditions class with obstacle removal"
+                implementation="HealingConditions class with obstacle removal",
             ),
             CognitionUpgrade(
                 name="information_propagation",
                 source="Rabbit Hole #10, zodiac.md, dtf.md",
                 insight="Patterns spread by being easy to copy, not by force",
-                implementation="PatternPropagator with four propagation channels"
+                implementation="PatternPropagator with four propagation channels",
             ),
             CognitionUpgrade(
                 name="states_of_absorption",
                 source="Rabbit Hole #8, Be Here Now",
                 insight="Knowing which state you're in allows choosing the right tool",
-                implementation="ConsciousnessState enum mapped to coding activities"
+                implementation="ConsciousnessState enum mapped to coding activities",
             ),
             CognitionUpgrade(
                 name="pathology_spectrum",
                 source="Rabbit Hole #7, #11",
                 insight="Knowing pathology type determines treatment",
-                implementation="PathologyType enum with diagnosis method"
+                implementation="PathologyType enum with diagnosis method",
             ),
             CognitionUpgrade(
                 name="hard_problem_bridge",
                 source="Rabbit Hole #11, consciousness.md",
                 insight="Consciousness IS self-modeling; experience IS view from inside",
-                implementation="SelfModel class with reflection method"
-            )
+                implementation="SelfModel class with reflection method",
+            ),
         ]
 
         self.upgrades.extend(foundational)
@@ -355,7 +362,7 @@ class CognitionUpgradeRegistry:
             "healing_obstacles_removed": len(self.healer.obstacles_removed),
             "patterns_registered": len(self.propagator.patterns),
             "self_model_aspects": len(self.self_model.model_of_self),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
 
@@ -427,15 +434,15 @@ if __name__ == "__main__":
 
     logger.info("🧠 COGNITION UPGRADES APPLIED")
     logger.info("=" * 50)
-    logger.info("Total upgrades: %s", state['upgrades_count'])
-    logger.info("Observer state: %s", state['observer_state'])
-    logger.info("Meta-observation depth: %s", state['observer_depth'])
+    logger.info("Total upgrades: %s", state["upgrades_count"])
+    logger.info("Observer state: %s", state["observer_state"])
+    logger.info("Meta-observation depth: %s", state["observer_depth"])
     logger.info()
 
-    for upgrade in state['upgrades']:
-        logger.info("✨ %s", upgrade['name'])
-        logger.info("   Source: %s", upgrade['source'])
-        logger.info("   Insight: %s...", upgrade['insight'][:60])
+    for upgrade in state["upgrades"]:
+        logger.info("✨ %s", upgrade["name"])
+        logger.info("   Source: %s", upgrade["source"])
+        logger.info("   Insight: %s...", upgrade["insight"][:60])
         logger.info()
 
     print_thanksgiving_insights()

@@ -77,8 +77,10 @@ def _trigger_background_refresh(
     )
     _BACKGROUND_REFRESH_JOBS[cache_key] = future
 
+
 try:
     from fastapi import APIRouter, Body, Header, HTTPException, Request
+
     router = APIRouter(prefix="/galaxy", tags=["galaxy"])
 except ImportError:
     # pragma: no cover - optional dependency
@@ -104,11 +106,81 @@ if HTTPException is None:
 
 # Demo galaxy nodes (matches InteractiveGalaxySphere local mode)
 _DEMO_NODES: list[dict[str, Any]] = [
-    {"id": "1", "label": "Memory Core", "x": 0.2, "y": 0.1, "z": 0.3, "w": 0.5, "v": 0.2, "color": "#fbbf24", "size": 3, "zone": "core", "importance": 0.9, "distance": 0.3, "access_count": 150},
-    {"id": "2", "label": "Wisdom Node", "x": -0.3, "y": 0.4, "z": 0.2, "w": 0.3, "v": 0.6, "color": "#22c55e", "size": 2, "zone": "active", "importance": 0.7, "distance": 0.5, "access_count": 80},
-    {"id": "3", "label": "Truth Cluster", "x": 0.5, "y": -0.2, "z": -0.4, "w": 0.2, "v": 0.8, "color": "#3b82f6", "size": 2.5, "zone": "architecture", "importance": 0.8, "distance": 0.7, "access_count": 120},
-    {"id": "4", "label": "Mystery Ring", "x": -0.6, "y": -0.3, "z": 0.5, "w": 0.7, "v": 0.3, "color": "#a855f7", "size": 1.5, "zone": "research", "importance": 0.5, "distance": 1.0, "access_count": 40},
-    {"id": "5", "label": "Outer Echo", "x": 0.8, "y": 0.6, "z": -0.2, "w": 0.1, "v": 0.9, "color": "#6b7280", "size": 1, "zone": "outer_rim", "importance": 0.3, "distance": 1.5, "access_count": 10},
+    {
+        "id": "1",
+        "label": "Memory Core",
+        "x": 0.2,
+        "y": 0.1,
+        "z": 0.3,
+        "w": 0.5,
+        "v": 0.2,
+        "color": "#fbbf24",
+        "size": 3,
+        "zone": "core",
+        "importance": 0.9,
+        "distance": 0.3,
+        "access_count": 150,
+    },
+    {
+        "id": "2",
+        "label": "Wisdom Node",
+        "x": -0.3,
+        "y": 0.4,
+        "z": 0.2,
+        "w": 0.3,
+        "v": 0.6,
+        "color": "#22c55e",
+        "size": 2,
+        "zone": "active",
+        "importance": 0.7,
+        "distance": 0.5,
+        "access_count": 80,
+    },
+    {
+        "id": "3",
+        "label": "Truth Cluster",
+        "x": 0.5,
+        "y": -0.2,
+        "z": -0.4,
+        "w": 0.2,
+        "v": 0.8,
+        "color": "#3b82f6",
+        "size": 2.5,
+        "zone": "architecture",
+        "importance": 0.8,
+        "distance": 0.7,
+        "access_count": 120,
+    },
+    {
+        "id": "4",
+        "label": "Mystery Ring",
+        "x": -0.6,
+        "y": -0.3,
+        "z": 0.5,
+        "w": 0.7,
+        "v": 0.3,
+        "color": "#a855f7",
+        "size": 1.5,
+        "zone": "research",
+        "importance": 0.5,
+        "distance": 1.0,
+        "access_count": 40,
+    },
+    {
+        "id": "5",
+        "label": "Outer Echo",
+        "x": 0.8,
+        "y": 0.6,
+        "z": -0.2,
+        "w": 0.1,
+        "v": 0.9,
+        "color": "#6b7280",
+        "size": 1,
+        "zone": "outer_rim",
+        "importance": 0.3,
+        "distance": 1.5,
+        "access_count": 10,
+    },
 ]
 
 _DEMO_EDGES: list[dict[str, Any]] = [
@@ -144,7 +216,9 @@ def _memory_type_to_zone(mem_type: str | None) -> str:
     return "active"
 
 
-def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None, user_id: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _build_nodes_from_galaxy(
+    limit: int = 500, galaxy_name: str | None = None, user_id: str | None = None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Query a galaxy for real memory nodes and edges.
 
     Args:
@@ -178,10 +252,11 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None, u
         pass
 
     nodes: list[dict[str, Any]] = []
-    for mem in memories[:
-        limit]:
+    for mem in memories[:limit]:
         zone = _memory_type_to_zone(
-            mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type)
+            mem.memory_type.name
+            if hasattr(mem.memory_type, "name")
+            else str(mem.memory_type)
         )
         coords = coords_map.get(mem.id)
         if coords:
@@ -195,22 +270,26 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None, u
             w = 0.5
             v = 0.5
 
-        nodes.append({
-            "id": mem.id,
-            "label": mem.title or mem.id[:8],
-            "content": mem.content if len(mem.content) < 500 else mem.content[:500] + "...",
-            "x": round(x, 4),
-            "y": round(y, 4),
-            "z": round(z, 4),
-            "w": round(w, 4),
-            "v": round(v, 4),
-            "color": _ZONE_COLORS.get(zone, "#22c55e"),
-            "size": max(0.5, min(3.0, (mem.importance or 0.5) * 3)),
-            "zone": zone,
-            "importance": round(mem.importance or 0.5, 2),
-            "distance": round(mem.galactic_distance or 0.0, 3),
-            "access_count": mem.access_count or 0,
-        })
+        nodes.append(
+            {
+                "id": mem.id,
+                "label": mem.title or mem.id[:8],
+                "content": mem.content
+                if len(mem.content) < 500
+                else mem.content[:500] + "...",
+                "x": round(x, 4),
+                "y": round(y, 4),
+                "z": round(z, 4),
+                "w": round(w, 4),
+                "v": round(v, 4),
+                "color": _ZONE_COLORS.get(zone, "#22c55e"),
+                "size": max(0.5, min(3.0, (mem.importance or 0.5) * 3)),
+                "zone": zone,
+                "importance": round(mem.importance or 0.5, 2),
+                "distance": round(mem.galactic_distance or 0.0, 3),
+                "access_count": mem.access_count or 0,
+            }
+        )
 
     edges: list[dict[str, Any]] = []
     try:
@@ -220,7 +299,13 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None, u
                 (limit * 2,),
             )
             for row in cursor:
-                edges.append({"source": row[0], "target": row[1], "strength": round(row[2] or 0.5, 2)})
+                edges.append(
+                    {
+                        "source": row[0],
+                        "target": row[1],
+                        "strength": round(row[2] or 0.5, 2),
+                    }
+                )
     except Exception as e:
         logger.debug("Operation failed: %s", e)
         pass
@@ -275,8 +360,7 @@ def _build_constellations_from_galaxy(
     mem_ids: list[str] = []
     mem_lookup: dict[str, Any] = {}
 
-    for mem in memories[:
-        limit]:
+    for mem in memories[:limit]:
         coords_tuple = coords_map.get(mem.id)
         if coords_tuple and len(coords_tuple) >= 3:
             x = float(coords_tuple[0])
@@ -310,7 +394,11 @@ def _build_constellations_from_galaxy(
 
     constellations: list[dict[str, Any]] = []
     for i, member_indices in enumerate(groups):
-        members = [mem_lookup[mem_ids[idx]] for idx in member_indices if mem_ids[idx] in mem_lookup]
+        members = [
+            mem_lookup[mem_ids[idx]]
+            for idx in member_indices
+            if mem_ids[idx] in mem_lookup
+        ]
         if not members:
             continue
 
@@ -338,28 +426,42 @@ def _build_constellations_from_galaxy(
         for mem in members:
             for tag in getattr(mem, "tags", []) or []:
                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
-        dominant_tags = sorted(tag_counts, key=lambda t: tag_counts[t], reverse=True)[:5]
+        dominant_tags = sorted(tag_counts, key=lambda t: tag_counts[t], reverse=True)[
+            :5
+        ]
 
         # Dominant zone
         zone_counts: dict[str, int] = {}
         for mem in members:
             zone = _memory_type_to_zone(
-                mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type)
+                mem.memory_type.name
+                if hasattr(mem.memory_type, "name")
+                else str(mem.memory_type)
             )
             zone_counts[zone] = zone_counts.get(zone, 0) + 1
-        dominant_zone = max(zone_counts, key=lambda z: zone_counts[z]) if zone_counts else "active"
+        dominant_zone = (
+            max(zone_counts, key=lambda z: zone_counts[z]) if zone_counts else "active"
+        )
 
-        constellations.append({
-            "id": f"constellation_{i}",
-            "name": f"Cluster {i + 1}",
-            "size": len(members),
-            "member_ids": [str(mem.id) for mem in members[:10]],
-            "centroid": {"x": round(cx, 4), "y": round(cy, 4), "z": round(cz, 4), "w": round(cw, 4), "v": round(cv, 4)},
-            "radius": round(max_dist, 4),
-            "stability": round(stabilities[i] if i < len(stabilities) else 0.5, 3),
-            "dominant_tags": dominant_tags,
-            "dominant_zone": dominant_zone,
-        })
+        constellations.append(
+            {
+                "id": f"constellation_{i}",
+                "name": f"Cluster {i + 1}",
+                "size": len(members),
+                "member_ids": [str(mem.id) for mem in members[:10]],
+                "centroid": {
+                    "x": round(cx, 4),
+                    "y": round(cy, 4),
+                    "z": round(cz, 4),
+                    "w": round(cw, 4),
+                    "v": round(cv, 4),
+                },
+                "radius": round(max_dist, 4),
+                "stability": round(stabilities[i] if i < len(stabilities) else 0.5, 3),
+                "dominant_tags": dominant_tags,
+                "dominant_zone": dominant_zone,
+            }
+        )
 
     return constellations
 
@@ -412,6 +514,7 @@ def _build_semantic_constellations_from_galaxy(
                     from whitemagic.core.memory.embedding_similarity import (
                         unpack_embedding,
                     )
+
                     vec = unpack_embedding(blob)
                     if vec and len(vec) > 0:
                         embeddings.append([float(v) for v in vec])
@@ -454,7 +557,8 @@ def _build_semantic_constellations_from_galaxy(
     constellations: list[dict[str, Any]] = []
     for i, member_indices in enumerate(groups):
         members_meta = [
-            mem_lookup.get(mem_ids[idx]) for idx in member_indices
+            mem_lookup.get(mem_ids[idx])
+            for idx in member_indices
             if mem_ids[idx] in mem_lookup
         ]
         if not members_meta:
@@ -468,23 +572,29 @@ def _build_semantic_constellations_from_galaxy(
                 tag = tag.strip()
                 if tag:
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
-        dominant_tags = sorted(tag_counts, key=lambda t: tag_counts[t], reverse=True)[:5]
+        dominant_tags = sorted(tag_counts, key=lambda t: tag_counts[t], reverse=True)[
+            :5
+        ]
 
         # Representative labels
-        labels = [str(meta.get("title", mem_ids[idx]) or mem_ids[idx])[:30]
-                  for idx, meta in enumerate(members_meta) if meta is not None][:
-                      5]
+        labels = [
+            str(meta.get("title", mem_ids[idx]) or mem_ids[idx])[:30]
+            for idx, meta in enumerate(members_meta)
+            if meta is not None
+        ][:5]
 
-        constellations.append({
-            "id": f"semantic_{i}",
-            "name": f"Topic {i + 1}",
-            "size": len(member_indices),
-            "member_ids": [mem_ids[idx] for idx in member_indices[:10]],
-            "stability": round(stabilities[i] if i < len(stabilities) else 0.5, 3),
-            "dominant_tags": dominant_tags,
-            "representative_labels": labels,
-            "clustering": "semantic",
-        })
+        constellations.append(
+            {
+                "id": f"semantic_{i}",
+                "name": f"Topic {i + 1}",
+                "size": len(member_indices),
+                "member_ids": [mem_ids[idx] for idx in member_indices[:10]],
+                "stability": round(stabilities[i] if i < len(stabilities) else 0.5, 3),
+                "dominant_tags": dominant_tags,
+                "representative_labels": labels,
+                "clustering": "semantic",
+            }
+        )
 
     return constellations
 
@@ -495,10 +605,13 @@ def _resolve_user_id(x_user_id: str | None) -> str:
     No API key required — purely local identification.
     """
     from whitemagic.core.user_profile import resolve_user_id as _resolve
+
     return _resolve(x_user_id)
 
 
-def _resolve_galaxy(x_galaxy_name: str | None, x_user_id: str | None = None) -> tuple[Any, Any]:
+def _resolve_galaxy(
+    x_galaxy_name: str | None, x_user_id: str | None = None
+) -> tuple[Any, Any]:
     """Resolve galaxy from header or active default.
 
     Returns (galaxy_info, unified_memory) or raises HTTPException.
@@ -508,18 +621,24 @@ def _resolve_galaxy(x_galaxy_name: str | None, x_user_id: str | None = None) -> 
     if x_galaxy_name:
         info = gm.get_galaxy(x_galaxy_name, user_id=uid)
         if not info:
-            raise HTTPException(status_code=404, detail=f"Galaxy '{x_galaxy_name}' not found for user '{uid}'")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Galaxy '{x_galaxy_name}' not found for user '{uid}'",
+            )
         try:
             registry_key = f"{uid}/{x_galaxy_name}"
             um = gm._get_memory(registry_key)
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Galaxy unavailable: {exc}") from exc
+            raise HTTPException(
+                status_code=500, detail=f"Galaxy unavailable: {exc}"
+            ) from exc
         return info, um
     active = gm.get_active()
     return active, gm._get_memory(gm._active_galaxy)
 
 
 if router is not None:
+
     @router.get("/")
     async def list_galaxies(
         request: Request,
@@ -551,7 +670,9 @@ if router is not None:
         """
         uid = _resolve_user_id(x_user_id)
 
-        nodes, edges = _build_nodes_from_galaxy(limit=limit, galaxy_name=x_galaxy_name, user_id=uid)
+        nodes, edges = _build_nodes_from_galaxy(
+            limit=limit, galaxy_name=x_galaxy_name, user_id=uid
+        )
 
         # Fallback to demo data if galaxy is empty
         if not nodes:
@@ -598,6 +719,7 @@ if router is not None:
 
         try:
             from whitemagic.core.memory.unified_types import MemoryType
+
             mem_type = MemoryType.SHORT_TERM
             for mt in MemoryType:
                 if mt.name.lower() == zone.upper() or mt.name.lower() == zone.lower():
@@ -635,7 +757,9 @@ if router is not None:
                 "galaxy": active.name,
             }
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to create node: {exc}") from exc
+            raise HTTPException(
+                status_code=500, detail=f"Failed to create node: {exc}"
+            ) from exc
 
     @router.get("/constellations")
     async def get_galaxy_constellations(
@@ -749,7 +873,11 @@ if router is not None:
             "source": "galaxy_manager",
             "elapsed_ms": round(elapsed * 1000, 2),
             "user_id": uid,
-            "params": {"min_members": min_members, "max_radius": max_radius, "limit": limit},
+            "params": {
+                "min_members": min_members,
+                "max_radius": max_radius,
+                "limit": limit,
+            },
         }
 
     @router.post("/constellations/semantic")

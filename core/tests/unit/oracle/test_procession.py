@@ -25,15 +25,37 @@ class TestProcessionStructure:
 
     def test_yin_order_is_precessional(self):
         signs = [s.sign for s in YIN_PROCESSION]
-        assert signs == ["pisces", "aquarius", "capricorn", "sagittarius",
-                         "scorpio", "libra", "virgo", "leo",
-                         "cancer", "gemini", "taurus", "aries"]
+        assert signs == [
+            "pisces",
+            "aquarius",
+            "capricorn",
+            "sagittarius",
+            "scorpio",
+            "libra",
+            "virgo",
+            "leo",
+            "cancer",
+            "gemini",
+            "taurus",
+            "aries",
+        ]
 
     def test_yang_order_is_zodiacal(self):
         signs = [s.sign for s in YANG_PROCESSION]
-        assert signs == ["aries", "taurus", "gemini", "cancer",
-                         "leo", "virgo", "libra", "scorpio",
-                         "sagittarius", "capricorn", "aquarius", "pisces"]
+        assert signs == [
+            "aries",
+            "taurus",
+            "gemini",
+            "cancer",
+            "leo",
+            "virgo",
+            "libra",
+            "scorpio",
+            "sagittarius",
+            "capricorn",
+            "aquarius",
+            "pisces",
+        ]
 
     def test_step_numbers_sequential(self):
         for i, step in enumerate(YIN_PROCESSION, 1):
@@ -80,7 +102,13 @@ class TestProcessionStructure:
             assert desc, f"Empty checkpoint description for {sign}"
 
     def test_color_stages_list(self):
-        assert COLOR_STAGES == ["Nigredo", "Cauda Pavonis", "Albedo", "Citrinitas", "Rubedo"]
+        assert COLOR_STAGES == [
+            "Nigredo",
+            "Cauda Pavonis",
+            "Albedo",
+            "Citrinitas",
+            "Rubedo",
+        ]
 
     def test_color_stage_for_yin(self):
         assert get_color_stage_for_step(1, "yin") == "Nigredo"
@@ -91,17 +119,40 @@ class TestProcessionStructure:
         assert get_color_stage_for_step(12, "yang") == "Nigredo"
 
     def test_enochian_names_present(self):
-        expected_names = {"ORO", "IBAH", "AOZPI", "MPH", "ARSL", "GAIOL",
-                         "OIP", "TEAA", "PDOCE", "MOR", "DIAL", "HCTGA"}
+        expected_names = {
+            "ORO",
+            "IBAH",
+            "AOZPI",
+            "MPH",
+            "ARSL",
+            "GAIOL",
+            "OIP",
+            "TEAA",
+            "PDOCE",
+            "MOR",
+            "DIAL",
+            "HCTGA",
+        }
         yin_names = {s.enochian for s in YIN_PROCESSION}
         yang_names = {s.enochian for s in YANG_PROCESSION}
         assert yin_names == expected_names
         assert yang_names == expected_names
 
     def test_ripley_gates_all_present(self):
-        expected_gates = {"Calcination", "Dissolution", "Separation", "Conjunction",
-                         "Putrefaction", "Congelation", "Cibation", "Sublimation",
-                         "Fermentation", "Exaltation", "Multiplication", "Projection"}
+        expected_gates = {
+            "Calcination",
+            "Dissolution",
+            "Separation",
+            "Conjunction",
+            "Putrefaction",
+            "Congelation",
+            "Cibation",
+            "Sublimation",
+            "Fermentation",
+            "Exaltation",
+            "Multiplication",
+            "Projection",
+        }
         yin_gates = {s.ripley_gate for s in YIN_PROCESSION}
         yang_gates = {s.ripley_gate for s in YANG_PROCESSION}
         assert yin_gates == expected_gates
@@ -115,6 +166,7 @@ class TestAlchemicalLoopRestructure:
     async def test_cycle_has_12_yang_steps(self):
         import asyncio
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
+
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
         result = await loop.run()
         assert len(result.cycles) == 1
@@ -124,6 +176,7 @@ class TestAlchemicalLoopRestructure:
     async def test_cycle_has_12_yin_steps(self):
         import asyncio
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
+
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
         result = await loop.run()
         assert len(result.cycles[0].yin_stages) == 12
@@ -131,6 +184,7 @@ class TestAlchemicalLoopRestructure:
     @pytest.mark.asyncio
     async def test_cycle_has_8_fixed_hubs(self):
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
+
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
         result = await loop.run()
         # 4 fixed hubs per phase = 8 total
@@ -139,6 +193,7 @@ class TestAlchemicalLoopRestructure:
     @pytest.mark.asyncio
     async def test_oracle_has_4_layers(self):
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
+
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
         result = await loop.run()
         og = result.cycles[0].oracle_guidance
@@ -157,6 +212,7 @@ class TestAlchemicalLoopRestructure:
     @pytest.mark.asyncio
     async def test_step_info_carries_enochian(self):
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
+
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
         result = await loop.run()
         first_yang = result.cycles[0].yang_stages[0]
@@ -166,6 +222,7 @@ class TestAlchemicalLoopRestructure:
     @pytest.mark.asyncio
     async def test_step_info_carries_color_stage(self):
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
+
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
         result = await loop.run()
         first_yang = result.cycles[0].yang_stages[0]

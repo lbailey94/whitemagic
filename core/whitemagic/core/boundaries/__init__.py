@@ -1,5 +1,5 @@
-"""BoundaryEngine package.
-"""
+"""BoundaryEngine package."""
+
 from .boundary_engine import (
     Boundary,
     BoundaryEngine,

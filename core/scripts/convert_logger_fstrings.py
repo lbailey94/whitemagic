@@ -16,6 +16,7 @@ Strategy:
 This script is conservative: it only touches calls inside try/
 except blocks. Other f-string logger calls are left alone.
 """
+
 import re
 from pathlib import Path
 
@@ -35,7 +36,7 @@ def convert_fstring(line: str) -> str | None:
         return None
     var_re = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_.]*)\}")
     vars_in_order: list[str] = []
-    new_msg = var_re.sub(lambda m: (vars_in_order.append(m.group(1)) or "%s"), msg)
+    new_msg = var_re.sub(lambda m: vars_in_order.append(m.group(1)) or "%s", msg)
     if not vars_in_order:
         return None
     args = ", ".join(vars_in_order)
@@ -73,6 +74,7 @@ def fix_file(path: Path) -> int:
         new_content = "".join(new_lines)
         try:
             import ast
+
             ast.parse(new_content)
         except SyntaxError:
             return 0

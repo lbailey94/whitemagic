@@ -9,6 +9,7 @@ Usage:
     # Or run directly for a standalone JSON report:
     python tests/integration/test_all_ganas_mcp.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -46,6 +47,7 @@ pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 
 # ── MCP Client ──────────────────────────────────────────────────────────
 
+
 class _MCPClient:
     def __init__(self, tx: Any, rx: Any) -> None:
         self._tx = tx
@@ -56,7 +58,9 @@ class _MCPClient:
         self._id += 1
         return self._id
 
-    async def request(self, method: str, params: dict | None = None, *, timeout: float = 30.0) -> dict:
+    async def request(
+        self, method: str, params: dict | None = None, *, timeout: float = 30.0
+    ) -> dict:
         req_id = self._next_id()
         raw: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method}
         if params is not None:
@@ -67,7 +71,11 @@ class _MCPClient:
         async def _wait() -> dict:
             while True:
                 session_msg = await self._rx.receive()
-                data = json.loads(session_msg.message.model_dump_json(by_alias=True, exclude_none=True))
+                data = json.loads(
+                    session_msg.message.model_dump_json(
+                        by_alias=True, exclude_none=True
+                    )
+                )
                 if "id" in data:
                     return data
 
@@ -81,11 +89,14 @@ class _MCPClient:
         await self._tx.send(SessionMessage(msg))
 
     async def initialize(self) -> dict:
-        resp = await self.request("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "all-ganas-test", "version": "1.0.0"},
-        })
+        resp = await self.request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "all-ganas-test", "version": "1.0.0"},
+            },
+        )
         await self.notify("notifications/initialized")
         return resp
 
@@ -119,7 +130,11 @@ async def mcp_session() -> AsyncGenerator[_MCPClient, None]:
 
 GANA_TESTS: list[tuple[str, str, dict]] = [
     ("gana_horn", "session_bootstrap", {"mode": "standard"}),
-    ("gana_neck", "create_memory", {"title": "All-gana test", "content": "test memory", "tags": ["test"]}),
+    (
+        "gana_neck",
+        "create_memory",
+        {"title": "All-gana test", "content": "test memory", "tags": ["test"]},
+    ),
     ("gana_heart", "get_session_context", {}),
     ("gana_tail", "token_report", {}),
     ("gana_dipper", "homeostasis", {}),
@@ -151,6 +166,7 @@ GANA_TESTS: list[tuple[str, str, dict]] = [
 
 # ── Tests ───────────────────────────────────────────────────────────────
 
+
 class TestAllGanas:
     """Exercise one tool per Gana and verify structured envelope responses."""
 
@@ -158,10 +174,14 @@ class TestAllGanas:
     async def test_gana(self, gana: str, tool: str, args: dict):
         async with mcp_session() as client:
             start = time.monotonic()
-            response = await client.request("tools/call", {
-                "name": gana,
-                "arguments": {"tool": tool, "args": args},
-            }, timeout=45.0)
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": gana,
+                    "arguments": {"tool": tool, "args": args},
+                },
+                timeout=45.0,
+            )
             elapsed = time.monotonic() - start
 
             assert "result" in response, f"{gana}/{tool}: no result key"
@@ -191,6 +211,7 @@ class TestAllGanas:
 
 # ── Standalone runner ───────────────────────────────────────────────────
 
+
 async def _run_standalone() -> dict:
     """Run all Gana tests and produce a JSON report."""
     state_dir = Path(tempfile.mkdtemp(prefix="wm_all_ganas_"))
@@ -211,10 +232,14 @@ async def _run_standalone() -> dict:
     for gana, tool, args in GANA_TESTS:
         start = time.monotonic()
         try:
-            response = await client.request("tools/call", {
-                "name": gana,
-                "arguments": {"tool": tool, "args": args},
-            }, timeout=45.0)
+            response = await client.request(
+                "tools/call",
+                {
+                    "name": gana,
+                    "arguments": {"tool": tool, "args": args},
+                },
+                timeout=45.0,
+            )
             elapsed = time.monotonic() - start
             content = response["result"].get("content", [{}])
             text = content[0].get("text", "") if content else ""
@@ -226,26 +251,30 @@ async def _run_standalone() -> dict:
                 data = {"raw_text": text[:200]}
                 status = "unparsed"
                 error_code = None
-            results.append({
-                "gana": gana,
-                "tool": tool,
-                "status": status,
-                "error_code": error_code,
-                "latency_sec": round(elapsed, 3),
-                "has_result": "result" in response,
-                "has_content": len(content) > 0,
-            })
+            results.append(
+                {
+                    "gana": gana,
+                    "tool": tool,
+                    "status": status,
+                    "error_code": error_code,
+                    "latency_sec": round(elapsed, 3),
+                    "has_result": "result" in response,
+                    "has_content": len(content) > 0,
+                }
+            )
         except Exception as exc:
             elapsed = time.monotonic() - start
-            results.append({
-                "gana": gana,
-                "tool": tool,
-                "status": "crashed",
-                "error_code": type(exc).__name__,
-                "latency_sec": round(elapsed, 3),
-                "has_result": False,
-                "has_content": False,
-            })
+            results.append(
+                {
+                    "gana": gana,
+                    "tool": tool,
+                    "status": "crashed",
+                    "error_code": type(exc).__name__,
+                    "latency_sec": round(elapsed, 3),
+                    "has_result": False,
+                    "has_content": False,
+                }
+            )
 
     await to_server_tx.aclose()
     server_task.cancel()
@@ -271,6 +300,7 @@ async def _run_standalone() -> dict:
 
 if __name__ == "__main__":
     import logging
+
     # Suppress startup warnings from leaking into JSON output
     logging.getLogger("whitemagic").setLevel(logging.CRITICAL)
     logging.getLogger("wm_mcp").setLevel(logging.CRITICAL)

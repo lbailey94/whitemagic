@@ -271,7 +271,10 @@ class BoundaryEngine:
             "stopped": True,
             "reason": reason,
             "violations": len(self.violations),
-            "session_duration_minutes": (datetime.now() - self.session_start).total_seconds() / 60,
+            "session_duration_minutes": (
+                datetime.now() - self.session_start
+            ).total_seconds()
+            / 60,
             "boundaries_status": self.get_status(),
         }
 
@@ -349,8 +352,6 @@ class BoundaryEngine:
         """Register a custom handler for boundary violations."""
         self.handlers[boundary_name] = handler
 
-
-# === Convenience Functions ===
 
 def get_boundary_engine() -> BoundaryEngine:
     """Get a BoundaryEngine instance."""

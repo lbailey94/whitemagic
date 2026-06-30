@@ -3,6 +3,7 @@
 Purpose: Offline processing, memory consolidation, and system maintenance.
 Runs in the background when the system is "idle" (or continuously).
 """
+
 import logging
 import signal
 import sys
@@ -24,8 +25,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("dream_daemon")
 
+
 class DreamDaemon:
     """DreamDaemon: dream daemon."""
+
     def __init__(self, interval_seconds: int = 600) -> None:
         self.interval = interval_seconds
         self.running = False
@@ -94,10 +97,16 @@ class DreamDaemon:
         """Move short-term memories to long-term or prune them."""
         try:
             from whitemagic.core.automation.consolidator import consolidate_now
+
             report = consolidate_now(minutes=self.interval // 60 or 60)
             created = report.get("semantic_created", 0)
             archived = report.get("episodic_archived", 0)
-            logger.info("  - Consolidated memories: %s semantic created, %s episodic archived", created, archived, exc_info=True)
+            logger.info(
+                "  - Consolidated memories: %s semantic created, %s episodic archived",
+                created,
+                archived,
+                exc_info=True,
+            )
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning("  - Memory consolidation skipped: %s", e, exc_info=True)
 
@@ -117,14 +126,21 @@ class DreamDaemon:
                 if log_file.stat().st_size > 5_000_000:
                     # >5MB
                     gz_path = log_file.with_suffix(".log.gz")
-                    with open(log_file, "rb") as f_in, gzip.open(gz_path, "wb") as f_out:
+                    with (
+                        open(log_file, "rb") as f_in,
+                        gzip.open(gz_path, "wb") as f_out,
+                    ):
                         f_out.writelines(f_in)
                     log_file.unlink()
                     compressed += 1
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.warning("  - Failed to compress %s: %s", log_file.name, e, exc_info=True)
+                logger.warning(
+                    "  - Failed to compress %s: %s", log_file.name, e, exc_info=True
+                )
 
-        logger.info("  - Log maintenance: %s files compressed", compressed, exc_info=True)
+        logger.info(
+            "  - Log maintenance: %s files compressed", compressed, exc_info=True
+        )
 
     def _generate_insights(self) -> None:
         """Generate insights from recent activity via bridge synthesis and resonance."""
@@ -134,17 +150,26 @@ class DreamDaemon:
             from whitemagic.core.intelligence.synthesis.bridge_synthesizer import (
                 BridgeSynthesizer,
             )
+
             synth = BridgeSynthesizer()
             bridges = synth.find_bridges(top_k=3)
             insights_found = len(bridges) if bridges else 0
             if insights_found > 0:
-                logger.info("  - Bridge synthesis found %s cross-domain connections", insights_found, exc_info=True)
+                logger.info(
+                    "  - Bridge synthesis found %s cross-domain connections",
+                    insights_found,
+                    exc_info=True,
+                )
         except Exception as e:
             logger.debug("  - Bridge synthesis unavailable: %s", e, exc_info=True)
 
         # Calculate system resonance via Julia
         resonance = self._calculate_resonance("system_state_snapshot")
-        logger.info("  - Insights: %s bridges, resonance={resonance:.4f}", insights_found, exc_info=True)
+        logger.info(
+            "  - Insights: %s bridges, resonance={resonance:.4f}",
+            insights_found,
+            exc_info=True,
+        )
         if resonance > 0.8:
             logger.info("  🌟 HIGH RESONANCE DETECTED! Triggering deep consolidation.")
 
@@ -170,7 +195,9 @@ class DreamDaemon:
             input_val = _json_dumps({"magnitude": 0.5, "damping": 0.1})
             result = subprocess.run(
                 ["julia", julia_script, input_val],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
 
             if result.returncode == 0:
@@ -182,8 +209,10 @@ class DreamDaemon:
             logger.error("Resonance calc failed: %s", e, exc_info=True)
             return 0.5
 
+
 # Singleton instance
 _daemon: DreamDaemon | None = None
+
 
 def get_daemon() -> DreamDaemon:
     """
@@ -197,6 +226,7 @@ def get_daemon() -> DreamDaemon:
         _daemon = DreamDaemon()
     return _daemon
 
+
 if __name__ == "__main__":
-    daemon = DreamDaemon(interval_seconds=60) # Fast interval for testing
+    daemon = DreamDaemon(interval_seconds=60)  # Fast interval for testing
     daemon.start()

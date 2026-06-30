@@ -21,7 +21,9 @@ class GanaChain:
     and prepares hints for the next. Creates a flowing, adaptive chain.
     """
 
-    def __init__(self, ganas: list[BaseGana], harmony_monitor: Any | None = None) -> None:
+    def __init__(
+        self, ganas: list[BaseGana], harmony_monitor: Any | None = None
+    ) -> None:
         """Initialize chain with Ganas.
 
         Args:
@@ -36,6 +38,7 @@ class GanaChain:
         # If no harmony monitor, create fallback
         if not self.harmony_monitor:
             from ..embodiment import HarmonyMonitor
+
             self.harmony_monitor = HarmonyMonitor()
 
         # Ensure Mypy knows it's not None
@@ -73,6 +76,7 @@ class GanaChain:
         monitor = self.harmony_monitor
         if monitor is None:
             from ..embodiment import HarmonyMonitor
+
             monitor = HarmonyMonitor()
             self.harmony_monitor = monitor
 
@@ -88,19 +92,23 @@ class GanaChain:
             # Build resonance hints
             hints = ResonanceHints(
                 predecessor_output=predecessor_output,
-                successor_context=mansion_sequence[i+1].name if i < len(mansion_sequence)-1 else None,
+                successor_context=mansion_sequence[i + 1].name
+                if i < len(mansion_sequence) - 1
+                else None,
                 lunar_phase=lunar_phase,
                 harmony_score=harmony["harmony_score"],
                 guna_tag=harmony["guna_tag"],
             )
 
             # Update state vector
-            state_vector.update({
-                "chain_position": i,
-                "total_ganas": len(mansion_sequence),
-                "harmony": harmony["harmony_score"],
-                "guna": harmony["guna_tag"],
-            })
+            state_vector.update(
+                {
+                    "chain_position": i,
+                    "total_ganas": len(mansion_sequence),
+                    "harmony": harmony["harmony_score"],
+                    "guna": harmony["guna_tag"],
+                }
+            )
 
             # Create call
             call = GanaCall(
@@ -163,7 +171,6 @@ class GanaChain:
         return {
             "total_ganas": len(self.ganas),
             "gana_stats": {
-                mansion.name: gana.stats
-                for mansion, gana in self.ganas.items()
+                mansion.name: gana.stats for mansion, gana in self.ganas.items()
             },
         }

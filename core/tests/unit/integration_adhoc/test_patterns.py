@@ -8,7 +8,7 @@ def test_pattern_extraction():
     sample = [
         "Solution: Use a hammer to fix the nail.",
         "If it rains, then ground gets wet.",
-        "Avoid using global variables because they cause bugs."
+        "Avoid using global variables because they cause bugs.",
     ]
     try:
         res = whitemagic_rs.extract_patterns_from_content(sample, 0.1)

@@ -17,6 +17,7 @@ from whitemagic.config.paths import MEMORY_DIR
 @dataclass
 class PatternMetrics:
     """Metrics about a pattern's effectiveness"""
+
     pattern_id: str
     pattern_type: str
     total_applications: int
@@ -51,6 +52,7 @@ class PatternMetrics:
 @dataclass
 class MetaPattern:
     """A pattern about patterns - meta-level insights"""
+
     meta_pattern_id: str
     insight: str
     evidence_count: int
@@ -82,7 +84,7 @@ class MetaLearningEngine:
         c = conn.cursor()
 
         # Pattern metrics table
-        c.execute('''
+        c.execute("""
             CREATE TABLE IF NOT EXISTS pattern_metrics (
                 pattern_id TEXT PRIMARY KEY,
                 pattern_type TEXT,
@@ -97,10 +99,10 @@ class MetaLearningEngine:
                 first_seen TEXT,
                 last_applied TEXT
             )
-        ''')
+        """)
 
         # Meta-patterns table
-        c.execute('''
+        c.execute("""
             CREATE TABLE IF NOT EXISTS meta_patterns (
                 meta_pattern_id TEXT PRIMARY KEY,
                 insight TEXT,
@@ -109,10 +111,10 @@ class MetaLearningEngine:
                 discovered_at TEXT,
                 pattern_types_involved TEXT
             )
-        ''')
+        """)
 
         # Pattern correlations table
-        c.execute('''
+        c.execute("""
             CREATE TABLE IF NOT EXISTS pattern_correlations (
                 pattern_a TEXT,
                 pattern_b TEXT,
@@ -121,7 +123,7 @@ class MetaLearningEngine:
                 synergy_score REAL DEFAULT 0.0,
                 PRIMARY KEY (pattern_a, pattern_b)
             )
-        ''')
+        """)
 
         conn.commit()
         conn.close()
@@ -134,30 +136,39 @@ class MetaLearningEngine:
         performance_gain: float,
         quality_score: float,
         confidence: float,
-        sources: list[str]
+        sources: list[str],
     ) -> None:
         """Update metrics for a pattern after application"""
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 
         # Get existing metrics
-        c.execute('SELECT * FROM pattern_metrics WHERE pattern_id = ?', (pattern_id,))
+        c.execute("SELECT * FROM pattern_metrics WHERE pattern_id = ?", (pattern_id,))
         row = c.fetchone()
 
         now = datetime.now().isoformat()
 
         if row is None:
             # New pattern
-            c.execute('''
+            c.execute(
+                """
                 INSERT INTO pattern_metrics VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                pattern_id, pattern_type, 1,
-                1 if success else 0,
-                0 if success else 1,
-                performance_gain, quality_score, confidence,
-                len(sources), json.dumps(sources),
-                now, now
-            ))
+            """,
+                (
+                    pattern_id,
+                    pattern_type,
+                    1,
+                    1 if success else 0,
+                    0 if success else 1,
+                    performance_gain,
+                    quality_score,
+                    confidence,
+                    len(sources),
+                    json.dumps(sources),
+                    now,
+                    now,
+                ),
+            )
         else:
             # Update existing
             total = row[2] + 1
@@ -169,7 +180,8 @@ class MetaLearningEngine:
             new_avg_quality = (row[6] * row[2] + quality_score) / total
             new_avg_conf = (row[7] * row[2] + confidence) / total
 
-            c.execute('''
+            c.execute(
+                """
                 UPDATE pattern_metrics
                 SET total_applications = ?,
                     successful_applications = ?,
@@ -179,7 +191,18 @@ class MetaLearningEngine:
                     avg_confidence = ?,
                     last_applied = ?
                 WHERE pattern_id = ?
-            ''', (total, successful, failed, new_avg_perf, new_avg_quality, new_avg_conf, now, pattern_id))
+            """,
+                (
+                    total,
+                    successful,
+                    failed,
+                    new_avg_perf,
+                    new_avg_quality,
+                    new_avg_conf,
+                    now,
+                    pattern_id,
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -192,7 +215,7 @@ class MetaLearningEngine:
         meta_patterns = []
 
         # Meta-pattern 1: Cross-source effectiveness
-        c.execute('''
+        c.execute("""
             SELECT
                 AVG(CASE WHEN source_count >= 2 THEN
                     CAST(successful_applications AS REAL) / total_applications
@@ -202,24 +225,26 @@ class MetaLearningEngine:
                     ELSE 0 END) as single_source_success
             FROM pattern_metrics
             WHERE total_applications > 0
-        ''')
+        """)
         row = c.fetchone()
         if row and row[0] and row[1]:
             multi_success = row[0]
             single_success = row[1]
             if multi_success > single_success * 1.2:
                 ratio = multi_success / single_success if single_success > 0 else 0
-                meta_patterns.append(MetaPattern(
-                    meta_pattern_id='cross_source_advantage',
-                    insight=f'Cross-source patterns have {ratio:.1f}x higher success rate',
-                    evidence_count=10,
-                    confidence=0.9,
-                    discovered_at=datetime.now().isoformat(),
-                    pattern_types_involved=['all']
-                ))
+                meta_patterns.append(
+                    MetaPattern(
+                        meta_pattern_id="cross_source_advantage",
+                        insight=f"Cross-source patterns have {ratio:.1f}x higher success rate",
+                        evidence_count=10,
+                        confidence=0.9,
+                        discovered_at=datetime.now().isoformat(),
+                        pattern_types_involved=["all"],
+                    )
+                )
 
         # Meta-pattern 2: Performance gain by pattern type
-        c.execute('''
+        c.execute("""
             SELECT pattern_type, AVG(avg_performance_gain), COUNT(*)
             FROM pattern_metrics
             WHERE total_applications > 0
@@ -227,21 +252,23 @@ class MetaLearningEngine:
             HAVING COUNT(*) >= 2
             ORDER BY AVG(avg_performance_gain) DESC
             LIMIT 3
-        ''')
+        """)
         for row in c.fetchall():
             pattern_type, avg_gain, count = row
             if avg_gain > 10.0:
-                meta_patterns.append(MetaPattern(
-                    meta_pattern_id=f'high_impact_{pattern_type}',
-                    insight=f'{pattern_type} patterns deliver {avg_gain:.1f}x average performance gain',
-                    evidence_count=count,
-                    confidence=min(0.95, 0.5 + (count * 0.1)),
-                    discovered_at=datetime.now().isoformat(),
-                    pattern_types_involved=[pattern_type]
-                ))
+                meta_patterns.append(
+                    MetaPattern(
+                        meta_pattern_id=f"high_impact_{pattern_type}",
+                        insight=f"{pattern_type} patterns deliver {avg_gain:.1f}x average performance gain",
+                        evidence_count=count,
+                        confidence=min(0.95, 0.5 + (count * 0.1)),
+                        discovered_at=datetime.now().isoformat(),
+                        pattern_types_involved=[pattern_type],
+                    )
+                )
 
         # Meta-pattern 3: Confidence threshold effectiveness
-        c.execute('''
+        c.execute("""
             SELECT
                 AVG(CASE WHEN avg_confidence >= 0.9 THEN
                     CAST(successful_applications AS REAL) / total_applications
@@ -251,20 +278,22 @@ class MetaLearningEngine:
                     ELSE 0 END) as low_conf_success
             FROM pattern_metrics
             WHERE total_applications > 0
-        ''')
+        """)
         row = c.fetchone()
         if row and row[0] and row[1]:
             high_conf = row[0]
             low_conf = row[1]
             if high_conf > low_conf * 1.3:
-                meta_patterns.append(MetaPattern(
-                    meta_pattern_id='confidence_threshold_validation',
-                    insight=f'Patterns with ≥90% confidence have {high_conf/low_conf:.1f}x better success rate',
-                    evidence_count=15,
-                    confidence=0.85,
-                    discovered_at=datetime.now().isoformat(),
-                    pattern_types_involved=['all']
-                ))
+                meta_patterns.append(
+                    MetaPattern(
+                        meta_pattern_id="confidence_threshold_validation",
+                        insight=f"Patterns with ≥90% confidence have {high_conf / low_conf:.1f}x better success rate",
+                        evidence_count=15,
+                        confidence=0.85,
+                        discovered_at=datetime.now().isoformat(),
+                        pattern_types_involved=["all"],
+                    )
+                )
 
         conn.close()
 
@@ -280,27 +309,32 @@ class MetaLearningEngine:
 
         # N+1 fix: executemany instead of per-row INSERT loop
         c.executemany(
-            'INSERT OR REPLACE INTO meta_patterns VALUES (?, ?, ?, ?, ?, ?)',
+            "INSERT OR REPLACE INTO meta_patterns VALUES (?, ?, ?, ?, ?, ?)",
             [
-                (mp.meta_pattern_id, mp.insight, mp.evidence_count,
-                 mp.confidence, mp.discovered_at, json.dumps(mp.pattern_types_involved))
+                (
+                    mp.meta_pattern_id,
+                    mp.insight,
+                    mp.evidence_count,
+                    mp.confidence,
+                    mp.discovered_at,
+                    json.dumps(mp.pattern_types_involved),
+                )
                 for mp in meta_patterns
-            ]
+            ],
         )
         conn.commit()
         conn.close()
 
     def get_pattern_recommendations(
-        self,
-        context: dict,
-        limit: int = 5
+        self, context: dict, limit: int = 5
     ) -> list[tuple[str, float, str]]:
         """Recommend patterns based on context and meta-learning"""
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 
         # Get top patterns by effectiveness score
-        c.execute('''
+        c.execute(
+            """
             SELECT
                 pattern_id,
                 pattern_type,
@@ -315,11 +349,20 @@ class MetaLearningEngine:
                 avg_performance_gain *
                 avg_quality_score DESC
             LIMIT ?
-        ''', (limit,))
+        """,
+            (limit,),
+        )
 
         recommendations = []
         for row in c.fetchall():
-            pattern_id, pattern_type, success_rate, avg_gain, avg_quality, source_count = row
+            (
+                pattern_id,
+                pattern_type,
+                success_rate,
+                avg_gain,
+                avg_quality,
+                source_count,
+            ) = row
             effectiveness = success_rate * avg_gain * avg_quality
 
             reason = f"{pattern_type} pattern: {success_rate:.0%} success, {avg_gain:.1f}x gain"
@@ -337,7 +380,7 @@ class MetaLearningEngine:
         c = conn.cursor()
 
         # Overall stats
-        c.execute('''
+        c.execute("""
             SELECT
                 COUNT(*) as total_patterns,
                 SUM(total_applications) as total_applications,
@@ -345,31 +388,33 @@ class MetaLearningEngine:
                 AVG(avg_performance_gain) as avg_performance_gain,
                 COUNT(CASE WHEN source_count >= 2 THEN 1 END) as multi_source_count
             FROM pattern_metrics
-        ''')
+        """)
         row = c.fetchone()
 
         # Meta-patterns
-        c.execute('SELECT COUNT(*) FROM meta_patterns')
+        c.execute("SELECT COUNT(*) FROM meta_patterns")
         meta_pattern_count = c.fetchone()[0]
 
-        c.execute('SELECT * FROM meta_patterns ORDER BY confidence DESC')
+        c.execute("SELECT * FROM meta_patterns ORDER BY confidence DESC")
         meta_patterns = []
         for row in c.fetchall():
-            meta_patterns.append({
-                'id': row[0],
-                'insight': row[1],
-                'evidence': row[2],
-                'confidence': row[3]
-            })
+            meta_patterns.append(
+                {
+                    "id": row[0],
+                    "insight": row[1],
+                    "evidence": row[2],
+                    "confidence": row[3],
+                }
+            )
 
         conn.close()
 
         return {
-            'total_patterns_tracked': row[0] if row else 0,
-            'total_applications': row[1] if row else 0,
-            'avg_success_rate': row[2] if row else 0.0,
-            'avg_performance_gain': row[3] if row else 0.0,
-            'multi_source_patterns': row[4] if row else 0,
-            'meta_patterns_discovered': meta_pattern_count,
-            'top_meta_patterns': meta_patterns[:5]
+            "total_patterns_tracked": row[0] if row else 0,
+            "total_applications": row[1] if row else 0,
+            "avg_success_rate": row[2] if row else 0.0,
+            "avg_performance_gain": row[3] if row else 0.0,
+            "multi_source_patterns": row[4] if row else 0,
+            "meta_patterns_discovered": meta_pattern_count,
+            "top_meta_patterns": meta_patterns[:5],
         }

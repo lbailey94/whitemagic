@@ -13,6 +13,7 @@ Usage:
     # Auto-selects best strategy
     scores = batch_cosine(pairs)  # List of (a, b) vector pairs
 """
+
 from __future__ import annotations
 
 import logging
@@ -71,6 +72,7 @@ def batch_cosine_rust(
     """
     try:
         from whitemagic_rust import rust_cosine_similarity
+
         return [rust_cosine_similarity(a, b) for a, b in pairs]
     except ImportError:
         logger.warning("Rust not available, falling back to NumPy")
@@ -107,7 +109,7 @@ def batch_cosine(
         return batch_cosine_numpy(pairs)
     elif strategy == "rust":
         return batch_cosine_rust(pairs)
-    else :
+    else:
         # auto
         # Rust is consistently faster than NumPy for 384d vectors at all batch sizes
         # NumPy only wins for very small vectors (<64d) where FFI overhead dominates
@@ -127,4 +129,3 @@ def parallel_status() -> dict[str, Any]:
         "rust_batch_available": False,
         "rust_batch_note": "rust_cosine_similarity is single-pair only",
     }
-

@@ -15,6 +15,7 @@ Checks:
 
 Run this in CI to catch doc/code drift early.
 """
+
 from __future__ import annotations
 
 import os
@@ -216,18 +217,24 @@ def check_tool_count_drift() -> None:
             claimed = int(match.group(1))
             if claimed != actual_callable:
                 line_num = text[: match.start()].count("\n") + 1
-                error(f"{rel}:{line_num} claims {claimed} callable tools, actual = {actual_callable}")
+                error(
+                    f"{rel}:{line_num} claims {claimed} callable tools, actual = {actual_callable}"
+                )
                 drift_count += 1
         for match in dispatch_pat.finditer(text):
             checked_count += 1
             claimed = int(match.group(1))
             if claimed != actual_dispatch:
                 line_num = text[: match.start()].count("\n") + 1
-                error(f"{rel}:{line_num} claims {claimed} dispatch tools, actual = {actual_dispatch}")
+                error(
+                    f"{rel}:{line_num} claims {claimed} dispatch tools, actual = {actual_dispatch}"
+                )
                 drift_count += 1
 
     if drift_count == 0:
-        ok(f"All {checked_count} tool-count references match reality ({actual_callable} callable / {actual_dispatch} dispatch)")
+        ok(
+            f"All {checked_count} tool-count references match reality ({actual_callable} callable / {actual_dispatch} dispatch)"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -266,8 +273,26 @@ def check_test_count_consistency() -> None:
     current_audit_baseline = 2260
     v23_1_0_baseline = 2526
     v23_2_0_baseline = 2589
-    release_markers = ("release baseline", "v22.2.0 release", "v22.2 release", "v22.2.1 release", "v22.2.2 release", "v22.2.3 release", "v22.3.0 release", "v23.0.0 release")
-    current_markers = ("current local audit", "current audit baseline", "live audit baseline", "v22.2.1 release", "v22.2.2 release", "v22.2.3 release", "v22.3.0 release", "v23.0.0 release")
+    release_markers = (
+        "release baseline",
+        "v22.2.0 release",
+        "v22.2 release",
+        "v22.2.1 release",
+        "v22.2.2 release",
+        "v22.2.3 release",
+        "v22.3.0 release",
+        "v23.0.0 release",
+    )
+    current_markers = (
+        "current local audit",
+        "current audit baseline",
+        "live audit baseline",
+        "v22.2.1 release",
+        "v22.2.2 release",
+        "v22.2.3 release",
+        "v22.3.0 release",
+        "v23.0.0 release",
+    )
     v23_1_0_markers = ("v23.1.0", "current baseline")
     v23_2_0_markers = ("v23.2.0",)
     seen: dict[str, list[tuple[str, int, str]]] = {}
@@ -295,10 +320,18 @@ def check_test_count_consistency() -> None:
     drift_count = 0
     for doc_rel, entries in sorted(seen.items()):
         for where, count, line_text in entries:
-            is_release = count == release_baseline and any(marker in line_text for marker in release_markers)
-            is_current = count == current_audit_baseline and any(marker in line_text for marker in current_markers)
-            is_v23_1_0 = count == v23_1_0_baseline and any(marker in line_text for marker in v23_1_0_markers)
-            is_v23_2_0 = count == v23_2_0_baseline and any(marker in line_text for marker in v23_2_0_markers)
+            is_release = count == release_baseline and any(
+                marker in line_text for marker in release_markers
+            )
+            is_current = count == current_audit_baseline and any(
+                marker in line_text for marker in current_markers
+            )
+            is_v23_1_0 = count == v23_1_0_baseline and any(
+                marker in line_text for marker in v23_1_0_markers
+            )
+            is_v23_2_0 = count == v23_2_0_baseline and any(
+                marker in line_text for marker in v23_2_0_markers
+            )
             if not (is_release or is_current or is_v23_1_0 or is_v23_2_0):
                 error(
                     f"{doc_rel}:{where} claims {count:,} tests without an accepted Option C baseline label"
@@ -428,7 +461,9 @@ def check_doc_gitignore_hygiene() -> None:
         for v in violations:
             error(f"Internal doc still tracked by git: {v}")
     else:
-        ok(f"All internal docs properly gitignored ({len(tracked)} .md/.txt files tracked)")
+        ok(
+            f"All internal docs properly gitignored ({len(tracked)} .md/.txt files tracked)"
+        )
 
 
 # ---------------------------------------------------------------------------

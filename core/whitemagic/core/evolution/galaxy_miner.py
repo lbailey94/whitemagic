@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Rust acceleration (S026 VC4)
 try:
     import whitemagic_rust as _wr
+
     _rust_galaxy_miner = getattr(_wr, "galaxy_miner", None)
     RUST_GALAXY_MINER_AVAILABLE = _rust_galaxy_miner is not None
 except ImportError:
@@ -34,6 +35,7 @@ except ImportError:
 @dataclass
 class AccessPattern:
     """Represents a discovered access pattern."""
+
     pattern_id: str
     pattern_type: str  # 'frequent_access', 'co_access', 'temporal', 'cache_candidate'
     memory_ids: list[str]
@@ -46,6 +48,7 @@ class AccessPattern:
 @dataclass
 class SemanticCluster:
     """Represents a semantic cluster across galaxies."""
+
     cluster_id: str
     memory_ids: list[str]
     common_tags: set[str]
@@ -68,7 +71,9 @@ class GalaxyPatternMiner:
         self.patterns: list[AccessPattern] = []
         self.clusters: list[SemanticCluster] = []
 
-        logger.info("🌌 GalaxyPatternMiner initialized with %s galaxies", len(galaxy_paths))
+        logger.info(
+            "🌌 GalaxyPatternMiner initialized with %s galaxies", len(galaxy_paths)
+        )
 
     def connect(self) -> None:
         """Connect to all galaxy databases."""
@@ -106,19 +111,25 @@ class GalaxyPatternMiner:
             for db_path in self.galaxy_paths:
                 if Path(db_path).exists():
                     try:
-                        rust_patterns = _rust_galaxy_miner.mine_access_patterns(db_path, min_frequency)
+                        rust_patterns = _rust_galaxy_miner.mine_access_patterns(
+                            db_path, min_frequency
+                        )
                         for rp in rust_patterns:
-                            patterns.append(AccessPattern(
-                                pattern_id=rp.pattern_id,
-                                pattern_type=rp.pattern_type,
-                                memory_ids=rp.memory_ids,
-                                frequency=rp.frequency,
-                                confidence=rp.confidence,
-                                metadata={'source_galaxy': rp.source_galaxy},
-                                discovered_at=datetime.now().isoformat()
-                            ))
+                            patterns.append(
+                                AccessPattern(
+                                    pattern_id=rp.pattern_id,
+                                    pattern_type=rp.pattern_type,
+                                    memory_ids=rp.memory_ids,
+                                    frequency=rp.frequency,
+                                    confidence=rp.confidence,
+                                    metadata={"source_galaxy": rp.source_galaxy},
+                                    discovered_at=datetime.now().isoformat(),
+                                )
+                            )
                     except Exception as e:
-                        logger.warning("Rust mining failed for %s: %s", db_path, e, exc_info=True)
+                        logger.warning(
+                            "Rust mining failed for %s: %s", db_path, e, exc_info=True
+                        )
             self.patterns.extend(patterns)
             logger.info("✓ Discovered %s access patterns (Rust)", len(patterns))
             return patterns
@@ -130,47 +141,65 @@ class GalaxyPatternMiner:
         for db_path, conn in self.connections.items():
             try:
                 # Get access frequency per memory
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT id, access_count, accessed_at
                     FROM memories
                     WHERE access_count >= ?
                     AND memory_type != 'quarantined'
                     ORDER BY access_count DESC
                     LIMIT 1000
-                """, (min_frequency,))
+                """,
+                    (min_frequency,),
+                )
 
                 frequent_memories = cursor.fetchall()
 
                 if frequent_memories:
                     # Create pattern for frequently accessed memories
-                    memory_ids = [row['id'] for row in frequent_memories]
-                    avg_access = sum(row['access_count'] for row in frequent_memories) / len(frequent_memories)
+                    memory_ids = [row["id"] for row in frequent_memories]
+                    avg_access = sum(
+                        row["access_count"] for row in frequent_memories
+                    ) / len(frequent_memories)
 
                     pattern = AccessPattern(
                         pattern_id=f"freq_access_{Path(db_path).stem}",
-                        pattern_type='frequent_access',
+                        pattern_type="frequent_access",
                         memory_ids=memory_ids,
                         frequency=int(avg_access),
                         confidence=min(1.0, len(memory_ids) / 100.0),
                         metadata={
-                            'source_galaxy': Path(db_path).name,
-                            'total_memories': len(memory_ids),
-                            'avg_access_count': avg_access,
-                            'max_access_count': max(row['access_count'] for row in frequent_memories)
+                            "source_galaxy": Path(db_path).name,
+                            "total_memories": len(memory_ids),
+                            "avg_access_count": avg_access,
+                            "max_access_count": max(
+                                row["access_count"] for row in frequent_memories
+                            ),
                         },
-                        discovered_at=datetime.now().isoformat()
+                        discovered_at=datetime.now().isoformat(),
                     )
                     patterns.append(pattern)
-                    logger.info("  Found %s frequently accessed memories in %s", len(memory_ids), Path(db_path).name)
+                    logger.info(
+                        "  Found %s frequently accessed memories in %s",
+                        len(memory_ids),
+                        Path(db_path).name,
+                    )
 
             except Exception as e:
-                logger.error("Error mining access patterns from %s: %s", db_path, e, exc_info=True)
+                logger.error(
+                    "Error mining access patterns from %s: %s",
+                    db_path,
+                    e,
+                    exc_info=True,
+                )
 
         self.patterns.extend(patterns)
         logger.info("✓ Discovered %s access patterns", len(patterns))
         return patterns
 
-    def mine_co_access_patterns(self, min_co_occurrence: int = 3) -> list[AccessPattern]:
+    def mine_co_access_patterns(
+        self, min_co_occurrence: int = 3
+    ) -> list[AccessPattern]:
         """Mine co-access patterns (memories accessed together).
 
         Args:
@@ -185,7 +214,8 @@ class GalaxyPatternMiner:
         for db_path, conn in self.connections.items():
             try:
                 # Get memories with similar access times (within 1 hour)
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT m1.id as id1, m2.id as id2,
                            COUNT(*) as co_access_count
                     FROM memories m1
@@ -198,7 +228,9 @@ class GalaxyPatternMiner:
                     HAVING co_access_count >= ?
                     ORDER BY co_access_count DESC
                     LIMIT 100
-                """, (min_co_occurrence,))
+                """,
+                    (min_co_occurrence,),
+                )
 
                 co_access_pairs = cursor.fetchall()
 
@@ -207,28 +239,39 @@ class GalaxyPatternMiner:
                     for row in co_access_pairs:
                         pattern = AccessPattern(
                             pattern_id=f"co_access_{row['id1'][:8]}_{row['id2'][:8]}",
-                            pattern_type='co_access',
-                            memory_ids=[row['id1'], row['id2']],
-                            frequency=row['co_access_count'],
-                            confidence=min(1.0, row['co_access_count'] / 10.0),
+                            pattern_type="co_access",
+                            memory_ids=[row["id1"], row["id2"]],
+                            frequency=row["co_access_count"],
+                            confidence=min(1.0, row["co_access_count"] / 10.0),
                             metadata={
-                                'source_galaxy': Path(db_path).name,
-                                'co_access_count': row['co_access_count']
+                                "source_galaxy": Path(db_path).name,
+                                "co_access_count": row["co_access_count"],
                             },
-                            discovered_at=datetime.now().isoformat()
+                            discovered_at=datetime.now().isoformat(),
                         )
                         patterns.append(pattern)
 
-                    logger.info("  Found %s co-access pairs in %s", len(co_access_pairs), Path(db_path).name)
+                    logger.info(
+                        "  Found %s co-access pairs in %s",
+                        len(co_access_pairs),
+                        Path(db_path).name,
+                    )
 
             except Exception as e:
-                logger.error("Error mining co-access patterns from %s: %s", db_path, e, exc_info=True)
+                logger.error(
+                    "Error mining co-access patterns from %s: %s",
+                    db_path,
+                    e,
+                    exc_info=True,
+                )
 
         self.patterns.extend(patterns)
         logger.info("✓ Discovered %s co-access patterns", len(patterns))
         return patterns
 
-    def mine_cache_candidates(self, min_access: int = 10, min_importance: float = 0.7) -> list[AccessPattern]:
+    def mine_cache_candidates(
+        self, min_access: int = 10, min_importance: float = 0.7
+    ) -> list[AccessPattern]:
         """Identify memories that should be cached.
 
         Args:
@@ -244,19 +287,28 @@ class GalaxyPatternMiner:
             for db_path in self.galaxy_paths:
                 if Path(db_path).exists():
                     try:
-                        rust_patterns = _rust_galaxy_miner.mine_cache_candidates(db_path, min_access, min_importance)
+                        rust_patterns = _rust_galaxy_miner.mine_cache_candidates(
+                            db_path, min_access, min_importance
+                        )
                         for rp in rust_patterns:
-                            patterns.append(AccessPattern(
-                                pattern_id=rp.pattern_id,
-                                pattern_type=rp.pattern_type,
-                                memory_ids=rp.memory_ids,
-                                frequency=rp.frequency,
-                                confidence=rp.confidence,
-                                metadata={'source_galaxy': rp.source_galaxy},
-                                discovered_at=datetime.now().isoformat()
-                            ))
+                            patterns.append(
+                                AccessPattern(
+                                    pattern_id=rp.pattern_id,
+                                    pattern_type=rp.pattern_type,
+                                    memory_ids=rp.memory_ids,
+                                    frequency=rp.frequency,
+                                    confidence=rp.confidence,
+                                    metadata={"source_galaxy": rp.source_galaxy},
+                                    discovered_at=datetime.now().isoformat(),
+                                )
+                            )
                     except Exception as e:
-                        logger.warning("Rust cache mining failed for %s: %s", db_path, e, exc_info=True)
+                        logger.warning(
+                            "Rust cache mining failed for %s: %s",
+                            db_path,
+                            e,
+                            exc_info=True,
+                        )
             self.patterns.extend(patterns)
             logger.info("✓ Discovered %s cache candidates (Rust)", len(patterns))
             return patterns
@@ -267,7 +319,8 @@ class GalaxyPatternMiner:
 
         for db_path, conn in self.connections.items():
             try:
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT id, title, access_count, importance,
                            LENGTH(content) as content_size
                     FROM memories
@@ -276,41 +329,61 @@ class GalaxyPatternMiner:
                     AND memory_type != 'quarantined'
                     ORDER BY access_count * importance DESC
                     LIMIT 500
-                """, (min_access, min_importance))
+                """,
+                    (min_access, min_importance),
+                )
 
                 candidates = cursor.fetchall()
 
                 if candidates:
-                    memory_ids = [row['id'] for row in candidates]
-                    avg_access = sum(row['access_count'] for row in candidates) / len(candidates)
-                    avg_importance = sum(row['importance'] for row in candidates) / len(candidates)
+                    memory_ids = [row["id"] for row in candidates]
+                    avg_access = sum(row["access_count"] for row in candidates) / len(
+                        candidates
+                    )
+                    avg_importance = sum(row["importance"] for row in candidates) / len(
+                        candidates
+                    )
 
                     pattern = AccessPattern(
                         pattern_id=f"cache_candidates_{Path(db_path).stem}",
-                        pattern_type='cache_candidate',
+                        pattern_type="cache_candidate",
                         memory_ids=memory_ids,
                         frequency=int(avg_access),
                         confidence=min(1.0, (avg_access * avg_importance) / 10.0),
                         metadata={
-                            'source_galaxy': Path(db_path).name,
-                            'total_candidates': len(memory_ids),
-                            'avg_access_count': avg_access,
-                            'avg_importance': avg_importance,
-                            'avg_content_size': sum(row['content_size'] for row in candidates) / len(candidates)
+                            "source_galaxy": Path(db_path).name,
+                            "total_candidates": len(memory_ids),
+                            "avg_access_count": avg_access,
+                            "avg_importance": avg_importance,
+                            "avg_content_size": sum(
+                                row["content_size"] for row in candidates
+                            )
+                            / len(candidates),
                         },
-                        discovered_at=datetime.now().isoformat()
+                        discovered_at=datetime.now().isoformat(),
                     )
                     patterns.append(pattern)
-                    logger.info("  Found %s cache candidates in %s", len(memory_ids), Path(db_path).name)
+                    logger.info(
+                        "  Found %s cache candidates in %s",
+                        len(memory_ids),
+                        Path(db_path).name,
+                    )
 
             except Exception as e:
-                logger.error("Error mining cache candidates from %s: %s", db_path, e, exc_info=True)
+                logger.error(
+                    "Error mining cache candidates from %s: %s",
+                    db_path,
+                    e,
+                    exc_info=True,
+                )
 
         self.patterns.extend(patterns)
         logger.info("✓ Discovered %s cache candidate patterns", len(patterns))
         return patterns
 
-    def mine_semantic_clusters(self, min_cluster_size: int = 3) -> list[SemanticCluster]:
+    def mine_semantic_clusters(
+        self, min_cluster_size: int = 3
+    ) -> list[SemanticCluster]:
         """Mine semantic clusters based on tags and content.
 
         Args:
@@ -325,18 +398,27 @@ class GalaxyPatternMiner:
             for db_path in self.galaxy_paths:
                 if Path(db_path).exists():
                     try:
-                        rust_clusters = _rust_galaxy_miner.mine_semantic_clusters(db_path, min_cluster_size)
+                        rust_clusters = _rust_galaxy_miner.mine_semantic_clusters(
+                            db_path, min_cluster_size
+                        )
                         for rc in rust_clusters:
-                            clusters.append(SemanticCluster(
-                                cluster_id=rc.cluster_id,
-                                memory_ids=rc.memory_ids,
-                                common_tags=set(rc.common_tags),
-                                avg_importance=rc.avg_importance,
-                                galaxy_sources=[Path(db_path).name],
-                                confidence=min(1.0, rc.size / 50.0)
-                            ))
+                            clusters.append(
+                                SemanticCluster(
+                                    cluster_id=rc.cluster_id,
+                                    memory_ids=rc.memory_ids,
+                                    common_tags=set(rc.common_tags),
+                                    avg_importance=rc.avg_importance,
+                                    galaxy_sources=[Path(db_path).name],
+                                    confidence=min(1.0, rc.size / 50.0),
+                                )
+                            )
                     except Exception as e:
-                        logger.warning("Rust cluster mining failed for %s: %s", db_path, e, exc_info=True)
+                        logger.warning(
+                            "Rust cluster mining failed for %s: %s",
+                            db_path,
+                            e,
+                            exc_info=True,
+                        )
             self.clusters.extend(clusters)
             logger.info("✓ Discovered %s semantic clusters (Rust)", len(clusters))
             return clusters
@@ -362,18 +444,25 @@ class GalaxyPatternMiner:
                 """)
 
                 for row in cursor.fetchall():
-                    memory_id = row['id']
-                    tags_str = row['tags'] or ''
-                    importance = row['importance'] or 0.5
+                    memory_id = row["id"]
+                    tags_str = row["tags"] or ""
+                    importance = row["importance"] or 0.5
 
                     # Parse tags (comma-separated)
-                    tags = set(t.strip() for t in tags_str.split(',') if t.strip())
+                    tags = set(t.strip() for t in tags_str.split(",") if t.strip())
 
                     for tag in tags:
-                        tag_to_memories[tag].append((memory_id, Path(db_path).name, importance))
+                        tag_to_memories[tag].append(
+                            (memory_id, Path(db_path).name, importance)
+                        )
 
             except Exception as e:
-                logger.error("Error mining semantic clusters from %s: %s", db_path, e, exc_info=True)
+                logger.error(
+                    "Error mining semantic clusters from %s: %s",
+                    db_path,
+                    e,
+                    exc_info=True,
+                )
 
         # Create clusters from tags with enough members
         for tag, memories in tag_to_memories.items():
@@ -388,7 +477,7 @@ class GalaxyPatternMiner:
                     common_tags={tag},
                     avg_importance=avg_importance,
                     galaxy_sources=galaxy_sources,
-                    confidence=min(1.0, len(memories) / 50.0)
+                    confidence=min(1.0, len(memories) / 50.0),
                 )
                 clusters.append(cluster)
 
@@ -401,12 +490,18 @@ class GalaxyPatternMiner:
         pattern_types = Counter(p.pattern_type for p in self.patterns)
 
         return {
-            'total_patterns': len(self.patterns),
-            'total_clusters': len(self.clusters),
-            'pattern_types': dict(pattern_types),
-            'galaxies_analyzed': len(self.connections),
-            'avg_pattern_confidence': sum(p.confidence for p in self.patterns) / len(self.patterns) if self.patterns else 0.0,
-            'avg_cluster_size': sum(len(c.memory_ids) for c in self.clusters) / len(self.clusters) if self.clusters else 0.0
+            "total_patterns": len(self.patterns),
+            "total_clusters": len(self.clusters),
+            "pattern_types": dict(pattern_types),
+            "galaxies_analyzed": len(self.connections),
+            "avg_pattern_confidence": sum(p.confidence for p in self.patterns)
+            / len(self.patterns)
+            if self.patterns
+            else 0.0,
+            "avg_cluster_size": sum(len(c.memory_ids) for c in self.clusters)
+            / len(self.clusters)
+            if self.clusters
+            else 0.0,
         }
 
 
@@ -427,6 +522,7 @@ def get_galaxy_miner(galaxy_paths: list[str] | None = None) -> GalaxyPatternMine
     if _galaxy_miner is None:
         if galaxy_paths is None:
             from whitemagic.config.paths import PROJECT_ROOT, WM_ROOT
+
             galaxy_paths = [
                 str(WM_ROOT / "memory/whitemagic.db"),
                 str(WM_ROOT / "memory/whitemagic_cold.db"),

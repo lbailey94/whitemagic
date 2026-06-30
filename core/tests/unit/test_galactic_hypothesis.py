@@ -1,4 +1,5 @@
 """Tests for Objective G — Galactic Zone Lifecycle for Hypotheses."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.galactic_hypothesis import (

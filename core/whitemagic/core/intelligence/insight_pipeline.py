@@ -33,10 +33,6 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class BriefingItem:
     """A single actionable item in the briefing."""
@@ -130,16 +126,17 @@ class InsightBriefing:
         # Velocity snapshot
         vm = self.velocity_metrics
         if vm:
-            lines.append(f"Memory Velocity: {vm.get('daily_avg_7d', 0)}/day "
-                        f"(acceleration: {vm.get('acceleration', 1.0):.1f}x)")
+            lines.append(
+                f"Memory Velocity: {vm.get('daily_avg_7d', 0)}/day "
+                f"(acceleration: {vm.get('acceleration', 1.0):.1f}x)"
+            )
             lines.append("")
 
         # Critical items first
         critical = self.critical_items
         if critical:
             lines.append("!! CRITICAL !!")
-            for item in critical[:
-                3]:
+            for item in critical[:3]:
                 lines.append(f"  - [{item.source_engine}] {item.title}")
                 if item.suggested_actions:
                     lines.append(f"    Action: {item.suggested_actions[0]}")
@@ -148,12 +145,17 @@ class InsightBriefing:
         # Top items by priority
         shown = set(i.id for i in critical)
         remaining = [i for i in self.items if i.id not in shown]
-        remaining.sort(key=lambda i: {"high": 0, "medium": 1, "low": 2}.get(i.priority, 3))
+        remaining.sort(
+            key=lambda i: {"high": 0, "medium": 1, "low": 2}.get(i.priority, 3)
+        )
 
-        for item in remaining[:
-            max_items - len(critical)]:
-            emoji = {"prediction": "🔮", "improvement": "🔧",
-                     "discovery": "💡", "emergence": "✨"}.get(item.category, "📌")
+        for item in remaining[: max_items - len(critical)]:
+            emoji = {
+                "prediction": "🔮",
+                "improvement": "🔧",
+                "discovery": "💡",
+                "emergence": "✨",
+            }.get(item.category, "📌")
             lines.append(f"{emoji} [{item.priority.upper()}] {item.title}")
             if item.description:
                 lines.append(f"   {item.description[:120]}")
@@ -162,17 +164,14 @@ class InsightBriefing:
         if self.constellation_context:
             lines.append("")
             lines.append(f"Active Constellations: {len(self.constellation_context)}")
-            for c in self.constellation_context[:
-                3]:
-                lines.append(f"  - {c.get('name', '?')} ({c.get('size', 0)} members, "
-                           f"zone: {c.get('zone', '?')})")
+            for c in self.constellation_context[:3]:
+                lines.append(
+                    f"  - {c.get('name', '?')} ({c.get('size', 0)} members, "
+                    f"zone: {c.get('zone', '?')})"
+                )
 
         return "\n".join(lines)
 
-
-# ---------------------------------------------------------------------------
-# Pipeline
-# ---------------------------------------------------------------------------
 
 class InsightPipeline:
     """Orchestrates insight generation from all four engines.
@@ -203,30 +202,26 @@ class InsightPipeline:
         start = time.perf_counter()
         items: list[BriefingItem] = []
 
-        # --- CoreAccessLayer context ---
         cal = self._get_core_access()
         velocity = cal.get_velocity_metrics() if cal else {}
-        constellations = [c.to_dict() for c in cal.get_all_constellations()] if cal else []
+        constellations = (
+            [c.to_dict() for c in cal.get_all_constellations()] if cal else []
+        )
         drift_7d = cal.get_constellation_drift(window_days=7) if cal else []
         drift_30d = cal.get_constellation_drift(window_days=30) if cal else []
 
-        # --- Predictive Engine ---
         if include_predictions:
             items.extend(self._run_predictive())
 
-        # --- Kaizen Engine ---
         if include_kaizen:
             items.extend(self._run_kaizen())
 
-        # --- Serendipity Engine ---
         if include_serendipity:
             items.extend(self._run_serendipity(serendipity_count))
 
-        # --- Emergence Engine ---
         if include_emergence:
             items.extend(self._run_emergence())
 
-        # --- Cross-reference with constellations ---
         if constellations:
             constellation_tags: dict[str, list[str]] = {}
             for c in constellations:
@@ -243,12 +238,10 @@ class InsightPipeline:
                         item.related_constellations.extend(names)
                 item.related_constellations = list(set(item.related_constellations))[:3]
 
-        # --- Deduplicate and prioritize ---
         items = self._deduplicate(items)
         items = self._prioritize(items)
-        items = items[:self._max_items]
+        items = items[: self._max_items]
 
-        # --- Build summary ---
         by_category: dict[str, int] = {}
         by_priority: dict[str, int] = {}
         by_engine: dict[str, int] = {}
@@ -266,25 +259,26 @@ class InsightPipeline:
         duration = (time.perf_counter() - start) * 1000
 
         # Add drift alerts as briefing items
-        for drift in drift_7d[:
-            3]:
+        for drift in drift_7d[:3]:
             if drift["drift_magnitude"] > 0.1:
-                items.append(BriefingItem(
-                    id=f"drift_{drift['name'][:20]}",
-                    category="emergence",
-                    title=f"Constellation drift: {drift['name']}",
-                    description=f"Moved {drift['drift_magnitude']:.3f} units in 7d "
-                                f"(dx={drift['drift_vector']['dx']}, dv={drift['drift_vector']['dv']})",
-                    priority="medium" if drift["drift_magnitude"] < 0.3 else "high",
-                    confidence=min(0.95, drift["drift_magnitude"] * 3),
-                    source_engine="drift_tracker",
-                    metadata=drift,
-                ))
+                items.append(
+                    BriefingItem(
+                        id=f"drift_{drift['name'][:20]}",
+                        category="emergence",
+                        title=f"Constellation drift: {drift['name']}",
+                        description=f"Moved {drift['drift_magnitude']:.3f} units in 7d "
+                        f"(dx={drift['drift_vector']['dx']}, dv={drift['drift_vector']['dv']})",
+                        priority="medium" if drift["drift_magnitude"] < 0.3 else "high",
+                        confidence=min(0.95, drift["drift_magnitude"] * 3),
+                        source_engine="drift_tracker",
+                        metadata=drift,
+                    )
+                )
 
         # Re-deduplicate and prioritize after adding drift items
         items = self._deduplicate(items)
         items = self._prioritize(items)
-        items = items[:self._max_items]
+        items = items[: self._max_items]
 
         # Rebuild summary with updated items
         by_category = {}
@@ -316,9 +310,11 @@ class InsightPipeline:
         )
 
         logger.info(
-            "📋 InsightBriefing generated: %s items in %.0fms "
-            "(%s)"
-        , len(items), duration, summary.get('by_priority', {}))
+            "📋 InsightBriefing generated: %s items in %.0fms (%s)",
+            len(items),
+            duration,
+            summary.get("by_priority", {}),
+        )
 
         # Persist briefing as memory for calibration tracking
         if self._persist_briefings:
@@ -326,40 +322,42 @@ class InsightPipeline:
 
         return briefing
 
-    # ------------------------------------------------------------------
-    # Engine runners (each isolated, graceful failure)
-    # ------------------------------------------------------------------
-
     def _run_predictive(self) -> list[BriefingItem]:
         """Run PredictiveEngine and normalize output."""
         try:
             from whitemagic.core.intelligence.synthesis.predictive_engine import (
                 get_predictive_engine,
             )
+
             engine = get_predictive_engine()
             report = engine.predict()
 
             items = []
-            for pred in report.predictions[:
-                15]:
+            for pred in report.predictions[:15]:
                 priority = self._confidence_to_priority(
-                    pred.confidence.value if hasattr(pred.confidence, 'value') else str(pred.confidence),
+                    pred.confidence.value
+                    if hasattr(pred.confidence, "value")
+                    else str(pred.confidence),
                     pred.impact_score,
                 )
-                items.append(BriefingItem(
-                    id=f"pred_{pred.id}",
-                    category="prediction",
-                    title=pred.title,
-                    description=pred.description,
-                    priority=priority,
-                    confidence=pred.impact_score,
-                    source_engine="predictive",
-                    suggested_actions=pred.suggested_actions[:3],
-                    metadata={
-                        "prediction_type": pred.prediction_type.value if hasattr(pred.prediction_type, 'value') else str(pred.prediction_type),
-                        "time_horizon": pred.time_horizon,
-                    },
-                ))
+                items.append(
+                    BriefingItem(
+                        id=f"pred_{pred.id}",
+                        category="prediction",
+                        title=pred.title,
+                        description=pred.description,
+                        priority=priority,
+                        confidence=pred.impact_score,
+                        source_engine="predictive",
+                        suggested_actions=pred.suggested_actions[:3],
+                        metadata={
+                            "prediction_type": pred.prediction_type.value
+                            if hasattr(pred.prediction_type, "value")
+                            else str(pred.prediction_type),
+                            "time_horizon": pred.time_horizon,
+                        },
+                    )
+                )
             return items
         except Exception as e:
             logger.warning("PredictiveEngine failed: %s", e, exc_info=True)
@@ -371,27 +369,33 @@ class InsightPipeline:
             from whitemagic.core.intelligence.synthesis.kaizen_engine import (
                 get_kaizen_engine,
             )
+
             engine = get_kaizen_engine()
             report = engine.analyze()
 
             items = []
-            for proposal in report.proposals[:
-                15]:
-                priority = self._effort_impact_to_priority(proposal.impact, proposal.effort)
-                items.append(BriefingItem(
-                    id=f"kaizen_{proposal.id}",
-                    category="improvement",
-                    title=proposal.title,
-                    description=proposal.description,
-                    priority=priority,
-                    confidence=0.7 if proposal.auto_fixable else 0.5,
-                    source_engine="kaizen",
-                    suggested_actions=[proposal.fix_action] if proposal.fix_action else [],
-                    metadata={
-                        "kaizen_category": proposal.category,
-                        "auto_fixable": proposal.auto_fixable,
-                    },
-                ))
+            for proposal in report.proposals[:15]:
+                priority = self._effort_impact_to_priority(
+                    proposal.impact, proposal.effort
+                )
+                items.append(
+                    BriefingItem(
+                        id=f"kaizen_{proposal.id}",
+                        category="improvement",
+                        title=proposal.title,
+                        description=proposal.description,
+                        priority=priority,
+                        confidence=0.7 if proposal.auto_fixable else 0.5,
+                        source_engine="kaizen",
+                        suggested_actions=[proposal.fix_action]
+                        if proposal.fix_action
+                        else [],
+                        metadata={
+                            "kaizen_category": proposal.category,
+                            "auto_fixable": proposal.auto_fixable,
+                        },
+                    )
+                )
             return items
         except Exception as e:
             logger.warning("KaizenEngine failed: %s", e, exc_info=True)
@@ -407,6 +411,7 @@ class InsightPipeline:
             from whitemagic.core.intelligence.synthesis.serendipity_engine import (
                 get_serendipity_engine,
             )
+
             engine = get_serendipity_engine()
 
             # Standard balanced serendipity
@@ -415,7 +420,8 @@ class InsightPipeline:
             # Quantum serendipity — non-obvious connections via superposition walks
             try:
                 quantum_surfaced = engine.surface(
-                    count=max(3, count // 2), mode="quantum",
+                    count=max(3, count // 2),
+                    mode="quantum",
                     context="system improvement and pattern recognition",
                 )
                 surfaced.extend(quantum_surfaced)
@@ -425,21 +431,23 @@ class InsightPipeline:
             items = []
             for mem in surfaced:
                 is_quantum = "Quantum" in mem.reason
-                items.append(BriefingItem(
-                    id=f"serendipity_{mem.id[:16]}",
-                    category="discovery",
-                    title=f"Rediscover: {mem.title}",
-                    description=f"{mem.reason}. Preview: {mem.content_preview[:100]}",
-                    priority="medium" if is_quantum else "low",
-                    confidence=mem.relevance_score,
-                    source_engine="serendipity",
-                    metadata={
-                        "memory_id": mem.id,
-                        "gravity": mem.gravity,
-                        "access_count": mem.access_count,
-                        "quantum": is_quantum,
-                    },
-                ))
+                items.append(
+                    BriefingItem(
+                        id=f"serendipity_{mem.id[:16]}",
+                        category="discovery",
+                        title=f"Rediscover: {mem.title}",
+                        description=f"{mem.reason}. Preview: {mem.content_preview[:100]}",
+                        priority="medium" if is_quantum else "low",
+                        confidence=mem.relevance_score,
+                        source_engine="serendipity",
+                        metadata={
+                            "memory_id": mem.id,
+                            "gravity": mem.gravity,
+                            "access_count": mem.access_count,
+                            "quantum": is_quantum,
+                        },
+                    )
+                )
             return items
         except Exception as e:
             logger.warning("SerendipityEngine failed: %s", e, exc_info=True)
@@ -451,6 +459,7 @@ class InsightPipeline:
             from whitemagic.core.intelligence.agentic.emergence_engine import (
                 get_emergence_engine,
             )
+
             engine = get_emergence_engine()
 
             # Run proactive scan
@@ -461,43 +470,44 @@ class InsightPipeline:
 
             items = []
             for insight in insights:
-                items.append(BriefingItem(
-                    id=f"emergence_{insight.id}",
-                    category="emergence",
-                    title=insight.title,
-                    description=insight.description,
-                    priority=self._confidence_to_priority_float(insight.confidence),
-                    confidence=insight.confidence,
-                    source_engine="emergence",
-                    metadata={"source_type": insight.source},
-                ))
+                items.append(
+                    BriefingItem(
+                        id=f"emergence_{insight.id}",
+                        category="emergence",
+                        title=insight.title,
+                        description=insight.description,
+                        priority=self._confidence_to_priority_float(insight.confidence),
+                        confidence=insight.confidence,
+                        source_engine="emergence",
+                        metadata={"source_type": insight.source},
+                    )
+                )
 
             for past in past_insights:
                 pid = past.get("id", "unknown")
                 if not any(i.id == f"emergence_{pid}" for i in items):
-                    items.append(BriefingItem(
-                        id=f"emergence_{pid}",
-                        category="emergence",
-                        title=past.get("title", "Unknown Insight"),
-                        description=past.get("description", ""),
-                        priority="medium",
-                        confidence=past.get("confidence", 0.5),
-                        source_engine="emergence",
-                        metadata={"source_type": past.get("source", "unknown")},
-                    ))
+                    items.append(
+                        BriefingItem(
+                            id=f"emergence_{pid}",
+                            category="emergence",
+                            title=past.get("title", "Unknown Insight"),
+                            description=past.get("description", ""),
+                            priority="medium",
+                            confidence=past.get("confidence", 0.5),
+                            source_engine="emergence",
+                            metadata={"source_type": past.get("source", "unknown")},
+                        )
+                    )
 
             return items
         except Exception as e:
             logger.warning("EmergenceEngine failed: %s", e, exc_info=True)
             return []
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
     def _get_core_access(self) -> Any:
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
+
             return get_core_access()
         except (ImportError, ModuleNotFoundError):
             return None
@@ -544,14 +554,14 @@ class InsightPipeline:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             from whitemagic.core.memory.unified_types import MemoryType
+
             um = get_unified_memory()
 
             self._briefing_count += 1
             title = f"Intelligence Briefing #{self._briefing_count} ({briefing.timestamp[:10]})"
 
             top_items_text = []
-            for item in briefing.items[:
-                8]:
+            for item in briefing.items[:8]:
                 top_items_text.append(
                     f"[{item.priority.upper()}] ({item.source_engine}) {item.title}: {item.description[:120]}"
                 )
@@ -569,7 +579,12 @@ class InsightPipeline:
                 title=title,
                 memory_type=MemoryType.LONG_TERM,
                 importance=0.6,
-                tags={"insight_briefing", "intelligence", "calibration", "auto_generated"},
+                tags={
+                    "insight_briefing",
+                    "intelligence",
+                    "calibration",
+                    "auto_generated",
+                },
                 metadata={
                     "briefing_number": self._briefing_count,
                     "total_items": len(briefing.items),
@@ -578,7 +593,9 @@ class InsightPipeline:
                 },
                 galaxy="insight",
             )
-            logger.debug("Persisted briefing #%s as memory", self._briefing_count, exc_info=True)
+            logger.debug(
+                "Persisted briefing #%s as memory", self._briefing_count, exc_info=True
+            )
         except Exception as e:
             logger.debug("Failed to persist briefing as memory: %s", e, exc_info=True)
 
@@ -600,10 +617,6 @@ class InsightPipeline:
         items.sort(key=lambda i: (priority_order.get(i.priority, 4), -i.confidence))
         return items
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _pipeline: InsightPipeline | None = None
 

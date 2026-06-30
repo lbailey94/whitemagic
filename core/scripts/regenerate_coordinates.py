@@ -48,6 +48,7 @@ log = logging.getLogger("coord_regen")
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -62,22 +63,112 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 def extract_keywords(text: str, max_words: int = 50) -> set[str]:
     """Extract meaningful keywords from text."""
     import re
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    text = re.sub(r'http\S+', '', text)
-    text = re.sub(r'[#*`_\[\]()]', ' ', text)
-    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    text = re.sub(r"http\S+", "", text)
+    text = re.sub(r"[#*`_\[\]()]", " ", text)
+    words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
     stopwords = {
-        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
-        'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'from', 'this',
-        'that', 'they', 'with', 'will', 'each', 'make', 'like', 'just', 'over',
-        'such', 'more', 'than', 'them', 'very', 'when', 'come', 'could', 'into',
-        'time', 'only', 'its', 'also', 'after', 'some', 'then', 'other', 'what',
-        'which', 'their', 'there', 'about', 'would', 'these', 'should', 'because',
-        'through', 'between', 'during', 'before', 'above', 'below', 'any',
-        'same', 'both', 'few', 'most', 'own', 'while', 'where', 'how', 'who',
-        'whom', 'why', 'did', 'does', 'doing', 'done', 'being', 'is', 'it',
-        'in', 'on', 'at', 'to', 'of', 'by', 'or', 'an', 'as', 'if', 'so',
-        'we', 'he', 'she', 'my', 'his', 'me', 'us', 'am', 'be',
+        "the",
+        "and",
+        "for",
+        "are",
+        "but",
+        "not",
+        "you",
+        "all",
+        "can",
+        "had",
+        "her",
+        "was",
+        "one",
+        "our",
+        "out",
+        "has",
+        "have",
+        "been",
+        "from",
+        "this",
+        "that",
+        "they",
+        "with",
+        "will",
+        "each",
+        "make",
+        "like",
+        "just",
+        "over",
+        "such",
+        "more",
+        "than",
+        "them",
+        "very",
+        "when",
+        "come",
+        "could",
+        "into",
+        "time",
+        "only",
+        "its",
+        "also",
+        "after",
+        "some",
+        "then",
+        "other",
+        "what",
+        "which",
+        "their",
+        "there",
+        "about",
+        "would",
+        "these",
+        "should",
+        "because",
+        "through",
+        "between",
+        "during",
+        "before",
+        "above",
+        "below",
+        "any",
+        "same",
+        "both",
+        "few",
+        "most",
+        "own",
+        "while",
+        "where",
+        "how",
+        "who",
+        "whom",
+        "why",
+        "did",
+        "does",
+        "doing",
+        "done",
+        "being",
+        "is",
+        "it",
+        "in",
+        "on",
+        "at",
+        "to",
+        "of",
+        "by",
+        "or",
+        "an",
+        "as",
+        "if",
+        "so",
+        "we",
+        "he",
+        "she",
+        "my",
+        "his",
+        "me",
+        "us",
+        "am",
+        "be",
     }
     return set(w for w in words if w not in stopwords)
 
@@ -101,7 +192,7 @@ def calculate_complexity_score(content: str) -> float:
     if not content:
         return 0.0
     # Sentence diversity
-    sentences = content.replace('!', '.').replace('?', '.').split('.')
+    sentences = content.replace("!", ".").replace("?", ".").split(".")
     sentences = [s.strip() for s in sentences if s.strip()]
     if not sentences:
         return 0.0
@@ -116,8 +207,9 @@ def calculate_complexity_score(content: str) -> float:
     return min(1.0, (sent_score * 0.5 + vocab_richness * 0.5))
 
 
-def calculate_resonance_params(memory_type: str, importance: float,
-                               diversity: float, complexity: float) -> tuple[float, float]:
+def calculate_resonance_params(
+    memory_type: str, importance: float, diversity: float, complexity: float
+) -> tuple[float, float]:
     """Calculate varied damping and frequency based on memory properties.
 
     Returns (damping, frequency) for the resonance oscillator.
@@ -129,23 +221,23 @@ def calculate_resonance_params(memory_type: str, importance: float,
     """
     # Base damping by memory type
     type_damping = {
-        "long_term": 0.05,    # Ring long
-        "short_term": 0.3,    # Quick decay
-        "pattern": 0.08,      # Clear signal
-        "wisdom": 0.03,       # Deep resonance
-        "log": 0.5,           # Fast decay
-        "episodic": 0.2,      # Moderate
+        "long_term": 0.05,  # Ring long
+        "short_term": 0.3,  # Quick decay
+        "pattern": 0.08,  # Clear signal
+        "wisdom": 0.03,  # Deep resonance
+        "log": 0.5,  # Fast decay
+        "episodic": 0.2,  # Moderate
     }
     base_damping = type_damping.get(memory_type, 0.15)
 
     # Base frequency by memory type
     type_frequency = {
-        "long_term": 1.5,     # High frequency
-        "short_term": 0.8,    # Lower frequency
-        "pattern": 2.0,       # Very high (clear signal)
-        "wisdom": 0.5,        # Low (deep)
-        "log": 1.0,           # Medium
-        "episodic": 1.2,      # Medium-high
+        "long_term": 1.5,  # High frequency
+        "short_term": 0.8,  # Lower frequency
+        "pattern": 2.0,  # Very high (clear signal)
+        "wisdom": 0.5,  # Low (deep)
+        "log": 1.0,  # Medium
+        "episodic": 1.2,  # Medium-high
     }
     base_frequency = type_frequency.get(memory_type, 1.0)
 
@@ -154,17 +246,18 @@ def calculate_resonance_params(memory_type: str, importance: float,
     frequency = base_frequency * (1.0 + importance * 0.5)
 
     # Adjust by diversity (more diverse = more complex resonance)
-    damping *= (1.0 - diversity * 0.3)
-    frequency *= (1.0 + diversity * 0.3)
+    damping *= 1.0 - diversity * 0.3
+    frequency *= 1.0 + diversity * 0.3
 
     # Adjust by complexity (more complex = richer resonance)
-    frequency *= (1.0 + complexity * 0.5)
+    frequency *= 1.0 + complexity * 0.5
 
     return max(0.01, min(1.0, damping)), max(0.1, min(5.0, frequency))
 
 
-def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
-                          dry_run: bool = False) -> dict:
+def regenerate_coordinates(
+    limit: int = 0, batch_size: int = 500, dry_run: bool = False
+) -> dict:
     """Regenerate all holographic coordinates with proper 5D spread."""
     db_path = get_db_path()
     conn = get_conn(db_path)
@@ -196,7 +289,7 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
 
     updated = 0
     for batch_start in range(0, total, batch_size):
-        batch = memories[batch_start:batch_start + batch_size]
+        batch = memories[batch_start : batch_start + batch_size]
 
         for mem in batch:
             # Extract content properties
@@ -225,11 +318,20 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
             # Use emotional_valence as primary signal
             x = -0.5 * emotional_valence
             # Add content-based signal
-            logic_words = sum(1 for kw in ['code', 'function', 'class', 'api', 'database', 'algorithm'] if kw in content.lower())
-            emotion_words = sum(1 for kw in ['feel', 'heart', 'love', 'joy', 'wonder', 'beauty', 'soul'] if kw in content.lower())
+            logic_words = sum(
+                1
+                for kw in ["code", "function", "class", "api", "database", "algorithm"]
+                if kw in content.lower()
+            )
+            emotion_words = sum(
+                1
+                for kw in ["feel", "heart", "love", "joy", "wonder", "beauty", "soul"]
+                if kw in content.lower()
+            )
             x += 0.05 * (logic_words - emotion_words)
             # Add hash-based variation
             import hashlib
+
             hash_val = int(hashlib.md5(f"{mem['id']}x".encode()).hexdigest()[:8], 16)
             x += ((hash_val % 1000) / 1000.0 - 0.5) * 0.3
             x = max(-1.0, min(1.0, x))
@@ -242,9 +344,14 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
             else:
                 y = 0.0
             # Content-based signal
-            if any(w in content.lower() for w in ["universal", "always", "principle", "pattern"]):
+            if any(
+                w in content.lower()
+                for w in ["universal", "always", "principle", "pattern"]
+            ):
                 y += 0.2
-            if any(w in content.lower() for w in ["specific", "line", "error", "file:"]):
+            if any(
+                w in content.lower() for w in ["specific", "line", "error", "file:"]
+            ):
                 y -= 0.2
             hash_val = int(hashlib.md5(f"{mem['id']}y".encode()).hexdigest()[:8], 16)
             y += ((hash_val % 1000) / 1000.0 - 0.5) * 0.3
@@ -256,6 +363,7 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
             if mem["created_at"]:
                 try:
                     from datetime import datetime
+
                     ts = datetime.fromisoformat(str(mem["created_at"])[:26])
                     age_days = (datetime.now() - ts).days
                     if age_days < 1:
@@ -273,7 +381,11 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
             # Future-oriented tags
             tags = set()
             try:
-                tags = set(json.loads(mem["metadata"]).get("tags", []) if mem["metadata"] else [])
+                tags = set(
+                    json.loads(mem["metadata"]).get("tags", [])
+                    if mem["metadata"]
+                    else []
+                )
             except Exception:
                 pass
             if tags & {"future", "plan", "vision", "roadmap"}:
@@ -282,7 +394,12 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
 
             # --- W-Axis: Importance / Gravity (FIXED: proper range [0.1, 2.0+]) ---
             # Combination of importance, neuro_score, usage, and content richness
-            w = (importance * 0.3) + (neuro_score * 0.2) + (diversity * 0.2) + (complexity * 0.1)
+            w = (
+                (importance * 0.3)
+                + (neuro_score * 0.2)
+                + (diversity * 0.2)
+                + (complexity * 0.1)
+            )
             # Usage boost
             usage_boost = min(0.4, (access_count + recall_count * 2) / 15.0)
             w += usage_boost
@@ -306,7 +423,7 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
                 # Decay based on access (memories not accessed decay toward edge)
                 access_factor = min(1.0, access_count / 10.0)
                 recall_factor = min(1.0, recall_count / 5.0)
-                activity = (access_factor * 0.6 + recall_factor * 0.4)
+                activity = access_factor * 0.6 + recall_factor * 0.4
                 v = v_base * 0.5 + activity * 0.5
                 # Diversity boost (rich memories stay more vital)
                 v += diversity * 0.1
@@ -325,7 +442,7 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
                     """INSERT OR REPLACE INTO holographic_coords
                        (memory_id, x, y, z, w, v)
                        VALUES (?, ?, ?, ?, ?, ?)""",
-                    (mem["id"], x, y, z, w, v)
+                    (mem["id"], x, y, z, w, v),
                 )
                 updated += 1
 
@@ -343,7 +460,9 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
         min_v = min(values) if values else 0
         max_v = max(values) if values else 0
         spread = max_v - min_v
-        log.info("  %s: min=%s, max=%s, avg=%s, spread=%s", name, min_v, max_v, avg, spread)
+        log.info(
+            "  %s: min=%s, max=%s, avg=%s, spread=%s", name, min_v, max_v, avg, spread
+        )
 
     log.info(f"\n📊 Coordinate Statistics:")
     stats(x_values, "X (Logic↔Emotion)")

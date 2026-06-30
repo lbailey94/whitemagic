@@ -288,10 +288,6 @@ pub fn get_galaxy_stats(db_path: &str) -> PyResult<HashMap<String, i64>> {
     Ok(stats)
 }
 
-// ---------------------------------------------------------------------------
-// Python module registration
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "python")]
 pub fn galaxy_miner(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<AccessPattern>()?;

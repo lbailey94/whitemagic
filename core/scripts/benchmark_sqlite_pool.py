@@ -25,7 +25,10 @@ QUERIES = [
     ("SELECT id, title, content FROM memories ORDER BY importance DESC LIMIT 10", ()),
     ("SELECT memory_type, COUNT(*) FROM memories GROUP BY memory_type", ()),
     ("SELECT id FROM memories WHERE importance > 0.5 LIMIT 20", ()),
-    ("SELECT id, importance, galactic_distance FROM memories ORDER BY created_at DESC LIMIT 50", ()),
+    (
+        "SELECT id, importance, galactic_distance FROM memories ORDER BY created_at DESC LIMIT 50",
+        (),
+    ),
 ]
 
 ITERATIONS = 100
@@ -115,21 +118,39 @@ def main():
 
     print(f"\n{'Metric':<20} {'Open/Close':>12} {'Pool':>12} {'Speedup':>10}")
     print("-" * 60)
-    print(f"{'Mean (ms)':<20} {open_close['mean_ms']:>12.3f} {pool['mean_ms']:>12.3f} {open_close['mean_ms']/pool['mean_ms']:>10.1f}x")
-    print(f"{'Median (ms)':<20} {open_close['median_ms']:>12.3f} {pool['median_ms']:>12.3f} {open_close['median_ms']/pool['median_ms']:>10.1f}x")
-    print(f"{'Min (ms)':<20} {open_close['min_ms']:>12.3f} {pool['min_ms']:>12.3f} {open_close['min_ms']/pool['min_ms']:>10.1f}x")
-    print(f"{'Max (ms)':<20} {open_close['max_ms']:>12.3f} {pool['max_ms']:>12.3f} {open_close['max_ms']/pool['max_ms']:>10.1f}x")
-    print(f"{'P95 (ms)':<20} {open_close['p95_ms']:>12.3f} {pool['p95_ms']:>12.3f} {open_close['p95_ms']/pool['p95_ms']:>10.1f}x")
-    print(f"{'Total (ms)':<20} {open_close['total_ms']:>12.3f} {pool['total_ms']:>12.3f} {open_close['total_ms']/pool['total_ms']:>10.1f}x")
+    print(
+        f"{'Mean (ms)':<20} {open_close['mean_ms']:>12.3f} {pool['mean_ms']:>12.3f} {open_close['mean_ms'] / pool['mean_ms']:>10.1f}x"
+    )
+    print(
+        f"{'Median (ms)':<20} {open_close['median_ms']:>12.3f} {pool['median_ms']:>12.3f} {open_close['median_ms'] / pool['median_ms']:>10.1f}x"
+    )
+    print(
+        f"{'Min (ms)':<20} {open_close['min_ms']:>12.3f} {pool['min_ms']:>12.3f} {open_close['min_ms'] / pool['min_ms']:>10.1f}x"
+    )
+    print(
+        f"{'Max (ms)':<20} {open_close['max_ms']:>12.3f} {pool['max_ms']:>12.3f} {open_close['max_ms'] / pool['max_ms']:>10.1f}x"
+    )
+    print(
+        f"{'P95 (ms)':<20} {open_close['p95_ms']:>12.3f} {pool['p95_ms']:>12.3f} {open_close['p95_ms'] / pool['p95_ms']:>10.1f}x"
+    )
+    print(
+        f"{'Total (ms)':<20} {open_close['total_ms']:>12.3f} {pool['total_ms']:>12.3f} {open_close['total_ms'] / pool['total_ms']:>10.1f}x"
+    )
 
-    improvement = (1 - pool['total_ms'] / open_close['total_ms']) * 100
+    improvement = (1 - pool["total_ms"] / open_close["total_ms"]) * 100
     print(f"\nOverall improvement: {improvement:.1f}%")
-    print(f"Time saved: {open_close['total_ms'] - pool['total_ms']:.1f}ms over {ITERATIONS} queries")
+    print(
+        f"Time saved: {open_close['total_ms'] - pool['total_ms']:.1f}ms over {ITERATIONS} queries"
+    )
 
     if improvement > 0:
-        print(f"\n✅ Connection pool is {open_close['total_ms']/pool['total_ms']:.1f}x faster than open/close")
+        print(
+            f"\n✅ Connection pool is {open_close['total_ms'] / pool['total_ms']:.1f}x faster than open/close"
+        )
     else:
-        print(f"\n⚠️ No significant improvement (pool overhead may dominate for fast queries)")
+        print(
+            f"\n⚠️ No significant improvement (pool overhead may dominate for fast queries)"
+        )
 
 
 if __name__ == "__main__":

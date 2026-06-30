@@ -1,10 +1,13 @@
 """Tuned emergence detection for 99%+ coherence."""
+
 from typing import Any
 
 from .gan_ying_enhanced import get_bus
 
 
-def detect_emergence_tuned(time_window_seconds: int = 60, diversity_threshold: int = 3) -> list[dict[str, Any]]:
+def detect_emergence_tuned(
+    time_window_seconds: int = 60, diversity_threshold: int = 3
+) -> list[dict[str, Any]]:
     """More sensitive emergence detection.
 
     Lowered thresholds:
@@ -16,6 +19,7 @@ def detect_emergence_tuned(time_window_seconds: int = 60, diversity_threshold: i
 
     # Filter to time window
     from datetime import datetime, timedelta
+
     cutoff = datetime.now() - timedelta(seconds=time_window_seconds)
     recent = [e for e in recent_events if e.timestamp >= cutoff]
 
@@ -27,35 +31,43 @@ def detect_emergence_tuned(time_window_seconds: int = 60, diversity_threshold: i
     # Pattern 1: Multi-garden activation (lowered threshold)
     gardens = set(e.source for e in recent if "Garden" in e.source)
     if len(gardens) >= diversity_threshold:
-        patterns.append({
-            "type": "multi_garden_activation",
-            "count": len(gardens),
-            "gardens": list(gardens),
-        })
+        patterns.append(
+            {
+                "type": "multi_garden_activation",
+                "count": len(gardens),
+                "gardens": list(gardens),
+            }
+        )
 
     # Pattern 2: High diversity (lowered threshold)
     event_types = set(e.event_type for e in recent)
     if len(event_types) >= diversity_threshold:
-        patterns.append({
-            "type": "high_diversity",
-            "count": len(event_types),
-            "types": [e.value for e in list(event_types)[:5]],
-        })
+        patterns.append(
+            {
+                "type": "high_diversity",
+                "count": len(event_types),
+                "types": [e.value for e in list(event_types)[:5]],
+            }
+        )
 
     # Pattern 3: Deep cascades
     max_depth = max((e.cascade_depth for e in recent), default=0)
     if max_depth >= 2:
-        patterns.append({
-            "type": "deep_cascade",
-            "max_depth": max_depth,
-        })
+        patterns.append(
+            {
+                "type": "deep_cascade",
+                "max_depth": max_depth,
+            }
+        )
 
     # Pattern 4: Rapid succession (NEW!)
     if len(recent) >= 10:
-        patterns.append({
-            "type": "rapid_resonance",
-            "event_count": len(recent),
-        })
+        patterns.append(
+            {
+                "type": "rapid_resonance",
+                "event_count": len(recent),
+            }
+        )
 
     # Pattern 5: System coordination (NEW!)
     system_types = set()
@@ -68,12 +80,15 @@ def detect_emergence_tuned(time_window_seconds: int = 60, diversity_threshold: i
             system_types.add("memory")
 
     if len(system_types) >= 2:
-        patterns.append({
-            "type": "system_coordination",
-            "systems": list(system_types),
-        })
+        patterns.append(
+            {
+                "type": "system_coordination",
+                "systems": list(system_types),
+            }
+        )
 
     return patterns
+
 
 def measure_final_coherence() -> dict[str, Any]:
     """Measure coherence with tuned emergence."""
@@ -108,7 +123,14 @@ def measure_final_coherence() -> dict[str, Any]:
     emergence_score = min(len(emergence) / 5.0, 1.0) * 10
     bonus = 10
 
-    total = gardens_score + zodiac_score + systems_score + cascade_score + emergence_score + bonus
+    total = (
+        gardens_score
+        + zodiac_score
+        + systems_score
+        + cascade_score
+        + emergence_score
+        + bonus
+    )
 
     return {
         "total": total,

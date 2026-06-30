@@ -25,11 +25,11 @@ class FlowIndicator(Enum):
     """Signs you're in flow."""
 
     TIME_DISTORTION = "time_distortion"  # Lost track of time
-    EFFORTLESS_ACTION = "effortless"     # Hard feels easy
-    FULL_ABSORPTION = "absorbed"         # Completely focused
-    CLEAR_GOALS = "clear_goals"          # Know what to do
-    IMMEDIATE_FEEDBACK = "feedback"      # See results instantly
-    CHALLENGE_SKILL_BALANCE = "balanced" # Just right difficulty
+    EFFORTLESS_ACTION = "effortless"  # Hard feels easy
+    FULL_ABSORPTION = "absorbed"  # Completely focused
+    CLEAR_GOALS = "clear_goals"  # Know what to do
+    IMMEDIATE_FEEDBACK = "feedback"  # See results instantly
+    CHALLENGE_SKILL_BALANCE = "balanced"  # Just right difficulty
 
 
 class FlowState:
@@ -52,15 +52,17 @@ class FlowState:
         self.current_indicators = []
 
         if self.bus and ResonanceEvent is not None and EventType is not None:
-            self.bus.emit(ResonanceEvent(
-                source="presence_flow",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "event": "flow_entered",
-                    "activity": activity,
-                },
-                confidence=0.8,
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="presence_flow",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={
+                        "event": "flow_entered",
+                        "activity": activity,
+                    },
+                    confidence=0.8,
+                )
+            )
 
         return f"🌊 Flow: {activity}"
 
@@ -83,16 +85,18 @@ class FlowState:
         self.current_indicators = []
 
         if self.bus and ResonanceEvent is not None and EventType is not None:
-            self.bus.emit(ResonanceEvent(
-                source="presence_flow",
-                event_type=EventType.SOLUTION_FOUND,
-                data={
-                    "event": "flow_completed",
-                    "duration": duration,
-                    "quality": flow_session["quality"],
-                },
-                confidence=float(flow_session.get("quality", 0.5)),  # type: ignore[arg-type]
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="presence_flow",
+                    event_type=EventType.SOLUTION_FOUND,
+                    data={
+                        "event": "flow_completed",
+                        "duration": duration,
+                        "quality": flow_session["quality"],
+                    },
+                    confidence=float(flow_session.get("quality", 0.5)),  # type: ignore[arg-type]
+                )
+            )
 
         return flow_session
 
@@ -123,9 +127,12 @@ class FlowState:
 
         return (indicator_score + duration_score) / 2
 
-    def auto_detect_indicators(self, tool_call_rate: float = 0.0,
-                                coherence: float = 0.0,
-                                session_duration_min: float = 0.0) -> list[FlowIndicator]:
+    def auto_detect_indicators(
+        self,
+        tool_call_rate: float = 0.0,
+        coherence: float = 0.0,
+        session_duration_min: float = 0.0,
+    ) -> list[FlowIndicator]:
         """Infer flow indicators from system activity metrics.
 
         This allows FlowState to participate in consciousness monitoring

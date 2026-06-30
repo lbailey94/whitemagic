@@ -37,12 +37,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data types
-# ---------------------------------------------------------------------------
-
 class Priority(IntEnum):
     """Work-item priority (lower number = higher priority)."""
+
     CRITICAL = 1
     HIGH = 3
     NORMAL = 5
@@ -85,10 +82,6 @@ class HumanQuestion:
     answer: str = ""
 
 
-# ---------------------------------------------------------------------------
-# Persistence helpers
-# ---------------------------------------------------------------------------
-
 def _state_dir() -> Path:
     root = Path(os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic")))
     d = root / "autonomous"
@@ -119,7 +112,16 @@ def _load_questions() -> list[HumanQuestion]:
         return []
     try:
         data = json.loads(path.read_text())
-        return [HumanQuestion(**{k: v for k, v in d.items() if k in HumanQuestion.__dataclass_fields__}) for d in data]
+        return [
+            HumanQuestion(
+                **{
+                    k: v
+                    for k, v in d.items()
+                    if k in HumanQuestion.__dataclass_fields__
+                }
+            )
+            for d in data
+        ]
     except Exception:
         return []
 
@@ -128,10 +130,6 @@ def _save_questions(qs: list[HumanQuestion]) -> None:
     path = _state_dir() / "human_questions.json"
     path.write_text(json.dumps([asdict(q) for q in qs], indent=2))
 
-
-# ---------------------------------------------------------------------------
-# Handler registry
-# ---------------------------------------------------------------------------
 
 _handlers: dict[str, Callable[..., Any]] = {}
 
@@ -146,10 +144,6 @@ def _default_handler(item: WorkItem) -> str:
     logger.info("Self-prompt executing (no handler): %s", item.task)
     return f"executed: {item.task}"
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def queue_work(
     task: str,
@@ -183,7 +177,13 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
     pending = [i for i in items if i.status == "pending"]
     pending.sort(key=lambda i: i.priority)
 
-    stats: dict[str, Any] = {"processed": 0, "failed": 0, "skipped": 0, "remaining": 0, "results": []}
+    stats: dict[str, Any] = {
+        "processed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "remaining": 0,
+        "results": [],
+    }
 
     for item in pending[:limit]:
         item.attempts += 1
@@ -195,7 +195,9 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
             item.status = "done"
             item.result = str(result) if result else "ok"
             stats["processed"] += 1
-            stats["results"].append({"id": item.id, "task": item.task, "result": item.result})
+            stats["results"].append(
+                {"id": item.id, "task": item.task, "result": item.result}
+            )
         except Exception as exc:
             if item.attempts >= item.max_attempts:
                 item.status = "failed"
@@ -204,12 +206,15 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
                 item.status = "pending"  # retry later
                 stats["skipped"] += 1
             item.result = f"error: {exc}"
-            logger.warning("Work item %s failed (attempt %d): %s", item.id, item.attempts, exc)
+            logger.warning(
+                "Work item %s failed (attempt %d): %s", item.id, item.attempts, exc
+            )
         elapsed = time.monotonic() - start
 
         # Log to diary if available
         try:
             from whitemagic.autonomous.diary import get_diary
+
             diary = get_diary()
             diary.log_hourly(
                 f"self_prompt:{item.handler or 'default'}",

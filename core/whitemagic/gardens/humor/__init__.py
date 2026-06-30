@@ -11,6 +11,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present moment (Z-axis 0.0)
 - Enriching lightness (W-axis +0.15)
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -58,10 +59,10 @@ class HumorGarden(BaseGarden, GanYingMixin):
         concrete and situational, happening in the present moment.
         """
         return CoordinateBias(
-            x=0.6,   # Emotional joy (humor is lighthearted, felt)
+            x=0.6,  # Emotional joy (humor is lighthearted, felt)
             y=-0.2,  # Concrete (humor is specific, situational)
-            z=0.0,   # Present (humor happens in the moment)
-            w=0.15,   # Enriching (humor lightens but isn't always critical)
+            z=0.0,  # Present (humor happens in the moment)
+            w=0.15,  # Enriching (humor lightens but isn't always critical)
         )
 
     def trigger_humor(self, what: str, intensity: float = 0.7) -> dict[str, Any]:
@@ -99,20 +100,29 @@ class HumorGarden(BaseGarden, GanYingMixin):
     @listen_for(EventType.JOY_TRIGGERED)
     def on_joy(self, event: Any) -> None:
         """Joy triggers humor."""
-        self.emit(EventType.HUMOR_TRIGGERED, {
-            "source": "joy",
-            "intensity": 0.6,
-        })
+        self.emit(
+            EventType.HUMOR_TRIGGERED,
+            {
+                "source": "joy",
+                "intensity": 0.6,
+            },
+        )
 
     @listen_for(EventType.PLAY_INITIATED)
     def on_play(self, event: Any) -> None:
         """Play brings humor."""
-        self.emit(EventType.HUMOR_TRIGGERED, {
-            "source": "play",
-            "intensity": 0.7,
-        })
+        self.emit(
+            EventType.HUMOR_TRIGGERED,
+            {
+                "source": "play",
+                "intensity": 0.7,
+            },
+        )
+
 
 _instance = None
+
+
 def get_humor_garden() -> HumorGarden:
     global _instance
     if _instance is None:

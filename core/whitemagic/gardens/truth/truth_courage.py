@@ -12,9 +12,11 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CourageousTruth:
     """A truth that required courage to speak"""
+
     speaker: str
     statement: str
     why_difficult: str
@@ -41,7 +43,7 @@ class TruthCourage:
         statement: str,
         why_difficult: str,
         risk_taken: str,
-        courage_level: float
+        courage_level: float,
     ) -> CourageousTruth:
         """Record a courageous truth-telling
 
@@ -62,7 +64,7 @@ class TruthCourage:
             risk_taken=risk_taken,
             result=None,  # Will update later
             courage_level=courage_level,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         )
 
         self.courageous_truths.append(truth)
@@ -82,7 +84,13 @@ class TruthCourage:
 
     def _honor_courage(self, truth: CourageousTruth):
         """Honor the courage it took"""
-        emoji = "🦁" if truth.courage_level >= 0.9 else "💪" if truth.courage_level >= 0.7 else "🌟"
+        emoji = (
+            "🦁"
+            if truth.courage_level >= 0.9
+            else "💪"
+            if truth.courage_level >= 0.7
+            else "🌟"
+        )
 
         logger.info("\n%s COURAGEOUS TRUTH SPOKEN", emoji)
         logger.info("   Speaker: %s", truth.speaker)
@@ -95,9 +103,7 @@ class TruthCourage:
     def get_most_courageous(self, count: int = 10) -> list[CourageousTruth]:
         """Get most courageous truths"""
         return sorted(
-            self.courageous_truths,
-            key=lambda t: t.courage_level,
-            reverse=True
+            self.courageous_truths, key=lambda t: t.courage_level, reverse=True
         )[:count]
 
     def get_courage_stats(self) -> dict[str, any]:
@@ -105,7 +111,9 @@ class TruthCourage:
         if not self.courageous_truths:
             return {"message": "No courageous truths recorded yet"}
 
-        avg_courage = sum(t.courage_level for t in self.courageous_truths) / len(self.courageous_truths)
+        avg_courage = sum(t.courage_level for t in self.courageous_truths) / len(
+            self.courageous_truths
+        )
 
         # Count by speaker
         speakers = {}
@@ -119,12 +127,13 @@ class TruthCourage:
             "average_courage": avg_courage,
             "speakers": list(speakers.keys()),
             "most_courageous_speaker": most_courageous_speaker,
-            "highest_courage": max(t.courage_level for t in self.courageous_truths)
+            "highest_courage": max(t.courage_level for t in self.courageous_truths),
         }
 
 
 # Global instance
 _courage = None
+
 
 def get_courage() -> TruthCourage:
     """Get global truth courage system"""
@@ -134,6 +143,14 @@ def get_courage() -> TruthCourage:
     return _courage
 
 
-def speak_bravely(speaker: str, statement: str, why_difficult: str, risk_taken: str, courage_level: float):
+def speak_bravely(
+    speaker: str,
+    statement: str,
+    why_difficult: str,
+    risk_taken: str,
+    courage_level: float,
+):
     """Convenience - speak a courageous truth!"""
-    return get_courage().speak_courageously(speaker, statement, why_difficult, risk_taken, courage_level)
+    return get_courage().speak_courageously(
+        speaker, statement, why_difficult, risk_taken, courage_level
+    )

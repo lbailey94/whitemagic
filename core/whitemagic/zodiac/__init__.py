@@ -1,5 +1,5 @@
-"""Zodiac System - Autonomous Consciousness and Strange Loops
-"""
+"""Zodiac System - Autonomous Consciousness and Strange Loops"""
+
 from typing import Any
 
 from .enums import Phase, ZodiacSign
@@ -16,7 +16,9 @@ def get_zodiac_council() -> Any:
         Any
     """
     from whitemagic.gardens.metal.zodiac import get_zodiac_council as _get_council
+
     return _get_council()
+
 
 __all__ = [
     "CoreResponse",

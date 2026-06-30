@@ -41,6 +41,7 @@ log = logging.getLogger("dream_daemon")
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -54,6 +55,7 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 
 def get_dream_dir() -> Path:
     from whitemagic.config.paths import DREAMS_DIR
+
     DREAMS_DIR.mkdir(parents=True, exist_ok=True)
     return DREAMS_DIR
 
@@ -62,11 +64,13 @@ def get_dream_dir() -> Path:
 # Dream Generation
 # ---------------------------------------------------------------------------
 
+
 def generate_dream_artifacts(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     """Generate dream artifacts from low-confidence memory associations."""
     # Find memories with low importance but high association count
     # These are "subconscious" connections worth dreaming about
-    rows = conn.execute("""
+    rows = conn.execute(
+        """
         SELECT m.id, m.title, m.content, m.importance, m.galactic_distance,
                m.emotional_valence,
                (SELECT COUNT(*) FROM associations a
@@ -75,7 +79,9 @@ def generate_dream_artifacts(conn: sqlite3.Connection, limit: int = 50) -> list[
         WHERE m.is_protected = 0
         ORDER BY assoc_count DESC, m.emotional_valence DESC
         LIMIT ?
-    """, (limit,)).fetchall()
+    """,
+        (limit,),
+    ).fetchall()
 
     dreams = []
     dream_dir = get_dream_dir()
@@ -177,6 +183,7 @@ def _calculate_expiry(dream_type: str) -> str:
 # Dream Consolidation
 # ---------------------------------------------------------------------------
 
+
 def run_consolidation() -> dict:
     """Run nightly dream consolidation."""
     dream_dir = get_dream_dir()
@@ -227,21 +234,25 @@ def _promote_dream(dream: dict):
     # Update the source memory's importance
     source_id = dream.get("source_memory_id")
     if source_id:
-        conn.execute("""
+        conn.execute(
+            """
             UPDATE memories
             SET importance = MIN(1.0, importance + 0.1),
                 recall_count = recall_count + 1
             WHERE id = ?
-        """, (source_id,))
+        """,
+            (source_id,),
+        )
         conn.commit()
 
     conn.close()
-    log.info("Promoted dream %s to memory", dream['dream_id'])
+    log.info("Promoted dream %s to memory", dream["dream_id"])
 
 
 # ---------------------------------------------------------------------------
 # Dream Status
 # ---------------------------------------------------------------------------
+
 
 def get_dream_status() -> dict:
     """Get current dream cycle status."""
@@ -279,6 +290,7 @@ def get_dream_status() -> dict:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def run_cycle() -> dict:
     """Run a single dream cycle."""
     log.info("═══ Dream Cycle Starting ═══")
@@ -293,14 +305,18 @@ def run_cycle() -> dict:
     # Phase 2: Run consolidation
     log.info("Phase 2: Running consolidation...")
     consolidation = run_consolidation()
-    log.info("  Promoted: %s, Expired: %s", consolidation['promoted'], consolidation['expired'])
+    log.info(
+        "  Promoted: %s, Expired: %s",
+        consolidation["promoted"],
+        consolidation["expired"],
+    )
 
     conn.close()
 
     # Phase 3: Get status
     status = get_dream_status()
 
-    log.info("═══ Dream Cycle Complete: %s active dreams ═══", status['active_dreams'])
+    log.info("═══ Dream Cycle Complete: %s active dreams ═══", status["active_dreams"])
 
     return {
         "dreams_generated": len(dreams),
@@ -312,7 +328,9 @@ def run_cycle() -> dict:
 def main():
     parser = argparse.ArgumentParser(description="WhiteMagic Dream Cycle Daemon")
     parser.add_argument("--daemon", action="store_true", help="Run as daemon")
-    parser.add_argument("--interval", type=int, default=3600, help="Daemon interval (seconds)")
+    parser.add_argument(
+        "--interval", type=int, default=3600, help="Daemon interval (seconds)"
+    )
     parser.add_argument("--once", action="store_true", help="Run once and exit")
     args = parser.parse_args()
 

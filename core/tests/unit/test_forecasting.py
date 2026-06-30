@@ -104,8 +104,13 @@ class TestDecompose:
     def test_decomposition_keys(self):
         result = decompose_brier([0.7, 0.3], [1, 0])
         assert set(result.keys()) == {
-            "brier_score", "reliability", "resolution", "uncertainty", "bss",
-            "brier_index", "calibration_gap",
+            "brier_score",
+            "reliability",
+            "resolution",
+            "uncertainty",
+            "bss",
+            "brier_index",
+            "calibration_gap",
         }
 
     def test_brier_score_consistent(self):
@@ -188,7 +193,9 @@ class TestTemporalForecastDB:
 
     def test_seed_validated_claims_inserts_all(self, tmp_db: TemporalForecastDB):
         result = tmp_db.seed_validated_claims()
-        assert result["inserted"] == 24  # 21 validated + 2 pending + 1 expired = 24 total
+        assert (
+            result["inserted"] == 24
+        )  # 21 validated + 2 pending + 1 expired = 24 total
 
     def test_seed_syncs_existing_rows(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()

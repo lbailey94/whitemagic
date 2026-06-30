@@ -18,16 +18,18 @@ class TestVSAWalkContextCompression(unittest.TestCase):
         """Generate synthetic walk results."""
         results = []
         for i in range(n):
-            results.append({
-                "memory_id": f"mem_{i}",
-                "title": f"Memory {i}",
-                "content": f"This is memory item {i} about topic {i % 3}. "
-                           f"It contains relevant information about concept {i}.",
-                "importance": 0.5 + i * 0.05,
-                "source": "anchor" if i < 3 else "graph_walk",
-                "rrf_score": 0.9 - i * 0.05,
-                "walk_paths": [],
-            })
+            results.append(
+                {
+                    "memory_id": f"mem_{i}",
+                    "title": f"Memory {i}",
+                    "content": f"This is memory item {i} about topic {i % 3}. "
+                    f"It contains relevant information about concept {i}.",
+                    "importance": 0.5 + i * 0.05,
+                    "source": "anchor" if i < 3 else "graph_walk",
+                    "rrf_score": 0.9 - i * 0.05,
+                    "walk_paths": [],
+                }
+            )
         return results
 
     def test_compress_empty_results(self) -> None:
@@ -64,12 +66,16 @@ class TestVSAWalkContextCompression(unittest.TestCase):
         self.assertIn("VSA Compressed", result["summary"])
 
     @patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor")
-    def test_compress_fallback_when_vsa_unavailable(self, mock_get_compressor: MagicMock) -> None:
+    def test_compress_fallback_when_vsa_unavailable(
+        self, mock_get_compressor: MagicMock
+    ) -> None:
         """Should fall back to truncation when VSA unavailable."""
         mock_get_compressor.side_effect = ImportError("no VSA")
 
         results = self._make_results(10)
-        result = self.walker.compress_walk_context(results, query="test", max_text_items=3)
+        result = self.walker.compress_walk_context(
+            results, query="test", max_text_items=3
+        )
 
         self.assertEqual(result["method"], "truncation_fallback")
         self.assertEqual(result["original_count"], 10)
@@ -77,7 +83,9 @@ class TestVSAWalkContextCompression(unittest.TestCase):
         self.assertIsNone(result["vector"])
 
     @patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor")
-    def test_compression_ratio_scales_with_result_count(self, mock_get_compressor: MagicMock) -> None:
+    def test_compression_ratio_scales_with_result_count(
+        self, mock_get_compressor: MagicMock
+    ) -> None:
         """More results should yield higher compression ratios."""
         from whitemagic.ai.vsa_context_compressor import VSACompressedContext
 
@@ -94,19 +102,24 @@ class TestVSAWalkContextCompression(unittest.TestCase):
 
         mock_compressor = MagicMock()
         mock_compressor.compress.side_effect = lambda items, **kw: make_mock_result(
-            len(items), "[VSA Compressed summary]",
+            len(items),
+            "[VSA Compressed summary]",
         )
         mock_get_compressor.return_value = mock_compressor
 
         small = self.walker.compress_walk_context(self._make_results(5), query="test")
         large = self.walker.compress_walk_context(self._make_results(50), query="test")
 
-        print(f"\n  Compression ratio: 5 items={small['compression_ratio']}x, 50 items={large['compression_ratio']}x")
+        print(
+            f"\n  Compression ratio: 5 items={small['compression_ratio']}x, 50 items={large['compression_ratio']}x"
+        )
         self.assertGreater(large["compression_ratio"], small["compression_ratio"])
 
     @patch.object(GraphWalker, "hybrid_recall")
     @patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor")
-    def test_hybrid_recall_compressed(self, mock_get_compressor: MagicMock, mock_recall: MagicMock) -> None:
+    def test_hybrid_recall_compressed(
+        self, mock_get_compressor: MagicMock, mock_recall: MagicMock
+    ) -> None:
         """hybrid_recall_compressed should return both results and compressed summary."""
         from whitemagic.ai.vsa_context_compressor import VSACompressedContext
 

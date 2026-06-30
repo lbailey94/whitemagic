@@ -1,4 +1,5 @@
 """Tests for Objective P — Information-Theoretic Exploration."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.info_theory import (
@@ -103,7 +104,9 @@ class TestAdaptiveWeights:
 class TestExplorationScore:
     def test_basic(self):
         result = compute_exploration_score(
-            predicted_impact=0.8, p_success=0.7, novelty=0.5,
+            predicted_impact=0.8,
+            p_success=0.7,
+            novelty=0.5,
         )
         assert "score" in result
         assert "information_gain" in result
@@ -112,13 +115,18 @@ class TestExplorationScore:
     def test_with_custom_weights(self):
         w = AdaptiveWeights(alpha=0.6, beta=0.2, gamma=0.2)
         result = compute_exploration_score(
-            predicted_impact=0.9, p_success=0.5, novelty=0.3, weights=w,
+            predicted_impact=0.9,
+            p_success=0.5,
+            novelty=0.3,
+            weights=w,
         )
         assert result["alpha"] == 0.6
 
     def test_certain_outcome(self):
         result = compute_exploration_score(
-            predicted_impact=0.8, p_success=1.0, novelty=0.0,
+            predicted_impact=0.8,
+            p_success=1.0,
+            novelty=0.0,
         )
         assert result["information_gain"] == 0.0
 

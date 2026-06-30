@@ -31,7 +31,9 @@ _PBKDF2_ITERATIONS = 600_000
 
 def _derive_key(passphrase: str, salt: bytes) -> bytes:
     """Derive a 256-bit encryption key from a passphrase using PBKDF2-HMAC-SHA256."""
-    return hashlib.pbkdf2_hmac("sha256", passphrase.encode("utf-8"), salt, _PBKDF2_ITERATIONS)
+    return hashlib.pbkdf2_hmac(
+        "sha256", passphrase.encode("utf-8"), salt, _PBKDF2_ITERATIONS
+    )
 
 
 def _encrypt(plaintext: bytes, key: bytes) -> tuple[bytes, bytes]:
@@ -74,8 +76,11 @@ def _decrypt(ciphertext_with_tag: bytes, nonce: bytes, key: bytes) -> bytes:
 class Vault:
     """Encrypted local secret storage backed by SQLite."""
 
-    def __init__(self, db_path: Path | None = None, passphrase: str | None = None) -> None:
+    def __init__(
+        self, db_path: Path | None = None, passphrase: str | None = None
+    ) -> None:
         from whitemagic.config.paths import WM_ROOT
+
         self.db_path = db_path or (WM_ROOT / "vault" / "secrets.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -120,11 +125,14 @@ class Vault:
         # Priority 2: OS keychain
         try:
             import keyring
+
             stored = keyring.get_password("whitemagic", "vault_master_key")
             if stored:
                 return base64.b64decode(stored)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug("Failed to read vault master key from OS keychain: %s", e, exc_info=True)
+            logger.debug(
+                "Failed to read vault master key from OS keychain: %s", e, exc_info=True
+            )
 
         # Priority 3: Passphrase
         if passphrase:
@@ -165,6 +173,7 @@ class Vault:
         than the guessable login@hostname fallback.
         """
         from whitemagic.config.paths import SECURITY_DIR
+
         key_file = SECURITY_DIR / ".vault_machine_key"
 
         try:
@@ -172,6 +181,7 @@ class Vault:
                 return key_file.read_text()
             # Generate a new random key
             import secrets
+
             key = secrets.token_urlsafe(32)
             key_file.write_text(key)
             key_file.chmod(0o600)
@@ -184,14 +194,17 @@ class Vault:
         """Store an encrypted secret."""
         ct, nonce = _encrypt(value.encode("utf-8"), self._master_key)
         now = datetime.now().isoformat()
-        self._conn.execute("""
+        self._conn.execute(
+            """
             INSERT INTO vault (name, encrypted_value, nonce, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
                 encrypted_value = excluded.encrypted_value,
                 nonce = excluded.nonce,
                 updated_at = excluded.updated_at
-        """, (name, ct, nonce, now, now))
+        """,
+            (name, ct, nonce, now, now),
+        )
         self._conn.commit()
         logger.info("Vault: stored secret '%s'", name, exc_info=True)
 
@@ -236,7 +249,9 @@ class Vault:
         new_key = _derive_key(new_passphrase, salt)
 
         # Re-encrypt all secrets
-        rows = self._conn.execute("SELECT name, encrypted_value, nonce FROM vault").fetchall()
+        rows = self._conn.execute(
+            "SELECT name, encrypted_value, nonce FROM vault"
+        ).fetchall()
         count = 0
         for name, ct, nonce in rows:
             plaintext = _decrypt(ct, nonce, old_key)
@@ -253,9 +268,11 @@ class Vault:
         # Update machine key file to match new passphrase
         try:
             from whitemagic.config.paths import SECURITY_DIR
+
             key_file = SECURITY_DIR / ".vault_machine_key"
             if key_file.exists():
                 import secrets
+
                 new_machine_key = secrets.token_urlsafe(32)
                 key_file.write_text(new_machine_key)
                 key_file.chmod(0o600)
@@ -268,7 +285,12 @@ class Vault:
     def __enter__(self) -> "Vault":
         return self
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         self.close()
 
     def close(self) -> None:

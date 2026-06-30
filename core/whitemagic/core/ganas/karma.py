@@ -18,6 +18,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
+
 class KarmaTraceLogger:
     """Logger for Gana execution traces.
     Currently uses standard Python file I/O.
@@ -65,7 +66,7 @@ class KarmaTraceLogger:
         trace_entry = {
             "timestamp": time.time(),
             "mansion": mansion_name,
-            "garden": garden, # Might be None if not passed
+            "garden": garden,  # Might be None if not passed
             "execution_ms": getattr(gana_result, "execution_time_ms", 0.0),
             "harmony": karma_trace.get("harmony"),
             "guna": karma_trace.get("guna"),
@@ -99,8 +100,7 @@ class KarmaTraceLogger:
                 # For large files, we should read from the end.
                 # For now, a simple read of all lines is fine for v5.0.0-alpha.
                 lines = f.readlines()
-                for line in lines[-limit:
-                    ]:
+                for line in lines[-limit:]:
                     try:
                         traces.append(_json_loads(line))
                     except json.JSONDecodeError:
@@ -110,8 +110,10 @@ class KarmaTraceLogger:
 
         return traces
 
+
 # Global logger instance
 _logger: KarmaTraceLogger | None = None
+
 
 def get_karma_tracer() -> KarmaTraceLogger:
     """
@@ -124,6 +126,7 @@ def get_karma_tracer() -> KarmaTraceLogger:
     if _logger is None:
         _logger = KarmaTraceLogger()
     return _logger
+
 
 # Backward compatibility alias
 get_karma_logger = get_karma_tracer

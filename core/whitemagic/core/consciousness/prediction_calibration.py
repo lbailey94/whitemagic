@@ -59,12 +59,17 @@ class TaskEstimate:
         if self.actual_minutes <= 0 or self.estimated_minutes <= 0:
             return 0.0
         import math
+
         return math.log(self.estimated_minutes / self.actual_minutes)
 
     @property
     def overconfidence_factor(self) -> float:
         """How many times faster than estimated. >1 = overconfident about duration."""
-        return self.estimated_minutes / self.actual_minutes if self.actual_minutes > 0 else 1.0
+        return (
+            self.estimated_minutes / self.actual_minutes
+            if self.actual_minutes > 0
+            else 1.0
+        )
 
 
 class PredictionCalibration:
@@ -116,9 +121,7 @@ class PredictionCalibration:
         """
         if compression_ratio is None:
             compression_ratio = (
-                estimated_minutes / actual_minutes
-                if actual_minutes > 0
-                else 1.0
+                estimated_minutes / actual_minutes if actual_minutes > 0 else 1.0
             )
 
         estimate = TaskEstimate(
@@ -199,7 +202,8 @@ class PredictionCalibration:
         act_min = actual_seconds_machine / 60.0
         compression = (
             estimated_seconds_machine / actual_seconds_machine
-            if actual_seconds_machine > 0 else 1.0
+            if actual_seconds_machine > 0
+            else 1.0
         )
 
         # CRPS (Continuous Ranked Probability Score)
@@ -277,8 +281,12 @@ class PredictionCalibration:
         # Summary stats
         compression_ratios = [e.compression_ratio for e in self.estimates]
         avg_compression = sum(compression_ratios) / len(compression_ratios)
-        overconfident_count = sum(1 for e in self.estimates if e.compression_ratio > 2.0)
-        underconfident_count = sum(1 for e in self.estimates if e.compression_ratio < 0.5)
+        overconfident_count = sum(
+            1 for e in self.estimates if e.compression_ratio > 2.0
+        )
+        underconfident_count = sum(
+            1 for e in self.estimates if e.compression_ratio < 0.5
+        )
 
         # By layer
         by_layer: dict[str, dict[str, float]] = {}
@@ -301,7 +309,9 @@ class PredictionCalibration:
         mean_crps = sum(crps_values) / len(crps_values) if crps_values else 0.0
 
         # Machine-time stats (seconds)
-        machine_estimates = [e for e in self.estimates if e.estimated_seconds_machine > 0]
+        machine_estimates = [
+            e for e in self.estimates if e.estimated_seconds_machine > 0
+        ]
         if machine_estimates:
             machine_log_errors = [
                 abs(math.log(e.estimated_seconds_machine / e.actual_seconds_machine))
@@ -311,7 +321,9 @@ class PredictionCalibration:
             ]
             mean_machine_log_error = sum(machine_log_errors) / len(machine_log_errors)
             machine_crps = [e.crps for e in machine_estimates if e.crps > 0]
-            mean_machine_crps = sum(machine_crps) / len(machine_crps) if machine_crps else 0.0
+            mean_machine_crps = (
+                sum(machine_crps) / len(machine_crps) if machine_crps else 0.0
+            )
         else:
             mean_machine_log_error = 0.0
             mean_machine_crps = 0.0
@@ -321,19 +333,26 @@ class PredictionCalibration:
         for est in self.estimates:
             t_type = est.task_type
             if t_type not in by_type:
-                by_type[t_type] = {"count": 0, "total_crps": 0.0, "total_log_error": 0.0}
+                by_type[t_type] = {
+                    "count": 0,
+                    "total_crps": 0.0,
+                    "total_log_error": 0.0,
+                }
             by_type[t_type]["count"] += 1
             by_type[t_type]["total_crps"] += est.crps
             if est.estimated_seconds_machine > 0 and est.actual_seconds_machine > 0:
                 by_type[t_type]["total_log_error"] += abs(
                     math.log(est.estimated_seconds_machine / est.actual_seconds_machine)
-                    if est.estimated_seconds_machine > 0 and est.actual_seconds_machine > 0
+                    if est.estimated_seconds_machine > 0
+                    and est.actual_seconds_machine > 0
                     else 0.0
                 )
 
         for t_type, stats in by_type.items():
             stats["mean_crps"] = round(stats["total_crps"] / stats["count"], 6)
-            stats["mean_log_error"] = round(stats["total_log_error"] / stats["count"], 4)
+            stats["mean_log_error"] = round(
+                stats["total_log_error"] / stats["count"], 4
+            )
             del stats["total_crps"]
             del stats["total_log_error"]
 
@@ -360,7 +379,9 @@ class PredictionCalibration:
                 for layer, s in by_layer.items()
             },
             "by_type": by_type,
-            "recommendation": self._recommendation(avg_compression, overconfident_count, underconfident_count),
+            "recommendation": self._recommendation(
+                avg_compression, overconfident_count, underconfident_count
+            ),
         }
 
     def _recommendation(
@@ -405,10 +426,14 @@ class PredictionCalibration:
         # Get layer-specific compression if available
         layer_estimates = [e for e in self.estimates if e.depth_layer == depth_layer]
         if layer_estimates:
-            observed_compression = sum(e.compression_ratio for e in layer_estimates) / len(layer_estimates)
+            observed_compression = sum(
+                e.compression_ratio for e in layer_estimates
+            ) / len(layer_estimates)
             n = len(layer_estimates)
         else:
-            observed_compression = sum(e.compression_ratio for e in self.estimates) / len(self.estimates)
+            observed_compression = sum(
+                e.compression_ratio for e in self.estimates
+            ) / len(self.estimates)
             n = len(self.estimates)
 
         # Bayesian shrinkage: blend observed with prior
@@ -416,9 +441,15 @@ class PredictionCalibration:
         PRIOR_COMPRESSION = 3.0
         PRIOR_WEIGHT = 5.0
         total_weight = n + PRIOR_WEIGHT
-        shrunk_compression = (observed_compression * n + PRIOR_COMPRESSION * PRIOR_WEIGHT) / total_weight
+        shrunk_compression = (
+            observed_compression * n + PRIOR_COMPRESSION * PRIOR_WEIGHT
+        ) / total_weight
 
-        adjusted = subjective_estimate_minutes / shrunk_compression if shrunk_compression > 0 else subjective_estimate_minutes
+        adjusted = (
+            subjective_estimate_minutes / shrunk_compression
+            if shrunk_compression > 0
+            else subjective_estimate_minutes
+        )
         logger.info(
             "Adjusted estimate: %.1fmin → %.1fmin (shrunk: %.1fx, observed: %.1fx, n=%d, layer: %s)",
             subjective_estimate_minutes,

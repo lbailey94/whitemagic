@@ -14,6 +14,7 @@ from whitemagic.core.zodiac import get_zodiac_clock
 
 logger = logging.getLogger(__name__)
 
+
 def astro_status(**kwargs: Any) -> dict[str, Any]:
     """Get the current astrological status of the WhiteMagic engine.
 
@@ -25,8 +26,9 @@ def astro_status(**kwargs: Any) -> dict[str, Any]:
     return {
         "status": "success",
         "astro_cycle": "Enochian Round (12-phase)",
-        "data": clock.status()
+        "data": clock.status(),
     }
+
 
 def astro_shift(target_phase: str | None = None, **kwargs: Any) -> dict[str, Any]:
     """Progress the WhiteMagic engine to a new Zodiacal phase.
@@ -44,16 +46,10 @@ def astro_shift(target_phase: str | None = None, **kwargs: Any) -> dict[str, Any
         return {
             "status": "success",
             "message": f"Successfully shifted to {new_status['phase']}",
-            "data": new_status
+            "data": new_status,
         }
     except ValueError as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        return {"status": "error", "message": str(e)}
     except Exception as e:
         logger.error("astro_shift: unexpected error: %s", e, exc_info=True)
-        return {
-            "status": "error",
-            "message": f"Internal shift failure: {e}"
-        }
+        return {"status": "error", "message": f"Internal shift failure: {e}"}

@@ -21,6 +21,7 @@ Usage:
 
     report = tracker.after_action_report()
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,9 +47,10 @@ class ArmyTier(StrEnum):
         ALPHA
         BETA
         GAMMA"""
-    ALPHA = "alpha"    # 10K clones — consensus voting
-    BETA = "beta"      # 70K clones — map-reduce
-    GAMMA = "gamma"    # 240K+ clones — brute-force search
+
+    ALPHA = "alpha"  # 10K clones — consensus voting
+    BETA = "beta"  # 70K clones — map-reduce
+    GAMMA = "gamma"  # 240K+ clones — brute-force search
 
 
 class ObjectiveStatus(StrEnum):
@@ -62,6 +64,7 @@ class ObjectiveStatus(StrEnum):
         COMPLETED
         FAILED
         SKIPPED"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -80,6 +83,7 @@ class FindingSeverity(StrEnum):
         MEDIUM
         LOW
         INFO"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -92,6 +96,7 @@ class Finding:
     """Finding: finding.
 
     Value object: equality and repr are field-based."""
+
     description: str
     severity: FindingSeverity = FindingSeverity.INFO
     category: str = ""
@@ -211,12 +216,14 @@ class ObjectiveMetrics:
         Returns:
             None
         """
-        self.findings.append(Finding(
-            description=description,
-            severity=FindingSeverity(severity),
-            category=category,
-            details=details or {},
-        ))
+        self.findings.append(
+            Finding(
+                description=description,
+                severity=FindingSeverity(severity),
+                category=category,
+                details=details or {},
+            )
+        )
 
     def set_result(self, result: dict[str, Any]) -> None:
         """
@@ -468,10 +475,6 @@ class CampaignTracker:
         tier = ArmyTier(army) if isinstance(army, str) else army
         self._armies[tier].end_time = time.time()
 
-    # ------------------------------------------------------------------
-    # Reporting
-    # ------------------------------------------------------------------
-
     def summary(self) -> dict[str, Any]:
         """Quick summary of current campaign state."""
         total_clones = sum(a.total_clones for a in self._armies.values())
@@ -479,7 +482,11 @@ class CampaignTracker:
         total_objectives = sum(len(a.objectives) for a in self._armies.values())
         completed = sum(a.completed_count for a in self._armies.values())
         failed = sum(a.failed_count for a in self._armies.values())
-        elapsed = (self._campaign_end or time.time()) - self._campaign_start if self._campaign_start else 0
+        elapsed = (
+            (self._campaign_end or time.time()) - self._campaign_start
+            if self._campaign_start
+            else 0
+        )
 
         return {
             "campaign": self._campaign_name,
@@ -499,14 +506,20 @@ class CampaignTracker:
 
     def after_action_report(self) -> dict[str, Any]:
         """Generate a full after-action report."""
-        elapsed = (self._campaign_end or time.time()) - self._campaign_start if self._campaign_start else 0
+        elapsed = (
+            (self._campaign_end or time.time()) - self._campaign_start
+            if self._campaign_start
+            else 0
+        )
 
         # Aggregate findings by severity
         all_findings: dict[str, int] = {}
         for army in self._armies.values():
             for obj in army.objectives:
                 for f in obj.findings:
-                    all_findings[f.severity.value] = all_findings.get(f.severity.value, 0) + 1
+                    all_findings[f.severity.value] = (
+                        all_findings.get(f.severity.value, 0) + 1
+                    )
 
         # Top findings
         top_findings: list[dict[str, Any]] = []
@@ -514,11 +527,13 @@ class CampaignTracker:
             for obj in army.objectives:
                 for f in obj.findings:
                     if f.severity in (FindingSeverity.CRITICAL, FindingSeverity.HIGH):
-                        top_findings.append({
-                            "objective": obj.name,
-                            "army": obj.army.value,
-                            **f.to_dict(),
-                        })
+                        top_findings.append(
+                            {
+                                "objective": obj.name,
+                                "army": obj.army.value,
+                                **f.to_dict(),
+                            }
+                        )
 
         # Per-objective effectiveness
         effectiveness: list[dict[str, Any]] = []
@@ -535,7 +550,9 @@ class CampaignTracker:
                     "confidence": round(obj.consensus_confidence, 4),
                     "findings_per_1k_clones": round(
                         len(obj.findings) / max(obj.clones_deployed / 1000, 1), 2
-                    ) if obj.clones_deployed else 0,
+                    )
+                    if obj.clones_deployed
+                    else 0,
                 }
                 effectiveness.append(eff)
 
@@ -547,13 +564,19 @@ class CampaignTracker:
             "totals": {
                 "clones_deployed": sum(a.total_clones for a in self._armies.values()),
                 "findings": sum(a.total_findings for a in self._armies.values()),
-                "objectives_completed": sum(a.completed_count for a in self._armies.values()),
+                "objectives_completed": sum(
+                    a.completed_count for a in self._armies.values()
+                ),
                 "objectives_failed": sum(a.failed_count for a in self._armies.values()),
-                "objectives_total": sum(len(a.objectives) for a in self._armies.values()),
+                "objectives_total": sum(
+                    len(a.objectives) for a in self._armies.values()
+                ),
             },
             "findings_by_severity": all_findings,
             "top_findings": top_findings[:20],
-            "armies": {tier.value: army.to_dict() for tier, army in self._armies.items()},
+            "armies": {
+                tier.value: army.to_dict() for tier, army in self._armies.items()
+            },
             "effectiveness": effectiveness,
         }
 
@@ -563,17 +586,17 @@ class CampaignTracker:
         totals = report["totals"]
         elapsed = report["total_elapsed_seconds"]
 
-        md = f"""# After-Action Report — {report['campaign']}
-**Generated**: {report['timestamp']}
-**Total Elapsed**: {elapsed:.1f}s ({elapsed/60:.1f} min)
+        md = f"""# After-Action Report — {report["campaign"]}
+**Generated**: {report["timestamp"]}
+**Total Elapsed**: {elapsed:.1f}s ({elapsed / 60:.1f} min)
 
 ## Campaign Summary
 | Metric | Value |
 |--------|-------|
-| Total Clones Deployed | {totals['clones_deployed']:,} |
-| Total Findings | {totals['findings']:,} |
-| Objectives Completed | {totals['objectives_completed']}/{totals['objectives_total']} |
-| Objectives Failed | {totals['objectives_failed']} |
+| Total Clones Deployed | {totals["clones_deployed"]:,} |
+| Total Findings | {totals["findings"]:,} |
+| Objectives Completed | {totals["objectives_completed"]}/{totals["objectives_total"]} |
+| Objectives Failed | {totals["objectives_failed"]} |
 
 ## Findings by Severity
 | Severity | Count |
@@ -591,7 +614,11 @@ class CampaignTracker:
         # Per-army sections
         for tier_name in ["alpha", "beta", "gamma"]:
             army = report["armies"].get(tier_name, {})
-            tier_label = {"alpha": "Alpha (10K — Consensus)", "beta": "Beta (70K — Map-Reduce)", "gamma": "Gamma (240K+ — Brute Force)"}
+            tier_label = {
+                "alpha": "Alpha (10K — Consensus)",
+                "beta": "Beta (70K — Map-Reduce)",
+                "gamma": "Gamma (240K+ — Brute Force)",
+            }
             md += f"\n## Army {tier_label.get(tier_name, tier_name)}\n"
             md += f"- **Clones**: {army.get('total_clones_deployed', 0):,}\n"
             md += f"- **Findings**: {army.get('total_findings', 0)}\n"
@@ -599,7 +626,13 @@ class CampaignTracker:
             md += f"- **Completed**: {army.get('objectives_completed', 0)}/{army.get('objectives_total', 0)}\n\n"
 
             for obj in army.get("objectives", []):
-                status_icon = {"completed": "✅", "failed": "❌", "running": "🔄", "pending": "⏳", "skipped": "⏭️"}
+                status_icon = {
+                    "completed": "✅",
+                    "failed": "❌",
+                    "running": "🔄",
+                    "pending": "⏳",
+                    "skipped": "⏭️",
+                }
                 icon = status_icon.get(obj["status"], "❓")
                 md += f"### {icon} {obj['name']}\n"
                 md += f"- Lieutenant: `{obj['lieutenant']}`\n"
@@ -616,8 +649,9 @@ class CampaignTracker:
         md += "## Effectiveness Ranking\n"
         md += "| Objective | Army | Clones | Findings | Findings/1K Clones | Time | Confidence |\n"
         md += "|-----------|------|--------|----------|-------------------|------|------------|\n"
-        for eff in sorted(report["effectiveness"], key=lambda x:
-            -x.get("findings_per_1k_clones", 0)):
+        for eff in sorted(
+            report["effectiveness"], key=lambda x: -x.get("findings_per_1k_clones", 0)
+        ):
             md += (
                 f"| {eff['name']} | {eff['army']} | {eff['clones']:,} | {eff['findings']} | "
                 f"{eff['findings_per_1k_clones']:.2f} | {eff['elapsed_s']:.1f}s | "
@@ -639,7 +673,9 @@ class CampaignTracker:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         json_path = reports_dir / f"grand_army_aar_{ts}.json"
-        json_path.write_text(_json_dumps(self.after_action_report(), indent=2, default=str))
+        json_path.write_text(
+            _json_dumps(self.after_action_report(), indent=2, default=str)
+        )
 
         md_path = reports_dir / f"grand_army_aar_{ts}.md"
         md_path.write_text(self.after_action_markdown())
@@ -647,10 +683,6 @@ class CampaignTracker:
         logger.info("After-action reports saved: %s, %s", json_path, md_path)
         return json_path, md_path
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _tracker: CampaignTracker | None = None
 _tracker_lock = threading.Lock()

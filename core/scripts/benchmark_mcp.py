@@ -54,11 +54,13 @@ def section(title):
 # 1. SERVER METADATA & INSTRUCTIONS
 # ══════════════════════════════════════════════════════════════════
 
+
 def bench_metadata():
     section("1. SERVER METADATA & INSTRUCTIONS")
 
     def test_server_creation():
         from whitemagic.run_mcp_lean import server, _VERSION
+
         assert server.name == "WhiteMagic Core"
         assert server.version == _VERSION
         assert server.website_url is not None
@@ -66,6 +68,7 @@ def bench_metadata():
 
     def test_instructions_loaded():
         from whitemagic.run_mcp_lean import server
+
         assert server.instructions is not None
         assert len(server.instructions) > 1000
         assert "gana_winnowing_basket" in server.instructions
@@ -73,6 +76,7 @@ def bench_metadata():
 
     def test_init_options():
         from whitemagic.run_mcp_lean import server
+
         opts = server.create_initialization_options()
         assert opts.instructions is not None
         assert opts.server_name == "WhiteMagic Core"
@@ -87,17 +91,20 @@ def bench_metadata():
 # 2. TOOL SCHEMA — ICONS, EXECUTION MODES, ENUMS
 # ══════════════════════════════════════════════════════════════════
 
+
 def bench_schema():
     section("2. TOOL SCHEMA — ICONS, EXECUTION, ENUMS")
 
     def test_tool_count():
         from whitemagic.run_mcp_lean import list_tools
+
         tools = asyncio.run(list_tools())
         assert len(tools) == 28
         return f"{len(tools)} Gana tools"
 
     def test_all_have_icons():
         from whitemagic.run_mcp_lean import list_tools
+
         tools = asyncio.run(list_tools())
         with_icons = [t for t in tools if t.icons]
         assert len(with_icons) == 28, f"Only {len(with_icons)}/28 have icons"
@@ -110,14 +117,18 @@ def bench_schema():
     def test_task_optional_tools():
         from whitemagic.run_mcp_lean import list_tools, _SLOW_GANAS
         import mcp.types as types
+
         tools = asyncio.run(list_tools())
-        task_tools = [t for t in tools if t.execution and t.execution.mode == types.TASK_OPTIONAL]
+        task_tools = [
+            t for t in tools if t.execution and t.execution.mode == types.TASK_OPTIONAL
+        ]
         assert len(task_tools) == len(_SLOW_GANAS)
         names = sorted(t.name for t in task_tools)
         return f"{len(task_tools)} task-optional: {', '.join(names)}"
 
     def test_per_gana_enums():
         from whitemagic.run_mcp_lean import list_tools
+
         tools = asyncio.run(list_tools())
         total_nested = 0
         for t in tools:
@@ -130,6 +141,7 @@ def bench_schema():
 
     def test_schema_structure():
         from whitemagic.run_mcp_lean import list_tools
+
         tools = asyncio.run(list_tools())
         for t in tools:
             props = t.inputSchema.get("properties", {})
@@ -151,28 +163,36 @@ def bench_schema():
 # 3. RESOURCES
 # ══════════════════════════════════════════════════════════════════
 
+
 def bench_resources():
     section("3. RESOURCES")
 
     def test_list_resources():
         from whitemagic.run_mcp_lean import list_resources
+
         resources = asyncio.run(list_resources())
         assert len(resources) == 3
         uris = [str(r.uri) for r in resources]
         assert any("ai-primary" in u for u in uris)
         assert any("server-instructions" in u for u in uris)
         assert any("system-map" in u for u in uris)
-        return f"{len(resources)} resources: ai-primary, server-instructions, system-map"
+        return (
+            f"{len(resources)} resources: ai-primary, server-instructions, system-map"
+        )
 
     def test_read_instructions():
         from whitemagic.run_mcp_lean import read_resource
-        content = asyncio.run(read_resource("whitemagic://orientation/server-instructions"))
+
+        content = asyncio.run(
+            read_resource("whitemagic://orientation/server-instructions")
+        )
         assert len(content) > 1000
         assert "Quick Start" in content
         return f"{len(content)} chars"
 
     def test_read_ai_primary():
         from whitemagic.run_mcp_lean import read_resource
+
         content = asyncio.run(read_resource("whitemagic://orientation/ai-primary"))
         assert len(content) > 100
         assert "Unavailable" not in content or "WhiteMagic" in content
@@ -187,35 +207,46 @@ def bench_resources():
 # 4. TOOL CALL LATENCY — SERIAL
 # ══════════════════════════════════════════════════════════════════
 
+
 def bench_serial_calls():
     section("4. TOOL CALL LATENCY — SERIAL")
 
     def test_health_report():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         result = _sync_dispatch("gana_root", "health_report", {}, None)
         assert result.get("status") != "error", result.get("error", "")
         return f"status={result.get('status')}"
 
     def test_search_memories():
         from whitemagic.run_mcp_lean import _sync_dispatch
-        result = _sync_dispatch("gana_winnowing_basket", "search_memories", {"query": "test", "limit": 3}, None)
+
+        result = _sync_dispatch(
+            "gana_winnowing_basket",
+            "search_memories",
+            {"query": "test", "limit": 3},
+            None,
+        )
         assert result.get("status") != "error", result.get("error", "")
         return f"status={result.get('status')}"
 
     def test_gnosis():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         result = _sync_dispatch("gana_ghost", "gnosis", {}, None)
         assert result.get("status") != "error", result.get("error", "")
         return f"status={result.get('status')}"
 
     def test_harmony_vector():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         result = _sync_dispatch("gana_straddling_legs", "harmony_vector", {}, None)
         assert result.get("status") != "error", result.get("error", "")
         return f"status={result.get('status')}"
 
     def test_yin_yang():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         result = _sync_dispatch("gana_mound", "get_yin_yang_balance", {}, None)
         assert result.get("status") != "error", result.get("error", "")
         return f"status={result.get('status')}"
@@ -231,11 +262,13 @@ def bench_serial_calls():
 # 5. PARALLEL TOOL CALLS
 # ══════════════════════════════════════════════════════════════════
 
+
 def bench_parallel_calls():
     section("5. PARALLEL TOOL CALLS")
 
     def test_parallel_3():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         calls = [
             ("gana_root", "health_report", {}, None),
             ("gana_straddling_legs", "harmony_vector", {}, None),
@@ -247,14 +280,22 @@ def bench_parallel_calls():
             results = [f.result() for f in futures]
         elapsed = (time.perf_counter() - start) * 1000
         errors = [r for r in results if r.get("status") == "error"]
-        assert len(errors) == 0, f"{len(errors)} errors: {[r.get('error') for r in errors]}"
+        assert len(errors) == 0, (
+            f"{len(errors)} errors: {[r.get('error') for r in errors]}"
+        )
         return f"3 calls in {elapsed:.0f}ms, all success"
 
     def test_parallel_5():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         calls = [
             ("gana_root", "health_report", {}, None),
-            ("gana_winnowing_basket", "search_memories", {"query": "architecture", "limit": 2}, None),
+            (
+                "gana_winnowing_basket",
+                "search_memories",
+                {"query": "architecture", "limit": 2},
+                None,
+            ),
             ("gana_straddling_legs", "harmony_vector", {}, None),
             ("gana_ghost", "gnosis", {}, None),
             ("gana_mound", "get_yin_yang_balance", {}, None),
@@ -265,15 +306,23 @@ def bench_parallel_calls():
             results = [f.result() for f in futures]
         elapsed = (time.perf_counter() - start) * 1000
         errors = [r for r in results if r.get("status") == "error"]
-        assert len(errors) == 0, f"{len(errors)} errors: {[r.get('error') for r in errors]}"
+        assert len(errors) == 0, (
+            f"{len(errors)} errors: {[r.get('error') for r in errors]}"
+        )
         return f"5 calls in {elapsed:.0f}ms, all success"
 
     def test_parallel_10():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         calls = [
             ("gana_root", "health_report", {}, None),
             ("gana_root", "state.summary", {}, None),
-            ("gana_winnowing_basket", "search_memories", {"query": "test", "limit": 1}, None),
+            (
+                "gana_winnowing_basket",
+                "search_memories",
+                {"query": "test", "limit": 1},
+                None,
+            ),
             ("gana_straddling_legs", "harmony_vector", {}, None),
             ("gana_ghost", "gnosis", {}, None),
             ("gana_mound", "get_yin_yang_balance", {}, None),
@@ -289,10 +338,13 @@ def bench_parallel_calls():
         elapsed = (time.perf_counter() - start) * 1000
         successes = sum(1 for r in results if r.get("status") != "error")
         errors = [r.get("error") for r in results if r.get("status") == "error"]
-        return f"10 calls in {elapsed:.0f}ms, {successes}/10 success" + (f", errors: {errors}" if errors else "")
+        return f"10 calls in {elapsed:.0f}ms, {successes}/10 success" + (
+            f", errors: {errors}" if errors else ""
+        )
 
     def test_serial_vs_parallel():
         from whitemagic.run_mcp_lean import _sync_dispatch
+
         calls = [
             ("gana_root", "health_report", {}, None),
             ("gana_straddling_legs", "harmony_vector", {}, None),
@@ -324,6 +376,7 @@ def bench_parallel_calls():
 # 6. HTTP TRANSPORT
 # ══════════════════════════════════════════════════════════════════
 
+
 def bench_http():
     section("6. HTTP TRANSPORT")
 
@@ -333,6 +386,7 @@ def bench_http():
     def test_http_transport_creation():
         from mcp.server.streamable_http import StreamableHTTPServerTransport
         import uuid
+
         transport = StreamableHTTPServerTransport(
             mcp_session_id=str(uuid.uuid4()),
             is_json_response_enabled=True,
@@ -349,6 +403,7 @@ def bench_http():
 # ══════════════════════════════════════════════════════════════════
 # SUMMARY
 # ══════════════════════════════════════════════════════════════════
+
 
 def main():
     print("=" * 60)
@@ -371,7 +426,9 @@ def main():
     print(f"  Failed:  {FAILED} \u274c")
 
     # Latency summary for serial calls
-    serial_results = [(l, t) for l, ok, t, _ in RESULTS if ok and "SERIAL" not in l and t > 10]
+    serial_results = [
+        (l, t) for l, ok, t, _ in RESULTS if ok and "SERIAL" not in l and t > 10
+    ]
     if serial_results:
         avg = sum(t for _, t in serial_results) / len(serial_results)
         print(f"  Avg tool call: {avg:.0f}ms")

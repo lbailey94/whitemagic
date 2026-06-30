@@ -12,6 +12,7 @@ Usage:
     score = cosine_similarity(vec_a, vec_b)
     scores = batch_cosine(query, [vec1, vec2, vec3])
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -37,10 +38,13 @@ _lib = None
 _lib_lock = threading.Lock()
 _HAS_ZIG = False
 
+
 # TopKResult structure for wm_vector_top_k
 class TopKResult(ctypes.Structure):
     """TopKResult: top k result."""
+
     _fields_ = [("index", ctypes.c_uint32), ("score", ctypes.c_float)]
+
 
 # Pre-allocated buffer pool to avoid repeated allocations
 _buffer_pool: dict[int, Any] = {}  # size -> ctypes array
@@ -58,7 +62,11 @@ def _get_buffer(size: int) -> Any:
 def _find_zig_lib() -> str | None:
     """Locate the compiled Zig shared library."""
     # From core/whitemagic/core/acceleration/ go up to core/, then to polyglot/
-    base = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "whitemagic-zig"
+    base = (
+        Path(__file__).resolve().parent.parent.parent.parent.parent
+        / "polyglot"
+        / "whitemagic-zig"
+    )
     candidates = [
         os.environ.get("WM_ZIG_LIB", ""),
         # Shared lib (dynamic) — primary target
@@ -142,6 +150,7 @@ def _to_c_array(vec: Sequence[float]) -> Any:
     """
     try:
         import numpy as np
+
         if isinstance(vec, np.ndarray) and vec.dtype == np.float32:
             return vec.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
         np_arr = np.asarray(vec, dtype=np.float32)
@@ -162,14 +171,10 @@ def _to_c_array_fast(vec: Sequence[float]) -> Any:
     n = len(vec)
     buf = _get_buffer(n)
     # struct.pack is implemented in C, much faster than Python loop
-    packed = struct.pack(f'{n}f', *vec)
+    packed = struct.pack(f"{n}f", *vec)
     ctypes.memmove(buf, packed, n * 4)
     return buf
 
-
-# ---------------------------------------------------------------------------
-# Pure Python fallback
-# ---------------------------------------------------------------------------
 
 def _py_cosine(a: Sequence[float], b: Sequence[float]) -> float:
     """Pure Python cosine similarity."""
@@ -180,10 +185,6 @@ def _py_cosine(a: Sequence[float], b: Sequence[float]) -> float:
         return 0.0
     return dot / (na * nb)
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
     """Compute cosine similarity between two vectors.
@@ -251,7 +252,9 @@ def batch_cosine(query: Sequence[float], vectors: list[Sequence[float]]) -> list
     return [_py_cosine(query, v) for v in vectors]
 
 
-def top_k_cosine(query: Sequence[float], vectors: list[Sequence[float]], k: int = 10) -> list[tuple[int, float]]:
+def top_k_cosine(
+    query: Sequence[float], vectors: list[Sequence[float]], k: int = 10
+) -> list[tuple[int, float]]:
     """Find top-K most similar vectors to query using Zig SIMD.
 
     Returns list of (index, score) tuples sorted by descending similarity.

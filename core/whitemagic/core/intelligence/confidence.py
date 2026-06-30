@@ -1,4 +1,3 @@
-
 import logging
 import sqlite3
 from datetime import datetime
@@ -6,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
 
 class ConfidenceLearner:
     """Confidence Learner — Reflexive Self-Improvement
@@ -37,34 +37,47 @@ class ConfidenceLearner:
         now = datetime.now().isoformat()
 
         if success:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO cluster_confidence (cluster_key, success_count, last_updated)
                 VALUES (?, 1, ?)
                 ON CONFLICT(cluster_key) DO UPDATE SET
                     success_count = success_count + 1,
                     last_updated = excluded.last_updated
-            """, (cluster_key, now))
+            """,
+                (cluster_key, now),
+            )
         else:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO cluster_confidence (cluster_key, failure_count, last_updated)
                 VALUES (?, 1, ?)
                 ON CONFLICT(cluster_key) DO UPDATE SET
                     failure_count = failure_count + 1,
                     last_updated = excluded.last_updated
-            """, (cluster_key, now))
+            """,
+                (cluster_key, now),
+            )
 
         conn.commit()
         conn.close()
-        logger.info("Confidence updated for %s: %s", cluster_key, 'SUCCESS' if success else 'FAILURE')
+        logger.info(
+            "Confidence updated for %s: %s",
+            cluster_key,
+            "SUCCESS" if success else "FAILURE",
+        )
 
     def get_score(self, cluster_key: str) -> float:
         """Calculate a confidence multiplier (0.5 to 1.5)."""
         conn = sqlite3.connect(str(self.db_path))
-        row = conn.execute("SELECT success_count, failure_count FROM cluster_confidence WHERE cluster_key = ?", (cluster_key,)).fetchone()
+        row = conn.execute(
+            "SELECT success_count, failure_count FROM cluster_confidence WHERE cluster_key = ?",
+            (cluster_key,),
+        ).fetchone()
         conn.close()
 
         if not row:
-            return 1.0 # Neutral starting point
+            return 1.0  # Neutral starting point
 
         success = float(row[0])
         failure = float(row[1])

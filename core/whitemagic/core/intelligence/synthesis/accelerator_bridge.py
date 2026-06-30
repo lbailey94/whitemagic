@@ -11,6 +11,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
+
 class AcceleratorBridge:
     """Accelerator Bridge — Layer 5: Execution
     Maps high-level 'Proposed Actions' from the solver into system executions.
@@ -40,7 +41,9 @@ class AcceleratorBridge:
             success = True
         else:
             logger.info("  Action Type: Unknown Dispatch — %s", action_description)
-            success = True # For now, we count specific insights as successful dispatches
+            success = (
+                True  # For now, we count specific insights as successful dispatches
+            )
 
         if "cluster_key" in metadata:
             ck = metadata["cluster_key"]
@@ -53,14 +56,19 @@ class AcceleratorBridge:
     def _promote_cluster_patterns(self, cluster_key: str) -> Any:
         """Promote Sol patterns from a successful cluster to the Solution Library."""
         conn = sqlite3.connect(str(self.db_path))
-        rows = conn.execute("SELECT content FROM cluster_patterns WHERE cluster_id = ? AND pattern_type = 'Sol'", (cluster_key,)).fetchall()
+        rows = conn.execute(
+            "SELECT content FROM cluster_patterns WHERE cluster_id = ? AND pattern_type = 'Sol'",
+            (cluster_key,),
+        ).fetchall()
         conn.close()
 
         confidence = self.learner.get_score(cluster_key)
         for row in rows:
             self.library.promote_pattern(row[0], cluster_key, confidence)  # type: ignore[attr-defined]
 
-    def _apply_snippet_operation(self, op: dict[str, Any], context: dict[str, Any]) -> bool:
+    def _apply_snippet_operation(
+        self, op: dict[str, Any], context: dict[str, Any]
+    ) -> bool:
         """Apply one declarative snippet operation to context."""
         action = op.get("action")
 
@@ -132,7 +140,11 @@ class AcceleratorBridge:
         try:
             payload = _json_loads(snippet)
         except (json.JSONDecodeError, ValueError) as e:
-            logger.error("Snippet rejected: expected JSON declarative format (%s)", e, exc_info=True)
+            logger.error(
+                "Snippet rejected: expected JSON declarative format (%s)",
+                e,
+                exc_info=True,
+            )
             return False
 
         operations = payload if isinstance(payload, list) else [payload]
@@ -150,7 +162,9 @@ class AcceleratorBridge:
         """Runs specialized maintenance scripts."""
         script_path = self.root_dir / "scripts" / "memory_maintenance.py"
         if not script_path.exists():
-            logger.warning("Maintenance script %s not found.", script_path, exc_info=True)
+            logger.warning(
+                "Maintenance script %s not found.", script_path, exc_info=True
+            )
             return
 
         try:
@@ -162,6 +176,7 @@ class AcceleratorBridge:
             return True
         except Exception as e:
             logger.error("  Action execution failed: %s", e, exc_info=True)
+
     def execute_council_decision(self, consensus: dict[str, Any]) -> Any:
         """Execute a decision from the Zodiac Council.
         Uses the multi-dimensional spectrum to determine the mode and energy of the action.
@@ -170,10 +185,18 @@ class AcceleratorBridge:
         proposal_id = consensus.get("proposal_id", "unknown")
 
         if importance < 0.7:
-            logger.info("⏭️ Council decision %s importance too low for autonomous execution: {importance:.2f}", proposal_id, exc_info=True)
+            logger.info(
+                "⏭️ Council decision %s importance too low for autonomous execution: {importance:.2f}",
+                proposal_id,
+                exc_info=True,
+            )
             return False
 
-        logger.info("⚡ Executing Council Decision %s (Importance: {importance:.2f})", proposal_id, exc_info=True)
+        logger.info(
+            "⚡ Executing Council Decision %s (Importance: {importance:.2f})",
+            proposal_id,
+            exc_info=True,
+        )
 
         # Determine the MODE of execution based on Logic Spectrum
         # Logic > 0.7 = Analytical/Strict
@@ -182,18 +205,22 @@ class AcceleratorBridge:
 
         if logic > 0.7:
             logger.info("  Mode: Analytical Execution (Strict optimization)")
-            return self._run_maintenance("strict_optimize", {"reason": f"council_{proposal_id}"})
+            return self._run_maintenance(
+                "strict_optimize", {"reason": f"council_{proposal_id}"}
+            )
         elif logic < 0.3:
             logger.info("  Mode: Intuitive Observation (Passive harmonization)")
-            return True # Wu Wei
+            return True  # Wu Wei
         else:
             logger.info("  Mode: Balanced Integration")
-            return self._run_maintenance("consolidate", {"reason": f"council_{proposal_id}"})
-
+            return self._run_maintenance(
+                "consolidate", {"reason": f"council_{proposal_id}"}
+            )
 
 
 # Singleton
 _accelerator_bridge = None
+
 
 def get_accelerator_bridge(root_dir: Path | None = None) -> AcceleratorBridge:
     """
@@ -211,6 +238,7 @@ def get_accelerator_bridge(root_dir: Path | None = None) -> AcceleratorBridge:
             root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
         _accelerator_bridge = AcceleratorBridge(root_dir)
     return _accelerator_bridge
+
 
 if __name__ == "__main__":
     # Smoke test dispatch

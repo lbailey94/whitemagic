@@ -17,6 +17,7 @@ This module provides:
 - **Cross-validation report**: Summarize whether self-assessments match
   held-out performance.
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CrossValidationResult:
     """Result of a cross-validation run."""
+
     split_ratio: float
     train_size: int
     validation_size: int
@@ -47,6 +49,7 @@ class CrossValidationResult:
 @dataclass
 class AdversarialTestResult:
     """Result of an adversarial test."""
+
     test_name: str
     passed: bool
     description: str
@@ -58,6 +61,7 @@ class AdversarialTestResult:
 @dataclass
 class ExternalValidationReport:
     """Comprehensive external validation report."""
+
     cross_validation: CrossValidationResult | None = None
     adversarial_tests: list[AdversarialTestResult] = field(default_factory=list)
     external_baselines: dict[str, float] = field(default_factory=dict)
@@ -84,6 +88,7 @@ class ExternalValidator:
     def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
             from whitemagic.config.paths import AUTODIDACTIC_DIR
+
             db_path = AUTODIDACTIC_DIR / "feedback.db"
         self._db_path = db_path
 
@@ -171,12 +176,16 @@ class ExternalValidator:
                 train_conf_rows = conf_rows[:split_c]
                 val_conf_rows = conf_rows[split_c:]
                 train_conf = (
-                    sum(r["initial_confidence"] for r in train_conf_rows) / len(train_conf_rows)
-                    if train_conf_rows else 0.0
+                    sum(r["initial_confidence"] for r in train_conf_rows)
+                    / len(train_conf_rows)
+                    if train_conf_rows
+                    else 0.0
                 )
                 val_conf = (
-                    sum(r["initial_confidence"] for r in val_conf_rows) / len(val_conf_rows)
-                    if val_conf_rows else 0.0
+                    sum(r["initial_confidence"] for r in val_conf_rows)
+                    / len(val_conf_rows)
+                    if val_conf_rows
+                    else 0.0
                 )
         except (sqlite3.OperationalError, Exception) as e:
             logger.debug("Confidence calibration query failed: %s", e)
@@ -229,14 +238,12 @@ class ExternalValidator:
 
         # Original Brier score
         original_brier = sum(
-            (r["initial_confidence"] - float(r["success"])) ** 2
-            for r in rows
+            (r["initial_confidence"] - float(r["success"])) ** 2 for r in rows
         ) / len(rows)
 
         # Flipped: replace confidence with (1 - confidence)
         flipped_brier = sum(
-            ((1.0 - r["initial_confidence"]) - float(r["success"])) ** 2
-            for r in rows
+            ((1.0 - r["initial_confidence"]) - float(r["success"])) ** 2 for r in rows
         ) / len(rows)
 
         # Test passes if original is better than flipped
@@ -282,8 +289,7 @@ class ExternalValidator:
             )
 
         system_brier = sum(
-            (r["initial_confidence"] - float(r["success"])) ** 2
-            for r in rows
+            (r["initial_confidence"] - float(r["success"])) ** 2 for r in rows
         ) / len(rows)
 
         random_brier = EXTERNAL_BASELINES["random_brier_score"]
@@ -335,11 +341,11 @@ class ExternalValidator:
             issues = []
             if cv.overfitting_detected:
                 issues.append(f"overfitting (gap={cv.overfitting_gap:.1%})")
-            failed_tests = [t.test_name for t in report.adversarial_tests if not t.passed]
+            failed_tests = [
+                t.test_name for t in report.adversarial_tests if not t.passed
+            ]
             if failed_tests:
                 issues.append(f"failed adversarial tests: {failed_tests}")
-            report.summary = (
-                f"Self-assessment mismatch detected: {'; '.join(issues)}."
-            )
+            report.summary = f"Self-assessment mismatch detected: {'; '.join(issues)}."
 
         return report

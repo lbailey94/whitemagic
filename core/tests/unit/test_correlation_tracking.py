@@ -1,4 +1,5 @@
 """Tests for Objective B — Interaction-Aware MC correlation tracking."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -16,7 +17,14 @@ def _make_loop(tmp_path: Path) -> AutodidacticLoop:
     return AutodidacticLoop(db_path=tmp_path / "test_feedback.db")
 
 
-def _record_pair(loop: AutodidacticLoop, pattern_a: str, pattern_b: str, success_a: bool, success_b: bool, t: float):
+def _record_pair(
+    loop: AutodidacticLoop,
+    pattern_a: str,
+    pattern_b: str,
+    success_a: bool,
+    success_b: bool,
+    t: float,
+):
     """Record a pair of outcomes at the same time."""
     for pid, success in [(pattern_a, success_a), (pattern_b, success_b)]:
         app = PatternApplication(
@@ -46,7 +54,9 @@ class TestCorrelationTracking:
         loop = _make_loop(tmp_path)
         conn = sqlite3.connect(str(loop.db_path))
         c = conn.cursor()
-        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pattern_correlations'")
+        c.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='pattern_correlations'"
+        )
         assert c.fetchone() is not None
         conn.close()
 

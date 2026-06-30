@@ -34,7 +34,6 @@ from whitemagic.config.paths import WM_ROOT
 
 logger = logging.getLogger(__name__)
 
-# --- TYPES & ENUMS ---
 
 class ReasoningLens(Enum):
     """ReasoningLens: reasoning lens.
@@ -48,6 +47,7 @@ class ReasoningLens(Enum):
         STOICISM
         FIRST_PRINCIPLES
         S026_COHERENCE"""
+
     OBJ_RECOVERY = "objective_recovery"
     WU_XING = "wu_xing"
     ART_OF_WAR = "art_of_war"
@@ -55,33 +55,39 @@ class ReasoningLens(Enum):
     FIRST_PRINCIPLES = "first_principles"
     S026_COHERENCE = "s026_coherence"
 
+
 @dataclass
 class ReasoningContext:
     """ReasoningContext: reasoning context.
 
     Value object: equality and repr are field-based."""
+
     question: str
     task_type: str = "analysis"
     stakes: str = "medium"
     complexity: str = "medium"
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class LensPerspective:
     """LensPerspective: lens perspective.
 
     Value object: equality and repr are field-based."""
+
     lens: ReasoningLens
     analysis: str
     guidance: str
     confidence: float
     details: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class ReasoningResult:
     """ReasoningResult: reasoning result.
 
     Value object: equality and repr are field-based."""
+
     question: str
     perspectives: list[LensPerspective]
     synthesis: str
@@ -91,11 +97,13 @@ class ReasoningResult:
     reasoning_chain: list[str] = field(default_factory=list)
     patterns_matched: list[dict[str, Any]] = field(default_factory=list)
 
+
 @dataclass(frozen=True)
 class ScratchpadAnalysis:
     """ScratchpadAnalysis: scratchpad analysis.
 
     Value object: equality and repr are field-based."""
+
     synthesis: str
     wisdom: str
     confidence: float
@@ -104,7 +112,6 @@ class ScratchpadAnalysis:
     reasoning_chain: list[str]
     timestamp: datetime
 
-# --- CORE REASONER (delegates to real multi_spectral_reasoning.py) ---
 
 class MultiSpectralReasoner:
     """Orchestrates multiple wisdom-based reasoning perspectives.
@@ -117,10 +124,16 @@ class MultiSpectralReasoner:
         from whitemagic.core.intelligence.multi_spectral_reasoning import (
             MultiSpectralReasoner as _RealReasoner,
         )
+
         self._real = _RealReasoner(base_dir=base_dir or WM_ROOT)
         self.reasoning_history: list[ReasoningResult] = []
 
-    def reason(self, question: str, lenses: Sequence[ReasoningLens] | None = None, context: ReasoningContext | None = None) -> ReasoningResult:
+    def reason(
+        self,
+        question: str,
+        lenses: Sequence[ReasoningLens] | None = None,
+        context: ReasoningContext | None = None,
+    ) -> ReasoningResult:
         from whitemagic.core.intelligence.multi_spectral_reasoning import (
             ReasoningContext as _RealContext,
         )
@@ -135,7 +148,7 @@ class MultiSpectralReasoner:
         }
         real_lenses = None
         if lenses:
-            mapped = [lens_map[l] for l in lenses if l in lens_map]
+            mapped = [lens_map[lens] for lens in lenses if lens in lens_map]
             if mapped:
                 real_lenses = mapped
 
@@ -149,18 +162,22 @@ class MultiSpectralReasoner:
                 complexity=context.complexity,
             )
 
-        real_result = self._real.reason(question=question, lenses=real_lenses, context=real_ctx)
+        real_result = self._real.reason(
+            question=question, lenses=real_lenses, context=real_ctx
+        )
 
         # Wrap back to stub types
         perspectives = []
         for p in real_result.perspectives:
-            perspectives.append(LensPerspective(
-                lens=ReasoningLens.WU_XING,
-                analysis=p.analysis,
-                guidance=p.guidance,
-                confidence=p.confidence,
-                details=p.details,
-            ))
+            perspectives.append(
+                LensPerspective(
+                    lens=ReasoningLens.WU_XING,
+                    analysis=p.analysis,
+                    guidance=p.guidance,
+                    confidence=p.confidence,
+                    details=p.details,
+                )
+            )
 
         result = ReasoningResult(
             question=question,
@@ -172,9 +189,12 @@ class MultiSpectralReasoner:
         self.reasoning_history.append(result)
         return result
 
-# --- SCRATCHPAD INTEGRATION ---
 
-def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None = None, lenses: Sequence[ReasoningLens] | None = None) -> ScratchpadAnalysis:
+def analyze_scratchpad(
+    scratchpad_content: dict[str, str],
+    question: str | None = None,
+    lenses: Sequence[ReasoningLens] | None = None,
+) -> ScratchpadAnalysis:
     """
     Perform the analyze scratchpad operation.
 
@@ -187,7 +207,9 @@ def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None 
         ScratchpadAnalysis
     """
     if question is None:
-        question = scratchpad_content.get("current_focus") or "What should I focus on next?"
+        question = (
+            scratchpad_content.get("current_focus") or "What should I focus on next?"
+        )
 
     reasoner = MultiSpectralReasoner()
     result = reasoner.reason(question=question, lenses=lenses)
@@ -196,13 +218,20 @@ def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None 
         synthesis=result.synthesis,
         wisdom=result.recommendation,
         confidence=result.confidence,
-        perspectives=[{"lens": p.lens.value, "guidance": p.guidance} for p in result.perspectives],
+        perspectives=[
+            {"lens": p.lens.value, "guidance": p.guidance} for p in result.perspectives
+        ],
         patterns_matched=0,
         reasoning_chain=[],
         timestamp=result.timestamp,
     )
 
-def serialize_scratchpad_with_analysis(scratchpad_content: dict[str, str], analysis: ScratchpadAnalysis, title: str = "Scratchpad") -> str:
+
+def serialize_scratchpad_with_analysis(
+    scratchpad_content: dict[str, str],
+    analysis: ScratchpadAnalysis,
+    title: str = "Scratchpad",
+) -> str:
     """
     Perform the serialize scratchpad with analysis operation.
 
@@ -214,14 +243,27 @@ def serialize_scratchpad_with_analysis(scratchpad_content: dict[str, str], analy
     Returns:
         str
     """
-    lines = [f"# {title}", "", "## Analysis", f"Confidence: {analysis.confidence:.2%}", "", "### Synthesis", analysis.synthesis, "", "### Recommendation", analysis.wisdom, ""]
+    lines = [
+        f"# {title}",
+        "",
+        "## Analysis",
+        f"Confidence: {analysis.confidence:.2%}",
+        "",
+        "### Synthesis",
+        analysis.synthesis,
+        "",
+        "### Recommendation",
+        analysis.wisdom,
+        "",
+    ]
     lines.append("## Scratchpad")
     for section, content in scratchpad_content.items():
         lines.extend([f"### {section.replace('_', ' ').title()}", content, ""])
     return "\n".join(lines)
 
-# --- SINGLETON ---
+
 _reasoner: MultiSpectralReasoner | None = None
+
 
 def get_reasoner() -> MultiSpectralReasoner:
     """

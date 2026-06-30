@@ -17,10 +17,6 @@
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Lightweight rusqlite wrapper (no connection pool — single WAL connection)
-// ---------------------------------------------------------------------------
-
 /// Open a WAL-mode SQLite connection with performance pragmas
 fn open_db(db_path: &str) -> Result<rusqlite::Connection, String> {
     let conn = rusqlite::Connection::open(db_path)
@@ -33,10 +29,6 @@ fn open_db(db_path: &str) -> Result<rusqlite::Connection, String> {
     ).map_err(|e| format!("PRAGMA error: {}", e))?;
     Ok(conn)
 }
-
-// ---------------------------------------------------------------------------
-// Batch galactic distance updates
-// ---------------------------------------------------------------------------
 
 /// Update galactic distances for a batch of memories.
 /// Much faster than Python's one-at-a-time UPDATE loop.
@@ -83,10 +75,6 @@ pub fn sqlite_batch_update_galactic(
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
 }
 
-// ---------------------------------------------------------------------------
-// Batch decay drift (galactic rotation)
-// ---------------------------------------------------------------------------
-
 /// Apply decay drift to all unprotected memories: distance += drift_amount.
 /// Clamps to [0.0, 1.0]. Returns count of affected rows.
 #[pyfunction]
@@ -108,10 +96,6 @@ pub fn sqlite_decay_drift(
     serde_json::to_string(&DriftResult { affected, drift_amount })
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
 }
-
-// ---------------------------------------------------------------------------
-// Fast FTS search with galactic weighting
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize)]
 struct SearchResult {
@@ -180,10 +164,6 @@ pub fn sqlite_fts_search(
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
 }
 
-// ---------------------------------------------------------------------------
-// Fast zone statistics
-// ---------------------------------------------------------------------------
-
 #[derive(Serialize)]
 struct ZoneStats {
     total: usize,
@@ -234,10 +214,6 @@ pub fn sqlite_zone_stats(db_path: &str) -> PyResult<String> {
     serde_json::to_string(&stats)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
 }
-
-// ---------------------------------------------------------------------------
-// Batch memory export (for association mining / consolidation)
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize)]
 struct MemoryExport {
@@ -303,10 +279,6 @@ pub fn sqlite_export_for_mining(
     serde_json::to_string(&exports)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

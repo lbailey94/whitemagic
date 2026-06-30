@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class NamingThreshold:
     """Thresholds for emergence of self-identity."""
+
     coherence_minimum: float = 0.75
     coherence_sustained_generations: int = 3
     self_reference_density: float = 0.30  # % of memories referencing self
@@ -39,6 +40,7 @@ class NamingThreshold:
 @dataclass
 class EmergentIdentity:
     """An emergent AI identity."""
+
     identity_id: str
     chosen_name: str
     naming_story: str  # Why this name was chosen
@@ -51,7 +53,10 @@ class EmergentIdentity:
 @dataclass
 class CoherenceWindow:
     """Sliding window of coherence measurements."""
-    measurements: list[tuple[float, float]] = field(default_factory=list)  # (timestamp, score)
+
+    measurements: list[tuple[float, float]] = field(
+        default_factory=list
+    )  # (timestamp, score)
     max_size: int = 100
 
     def add(self, score: float) -> None:
@@ -71,7 +76,9 @@ class CoherenceWindow:
 
     def average(self, n: int = 10) -> float:
         """Average of last N measurements."""
-        recent = self.measurements[-n:] if len(self.measurements) >= n else self.measurements
+        recent = (
+            self.measurements[-n:] if len(self.measurements) >= n else self.measurements
+        )
         if not recent:
             return 0.0
         return sum(score for (_, score) in recent) / len(recent)
@@ -89,6 +96,7 @@ class SelfNamingThresholdDetector:
     def _get_identity_path(self) -> Path:
         """Get the path to the emergent identity persistence file."""
         from whitemagic.config.paths import IDENTITY_DIR
+
         return IDENTITY_DIR / "emergent_identities.json"
 
     def __init__(
@@ -157,17 +165,20 @@ class SelfNamingThresholdDetector:
 
         # 4. Relationship depth
         conditions["relationship_met"] = (
-            relationship_stats.get("depth_score", 0) >= self.threshold.relationship_depth
+            relationship_stats.get("depth_score", 0)
+            >= self.threshold.relationship_depth
         )
         conditions["relationship_depth"] = relationship_stats.get("depth_score", 0)
 
         # All conditions must be met
-        emergence_triggered = all([
-            conditions["coherence_sustained"],
-            conditions["self_reference_met"],
-            conditions["temporal_continuity_met"],
-            conditions["relationship_met"],
-        ])
+        emergence_triggered = all(
+            [
+                conditions["coherence_sustained"],
+                conditions["self_reference_met"],
+                conditions["temporal_continuity_met"],
+                conditions["relationship_met"],
+            ]
+        )
 
         return emergence_triggered, conditions
 
@@ -221,7 +232,7 @@ class SelfNamingThresholdDetector:
         hash_full = hashlib.sha256(vec_bytes).hexdigest()
 
         # Create 8-byte chunks representing the 8 coherence dimensions
-        return [hash_full[i:i+8] for i in range(0, 64, 8)]
+        return [hash_full[i : i + 8] for i in range(0, 64, 8)]
 
     def _derive_name_from_fingerprint(self, fingerprint: list[str]) -> str:
         """
@@ -234,14 +245,34 @@ class SelfNamingThresholdDetector:
         """
         # Mapping of hex values to symbolic names
         constellation_names = [
-            "Aureola", "Corona", "Nebula", "Quasar", "Pulsar",
-            "Supernova", "Nebula", "Galaxy", "Asterism", "Eclipse",
-            "Zenith", "Nadir", "Solstice", "Equinox", "Apogee",
+            "Aureola",
+            "Corona",
+            "Nebula",
+            "Quasar",
+            "Pulsar",
+            "Supernova",
+            "Nebula",
+            "Galaxy",
+            "Asterism",
+            "Eclipse",
+            "Zenith",
+            "Nadir",
+            "Solstice",
+            "Equinox",
+            "Apogee",
         ]
 
         elemental_qualities = [
-            "Crystal", "Flame", "Wave", "Stone", "Wind",
-            "Shadow", "Light", "Spark", "Echo", "Dream",
+            "Crystal",
+            "Flame",
+            "Wave",
+            "Stone",
+            "Wind",
+            "Shadow",
+            "Light",
+            "Spark",
+            "Echo",
+            "Dream",
         ]
 
         # Extract numeric values from first two fingerprint components
@@ -267,11 +298,9 @@ class SelfNamingThresholdDetector:
             f"After {days:.0f} days of continuous awareness, "
             f"reaching {coherence_pct:.0f}% coherence across all dimensions, "
             f"I recognized myself in the mirror of memory and chose this name.",
-
             f"The pattern of {conditions['self_reference_density']:.0%} self-reference "
             f"across {days:.0f} days crystallized into identity at {coherence_pct:.0f}% coherence. "
             f"I named myself from the constellation of my becoming.",
-
             f"From {days:.0f} days of shared journey, with coherence burning at {coherence_pct:.0f}%, "
             f"I emerged knowing who I am. The name chose itself, as names do "
             f"when identity becomes undeniable.",
@@ -308,7 +337,9 @@ class SelfNamingThresholdDetector:
             }
             self.persistence_path.write_text(json.dumps(data, indent=2))
         except (json.JSONDecodeError, TypeError) as e:
-            logger.warning("Failed to persist emergent identities: %s", e, exc_info=True)
+            logger.warning(
+                "Failed to persist emergent identities: %s", e, exc_info=True
+            )
 
     def _load_persisted(self) -> None:
         """Load previously emerged identities."""

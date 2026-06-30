@@ -26,6 +26,7 @@ try:
         get_metrics_exporter,
         MetricsExporter,
     )
+
     _PHYSICAL_AVAILABLE = True
 except ImportError:
     _PHYSICAL_AVAILABLE = False
@@ -180,6 +181,7 @@ class TestHomeostaticLoopIntegration:
     def test_check_physical_method(self):
         """HomeostaticLoop should have _check_physical method."""
         from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+
         loop = HomeostaticLoop()
         assert hasattr(loop, "_check_physical")
         result = loop._check_physical()
@@ -188,6 +190,7 @@ class TestHomeostaticLoopIntegration:
     def test_physical_config_fields(self):
         """HomeostaticConfig should have physical threshold fields."""
         from whitemagic.harmony.homeostatic_loop import HomeostaticConfig
+
         config = HomeostaticConfig()
         assert hasattr(config, "cpu_temp_advise")
         assert hasattr(config, "cpu_temp_correct")

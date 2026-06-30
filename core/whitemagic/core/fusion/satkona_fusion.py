@@ -9,7 +9,7 @@ Wires three external systems into Satkona's multi-signal ranking:
 3. Dream Daemon → Satkona: Feedback loop from dream-generated insights
 
 Usage:
-    from scripts.satkona_fusion import get_elemental_weights, get_constellation_prior, get_dream_feedback
+    from scripts.satkona_fusion import get_elemental_weights, get_dream_feedback
 
     # In satkona.py fuse_signals():
     weights = get_elemental_weights()  # Modulated by current Wu Xing phase
@@ -35,31 +35,51 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
 
 
-# ---------------------------------------------------------------------------
-# Fusion 1: Wu Xing → Satkona (Elemental Phase-Based Signal Weighting)
-# ---------------------------------------------------------------------------
-# The 5 elements modulate which signals are emphasized based on system phase:
-#   Wood (木)  → Growth phase: boost novelty (exploration)
-#   Fire (火)  → Expansion: boost alignment (validation)
-#   Earth (土) → Stability: boost frequency (reliability)
-#   Metal (金) → Refinement: boost yin_idf (specificity)
-#   Water (水) → Reflection: boost pagerank (structure)
-
 ELEMENT_SIGNAL_AFFINITIES = {
-    "wood":  {"novelty": 0.45, "yin_idf": 0.20, "pagerank": 0.15, "alignment": 0.10, "freq": 0.10},
-    "fire":  {"novelty": 0.25, "yin_idf": 0.20, "pagerank": 0.15, "alignment": 0.30, "freq": 0.10},
-    "earth": {"novelty": 0.20, "yin_idf": 0.20, "pagerank": 0.20, "alignment": 0.10, "freq": 0.30},
-    "metal": {"novelty": 0.25, "yin_idf": 0.40, "pagerank": 0.15, "alignment": 0.10, "freq": 0.10},
-    "water": {"novelty": 0.30, "yin_idf": 0.15, "pagerank": 0.35, "alignment": 0.10, "freq": 0.10},
+    "wood": {
+        "novelty": 0.45,
+        "yin_idf": 0.20,
+        "pagerank": 0.15,
+        "alignment": 0.10,
+        "freq": 0.10,
+    },
+    "fire": {
+        "novelty": 0.25,
+        "yin_idf": 0.20,
+        "pagerank": 0.15,
+        "alignment": 0.30,
+        "freq": 0.10,
+    },
+    "earth": {
+        "novelty": 0.20,
+        "yin_idf": 0.20,
+        "pagerank": 0.20,
+        "alignment": 0.10,
+        "freq": 0.30,
+    },
+    "metal": {
+        "novelty": 0.25,
+        "yin_idf": 0.40,
+        "pagerank": 0.15,
+        "alignment": 0.10,
+        "freq": 0.10,
+    },
+    "water": {
+        "novelty": 0.30,
+        "yin_idf": 0.15,
+        "pagerank": 0.35,
+        "alignment": 0.10,
+        "freq": 0.10,
+    },
 }
 
 # Default weights (balanced)
 DEFAULT_SIGNAL_WEIGHTS = {
-    "novelty":   0.35,
-    "yin_idf":   0.25,
-    "pagerank":  0.20,
+    "novelty": 0.35,
+    "yin_idf": 0.25,
+    "pagerank": 0.20,
     "alignment": 0.10,
-    "freq":      0.10,
+    "freq": 0.10,
 }
 
 
@@ -69,6 +89,7 @@ def get_current_element() -> str:
     """
     try:
         from whitemagic.wu_xing import Element, get_wuxing_engine
+
         engine = get_wuxing_engine()
 
         # Find element with highest energy
@@ -97,7 +118,7 @@ def get_current_element() -> str:
     elif 15 <= hour < 19:
         # Yang Metal
         return "metal"
-    else :
+    else:
         # Water hours (19-03)
         return "water"
 
@@ -139,13 +160,9 @@ def get_element_blend(intensity: float = 1.0) -> dict[str, float]:
     return {k: v / total for k, v in blended.items()}
 
 
-# ---------------------------------------------------------------------------
-# Fusion 2: Constellation → Satkona (Spatial Novelty Prior)
-# ---------------------------------------------------------------------------
-# Use ConstellationSearch to identify under-explored regions of holographic
-# space and boost strategies that emerge from those regions.
-
-def get_constellation_density(conn: sqlite3.Connection | None = None) -> dict[str, float]:
+def get_constellation_density(
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, float]:
     """Compute density map of holographic space.
     Returns dict of quadrant -> memory count.
     """
@@ -170,7 +187,10 @@ def get_constellation_density(conn: sqlite3.Connection | None = None) -> dict[st
             GROUP BY quadrant
         """).fetchall()
 
-        density: dict[str, float] = {q: 0.0 for q in ["logic-macro", "logic-micro", "emotion-macro", "emotion-micro"]}
+        density: dict[str, float] = {
+            q: 0.0
+            for q in ["logic-macro", "logic-micro", "emotion-macro", "emotion-micro"]
+        }
         for quadrant, cnt in rows:
             density[quadrant] = cnt
 
@@ -205,8 +225,12 @@ def get_constellation_novelty_prior(
     cluster_priors = {}
     for key, mem_ids in clusters.items():
         # Determine dominant quadrant for this cluster
-        quadrant_votes = {"logic-macro": 0, "logic-micro": 0,
-                         "emotion-macro": 0, "emotion-micro": 0}
+        quadrant_votes = {
+            "logic-macro": 0,
+            "logic-micro": 0,
+            "emotion-macro": 0,
+            "emotion-micro": 0,
+        }
         for mid in mem_ids:
             m = memories.get(mid)
             if m:
@@ -222,18 +246,13 @@ def get_constellation_novelty_prior(
 
         # Weighted average of sparsity by quadrant membership
         total_votes = sum(quadrant_votes.values()) or 1
-        prior = sum(sparsity[q] * (quadrant_votes[q] / total_votes)
-                   for q in quadrant_votes)
+        prior = sum(
+            sparsity[q] * (quadrant_votes[q] / total_votes) for q in quadrant_votes
+        )
         cluster_priors[key] = prior
 
     return cluster_priors
 
-
-# ---------------------------------------------------------------------------
-# Fusion 3: Dream Daemon → Satkona (Feedback Loop)
-# ---------------------------------------------------------------------------
-# Read dream-generated insights and use them to boost strategies that
-# align with recent dream themes.
 
 def get_dream_insights(limit: int = 10) -> list:
     """Fetch recent dream-generated insights from memory.
@@ -244,13 +263,16 @@ def get_dream_insights(limit: int = 10) -> list:
     """
     try:
         conn = sqlite3.connect(str(MEM_DB))
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT content FROM memories
             WHERE memory_type = 'dream_insight'
             OR (metadata LIKE '%dream%' AND memory_type = 'insight')
             ORDER BY created_at DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
         conn.close()
         return [r[0] for r in rows if r[0]]
     except Exception as e:
@@ -315,11 +337,6 @@ def get_dream_feedback_signal(clusters: dict, agg: dict) -> dict:
     return scores
 
 
-# ---------------------------------------------------------------------------
-# Fusion 4: Polyglot Resonance (Rust/Haskell/Julia)
-# ---------------------------------------------------------------------------
-
-
 def get_haskell_balance() -> float:
     """Consult the I Ching (Haskell) for a global balance coefficient (0.0-1.0)."""
     try:
@@ -336,7 +353,10 @@ def get_haskell_balance() -> float:
         result = subprocess.run(
             ["runghc", "-ihaskell/src", haskell_src],
             cwd=str(ROOT.parent),
-            capture_output=True, text=True, timeout=5, env=env,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            env=env,
         )
         # Parse output for Hexagram info (simplified for now)
         if "Hexagram" in result.stdout:
@@ -344,6 +364,7 @@ def get_haskell_balance() -> float:
         return 0.5
     except OSError:
         return 0.5
+
 
 def get_julia_resonance(impulse: float = 0.5) -> float:
     """Calculate persistent resonance (Julia) for a memory impulse."""
@@ -355,7 +376,9 @@ def get_julia_resonance(impulse: float = 0.5) -> float:
         input_data = _json_dumps({"magnitude": impulse, "damping": 0.1})
         result = subprocess.run(
             ["julia", julia_script, input_data],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             data = _json_loads(result.stdout)
@@ -364,10 +387,12 @@ def get_julia_resonance(impulse: float = 0.5) -> float:
     except OSError:
         return 0.0
 
+
 def get_rust_acceleration(query_vec: list) -> list:
     """Use Rust SIMD for rapid candidate selection if available."""
     try:
         import whitemagic_rs as rs
+
         if hasattr(rs, "search"):
             return rs.search(query_vec)
     except Exception as e:
@@ -375,9 +400,6 @@ def get_rust_acceleration(query_vec: list) -> list:
         pass
     return []
 
-# ---------------------------------------------------------------------------
-# Combined Fusion: Integrate ALL systems into Satkona
-# ---------------------------------------------------------------------------
 
 def fuse_signals_with_fusion(
     signals: dict[str, dict[Any, float]],
@@ -455,8 +477,8 @@ def fuse_signals_with_fusion(
 
     # Add Polyglot Signals (Haskell Balance + Julia Resonance)
     # These act as global multipliers or bias terms
-    balance = get_haskell_balance() # 0.5-1.0
-    resonance = get_julia_resonance(0.8) # 0.0-1.0
+    balance = get_haskell_balance()  # 0.5-1.0
+    resonance = get_julia_resonance(0.8)  # 0.0-1.0
 
     # Apply global modulation
     # If balance is high, we favor existing structure (PageRank/Frequency)
@@ -465,15 +487,11 @@ def fuse_signals_with_fusion(
         # Boost stability signals
         for k in all_keys:
             # straightforward bias
-            relevance[k] *= (1.0 + resonance * 0.1)
+            relevance[k] *= 1.0 + resonance * 0.1
 
     # Re-normalize final scores
     return dict(normalise(relevance))
 
-
-# ---------------------------------------------------------------------------
-# CLI Test
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     print("=" * 60)
@@ -501,9 +519,8 @@ if __name__ == "__main__":
     insights = get_dream_insights(limit=3)
     print(f"    Recent dream insights: {len(insights)}")
     if insights:
-        for i, insight in enumerate(insights[:
-            3]):
-            print(f"      [{i+1}] {insight[:80]}...")
+        for i, insight in enumerate(insights[:3]):
+            print(f"      [{i + 1}] {insight[:80]}...")
 
     print("\n" + "=" * 60)
     print("  Fusion module ready for integration into satkona.py")

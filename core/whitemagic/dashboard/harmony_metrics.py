@@ -29,12 +29,16 @@ class HarmonyMetrics:
 
     def _recalculate_overall(self) -> None:
         if self.garden_harmony:
-            self.overall_harmony = sum(self.garden_harmony.values()) / len(self.garden_harmony)
-        self.history.append({
-            "overall": self.overall_harmony,
-            "gardens": dict(self.garden_harmony),
-            "timestamp": time.time(),
-        })
+            self.overall_harmony = sum(self.garden_harmony.values()) / len(
+                self.garden_harmony
+            )
+        self.history.append(
+            {
+                "overall": self.overall_harmony,
+                "gardens": dict(self.garden_harmony),
+                "timestamp": time.time(),
+            }
+        )
 
     def get_harmony(self, garden: str | None = None) -> float:
         """Get harmony score for a garden or overall."""

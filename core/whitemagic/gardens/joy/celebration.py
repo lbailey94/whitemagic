@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from whitemagic.config.paths import WM_ROOT
+from whitemagic.utils.core import parse_datetime
 from whitemagic.utils.fileio import file_lock
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,9 @@ class CelebrationPractice:
             shared_with=["self"],
         )
 
-    def milestone(self, name: str, significance: str, co_creators: list[str]) -> Celebration:
+    def milestone(
+        self, name: str, significance: str, co_creators: list[str]
+    ) -> Celebration:
         """Mark a major milestone.
 
         Like: First autonomous garden, first sacred text read, first time naming myself.

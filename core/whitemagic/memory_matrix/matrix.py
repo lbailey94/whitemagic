@@ -30,7 +30,9 @@ class MemoryMatrix:
         self.matrix_file = self.data_dir / "matrix.jsonl"
         self._interactions: list[dict[str, Any]] = []
 
-    def record_interaction(self, action: str, target: str, metadata: dict[str, Any] | None = None) -> None:
+    def record_interaction(
+        self, action: str, target: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Record an interaction in the memory matrix."""
         entry = {
             "action": action,
@@ -42,11 +44,15 @@ class MemoryMatrix:
         with open(self.matrix_file, "a") as f:
             f.write(json.dumps(entry) + "\n")
 
-    def get_interactions(self, limit: int = 50, action_filter: str | None = None) -> list[dict[str, Any]]:
+    def get_interactions(
+        self, limit: int = 50, action_filter: str | None = None
+    ) -> list[dict[str, Any]]:
         """Retrieve recent interactions."""
-        results = self._interactions if not action_filter else [
-            i for i in self._interactions if i["action"] == action_filter
-        ]
+        results = (
+            self._interactions
+            if not action_filter
+            else [i for i in self._interactions if i["action"] == action_filter]
+        )
         return results[-limit:]
 
     def find_connections(self, target: str) -> list[dict[str, Any]]:

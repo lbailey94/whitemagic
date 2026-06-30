@@ -4,6 +4,7 @@ Validates that the upgraded Scratchpad/ScratchpadManager supports
 sequential-thinking-style chain state (thought_number, total_thoughts),
 branching (branch_id, branch_from), and revision (is_revision, revises_entry).
 """
+
 from __future__ import annotations
 
 import json
@@ -34,11 +35,15 @@ class TestScratchpadChainState:
         assert status["branch_count"] == 0
 
     def test_explicit_thought_number(self, manager: ScratchpadManager):
-        entry = manager.write_to("test-explicit", "Step 2", thought_number=2, total_thoughts=5)
+        entry = manager.write_to(
+            "test-explicit", "Step 2", thought_number=2, total_thoughts=5
+        )
         assert entry["thought_number"] == 2
         assert entry["total_thoughts"] == 5
 
-    def test_total_thoughts_defaults_to_thought_number(self, manager: ScratchpadManager):
+    def test_total_thoughts_defaults_to_thought_number(
+        self, manager: ScratchpadManager
+    ):
         entry = manager.write_to("test-default", "Only thought")
         assert entry["thought_number"] == 1
         assert entry["total_thoughts"] == 1
@@ -55,7 +60,9 @@ class TestScratchpadBranching:
     def test_branch_creates_separate_chain(self, manager: ScratchpadManager):
         manager.write_to("test-branch", "Main 1")
         manager.write_to("test-branch", "Main 2")
-        manager.write_to("test-branch", "Branch A thought 1", branch_id="branch-a", branch_from=2)
+        manager.write_to(
+            "test-branch", "Branch A thought 1", branch_id="branch-a", branch_from=2
+        )
         manager.write_to("test-branch", "Branch A thought 2", branch_id="branch-a")
 
         status = manager.get_chain_status("test-branch")
@@ -136,7 +143,11 @@ class TestScratchpadBackwardCompat:
             "name": "old-pad",
             "focus": None,
             "entries": [
-                {"content": "Old thought", "tag": "current_focus", "timestamp": "2024-01-01T00:00:00"},
+                {
+                    "content": "Old thought",
+                    "tag": "current_focus",
+                    "timestamp": "2024-01-01T00:00:00",
+                },
             ],
             "created": "2024-01-01T00:00:00",
             "last_active": "2024-01-01T00:00:00",

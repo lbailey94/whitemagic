@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Metrics bridge — Hologram and metric tracking."""
+
 import logging
 from typing import Any, cast
 
@@ -19,7 +20,7 @@ def get_metrics_summary() -> dict[str, Any]:
             "hologram_entries": stats.get("entry_count", 0),
             "cache_size_mb": stats.get("size_mb", 0.0),
             "hit_rate": stats.get("hit_rate", 0.0),
-        }
+        },
     }
 
 

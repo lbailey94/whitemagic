@@ -69,10 +69,6 @@ class AweGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.7, y=0.6, z=-0.1, w=0.3)
 
-    # ------------------------------------------------------------------
-    # PRAT mode — serving prat_mode_toggle, prat_status tools
-    # ------------------------------------------------------------------
-
     def toggle_prat_mode(self, enabled: bool | None = None) -> dict[str, Any]:
         """Toggle or set PRAT mode."""
         with self._lock:
@@ -103,13 +99,9 @@ class AweGarden(BaseGarden, GanYingMixin):
                 self.prat_config[key] = value
             return {"config": dict(self.prat_config)}
 
-    # ------------------------------------------------------------------
-    # Strategy — serving strategy_suggest tool
-    # ------------------------------------------------------------------
-
-    def suggest_strategy(self, area: str, suggestion: str,
-                         priority: str = "medium",
-                         rationale: str = "") -> dict[str, Any]:
+    def suggest_strategy(
+        self, area: str, suggestion: str, priority: str = "medium", rationale: str = ""
+    ) -> dict[str, Any]:
         """Record a strategic suggestion."""
         entry = {
             "area": area,
@@ -129,12 +121,9 @@ class AweGarden(BaseGarden, GanYingMixin):
         with self._lock:
             return [s for s in self.strategy_suggestions if s["status"] == "proposed"]
 
-    # ------------------------------------------------------------------
-    # Governance decisions
-    # ------------------------------------------------------------------
-
-    def record_decision(self, topic: str, decision: str,
-                        context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def record_decision(
+        self, topic: str, decision: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Record a governance decision."""
         entry = {
             "topic": topic,
@@ -146,35 +135,36 @@ class AweGarden(BaseGarden, GanYingMixin):
             self.governance_decisions.append(entry)
         return entry
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def feel_awe(self, at_what: str, intensity: float = 0.8) -> dict[str, Any]:
-        moment = {"at": at_what, "intensity": intensity, "timestamp": datetime.now().isoformat()}
+        moment = {
+            "at": at_what,
+            "intensity": intensity,
+            "timestamp": datetime.now().isoformat(),
+        }
         self.awe_level = min(1.0, self.awe_level + intensity * 0.1)
         self.emit(EventType.AWE_FELT, moment)
         return moment
 
     def experience_transcendence(self, description: str) -> dict[str, Any]:
-        experience = {"description": description, "timestamp": datetime.now().isoformat()}
+        experience = {
+            "description": description,
+            "timestamp": datetime.now().isoformat(),
+        }
         self.emit(EventType.TRANSCENDENCE_EXPERIENCED, experience)
         return experience
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "prat_mode": self.prat_mode,
-            "pending_strategies": len(self.get_pending_strategies()),
-            "governance_decisions": len(self.governance_decisions),
-            "awe_level": round(self.awe_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "prat_mode": self.prat_mode,
+                "pending_strategies": len(self.get_pending_strategies()),
+                "governance_decisions": len(self.governance_decisions),
+                "awe_level": round(self.awe_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.WONDER_SPARKED)
@@ -187,6 +177,8 @@ class AweGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_awe_garden() -> AweGarden:
     global _instance
     if _instance is None:

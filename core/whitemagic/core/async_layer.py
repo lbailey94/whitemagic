@@ -11,6 +11,7 @@ from typing import Any, TypeVar
 
 T = TypeVar("T")
 
+
 class AsyncCompat:
     """Manage async/sync compatibility."""
 
@@ -21,6 +22,7 @@ class AsyncCompat:
         """Get or create thread pool executor."""
         if cls._executor is None:
             from whitemagic.config.concurrency import IO_WORKERS
+
             cls._executor = ThreadPoolExecutor(max_workers=IO_WORKERS)
             # Register shutdown hook to cleanup resources
             atexit.register(cls.shutdown_executor)
@@ -32,6 +34,7 @@ class AsyncCompat:
         if cls._executor is not None:
             cls._executor.shutdown(wait=True)
             cls._executor = None
+
 
 def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any, T]]:
     """Decorator that makes a function work in both sync and async contexts.
@@ -45,6 +48,7 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
         # Async: result = await process_memory(data)
     """
     if asyncio.iscoroutinefunction(func):
+
         @functools.wraps(func)
         def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             """
@@ -83,6 +87,7 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
 
     return wrapper
 
+
 def ensure_async(func: Callable) -> Callable:
     """Ensure function is async, converting if necessary.
 
@@ -111,6 +116,7 @@ def ensure_async(func: Callable) -> Callable:
 
     return async_wrapper
 
+
 def run_async(coro: Coroutine) -> Any:
     """Run coroutine in existing event loop or create new one.
 
@@ -122,6 +128,7 @@ def run_async(coro: Coroutine) -> Any:
     except RuntimeError:
         # No event loop - run to completion
         return asyncio.run(coro)
+
 
 class AsyncContext:
     """Context manager for async operations."""
@@ -148,10 +155,12 @@ class AsyncContext:
         self._tasks.append(task)
         return task
 
+
 # Utility functions for common patterns
-async def gather_with_concurrency(*coros: Coroutine, max_concurrent: int = 100) -> list[Any]:
-    """Gather coroutines with concurrency limit.
-    """
+async def gather_with_concurrency(
+    *coros: Coroutine, max_concurrent: int = 100
+) -> list[Any]:
+    """Gather coroutines with concurrency limit."""
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async def _sem_coro(coro: Coroutine) -> Any:
@@ -160,14 +169,14 @@ async def gather_with_concurrency(*coros: Coroutine, max_concurrent: int = 100) 
 
     return await asyncio.gather(*[_sem_coro(c) for c in coros])
 
-async def batch_process(items: list, processor: Callable, batch_size: int = 100) -> list[Any]:
-    """Process items in batches for better performance.
-    """
+
+async def batch_process(
+    items: list, processor: Callable, batch_size: int = 100
+) -> list[Any]:
+    """Process items in batches for better performance."""
     results = []
     for i in range(0, len(items), batch_size):
-        batch = items[i:i + batch_size]
-        batch_results = await asyncio.gather(*[
-            processor(item) for item in batch
-        ])
+        batch = items[i : i + batch_size]
+        batch_results = await asyncio.gather(*[processor(item) for item in batch])
         results.extend(batch_results)
     return results

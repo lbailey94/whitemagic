@@ -51,12 +51,12 @@ _intake_lock = threading.Lock()
 class IntakeStatus(Enum):
     """Status of a file in the intake queue."""
 
-    PENDING = auto()      # Awaiting processing
-    PROCESSING = auto()   # Currently being processed
-    COMPLETED = auto()    # Successfully ingested
-    DUPLICATE = auto()    # Already exists in memory
-    SKIPPED = auto()      # Manually skipped
-    ERROR = auto()        # Processing failed
+    PENDING = auto()  # Awaiting processing
+    PROCESSING = auto()  # Currently being processed
+    COMPLETED = auto()  # Successfully ingested
+    DUPLICATE = auto()  # Already exists in memory
+    SKIPPED = auto()  # Manually skipped
+    ERROR = auto()  # Processing failed
 
 
 @dataclass
@@ -116,6 +116,7 @@ class HolographicIntake:
         """Lazy-load the multimodal processor chain."""
         try:
             from whitemagic.core.intake.media_processor import get_processor_chain
+
             return get_processor_chain()
         except (ImportError, ModuleNotFoundError):
             return None
@@ -131,7 +132,7 @@ class HolographicIntake:
         state_dir.mkdir(parents=True, exist_ok=True)
 
         self._queue: dict[str, IntakeItem] = {}  # path -> IntakeItem
-        self._known_hashes: set[str] = set()     # Content hashes already in memory
+        self._known_hashes: set[str] = set()  # Content hashes already in memory
         self._watch_dirs: list[str] = []
         self._running = False
         self._thread: threading.Thread | None = None
@@ -202,6 +203,7 @@ class HolographicIntake:
             # Also check SQLite
             try:
                 import sqlite3
+
                 if DB_PATH.exists():
                     conn = sqlite3.connect(str(DB_PATH))
                     # Check if content column exists and extract hashes
@@ -228,10 +230,6 @@ class HolographicIntake:
             logger.debug("Operation failed: %s", e)
             return ""
 
-    # =========================================================================
-    # Watch Management
-    # =========================================================================
-
     def add_watch(self, path: str) -> bool:
         """Add a directory to watch for new files."""
         abs_path = str(Path(path).resolve())
@@ -256,10 +254,6 @@ class HolographicIntake:
     def list_watches(self) -> list[str]:
         """List watched directories."""
         return self._watch_dirs.copy()
-
-    # =========================================================================
-    # Scanning & Detection
-    # =========================================================================
 
     def scan_directory(self, path: str) -> list[IntakeItem]:
         """Scan a directory for new files not in memory."""
@@ -317,10 +311,6 @@ class HolographicIntake:
             all_new.extend(self.scan_directory(watch_dir))
         return all_new
 
-    # =========================================================================
-    # Processing
-    # =========================================================================
-
     def process_item(self, path: str) -> bool:
         """Process a single item from the queue."""
         if path not in self._queue:
@@ -374,7 +364,9 @@ class HolographicIntake:
             coords = encoder.encode(encode_input)
 
             # Create memory
-            memory_id = hashlib.sha256(f"{path}:{item.detected_at}".encode()).hexdigest()[:16]
+            memory_id = hashlib.sha256(
+                f"{path}:{item.detected_at}".encode()
+            ).hexdigest()[:16]
             base_tags = {item.file_type, "auto-ingested"}
             base_tags.update(extra_tags)
             mem_metadata: dict[str, Any] = {
@@ -426,20 +418,17 @@ class HolographicIntake:
         """Process pending items in the queue."""
         stats = {"processed": 0, "errors": 0, "skipped": 0}
 
-        pending = [p for p, item in self._queue.items() if item.status == IntakeStatus.PENDING]
+        pending = [
+            p for p, item in self._queue.items() if item.status == IntakeStatus.PENDING
+        ]
 
-        for path in pending[:
-            limit]:
+        for path in pending[:limit]:
             if self.process_item(path):
                 stats["processed"] += 1
             else:
                 stats["errors"] += 1
 
         return stats
-
-    # =========================================================================
-    # Queue Management
-    # =========================================================================
 
     def get_queue_stats(self) -> dict[str, int]:
         """Get queue statistics."""
@@ -450,11 +439,17 @@ class HolographicIntake:
 
     def get_pending(self) -> list[IntakeItem]:
         """Get pending items."""
-        return [item for item in self._queue.values() if item.status == IntakeStatus.PENDING]
+        return [
+            item for item in self._queue.values() if item.status == IntakeStatus.PENDING
+        ]
 
     def clear_completed(self) -> int:
         """Remove completed items from queue."""
-        to_remove = [p for p, item in self._queue.items() if item.status == IntakeStatus.COMPLETED]
+        to_remove = [
+            p
+            for p, item in self._queue.items()
+            if item.status == IntakeStatus.COMPLETED
+        ]
         for path in to_remove:
             del self._queue[path]
         self._save_queue()
@@ -468,13 +463,10 @@ class HolographicIntake:
             return True
         return False
 
-    # =========================================================================
-    # Background Monitoring
-    # =========================================================================
-
     def _monitor_loop(self) -> None:
         """Background monitoring loop."""
         import time
+
         while self._running:
             try:
                 # Scan for new files
@@ -548,13 +540,12 @@ if __name__ == "__main__":
     if cmd == "scan" and len(sys.argv) > 2:
         items = intake.scan_directory(sys.argv[2])
         logger.info("Found %s new files", len(items))
-        for item in items[:
-            10]:
+        for item in items[:10]:
             logger.info("  %s", item.path)
 
     elif cmd == "process":
         stats = intake.process_queue()
-        logger.info("Processed: %s, Errors: %s", stats['processed'], stats['errors'])
+        logger.info("Processed: %s, Errors: %s", stats["processed"], stats["errors"])
 
     elif cmd == "status":
         stats = intake.get_queue_stats()
@@ -575,6 +566,7 @@ if __name__ == "__main__":
         try:
             while True:
                 import time
+
                 time.sleep(1)
         except KeyboardInterrupt:
             intake.stop()

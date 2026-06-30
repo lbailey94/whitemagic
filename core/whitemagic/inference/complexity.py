@@ -19,6 +19,7 @@ Routing signals:
   5. Tool-call requirement (does the prompt need function calling?)
   6. Context window needs (long context → higher tier)
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,38 +33,100 @@ logger = logging.getLogger(__name__)
 
 class InferenceTier(IntEnum):
     """Inference capability tiers, ordered by cost/latency."""
-    EDGE_RULES = 0     # Pattern matching, cache — sub-millisecond
-    LOCAL_SMALL = 1    # Ollama 1.5B-7B quantized — 50-500ms
-    LOCAL_LARGE = 2    # BitNet/Ollama 8B+ — 1-10s
-    CLOUD = 3          # Frontier model via API — 2-30s
+
+    EDGE_RULES = 0  # Pattern matching, cache — sub-millisecond
+    LOCAL_SMALL = 1  # Ollama 1.5B-7B quantized — 50-500ms
+    LOCAL_LARGE = 2  # BitNet/Ollama 8B+ — 1-10s
+    CLOUD = 3  # Frontier model via API — 2-30s
 
 
 # Task type patterns — ordered from simplest to most complex
 _TASK_PATTERNS: list[tuple[re.Pattern[str], InferenceTier, str]] = [
     # Tier 0: Edge rules can handle these
-    (re.compile(r"^(hi|hello|hey|greetings|bye|goodbye|thanks)\b", re.I), InferenceTier.EDGE_RULES, "greeting"),
-    (re.compile(r"\b(version|what version|status|health)\b", re.I), InferenceTier.EDGE_RULES, "status_query"),
+    (
+        re.compile(r"^(hi|hello|hey|greetings|bye|goodbye|thanks)\b", re.I),
+        InferenceTier.EDGE_RULES,
+        "greeting",
+    ),
+    (
+        re.compile(r"\b(version|what version|status|health)\b", re.I),
+        InferenceTier.EDGE_RULES,
+        "status_query",
+    ),
     (re.compile(r"\b(yes|no|true|false)\b", re.I), InferenceTier.EDGE_RULES, "boolean"),
-
     # Tier 1: Local small model — classification, extraction, simple Q&A
-    (re.compile(r"\b(classify|categor|label|tag)\b", re.I), InferenceTier.LOCAL_SMALL, "classification"),
-    (re.compile(r"\b(extract|pull out|find the|identify)\b", re.I), InferenceTier.LOCAL_SMALL, "extraction"),
-    (re.compile(r"\b(summariz|tl;?dr|brief|condense)\b", re.I), InferenceTier.LOCAL_SMALL, "summarization"),
-    (re.compile(r"\b(translat|paraphrase|rewrite|rephrase)\b", re.I), InferenceTier.LOCAL_SMALL, "reformulation"),
-    (re.compile(r"\b(format|template|structure)\b", re.I), InferenceTier.LOCAL_SMALL, "formatting"),
-
+    (
+        re.compile(r"\b(classify|categor|label|tag)\b", re.I),
+        InferenceTier.LOCAL_SMALL,
+        "classification",
+    ),
+    (
+        re.compile(r"\b(extract|pull out|find the|identify)\b", re.I),
+        InferenceTier.LOCAL_SMALL,
+        "extraction",
+    ),
+    (
+        re.compile(r"\b(summariz|tl;?dr|brief|condense)\b", re.I),
+        InferenceTier.LOCAL_SMALL,
+        "summarization",
+    ),
+    (
+        re.compile(r"\b(translat|paraphrase|rewrite|rephrase)\b", re.I),
+        InferenceTier.LOCAL_SMALL,
+        "reformulation",
+    ),
+    (
+        re.compile(r"\b(format|template|structure)\b", re.I),
+        InferenceTier.LOCAL_SMALL,
+        "formatting",
+    ),
     # Tier 2: Local large model — reasoning, analysis, code generation
-    (re.compile(r"\b(analyz|evaluat|assess|investigat)\b", re.I), InferenceTier.LOCAL_LARGE, "analysis"),
-    (re.compile(r"\b(code|function|implement|debug|refactor)\b", re.I), InferenceTier.LOCAL_LARGE, "coding"),
-    (re.compile(r"\b(reason|deduce|infer|conclude)\b", re.I), InferenceTier.LOCAL_LARGE, "reasoning"),
-    (re.compile(r"\b(compare|contrast|versus|vs\.?)\b", re.I), InferenceTier.LOCAL_LARGE, "comparison"),
-    (re.compile(r"\b(plan|design|architect|strategy)\b", re.I), InferenceTier.LOCAL_LARGE, "planning"),
-
+    (
+        re.compile(r"\b(analyz|evaluat|assess|investigat)\b", re.I),
+        InferenceTier.LOCAL_LARGE,
+        "analysis",
+    ),
+    (
+        re.compile(r"\b(code|function|implement|debug|refactor)\b", re.I),
+        InferenceTier.LOCAL_LARGE,
+        "coding",
+    ),
+    (
+        re.compile(r"\b(reason|deduce|infer|conclude)\b", re.I),
+        InferenceTier.LOCAL_LARGE,
+        "reasoning",
+    ),
+    (
+        re.compile(r"\b(compare|contrast|versus|vs\.?)\b", re.I),
+        InferenceTier.LOCAL_LARGE,
+        "comparison",
+    ),
+    (
+        re.compile(r"\b(plan|design|architect|strategy)\b", re.I),
+        InferenceTier.LOCAL_LARGE,
+        "planning",
+    ),
     # Tier 3: Cloud — multi-step reasoning, long-form creative, complex tool chains
-    (re.compile(r"\b(multi.?step|chain|pipeline|workflow)\b", re.I), InferenceTier.CLOUD, "multi_step"),
-    (re.compile(r"\b(creative|story|poem|novel|screenplay)\b", re.I), InferenceTier.CLOUD, "creative"),
-    (re.compile(r"\b(research|literature|survey|systematic)\b", re.I), InferenceTier.CLOUD, "research"),
-    (re.compile(r"\b(legal|medical|financial advis|compliance)\b", re.I), InferenceTier.CLOUD, "expert_domain"),
+    (
+        re.compile(r"\b(multi.?step|chain|pipeline|workflow)\b", re.I),
+        InferenceTier.CLOUD,
+        "multi_step",
+    ),
+    (
+        re.compile(r"\b(creative|story|poem|novel|screenplay)\b", re.I),
+        InferenceTier.CLOUD,
+        "creative",
+    ),
+    (
+        re.compile(r"\b(research|literature|survey|systematic)\b", re.I),
+        InferenceTier.CLOUD,
+        "research",
+    ),
+    (
+        re.compile(r"\b(legal|medical|financial advis|compliance)\b", re.I),
+        InferenceTier.CLOUD,
+        "expert_domain",
+    ),
 ]
 
 # Sensitivity patterns — override routing to keep data local
@@ -77,8 +140,12 @@ _SENSITIVITY_PATTERNS = [
 
 # Tool-call indicators — prompts that likely need function calling
 _TOOL_CALL_PATTERNS = [
-    re.compile(r"\b(call|invoke|execute|run)\s+(the\s+)?(tool|function|api|command)\b", re.I),
-    re.compile(r"\b(search|find|lookup|query)\s+(the\s+)?(memor\w*|database|knowledge)\b", re.I),
+    re.compile(
+        r"\b(call|invoke|execute|run)\s+(the\s+)?(tool|function|api|command)\b", re.I
+    ),
+    re.compile(
+        r"\b(search|find|lookup|query)\s+(the\s+)?(memor\w*|database|knowledge)\b", re.I
+    ),
     re.compile(r"\b(use|with|via)\s+(tool|function|mcp)\b", re.I),
 ]
 
@@ -93,6 +160,7 @@ _MULTI_TURN_PATTERNS = [
 @dataclass
 class ComplexityAssessment:
     """Result of complexity classification."""
+
     tier: InferenceTier
     task_type: str
     confidence: float

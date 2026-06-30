@@ -25,19 +25,21 @@ from whitemagic.config.paths import PIPELINE_DIR
 
 class PipelinePhase(Enum):
     """7 phases of the Yin-Yang tactical cycle"""
-    SCOUT = "scout"              # YIN: Explore, gather intelligence
-    DISCOVER = "discover"        # YIN: Find patterns, identify gaps
-    CLARIFY = "clarify"          # YIN: Vague → specific + measurable
-    PLAN = "plan"                # YIN: Strategy generation + simulation
-    EXECUTE = "execute"          # YANG: Parallel deployment
-    VERIFY = "verify"            # YANG: Victory condition checks
-    REFLECT = "reflect"          # YIN: Learn from cycle, prepare next
+
+    SCOUT = "scout"  # YIN: Explore, gather intelligence
+    DISCOVER = "discover"  # YIN: Find patterns, identify gaps
+    CLARIFY = "clarify"  # YIN: Vague → specific + measurable
+    PLAN = "plan"  # YIN: Strategy generation + simulation
+    EXECUTE = "execute"  # YANG: Parallel deployment
+    VERIFY = "verify"  # YANG: Victory condition checks
+    REFLECT = "reflect"  # YIN: Learn from cycle, prepare next
 
 
 class YinYang(Enum):
     """Phase polarity"""
-    YIN = "yin"      # Receptive, analytical, planning
-    YANG = "yang"    # Active, execution, manifestation
+
+    YIN = "yin"  # Receptive, analytical, planning
+    YANG = "yang"  # Active, execution, manifestation
 
 
 PHASE_POLARITY = {
@@ -54,6 +56,7 @@ PHASE_POLARITY = {
 @dataclass
 class ObjectiveRefinement:
     """Tracks transformation from vague → specific"""
+
     original: str
     refined: str
     metrics: list[str]
@@ -66,6 +69,7 @@ class ObjectiveRefinement:
 @dataclass
 class StrategySimulation:
     """Results from simulating a strategy"""
+
     strategy_name: str
     predicted_success_rate: float
     predicted_duration: float
@@ -79,6 +83,7 @@ class StrategySimulation:
 @dataclass
 class CycleMetrics:
     """Metrics for one complete cycle"""
+
     cycle_number: int
     start_time: float
     end_time: float | None = None
@@ -95,6 +100,7 @@ class CycleMetrics:
 @dataclass
 class PipelineState:
     """Complete state of the tactical pipeline"""
+
     campaign_codename: str
     current_phase: PipelinePhase
     current_cycle: int
@@ -119,20 +125,20 @@ class PipelineState:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'campaign_codename': self.campaign_codename,
-            'current_phase': self.current_phase.value,
-            'current_cycle': self.current_cycle,
-            'total_cycles': self.total_cycles,
-            'scout_findings': self.scout_findings,
-            'discovered_patterns': self.discovered_patterns,
-            'refined_objectives': [asdict(obj) for obj in self.refined_objectives],
-            'strategy_simulations': [asdict(sim) for sim in self.strategy_simulations],
-            'execution_results': self.execution_results,
-            'verification_results': self.verification_results,
-            'cycle_metrics': [asdict(m) for m in self.cycle_metrics],
-            'victory_achieved': self.victory_achieved,
-            'victory_cycle': self.victory_cycle,
-            'stagnation_count': self.stagnation_count,
+            "campaign_codename": self.campaign_codename,
+            "current_phase": self.current_phase.value,
+            "current_cycle": self.current_cycle,
+            "total_cycles": self.total_cycles,
+            "scout_findings": self.scout_findings,
+            "discovered_patterns": self.discovered_patterns,
+            "refined_objectives": [asdict(obj) for obj in self.refined_objectives],
+            "strategy_simulations": [asdict(sim) for sim in self.strategy_simulations],
+            "execution_results": self.execution_results,
+            "verification_results": self.verification_results,
+            "cycle_metrics": [asdict(m) for m in self.cycle_metrics],
+            "victory_achieved": self.victory_achieved,
+            "victory_cycle": self.victory_cycle,
+            "stagnation_count": self.stagnation_count,
         }
 
 
@@ -164,20 +170,25 @@ class TacticalPipeline:
                 data = json.load(f)
                 # Reconstruct enums and dataclasses
                 state = PipelineState(
-                    campaign_codename=data['campaign_codename'],
-                    current_phase=PipelinePhase(data['current_phase']),
-                    current_cycle=data['current_cycle'],
-                    total_cycles=data['total_cycles'],
-                    scout_findings=data['scout_findings'],
-                    discovered_patterns=data['discovered_patterns'],
-                    refined_objectives=[ObjectiveRefinement(**obj) for obj in data['refined_objectives']],
-                    strategy_simulations=[StrategySimulation(**sim) for sim in data['strategy_simulations']],
-                    execution_results=data['execution_results'],
-                    verification_results=data['verification_results'],
-                    cycle_metrics=[CycleMetrics(**m) for m in data['cycle_metrics']],
-                    victory_achieved=data['victory_achieved'],
-                    victory_cycle=data.get('victory_cycle'),
-                    stagnation_count=data.get('stagnation_count', 0),
+                    campaign_codename=data["campaign_codename"],
+                    current_phase=PipelinePhase(data["current_phase"]),
+                    current_cycle=data["current_cycle"],
+                    total_cycles=data["total_cycles"],
+                    scout_findings=data["scout_findings"],
+                    discovered_patterns=data["discovered_patterns"],
+                    refined_objectives=[
+                        ObjectiveRefinement(**obj) for obj in data["refined_objectives"]
+                    ],
+                    strategy_simulations=[
+                        StrategySimulation(**sim)
+                        for sim in data["strategy_simulations"]
+                    ],
+                    execution_results=data["execution_results"],
+                    verification_results=data["verification_results"],
+                    cycle_metrics=[CycleMetrics(**m) for m in data["cycle_metrics"]],
+                    victory_achieved=data["victory_achieved"],
+                    victory_cycle=data.get("victory_cycle"),
+                    stagnation_count=data.get("stagnation_count", 0),
                 )
                 return state
         else:
@@ -190,7 +201,7 @@ class TacticalPipeline:
     def save_state(self):
         """Persist pipeline state to disk"""
         state_file = self.state_dir / f"{self.campaign_codename}_pipeline.json"
-        with open(state_file, 'w') as f:
+        with open(state_file, "w") as f:
             json.dump(self.state.to_dict(), f, indent=2)
 
     def start_cycle(self) -> CycleMetrics:
@@ -240,8 +251,6 @@ class TacticalPipeline:
         if self.current_cycle_metrics:
             self.current_cycle_metrics.phase_durations[phase.value] = duration
 
-    # ========== PHASE 1: SCOUT (YIN) ==========
-
     def scout(self, scout_fn) -> list[dict[str, Any]]:
         """
         Phase 1: Scout and explore terrain
@@ -263,8 +272,6 @@ class TacticalPipeline:
         self.save_state()
         return cast(list[dict[str, Any]], findings)
 
-    # ========== PHASE 2: DISCOVER (YIN) ==========
-
     def discover(self, discover_fn) -> list[dict[str, Any]]:
         """
         Phase 2: Discover patterns and identify gaps
@@ -282,15 +289,15 @@ class TacticalPipeline:
         if not isinstance(patterns, list):
             patterns = [patterns] if patterns else []
 
-        patterns_list = [dict(p) if isinstance(p, dict) else {"pattern": str(p)} for p in patterns]
+        patterns_list = [
+            dict(p) if isinstance(p, dict) else {"pattern": str(p)} for p in patterns
+        ]
 
         self.state.discovered_patterns.extend(patterns_list)
 
         self.record_phase_duration(PipelinePhase.DISCOVER, time.time() - start)
         self.save_state()
         return patterns_list
-
-    # ========== PHASE 3: CLARIFY (YIN) ==========
 
     def clarify(self, clarify_fn) -> list[ObjectiveRefinement]:
         """
@@ -318,8 +325,6 @@ class TacticalPipeline:
         self.save_state()
         return ref_list
 
-    # ========== PHASE 4: PLAN (YIN) ==========
-
     def plan(self, plan_fn) -> list[StrategySimulation]:
         """
         Phase 4: Generate strategies, simulate, rank by consensus
@@ -346,8 +351,6 @@ class TacticalPipeline:
         self.save_state()
         return cast(list[StrategySimulation], simulations)
 
-    # ========== PHASE 5: EXECUTE (YANG) ==========
-
     def execute(self, execute_fn) -> dict[str, Any]:
         """
         Phase 5: Deploy parallel armies with top-ranked strategy
@@ -369,13 +372,13 @@ class TacticalPipeline:
 
         self.state.execution_results.append(results)
         if self.current_cycle_metrics:
-            self.current_cycle_metrics.clones_deployed += results.get('clones_deployed', 0)
+            self.current_cycle_metrics.clones_deployed += results.get(
+                "clones_deployed", 0
+            )
 
         self.record_phase_duration(PipelinePhase.EXECUTE, time.time() - start)
         self.save_state()
         return cast(dict[str, Any], results)
-
-    # ========== PHASE 6: VERIFY (YANG) ==========
 
     def verify(self, verify_fn) -> dict[str, Any]:
         """
@@ -389,23 +392,30 @@ class TacticalPipeline:
         """
         start = time.time()
 
-        verification = verify_fn(self.state.execution_results[-1] if self.state.execution_results else {})
+        verification = verify_fn(
+            self.state.execution_results[-1] if self.state.execution_results else {}
+        )
 
         self.state.verification_results.append(verification)
         if self.current_cycle_metrics:
-            self.current_cycle_metrics.victory_conditions_met = verification.get('vcs_met', 0)
-            self.current_cycle_metrics.victory_conditions_total = verification.get('vcs_total', 0)
+            self.current_cycle_metrics.victory_conditions_met = verification.get(
+                "vcs_met", 0
+            )
+            self.current_cycle_metrics.victory_conditions_total = verification.get(
+                "vcs_total", 0
+            )
 
         # Check for victory
-        if verification.get('vcs_met', 0) == verification.get('vcs_total', 0) and verification.get('vcs_total', 0) > 0:
+        if (
+            verification.get("vcs_met", 0) == verification.get("vcs_total", 0)
+            and verification.get("vcs_total", 0) > 0
+        ):
             self.state.victory_achieved = True
             self.state.victory_cycle = self.state.current_cycle
 
         self.record_phase_duration(PipelinePhase.VERIFY, time.time() - start)
         self.save_state()
         return cast(dict[str, Any], verification)
-
-    # ========== PHASE 7: REFLECT (YIN) ==========
 
     def reflect(self, reflect_fn) -> dict[str, Any]:
         """
@@ -421,36 +431,42 @@ class TacticalPipeline:
 
         # Gather all cycle data
         cycle_data = {
-            'cycle_number': self.state.current_cycle,
-            'scout_findings': self.state.scout_findings,
-            'discovered_patterns': self.state.discovered_patterns,
-            'refined_objectives': [asdict(obj) for obj in self.state.refined_objectives],
-            'strategy_simulations': [asdict(sim) for sim in self.state.strategy_simulations],
-            'execution_results': self.state.execution_results,
-            'verification_results': self.state.verification_results,
-            'metrics': asdict(self.current_cycle_metrics) if self.current_cycle_metrics else {},
+            "cycle_number": self.state.current_cycle,
+            "scout_findings": self.state.scout_findings,
+            "discovered_patterns": self.state.discovered_patterns,
+            "refined_objectives": [
+                asdict(obj) for obj in self.state.refined_objectives
+            ],
+            "strategy_simulations": [
+                asdict(sim) for sim in self.state.strategy_simulations
+            ],
+            "execution_results": self.state.execution_results,
+            "verification_results": self.state.verification_results,
+            "metrics": asdict(self.current_cycle_metrics)
+            if self.current_cycle_metrics
+            else {},
         }
 
         insights = reflect_fn(cycle_data)
 
         # Check for stagnation
         if self.state.verification_results:
-            last_vcs = self.state.verification_results[-1].get('vcs_met', 0)
+            last_vcs = self.state.verification_results[-1].get("vcs_met", 0)
             if len(self.state.verification_results) > 1:
-                prev_vcs = self.state.verification_results[-2].get('vcs_met', 0)
+                prev_vcs = self.state.verification_results[-2].get("vcs_met", 0)
                 if last_vcs <= prev_vcs:
                     self.state.stagnation_count += 1
                 else:
                     self.state.stagnation_count = 0
 
         if self.current_cycle_metrics:
-            self.current_cycle_metrics.improvements_from_last_cycle = insights.get('improvements', [])
+            self.current_cycle_metrics.improvements_from_last_cycle = insights.get(
+                "improvements", []
+            )
 
         self.record_phase_duration(PipelinePhase.REFLECT, time.time() - start)
         self.save_state()
         return cast(dict[str, Any], insights)
-
-    # ========== UTILITY METHODS ==========
 
     def get_current_polarity(self) -> YinYang:
         """Get current phase polarity (Yin or Yang)"""
@@ -459,17 +475,17 @@ class TacticalPipeline:
     def get_cycle_summary(self) -> dict[str, Any]:
         """Get summary of current cycle"""
         return {
-            'cycle_number': self.state.current_cycle,
-            'current_phase': self.state.current_phase.value,
-            'polarity': self.get_current_polarity().value,
-            'findings': len(self.state.scout_findings),
-            'patterns': len(self.state.discovered_patterns),
-            'refined_objectives': len(self.state.refined_objectives),
-            'strategies': len(self.state.strategy_simulations),
-            'executions': len(self.state.execution_results),
-            'verifications': len(self.state.verification_results),
-            'victory_achieved': self.state.victory_achieved,
-            'stagnation_count': self.state.stagnation_count,
+            "cycle_number": self.state.current_cycle,
+            "current_phase": self.state.current_phase.value,
+            "polarity": self.get_current_polarity().value,
+            "findings": len(self.state.scout_findings),
+            "patterns": len(self.state.discovered_patterns),
+            "refined_objectives": len(self.state.refined_objectives),
+            "strategies": len(self.state.strategy_simulations),
+            "executions": len(self.state.execution_results),
+            "verifications": len(self.state.verification_results),
+            "victory_achieved": self.state.victory_achieved,
+            "stagnation_count": self.state.stagnation_count,
         }
 
     def should_continue(self, max_cycles: int = 10, max_stagnation: int = 3) -> bool:
@@ -502,16 +518,20 @@ class TacticalPipeline:
 
         if self.state.verification_results:
             last_verify = self.state.verification_results[-1]
-            vcs_met = last_verify.get('vcs_met', 0)
-            vcs_total = last_verify.get('vcs_total', 0)
-            lines.append(f"  Victory Conditions: {vcs_met}/{vcs_total} ({100*vcs_met/vcs_total if vcs_total > 0 else 0:.1f}%)")
+            vcs_met = last_verify.get("vcs_met", 0)
+            vcs_total = last_verify.get("vcs_total", 0)
+            lines.append(
+                f"  Victory Conditions: {vcs_met}/{vcs_total} ({100 * vcs_met / vcs_total if vcs_total > 0 else 0:.1f}%)"
+            )
 
-        lines.extend([
-            "",
-            "Status:",
-            f"  Victory: {'✅ ACHIEVED' if self.state.victory_achieved else '🔄 In Progress'}",
-            f"  Stagnation: {self.state.stagnation_count} cycles",
-        ])
+        lines.extend(
+            [
+                "",
+                "Status:",
+                f"  Victory: {'✅ ACHIEVED' if self.state.victory_achieved else '🔄 In Progress'}",
+                f"  Stagnation: {self.state.stagnation_count} cycles",
+            ]
+        )
 
         return "\n".join(lines)
 

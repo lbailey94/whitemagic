@@ -1,5 +1,6 @@
 # ruff: noqa: E402
 """Voting tool handlers."""
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ def _emit(event_type_name: str, data: dict) -> None:
     """Best-effort Gan Ying event emission."""
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type_name, data, source="voting")
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced voting emit err: %s", e, exc_info=True)
@@ -57,10 +59,6 @@ def _save_vote_session(session: dict[str, Any]) -> None:
     meta_path = _vote_session_dir(session_id) / "meta.json"
     meta_path.write_text(_json_dumps(session, indent=2), encoding="utf-8")
 
-
-# ---------------------------------------------------------------------------
-# Confidence extraction (ported from Tools voting system)
-# ---------------------------------------------------------------------------
 
 def _extract_confidence(text: str) -> int:
     """Extract confidence percentage from vote text."""
@@ -116,10 +114,6 @@ def _analyze_votes(votes: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: vote.create
-# ---------------------------------------------------------------------------
-
 def handle_vote_create(**kwargs: Any) -> dict[str, Any]:
     """Create a new voting session for a problem/question."""
     problem = kwargs.get("problem")
@@ -154,10 +148,6 @@ def handle_vote_create(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: vote.cast
-# ---------------------------------------------------------------------------
-
 def handle_vote_cast(**kwargs: Any) -> dict[str, Any]:
     """Cast a vote in a voting session."""
     session_id = kwargs.get("session_id")
@@ -176,10 +166,17 @@ def handle_vote_cast(**kwargs: Any) -> dict[str, Any]:
     try:
         session = _load_vote_session(session_id)
     except FileNotFoundError:
-        return {"status": "error", "error": f"Vote session {session_id} not found", "error_code": "not_found"}
+        return {
+            "status": "error",
+            "error": f"Vote session {session_id} not found",
+            "error_code": "not_found",
+        }
 
     if session.get("status") != "open":
-        return {"status": "error", "error": f"Voting session is {session.get('status')}, not open"}
+        return {
+            "status": "error",
+            "error": f"Voting session is {session.get('status')}, not open",
+        }
 
     # Auto-extract confidence from solution text if not provided
     if confidence is None:
@@ -201,7 +198,10 @@ def handle_vote_cast(**kwargs: Any) -> dict[str, Any]:
     vote_file = _vote_session_dir(session_id) / f"vote_{voter}.json"
     vote_file.write_text(_json_dumps(vote, indent=2), encoding="utf-8")
 
-    _emit("VOTE_CAST", {"session_id": session_id, "voter": voter, "confidence": confidence})
+    _emit(
+        "VOTE_CAST",
+        {"session_id": session_id, "voter": voter, "confidence": confidence},
+    )
 
     return {
         "status": "success",
@@ -210,10 +210,6 @@ def handle_vote_cast(**kwargs: Any) -> dict[str, Any]:
         "total_votes": len(session["votes"]),
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: vote.analyze
-# ---------------------------------------------------------------------------
 
 def handle_vote_analyze(**kwargs: Any) -> dict[str, Any]:
     """Analyze votes and determine consensus for a session."""
@@ -226,7 +222,11 @@ def handle_vote_analyze(**kwargs: Any) -> dict[str, Any]:
     try:
         session = _load_vote_session(session_id)
     except FileNotFoundError:
-        return {"status": "error", "error": f"Vote session {session_id} not found", "error_code": "not_found"}
+        return {
+            "status": "error",
+            "error": f"Vote session {session_id} not found",
+            "error_code": "not_found",
+        }
 
     votes = session.get("votes", [])
     analysis = _analyze_votes(votes)
@@ -236,19 +236,34 @@ def handle_vote_analyze(**kwargs: Any) -> dict[str, Any]:
         session["closed_at"] = datetime.now().isoformat()
         session["analysis"] = analysis
         _save_vote_session(session)
-        _emit("VOTE_SESSION_CLOSED", {"session_id": session_id, "consensus": analysis["consensus_strength"]})
+        _emit(
+            "VOTE_SESSION_CLOSED",
+            {"session_id": session_id, "consensus": analysis["consensus_strength"]},
+        )
 
     if analysis.get("consensus_strength") == "strong":
-        _emit("VOTE_CONSENSUS_REACHED", {"session_id": session_id, "winner": analysis.get("winner", {}).get("voter")})
+        _emit(
+            "VOTE_CONSENSUS_REACHED",
+            {
+                "session_id": session_id,
+                "winner": analysis.get("winner", {}).get("voter"),
+            },
+        )
 
     # Save analysis results
     results_file = _vote_session_dir(session_id) / "results.json"
-    results_file.write_text(_json_dumps({
-        "session_id": session_id,
-        "problem": session.get("problem"),
-        "analysis": analysis,
-        "analyzed_at": datetime.now().isoformat(),
-    }, indent=2), encoding="utf-8")
+    results_file.write_text(
+        _json_dumps(
+            {
+                "session_id": session_id,
+                "problem": session.get("problem"),
+                "analysis": analysis,
+                "analyzed_at": datetime.now().isoformat(),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     return {
         "status": "success",
@@ -258,14 +273,6 @@ def handle_vote_analyze(**kwargs: Any) -> dict[str, Any]:
         "session_status": session.get("status"),
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: vote.list
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Handler: vote.record_outcome
-# ---------------------------------------------------------------------------
 
 def handle_vote_record_outcome(**kwargs: Any) -> dict[str, Any]:
     """Record whether the winning solution from a vote actually worked."""
@@ -279,7 +286,11 @@ def handle_vote_record_outcome(**kwargs: Any) -> dict[str, Any]:
     try:
         session = _load_vote_session(session_id)
     except FileNotFoundError:
-        return {"status": "error", "error": f"Vote session {session_id} not found", "error_code": "not_found"}
+        return {
+            "status": "error",
+            "error": f"Vote session {session_id} not found",
+            "error_code": "not_found",
+        }
 
     # Record outcome
     session["outcome"] = {
@@ -317,14 +328,13 @@ def handle_vote_record_outcome(**kwargs: Any) -> dict[str, Any]:
         "status": "success",
         "message": f"Outcome recorded for {session_id}: {'success' if success else 'failure'}",
         "outcome": session["outcome"],
-        "voter_accuracy": {v: round(d["correct"] / max(d["outcomes_tracked"], 1), 3)
-                           for v, d in accuracy.items() if d["outcomes_tracked"] > 0},
+        "voter_accuracy": {
+            v: round(d["correct"] / max(d["outcomes_tracked"], 1), 3)
+            for v, d in accuracy.items()
+            if d["outcomes_tracked"] > 0
+        },
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: vote.list
-# ---------------------------------------------------------------------------
 
 def handle_vote_list(**kwargs: Any) -> dict[str, Any]:
     """List voting sessions."""
@@ -343,13 +353,15 @@ def handle_vote_list(**kwargs: Any) -> dict[str, Any]:
             s = _json_loads(meta.read_text(encoding="utf-8"))
             if status_filter and s.get("status") != status_filter:
                 continue
-            sessions.append({
-                "id": s["id"],
-                "problem": s.get("problem", "")[:100],
-                "status": s.get("status"),
-                "vote_count": len(s.get("votes", [])),
-                "created_at": s.get("created_at"),
-            })
+            sessions.append(
+                {
+                    "id": s["id"],
+                    "problem": s.get("problem", "")[:100],
+                    "status": s.get("status"),
+                    "vote_count": len(s.get("votes", [])),
+                    "created_at": s.get("created_at"),
+                }
+            )
         except (json.JSONDecodeError, OSError, KeyError):
             continue
         if len(sessions) >= limit:

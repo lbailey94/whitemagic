@@ -57,7 +57,9 @@ In the shadows, truth is found.
             categories = call.state_vector.get("categories")
             tracker = get_tracker()
             # Ensure categories is a list to satisfy Mypy
-            summary = tracker.get_summary(categories if isinstance(categories, list) else [])
+            summary = tracker.get_summary(
+                categories if isinstance(categories, list) else []
+            )
             return {
                 "mansion": self.mansion.name,
                 "garden": self.garden,
@@ -72,6 +74,7 @@ In the shadows, truth is found.
                 from whitemagic.core.intelligence.synthesis.kaizen_engine import (
                     get_kaizen_engine,
                 )
+
                 kaizen = get_kaizen_engine()
                 report = kaizen.analyze()
                 return {
@@ -79,11 +82,16 @@ In the shadows, truth is found.
                     "garden": self.garden,
                     "action": "kaizen_analyze",
                     "total_proposals": len(report.proposals),
-                    "high_impact": len([p for p in report.proposals if p.impact == "high"]),
-                    "auto_fixable": len([p for p in report.proposals if p.auto_fixable]),
-                    "proposals": [{"title": p.title, "impact": p.impact, "category": p.category}
-                                  for p in report.proposals[:
-                                      10]],
+                    "high_impact": len(
+                        [p for p in report.proposals if p.impact == "high"]
+                    ),
+                    "auto_fixable": len(
+                        [p for p in report.proposals if p.auto_fixable]
+                    ),
+                    "proposals": [
+                        {"title": p.title, "impact": p.impact, "category": p.category}
+                        for p in report.proposals[:10]
+                    ],
                     "metrics": report.metrics,
                     "status": "introspected",
                 }
@@ -94,6 +102,7 @@ In the shadows, truth is found.
             try:
                 from whitemagic.config import PROJECT_ROOT
                 from whitemagic.optimization.polyglot_router import get_router
+
                 router = get_router()
 
                 pattern = call.state_vector.get("pattern", "TODO")
@@ -124,6 +133,7 @@ In the shadows, truth is found.
                 from whitemagic.core.intelligence.synthesis.kaizen_engine import (
                     get_kaizen_engine,
                 )
+
                 kaizen = get_kaizen_engine()
                 results = kaizen.apply_auto_fixes()  # type: ignore[assignment]
                 return {
@@ -146,6 +156,7 @@ In the shadows, truth is found.
             "introspection_depth": "deep",
             "status": "reflective",
         }
+
 
 class WillowGana(BaseGana):
     """Willow (柳 Liu) - Flexibility.
@@ -180,6 +191,7 @@ Softness overcomes hardness.
             "status": "flowing",
         }
 
+
 class StarGana(BaseGana):
     """Star (星 Xing) - Illumination.
 
@@ -208,11 +220,13 @@ Light reveals what is hidden.
 
         if call.task == "prat_get_context":
             from whitemagic.cascade.context_synthesizer import get_context_synthesizer
+
             synth = get_context_synthesizer()
             ctx = synth.gather()
             # Convert dataclass to dict for JSON serialization if needed, or return object
             # UnifiedContext is a dataclass
             from dataclasses import asdict
+
             return {
                 "mansion": self.mansion.name,
                 "garden": self.garden,
@@ -229,6 +243,7 @@ Light reveals what is hidden.
             # Real prat_invoke logic should be here.
             # It usually calls adaptive_portal.
             from whitemagic.cascade.adaptive_portal import get_adaptive_portal
+
             portal = get_adaptive_portal()
 
             target = call.state_vector.get("target_tool")
@@ -258,6 +273,7 @@ Light reveals what is hidden.
             "status": "radiant",
         }
 
+
 class ExtendedNetGana(BaseGana):
     """Extended Net (张 Zhang) - Connectivity.
 
@@ -286,7 +302,12 @@ Everything is connected to everything else.
     async def _execute_core(self, call: GanaCall, morphed_template: str) -> Any:
         """Execute networking/resonance logic."""
         # CoreAccessLayer-powered operations (v14+)
-        if call.task in ["hybrid_recall", "find_bridges", "walk_associations", "association_stats"]:
+        if call.task in [
+            "hybrid_recall",
+            "find_bridges",
+            "walk_associations",
+            "association_stats",
+        ]:
             return self._execute_core_access(call)
 
         from whitemagic.core.resonance.gan_ying import (
@@ -307,7 +328,9 @@ Everything is connected to everything else.
 
                 event = ResonanceEvent(
                     source=source,
-                    event_type=EventType(event_type) if event_type in EventType.__members__ else EventType.SYSTEM_STATE_CHANGE,
+                    event_type=EventType(event_type)
+                    if event_type in EventType.__members__
+                    else EventType.SYSTEM_STATE_CHANGE,
                     data=data,
                     timestamp=datetime.now(),
                 )
@@ -327,17 +350,22 @@ Everything is connected to everything else.
                     "mansion": self.mansion.name,
                     "garden": self.garden,
                     "action": "monitor",
-                    "bus_active": True, # Sync bus is always "active"
+                    "bus_active": True,  # Sync bus is always "active"
                     "subscriber_count": len(bus._listeners),
                     "status": "connected",
                 }
 
         # UnifiedPatternAPI integration
-        if call.task in ["search_all_patterns", "find_pattern_correlations", "get_pattern_stats"]:
+        if call.task in [
+            "search_all_patterns",
+            "find_pattern_correlations",
+            "get_pattern_stats",
+        ]:
             try:
                 from whitemagic.core.intelligence.synthesis.unified_patterns import (
                     get_pattern_api,
                 )
+
                 api = get_pattern_api()
 
                 if call.task == "search_all_patterns":
@@ -346,18 +374,30 @@ Everything is connected to everything else.
                     min_confidence = call.state_vector.get("min_confidence", 0.5)
 
                     import asyncio
+
                     loop = asyncio.get_running_loop()
                     # Run search in executor to prevent blocking
-                    patterns = await loop.run_in_executor(None, lambda: api.search(query=query, engines=engines, min_confidence=min_confidence))
+                    patterns = await loop.run_in_executor(
+                        None,
+                        lambda: api.search(
+                            query=query, engines=engines, min_confidence=min_confidence
+                        ),
+                    )
                     return {
                         "mansion": self.mansion.name,
                         "garden": self.garden,
                         "action": "search_patterns",
                         "pattern_count": len(patterns),
-                        "patterns": [{"id": p.id, "type": p.pattern_type, "title": p.title,
-                                     "source": p.source_engine, "confidence": p.confidence}
-                                    for p in patterns[:
-                                        10]],
+                        "patterns": [
+                            {
+                                "id": p.id,
+                                "type": p.pattern_type,
+                                "title": p.title,
+                                "source": p.source_engine,
+                                "confidence": p.confidence,
+                            }
+                            for p in patterns[:10]
+                        ],
                         "status": "connected",
                     }
 
@@ -396,6 +436,7 @@ Everything is connected to everything else.
         """Execute CoreAccessLayer-powered operations (v14+)."""
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
+
             cal = get_core_access()
 
             if call.task == "hybrid_recall":
@@ -428,7 +469,9 @@ Everything is connected to everything else.
                 memory_ids = call.state_vector.get("memory_ids", [])
                 depth = call.state_vector.get("depth", 2)
                 min_strength = call.state_vector.get("min_strength", 0.3)
-                nodes = cal.query_association_subgraph(memory_ids, depth=depth, min_strength=min_strength)
+                nodes = cal.query_association_subgraph(
+                    memory_ids, depth=depth, min_strength=min_strength
+                )
                 return {
                     "mansion": self.mansion.name,
                     "garden": self.garden,
@@ -463,6 +506,7 @@ Everything is connected to everything else.
             "status": "connected",
         }
 
+
 class WingsGana(BaseGana):
     """Wings (翼 Yi) - Expansion.
 
@@ -495,6 +539,7 @@ Flight requires balance and thrust.
                 from whitemagic.core.intelligence.synthesis.sub_clustering import (
                     get_sub_clustering_engine,
                 )
+
                 engine = get_sub_clustering_engine()
 
                 if call.task == "find_large_clusters":
@@ -504,7 +549,9 @@ Flight requires balance and thrust.
                         "garden": self.garden,
                         "action": "find_large_clusters",
                         "large_clusters": len(large),
-                        "clusters": [{"id": c[0][:16], "size": c[1]} for c in large[:5]],
+                        "clusters": [
+                            {"id": c[0][:16], "size": c[1]} for c in large[:5]
+                        ],
                         "status": "surveyed",
                     }
 
@@ -516,7 +563,9 @@ Flight requires balance and thrust.
                         "garden": self.garden,
                         "action": "subdivide_clusters",
                         "clusters_processed": len(results),
-                        "sub_clusters_created": sum(len(subs) for subs in results.values()),
+                        "sub_clusters_created": sum(
+                            len(subs) for subs in results.values()
+                        ),
                         "dry_run": dry_run,
                         "status": "expanded",
                     }
@@ -525,6 +574,7 @@ Flight requires balance and thrust.
 
         try:
             from whitemagic.cascade.advanced_parallel import AdaptiveParallelExecutor
+
             executor = AdaptiveParallelExecutor()
             stats = executor.get_stats()
 
@@ -545,6 +595,7 @@ Flight requires balance and thrust.
             "coverage": "high",
             "status": "flying",
         }
+
 
 class ChariotGana(BaseGana):
     """Chariot (轸 Zhen) - Movement.
@@ -595,14 +646,26 @@ The journey changes the traveler.
                 file_path = call.state_vector.get("file_path")
                 if file_path:
                     mark_read(file_path, call.state_vector.get("notes"))
-                    return {"mansion": self.mansion.name, "garden": self.garden, "action": "mark_read", "file": file_path, "status": "marked"}
+                    return {
+                        "mansion": self.mansion.name,
+                        "garden": self.garden,
+                        "action": "mark_read",
+                        "file": file_path,
+                        "status": "marked",
+                    }
             elif op == "extract_wisdom":
                 content = str(call.state_vector.get("content", ""))
                 source = str(call.state_vector.get("source", "unknown"))
                 wisdom = extract_wisdom(content, source)
                 # Wisdom is a dict with 'chapters' and 'gana' keys
                 count = len(wisdom.get("chapters", []))
-                return {"mansion": self.mansion.name, "garden": self.garden, "action": "extract_wisdom", "wisdom_count": count, "status": "extracted"}
+                return {
+                    "mansion": self.mansion.name,
+                    "garden": self.garden,
+                    "action": "extract_wisdom",
+                    "wisdom_count": count,
+                    "status": "extracted",
+                }
 
         return {
             "mansion": self.mansion.name,
@@ -611,6 +674,7 @@ The journey changes the traveler.
             "payload": "delivered",
             "status": "moving",
         }
+
 
 class AbundanceGana(BaseGana):
     """Abundance (豐 Feng) - Surplus & Regeneration.
@@ -639,9 +703,15 @@ Joy increases when shared. Dreams regenerate what waking depletes.
     async def _execute_core(self, call: GanaCall, morphed_template: str) -> Any:
         """Execute surplus, dream cycle, and regeneration logic."""
         # Dream Cycle status and control (v14+)
-        if call.task in ["dream_status", "dream_cycle", "start_dreaming", "stop_dreaming"]:
+        if call.task in [
+            "dream_status",
+            "dream_cycle",
+            "start_dreaming",
+            "stop_dreaming",
+        ]:
             try:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
                 dc = get_dream_cycle()
 
                 if call.task == "start_dreaming":
@@ -680,8 +750,8 @@ Joy increases when shared. Dreams regenerate what waking depletes.
 
         # Sovereign budget logic
         try:
-            from whitemagic.core.economy.sovereign_market import get_market
             from whitemagic.core.consciousness.token_economy import get_token_economy
+            from whitemagic.core.economy.sovereign_market import get_market
 
             economy = get_token_economy()
             status = economy.get_budget_status()
@@ -697,7 +767,8 @@ Joy increases when shared. Dreams regenerate what waking depletes.
                 "garden": self.garden,
                 "budget_status": status,
                 "market_decision": market_decision,
-                "is_sovereign_action": market_decision["decision"] in ["bid", "throttle"],
+                "is_sovereign_action": market_decision["decision"]
+                in ["bid", "throttle"],
                 "joy_level": "high" if status["status"] == "optimal" else "moderate",
                 "status": "abundant",
             }

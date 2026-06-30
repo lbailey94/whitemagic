@@ -30,6 +30,7 @@ from typing import Any
 @dataclass
 class HoltWintersState:
     """State for Holt-Winters double exponential smoothing."""
+
     level: float
     trend: float
     alpha: float
@@ -37,7 +38,9 @@ class HoltWintersState:
     residuals: list[float] = field(default_factory=list)
 
 
-def holt_winters_fit(series: list[float], alpha: float = 0.3, beta: float = 0.1) -> HoltWintersState:
+def holt_winters_fit(
+    series: list[float], alpha: float = 0.3, beta: float = 0.1
+) -> HoltWintersState:
     """Fit Holt-Winters double exponential smoothing to a time series."""
     n = len(series)
     if n < 2:
@@ -79,7 +82,9 @@ def holt_winters_forecast(state: HoltWintersState, steps: int) -> dict[str, Any]
     # Estimate forecast error from residuals
     if len(state.residuals) > 1:
         mean_r = sum(state.residuals) / len(state.residuals)
-        variance = sum((r - mean_r) ** 2 for r in state.residuals) / (len(state.residuals) - 1)
+        variance = sum((r - mean_r) ** 2 for r in state.residuals) / (
+            len(state.residuals) - 1
+        )
         sigma = math.sqrt(variance)
     else:
         sigma = 0.1
@@ -143,8 +148,10 @@ class SelfModelForecaster:
         fc["series_mean"] = round(self._mean(values), 6)
         fc["series_std"] = round(self._std(values), 6)
         fc["trend_direction"] = (
-            "increasing" if state.trend > 0.001
-            else "decreasing" if state.trend < -0.001
+            "increasing"
+            if state.trend > 0.001
+            else "decreasing"
+            if state.trend < -0.001
             else "stable"
         )
 
@@ -171,14 +178,17 @@ class SelfModelForecaster:
         for i, r in enumerate(residuals):
             z = abs(r - mu) / sigma if sigma > 0 else 0.0
             if z > threshold:
-                anomalies.append({
-                    "index": i + 1,  # 1-indexed, offset by 1 since residuals start at t=2
-                    "value": round(values[i + 1], 6),
-                    "expected": round(values[i + 1] - r, 6),
-                    "residual": round(r, 6),
-                    "z_score": round(z, 4),
-                    "direction": "above" if r > 0 else "below",
-                })
+                anomalies.append(
+                    {
+                        "index": i
+                        + 1,  # 1-indexed, offset by 1 since residuals start at t=2
+                        "value": round(values[i + 1], 6),
+                        "expected": round(values[i + 1] - r, 6),
+                        "residual": round(r, 6),
+                        "z_score": round(z, 4),
+                        "direction": "above" if r > 0 else "below",
+                    }
+                )
 
         return {
             "anomalies": anomalies,
@@ -220,13 +230,15 @@ class SelfModelForecaster:
             for j in range(i + 1, n):
                 r = corr[i][j]
                 if abs(r) > 0.7:
-                    strong.append({
-                        "metric_a": names[i],
-                        "metric_b": names[j],
-                        "correlation": round(r, 4),
-                        "relationship": "positive" if r > 0 else "negative",
-                        "strength": "very_strong" if abs(r) > 0.9 else "strong",
-                    })
+                    strong.append(
+                        {
+                            "metric_a": names[i],
+                            "metric_b": names[j],
+                            "correlation": round(r, 4),
+                            "relationship": "positive" if r > 0 else "negative",
+                            "strength": "very_strong" if abs(r) > 0.9 else "strong",
+                        }
+                    )
 
         return {
             "metric_names": names,
@@ -276,23 +288,29 @@ class SelfModelForecaster:
 
                 # Alert thresholds (domain-specific)
                 if name == "energy" and trend == "decreasing" and last_val < 0.4:
-                    alerts.append({
-                        "metric": name,
-                        "alert": "low_energy_declining",
-                        "severity": "warning",
-                    })
+                    alerts.append(
+                        {
+                            "metric": name,
+                            "alert": "low_energy_declining",
+                            "severity": "warning",
+                        }
+                    )
                 elif name == "error_rate" and trend == "increasing" and last_val > 0.2:
-                    alerts.append({
-                        "metric": name,
-                        "alert": "error_rate_rising",
-                        "severity": "critical",
-                    })
+                    alerts.append(
+                        {
+                            "metric": name,
+                            "alert": "error_rate_rising",
+                            "severity": "critical",
+                        }
+                    )
                 elif name == "karma_debt" and trend == "increasing" and last_val > 0.5:
-                    alerts.append({
-                        "metric": name,
-                        "alert": "karma_debt_growing",
-                        "severity": "warning",
-                    })
+                    alerts.append(
+                        {
+                            "metric": name,
+                            "alert": "karma_debt_growing",
+                            "severity": "warning",
+                        }
+                    )
 
         return {
             "forecasts": forecasts,

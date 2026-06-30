@@ -63,7 +63,9 @@ class TestQuantizedHRREngine(unittest.TestCase):
 
         # Should be positively correlated (not perfect due to quantization)
         corr = np.corrcoef(a_float, recovered_float)[0, 1]
-        self.assertGreater(corr, 0.0, "Unbind should recover a correlated version of original")
+        self.assertGreater(
+            corr, 0.0, "Unbind should recover a correlated version of original"
+        )
 
     def test_bind_is_modular_addition(self) -> None:
         """Verify binding uses modular arithmetic."""
@@ -100,7 +102,9 @@ class TestQuantizedHRREngine(unittest.TestCase):
         # Maximum distance (K/2 apart) should be orthogonal (~0.0)
         c = np.full(64, 8, dtype=np.uint8)  # Level 8 = maximum distance from 0 for K=16
         sim_opposite = self.engine.similarity(a, c)
-        self.assertLessEqual(sim_opposite, 0.01, "Maximum-distance levels should be orthogonal (~0.0)")
+        self.assertLessEqual(
+            sim_opposite, 0.01, "Maximum-distance levels should be orthogonal (~0.0)"
+        )
 
     def test_relation_vectors_exist(self) -> None:
         """Test that canonical relation vectors are initialized."""
@@ -122,7 +126,9 @@ class TestQuantizedHRREngine(unittest.TestCase):
         orig_float = self.engine._to_float(self.engine._to_quantized(embedding))
         recovered_float = self.engine._to_float(recovered)
         corr = np.corrcoef(orig_float, recovered_float)[0, 1]
-        self.assertGreater(corr, -0.1, "Project/inverse_project should not be anti-correlated")
+        self.assertGreater(
+            corr, -0.1, "Project/inverse_project should not be anti-correlated"
+        )
 
     def test_superpose(self) -> None:
         """Test superposition of multiple vectors."""

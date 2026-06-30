@@ -53,7 +53,7 @@ class LazyGroup(click.Group):
                 # Loader can return None or the group itself
                 if result is not None and result is not self:
                     # If loader returns a different object, copy its commands
-                    if hasattr(result, 'commands'):
+                    if hasattr(result, "commands"):
                         for name, cmd in result.commands.items():
                             self.add_command(cmd, name=name)
             except ImportError as e:
@@ -95,6 +95,7 @@ def _create_missing_dep_command(error_msg: str) -> click.Command:
     This is the intended runtime behavior when an extra (e.g. 'mcp', 'api') is
     not installed — not a development stub.
     """
+
     @click.command(name="unavailable")
     @click.pass_context
     def unavailable_cmd(ctx):
@@ -109,6 +110,7 @@ def _create_missing_dep_command(error_msg: str) -> click.Command:
 
 def _make_missing_dep_callback(error_msg: str) -> Callable:
     """Create a callback function that shows missing dependency error."""
+
     def callback(*args, **kwargs):
         """Print a missing-dependency error to stderr and raise ClickException."""
         click.echo("ERROR: This command requires additional dependencies.", err=True)
@@ -133,15 +135,19 @@ def optional_command(name: str, extra: str | None = None):
             app = GalaxyTUI()
             app.run()
     """
+
     def decorator(func: Callable) -> click.Command:
         """Wrap func in a Click command that converts ImportError into a friendly hint."""
+
         @click.command(name=name)
         @click.pass_context
         def wrapper(ctx, *args, **kwargs):
             try:
                 return func(*args, **kwargs)
             except ImportError as e:
-                click.echo(f"ERROR: This command requires 'whitemagic[{extra}]'", err=True)
+                click.echo(
+                    f"ERROR: This command requires 'whitemagic[{extra}]'", err=True
+                )
                 click.echo(f"Install: pip install whitemagic[{extra}]", err=True)
                 if extra:
                     click.echo(f"Missing: {e}", err=True)

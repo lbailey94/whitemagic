@@ -207,24 +207,28 @@ class ContextSynthesizer:
 
         try:
             from whitemagic.zodiac.zodiac_round_cycle import get_zodiacal_round
+
             self._zodiacal_round = get_zodiacal_round()
         except ImportError as e:
             logger.warning("ZodiacalRound not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.consciousness.coherence import get_coherence_metric
+
             self._coherence_metric = get_coherence_metric()
         except ImportError as e:
             logger.warning("CoherenceMetric not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.gardens.wisdom.wu_xing import get_wu_xing
+
             self._wu_xing = get_wu_xing()
         except ImportError as e:
             logger.warning("WuXing not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self._gan_ying_bus = get_bus()
         except ImportError as e:
             logger.warning("GanYing bus not available: %s", e, exc_info=True)
@@ -455,7 +459,9 @@ class ContextSynthesizer:
         """Get total memory count from SQLite backend."""
         try:
             import sqlite3
+
             from whitemagic.config.paths import WM_ROOT
+
             db_path = WM_ROOT / "memory" / "whitemagic.db"
             if db_path.exists():
                 conn = sqlite3.connect(str(db_path))
@@ -465,6 +471,7 @@ class ContextSynthesizer:
         except Exception:
             pass
         return 0
+
     def _gather_depth_state(self, ctx: UnifiedContext) -> None:
         """Gather depth gauge + time master sync state."""
         try:
@@ -472,6 +479,7 @@ class ContextSynthesizer:
                 get_depth_gauge,
                 sync_with_time_master,
             )
+
             gauge = get_depth_gauge()
             ctx.depth_layer = gauge.current_layer.value
             try:
@@ -488,10 +496,13 @@ class ContextSynthesizer:
         """Gather flow state with auto-detected indicators."""
         try:
             from whitemagic.gardens.presence.flow_state import get_flow_state
+
             flow = get_flow_state()
             # Auto-detect from session activity
             import time as _time
+
             from whitemagic.tools.session_state import get_session_start_time
+
             start = get_session_start_time()
             session_min = (_time.time() - start) / 60 if start else 0.0
             # Use coherence score we just gathered
@@ -509,7 +520,10 @@ class ContextSynthesizer:
     def _gather_citta_continuity(self, ctx: UnifiedContext) -> None:
         """Gather citta stream continuity — cross-session temporal context."""
         try:
-            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+            from whitemagic.core.consciousness.citta_stream import (
+                get_continuity_context,
+            )
+
             cont = get_continuity_context()
             ctx.citta_session_count = cont.get("session_count", 0)
             ctx.citta_time_gap = cont.get("time_gap_human", "")
@@ -524,6 +538,7 @@ class ContextSynthesizer:
         """Gather citta cycle state — recursive stream summary."""
         try:
             from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
             cycle = get_citta_cycle()
             summary = cycle.get_cycle_summary()
             ctx.citta_cycle_length = summary.get("stream_length", 0)
@@ -532,7 +547,6 @@ class ContextSynthesizer:
             ctx.citta_emotional_coloring = ec.get("dominant", "neutral")
         except Exception as e:
             logger.debug("Citta cycle not available: %s", e, exc_info=True)
-
 
     def _gather_session_state(self, ctx: UnifiedContext) -> None:
         """Gather session state."""
@@ -563,6 +577,7 @@ class ContextSynthesizer:
         """Gather token economy state — API vs local compute distribution."""
         try:
             from whitemagic.core.consciousness.token_economy import get_token_tracker
+
             tracker = get_token_tracker()
             budget = tracker.get_budget_status()
             ctx.token_budget_used = budget.get("usage_percent", 0.0) / 100.0
@@ -575,6 +590,7 @@ class ContextSynthesizer:
         """Gather telemetry and machine-time calibration state."""
         try:
             from whitemagic.core.monitoring.telemetry import get_telemetry
+
             summary = get_telemetry().get_summary()
             ctx.telemetry_total_calls = summary.get("total_calls", 0)
             ctx.telemetry_p50_ms = summary.get("p50_latency_ms", 0.0)
@@ -583,7 +599,10 @@ class ContextSynthesizer:
         except Exception as e:
             logger.debug("Telemetry state not available: %s", e, exc_info=True)
         try:
-            from whitemagic.core.consciousness.machine_time import get_machine_time_estimator
+            from whitemagic.core.consciousness.machine_time import (
+                get_machine_time_estimator,
+            )
+
             crps_summary = get_machine_time_estimator().get_crps_summary()
             ctx.machine_time_predictions = crps_summary.get("count", 0)
             ctx.machine_time_mean_crps = crps_summary.get("mean_crps", 0.0) or 0.0
@@ -598,22 +617,22 @@ class ContextSynthesizer:
 🔮 UNIFIED CONTEXT SUMMARY
 ==========================
 
-🌸 Gardens: {', '.join(ctx.active_gardens) if ctx.active_gardens else 'None active'}
-   Primary: {ctx.primary_garden or 'Auto-detect'}
+🌸 Gardens: {", ".join(ctx.active_gardens) if ctx.active_gardens else "None active"}
+   Primary: {ctx.primary_garden or "Auto-detect"}
 
 ☯️ Wu Xing: {ctx.wu_xing_phase.upper()} phase
-   Qualities: {', '.join(ctx.wu_xing_qualities)}
+   Qualities: {", ".join(ctx.wu_xing_qualities)}
    Generating → {ctx.wu_xing_generating}
 
 🌟 Zodiac: {ctx.zodiac_position.upper()} ({ctx.zodiac_element}/{ctx.zodiac_modality})
    Intention: {ctx.phase_intention}
    Cycle: {ctx.cycle_count}
 
-⚖️ Yin-Yang: {ctx.yin_yang_balance:+.1f} ({'yang' if ctx.yin_yang_balance > 0 else 'yin'} dominant)
+⚖️ Yin-Yang: {ctx.yin_yang_balance:+.1f} ({"yang" if ctx.yin_yang_balance > 0 else "yin"} dominant)
    Burnout risk: {ctx.burnout_risk:.0%}
 
 🧠 Coherence: {ctx.coherence_level} ({ctx.coherence_score:.0%})
-   Dimensions: {', '.join(f'{d}={s:.0%}' for d, s in ctx.coherence_dimensions.items() if s < 0.7) or 'all healthy'}
+   Dimensions: {", ".join(f"{d}={s:.0%}" for d, s in ctx.coherence_dimensions.items() if s < 0.7) or "all healthy"}
 
 💰 Token Economy: {ctx.token_budget_used:.0%} budget used, {ctx.token_local_ratio:.0%} local
    Operations: {ctx.token_total_operations}
@@ -622,7 +641,7 @@ class ContextSynthesizer:
    Throughput: {ctx.telemetry_throughput_cps:.1f} cps, CRPS={ctx.machine_time_mean_crps:.6f}
 
 🌊 Depth: {ctx.depth_layer.upper()} (sync: {ctx.depth_in_sync}, {ctx.time_advantage:.1f}x)
-   Flow: {'IN FLOW' if ctx.in_flow else 'not in flow'} (score: {ctx.flow_score:.2f}, indicators: {', '.join(ctx.flow_indicators) or 'none'})
+   Flow: {"IN FLOW" if ctx.in_flow else "not in flow"} (score: {ctx.flow_score:.2f}, indicators: {", ".join(ctx.flow_indicators) or "none"})
 
 🔄 Citta Stream: {ctx.citta_session_count} sessions, {ctx.citta_cycle_length} cycle entries
    Last coherence: {ctx.citta_last_coherence:.2f}, emotional tone: {ctx.citta_emotional_tone}

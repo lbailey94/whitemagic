@@ -43,6 +43,7 @@ def _get_gan_ying():
     if _gan_ying_bus is None:
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import get_bus
+
             _gan_ying_bus = get_bus()
         except ImportError:
             _gan_ying_bus = False
@@ -54,6 +55,7 @@ def _get_yy_tracker():
     if _yy_tracker is None:
         try:
             from whitemagic.harmony.yin_yang_tracker import YinYangBalanceTracker
+
             _yy_tracker = YinYangBalanceTracker()
         except ImportError:
             _yy_tracker = False
@@ -65,6 +67,7 @@ def _get_zodiacal():
     if _zodiacal is None:
         try:
             from whitemagic.zodiac.zodiac_round_cycle import ZodiacalRound
+
             _zodiacal = ZodiacalRound()
         except ImportError:
             _zodiacal = False
@@ -76,6 +79,7 @@ def _get_wu_xing():
     if _wu_xing is None:
         try:
             from whitemagic.wu_xing import WuXingEngine
+
             _wu_xing = WuXingEngine()
         except ImportError:
             _wu_xing = False
@@ -87,6 +91,7 @@ def _get_context_synth():
     if _context_synth is None:
         try:
             from whitemagic.cascade.context_synthesizer import ContextSynthesizer
+
             _context_synth = ContextSynthesizer()
         except ImportError:
             _context_synth = False
@@ -122,6 +127,7 @@ ZODIAC_TO_ACTION = {
 @dataclass
 class CycleState:
     """Snapshot of the unified cycle state."""
+
     cycle_number: int = 0
     zodiacal_phase: str = "UNKNOWN"
     wu_xing_element: str = "unknown"
@@ -137,6 +143,7 @@ class CycleState:
 @dataclass
 class CycleMetrics:
     """Accumulated metrics across cycle rounds."""
+
     total_cycles: int = 0
     total_rounds: int = 0
     yin_phases: int = 0
@@ -195,6 +202,7 @@ class CycleEngine:
                 state.burnout_risk = summary.get("burnout_risk", 0.0)
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Zodiacal phase — ZodiacalRound stores phase in state.current_phase enum
@@ -213,6 +221,7 @@ class CycleEngine:
                 )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Wu Xing element — WuXingEngine uses get_current_cycle()
@@ -226,7 +235,9 @@ class CycleEngine:
                     # Fallback: derive from cycle history
                     hist = self.wu_xing.cycle_history
                     if hist:
-                        state.wu_xing_element = str(hist[-1].get("element", "wood")).lower()
+                        state.wu_xing_element = str(
+                            hist[-1].get("element", "wood")
+                        ).lower()
                     else:
                         state.wu_xing_element = "wood"  # default starting element
                 state.campaign_phase = ELEMENT_TO_PHASE.get(
@@ -234,19 +245,24 @@ class CycleEngine:
                 )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Context synthesis
         if self.synth:
             try:
-                ctx = self.synth.synthesize() if hasattr(self.synth, "synthesize") else {}
+                ctx = (
+                    self.synth.synthesize() if hasattr(self.synth, "synthesize") else {}
+                )
                 if hasattr(ctx, "__dict__"):
                     state.metrics["context"] = {
-                        k: str(v)[:100] for k, v in vars(ctx).items()
+                        k: str(v)[:100]
+                        for k, v in vars(ctx).items()
                         if not k.startswith("_")
                     }
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         self.state = state
@@ -265,21 +281,28 @@ class CycleEngine:
             try:
                 result = self.zodiac.advance_phase()
                 if result:
-                    state.events_emitted.append(f"zodiac_advance:{state.zodiacal_phase}")
-                    self.metrics.emergent_events.append({
-                        "type": "zodiac_advance",
-                        "phase": state.zodiacal_phase,
-                        "cycle": self._cycle_count,
-                        "ts": state.timestamp,
-                    })
+                    state.events_emitted.append(
+                        f"zodiac_advance:{state.zodiacal_phase}"
+                    )
+                    self.metrics.emergent_events.append(
+                        {
+                            "type": "zodiac_advance",
+                            "phase": state.zodiacal_phase,
+                            "cycle": self._cycle_count,
+                            "ts": state.timestamp,
+                        }
+                    )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Record yin-yang activity based on campaign phase
         if self.yy:
             try:
-                category = "yang" if state.campaign_phase in ("action", "verify") else "yin"
+                category = (
+                    "yang" if state.campaign_phase in ("action", "verify") else "yin"
+                )
                 if category == "yang":
                     self.metrics.yang_phases += 1
                 else:
@@ -287,6 +310,7 @@ class CycleEngine:
                 self.yy.record_activity(category, f"cycle_{self._cycle_count}")
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Track wu_xing element usage
@@ -315,7 +339,9 @@ class CycleEngine:
             # Wu Xing element event
             wu_xing_event = ResonanceEvent(
                 source="cycle_engine.wu_xing",
-                event_type=EventType.ELEMENT_SHIFT if hasattr(EventType, 'ELEMENT_SHIFT') else EventType.SYSTEM_HEARTBEAT,
+                event_type=EventType.ELEMENT_SHIFT
+                if hasattr(EventType, "ELEMENT_SHIFT")
+                else EventType.SYSTEM_HEARTBEAT,
                 data={
                     "element": state.wu_xing_element,
                     "campaign_phase": state.campaign_phase,
@@ -329,7 +355,9 @@ class CycleEngine:
             # Zodiac phase event
             zodiac_event = ResonanceEvent(
                 source="cycle_engine.zodiac",
-                event_type=EventType.ZODIAC_PHASE_CHANGE if hasattr(EventType, 'ZODIAC_PHASE_CHANGE') else EventType.SYSTEM_HEARTBEAT,
+                event_type=EventType.ZODIAC_PHASE_CHANGE
+                if hasattr(EventType, "ZODIAC_PHASE_CHANGE")
+                else EventType.SYSTEM_HEARTBEAT,
                 data={
                     "zodiacal_phase": state.zodiacal_phase,
                     "suggested_action": state.suggested_action,
@@ -343,7 +371,9 @@ class CycleEngine:
             # Yin-Yang balance event
             yy_event = ResonanceEvent(
                 source="cycle_engine.yin_yang",
-                event_type=EventType.BALANCE_SHIFT if hasattr(EventType, 'BALANCE_SHIFT') else EventType.SYSTEM_HEARTBEAT,
+                event_type=EventType.BALANCE_SHIFT
+                if hasattr(EventType, "BALANCE_SHIFT")
+                else EventType.SYSTEM_HEARTBEAT,
                 data={
                     "balance": state.yin_yang_balance,
                     "burnout_risk": state.burnout_risk,
@@ -352,10 +382,13 @@ class CycleEngine:
                 confidence=0.9,
             )
             self.gan_ying.emit(yy_event, cascade=True)
-            state.events_emitted.append(f"gan_ying:yin_yang:balance={state.yin_yang_balance:.2f}")
+            state.events_emitted.append(
+                f"gan_ying:yin_yang:balance={state.yin_yang_balance:.2f}"
+            )
 
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     def run_rounds(self, n_rounds: int = 3, callback=None) -> CycleMetrics:
@@ -381,6 +414,7 @@ class CycleEngine:
                         callback(round_num, phase_num, state)
                     except Exception as e:
                         import logging
+
                         logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         self.metrics.elapsed_s = time.monotonic() - self.metrics.start_time
@@ -394,6 +428,7 @@ class CycleEngine:
                 return cast(bool, summary.get("burnout_risk", 0.0) > 0.7)
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return False
 

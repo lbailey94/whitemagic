@@ -15,6 +15,7 @@ Portfolio balance target:
   Stagnation → increase rajasic allocation
   Chaos/instability → increase sattvic allocation
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from typing import Any
 
 class Guna(Enum):
     """Three gunas for improvement classification."""
+
     SATTVIC = "sattvic"  # Clarity, harmony
     RAJASIC = "rajasic"  # Action, energy
     TAMASIC = "tamasic"  # Inertia, dissolution
@@ -34,19 +36,45 @@ GUNA_CONFIG: dict[Guna, dict[str, Any]] = {
         "description": "Documentation, naming, organization, quality",
         "prior_mean": 0.8,
         "prior_variance": 0.05,
-        "keywords": ["doc", "naming", "organize", "quality", "clean", "clarify", "standardize"],
+        "keywords": [
+            "doc",
+            "naming",
+            "organize",
+            "quality",
+            "clean",
+            "clarify",
+            "standardize",
+        ],
     },
     Guna.RAJASIC: {
         "description": "New features, acceleration, expansion, optimization",
         "prior_mean": 0.5,
         "prior_variance": 0.2,
-        "keywords": ["feature", "accelerat", "optim", "new", "expand", "performance", "speed", "parallel"],
+        "keywords": [
+            "feature",
+            "accelerat",
+            "optim",
+            "new",
+            "expand",
+            "performance",
+            "speed",
+            "parallel",
+        ],
     },
     Guna.TAMASIC: {
         "description": "Debt reduction, deprecation, cleanup, removal",
         "prior_mean": 0.6,
         "prior_variance": 0.05,
-        "keywords": ["debt", "deprecat", "cleanup", "remove", "delete", "archive", "purge", "strip"],
+        "keywords": [
+            "debt",
+            "deprecat",
+            "cleanup",
+            "remove",
+            "delete",
+            "archive",
+            "purge",
+            "strip",
+        ],
     },
 }
 
@@ -54,6 +82,7 @@ GUNA_CONFIG: dict[Guna, dict[str, Any]] = {
 @dataclass
 class GunaPortfolio:
     """Portfolio allocation across gunas."""
+
     sattvic: float = 0.33
     rajasic: float = 0.34
     tamasic: float = 0.33
@@ -68,7 +97,11 @@ class GunaPortfolio:
     @property
     def dominant(self) -> Guna:
         """Return the dominant guna in the portfolio."""
-        values = {Guna.SATTVIC: self.sattvic, Guna.RAJASIC: self.rajasic, Guna.TAMASIC: self.tamasic}
+        values = {
+            Guna.SATTVIC: self.sattvic,
+            Guna.RAJASIC: self.rajasic,
+            Guna.TAMASIC: self.tamasic,
+        }
         return max(values, key=values.get)  # type: ignore[arg-type]
 
 

@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 # Rust acceleration (S026 VC6)
 try:
     import whitemagic_rust as _wr
+
     _rust_holographic: Any = getattr(_wr, "holographic_encoder_5d", None)
     RUST_HOLOGRAPHIC_AVAILABLE = _rust_holographic is not None
 except ImportError:
@@ -63,6 +64,7 @@ class HolographicCoordinate:
     """HolographicCoordinate: holographic coordinate.
 
     Value object: equality and repr are field-based."""
+
     x: float  # Logic <-> Emotion
     y: float  # Micro <-> Macro
     z: float  # Time
@@ -91,12 +93,10 @@ class HolographicCoordinate:
         """
         return {"x": self.x, "y": self.y, "z": self.z, "w": self.w, "v": self.v}
 
+
 class CoordinateEncoder:
     """Encodes memories into holographic coordinates (v2.0)."""
 
-    # --- Semantic Anchors (v2.2 Enhancement) ---
-    # These IDs represent distant poles in the current embedding space to maximize coordinate spread.
-    # Logic/Discovery vs Raw/Benchmark
     ANCHOR_LOGIC_ID = "3c9afb8e-bca0-4ef1-bc1d-64dd5595b93f"
     ANCHOR_EMOTION_ID = "33c01076f2580558"
     # Macro/Reflection vs Micro/Benchmark
@@ -107,7 +107,7 @@ class CoordinateEncoder:
         self._cache: dict[str, HolographicCoordinate] = {}
         self._garden_bias_enabled = True
         self._embedding_engine: Any | None = None
-        self._anchor_embeddings: dict[str, Any] = {} # Now stores list[float]
+        self._anchor_embeddings: dict[str, Any] = {}  # Now stores list[float]
         self._mean_vector: list[float] | None = None
         self._pca_components: dict[str, list[float]] | None = None
         self._load_mean_vector()
@@ -118,12 +118,15 @@ class CoordinateEncoder:
         import json
         import os
         from pathlib import Path
+
         # Use project-relative path
         project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
         path = project_root / "data/semantic_mean_vector.json"
         # Fallback to archives if not found
         if not path.exists():
-            path = Path("/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/core_system/data/semantic_mean_vector.json")
+            path = Path(
+                "/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/core_system/data/semantic_mean_vector.json"
+            )
         if os.path.exists(path):
             try:
                 with open(path) as f:
@@ -136,12 +139,15 @@ class CoordinateEncoder:
         import json
         import os
         from pathlib import Path
+
         # Use project-relative path
         project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
         path = project_root / "data/semantic_pca_components.json"
         # Fallback to archives if not found
         if not path.exists():
-            path = Path("/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/core_system/data/semantic_pca_components.json")
+            path = Path(
+                "/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/core_system/data/semantic_pca_components.json"
+            )
         if os.path.exists(path):
             try:
                 with open(path) as f:
@@ -163,9 +169,12 @@ class CoordinateEncoder:
         if self._embedding_engine is None:
             try:
                 from whitemagic.core.memory.embeddings import get_embedding_engine
+
                 self._embedding_engine = get_embedding_engine()
             except ImportError:
-                logger.debug("Optional encoder dependency not available; using fallback")
+                logger.debug(
+                    "Optional encoder dependency not available; using fallback"
+                )
         return self._embedding_engine
 
     def _get_anchor_embedding(self, name: str, anchor_id: str) -> Any | None:
@@ -199,6 +208,7 @@ class CoordinateEncoder:
             return 0.0
 
         import math
+
         # Center the memory vector
         v = self._center_vector(mem_vec)
 
@@ -231,7 +241,6 @@ class CoordinateEncoder:
             """
             return [x - y for x, y in zip(v1, v2)]
 
-        # --- PCA Projection Path (Preferred) ---
         if self._pca_components:
             pc_vec = self._pca_components.get(f"{axis}_axis")
             if pc_vec:
@@ -241,7 +250,6 @@ class CoordinateEncoder:
                 # After centering, MiniLM PCA scores are typically in [-0.15, 0.15]
                 return float(max(-1.0, min(1.0, score * 6.0)))
 
-        # --- Anchor-based Fallback ---
         if axis == "x":
             # Axis: Logic (+) <---> Emotion (-)
             p1 = self._get_anchor_embedding("logic", self.ANCHOR_LOGIC_ID)
@@ -282,8 +290,6 @@ class CoordinateEncoder:
 
         return 0.0
 
-    # --- GANA (Galactic Augmented Natural Alignment) ---
-    # High-precision lexical-geometric bridge for 100% recall certification
     GANA_MAP = {
         "degree": "Business Administration",
         "graduated": "Diplomat",
@@ -292,10 +298,12 @@ class CoordinateEncoder:
         "project": "Repository",
         "loyal": "Fidelity",
         "career": "Profession",
-        "research": "Investigation"
+        "research": "Investigation",
     }
 
-    def _apply_gana_alignment(self, text: str, x: float, y: float) -> tuple[float, float]:
+    def _apply_gana_alignment(
+        self, text: str, x: float, y: float
+    ) -> tuple[float, float]:
         """Align coordinates to semantic poles based on keyword detection.
         Re-aligned to 0.5 baseline for DB compatibility.
         """
@@ -305,7 +313,7 @@ class CoordinateEncoder:
                 # Align to the "GANA Pole" (Macroscopic Logic)
                 # Reverted to 0.5 weight to match original ingestion baseline.
                 x = (x * 0.5) + (1.0 * 0.5)
-                y = (y * 0.5) + (0.5 * 0.5) # Shift toward GANA Pole
+                y = (y * 0.5) + (0.5 * 0.5)  # Shift toward GANA Pole
         return x, y
 
     def encode(self, memory: dict[str, Any]) -> HolographicCoordinate:
@@ -327,6 +335,7 @@ class CoordinateEncoder:
                 holographic_encode_single,
                 rust_v131_available,
             )
+
             if rust_v131_available():
                 result = holographic_encode_single(memory)
                 if result:
@@ -356,6 +365,7 @@ class CoordinateEncoder:
         else:
             try:
                 from whitemagic.optimization.polyglot_router import get_router
+
                 router = get_router()
                 current_time = int(time.time())
 
@@ -373,7 +383,11 @@ class CoordinateEncoder:
                         mojo_coords.get("v", v),
                     )
             except Exception as e:
-                logger.debug("Mojo router failed, falling back to Python math: %s", e, exc_info=True)
+                logger.debug(
+                    "Mojo router failed, falling back to Python math: %s",
+                    e,
+                    exc_info=True,
+                )
                 self._routing_active = False
                 # Fall through to Python math
 
@@ -390,12 +404,13 @@ class CoordinateEncoder:
             if garden_bias:
                 x, y, z, w, v = self._blend_with_garden(x, y, z, w, garden_bias, v=v)
 
-        # --- GANA ALIGNMENT (Phase 11 Precision) ---
         x, y = self._apply_gana_alignment(memory, x, y)  # type: ignore[arg-type]
 
         return HolographicCoordinate(x, y, z, w, v)
 
-    def encode_batch(self, memories: list[dict[str, Any]]) -> list[HolographicCoordinate]:
+    def encode_batch(
+        self, memories: list[dict[str, Any]]
+    ) -> list[HolographicCoordinate]:
         """Batch-encode memories into holographic coordinates.
 
         Uses Rust Rayon parallelism when available, falls back to
@@ -405,21 +420,32 @@ class CoordinateEncoder:
         if RUST_HOLOGRAPHIC_AVAILABLE and len(memories) > 1:
             try:
                 import json
+
                 # Prepare memories for Rust (simplified format)
                 rust_memories = []
                 for m in memories:
-                    rust_memories.append({
-                        "id": m.get("id", ""),
-                        "content": str(m.get("content", "")),
-                        "importance": float(m.get("importance") or 0.5),
-                        "access_count": int(m.get("access_count") or 0),
-                        "age_days": self._get_age_days(m),
-                        "galactic_distance": float(m.get("galactic_distance") or 0.5),
-                        "garden": m.get("metadata", {}).get("garden", "") if isinstance(m.get("metadata"), dict) else "",
-                        "tags": list(m.get("tags", [])) if isinstance(m.get("tags"), (list, set)) else [],
-                    })
+                    rust_memories.append(
+                        {
+                            "id": m.get("id", ""),
+                            "content": str(m.get("content", "")),
+                            "importance": float(m.get("importance") or 0.5),
+                            "access_count": int(m.get("access_count") or 0),
+                            "age_days": self._get_age_days(m),
+                            "galactic_distance": float(
+                                m.get("galactic_distance") or 0.5
+                            ),
+                            "garden": m.get("metadata", {}).get("garden", "")
+                            if isinstance(m.get("metadata"), dict)
+                            else "",
+                            "tags": list(m.get("tags", []))
+                            if isinstance(m.get("tags"), (list, set))
+                            else [],
+                        }
+                    )
 
-                result_json = _rust_holographic.holographic_encode_batch(json.dumps(rust_memories))
+                result_json = _rust_holographic.holographic_encode_batch(
+                    json.dumps(rust_memories)
+                )
                 results = json.loads(result_json)
 
                 return [
@@ -433,7 +459,11 @@ class CoordinateEncoder:
                     for r in results
                 ]
             except Exception as e:
-                logger.warning("Rust batch encoding failed: %s, falling back to Python", e, exc_info=True)
+                logger.warning(
+                    "Rust batch encoding failed: %s, falling back to Python",
+                    e,
+                    exc_info=True,
+                )
 
         # Python fallback: encode one at a time
         return [self.encode(m) for m in memories]
@@ -444,7 +474,12 @@ class CoordinateEncoder:
         if timestamp_str:
             try:
                 if isinstance(timestamp_str, str):
-                    for fmt in ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]:
+                    for fmt in [
+                        "%Y-%m-%dT%H:%M:%S.%f",
+                        "%Y-%m-%dT%H:%M:%S",
+                        "%Y-%m-%d %H:%M:%S",
+                        "%Y-%m-%d",
+                    ]:
                         try:
                             ts = datetime.strptime(timestamp_str[:26], fmt)
                             return (datetime.now() - ts).days
@@ -463,29 +498,68 @@ class CoordinateEncoder:
         garden_name = metadata.get("garden")
         if not garden_name:
             tags = memory.get("tags", [])
-            garden_tags = [t for t in tags if t in [
-                "joy", "wisdom", "beauty", "truth", "love", "mystery",
-                "play", "wonder", "connection", "courage", "gratitude",
-                "patience", "grief", "awe", "humor", "healing", "creation",
-                "transformation", "sanctuary", "adventure", "reverence",
-                "stillness", "protection", "presence", "voice", "dharma",
-                "sangha", "practice", "browser",
-            ]]
+            garden_tags = [
+                t
+                for t in tags
+                if t
+                in [
+                    "joy",
+                    "wisdom",
+                    "beauty",
+                    "truth",
+                    "love",
+                    "mystery",
+                    "play",
+                    "wonder",
+                    "connection",
+                    "courage",
+                    "gratitude",
+                    "patience",
+                    "grief",
+                    "awe",
+                    "humor",
+                    "healing",
+                    "creation",
+                    "transformation",
+                    "sanctuary",
+                    "adventure",
+                    "reverence",
+                    "stillness",
+                    "protection",
+                    "presence",
+                    "voice",
+                    "dharma",
+                    "sangha",
+                    "practice",
+                    "browser",
+                ]
+            ]
             if garden_tags:
                 garden_name = garden_tags[0]
 
         if garden_name:
             try:
                 from whitemagic.gardens.base_garden import get_garden_bias
+
                 bias = get_garden_bias(garden_name)
                 if bias:
                     return cast(dict[str, float], bias.to_dict())
             except ImportError:
-                logger.debug("Optional encoder dependency not available; using fallback")
+                logger.debug(
+                    "Optional encoder dependency not available; using fallback"
+                )
         return None
 
-    def _blend_with_garden(self, x: float, y: float, z: float, w: float,
-                          bias: dict[str, float], ratio: float = 0.3, v: float = 0.5) -> tuple:
+    def _blend_with_garden(
+        self,
+        x: float,
+        y: float,
+        z: float,
+        w: float,
+        bias: dict[str, float],
+        ratio: float = 0.3,
+        v: float = 0.5,
+    ) -> tuple:
         """Blend base coordinates with garden bias."""
         blended_x = x * (1 - ratio) + bias.get("x", 0.0) * ratio
         blended_y = y * (1 - ratio) + bias.get("y", 0.0) * ratio
@@ -521,15 +595,53 @@ class CoordinateEncoder:
         score = -0.5 * valence
 
         # Logic keywords (toward +1.0)
-        logic_tags = {"logic", "strategy", "code", "architecture", "plan", "analysis",
-                      "audit", "technical", "system", "algorithm", "debug", "fix",
-                      "implementation", "refactor", "migration", "database", "api",
-                      "sql", "rust", "python", "cli", "schema", "backend"}
+        logic_tags = {
+            "logic",
+            "strategy",
+            "code",
+            "architecture",
+            "plan",
+            "analysis",
+            "audit",
+            "technical",
+            "system",
+            "algorithm",
+            "debug",
+            "fix",
+            "implementation",
+            "refactor",
+            "migration",
+            "database",
+            "api",
+            "sql",
+            "rust",
+            "python",
+            "cli",
+            "schema",
+            "backend",
+        }
 
         # Emotion keywords (toward -1.0)
-        emotion_tags = {"joy", "fear", "anger", "love", "gratitude", "meditation",
-                        "dream", "feeling", "emotion", "heart", "soul", "spirit",
-                        "intuition", "wonder", "awe", "beauty", "sacred", "dharma"}
+        emotion_tags = {
+            "joy",
+            "fear",
+            "anger",
+            "love",
+            "gratitude",
+            "meditation",
+            "dream",
+            "feeling",
+            "emotion",
+            "heart",
+            "soul",
+            "spirit",
+            "intuition",
+            "wonder",
+            "awe",
+            "beauty",
+            "sacred",
+            "dharma",
+        }
 
         tags = set(t.lower() for t in memory.get("tags", []))
         logic_count = len(tags.intersection(logic_tags))
@@ -545,13 +657,52 @@ class CoordinateEncoder:
         title = str(memory.get("title", "")).lower()
         combined = content + " " + title
 
-        logic_keywords = ["code", "function", "class", "import", "error", "bug", "fix",
-                          "algorithm", "database", "sql", "api", "commit", "git",
-                          "version", "module", "test", "debug", "config", "schema",
-                          "migrate", "refactor", "implement", "build", "deploy"]
-        emotion_keywords = ["feel", "heart", "love", "joy", "wonder", "beauty", "soul",
-                            "intuition", "sacred", "meditation", "dream", "gratitude",
-                            "peace", "calm", "insight", "wisdom", "dharma", "spirit"]
+        logic_keywords = [
+            "code",
+            "function",
+            "class",
+            "import",
+            "error",
+            "bug",
+            "fix",
+            "algorithm",
+            "database",
+            "sql",
+            "api",
+            "commit",
+            "git",
+            "version",
+            "module",
+            "test",
+            "debug",
+            "config",
+            "schema",
+            "migrate",
+            "refactor",
+            "implement",
+            "build",
+            "deploy",
+        ]
+        emotion_keywords = [
+            "feel",
+            "heart",
+            "love",
+            "joy",
+            "wonder",
+            "beauty",
+            "soul",
+            "intuition",
+            "sacred",
+            "meditation",
+            "dream",
+            "gratitude",
+            "peace",
+            "calm",
+            "insight",
+            "wisdom",
+            "dharma",
+            "spirit",
+        ]
 
         logic_word_count = sum(1 for kw in logic_keywords if kw in combined)
         emotion_word_count = sum(1 for kw in emotion_keywords if kw in combined)
@@ -562,8 +713,6 @@ class CoordinateEncoder:
         # Add hash-based variation to prevent clustering
         score += self._content_hash_bias(memory, "x")
 
-        # --- Semantic Bias (v2.1 Enhancement) ---
-        # Inject semantic signal from embeddings (0.7 weight)
         semantic_bias = self._calculate_semantic_bias(memory, "x")
         score = (score * 0.2) + (semantic_bias * 0.8)
 
@@ -595,8 +744,18 @@ class CoordinateEncoder:
         # Micro tags
         micro_tags = {"detail", "specific", "log", "debug", "error", "line", "file"}
         # Macro tags
-        macro_tags = {"pattern", "principle", "wisdom", "insight", "overview",
-                      "architecture", "design", "philosophy", "strategy", "era"}
+        macro_tags = {
+            "pattern",
+            "principle",
+            "wisdom",
+            "insight",
+            "overview",
+            "architecture",
+            "design",
+            "philosophy",
+            "strategy",
+            "era",
+        }
 
         tags = set(t.lower() for t in memory.get("tags", []))
         micro_count = len(tags.intersection(micro_tags))
@@ -609,19 +768,38 @@ class CoordinateEncoder:
         content = str(memory.get("content", "")).lower()
 
         # Macro indicators
-        if any(w in content for w in ["universal", "always", "principle", "pattern",
-                                       "architecture", "overview", "era", "phase"]):
+        if any(
+            w in content
+            for w in [
+                "universal",
+                "always",
+                "principle",
+                "pattern",
+                "architecture",
+                "overview",
+                "era",
+                "phase",
+            ]
+        ):
             score += 0.15
         # Micro indicators
-        if any(w in content for w in ["specific", "line", "error", "bug", "file:",
-                                       "at line", "traceback"]):
+        if any(
+            w in content
+            for w in [
+                "specific",
+                "line",
+                "error",
+                "bug",
+                "file:",
+                "at line",
+                "traceback",
+            ]
+        ):
             score -= 0.15
 
         # Hash variation
         score += self._content_hash_bias(memory, "y")
 
-        # --- Semantic Bias (v2.1 Enhancement) ---
-        # Inject semantic signal from embeddings (0.7 weight)
         semantic_bias = self._calculate_semantic_bias(memory, "y")
         score = (score * 0.2) + (semantic_bias * 0.8)
 
@@ -640,8 +818,12 @@ class CoordinateEncoder:
                 # Handle various formats
                 if isinstance(timestamp_str, str):
                     # Try ISO format first
-                    for fmt in ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S",
-                                "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]:
+                    for fmt in [
+                        "%Y-%m-%dT%H:%M:%S.%f",
+                        "%Y-%m-%dT%H:%M:%S",
+                        "%Y-%m-%d %H:%M:%S",
+                        "%Y-%m-%d",
+                    ]:
                         try:
                             ts = datetime.strptime(timestamp_str[:26], fmt)
                             break
@@ -678,7 +860,9 @@ class CoordinateEncoder:
 
         # Content hints
         content = str(memory.get("content", "")).lower()
-        if any(w in content for w in ["will ", "plan to", "next step", "future", "goal"]):
+        if any(
+            w in content for w in ["will ", "plan to", "next step", "future", "goal"]
+        ):
             score += 0.2
         if any(w in content for w in ["was ", "used to", "previously", "legacy"]):
             score -= 0.2
@@ -726,8 +910,17 @@ class CoordinateEncoder:
             base -= 0.1
 
         # High-importance tags
-        important_tags = {"critical", "important", "key", "core", "essential",
-                          "milestone", "breakthrough", "wisdom", "principle"}
+        important_tags = {
+            "critical",
+            "important",
+            "key",
+            "core",
+            "essential",
+            "milestone",
+            "breakthrough",
+            "wisdom",
+            "principle",
+        }
         tags = set(t.lower() for t in memory.get("tags", []))
 
         base += 0.1 * len(tags.intersection(important_tags))
@@ -737,10 +930,6 @@ class CoordinateEncoder:
         resonance_score = float(memory.get("resonance_score", 0.0) or 0.0)
 
         w = base + (joy_score * 0.5) + (resonance_score * 0.5)
-
-        # --- Importance Jitter (v7.4 Enhancement) ---
-        # Removed random jitter to ensure deterministic validation and stable indexing.
-        # --------------------------------------------
 
         # Content length as minor importance signal
         content_len = len(str(memory.get("content", "")))
@@ -758,7 +947,11 @@ class CoordinateEncoder:
         0.0 = Far Edge (deep archive, low retention).
         """
         # Protected = always at core
-        if memory.get("is_protected") or memory.get("is_core_identity") or memory.get("is_sacred"):
+        if (
+            memory.get("is_protected")
+            or memory.get("is_core_identity")
+            or memory.get("is_sacred")
+        ):
             return 1.0
 
         # Base from galactic distance if available
@@ -777,6 +970,7 @@ class CoordinateEncoder:
         if last_recalled:
             try:
                 from whitemagic.utils.core import parse_datetime
+
                 if isinstance(last_recalled, str):
                     dt = parse_datetime(last_recalled)
                 else:
@@ -800,6 +994,7 @@ class CoordinateEncoder:
             v += 0.1
 
         return float(max(0.0, min(1.0, v)))
+
 
 # Integration helper
 def encode_memory(memory_obj: Any) -> Any:

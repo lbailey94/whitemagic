@@ -24,7 +24,7 @@ def call_tool(
     _record_metrics: bool = True,
     _emit_gan_ying: bool = True,
     _post_blackboard: bool = True,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Enhanced tool call with integrated blackboard, gan ying, and metrics.
 
@@ -50,27 +50,36 @@ def call_tool(
     if _post_blackboard:
         try:
             from whitemagic.agents.blackboard import get_blackboard
+
             blackboard = get_blackboard()
         except (ImportError, ModuleNotFoundError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     if _emit_gan_ying:
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import get_event_bus
+
             gan_ying = get_event_bus()
         except (ImportError, ModuleNotFoundError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     # Post to blackboard (pre-call)
     if blackboard:
         try:
-            blackboard.post("tool.call", {
-                "tool": tool_name,
-                "args": {k: str(v)[:100] for k, v in kwargs.items()},  # Truncate for blackboard
-                "timestamp": time.time(),
-            })
+            blackboard.post(
+                "tool.call",
+                {
+                    "tool": tool_name,
+                    "args": {
+                        k: str(v)[:100] for k, v in kwargs.items()
+                    },  # Truncate for blackboard
+                    "timestamp": time.time(),
+                },
+            )
         except Exception as e:
             logger.debug("Blackboard post failed: %s", e, exc_info=True)
 
@@ -102,12 +111,15 @@ def call_tool(
         # Post to blackboard (post-call)
         if blackboard:
             try:
-                blackboard.post("tool.result", {
-                    "tool": tool_name,
-                    "success": success,
-                    "latency_ms": latency_ms,
-                    "timestamp": time.time(),
-                })
+                blackboard.post(
+                    "tool.result",
+                    {
+                        "tool": tool_name,
+                        "success": success,
+                        "latency_ms": latency_ms,
+                        "timestamp": time.time(),
+                    },
+                )
             except Exception as e:
                 logger.debug("Blackboard post failed: %s", e, exc_info=True)
 
@@ -142,18 +154,23 @@ def call_tool(
                 )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         # Post failure to blackboard
         if blackboard:
             try:
-                blackboard.post("tool.error", {
-                    "tool": tool_name,
-                    "error": str(e)[:200],  # type: ignore[misc]
-                    "timestamp": time.time(),
-                })
+                blackboard.post(
+                    "tool.error",
+                    {
+                        "tool": tool_name,
+                        "error": str(e)[:200],  # type: ignore[misc]
+                        "timestamp": time.time(),
+                    },
+                )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         return {

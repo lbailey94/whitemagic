@@ -58,6 +58,7 @@ def get_conn() -> sqlite3.Connection:
 # Benchmark Runner
 # ---------------------------------------------------------------------------
 
+
 class BenchmarkSuite:
     def __init__(self):
         self.results = {}
@@ -69,6 +70,7 @@ class BenchmarkSuite:
     def set_phase_progress(self, total: int, label: str = "Gauntlet"):
         """Initialize the overall gauntlet progress bar."""
         from whitemagic.utils.progress_bar import ProgressBar
+
         if self._phase_bar is not None:
             self._phase_bar.finish()
         self._phase_bar = ProgressBar(total=total, label=label)
@@ -92,6 +94,7 @@ class BenchmarkSuite:
         log.info("  Running %s (%s iterations)...", name, iterations)
 
         from whitemagic.utils.progress_bar import ProgressBar
+
         bar = ProgressBar(
             total=iterations + warmup,
             label=name,
@@ -126,7 +129,12 @@ class BenchmarkSuite:
         }
 
         self.results[name] = stats
-        log.info("    Mean: %sms, Median: %sms, P95: %sms", stats['mean_ms'], stats['median_ms'], stats['p95_ms'])
+        log.info(
+            "    Mean: %sms, Median: %sms, P95: %sms",
+            stats["mean_ms"],
+            stats["median_ms"],
+            stats["p95_ms"],
+        )
 
         return stats
 
@@ -143,6 +151,7 @@ class BenchmarkSuite:
 # Benchmarks
 # ---------------------------------------------------------------------------
 
+
 def bench_memory_pipeline(suite: BenchmarkSuite):
     log.info("\n═══ 1. Memory Pipeline ═══")
     conn = get_conn()
@@ -150,10 +159,19 @@ def bench_memory_pipeline(suite: BenchmarkSuite):
     # Store benchmark
     def store_memory():
         with conn:  # Single transaction — reduces WAL checkpoint variance
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO memories (content, title, memory_type, importance, created_at)
                 VALUES (?, ?, ?, ?, ?)
-            """, ("benchmark content", "benchmark title", "long_term", 0.5, datetime.now().isoformat()))
+            """,
+                (
+                    "benchmark content",
+                    "benchmark title",
+                    "long_term",
+                    0.5,
+                    datetime.now().isoformat(),
+                ),
+            )
             conn.execute("DELETE FROM memories WHERE title = 'benchmark title'")
 
     suite.run("memory_store", store_memory, iterations=20)
@@ -161,7 +179,9 @@ def bench_memory_pipeline(suite: BenchmarkSuite):
     # Search benchmark
     def search_memories():
         conn.execute("SELECT * FROM memories WHERE content LIKE ? LIMIT 50", ("%the%",))
-        conn.execute("SELECT * FROM memories WHERE title LIKE ? LIMIT 50", ("%memory%",))
+        conn.execute(
+            "SELECT * FROM memories WHERE title LIKE ? LIMIT 50", ("%memory%",)
+        )
 
     suite.run("memory_search", search_memories, iterations=20)
 
@@ -186,12 +206,14 @@ def bench_resonance_models(suite: BenchmarkSuite):
     from whitemagic.core.resonance.resonance_models import (
         MemoryDecayModel,
         PatternResonanceDetector,
-        ConstellationMerger, Constellation,
+        ConstellationMerger,
+        Constellation,
         GardenResonanceMatrix,
     )
 
     # Decay prediction
     decay = MemoryDecayModel()
+
     def predict_decay():
         decay.predict_retention(importance=0.7, age_days=30, access_count=5)
 
@@ -206,9 +228,18 @@ def bench_resonance_models(suite: BenchmarkSuite):
     # Pattern detection (small dataset)
     detector = PatternResonanceDetector()
     memories = [
-        {"id": i, "importance": 0.5 + i * 0.01, "resonance": {"frequency": 2.0 + i * 0.05, "damping": 0.1, "garden": "knowledge"}}
+        {
+            "id": i,
+            "importance": 0.5 + i * 0.01,
+            "resonance": {
+                "frequency": 2.0 + i * 0.05,
+                "damping": 0.1,
+                "garden": "knowledge",
+            },
+        }
         for i in range(100)
     ]
+
     def find_patterns():
         detector.find_resonant_patterns(memories, min_cluster_size=2)
 
@@ -217,9 +248,17 @@ def bench_resonance_models(suite: BenchmarkSuite):
     # Constellation merge
     merger = ConstellationMerger(overlap_threshold=0.3)
     constellations = [
-        Constellation(i, [i*10, i*10+1], (0.1*i, 0.2*i, 0.3*i, 0.8, 0.5), 0.3, 0.7, "knowledge")
+        Constellation(
+            i,
+            [i * 10, i * 10 + 1],
+            (0.1 * i, 0.2 * i, 0.3 * i, 0.8, 0.5),
+            0.3,
+            0.7,
+            "knowledge",
+        )
         for i in range(20)
     ]
+
     def merge_constellations():
         merger.merge_overlapping(constellations)
 
@@ -228,9 +267,14 @@ def bench_resonance_models(suite: BenchmarkSuite):
     # Garden harmony
     matrix = GardenResonanceMatrix()
     gardens = {
-        f"garden_{i}": {"memory_count": 100, "avg_frequency": 1.0 + i * 0.3, "avg_damping": 0.1 + i * 0.02}
+        f"garden_{i}": {
+            "memory_count": 100,
+            "avg_frequency": 1.0 + i * 0.3,
+            "avg_damping": 0.1 + i * 0.02,
+        }
         for i in range(10)
     }
+
     def calculate_harmony():
         matrix.calculate_inter_garden_harmony(gardens)
 
@@ -266,6 +310,7 @@ def bench_memory_stats(suite: BenchmarkSuite):
 
     # Importance distribution
     scores = [0.5 + i * 0.001 for i in range(1000)]
+
     def analyze_importance():
         analyzer.analyze_importance_distribution(scores)
 
@@ -274,6 +319,7 @@ def bench_memory_stats(suite: BenchmarkSuite):
     # Zone transitions
     before = [0.1 + i * 0.001 for i in range(1000)]
     after = [0.15 + i * 0.001 for i in range(1000)]
+
     def zone_transitions():
         analyzer.zone_transition_matrix(before, after)
 
@@ -281,6 +327,7 @@ def bench_memory_stats(suite: BenchmarkSuite):
 
     # Outlier detection
     values = [0.5 + i * 0.001 for i in range(1000)] + [5.0, 6.0, 7.0]
+
     def detect_outliers():
         analyzer.detect_outliers(values)
 
@@ -296,6 +343,7 @@ def bench_self_model_forecast(suite: BenchmarkSuite):
 
     # Forecast
     values = [0.5 + i * 0.01 for i in range(100)]
+
     def forecast():
         forecaster.forecast_metric(values, steps=5)
 
@@ -309,9 +357,9 @@ def bench_self_model_forecast(suite: BenchmarkSuite):
 
     # Correlation matrix
     metrics = {
-        f"metric_{i}": [0.5 + j * 0.01 + i * 0.1 for j in range(50)]
-        for i in range(5)
+        f"metric_{i}": [0.5 + j * 0.01 + i * 0.1 for j in range(50)] for i in range(5)
     }
+
     def correlation_matrix():
         forecaster.correlation_matrix(metrics)
 
@@ -417,17 +465,27 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
     # Rust cosine
     try:
         import whitemagic_rs
-        suite.run("rust_cosine_384d", lambda: whitemagic_rs.rust_cosine_similarity(a, b), iterations=50)
+
+        suite.run(
+            "rust_cosine_384d",
+            lambda: whitemagic_rs.rust_cosine_similarity(a, b),
+            iterations=50,
+        )
     except ImportError:
         log.info("  Rust not available, skipping")
 
     # Zig SIMD cosine (with numpy zero-copy)
     try:
         import numpy as np
-        from whitemagic.core.acceleration.simd_cosine import cosine_similarity as zig_cosine
+        from whitemagic.core.acceleration.simd_cosine import (
+            cosine_similarity as zig_cosine,
+        )
+
         a_np = np.array(a, dtype=np.float32)
         b_np = np.array(b, dtype=np.float32)
-        suite.run("zig_cosine_384d_numpy", lambda: zig_cosine(a_np, b_np), iterations=50)
+        suite.run(
+            "zig_cosine_384d_numpy", lambda: zig_cosine(a_np, b_np), iterations=50
+        )
     except ImportError:
         log.info("  Zig not available, skipping")
 
@@ -435,9 +493,14 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
     try:
         import numpy as np
         from whitemagic.core.acceleration.simd_cosine import batch_cosine as zig_batch
+
         query_np = np.random.rand(384).astype(np.float32)
         vectors_np = np.random.rand(100, 384).astype(np.float32)
-        suite.run("zig_batch_cosine_100x384d", lambda: zig_batch(query_np, vectors_np), iterations=10)
+        suite.run(
+            "zig_batch_cosine_100x384d",
+            lambda: zig_batch(query_np, vectors_np),
+            iterations=10,
+        )
     except ImportError:
         log.info("  Zig batch not available, skipping")
 
@@ -445,9 +508,14 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
     try:
         import numpy as np
         from whitemagic.core.acceleration.simd_cosine import top_k_cosine as zig_topk
+
         query_np = np.random.rand(384).astype(np.float32)
         vectors_np = np.random.rand(1000, 384).astype(np.float32)
-        suite.run("zig_topk_cosine_1000x384d_k10", lambda: zig_topk(query_np, vectors_np, k=10), iterations=10)
+        suite.run(
+            "zig_topk_cosine_1000x384d_k10",
+            lambda: zig_topk(query_np, vectors_np, k=10),
+            iterations=10,
+        )
     except ImportError:
         log.info("  Zig top-K not available, skipping")
 
@@ -455,49 +523,87 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
     try:
         import whitemagic_rs
         import json
+
         coords = [[random.random() for _ in range(5)] for _ in range(100)]
         coords_json = json.dumps(coords)
-        suite.run("rust_galactic_batch_100", lambda: whitemagic_rs.galactic_batch_score_quick(coords_json), iterations=20)
+        suite.run(
+            "rust_galactic_batch_100",
+            lambda: whitemagic_rs.galactic_batch_score_quick(coords_json),
+            iterations=20,
+        )
     except ImportError:
         pass
 
     # Rust grid cluster
     try:
         import whitemagic_rs
+
         coords = [[random.random() for _ in range(5)] for _ in range(100)]
-        suite.run("rust_grid_cluster_100", lambda: whitemagic_rs.grid_cluster(coords, 2), iterations=10)
+        suite.run(
+            "rust_grid_cluster_100",
+            lambda: whitemagic_rs.grid_cluster(coords, 2),
+            iterations=10,
+        )
     except ImportError:
         pass
 
     # Haskell hexagram creation (I Ching)
     try:
         from whitemagic.core.acceleration.haskell_bridge import hs_create_hexagram
+
         lines = [1, 0, 1, 0, 1, 0]
-        suite.run("haskell_hexagram_create", lambda: hs_create_hexagram(lines), iterations=50)
+        suite.run(
+            "haskell_hexagram_create", lambda: hs_create_hexagram(lines), iterations=50
+        )
     except ImportError:
         log.info("  Haskell not available, skipping")
 
     # Haskell batch hexagram creation
     try:
-        from whitemagic.core.acceleration.haskell_bridge import hs_create_hexagrams_batch
+        from whitemagic.core.acceleration.haskell_bridge import (
+            hs_create_hexagrams_batch,
+        )
+
         batch_lines = [[random.randint(0, 1) for _ in range(6)] for _ in range(50)]
-        suite.run("haskell_hexagram_batch_50", lambda: hs_create_hexagrams_batch(batch_lines), iterations=10)
+        suite.run(
+            "haskell_hexagram_batch_50",
+            lambda: hs_create_hexagrams_batch(batch_lines),
+            iterations=10,
+        )
     except ImportError:
         log.info("  Haskell batch not available, skipping")
 
     # Rust batch cosine (sequential, SIMD)
     try:
         from whitemagic.core.acceleration.parallel_rust import batch_cosine_rust
-        pairs = [([random.random() for _ in range(384)], [random.random() for _ in range(384)]) for _ in range(100)]
-        suite.run("rust_batch_cosine_100", lambda: batch_cosine_rust(pairs), iterations=10)
+
+        pairs = [
+            (
+                [random.random() for _ in range(384)],
+                [random.random() for _ in range(384)],
+            )
+            for _ in range(100)
+        ]
+        suite.run(
+            "rust_batch_cosine_100", lambda: batch_cosine_rust(pairs), iterations=10
+        )
     except ImportError:
         log.info("  Rust batch cosine not available, skipping")
 
     # NumPy batch cosine (vectorized)
     try:
         from whitemagic.core.acceleration.parallel_rust import batch_cosine_numpy
-        pairs = [([random.random() for _ in range(384)], [random.random() for _ in range(384)]) for _ in range(100)]
-        suite.run("numpy_batch_cosine_100", lambda: batch_cosine_numpy(pairs), iterations=10)
+
+        pairs = [
+            (
+                [random.random() for _ in range(384)],
+                [random.random() for _ in range(384)],
+            )
+            for _ in range(100)
+        ]
+        suite.run(
+            "numpy_batch_cosine_100", lambda: batch_cosine_numpy(pairs), iterations=10
+        )
     except ImportError:
         log.info("  NumPy batch cosine not available, skipping")
 
@@ -505,12 +611,17 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
     try:
         import numpy as np
         from whitemagic.core.acceleration.hnsw_zig import HnswIndex
-        hnsw = HnswIndex(dim=384, m=16, ef_construction=200, ef_search=50, max_elements=1000)
+
+        hnsw = HnswIndex(
+            dim=384, m=16, ef_construction=200, ef_search=50, max_elements=1000
+        )
         # Add 500 vectors
         for _ in range(500):
             hnsw.add(np.random.rand(384).astype(np.float32))
         query = np.random.rand(384).astype(np.float32)
-        suite.run("hnsw_search_500_k10", lambda: hnsw.search(query, k=10), iterations=10)
+        suite.run(
+            "hnsw_search_500_k10", lambda: hnsw.search(query, k=10), iterations=10
+        )
     except ImportError:
         log.info("  HNSW not available, skipping")
 
@@ -518,6 +629,7 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
 # ---------------------------------------------------------------------------
 # Fragment (Rust) Benchmarks
 # ---------------------------------------------------------------------------
+
 
 def bench_fragment(suite: BenchmarkSuite):
     """Benchmark Fragment codebase search — PyO3, HTTP, subprocess layers."""
@@ -528,44 +640,69 @@ def bench_fragment(suite: BenchmarkSuite):
     # Fragment status (layer detection)
     try:
         from whitemagic.tools.handlers.fragment import handle_fragment_status
-        suite.run("fragment_status", lambda: handle_fragment_status(path=repo_path), iterations=20)
+
+        suite.run(
+            "fragment_status",
+            lambda: handle_fragment_status(path=repo_path),
+            iterations=20,
+        )
     except Exception:
         log.info("  Fragment status not available, skipping")
 
     # Fragment search via PyO3 (cold cache — includes index load)
     try:
         from whitemagic.tools.handlers.fragment import handle_fragment_search
-        suite.run("fragment_search_cold", lambda: handle_fragment_search(
-            query="how does homeostasis work", path=repo_path, top=5
-        ), iterations=10)
+
+        suite.run(
+            "fragment_search_cold",
+            lambda: handle_fragment_search(
+                query="how does homeostasis work", path=repo_path, top=5
+            ),
+            iterations=10,
+        )
     except Exception:
         log.info("  Fragment search not available, skipping")
 
     # Fragment search — warm cache (prime once, measure steady-state)
     try:
         from whitemagic.tools.handlers.fragment import handle_fragment_search
+
         # Prime the index cache
         handle_fragment_search(query="priming query", path=repo_path, top=1)
-        suite.run("fragment_search_warm", lambda: handle_fragment_search(
-            query="how does homeostasis work", path=repo_path, top=5
-        ), iterations=20)
+        suite.run(
+            "fragment_search_warm",
+            lambda: handle_fragment_search(
+                query="how does homeostasis work", path=repo_path, top=5
+            ),
+            iterations=20,
+        )
     except Exception:
         log.info("  Fragment warm-cache search not available, skipping")
 
     # Fragment search — warm cache, larger top
     try:
         from whitemagic.tools.handlers.fragment import handle_fragment_search
-        suite.run("fragment_search_warm_top20", lambda: handle_fragment_search(
-            query="kaizen engine analysis", path=repo_path, top=20
-        ), iterations=20)
+
+        suite.run(
+            "fragment_search_warm_top20",
+            lambda: handle_fragment_search(
+                query="kaizen engine analysis", path=repo_path, top=20
+            ),
+            iterations=20,
+        )
     except Exception:
         log.info("  Fragment warm-cache top20 not available, skipping")
 
     # Python vector search comparison
     try:
         from whitemagic.core.memory.vector_search import get_vector_search
+
         vs = get_vector_search()
-        suite.run("python_vector_search", lambda: vs.search("how does homeostasis work", limit=5), iterations=10)
+        suite.run(
+            "python_vector_search",
+            lambda: vs.search("how does homeostasis work", limit=5),
+            iterations=10,
+        )
     except Exception:
         log.info("  Python vector search not available, skipping")
 
@@ -573,6 +710,7 @@ def bench_fragment(suite: BenchmarkSuite):
 # ---------------------------------------------------------------------------
 # STRATA Benchmarks
 # ---------------------------------------------------------------------------
+
 
 def bench_strata(suite: BenchmarkSuite):
     """Benchmark STRATA codebase static analysis."""
@@ -583,23 +721,38 @@ def bench_strata(suite: BenchmarkSuite):
     # STRATA list_checks
     try:
         from whitemagic.tools.handlers.strata import handle_strata_list_checks
-        suite.run("strata_list_checks", lambda: handle_strata_list_checks(), iterations=20)
+
+        suite.run(
+            "strata_list_checks", lambda: handle_strata_list_checks(), iterations=20
+        )
     except Exception:
         log.info("  STRATA list_checks not available, skipping")
 
     # STRATA analyze (incremental, sequential — parallel is slower due to GIL)
     try:
         from whitemagic.tools.handlers.strata import handle_strata_analyze
-        suite.run("strata_analyze_sequential", lambda: handle_strata_analyze(
-            path=repo_path, incremental=True, parallel=False
-        ), iterations=3, warmup=1)
+
+        suite.run(
+            "strata_analyze_sequential",
+            lambda: handle_strata_analyze(
+                path=repo_path, incremental=True, parallel=False
+            ),
+            iterations=3,
+            warmup=1,
+        )
     except Exception:
         log.info("  STRATA analyze not available, skipping")
 
     # STRATA survey
     try:
         from whitemagic.tools.handlers.strata import handle_strata_survey
-        suite.run("strata_survey", lambda: handle_strata_survey(path=repo_path), iterations=5, warmup=1)
+
+        suite.run(
+            "strata_survey",
+            lambda: handle_strata_survey(path=repo_path),
+            iterations=5,
+            warmup=1,
+        )
     except Exception:
         log.info("  STRATA survey not available, skipping")
 
@@ -608,6 +761,7 @@ def bench_strata(suite: BenchmarkSuite):
 # Physical Metrics Benchmarks
 # ---------------------------------------------------------------------------
 
+
 def bench_physical_metrics(suite: BenchmarkSuite):
     """Benchmark physical metrics fetching and Prometheus export."""
     log.info("Physical Metrics Benchmarks:")
@@ -615,6 +769,7 @@ def bench_physical_metrics(suite: BenchmarkSuite):
     # Physical metrics fetch (graceful degradation when laptop-optimizer absent)
     try:
         from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+
         source = get_physical_metrics_source()
         suite.run("physical_metrics_fetch", lambda: source.get_metrics(), iterations=50)
     except Exception:
@@ -622,17 +777,26 @@ def bench_physical_metrics(suite: BenchmarkSuite):
 
     # Adaptive targets computation
     try:
-        from whitemagic.harmony.physical_metrics import AdaptiveTargets, PowerContext, TimeContext, LoadContext
+        from whitemagic.harmony.physical_metrics import (
+            AdaptiveTargets,
+            PowerContext,
+            TimeContext,
+            LoadContext,
+        )
+
         targets = AdaptiveTargets()
-        suite.run("adaptive_targets_compute", lambda: targets.adapt(
-            PowerContext.AC, TimeContext.DAY, LoadContext.IDLE
-        ), iterations=100)
+        suite.run(
+            "adaptive_targets_compute",
+            lambda: targets.adapt(PowerContext.AC, TimeContext.DAY, LoadContext.IDLE),
+            iterations=100,
+        )
     except Exception:
         log.info("  Adaptive targets not available, skipping")
 
     # Thermal anomaly detection
     try:
         from whitemagic.harmony.physical_metrics import ThermalAnomalyDetector
+
         detector = ThermalAnomalyDetector()
         suite.run("thermal_anomaly_check", lambda: detector.check(55.0), iterations=100)
     except Exception:
@@ -641,6 +805,7 @@ def bench_physical_metrics(suite: BenchmarkSuite):
     # Prometheus export
     try:
         from whitemagic.harmony.metrics_exporter import get_metrics_exporter
+
         exporter = get_metrics_exporter()
         suite.run("prometheus_export", lambda: exporter.export(), iterations=20)
     except Exception:
@@ -649,8 +814,11 @@ def bench_physical_metrics(suite: BenchmarkSuite):
     # Homeostatic loop check (includes physical)
     try:
         from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
         loop = get_homeostatic_loop()
-        suite.run("homeostatic_check_with_physical", lambda: loop.check(), iterations=10)
+        suite.run(
+            "homeostatic_check_with_physical", lambda: loop.check(), iterations=10
+        )
     except Exception:
         log.info("  Homeostatic loop not available, skipping")
 
@@ -659,6 +827,7 @@ def bench_physical_metrics(suite: BenchmarkSuite):
 # DNA & Zodiac Benchmarks
 # ---------------------------------------------------------------------------
 
+
 def bench_dna_zodiac(suite: BenchmarkSuite):
     """Benchmark DNA validation and Zodiac activation tools."""
     log.info("DNA & Zodiac Benchmarks:")
@@ -666,6 +835,7 @@ def bench_dna_zodiac(suite: BenchmarkSuite):
     # DNA principles listing
     try:
         from whitemagic.tools.handlers.misc import handle_dna_principles
+
         suite.run("dna_principles", lambda: handle_dna_principles(), iterations=100)
     except Exception:
         log.info("  DNA principles not available, skipping")
@@ -673,45 +843,73 @@ def bench_dna_zodiac(suite: BenchmarkSuite):
     # DNA validate (safe fix)
     try:
         from whitemagic.tools.handlers.misc import handle_dna_validate
-        suite.run("dna_validate_safe", lambda: handle_dna_validate(
-            fix_details={"action": "update version", "file": "docs/README.md"},
-            threat_type="version_drift",
-        ), iterations=100)
+
+        suite.run(
+            "dna_validate_safe",
+            lambda: handle_dna_validate(
+                fix_details={"action": "update version", "file": "docs/README.md"},
+                threat_type="version_drift",
+            ),
+            iterations=100,
+        )
     except Exception:
         log.info("  DNA validate not available, skipping")
 
     # DNA validate (critical violation)
     try:
         from whitemagic.tools.handlers.misc import handle_dna_validate
-        suite.run("dna_validate_critical", lambda: handle_dna_validate(
-            fix_details={"action": "delete core system", "file": "whitemagic/core/__init__.py"},
-            threat_type="code_anomaly",
-        ), iterations=100)
+
+        suite.run(
+            "dna_validate_critical",
+            lambda: handle_dna_validate(
+                fix_details={
+                    "action": "delete core system",
+                    "file": "whitemagic/core/__init__.py",
+                },
+                threat_type="code_anomaly",
+            ),
+            iterations=100,
+        )
     except Exception:
         log.info("  DNA validate critical not available, skipping")
 
     # Zodiac activate Aries
     try:
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_activate
-        suite.run("zodiac_activate_aries", lambda: handle_zodiac_activate(
-            core="aries",
-            context={"operation": "benchmark", "intention": "action", "urgency": "normal"},
-        ), iterations=50)
+
+        suite.run(
+            "zodiac_activate_aries",
+            lambda: handle_zodiac_activate(
+                core="aries",
+                context={
+                    "operation": "benchmark",
+                    "intention": "action",
+                    "urgency": "normal",
+                },
+            ),
+            iterations=50,
+        )
     except Exception:
         log.info("  Zodiac activate not available, skipping")
 
     # Zodiac council convene
     try:
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_council
-        suite.run("zodiac_council", lambda: handle_zodiac_council(
-            decision="Should we optimize the memory system?"
-        ), iterations=20)
+
+        suite.run(
+            "zodiac_council",
+            lambda: handle_zodiac_council(
+                decision="Should we optimize the memory system?"
+            ),
+            iterations=20,
+        )
     except Exception:
         log.info("  Zodiac council not available, skipping")
 
     # Zodiac stats
     try:
         from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_stats
+
         suite.run("zodiac_stats", lambda: handle_zodiac_stats(), iterations=50)
     except Exception:
         log.info("  Zodiac stats not available, skipping")
@@ -719,6 +917,7 @@ def bench_dna_zodiac(suite: BenchmarkSuite):
     # Garden health
     try:
         from whitemagic.tools.handlers.garden import handle_garden_health
+
         suite.run("garden_health", lambda: handle_garden_health(), iterations=50)
     except Exception:
         log.info("  Garden health not available, skipping")
@@ -727,6 +926,7 @@ def bench_dna_zodiac(suite: BenchmarkSuite):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(description="WhiteMagic Benchmark Gauntlet")
@@ -765,26 +965,80 @@ def main():
     summary = suite.summary()
 
     # Print summary
-    log.info(f"\n{'='*60}")
+    log.info(f"\n{'=' * 60}")
     log.info(f"BENCHMARK SUMMARY")
-    log.info(f"{'='*60}")
-    log.info("Total time: %ss", summary['total_time_seconds'])
+    log.info(f"{'=' * 60}")
+    log.info("Total time: %ss", summary["total_time_seconds"])
     log.info(f"Benchmarks run: {len(summary['benchmarks'])}")
 
     # Group by category
     categories = {
-        "Memory Pipeline": ["memory_store", "memory_search", "memory_recall", "memory_count"],
-        "Resonance Models": ["decay_prediction", "decay_curve", "pattern_detection_100", "constellation_merge_20", "garden_harmony_10"],
+        "Memory Pipeline": [
+            "memory_store",
+            "memory_search",
+            "memory_recall",
+            "memory_count",
+        ],
+        "Resonance Models": [
+            "decay_prediction",
+            "decay_curve",
+            "pattern_detection_100",
+            "constellation_merge_20",
+            "garden_harmony_10",
+        ],
         "Julia Ports": ["resonance_stats", "find_neighbors_100", "find_neighbors_500"],
-        "Memory Stats": ["importance_distribution_1000", "zone_transitions_1000", "outlier_detection_1003"],
-        "Self-Model Forecast": ["forecast_100", "anomaly_detection_100", "correlation_5x50", "batch_forecast_5"],
-        "Database Queries": ["simple_select_100", "complex_join_100", "aggregation_gardens", "cached_aggregation_gardens", "association_query"],
+        "Memory Stats": [
+            "importance_distribution_1000",
+            "zone_transitions_1000",
+            "outlier_detection_1003",
+        ],
+        "Self-Model Forecast": [
+            "forecast_100",
+            "anomaly_detection_100",
+            "correlation_5x50",
+            "batch_forecast_5",
+        ],
+        "Database Queries": [
+            "simple_select_100",
+            "complex_join_100",
+            "aggregation_gardens",
+            "cached_aggregation_gardens",
+            "association_query",
+        ],
         "Dream Cycle": ["dream_status", "dream_consolidation"],
-        "Polyglot Comparison": ["python_cosine_384d", "rust_cosine_384d", "zig_cosine_384d_numpy", "zig_batch_cosine_100x384d", "rust_galactic_batch_100", "rust_grid_cluster_100", "haskell_hexagram_create"],
-        "Fragment (Rust)": ["fragment_status", "fragment_search_cold", "fragment_search_warm", "fragment_search_warm_top20", "python_vector_search"],
+        "Polyglot Comparison": [
+            "python_cosine_384d",
+            "rust_cosine_384d",
+            "zig_cosine_384d_numpy",
+            "zig_batch_cosine_100x384d",
+            "rust_galactic_batch_100",
+            "rust_grid_cluster_100",
+            "haskell_hexagram_create",
+        ],
+        "Fragment (Rust)": [
+            "fragment_status",
+            "fragment_search_cold",
+            "fragment_search_warm",
+            "fragment_search_warm_top20",
+            "python_vector_search",
+        ],
         "STRATA": ["strata_list_checks", "strata_analyze_sequential", "strata_survey"],
-        "Physical Metrics": ["physical_metrics_fetch", "adaptive_targets_compute", "thermal_anomaly_check", "prometheus_export", "homeostatic_check_with_physical"],
-        "DNA & Zodiac": ["dna_principles", "dna_validate_safe", "dna_validate_critical", "zodiac_activate_aries", "zodiac_council", "zodiac_stats", "garden_health"],
+        "Physical Metrics": [
+            "physical_metrics_fetch",
+            "adaptive_targets_compute",
+            "thermal_anomaly_check",
+            "prometheus_export",
+            "homeostatic_check_with_physical",
+        ],
+        "DNA & Zodiac": [
+            "dna_principles",
+            "dna_validate_safe",
+            "dna_validate_critical",
+            "zodiac_activate_aries",
+            "zodiac_council",
+            "zodiac_stats",
+            "garden_health",
+        ],
     }
 
     for category, benchmarks in categories.items():
@@ -792,7 +1046,13 @@ def main():
         for name in benchmarks:
             if name in summary["benchmarks"]:
                 stats = summary["benchmarks"][name]
-                log.info("  %s mean=%sms  median=%sms  p95=%sms", name, stats['mean_ms'], stats['median_ms'], stats['p95_ms'])
+                log.info(
+                    "  %s mean=%sms  median=%sms  p95=%sms",
+                    name,
+                    stats["mean_ms"],
+                    stats["median_ms"],
+                    stats["p95_ms"],
+                )
 
     # Save results
     if args.output:

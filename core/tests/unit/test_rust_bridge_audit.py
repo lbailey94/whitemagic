@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Regression tests for Rust bridge type mismatch fixes (3A)."""
+
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -9,7 +10,9 @@ class TestPolyglotAcceleratorRustBridge(unittest.TestCase):
 
     def test_extract_patterns_returns_list_of_dicts(self):
         """Test that extract_patterns converts Rust 7-tuple to list[dict]."""
-        from whitemagic.core.acceleration.polyglot_accelerator import PolyglotAccelerator
+        from whitemagic.core.acceleration.polyglot_accelerator import (
+            PolyglotAccelerator,
+        )
 
         accel = PolyglotAccelerator()
         # Force Rust path
@@ -33,19 +36,29 @@ class TestPolyglotAcceleratorRustBridge(unittest.TestCase):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 4)  # 1 solution + 1 anti + 1 heuristic + 1 opt
         types = {r["type"] for r in result}
-        self.assertEqual(types, {"solution", "anti_pattern", "heuristic", "optimization"})
+        self.assertEqual(
+            types, {"solution", "anti_pattern", "heuristic", "optimization"}
+        )
         self.assertTrue(all("description" in r for r in result))
 
     def test_extract_patterns_accepts_list_input(self):
         """Test that extract_patterns accepts list[str] input."""
-        from whitemagic.core.acceleration.polyglot_accelerator import PolyglotAccelerator
+        from whitemagic.core.acceleration.polyglot_accelerator import (
+            PolyglotAccelerator,
+        )
 
         accel = PolyglotAccelerator()
         accel._rust_available = True
 
         mock_rs = MagicMock()
         mock_rs.extract_patterns_from_content.return_value = (
-            3, 2, ["s1"], [], [], [], 0.01,
+            3,
+            2,
+            ["s1"],
+            [],
+            [],
+            [],
+            0.01,
         )
 
         with patch.dict("sys.modules", {"whitemagic_rs": mock_rs}):
@@ -60,7 +73,9 @@ class TestPolyglotAcceleratorRustBridge(unittest.TestCase):
         """Test that search_memories parses JSON string from Rust search_query."""
         import json as _json
 
-        from whitemagic.core.acceleration.polyglot_accelerator import PolyglotAccelerator
+        from whitemagic.core.acceleration.polyglot_accelerator import (
+            PolyglotAccelerator,
+        )
 
         accel = PolyglotAccelerator()
         accel._rust_available = True
@@ -68,10 +83,12 @@ class TestPolyglotAcceleratorRustBridge(unittest.TestCase):
         mock_rs = MagicMock()
         mock_rs.search_build_index.return_value = (10, 100)  # (doc_count, vocab_size)
         # Rust returns JSON string
-        mock_rs.search_query.return_value = _json.dumps([
-            {"id": "mem1", "score": 0.95},
-            {"id": "mem2", "score": 0.80},
-        ])
+        mock_rs.search_query.return_value = _json.dumps(
+            [
+                {"id": "mem1", "score": 0.95},
+                {"id": "mem2", "score": 0.80},
+            ]
+        )
 
         with patch.dict("sys.modules", {"whitemagic_rs": mock_rs}):
             result = accel.search_memories(
@@ -99,8 +116,10 @@ class TestRustSearchTypeAnnotations(unittest.TestCase):
     def test_search_build_index_return_type(self):
         """Test that search_build_index is annotated as tuple[int, int] | None."""
         from whitemagic.optimization.rust_search import search_build_index
+
         # Check the return annotation
         import typing
+
         hints = typing.get_type_hints(search_build_index)
         # The return type should not be str
         return_hint = str(hints.get("return", ""))
@@ -115,6 +134,7 @@ class TestRustAcceleratorsTypeAnnotations(unittest.TestCase):
         """Test that search_build_index is annotated as tuple[int, int] | None."""
         from whitemagic.optimization.rust_accelerators import search_build_index
         import typing
+
         hints = typing.get_type_hints(search_build_index)
         return_hint = str(hints.get("return", ""))
         self.assertIn("tuple", return_hint)

@@ -11,7 +11,11 @@ import click
 
 
 def _get_army_script() -> Path:
-    return Path(__file__).resolve().parent.parent.parent.parent / "scripts" / "deploy_grand_army.py"
+    return (
+        Path(__file__).resolve().parent.parent.parent.parent
+        / "scripts"
+        / "deploy_grand_army.py"
+    )
 
 
 @click.group()
@@ -40,9 +44,14 @@ def army_list() -> None:
 
 
 @army.command()
-@click.option("--time-limit", "-t", default=300, help="Time limit in seconds (default: 300)")
+@click.option(
+    "--time-limit", "-t", default=300, help="Time limit in seconds (default: 300)"
+)
 @click.option("--columns", "-c", default=1, help="Parallel columns for Sun Bin mode")
-@click.option("--phase", type=click.Choice(["immediate", "foundation", "infrastructure", "intelligence"]))
+@click.option(
+    "--phase",
+    type=click.Choice(["immediate", "foundation", "infrastructure", "intelligence"]),
+)
 @click.option("--yin-yang", is_flag=True, help="Autonomous recon/action/verify cycle")
 def deploy(time_limit: int, columns: int, phase: str | None, yin_yang: bool) -> None:
     """Deploy campaigns from doctrine files."""

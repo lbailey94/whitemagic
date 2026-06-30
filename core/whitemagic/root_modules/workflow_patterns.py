@@ -52,7 +52,9 @@ class WorkflowPatterns:
     def add_pattern(self, name: str, description: str, steps: list[str]) -> None:
         self.patterns[name] = {"description": description, "steps": steps}
 
-    def execute_pattern(self, name: str, step_fn: Callable[[str], bool] | None = None) -> dict[str, Any]:
+    def execute_pattern(
+        self, name: str, step_fn: Callable[[str], bool] | None = None
+    ) -> dict[str, Any]:
         """Execute a workflow pattern step by step."""
         pattern = self.patterns.get(name)
         if not pattern:

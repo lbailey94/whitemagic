@@ -14,8 +14,7 @@ from whitemagic.core.memory.unified import remember
 
 
 class Scratchpad:
-    """Ephemeral session storage that auto-commits to long-term memory.
-    """
+    """Ephemeral session storage that auto-commits to long-term memory."""
 
     def __init__(self, session_id: str | None = None) -> None:
         self.session_id = session_id or f"session_{int(time.time())}"
@@ -53,14 +52,19 @@ class Scratchpad:
         if not self.entries:
             return
 
-        print(f"  [Scratchpad] Finalizing {len(self.entries)} entries for {self.session_id}...")
+        print(
+            f"  [Scratchpad] Finalizing {len(self.entries)} entries for {self.session_id}..."
+        )
 
         # Coherence boost for session closure (Phase 26)
         try:
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 get_coherence,
             )
-            get_coherence().boost(len(self.entries), f"Scratchpad finalization: {self.session_id}")
+
+            get_coherence().boost(
+                len(self.entries), f"Scratchpad finalization: {self.session_id}"
+            )
         except (ImportError, ModuleNotFoundError):
             pass
 
@@ -97,10 +101,13 @@ class Scratchpad:
             return
 
         for i, entry in enumerate(self.entries):
-            print(f"  {i+1}. [{entry['timestamp']}] {entry['text'][:100]}...")
+            print(f"  {i + 1}. [{entry['timestamp']}] {entry['text'][:100]}...")
+
 
 def get_active_scratchpad() -> Scratchpad:
     """Gets or creates a scratchpad for the current session."""
     # We can use an environment variable to track the session, or default to a daily one
-    session_id = os.getenv("WM_SESSION_ID") or f"day_{datetime.now().strftime('%Y%m%d')}"
+    session_id = (
+        os.getenv("WM_SESSION_ID") or f"day_{datetime.now().strftime('%Y%m%d')}"
+    )
     return Scratchpad(session_id)

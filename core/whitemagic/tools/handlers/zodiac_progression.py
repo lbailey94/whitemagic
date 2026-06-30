@@ -1,10 +1,12 @@
 """MCP handler for Unified Zodiacal Progression status (Bridge 1 — Telemetric Qi)."""
+
 from typing import Any
 
 
 def handle_zodiac_status(**kwargs: Any) -> dict[str, Any]:
     """Return the current phase of the UnifiedProgressionDaemon."""
     from whitemagic.core.governance.unified_progression import get_progression_daemon
+
     daemon = get_progression_daemon()
     return {
         "status": "success",
@@ -38,6 +40,7 @@ def handle_zodiac_activate(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
         cores = get_zodiac_cores()
         response = cores.activate_core(core_name, context)
         if response is None:
@@ -67,6 +70,7 @@ def handle_zodiac_council(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.gardens.connection.zodiac_cores import ZodiacCouncil
+
         council = ZodiacCouncil()
         result = council.convene(decision)
         return {
@@ -84,6 +88,7 @@ def handle_zodiac_stats(**kwargs: Any) -> dict[str, Any]:
     """Get activation statistics for all zodiac cores."""
     try:
         from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
         cores = get_zodiac_cores()
         return {"status": "success", "stats": cores.get_core_statistics()}
     except Exception as e:

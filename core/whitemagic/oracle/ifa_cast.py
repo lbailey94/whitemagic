@@ -21,13 +21,13 @@ import hashlib
 import random
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from whitemagic.oracle.ifa_data import (
+    PRINCIPAL_ODU,
     OduAmulu,
     OduMeji,
-    PRINCIPAL_ODU,
     get_odu_by_binary,
     ifa_to_iching,
 )
@@ -37,14 +37,14 @@ from whitemagic.oracle.ifa_data import (
 class CastResult:
     """Result of an Ifa casting."""
 
-    right_binary: str          # 4-bit right leg (cast first, yang/active)
-    left_binary: str           # 4-bit left leg (cast second, yin/receptive)
-    full_binary: str           # 8-bit combined
-    decimal: int               # 0-255
-    odu: OduMeji | OduAmulu    # The Odu object
-    is_meji: bool              # True if principal (doubled) Odu
-    iching_hexagram: int       # Corresponding I Ching hexagram (King Wen)
-    casting_method: str        # "cowrie", "opele", or "ikin"
+    right_binary: str  # 4-bit right leg (cast first, yang/active)
+    left_binary: str  # 4-bit left leg (cast second, yin/receptive)
+    full_binary: str  # 8-bit combined
+    decimal: int  # 0-255
+    odu: OduMeji | OduAmulu  # The Odu object
+    is_meji: bool  # True if principal (doubled) Odu
+    iching_hexagram: int  # Corresponding I Ching hexagram (King Wen)
+    casting_method: str  # "cowrie", "opele", or "ikin"
     shell_results: list[bool]  # Raw shell results (True = open/0, False = closed/1)
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     question: str = ""
@@ -91,12 +91,24 @@ class CastResult:
             "left_leg": self.left_binary,
             "marks": self.marks,
             "wisdom": self.wisdom,
-            "meaning": self.odu.meaning if isinstance(self.odu, OduMeji) else f"{self.odu.right_leg.meaning} + {self.odu.left_leg.meaning}",
-            "element": self.odu.element if isinstance(self.odu, OduMeji) else f"{self.odu.right_leg.element}/{self.odu.left_leg.element}",
-            "ire": self.odu.ire if isinstance(self.odu, OduMeji) else f"{self.odu.right_leg.ire} + {self.odu.left_leg.ire}",
-            "osogbo": self.odu.osogbo if isinstance(self.odu, OduMeji) else f"{self.odu.right_leg.osogbo} + {self.odu.left_leg.osogbo}",
-            "prescriptions": self.odu.prescriptions if isinstance(self.odu, OduMeji) else [*self.odu.right_leg.prescriptions, *self.odu.left_leg.prescriptions],
-            "prohibitions": self.odu.prohibitions if isinstance(self.odu, OduMeji) else [*self.odu.right_leg.prohibitions, *self.odu.left_leg.prohibitions],
+            "meaning": self.odu.meaning
+            if isinstance(self.odu, OduMeji)
+            else f"{self.odu.right_leg.meaning} + {self.odu.left_leg.meaning}",
+            "element": self.odu.element
+            if isinstance(self.odu, OduMeji)
+            else f"{self.odu.right_leg.element}/{self.odu.left_leg.element}",
+            "ire": self.odu.ire
+            if isinstance(self.odu, OduMeji)
+            else f"{self.odu.right_leg.ire} + {self.odu.left_leg.ire}",
+            "osogbo": self.odu.osogbo
+            if isinstance(self.odu, OduMeji)
+            else f"{self.odu.right_leg.osogbo} + {self.odu.left_leg.osogbo}",
+            "prescriptions": self.odu.prescriptions
+            if isinstance(self.odu, OduMeji)
+            else [*self.odu.right_leg.prescriptions, *self.odu.left_leg.prescriptions],
+            "prohibitions": self.odu.prohibitions
+            if isinstance(self.odu, OduMeji)
+            else [*self.odu.right_leg.prohibitions, *self.odu.left_leg.prohibitions],
             "timestamp": self.timestamp,
             "question": self.question,
         }
@@ -121,7 +133,9 @@ class IfaCaster:
             self.rng = random.SystemRandom()
         self.history: list[CastResult] = []
 
-    def cast_cowrie(self, question: str = "", context: dict[str, Any] | None = None) -> CastResult:
+    def cast_cowrie(
+        self, question: str = "", context: dict[str, Any] | None = None
+    ) -> CastResult:
         """Cast 16 cowrie shells to produce an Odu.
 
         Traditional method: 16 cowrie shells are thrown. Each lands
@@ -157,7 +171,9 @@ class IfaCaster:
             right_binary, left_binary, "cowrie", shells, question, context
         )
 
-    def cast_opele(self, question: str = "", context: dict[str, Any] | None = None) -> CastResult:
+    def cast_opele(
+        self, question: str = "", context: dict[str, Any] | None = None
+    ) -> CastResult:
         """Cast the opele chain to produce an Odu.
 
         The opele is a chain with 8 half-pods. When cast, each pod lands
@@ -180,7 +196,9 @@ class IfaCaster:
             right_binary, left_binary, "opele", pods, question, context
         )
 
-    def cast_ikin(self, question: str = "", context: dict[str, Any] | None = None) -> CastResult:
+    def cast_ikin(
+        self, question: str = "", context: dict[str, Any] | None = None
+    ) -> CastResult:
         """Cast 16 sacred palm nuts (ikin Ifa) to produce an Odu.
 
         Traditional method: 16 ikin are grabbed in the right hand.
@@ -203,8 +221,12 @@ class IfaCaster:
             right_binary, left_binary, "ikin", results, question, context
         )
 
-    def cast(self, question: str = "", context: dict[str, Any] | None = None,
-             method: str = "cowrie") -> CastResult:
+    def cast(
+        self,
+        question: str = "",
+        context: dict[str, Any] | None = None,
+        method: str = "cowrie",
+    ) -> CastResult:
         """Cast using the specified method.
 
         Args:
@@ -222,8 +244,6 @@ class IfaCaster:
         self.history.append(result)
         return result
 
-    # --- Internal helpers ---
-
     def _gather_entropy(self, question: str, context: dict[str, Any] | None) -> bytes:
         """Gather entropy from question, context, and system state.
 
@@ -233,6 +253,7 @@ class IfaCaster:
         nanosecond timestamps for additional irreducibility.
         """
         import os
+
         ctx_str = str(context) if context else ""
         if self._seed is not None:
             combined = f"{question}|{ctx_str}|{self._seed}"
@@ -264,7 +285,7 @@ class IfaCaster:
         """
         bits = []
         for i in range(0, len(shells), 2):
-            pair = shells[i:i + 2]
+            pair = shells[i : i + 2]
             if len(pair) == 2:
                 if pair[0] == pair[1]:
                     # Both agree: use that value
@@ -298,7 +319,9 @@ class IfaCaster:
         iching_num = ifa_to_iching(right_binary, left_binary)
 
         ctx_str = str(context) if context else ""
-        context_hash = hashlib.sha256(ctx_str.encode()).hexdigest()[:16] if ctx_str else ""
+        context_hash = (
+            hashlib.sha256(ctx_str.encode()).hexdigest()[:16] if ctx_str else ""
+        )
 
         return CastResult(
             right_binary=right_binary,
@@ -327,7 +350,8 @@ def get_caster(seed: int | None = None) -> IfaCaster:
     return _caster
 
 
-def cast_ifa(question: str = "", context: dict[str, Any] | None = None,
-             method: str = "cowrie") -> CastResult:
+def cast_ifa(
+    question: str = "", context: dict[str, Any] | None = None, method: str = "cowrie"
+) -> CastResult:
     """Convenience function to cast Ifa."""
     return get_caster().cast(question=question, context=context, method=method)

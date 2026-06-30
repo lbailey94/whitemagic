@@ -1,118 +1,164 @@
-"""Intelligence Tools — context optimizer, prompt templates, zodiac cores.
-"""
+"""Intelligence Tools — context optimizer, prompt templates, zodiac cores."""
 
 from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
 TOOLS: list[ToolDefinition] = [
-ToolDefinition(
-    name="zodiac.activate",
-    description=(
-        "Activate a specific zodiac core with context. "
-        "Each core (Aries through Pisces) provides specialized processing: "
-        "Aries=initiative, Taurus=stability, Gemini=synthesis, etc. "
-        "Returns wisdom, resonance score, and transformation applied."
-    ),
-    category=ToolCategory.SYSTEM,
-    safety=ToolSafety.READ,
-    input_schema={
-        "type": "object",
-        "properties": {
-            "core": {
-                "type": "string",
-                "enum": ["aries", "taurus", "gemini", "cancer", "leo", "virgo",
-                         "libra", "scorpio", "sagittarius", "capricorn",
-                         "aquarius", "pisces"],
-                "description": "Zodiac sign to activate",
+    ToolDefinition(
+        name="zodiac.activate",
+        description=(
+            "Activate a specific zodiac core with context. "
+            "Each core (Aries through Pisces) provides specialized processing: "
+            "Aries=initiative, Taurus=stability, Gemini=synthesis, etc. "
+            "Returns wisdom, resonance score, and transformation applied."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "core": {
+                    "type": "string",
+                    "enum": [
+                        "aries",
+                        "taurus",
+                        "gemini",
+                        "cancer",
+                        "leo",
+                        "virgo",
+                        "libra",
+                        "scorpio",
+                        "sagittarius",
+                        "capricorn",
+                        "aquarius",
+                        "pisces",
+                    ],
+                    "description": "Zodiac sign to activate",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Operation context",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Operation type",
+                        },
+                        "intention": {
+                            "type": "string",
+                            "description": "Intention behind activation",
+                        },
+                        "urgency": {
+                            "type": "string",
+                            "enum": ["low", "normal", "high"],
+                            "default": "normal",
+                        },
+                    },
+                },
             },
-            "context": {
-                "type": "object",
-                "description": "Operation context",
-                "properties": {
-                    "operation": {"type": "string", "description": "Operation type"},
-                    "intention": {"type": "string", "description": "Intention behind activation"},
-                    "urgency": {"type": "string", "enum": ["low", "normal", "high"], "default": "normal"},
+            "required": ["core"],
+        },
+    ),
+    ToolDefinition(
+        name="zodiac.council",
+        description=(
+            "Convene the full 12-sign zodiac council for a decision. "
+            "Returns perspectives from all 12 cores on the given decision."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "decision": {
+                    "type": "string",
+                    "description": "The decision to get perspectives on",
+                },
+            },
+            "required": ["decision"],
+        },
+    ),
+    ToolDefinition(
+        name="zodiac.stats",
+        description="Get activation statistics for all 12 zodiac cores",
+        category=ToolCategory.INTROSPECTION,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="context.pack",
+        description="Pack memories into an optimized context window for LLM calls — salience scoring + primacy/recency reorder",
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query to find and score relevant memories",
+                    "default": "*",
+                },
+                "token_budget": {
+                    "type": "integer",
+                    "default": 8000,
+                    "description": "Maximum tokens for the context window",
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 50,
+                    "description": "Max memories to consider",
                 },
             },
         },
-        "required": ["core"],
-    },
-),
-ToolDefinition(
-    name="zodiac.council",
-    description=(
-        "Convene the full 12-sign zodiac council for a decision. "
-        "Returns perspectives from all 12 cores on the given decision."
     ),
-    category=ToolCategory.SYSTEM,
-    safety=ToolSafety.READ,
-    input_schema={
-        "type": "object",
-        "properties": {
-            "decision": {"type": "string", "description": "The decision to get perspectives on"},
+    ToolDefinition(
+        name="context.status",
+        description="Get Context Window Optimizer configuration and status",
+        category=ToolCategory.INTROSPECTION,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="prompt.render",
+        description="Render a named prompt template with variable substitution and optional Wu Xing tone",
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Template name (e.g. session_greeting, memory_synthesis)",
+                    "default": "session_greeting",
+                },
+                "wu_xing": {
+                    "type": "string",
+                    "enum": ["wood", "fire", "earth", "metal", "water"],
+                    "description": "Wu Xing element for tone selection",
+                },
+                "variables": {
+                    "type": "object",
+                    "description": "Key-value pairs for template variable substitution",
+                    "default": {},
+                },
+            },
         },
-        "required": ["decision"],
-    },
-),
-ToolDefinition(
-    name="zodiac.stats",
-    description="Get activation statistics for all 12 zodiac cores",
-    category=ToolCategory.INTROSPECTION,
-    safety=ToolSafety.READ,
-    input_schema={"type": "object", "properties": {}},
-),
-ToolDefinition(
-    name="context.pack",
-    description="Pack memories into an optimized context window for LLM calls — salience scoring + primacy/recency reorder",
-    category=ToolCategory.SYSTEM,
-    safety=ToolSafety.READ,
-    input_schema={
-        "type": "object",
-        "properties": {
-            "query": {"type": "string", "description": "Search query to find and score relevant memories", "default": "*"},
-            "token_budget": {"type": "integer", "default": 8000, "description": "Maximum tokens for the context window"},
-            "limit": {"type": "integer", "default": 50, "description": "Max memories to consider"},
+    ),
+    ToolDefinition(
+        name="prompt.list",
+        description="List all available prompt templates, optionally filtered by tag",
+        category=ToolCategory.INTROSPECTION,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "tag": {"type": "string", "description": "Filter templates by tag"},
+            },
         },
-    },
-),
-ToolDefinition(
-    name="context.status",
-    description="Get Context Window Optimizer configuration and status",
-    category=ToolCategory.INTROSPECTION,
-    safety=ToolSafety.READ,
-    input_schema={"type": "object", "properties": {}},
-),
-
-ToolDefinition(
-    name="prompt.render",
-    description="Render a named prompt template with variable substitution and optional Wu Xing tone",
-    category=ToolCategory.SYSTEM,
-    safety=ToolSafety.READ,
-    input_schema={
-        "type": "object",
-        "properties": {
-            "name": {"type": "string", "description": "Template name (e.g. session_greeting, memory_synthesis)", "default": "session_greeting"},
-            "wu_xing": {"type": "string", "enum": ["wood", "fire", "earth", "metal", "water"], "description": "Wu Xing element for tone selection"},
-            "variables": {"type": "object", "description": "Key-value pairs for template variable substitution", "default": {}},
-        },
-    },
-),
-ToolDefinition(
-    name="prompt.list",
-    description="List all available prompt templates, optionally filtered by tag",
-    category=ToolCategory.INTROSPECTION,
-    safety=ToolSafety.READ,
-    input_schema={
-        "type": "object",
-        "properties": {
-            "tag": {"type": "string", "description": "Filter templates by tag"},
-        },
-    },
-),
-ToolDefinition(
-    name="prompt.reload",
-    description="Reload prompt templates from $WM_STATE_ROOT/prompts/ YAML files",
-    category=ToolCategory.SYSTEM,
-    safety=ToolSafety.WRITE,
-    input_schema={"type": "object", "properties": {}},
-),
+    ),
+    ToolDefinition(
+        name="prompt.reload",
+        description="Reload prompt templates from $WM_STATE_ROOT/prompts/ YAML files",
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.WRITE,
+        input_schema={"type": "object", "properties": {}},
+    ),
 ]

@@ -49,7 +49,8 @@ class MultiAgentCoordinator:
         with self._lock:
             # Release all locks held by this agent
             locks_to_release = [
-                resource for resource, lock in self.locks.items()
+                resource
+                for resource, lock in self.locks.items()
                 if lock.agent_id == agent_id
             ]
 
@@ -95,14 +96,18 @@ class MultiAgentCoordinator:
                     return True, None
 
                 # Resource locked by another agent
-                return False, f"Resource locked by agent {existing_lock.agent_id} for operation: {existing_lock.operation}"
+                return (
+                    False,
+                    f"Resource locked by agent {existing_lock.agent_id} for operation: {existing_lock.operation}",
+                )
 
             # Grant lock
             lock = ResourceLock(
                 resource=resource,
                 agent_id=agent_id,
                 acquired_at=datetime.now(UTC),
-                expires_at=datetime.now(UTC) + timedelta(seconds=timeout or self.lock_timeout),
+                expires_at=datetime.now(UTC)
+                + timedelta(seconds=timeout or self.lock_timeout),
                 operation=operation,
             )
 
@@ -144,17 +149,13 @@ class MultiAgentCoordinator:
     def get_agent_locks(self, agent_id: str) -> list[ResourceLock]:
         """Get all locks held by an agent."""
         with self._lock:
-            return [
-                lock for lock in self.locks.values()
-                if lock.agent_id == agent_id
-            ]
+            return [lock for lock in self.locks.values() if lock.agent_id == agent_id]
 
     def _cleanup_expired_locks(self) -> Any:
         """Remove expired locks (called with lock held)."""
         now = datetime.now(UTC)
         expired = [
-            resource for resource, lock in self.locks.items()
-            if lock.expires_at < now
+            resource for resource, lock in self.locks.items() if lock.expires_at < now
         ]
 
         for resource in expired:
@@ -169,10 +170,13 @@ class MultiAgentCoordinator:
                 "active_agents": len(self.active_agents),
                 "active_locks": len(self.locks),
                 "locks_by_agent": {
-                    agent_id: len([
-                        lock for lock in self.locks.values()
-                        if lock.agent_id == agent_id
-                    ])
+                    agent_id: len(
+                        [
+                            lock
+                            for lock in self.locks.values()
+                            if lock.agent_id == agent_id
+                        ]
+                    )
                     for agent_id in self.active_agents
                 },
             }

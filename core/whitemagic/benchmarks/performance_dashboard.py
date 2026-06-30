@@ -29,7 +29,9 @@ class PerformanceDashboard:
         self.metrics_file = self.data_dir / "metrics.jsonl"
         self._metrics: list[dict[str, Any]] = []
 
-    def record_metric(self, name: str, value: float, unit: str = "ms") -> dict[str, Any]:
+    def record_metric(
+        self, name: str, value: float, unit: str = "ms"
+    ) -> dict[str, Any]:
         """Record a performance metric."""
         entry = {
             "name": name,

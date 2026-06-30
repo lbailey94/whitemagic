@@ -1,4 +1,5 @@
 """Tests for cardinality velocity-enhanced surprise gate."""
+
 import time
 from collections import deque
 from unittest.mock import patch

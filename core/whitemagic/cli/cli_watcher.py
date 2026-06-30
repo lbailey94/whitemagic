@@ -16,7 +16,9 @@ def watch() -> None:
 
 @watch.command("add")
 @click.argument("path", default=".")
-@click.option("--recursive/--no-recursive", "-r/-R", default=True, help="Watch subdirectories")
+@click.option(
+    "--recursive/--no-recursive", "-r/-R", default=True, help="Watch subdirectories"
+)
 @click.option("--pattern", "-p", multiple=True, help="File patterns (e.g., *.py)")
 @click.option("--ignore", "-i", multiple=True, help="Patterns to ignore")
 def add_watch(
@@ -118,6 +120,7 @@ def start_watcher() -> None:
         # Keep running until interrupted
         try:
             import time
+
             while watcher.is_running():
                 time.sleep(1)
         except KeyboardInterrupt:

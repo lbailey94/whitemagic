@@ -22,11 +22,12 @@ from whitemagic.dharma.rules import get_rules_engine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DeepEngineActivation")
 
+
 def run_activation():
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEEP ENGINE ACTIVATION: RECURSIVE ANALYSIS")
-    print("="*60)
-    
+    print("=" * 60)
+
     # Ensure Dharma is in creative mode
     get_rules_engine().set_profile("creative")
     print("Dharma Profile: CREATIVE (Relaxed Restrictions)")
@@ -35,7 +36,7 @@ def run_activation():
     print("\n[1/2] Activating Kaizen Engine (Quality & Gaps)...")
     kaizen = get_kaizen_engine()
     report = kaizen.analyze()
-    
+
     print(f"  Found {len(report.proposals)} improvement proposals.")
     for cat, props in report.by_category.items():
         print(f"    - {cat.upper()}: {len(props)} proposals")
@@ -45,10 +46,10 @@ def run_activation():
     # 2. Emergence Engine
     print("\n[2/2] Activating Emergence Engine (Insight Synthesis)...")
     emergence = get_emergence_engine()
-    # Emergence engine usually needs to listen to the bus, 
+    # Emergence engine usually needs to listen to the bus,
     # but we can trigger a proactive scan (v14 feature).
     insights = emergence.scan_for_emergence()
-    
+
     print(f"  Found {len(insights)} emergent insights.")
     for insight in insights:
         print(f"    * ✨ {insight.title} (Confidence: {insight.confidence:.2f})")
@@ -59,13 +60,13 @@ def run_activation():
     with open(output_md, "w") as f:
         f.write("# 🌀 WhiteMagic Evolution Report v2\n")
         f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        
+
         f.write("## 改善 (Kaizen) Proposals\n")
         for p in report.proposals:
             f.write(f"- **[{p.category.upper()}]** {p.title}\n")
             f.write(f"  - Impact: {p.impact} | Auto-fixable: {p.auto_fixable}\n")
             f.write(f"  - {p.description}\n\n")
-            
+
         f.write("## ✨ Emergent Insights\n")
         for insight in insights:
             f.write(f"### {insight.title}\n")
@@ -74,6 +75,7 @@ def run_activation():
             f.write(f"- {insight.description}\n\n")
 
     print(f"\n✅ Evolution report saved to: {output_md}")
+
 
 if __name__ == "__main__":
     run_activation()

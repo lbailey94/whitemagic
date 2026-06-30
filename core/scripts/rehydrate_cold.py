@@ -29,7 +29,9 @@ def count(conn, table, prefix="main"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Rehydrate cold archive via SQL ATTACH")
+    parser = argparse.ArgumentParser(
+        description="Rehydrate cold archive via SQL ATTACH"
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -59,7 +61,13 @@ def main():
 
     # --- Pre-counts ---
     print("\n📊 Before:")
-    for t in ["memories", "associations", "holographic_coords", "memory_embeddings", "tags"]:
+    for t in [
+        "memories",
+        "associations",
+        "holographic_coords",
+        "memory_embeddings",
+        "tags",
+    ]:
         mc = count(conn, t, "main")
         cc = count(conn, t, "cold")
         print(f"  {t}: active={mc:,}  cold={cc:,}")
@@ -78,8 +86,12 @@ def main():
     # --- 1. Memories ---
     # The cold DB has a slightly different schema (missing some columns).
     # We select only columns that exist in both.
-    cold_mem_cols = [r[1] for r in conn.execute("PRAGMA cold.table_info(memories)").fetchall()]
-    active_mem_cols = [r[1] for r in conn.execute("PRAGMA main.table_info(memories)").fetchall()]
+    cold_mem_cols = [
+        r[1] for r in conn.execute("PRAGMA cold.table_info(memories)").fetchall()
+    ]
+    active_mem_cols = [
+        r[1] for r in conn.execute("PRAGMA main.table_info(memories)").fetchall()
+    ]
     shared_cols = [c for c in active_mem_cols if c in cold_mem_cols]
     col_list = ", ".join(shared_cols)
 
@@ -94,13 +106,19 @@ def main():
     print(f"  ✅ Memories done in {dt:.1f}s")
 
     # --- 2. Associations ---
-    cold_assoc_cols = [r[1] for r in conn.execute("PRAGMA cold.table_info(associations)").fetchall()]
-    active_assoc_cols = [r[1] for r in conn.execute("PRAGMA main.table_info(associations)").fetchall()]
+    cold_assoc_cols = [
+        r[1] for r in conn.execute("PRAGMA cold.table_info(associations)").fetchall()
+    ]
+    active_assoc_cols = [
+        r[1] for r in conn.execute("PRAGMA main.table_info(associations)").fetchall()
+    ]
     shared_assoc = [c for c in active_assoc_cols if c in cold_assoc_cols]
     acol_list = ", ".join(shared_assoc)
 
     cold_assoc_count = count(conn, "associations", "cold")
-    print(f"\n📦 Ingesting associations ({cold_assoc_count:,} rows, {len(shared_assoc)} shared cols)...")
+    print(
+        f"\n📦 Ingesting associations ({cold_assoc_count:,} rows, {len(shared_assoc)} shared cols)..."
+    )
     print("   This may take several minutes for 18.7M rows...")
     t0 = time.perf_counter()
 
@@ -124,8 +142,10 @@ def main():
         pct = min(100, total_done / max(1, cold_assoc_count) * 100)
         rate = total_done / max(0.1, elapsed)
         remaining = max(0, cold_assoc_count - total_done) / max(1, rate)
-        print(f"    ... {min(total_done, cold_assoc_count):,}/{cold_assoc_count:,} ({pct:.0f}%) "
-              f"[{elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining]")
+        print(
+            f"    ... {min(total_done, cold_assoc_count):,}/{cold_assoc_count:,} ({pct:.0f}%) "
+            f"[{elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining]"
+        )
 
         if total_done >= cold_assoc_count:
             break
@@ -136,8 +156,14 @@ def main():
     # --- 3. Holographic coords ---
     print("\n📦 Ingesting holographic coords...")
     t0 = time.perf_counter()
-    cold_holo_cols = [r[1] for r in conn.execute("PRAGMA cold.table_info(holographic_coords)").fetchall()]
-    active_holo_cols = [r[1] for r in conn.execute("PRAGMA main.table_info(holographic_coords)").fetchall()]
+    cold_holo_cols = [
+        r[1]
+        for r in conn.execute("PRAGMA cold.table_info(holographic_coords)").fetchall()
+    ]
+    active_holo_cols = [
+        r[1]
+        for r in conn.execute("PRAGMA main.table_info(holographic_coords)").fetchall()
+    ]
     shared_holo = [c for c in active_holo_cols if c in cold_holo_cols]
     hcol_list = ", ".join(shared_holo)
     conn.execute(f"""
@@ -151,8 +177,18 @@ def main():
     print("\n📦 Ingesting embeddings...")
     t0 = time.perf_counter()
     try:
-        cold_embed_cols = [r[1] for r in conn.execute("PRAGMA cold.table_info(memory_embeddings)").fetchall()]
-        active_embed_cols = [r[1] for r in conn.execute("PRAGMA main.table_info(memory_embeddings)").fetchall()]
+        cold_embed_cols = [
+            r[1]
+            for r in conn.execute(
+                "PRAGMA cold.table_info(memory_embeddings)"
+            ).fetchall()
+        ]
+        active_embed_cols = [
+            r[1]
+            for r in conn.execute(
+                "PRAGMA main.table_info(memory_embeddings)"
+            ).fetchall()
+        ]
         shared_embed = [c for c in active_embed_cols if c in cold_embed_cols]
         if shared_embed:
             ecol_list = ", ".join(shared_embed)
@@ -191,7 +227,13 @@ def main():
 
     # --- Final counts ---
     print("\n📊 After:")
-    for t in ["memories", "associations", "holographic_coords", "memory_embeddings", "tags"]:
+    for t in [
+        "memories",
+        "associations",
+        "holographic_coords",
+        "memory_embeddings",
+        "tags",
+    ]:
         mc = count(conn, t, "main")
         print(f"  {t}: {mc:,}")
 

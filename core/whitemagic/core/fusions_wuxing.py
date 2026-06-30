@@ -30,10 +30,10 @@ _QUADRANT_TO_ELEMENT = {
 
 # Legacy compass direction names from GANA_META -> Chinese astronomical quadrants
 _COMPASS_TO_ASTRONOMICAL = {
-    "East": "Northeast",   # Wood
+    "East": "Northeast",  # Wood
     "South": "Southeast",  # Fire
-    "West": "Northwest",   # Metal
-    "North": "Center",     # Water
+    "West": "Northwest",  # Metal
+    "North": "Center",  # Water
 }
 
 
@@ -66,7 +66,7 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
         # Check if this quadrant matches the dominant element
         matching_quadrant = _ELEMENT_TO_QUADRANT.get(dominant_element)
 
-        boosted = (matching_quadrant == quadrant)
+        boosted = matching_quadrant == quadrant
 
         # Boost factor: 1.0 (no boost) to 1.5 (full alignment)
         if boosted and element_energy > 0:
@@ -81,8 +81,11 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
             q_element = _QUADRANT_TO_ELEMENT[quadrant]
             # Overcoming cycle: Wood→Earth→Water→Fire→Metal→Wood
             _OVERCOMES = {
-                "wood": "earth", "earth": "water", "water": "fire",
-                "fire": "metal", "metal": "wood",
+                "wood": "earth",
+                "earth": "water",
+                "water": "fire",
+                "fire": "metal",
+                "metal": "wood",
             }
             if _OVERCOMES.get(dominant_element) == q_element:
                 penalized = True
@@ -114,6 +117,7 @@ def _get_dominant_element() -> tuple:
     """Get the dominant Wu Xing element and its energy. Safe fallback."""
     try:
         from whitemagic.wu_xing import WuXingEngine
+
         engine = WuXingEngine()
         # Find highest energy element
         best = max(engine.elements.values(), key=lambda s: s.energy)

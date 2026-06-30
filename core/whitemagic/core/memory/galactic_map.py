@@ -44,10 +44,6 @@ from whitemagic.core.memory.unified_types import Memory
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Galactic Zones
-# ---------------------------------------------------------------------------
-
 class GalacticZone(Enum):
     """Named zones radiating outward from the galactic core."""
 
@@ -71,10 +67,6 @@ def classify_zone(distance: float) -> GalacticZone:
     else:
         return GalacticZone.FAR_EDGE
 
-
-# ---------------------------------------------------------------------------
-# Sweep Report
-# ---------------------------------------------------------------------------
 
 @dataclass
 class GalacticSweepReport:
@@ -112,10 +104,6 @@ class GalacticSweepReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Galactic Map Engine
-# ---------------------------------------------------------------------------
-
 class GalacticMap:
     """Computes and persists galactic distance for every memory.
 
@@ -129,10 +117,6 @@ class GalacticMap:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._total_sweeps = 0
-
-    # ------------------------------------------------------------------
-    # Distance computation
-    # ------------------------------------------------------------------
 
     def compute_distance(self, mem: Memory, retention_score: float | None = None) -> float:
         """Compute galactic distance for a single memory.
@@ -169,10 +153,6 @@ class GalacticMap:
         total_weight = sum(w for _, w in signals)
         weighted_sum = sum(v * w for v, w in signals)
         return weighted_sum / total_weight if total_weight > 0 else 0.5
-
-    # ------------------------------------------------------------------
-    # Full sweep
-    # ------------------------------------------------------------------
 
     def full_sweep(self, batch_size: int = 500) -> GalacticSweepReport:
         """Sweep ALL memories in the database:
@@ -324,10 +304,6 @@ class GalacticMap:
 
         return report
 
-    # ------------------------------------------------------------------
-    # Decay drift — unaccessed memories drift outward
-    # ------------------------------------------------------------------
-
     def decay_drift(self, drift_rate: float = 0.005, inactivity_days: int = 14) -> dict[str, Any]:
         """Apply outward drift to memories not accessed in `inactivity_days`.
 
@@ -403,10 +379,6 @@ class GalacticMap:
             "inactivity_days": inactivity_days,
         }
 
-    # ------------------------------------------------------------------
-    # Set distance for a single memory (used by consolidation)
-    # ------------------------------------------------------------------
-
     def set_distance(self, memory_id: str, distance: float) -> None:
         """Set galactic distance for a single memory."""
         try:
@@ -416,10 +388,6 @@ class GalacticMap:
             backend.update_galactic_distance(memory_id, distance)
         except Exception as exc:
             logger.debug("set_distance failed: %s", exc, exc_info=True)
-
-    # ------------------------------------------------------------------
-    # Lightweight zone counting (for Harmony Vector A4 synthesis)
-    # ------------------------------------------------------------------
 
     def get_zone_counts(self) -> dict[str, int]:
         """Query the DB directly for zone distribution without running a
@@ -504,10 +472,6 @@ class GalacticMap:
             logger.debug("get_zone_counts_by_galaxy failed: %s", e, exc_info=True)
             return {}
 
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -518,10 +482,6 @@ class GalacticMap:
         return {
             "total_sweeps": self._total_sweeps,
         }
-
-    # ------------------------------------------------------------------
-    # Async versions for PSR-013
-    # ------------------------------------------------------------------
 
     async def full_sweep_async(self, batch_size: int = 500) -> GalacticSweepReport:
         """Async version of full_sweep for non-blocking galactic operations."""
@@ -675,10 +635,6 @@ class GalacticMap:
             logger.debug("get_zone_counts_async failed: %s", e, exc_info=True)
             return {}
 
-
-    # ------------------------------------------------------------------
-    # Galactic Telepathy facade (fused from GalacticTelepathyEngine)
-    # ------------------------------------------------------------------
 
     _telepathy_engine_instance: Any = None
 

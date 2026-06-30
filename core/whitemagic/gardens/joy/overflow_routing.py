@@ -178,4 +178,6 @@ if __name__ == "__main__":
     router = OverflowRouter()
     router.first_channels()
     logger.info(router.abundance_report())
-    logger.info("\n" + router.gift_to_world("Joy Garden architecture", SurplusType.CREATIVE))
+    logger.info(
+        "\n" + router.gift_to_world("Joy Garden architecture", SurplusType.CREATIVE)
+    )

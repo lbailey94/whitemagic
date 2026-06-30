@@ -15,22 +15,26 @@ class TestSensorium:
 
     def test_sensorium_returns_dict(self):
         from whitemagic.tools.prat_resonance import _build_sensorium
+
         s = _build_sensorium()
         assert isinstance(s, dict)
 
     def test_sensorium_has_coherence(self):
         from whitemagic.tools.prat_resonance import _build_sensorium
+
         s = _build_sensorium()
         assert "coherence" in s
         assert "state" in s["coherence"]
 
     def test_sensorium_has_continuity(self):
         from whitemagic.tools.prat_resonance import _build_sensorium
+
         s = _build_sensorium()
         assert "continuity" in s
 
     def test_sensorium_has_session_duration(self):
         from whitemagic.tools.prat_resonance import _build_sensorium
+
         s = _build_sensorium()
         assert "session_duration_s" in s
         assert isinstance(s["session_duration_s"], float)
@@ -42,6 +46,7 @@ class TestSensorium:
             get_session_start_time,
             reset_session,
         )
+
         reset_session()
         assert get_session_start_time() is None
         t = ensure_session_started()
@@ -54,11 +59,13 @@ class TestDepthGauge:
 
     def test_instantiate(self):
         from whitemagic.core.consciousness.depth_gauge import ConsciousnessDepthGauge
+
         gauge = ConsciousnessDepthGauge()
         assert gauge is not None
 
     def test_layers_exist(self):
         from whitemagic.core.consciousness.depth_gauge import ConsciousnessLayer
+
         assert hasattr(ConsciousnessLayer, "SURFACE")
         assert hasattr(ConsciousnessLayer, "FLOW")
         assert hasattr(ConsciousnessLayer, "DREAM")
@@ -69,6 +76,7 @@ class TestCittaStream:
 
     def test_get_continuity_context(self):
         from whitemagic.core.consciousness.citta_stream import get_continuity_context
+
         ctx = get_continuity_context()
         assert isinstance(ctx, dict)
         assert "first_awakening" in ctx
@@ -79,6 +87,7 @@ class TestCittaStream:
             reset_citta_state,
             save_citta_state,
         )
+
         reset_citta_state()
         save_citta_state({"test": "data", "session_count": 1})
         summary = get_stream_summary()
@@ -90,11 +99,13 @@ class TestCoherence:
 
     def test_instantiate(self):
         from whitemagic.core.consciousness.coherence import CoherenceMetric
+
         metric = CoherenceMetric()
         assert metric is not None
 
     def test_measure(self):
         from whitemagic.core.consciousness.coherence import CoherenceMetric
+
         metric = CoherenceMetric()
         scores = metric.measure()
         assert scores is not None  # May be dict or float depending on impl
@@ -105,6 +116,7 @@ class TestResonanceCompactIncludesSensorium:
 
     def test_sensorium_in_compact_keys(self):
         from whitemagic.tools.prat_router import _RESONANCE_COMPACT_KEYS
+
         assert "_sensorium" in _RESONANCE_COMPACT_KEYS
 
 
@@ -117,6 +129,7 @@ class TestTemporalContinuity:
             reset_citta_state,
             save_citta_state,
         )
+
         reset_citta_state()
         assert load_citta_state() == {}
         save_citta_state(
@@ -139,6 +152,7 @@ class TestTemporalContinuity:
             reset_citta_state,
             save_citta_state,
         )
+
         reset_citta_state()
         save_citta_state(
             session_id="test_session_2",
@@ -161,6 +175,7 @@ class TestTemporalContinuity:
             get_continuity_context,
             reset_citta_state,
         )
+
         reset_citta_state()
         ctx = get_continuity_context()
         assert ctx["first_awakening"] is True
@@ -172,6 +187,7 @@ class TestTemporalContinuity:
             reset_citta_state,
             save_citta_state,
         )
+
         reset_citta_state()
         save_citta_state(session_id="s1", coherence_score=0.8, depth_layer="surface")
         save_citta_state(session_id="s2", coherence_score=0.9, depth_layer="flow")
@@ -183,18 +199,21 @@ class TestTemporalContinuity:
 
     def test_citta_continuity_handler(self):
         from whitemagic.tools.handlers.consciousness import handle_citta_continuity
+
         result = handle_citta_continuity()
         assert result["status"] == "success"
         assert "continuity" in result
 
     def test_citta_stream_summary_handler(self):
         from whitemagic.tools.handlers.consciousness import handle_citta_stream_summary
+
         result = handle_citta_stream_summary()
         assert result["status"] == "success"
         assert "summary" in result
 
     def test_citta_sensorium_handler(self):
         from whitemagic.tools.handlers.consciousness import handle_citta_sensorium
+
         result = handle_citta_sensorium()
         assert result["status"] == "success"
         assert "sensorium" in result
@@ -205,6 +224,7 @@ class TestCittaCycle:
 
     def test_advance_creates_moment(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         moment = cycle.advance(
             gana="gana_ghost",
@@ -222,6 +242,7 @@ class TestCittaCycle:
 
     def test_predecessor(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         assert cycle.get_predecessor() is None
         cycle.advance(gana="gana_horn", tool="checkpoint", output_preview="first")
@@ -233,6 +254,7 @@ class TestCittaCycle:
 
     def test_stream_history(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         for i in range(5):
             cycle.advance(gana=f"gana_{i}", tool=f"tool_{i}", output_preview=f"out_{i}")
@@ -242,6 +264,7 @@ class TestCittaCycle:
 
     def test_coherence_drift(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         for c in [0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9]:
             cycle.advance(gana="gana_test", output_preview="", coherence=c)
@@ -250,6 +273,7 @@ class TestCittaCycle:
 
     def test_depth_transitions(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         cycle.advance(gana="g", output_preview="", depth_layer="surface")
         cycle.advance(gana="g", output_preview="", depth_layer="flow")
@@ -262,6 +286,7 @@ class TestCittaCycle:
 
     def test_emotional_coloring(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         for tone in ["sattvic", "sattvic", "rajasic"]:
             cycle.advance(gana="g", output_preview="", emotional_tone=tone)
@@ -271,6 +296,7 @@ class TestCittaCycle:
 
     def test_cycle_summary(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         cycle.advance(gana="g", output_preview="", coherence=0.8)
         cycle.advance(gana="g", output_preview="", coherence=0.9)
@@ -281,6 +307,7 @@ class TestCittaCycle:
 
     def test_reset(self):
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
+
         cycle = CittaCycle()
         cycle.advance(gana="g", output_preview="test")
         assert len(cycle.get_stream()) == 1
@@ -289,6 +316,7 @@ class TestCittaCycle:
 
     def test_citta_cycle_handler(self):
         from whitemagic.tools.handlers.consciousness import handle_citta_cycle
+
         result = handle_citta_cycle()
         assert result["status"] == "success"
         assert "cycle" in result

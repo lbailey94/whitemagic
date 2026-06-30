@@ -15,8 +15,18 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 ZODIAC_SIGNS = [
-    "aries", "taurus", "gemini", "cancer", "leo", "virgo",
-    "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+    "aries",
+    "taurus",
+    "gemini",
+    "cancer",
+    "leo",
+    "virgo",
+    "libra",
+    "scorpio",
+    "sagittarius",
+    "capricorn",
+    "aquarius",
+    "pisces",
 ]
 
 SIGN_QUALITIES: dict[str, str] = {
@@ -38,6 +48,7 @@ SIGN_QUALITIES: dict[str, str] = {
 @dataclass
 class ZodiacCore:
     """A single zodiac consciousness core."""
+
     sign: str
     quality: str
     active: bool = False

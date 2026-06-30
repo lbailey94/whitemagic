@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, Clock, Zap, Brain, Heart } from 'lucide-react';
 
 const Timeline = ({ events, loading }) => {

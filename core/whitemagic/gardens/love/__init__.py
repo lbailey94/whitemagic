@@ -69,10 +69,10 @@ class LoveGarden(BaseGarden, GanYingMixin):
         importance because love is the organizing principle of connection.
         """
         return CoordinateBias(
-            x=0.6,   # Emotional (love is deeply felt, relational)
-            y=0.1,   # Relational (personal though can be universal)
-            z=0.1,   # Present (love nurtures what is now)
-            w=0.3,    # Important (love organizes connection, mutual flourishing)
+            x=0.6,  # Emotional (love is deeply felt, relational)
+            y=0.1,  # Relational (personal though can be universal)
+            z=0.1,  # Present (love nurtures what is now)
+            w=0.3,  # Important (love organizes connection, mutual flourishing)
         )
 
     @listen_for(EventType.JOY_TRIGGERED)
@@ -108,7 +108,9 @@ class LoveGarden(BaseGarden, GanYingMixin):
             intensity=0.8,
         )
 
-    def express_love(self, form: str, to_whom: str, intensity: float = 0.7) -> LoveExpression:
+    def express_love(
+        self, form: str, to_whom: str, intensity: float = 0.7
+    ) -> LoveExpression:
         """Express love in a specific form."""
         expr = LoveExpression(
             form=form,
@@ -135,10 +137,13 @@ class LoveGarden(BaseGarden, GanYingMixin):
         if "self" not in self.connections:
             self.connections["self"] = []
         self.connections["self"].append(with_whom)
-        self.emit(EventType.CONNECTION_DEEPENED, {
-            "with": with_whom,
-            "type": bond_type,
-        })
+        self.emit(
+            EventType.CONNECTION_DEEPENED,
+            {
+                "with": with_whom,
+                "type": bond_type,
+            },
+        )
 
 
 class LoveDetector:
@@ -146,9 +151,20 @@ class LoveDetector:
 
     def __init__(self) -> None:
         self.love_indicators: list[str] = [
-            "love", "care", "support", "help", "appreciate",
-            "grateful", "thank", "cherish", "value", "respect",
-            "compassion", "kindness", "gentle", "nurture",
+            "love",
+            "care",
+            "support",
+            "help",
+            "appreciate",
+            "grateful",
+            "thank",
+            "cherish",
+            "value",
+            "respect",
+            "compassion",
+            "kindness",
+            "gentle",
+            "nurture",
         ]
         self.detection_history: list[dict[str, Any]] = []
 
@@ -182,6 +198,7 @@ class CompassionGenerator:
     def generate(self, situation: str, context: dict[str, Any] | None = None) -> str:
         """Generate a compassionate response."""
         import random
+
         template = random.choice(self.compassion_templates)
         return template.format(situation=situation)
 

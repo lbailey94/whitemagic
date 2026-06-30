@@ -8,6 +8,7 @@ Usage:
     whitemagic self-improve --status         # Show loop status
     whitemagic self-improve --record-outcome HYP_ID --success  # Record outcome
 """
+
 from __future__ import annotations
 
 import json as json_module
@@ -33,12 +34,16 @@ def run(ctx, cycles: int, max_hypotheses: int, json_flag: bool, verbose: bool):
     loop = get_improvement_loop()
 
     all_cycles = []
-    json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = json_flag or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
     for i in range(cycles):
         if not json_output:
-            click.echo(f"\n{'='*60}")
-            click.echo(f"  Improvement Cycle {i+1}/{cycles}")
-            click.echo(f"{'='*60}")
+            click.echo(f"\n{'=' * 60}")
+            click.echo(f"  Improvement Cycle {i + 1}/{cycles}")
+            click.echo(f"{'=' * 60}")
 
         cycle = loop.run_cycle(max_hypotheses=max_hypotheses)
         all_cycles.append(cycle)
@@ -62,7 +67,9 @@ def run(ctx, cycles: int, max_hypotheses: int, json_flag: bool, verbose: bool):
         click.echo("\n  Phase 2 — IMAGINE:")
         click.echo(f"    Hypotheses created: {imagine.get('hypotheses_created', 0)}")
         click.echo(f"    MC simulations: {imagine.get('mc_simulations', 0)}")
-        click.echo(f"    Distinct improvements seen: {imagine.get('distinct_improvements', 0)}")
+        click.echo(
+            f"    Distinct improvements seen: {imagine.get('distinct_improvements', 0)}"
+        )
 
         predict = cycle.phase_results.get("predict", {})
         click.echo("\n  Phase 3 — PREDICT:")
@@ -75,21 +82,34 @@ def run(ctx, cycles: int, max_hypotheses: int, json_flag: bool, verbose: bool):
 
         for rec in recs[:5]:
             click.echo(f"\n    #{rec['rank']} [{rec['source']}] {rec['title']}")
-            click.echo(f"        Score: {rec['score']:.4f} | Impact: {rec['predicted_impact']:.3f} | Confidence: {rec['confidence']:.3f}")
-            click.echo(f"        Novelty: {rec['novelty']:.3f} | Effort: {rec['effort']} | Auto-fixable: {rec['auto_fixable']}")
+            click.echo(
+                f"        Score: {rec['score']:.4f} | Impact: {rec['predicted_impact']:.3f} | Confidence: {rec['confidence']:.3f}"
+            )
+            click.echo(
+                f"        Novelty: {rec['novelty']:.3f} | Effort: {rec['effort']} | Auto-fixable: {rec['auto_fixable']}"
+            )
             if rec.get("fix_action"):
                 click.echo(f"        Fix action: {rec['fix_action']}")
             if rec.get("recommended_tools"):
-                tools_str = ", ".join(f"{t['tool']}({t['expected_success']:.0%})" for t in rec["recommended_tools"])
+                tools_str = ", ".join(
+                    f"{t['tool']}({t['expected_success']:.0%})"
+                    for t in rec["recommended_tools"]
+                )
                 click.echo(f"        Recommended tools: {tools_str}")
 
         learn = cycle.phase_results.get("learn", {})
         click.echo("\n  Phase 5 — LEARN:")
-        click.echo(f"    Applications recorded: {learn.get('applications_recorded', 0)}")
+        click.echo(
+            f"    Applications recorded: {learn.get('applications_recorded', 0)}"
+        )
         summary = learn.get("learning_summary", {})
         if summary:
-            click.echo(f"    Total applications (all-time): {summary.get('total_applications', 0)}")
-            click.echo(f"    Overall success rate: {summary.get('overall_success_rate', 0):.1%}")
+            click.echo(
+                f"    Total applications (all-time): {summary.get('total_applications', 0)}"
+            )
+            click.echo(
+                f"    Overall success rate: {summary.get('overall_success_rate', 0):.1%}"
+            )
             click.echo(f"    Improved patterns: {summary.get('improved_patterns', 0)}")
 
         if verbose and cycle.analytics.get("errors"):
@@ -108,7 +128,7 @@ def run(ctx, cycles: int, max_hypotheses: int, json_flag: bool, verbose: bool):
         click.echo("\n" + "=" * 60)
         click.echo(f"  {cycles} cycle(s) complete")
         click.echo(f"  Total distinct improvements tracked: {loop._hll.estimate()}")
-        click.echo(f"{'='*60}")
+        click.echo(f"{'=' * 60}")
 
 
 @self_improve.command()
@@ -121,7 +141,11 @@ def status(ctx, json_flag: bool):
     loop = get_improvement_loop()
     s = loop.get_status()
 
-    json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = json_flag or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
     if json_output:
         click.echo(json_module.dumps(s, indent=2, default=str))
         return
@@ -146,15 +170,29 @@ def status(ctx, json_flag: bool):
         if bs.get("top_tools"):
             click.echo("    Top tools:")
             for t in bs["top_tools"][:3]:
-                click.echo(f"      {t['tool']}: {t['expected_value']:.1%} ({t['total_calls']} calls)")
+                click.echo(
+                    f"      {t['tool']}: {t['expected_value']:.1%} ({t['total_calls']} calls)"
+                )
 
 
 @self_improve.command()
 @click.argument("hypothesis_id")
-@click.option("--success/--failure", required=True, help="Was the improvement successful?")
-@click.option("--performance-gain", type=float, default=None, help="Performance gain (e.g., 13.0 for 13x)")
+@click.option(
+    "--success/--failure", required=True, help="Was the improvement successful?"
+)
+@click.option(
+    "--performance-gain",
+    type=float,
+    default=None,
+    help="Performance gain (e.g., 13.0 for 13x)",
+)
 @click.option("--quality-score", type=float, default=None, help="Quality score 0-1")
-def record_outcome(hypothesis_id: str, success: bool, performance_gain: float | None, quality_score: float | None):
+def record_outcome(
+    hypothesis_id: str,
+    success: bool,
+    performance_gain: float | None,
+    quality_score: float | None,
+):
     """Record the outcome of an implemented improvement.
 
     This closes the loop — predictions from previous cycles get validated

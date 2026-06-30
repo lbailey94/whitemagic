@@ -53,10 +53,13 @@ class PatternFederation:
         """Connect to Gan Ying Bus and register auto-federation listener."""
         try:
             from whitemagic.core.resonance._consolidated import EventType, get_bus
+
             self.bus = get_bus()
             # Auto-federate: listen for PATTERN_DETECTED events and contribute them
             self.bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
-            logger.info("Pattern Federation connected to Gan Ying Bus with auto-federation")
+            logger.info(
+                "Pattern Federation connected to Gan Ying Bus with auto-federation"
+            )
         except ImportError:
             pass
 
@@ -67,12 +70,14 @@ class PatternFederation:
         to the federation library if it has a name and solution.
         """
         try:
-            data = event.data if hasattr(event, 'data') else {}
+            data = event.data if hasattr(event, "data") else {}
             name = data.get("name", "")
             if not name or data.get("federated"):
                 return  # Skip unnamed or already-federated patterns
             self.contribute_pattern(
-                session_id=data.get("source", event.source if hasattr(event, 'source') else "gan_ying"),
+                session_id=data.get(
+                    "source", event.source if hasattr(event, "source") else "gan_ying"
+                ),
                 name=name,
                 problem=data.get("problem", ""),
                 solution=data.get("solution", data.get("description", "")),
@@ -105,7 +110,9 @@ class PatternFederation:
             Pattern ID
 
         """
-        pattern_id = f"pattern_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{session_id[:8]}"
+        pattern_id = (
+            f"pattern_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{session_id[:8]}"
+        )
 
         pattern = FederatedPattern(
             pattern_id=pattern_id,
@@ -131,17 +138,21 @@ class PatternFederation:
                     EventType,
                     ResonanceEvent,
                 )
-                self.bus.emit(ResonanceEvent(
-                    source="pattern_federation",
-                    event_type=EventType.PATTERN_DETECTED,
-                    data={
-                        "pattern_id": pattern_id,
-                        "name": name,
-                        "confidence": confidence,
-                        "federated": True,
-                    },
-                    confidence=confidence,
-                ), async_dispatch=True)
+
+                self.bus.emit(
+                    ResonanceEvent(
+                        source="pattern_federation",
+                        event_type=EventType.PATTERN_DETECTED,
+                        data={
+                            "pattern_id": pattern_id,
+                            "name": name,
+                            "confidence": confidence,
+                            "federated": True,
+                        },
+                        confidence=confidence,
+                    ),
+                    async_dispatch=True,
+                )
             except (ImportError, AttributeError):
                 pass
 
@@ -180,14 +191,21 @@ class PatternFederation:
         if total > 0:
             success_rate = pattern.success_count / total
             # Weighted average: original confidence + empirical success rate
-            pattern.confidence = (pattern.confidence + success_rate * len(pattern.contributors)) / (1 + len(pattern.contributors))
+            pattern.confidence = (
+                pattern.confidence + success_rate * len(pattern.contributors)
+            ) / (1 + len(pattern.contributors))
 
         pattern.last_used = datetime.now()
         self._save_pattern(pattern)
         self._update_index(pattern)
 
         status = "✅ success" if success else "❌ failure"
-        logger.info("📊 Pattern '%s' validated: %s (confidence: {pattern.confidence:.2f})", pattern.name, status, exc_info=True)
+        logger.info(
+            "📊 Pattern '%s' validated: %s (confidence: {pattern.confidence:.2f})",
+            pattern.name,
+            status,
+            exc_info=True,
+        )
 
     def search_patterns(
         self,
@@ -213,19 +231,17 @@ class PatternFederation:
 
         # Filter by tags
         if tags:
-            patterns = [
-                p for p in patterns
-                if any(tag in p.tags for tag in tags)
-            ]
+            patterns = [p for p in patterns if any(tag in p.tags for tag in tags)]
 
         # Filter by query
         if query:
             query_lower = query.lower()
             patterns = [
-                p for p in patterns
-                if query_lower in p.name.lower() or
-                   query_lower in p.problem.lower() or
-                   query_lower in p.solution.lower()
+                p
+                for p in patterns
+                if query_lower in p.name.lower()
+                or query_lower in p.problem.lower()
+                or query_lower in p.solution.lower()
             ]
 
         # Sort by confidence * usage
@@ -297,10 +313,22 @@ class PatternFederation:
                     last_used=parse_datetime(data["last_used"]),
                 )
         except json.JSONDecodeError as e:
-            logger.error("Error loading pattern %s from %s: %s", pattern_id, pattern_file, e, exc_info=True)
+            logger.error(
+                "Error loading pattern %s from %s: %s",
+                pattern_id,
+                pattern_file,
+                e,
+                exc_info=True,
+            )
             return None
         except Exception as e:
-            logger.error("Unexpected error loading pattern %s from %s: %s", pattern_id, pattern_file, e, exc_info=True)
+            logger.error(
+                "Unexpected error loading pattern %s from %s: %s",
+                pattern_id,
+                pattern_file,
+                e,
+                exc_info=True,
+            )
             return None
 
     def _load_all_patterns(self) -> list[FederatedPattern]:
@@ -321,10 +349,17 @@ class PatternFederation:
                 with open(self.index_file) as f:
                     index = json.load(f)
             except json.JSONDecodeError as e:
-                logger.error("Error loading index from %s: %s", self.index_file, e, exc_info=True)
+                logger.error(
+                    "Error loading index from %s: %s", self.index_file, e, exc_info=True
+                )
                 index = {}
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.error("Unexpected error loading index from %s: %s", self.index_file, e, exc_info=True)
+                logger.error(
+                    "Unexpected error loading index from %s: %s",
+                    self.index_file,
+                    e,
+                    exc_info=True,
+                )
                 index = {}
 
         index[pattern.pattern_id] = {
@@ -359,12 +394,14 @@ def federate_patterns() -> list[dict[str, Any]]:
     # Convert to simple dict format
     patterns = []
     for p in best_patterns:
-        patterns.append({
-            "type": "federated_pattern",
-            "name": p.name,
-            "confidence": p.confidence,
-            "contributors": len(p.contributors),
-            "validations": p.success_count + p.failure_count,
-        })
+        patterns.append(
+            {
+                "type": "federated_pattern",
+                "name": p.name,
+                "confidence": p.confidence,
+                "contributors": len(p.contributors),
+                "validations": p.success_count + p.failure_count,
+            }
+        )
 
     return patterns

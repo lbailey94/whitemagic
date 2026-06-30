@@ -35,55 +35,58 @@ logger = logging.getLogger(__name__)
 try:
     from nacl.encoding import RawEncoder
     from nacl.signing import SigningKey, VerifyKey
+
     _NACL_AVAILABLE = True
 except ImportError:
     _NACL_AVAILABLE = False
 
-# ---------------------------------------------------------------------------
-# Permission Scopes (Leap 9: capability declarations)
-# ---------------------------------------------------------------------------
-
 # Standard permission scopes that tools can declare
 PERMISSION_SCOPES = {
-    "memory:read":     "Read from memory stores (hot/cold DB)",
-    "memory:write":    "Create or update memories",
-    "memory:delete":   "Delete or archive memories",
-    "fs:read":         "Read files from the filesystem",
-    "fs:write":        "Write files to the filesystem",
-    "net:outbound":    "Make outbound network requests",
-    "net:listen":      "Listen for inbound connections",
+    "memory:read": "Read from memory stores (hot/cold DB)",
+    "memory:write": "Create or update memories",
+    "memory:delete": "Delete or archive memories",
+    "fs:read": "Read files from the filesystem",
+    "fs:write": "Write files to the filesystem",
+    "net:outbound": "Make outbound network requests",
+    "net:listen": "Listen for inbound connections",
     "exec:subprocess": "Spawn subprocesses",
-    "exec:eval":       "Evaluate dynamic code",
-    "gpu:compute":     "Use GPU compute resources",
-    "state:read":      "Read system state (harmony, karma, etc.)",
-    "state:write":     "Modify system state",
+    "exec:eval": "Evaluate dynamic code",
+    "gpu:compute": "Use GPU compute resources",
+    "state:read": "Read system state (harmony, karma, etc.)",
+    "state:write": "Modify system state",
     "governance:read": "Read governance rules and scores",
-    "governance:write":"Modify governance rules",
-    "crypto:sign":     "Sign data with system keys",
-    "crypto:verify":   "Verify signatures",
-    "broker:publish":  "Publish to message broker",
-    "broker:subscribe":"Subscribe to message broker topics",
-    "agent:register":  "Register/deregister agents",
-    "agent:trust":     "Modify agent trust levels",
+    "governance:write": "Modify governance rules",
+    "crypto:sign": "Sign data with system keys",
+    "crypto:verify": "Verify signatures",
+    "broker:publish": "Publish to message broker",
+    "broker:subscribe": "Subscribe to message broker topics",
+    "agent:register": "Register/deregister agents",
+    "agent:trust": "Modify agent trust levels",
 }
 
 # Auto-derive permissions from ToolSafety + ToolCategory
 _SAFETY_PERMISSIONS: dict[str, tuple[str, ...]] = {
-    "read":   ("memory:read", "state:read"),
-    "write":  ("memory:read", "memory:write", "state:read", "state:write"),
-    "delete": ("memory:read", "memory:write", "memory:delete", "state:read", "state:write"),
+    "read": ("memory:read", "state:read"),
+    "write": ("memory:read", "memory:write", "state:read", "state:write"),
+    "delete": (
+        "memory:read",
+        "memory:write",
+        "memory:delete",
+        "state:read",
+        "state:write",
+    ),
 }
 
 _CATEGORY_EXTRA_PERMISSIONS: dict[str, tuple[str, ...]] = {
-    "broker":       ("broker:publish", "broker:subscribe"),
-    "agent":        ("agent:register",),
-    "governor":     ("governance:read", "governance:write"),
-    "dharma":       ("governance:read",),
-    "inference":    ("exec:subprocess",),
-    "browser":      ("net:outbound", "fs:read"),
-    "archaeology":  ("fs:read",),
-    "edge":         ("exec:subprocess",),
-    "system":       ("fs:read", "state:read"),
+    "broker": ("broker:publish", "broker:subscribe"),
+    "agent": ("agent:register",),
+    "governor": ("governance:read", "governance:write"),
+    "dharma": ("governance:read",),
+    "inference": ("exec:subprocess",),
+    "browser": ("net:outbound", "fs:read"),
+    "archaeology": ("fs:read",),
+    "edge": ("exec:subprocess",),
+    "system": ("fs:read", "state:read"),
 }
 
 
@@ -94,38 +97,34 @@ def derive_permissions(safety: str, category: str) -> tuple[str, ...]:
     return tuple(sorted(perms))
 
 
-# ---------------------------------------------------------------------------
-# Manifest Entry
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ManifestEntry:
     """A single tool's entry in the signed manifest."""
+
     tool_name: str
     category: str
     safety: str
     permissions: tuple[str, ...]
-    handler_hash: str       # SHA-256 of the handler source file
-    schema_hash: str        # SHA-256 of the input_schema JSON
-    entry_hash: str = ""    # SHA-256 of this entry (for Merkle tree)
+    handler_hash: str  # SHA-256 of the handler source file
+    schema_hash: str  # SHA-256 of the input_schema JSON
+    entry_hash: str = ""  # SHA-256 of this entry (for Merkle tree)
 
     def compute_entry_hash(self) -> str:
         """Compute the deterministic hash of this entry."""
-        canonical = _json_dumps({
-            "tool_name": self.tool_name,
-            "category": self.category,
-            "safety": self.safety,
-            "permissions": list(self.permissions),
-            "handler_hash": self.handler_hash,
-            "schema_hash": self.schema_hash,
-        }, sort_keys=True)
+        canonical = _json_dumps(
+            {
+                "tool_name": self.tool_name,
+                "category": self.category,
+                "safety": self.safety,
+                "permissions": list(self.permissions),
+                "handler_hash": self.handler_hash,
+                "schema_hash": self.schema_hash,
+            },
+            sort_keys=True,
+        )
         self.entry_hash = hashlib.sha256(canonical.encode()).hexdigest()
         return self.entry_hash
 
-
-# ---------------------------------------------------------------------------
-# Merkle Tree
-# ---------------------------------------------------------------------------
 
 def _merkle_root(hashes: list[str]) -> str:
     """Compute Merkle root from a list of hex hashes."""
@@ -146,10 +145,6 @@ def _merkle_root(hashes: list[str]) -> str:
     return _merkle_root(next_level)
 
 
-# ---------------------------------------------------------------------------
-# Handler Hash Computation
-# ---------------------------------------------------------------------------
-
 def _hash_file(path: Path) -> str:
     """SHA-256 hash of a file's contents."""
     try:
@@ -168,25 +163,37 @@ def _find_handler_file(tool_name: str) -> Path | None:
     # Map tool name prefixes to handler files
     prefix_map = {
         "session": "session.py",
-        "create_memory": "memory.py", "update_memory": "memory.py",
-        "delete_memory": "memory.py", "read_memory": "memory.py",
-        "search_memories": "memory.py", "list_memories": "memory.py",
-        "fast_read": "memory.py", "batch_read": "memory.py",
+        "create_memory": "memory.py",
+        "update_memory": "memory.py",
+        "delete_memory": "memory.py",
+        "read_memory": "memory.py",
+        "search_memories": "memory.py",
+        "list_memories": "memory.py",
+        "fast_read": "memory.py",
+        "batch_read": "memory.py",
         "import_memories": "export_import.py",
         "export_memories": "export_import.py",
-        "gnosis": "introspection.py", "capabilities": "introspection.py",
-        "manifest": "introspection.py", "explain": "introspection.py",
+        "gnosis": "introspection.py",
+        "capabilities": "introspection.py",
+        "manifest": "introspection.py",
+        "explain": "introspection.py",
         "capability": "introspection.py",
-        "evaluate_ethics": "ethics.py", "check_boundaries": "ethics.py",
-        "harmony_vector": "ethics.py", "get_ethical": "ethics.py",
+        "evaluate_ethics": "ethics.py",
+        "check_boundaries": "ethics.py",
+        "harmony_vector": "ethics.py",
+        "get_ethical": "ethics.py",
         "get_dharma": "ethics.py",
         "dream": "dreaming.py",
         "grimoire": "grimoire.py",
         "archaeology": "archaeology.py",
-        "pattern": "patterns.py", "cluster": "patterns.py",
-        "kaizen": "synthesis.py", "ensemble": "synthesis.py",
+        "pattern": "patterns.py",
+        "cluster": "patterns.py",
+        "kaizen": "synthesis.py",
+        "ensemble": "synthesis.py",
         "reasoning": "synthesis.py",
-        "health": "misc.py", "ship": "misc.py", "state": "misc.py",
+        "health": "misc.py",
+        "ship": "misc.py",
+        "state": "misc.py",
         "rust_": "misc.py",
         "swarm": "swarm.py",
         "vote": "voting.py",
@@ -194,12 +201,15 @@ def _find_handler_file(tool_name: str) -> Path | None:
         "broker": "broker.py",
         "pipeline": "pipeline.py",
         "ollama": "ollama.py",
-        "edge_": "edge.py", "bitnet": "bitnet.py",
+        "edge_": "edge.py",
+        "bitnet": "bitnet.py",
         "vector": "vector_search.py",
         "karma": "karma.py",
         "dharma": "dharma.py",
-        "track_metric": "metrics.py", "get_metrics": "metrics.py",
-        "record_yin": "metrics.py", "get_yin": "metrics.py",
+        "track_metric": "metrics.py",
+        "get_metrics": "metrics.py",
+        "record_yin": "metrics.py",
+        "get_yin": "metrics.py",
         "galactic": "galactic.py",
         "garden": "garden.py",
         "task": "task.py",
@@ -246,13 +256,10 @@ def _find_handler_file(tool_name: str) -> Path | None:
     return misc if misc.exists() else None
 
 
-# ---------------------------------------------------------------------------
-# Manifest Generation
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ToolManifest:
     """Complete signed manifest of all registered tools."""
+
     version: str
     generated_at: str
     tool_count: int
@@ -293,8 +300,10 @@ def generate_manifest() -> ToolManifest:
 
     for td in tools:
         # Derive permissions if not explicitly set
-        perms = td.permissions if td.permissions else derive_permissions(
-            td.safety.value, td.category.value
+        perms = (
+            td.permissions
+            if td.permissions
+            else derive_permissions(td.safety.value, td.category.value)
         )
         all_perms.update(perms)
 
@@ -326,7 +335,9 @@ def generate_manifest() -> ToolManifest:
 
     # Read version
     try:
-        version = Path(__file__).parent.parent.parent.joinpath("VERSION").read_text().strip()
+        version = (
+            Path(__file__).parent.parent.parent.joinpath("VERSION").read_text().strip()
+        )
     except (OSError, FileNotFoundError, PermissionError):
         version = "unknown"
 
@@ -340,10 +351,6 @@ def generate_manifest() -> ToolManifest:
         unique_permissions=sorted(all_perms),
     )
 
-
-# ---------------------------------------------------------------------------
-# Manifest Verification
-# ---------------------------------------------------------------------------
 
 def verify_manifest(manifest: ToolManifest) -> tuple[bool, list[str]]:
     """Verify a manifest against the current codebase.
@@ -362,15 +369,21 @@ def verify_manifest(manifest: ToolManifest) -> tuple[bool, list[str]]:
         expected = entry.entry_hash
         entry.compute_entry_hash()
         if entry.entry_hash != expected:
-            errors.append(f"Entry hash mismatch for {entry.tool_name}: "
-                          f"stored={expected[:16]}... computed={entry.entry_hash[:16]}...")
+            errors.append(
+                f"Entry hash mismatch for {entry.tool_name}: "
+                f"stored={expected[:16]}... computed={entry.entry_hash[:16]}..."
+            )
 
     # 2. Recompute Merkle root
-    entry_hashes = [e.entry_hash for e in sorted(manifest.entries, key=lambda e: e.tool_name)]
+    entry_hashes = [
+        e.entry_hash for e in sorted(manifest.entries, key=lambda e: e.tool_name)
+    ]
     recomputed_root = _merkle_root(entry_hashes)
     if recomputed_root != manifest.merkle_root:
-        errors.append(f"Merkle root mismatch: stored={manifest.merkle_root[:16]}... "
-                      f"computed={recomputed_root[:16]}...")
+        errors.append(
+            f"Merkle root mismatch: stored={manifest.merkle_root[:16]}... "
+            f"computed={recomputed_root[:16]}..."
+        )
 
     # 3. Verify handler file hashes
     tampered = 0
@@ -383,19 +396,20 @@ def verify_manifest(manifest: ToolManifest) -> tuple[bool, list[str]]:
         current_hash = _hash_file(handler_path)
         if current_hash != entry.handler_hash:
             tampered += 1
-            errors.append(f"Handler tampered: {entry.tool_name} "
-                          f"(expected={entry.handler_hash[:16]}... "
-                          f"current={current_hash[:16]}...)")
+            errors.append(
+                f"Handler tampered: {entry.tool_name} "
+                f"(expected={entry.handler_hash[:16]}... "
+                f"current={current_hash[:16]}...)"
+            )
 
     if tampered > 0:
-        errors.insert(0, f"INTEGRITY ALERT: {tampered} handler file(s) modified since manifest generation")
+        errors.insert(
+            0,
+            f"INTEGRITY ALERT: {tampered} handler file(s) modified since manifest generation",
+        )
 
     return (len(errors) == 0, errors)
 
-
-# ---------------------------------------------------------------------------
-# MCP Tool Interface
-# ---------------------------------------------------------------------------
 
 def manifest_tool() -> dict[str, Any]:
     """Generate and return the tool manifest (MCP tool handler)."""
@@ -427,10 +441,6 @@ def manifest_verify_tool() -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Ed25519 Cryptographic Signing (v14.3 — Phase 4a of V15 Strategy)
-# ---------------------------------------------------------------------------
-
 def _get_key_dir() -> Path:
     """Return the directory for signing keys (~/.whitemagic/keys/)."""
     key_dir = KEYS_DIR
@@ -448,7 +458,10 @@ def generate_signing_keypair(force: bool = False) -> dict[str, Any]:
     The DID:key format follows did:key:z6Mk... (multicodec Ed25519-pub).
     """
     if not _NACL_AVAILABLE:
-        return {"status": "error", "reason": "PyNaCl not installed (pip install pynacl)"}
+        return {
+            "status": "error",
+            "reason": "PyNaCl not installed (pip install pynacl)",
+        }
 
     key_dir = _get_key_dir()
     priv_path = key_dir / "manifest_signing.key"

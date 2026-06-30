@@ -11,6 +11,7 @@ Modes:
 
 The TUI reuses CLI commands internally — it's a view layer, not a separate API.
 """
+
 from typing import Any
 
 from textual.app import App, ComposeResult  # type: ignore[import-not-found]
@@ -28,6 +29,7 @@ from whitemagic import __version__
 
 try:
     from whitemagic.core.memory.unified import get_unified_memory
+
     HAS_MEMORY = True
 except ImportError:
     HAS_MEMORY = False
@@ -59,6 +61,7 @@ class GalaxyMap(Static):
 
     def update_map(self, memories: list[Any]) -> None:
         from whitemagic.tools.tui.galaxy import GalaxyExplorer
+
         explorer = GalaxyExplorer(memories)
         width = self.size.width - 2
         height = self.size.height - 2
@@ -86,7 +89,9 @@ class TelemetryPanel(Static):
                 lines.append(f"[bold]Health:[/bold] {status} ({score:.0%})")
                 if "db" in data:
                     db = data["db"]
-                    lines.append(f"[bold]DB:[/bold] {db.get('memory_count', '?')} memories, {db.get('size_mb', '?')} MB")
+                    lines.append(
+                        f"[bold]DB:[/bold] {db.get('memory_count', '?')} memories, {db.get('size_mb', '?')} MB"
+                    )
                 rust = data.get("rust", {}).get("available", False)
                 lines.append(f"[bold]Rust:[/bold] {'yes' if rust else 'no'}")
         except Exception as e:
@@ -96,6 +101,7 @@ class TelemetryPanel(Static):
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 get_coherence,
             )
+
             coh = get_coherence()
             stats = coh.get_iteration_stats()
             level = stats.get("coherence_level", 100)
@@ -144,7 +150,11 @@ class ToolsPanel(Static):
 
             by_cat: dict[str, list] = {}
             for t in tools:
-                cat = t.category.value if hasattr(t.category, 'value') else str(t.category)
+                cat = (
+                    t.category.value
+                    if hasattr(t.category, "value")
+                    else str(t.category)
+                )
                 by_cat.setdefault(cat, []).append(t)
 
             for cat in sorted(by_cat.keys()):
@@ -174,7 +184,9 @@ class DreamPanel(Static):
             data = result.get("details", result) if isinstance(result, dict) else result
             if isinstance(data, dict):
                 lines.append("[bold]Dream Cycle Status[/]\n")
-                lines.append(f"  Active: {data.get('dreaming', data.get('active', False))}")
+                lines.append(
+                    f"  Active: {data.get('dreaming', data.get('active', False))}"
+                )
                 lines.append(f"  Current phase: {data.get('current_phase', '?')}")
                 lines.append(f"  Total cycles: {data.get('total_cycles', 0)}")
                 lines.append(f"  Idle threshold: {data.get('idle_threshold', '?')}s")
@@ -184,7 +196,9 @@ class DreamPanel(Static):
                     lines.append(f"\n[bold]Recent Dreams ({len(recent)}):[/]")
                     for dream in recent[:5]:
                         if isinstance(dream, dict):
-                            lines.append(f"  - {dream.get('phase', '?')}: {str(dream.get('summary', ''))[:60]}")
+                            lines.append(
+                                f"  - {dream.get('phase', '?')}: {str(dream.get('summary', ''))[:60]}"
+                            )
         except Exception as e:
             lines.append(f"[red]Dream status error: {e}[/]")
 
@@ -196,7 +210,9 @@ class DreamPanel(Static):
                 lines.append(f"\n[bold]Artifacts: {len(artifacts)}[/]")
                 for a in artifacts[:5]:
                     if isinstance(a, dict):
-                        lines.append(f"  - [{a.get('type', '?')}] {str(a.get('title', ''))[:50]}")
+                        lines.append(
+                            f"  - [{a.get('type', '?')}] {str(a.get('title', ''))[:50]}"
+                        )
         except Exception:
             pass
 
@@ -322,7 +338,13 @@ class CognitiveCockpit(App):
         self.sub_title = f"{mode.title()} Mode"
 
         view_area = self.query_one("#view-area")
-        for widget_id in ["galaxy_view", "telemetry_view", "tools_view", "dream_view", "memory_table"]:
+        for widget_id in [
+            "galaxy_view",
+            "telemetry_view",
+            "tools_view",
+            "dream_view",
+            "memory_table",
+        ]:
             try:
                 w = self.query_one(f"#{widget_id}")
                 w.remove()
@@ -388,6 +410,7 @@ class CognitiveCockpit(App):
 
         try:
             from whitemagic.core.intelligence.vector_lake import get_vector_lake
+
             lake = get_vector_lake()
             raw_results = lake.get_holographic_sample(limit=100)
 

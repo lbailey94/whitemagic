@@ -3,7 +3,6 @@
 
 Wraps the GrimoireEngine in the WhiteMagic Plugin protocol so it can be
 discovered, loaded, and hot-swapped by the PluginRegistry without a hard
-import dependency in the core dispatch startup path.
 
 The existing whitemagic.core.plugin system (PluginRegistry, PluginLoader,
 PluginDiscovery) is already wired to scan for Plugin subclasses. Registering
@@ -16,6 +15,7 @@ Usage (automatic via PluginDiscovery, or explicit):
     plugin = registry.get("grimoire")
     plugin.start()
 """
+
 from __future__ import annotations
 
 import logging
@@ -23,11 +23,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Minimal Plugin Protocol (mirrors what whitemagic.core.plugin.base defines,
-# without a hard import so this file is always importable even when the full
-# plugin subsystem hasn't loaded yet).
-# ---------------------------------------------------------------------------
 
 class _PluginBase:
     """Thin fallback base so GrimoirePlugin is always usable."""
@@ -56,6 +51,7 @@ class _PluginBase:
 
 try:
     from whitemagic.core.plugin.base import Plugin as _ImportedPlugin
+
     _PluginBase: type = _ImportedPlugin  # type: ignore[no-redef,misc]
 except ImportError:
     pass  # fallback base is sufficient
@@ -84,6 +80,7 @@ class GrimoirePlugin(_PluginBase):
             None
         """
         from whitemagic.core.intelligence.grimoire_engine import get_grimoire_engine
+
         self._engine = get_grimoire_engine()
         self._engine.awaken()
         self._running = True
@@ -100,7 +97,9 @@ class GrimoirePlugin(_PluginBase):
         self._engine = None
         logger.info("GrimoirePlugin stopped")
 
-    def recommend(self, task: str, keywords: list[str] | None = None) -> list[dict[str, Any]]:
+    def recommend(
+        self, task: str, keywords: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Public API: recommend spells for a task using live cycle context."""
         if not self._running or self._engine is None:
             return []
@@ -120,6 +119,7 @@ class GrimoirePlugin(_PluginBase):
         from whitemagic.core.governance.unified_progression import (
             get_progression_daemon,
         )
+
         daemon = get_progression_daemon()
         return {
             "name": self.name,
@@ -132,14 +132,11 @@ class GrimoirePlugin(_PluginBase):
         }
 
 
-# ---------------------------------------------------------------------------
-# Auto-registration helper
-# ---------------------------------------------------------------------------
-
 def register_grimoire_plugin() -> None:
     """Register GrimoirePlugin with the PluginRegistry if available."""
     try:
         from whitemagic.core.plugin import get_registry
+
         registry = get_registry()
         plugin = GrimoirePlugin()
         plugin.start()

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import httpx
+
     _HTTPX_AVAILABLE = True
 except ImportError:
     _HTTPX_AVAILABLE = False
@@ -40,6 +41,7 @@ class ProofOfGratitude:
     timestamp: str = ""
     benefits: dict[str, Any] = field(default_factory=dict)
 
+
 # XRPL public nodes (mainnet)
 _XRPL_NODES = [
     "https://xrplcluster.com",
@@ -51,7 +53,9 @@ _BASESCAN_API = "https://api.basescan.org/api"
 _BASESCAN_KEY = os.getenv("BASESCAN_API_KEY", "")  # Optional, higher rate limits
 
 
-def verify_xrpl_payment(tx_hash: str, expected_destination: str = "", expected_tag: int | None = None) -> dict[str, Any]:
+def verify_xrpl_payment(
+    tx_hash: str, expected_destination: str = "", expected_tag: int | None = None
+) -> dict[str, Any]:
     """Verify an XRPL payment transaction via JSON-RPC with failover.
 
     Args:
@@ -90,7 +94,9 @@ def verify_xrpl_payment(tx_hash: str, expected_destination: str = "", expected_t
                 result = data.get("result", {})
 
                 if result.get("error"):
-                    errors.append(f"Node {node} error: {result.get('error_message', result.get('error'))}")
+                    errors.append(
+                        f"Node {node} error: {result.get('error_message', result.get('error'))}"
+                    )
                     continue
 
                 if result.get("status") != "success":
@@ -157,7 +163,9 @@ def verify_xrpl_payment(tx_hash: str, expected_destination: str = "", expected_t
     }
 
 
-def verify_x402_payment(tx_hash: str, expected_amount_usdc: float = 0.0) -> dict[str, Any]:
+def verify_x402_payment(
+    tx_hash: str, expected_amount_usdc: float = 0.0
+) -> dict[str, Any]:
     """Verify an x402 micropayment on Base L2 via Basescan API.
 
     Queries Basescan for the transaction receipt, checks status,
@@ -226,7 +234,9 @@ def verify_x402_payment(tx_hash: str, expected_amount_usdc: float = 0.0) -> dict
                 "gas_used": int(gas_used, 16) if gas_used else 0,
                 "from": from_addr,
                 "to": to_addr,
-                "note": "USDC amount requires ERC-20 transfer log decoding" if success else "Transaction failed on-chain",
+                "note": "USDC amount requires ERC-20 transfer log decoding"
+                if success
+                else "Transaction failed on-chain",
             }
     except Exception as exc:
         logger.warning("Basescan verification failed: %s", exc, exc_info=True)
@@ -248,6 +258,7 @@ def get_gratitude_benefits(agent_id: str) -> dict[str, Any]:
     """
     try:
         from whitemagic.gratitude.ledger import get_gratitude_ledger
+
         ledger = get_gratitude_ledger()
         contribution = ledger.get_agent_contribution(agent_id)
     except (ImportError, ModuleNotFoundError):

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Flower, Tree, Sun, Droplets, Wind, Mountain } from 'lucide-react';
 
 const GardenHealth = ({ gardens, loading }) => {

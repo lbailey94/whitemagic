@@ -27,6 +27,7 @@ class RustEmbeddingsBridge:
         """Check if Rust extension is available."""
         try:
             import importlib
+
             self._rust_module = importlib.import_module("whitemagic_rust")
             self._rust_available = True
             logger.info("Rust embeddings bridge active")
@@ -51,15 +52,20 @@ class RustEmbeddingsBridge:
             return 0.0
         return dot / (norm_a * norm_b)
 
-    def batch_similarity(self, query: list[float], vectors: list[list[float]]) -> list[float]:
+    def batch_similarity(
+        self, query: list[float], vectors: list[list[float]]
+    ) -> list[float]:
         """Batch cosine similarity."""
-        if self._rust_available and hasattr(self._rust_module, "batch_cosine_similarity"):
+        if self._rust_available and hasattr(
+            self._rust_module, "batch_cosine_similarity"
+        ):
             return list(self._rust_module.batch_cosine_similarity(query, vectors))
         return [self.cosine_similarity(query, v) for v in vectors]
 
     def benchmark(self, n: int = 1000) -> dict[str, Any]:
         """Benchmark Rust vs Python performance."""
         import random
+
         vec_a = [random.random() for _ in range(128)]
         vec_b = [random.random() for _ in range(128)]
 

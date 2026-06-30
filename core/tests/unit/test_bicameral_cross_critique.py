@@ -18,7 +18,10 @@ class TestSemanticSimilarity(unittest.TestCase):
     def test_returns_none_when_embedding_engine_unavailable(self) -> None:
         """Should return None when embedding engine fails to load."""
         reasoner = BicameralReasoner(left_clones=1, right_clones=1)
-        with patch("whitemagic.core.memory.embeddings.get_embedding_engine", side_effect=Exception("no model")):
+        with patch(
+            "whitemagic.core.memory.embeddings.get_embedding_engine",
+            side_effect=Exception("no model"),
+        ):
             result = reasoner._compute_semantic_similarity("hello", "world")
             self.assertIsNone(result)
 
@@ -26,8 +29,13 @@ class TestSemanticSimilarity(unittest.TestCase):
         """Should return cosine similarity when embeddings are available."""
         reasoner = BicameralReasoner(left_clones=1, right_clones=1)
         mock_engine = MagicMock()
-        mock_engine.encode = MagicMock(side_effect=lambda text: [0.1, 0.2, 0.3] if text == "a" else [0.3, 0.2, 0.1])
-        with patch("whitemagic.core.memory.embeddings.get_embedding_engine", return_value=mock_engine):
+        mock_engine.encode = MagicMock(
+            side_effect=lambda text: [0.1, 0.2, 0.3] if text == "a" else [0.3, 0.2, 0.1]
+        )
+        with patch(
+            "whitemagic.core.memory.embeddings.get_embedding_engine",
+            return_value=mock_engine,
+        ):
             result = reasoner._compute_semantic_similarity("a", "b")
             self.assertIsNotNone(result)
             self.assertGreater(result, 0.0)
@@ -38,7 +46,10 @@ class TestSemanticSimilarity(unittest.TestCase):
         reasoner = BicameralReasoner(left_clones=1, right_clones=1)
         mock_engine = MagicMock()
         mock_engine.encode = MagicMock(return_value=[0.0, 0.0, 0.0])
-        with patch("whitemagic.core.memory.embeddings.get_embedding_engine", return_value=mock_engine):
+        with patch(
+            "whitemagic.core.memory.embeddings.get_embedding_engine",
+            return_value=mock_engine,
+        ):
             result = reasoner._compute_semantic_similarity("a", "b")
             self.assertIsNone(result)
 

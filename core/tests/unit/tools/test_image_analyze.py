@@ -1,4 +1,5 @@
 """Unit tests for image_analyze tool handler."""
+
 import os
 import tempfile
 

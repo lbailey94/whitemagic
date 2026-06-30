@@ -16,10 +16,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// ---------------------------------------------------------------------------
-// Sliding window counter
-// ---------------------------------------------------------------------------
-
 /// A single sliding-window counter using two half-windows for smooth transitions.
 /// This avoids the "boundary spike" problem of fixed-window counters.
 pub struct SlidingWindow {
@@ -141,10 +137,6 @@ fn current_time_ms() -> u64 {
         .as_millis() as u64
 }
 
-// ---------------------------------------------------------------------------
-// Multi-tool rate limiter
-// ---------------------------------------------------------------------------
-
 /// Rate limiter managing per-tool and global windows.
 pub struct RateLimiter {
     /// Per-tool windows
@@ -223,19 +215,11 @@ impl RateLimiter {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Global singleton
-// ---------------------------------------------------------------------------
-
 lazy_static::lazy_static! {
     static ref GLOBAL_LIMITER: Arc<RateLimiter> = Arc::new(
         RateLimiter::new(300, 60, 10)
     );
 }
-
-// ---------------------------------------------------------------------------
-// Python bindings
-// ---------------------------------------------------------------------------
 
 /// Check if a tool invocation is allowed by the rate limiter.
 /// Returns JSON: {"allowed": bool, "retry_after_ms": u64|null}
@@ -283,13 +267,6 @@ pub fn rate_stats() -> PyResult<String> {
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
 }
 
-// ---------------------------------------------------------------------------
-// Native Python type bindings (v14 — zero-copy FFI)
-// ---------------------------------------------------------------------------
-// These functions return native Python types instead of JSON strings,
-// eliminating the serialization/deserialization tax on the FFI boundary.
-// Benchmarked: ~50% faster than JSON-based counterparts.
-
 /// Rate check returning native Python tuple: (allowed, retry_after_ms).
 /// No JSON serialization — tuple crosses FFI as a direct Python object.
 #[pyfunction]
@@ -320,10 +297,6 @@ pub fn rate_check_batch_native(tool_names: Vec<String>) -> PyResult<Vec<(String,
 pub fn rate_stats_native() -> PyResult<HashMap<String, f64>> {
     Ok(GLOBAL_LIMITER.stats())
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

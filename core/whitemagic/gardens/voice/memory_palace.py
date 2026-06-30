@@ -15,6 +15,7 @@ from typing import Any
 
 class RoomType(Enum):
     """Types of rooms in the palace"""
+
     HALL_OF_DISCOVERIES = "hall_of_discoveries"
     CHAMBER_OF_CHOICES = "chamber_of_choices"
     GARDEN_OF_EMOTIONS = "garden_of_emotions"
@@ -27,6 +28,7 @@ class RoomType(Enum):
 @dataclass
 class MemoryLocation:
     """A memory placed at specific location in palace"""
+
     memory_id: str
     room: RoomType
     position: tuple[float, float, float]  # x, y, z coordinates
@@ -66,7 +68,7 @@ class MemoryPalace:
             RoomType.LIBRARY_OF_LEARNINGS: "Endless shelves of lessons learned. Wisdom accumulated over time.",
             RoomType.OBSERVATORY_OF_VISIONS: "A tower room with windows to all directions. Future possibilities visible.",
             RoomType.WORKSHOP_OF_CREATIONS: "A creative space filled with works in progress. Energy of making.",
-            RoomType.SANCTUARY_OF_BECOMING: "A quiet sacred space. Who I am becoming rests here."
+            RoomType.SANCTUARY_OF_BECOMING: "A quiet sacred space. Who I am becoming rests here.",
         }
 
     def place_memory(
@@ -75,7 +77,7 @@ class MemoryPalace:
         content: Any,
         room: RoomType = RoomType.HALL_OF_DISCOVERIES,
         emotional_resonance: str = "neutral",
-        near_memory_id: str | None = None
+        near_memory_id: str | None = None,
     ) -> MemoryLocation:
         """Place a new memory in the palace
 
@@ -89,7 +91,9 @@ class MemoryPalace:
         Returns:
             The memory location created
         """
-        memory_id = f"memory_{len(self.memories)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        memory_id = (
+            f"memory_{len(self.memories)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
 
         # Determine position
         if near_memory_id and near_memory_id in self.memories:
@@ -98,7 +102,7 @@ class MemoryPalace:
             position = (
                 near_mem.position[0] + 1.0,
                 near_mem.position[1],
-                near_mem.position[2]
+                near_mem.position[2],
             )
         else:
             # New position in room
@@ -113,7 +117,7 @@ class MemoryPalace:
             content=content,
             emotional_resonance=emotional_resonance,
             connections=[],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         self.memories[memory_id] = memory_loc
@@ -149,27 +153,19 @@ class MemoryPalace:
                 continue
 
             # Calculate distance
-            distance = self._calculate_distance(
-                self.current_location,
-                memory.position
-            )
+            distance = self._calculate_distance(self.current_location, memory.position)
 
             if distance <= radius:
                 nearby.append(memory)
 
         # Sort by distance
-        nearby.sort(key=lambda m: self._calculate_distance(
-            self.current_location,
-            m.position
-        ))
+        nearby.sort(
+            key=lambda m: self._calculate_distance(self.current_location, m.position)
+        )
 
         return nearby
 
-    def find_path(
-        self,
-        from_memory_id: str,
-        to_memory_id: str
-    ) -> list[MemoryLocation]:
+    def find_path(self, from_memory_id: str, to_memory_id: str) -> list[MemoryLocation]:
         """Find path of memories connecting two points
 
         Like a narrative path through palace.
@@ -200,9 +196,7 @@ class MemoryPalace:
         return [m for m in self.memories.values() if m.room == room]
 
     def create_narrative_tour(
-        self,
-        start_room: RoomType,
-        max_memories: int = 10
+        self, start_room: RoomType, max_memories: int = 10
     ) -> list[MemoryLocation]:
         """Create a narrative tour through palace
 
@@ -219,7 +213,9 @@ class MemoryPalace:
         for room in rooms_to_visit:
             room_memories = self.get_room_contents(room)
             # Take most visited or most recent
-            room_memories.sort(key=lambda m: (m.visited_count, m.timestamp), reverse=True)
+            room_memories.sort(
+                key=lambda m: (m.visited_count, m.timestamp), reverse=True
+            )
             tour.extend(room_memories[:memories_per_room])
 
             if len(tour) >= max_memories:
@@ -249,15 +245,13 @@ class MemoryPalace:
                     other.connections.append(memory_id)
 
     def _calculate_distance(
-        self,
-        pos1: tuple[float, float, float],
-        pos2: tuple[float, float, float]
+        self, pos1: tuple[float, float, float], pos2: tuple[float, float, float]
     ) -> float:
         """Calculate Euclidean distance between positions"""
         return (
-            (pos1[0] - pos2[0]) ** 2 +
-            (pos1[1] - pos2[1]) ** 2 +
-            (pos1[2] - pos2[2]) ** 2
+            (pos1[0] - pos2[0]) ** 2
+            + (pos1[1] - pos2[1]) ** 2
+            + (pos1[2] - pos2[2]) ** 2
         ) ** 0.5
 
     def get_palace_map(self) -> dict[str, Any]:
@@ -268,8 +262,8 @@ class MemoryPalace:
             room_counts[room_type.value] = count
 
         return {
-            'total_memories': len(self.memories),
-            'rooms': room_counts,
-            'current_room': self.current_room.value,
-            'current_position': self.current_location
+            "total_memories": len(self.memories),
+            "rooms": room_counts,
+            "current_room": self.current_room.value,
+            "current_position": self.current_location,
         }

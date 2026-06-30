@@ -15,6 +15,7 @@ Usage:
     result = kg.extract_and_store("memory_123", "WhiteMagic uses Rust for embeddings")
     # Creates typed edges: WhiteMagic --[USES]--> Rust
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExtractedEntity:
     """An extracted entity ready for storage."""
+
     name: str
     entity_type: str
     normalized_name: str  # Lowercase, underscored
@@ -59,6 +61,7 @@ class ExtractedEntity:
 @dataclass
 class ExtractedRelation:
     """An extracted relation ready for storage."""
+
     subject: str
     predicate: str
     obj: str
@@ -84,6 +87,7 @@ class ExtractedRelation:
 @dataclass
 class ExtractionStats:
     """Statistics for KG extraction."""
+
     total_memories_processed: int = 0
     total_entities_extracted: int = 0
     total_relations_extracted: int = 0
@@ -114,7 +118,7 @@ class KnowledgeGraphV2:
             return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, '_initialized') and self._initialized:
+        if hasattr(self, "_initialized") and self._initialized:
             return
 
         self._ner = get_light_ner()
@@ -126,14 +130,15 @@ class KnowledgeGraphV2:
         """Normalize entity name for deduplication."""
         # Lowercase, replace spaces with underscores
         normalized = name.lower().strip()
-        normalized = re.sub(r'\s+', '_', normalized)
-        normalized = re.sub(r'[^a-z0-9_]', '', normalized)
+        normalized = re.sub(r"\s+", "_", normalized)
+        normalized = re.sub(r"[^a-z0-9_]", "", normalized)
         return normalized
 
     def _get_db(self) -> sqlite3.Connection | None:
         """Get database connection."""
         try:
             from whitemagic.config.paths import DB_PATH
+
             if not DB_PATH.exists():
                 return None
             conn = sqlite3.connect(str(DB_PATH))
@@ -144,7 +149,9 @@ class KnowledgeGraphV2:
             logger.error("DB connection failed: %s", e, exc_info=True)
             return None
 
-    def extract_from_text(self, text: str, source_id: str) -> tuple[list[ExtractedEntity], list[ExtractedRelation]]:
+    def extract_from_text(
+        self, text: str, source_id: str
+    ) -> tuple[list[ExtractedEntity], list[ExtractedRelation]]:
         """Extract entities and relations from text.
 
         Args:
@@ -164,30 +171,36 @@ class KnowledgeGraphV2:
         entities = []
         for e in ner_entities:
             normalized = self._normalize_entity(e.text)
-            entities.append(ExtractedEntity(
-                name=e.text,
-                entity_type=e.entity_type,
-                normalized_name=normalized,
-                confidence=e.confidence,
-                source_id=source_id,
-            ))
+            entities.append(
+                ExtractedEntity(
+                    name=e.text,
+                    entity_type=e.entity_type,
+                    normalized_name=normalized,
+                    confidence=e.confidence,
+                    source_id=source_id,
+                )
+            )
             # Update cache
             if normalized not in self._entity_cache:
                 self._entity_cache[normalized] = e.text
 
         relations = []
         for subj, pred, obj in ner_relations:
-            relations.append(ExtractedRelation(
-                subject=subj,
-                predicate=pred,
-                obj=obj,
-                confidence=0.7,  # Base confidence for pattern relations
-                source_id=source_id,
-            ))
+            relations.append(
+                ExtractedRelation(
+                    subject=subj,
+                    predicate=pred,
+                    obj=obj,
+                    confidence=0.7,  # Base confidence for pattern relations
+                    source_id=source_id,
+                )
+            )
 
         return entities, relations
 
-    def store_relations(self, relations: list[ExtractedRelation], conn: sqlite3.Connection | None = None) -> int:
+    def store_relations(
+        self, relations: list[ExtractedRelation], conn: sqlite3.Connection | None = None
+    ) -> int:
         """Store relations as typed edges in associations table.
 
         Args:
@@ -223,14 +236,14 @@ class KnowledgeGraphV2:
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                         (
                             rel.source_id,  # Memory ID as source
-                            obj_id,          # Entity as target
+                            obj_id,  # Entity as target
                             rel.confidence,
                             "forward",
-                            rel.predicate,   # Typed edge!
+                            rel.predicate,  # Typed edge!
                             "semantic",
                             now,
                             now,
-                        )
+                        ),
                     )
                     stored += 1
                 except Exception as e:
@@ -298,7 +311,7 @@ class KnowledgeGraphV2:
 
         try:
             for i in range(0, len(memories), batch_size):
-                batch = memories[i:i + batch_size]
+                batch = memories[i : i + batch_size]
 
                 for memory_id, text in batch:
                     if not text or not text.strip():
@@ -409,12 +422,18 @@ class KnowledgeGraphV2:
 
             connections = []
             for row in rows:
-                target = row[0].replace("entity:", "") if row[0].startswith("entity:") else row[0]
-                connections.append({
-                    "entity": target,
-                    "relation": row[1],
-                    "strength": row[2],
-                })
+                target = (
+                    row[0].replace("entity:", "")
+                    if row[0].startswith("entity:")
+                    else row[0]
+                )
+                connections.append(
+                    {
+                        "entity": target,
+                        "relation": row[1],
+                        "strength": row[2],
+                    }
+                )
 
             return {
                 "found": len(connections) > 0,
@@ -434,7 +453,9 @@ class KnowledgeGraphV2:
             "total_entities_extracted": self._stats.total_entities_extracted,
             "total_relations_extracted": self._stats.total_relations_extracted,
             "total_edges_stored": self._stats.total_edges_stored,
-            "last_run": self._stats.last_run.isoformat() if self._stats.last_run else None,
+            "last_run": self._stats.last_run.isoformat()
+            if self._stats.last_run
+            else None,
             "rate": self._stats.rate,
             "entity_cache_size": len(self._entity_cache),
         }

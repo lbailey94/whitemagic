@@ -86,7 +86,11 @@ class ParallelPipeline:
         self.stages: list[PipelineStage] = []
 
     def add_stage(
-        self, name: str, func: Callable, workers: int = 1, timeout: float | None = None,
+        self,
+        name: str,
+        func: Callable,
+        workers: int = 1,
+        timeout: float | None = None,
     ) -> ParallelPipeline:
         """Add stage to pipeline.
 
@@ -104,7 +108,9 @@ class ParallelPipeline:
         self.stages.append(stage)
         return self
 
-    async def _execute_stage(self, stage: PipelineStage, inputs: list[Any]) -> list[Any]:
+    async def _execute_stage(
+        self, stage: PipelineStage, inputs: list[Any]
+    ) -> list[Any]:
         """Execute a single stage.
 
         Args:
@@ -143,12 +149,15 @@ class ParallelPipeline:
         # Process all items in parallel (up to workers limit)
         if stage.timeout:
             results = await asyncio.wait_for(
-                asyncio.gather(*[process_item(item) for item in inputs], return_exceptions=True),
+                asyncio.gather(
+                    *[process_item(item) for item in inputs], return_exceptions=True
+                ),
                 timeout=stage.timeout,
             )
         else:
             results = await asyncio.gather(
-                *[process_item(item) for item in inputs], return_exceptions=True,
+                *[process_item(item) for item in inputs],
+                return_exceptions=True,
             )
 
         # Filter out None and exceptions

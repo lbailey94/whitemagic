@@ -8,8 +8,20 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-JOY_INDICATORS = {"joy", "happy", "delighted", "thrilled", "blissful", "elated",
-                  "grateful", "wonderful", "amazing", "beautiful", "love", "celebrate"}
+JOY_INDICATORS = {
+    "joy",
+    "happy",
+    "delighted",
+    "thrilled",
+    "blissful",
+    "elated",
+    "grateful",
+    "wonderful",
+    "amazing",
+    "beautiful",
+    "love",
+    "celebrate",
+}
 
 
 class JoyDetector:
@@ -24,7 +36,9 @@ class JoyDetector:
         matches = words & JOY_INDICATORS
         joy_level = min(len(matches) / 5.0, 1.0)
         if joy_level > 0:
-            self._detections.append({"text_preview": text[:100], "joy_level": joy_level})
+            self._detections.append(
+                {"text_preview": text[:100], "joy_level": joy_level}
+            )
         return joy_level
 
     def recent_detections(self, limit: int = 10) -> list[dict[str, Any]]:
@@ -35,6 +49,7 @@ class JoyDetector:
             "total_detections": len(self._detections),
             "avg_joy": (
                 sum(d["joy_level"] for d in self._detections) / len(self._detections)
-                if self._detections else 0.0
+                if self._detections
+                else 0.0
             ),
         }

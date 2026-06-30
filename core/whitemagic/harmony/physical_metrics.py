@@ -87,8 +87,9 @@ class AdaptiveTargets:
     psi_cpu_max: float = 30.0
     disk_max: float = 85.0
 
-    def adapt(self, power: PowerContext, time_ctx: TimeContext,
-              load: LoadContext) -> None:
+    def adapt(
+        self, power: PowerContext, time_ctx: TimeContext, load: LoadContext
+    ) -> None:
         if power == PowerContext.AC:
             self.cpu_temp_max = 70.0
         elif power == PowerContext.BATTERY:
@@ -135,7 +136,7 @@ class ThermalAnomalyDetector:
         with self._lock:
             self._history.append((now, temp))
             if len(self._history) > self._max_history:
-                self._history = self._history[-self._max_history:]
+                self._history = self._history[-self._max_history :]
 
             if len(self._history) < 2:
                 return None
@@ -280,6 +281,7 @@ class PhysicalMetricsSource:
         """Fetch stats from laptop-optimizer API."""
         try:
             import urllib.request
+
             req = urllib.request.Request(
                 f"{self._api_url}/api/stats",
                 method="GET",
@@ -314,14 +316,18 @@ class PhysicalMetricsSource:
                 cpu_usage=cpu.get("usage"),
                 battery_percent=power.get("battery_cap"),
                 battery_status=power.get("battery_status"),
-                memory_percent=(mem.get("used", 0) / mem.get("total", 1) * 100) if mem.get("total") else None,
+                memory_percent=(mem.get("used", 0) / mem.get("total", 1) * 100)
+                if mem.get("total")
+                else None,
                 swap_percent=raw.get("swap", {}).get("percent"),
                 disk_usage=raw.get("disk", {}).get("percent"),
                 psi_cpu=raw.get("psi", {}).get("cpu"),
                 power_draw=power.get("power_draw"),
                 fan_rpm=raw.get("thermal", {}).get("fan_rpm"),
                 thermal_throttling=raw.get("thermal", {}).get("throttling_count", 0),
-                health_score=raw.get("_health_score", {}).get("score") if isinstance(raw.get("_health_score"), dict) else None,
+                health_score=raw.get("_health_score", {}).get("score")
+                if isinstance(raw.get("_health_score"), dict)
+                else None,
             )
 
             # Feed thermal detector
@@ -341,7 +347,11 @@ class PhysicalMetricsSource:
         metrics = self.get_metrics()
 
         if metrics.battery_status:
-            power = PowerContext.BATTERY if "Discharg" in metrics.battery_status else PowerContext.AC
+            power = (
+                PowerContext.BATTERY
+                if "Discharg" in metrics.battery_status
+                else PowerContext.AC
+            )
         else:
             power = PowerContext.UNKNOWN
 
@@ -404,67 +414,81 @@ class PhysicalMetricsSource:
         recommendations: list[dict[str, Any]] = []
 
         if metrics.cpu_temp is not None and metrics.cpu_temp > targets.cpu_temp_max:
-            recommendations.append({
-                "type": "thermal",
-                "severity": "warn",
-                "message": f"CPU temperature {metrics.cpu_temp:.0f}°C exceeds target ({targets.cpu_temp_max:.0f}°C)",
-                "action": "Consider increasing TCC offset or closing CPU-heavy apps",
-                "auto_eligible": False,
-            })
+            recommendations.append(
+                {
+                    "type": "thermal",
+                    "severity": "warn",
+                    "message": f"CPU temperature {metrics.cpu_temp:.0f}°C exceeds target ({targets.cpu_temp_max:.0f}°C)",
+                    "action": "Consider increasing TCC offset or closing CPU-heavy apps",
+                    "auto_eligible": False,
+                }
+            )
 
-        if (metrics.battery_percent is not None and
-                metrics.battery_status and "Discharg" in metrics.battery_status and
-                metrics.battery_percent < targets.battery_min):
-            recommendations.append({
-                "type": "power",
-                "severity": "critical",
-                "message": f"Battery at {metrics.battery_percent:.0f}%",
-                "action": "Switch to powersave mode or connect AC adapter",
-                "auto_eligible": True,
-            })
+        if (
+            metrics.battery_percent is not None
+            and metrics.battery_status
+            and "Discharg" in metrics.battery_status
+            and metrics.battery_percent < targets.battery_min
+        ):
+            recommendations.append(
+                {
+                    "type": "power",
+                    "severity": "critical",
+                    "message": f"Battery at {metrics.battery_percent:.0f}%",
+                    "action": "Switch to powersave mode or connect AC adapter",
+                    "auto_eligible": True,
+                }
+            )
 
-        if metrics.memory_percent is not None and metrics.memory_percent > targets.memory_max:
-            recommendations.append({
-                "type": "memory",
-                "severity": "warn",
-                "message": f"Memory at {metrics.memory_percent:.0f}%",
-                "action": "Close unused applications or browser tabs",
-                "auto_eligible": False,
-            })
+        if (
+            metrics.memory_percent is not None
+            and metrics.memory_percent > targets.memory_max
+        ):
+            recommendations.append(
+                {
+                    "type": "memory",
+                    "severity": "warn",
+                    "message": f"Memory at {metrics.memory_percent:.0f}%",
+                    "action": "Close unused applications or browser tabs",
+                    "auto_eligible": False,
+                }
+            )
 
         if metrics.swap_percent is not None and metrics.swap_percent > targets.swap_max:
-            recommendations.append({
-                "type": "memory",
-                "severity": "warn",
-                "message": f"Swap at {metrics.swap_percent:.0f}%",
-                "action": "Memory pressure high — close heavy applications",
-                "auto_eligible": False,
-            })
+            recommendations.append(
+                {
+                    "type": "memory",
+                    "severity": "warn",
+                    "message": f"Swap at {metrics.swap_percent:.0f}%",
+                    "action": "Memory pressure high — close heavy applications",
+                    "auto_eligible": False,
+                }
+            )
 
         if metrics.psi_cpu is not None and metrics.psi_cpu > targets.psi_cpu_max:
-            recommendations.append({
-                "type": "pressure",
-                "severity": "warn",
-                "message": f"CPU PSI pressure at {metrics.psi_cpu:.0f}",
-                "action": "System under CPU pressure — investigate top processes",
-                "auto_eligible": False,
-            })
+            recommendations.append(
+                {
+                    "type": "pressure",
+                    "severity": "warn",
+                    "message": f"CPU PSI pressure at {metrics.psi_cpu:.0f}",
+                    "action": "System under CPU pressure — investigate top processes",
+                    "auto_eligible": False,
+                }
+            )
 
         if metrics.thermal_throttling > 0:
-            recommendations.append({
-                "type": "thermal",
-                "severity": "critical",
-                "message": f"{metrics.thermal_throttling} cores throttling",
-                "action": "Recommend cooling intervention",
-                "auto_eligible": True,
-            })
+            recommendations.append(
+                {
+                    "type": "thermal",
+                    "severity": "critical",
+                    "message": f"{metrics.thermal_throttling} cores throttling",
+                    "action": "Recommend cooling intervention",
+                    "auto_eligible": True,
+                }
+            )
 
         return recommendations
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _physical_source: PhysicalMetricsSource | None = None
 _source_lock = threading.Lock()

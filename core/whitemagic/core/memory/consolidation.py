@@ -167,10 +167,6 @@ class MemoryConsolidator:
             "total_expired": 0,
         }
 
-    # ------------------------------------------------------------------
-    # Core consolidation
-    # ------------------------------------------------------------------
-
     def consolidate(self, memories: Any = None) -> ConsolidationReport:
         """Run a full consolidation cycle.
 
@@ -183,7 +179,6 @@ class MemoryConsolidator:
         start = time.perf_counter()
         report = ConsolidationReport()
 
-        # Step 1: Load memories
         if memories is None:
             memories = self._load_recent()
         if not memories:
@@ -194,24 +189,19 @@ class MemoryConsolidator:
 
         report.memories_analyzed = len(memories)
 
-        # Step 1.5: Rust content-based consolidation pre-pass
         rust_clusters = self._rust_content_consolidation(memories)
         if rust_clusters:
             report.details = {"rust_consolidation": rust_clusters}
 
-        # Step 2: Cluster by tag similarity
         clusters = self._cluster_by_tags(memories)
         report.clusters_found = len(clusters)
         report.clusters = clusters
 
-        # Step 3: Synthesize strategy memories from strong clusters
         strategies = self._synthesize_strategies(clusters, memories)
         report.strategies_synthesized = len(strategies)
 
-        # Step 3.5: Bicameral creative clustering (A3 synthesis)
         self._bicameral_enrich(clusters, strategies)
 
-        # Step 4: Promote high-value memories
         promotions = self._promote_high_value(memories)
         report.promotions = promotions
 
@@ -222,18 +212,14 @@ class MemoryConsolidator:
             self._total_strategies += len(strategies)
             self._total_promotions += promotions
 
-        # Step 5: Promote synthesized strategies to INNER_RIM galactic zone
         self._galactic_promote(strategies)
 
-        # Step 5.5: G5 Synthesis — Create KG relations linking source → strategy
         self._feed_knowledge_graph(clusters, strategies)
 
-        # Step 5.6: Reconsolidate any labile memories (fused from ReconsolidationEngine)
         reconsolidation_results = self.reconsolidate_all()
         if reconsolidation_results:
             logger.debug("Reconsolidated %d labile memories during consolidation", len(reconsolidation_results))
 
-        # Step 6: Feed Harmony Vector energy from consolidation health
         self._update_harmony(report)
 
         # Emit events
@@ -249,10 +235,6 @@ class MemoryConsolidator:
          self._total_consolidations, report.memories_analyzed, report.clusters_found, report.strategies_synthesized, report.promotions, report.duration_ms)
 
         return report
-
-    # ------------------------------------------------------------------
-    # Step 1: Load
-    # ------------------------------------------------------------------
 
     def _load_recent(self) -> list[Any]:
         """Load recent memories from UnifiedMemory."""
@@ -303,10 +285,6 @@ class MemoryConsolidator:
         except Exception as e:
             logger.debug("Rust content consolidation skipped: %s", e, exc_info=True)
         return None
-
-    # ------------------------------------------------------------------
-    # Step 2: Cluster
-    # ------------------------------------------------------------------
 
     def _find_near_duplicates_minhash(self, memories: list[Any]) -> list[dict[str, Any]]:
         """Use Rust MinHash LSH to quickly find near-duplicate memory pairs."""
@@ -515,10 +493,6 @@ class MemoryConsolidator:
 
         return clusters
 
-    # ------------------------------------------------------------------
-    # Step 3: Synthesize strategies
-    # ------------------------------------------------------------------
-
     def _synthesize_strategies(self, clusters: list[MemoryCluster], memories: list[Any]) -> list[dict[str, Any]]:
         """Create strategy memories from strong clusters.
 
@@ -580,10 +554,6 @@ class MemoryConsolidator:
 
         return strategies
 
-    # ------------------------------------------------------------------
-    # Step 3.5: Bicameral creative clustering (A3 synthesis)
-    # ------------------------------------------------------------------
-
     def _bicameral_enrich(
         self, clusters: list[MemoryCluster], strategies: list[dict[str, Any]],
     ) -> None:
@@ -610,7 +580,6 @@ class MemoryConsolidator:
         except (ImportError, AttributeError):
             return
 
-        # --- Left hemisphere: logical cross-cluster links ---
         logical_links = []
         for i, c1 in enumerate(clusters):
             for c2 in clusters[i + 1:
@@ -625,7 +594,6 @@ class MemoryConsolidator:
                         "combined_access": c1.total_access_count + c2.total_access_count,
                     })
 
-        # --- Right hemisphere: creative cross-cluster links ---
         creative_links = []
         for i, c1 in enumerate(clusters):
             for c2 in clusters[i + 1:
@@ -667,10 +635,6 @@ class MemoryConsolidator:
             for link in all_links:
                 strategies.append(link)
 
-    # ------------------------------------------------------------------
-    # Step 4: Promote high-value memories
-    # ------------------------------------------------------------------
-
     def _promote_high_value(self, memories: list[Any]) -> int:
         """Promote frequently-accessed, high-importance short-term memories
         to LONG_TERM.
@@ -694,10 +658,6 @@ class MemoryConsolidator:
                     logger.debug("Memory promotion failed for %s: %s", mem.id, e)
 
         return promotions
-
-    # ------------------------------------------------------------------
-    # G5 Synthesis: Consolidation → Knowledge Graph
-    # ------------------------------------------------------------------
 
     def _feed_knowledge_graph(self, clusters: list[MemoryCluster],
                               strategies: list[dict[str, Any]]) -> None:
@@ -749,10 +709,6 @@ class MemoryConsolidator:
         except Exception as e:
             logger.debug("KG enrichment skipped: %s", e, exc_info=True)
 
-    # ------------------------------------------------------------------
-    # Galactic zone promotion (Gap A1 synthesis)
-    # ------------------------------------------------------------------
-
     def _galactic_promote(self, strategies: list[dict[str, Any]]) -> None:
         """Promote synthesized strategy memories to INNER_RIM galactic zone.
 
@@ -781,10 +737,6 @@ class MemoryConsolidator:
         except Exception as e:
             logger.debug("Galactic promotion skipped: %s", e, exc_info=True)
 
-    # ------------------------------------------------------------------
-    # Harmony Vector feedback
-    # ------------------------------------------------------------------
-
     def _update_harmony(self, report: ConsolidationReport) -> None:
         """Feed consolidation results into the Harmony Vector energy dimension."""
         try:
@@ -799,10 +751,6 @@ class MemoryConsolidator:
             )
         except Exception as e:
             logger.debug("Karma ledger append failed after consolidation: %s", e)
-
-    # ------------------------------------------------------------------
-    # Events
-    # ------------------------------------------------------------------
 
     def _emit_events(self, report: ConsolidationReport, strategies: list[dict[str, Any]]) -> None:
         """Emit consolidation and insight events."""
@@ -837,10 +785,6 @@ class MemoryConsolidator:
         except Exception as e:
             logger.debug("Event emission failed during consolidation: %s", e)
 
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -861,10 +805,6 @@ class MemoryConsolidator:
                 },
                 "reconsolidation": self.get_reconsolidation_status(),
             }
-
-    # ------------------------------------------------------------------
-    # Reconsolidation (fused from ReconsolidationEngine)
-    # ------------------------------------------------------------------
 
     def mark_labile(
         self,
@@ -1080,10 +1020,6 @@ class MemoryConsolidator:
         self._reconsolidation_stats["total_expired"] += 1
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _consolidator: MemoryConsolidator | None = None
 _consolidator_lock = threading.Lock()
 
@@ -1097,10 +1033,6 @@ def get_consolidator() -> MemoryConsolidator:
                 _consolidator = MemoryConsolidator()
     return _consolidator
 
-
-# ---------------------------------------------------------------------------
-# Consolidation Daemon (v23.1) — Auto-scheduled background consolidation
-# ---------------------------------------------------------------------------
 
 class ConsolidationDaemon:
     """Background thread that auto-schedules memory consolidation.

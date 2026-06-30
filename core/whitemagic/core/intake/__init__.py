@@ -34,6 +34,7 @@ class IntakeStats:
     last_scan: str | None = None
     errors: list[str] = field(default_factory=list)
 
+
 class HolographicIntake:
     """Auto-ingestion for new files into holographic hypercube."""
 
@@ -82,10 +83,15 @@ class HolographicIntake:
 
     def _save(self) -> None:
         """Save configuration and state."""
-        self.config_path.write_text(_json_dumps({
-            "watch_dirs": self._watch_dirs,
-            "updated": datetime.now().isoformat(),
-        }, indent=2))
+        self.config_path.write_text(
+            _json_dumps(
+                {
+                    "watch_dirs": self._watch_dirs,
+                    "updated": datetime.now().isoformat(),
+                },
+                indent=2,
+            )
+        )
 
         self.hashes_path.write_text(_json_dumps(list(self._known_hashes)))
         self.queue_path.write_text(_json_dumps(self._queue, indent=2))
@@ -134,13 +140,15 @@ class HolographicIntake:
                     self.stats.files_scanned += 1
                     h = self._hash_file(f)
                     if h not in self._known_hashes:
-                        new_files.append({
-                            "path": str(f),
-                            "hash": h,
-                            "size": f.stat().st_size,
-                            "name": f.name,
-                            "discovered": datetime.now().isoformat(),
-                        })
+                        new_files.append(
+                            {
+                                "path": str(f),
+                                "hash": h,
+                                "size": f.stat().st_size,
+                                "name": f.name,
+                                "discovered": datetime.now().isoformat(),
+                            }
+                        )
 
         self.stats.last_scan = datetime.now().isoformat()
         return new_files
@@ -216,6 +224,7 @@ class HolographicIntake:
 
             # Store in SQLite
             from whitemagic.config.paths import DB_PATH
+
             db = SQLiteBackend(DB_PATH)
             db.store(memory)
             db.store_coords(mem_id, coords.x, coords.y, coords.z, coords.w)  # type: ignore[call-arg]
@@ -319,8 +328,10 @@ class HolographicIntake:
             },
         }
 
+
 # Global instance
 _instance: HolographicIntake | None = None
+
 
 def get_intake() -> HolographicIntake:
     """Get global intake instance."""
@@ -328,6 +339,7 @@ def get_intake() -> HolographicIntake:
     if _instance is None:
         _instance = HolographicIntake()
     return _instance
+
 
 def start_intake_daemon(interval: int = 60) -> HolographicIntake:
     """Start the holographic intake daemon with defaults."""

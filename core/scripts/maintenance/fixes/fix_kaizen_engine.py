@@ -1,4 +1,3 @@
-
 with open("whitemagic/core/intelligence/synthesis/kaizen_engine.py") as f:
     content = f.read()
 
@@ -19,7 +18,7 @@ content = content.replace(
             pass
 
         proposals = []
-        metrics = {}"""
+        metrics = {}""",
 )
 
 with open("whitemagic/core/intelligence/synthesis/kaizen_engine.py", "w") as f:

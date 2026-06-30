@@ -15,24 +15,51 @@ def reasoning() -> None:
 
 
 @reasoning.command()
-@click.argument('question')
-@click.option('--task-type', '-t', default='analysis',
-              help='Type of task (implementation, debugging, planning, etc.)')
-@click.option('--urgency', '-u', default='normal',
-              type=click.Choice(['low', 'normal', 'high']),
-              help='Urgency level')
-@click.option('--complexity', '-c', default='medium',
-              type=click.Choice(['low', 'medium', 'high']),
-              help='Complexity level')
-@click.option('--lenses', '-l', multiple=True,
-              type=click.Choice(['i_ching', 'wu_xing', 'art_of_war', 'zodiac', 'all']),
-              help='Specific lenses to use (default: all)')
-@click.option('--sequential/--no-sequential', default=True,
-              help='Use sequential thinking (default: yes)')
-@click.option('--save/--no-save', default=True,
-              help='Save reasoning to memory (default: yes)')
-def ask(question: str, task_type: str, urgency: str, complexity: str,
-        lenses: tuple[str, ...], sequential: bool, save: bool) -> None:
+@click.argument("question")
+@click.option(
+    "--task-type",
+    "-t",
+    default="analysis",
+    help="Type of task (implementation, debugging, planning, etc.)",
+)
+@click.option(
+    "--urgency",
+    "-u",
+    default="normal",
+    type=click.Choice(["low", "normal", "high"]),
+    help="Urgency level",
+)
+@click.option(
+    "--complexity",
+    "-c",
+    default="medium",
+    type=click.Choice(["low", "medium", "high"]),
+    help="Complexity level",
+)
+@click.option(
+    "--lenses",
+    "-l",
+    multiple=True,
+    type=click.Choice(["i_ching", "wu_xing", "art_of_war", "zodiac", "all"]),
+    help="Specific lenses to use (default: all)",
+)
+@click.option(
+    "--sequential/--no-sequential",
+    default=True,
+    help="Use sequential thinking (default: yes)",
+)
+@click.option(
+    "--save/--no-save", default=True, help="Save reasoning to memory (default: yes)"
+)
+def ask(
+    question: str,
+    task_type: str,
+    urgency: str,
+    complexity: str,
+    lenses: tuple[str, ...],
+    sequential: bool,
+    save: bool,
+) -> None:
     """Ask a question using multi-spectral reasoning
 
     Examples:
@@ -48,24 +75,23 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
 
     # Create context
     context = ReasoningContext(
-        question=question,
-        task_type=task_type,
-        urgency=urgency,
-        complexity=complexity
+        question=question, task_type=task_type, urgency=urgency, complexity=complexity
     )
 
     # Parse lenses
     lens_mapping = {
-        'i_ching': ReasoningLens.I_CHING,
-        'wu_xing': ReasoningLens.WU_XING,
-        'art_of_war': ReasoningLens.ART_OF_WAR,
-        'zodiac': ReasoningLens.ZODIAC,
-        'all': ReasoningLens.ALL
+        "i_ching": ReasoningLens.I_CHING,
+        "wu_xing": ReasoningLens.WU_XING,
+        "art_of_war": ReasoningLens.ART_OF_WAR,
+        "zodiac": ReasoningLens.ZODIAC,
+        "all": ReasoningLens.ALL,
     }
 
     selected_lenses: list[ReasoningLens] | None = None
     if lenses:
-        selected_lenses = [lens_mapping[lens] for lens in lenses if lens in lens_mapping]
+        selected_lenses = [
+            lens_mapping[lens] for lens in lenses if lens in lens_mapping
+        ]
 
     # Reason
     reasoner = get_reasoner()
@@ -73,7 +99,7 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
         question=question,
         lenses=selected_lenses,
         context=context,
-        use_sequential_thinking=sequential
+        use_sequential_thinking=sequential,
     )
 
     # Result is already displayed by the reasoner
@@ -85,8 +111,7 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
 
 
 @reasoning.command()
-@click.option('--limit', '-n', default=10,
-              help='Number of past reasonings to show')
+@click.option("--limit", "-n", default=10, help="Number of past reasonings to show")
 def history(limit: int) -> None:
     """Show reasoning history (pattern memory)"""
     from whitemagic.core.intelligence.multi_spectral_reasoning import get_reasoner
@@ -100,8 +125,7 @@ def history(limit: int) -> None:
     click.echo(f"\n🧠 Reasoning History (last {limit}):")
     click.echo("=" * 60)
 
-    for i, result in enumerate(reasoner.reasoning_history[-limit:
-        ], 1):
+    for i, result in enumerate(reasoner.reasoning_history[-limit:], 1):
         click.echo(f"\n{i}. {result.question}")
         click.echo(f"   Confidence: {result.confidence:.0%}")
         click.echo(f"   Timestamp: {result.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -124,7 +148,7 @@ def status() -> None:
         "Wu Xing": reasoner.wu_xing is not None,
         "Art of War": reasoner.art_of_war is not None,
         "Zodiac": reasoner.zodiac_cores is not None,
-        "Gan Ying Bus": reasoner.bus is not None
+        "Gan Ying Bus": reasoner.bus is not None,
     }
 
     click.echo("\n📊 Available Systems:")
@@ -144,9 +168,10 @@ def status() -> None:
 
 
 @reasoning.command()
-@click.argument('question')
-@click.option('--threshold', '-t', default=0.6, type=float,
-              help='Similarity threshold (0.0-1.0)')
+@click.argument("question")
+@click.option(
+    "--threshold", "-t", default=0.6, type=float, help="Similarity threshold (0.0-1.0)"
+)
 def similar(question: str, threshold: float) -> None:
     """Find similar past reasonings (pattern matching)"""
     from whitemagic.core.intelligence.multi_spectral_reasoning import get_reasoner

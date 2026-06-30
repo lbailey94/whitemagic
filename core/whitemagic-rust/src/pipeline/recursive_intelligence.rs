@@ -198,10 +198,6 @@ fn hash_sequence(seq: &[String]) -> u64 {
     hasher.finish()
 }
 
-// ---------------------------------------------------------------------------
-// Python module registration
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "python")]
 pub fn recursive_intelligence(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EventPattern>()?;

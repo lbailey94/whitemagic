@@ -1,4 +1,3 @@
-
 with open("whitemagic/autonomous/executor/continuous_executor.py") as f:
     content = f.read()
 
@@ -16,7 +15,7 @@ content = content.replace(
             if self.nervous_system and not self.nervous_system.is_active:
                 self.nervous_system.start()
         except ImportError:
-            self.nervous_system = None"""
+            self.nervous_system = None""",
 )
 
 with open("whitemagic/autonomous/executor/continuous_executor.py", "w") as f:

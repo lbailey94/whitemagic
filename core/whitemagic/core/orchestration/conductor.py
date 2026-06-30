@@ -153,9 +153,15 @@ class ConductorOrchestrator:
             },
             "progress": progress,
             "current_iteration": current_result.iteration if current_result else 0,
-            "current_confidence": current_result.thought_path.confidence if current_result else None,
-            "current_strategy": current_result.thought_path.strategy if current_result else None,
-            "current_preview": current_result.thought_path.content[:240] if current_result else None,
+            "current_confidence": current_result.thought_path.confidence
+            if current_result
+            else None,
+            "current_strategy": current_result.thought_path.strategy
+            if current_result
+            else None,
+            "current_preview": current_result.thought_path.content[:240]
+            if current_result
+            else None,
         }
 
         if error is not None:
@@ -197,7 +203,9 @@ class ConductorOrchestrator:
                 phase=self._live_phase,
             )
             try:
-                await asyncio.wait_for(stop_event.wait(), timeout=_LIVE_STATUS_REFRESH_SECONDS)
+                await asyncio.wait_for(
+                    stop_event.wait(), timeout=_LIVE_STATUS_REFRESH_SECONDS
+                )
             except TimeoutError:
                 continue
 
@@ -223,8 +231,12 @@ class ConductorOrchestrator:
         self._live_phase = "starting"
         live_error: str | None = None
         heartbeat_stop = asyncio.Event()
-        heartbeat_task = asyncio.create_task(self._heartbeat_live_status(heartbeat_stop))
-        await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
+        heartbeat_task = asyncio.create_task(
+            self._heartbeat_live_status(heartbeat_stop)
+        )
+        await asyncio.to_thread(
+            self._write_live_status, active=True, phase=self._live_phase
+        )
         emit_event(
             source="conductor",
             event_type=EventType.SYSTEM_STARTED,
@@ -251,14 +263,27 @@ class ConductorOrchestrator:
             # Main orchestration loop
             for iteration in range(1, self.config.max_iterations + 1):
                 self._live_phase = f"iteration-{iteration}-exploring"
-                await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
-                logger.info("\n🎼 Conductor Iteration %s/%s", iteration, self.config.max_iterations, exc_info=True)
+                await asyncio.to_thread(
+                    self._write_live_status, active=True, phase=self._live_phase
+                )
+                logger.info(
+                    "\n🎼 Conductor Iteration %s/%s",
+                    iteration,
+                    self.config.max_iterations,
+                    exc_info=True,
+                )
 
                 # Check timeout
                 if self._check_timeout():
-                    logger.info("⏰ Timeout reached after %s minutes", self.config.timeout_minutes, exc_info=True)
+                    logger.info(
+                        "⏰ Timeout reached after %s minutes",
+                        self.config.timeout_minutes,
+                        exc_info=True,
+                    )
                     self._live_phase = "timeout"
-                    await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
+                    await asyncio.to_thread(
+                        self._write_live_status, active=True, phase=self._live_phase
+                    )
                     break
 
                 # Deploy clone army
@@ -292,7 +317,9 @@ class ConductorOrchestrator:
 
                 # Checkpoint if needed
                 if iteration % self.config.checkpoint_interval == 0:
-                    result.checkpoint_created = self._create_checkpoint(iteration, result)
+                    result.checkpoint_created = self._create_checkpoint(
+                        iteration, result
+                    )
 
                 # Emit progress event
                 emit_event(
@@ -309,19 +336,30 @@ class ConductorOrchestrator:
                 self.iterations.append(result)
 
                 self._live_phase = f"iteration-{iteration}-complete"
-                await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
+                await asyncio.to_thread(
+                    self._write_live_status, active=True, phase=self._live_phase
+                )
 
                 # Exit if complete
                 if result.is_complete:
-                    logger.info("✅ Task complete at iteration %s!", iteration, exc_info=True)
+                    logger.info(
+                        "✅ Task complete at iteration %s!", iteration, exc_info=True
+                    )
                     self._completed = True
                     break
 
                 # Check budget
                 if self.token_budget.used > self.token_budget.allocated * 0.9:
-                    logger.info("💰 Token budget approaching limit: %s/%s", self.token_budget.used, self.token_budget.allocated, exc_info=True)
+                    logger.info(
+                        "💰 Token budget approaching limit: %s/%s",
+                        self.token_budget.used,
+                        self.token_budget.allocated,
+                        exc_info=True,
+                    )
                     self._live_phase = "budget-limit"
-                    await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
+                    await asyncio.to_thread(
+                        self._write_live_status, active=True, phase=self._live_phase
+                    )
                     break
 
             # Final result
@@ -333,7 +371,9 @@ class ConductorOrchestrator:
                 data={
                     "total_iterations": len(self.iterations),
                     "completed": self._completed,
-                    "duration_seconds": (datetime.now() - (self._start_time or datetime.now())).total_seconds(),
+                    "duration_seconds": (
+                        datetime.now() - (self._start_time or datetime.now())
+                    ).total_seconds(),
                     "total_tokens": self.token_budget.used,
                 },
             )
@@ -378,7 +418,9 @@ class ConductorOrchestrator:
 
         # Add progress summary
         if iteration > 1:
-            avg_confidence = sum(r.thought_path.confidence for r in self.iterations) / len(self.iterations)
+            avg_confidence = sum(
+                r.thought_path.confidence for r in self.iterations
+            ) / len(self.iterations)
             context_parts.append(f"\nAverage confidence so far: {avg_confidence:.2f}")
 
         return "\n".join(context_parts)
@@ -386,8 +428,8 @@ class ConductorOrchestrator:
     def _default_completion_check(self, thought_path: AsyncThoughtPath) -> bool:
         """Default completion check using completion_check string."""
         return (
-            self.config.completion_check.lower() in thought_path.content.lower() or
-            thought_path.confidence > 0.95
+            self.config.completion_check.lower() in thought_path.content.lower()
+            or thought_path.confidence > 0.95
         )
 
     def _check_timeout(self) -> bool:
@@ -395,7 +437,9 @@ class ConductorOrchestrator:
         if self.config.timeout_minutes is None:
             return False
 
-        elapsed = (datetime.now() - (self._start_time or datetime.now())).total_seconds() / 60
+        elapsed = (
+            datetime.now() - (self._start_time or datetime.now())
+        ).total_seconds() / 60
         return bool(elapsed > self.config.timeout_minutes)
 
     def _create_checkpoint(self, iteration: int, result: IterationResult) -> bool:
@@ -412,7 +456,9 @@ class ConductorOrchestrator:
                     "content_preview": result.thought_path.content[:200],
                 },
             )
-            logger.info("📍 Checkpoint created at iteration %s", iteration, exc_info=True)
+            logger.info(
+                "📍 Checkpoint created at iteration %s", iteration, exc_info=True
+            )
             return True
         except Exception as e:
             logger.info("⚠️ Checkpoint failed: %s", e, exc_info=True)
@@ -427,12 +473,16 @@ class ConductorOrchestrator:
                 "avg_confidence": 0.0,
                 "max_confidence": 0.0,
                 "tokens_used": self.token_budget.used,
-                "duration_seconds": (datetime.now() - self._start_time).total_seconds() if self._start_time else 0,
+                "duration_seconds": (datetime.now() - self._start_time).total_seconds()
+                if self._start_time
+                else 0,
                 "checkpoints_created": 0,
                 "completed": False,
             }
 
-        avg_confidence = sum(r.thought_path.confidence for r in self.iterations) / len(self.iterations)
+        avg_confidence = sum(r.thought_path.confidence for r in self.iterations) / len(
+            self.iterations
+        )
         max_confidence = max(r.thought_path.confidence for r in self.iterations)
 
         return {
@@ -441,8 +491,12 @@ class ConductorOrchestrator:
             "avg_confidence": avg_confidence,
             "max_confidence": max_confidence,
             "tokens_used": self.token_budget.used,
-            "duration_seconds": (datetime.now() - self._start_time).total_seconds() if self._start_time else 0,
-            "checkpoints_created": sum(1 for r in self.iterations if r.checkpoint_created),
+            "duration_seconds": (datetime.now() - self._start_time).total_seconds()
+            if self._start_time
+            else 0,
+            "checkpoints_created": sum(
+                1 for r in self.iterations if r.checkpoint_created
+            ),
             "completed": self._completed,
         }
 
@@ -487,8 +541,6 @@ class ConductorOrchestrator:
         return output_path
 
 
-# === Convenience Functions ===
-
 async def conduct_task(
     prompt: str,
     max_iterations: int = 50,
@@ -524,9 +576,12 @@ async def conduct_with_garden(
     result = await conductor.conduct(prompt)
 
     if garden == "practice":
-        emit_event("PRACTICE_RITUAL_COMPLETE", {  # type: ignore[call-arg,arg-type]
-            "iterations": len(conductor.iterations),
-            "success": result.is_complete,
-        })
+        emit_event(
+            "PRACTICE_RITUAL_COMPLETE",
+            {  # type: ignore[call-arg,arg-type]
+                "iterations": len(conductor.iterations),
+                "success": result.is_complete,
+            },
+        )
 
     return result

@@ -1,6 +1,3 @@
-// Rust Hot Path Translations - Batch 1: Clustering, Hashing, Retention
-// ============================================================================
-// Phase A: 25 functions translated to Rust
 
 use pyo3::prelude::*;
 use numpy::{PyReadonlyArray1, PyReadonlyArray2};

@@ -24,7 +24,12 @@ except ModuleNotFoundError as exc:
 
 logger = logging.getLogger(__name__)
 
-DEMO_MODE = os.environ.get("WM_DEMO_MODE", "false").lower() in {"1", "true", "yes", "on"}
+DEMO_MODE = os.environ.get("WM_DEMO_MODE", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -132,7 +137,9 @@ def get_memories() -> Any:
                     },
                 ]
             else:
-                return jsonify({"memories": [], "error": "Memory backend unavailable"}), 503
+                return jsonify(
+                    {"memories": [], "error": "Memory backend unavailable"}
+                ), 503
 
         return jsonify({"memories": memories})
     except Exception as e:
@@ -213,6 +220,7 @@ def get_events() -> Any:
         # Try to get events from continuity system
         try:
             import whitemagic.core.continuity as continuity
+
             get_events_fn = getattr(continuity, "get_events", None)
             recent_events = get_events_fn(limit=20) if callable(get_events_fn) else []
 
@@ -252,7 +260,9 @@ def get_events() -> Any:
                     },
                 ]
             else:
-                return jsonify({"events": [], "error": "Event backend unavailable"}), 503
+                return jsonify(
+                    {"events": [], "error": "Event backend unavailable"}
+                ), 503
 
         return jsonify({"events": events})
     except Exception as e:
@@ -410,14 +420,7 @@ def get_polyglot_balance() -> Any:
     """Get language balance metrics (Lichen Architecture)."""
     # Dynamic audit of active codebase (excluding venv and archives)
     base_path = Path(__file__).parent.parent.parent
-    stats = {
-        "Python": 0,
-        "Rust": 0,
-        "Mojo": 0,
-        "Elixir": 0,
-        "Koka": 0,
-        "Zig": 0
-    }
+    stats = {"Python": 0, "Rust": 0, "Mojo": 0, "Elixir": 0, "Koka": 0, "Zig": 0}
 
     extensions = {
         "*.py": "Python",
@@ -426,14 +429,17 @@ def get_polyglot_balance() -> Any:
         "*.ex": "Elixir",
         "*.exs": "Elixir",
         "*.kk": "Koka",
-        "*.zig": "Zig"
+        "*.zig": "Zig",
     }
 
     for pattern, lang in extensions.items():
         try:
             # Simple count using path globbing to avoid heavy walk
-            count = sum(1 for p in base_path.rglob(pattern)
-                       if "_archives" not in str(p) and ".venv" not in str(p))
+            count = sum(
+                1
+                for p in base_path.rglob(pattern)
+                if "_archives" not in str(p) and ".venv" not in str(p)
+            )
             stats[lang] += count
         except Exception as e:
             logger.debug("Operation failed: %s", e)
@@ -446,29 +452,44 @@ def get_polyglot_balance() -> Any:
 def get_dream_phases() -> Any:
     """Get current status of the 12-phase Elixir Dream Cycle."""
     import os
+
     is_master = os.environ.get("WHITEMAGIC_ELIXIR_MASTER") == "1"
 
     phases = [
-        "triage", "consolidation", "constellation", "resonance",
-        "pruning", "archiving", "indexing", "projection",
-        "evolution", "mutation", "synthesis", "harmonize"
+        "triage",
+        "consolidation",
+        "constellation",
+        "resonance",
+        "pruning",
+        "archiving",
+        "indexing",
+        "projection",
+        "evolution",
+        "mutation",
+        "synthesis",
+        "harmonize",
     ]
 
-    return jsonify({
-        "is_master": is_master,
-        "phases": phases,
-        "current_phase": phases[0] if is_master else "unknown",
-        "active": is_master
-    })
+    return jsonify(
+        {
+            "is_master": is_master,
+            "phases": phases,
+            "current_phase": phases[0] if is_master else "unknown",
+            "active": is_master,
+        }
+    )
 
 
 @app.route("/api/locomo/stats")
 def get_locomo_stats() -> Any:
     """Get latest LoCoMo accuracy and latency metrics."""
     try:
-        results_path = Path(__file__).parent.parent.parent / "reports" / "locomo_results.json"
+        results_path = (
+            Path(__file__).parent.parent.parent / "reports" / "locomo_results.json"
+        )
         if results_path.exists():
             import json
+
             with open(results_path) as f:
                 data = json.load(f)
                 return jsonify(data.get("strategies", {}).get("adaptive", {}))
@@ -476,21 +497,23 @@ def get_locomo_stats() -> Any:
         pass
 
     # Fallback when no results file exists
-    return jsonify({
-        "status": "fallback",
-        "message": "No LoCoMo results file found. Run benchmarks to populate.",
-        "overall_accuracy": 88.0,
-        "avg_latency_ms": 1421.0,
-        "total_hits": 22,
-        "total_questions": 25,
-        "by_type": {
-            "single_hop": {"accuracy": 100.0},
-            "multi_hop": {"accuracy": 100.0},
-            "temporal": {"accuracy": 100.0},
-            "open_domain": {"accuracy": 71.4},
-            "adversarial": {"accuracy": 66.7}
+    return jsonify(
+        {
+            "status": "fallback",
+            "message": "No LoCoMo results file found. Run benchmarks to populate.",
+            "overall_accuracy": 88.0,
+            "avg_latency_ms": 1421.0,
+            "total_hits": 22,
+            "total_questions": 25,
+            "by_type": {
+                "single_hop": {"accuracy": 100.0},
+                "multi_hop": {"accuracy": 100.0},
+                "temporal": {"accuracy": 100.0},
+                "open_domain": {"accuracy": 71.4},
+                "adversarial": {"accuracy": 66.7},
+            },
         }
-    })
+    )
 
 
 @app.route("/api/stats")

@@ -30,6 +30,7 @@ class BridgeCoordinator:
             module_name = f"whitemagic_{name.split('_')[0]}"
             try:
                 import importlib
+
                 mod = importlib.import_module(module_name)
                 self.bridges[name]["available"] = True
                 self.bridges[name]["module"] = mod

@@ -4,6 +4,7 @@ The v22.2.2 first attempt placed markers inside function docstrings
 or multi-line string literals. The fix: remove ALL `# ruff: noqa:
 BLE001` lines, then re-apply with a corrected script.
 """
+
 from pathlib import Path
 
 ROOT = Path("whitemagic")

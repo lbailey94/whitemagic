@@ -10,23 +10,19 @@ from enum import Enum
 class CloneType(Enum):
     """Types of specialized search clones."""
 
-    # === Internal Memory Search ===
     MD_ARCHAEOLOGIST = "md_archaeologist"      # Markdown file specialist
     JSON_PARSER = "json_parser"                # JSON structure expert
     YAML_NAVIGATOR = "yaml_navigator"          # YAML config specialist
     PATTERN_HUNTER = "pattern_hunter"          # Cross-format pattern finder
 
-    # === External Search ===
     WEB_RESEARCHER = "web_researcher"          # General web search
     ACADEMIC_SCHOLAR = "academic_scholar"      # Papers, arxiv, research
     FORUM_CRAWLER = "forum_crawler"            # Reddit, forums, discussions
 
-    # === Introspection ===
     SELF_EXAMINER = "self_examiner"            # Self-analysis, meta-cognition
     EMOTION_SENSOR = "emotion_sensor"          # Emotional resonance detection
     TEMPORAL_TRACKER = "temporal_tracker"      # Time-based pattern finder
 
-    # === Specialized ===
     CODE_ANALYST = "code_analyst"              # Python/code understanding
     GRIMOIRE_READER = "grimoire_reader"        # WhiteMagic grimoire specialist
     ZODIAC_CONSULTANT = "zodiac_consultant"    # Zodiac core consultation

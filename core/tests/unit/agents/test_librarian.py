@@ -23,7 +23,9 @@ class TestLibrarianAgent:
         from whitemagic.agents.librarian import InMemoryStorage, LibrarianAgent
 
         agent = LibrarianAgent(storage=InMemoryStorage())
-        text = "Note: this is an important finding about memory. Remember: dragons exist."
+        text = (
+            "Note: this is an important finding about memory. Remember: dragons exist."
+        )
         extracted = agent.extract_from_text(text, source="test")
 
         assert len(extracted) >= 1
@@ -57,8 +59,14 @@ class TestLibrarianAgent:
 
         agent = LibrarianAgent(storage=InMemoryStorage())
         messages = [
-            {"role": "user", "content": "Note: this is important context for the system"},
-            {"role": "assistant", "content": "I have decided to implement the new design."},
+            {
+                "role": "user",
+                "content": "Note: this is important context for the system",
+            },
+            {
+                "role": "assistant",
+                "content": "I have decided to implement the new design.",
+            },
         ]
         extracted = agent.extract_from_conversation(messages)
         # Should extract from both messages

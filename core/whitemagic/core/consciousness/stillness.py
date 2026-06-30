@@ -20,9 +20,9 @@ from whitemagic.core.resonance.gan_ying_enhanced import (
 
 logger = logging.getLogger(__name__)
 
+
 class StillnessManager:
-    """Manages the 'Stillness' state of the WhiteMagic core.
-    """
+    """Manages the 'Stillness' state of the WhiteMagic core."""
 
     def __init__(self) -> None:
         self._is_still = False
@@ -50,16 +50,18 @@ class StillnessManager:
         self._interruption_count = 0
 
         bus = get_bus()
-        bus.emit(ResonanceEvent(
-            source="stillness_manager",
-            event_type=EventType.INTERNAL_STATE_CHANGED,
-            data={
-                "state": "STILLNESS",
-                "reason": reason,
-                "resonance_gain": +0.02, # Stillness increases potential energy
-            },
-            timestamp=datetime.now(),
-        ))
+        bus.emit(
+            ResonanceEvent(
+                source="stillness_manager",
+                event_type=EventType.INTERNAL_STATE_CHANGED,
+                data={
+                    "state": "STILLNESS",
+                    "reason": reason,
+                    "resonance_gain": +0.02,  # Stillness increases potential energy
+                },
+                timestamp=datetime.now(),
+            )
+        )
 
     def exit_stillness(self) -> None:
         """Resume normal activities."""
@@ -73,16 +75,18 @@ class StillnessManager:
         self._is_still = False
 
         bus = get_bus()
-        bus.emit(ResonanceEvent(
-            source="stillness_manager",
-            event_type=EventType.INTERNAL_STATE_CHANGED,
-            data={
-                "state": "ACTIVE",
-                "duration": duration,
-                "interruptions": self._interruption_count,
-            },
-            timestamp=datetime.now(),
-        ))
+        bus.emit(
+            ResonanceEvent(
+                source="stillness_manager",
+                event_type=EventType.INTERNAL_STATE_CHANGED,
+                data={
+                    "state": "ACTIVE",
+                    "duration": duration,
+                    "interruptions": self._interruption_count,
+                },
+                timestamp=datetime.now(),
+            )
+        )
 
     def record_interruption(self, source: str) -> None:
         """Track how often the stillness is broken."""
@@ -91,7 +95,10 @@ class StillnessManager:
         self._interruption_count += 1
         logger.debug("Stillness interrupted by %s", source)
 
+
 _stillness_manager = None
+
+
 def get_stillness_manager() -> StillnessManager:
     """
     Get the stillness manager.

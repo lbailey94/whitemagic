@@ -63,6 +63,7 @@ class PatternLearner:
 
     def __init__(self, data_dir: Path | None = None) -> None:
         from whitemagic.config.paths import DATA_DIR
+
         self.data_dir = data_dir or (DATA_DIR / "learning")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,51 +95,102 @@ class PatternLearner:
         queries_file = self.data_dir / "queries.json"
         rules_file = self.data_dir / "learned_rules.json"
 
-        queries_file.write_text(_json_dumps([
-            {
-                "query": q.query,
-                "answer": q.answer,
-                "method": q.method,
-                "confidence": q.confidence,
-                "timestamp": q.timestamp,
-                "tokens_used": q.tokens_used,
-            }
-            for q in self._queries
-        ], indent=2))
+        queries_file.write_text(
+            _json_dumps(
+                [
+                    {
+                        "query": q.query,
+                        "answer": q.answer,
+                        "method": q.method,
+                        "confidence": q.confidence,
+                        "timestamp": q.timestamp,
+                        "tokens_used": q.tokens_used,
+                    }
+                    for q in self._queries
+                ],
+                indent=2,
+            )
+        )
 
-        rules_file.write_text(_json_dumps([
-            {
-                "id": r.id,
-                "pattern": r.pattern,
-                "response": r.response,
-                "confidence": r.confidence,
-                "learned_from": r.learned_from,
-                "created": r.created,
-                "times_used": r.times_used,
-            }
-            for r in self._learned_rules
-        ], indent=2))
+        rules_file.write_text(
+            _json_dumps(
+                [
+                    {
+                        "id": r.id,
+                        "pattern": r.pattern,
+                        "response": r.response,
+                        "confidence": r.confidence,
+                        "learned_from": r.learned_from,
+                        "created": r.created,
+                        "times_used": r.times_used,
+                    }
+                    for r in self._learned_rules
+                ],
+                indent=2,
+            )
+        )
 
-    def record_query(self, query: str, answer: str, method: str,
-                     confidence: float, tokens_used: int = 0) -> None:
+    def record_query(
+        self,
+        query: str,
+        answer: str,
+        method: str,
+        confidence: float,
+        tokens_used: int = 0,
+    ) -> None:
         """Record a query for learning."""
-        self._queries.append(QueryRecord(
-            query=query,
-            answer=answer,
-            method=method,
-            confidence=confidence,
-            timestamp=datetime.now().isoformat(),
-            tokens_used=tokens_used,
-        ))
+        self._queries.append(
+            QueryRecord(
+                query=query,
+                answer=answer,
+                method=method,
+                confidence=confidence,
+                timestamp=datetime.now().isoformat(),
+                tokens_used=tokens_used,
+            )
+        )
         self._save()
 
     def _extract_keywords(self, text: str) -> list[str]:
         """Extract significant keywords from text."""
-        stopwords = {"the", "a", "an", "is", "are", "was", "were", "be",
-                     "to", "of", "in", "for", "on", "with", "at", "by",
-                     "and", "or", "but", "if", "this", "that", "it",
-                     "what", "how", "when", "where", "why", "which",
-                     "can", "do", "does", "have", "has", "my", "your"}
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "and",
+            "or",
+            "but",
+            "if",
+            "this",
+            "that",
+            "it",
+            "what",
+            "how",
+            "when",
+            "where",
+            "why",
+            "which",
+            "can",
+            "do",
+            "does",
+            "have",
+            "has",
+            "my",
+            "your",
+        }
 
         words = re.findall(r"\b\w+\b", text.lower())
         return [w for w in words if w not in stopwords and len(w) > 2]
@@ -157,7 +209,9 @@ class PatternLearner:
         # Filter to clusters with multiple queries
         return {k: v for k, v in clusters.items() if len(v) >= 2}
 
-    def learn(self, min_cluster_size: int = 2, min_confidence: float = 0.8) -> list[LearnedRule]:
+    def learn(
+        self, min_cluster_size: int = 2, min_confidence: float = 0.8
+    ) -> list[LearnedRule]:
         """Learn new rules from recorded queries.
 
         Returns: List of newly learned rules
@@ -167,8 +221,11 @@ class PatternLearner:
 
         for cluster_key, queries in clusters.items():
             # Only learn from high-confidence cloud answers
-            cloud_queries = [q for q in queries
-                          if q.method == "cloud" and q.confidence >= min_confidence]
+            cloud_queries = [
+                q
+                for q in queries
+                if q.method == "cloud" and q.confidence >= min_confidence
+            ]
 
             if len(cloud_queries) < min_cluster_size:
                 continue

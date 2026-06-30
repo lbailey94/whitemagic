@@ -1,4 +1,3 @@
-
 with open("whitemagic/core/intelligence/synthesis/causal_net.py") as f:
     content = f.read()
 
@@ -19,9 +18,8 @@ content = content.replace(
                 # Note: Currently stubbed out in Rust, gracefully falling back to Python
                 pass
         except Exception:
-            pass"""
+            pass""",
 )
 
 with open("whitemagic/core/intelligence/synthesis/causal_net.py", "w") as f:
     f.write(content)
-

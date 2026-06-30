@@ -23,4 +23,9 @@ def run_benchmarks(
         results = benchmark.run_full_benchmark()
     else:
         results = benchmark.benchmark_import_time()
-    return {"status": "completed", "suite": suite, "benchmark_type": suite, "results": results}
+    return {
+        "status": "completed",
+        "suite": suite,
+        "benchmark_type": suite,
+        "results": results,
+    }

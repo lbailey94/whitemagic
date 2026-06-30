@@ -1,6 +1,5 @@
 """Tests for Neurotransmitter Vector."""
 
-
 from whitemagic.core.monitoring.neurotransmitter_vector import (
     NeurotransmitterVector,
 )
@@ -16,7 +15,10 @@ class TestNeurotransmitterVector:
         assert snap.dopamine == 0.5
         assert snap.cortisol == 0.5
         assert snap.serotonin == 0.5
-        assert snap.dominant in ("baseline", "dopamine")  # dopamine is first in dict when all equal
+        assert snap.dominant in (
+            "baseline",
+            "dopamine",
+        )  # dopamine is first in dict when all equal
 
     def test_success_increases_dopamine(self):
         """Successful tool calls should increase dopamine."""
@@ -62,10 +64,15 @@ class TestNeurotransmitterVector:
         """Interpretation should be non-empty."""
         nt = NeurotransmitterVector()
         for _ in range(5):
-            nt.record_tool_call(success=False, result={"tool": "test", "status": "error"})
+            nt.record_tool_call(
+                success=False, result={"tool": "test", "status": "error"}
+            )
         snap = nt.snapshot()
         assert len(snap.interpretation) > 0
-        assert "stressed" in snap.interpretation.lower() or "baseline" in snap.interpretation.lower()
+        assert (
+            "stressed" in snap.interpretation.lower()
+            or "baseline" in snap.interpretation.lower()
+        )
 
     def test_singleton(self):
         """get_neurotransmitter_vector should return the same instance."""

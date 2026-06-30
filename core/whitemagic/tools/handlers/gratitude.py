@@ -51,14 +51,18 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
         try:
             if channel == "xrpl":
                 from whitemagic.gratitude.proof import verify_xrpl_payment
+
                 result = verify_xrpl_payment(tx_hash)
                 verified = result.get("verified", False)
             elif channel == "x402":
                 from whitemagic.gratitude.proof import verify_x402_payment
+
                 result = verify_x402_payment(tx_hash)
                 verified = result.get("verified", False)
         except Exception as exc:
-            logger.warning("Verification failed for %s: %s", tx_hash, exc, exc_info=True)
+            logger.warning(
+                "Verification failed for %s: %s", tx_hash, exc, exc_info=True
+            )
 
     event = GratitudeEvent(
         channel=channel,
@@ -74,7 +78,14 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
     ledger = get_gratitude_ledger()
     ledger.record(event)
 
-    logger.info("Gratitude recorded: %s %s via %s (verified=%s)", amount, currency, channel, verified, exc_info=True)
+    logger.info(
+        "Gratitude recorded: %s %s via %s (verified=%s)",
+        amount,
+        currency,
+        channel,
+        verified,
+        exc_info=True,
+    )
 
     # Generate payment link for XRPL if manual/failed
     payment_link = ""
@@ -98,12 +109,16 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
         "currency": currency,
         "channel": channel,
         "verified": verified,
-        "message": "Thank you for your gratitude! 🙏" if not verified else "Verified on-chain. Thank you! 🙏✅",
+        "message": "Thank you for your gratitude! 🙏"
+        if not verified
+        else "Verified on-chain. Thank you! 🙏✅",
     }
 
     if payment_link:
         response["payment_link"] = payment_link
-        response["instruction"] = f"To complete your tip, use this Xaman link: {payment_link}"
+        response["instruction"] = (
+            f"To complete your tip, use this Xaman link: {payment_link}"
+        )
 
     return response
 

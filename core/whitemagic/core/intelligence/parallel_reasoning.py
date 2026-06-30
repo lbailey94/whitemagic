@@ -47,24 +47,30 @@ from typing import Any
 # Optional imports for memory injection and anti-pattern checking
 try:
     from whitemagic.core.memory.unified import get_unified_memory
+
     _HAS_MEMORY = True
 except Exception:
     _HAS_MEMORY = False
 
 try:
     from whitemagic.core.immune.defense.autoimmune import AutoimmuneSystem
+
     _HAS_ANTIPATTERN = True
 except Exception:
     _HAS_ANTIPATTERN = False
 
 try:
-    from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import get_autonomous_learner
+    from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import (
+        get_autonomous_learner,
+    )
+
     _HAS_LEARNER = True
 except Exception:
     _HAS_LEARNER = False
 
 try:
     from whitemagic.forecasting.mc_integration import MCForecastEnhancer
+
     _HAS_MC = True
 except Exception:
     _HAS_MC = False
@@ -351,7 +357,9 @@ class ParallelReasoningTree:
         branch = self.branches.get(branch_id)
         if branch:
             branch.status = BranchStatus.ABANDONED
-            branch.insights.append(f"Abandoned: {reason}" if reason else "Abandoned: low score")
+            branch.insights.append(
+                f"Abandoned: {reason}" if reason else "Abandoned: low score"
+            )
 
     def revise_thought(
         self,
@@ -419,7 +427,11 @@ class ParallelReasoningTree:
         if not branch or not branch.thoughts:
             return 0.0
 
-        confidences = [t.confidence for t in branch.thoughts if not t.content.startswith("[inherited]")]
+        confidences = [
+            t.confidence
+            for t in branch.thoughts
+            if not t.content.startswith("[inherited]")
+        ]
         if not confidences:
             return 0.0
 
@@ -438,11 +450,15 @@ class ParallelReasoningTree:
         Two branches converge when their latest thoughts share significant
         keyword overlap, indicating they're reaching similar conclusions.
         """
-        active = [b for b in self.branches.values() if b.status == BranchStatus.ACTIVE and b.latest_thought]
+        active = [
+            b
+            for b in self.branches.values()
+            if b.status == BranchStatus.ACTIVE and b.latest_thought
+        ]
         convergence_points: list[dict[str, Any]] = []
 
         for i, branch_a in enumerate(active):
-            for branch_b in active[i + 1:]:
+            for branch_b in active[i + 1 :]:
                 thought_a = branch_a.latest_thought
                 thought_b = branch_b.latest_thought
                 if not thought_a or not thought_b:
@@ -450,8 +466,38 @@ class ParallelReasoningTree:
 
                 words_a = set(thought_a.content.lower().split())
                 words_b = set(thought_b.content.lower().split())
-                words_a -= {"the", "a", "an", "is", "to", "and", "or", "in", "for", "of", "with", "it", "this", "that"}
-                words_b -= {"the", "a", "an", "is", "to", "and", "or", "in", "for", "of", "with", "it", "this", "that"}
+                words_a -= {
+                    "the",
+                    "a",
+                    "an",
+                    "is",
+                    "to",
+                    "and",
+                    "or",
+                    "in",
+                    "for",
+                    "of",
+                    "with",
+                    "it",
+                    "this",
+                    "that",
+                }
+                words_b -= {
+                    "the",
+                    "a",
+                    "an",
+                    "is",
+                    "to",
+                    "and",
+                    "or",
+                    "in",
+                    "for",
+                    "of",
+                    "with",
+                    "it",
+                    "this",
+                    "that",
+                }
 
                 if not words_a or not words_b:
                     continue
@@ -461,12 +507,14 @@ class ParallelReasoningTree:
                 jaccard = overlap / union if union > 0 else 0
 
                 if jaccard >= self.convergence_threshold:
-                    convergence_points.append({
-                        "branch_a": branch_a.branch_id,
-                        "branch_b": branch_b.branch_id,
-                        "similarity": round(jaccard, 3),
-                        "shared_keywords": list(words_a & words_b)[:10],
-                    })
+                    convergence_points.append(
+                        {
+                            "branch_a": branch_a.branch_id,
+                            "branch_b": branch_b.branch_id,
+                            "similarity": round(jaccard, 3),
+                            "shared_keywords": list(words_a & words_b)[:10],
+                        }
+                    )
 
         return convergence_points
 
@@ -483,8 +531,12 @@ class ParallelReasoningTree:
         for bid in self.branches:
             self.score_branch(bid)
 
-        active = [b for b in self.branches.values() if b.status != BranchStatus.ABANDONED]
-        abandoned = [b for b in self.branches.values() if b.status == BranchStatus.ABANDONED]
+        active = [
+            b for b in self.branches.values() if b.status != BranchStatus.ABANDONED
+        ]
+        abandoned = [
+            b for b in self.branches.values() if b.status == BranchStatus.ABANDONED
+        ]
         revised = [t for t in self.all_thoughts.values() if t.is_revision]
 
         if not active:
@@ -494,21 +546,29 @@ class ParallelReasoningTree:
         best = max(active, key=lambda b: b.score)
 
         parts: list[str] = []
-        parts.append(f"Parallel Reasoning Synthesis: {len(self.branches)} branches explored, "
-                      f"{len(active)} active, {len(abandoned)} abandoned, {len(revised)} revisions.")
+        parts.append(
+            f"Parallel Reasoning Synthesis: {len(self.branches)} branches explored, "
+            f"{len(active)} active, {len(abandoned)} abandoned, {len(revised)} revisions."
+        )
 
         parts.append(f"\nBest branch: {best.branch_id} (score={best.score:.2f})")
         parts.append(f"  Hypothesis: {best.hypothesis}")
         for t in best.thoughts:
             if t.content.startswith("[inherited]"):
                 continue
-            prefix = f"  [{t.thought_number}]" + (" (revised)" if t.is_revision else "") + (" (hypothesis)" if t.is_hypothesis else "")
+            prefix = (
+                f"  [{t.thought_number}]"
+                + (" (revised)" if t.is_revision else "")
+                + (" (hypothesis)" if t.is_hypothesis else "")
+            )
             parts.append(f"{prefix} {t.content}")
 
         if convergence:
             parts.append(f"\nConvergence detected at {len(convergence)} point(s):")
             for cp in convergence[:5]:
-                parts.append(f"  {cp['branch_a']} <-> {cp['branch_b']} (sim={cp['similarity']:.2f})")
+                parts.append(
+                    f"  {cp['branch_a']} <-> {cp['branch_b']} (sim={cp['similarity']:.2f})"
+                )
 
         other_insights: list[str] = []
         for b in active:
@@ -517,7 +577,7 @@ class ParallelReasoningTree:
             for insight in b.insights:
                 other_insights.append(f"  [{b.branch_id}] {insight}")
         if other_insights:
-            parts.append(f"\nInsights from other branches:")
+            parts.append("\nInsights from other branches:")
             parts.extend(other_insights[:10])
 
         if abandoned:
@@ -575,7 +635,9 @@ class ParallelReasoningTree:
         # Explore branches in parallel using asyncio
         tasks = []
         for bid in list(self.branches.keys()):
-            tasks.append(self._explore_branch(bid, max_depth, fork_threshold, max_branches))
+            tasks.append(
+                self._explore_branch(bid, max_depth, fork_threshold, max_branches)
+            )
         await asyncio.gather(*tasks, return_exceptions=True)
 
         # Detect convergence and cross-pollinate
@@ -583,7 +645,8 @@ class ParallelReasoningTree:
         for cp in convergence:
             try:
                 self.cross_pollinate(
-                    cp["branch_a"], cp["branch_b"],
+                    cp["branch_a"],
+                    cp["branch_b"],
                     f"Convergence on: {', '.join(cp['shared_keywords'][:5])}",
                 )
             except Exception:
@@ -591,7 +654,10 @@ class ParallelReasoningTree:
 
         # Auto-learn from all branch outcomes
         for branch in self.branches.values():
-            if branch.status == BranchStatus.ACTIVE and branch.score > self.convergence_threshold:
+            if (
+                branch.status == BranchStatus.ACTIVE
+                and branch.score > self.convergence_threshold
+            ):
                 branch.status = BranchStatus.CONVERGED
             self._auto_learn_from_branch(branch)
 
@@ -601,10 +667,14 @@ class ParallelReasoningTree:
         # Determine best branch
         for bid in self.branches:
             self.score_branch(bid)
-        active = [b for b in self.branches.values() if b.status != BranchStatus.ABANDONED]
+        active = [
+            b for b in self.branches.values() if b.status != BranchStatus.ABANDONED
+        ]
         best_id = max(active, key=lambda b: b.score).branch_id if active else "main"
 
-        abandoned_count = sum(1 for b in self.branches.values() if b.status == BranchStatus.ABANDONED)
+        abandoned_count = sum(
+            1 for b in self.branches.values() if b.status == BranchStatus.ABANDONED
+        )
         revised_count = sum(1 for t in self.all_thoughts.values() if t.is_revision)
 
         return ParallelReasoningResult(
@@ -626,12 +696,16 @@ class ParallelReasoningTree:
             mem = get_unified_memory()
             results = mem.search(self.question, limit=5)
             for r in results:
-                self._memory_context.append({
-                    "content": getattr(r, "content", str(r))[:500],
-                    "tags": getattr(r, "tags", []),
-                    "score": getattr(r, "score", 0.0),
-                })
-            logger.debug("Loaded %d memory contexts for reasoning", len(self._memory_context))
+                self._memory_context.append(
+                    {
+                        "content": getattr(r, "content", str(r))[:500],
+                        "tags": getattr(r, "tags", []),
+                        "score": getattr(r, "score", 0.0),
+                    }
+                )
+            logger.debug(
+                "Loaded %d memory contexts for reasoning", len(self._memory_context)
+            )
         except Exception as e:
             logger.debug("Memory context loading skipped: %s", e)
 
@@ -642,12 +716,15 @@ class ParallelReasoningTree:
         try:
             import tempfile
             from pathlib import Path
+
             # AutoimmuneSystem loads from memory/meta dir -- use temp if not available
             immune = AutoimmuneSystem(base_dir=Path(tempfile.gettempdir()))
             for ap in immune.anti_patterns.values():
                 if ap.confidence >= 0.7:
                     self._anti_patterns.append(ap.title)
-            logger.debug("Loaded %d anti-patterns for reasoning", len(self._anti_patterns))
+            logger.debug(
+                "Loaded %d anti-patterns for reasoning", len(self._anti_patterns)
+            )
         except Exception as e:
             logger.debug("Anti-pattern loading skipped: %s", e)
 
@@ -722,6 +799,7 @@ class ParallelReasoningTree:
         """Get the current zodiacal phase for injection timing."""
         try:
             from whitemagic.core.orchestration.zodiacal_procession import get_procession
+
             proc = get_procession()
             return proc.state.current_phase.value
         except Exception:
@@ -745,7 +823,9 @@ class ParallelReasoningTree:
                 best_lesson = lesson
         return best_lesson or self._lessons[0]
 
-    def _select_memory_for_branch(self, branch: ReasoningBranch) -> dict[str, Any] | None:
+    def _select_memory_for_branch(
+        self, branch: ReasoningBranch
+    ) -> dict[str, Any] | None:
         """Select the most relevant memory for a specific branch.
 
         Uses keyword overlap between branch hypothesis and memory content.
@@ -829,14 +909,18 @@ class ParallelReasoningTree:
             # Create claims from branch thoughts
             claims = []
             for thought in branch.thoughts:
-                claims.append({
-                    "id": f"branch_{branch.id}_thought_{thought.id}",
-                    "claim": thought.content[:100],
-                    "confidence": thought.confidence,
-                    "outcome": 1.0 if thought.confidence > 0.5 else 0.0,
-                    "status": "validated" if thought.confidence > 0.5 else "falsified",
-                    "category": "reasoning",
-                })
+                claims.append(
+                    {
+                        "id": f"branch_{branch.id}_thought_{thought.id}",
+                        "claim": thought.content[:100],
+                        "confidence": thought.confidence,
+                        "outcome": 1.0 if thought.confidence > 0.5 else 0.0,
+                        "status": "validated"
+                        if thought.confidence > 0.5
+                        else "falsified",
+                        "category": "reasoning",
+                    }
+                )
 
             if not claims:
                 return branch.score
@@ -854,7 +938,9 @@ class ParallelReasoningTree:
             logger.debug("MC branch scoring skipped: %s", e)
             return branch.score
 
-    def _should_branch_continue(self, branch: ReasoningBranch, current_step: int) -> bool:
+    def _should_branch_continue(
+        self, branch: ReasoningBranch, current_step: int
+    ) -> bool:
         """Determine if a branch should continue exploring using MC confidence.
 
         Uses Monte Carlo scoring to decide whether to invest more steps
@@ -922,18 +1008,30 @@ class ParallelReasoningTree:
             # MC-based continuation decision
             if step >= 3 and not self._should_branch_continue(branch, step):
                 mc_score = self._score_branch_monte_carlo(branch)
-                self.abandon_branch(branch_id, f"MC score {mc_score:.2f} below dynamic threshold at step {step}")
+                self.abandon_branch(
+                    branch_id,
+                    f"MC score {mc_score:.2f} below dynamic threshold at step {step}",
+                )
                 self._auto_learn_from_branch(branch)
                 break
 
             if score < self.branch_threshold and step >= 3:
-                self.abandon_branch(branch_id, f"Score {score:.2f} below threshold {self.branch_threshold}")
+                self.abandon_branch(
+                    branch_id,
+                    f"Score {score:.2f} below threshold {self.branch_threshold}",
+                )
                 self._auto_learn_from_branch(branch)
                 break
 
             # Fork if high confidence and we have room
-            if confidence >= fork_threshold and len(self.branches) < max_branches and step >= 2:
-                fork_hyp = f"Forked from {branch_id} at step {step}: {thought_content[:60]}"
+            if (
+                confidence >= fork_threshold
+                and len(self.branches) < max_branches
+                and step >= 2
+            ):
+                fork_hyp = (
+                    f"Forked from {branch_id} at step {step}: {thought_content[:60]}"
+                )
                 self._create_branch(
                     hypothesis=fork_hyp,
                     parent_branch=branch_id,

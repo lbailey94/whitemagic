@@ -18,10 +18,6 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
-// 5D Spatial Index
-// ---------------------------------------------------------------------------
-
 #[pyclass]
 #[derive(Clone)]
 pub struct SpatialIndex5D {
@@ -177,10 +173,6 @@ impl SpatialIndex5D {
         Ok(())
     }
 }
-
-// ---------------------------------------------------------------------------
-// Standalone functions for batch operations
-// ---------------------------------------------------------------------------
 
 /// Batch nearest-neighbor: given a list of query points, find nearest
 /// neighbors for each (parallel via Rayon).

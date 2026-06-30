@@ -38,11 +38,11 @@ logger = logging.getLogger(__name__)
 class EffortTier(Enum):
     """Machine-speed effort classification."""
 
-    TRIVIAL = "trivial"      # <1s
-    QUICK = "quick"          # 1-10s
-    MODERATE = "moderate"    # 10-60s
-    EXTENDED = "extended"    # 1-10min
-    DEEP = "deep"            # 10min+
+    TRIVIAL = "trivial"  # <1s
+    QUICK = "quick"  # 1-10s
+    MODERATE = "moderate"  # 10-60s
+    EXTENDED = "extended"  # 1-10min
+    DEEP = "deep"  # 10min+
 
     @property
     def decision(self) -> str:
@@ -388,15 +388,17 @@ class MachineTimeEstimator:
             sigma = max(prediction.p90 - prediction.p50, 0.001)
             crps = crps_gaussian(prediction.predicted_seconds, actual_seconds, sigma)
 
-            result.update({
-                "predicted_seconds": round(prediction.predicted_seconds, 6),
-                "error_seconds": round(error, 6),
-                "abs_error_pct": round(abs_error_pct, 2),
-                "log_ratio_error": round(log_ratio, 4),
-                "crps": round(crps, 6),
-                "tier": prediction.tier.value,
-                "confidence": prediction.confidence,
-            })
+            result.update(
+                {
+                    "predicted_seconds": round(prediction.predicted_seconds, 6),
+                    "error_seconds": round(error, 6),
+                    "abs_error_pct": round(abs_error_pct, 2),
+                    "log_ratio_error": round(log_ratio, 4),
+                    "crps": round(crps, 6),
+                    "tier": prediction.tier.value,
+                    "confidence": prediction.confidence,
+                }
+            )
 
         # Persist
         entry = {
@@ -404,7 +406,11 @@ class MachineTimeEstimator:
             "tool_name": tool_name,
             "operation_type": op_type,
             "actual_seconds": actual_seconds,
-            **{k: v for k, v in result.items() if k not in ("tool_name", "operation_type")},
+            **{
+                k: v
+                for k, v in result.items()
+                if k not in ("tool_name", "operation_type")
+            },
         }
         try:
             with open(self.log_path, "a") as f:
@@ -454,7 +460,13 @@ class MachineTimeEstimator:
         for tool, correction in sorted(self._correction_factors.items()):
             ratios = self._tool_log_ratios.get(tool, [])
             mean_ratio = statistics.mean(ratios) if ratios else 0.0
-            bias = "overestimate" if mean_ratio > 0.1 else "underestimate" if mean_ratio < -0.1 else "calibrated"
+            bias = (
+                "overestimate"
+                if mean_ratio > 0.1
+                else "underestimate"
+                if mean_ratio < -0.1
+                else "calibrated"
+            )
             feedback[tool] = {
                 "correction_factor": round(correction, 4),
                 "mean_log_ratio_error": round(mean_ratio, 4),
@@ -469,9 +481,14 @@ class MachineTimeEstimator:
                 f"Tools with most bias: "
                 + ", ".join(
                     f"{t} ({d['bias_direction']}, correction={d['correction_factor']})"
-                    for t, d in sorted(feedback.items(), key=lambda x: abs(x[1]['mean_log_ratio_error']), reverse=True)[:3]
+                    for t, d in sorted(
+                        feedback.items(),
+                        key=lambda x: abs(x[1]["mean_log_ratio_error"]),
+                        reverse=True,
+                    )[:3]
                 )
-                if feedback else "No corrections yet — need at least 5 samples per tool."
+                if feedback
+                else "No corrections yet — need at least 5 samples per tool."
             ),
         }
 
@@ -534,12 +551,18 @@ class MachineTimeEstimator:
             return {"count": 0, "mean_crps": None, "message": f"Error: {e}"}
 
         if not crps_values:
-            return {"count": 0, "mean_crps": None, "message": "No predictions with CRPS"}
+            return {
+                "count": 0,
+                "mean_crps": None,
+                "message": "No predictions with CRPS",
+            }
 
         mean_crps = statistics.mean(crps_values)
         median_crps = statistics.median(crps_values)
         mean_log_ratio = statistics.mean(log_ratios) if log_ratios else 0.0
-        mae_log_ratio = statistics.mean([abs(x) for x in log_ratios]) if log_ratios else 0.0
+        mae_log_ratio = (
+            statistics.mean([abs(x) for x in log_ratios]) if log_ratios else 0.0
+        )
 
         per_type_summary = {}
         for op_type, values in sorted(per_type.items()):

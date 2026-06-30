@@ -24,6 +24,7 @@ def check_proactive_dream() -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.self_model import get_self_model
+
         model = get_self_model()
         forecast = model.forecast("energy")
 
@@ -58,7 +59,9 @@ def check_proactive_dream() -> dict[str, Any]:
                     logger.info(
                         "🔮 Proactive dream triggered: energy %.3f → %.3f "
                         "(predicted trough in ~%d steps)",
-                        forecast.current, forecast.predicted, forecast.threshold_eta,
+                        forecast.current,
+                        forecast.predicted,
+                        forecast.threshold_eta,
                     )
                     result["triggered"] = True
                     result["reason"] = (
@@ -68,11 +71,14 @@ def check_proactive_dream() -> dict[str, Any]:
                     result["dream_phase"] = "proactive_consolidation"
 
                     # Emit event
-                    emit_fusion_event("PROACTIVE_DREAM", {
-                        "energy_current": forecast.current,
-                        "energy_predicted": forecast.predicted,
-                        "threshold_eta": forecast.threshold_eta,
-                    })
+                    emit_fusion_event(
+                        "PROACTIVE_DREAM",
+                        {
+                            "energy_current": forecast.current,
+                            "energy_predicted": forecast.predicted,
+                            "threshold_eta": forecast.threshold_eta,
+                        },
+                    )
                 else:
                     result["triggered"] = False
                     result["reason"] = "already dreaming or dream cycle not running"

@@ -74,10 +74,6 @@ class SanctuaryGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.3, y=0.0, z=0.0, w=0.3)
 
-    # ------------------------------------------------------------------
-    # Sandbox limits — serving sandbox.set_limits, sandbox.status tools
-    # ------------------------------------------------------------------
-
     def set_limits(self, **kwargs: Any) -> dict[str, Any]:
         """Set sandbox resource limits."""
         with self._lock:
@@ -95,22 +91,24 @@ class SanctuaryGarden(BaseGarden, GanYingMixin):
                 "active_locks": len(self.active_locks),
                 "violations_total": len(self.violations),
                 "safety_level": round(self.safety_level, 3),
-                "locks": {k: {"agent": v["agent_id"], "reason": v["reason"]}
-                          for k, v in self.active_locks.items()},
+                "locks": {
+                    k: {"agent": v["agent_id"], "reason": v["reason"]}
+                    for k, v in self.active_locks.items()
+                },
             }
 
-    # ------------------------------------------------------------------
-    # Lock management — serving sangha_lock tool
-    # ------------------------------------------------------------------
-
-    def acquire_lock(self, resource_id: str, agent_id: str,
-                     reason: str = "", ttl_seconds: int = 300) -> dict[str, Any]:
+    def acquire_lock(
+        self, resource_id: str, agent_id: str, reason: str = "", ttl_seconds: int = 300
+    ) -> dict[str, Any]:
         """Acquire a lock on a resource."""
         with self._lock:
             if resource_id in self.active_locks:
                 holder = self.active_locks[resource_id]
-                return {"acquired": False, "held_by": holder["agent_id"],
-                        "reason": holder["reason"]}
+                return {
+                    "acquired": False,
+                    "held_by": holder["agent_id"],
+                    "reason": holder["reason"],
+                }
             lock = {
                 "resource_id": resource_id,
                 "agent_id": agent_id,
@@ -119,7 +117,9 @@ class SanctuaryGarden(BaseGarden, GanYingMixin):
                 "ttl_seconds": ttl_seconds,
             }
             self.active_locks[resource_id] = lock
-        self.emit(EventType.SAFETY_ESTABLISHED, {"lock": resource_id, "agent": agent_id})
+        self.emit(
+            EventType.SAFETY_ESTABLISHED, {"lock": resource_id, "agent": agent_id}
+        )
         return {"acquired": True, "lock": lock}
 
     def release_lock(self, resource_id: str, agent_id: str) -> dict[str, Any]:
@@ -133,12 +133,13 @@ class SanctuaryGarden(BaseGarden, GanYingMixin):
             del self.active_locks[resource_id]
         return {"released": True, "resource": resource_id}
 
-    # ------------------------------------------------------------------
-    # Violation tracking — serving sandbox.violations tool
-    # ------------------------------------------------------------------
-
-    def record_violation(self, violation_type: str, description: str,
-                         agent_id: str = "", severity: float = 0.5) -> dict[str, Any]:
+    def record_violation(
+        self,
+        violation_type: str,
+        description: str,
+        agent_id: str = "",
+        severity: float = 0.5,
+    ) -> dict[str, Any]:
         """Record a sandbox violation."""
         entry = {
             "type": violation_type,
@@ -158,38 +159,39 @@ class SanctuaryGarden(BaseGarden, GanYingMixin):
         with self._lock:
             return list(self.violations)[-limit:]
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def enter_sanctuary(self, where: str = "inner space") -> dict[str, Any]:
         sanctuary = {"where": where, "entered": datetime.now().isoformat()}
         self.emit(EventType.SANCTUARY_ENTERED, sanctuary)
         return sanctuary
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "sandbox": self.get_sandbox_status(),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "sandbox": self.get_sandbox_status(),
+            }
+        )
         return base
 
     @listen_for(EventType.HEALING_INITIATED)
     def on_healing(self, event: Any) -> None:
-        self.emit(EventType.SANCTUARY_ENTERED, {"source": "healing", "where": "healing space"})
+        self.emit(
+            EventType.SANCTUARY_ENTERED, {"source": "healing", "where": "healing space"}
+        )
 
     @listen_for(EventType.THREAT_DETECTED)
     def on_threat(self, event: Any) -> None:
-        self.emit(EventType.SAFETY_ESTABLISHED, {"source": "threat_response", "for": "protection"})
+        self.emit(
+            EventType.SAFETY_ESTABLISHED,
+            {"source": "threat_response", "for": "protection"},
+        )
 
 
 _instance = None
+
+
 def get_sanctuary_garden() -> SanctuaryGarden:
     global _instance
     if _instance is None:

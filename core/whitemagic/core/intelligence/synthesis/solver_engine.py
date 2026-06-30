@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Dharmic Solver Engine — cvxpy-based constrained optimization."""
+
 from __future__ import annotations
 
 import logging
@@ -8,6 +9,7 @@ import numpy as np
 
 try:
     import cvxpy as cp
+
     HAS_CVXPY = True
 except ImportError:
     HAS_CVXPY = False
@@ -54,7 +56,8 @@ class DharmicSolver:
         # 2. Entropy-Regularized Frank-Wolfe Loop
         logger.info(
             "DharmicSolver: Starting Frank-Wolfe optimization for %s nodes (budget: %s)",
-            n, budget,
+            n,
+            budget,
         )
         t = 0
         for t in range(max_iters):
@@ -88,7 +91,8 @@ class DharmicSolver:
 
         logger.info(
             "DharmicSolver: Selected %s nodes after %s iterations",
-            len(selected), t + 1,
+            len(selected),
+            t + 1,
         )
         return selected
 
@@ -163,10 +167,6 @@ class DharmicSolver:
             return np.zeros(n)
         return s.value  # type: ignore[no-any-return]
 
-
-# ---------------------------------------------------------------------------
-# Singleton helper
-# ---------------------------------------------------------------------------
 
 _solver: DharmicSolver | None = None
 

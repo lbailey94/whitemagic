@@ -498,10 +498,6 @@ impl HNSWIndex {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Python module registration
-// ---------------------------------------------------------------------------
-
 #[cfg(feature = "python")]
 pub fn hnsw_index(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<HNSWIndex>()?;

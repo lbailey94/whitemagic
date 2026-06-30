@@ -15,10 +15,6 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 // AgentCapability describes what an agent can do.
 type AgentCapability struct {
 	Name        string   `json:"name"`
@@ -83,10 +79,6 @@ type StreamEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 	Data      any       `json:"data"`
 }
-
-// ---------------------------------------------------------------------------
-// AgentRegistry
-// ---------------------------------------------------------------------------
 
 // AgentRegistry manages agent registration and coordination.
 type AgentRegistry struct {
@@ -342,10 +334,6 @@ func (r *AgentRegistry) ToJSON() (string, error) {
 	}
 	return string(bytes), nil
 }
-
-// ---------------------------------------------------------------------------
-// Internal
-// ---------------------------------------------------------------------------
 
 func (r *AgentRegistry) hasRequiredCaps(agent *AgentInfo, required []string) bool {
 	if len(required) == 0 {

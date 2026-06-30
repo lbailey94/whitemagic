@@ -5,6 +5,7 @@ from whitemagic.utils.rust_helper import get_rust_module
 
 logger = logging.getLogger(__name__)
 
+
 class HolographicContextInjector:
     """I008 Arrow IPC -> LLM Context Injector.
 
@@ -16,7 +17,7 @@ class HolographicContextInjector:
     def __init__(self):
         self._rust_available = False
         rust_module = get_rust_module()
-        if rust_module is not None and hasattr(rust_module, 'arrow_bridge'):
+        if rust_module is not None and hasattr(rust_module, "arrow_bridge"):
             self._arrow = rust_module.arrow_bridge
             self._rust_available = True
 
@@ -35,10 +36,15 @@ class HolographicContextInjector:
 3. `nexus/src/components/RadialPalette.tsx` (Resonance: 0.88) - MandalaOS UI for Karmic Consent and agent routing.
 </holographic_context>"""
         except Exception as e:
-            logger.warning("Failed to generate holographic context: %s", e, exc_info=True)
+            logger.warning(
+                "Failed to generate holographic context: %s", e, exc_info=True
+            )
             return f"<!-- Holographic Context Error: {e} -->"
 
+
 _holographic_injector = None
+
+
 def get_holographic_injector() -> HolographicContextInjector:
     """
     Get the holographic injector.

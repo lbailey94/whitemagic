@@ -29,19 +29,19 @@ class MetricsCollector:
 
     def get_metrics(self) -> dict[str, Any]:
         """Get all collected metrics."""
-        return {
-            "metrics": self.metrics,
-            "timestamp": datetime.now().isoformat()
-        }
+        return {"metrics": self.metrics, "timestamp": datetime.now().isoformat()}
 
     def get_summary(self, categories: list[str] | None = None) -> dict[str, Any]:
         """Get metrics summary, optionally filtered by categories."""
         if categories:
-            filtered = {k: v for k, v in self.metrics.items()
-                       if any(cat in k for cat in categories)}
+            filtered = {
+                k: v
+                for k, v in self.metrics.items()
+                if any(cat in k for cat in categories)
+            }
             return {
                 "metrics": filtered,
                 "categories": categories,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
         return self.get_metrics()

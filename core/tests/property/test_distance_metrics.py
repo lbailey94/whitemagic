@@ -13,6 +13,7 @@ Properties verified:
 5. classify_zone is monotonic on the unit interval and returns one
    of the documented GalacticZone values.
 """
+
 from __future__ import annotations
 
 import math
@@ -50,7 +51,9 @@ def _angular_distance(a: list[float], b: list[float]) -> float:
 # WhiteMagic embeddings are normalized away from zero in practice.
 def _nonzero_vector():
     return st.lists(
-        st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False),
+        st.floats(
+            min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False
+        ),
         min_size=DIM,
         max_size=DIM,
     ).filter(lambda v: any(abs(x) > 1e-6 for x in v))

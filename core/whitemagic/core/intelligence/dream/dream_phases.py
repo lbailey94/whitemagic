@@ -4,6 +4,7 @@ Re-exports from the canonical source in dream_cycle.py to avoid
 duplicate enum drift. The 8-phase version was superseded by the
 12-phase version in v17.0.
 """
+
 from whitemagic.core.dreaming.dream_cycle import DreamPhase
 
 PHASE_ORDER = list(DreamPhase)

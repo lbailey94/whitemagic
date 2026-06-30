@@ -81,9 +81,11 @@ class SessionHandoff:
         if self.current_session_file.exists():
             prev_state = self._load_session_state(self.current_session_file)
             if prev_state and not prev_state.ended_at:
-                logger.info("🔄 Resuming from previous session: %s", prev_state.session_id)
+                logger.info(
+                    "🔄 Resuming from previous session: %s", prev_state.session_id
+                )
                 logger.info("   Active tasks: %s", len(prev_state.active_tasks))
-                logger.info("   Next steps: %s", ', '.join(prev_state.next_steps[:3]))
+                logger.info("   Next steps: %s", ", ".join(prev_state.next_steps[:3]))
                 return prev_state
 
         # Create new session
@@ -196,7 +198,10 @@ class SessionHandoff:
         self._create_handoff_doc(state, handoff_file)
 
         logger.info("🏁 Session ended: %s", session_id)
-        logger.info("   Duration: %s minutes", format((state.ended_at - state.started_at).total_seconds() / 60, ".1f"))
+        logger.info(
+            "   Duration: %s minutes",
+            format((state.ended_at - state.started_at).total_seconds() / 60, ".1f"),
+        )
         logger.info("   Tasks completed: %s", len(state.completed_tasks))
         logger.info("   Next steps: %s", len(state.next_steps))
 
@@ -227,10 +232,14 @@ class SessionHandoff:
             max_iterations=data.get("max_iterations", 50),
             completion_criteria=data.get("completion_criteria", ""),
             is_continuous=data.get("is_continuous", False),
-            last_progress_at=parse_datetime(data["last_progress_at"]) if data.get("last_progress_at") else None,
+            last_progress_at=parse_datetime(data["last_progress_at"])
+            if data.get("last_progress_at")
+            else None,
         )
 
-    def _save_session_state(self, state: SessionState, filepath: Path | None = None) -> None:
+    def _save_session_state(
+        self, state: SessionState, filepath: Path | None = None
+    ) -> None:
         """Save session state to file."""
         if filepath is None:
             filepath = self.current_session_file
@@ -252,7 +261,9 @@ class SessionHandoff:
             "max_iterations": state.max_iterations,
             "completion_criteria": state.completion_criteria,
             "is_continuous": state.is_continuous,
-            "last_progress_at": state.last_progress_at.isoformat() if state.last_progress_at else None,
+            "last_progress_at": state.last_progress_at.isoformat()
+            if state.last_progress_at
+            else None,
         }
         with file_lock(filepath):
             atomic_write(filepath, _json_dumps(data, indent=2))
@@ -266,31 +277,31 @@ class SessionHandoff:
 
 **Agent**: {state.agent_name}
 **Duration**: {duration:.1f} minutes
-**Ended**: {ended_at.strftime('%Y-%m-%d %H:%M:%S')}
+**Ended**: {ended_at.strftime("%Y-%m-%d %H:%M:%S")}
 
 ---
 
 ## ✅ Completed ({len(state.completed_tasks)})
 
-{chr(10).join(f'- {task}' for task in state.completed_tasks)}
+{chr(10).join(f"- {task}" for task in state.completed_tasks)}
 
 ---
 
 ## ⏳ Active ({len(state.active_tasks)})
 
-{chr(10).join(f'- {task}' for task in state.active_tasks)}
+{chr(10).join(f"- {task}" for task in state.active_tasks)}
 
 ---
 
 ## 🎯 Next Steps
 
-{chr(10).join(f'{i+1}. {step}' for i, step in enumerate(state.next_steps))}
+{chr(10).join(f"{i + 1}. {step}" for i, step in enumerate(state.next_steps))}
 
 ---
 
 ## 📊 Session Stats
 
-- **Token Usage**: {state.token_usage['used']}/{state.token_usage['total']} ({state.token_usage['used']/state.token_usage['total']*100:.1f}%)
+- **Token Usage**: {state.token_usage["used"]}/{state.token_usage["total"]} ({state.token_usage["used"] / state.token_usage["total"] * 100:.1f}%)
 - **Files Modified**: {len(state.files_modified)}
 - **Decisions Made**: {len(state.decisions_made)}
 
@@ -306,8 +317,6 @@ class SessionHandoff:
 """
         with file_lock(filepath):
             atomic_write(filepath, content)
-
-    # ===== CONTINUOUS EXECUTION (v4.3.0) =====
 
     def start_continuous(
         self,

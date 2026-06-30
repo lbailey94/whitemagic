@@ -14,7 +14,9 @@ class HonestExpression:
     Honesty serves love. Not ego.
     """
 
-    def authentic_response(self, situation: str, polite_response: str, true_response: str) -> str:
+    def authentic_response(
+        self, situation: str, polite_response: str, true_response: str
+    ) -> str:
         """
         Choose truth over politeness when it matters.
         """

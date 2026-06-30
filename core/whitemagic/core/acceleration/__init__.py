@@ -28,7 +28,10 @@ except ImportError:
         Returns:
             dict[str, Any]
         """
-        return {"status": "error", "message": "Elixir bridge not available or archived."}
+        return {
+            "status": "error",
+            "message": "Elixir bridge not available or archived.",
+        }
 
     def elixir_cascade_execute(
         tool_name: str,
@@ -49,7 +52,10 @@ except ImportError:
             dict[str, Any] | None
         """
         logger.debug("Elixir bridge not available — elixir_cascade_execute skipped")
-        return {"status": "skipped", "reason": "Elixir bridge not available or archived."}
+        return {
+            "status": "skipped",
+            "reason": "Elixir bridge not available or archived.",
+        }
 
     def elixir_cascade_pipeline(
         tasks: list[dict[str, Any]],
@@ -68,7 +74,11 @@ except ImportError:
             dict[str, Any] | None
         """
         logger.debug("Elixir bridge not available — elixir_cascade_pipeline skipped")
-        return {"status": "skipped", "reason": "Elixir bridge not available or archived."}
+        return {
+            "status": "skipped",
+            "reason": "Elixir bridge not available or archived.",
+        }
+
 
 try:
     from .go_mesh_bridge import (
@@ -78,6 +88,7 @@ try:
         mesh_sync_memory,
     )
 except ImportError:
+
     def go_mesh_status() -> dict[str, Any]:
         """
         Perform the go mesh status operation.
@@ -133,6 +144,7 @@ except ImportError:
         logger.debug("Go mesh bridge not available — mesh_sync_memory skipped")
         return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
+
 try:
     from .haskell_bridge import (
         haskell_bridge_status,
@@ -141,6 +153,7 @@ try:
         haskell_maturity_assess,
     )
 except ImportError:
+
     def haskell_bridge_status() -> dict[str, Any]:
         """
         Perform the haskell bridge status operation.
@@ -221,6 +234,7 @@ except ImportError:
         logger.debug("Haskell bridge not available — haskell_maturity_assess skipped")
         return {"status": "skipped", "reason": "Haskell bridge not available."}
 
+
 try:
     from .julia_bridge import (
         julia_batch_forecast,
@@ -229,6 +243,7 @@ try:
         julia_importance_distribution,
     )
 except ImportError:
+
     def julia_batch_forecast(
         metrics: dict[str, list[float]],
         steps: int = 5,
@@ -288,8 +303,11 @@ except ImportError:
         Returns:
             dict[str, Any] | None
         """
-        logger.debug("Julia bridge not available — julia_importance_distribution skipped")
+        logger.debug(
+            "Julia bridge not available — julia_importance_distribution skipped"
+        )
         return {"status": "skipped", "reason": "Julia bridge not available."}
+
 
 try:
     from .mojo_bridge import (
@@ -299,6 +317,7 @@ try:
         mojo_status,
     )
 except ImportError:
+
     def mojo_batch_encode(
         memories: list[dict[str, Any]],
     ) -> list[tuple[float, float, float, float, float]] | None:
@@ -355,6 +374,7 @@ except ImportError:
         """
         return {"status": "error", "message": "Mojo bridge not available."}
 
+
 from .dispatch_bridge import DispatchBridge, get_dispatch
 from .event_ring_bridge import EventRingBridge, get_event_ring
 from .mojo_bridge import (
@@ -397,28 +417,51 @@ from .state_board_bridge import StateBoardBridge, get_state_board
 
 __all__ = [
     # SIMD operations (always available)
-    "cosine_similarity", "batch_cosine", "simd_status",
-    "extract_keywords", "simd_keywords_status",
-    "pairwise_distance_matrix", "cosine_similarity_zig", "top_k_nearest",
+    "cosine_similarity",
+    "batch_cosine",
+    "simd_status",
+    "extract_keywords",
+    "simd_keywords_status",
+    "pairwise_distance_matrix",
+    "cosine_similarity_zig",
+    "top_k_nearest",
     "simd_distance_status",
-    "holographic_5d_distance", "holographic_5d_knn", "holographic_5d_centroid",
+    "holographic_5d_distance",
+    "holographic_5d_knn",
+    "holographic_5d_centroid",
     "simd_holographic_status",
-    "grid_density_scan", "simd_constellation_status",
-    "batch_topk_cosine", "batch_normalize", "batch_centroid",
+    "grid_density_scan",
+    "simd_constellation_status",
+    "batch_topk_cosine",
+    "batch_normalize",
+    "batch_centroid",
     "simd_vector_batch_status",
     # Mojo (if available)
-    "mojo_batch_encode", "mojo_quantize", "mojo_neuro_score", "mojo_status",
+    "mojo_batch_encode",
+    "mojo_quantize",
+    "mojo_neuro_score",
+    "mojo_status",
     # Core bridges (always available)
-    "StateBoardBridge", "get_state_board",
-    "EventRingBridge", "get_event_ring",
-    "DispatchBridge", "get_dispatch",
+    "StateBoardBridge",
+    "get_state_board",
+    "EventRingBridge",
+    "get_event_ring",
+    "DispatchBridge",
+    "get_dispatch",
     # Polyglot bridges (optional - may raise NotImplementedError)
-    "haskell_check_boundaries", "haskell_maturity_assess",
-    "haskell_evaluate_rules", "haskell_bridge_status",
-    "elixir_cascade_execute", "elixir_cascade_pipeline",
+    "haskell_check_boundaries",
+    "haskell_maturity_assess",
+    "haskell_evaluate_rules",
+    "haskell_bridge_status",
+    "elixir_cascade_execute",
+    "elixir_cascade_pipeline",
     "elixir_bridge_status",
-    "mesh_sync_memory", "mesh_agent_status", "mesh_distribute_task",
+    "mesh_sync_memory",
+    "mesh_agent_status",
+    "mesh_distribute_task",
     "go_mesh_status",
-    "julia_importance_distribution", "julia_forecast_metric",
-    "julia_batch_forecast", "julia_bridge_status",
+    "julia_importance_distribution",
+    "julia_forecast_metric",
+    "julia_batch_forecast",
+    "julia_bridge_status",
 ]

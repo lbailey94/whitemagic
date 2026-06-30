@@ -21,10 +21,7 @@ try:
     import whitemagic_rust
 
     result_json = whitemagic_rust.simhash_lsh.simhash_find_duplicates(
-        embeddings_flat,
-        embedding_dim,
-        0.95,
-        10
+        embeddings_flat, embedding_dim, 0.95, 10
     )
     rust_results = json.loads(result_json)
     print(f"Found {len(rust_results)} duplicates.")

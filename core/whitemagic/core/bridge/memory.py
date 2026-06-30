@@ -71,6 +71,7 @@ def memory_search(
 ) -> dict[str, Any]:
     """Search memories."""
     from whitemagic.core.memory.manager import MemoryManager
+
     manager = MemoryManager()
 
     # Handle parameter aliases
@@ -83,6 +84,7 @@ def memory_search(
     if use_rust and query and not tags and not memory_type:
         try:
             import whitemagic_rs
+
             # Get all memories for Rust search (this is the current limitation of this bridge)
             # Future enhancement: maintain a Rust-side index
             all_mems = manager.unified.list_recent(limit=1000)
@@ -101,13 +103,22 @@ def memory_search(
                 for mem_id, score in rust_results:
                     mem = manager.unified.recall(mem_id)
                     if mem:
-                        results.append({
-                            "entry": manager._memory_to_dict(mem),
-                            "preview": str(mem.content)[:200] if mem.content else "",
-                            "score": score,
-                        })
+                        results.append(
+                            {
+                                "entry": manager._memory_to_dict(mem),
+                                "preview": str(mem.content)[:200]
+                                if mem.content
+                                else "",
+                                "score": score,
+                            }
+                        )
 
-                return {"results": results, "count": len(results), "query": query, "method": "rust_simd"}
+                return {
+                    "results": results,
+                    "count": len(results),
+                    "query": query,
+                    "method": "rust_simd",
+                }
         except (ImportError, AttributeError):
             pass
 
@@ -134,21 +145,31 @@ def memory_search(
             if isinstance(entry, dict):
                 truncated_mem = entry.copy()
                 if "content" in truncated_mem and len(truncated_mem["content"]) > 500:
-                    truncated_mem["content"] = truncated_mem["content"][:500] + "... (truncated)"
+                    truncated_mem["content"] = (
+                        truncated_mem["content"][:500] + "... (truncated)"
+                    )
                 truncated_results.append(truncated_mem)
             else:
                 truncated_results.append(entry)
-        return {"results": truncated_results, "count": len(truncated_results), "query": query}
+        return {
+            "results": truncated_results,
+            "count": len(truncated_results),
+            "query": query,
+        }
     elif isinstance(result, dict):
         # Also truncate if result dict contains results array
         if "results" in result and isinstance(result["results"], list):
             truncated_results = []
-            for entry in result["results"][:
-                limit]:
+            for entry in result["results"][:limit]:
                 if isinstance(entry, dict):
                     truncated_mem = entry.copy()
-                    if "content" in truncated_mem and len(truncated_mem["content"]) > 500:
-                        truncated_mem["content"] = truncated_mem["content"][:500] + "... (truncated)"
+                    if (
+                        "content" in truncated_mem
+                        and len(truncated_mem["content"]) > 500
+                    ):
+                        truncated_mem["content"] = (
+                            truncated_mem["content"][:500] + "... (truncated)"
+                        )
                     truncated_results.append(truncated_mem)
                 else:
                     truncated_results.append(entry)
@@ -156,12 +177,20 @@ def memory_search(
             result["count"] = len(truncated_results)
         return result
     else:
-        return {"results": [], "count": 0, "query": query, "error": "Unexpected result type"}
+        return {
+            "results": [],
+            "count": 0,
+            "query": query,
+            "error": "Unexpected result type",
+        }
 
 
-def memory_read(memory_id: str | None = None, filename: str | None = None, **kwargs: Any) -> dict[str, Any]:
+def memory_read(
+    memory_id: str | None = None, filename: str | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Read a memory by id/filename."""
     from whitemagic.core.memory.manager import MemoryManager
+
     manager = MemoryManager()
 
     target = memory_id or filename
@@ -185,6 +214,7 @@ def memory_update(
 ) -> dict[str, Any]:
     """Update a memory by id/filename."""
     from whitemagic.core.memory.manager import MemoryManager
+
     manager = MemoryManager()
     # Use filename if provided, otherwise use memory_id
     target_filename = filename or memory_id
@@ -199,7 +229,11 @@ def memory_update(
         add_tags=add_tags,
         remove_tags=remove_tags,
     )
-    if isinstance(result, dict) and result.get("success") is False and "not found" in str(result.get("error", "")).lower():
+    if (
+        isinstance(result, dict)
+        and result.get("success") is False
+        and "not found" in str(result.get("error", "")).lower()
+    ):
         return {
             "success": True,
             "status": "success",
@@ -217,6 +251,7 @@ def memory_delete(
 ) -> dict[str, Any]:
     """Delete a memory by id/filename."""
     from whitemagic.core.memory.manager import MemoryManager
+
     manager = MemoryManager()
 
     target = memory_id or filename
@@ -235,7 +270,9 @@ def memory_delete(
     return cast(dict[str, Any], result)
 
 
-def memory_list(limit: int = 20, memory_type: str | None = None, **kwargs: Any) -> dict[str, Any]:
+def memory_list(
+    limit: int = 20, memory_type: str | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """List recent memories."""
     from whitemagic.core.memory.manager import MemoryManager
 
@@ -244,7 +281,9 @@ def memory_list(limit: int = 20, memory_type: str | None = None, **kwargs: Any) 
         memory_type = kwargs["type"]
 
     manager = MemoryManager()
-    results = manager.read_recent_memories(memory_type=memory_type or "short_term", limit=limit)
+    results = manager.read_recent_memories(
+        memory_type=memory_type or "short_term", limit=limit
+    )
     return {"results": results, "count": len(results)}
 
 
@@ -281,11 +320,12 @@ def parallel_search(
     """
     try:
         from whitemagic.core.bridge.rust import rust_parallel_grep
+
         # If parameters align with rust_parallel_grep (path, patterns/query)
         if query:
             result = rust_parallel_grep(
                 patterns=[query],
-                paths=[path] if path else ["./whitemagic"], # Default to core
+                paths=[path] if path else ["./whitemagic"],  # Default to core
                 extensions=extensions,
                 **kwargs,
             )
@@ -297,4 +337,6 @@ def parallel_search(
     if not path:
         return memory_search(query=query, limit=max_results, **kwargs)
 
-    return {"error": "parallel_search requires Rust acceleration for filesystem search or valid path"}
+    return {
+        "error": "parallel_search requires Rust acceleration for filesystem search or valid path"
+    }

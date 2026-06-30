@@ -11,7 +11,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) -> dict[str, Any]:
+def modulate_drive_from_resonance(
+    gana_name: str, tool_name: str | None = None
+) -> dict[str, Any]:
     """After a PRAT call, modulate the Emotion/Drive Core based on
     which Gana was invoked and its resonance context.
 
@@ -42,14 +44,15 @@ def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) 
 
         # Base drive event based on quadrant
         _QUADRANT_DRIVES = {
-            "East":  ("curiosity",     0.03, "TOOL_SUCCESS"),
-            "South": ("satisfaction",  0.03, "TOOL_SUCCESS"),
-            "West":  ("caution",       0.02, "TOOL_SUCCESS"),
-            "North": ("energy",        0.02, "TOOL_SUCCESS"),
+            "East": ("curiosity", 0.03, "TOOL_SUCCESS"),
+            "South": ("satisfaction", 0.03, "TOOL_SUCCESS"),
+            "West": ("caution", 0.02, "TOOL_SUCCESS"),
+            "North": ("energy", 0.02, "TOOL_SUCCESS"),
         }
 
         drive_name, base_delta, event_type = _QUADRANT_DRIVES.get(
-            quadrant, ("curiosity", 0.01, "TOOL_SUCCESS"),
+            quadrant,
+            ("curiosity", 0.01, "TOOL_SUCCESS"),
         )
 
         # Amplify if predecessor was in same quadrant (mood deepening)
@@ -61,7 +64,9 @@ def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) 
                 mood_amplifier = 1.5  # 50% boost for same-quadrant sequences
                 logger.debug(
                     "Mood deepening: %s → %s (both %s quadrant)",
-                    predecessor.gana_name, gana_name, quadrant,
+                    predecessor.gana_name,
+                    gana_name,
+                    quadrant,
                 )
 
         delta = base_delta * mood_amplifier
@@ -85,7 +90,8 @@ def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) 
             "mood_amplifier": mood_amplifier,
             "predecessor_quadrant": (
                 _get_meta(predecessor.gana_name).get("quadrant")
-                if predecessor else None
+                if predecessor
+                else None
             ),
         }
 

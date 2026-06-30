@@ -45,7 +45,9 @@ class TriggerManager:
         # Auto mode: use engine's logic
         return bool(check["should_consolidate"])
 
-    def trigger_consolidate(self, trigger_type: str = "auto", dry_run: bool = False) -> dict[str, Any]:
+    def trigger_consolidate(
+        self, trigger_type: str = "auto", dry_run: bool = False
+    ) -> dict[str, Any]:
         """Trigger consolidation with logging."""
         if not self.should_trigger(trigger_type):
             return {"triggered": False, "reason": "Not needed"}
@@ -85,20 +87,26 @@ def on_session_end(manager: Any, dry_run: bool = False) -> dict[str, Any]:
     return trigger.trigger_consolidate("session_end", dry_run=dry_run)
 
 
-def on_version_release(manager: Any, version: str, dry_run: bool = False) -> dict[str, Any]:
+def on_version_release(
+    manager: Any, version: str, dry_run: bool = False
+) -> dict[str, Any]:
     """Trigger on version release."""
     trigger = TriggerManager(manager)
     logger.info("📦 Version %s released - consolidating memories...", version)
     return trigger.trigger_consolidate("version_release", dry_run=dry_run)
 
 
-def on_memory_count(manager: Any, threshold: int = 40, dry_run: bool = False) -> dict[str, Any]:
+def on_memory_count(
+    manager: Any, threshold: int = 40, dry_run: bool = False
+) -> dict[str, Any]:
     """Trigger when memory count exceeds threshold."""
     trigger = TriggerManager(manager)
     check = trigger.engine.should_consolidate()
 
     if check["count"] >= threshold:
-        logger.info("📊 Memory count (%s) exceeded threshold (%s)", check['count'], threshold)
+        logger.info(
+            "📊 Memory count (%s) exceeded threshold (%s)", check["count"], threshold
+        )
         return trigger.trigger_consolidate("count_threshold", dry_run=dry_run)
 
     return {"triggered": False, "count": check["count"], "threshold": threshold}

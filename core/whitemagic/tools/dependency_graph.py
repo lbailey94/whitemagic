@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 class EdgeType:
     """EdgeType: edge type."""
+
     REQUIRES = "requires"
     SUGGESTS = "suggests"
     PROVIDES = "provides"
@@ -48,8 +49,8 @@ class ToolEdge:
 
     source: str
     target: str
-    edge_type: str   # requires | suggests | provides
-    weight: float = 1.0   # 0-1 confidence/frequency
+    edge_type: str  # requires | suggests | provides
+    weight: float = 1.0  # 0-1 confidence/frequency
     description: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -68,70 +69,169 @@ class ToolEdge:
         }
 
 
-# ---------------------------------------------------------------------------
-# Static declarations (common tool chains)
-# ---------------------------------------------------------------------------
-
 _STATIC_EDGES: list[ToolEdge] = [
     # Memory lifecycle
-    ToolEdge("create_memory", "search_memory", EdgeType.SUGGESTS, 0.7,
-             "After creating, often search to verify"),
-    ToolEdge("search_memory", "get_memory", EdgeType.SUGGESTS, 0.8,
-             "Search results lead to detail fetch"),
-    ToolEdge("get_memory", "update_memory", EdgeType.SUGGESTS, 0.5,
-             "Reading a memory may lead to updates"),
-    ToolEdge("memory.lifecycle_sweep", "memory.lifecycle_stats", EdgeType.SUGGESTS, 0.9,
-             "Check stats after running a sweep"),
-    ToolEdge("memory.consolidate", "memory.consolidation_stats", EdgeType.SUGGESTS, 0.9,
-             "Check stats after consolidation"),
-
+    ToolEdge(
+        "create_memory",
+        "search_memory",
+        EdgeType.SUGGESTS,
+        0.7,
+        "After creating, often search to verify",
+    ),
+    ToolEdge(
+        "search_memory",
+        "get_memory",
+        EdgeType.SUGGESTS,
+        0.8,
+        "Search results lead to detail fetch",
+    ),
+    ToolEdge(
+        "get_memory",
+        "update_memory",
+        EdgeType.SUGGESTS,
+        0.5,
+        "Reading a memory may lead to updates",
+    ),
+    ToolEdge(
+        "memory.lifecycle_sweep",
+        "memory.lifecycle_stats",
+        EdgeType.SUGGESTS,
+        0.9,
+        "Check stats after running a sweep",
+    ),
+    ToolEdge(
+        "memory.consolidate",
+        "memory.consolidation_stats",
+        EdgeType.SUGGESTS,
+        0.9,
+        "Check stats after consolidation",
+    ),
     # Voting workflow
-    ToolEdge("vote.create", "vote.cast", EdgeType.REQUIRES, 1.0,
-             "Must create a session before casting votes"),
-    ToolEdge("vote.cast", "vote.analyze", EdgeType.SUGGESTS, 0.8,
-             "After voting, analyze results"),
-    ToolEdge("vote.analyze", "vote.record_outcome", EdgeType.SUGGESTS, 0.6,
-             "After analysis, record whether solution worked"),
-
+    ToolEdge(
+        "vote.create",
+        "vote.cast",
+        EdgeType.REQUIRES,
+        1.0,
+        "Must create a session before casting votes",
+    ),
+    ToolEdge(
+        "vote.cast",
+        "vote.analyze",
+        EdgeType.SUGGESTS,
+        0.8,
+        "After voting, analyze results",
+    ),
+    ToolEdge(
+        "vote.analyze",
+        "vote.record_outcome",
+        EdgeType.SUGGESTS,
+        0.6,
+        "After analysis, record whether solution worked",
+    ),
     # Agent lifecycle
-    ToolEdge("agent.register", "agent.heartbeat", EdgeType.SUGGESTS, 0.7,
-             "Registered agents should send heartbeats"),
-    ToolEdge("agent.register", "agent.capabilities", EdgeType.SUGGESTS, 0.5,
-             "After registration, check capabilities"),
-    ToolEdge("agent.list", "agent.capabilities", EdgeType.SUGGESTS, 0.6,
-             "List agents then check specific capabilities"),
-
+    ToolEdge(
+        "agent.register",
+        "agent.heartbeat",
+        EdgeType.SUGGESTS,
+        0.7,
+        "Registered agents should send heartbeats",
+    ),
+    ToolEdge(
+        "agent.register",
+        "agent.capabilities",
+        EdgeType.SUGGESTS,
+        0.5,
+        "After registration, check capabilities",
+    ),
+    ToolEdge(
+        "agent.list",
+        "agent.capabilities",
+        EdgeType.SUGGESTS,
+        0.6,
+        "List agents then check specific capabilities",
+    ),
     # Pipeline workflow
-    ToolEdge("pipeline.create", "pipeline.status", EdgeType.SUGGESTS, 0.9,
-             "Check pipeline status after creation"),
-    ToolEdge("pipeline.status", "pipeline.list", EdgeType.SUGGESTS, 0.4,
-             "May want to see all pipelines"),
-
+    ToolEdge(
+        "pipeline.create",
+        "pipeline.status",
+        EdgeType.SUGGESTS,
+        0.9,
+        "Check pipeline status after creation",
+    ),
+    ToolEdge(
+        "pipeline.status",
+        "pipeline.list",
+        EdgeType.SUGGESTS,
+        0.4,
+        "May want to see all pipelines",
+    ),
     # Introspection chain
-    ToolEdge("gnosis", "homeostasis.check", EdgeType.SUGGESTS, 0.6,
-             "After introspection, check if corrective action needed"),
-    ToolEdge("gnosis", "maturity.assess", EdgeType.SUGGESTS, 0.5,
-             "Gnosis overview often leads to maturity check"),
-    ToolEdge("harmony_vector", "homeostasis.check", EdgeType.SUGGESTS, 0.7,
-             "After reading harmony, trigger health check"),
-    ToolEdge("karma_report", "karmic_trace", EdgeType.SUGGESTS, 0.8,
-             "Karma report often leads to detailed trace"),
-
+    ToolEdge(
+        "gnosis",
+        "homeostasis.check",
+        EdgeType.SUGGESTS,
+        0.6,
+        "After introspection, check if corrective action needed",
+    ),
+    ToolEdge(
+        "gnosis",
+        "maturity.assess",
+        EdgeType.SUGGESTS,
+        0.5,
+        "Gnosis overview often leads to maturity check",
+    ),
+    ToolEdge(
+        "harmony_vector",
+        "homeostasis.check",
+        EdgeType.SUGGESTS,
+        0.7,
+        "After reading harmony, trigger health check",
+    ),
+    ToolEdge(
+        "karma_report",
+        "karmic_trace",
+        EdgeType.SUGGESTS,
+        0.8,
+        "Karma report often leads to detailed trace",
+    ),
     # Dharma workflow
-    ToolEdge("dharma_rules", "set_dharma_profile", EdgeType.SUGGESTS, 0.5,
-             "Reviewing rules may lead to profile change"),
-    ToolEdge("evaluate_ethics", "dharma_rules", EdgeType.SUGGESTS, 0.4,
-             "After ethical evaluation, may want to see active rules"),
-
+    ToolEdge(
+        "dharma_rules",
+        "set_dharma_profile",
+        EdgeType.SUGGESTS,
+        0.5,
+        "Reviewing rules may lead to profile change",
+    ),
+    ToolEdge(
+        "evaluate_ethics",
+        "dharma_rules",
+        EdgeType.SUGGESTS,
+        0.4,
+        "After ethical evaluation, may want to see active rules",
+    ),
     # Yin/Yang balance
-    ToolEdge("record_yin_yang_activity", "get_yin_yang_balance", EdgeType.SUGGESTS, 0.8,
-             "After recording activity, check balance"),
-
+    ToolEdge(
+        "record_yin_yang_activity",
+        "get_yin_yang_balance",
+        EdgeType.SUGGESTS,
+        0.8,
+        "After recording activity, check balance",
+    ),
     # Task distribution
-    ToolEdge("task.create", "task.assign", EdgeType.REQUIRES, 0.9,
-             "Create task before assigning"),
-    ToolEdge("task.assign", "task.status", EdgeType.SUGGESTS, 0.7,
-             "Check task status after assignment"),
+    ToolEdge(
+        "task.create",
+        "task.assign",
+        EdgeType.REQUIRES,
+        0.9,
+        "Create task before assigning",
+    ),
+    ToolEdge(
+        "task.assign",
+        "task.status",
+        EdgeType.SUGGESTS,
+        0.7,
+        "Check task status after assignment",
+    ),
 ]
 
 
@@ -161,11 +261,9 @@ class ToolDependencyGraph:
         self._all_tools.add(edge.source)
         self._all_tools.add(edge.target)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def next_steps(self, tool: str, edge_type: str | None = None) -> list[dict[str, Any]]:
+    def next_steps(
+        self, tool: str, edge_type: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get tools that commonly follow this one."""
         with self._lock:
             edges = self._outgoing.get(tool, [])
@@ -175,7 +273,9 @@ class ToolDependencyGraph:
             edges = sorted(edges, key=lambda e: e.weight, reverse=True)
             return [e.to_dict() for e in edges]
 
-    def prerequisites(self, tool: str, edge_type: str | None = None) -> list[dict[str, Any]]:
+    def prerequisites(
+        self, tool: str, edge_type: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get tools that must or should run before this one."""
         with self._lock:
             edges = self._incoming.get(tool, [])
@@ -215,7 +315,8 @@ class ToolDependencyGraph:
                     return
             # New learned edge
             edge = ToolEdge(
-                source=source, target=target,
+                source=source,
+                target=target,
                 edge_type=EdgeType.SUGGESTS,
                 weight=weight,
                 description="Learned from pipeline execution history",
@@ -246,10 +347,6 @@ class ToolDependencyGraph:
                 all_edges.extend(e.to_dict() for e in edges)
             return all_edges
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _graph: ToolDependencyGraph | None = None
 _graph_lock = threading.Lock()

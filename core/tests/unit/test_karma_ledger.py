@@ -3,6 +3,7 @@ Unit tests for Karma Ledger v1.0.0.
 Exercises: record, report, get_debt, verify_chain, merkle_root, forgive,
 and chain integrity.
 """
+
 import os
 import tempfile
 from pathlib import Path
@@ -251,6 +252,7 @@ class TestKarmaLedgerSigning:
     @pytest.fixture(autouse=True)
     def _isolate_signer(self, monkeypatch, tmp_path):
         from whitemagic.security.audit_signing import AuditSigner
+
         monkeypatch.setattr(
             "whitemagic.security.audit_signing._state_root",
             lambda: tmp_path,
@@ -266,6 +268,7 @@ class TestKarmaLedgerSigning:
         assert hasattr(entry, "key_id")
         # When crypto is present, signing should succeed
         from whitemagic.security.audit_signing import _CRYPTO_AVAILABLE
+
         if _CRYPTO_AVAILABLE:
             assert entry.signature
             assert entry.key_id
@@ -276,6 +279,7 @@ class TestKarmaLedgerSigning:
         result = memory_ledger.verify_chain()
         assert result["valid"] is True
         from whitemagic.security.audit_signing import _CRYPTO_AVAILABLE
+
         if _CRYPTO_AVAILABLE:
             assert result.get("signatures_verified", 0) >= 1
 
@@ -287,6 +291,7 @@ class TestKarmaLedgerSigning:
 
     def test_signature_tampering_detected_in_verify_chain(self, memory_ledger):
         from whitemagic.security.audit_signing import _CRYPTO_AVAILABLE
+
         if not _CRYPTO_AVAILABLE:
             pytest.skip("cryptography not installed")
         memory_ledger.record("t1", "READ", 0, True)

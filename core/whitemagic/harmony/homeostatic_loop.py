@@ -41,10 +41,10 @@ logger = logging.getLogger(__name__)
 class ActionLevel(StrEnum):
     """Graduated response levels."""
 
-    OBSERVE = "observe"     # Just note it
-    ADVISE = "advise"       # Log a recommendation
-    CORRECT = "correct"     # Take gentle corrective action
-    INTERVENE = "intervene" # Take strong corrective action
+    OBSERVE = "observe"  # Just note it
+    ADVISE = "advise"  # Log a recommendation
+    CORRECT = "correct"  # Take gentle corrective action
+    INTERVENE = "intervene"  # Take strong corrective action
 
 
 @dataclass
@@ -80,25 +80,25 @@ class HomeostaticConfig:
     """Thresholds for homeostatic intervention."""
 
     # When a dimension drops below these values, we act
-    error_rate_advise: float = 0.7     # advise when error dimension < 0.7
-    error_rate_correct: float = 0.4    # correct when < 0.4
-    karma_debt_advise: float = 0.7     # advise when karma_debt dimension < 0.7
-    karma_debt_correct: float = 0.4    # correct when < 0.4
-    energy_advise: float = 0.6         # advise when energy < 0.6
-    energy_correct: float = 0.3        # correct when < 0.3
-    dharma_advise: float = 0.7         # advise when dharma < 0.7
-    dharma_correct: float = 0.4        # correct when < 0.4
-    latency_advise: float = 0.5        # advise when latency dimension < 0.5
-    harmony_intervene: float = 0.3     # intervene when composite < 0.3
-    check_interval_s: float = 10.0     # how often to check (seconds)
+    error_rate_advise: float = 0.7  # advise when error dimension < 0.7
+    error_rate_correct: float = 0.4  # correct when < 0.4
+    karma_debt_advise: float = 0.7  # advise when karma_debt dimension < 0.7
+    karma_debt_correct: float = 0.4  # correct when < 0.4
+    energy_advise: float = 0.6  # advise when energy < 0.6
+    energy_correct: float = 0.3  # correct when < 0.3
+    dharma_advise: float = 0.7  # advise when dharma < 0.7
+    dharma_correct: float = 0.4  # correct when < 0.4
+    latency_advise: float = 0.5  # advise when latency dimension < 0.5
+    harmony_intervene: float = 0.3  # intervene when composite < 0.3
+    check_interval_s: float = 10.0  # how often to check (seconds)
 
     # Physical thresholds (laptop-optimizer integration)
-    cpu_temp_advise: float = 65.0      # °C — advise
-    cpu_temp_correct: float = 80.0     # °C — correct
-    cpu_temp_intervene: float = 90.0   # °C — intervene
-    battery_low_advise: float = 30.0   # % — advise
+    cpu_temp_advise: float = 65.0  # °C — advise
+    cpu_temp_correct: float = 80.0  # °C — correct
+    cpu_temp_intervene: float = 90.0  # °C — intervene
+    battery_low_advise: float = 30.0  # % — advise
     battery_low_correct: float = 15.0  # % — correct
-    memory_high_advise: float = 75.0   # % — advise
+    memory_high_advise: float = 75.0  # % — advise
     memory_high_correct: float = 90.0  # % — correct
     workspace_index_advise: float = 0.9
     workspace_index_correct: float = 0.75
@@ -131,10 +131,6 @@ class HomeostaticLoop:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
-    # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
-
     def attach(self) -> bool:
         """Start the homeostatic loop as a background thread."""
         if self._running:
@@ -149,8 +145,8 @@ class HomeostaticLoop:
         self._thread.start()
         self._attached = True
         logger.info(
-            "Homeostatic loop started (check every %ss)",
-         self._config.check_interval_s)
+            "Homeostatic loop started (check every %ss)", self._config.check_interval_s
+        )
         return True
 
     def detach(self) -> None:
@@ -172,10 +168,6 @@ class HomeostaticLoop:
             except Exception as e:
                 logger.debug("Homeostatic check error: %s", e, exc_info=True)
 
-    # ------------------------------------------------------------------
-    # Core check
-    # ------------------------------------------------------------------
-
     def check(self) -> list[HomeostaticAction]:
         """Sample the Harmony Vector and apply corrective actions.
         Returns list of actions taken this cycle.
@@ -185,6 +177,7 @@ class HomeostaticLoop:
         """
         try:
             from whitemagic.harmony.vector import get_harmony_vector
+
             snap = get_harmony_vector().snapshot()
         except (ImportError, ModuleNotFoundError):
             return []
@@ -192,58 +185,73 @@ class HomeostaticLoop:
         self._total_checks += 1
         actions: list[HomeostaticAction] = []
 
-        # --- Salience Arbiter coupling ---
-        # If the spotlight contains high-urgency events, escalate corrections
         salience_boost = self._salience_urgency_boost()
 
-        # --- Composite harmony critically low → INTERVENE ---
-        # Salience boost can lower the intervention threshold (more aggressive)
         intervene_threshold = self._config.harmony_intervene + (salience_boost * 0.1)
         if snap.harmony_score < intervene_threshold:
             action = self._intervene_critical(snap)
             if action:
                 actions.append(action)
 
-        # --- Error rate degraded ---
         if snap.error_rate < self._config.error_rate_correct:
             actions.append(self._correct_errors(snap))
         elif snap.error_rate < self._config.error_rate_advise:
-            actions.append(self._advise("error_rate", snap.error_rate,
-                                        self._config.error_rate_advise,
-                                        "High error rate detected. Consider reviewing failing tools."))
+            actions.append(
+                self._advise(
+                    "error_rate",
+                    snap.error_rate,
+                    self._config.error_rate_advise,
+                    "High error rate detected. Consider reviewing failing tools.",
+                )
+            )
 
-        # --- Karma debt ---
         if snap.karma_debt < self._config.karma_debt_correct:
             actions.append(self._correct_karma(snap))
         elif snap.karma_debt < self._config.karma_debt_advise:
-            actions.append(self._advise("karma_debt", snap.karma_debt,
-                                        self._config.karma_debt_advise,
-                                        "Karma debt rising. Check karma_report for mismatches."))
+            actions.append(
+                self._advise(
+                    "karma_debt",
+                    snap.karma_debt,
+                    self._config.karma_debt_advise,
+                    "Karma debt rising. Check karma_report for mismatches.",
+                )
+            )
 
-        # --- Energy (memory pressure) ---
         if snap.energy < self._config.energy_correct:
             actions.append(self._correct_energy(snap))
         elif snap.energy < self._config.energy_advise:
-            actions.append(self._advise("energy", snap.energy,
-                                        self._config.energy_advise,
-                                        "Energy low. Consider running a memory lifecycle sweep."))
+            actions.append(
+                self._advise(
+                    "energy",
+                    snap.energy,
+                    self._config.energy_advise,
+                    "Energy low. Consider running a memory lifecycle sweep.",
+                )
+            )
 
-        # --- Dharma (ethical score) ---
         if snap.dharma < self._config.dharma_correct:
             actions.append(self._correct_dharma(snap))
         elif snap.dharma < self._config.dharma_advise:
-            actions.append(self._advise("dharma", snap.dharma,
-                                        self._config.dharma_advise,
-                                        "Dharma score declining. Review recent tool usage patterns."))
+            actions.append(
+                self._advise(
+                    "dharma",
+                    snap.dharma,
+                    self._config.dharma_advise,
+                    "Dharma score declining. Review recent tool usage patterns.",
+                )
+            )
 
-        # --- Latency ---
         if snap.latency < self._config.latency_advise:
-            actions.append(self._advise("latency", snap.latency,
-                                        self._config.latency_advise,
-                                        f"High latency (p95={snap.p95_latency_ms:.0f}ms). "
-                                        "Check circuit breaker status."))
+            actions.append(
+                self._advise(
+                    "latency",
+                    snap.latency,
+                    self._config.latency_advise,
+                    f"High latency (p95={snap.p95_latency_ms:.0f}ms). "
+                    "Check circuit breaker status.",
+                )
+            )
 
-        # --- Physical metrics (laptop-optimizer integration) ---
         physical_actions = self._check_physical()
         actions.extend(physical_actions)
 
@@ -277,16 +285,13 @@ class HomeostaticLoop:
 
         return actions
 
-    # ------------------------------------------------------------------
-    # Salience Arbiter coupling
-    # ------------------------------------------------------------------
-
     def _salience_urgency_boost(self) -> float:
         """Query the Salience Arbiter spotlight for high-urgency events.
         Returns a boost factor [0.0–1.0] that escalates homeostatic thresholds.
         """
         try:
             from whitemagic.core.resonance.salience_arbiter import get_salience_arbiter
+
             arbiter = get_salience_arbiter()
             spotlight = arbiter.get_spotlight(n=5)
             if not spotlight:
@@ -308,6 +313,7 @@ class HomeostaticLoop:
                 ResonanceEvent,
             )
             from whitemagic.core.resonance.salience_arbiter import get_salience_arbiter
+
             event_type = (
                 EventType.SYSTEM_HEALTH_CHANGED
                 if action.level in (ActionLevel.CORRECT, ActionLevel.INTERVENE)
@@ -322,68 +328,97 @@ class HomeostaticLoop:
             get_salience_arbiter().admit(event)
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
-    # ------------------------------------------------------------------
-    # Corrective actions
-    # ------------------------------------------------------------------
-
-    def _advise(self, dimension: str, value: float, threshold: float,
-                message: str) -> HomeostaticAction:
+    def _advise(
+        self, dimension: str, value: float, threshold: float, message: str
+    ) -> HomeostaticAction:
         """Log an advisory — no system changes."""
-        logger.info("[Homeostasis/ADVISE] %s=%.3f < %s: %s", dimension, value, threshold, message)
+        logger.info(
+            "[Homeostasis/ADVISE] %s=%.3f < %s: %s",
+            dimension,
+            value,
+            threshold,
+            message,
+        )
         return HomeostaticAction(
-            dimension=dimension, level=ActionLevel.ADVISE,
-            value=value, threshold=threshold, action_taken=message,
+            dimension=dimension,
+            level=ActionLevel.ADVISE,
+            value=value,
+            threshold=threshold,
+            action_taken=message,
         )
 
     def _correct_errors(self, snap: Any) -> HomeostaticAction:
         """Correct high error rate by emitting a warning event."""
         msg = "Error rate critical. Emitting system warning."
-        logger.warning("[Homeostasis/CORRECT] error_rate=%.3f: %s", snap.error_rate, msg)
+        logger.warning(
+            "[Homeostasis/CORRECT] error_rate=%.3f: %s", snap.error_rate, msg
+        )
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
                 EventType,
                 ResonanceEvent,
                 get_bus,
             )
-            get_bus().emit(ResonanceEvent(
-                event_type=EventType.WARNING_ISSUED,
-                source="homeostatic_loop",
-                data={"dimension": "error_rate", "value": snap.error_rate,
-                      "errors_in_window": snap.errors_in_window},
-            ))
+
+            get_bus().emit(
+                ResonanceEvent(
+                    event_type=EventType.WARNING_ISSUED,
+                    source="homeostatic_loop",
+                    data={
+                        "dimension": "error_rate",
+                        "value": snap.error_rate,
+                        "errors_in_window": snap.errors_in_window,
+                    },
+                )
+            )
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return HomeostaticAction(
-            dimension="error_rate", level=ActionLevel.CORRECT,
-            value=snap.error_rate, threshold=self._config.error_rate_correct,
+            dimension="error_rate",
+            level=ActionLevel.CORRECT,
+            value=snap.error_rate,
+            threshold=self._config.error_rate_correct,
             action_taken=msg,
         )
 
     def _correct_karma(self, snap: Any) -> HomeostaticAction:
         """Correct high karma debt by emitting a boundary event."""
         msg = "Karma debt high. Emitting boundary violation event."
-        logger.warning("[Homeostasis/CORRECT] karma_debt=%.3f: %s", snap.karma_debt, msg)
+        logger.warning(
+            "[Homeostasis/CORRECT] karma_debt=%.3f: %s", snap.karma_debt, msg
+        )
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
                 EventType,
                 ResonanceEvent,
                 get_bus,
             )
-            get_bus().emit(ResonanceEvent(
-                event_type=EventType.BOUNDARY_VIOLATED,
-                source="homeostatic_loop",
-                data={"dimension": "karma_debt", "value": snap.karma_debt,
-                      "mismatches": snap.karma_mismatches_in_window},
-            ))
+
+            get_bus().emit(
+                ResonanceEvent(
+                    event_type=EventType.BOUNDARY_VIOLATED,
+                    source="homeostatic_loop",
+                    data={
+                        "dimension": "karma_debt",
+                        "value": snap.karma_debt,
+                        "mismatches": snap.karma_mismatches_in_window,
+                    },
+                )
+            )
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return HomeostaticAction(
-            dimension="karma_debt", level=ActionLevel.CORRECT,
-            value=snap.karma_debt, threshold=self._config.karma_debt_correct,
+            dimension="karma_debt",
+            level=ActionLevel.CORRECT,
+            value=snap.karma_debt,
+            threshold=self._config.karma_debt_correct,
             action_taken=msg,
         )
 
@@ -393,6 +428,7 @@ class HomeostaticLoop:
         logger.warning("[Homeostasis/CORRECT] energy=%.3f: %s", snap.energy, msg)
         try:
             from whitemagic.core.memory.lifecycle import get_lifecycle_manager
+
             mgr = get_lifecycle_manager()
             # v21: Use the dedicated lifecycle worker instead of spawning raw threads
             # The lifecycle manager already handles its own backgrounding in _on_slow_flush,
@@ -400,17 +436,17 @@ class HomeostaticLoop:
             # We'll call the async-safe version or wrap it in the global bus worker if appropriate.
             # For now, we'll keep the thread but ensure it's named and tracked.
             t = threading.Thread(
-                target=mgr.run_sweep,
-                daemon=True,
-                name="homeostatic-correction-sweep"
+                target=mgr.run_sweep, daemon=True, name="homeostatic-correction-sweep"
             )
             t.start()
             msg += " (Started in background)"
         except Exception as e:
             msg += f" (Could not start sweep: {e})"
         return HomeostaticAction(
-            dimension="energy", level=ActionLevel.CORRECT,
-            value=snap.energy, threshold=self._config.energy_correct,
+            dimension="energy",
+            level=ActionLevel.CORRECT,
+            value=snap.energy,
+            threshold=self._config.energy_correct,
             action_taken=msg,
         )
 
@@ -420,15 +456,19 @@ class HomeostaticLoop:
         logger.warning("[Homeostasis/CORRECT] dharma=%.3f: %s", snap.dharma, msg)
         try:
             from whitemagic.dharma.rules import get_rules_engine
+
             engine = get_rules_engine()
             if engine.get_profile() != "secure":
                 engine.set_profile("secure")
         except (ImportError, ModuleNotFoundError) as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return HomeostaticAction(
-            dimension="dharma", level=ActionLevel.CORRECT,
-            value=snap.dharma, threshold=self._config.dharma_correct,
+            dimension="dharma",
+            level=ActionLevel.CORRECT,
+            value=snap.dharma,
+            threshold=self._config.dharma_correct,
             action_taken=msg,
         )
 
@@ -445,27 +485,29 @@ class HomeostaticLoop:
                 ResonanceEvent,
                 get_bus,
             )
-            get_bus().emit(ResonanceEvent(
-                event_type=EventType.SYSTEM_HEALTH_CHANGED,
-                source="homeostatic_loop",
-                data={
-                    "harmony_score": snap.harmony_score,
-                    "level": "critical",
-                    "dimensions": snap.to_dict(),
-                },
-            ))
+
+            get_bus().emit(
+                ResonanceEvent(
+                    event_type=EventType.SYSTEM_HEALTH_CHANGED,
+                    source="homeostatic_loop",
+                    data={
+                        "harmony_score": snap.harmony_score,
+                        "level": "critical",
+                        "dimensions": snap.to_dict(),
+                    },
+                )
+            )
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
         return HomeostaticAction(
-            dimension="harmony_score", level=ActionLevel.INTERVENE,
-            value=snap.harmony_score, threshold=self._config.harmony_intervene,
+            dimension="harmony_score",
+            level=ActionLevel.INTERVENE,
+            value=snap.harmony_score,
+            threshold=self._config.harmony_intervene,
             action_taken=msg,
         )
-
-    # ------------------------------------------------------------------
-    # Physical metrics (laptop-optimizer synthesis)
-    # ------------------------------------------------------------------
 
     def _check_physical(self) -> list[HomeostaticAction]:
         """Check physical system metrics from laptop-optimizer.
@@ -474,6 +516,7 @@ class HomeostaticLoop:
         """
         try:
             from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+
             source = get_physical_metrics_source()
             metrics = source.get_metrics()
             if not metrics.is_available:
@@ -485,78 +528,102 @@ class HomeostaticLoop:
             # CPU temperature
             if metrics.cpu_temp is not None:
                 if metrics.cpu_temp >= self._config.cpu_temp_intervene:
-                    actions.append(HomeostaticAction(
-                        dimension="cpu_temp",
-                        level=ActionLevel.INTERVENE,
-                        value=metrics.cpu_temp,
-                        threshold=self._config.cpu_temp_intervene,
-                        action_taken=f"CRITICAL: CPU at {metrics.cpu_temp:.0f}°C. "
-                                     "Thermal throttling imminent.",
-                    ))
+                    actions.append(
+                        HomeostaticAction(
+                            dimension="cpu_temp",
+                            level=ActionLevel.INTERVENE,
+                            value=metrics.cpu_temp,
+                            threshold=self._config.cpu_temp_intervene,
+                            action_taken=f"CRITICAL: CPU at {metrics.cpu_temp:.0f}°C. "
+                            "Thermal throttling imminent.",
+                        )
+                    )
                 elif metrics.cpu_temp >= self._config.cpu_temp_correct:
-                    actions.append(HomeostaticAction(
-                        dimension="cpu_temp",
-                        level=ActionLevel.CORRECT,
-                        value=metrics.cpu_temp,
-                        threshold=self._config.cpu_temp_correct,
-                        action_taken=f"CPU at {metrics.cpu_temp:.0f}°C. "
-                                     "Consider reducing load or increasing TCC offset.",
-                    ))
+                    actions.append(
+                        HomeostaticAction(
+                            dimension="cpu_temp",
+                            level=ActionLevel.CORRECT,
+                            value=metrics.cpu_temp,
+                            threshold=self._config.cpu_temp_correct,
+                            action_taken=f"CPU at {metrics.cpu_temp:.0f}°C. "
+                            "Consider reducing load or increasing TCC offset.",
+                        )
+                    )
                 elif metrics.cpu_temp >= targets.cpu_temp_max:
-                    actions.append(self._advise(
-                        "cpu_temp", metrics.cpu_temp,
-                        targets.cpu_temp_max,
-                        f"CPU warm at {metrics.cpu_temp:.0f}°C "
-                        f"(target: {targets.cpu_temp_max:.0f}°C).",
-                    ))
+                    actions.append(
+                        self._advise(
+                            "cpu_temp",
+                            metrics.cpu_temp,
+                            targets.cpu_temp_max,
+                            f"CPU warm at {metrics.cpu_temp:.0f}°C "
+                            f"(target: {targets.cpu_temp_max:.0f}°C).",
+                        )
+                    )
 
             # Thermal anomaly detection
             anomaly = source.check_thermal_anomaly()
             if anomaly:
-                actions.append(HomeostaticAction(
-                    dimension="thermal_anomaly",
-                    level=ActionLevel.INTERVENE if anomaly.pattern == "critical_jump" else ActionLevel.CORRECT,
-                    value=anomaly.current_temp,
-                    threshold=anomaly.threshold,
-                    action_taken=f"Thermal anomaly ({anomaly.pattern}): {anomaly.message}",
-                ))
+                actions.append(
+                    HomeostaticAction(
+                        dimension="thermal_anomaly",
+                        level=ActionLevel.INTERVENE
+                        if anomaly.pattern == "critical_jump"
+                        else ActionLevel.CORRECT,
+                        value=anomaly.current_temp,
+                        threshold=anomaly.threshold,
+                        action_taken=f"Thermal anomaly ({anomaly.pattern}): {anomaly.message}",
+                    )
+                )
 
             # Battery
-            if (metrics.battery_percent is not None and
-                    metrics.battery_status and "Discharg" in metrics.battery_status):
+            if (
+                metrics.battery_percent is not None
+                and metrics.battery_status
+                and "Discharg" in metrics.battery_status
+            ):
                 if metrics.battery_percent <= self._config.battery_low_correct:
-                    actions.append(HomeostaticAction(
-                        dimension="battery",
-                        level=ActionLevel.CORRECT,
-                        value=metrics.battery_percent,
-                        threshold=self._config.battery_low_correct,
-                        action_taken=f"Battery critical at {metrics.battery_percent:.0f}%. "
-                                     "Switch to powersave mode or connect AC.",
-                    ))
+                    actions.append(
+                        HomeostaticAction(
+                            dimension="battery",
+                            level=ActionLevel.CORRECT,
+                            value=metrics.battery_percent,
+                            threshold=self._config.battery_low_correct,
+                            action_taken=f"Battery critical at {metrics.battery_percent:.0f}%. "
+                            "Switch to powersave mode or connect AC.",
+                        )
+                    )
                 elif metrics.battery_percent <= self._config.battery_low_advise:
-                    actions.append(self._advise(
-                        "battery", metrics.battery_percent,
-                        self._config.battery_low_advise,
-                        f"Battery low at {metrics.battery_percent:.0f}%.",
-                    ))
+                    actions.append(
+                        self._advise(
+                            "battery",
+                            metrics.battery_percent,
+                            self._config.battery_low_advise,
+                            f"Battery low at {metrics.battery_percent:.0f}%.",
+                        )
+                    )
 
             # Memory pressure
             if metrics.memory_percent is not None:
                 if metrics.memory_percent >= self._config.memory_high_correct:
-                    actions.append(HomeostaticAction(
-                        dimension="memory_pressure",
-                        level=ActionLevel.CORRECT,
-                        value=metrics.memory_percent,
-                        threshold=self._config.memory_high_correct,
-                        action_taken=f"Memory at {metrics.memory_percent:.0f}%. "
-                                     "Close heavy applications.",
-                    ))
+                    actions.append(
+                        HomeostaticAction(
+                            dimension="memory_pressure",
+                            level=ActionLevel.CORRECT,
+                            value=metrics.memory_percent,
+                            threshold=self._config.memory_high_correct,
+                            action_taken=f"Memory at {metrics.memory_percent:.0f}%. "
+                            "Close heavy applications.",
+                        )
+                    )
                 elif metrics.memory_percent >= self._config.memory_high_advise:
-                    actions.append(self._advise(
-                        "memory_pressure", metrics.memory_percent,
-                        self._config.memory_high_advise,
-                        f"Memory at {metrics.memory_percent:.0f}%.",
-                    ))
+                    actions.append(
+                        self._advise(
+                            "memory_pressure",
+                            metrics.memory_percent,
+                            self._config.memory_high_advise,
+                            f"Memory at {metrics.memory_percent:.0f}%.",
+                        )
+                    )
 
             return actions
         except Exception as e:
@@ -568,26 +635,31 @@ class HomeostaticLoop:
             from whitemagic.harmony.workspace_index_health import (
                 evaluate_workspace_index_health,
             )
+
             report = evaluate_workspace_index_health()
             if report.health_score < self._config.workspace_index_correct:
-                return [HomeostaticAction(
-                    dimension="workspace_indexes",
-                    level=ActionLevel.CORRECT,
-                    value=report.health_score,
-                    threshold=self._config.workspace_index_correct,
-                    action_taken=(
-                        f"Workspace index health degraded: {report.status} "
-                        f"({report.indexes_present}/{report.total_workspaces} indexes present, "
-                        f"{report.total_errors} errors). Run core/scripts/workspace_index_health.py."
-                    ),
-                )]
+                return [
+                    HomeostaticAction(
+                        dimension="workspace_indexes",
+                        level=ActionLevel.CORRECT,
+                        value=report.health_score,
+                        threshold=self._config.workspace_index_correct,
+                        action_taken=(
+                            f"Workspace index health degraded: {report.status} "
+                            f"({report.indexes_present}/{report.total_workspaces} indexes present, "
+                            f"{report.total_errors} errors). Run core/scripts/workspace_index_health.py."
+                        ),
+                    )
+                ]
             if report.health_score < self._config.workspace_index_advise:
-                return [self._advise(
-                    "workspace_indexes",
-                    report.health_score,
-                    self._config.workspace_index_advise,
-                    f"Workspace index health advisory: {report.status}.",
-                )]
+                return [
+                    self._advise(
+                        "workspace_indexes",
+                        report.health_score,
+                        self._config.workspace_index_advise,
+                        f"Workspace index health advisory: {report.status}.",
+                    )
+                ]
         except Exception as e:
             logger.debug("Workspace index health check skipped: %s", e)
         return []
@@ -595,22 +667,27 @@ class HomeostaticLoop:
     def _check_git_hygiene(self) -> list[HomeostaticAction]:
         try:
             from whitemagic.harmony.git_hygiene import evaluate_git_hygiene
+
             report = evaluate_git_hygiene()
             if report.health_score < self._config.git_hygiene_correct:
-                return [HomeostaticAction(
-                    dimension="git_hygiene",
-                    level=ActionLevel.CORRECT,
-                    value=report.health_score,
-                    threshold=self._config.git_hygiene_correct,
-                    action_taken=report.action_summary(),
-                )]
+                return [
+                    HomeostaticAction(
+                        dimension="git_hygiene",
+                        level=ActionLevel.CORRECT,
+                        value=report.health_score,
+                        threshold=self._config.git_hygiene_correct,
+                        action_taken=report.action_summary(),
+                    )
+                ]
             if report.health_score < self._config.git_hygiene_advise:
-                return [self._advise(
-                    "git_hygiene",
-                    report.health_score,
-                    self._config.git_hygiene_advise,
-                    report.action_summary(),
-                )]
+                return [
+                    self._advise(
+                        "git_hygiene",
+                        report.health_score,
+                        self._config.git_hygiene_advise,
+                        report.action_summary(),
+                    )
+                ]
         except Exception as e:
             logger.debug("Git hygiene check skipped: %s", e)
         return []
@@ -635,6 +712,7 @@ class HomeostaticLoop:
                 from whitemagic.tools.handlers.consciousness import (
                     handle_consciousness_status,
                 )
+
                 status = handle_consciousness_status()
                 health_score = status.get("health", 1.0)
                 module_count = status.get("total_modules", 0)
@@ -643,40 +721,53 @@ class HomeostaticLoop:
                 pass
 
             if health_score < self._config.consciousness_correct:
-                return [HomeostaticAction(
-                    dimension="consciousness",
-                    level=ActionLevel.CORRECT,
-                    value=health_score,
-                    threshold=self._config.consciousness_correct,
-                    action_taken=(
-                        f"Consciousness health critical: {available_count}/{module_count} modules available. "
-                        "Check imports and dependencies for recovered consciousness modules."
-                    ),
-                )]
+                return [
+                    HomeostaticAction(
+                        dimension="consciousness",
+                        level=ActionLevel.CORRECT,
+                        value=health_score,
+                        threshold=self._config.consciousness_correct,
+                        action_taken=(
+                            f"Consciousness health critical: {available_count}/{module_count} modules available. "
+                            "Check imports and dependencies for recovered consciousness modules."
+                        ),
+                    )
+                ]
             if health_score < self._config.consciousness_advise:
-                return [self._advise(
-                    "consciousness",
-                    health_score,
-                    self._config.consciousness_advise,
-                    f"Consciousness health below optimal: {available_count}/{module_count} modules available.",
-                )]
+                return [
+                    self._advise(
+                        "consciousness",
+                        health_score,
+                        self._config.consciousness_advise,
+                        f"Consciousness health below optimal: {available_count}/{module_count} modules available.",
+                    )
+                ]
 
             # Check coherence metric if available
             try:
                 metric = CoherenceMetric()
                 scores = metric.measure()
-                composite = metric.composite_score(scores) if hasattr(metric, "composite_score") else None
-                if composite is not None and composite < self._config.consciousness_correct:
-                    return [HomeostaticAction(
-                        dimension="consciousness_coherence",
-                        level=ActionLevel.CORRECT,
-                        value=composite,
-                        threshold=self._config.consciousness_correct,
-                        action_taken=(
-                            f"Consciousness coherence critical: {composite:.3f}. "
-                            "Consider running smarana practice or depth gauge assessment."
-                        ),
-                    )]
+                composite = (
+                    metric.composite_score(scores)
+                    if hasattr(metric, "composite_score")
+                    else None
+                )
+                if (
+                    composite is not None
+                    and composite < self._config.consciousness_correct
+                ):
+                    return [
+                        HomeostaticAction(
+                            dimension="consciousness_coherence",
+                            level=ActionLevel.CORRECT,
+                            value=composite,
+                            threshold=self._config.consciousness_correct,
+                            action_taken=(
+                                f"Consciousness coherence critical: {composite:.3f}. "
+                                "Consider running smarana practice or depth gauge assessment."
+                            ),
+                        )
+                    ]
             except Exception:
                 pass
 
@@ -708,8 +799,13 @@ class HomeostaticLoop:
             # Run a tick with available tools
             try:
                 from whitemagic.tools.registry import get_registry
+
                 registry = get_registry()
-                available = list(registry.callable.keys()) if hasattr(registry, 'callable') else []
+                available = (
+                    list(registry.callable.keys())
+                    if hasattr(registry, "callable")
+                    else []
+                )
             except Exception:
                 available = []
 
@@ -721,34 +817,42 @@ class HomeostaticLoop:
             for metric, info in health.items():
                 status = info.get("status", "healthy")
                 if status in ("degraded", "critical"):
-                    actions.append(HomeostaticAction(
-                        dimension=f"apotheosis_{metric}",
-                        level=ActionLevel.CORRECT if status == "critical" else ActionLevel.ADVISE,
-                        value=info.get("value", 0.0),
-                        threshold=0.6,
-                        action_taken=f"Apotheosis {metric} {status}: {info.get('value', 0):.2f}",
-                    ))
+                    actions.append(
+                        HomeostaticAction(
+                            dimension=f"apotheosis_{metric}",
+                            level=ActionLevel.CORRECT
+                            if status == "critical"
+                            else ActionLevel.ADVISE,
+                            value=info.get("value", 0.0),
+                            threshold=0.6,
+                            action_taken=f"Apotheosis {metric} {status}: {info.get('value', 0):.2f}",
+                        )
+                    )
 
             # Check for predictive alerts
             alerts = results.get("predictive_alerts", [])
             for alert in alerts:
-                actions.append(self._advise(
-                    f"apotheosis_predictive_{alert['component']}",
-                    alert["confidence"],
-                    0.8,
-                    f"Predictive alert: {alert['issue']} (confidence: {alert['confidence']:.2f})",
-                ))
+                actions.append(
+                    self._advise(
+                        f"apotheosis_predictive_{alert['component']}",
+                        alert["confidence"],
+                        0.8,
+                        f"Predictive alert: {alert['issue']} (confidence: {alert['confidence']:.2f})",
+                    )
+                )
 
             # Check for auto-heal actions
             heal_actions = results.get("auto_heal_actions", [])
             for action in heal_actions:
-                actions.append(HomeostaticAction(
-                    dimension="apotheosis_auto_heal",
-                    level=ActionLevel.CORRECT,
-                    value=0.0,
-                    threshold=1.0,
-                    action_taken=f"Auto-heal: {action}",
-                ))
+                actions.append(
+                    HomeostaticAction(
+                        dimension="apotheosis_auto_heal",
+                        level=ActionLevel.CORRECT,
+                        value=0.0,
+                        threshold=1.0,
+                        action_taken=f"Auto-heal: {action}",
+                    )
+                )
 
             return actions
 
@@ -795,32 +899,32 @@ class HomeostaticLoop:
                 health = max(0.0, 1.0 - penalty)
 
             if health < self._config.codebase_health_correct:
-                return [HomeostaticAction(
-                    dimension="codebase_health",
-                    level=ActionLevel.CORRECT,
-                    value=health,
-                    threshold=self._config.codebase_health_correct,
-                    action_taken=(
-                        f"Codebase health critical: {len(errors)} errors, "
-                        f"{len(warnings)} warnings, {len(infos)} info. "
-                        "Run STRATA analysis for details."
-                    ),
-                )]
+                return [
+                    HomeostaticAction(
+                        dimension="codebase_health",
+                        level=ActionLevel.CORRECT,
+                        value=health,
+                        threshold=self._config.codebase_health_correct,
+                        action_taken=(
+                            f"Codebase health critical: {len(errors)} errors, "
+                            f"{len(warnings)} warnings, {len(infos)} info. "
+                            "Run STRATA analysis for details."
+                        ),
+                    )
+                ]
             if health < self._config.codebase_health_advise:
-                return [self._advise(
-                    "codebase_health",
-                    health,
-                    self._config.codebase_health_advise,
-                    f"Codebase health below optimal: {len(warnings)} warnings, "
-                    f"{len(infos)} info findings from STRATA.",
-                )]
+                return [
+                    self._advise(
+                        "codebase_health",
+                        health,
+                        self._config.codebase_health_advise,
+                        f"Codebase health below optimal: {len(warnings)} warnings, "
+                        f"{len(infos)} info findings from STRATA.",
+                    )
+                ]
         except Exception as e:
             logger.debug("Codebase health check skipped: %s", e)
         return []
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -851,10 +955,6 @@ class HomeostaticLoop:
         """
         return self._running
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _loop: HomeostaticLoop | None = None
 _loop_lock = threading.Lock()

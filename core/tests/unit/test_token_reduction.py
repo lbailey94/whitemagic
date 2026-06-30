@@ -1,4 +1,5 @@
 """Tests for token reduction middleware: semantic cache, draft-review, dense dispatch."""
+
 from __future__ import annotations
 
 import tempfile
@@ -66,6 +67,7 @@ class TestSemanticCache:
     def test_cache_miss_dispatches_and_caches(self):
         """On cache miss, should dispatch and cache the result."""
         with tempfile.TemporaryDirectory() as tmpdir:
+
             def next_fn(ctx):
                 return {"status": "success", "result": "42 is the answer"}
 
@@ -84,6 +86,7 @@ class TestSemanticCache:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Pre-populate cache using the SAME filename the middleware uses
             from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
+
             cache = QueryCache(cache_file=Path(tmpdir) / "dispatch_query_cache.json")
             key = _cache_key("ollama.chat", {"prompt": "cached question"})
             cache.set(key, "cached answer", 100)
@@ -180,7 +183,10 @@ class TestDraftReview:
             kwargs={"prompt": "x" * 200},
         )
 
-        with patch("whitemagic.tools.handlers.ollama.handle_ollama_chat", side_effect=ImportError("no ollama")):
+        with patch(
+            "whitemagic.tools.handlers.ollama.handle_ollama_chat",
+            side_effect=ImportError("no ollama"),
+        ):
             result = mw_draft_review(ctx, next_fn)
             assert called  # Fell through to normal dispatch
 
@@ -242,18 +248,21 @@ class TestPipelineIntegration:
     def test_pipeline_has_semantic_cache(self):
         """Pipeline should include semantic_cache stage."""
         from whitemagic.tools.dispatch_table import _pipeline
+
         stage_names = [name for name, _ in _pipeline._middlewares]
         assert "semantic_cache" in stage_names
 
     def test_pipeline_has_draft_review(self):
         """Pipeline should include draft_review stage."""
         from whitemagic.tools.dispatch_table import _pipeline
+
         stage_names = [name for name, _ in _pipeline._middlewares]
         assert "draft_review" in stage_names
 
     def test_pipeline_order(self):
         """Semantic cache should come before inference_router, draft_review after."""
         from whitemagic.tools.dispatch_table import _pipeline
+
         stage_names = [name for name, _ in _pipeline._middlewares]
         sc_idx = stage_names.index("semantic_cache")
         ir_idx = stage_names.index("inference_router")

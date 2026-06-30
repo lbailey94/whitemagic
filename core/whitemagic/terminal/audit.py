@@ -16,6 +16,7 @@ from whitemagic.config.paths import get_state_root
 @dataclass
 class AuditLog:
     """A single audit log entry."""
+
     log_id: str
     command: str
     exit_code: int

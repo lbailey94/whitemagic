@@ -51,8 +51,6 @@ class RankedResult:
         return 0.3 * self.original_score + 0.7 * self.rerank_score
 
 
-
-
 def _check_cross_encoder() -> bool:
     """Check if cross-encoder model is available."""
     global _cross_encoder_available
@@ -60,6 +58,7 @@ def _check_cross_encoder() -> bool:
         return _cross_encoder_available
     try:
         from sentence_transformers import CrossEncoder  # noqa: F401
+
         _cross_encoder_available = True
     except ImportError:
         _cross_encoder_available = False
@@ -73,6 +72,7 @@ def _get_cross_encoder() -> Any:
         return _cross_encoder
     try:
         from sentence_transformers import CrossEncoder
+
         _cross_encoder = CrossEncoder(
             "cross-encoder/ms-marco-MiniLM-L-6-v2",
             max_length=512,
@@ -89,7 +89,13 @@ def _tokenize(text: str) -> list[str]:
     return re.findall(r"\b\w+\b", text.lower())
 
 
-def _bm25_score(query_tokens: list[str], doc_tokens: list[str], k1: float = 1.5, b: float = 0.75, avgdl: float = 100.0) -> float:
+def _bm25_score(
+    query_tokens: list[str],
+    doc_tokens: list[str],
+    k1: float = 1.5,
+    b: float = 0.75,
+    avgdl: float = 100.0,
+) -> float:
     """BM25 score for a single document against query tokens."""
     doc_len = len(doc_tokens)
     if doc_len == 0:
@@ -148,8 +154,7 @@ def lexical_rerank(
                 rerank_score=0.0,
                 metadata=r.get("metadata"),
             )
-            for r in results[:
-                top_k]
+            for r in results[:top_k]
         ]
 
     # 1. Build Vocab from the 200 candidates
@@ -186,7 +191,9 @@ def lexical_rerank(
     query_norm = np.linalg.norm(query_vector_tfidf)
 
     if query_norm > 0:
-        scores = np.dot(doc_vectors_tfidf, query_vector_tfidf) / (doc_norms * query_norm + 1e-9)
+        scores = np.dot(doc_vectors_tfidf, query_vector_tfidf) / (
+            doc_norms * query_norm + 1e-9
+        )
     else:
         scores = np.zeros(len(all_docs))
 
@@ -198,22 +205,27 @@ def lexical_rerank(
     # 6. Assemble Results
     reranked = []
     for i, (r, score) in enumerate(zip(results, scores)):
-        reranked.append(RankedResult(
-            memory_id=r.get("id", ""),
-            title=r.get("title", ""),
-            content=r.get("content", ""),
-            original_score=r.get("score", 0.0) / norm_factor,
-            rerank_score=float(score),
-            metadata=r.get("metadata"),
-        ))
+        reranked.append(
+            RankedResult(
+                memory_id=r.get("id", ""),
+                title=r.get("title", ""),
+                content=r.get("content", ""),
+                original_score=r.get("score", 0.0) / norm_factor,
+                rerank_score=float(score),
+                metadata=r.get("metadata"),
+            )
+        )
 
     reranked.sort(key=lambda x: x.combined_score, reverse=True)
     return reranked[:top_k]
 
+
 def _simple_bm25_rerank(query: str, results: list[Any], top_k: int) -> list[Any]:
     # (Original BM25 logic as fallback)
     query_tokens = _tokenize(query)
-    all_tokens = [_tokenize(r.get("content", "") + " " + r.get("title", "")) for r in results]
+    all_tokens = [
+        _tokenize(r.get("content", "") + " " + r.get("title", "")) for r in results
+    ]
     avgdl = sum(len(t) for t in all_tokens) / max(len(all_tokens), 1)
     ranked = []
     max_bm25 = 0.0
@@ -230,14 +242,16 @@ def _simple_bm25_rerank(query: str, results: list[Any], top_k: int) -> list[Any]
     reranked = []
     for r, bm25 in ranked:
         norm_score = bm25 / max_bm25 if max_bm25 > 0 else 0.0
-        reranked.append(RankedResult(
-            memory_id=r.get("id", ""),
-            title=r.get("title", ""),
-            content=r.get("content", ""),
-            original_score=r.get("score", 0.0) / norm_factor,
-            rerank_score=norm_score,
-            metadata=r.get("metadata"),
-        ))
+        reranked.append(
+            RankedResult(
+                memory_id=r.get("id", ""),
+                title=r.get("title", ""),
+                content=r.get("content", ""),
+                original_score=r.get("score", 0.0) / norm_factor,
+                rerank_score=norm_score,
+                metadata=r.get("metadata"),
+            )
+        )
     reranked.sort(key=lambda x: x.combined_score, reverse=True)
     return reranked[:top_k]
 
@@ -287,28 +301,43 @@ def cross_encoder_rerank(
         reranked = []
         for r, score in zip(results, scores):
             norm_score = (float(score) - min_s) / score_range
-            reranked.append(RankedResult(
-                memory_id=r.get("id", ""),
-                title=r.get("title", ""),
-                content=r.get("content", ""),
-                original_score=r.get("score", 0.0) / norm_factor,
-                rerank_score=norm_score,
-                metadata=r.get("metadata"),
-            ))
+            reranked.append(
+                RankedResult(
+                    memory_id=r.get("id", ""),
+                    title=r.get("title", ""),
+                    content=r.get("content", ""),
+                    original_score=r.get("score", 0.0) / norm_factor,
+                    rerank_score=norm_score,
+                    metadata=r.get("metadata"),
+                )
+            )
 
-        for i, res in enumerate(reranked[:
-            10]):
-            logger.debug("RANK %s: id=%s combined_score=%s (orig=%s, rerank=%s)", i+1, res.memory_id, res.combined_score, res.original_score, res.rerank_score)
+        for i, res in enumerate(reranked[:10]):
+            logger.debug(
+                "RANK %s: id=%s combined_score=%s (orig=%s, rerank=%s)",
+                i + 1,
+                res.memory_id,
+                res.combined_score,
+                res.original_score,
+                res.rerank_score,
+            )
         return reranked[:top_k]
 
     except Exception as e:
-        logger.warning("Cross-encoder inference failed: %s, falling back to lexical", e, exc_info=True)
+        logger.warning(
+            "Cross-encoder inference failed: %s, falling back to lexical",
+            e,
+            exc_info=True,
+        )
         return lexical_rerank(query, results, top_k)
 
 
 class Reranker:
     """Wrapper class for reranking operations (backward compatibility)."""
-    def rerank(self, query: str, items: list[dict[str, Any]], top_k: int = 10) -> list[dict[str, Any]]:
+
+    def rerank(
+        self, query: str, items: list[dict[str, Any]], top_k: int = 10
+    ) -> list[dict[str, Any]]:
         """
         Perform the rerank operation.
 
@@ -331,6 +360,7 @@ class Reranker:
             dict[str, Any]
         """
         return get_status()
+
 
 def rerank(
     query: str,
@@ -363,7 +393,9 @@ def get_status() -> dict[str, Any]:
     """Get reranker status."""
     return {
         "cross_encoder_available": _check_cross_encoder(),
-        "model": "cross-encoder/ms-marco-MiniLM-L-6-v2" if _check_cross_encoder() else None,
+        "model": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        if _check_cross_encoder()
+        else None,
         "fallback": "lexical_bm25",
         "strategies": ["auto", "cross_encoder", "lexical"],
     }

@@ -1,4 +1,5 @@
 """Prompt tool handlers — rendering and template management."""
+
 from typing import Any
 
 

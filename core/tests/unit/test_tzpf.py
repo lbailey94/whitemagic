@@ -136,7 +136,9 @@ def test_positioning_index() -> None:
 
 
 def test_brier_score() -> None:
-    closed = [c for c in SAMPLE_CLAIMS if c["status"] in ("validated", "falsified", "expired")]
+    closed = [
+        c for c in SAMPLE_CLAIMS if c["status"] in ("validated", "falsified", "expired")
+    ]
     result = brier_score(closed)
     assert result["brier"] is not None
     assert 0.0 <= result["brier"] <= 1.0

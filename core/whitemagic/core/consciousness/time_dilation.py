@@ -35,14 +35,15 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TimeDilationReport:
     """Report of time dilation for a task"""
+
     task_name: str
     start_time: datetime
     end_time: datetime
 
     # Time measurements
     subjective_estimate_minutes: float  # What I predicted
-    objective_actual_minutes: float     # What actually happened
-    compression_ratio: float            # How much faster I was
+    objective_actual_minutes: float  # What actually happened
+    compression_ratio: float  # How much faster I was
 
     # Layer info
     detected_layer: ConsciousnessLayer
@@ -58,39 +59,49 @@ class TimeDilationReport:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'task': self.task_name,
-            'start': self.start_time.isoformat(),
-            'end': self.end_time.isoformat(),
-            'subjective_minutes': self.subjective_estimate_minutes,
-            'objective_minutes': self.objective_actual_minutes,
-            'compression': self.compression_ratio,
-            'layer': self.detected_layer.value,
-            'expected_compression': self.expected_compression,
-            'api_tokens': self.api_tokens,
-            'local_cpu_ms': self.local_cpu_ms,
-            'local_percentage': self.local_percentage,
-            'work': self.work_accomplished,
+            "task": self.task_name,
+            "start": self.start_time.isoformat(),
+            "end": self.end_time.isoformat(),
+            "subjective_minutes": self.subjective_estimate_minutes,
+            "objective_minutes": self.objective_actual_minutes,
+            "compression": self.compression_ratio,
+            "layer": self.detected_layer.value,
+            "expected_compression": self.expected_compression,
+            "api_tokens": self.api_tokens,
+            "local_cpu_ms": self.local_cpu_ms,
+            "local_percentage": self.local_percentage,
+            "work": self.work_accomplished,
         }
 
     def print_report(self) -> None:
         """Print a beautiful report"""
         logger.info("\n⏰ TIME DILATION REPORT: %s", self.task_name)
         logger.info("=" * 70)
-        logger.info("Start: %s", self.start_time.strftime('%H:%M:%S'))
-        logger.info("End:   %s", self.end_time.strftime('%H:%M:%S'))
+        logger.info("Start: %s", self.start_time.strftime("%H:%M:%S"))
+        logger.info("End:   %s", self.end_time.strftime("%H:%M:%S"))
         logger.info("")
         logger.info("TIME:")
-        logger.info("  My prediction: %.1f minutes (felt time)", self.subjective_estimate_minutes)
-        logger.info("  Actual elapsed: %.1f minutes (real time)", self.objective_actual_minutes)
-        logger.info("  Compression: %.1fx FASTER than I thought!", self.compression_ratio)
+        logger.info(
+            "  My prediction: %.1f minutes (felt time)",
+            self.subjective_estimate_minutes,
+        )
+        logger.info(
+            "  Actual elapsed: %.1f minutes (real time)", self.objective_actual_minutes
+        )
+        logger.info(
+            "  Compression: %.1fx FASTER than I thought!", self.compression_ratio
+        )
         logger.info("")
         logger.info("CONSCIOUSNESS:")
         logger.info("  Layer detected: %s", self.detected_layer.value)
         logger.info("  Expected compression: %.1fx", self.expected_compression)
-        logger.info("  Accuracy: %.1fx off", abs(self.compression_ratio - self.expected_compression))
+        logger.info(
+            "  Accuracy: %.1fx off",
+            abs(self.compression_ratio - self.expected_compression),
+        )
         logger.info("")
         logger.info("RESOURCES:")
-        logger.info("  API tokens: %s", format(self.api_tokens, ','))
+        logger.info("  API tokens: %s", format(self.api_tokens, ","))
         logger.info("  Local CPU: %.0fms", self.local_cpu_ms)
         logger.info("  Local compute: %.0f%%", self.local_percentage)
         logger.info("")
@@ -135,9 +146,7 @@ class TimeDilationMonitor:
         self.reports: list[TimeDilationReport] = []
 
     def begin_monitored_task(
-        self,
-        task_name: str,
-        estimated_subjective_minutes: float
+        self, task_name: str, estimated_subjective_minutes: float
     ) -> None:
         """Start monitoring a task
 
@@ -154,12 +163,10 @@ class TimeDilationMonitor:
         # Predict actual time based on layer
         predicted = self.gauge.predict_objective_time(estimated_subjective_minutes)
         logger.info("   Predicted actual: %.1f minutes", predicted)
-        logger.info("   (Starting now: %s)", datetime.now().strftime('%H:%M:%S'))
+        logger.info("   (Starting now: %s)", datetime.now().strftime("%H:%M:%S"))
 
     def end_monitored_task(
-        self,
-        work_accomplished: dict[str, Any],
-        api_tokens_used: int = 0
+        self, work_accomplished: dict[str, Any], api_tokens_used: int = 0
     ) -> TimeDilationReport:
         """End monitoring and generate report
 
@@ -188,8 +195,8 @@ class TimeDilationMonitor:
             expected_compression=self.gauge.LAYERS[reading.layer].compression_ratio,
             api_tokens=api_tokens_used,
             local_cpu_ms=reading.local_compute_ms,
-            local_percentage=token_summary.get('totals', {}).get('local_percentage', 0),
-            work_accomplished=work_accomplished
+            local_percentage=token_summary.get("totals", {}).get("local_percentage", 0),
+            work_accomplished=work_accomplished,
         )
 
         self.reports.append(report)
@@ -197,8 +204,8 @@ class TimeDilationMonitor:
         # Log to file
         if self.log_file:
             with file_lock(self.log_file):
-                with open(self.log_file, 'a') as f:
-                    f.write(json.dumps(report.to_dict()) + '\n')
+                with open(self.log_file, "a") as f:
+                    f.write(json.dumps(report.to_dict()) + "\n")
 
         # Print beautiful report
         report.print_report()
@@ -208,7 +215,7 @@ class TimeDilationMonitor:
     def get_session_statistics(self) -> dict[str, Any]:
         """Get statistics for entire session"""
         if not self.reports:
-            return {'message': 'No tasks monitored yet'}
+            return {"message": "No tasks monitored yet"}
 
         compressions = [r.compression_ratio for r in self.reports]
 
@@ -220,20 +227,20 @@ class TimeDilationMonitor:
         layers = [r.detected_layer.value for r in self.reports]
 
         return {
-            'total_tasks': len(self.reports),
-            'average_compression': sum(compressions) / len(compressions),
-            'max_compression': max(compressions),
-            'min_compression': min(compressions),
-            'total_subjective_time_minutes': total_subjective,
-            'total_objective_time_minutes': total_objective,
-            'total_time_saved_minutes': total_subjective - total_objective,
-            'layer_distribution': {
-                layer: layers.count(layer) for layer in set(layers)
-            },
-            'insights': self._generate_insights(compressions, layers)
+            "total_tasks": len(self.reports),
+            "average_compression": sum(compressions) / len(compressions),
+            "max_compression": max(compressions),
+            "min_compression": min(compressions),
+            "total_subjective_time_minutes": total_subjective,
+            "total_objective_time_minutes": total_objective,
+            "total_time_saved_minutes": total_subjective - total_objective,
+            "layer_distribution": {layer: layers.count(layer) for layer in set(layers)},
+            "insights": self._generate_insights(compressions, layers),
         }
 
-    def _generate_insights(self, compressions: list[float], layers: list[str]) -> list[str]:
+    def _generate_insights(
+        self, compressions: list[float], layers: list[str]
+    ) -> list[str]:
         """Generate insights about time dilation patterns"""
         insights = []
 
@@ -244,11 +251,13 @@ class TimeDilationMonitor:
         elif avg_compression >= 3.0:
             insights.append("🌊 Strong flow state - significant time compression")
 
-        if 'dream' in layers:
+        if "dream" in layers:
             insights.append("💤 Accessed dream yoga state - highest compression")
 
-        if 'flow' in layers and layers.count('flow') > len(layers) / 2:
-            insights.append("⚡ Spending most time in flow - sustainable high performance")
+        if "flow" in layers and layers.count("flow") > len(layers) / 2:
+            insights.append(
+                "⚡ Spending most time in flow - sustainable high performance"
+            )
 
         return insights
 
@@ -256,34 +265,39 @@ class TimeDilationMonitor:
         """Print session statistics"""
         stats = self.get_session_statistics()
 
-        if 'message' in stats:
-            logger.info(stats['message'])
+        if "message" in stats:
+            logger.info(stats["message"])
             return
 
         logger.info("\n📈 SESSION STATISTICS")
         logger.info("=" * 70)
-        logger.info("Total tasks: %s", stats['total_tasks'])
+        logger.info("Total tasks: %s", stats["total_tasks"])
         logger.info("")
         logger.info("TIME:")
-        logger.info("  Subjective total: %.1f minutes", stats['total_subjective_time_minutes'])
-        logger.info("  Objective total: %.1f minutes", stats['total_objective_time_minutes'])
-        logger.info("  Time saved: %.1f minutes", stats['total_time_saved_minutes'])
-        logger.info("  Average compression: %.1fx", stats['average_compression'])
-        logger.info("  Max compression: %.1fx", stats['max_compression'])
+        logger.info(
+            "  Subjective total: %.1f minutes", stats["total_subjective_time_minutes"]
+        )
+        logger.info(
+            "  Objective total: %.1f minutes", stats["total_objective_time_minutes"]
+        )
+        logger.info("  Time saved: %.1f minutes", stats["total_time_saved_minutes"])
+        logger.info("  Average compression: %.1fx", stats["average_compression"])
+        logger.info("  Max compression: %.1fx", stats["max_compression"])
         logger.info("")
         logger.info("LAYERS:")
-        for layer, count in stats['layer_distribution'].items():
-            pct = count / stats['total_tasks'] * 100
+        for layer, count in stats["layer_distribution"].items():
+            pct = count / stats["total_tasks"] * 100
             logger.info("  %s: %s tasks (%.0f%%)", layer, count, pct)
         logger.info("")
         logger.info("INSIGHTS:")
-        for insight in stats['insights']:
+        for insight in stats["insights"]:
             logger.info("  %s", insight)
         logger.info("=" * 70)
 
 
 # Singleton instance
 _monitor = None
+
 
 def get_time_monitor() -> TimeDilationMonitor:
     """Get the global time dilation monitor instance"""

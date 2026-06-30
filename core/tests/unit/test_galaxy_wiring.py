@@ -47,8 +47,11 @@ class TestDreamCycleGalaxyWiring(unittest.TestCase):
         calls = _extract_galaxy_args(filepath)
         # Should have at least one store call with galaxy="creative_solutions"
         galaxy_calls = [g for _, g in calls if g is not None]
-        self.assertIn("creative_solutions", galaxy_calls,
-                      "dream_cycle.py must route store() to creative_solutions galaxy")
+        self.assertIn(
+            "creative_solutions",
+            galaxy_calls,
+            "dream_cycle.py must route store() to creative_solutions galaxy",
+        )
 
 
 class TestInsightPipelineGalaxyWiring(unittest.TestCase):
@@ -58,8 +61,11 @@ class TestInsightPipelineGalaxyWiring(unittest.TestCase):
         filepath = _SRC / "core/intelligence/insight_pipeline.py"
         calls = _extract_galaxy_args(filepath)
         galaxy_calls = [g for _, g in calls if g is not None]
-        self.assertIn("insight", galaxy_calls,
-                      "insight_pipeline.py must route store() to insight galaxy")
+        self.assertIn(
+            "insight",
+            galaxy_calls,
+            "insight_pipeline.py must route store() to insight galaxy",
+        )
 
 
 class TestNarrativeCompressorGalaxyWiring(unittest.TestCase):
@@ -69,8 +75,11 @@ class TestNarrativeCompressorGalaxyWiring(unittest.TestCase):
         filepath = _SRC / "core/dreaming/narrative_compressor.py"
         calls = _extract_galaxy_args(filepath)
         galaxy_calls = [g for _, g in calls if g is not None]
-        self.assertIn("creative_solutions", galaxy_calls,
-                      "narrative_compressor.py must route store() to creative_solutions galaxy")
+        self.assertIn(
+            "creative_solutions",
+            galaxy_calls,
+            "narrative_compressor.py must route store() to creative_solutions galaxy",
+        )
 
 
 class TestCrossDomainDetectorGalaxyWiring(unittest.TestCase):
@@ -80,8 +89,11 @@ class TestCrossDomainDetectorGalaxyWiring(unittest.TestCase):
         filepath = _SRC / "core/intelligence/synthesis/cross_domain_detector.py"
         calls = _extract_galaxy_args(filepath)
         galaxy_calls = [g for _, g in calls if g is not None]
-        self.assertIn("creative_solutions", galaxy_calls,
-                      "cross_domain_detector.py must route store() to creative_solutions galaxy")
+        self.assertIn(
+            "creative_solutions",
+            galaxy_calls,
+            "cross_domain_detector.py must route store() to creative_solutions galaxy",
+        )
 
 
 class TestDreamStateGalaxyWiring(unittest.TestCase):
@@ -91,8 +103,11 @@ class TestDreamStateGalaxyWiring(unittest.TestCase):
         filepath = _SRC / "core/patterns/emergence/dream_state.py"
         calls = _extract_galaxy_args(filepath)
         galaxy_calls = [g for _, g in calls if g is not None]
-        self.assertIn("creative_solutions", galaxy_calls,
-                      "dream_state.py must route store() to creative_solutions galaxy")
+        self.assertIn(
+            "creative_solutions",
+            galaxy_calls,
+            "dream_state.py must route store() to creative_solutions galaxy",
+        )
 
 
 class TestAutonomousLearnerGalaxyWiring(unittest.TestCase):
@@ -102,11 +117,17 @@ class TestAutonomousLearnerGalaxyWiring(unittest.TestCase):
         filepath = _SRC / "core/patterns/pattern_consciousness/autonomous_learner.py"
         calls = _extract_galaxy_args(filepath)
         galaxy_calls = [g for _, g in calls if g is not None]
-        self.assertIn("self_learning", galaxy_calls,
-                      "autonomous_learner.py must route store() to self_learning galaxy")
+        self.assertIn(
+            "self_learning",
+            galaxy_calls,
+            "autonomous_learner.py must route store() to self_learning galaxy",
+        )
         # All 3 store calls should have galaxy
-        self.assertEqual(len(galaxy_calls), 3,
-                         "autonomous_learner.py should have 3 store() calls with galaxy=")
+        self.assertEqual(
+            len(galaxy_calls),
+            3,
+            "autonomous_learner.py should have 3 store() calls with galaxy=",
+        )
 
 
 class TestNoUnwiredStoreCallsInWiredFiles(unittest.TestCase):
@@ -116,29 +137,37 @@ class TestNoUnwiredStoreCallsInWiredFiles(unittest.TestCase):
         filepath = _SRC / "core/dreaming/dream_cycle.py"
         calls = _extract_galaxy_args(filepath)
         for lineno, galaxy in calls:
-            self.assertIsNotNone(galaxy,
-                f"dream_cycle.py store() at line {lineno} missing galaxy= parameter")
+            self.assertIsNotNone(
+                galaxy,
+                f"dream_cycle.py store() at line {lineno} missing galaxy= parameter",
+            )
 
     def test_insight_pipeline_all_stores_wired(self):
         filepath = _SRC / "core/intelligence/insight_pipeline.py"
         calls = _extract_galaxy_args(filepath)
         for lineno, galaxy in calls:
-            self.assertIsNotNone(galaxy,
-                f"insight_pipeline.py store() at line {lineno} missing galaxy= parameter")
+            self.assertIsNotNone(
+                galaxy,
+                f"insight_pipeline.py store() at line {lineno} missing galaxy= parameter",
+            )
 
     def test_narrative_compressor_all_stores_wired(self):
         filepath = _SRC / "core/dreaming/narrative_compressor.py"
         calls = _extract_galaxy_args(filepath)
         for lineno, galaxy in calls:
-            self.assertIsNotNone(galaxy,
-                f"narrative_compressor.py store() at line {lineno} missing galaxy= parameter")
+            self.assertIsNotNone(
+                galaxy,
+                f"narrative_compressor.py store() at line {lineno} missing galaxy= parameter",
+            )
 
     def test_autonomous_learner_all_stores_wired(self):
         filepath = _SRC / "core/patterns/pattern_consciousness/autonomous_learner.py"
         calls = _extract_galaxy_args(filepath)
         for lineno, galaxy in calls:
-            self.assertIsNotNone(galaxy,
-                f"autonomous_learner.py store() at line {lineno} missing galaxy= parameter")
+            self.assertIsNotNone(
+                galaxy,
+                f"autonomous_learner.py store() at line {lineno} missing galaxy= parameter",
+            )
 
 
 if __name__ == "__main__":

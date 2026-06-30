@@ -31,6 +31,7 @@ class ScratchpadAnalysis:
     """ScratchpadAnalysis: scratchpad analysis.
 
     Value object: equality and repr are field-based."""
+
     synthesis: str
     wisdom: str
     confidence: float

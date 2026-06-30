@@ -83,7 +83,9 @@ class WorkspaceIndexHealthReport:
         missing_penalty = self.total_workspaces - self.indexes_present
         warning_penalty = self.total_warnings * 0.25
         error_penalty = self.total_errors
-        raw = 1.0 - ((missing_penalty + warning_penalty + error_penalty) / self.total_workspaces)
+        raw = 1.0 - (
+            (missing_penalty + warning_penalty + error_penalty) / self.total_workspaces
+        )
         return max(0.0, min(1.0, raw))
 
     @property
@@ -137,7 +139,9 @@ def evaluate_workspace_index_health(
     workspace_root: str | Path | None = None,
     workspace_names: tuple[str, ...] = DEFAULT_WORKSPACES,
 ) -> WorkspaceIndexHealthReport:
-    root = Path(workspace_root) if workspace_root is not None else default_workspace_root()
+    root = (
+        Path(workspace_root) if workspace_root is not None else default_workspace_root()
+    )
     statuses = [_inspect_workspace(root, name) for name in workspace_names]
     return WorkspaceIndexHealthReport(
         root=str(root),
@@ -190,7 +194,9 @@ def _unresolved_index_links(index_path: Path, text: str) -> list[str]:
         candidate = Path(raw)
         if candidate.name == raw and raw != "INDEX.md":
             continue
-        resolved = candidate if candidate.is_absolute() else index_path.parent / candidate
+        resolved = (
+            candidate if candidate.is_absolute() else index_path.parent / candidate
+        )
         if not resolved.exists():
             unresolved.append(raw)
     return unresolved

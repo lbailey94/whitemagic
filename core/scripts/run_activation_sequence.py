@@ -39,7 +39,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("activation")
 
-REPORT_PATH = ROOT / "reports" / f"activation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+REPORT_PATH = (
+    ROOT / "reports" / f"activation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+)
 
 
 def step_db_stats():
@@ -49,6 +51,7 @@ def step_db_stats():
     print("=" * 70)
 
     from whitemagic.core.memory.unified import get_unified_memory
+
     um = get_unified_memory()
     stats = um.get_stats()
     print(f"  Memories: {stats.get('total_memories', '?'):,}")
@@ -56,11 +59,19 @@ def step_db_stats():
 
     with um.backend.pool.connection() as conn:
         assoc_count = conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
-        typed_count = conn.execute("SELECT COUNT(*) FROM associations WHERE relation_type != 'associated_with'").fetchone()[0]
-        holo_count = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[0]
-        embed_count = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0]
+        typed_count = conn.execute(
+            "SELECT COUNT(*) FROM associations WHERE relation_type != 'associated_with'"
+        ).fetchone()[0]
+        holo_count = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[
+            0
+        ]
+        embed_count = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[
+            0
+        ]
         tag_count = conn.execute("SELECT COUNT(*) FROM tags").fetchone()[0]
-        constellation_count = conn.execute("SELECT COUNT(*) FROM constellation_membership").fetchone()[0]
+        constellation_count = conn.execute(
+            "SELECT COUNT(*) FROM constellation_membership"
+        ).fetchone()[0]
 
     print(f"  Associations: {assoc_count:,} ({typed_count:,} typed)")
     print(f"  Holographic coords: {holo_count:,}")
@@ -87,6 +98,7 @@ def step_galactic_sweep():
     print("=" * 70)
 
     from whitemagic.core.memory.galactic_map import get_galactic_map
+
     gmap = get_galactic_map()
 
     start = time.perf_counter()
@@ -102,8 +114,12 @@ def step_galactic_sweep():
         bar = "█" * int(pct / 2)
         print(f"    {zone_name:>12}: {count:5,d} ({pct:5.1f}%) {bar}")
 
-    print(f"  Core: {report.core_count:,}  |  Far Edge: {report.edge_count:,}  |  Protected: {report.protected_count:,}")
-    print(f"  Avg retention: {report.avg_retention:.4f}  |  Avg distance: {report.avg_distance:.4f}")
+    print(
+        f"  Core: {report.core_count:,}  |  Far Edge: {report.edge_count:,}  |  Protected: {report.protected_count:,}"
+    )
+    print(
+        f"  Avg retention: {report.avg_retention:.4f}  |  Avg distance: {report.avg_distance:.4f}"
+    )
 
     return report.to_dict()
 
@@ -115,6 +131,7 @@ def step_association_mining(quick=False):
     print("=" * 70)
 
     from whitemagic.core.memory.miners import get_association_miner
+
     miner = get_association_miner(max_proposals=100, persist=True)
 
     # Keyword-based mining
@@ -170,6 +187,7 @@ def step_constellation_detection():
     print("=" * 70)
 
     from whitemagic.core.memory.constellations import get_constellation_detector
+
     detector = get_constellation_detector()
 
     start = time.perf_counter()
@@ -185,7 +203,9 @@ def step_constellation_detection():
     if report.constellations:
         print(f"\n  Top constellations:")
         for c in report.constellations[:10]:
-            print(f"    🌟 {c.name} ({len(c.member_ids)} members, zone={c.zone}, stability={c.stability:.2f})")
+            print(
+                f"    🌟 {c.name} ({len(c.member_ids)} members, zone={c.zone}, stability={c.stability:.2f})"
+            )
             if c.dominant_tags:
                 print(f"       tags: {', '.join(c.dominant_tags[:5])}")
 
@@ -193,7 +213,9 @@ def step_constellation_detection():
     try:
         drift = detector.analyze_drift()
         if drift and drift.get("tracked_constellations"):
-            print(f"\n  Drift analysis: {drift['tracked_constellations']} constellations tracked")
+            print(
+                f"\n  Drift analysis: {drift['tracked_constellations']} constellations tracked"
+            )
             print(f"    Avg drift: {drift.get('avg_drift_distance', 0):.4f}")
     except Exception:
         pass
@@ -208,6 +230,7 @@ def step_graph_topology():
     print("=" * 70)
 
     from whitemagic.core.memory.graph import get_graph_engine
+
     engine = get_graph_engine()
 
     print("  Rebuilding graph...")
@@ -228,9 +251,11 @@ def step_graph_topology():
     bridges = engine.find_bridge_nodes(top_n=10)
     print(f"  Bridge nodes found: {len(bridges)}")
     for b in bridges[:5]:
-        print(f"    🌉 {b.get('memory_id', '?')[:12]}... "
-              f"(betweenness={b.get('betweenness', 0):.6f}, "
-              f"communities={b.get('communities_connected', 0)})")
+        print(
+            f"    🌉 {b.get('memory_id', '?')[:12]}... "
+            f"(betweenness={b.get('betweenness', 0):.6f}, "
+            f"communities={b.get('communities_connected', 0)})"
+        )
 
     # Community detection
     print("\n  Detecting communities...")
@@ -275,6 +300,7 @@ def step_dream_cycle(quick=False):
 
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
         cycle = get_dream_cycle()
 
         print("  Running all dream phases manually...")
@@ -299,8 +325,11 @@ def step_dream_cycle(quick=False):
                 dt = time.perf_counter() - t0
                 results_phases[phase_name] = result
                 summary_str = json.dumps(
-                    {k: v for k, v in (result or {}).items()
-                     if not isinstance(v, (list, dict)) or len(str(v)) < 100},
+                    {
+                        k: v
+                        for k, v in (result or {}).items()
+                        if not isinstance(v, (list, dict)) or len(str(v)) < 100
+                    },
                     default=str,
                 )[:200]
                 print(f"    💤 {phase_name} ({dt:.1f}s): {summary_str}")
@@ -315,6 +344,7 @@ def step_dream_cycle(quick=False):
     except Exception as e:
         print(f"  ❌ Dream cycle error: {e}")
         import traceback
+
         traceback.print_exc()
         return {"error": str(e)}
 
@@ -327,15 +357,27 @@ def step_harmony_vector():
 
     try:
         from whitemagic.harmony.vector import get_harmony_vector
+
         hv = get_harmony_vector()
         snap = hv.snapshot()
         assessment = snap.to_dict()
 
-        h = assessment.get('harmony', '?')
-        print(f"  Overall harmony: {h:.4f}" if isinstance(h, (int, float)) else f"  Overall harmony: {h}")
+        h = assessment.get("harmony", "?")
+        print(
+            f"  Overall harmony: {h:.4f}"
+            if isinstance(h, (int, float))
+            else f"  Overall harmony: {h}"
+        )
         print(f"  Dimensions:")
-        for key in ["sattva", "rajas", "tamas", "karma_debt", "galactic_vitality",
-                     "tool_diversity", "harmony"]:
+        for key in [
+            "sattva",
+            "rajas",
+            "tamas",
+            "karma_debt",
+            "galactic_vitality",
+            "tool_diversity",
+            "harmony",
+        ]:
             val = assessment.get(key)
             if val is not None and isinstance(val, (int, float)):
                 bar = "█" * int(float(val) * 20)
@@ -355,6 +397,7 @@ def step_wu_xing_balance():
 
     try:
         from whitemagic.wu_xing import get_wuxing_engine, get_elemental_balance
+
         engine = get_wuxing_engine()
         balance = get_elemental_balance()
         print(f"  Current phase: {balance.get('current_phase', '?')}")
@@ -416,8 +459,10 @@ def step_graph_walker_test():
         if result.paths:
             print(f"\n  Top paths:")
             for i, path in enumerate(result.paths[:3]):
-                print(f"    Path {i+1}: {' → '.join(n[:8] for n in path.nodes)} "
-                      f"(score={path.total_score:.6f}, depth={path.depth})")
+                print(
+                    f"    Path {i + 1}: {' → '.join(n[:8] for n in path.nodes)} "
+                    f"(score={path.total_score:.6f}, depth={path.depth})"
+                )
                 if path.relation_types:
                     print(f"      Relations: {' → '.join(path.relation_types[:5])}")
 
@@ -431,6 +476,7 @@ def step_graph_walker_test():
     except Exception as e:
         print(f"  ❌ Graph Walker error: {e}")
         import traceback
+
         traceback.print_exc()
         return {"error": str(e)}
 
@@ -448,29 +494,40 @@ def step_system_summary(results):
     graph = results.get("graph_topology", {})
 
     print(f"""
-  Galaxy Size:     {db.get('memories', '?'):,} memories
-  Associations:    {db.get('associations', '?'):,} ({db.get('typed_associations', '?'):,} typed)
-  Embeddings:      {db.get('embeddings', '?'):,}
-  Holo Coords:     {db.get('holographic_coords', '?'):,}
-  DB Size:         {db.get('db_size_mb', '?')} MB
+  Galaxy Size:     {db.get("memories", "?"):,} memories
+  Associations:    {db.get("associations", "?"):,} ({db.get("typed_associations", "?"):,} typed)
+  Embeddings:      {db.get("embeddings", "?"):,}
+  Holo Coords:     {db.get("holographic_coords", "?"):,}
+  DB Size:         {db.get("db_size_mb", "?")} MB
   
-  Galactic Zones:  {json.dumps(sweep.get('zone_counts', {}), indent=None)[:200]}
-  Core Memories:   {sweep.get('core_count', '?'):,}
-  Constellations:  {constellations.get('constellations_found', '?')}
-  Bridge Nodes:    {graph.get('bridges', '?')}
-  Communities:     {graph.get('communities', '?')}
+  Galactic Zones:  {json.dumps(sweep.get("zone_counts", {}), indent=None)[:200]}
+  Core Memories:   {sweep.get("core_count", "?"):,}
+  Constellations:  {constellations.get("constellations_found", "?")}
+  Bridge Nodes:    {graph.get("bridges", "?")}
+  Communities:     {graph.get("communities", "?")}
   
-  New Assocs Created: {mining.get('keyword_mining', {}).get('links_created', 0) + mining.get('semantic_mining', {}).get('links_created', 0)}
+  New Assocs Created: {mining.get("keyword_mining", {}).get("links_created", 0) + mining.get("semantic_mining", {}).get("links_created", 0)}
 """)
 
 
 def main():
     parser = argparse.ArgumentParser(description="WhiteMagic Activation Sequence")
     parser.add_argument("--quick", action="store_true", help="Skip slow operations")
-    parser.add_argument("--step", choices=[
-        "stats", "sweep", "mine", "constellations", "graph", "dream",
-        "harmony", "wuxing", "walker",
-    ], help="Run a single step only")
+    parser.add_argument(
+        "--step",
+        choices=[
+            "stats",
+            "sweep",
+            "mine",
+            "constellations",
+            "graph",
+            "dream",
+            "harmony",
+            "wuxing",
+            "walker",
+        ],
+        help="Run a single step only",
+    )
     args = parser.parse_args()
 
     print("🚀 WhiteMagic v15.7 — Full Activation Sequence")
@@ -503,6 +560,7 @@ def main():
         except Exception as e:
             print(f"  ❌ Error: {e}")
             import traceback
+
             traceback.print_exc()
             results[key] = {"error": str(e)}
     else:
@@ -512,6 +570,7 @@ def main():
             except Exception as e:
                 print(f"\n  ❌ Step '{step_name}' failed: {e}")
                 import traceback
+
                 traceback.print_exc()
                 results[key] = {"error": str(e)}
 

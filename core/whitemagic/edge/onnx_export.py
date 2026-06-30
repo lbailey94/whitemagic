@@ -45,11 +45,13 @@ class RuleBasedONNX:
 
     def add_rule(self, pattern: str, response: str, confidence: float = 1.0) -> Any:
         """Add a rule to the model."""
-        self.rules.append({
-            "pattern": pattern,
-            "response": response,
-            "confidence": confidence,
-        })
+        self.rules.append(
+            {
+                "pattern": pattern,
+                "response": response,
+                "confidence": confidence,
+            }
+        )
 
     def export_json(self, path: Path) -> dict:
         """Export as JSON format (ONNX-like structure).
@@ -174,6 +176,7 @@ class ONNXExporter:
 
     def __init__(self) -> None:
         from whitemagic.edge.inference import get_edge_inference
+
         self.engine = get_edge_inference()
 
     def get_rules(self) -> list[dict]:
@@ -264,8 +267,6 @@ class ONNXExporter:
         return results
 
 
-# === Runtime Loader ===
-
 class ONNXLoader:
     """Load exported ONNX models for inference."""
 
@@ -296,26 +297,28 @@ class ONNXLoader:
 
         for _ in range(rule_count):
             # Pattern
-            pattern_len = struct.unpack("H", data[offset:offset+2])[0]
+            pattern_len = struct.unpack("H", data[offset : offset + 2])[0]
             offset += 2
-            pattern = data[offset:offset+pattern_len].decode("utf-8")
+            pattern = data[offset : offset + pattern_len].decode("utf-8")
             offset += pattern_len
 
             # Response
-            response_len = struct.unpack("H", data[offset:offset+2])[0]
+            response_len = struct.unpack("H", data[offset : offset + 2])[0]
             offset += 2
-            response = data[offset:offset+response_len].decode("utf-8")
+            response = data[offset : offset + response_len].decode("utf-8")
             offset += response_len
 
             # Confidence
-            confidence = struct.unpack("f", data[offset:offset+4])[0]
+            confidence = struct.unpack("f", data[offset : offset + 4])[0]
             offset += 4
 
-            rules.append({
-                "pattern": pattern,
-                "response": response,
-                "confidence": confidence,
-            })
+            rules.append(
+                {
+                    "pattern": pattern,
+                    "response": response,
+                    "confidence": confidence,
+                }
+            )
 
         return rules
 
@@ -333,8 +336,8 @@ if __name__ == "__main__":
 
     for format_name, result in results.items():
         logger.info("\n%s:", format_name)
-        logger.info("  Success: %s", result['success'])
-        logger.info("  Path: %s", result['path'])
-        logger.info("  Rules: %s", result['rules'])
+        logger.info("  Success: %s", result["success"])
+        logger.info("  Path: %s", result["path"])
+        logger.info("  Rules: %s", result["rules"])
         if "size_bytes" in result:
-            logger.info("  Size: %s bytes", result['size_bytes'])
+            logger.info("  Size: %s bytes", result["size_bytes"])

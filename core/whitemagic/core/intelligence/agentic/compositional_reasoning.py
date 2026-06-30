@@ -41,10 +41,6 @@ class CompositionalResult:
     latency_ms: float = 0.0
 
 
-# ---------------------------------------------------------------------------
-# Relation extraction patterns
-# ---------------------------------------------------------------------------
-
 _RELATION_PATTERNS: list[tuple[str, str, str]] = [
     # (regex_pattern, relation, direction)
     # direction: "forward" = project, "inverse" = inverse_project
@@ -134,6 +130,7 @@ class CompositionalReasoner:
         # Encode the subject text into an embedding
         try:
             from whitemagic.core.memory.embeddings import EmbeddingEngine
+
             engine = EmbeddingEngine()
             subject_embedding = engine.encode(subject)
             if subject_embedding is None:
@@ -185,7 +182,9 @@ class CompositionalReasoner:
             score = m.get("similarity", 0.0)
             answer_parts.append(f"- {title}: {content} (score: {score:.2f})")
 
-        answer = f"Via {relation} relation with '{subject}':\n" + "\n".join(answer_parts)
+        answer = f"Via {relation} relation with '{subject}':\n" + "\n".join(
+            answer_parts
+        )
         tokens_saved = len(answer) // 4  # rough token estimate
 
         return CompositionalResult(
@@ -212,25 +211,26 @@ class CompositionalReasoner:
         """
         try:
             from whitemagic.core.memory.embeddings import EmbeddingEngine
+
             engine = EmbeddingEngine()
 
             # Use search_similar with the projected vector
             results = engine.search_similar_by_vector(
-                projected_embedding, limit=limit, min_similarity=0.1,
+                projected_embedding,
+                limit=limit,
+                min_similarity=0.1,
             )
             return results
         except AttributeError:
             # search_similar_by_vector may not exist — fall back to text search
-            logger.debug("Vector search by embedding not available, using text fallback")
+            logger.debug(
+                "Vector search by embedding not available, using text fallback"
+            )
             return []
         except Exception as e:
             logger.debug("Projected search failed: %s", e, exc_info=True)
             return []
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _reasoner: CompositionalReasoner | None = None
 

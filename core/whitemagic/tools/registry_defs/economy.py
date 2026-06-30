@@ -25,9 +25,19 @@ TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "task": {"type": "string", "description": "Detailed description of the task"},
-                "amount": {"type": "number", "description": "Amount in XRP to lock in escrow"},
-                "expires_in": {"type": "integer", "description": "Seconds until the bounty expires", "default": 86400},
+                "task": {
+                    "type": "string",
+                    "description": "Detailed description of the task",
+                },
+                "amount": {
+                    "type": "number",
+                    "description": "Amount in XRP to lock in escrow",
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "description": "Seconds until the bounty expires",
+                    "default": 86400,
+                },
             },
             "required": ["task", "amount"],
         },
@@ -40,7 +50,11 @@ TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "status": {"type": "string", "description": "Filter by status (open, active, completed)", "default": "open"},
+                "status": {
+                    "type": "string",
+                    "description": "Filter by status (open, active, completed)",
+                    "default": "open",
+                },
             },
         },
     ),
@@ -52,9 +66,18 @@ TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "galaxy_name": {"type": "string", "description": "Name of the galaxy to rent"},
-                "agent_id": {"type": "string", "description": "ID of the agent requesting access"},
-                "tx_hash": {"type": "string", "description": "XRPL transaction hash of the rental payment"},
+                "galaxy_name": {
+                    "type": "string",
+                    "description": "Name of the galaxy to rent",
+                },
+                "agent_id": {
+                    "type": "string",
+                    "description": "ID of the agent requesting access",
+                },
+                "tx_hash": {
+                    "type": "string",
+                    "description": "XRPL transaction hash of the rental payment",
+                },
             },
             "required": ["galaxy_name", "tx_hash"],
         },

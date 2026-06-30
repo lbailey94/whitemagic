@@ -50,10 +50,11 @@ class PipelineIntegration:
 
         # Extract YAML frontmatter
         frontmatter: dict[str, Any] = {}
-        if content.startswith('---'):
-            parts = content.split('---', 2)
+        if content.startswith("---"):
+            parts = content.split("---", 2)
             if len(parts) >= 3:
                 import yaml
+
                 frontmatter = yaml.safe_load(parts[1]) or {}
                 content = parts[2]
 
@@ -61,9 +62,9 @@ class PipelineIntegration:
         sections = self._parse_sections(content)
 
         return {
-            'frontmatter': frontmatter,
-            'sections': sections,
-            'content': content,
+            "frontmatter": frontmatter,
+            "sections": sections,
+            "content": content,
         }
 
     def _parse_sections(self, content: str) -> dict[str, str]:
@@ -72,21 +73,19 @@ class PipelineIntegration:
         current_section = None
         current_content: list[str] = []
 
-        for line in content.split('\n'):
-            if line.startswith('## '):
+        for line in content.split("\n"):
+            if line.startswith("## "):
                 if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
+                    sections[current_section] = "\n".join(current_content).strip()
                 current_section = line[3:].strip()
                 current_content = []
             elif current_section:
                 current_content.append(line)
 
         if current_section:
-            sections[current_section] = '\n'.join(current_content).strip()
+            sections[current_section] = "\n".join(current_content).strip()
 
         return sections
-
-    # ========== PHASE 1: SCOUT ==========
 
     def scout_implementation(self) -> list[dict[str, Any]]:
         """
@@ -116,10 +115,12 @@ class PipelineIntegration:
 
         # 3. Check current victory condition status
         vc_status = self._check_current_vcs()
-        findings.append({
-            'type': 'victory_conditions',
-            'data': vc_status,
-        })
+        findings.append(
+            {
+                "type": "victory_conditions",
+                "data": vc_status,
+            }
+        )
 
         return findings
 
@@ -128,23 +129,26 @@ class PipelineIntegration:
         targets = []
 
         # Look for Targets section
-        if 'Targets' in self.campaign_data['sections']:
-            targets_text = self.campaign_data['sections']['Targets']
+        if "Targets" in self.campaign_data["sections"]:
+            targets_text = self.campaign_data["sections"]["Targets"]
             # Parse table or list format
-            for line in targets_text.split('\n'):
-                if '|' in line and not line.startswith('|---'):
-                    parts = [p.strip() for p in line.split('|') if p.strip()]
-                    if len(parts) >= 2 and not parts[0].startswith('File'):
-                        targets.append({
-                            'file': parts[0],
-                            'pattern': parts[1] if len(parts) > 1 else None,
-                        })
+            for line in targets_text.split("\n"):
+                if "|" in line and not line.startswith("|---"):
+                    parts = [p.strip() for p in line.split("|") if p.strip()]
+                    if len(parts) >= 2 and not parts[0].startswith("File"):
+                        targets.append(
+                            {
+                                "file": parts[0],
+                                "pattern": parts[1] if len(parts) > 1 else None,
+                            }
+                        )
 
         return targets
 
     def _scan_target(self, target: dict[str, Any]) -> dict[str, Any] | None:
         """Scan a specific target file/pattern."""
         from pathlib import Path
+
         path_str = target.get("path", ".")
         path = Path(path_str)
         if not path.exists():
@@ -157,7 +161,11 @@ class PipelineIntegration:
                 "target": target,
                 "status": "scanned",
                 "file_count": len(files),
-                "total_lines": sum(len(f.read_text(encoding="utf-8").splitlines()) for f in files if f.is_file()),
+                "total_lines": sum(
+                    len(f.read_text(encoding="utf-8").splitlines())
+                    for f in files
+                    if f.is_file()
+                ),
             }
         else:
             content = path.read_text(encoding="utf-8") if path.is_file() else ""
@@ -172,15 +180,15 @@ class PipelineIntegration:
     def _extract_metrics(self) -> list[str]:
         """Extract metrics mentioned in campaign"""
         metrics = []
-        content = self.campaign_data['content'].lower()
+        content = self.campaign_data["content"].lower()
 
         # Look for common metric patterns
         metric_patterns = [
-            r'(\d+x)\s+speedup',
-            r'(\d+%)\s+reduction',
-            r'(\d+)\s+files?',
-            r'(\d+)\s+queries',
-            r'accuracy\s+[>≥]\s*(\d+%)',
+            r"(\d+x)\s+speedup",
+            r"(\d+%)\s+reduction",
+            r"(\d+)\s+files?",
+            r"(\d+)\s+queries",
+            r"accuracy\s+[>≥]\s*(\d+%)",
         ]
 
         for pattern in metric_patterns:
@@ -192,6 +200,7 @@ class PipelineIntegration:
     def _measure_baseline(self, metric: str) -> dict[str, Any] | None:
         """Measure baseline for a metric."""
         import time
+
         start = time.perf_counter()
         # Minimal benchmark: count imports in campaign file directory
         target_dir = self.campaign_file.parent
@@ -221,36 +230,43 @@ class PipelineIntegration:
         for vc in vcs:
             # This would run actual verification
             # For now, assume not met
-            vc['met'] = False
+            vc["met"] = False
 
         return {
-            'vcs': vcs,
-            'met': met,
-            'total': total,
-            'percentage': 100 * met / total if total > 0 else 0,
+            "vcs": vcs,
+            "met": met,
+            "total": total,
+            "percentage": 100 * met / total if total > 0 else 0,
         }
 
     def _extract_victory_conditions(self) -> list[dict[str, Any]]:
         """Extract victory conditions from campaign"""
         vcs = []
 
-        if 'Victory Conditions' in self.campaign_data['sections']:
-            vc_text = self.campaign_data['sections']['Victory Conditions']
-            for line in vc_text.split('\n'):
+        if "Victory Conditions" in self.campaign_data["sections"]:
+            vc_text = self.campaign_data["sections"]["Victory Conditions"]
+            for line in vc_text.split("\n"):
                 line = line.strip()
-                if line.startswith('- [ ]') or line.startswith('- [x]') or line.startswith('❌') or line.startswith('✅'):
-                    met = line.startswith('- [x]') or line.startswith('✅')
-                    text = re.sub(r'^[-\s]*\[[ x]\]\s*|^[❌✅]\s*', '', line)
-                    vcs.append({
-                        'text': text,
-                        'met': met,
-                    })
+                if (
+                    line.startswith("- [ ]")
+                    or line.startswith("- [x]")
+                    or line.startswith("❌")
+                    or line.startswith("✅")
+                ):
+                    met = line.startswith("- [x]") or line.startswith("✅")
+                    text = re.sub(r"^[-\s]*\[[ x]\]\s*|^[❌✅]\s*", "", line)
+                    vcs.append(
+                        {
+                            "text": text,
+                            "met": met,
+                        }
+                    )
 
         return vcs
 
-    # ========== PHASE 2: DISCOVER ==========
-
-    def discover_implementation(self, scout_findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def discover_implementation(
+        self, scout_findings: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """
         Discover phase: Find patterns and identify gaps
 
@@ -263,49 +279,68 @@ class PipelineIntegration:
         patterns = []
 
         # 1. Identify vague victory conditions
-        vc_findings = [f for f in scout_findings if f.get('type') == 'victory_conditions']
+        vc_findings = [
+            f for f in scout_findings if f.get("type") == "victory_conditions"
+        ]
         if vc_findings:
-            vague_vcs = self._find_vague_vcs(vc_findings[0]['data']['vcs'])
+            vague_vcs = self._find_vague_vcs(vc_findings[0]["data"]["vcs"])
             if vague_vcs:
-                patterns.append({
-                    'type': 'vague_victory_conditions',
-                    'count': len(vague_vcs),
-                    'vcs': vague_vcs,
-                    'severity': 'high',
-                })
+                patterns.append(
+                    {
+                        "type": "vague_victory_conditions",
+                        "count": len(vague_vcs),
+                        "vcs": vague_vcs,
+                        "severity": "high",
+                    }
+                )
 
         # 2. Identify missing baselines
-        baseline_findings = [f for f in scout_findings if f.get('type') == 'baseline_measurement']
-        missing_baselines = [f for f in baseline_findings if f.get('value') == 'to_be_measured']
+        baseline_findings = [
+            f for f in scout_findings if f.get("type") == "baseline_measurement"
+        ]
+        missing_baselines = [
+            f for f in baseline_findings if f.get("value") == "to_be_measured"
+        ]
         if missing_baselines:
-            patterns.append({
-                'type': 'missing_baselines',
-                'count': len(missing_baselines),
-                'metrics': [f['metric'] for f in missing_baselines],
-                'severity': 'high',
-            })
+            patterns.append(
+                {
+                    "type": "missing_baselines",
+                    "count": len(missing_baselines),
+                    "metrics": [f["metric"] for f in missing_baselines],
+                    "severity": "high",
+                }
+            )
 
         # 3. Identify discovery vs implementation gap
         if self._has_discovery_gap():
-            patterns.append({
-                'type': 'discovery_implementation_gap',
-                'description': 'Campaign has discovery objectives but no implementation phase',
-                'severity': 'critical',
-            })
+            patterns.append(
+                {
+                    "type": "discovery_implementation_gap",
+                    "description": "Campaign has discovery objectives but no implementation phase",
+                    "severity": "critical",
+                }
+            )
 
         return patterns
 
     def _find_vague_vcs(self, vcs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Identify vague victory conditions"""
-        vague_keywords = ['optimize', 'improve', 'enhance', 'consider', 'explore', 'investigate']
+        vague_keywords = [
+            "optimize",
+            "improve",
+            "enhance",
+            "consider",
+            "explore",
+            "investigate",
+        ]
         vague = []
 
         for vc in vcs:
-            text_lower = vc['text'].lower()
+            text_lower = vc["text"].lower()
             if any(keyword in text_lower for keyword in vague_keywords):
                 # Check if it has specific metrics
-                has_number = bool(re.search(r'\d+', vc['text']))
-                has_comparison = bool(re.search(r'[>≥<≤=]', vc['text']))
+                has_number = bool(re.search(r"\d+", vc["text"]))
+                has_comparison = bool(re.search(r"[>≥<≤=]", vc["text"]))
 
                 if not (has_number and has_comparison):
                     vague.append(vc)
@@ -314,16 +349,16 @@ class PipelineIntegration:
 
     def _has_discovery_gap(self) -> bool:
         """Check if campaign has discovery but no implementation"""
-        strategy = self.campaign_data['frontmatter'].get('type', '')
+        strategy = self.campaign_data["frontmatter"].get("type", "")
 
         # Discovery-only strategies
-        discovery_types = ['discovery', 'security_scan', 'consensus_vote']
+        discovery_types = ["discovery", "security_scan", "consensus_vote"]
 
         return strategy in discovery_types
 
-    # ========== PHASE 3: CLARIFY ==========
-
-    def clarify_implementation(self, discovered_patterns: list[dict[str, Any]]) -> list[ObjectiveRefinement]:
+    def clarify_implementation(
+        self, discovered_patterns: list[dict[str, Any]]
+    ) -> list[ObjectiveRefinement]:
         """
         Clarify phase: Transform vague → specific + measurable
 
@@ -336,19 +371,19 @@ class PipelineIntegration:
         refinements = []
 
         for pattern in discovered_patterns:
-            if pattern['type'] == 'vague_victory_conditions':
-                for vc in pattern['vcs']:
+            if pattern["type"] == "vague_victory_conditions":
+                for vc in pattern["vcs"]:
                     refined = self._refine_vague_vc(vc)
                     if refined:
                         refinements.append(refined)
 
-            elif pattern['type'] == 'missing_baselines':
-                for metric in pattern['metrics']:
+            elif pattern["type"] == "missing_baselines":
+                for metric in pattern["metrics"]:
                     refined = self._add_baseline_to_metric(metric)
                     if refined:
                         refinements.append(refined)
 
-            elif pattern['type'] == 'discovery_implementation_gap':
+            elif pattern["type"] == "discovery_implementation_gap":
                 refined = self._add_implementation_phase()
                 if refined:
                     refinements.append(refined)
@@ -357,22 +392,22 @@ class PipelineIntegration:
 
     def _refine_vague_vc(self, vc: dict[str, Any]) -> ObjectiveRefinement | None:
         """Refine a vague victory condition"""
-        original = vc['text']
+        original = vc["text"]
 
         # Apply refinement rules
-        if 'optimize' in original.lower():
-            refined = original.replace('optimize', 'achieve ≥10x speedup on')
-            metrics = ['baseline_time', 'optimized_time', 'speedup_ratio']
-            verification = 'benchmark_comparison'
-        elif 'improve' in original.lower():
-            refined = original.replace('improve', 'increase by ≥50%')
-            metrics = ['baseline_value', 'improved_value', 'improvement_percentage']
-            verification = 'metric_comparison'
+        if "optimize" in original.lower():
+            refined = original.replace("optimize", "achieve ≥10x speedup on")
+            metrics = ["baseline_time", "optimized_time", "speedup_ratio"]
+            verification = "benchmark_comparison"
+        elif "improve" in original.lower():
+            refined = original.replace("improve", "increase by ≥50%")
+            metrics = ["baseline_value", "improved_value", "improvement_percentage"]
+            verification = "metric_comparison"
         else:
             # Generic refinement
             refined = f"{original} (measured with specific numeric target ≥X)"
-            metrics = ['baseline', 'target', 'actual']
-            verification = 'automated_check'
+            metrics = ["baseline", "target", "actual"]
+            verification = "automated_check"
 
         return ObjectiveRefinement(
             original=original,
@@ -387,10 +422,10 @@ class PipelineIntegration:
         return ObjectiveRefinement(
             original=f"Metric: {metric}",
             refined=f"Measure baseline for {metric}, then achieve target improvement",
-            metrics=['baseline', 'target', 'actual', 'improvement'],
-            baseline={'value': 'to_be_measured'},
-            target={'improvement': '≥10x or ≥50%'},
-            verification_method='benchmark',
+            metrics=["baseline", "target", "actual", "improvement"],
+            baseline={"value": "to_be_measured"},
+            target={"improvement": "≥10x or ≥50%"},
+            verification_method="benchmark",
             confidence=0.8,
         )
 
@@ -399,14 +434,14 @@ class PipelineIntegration:
         return ObjectiveRefinement(
             original="Discovery-only campaign",
             refined="Two-phase deployment: (1) Scout 15% clones for discovery, (2) Implement 85% clones for execution",
-            metrics=['discoveries_made', 'implementations_completed', 'tests_passing'],
-            verification_method='code_verification',
+            metrics=["discoveries_made", "implementations_completed", "tests_passing"],
+            verification_method="code_verification",
             confidence=0.9,
         )
 
-    # ========== PHASE 4: PLAN ==========
-
-    def plan_implementation(self, refined_objectives: list[ObjectiveRefinement]) -> list[StrategySimulation]:
+    def plan_implementation(
+        self, refined_objectives: list[ObjectiveRefinement]
+    ) -> list[StrategySimulation]:
         """
         Plan phase: Generate strategies, simulate, rank by consensus
 
@@ -419,52 +454,62 @@ class PipelineIntegration:
         simulations = []
 
         # Strategy 1: Small parallel armies (RECOMMENDED)
-        simulations.append(StrategySimulation(
-            strategy_name="small_parallel_armies",
-            predicted_success_rate=0.75,
-            predicted_duration=300.0,  # 5 min
-            predicted_clone_count=60000,  # 3x 20K armies
-            risks=["Coordination overhead", "Requires clear task division"],
-            dependencies=[],
-            consensus_votes=10,  # Highest based on doctrine
-        ))
+        simulations.append(
+            StrategySimulation(
+                strategy_name="small_parallel_armies",
+                predicted_success_rate=0.75,
+                predicted_duration=300.0,  # 5 min
+                predicted_clone_count=60000,  # 3x 20K armies
+                risks=["Coordination overhead", "Requires clear task division"],
+                dependencies=[],
+                consensus_votes=10,  # Highest based on doctrine
+            )
+        )
 
         # Strategy 2: Two-phase deployment (scout → implement)
-        simulations.append(StrategySimulation(
-            strategy_name="two_phase_deployment",
-            predicted_success_rate=0.80,
-            predicted_duration=600.0,  # 10 min
-            predicted_clone_count=100000,  # 15K scout + 85K implement
-            risks=["Longer duration", "Discovery may not yield actionable items"],
-            dependencies=["Clear implementation VCs"],
-            consensus_votes=9,
-        ))
+        simulations.append(
+            StrategySimulation(
+                strategy_name="two_phase_deployment",
+                predicted_success_rate=0.80,
+                predicted_duration=600.0,  # 10 min
+                predicted_clone_count=100000,  # 15K scout + 85K implement
+                risks=["Longer duration", "Discovery may not yield actionable items"],
+                dependencies=["Clear implementation VCs"],
+                consensus_votes=9,
+            )
+        )
 
         # Strategy 3: Focused single army
-        simulations.append(StrategySimulation(
-            strategy_name="focused_single_army",
-            predicted_success_rate=0.60,
-            predicted_duration=180.0,  # 3 min
-            predicted_clone_count=25000,
-            risks=["May miss edge cases", "Single point of failure"],
-            dependencies=[],
-            consensus_votes=7,
-        ))
+        simulations.append(
+            StrategySimulation(
+                strategy_name="focused_single_army",
+                predicted_success_rate=0.60,
+                predicted_duration=180.0,  # 3 min
+                predicted_clone_count=25000,
+                risks=["May miss edge cases", "Single point of failure"],
+                dependencies=[],
+                consensus_votes=7,
+            )
+        )
 
         # Strategy 4: Massive brute force (NOT RECOMMENDED)
-        simulations.append(StrategySimulation(
-            strategy_name="massive_brute_force",
-            predicted_success_rate=0.30,
-            predicted_duration=900.0,  # 15 min
-            predicted_clone_count=500000,
-            risks=["Coordination overhead", "Diminishing returns", "Resource waste"],
-            dependencies=["Stress test only"],
-            consensus_votes=2,
-        ))
+        simulations.append(
+            StrategySimulation(
+                strategy_name="massive_brute_force",
+                predicted_success_rate=0.30,
+                predicted_duration=900.0,  # 15 min
+                predicted_clone_count=500000,
+                risks=[
+                    "Coordination overhead",
+                    "Diminishing returns",
+                    "Resource waste",
+                ],
+                dependencies=["Stress test only"],
+                consensus_votes=2,
+            )
+        )
 
         return simulations
-
-    # ========== PHASE 5: EXECUTE ==========
 
     def execute_implementation(self, strategy: StrategySimulation) -> dict[str, Any]:
         """Execute phase: Write strategy output to a file."""
@@ -487,9 +532,9 @@ class PipelineIntegration:
             "output_path": str(output_path),
         }
 
-    # ========== PHASE 6: VERIFY ==========
-
-    def verify_implementation(self, execution_results: dict[str, Any]) -> dict[str, Any]:
+    def verify_implementation(
+        self, execution_results: dict[str, Any]
+    ) -> dict[str, Any]:
         """Verify phase: Check victory conditions and measure results."""
         vcs = self._extract_victory_conditions()
 
@@ -500,13 +545,11 @@ class PipelineIntegration:
             vcs_met += 1  # Output file created
 
         return {
-            'vcs_met': vcs_met,
-            'vcs_total': vcs_total,
-            'percentage': 100 * vcs_met / vcs_total if vcs_total > 0 else 0,
-            'details': vcs,
+            "vcs_met": vcs_met,
+            "vcs_total": vcs_total,
+            "percentage": 100 * vcs_met / vcs_total if vcs_total > 0 else 0,
+            "details": vcs,
         }
-
-    # ========== PHASE 7: REFLECT ==========
 
     def reflect_implementation(self, cycle_data: dict[str, Any]) -> dict[str, Any]:
         """
@@ -515,39 +558,47 @@ class PipelineIntegration:
         Analyzes what worked, what didn't, and how to improve.
         """
         insights = {
-            'cycle_number': cycle_data['cycle_number'],
-            'improvements': [],
-            'recommendations': [],
-            'next_cycle_strategy': None,
+            "cycle_number": cycle_data["cycle_number"],
+            "improvements": [],
+            "recommendations": [],
+            "next_cycle_strategy": None,
         }
 
         # Analyze verification results
-        if cycle_data['verification_results']:
-            last_verify = cycle_data['verification_results'][-1]
-            vcs_percentage = last_verify.get('percentage', 0)
+        if cycle_data["verification_results"]:
+            last_verify = cycle_data["verification_results"][-1]
+            vcs_percentage = last_verify.get("percentage", 0)
 
             if vcs_percentage == 0:
-                insights['improvements'].append("No VCs met - need to refine objectives")
-                insights['recommendations'].append("Run clarify phase again with more specific metrics")
-                insights['next_cycle_strategy'] = 'focus_on_clarification'
+                insights["improvements"].append(
+                    "No VCs met - need to refine objectives"
+                )
+                insights["recommendations"].append(
+                    "Run clarify phase again with more specific metrics"
+                )
+                insights["next_cycle_strategy"] = "focus_on_clarification"
 
             elif vcs_percentage < 50:
-                insights['improvements'].append("Partial progress - execution strategy may need adjustment")
-                insights['recommendations'].append("Try two-phase deployment or smaller armies")
-                insights['next_cycle_strategy'] = 'adjust_execution_strategy'
+                insights["improvements"].append(
+                    "Partial progress - execution strategy may need adjustment"
+                )
+                insights["recommendations"].append(
+                    "Try two-phase deployment or smaller armies"
+                )
+                insights["next_cycle_strategy"] = "adjust_execution_strategy"
 
             elif vcs_percentage < 100:
-                insights['improvements'].append("High progress - close to victory")
-                insights['recommendations'].append("Focus on remaining VCs with targeted deployment")
-                insights['next_cycle_strategy'] = 'targeted_completion'
+                insights["improvements"].append("High progress - close to victory")
+                insights["recommendations"].append(
+                    "Focus on remaining VCs with targeted deployment"
+                )
+                insights["next_cycle_strategy"] = "targeted_completion"
 
             else:
-                insights['improvements'].append("Victory achieved!")
-                insights['next_cycle_strategy'] = 'complete'
+                insights["improvements"].append("Victory achieved!")
+                insights["next_cycle_strategy"] = "complete"
 
         return insights
-
-    # ========== FULL CYCLE EXECUTION ==========
 
     def run_full_cycle(self) -> dict[str, Any]:
         """Execute one complete Yin-Yang cycle"""
@@ -576,13 +627,15 @@ class PipelineIntegration:
         self.pipeline.advance_phase()  # VERIFY → REFLECT
 
         return {
-            'cycle_complete': True,
-            'summary': self.pipeline.get_cycle_summary(),
-            'progress_report': self.pipeline.get_progress_report(),
-            'should_continue': self.pipeline.should_continue(),
+            "cycle_complete": True,
+            "summary": self.pipeline.get_cycle_summary(),
+            "progress_report": self.pipeline.get_progress_report(),
+            "should_continue": self.pipeline.should_continue(),
         }
 
 
-def create_pipeline_integration(campaign_codename: str, campaign_file: Path) -> PipelineIntegration:
+def create_pipeline_integration(
+    campaign_codename: str, campaign_file: Path
+) -> PipelineIntegration:
     """Factory function to create pipeline integration"""
     return PipelineIntegration(campaign_codename, campaign_file)

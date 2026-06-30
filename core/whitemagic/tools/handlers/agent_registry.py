@@ -5,6 +5,7 @@ Provides agent registration, heartbeat, capability declaration, and
 discovery for coordinated multi-agent workflows.  All state is stored
 under WM_STATE_ROOT/agents/.
 """
+
 import json
 import logging
 import os
@@ -23,10 +24,10 @@ def _emit(event_type_name: str, data: dict) -> None:
     """Best-effort Gan Ying event emission."""
     try:
         from whitemagic.core.resonance import emit_event
+
         emit_event(event_type_name, data, source="agent_registry")
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Gan Ying emit failed in agent_registry (non-critical): %s", e)
-
 
 
 def _agents_dir() -> Path:
@@ -88,15 +89,12 @@ def _is_active(agent: dict[str, Any]) -> bool:
         last_hb = agent.get("registered_at", "")
     try:
         from datetime import datetime as dt
+
         ts = dt.fromisoformat(last_hb)
         return (dt.now() - ts).total_seconds() < _HEARTBEAT_STALE_S
     except (ValueError, TypeError):
         return False
 
-
-# ---------------------------------------------------------------------------
-# Handler: agent.register
-# ---------------------------------------------------------------------------
 
 def handle_agent_register(**kwargs: Any) -> dict[str, Any]:
     """Register a new agent or update an existing one."""
@@ -140,7 +138,10 @@ def handle_agent_register(**kwargs: Any) -> dict[str, Any]:
     }
     _save_agent(agent)
 
-    _emit("AGENT_REGISTERED", {"agent_id": agent_id, "name": name, "capabilities": capabilities})
+    _emit(
+        "AGENT_REGISTERED",
+        {"agent_id": agent_id, "name": name, "capabilities": capabilities},
+    )
 
     return {
         "status": "success",
@@ -149,10 +150,6 @@ def handle_agent_register(**kwargs: Any) -> dict[str, Any]:
         "new": True,
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: agent.heartbeat
-# ---------------------------------------------------------------------------
 
 def handle_agent_heartbeat(**kwargs: Any) -> dict[str, Any]:
     """Update agent heartbeat and optional workload info."""
@@ -169,7 +166,11 @@ def handle_agent_heartbeat(**kwargs: Any) -> dict[str, Any]:
 
     agent = _load_agent(agent_id)
     if not agent:
-        return {"status": "error", "error": f"Agent {agent_id} not found", "error_code": "not_found"}
+        return {
+            "status": "error",
+            "error": f"Agent {agent_id} not found",
+            "error_code": "not_found",
+        }
 
     now = datetime.now().isoformat()
     agent["last_heartbeat"] = now
@@ -187,7 +188,10 @@ def handle_agent_heartbeat(**kwargs: Any) -> dict[str, Any]:
 
     _save_agent(agent)
 
-    _emit("AGENT_HEARTBEAT", {"agent_id": agent_id, "heartbeat_count": agent["heartbeat_count"]})
+    _emit(
+        "AGENT_HEARTBEAT",
+        {"agent_id": agent_id, "heartbeat_count": agent["heartbeat_count"]},
+    )
 
     return {
         "status": "success",
@@ -195,10 +199,6 @@ def handle_agent_heartbeat(**kwargs: Any) -> dict[str, Any]:
         "heartbeat_count": agent["heartbeat_count"],
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: agent.list
-# ---------------------------------------------------------------------------
 
 def handle_agent_list(**kwargs: Any) -> dict[str, Any]:
     """List all registered agents with optional filters."""
@@ -237,10 +237,6 @@ def handle_agent_list(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Handler: agent.capabilities
-# ---------------------------------------------------------------------------
-
 def handle_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
     """Query agent capabilities — what can a specific agent do?"""
     agent_id = kwargs.get("agent_id")
@@ -253,7 +249,11 @@ def handle_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
 
     agent = _load_agent(agent_id)
     if not agent:
-        return {"status": "error", "error": f"Agent {agent_id} not found", "error_code": "not_found"}
+        return {
+            "status": "error",
+            "error": f"Agent {agent_id} not found",
+            "error_code": "not_found",
+        }
 
     return {
         "status": "success",
@@ -265,10 +265,6 @@ def handle_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
         "host": agent.get("host"),
     }
 
-
-# ---------------------------------------------------------------------------
-# Handler: agent.deregister
-# ---------------------------------------------------------------------------
 
 def handle_agent_deregister(**kwargs: Any) -> dict[str, Any]:
     """Remove an agent from the registry."""
@@ -282,4 +278,8 @@ def handle_agent_deregister(**kwargs: Any) -> dict[str, Any]:
             "status": "success",
             "message": f"Agent {agent_id} deregistered",
         }
-    return {"status": "error", "error": f"Agent {agent_id} not found", "error_code": "not_found"}
+    return {
+        "status": "error",
+        "error": f"Agent {agent_id} not found",
+        "error_code": "not_found",
+    }

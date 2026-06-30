@@ -33,6 +33,7 @@ class DreamStateOrchestration:
         # Try to use emergence dream state
         try:
             from whitemagic.emergence.dream_state import get_dream_state
+
             ds = get_dream_state()
             seq = ds.dream()
             result["patterns_synthesized"] = seq.patterns_synthesized
@@ -45,6 +46,7 @@ class DreamStateOrchestration:
             from whitemagic.synergies.pattern_dream_bridge import (
                 get_pattern_dream_bridge,
             )
+
             bridge = get_pattern_dream_bridge()
             syntheses = bridge.process_queue()
             result["bridge_syntheses"] = len(syntheses)

@@ -3,7 +3,6 @@
 Provides high-performance Rust-accelerated operations.
 """
 
-
 from whitemagic.utils.rust_helper import get_rust_module, is_rust_available
 
 
@@ -37,10 +36,11 @@ class RustAccelerator:
         Returns:
             Similarity score between 0.0 and 1.0
         """
-        if hasattr(self._rust, 'rust_similarity'):
+        if hasattr(self._rust, "rust_similarity"):
             return float(self._rust.rust_similarity(text1, text2))  # type: ignore[union-attr]
         # Fallback to pure Python
         from difflib import SequenceMatcher
+
         return SequenceMatcher(None, text1, text2).ratio()
 
     def is_available(self) -> bool:
@@ -52,4 +52,4 @@ class RustAccelerator:
         return self._rust is not None
 
 
-__all__ = ['RustAccelerator']
+__all__ = ["RustAccelerator"]

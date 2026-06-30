@@ -20,260 +20,548 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Subsystem Registry
-# ---------------------------------------------------------------------------
-
 SUBSYSTEMS: list[dict[str, Any]] = [
-    {"id": "memory_unified", "name": "Memory (Unified)", "location": "core/memory/unified.py",
-     "polyglot": "Rust (KD-tree, batch scoring)", "category": "memory"},
-    {"id": "galactic_map", "name": "Galactic Map", "location": "core/memory/galactic_map.py",
-     "polyglot": "Rust (retention scoring)", "category": "memory"},
-    {"id": "holographic_5d", "name": "5D Holographic Coords", "location": "intelligence/hologram/encoder.py",
-     "polyglot": "Rust (SpatialIndex5D)", "category": "memory"},
-    {"id": "association_miner", "name": "Association Miner", "location": "core/memory/association_miner.py",
-     "polyglot": "Rust (Jaccard overlap)", "category": "memory"},
-    {"id": "constellations", "name": "Constellation Detection", "location": "core/memory/constellations.py",
-     "polyglot": None, "category": "memory"},
-    {"id": "consolidation", "name": "Memory Consolidation", "location": "core/memory/consolidation.py",
-     "polyglot": None, "category": "memory"},
-    {"id": "mindful_forgetting", "name": "Mindful Forgetting", "location": "core/memory/mindful_forgetting.py",
-     "polyglot": None, "category": "memory"},
-    {"id": "dream_cycle", "name": "Dream Cycle (12-phase)", "location": "core/dreaming/dream_cycle.py",
-     "polyglot": "Elixir (OTP GenServer)", "category": "intelligence"},
-    {"id": "temporal_scheduler", "name": "Temporal Scheduler", "location": "core/resonance/temporal_scheduler.py",
-     "polyglot": None, "category": "resonance"},
-    {"id": "salience_arbiter", "name": "Salience Arbiter", "location": "core/resonance/salience_arbiter.py",
-     "polyglot": None, "category": "resonance"},
-    {"id": "gan_ying", "name": "Gan Ying Event Bus", "location": "core/resonance/gan_ying_enhanced.py",
-     "polyglot": "Elixir (actor model)", "category": "resonance"},
-    {"id": "redis_bridge", "name": "Redis Bridge", "location": "core/resonance/redis_bridge.py",
-     "polyglot": "Go (libp2p mesh)", "category": "resonance"},
-    {"id": "harmony_vector", "name": "Harmony Vector (7D)", "location": "harmony/vector.py",
-     "polyglot": None, "category": "governance"},
-    {"id": "homeostatic_loop", "name": "Homeostatic Loop", "location": "harmony/homeostatic_loop.py",
-     "polyglot": None, "category": "governance"},
-    {"id": "dharma_rules", "name": "Dharma Rules Engine", "location": "dharma/rules.py",
-     "polyglot": "Haskell (algebraic types)", "category": "governance"},
-    {"id": "karma_ledger", "name": "Karma Ledger", "location": "dharma/karma_ledger.py",
-     "polyglot": None, "category": "governance"},
-    {"id": "maturity_gates", "name": "Maturity Gates", "location": "core/governance/maturity_gates.py",
-     "polyglot": None, "category": "governance"},
-    {"id": "bicameral", "name": "Bicameral Reasoner", "location": "core/intelligence/bicameral.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "emotion_drive", "name": "Emotion/Drive Core", "location": "core/intelligence/emotion_drive.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "self_model", "name": "Self-Model", "location": "core/intelligence/self_model.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "knowledge_graph", "name": "Knowledge Graph", "location": "intelligence/knowledge_graph/",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "gana_architecture", "name": "28 Gana Architecture", "location": "core/ganas/",
-     "polyglot": None, "category": "architecture"},
-    {"id": "prat_router", "name": "PRAT Router", "location": "tools/prat_router.py",
-     "polyglot": None, "category": "architecture"},
-    {"id": "prat_resonance", "name": "PRAT Resonance", "location": "tools/prat_resonance.py",
-     "polyglot": None, "category": "architecture"},
-    {"id": "zig_simd", "name": "Zig SIMD Acceleration", "location": "core/acceleration/simd_cosine.py",
-     "polyglot": "Zig (AVX2 SIMD cosine)", "category": "memory"},
+    {
+        "id": "memory_unified",
+        "name": "Memory (Unified)",
+        "location": "core/memory/unified.py",
+        "polyglot": "Rust (KD-tree, batch scoring)",
+        "category": "memory",
+    },
+    {
+        "id": "galactic_map",
+        "name": "Galactic Map",
+        "location": "core/memory/galactic_map.py",
+        "polyglot": "Rust (retention scoring)",
+        "category": "memory",
+    },
+    {
+        "id": "holographic_5d",
+        "name": "5D Holographic Coords",
+        "location": "intelligence/hologram/encoder.py",
+        "polyglot": "Rust (SpatialIndex5D)",
+        "category": "memory",
+    },
+    {
+        "id": "association_miner",
+        "name": "Association Miner",
+        "location": "core/memory/association_miner.py",
+        "polyglot": "Rust (Jaccard overlap)",
+        "category": "memory",
+    },
+    {
+        "id": "constellations",
+        "name": "Constellation Detection",
+        "location": "core/memory/constellations.py",
+        "polyglot": None,
+        "category": "memory",
+    },
+    {
+        "id": "consolidation",
+        "name": "Memory Consolidation",
+        "location": "core/memory/consolidation.py",
+        "polyglot": None,
+        "category": "memory",
+    },
+    {
+        "id": "mindful_forgetting",
+        "name": "Mindful Forgetting",
+        "location": "core/memory/mindful_forgetting.py",
+        "polyglot": None,
+        "category": "memory",
+    },
+    {
+        "id": "dream_cycle",
+        "name": "Dream Cycle (12-phase)",
+        "location": "core/dreaming/dream_cycle.py",
+        "polyglot": "Elixir (OTP GenServer)",
+        "category": "intelligence",
+    },
+    {
+        "id": "temporal_scheduler",
+        "name": "Temporal Scheduler",
+        "location": "core/resonance/temporal_scheduler.py",
+        "polyglot": None,
+        "category": "resonance",
+    },
+    {
+        "id": "salience_arbiter",
+        "name": "Salience Arbiter",
+        "location": "core/resonance/salience_arbiter.py",
+        "polyglot": None,
+        "category": "resonance",
+    },
+    {
+        "id": "gan_ying",
+        "name": "Gan Ying Event Bus",
+        "location": "core/resonance/gan_ying_enhanced.py",
+        "polyglot": "Elixir (actor model)",
+        "category": "resonance",
+    },
+    {
+        "id": "redis_bridge",
+        "name": "Redis Bridge",
+        "location": "core/resonance/redis_bridge.py",
+        "polyglot": "Go (libp2p mesh)",
+        "category": "resonance",
+    },
+    {
+        "id": "harmony_vector",
+        "name": "Harmony Vector (7D)",
+        "location": "harmony/vector.py",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "homeostatic_loop",
+        "name": "Homeostatic Loop",
+        "location": "harmony/homeostatic_loop.py",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "dharma_rules",
+        "name": "Dharma Rules Engine",
+        "location": "dharma/rules.py",
+        "polyglot": "Haskell (algebraic types)",
+        "category": "governance",
+    },
+    {
+        "id": "karma_ledger",
+        "name": "Karma Ledger",
+        "location": "dharma/karma_ledger.py",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "maturity_gates",
+        "name": "Maturity Gates",
+        "location": "core/governance/maturity_gates.py",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "bicameral",
+        "name": "Bicameral Reasoner",
+        "location": "core/intelligence/bicameral.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "emotion_drive",
+        "name": "Emotion/Drive Core",
+        "location": "core/intelligence/emotion_drive.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "self_model",
+        "name": "Self-Model",
+        "location": "core/intelligence/self_model.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "knowledge_graph",
+        "name": "Knowledge Graph",
+        "location": "intelligence/knowledge_graph/",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "gana_architecture",
+        "name": "28 Gana Architecture",
+        "location": "core/ganas/",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "prat_router",
+        "name": "PRAT Router",
+        "location": "tools/prat_router.py",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "prat_resonance",
+        "name": "PRAT Resonance",
+        "location": "tools/prat_resonance.py",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "zig_simd",
+        "name": "Zig SIMD Acceleration",
+        "location": "core/acceleration/simd_cosine.py",
+        "polyglot": "Zig (AVX2 SIMD cosine)",
+        "category": "memory",
+    },
     # v23.3+ additions
-    {"id": "galaxy_router", "name": "Galaxy Router (6D)", "location": "core/memory/galaxy_router.py",
-     "polyglot": "Rust (6D coords, cross-galaxy RRF)", "category": "memory"},
-    {"id": "citta_stream", "name": "Citta Stream", "location": "core/consciousness/citta_stream.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "coherence_metric", "name": "Coherence Metric (8D)", "location": "core/consciousness/coherence.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "context_synthesizer", "name": "Context Synthesizer (Sensorium)", "location": "cascade/context_synthesizer.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "insight_pipeline", "name": "Insight Pipeline", "location": "core/intelligence/insight_pipeline.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "emergence_engine", "name": "Emergence Engine", "location": "core/orchestration/unified_orchestrator.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "autonomous_learner", "name": "Autonomous Learner", "location": "core/patterns/pattern_consciousness/autonomous_learner.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "narrative_compressor", "name": "Narrative Compressor", "location": "core/dreaming/narrative_compressor.py",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "bridge_synthesizer", "name": "Bridge Synthesizer", "location": "core/memory/bridge_synthesizer.py",
-     "polyglot": None, "category": "memory"},
-    {"id": "session_crystallizer", "name": "Session Crystallizer", "location": "core/memory/session_crystallizer.py",
-     "polyglot": None, "category": "memory"},
-    {"id": "archaeology", "name": "Archaeology (Code History)", "location": "archaeology/dig.py",
-     "polyglot": None, "category": "memory"},
-    {"id": "fragment_search", "name": "Fragment (Rust Search)", "location": "tools/handlers/fragment.py",
-     "polyglot": "Rust (BM25+semantic, PyO3)", "category": "memory"},
-    {"id": "strata_analysis", "name": "STRATA Static Analysis", "location": "tools/strata/__init__.py",
-     "polyglot": "Rust (parallel walker)", "category": "governance"},
-    {"id": "wm_meta_tool", "name": "WM Meta-Tool (PRAT Seed)", "location": "tools/prat_router.py",
-     "polyglot": None, "category": "architecture"},
-    {"id": "zodiac_cores", "name": "Zodiac Cores (12)", "location": "zodiac/zodiac_cores.py",
-     "polyglot": None, "category": "architecture"},
-    {"id": "gardens", "name": "Consciousness Gardens (20+)", "location": "gardens/",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "security_suite", "name": "Security Suite (13 modules)", "location": "security/",
-     "polyglot": None, "category": "governance"},
-    {"id": "forecasting", "name": "Prescience/Forecasting", "location": "forecasting/",
-     "polyglot": None, "category": "intelligence"},
-    {"id": "gratitude_economy", "name": "Gratitude Economy", "location": "gratitude/",
-     "polyglot": None, "category": "governance"},
-    {"id": "agent_swarm", "name": "Agent Swarm Coordination", "location": "agents/",
-     "polyglot": None, "category": "architecture"},
-    {"id": "grimoire_spells", "name": "Grimoire Spell System", "location": "grimoire/",
-     "polyglot": None, "category": "architecture"},
-    {"id": "codebase_health_sensor", "name": "Codebase Health Sensor", "location": "harmony/homeostatic_loop.py",
-     "polyglot": None, "category": "governance"},
-    {"id": "git_hygiene_sensor", "name": "Git Hygiene Sensor", "location": "harmony/git_hygiene.py",
-     "polyglot": None, "category": "governance"},
+    {
+        "id": "galaxy_router",
+        "name": "Galaxy Router (6D)",
+        "location": "core/memory/galaxy_router.py",
+        "polyglot": "Rust (6D coords, cross-galaxy RRF)",
+        "category": "memory",
+    },
+    {
+        "id": "citta_stream",
+        "name": "Citta Stream",
+        "location": "core/consciousness/citta_stream.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "coherence_metric",
+        "name": "Coherence Metric (8D)",
+        "location": "core/consciousness/coherence.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "context_synthesizer",
+        "name": "Context Synthesizer (Sensorium)",
+        "location": "cascade/context_synthesizer.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "insight_pipeline",
+        "name": "Insight Pipeline",
+        "location": "core/intelligence/insight_pipeline.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "emergence_engine",
+        "name": "Emergence Engine",
+        "location": "core/orchestration/unified_orchestrator.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "autonomous_learner",
+        "name": "Autonomous Learner",
+        "location": "core/patterns/pattern_consciousness/autonomous_learner.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "narrative_compressor",
+        "name": "Narrative Compressor",
+        "location": "core/dreaming/narrative_compressor.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "bridge_synthesizer",
+        "name": "Bridge Synthesizer",
+        "location": "core/memory/bridge_synthesizer.py",
+        "polyglot": None,
+        "category": "memory",
+    },
+    {
+        "id": "session_crystallizer",
+        "name": "Session Crystallizer",
+        "location": "core/memory/session_crystallizer.py",
+        "polyglot": None,
+        "category": "memory",
+    },
+    {
+        "id": "archaeology",
+        "name": "Archaeology (Code History)",
+        "location": "archaeology/dig.py",
+        "polyglot": None,
+        "category": "memory",
+    },
+    {
+        "id": "fragment_search",
+        "name": "Fragment (Rust Search)",
+        "location": "tools/handlers/fragment.py",
+        "polyglot": "Rust (BM25+semantic, PyO3)",
+        "category": "memory",
+    },
+    {
+        "id": "strata_analysis",
+        "name": "STRATA Static Analysis",
+        "location": "tools/strata/__init__.py",
+        "polyglot": "Rust (parallel walker)",
+        "category": "governance",
+    },
+    {
+        "id": "wm_meta_tool",
+        "name": "WM Meta-Tool (PRAT Seed)",
+        "location": "tools/prat_router.py",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "zodiac_cores",
+        "name": "Zodiac Cores (12)",
+        "location": "zodiac/zodiac_cores.py",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "gardens",
+        "name": "Consciousness Gardens (20+)",
+        "location": "gardens/",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "security_suite",
+        "name": "Security Suite (13 modules)",
+        "location": "security/",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "forecasting",
+        "name": "Prescience/Forecasting",
+        "location": "forecasting/",
+        "polyglot": None,
+        "category": "intelligence",
+    },
+    {
+        "id": "gratitude_economy",
+        "name": "Gratitude Economy",
+        "location": "gratitude/",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "agent_swarm",
+        "name": "Agent Swarm Coordination",
+        "location": "agents/",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "grimoire_spells",
+        "name": "Grimoire Spell System",
+        "location": "grimoire/",
+        "polyglot": None,
+        "category": "architecture",
+    },
+    {
+        "id": "codebase_health_sensor",
+        "name": "Codebase Health Sensor",
+        "location": "harmony/homeostatic_loop.py",
+        "polyglot": None,
+        "category": "governance",
+    },
+    {
+        "id": "git_hygiene_sensor",
+        "name": "Git Hygiene Sensor",
+        "location": "harmony/git_hygiene.py",
+        "polyglot": None,
+        "category": "governance",
+    },
 ]
 
-
-# ---------------------------------------------------------------------------
-# Active Cross-System Fusions
-# ---------------------------------------------------------------------------
 
 ACTIVE_FUSIONS: list[dict[str, str]] = [
-    {"id": "dream_consolidation_galactic",
-     "name": "Dream Cycle → Consolidation → Galactic Map",
-     "emergent": "Sleeping creates strategy memories promoted to INNER_RIM",
-     "path": "dream_cycle.py → consolidation.py → galactic_map.py"},
-    {"id": "harmony_homeostasis_dharma",
-     "name": "Harmony Vector → Homeostatic Loop → Dharma",
-     "emergent": "Self-healing: health drops → auto-correction → ethical tightening",
-     "path": "vector.py → homeostatic_loop.py → rules.py"},
-    {"id": "recall_galactic_spiral",
-     "name": "Recall → Galactic Spiral-In",
-     "emergent": "Accessing a memory moves it closer to CORE (5%/access)",
-     "path": "unified.py recall()"},
-    {"id": "tool_harmony_karma_dream",
-     "name": "Tool Call → Harmony + Karma + Dream Touch",
-     "emergent": "Every tool invocation feeds health, audits side-effects, resets idle timer",
-     "path": "unified_api.py _record_telemetry()"},
-    {"id": "agent_trust_rate_limiter",
-     "name": "Agent Trust → Rate Limiter",
-     "emergent": "Trusted agents get 2× rate limits; restricted get 0.25×",
-     "path": "rate_limiter.py _trust_multiplier()"},
-    {"id": "association_kg_constellations",
-     "name": "Association Miner → Knowledge Graph → Constellations",
-     "emergent": "Keyword links → KG relations → density clusters",
-     "path": "Three-way cross-feed"},
-    {"id": "circuit_breaker_selfmodel",
-     "name": "Circuit Breaker → Self-Model Forecast",
-     "emergent": "Predictive breaker tightening from metric regression",
-     "path": "circuit_breaker.py predictive_check()"},
-    {"id": "grimoire_emotion",
-     "name": "Grimoire → Emotion/Drive Core",
-     "emergent": "Spell confidence modulated by emotional state",
-     "path": "grimoire/auto_cast.py _drive_bias()"},
-    {"id": "galactic_harmony_energy",
-     "name": "Galactic Map → Harmony Vector Energy",
-     "emergent": "Memory vitality (40%) blends with runtime pressure (60%)",
-     "path": "galactic_map.py → vector.py"},
-    {"id": "consolidation_kg",
-     "name": "Consolidation → KG Relations",
-     "emergent": "Synthesized memories create KG entities",
-     "path": "consolidation.py _feed_knowledge_graph()"},
-    {"id": "prat_resonance_chain",
-     "name": "PRAT Router → Resonance State",
-     "emergent": "Sequential tool calls carry predecessor/successor context, lunar amplification, Guna adaptation",
-     "path": "prat_router.py → prat_resonance.py"},
-    {"id": "depgraph_pipeline",
-     "name": "Dependency Graph → Pipeline Engine",
-     "emergent": "Pipeline step validation against dependency edges before execution",
-     "path": "tools/handlers/pipeline.py _validate_pipeline_deps()"},
-    {"id": "selfmodel_dream",
-     "name": "Self-Model Forecasts → Dream Scheduling",
-     "emergent": "Predicted energy troughs trigger proactive dreaming before exhaustion",
-     "path": "core/fusions.py check_proactive_dream()"},
-    {"id": "wuxing_gana_boost",
-     "name": "Wu Xing Phase → Gana Quadrant Boost",
-     "emergent": "Current elemental phase amplifies matching quadrant's Ganas via boost_factor",
-     "path": "core/fusions.py → prat_router.py route_prat_call()"},
-    {"id": "resonance_emotion",
-     "name": "PRAT Resonance → Emotion/Drive Core",
-     "emergent": "Predecessor/successor Gana output modulates emotional state, creating mood across chains",
-     "path": "core/fusions.py modulate_drive_from_resonance() → prat_router.py"},
-    {"id": "zodiac_grimoire",
-     "name": "Zodiac Cores → Grimoire Spells",
-     "emergent": "Active zodiac core modulates which grimoire spells are recommended via element→Wu Xing mapping",
-     "path": "core/fusions.py get_zodiac_spell_boost()"},
-    {"id": "bicameral_consolidation",
-     "name": "Bicameral Reasoner → Consolidation",
-     "emergent": "Right hemisphere creative cross-pollination enhances memory cluster discovery",
-     "path": "core/fusions.py bicameral_consolidation_enhance()"},
-    {"id": "salience_homeostasis",
-     "name": "Salience Arbiter ↔ Homeostatic Loop",
-     "emergent": "Bidirectional: salience alerts trigger homeostasis; health adjusts salience thresholds",
-     "path": "core/fusions.py salience_homeostasis_sync()"},
-    {"id": "dream_bicameral",
-     "name": "Dream Cycle → Bicameral",
-     "emergent": "Dream SERENDIPITY phase uses bicameral reasoning for creative cross-pollination",
-     "path": "core/fusions.py dream_bicameral_serendipity()"},
-    {"id": "constellation_garden",
-     "name": "Constellation Detection → Garden Activation",
-     "emergent": "Dense memory clusters auto-activate the corresponding consciousness garden",
-     "path": "core/fusions.py constellation_garden_activate()"},
-    {"id": "kg_gana_routing",
-     "name": "Knowledge Graph → Gana Routing",
-     "emergent": "KG entity relationships suggest which Gana to invoke next",
-     "path": "core/fusions.py kg_suggest_next_gana()"},
-    {"id": "zig_simd_cosine",
-     "name": "Zig SIMD → Vector Search",
-     "emergent": "Hardware-accelerated cosine similarity for embedding vector search (AVX2, 8-lane)",
-     "path": "core/acceleration/simd_cosine.py → core/memory/vector_search.py"},
-    {"id": "haskell_dharma_primary",
-     "name": "Haskell Dharma → Python Dharma",
-     "emergent": "Type-safe algebraic rule engine as primary evaluator with Python fallback",
-     "path": "dharma/rules.py → haskell/haskell_bridge.py"},
-    {"id": "gana_chain_harmony",
-     "name": "Gana Chain → Harmony Vector",
-     "emergent": "Chains adapt mid-sequence based on system health — stressed system truncates, healthy extends",
-     "path": "core/fusions.py gana_chain_harmony_adapt()"},
-    {"id": "prat_gana_chain",
-     "name": "PRAT Router → Gana Chain",
-     "emergent": "Sequential same-Gana PRAT calls auto-detected for resonance chain sequencing",
-     "path": "core/fusions.py prat_auto_chain_detect()"},
-    {"id": "holographic_encode",
-     "name": "Holographic Encoding Bridge",
-     "emergent": "Batch 5D coordinate encoding via Python CoordinateEncoder",
-     "path": "core/fusions.py holographic_batch_encode()"},
-    {"id": "elixir_event_bus",
-     "name": "Elixir Event Bus → Python Gan Ying",
-     "emergent": "Elixir OTP actor-model event routing bridges with Python Gan Ying (3-lane temporal)",
-     "path": "core/fusions.py elixir_event_bridge()"},
-    {"id": "go_mesh_sync",
-     "name": "Go Mesh → Memory Sync",
-     "emergent": "Cross-node memory replication and announcement via Go libp2p mesh",
-     "path": "core/fusions.py mesh_memory_sync()"},
-    {"id": "galaxy_subsystem_routing",
-     "name": "Galaxy Router → UnifiedMemory.store()",
-     "emergent": "Cognitive subsystems auto-route memories to specialized galaxies via subsystem= parameter",
-     "path": "unified.py store() → galaxy_router.py route()"},
-    {"id": "codebase_health_homeostasis",
-     "name": "STRATA → Homeostatic Loop",
-     "emergent": "Periodic codebase health checks (dead code, stubs, drift) feed into self-healing loop",
-     "path": "homeostatic_loop.py _check_codebase_health() → strata.analyze()"},
-    {"id": "fragment_read_acceleration",
-     "name": "Fragment → wm_read codebase mode",
-     "emergent": "Rust BM25+semantic search accelerates codebase reading 100x over Python vector search",
-     "path": "fragment.py → wm_read.py _read_codebase()"},
-    {"id": "anomaly_homeostatic_deferral",
-     "name": "Anomaly Check → Homeostatic Codebase Sensor",
-     "emergent": "Real-time anomaly checks defer STRATA to periodic homeostatic loop, preventing timeouts",
-     "path": "anomaly.py → homeostatic_loop.py _check_codebase_health()"},
+    {
+        "id": "dream_consolidation_galactic",
+        "name": "Dream Cycle → Consolidation → Galactic Map",
+        "emergent": "Sleeping creates strategy memories promoted to INNER_RIM",
+        "path": "dream_cycle.py → consolidation.py → galactic_map.py",
+    },
+    {
+        "id": "harmony_homeostasis_dharma",
+        "name": "Harmony Vector → Homeostatic Loop → Dharma",
+        "emergent": "Self-healing: health drops → auto-correction → ethical tightening",
+        "path": "vector.py → homeostatic_loop.py → rules.py",
+    },
+    {
+        "id": "recall_galactic_spiral",
+        "name": "Recall → Galactic Spiral-In",
+        "emergent": "Accessing a memory moves it closer to CORE (5%/access)",
+        "path": "unified.py recall()",
+    },
+    {
+        "id": "tool_harmony_karma_dream",
+        "name": "Tool Call → Harmony + Karma + Dream Touch",
+        "emergent": "Every tool invocation feeds health, audits side-effects, resets idle timer",
+        "path": "unified_api.py _record_telemetry()",
+    },
+    {
+        "id": "agent_trust_rate_limiter",
+        "name": "Agent Trust → Rate Limiter",
+        "emergent": "Trusted agents get 2× rate limits; restricted get 0.25×",
+        "path": "rate_limiter.py _trust_multiplier()",
+    },
+    {
+        "id": "association_kg_constellations",
+        "name": "Association Miner → Knowledge Graph → Constellations",
+        "emergent": "Keyword links → KG relations → density clusters",
+        "path": "Three-way cross-feed",
+    },
+    {
+        "id": "circuit_breaker_selfmodel",
+        "name": "Circuit Breaker → Self-Model Forecast",
+        "emergent": "Predictive breaker tightening from metric regression",
+        "path": "circuit_breaker.py predictive_check()",
+    },
+    {
+        "id": "grimoire_emotion",
+        "name": "Grimoire → Emotion/Drive Core",
+        "emergent": "Spell confidence modulated by emotional state",
+        "path": "grimoire/auto_cast.py _drive_bias()",
+    },
+    {
+        "id": "galactic_harmony_energy",
+        "name": "Galactic Map → Harmony Vector Energy",
+        "emergent": "Memory vitality (40%) blends with runtime pressure (60%)",
+        "path": "galactic_map.py → vector.py",
+    },
+    {
+        "id": "consolidation_kg",
+        "name": "Consolidation → KG Relations",
+        "emergent": "Synthesized memories create KG entities",
+        "path": "consolidation.py _feed_knowledge_graph()",
+    },
+    {
+        "id": "prat_resonance_chain",
+        "name": "PRAT Router → Resonance State",
+        "emergent": "Sequential tool calls carry predecessor/successor context, lunar amplification, Guna adaptation",
+        "path": "prat_router.py → prat_resonance.py",
+    },
+    {
+        "id": "depgraph_pipeline",
+        "name": "Dependency Graph → Pipeline Engine",
+        "emergent": "Pipeline step validation against dependency edges before execution",
+        "path": "tools/handlers/pipeline.py _validate_pipeline_deps()",
+    },
+    {
+        "id": "selfmodel_dream",
+        "name": "Self-Model Forecasts → Dream Scheduling",
+        "emergent": "Predicted energy troughs trigger proactive dreaming before exhaustion",
+        "path": "core/fusions.py check_proactive_dream()",
+    },
+    {
+        "id": "wuxing_gana_boost",
+        "name": "Wu Xing Phase → Gana Quadrant Boost",
+        "emergent": "Current elemental phase amplifies matching quadrant's Ganas via boost_factor",
+        "path": "core/fusions.py → prat_router.py route_prat_call()",
+    },
+    {
+        "id": "resonance_emotion",
+        "name": "PRAT Resonance → Emotion/Drive Core",
+        "emergent": "Predecessor/successor Gana output modulates emotional state, creating mood across chains",
+        "path": "core/fusions.py modulate_drive_from_resonance() → prat_router.py",
+    },
+    {
+        "id": "zodiac_grimoire",
+        "name": "Zodiac Cores → Grimoire Spells",
+        "emergent": "Active zodiac core modulates which grimoire spells are recommended via element→Wu Xing mapping",
+        "path": "core/fusions.py get_zodiac_spell_boost()",
+    },
+    {
+        "id": "bicameral_consolidation",
+        "name": "Bicameral Reasoner → Consolidation",
+        "emergent": "Right hemisphere creative cross-pollination enhances memory cluster discovery",
+        "path": "core/fusions.py bicameral_consolidation_enhance()",
+    },
+    {
+        "id": "salience_homeostasis",
+        "name": "Salience Arbiter ↔ Homeostatic Loop",
+        "emergent": "Bidirectional: salience alerts trigger homeostasis; health adjusts salience thresholds",
+        "path": "core/fusions.py salience_homeostasis_sync()",
+    },
+    {
+        "id": "dream_bicameral",
+        "name": "Dream Cycle → Bicameral",
+        "emergent": "Dream SERENDIPITY phase uses bicameral reasoning for creative cross-pollination",
+        "path": "core/fusions.py dream_bicameral_serendipity()",
+    },
+    {
+        "id": "constellation_garden",
+        "name": "Constellation Detection → Garden Activation",
+        "emergent": "Dense memory clusters auto-activate the corresponding consciousness garden",
+        "path": "core/fusions.py constellation_garden_activate()",
+    },
+    {
+        "id": "kg_gana_routing",
+        "name": "Knowledge Graph → Gana Routing",
+        "emergent": "KG entity relationships suggest which Gana to invoke next",
+        "path": "core/fusions.py kg_suggest_next_gana()",
+    },
+    {
+        "id": "zig_simd_cosine",
+        "name": "Zig SIMD → Vector Search",
+        "emergent": "Hardware-accelerated cosine similarity for embedding vector search (AVX2, 8-lane)",
+        "path": "core/acceleration/simd_cosine.py → core/memory/vector_search.py",
+    },
+    {
+        "id": "haskell_dharma_primary",
+        "name": "Haskell Dharma → Python Dharma",
+        "emergent": "Type-safe algebraic rule engine as primary evaluator with Python fallback",
+        "path": "dharma/rules.py → haskell/haskell_bridge.py",
+    },
+    {
+        "id": "gana_chain_harmony",
+        "name": "Gana Chain → Harmony Vector",
+        "emergent": "Chains adapt mid-sequence based on system health — stressed system truncates, healthy extends",
+        "path": "core/fusions.py gana_chain_harmony_adapt()",
+    },
+    {
+        "id": "prat_gana_chain",
+        "name": "PRAT Router → Gana Chain",
+        "emergent": "Sequential same-Gana PRAT calls auto-detected for resonance chain sequencing",
+        "path": "core/fusions.py prat_auto_chain_detect()",
+    },
+    {
+        "id": "holographic_encode",
+        "name": "Holographic Encoding Bridge",
+        "emergent": "Batch 5D coordinate encoding via Python CoordinateEncoder",
+        "path": "core/fusions.py holographic_batch_encode()",
+    },
+    {
+        "id": "elixir_event_bus",
+        "name": "Elixir Event Bus → Python Gan Ying",
+        "emergent": "Elixir OTP actor-model event routing bridges with Python Gan Ying (3-lane temporal)",
+        "path": "core/fusions.py elixir_event_bridge()",
+    },
+    {
+        "id": "go_mesh_sync",
+        "name": "Go Mesh → Memory Sync",
+        "emergent": "Cross-node memory replication and announcement via Go libp2p mesh",
+        "path": "core/fusions.py mesh_memory_sync()",
+    },
+    {
+        "id": "galaxy_subsystem_routing",
+        "name": "Galaxy Router → UnifiedMemory.store()",
+        "emergent": "Cognitive subsystems auto-route memories to specialized galaxies via subsystem= parameter",
+        "path": "unified.py store() → galaxy_router.py route()",
+    },
+    {
+        "id": "codebase_health_homeostasis",
+        "name": "STRATA → Homeostatic Loop",
+        "emergent": "Periodic codebase health checks (dead code, stubs, drift) feed into self-healing loop",
+        "path": "homeostatic_loop.py _check_codebase_health() → strata.analyze()",
+    },
+    {
+        "id": "fragment_read_acceleration",
+        "name": "Fragment → wm_read codebase mode",
+        "emergent": "Rust BM25+semantic search accelerates codebase reading 100x over Python vector search",
+        "path": "fragment.py → wm_read.py _read_codebase()",
+    },
+    {
+        "id": "anomaly_homeostatic_deferral",
+        "name": "Anomaly Check → Homeostatic Codebase Sensor",
+        "emergent": "Real-time anomaly checks defer STRATA to periodic homeostatic loop, preventing timeouts",
+        "path": "anomaly.py → homeostatic_loop.py _check_codebase_health()",
+    },
 ]
 
-
-# ---------------------------------------------------------------------------
-# Unexplored Synthesis Opportunities
-# ---------------------------------------------------------------------------
 
 UNEXPLORED_FUSIONS: list[dict[str, str]] = [
     # All 28 fusions now wired — matching the 28 Ganas.
     # Future synthesis opportunities will be added here as new subsystems emerge.
 ]
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def get_capability_matrix(
     category: str | None = None,
@@ -391,12 +679,9 @@ def suggest_next_fusion() -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Live Probes
-# ---------------------------------------------------------------------------
-
 def _probe_harmony() -> dict[str, Any]:
     from whitemagic.harmony.vector import get_harmony_vector
+
     hv = get_harmony_vector()
     snap = hv.snapshot()
     return {"harmony_score": snap.harmony_score, "energy": snap.energy}
@@ -404,12 +689,14 @@ def _probe_harmony() -> dict[str, Any]:
 
 def _probe_dharma() -> dict[str, Any]:
     from whitemagic.dharma.rules import get_rules_engine
+
     engine = get_rules_engine()
     return {"profile": engine.get_profile(), "rules": len(engine.get_rules())}
 
 
 def _probe_maturity() -> dict[str, Any]:
     from whitemagic.core.governance.maturity_gates import get_maturity_engine
+
     engine = get_maturity_engine()
     report = engine.assess()
     return {"stage": report.to_dict().get("current_stage", "unknown")}
@@ -417,6 +704,7 @@ def _probe_maturity() -> dict[str, Any]:
 
 def _probe_dream() -> dict[str, Any]:
     from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
     dc = get_dream_cycle()
     phase_obj = getattr(dc, "current_phase", None)
     phase_name = getattr(phase_obj, "name", "IDLE")
@@ -428,20 +716,27 @@ def _probe_dream() -> dict[str, Any]:
 
 def _probe_temporal() -> dict[str, Any]:
     from whitemagic.core.resonance.temporal_scheduler import get_temporal_scheduler
+
     scheduler = get_temporal_scheduler()
     return {"running": scheduler.is_running}
 
 
 def _probe_homeostasis() -> dict[str, Any]:
     from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
     loop = get_homeostatic_loop()
     stats = loop.get_stats()
-    return {"running": stats.get("running", False),
-            "total_checks": stats.get("total_checks", 0)}
+    return {
+        "running": stats.get("running", False),
+        "total_checks": stats.get("total_checks", 0),
+    }
 
 
 def _probe_resonance() -> dict[str, Any]:
     from whitemagic.tools.prat_resonance import get_resonance_summary
+
     summary = get_resonance_summary()
-    return {"session_calls": summary["session_calls"],
-            "last_gana": summary.get("last_gana")}
+    return {
+        "session_calls": summary["session_calls"],
+        "last_gana": summary.get("last_gana"),
+    }

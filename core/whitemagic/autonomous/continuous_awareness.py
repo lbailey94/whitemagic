@@ -26,7 +26,12 @@ def _get_implementation():
             ParallelCognition,
         )
         from whitemagic.fileio import file_lock
-        return {"ParallelCognition": ParallelCognition, "ContinuousMonitor": ContinuousMonitor, "file_lock": file_lock}
+
+        return {
+            "ParallelCognition": ParallelCognition,
+            "ContinuousMonitor": ContinuousMonitor,
+            "file_lock": file_lock,
+        }
     except ImportError:
         return None
 
@@ -38,10 +43,13 @@ class ContinuousSelfAwareness:
         self._impl = _get_implementation()
         if root_path is None:
             from whitemagic.config import PROJECT_ROOT
+
             root_path = str(PROJECT_ROOT)
         self.root_path = root_path
         if self._impl is not None:
-            self.monitor = self._impl["ContinuousMonitor"](root_path, interval_seconds=30)
+            self.monitor = self._impl["ContinuousMonitor"](
+                root_path, interval_seconds=30
+            )
             self.cognition = self._impl["ParallelCognition"]()
         state_dir = self._get_state_dir()
         self.awareness_log = state_dir / "awareness.jsonl"
@@ -53,6 +61,7 @@ class ContinuousSelfAwareness:
     def _get_state_dir() -> Path:
         """Get the runtime state directory via canonical paths config."""
         from whitemagic.config.paths import WM_STATE_ROOT
+
         return Path(WM_STATE_ROOT) / "awareness"
 
     def observe_once(self) -> dict[str, Any]:
@@ -64,21 +73,34 @@ class ContinuousSelfAwareness:
                 "timestamp": datetime.now().isoformat(),
             }
         snapshot = self.monitor.monitor_once()
-        drift = self.monitor.detect_drift() if len(self.monitor.snapshots) >= 2 else {"drift_detected": False}
+        drift = (
+            self.monitor.detect_drift()
+            if len(self.monitor.snapshots) >= 2
+            else {"drift_detected": False}
+        )
         patterns = self._detect_patterns(snapshot, drift)
         adjustments = self._decide_adjustments(patterns)
         observation = {
             "timestamp": datetime.now().isoformat(),
-            "snapshot": {"files": snapshot["files"], "lines": snapshot["lines"], "duration": snapshot["duration"]},
+            "snapshot": {
+                "files": snapshot["files"],
+                "lines": snapshot["lines"],
+                "duration": snapshot["duration"],
+            },
             "drift": drift,
             "patterns": patterns,
             "adjustments": adjustments,
-            "meta": {"snapshot_speed": f"{snapshot['speed_files_per_sec']:.0f} files/sec", "self_aware": True},
+            "meta": {
+                "snapshot_speed": f"{snapshot['speed_files_per_sec']:.0f} files/sec",
+                "self_aware": True,
+            },
         }
         self._log_observation(observation)
         return observation
 
-    def _detect_patterns(self, snapshot: dict[str, Any], drift: dict[str, Any]) -> list[str]:
+    def _detect_patterns(
+        self, snapshot: dict[str, Any], drift: dict[str, Any]
+    ) -> list[str]:
         patterns = []
         if drift.get("drift_detected"):
             if drift.get("file_change", 0) > 0:

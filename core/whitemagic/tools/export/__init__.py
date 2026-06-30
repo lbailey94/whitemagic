@@ -1,4 +1,5 @@
 """WhiteMagic Export/Import subpackage."""
+
 from whitemagic.tools.export.manager import (  # noqa: F401
     ExportImportManager,
     ExportRequest,

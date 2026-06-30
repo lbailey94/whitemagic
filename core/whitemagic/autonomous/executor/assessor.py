@@ -34,7 +34,9 @@ class ProgressAssessor:
         self.plateau_threshold = 10  # Iterations without progress
         self.iterations_since_success = 0
 
-    async def assess_objective(self, obj: Objective, result: ExecutionResult) -> Assessment:
+    async def assess_objective(
+        self, obj: Objective, result: ExecutionResult
+    ) -> Assessment:
         """Assess if objective is complete."""
         # Check for errors first
         if result.errors:
@@ -53,7 +55,10 @@ class ProgressAssessor:
                 )
 
             # Check for plateau (no progress for too long)
-            if self.iterations_since_success >= self.plateau_threshold and not self.plateau_detected:
+            if (
+                self.iterations_since_success >= self.plateau_threshold
+                and not self.plateau_detected
+            ):
                 self.plateau_detected = True
                 return Assessment(
                     complete=False,
@@ -89,7 +94,10 @@ class ProgressAssessor:
                 )
 
             # Check for plateau
-            if self.iterations_since_success >= self.plateau_threshold and not self.plateau_detected:
+            if (
+                self.iterations_since_success >= self.plateau_threshold
+                and not self.plateau_detected
+            ):
                 self.plateau_detected = True
                 return Assessment(
                     complete=False,
@@ -119,9 +127,12 @@ class ProgressAssessor:
             summary=f"Completed: {obj.description}",
         )
 
-    async def check_criteria(self, criteria: list[str], result: ExecutionResult) -> bool:
+    async def check_criteria(
+        self, criteria: list[str], result: ExecutionResult
+    ) -> bool:
         """Check if success criteria are met."""
         from pathlib import Path
+
         if not criteria:
             return bool(result.success)  # No criteria = rely on execution result
 

@@ -16,11 +16,11 @@ from whitemagic.security.audit_signing import get_audit_signer
 
 
 class TestKarmaLedgerSigning:
-
     def test_audit_signer_generates_ed25519_signature(self):
         signer = get_audit_signer()
         if not signer.is_available():
             import pytest
+
             pytest.skip("cryptography library unavailable")
 
         sig_data = signer.sign("test_payload")
@@ -35,18 +35,22 @@ class TestKarmaLedgerSigning:
         signer = get_audit_signer()
         if not signer.is_available():
             import pytest
+
             pytest.skip("cryptography library unavailable")
 
         payload = "karma_test_payload"
         sig_data = signer.sign(payload)
         assert sig_data is not None
         assert signer.verify(payload, sig_data["signature"], sig_data["key_id"])
-        assert not signer.verify(payload + "_tampered", sig_data["signature"], sig_data["key_id"])
+        assert not signer.verify(
+            payload + "_tampered", sig_data["signature"], sig_data["key_id"]
+        )
 
     def test_ledger_record_includes_signature(self):
         signer = get_audit_signer()
         if not signer.is_available():
             import pytest
+
             pytest.skip("cryptography library unavailable")
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -66,12 +70,17 @@ class TestKarmaLedgerSigning:
         signer = get_audit_signer()
         if not signer.is_available():
             import pytest
+
             pytest.skip("cryptography library unavailable")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             ledger = KarmaLedger(storage_dir=Path(tmpdir))
-            ledger.record(tool="t1", declared_safety="READ", actual_writes=0, success=True)
-            ledger.record(tool="t2", declared_safety="WRITE", actual_writes=1, success=True)
+            ledger.record(
+                tool="t1", declared_safety="READ", actual_writes=0, success=True
+            )
+            ledger.record(
+                tool="t2", declared_safety="WRITE", actual_writes=1, success=True
+            )
 
             result = ledger.verify_chain()
             assert result["valid"] is True
@@ -81,6 +90,7 @@ class TestKarmaLedgerSigning:
         signer = get_audit_signer()
         if not signer.is_available():
             import pytest
+
             pytest.skip("cryptography library unavailable")
 
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -20,15 +20,18 @@ logger = logging.getLogger(__name__)
 _whitemagic_rust = None
 _ipc_initialized = False
 
+
 def _get_rs():
     global _whitemagic_rust
     if _whitemagic_rust is None:
         try:
             import whitemagic_rust as rs
+
             _whitemagic_rust = rs
         except ImportError:
             _whitemagic_rust = False
     return _whitemagic_rust
+
 
 def init_ipc(node_name: str | None = None) -> dict[str, Any]:
     """Initialize IPC bridge for this process."""
@@ -39,10 +42,11 @@ def init_ipc(node_name: str | None = None) -> dict[str, Any]:
 
     if node_name is None:
         import os
+
         node_name = f"wm_{os.getpid()}"
 
     rs = _get_rs()
-    if not rs or not hasattr(rs, 'ipc_bridge'):
+    if not rs or not hasattr(rs, "ipc_bridge"):
         return {"initialized": False, "error": "Rust bridge unavailable"}
 
     try:
@@ -54,13 +58,14 @@ def init_ipc(node_name: str | None = None) -> dict[str, Any]:
         logger.warning("IPC init failed (using fallback): %s", e, exc_info=True)
         return {"initialized": False, "error": str(e)}
 
+
 def publish(channel: str, payload: bytes) -> dict[str, Any]:
     """Publish bytes to an IPC channel."""
     if not _ipc_initialized:
         init_ipc()
 
     rs = _get_rs()
-    if not rs or not hasattr(rs, 'ipc_bridge'):
+    if not rs or not hasattr(rs, "ipc_bridge"):
         return {"published": False, "error": "Rust bridge unavailable"}
 
     try:
@@ -69,9 +74,11 @@ def publish(channel: str, payload: bytes) -> dict[str, Any]:
     except Exception as e:
         return {"published": False, "error": str(e)}
 
+
 def publish_json(channel: str, data: dict) -> dict[str, Any]:
     """Publish JSON-serializable data to an IPC channel."""
     return publish(channel, json.dumps(data).encode())
+
 
 def try_receive(channel: str, max_samples: int = 16) -> list[bytes]:
     """Non-blocking poll for up to `max_samples` pending messages on a channel.
@@ -94,6 +101,7 @@ def try_receive(channel: str, max_samples: int = 16) -> list[bytes]:
         logger.debug("ipc_try_receive(%s) failed: %s", channel, e, exc_info=True)
         return []
 
+
 def try_receive_json(channel: str, max_samples: int = 16) -> list[dict]:
     """Like try_receive, but parse each payload as JSON and skip malformed entries."""
     out: list[dict] = []
@@ -104,10 +112,11 @@ def try_receive_json(channel: str, max_samples: int = 16) -> list[dict]:
             continue
     return out
 
+
 def get_status() -> dict[str, Any]:
     """Get IPC bridge status."""
     rs = _get_rs()
-    if not rs or not hasattr(rs, 'ipc_bridge'):
+    if not rs or not hasattr(rs, "ipc_bridge"):
         return {"error": "Rust bridge unavailable"}
 
     try:
@@ -115,6 +124,7 @@ def get_status() -> dict[str, Any]:
         return dict(res) if res is not None else {"error": "empty status"}
     except Exception as e:
         return {"error": str(e)}
+
 
 def shutdown_ipc():
     """Shutdown IPC (auto-called at exit)."""
@@ -151,6 +161,7 @@ def tap_harmony(max_samples: int = 10) -> list[dict]:
     Returns pending harmony vector broadcast messages as a list of dicts.
     """
     return try_receive_json("wm/harmony", max_samples=max_samples)
+
 
 # Auto-initialize on first use if WM_AUTO_IPC is set
 if os.environ.get("WM_AUTO_IPC", "0") == "1":

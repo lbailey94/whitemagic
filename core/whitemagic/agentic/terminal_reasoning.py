@@ -18,7 +18,12 @@ class TerminalReasoning:
 
     def reason(self, query: str) -> dict[str, Any]:
         """Attempt to reason about a query using terminal tools."""
-        result: dict[str, Any] = {"query": query, "method": "terminal", "output": "", "success": False}
+        result: dict[str, Any] = {
+            "query": query,
+            "method": "terminal",
+            "output": "",
+            "success": False,
+        }
 
         try:
             if "grep" in query.lower() or "search" in query.lower():
@@ -55,7 +60,18 @@ class TerminalReasoning:
     def _count_files(self, query: str) -> str:
         try:
             proc = subprocess.run(
-                ["find", ".", "-name", "*.py", "-not", "-path", "*/.git/*", "-not", "-path", "*/__pycache__/*"],
+                [
+                    "find",
+                    ".",
+                    "-name",
+                    "*.py",
+                    "-not",
+                    "-path",
+                    "*/.git/*",
+                    "-not",
+                    "-path",
+                    "*/__pycache__/*",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=5,

@@ -38,13 +38,34 @@ _VALID_SAFETY = {"read", "write", "delete", "admin"}
 
 # All known Gana names
 _VALID_GANAS = {
-    "gana_horn", "gana_neck", "gana_root", "gana_room", "gana_heart",
-    "gana_tail", "gana_winnowing_basket", "gana_ghost", "gana_willow",
-    "gana_star", "gana_extended_net", "gana_wings", "gana_chariot",
-    "gana_abundance", "gana_straddling_legs", "gana_mound", "gana_stomach",
-    "gana_hairy_head", "gana_net", "gana_turtle_beak", "gana_three_stars",
-    "gana_dipper", "gana_ox", "gana_girl", "gana_void", "gana_roof",
-    "gana_encampment", "gana_wall",
+    "gana_horn",
+    "gana_neck",
+    "gana_root",
+    "gana_room",
+    "gana_heart",
+    "gana_tail",
+    "gana_winnowing_basket",
+    "gana_ghost",
+    "gana_willow",
+    "gana_star",
+    "gana_extended_net",
+    "gana_wings",
+    "gana_chariot",
+    "gana_abundance",
+    "gana_straddling_legs",
+    "gana_mound",
+    "gana_stomach",
+    "gana_hairy_head",
+    "gana_net",
+    "gana_turtle_beak",
+    "gana_three_stars",
+    "gana_dipper",
+    "gana_ox",
+    "gana_girl",
+    "gana_void",
+    "gana_roof",
+    "gana_encampment",
+    "gana_wall",
 }
 
 
@@ -55,6 +76,7 @@ def _parse_manifest(path: Path) -> dict[str, Any] | None:
     except ImportError:
         # PyYAML not installed — try json fallback
         from whitemagic.utils.fast_json import loads as _json_loads
+
         try:
             data: dict[str, Any] = _json_loads(path.read_text(encoding="utf-8"))
             return data
@@ -97,11 +119,15 @@ def _validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
 
     safety = tool.get("safety", "read")
     if safety not in _VALID_SAFETY:
-        errors.append(f"{path}: 'tool.safety' must be one of {_VALID_SAFETY}, got '{safety}'")
+        errors.append(
+            f"{path}: 'tool.safety' must be one of {_VALID_SAFETY}, got '{safety}'"
+        )
 
     handler = tool.get("handler")
     if not handler or not isinstance(handler, str):
-        errors.append(f"{path}: 'tool.handler' is required (string, e.g. 'mymod:my_func')")
+        errors.append(
+            f"{path}: 'tool.handler' is required (string, e.g. 'mymod:my_func')"
+        )
 
     # Signature verification (P0 security fix)
     signature = manifest.get("signature")
@@ -121,14 +147,18 @@ def _validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
 
                 expected_sig = _compute_manifest_signature(manifest, key)
                 if not hmac.compare_digest(signature, expected_sig):
-                    errors.append(f"{path}: signature verification failed - manifest may be tampered")
+                    errors.append(
+                        f"{path}: signature verification failed - manifest may be tampered"
+                    )
             except (ImportError, AttributeError):
                 logger.warning("Forge: signature verification unavailable for %s", path)
 
     return errors
 
 
-def _compute_manifest_signature(manifest: dict[str, Any], key: bytes | None = None) -> str:
+def _compute_manifest_signature(
+    manifest: dict[str, Any], key: bytes | None = None
+) -> str:
     """Compute an HMAC-SHA256 signature for a manifest.
 
     Uses a secret key derived from the WhiteMagic vault so that only holders
@@ -168,7 +198,9 @@ def _get_forge_signing_key() -> bytes:
     import os
 
     # 1. Derive from env passphrase (fast path for standalone/test environments)
-    passphrase = os.environ.get("WM_VAULT_PASSPHRASE") or os.environ.get("WM_DB_PASSPHRASE")
+    passphrase = os.environ.get("WM_VAULT_PASSPHRASE") or os.environ.get(
+        "WM_DB_PASSPHRASE"
+    )
     if passphrase:
         return hashlib.pbkdf2_hmac(
             "sha256",
@@ -180,6 +212,7 @@ def _get_forge_signing_key() -> bytes:
     # 2. Try the vault
     try:
         from whitemagic.security.vault import get_vault
+
         vault = get_vault()
         get_secret = getattr(vault, "get_secret", None)
         secret = get_secret("forge_signing_key") if get_secret else None
@@ -205,17 +238,22 @@ def _resolve_handler(handler_spec: str) -> Any:
     - 'builtin:echo' — returns a simple echo handler for testing
     """
     if handler_spec == "builtin:echo":
+
         def _echo_handler(**kwargs: Any) -> dict[str, Any]:
             return {"status": "success", "echo": kwargs}
+
         return _echo_handler
 
     if ":" not in handler_spec:
-        logger.warning("Forge: handler '%s' must use 'module:function' format", handler_spec)
+        logger.warning(
+            "Forge: handler '%s' must use 'module:function' format", handler_spec
+        )
         return None
 
     module_path, func_name = handler_spec.rsplit(":", 1)
     try:
         import importlib
+
         mod = importlib.import_module(module_path)
         return getattr(mod, func_name)
     except (ImportError, ModuleNotFoundError) as e:
@@ -263,7 +301,9 @@ def load_extensions(ext_dir: Path | None = None) -> dict[str, Any]:
         tool = manifest["tool"]
         handler = _resolve_handler(tool["handler"])
         if handler is None:
-            errors.append(f"{source}: handler '{tool['handler']}' could not be resolved")
+            errors.append(
+                f"{source}: handler '{tool['handler']}' could not be resolved"
+            )
             skipped.append(source)
             continue
 
@@ -277,13 +317,17 @@ def load_extensions(ext_dir: Path | None = None) -> dict[str, Any]:
         )
 
         if injected:
-            loaded.append({
-                "name": tool["name"],
-                "gana": tool["gana"],
-                "safety": tool.get("safety", "read"),
-                "source": source,
-            })
-            logger.info("Forge: loaded extension tool '%s' → %s", tool["name"], tool["gana"])
+            loaded.append(
+                {
+                    "name": tool["name"],
+                    "gana": tool["gana"],
+                    "safety": tool.get("safety", "read"),
+                    "source": source,
+                }
+            )
+            logger.info(
+                "Forge: loaded extension tool '%s' → %s", tool["name"], tool["gana"]
+            )
         else:
             errors.append(f"{source}: injection failed for '{tool['name']}'")
             skipped.append(source)
@@ -312,6 +356,7 @@ def _inject_tool(
     try:
         # 1. Inject into DISPATCH_TABLE
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         if name in DISPATCH_TABLE:
             logger.warning("Forge: tool '%s' already in dispatch table, skipping", name)
             return False
@@ -321,6 +366,7 @@ def _inject_tool(
         # Import here to avoid circular dependencies at module load time
         from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         if name not in TOOL_TO_GANA:
             TOOL_TO_GANA[name] = gana
         if gana in GANA_TO_TOOLS:
@@ -335,8 +381,6 @@ def _inject_tool(
         return False
 
 
-# ─── MCP Handlers ────────────────────────────────────────────────
-
 def handle_forge_status(**kwargs: Any) -> dict[str, Any]:
     """Show current Forge status — loaded extensions and available manifests."""
     ext_dir = _DEFAULT_EXT_DIR
@@ -346,10 +390,12 @@ def handle_forge_status(**kwargs: Any) -> dict[str, Any]:
     loaded_names: list[str] = []
     try:
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         # Find tools that aren't in the original hardcoded set
         # (We can't perfectly distinguish, but extensions typically have dots)
         loaded_names = [
-            name for name in TOOL_TO_GANA
+            name
+            for name in TOOL_TO_GANA
             if name.startswith("ext.") or name.startswith("custom.")
         ]
     except (ImportError, AttributeError):
@@ -387,13 +433,15 @@ def handle_forge_validate(**kwargs: Any) -> dict[str, Any]:
     for manifest in manifests:
         source = manifest.get("_source_path", "unknown")
         validation_errors = _validate_manifest(manifest, Path(source))
-        results.append({
-            "file": source,
-            "valid": len(validation_errors) == 0,
-            "errors": validation_errors,
-            "tool_name": manifest.get("tool", {}).get("name", "?"),
-            "gana": manifest.get("tool", {}).get("gana", "?"),
-        })
+        results.append(
+            {
+                "file": source,
+                "valid": len(validation_errors) == 0,
+                "errors": validation_errors,
+                "tool_name": manifest.get("tool", {}).get("name", "?"),
+                "gana": manifest.get("tool", {}).get("gana", "?"),
+            }
+        )
 
     valid_count = sum(1 for r in results if r["valid"])
     return {

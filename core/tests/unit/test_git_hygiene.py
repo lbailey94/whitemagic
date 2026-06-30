@@ -12,6 +12,7 @@ from whitemagic.harmony.git_hygiene import (
 
 def _mock_repo(porcelain_output: str, branch: str = "main") -> MagicMock:
     """Return a side_effect for subprocess.run that answers git status/branch."""
+
     def side_effect(cmd, **kwargs):
         result = MagicMock()
         if "branch" in cmd:
@@ -22,6 +23,7 @@ def _mock_repo(porcelain_output: str, branch: str = "main") -> MagicMock:
             result.stderr = ""
             result.returncode = 0
         return result
+
     return side_effect
 
 

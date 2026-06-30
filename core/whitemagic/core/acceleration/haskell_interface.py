@@ -15,14 +15,70 @@ _HASKELL_DIR = Path(__file__).resolve().parents[3] / "haskell"
 # Binary: bit 0 = bottom line, bit 5 = top line. 1=Yang, 0=Yin.
 # Cross-referenced with Wikibooks "I Ching/The 64 Hexagrams".
 _KING_WEN_TABLE = [
-    2, 24, 7, 19, 15, 36, 46, 11,
-    16, 51, 40, 54, 62, 55, 32, 34,
-    8, 3, 29, 60, 39, 63, 48, 5,
-    45, 17, 47, 58, 31, 49, 28, 43,
-    23, 27, 4, 41, 52, 22, 18, 26,
-    35, 21, 64, 38, 56, 30, 50, 14,
-    20, 42, 59, 61, 53, 37, 57, 9,
-    12, 25, 6, 10, 33, 13, 44, 1,
+    2,
+    24,
+    7,
+    19,
+    15,
+    36,
+    46,
+    11,
+    16,
+    51,
+    40,
+    54,
+    62,
+    55,
+    32,
+    34,
+    8,
+    3,
+    29,
+    60,
+    39,
+    63,
+    48,
+    5,
+    45,
+    17,
+    47,
+    58,
+    31,
+    49,
+    28,
+    43,
+    23,
+    27,
+    4,
+    41,
+    52,
+    22,
+    18,
+    26,
+    35,
+    21,
+    64,
+    38,
+    56,
+    30,
+    50,
+    14,
+    20,
+    42,
+    59,
+    61,
+    53,
+    37,
+    57,
+    9,
+    12,
+    25,
+    6,
+    10,
+    33,
+    13,
+    44,
+    1,
 ]
 
 
@@ -31,7 +87,7 @@ def _binary_to_king_wen(lines: list[int]) -> int:
     binary = 0
     for i, line in enumerate(lines):
         if line:
-            binary |= (1 << i)
+            binary |= 1 << i
     return _KING_WEN_TABLE[binary]
 
 
@@ -78,6 +134,7 @@ class HaskellBridge:
         """
         if lines is None:
             import random
+
             lines = [random.randint(0, 1) for _ in range(6)]
 
         if not self._available:

@@ -7,6 +7,7 @@ Provides the `image_analyze` tool for gana_chariot. Uses a tiered approach:
 
 Returns a stable JSON envelope with metadata, structural analysis, and OCR text.
 """
+
 import json
 import logging
 import os
@@ -24,6 +25,7 @@ _OCR_API_URL = "https://api.ocr.space/parse/image"
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
@@ -175,26 +177,38 @@ def _structural_analysis(img: Any) -> dict[str, Any]:
         else:
             if in_band:
                 band_height = y - band_start
-                avg_density = round(sum(row_densities[band_start:y]) / max(1, band_height), 1)
-                band_type = "thick" if band_height > 20 else "thin" if band_height > 5 else "line"
-                text_bands.append({
-                    "y_start": band_start,
-                    "y_end": y - 1,
-                    "height": band_height,
-                    "avg_density": avg_density,
-                    "type": band_type,
-                })
+                avg_density = round(
+                    sum(row_densities[band_start:y]) / max(1, band_height), 1
+                )
+                band_type = (
+                    "thick"
+                    if band_height > 20
+                    else "thin"
+                    if band_height > 5
+                    else "line"
+                )
+                text_bands.append(
+                    {
+                        "y_start": band_start,
+                        "y_end": y - 1,
+                        "height": band_height,
+                        "avg_density": avg_density,
+                        "type": band_type,
+                    }
+                )
                 in_band = False
     if in_band:
         band_height = h - band_start
         avg_density = round(sum(row_densities[band_start:h]) / max(1, band_height), 1)
-        text_bands.append({
-            "y_start": band_start,
-            "y_end": h - 1,
-            "height": band_height,
-            "avg_density": avg_density,
-            "type": "thick" if band_height > 20 else "thin",
-        })
+        text_bands.append(
+            {
+                "y_start": band_start,
+                "y_end": h - 1,
+                "height": band_height,
+                "avg_density": avg_density,
+                "type": "thick" if band_height > 20 else "thin",
+            }
+        )
 
     # Dominant colors (sampled from 50x50 downscale)
     small = img.convert("RGB").resize((50, 50))
@@ -202,15 +216,14 @@ def _structural_analysis(img: Any) -> dict[str, Any]:
     top_colors = []
     if colors:
         colors.sort(key=lambda c: c[0], reverse=True)
-        top_colors = [
-            {"count": c[0], "rgb": list(c[1])}
-            for c in colors[:5]
-        ]
+        top_colors = [{"count": c[0], "rgb": list(c[1])} for c in colors[:5]]
 
     return {
         "dimensions": {"width": w, "height": h},
         "content_bounding_box": bbox,
-        "content_coverage_pct": round((content_w * content_h) / (w * h) * 100, 1) if has_content else 0,
+        "content_coverage_pct": round((content_w * content_h) / (w * h) * 100, 1)
+        if has_content
+        else 0,
         "tonal_distribution": {
             "dark_pct": dark_pct,
             "mid_pct": mid_pct,
@@ -344,12 +357,20 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
                 # Tier 1: Tesseract
                 text, err = _tesseract_ocr(gray_path)
                 if text:
-                    ocr_result = {"text": text[:max_text_length], "method": "tesseract", "error": None}
+                    ocr_result = {
+                        "text": text[:max_text_length],
+                        "method": "tesseract",
+                        "error": None,
+                    }
                 else:
                     # Tier 2: Online OCR
                     text, err = _online_ocr(gray_path)
                     if text:
-                        ocr_result = {"text": text[:max_text_length], "method": "ocr_space_api", "error": None}
+                        ocr_result = {
+                            "text": text[:max_text_length],
+                            "method": "ocr_space_api",
+                            "error": None,
+                        }
                     else:
                         ocr_result = {
                             "text": None,
@@ -366,12 +387,15 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
             "ocr": ocr_result,
         }
 
-        _emit("IMAGE_ANALYZE", {
-            "image": os.path.basename(image_path),
-            "ocr_method": ocr_result.get("method"),
-            "text_length": len(ocr_result.get("text") or ""),
-            "bands": structure["text_band_count"],
-        })
+        _emit(
+            "IMAGE_ANALYZE",
+            {
+                "image": os.path.basename(image_path),
+                "ocr_method": ocr_result.get("method"),
+                "text_length": len(ocr_result.get("text") or ""),
+                "bands": structure["text_band_count"],
+            },
+        )
 
         return {"status": "success", **result}
 

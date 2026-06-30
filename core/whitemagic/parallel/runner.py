@@ -182,7 +182,9 @@ class ParallelTestRunner:
             if self.use_processes:
                 test_root = str(self.test_dir.parent)
                 future_to_test = {
-                    executor.submit(_run_single_test_file_worker, str(tf), test_root): tf
+                    executor.submit(
+                        _run_single_test_file_worker, str(tf), test_root
+                    ): tf
                     for tf in test_files
                 }
             else:

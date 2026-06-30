@@ -1,10 +1,12 @@
 # ruff: noqa: BLE001
 """Garden tool handlers."""
+
 from typing import Any
 
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
@@ -17,6 +19,7 @@ def handle_garden_activate(**kwargs: Any) -> dict[str, Any]:
     """
     garden_name = kwargs.get("garden", "").lower()
     from whitemagic.gardens import get_garden
+
     get_garden(garden_name)
     _emit("GARDEN_ACTIVATED", {"garden": garden_name})
     return {"status": "success", "garden": garden_name, "active": True}
@@ -30,6 +33,7 @@ def handle_garden_status(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.gardens import get_all_gardens
+
     gardens = get_all_gardens()
     return {"status": "success", "count": len(gardens), "gardens": list(gardens.keys())}
 
@@ -44,6 +48,7 @@ def handle_garden_synergy(**kwargs: Any) -> dict[str, Any]:
     try:
         from whitemagic.gardens.cross_pollination import get_resonance_matrix
         from whitemagic.gardens.garden_state import get_garden_state_tracker
+
         matrix = get_resonance_matrix()
         tracker = get_garden_state_tracker()
         stats = matrix.get_resonance_stats()
@@ -130,11 +135,13 @@ def handle_garden_list_files(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.garden_directory import get_garden_directory
+
         directory = get_garden_directory()
         files = directory.get_garden_files(garden, file_type)
 
         # Get garden metadata
         from whitemagic.core.intelligence.garden_gana_registry import get_by_garden
+
         entry = get_by_garden(garden)
 
         return {
@@ -166,6 +173,7 @@ def handle_garden_list_functions(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.garden_function_registry import get_function_registry
+
         registry = get_function_registry()
         functions = registry.get_garden_functions(garden)
 
@@ -180,8 +188,7 @@ def handle_garden_list_functions(**kwargs: Any) -> dict[str, Any]:
                     "element": f.element,
                     "is_public": f.is_public,
                 }
-                for f in functions[:
-                    limit]
+                for f in functions[:limit]
             ],
             "count": len(functions),
             "truncated": len(functions) > limit,
@@ -211,6 +218,7 @@ def handle_garden_search(**kwargs: Any) -> dict[str, Any]:
         # Search files
         if search_type in ("files", "all"):
             from whitemagic.core.garden_directory import get_garden_directory
+
             directory = get_garden_directory()
             file_results = directory.search_files(query, gardens)
             results["files"] = [
@@ -220,13 +228,13 @@ def handle_garden_search(**kwargs: Any) -> dict[str, Any]:
                     "type": m.file_type,
                     "loc": m.loc_count,
                 }
-                for m in file_results[:
-                    50]
+                for m in file_results[:50]
             ]
 
         # Search functions
         if search_type in ("functions", "all"):
             from whitemagic.core.garden_function_registry import get_function_registry
+
             registry = get_function_registry()
             func_results = registry.search_functions(query, gardens)
             results["functions"] = [
@@ -235,8 +243,7 @@ def handle_garden_search(**kwargs: Any) -> dict[str, Any]:
                     "file": f.file_path,
                     "garden": f.primary_garden,
                 }
-                for f in func_results[:
-                    50]
+                for f in func_results[:50]
             ]
 
         return {
@@ -341,7 +348,10 @@ def handle_garden_map_system(**kwargs: Any) -> dict[str, Any]:
         "dream": {"primary": "mystery", "operating": ["transformation", "wisdom"]},
         "mcp": {"primary": "voice", "operating": ["connection", "sangha"]},
         "immune": {"primary": "healing", "operating": ["protection", "sanctuary"]},
-        "evolution": {"primary": "transformation", "operating": ["creation", "courage"]},
+        "evolution": {
+            "primary": "transformation",
+            "operating": ["creation", "courage"],
+        },
         "governance": {"primary": "dharma", "operating": ["truth", "wisdom"]},
         "resonance": {"primary": "connection", "operating": ["love", "sangha"]},
         "consciousness": {"primary": "mystery", "operating": ["wonder", "wisdom"]},
@@ -371,6 +381,7 @@ def handle_garden_map_system(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.garden_directory import get_garden_directory
+
         directory = get_garden_directory()
 
         # Get files for primary garden
@@ -438,6 +449,7 @@ def handle_garden_browse(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.garden_virtual_fs import get_garden_virtual_fs
+
         vfs = get_garden_virtual_fs()
 
         if not vfs._loaded:
@@ -476,6 +488,7 @@ def handle_garden_resolve(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.garden_virtual_fs import get_garden_virtual_fs
+
         vfs = get_garden_virtual_fs()
 
         if not vfs._loaded:

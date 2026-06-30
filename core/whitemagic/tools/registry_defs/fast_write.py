@@ -17,9 +17,21 @@ TOOLS: list[ToolDefinition] = [
             "properties": {
                 "path": {"type": "string", "description": "Target file path"},
                 "content": {"type": "string", "description": "File content to write"},
-                "validate": {"type": "boolean", "default": True, "description": "Validate Python syntax after write"},
-                "backup": {"type": "boolean", "default": False, "description": "Backup existing file to .bak before write"},
-                "dry_run": {"type": "boolean", "default": False, "description": "Show what would be written without writing"},
+                "validate": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Validate Python syntax after write",
+                },
+                "backup": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Backup existing file to .bak before write",
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Show what would be written without writing",
+                },
             },
             "required": ["path", "content"],
         },
@@ -34,7 +46,11 @@ TOOLS: list[ToolDefinition] = [
             "properties": {
                 "path": {"type": "string", "description": "Target file path"},
                 "content": {"type": "string", "description": "Content to append"},
-                "validate": {"type": "boolean", "default": True, "description": "Validate Python syntax after append"},
+                "validate": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Validate Python syntax after append",
+                },
             },
             "required": ["path", "content"],
         },
@@ -47,7 +63,10 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "files": {"type": "object", "description": "Dict of {path: content} pairs"},
+                "files": {
+                    "type": "object",
+                    "description": "Dict of {path: content} pairs",
+                },
                 "validate": {"type": "boolean", "default": True},
                 "backup": {"type": "boolean", "default": False},
             },

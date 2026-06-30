@@ -8,20 +8,22 @@ import pytest
 
 try:
     from whitemagic.core.resonance.event_types import EventType
+
     # Monkey patch EventType to avoid missing attribute errors in obsolete tests
-    setattr(EventType, 'VOTE_SESSION_CLOSED', 'VOTE_SESSION_CLOSED')
-    setattr(EventType, 'VOTE_CONSENSUS_REACHED', 'VOTE_CONSENSUS_REACHED')
-    setattr(EventType, 'TASK_FAILED', 'TASK_FAILED')
-    setattr(EventType, 'TASK_CREATED', 'TASK_CREATED')
-    setattr(EventType, 'AGENT_DEREGISTERED', 'AGENT_DEREGISTERED')
-    setattr(EventType, 'BROKER_DISCONNECTED', 'BROKER_DISCONNECTED')
-    setattr(EventType, 'BROKER_MESSAGE_PUBLISHED', 'BROKER_MESSAGE_PUBLISHED')
+    setattr(EventType, "VOTE_SESSION_CLOSED", "VOTE_SESSION_CLOSED")
+    setattr(EventType, "VOTE_CONSENSUS_REACHED", "VOTE_CONSENSUS_REACHED")
+    setattr(EventType, "TASK_FAILED", "TASK_FAILED")
+    setattr(EventType, "TASK_CREATED", "TASK_CREATED")
+    setattr(EventType, "AGENT_DEREGISTERED", "AGENT_DEREGISTERED")
+    setattr(EventType, "BROKER_DISCONNECTED", "BROKER_DISCONNECTED")
+    setattr(EventType, "BROKER_MESSAGE_PUBLISHED", "BROKER_MESSAGE_PUBLISHED")
 except ImportError:
     pass
 
 # Check if Rust backend is available
 try:
     import whitemagic_rust  # noqa: F401 — sentinel for RUST_AVAILABLE
+
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
@@ -86,6 +88,7 @@ def _stop_background_daemons():
     # Stop the GanYingBus global async worker thread
     try:
         import whitemagic.core.resonance._consolidated as _cons
+
         _cons._GLOBAL_WORKER_THREAD = None
         # Drain the queue to prevent stale events from being processed
         while not _cons._GLOBAL_ASYNC_QUEUE.empty():
@@ -99,6 +102,7 @@ def _stop_background_daemons():
     # Reset the MCP server _INITIALISED flag so it re-initializes cleanly
     try:
         import whitemagic.run_mcp_lean as _mcp
+
         if hasattr(_mcp, "_INITIALISED"):
             _mcp._INITIALISED = False
     except Exception:  # noqa: BLE001
@@ -107,6 +111,7 @@ def _stop_background_daemons():
     # Clean up Redis broker to prevent __del__ warnings at process exit
     try:
         from whitemagic.tools.handlers.broker import cleanup_broker
+
         cleanup_broker()
     except Exception:  # noqa: BLE001
         pass
@@ -114,6 +119,7 @@ def _stop_background_daemons():
     # Clean up Redis cache connection pools
     try:
         from whitemagic.cache.redis import clear_redis_cache
+
         clear_redis_cache()
     except Exception:  # noqa: BLE001
         pass
@@ -131,6 +137,7 @@ def _reset_singletons():
     # Try the new centralized registry first
     try:
         from whitemagic.utils.singleton import reset_all_singletons
+
         reset_all_singletons()
     except ImportError:
         pass
@@ -183,7 +190,10 @@ def _reset_singletons():
         # --- Dreaming ---
         ("whitemagic.core.dreaming.dream_cycle", "_dream_cycle"),
         # --- Pattern Consciousness ---
-        ("whitemagic.core.patterns.pattern_consciousness.resonance_cascade", "_orchestrator"),
+        (
+            "whitemagic.core.patterns.pattern_consciousness.resonance_cascade",
+            "_orchestrator",
+        ),
         # --- Mesh ---
         ("whitemagic.mesh.awareness", "_awareness"),
     ]
@@ -226,7 +236,9 @@ def tool_caller():
 
         def ok(self, tool_name: str, **kwargs):
             result = call_tool(tool_name, **kwargs)
-            assert result["status"] == "success", f"{tool_name} failed: {result.get('message')}"
+            assert result["status"] == "success", (
+                f"{tool_name} failed: {result.get('message')}"
+            )
             return result
 
         def err(self, tool_name: str, **kwargs):
@@ -253,6 +265,7 @@ def mcp_test_env(tmp_path_factory):
     holds file handles briefly after process teardown).
     """
     import shutil
+
     state_dir = tmp_path_factory.mktemp("wm_mcp_state")
     prev = {
         "WM_SILENT_INIT": os.environ.get("WM_SILENT_INIT"),
@@ -281,6 +294,7 @@ def mcp_test_env(tmp_path_factory):
 # Shows: [████████░░░░░░░░] 50.00% | 750/1500 | 8.2s | ETA 8.2s | ✓749 ✗1 | test_name
 # ---------------------------------------------------------------------------
 
+
 def pytest_addoption(parser):
     group = parser.getgroup("progress")
     group.addoption(
@@ -299,6 +313,7 @@ def pytest_collection_finish(session):
     global _progress_bar
     if session.config.getoption("progress", False):
         from whitemagic.utils.progress_bar import ProgressBar
+
         _progress_bar = ProgressBar(
             total=len(session.items),
             label="Tests",

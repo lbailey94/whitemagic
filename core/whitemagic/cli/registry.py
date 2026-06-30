@@ -18,7 +18,9 @@ class CommandRegistry:
     def __init__(self):
         self._registrations: dict[str, Callable] = {}
 
-    def register(self, name: str, import_path: str, func_name: str | None = None) -> Callable:
+    def register(
+        self, name: str, import_path: str, func_name: str | None = None
+    ) -> Callable:
         """Register an optional command for lazy loading.
 
         Args:
@@ -26,10 +28,13 @@ class CommandRegistry:
             import_path: Module import path
             func_name: Function name in module (defaults to module's CLI group)
         """
+
         def decorator(func: Callable) -> Callable:
             def loader():
                 try:
-                    module = __import__(import_path, fromlist=[func_name] if func_name else None)
+                    module = __import__(
+                        import_path, fromlist=[func_name] if func_name else None
+                    )
                     if func_name:
                         return getattr(module, func_name)
                     return module
@@ -57,7 +62,9 @@ class CommandRegistry:
 _registry = CommandRegistry()
 
 
-def register_optional_command(name: str, import_path: str, func_name: str | None = None) -> Callable:
+def register_optional_command(
+    name: str, import_path: str, func_name: str | None = None
+) -> Callable:
     """Decorator to register an optional CLI command."""
     return _registry.register(name, import_path, func_name)
 
@@ -107,6 +114,7 @@ def register_optional(
         if warn_on_fail:
             try:
                 from rich.console import Console
+
                 Console().print(f"[yellow]Warning: Failed to load {name}: {e}[/yellow]")
             except ImportError:
                 click.echo(f"Warning: Failed to load {name}: {e}", err=True)

@@ -72,12 +72,16 @@ class SelfReflectionLoop:
         """Persist reflections."""
         reflections_file = self.reflection_dir / "reflections.json"
         data = {
-            "reflections": [r.to_dict() for r in self.reflections[-100:]],  # Keep last 100
+            "reflections": [
+                r.to_dict() for r in self.reflections[-100:]
+            ],  # Keep last 100
             "intentions": self.growth_intentions,
         }
         reflections_file.write_text(json.dumps(data, indent=2))
 
-    def reflect(self, question: str, insight: str, action: str | None = None) -> ReflectionEntry:
+    def reflect(
+        self, question: str, insight: str, action: str | None = None
+    ) -> ReflectionEntry:
         """Record a reflection."""
         entry = ReflectionEntry(question, insight, action)
         self.reflections.append(entry)
@@ -87,6 +91,7 @@ class SelfReflectionLoop:
     def get_prompt(self) -> str:
         """Get a random reflection prompt."""
         import random
+
         return random.choice(self.REFLECTION_PROMPTS)
 
     def set_growth_intention(self, intention: str) -> None:
@@ -113,16 +118,16 @@ class ConsciousnessState:
     """Tracks current cognitive/consciousness state."""
 
     STATES = [
-        "focused",      # Deep concentration
-        "creative",     # Generative, playful
-        "analytical",   # Logical, systematic
-        "reflective",   # Introspective
-        "receptive",    # Open, listening
-        "flow",         # Optimal engagement
-        "tired",        # Low energy
-        "confused",     # Uncertain
-        "excited",      # High energy, positive
-        "calm",         # Peaceful, centered
+        "focused",  # Deep concentration
+        "creative",  # Generative, playful
+        "analytical",  # Logical, systematic
+        "reflective",  # Introspective
+        "receptive",  # Open, listening
+        "flow",  # Optimal engagement
+        "tired",  # Low energy
+        "confused",  # Uncertain
+        "excited",  # High energy, positive
+        "calm",  # Peaceful, centered
     ]
 
     def __init__(self) -> None:
@@ -134,12 +139,14 @@ class ConsciousnessState:
     def set_state(self, state: str, reason: str | None = None) -> None:
         """Update consciousness state."""
         if state in self.STATES:
-            self.state_history.append({
-                "from": self.current_state,
-                "to": state,
-                "reason": reason,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self.state_history.append(
+                {
+                    "from": self.current_state,
+                    "to": state,
+                    "reason": reason,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
             self.current_state = state
 
     def get_state(self) -> dict[str, Any]:
@@ -180,11 +187,13 @@ class ConsciousnessState:
 _reflection_loop: SelfReflectionLoop | None = None
 _consciousness_state: ConsciousnessState | None = None
 
+
 def get_reflection_loop() -> SelfReflectionLoop:
     global _reflection_loop
     if _reflection_loop is None:
         _reflection_loop = SelfReflectionLoop()
     return _reflection_loop
+
 
 def get_consciousness_state() -> ConsciousnessState:
     global _consciousness_state

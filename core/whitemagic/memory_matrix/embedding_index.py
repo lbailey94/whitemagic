@@ -30,7 +30,9 @@ class EmbeddingIndex:
         self.index_file = self.data_dir / "embedding_index.jsonl"
         self._index: list[dict[str, Any]] = []
 
-    def add(self, item_id: str, content: str, metadata: dict[str, Any] | None = None) -> None:
+    def add(
+        self, item_id: str, content: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Add content to the embedding index."""
         # Simple keyword-based embedding (hash-based pseudo-embedding)
         words = set(content.lower().split())
@@ -57,7 +59,12 @@ class EmbeddingIndex:
                 scored.append((score, entry))
         scored.sort(key=lambda x: -x[0])
         return [
-            {"id": e["id"], "content": e["content"], "score": s, "metadata": e["metadata"]}
+            {
+                "id": e["id"],
+                "content": e["content"],
+                "score": s,
+                "metadata": e["metadata"],
+            }
             for s, e in scored[:limit]
         ]
 

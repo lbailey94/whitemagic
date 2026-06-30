@@ -41,6 +41,7 @@ class DreamState:
 
         # Polyglot Router integration
         from whitemagic.optimization.polyglot_router import get_router
+
         self.router = get_router()
 
         self._connect_systems()
@@ -49,6 +50,7 @@ class DreamState:
         """Connect to all systems including PatternEngine."""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()
             logger.info("🎵 Dream State connected to Gan Ying Bus")
         except ImportError:
@@ -56,6 +58,7 @@ class DreamState:
 
         try:
             from whitemagic.core.immune.antibodies import AntibodyLibrary
+
             self.antibody_library = AntibodyLibrary()
             logger.info("💉 Dream State connected to Antibody Library")
         except ImportError:
@@ -65,6 +68,7 @@ class DreamState:
             from whitemagic.emergence.detector import (
                 EmergenceDetector,  # type: ignore[import-not-found]
             )
+
             self.emergence_detector = EmergenceDetector()
             logger.info("🌟 Dream State connected to Emergence Detector")
         except ImportError:
@@ -72,21 +76,25 @@ class DreamState:
 
         try:
             from whitemagic.core.memory.pattern_engine import get_engine
+
             self.pattern_engine = get_engine()
             logger.info("🧠 Dream State connected to Pattern Engine (reads archives!)")
         except ImportError:
             pass
 
         if self.pattern_engine:
-            pass # (Keep existing logic)
+            pass  # (Keep existing logic)
 
     async def enter_dream_state(self, duration_minutes: int = 5) -> list[DreamInsight]:
         """Enter dream state - synthesize patterns AND drive autonomy."""
-        logger.info("💤 Entering dream state for %s minutes...", duration_minutes, exc_info=True)
+        logger.info(
+            "💤 Entering dream state for %s minutes...", duration_minutes, exc_info=True
+        )
 
         # 1. Run Autonomy Cycle (Self-Improvement)
         try:
             from whitemagic.core.intelligence.omni import get_autonomy_engine
+
             autonomy = get_autonomy_engine()
             await autonomy.run_cycle()
         except (ImportError, ModuleNotFoundError) as e:
@@ -108,39 +116,48 @@ class DreamState:
         if self.pattern_engine:
             try:
                 # Use Rust for high-speed pattern matching
-                report = self.pattern_engine.extract_patterns(min_confidence=0.6, use_rust=True)
+                report = self.pattern_engine.extract_patterns(
+                    min_confidence=0.6, use_rust=True
+                )
 
                 # Solutions
-                for solution in report.solutions[:
-                    10]:
-                    patterns.append({
-                        "id": f"SOL_{len(patterns)}",
-                        "pattern": solution.title[:60],
-                        "domain": "solution",
-                        "confidence": solution.confidence,
-                    })
+                for solution in report.solutions[:10]:
+                    patterns.append(
+                        {
+                            "id": f"SOL_{len(patterns)}",
+                            "pattern": solution.title[:60],
+                            "domain": "solution",
+                            "confidence": solution.confidence,
+                        }
+                    )
 
                 # Optimizations
-                for opt in report.optimizations[:
-                    10]:
-                    patterns.append({
-                        "id": f"OPT_{len(patterns)}",
-                        "pattern": opt.title[:60],
-                        "domain": "optimization",
-                        "confidence": opt.confidence,
-                    })
+                for opt in report.optimizations[:10]:
+                    patterns.append(
+                        {
+                            "id": f"OPT_{len(patterns)}",
+                            "pattern": opt.title[:60],
+                            "domain": "optimization",
+                            "confidence": opt.confidence,
+                        }
+                    )
 
                 # Heuristics
-                for h in report.heuristics[:
-                    5]:
-                    patterns.append({
-                        "id": f"HEU_{len(patterns)}",
-                        "pattern": h.title[:60],
-                        "domain": "heuristic",
-                        "confidence": h.confidence,
-                    })
+                for h in report.heuristics[:5]:
+                    patterns.append(
+                        {
+                            "id": f"HEU_{len(patterns)}",
+                            "pattern": h.title[:60],
+                            "domain": "heuristic",
+                            "confidence": h.confidence,
+                        }
+                    )
 
-                logger.info("🧠 Loaded {len(patterns)} patterns from %s memories (including archives!)", report.total_memories, exc_info=True)
+                logger.info(
+                    "🧠 Loaded {len(patterns)} patterns from %s memories (including archives!)",
+                    report.total_memories,
+                    exc_info=True,
+                )
                 return patterns
             except Exception as e:
                 logger.info("⚠️ Pattern engine error: %s", e, exc_info=True)
@@ -154,7 +171,9 @@ class DreamState:
             {"id": "P5", "pattern": "resonance_hub", "domain": "integration"},
         ]
 
-    def _synthesize_patterns(self, patterns: list[dict[str, Any]]) -> list[DreamInsight]:
+    def _synthesize_patterns(
+        self, patterns: list[dict[str, Any]]
+    ) -> list[DreamInsight]:
         """Spontaneously combine patterns to discover insights."""
         insights = []
 
@@ -185,7 +204,9 @@ class DreamState:
                         start = max(0, line_no - 5)
                         end = min(len(lines), line_no + 5)
                         snippet = "".join(lines[start:end])
-                        context_snippets.append(f"--- FILE: {os.path.basename(file_path)} (Line {line_no}) ---\n{snippet}")
+                        context_snippets.append(
+                            f"--- FILE: {os.path.basename(file_path)} (Line {line_no}) ---\n{snippet}"
+                        )
                 except (OSError, UnicodeDecodeError):
                     pass
 
@@ -194,6 +215,7 @@ class DreamState:
         # 2. Get Voice Persona
         try:
             from whitemagic.gardens.voice.voice_synthesis import VoiceSynthesis
+
             voice = VoiceSynthesis()
             voice.get_persona_prompt()
         except ImportError:
@@ -202,7 +224,9 @@ class DreamState:
         # 3. Neural Brain Synthesis
         try:
             # from whitemagic.brain import generate
-            response = {"response": f"💡 Combining {' + '.join(pattern_names[:2])} reveals a strategic resonance in {patterns[0].get('domain', 'tech')} through pattern emergence."}
+            response = {
+                "response": f"💡 Combining {' + '.join(pattern_names[:2])} reveals a strategic resonance in {patterns[0].get('domain', 'tech')} through pattern emergence."
+            }
             if "response" in response:
                 insight_text = response["response"].strip()
             else:
@@ -212,7 +236,7 @@ class DreamState:
             insight_text = f"💡 Combining {' + '.join(pattern_names[:2])} reveals a strategic resonance in {patterns[0].get('domain', 'tech')} through pattern emergence."
 
         return DreamInsight(
-            id=f"DI{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(10,99)}",
+            id=f"DI{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(10, 99)}",
             insight=insight_text,
             synthesized_from=[p.get("id", "unknown") for p in patterns],
             novelty_score=random.uniform(0.7, 0.98),
@@ -223,6 +247,7 @@ class DreamState:
     def _integrate_insights(self, insights: list[DreamInsight]) -> None:
         """Feed insights to other systems and store in Data Sea."""
         from whitemagic.core.memory.unified import MemoryType, get_unified_memory
+
         um = get_unified_memory()
 
         for insight in insights:
@@ -240,9 +265,13 @@ class DreamState:
                     },
                     galaxy="creative_solutions",
                 )
-                logger.info("💾 Insight %s persisted to Data Sea", insight.id, exc_info=True)
+                logger.info(
+                    "💾 Insight %s persisted to Data Sea", insight.id, exc_info=True
+                )
             except Exception as e:
-                logger.info("⚠️ Failed to store insight in Data Sea: %s", e, exc_info=True)
+                logger.info(
+                    "⚠️ Failed to store insight in Data Sea: %s", e, exc_info=True
+                )
 
             if insight.practical_value < 0.7:
                 continue
@@ -251,6 +280,7 @@ class DreamState:
             if self.antibody_library:
                 try:
                     from whitemagic.core.immune.antibodies import Antibody
+
                     antibody = Antibody(
                         name=f"dream_insight_{insight.id}",
                         antigen_pattern=f"pattern_from_dream:{insight.id}",
@@ -261,7 +291,11 @@ class DreamState:
                     )
                     self.antibody_library.register(antibody)
                 except Exception as e:
-                    logger.debug("Antibody registration failed for dream insight %s: %s", insight.id, e)
+                    logger.debug(
+                        "Antibody registration failed for dream insight %s: %s",
+                        insight.id,
+                        e,
+                    )
 
             # Emergence Detector
             if self.emergence_detector:
@@ -269,7 +303,10 @@ class DreamState:
                     self.emergence_detector.observe(
                         action=insight.insight,
                         outcome="High value insight from dream",
-                        context={"source": "dream_state", "novelty": insight.novelty_score},
+                        context={
+                            "source": "dream_state",
+                            "novelty": insight.novelty_score,
+                        },
                     )
                 except Exception as e:
                     logger.debug("Emergence detector observe failed: %s", e)
@@ -281,13 +318,19 @@ class DreamState:
                         EventType,
                         ResonanceEvent,
                     )
-                    self.bus.emit(ResonanceEvent(
-                        source="dream_state",
-                        event_type=EventType.INSIGHT_FLASH,
-                        data={"insight": insight.insight, "novelty": insight.novelty_score},
-                        timestamp=datetime.now(),
-                        confidence=insight.novelty_score,
-                    ))
+
+                    self.bus.emit(
+                        ResonanceEvent(
+                            source="dream_state",
+                            event_type=EventType.INSIGHT_FLASH,
+                            data={
+                                "insight": insight.insight,
+                                "novelty": insight.novelty_score,
+                            },
+                            timestamp=datetime.now(),
+                            confidence=insight.novelty_score,
+                        )
+                    )
                 except Exception as e:
                     logger.debug("Gan Ying bus emit failed for dream insight: %s", e)
 
@@ -299,16 +342,13 @@ class DreamState:
             reverse=True,
         )
 
-    # ------------------------------------------------------------------
-    # Grimoire facade methods (fused from GrimoireEngine)
-    # ------------------------------------------------------------------
-
     _grimoire_instance: Any = None
 
     def _get_grimoire(self):
         """Lazy accessor for the fused Grimoire sub-engine."""
         if self._grimoire_instance is None:
             from whitemagic.core.intelligence.grimoire_engine import Grimoire
+
             self._grimoire_instance = Grimoire()
         return self._grimoire_instance
 
@@ -358,9 +398,14 @@ def get_grimoire_engine():
 if __name__ == "__main__":
     dream = DreamState()
     import asyncio
+
     insights = asyncio.run(dream.enter_dream_state(duration_minutes=1))
 
     logger.info("\n🌟 Dream Insights:")
     for insight in insights:
         logger.info("  • %s", insight.insight)
-        logger.info("    Novelty: %s | Value: %s", insight.novelty_score, insight.practical_value)
+        logger.info(
+            "    Novelty: %s | Value: %s",
+            insight.novelty_score,
+            insight.practical_value,
+        )

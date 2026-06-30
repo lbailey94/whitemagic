@@ -10,6 +10,7 @@ Usage:
     )
     probs = transition_batch(semantic, gravity, recency, staleness, weights)
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -70,8 +71,14 @@ def _load_lib() -> Any:
 
             # wm_graph_transition_single(semantic_sim, galactic_gravity, recency, staleness, w_semantic, w_gravity, w_recency, w_staleness)
             lib.wm_graph_transition_single.argtypes = [
-                ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float,
-                ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
             ]
             lib.wm_graph_transition_single.restype = ctypes.c_float
 
@@ -83,10 +90,6 @@ def _load_lib() -> Any:
             logger.debug("Failed to load Zig graph transitions: %s", e)
             return None
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def transition_single(
     semantic_sim: float,
@@ -110,19 +113,27 @@ def transition_single(
     lib = _load_lib()
     if lib is not None:
         try:
-            return float(lib.wm_graph_transition_single(
-                semantic_sim, galactic_gravity, recency, staleness,
-                weights[0], weights[1], weights[2], weights[3]
-            ))
+            return float(
+                lib.wm_graph_transition_single(
+                    semantic_sim,
+                    galactic_gravity,
+                    recency,
+                    staleness,
+                    weights[0],
+                    weights[1],
+                    weights[2],
+                    weights[3],
+                )
+            )
         except Exception as e:
             logger.debug("Zig transition_single failed: %s", e)
 
     # Python fallback
     prob = (
-        weights[0] * semantic_sim +
-        weights[1] * galactic_gravity +
-        weights[2] * recency +
-        weights[3] * (1.0 - staleness)
+        weights[0] * semantic_sim
+        + weights[1] * galactic_gravity
+        + weights[2] * recency
+        + weights[3] * (1.0 - staleness)
     )
     return max(0.0, min(1.0, prob))
 
@@ -163,8 +174,7 @@ def transition_batch(
             probs_arr = (ctypes.c_float * n)()
 
             lib.wm_graph_transition_batch(
-                sem_arr, grav_arr, rec_arr, stal_arr,
-                weights_arr, n, probs_arr
+                sem_arr, grav_arr, rec_arr, stal_arr, weights_arr, n, probs_arr
             )
             return [float(probs_arr[i]) for i in range(n)]
         except Exception as e:
@@ -172,12 +182,16 @@ def transition_batch(
 
     # Python fallback
     return [
-        max(0.0, min(1.0,
-            weights[0] * semantic[i] +
-            weights[1] * gravity[i] +
-            weights[2] * recency[i] +
-            weights[3] * (1.0 - staleness[i])
-        ))
+        max(
+            0.0,
+            min(
+                1.0,
+                weights[0] * semantic[i]
+                + weights[1] * gravity[i]
+                + weights[2] * recency[i]
+                + weights[3] * (1.0 - staleness[i]),
+            ),
+        )
         for i in range(n)
     ]
 

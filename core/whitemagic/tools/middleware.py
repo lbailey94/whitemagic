@@ -35,12 +35,6 @@ from whitemagic.runtime_status import get_runtime_status
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Cached module references — hoisted from per-call lazy imports to eliminate
-# import-lock contention on rapid parallel tool dispatch.
-# Each is loaded once on first access; failures are cached as None.
-# ---------------------------------------------------------------------------
-
 _sanitize_tool_args: Callable[..., Any] | None = None
 _get_breaker_registry: Callable[[], Any] | None = None
 _get_rate_limiter: Callable[..., Any] | None = None
@@ -68,90 +62,96 @@ def _ensure_cached() -> None:
         return
     try:
         from whitemagic.tools.input_sanitizer import sanitize_tool_args
+
         _sanitize_tool_args = sanitize_tool_args
     except Exception as e:
         logger.debug("Middleware: input_sanitizer dependency missing: %s", e)
     try:
         from whitemagic.tools.circuit_breaker import get_breaker_registry
+
         _get_breaker_registry = get_breaker_registry
     except Exception as e:
         logger.debug("Middleware: circuit_breaker dependency missing: %s", e)
     try:
         from whitemagic.tools.rate_limiter import get_rate_limiter
+
         _get_rate_limiter = get_rate_limiter
     except Exception as e:
         logger.debug("Middleware: rate_limiter dependency missing: %s", e)
     try:
         from whitemagic.tools.tool_permissions import check_tool_permission
+
         _check_tool_permission = check_tool_permission  # type: ignore[assignment]
     except Exception as e:
         logger.debug("Middleware: tool_permissions dependency missing: %s", e)
     try:
         from whitemagic.tools.maturity_check import check_maturity_for_tool
+
         _check_maturity_for_tool = check_maturity_for_tool  # type: ignore[assignment]
     except Exception as e:
         logger.debug("Middleware: maturity_check dependency missing: %s", e)
     try:
         from whitemagic.security.security_breaker import get_security_monitor
+
         _get_security_monitor = get_security_monitor
     except Exception as e:
         logger.debug("Middleware: security_breaker dependency missing: %s", e)
     try:
         from whitemagic.core.governor import get_governor
+
         _get_governor = get_governor
     except Exception as e:
         try:
             from whitemagic.dharma.governor import (  # type: ignore[assignment]
                 get_governor,
             )
+
             _get_governor = get_governor
         except (ImportError, AttributeError):
             pass
         logger.debug("Middleware: governor dependency missing: %s", e)
     try:
         from whitemagic.core.monitoring.prometheus_export import get_prometheus
+
         _get_prometheus = get_prometheus
     except Exception as e:
         logger.debug("Middleware: prometheus_export dependency missing: %s", e)
     try:
         from whitemagic.core.monitoring.otel_export import get_otel
+
         _get_otel = get_otel
     except Exception as e:
         logger.debug("Middleware: otel_export dependency missing: %s", e)
     try:
         from whitemagic.utils.core import compact_dict
+
         _compact_fn = compact_dict
     except (ImportError, AttributeError):
         pass
     try:
         from whitemagic.edge.inference import get_edge_inference
+
         _get_edge_inference = get_edge_inference
     except Exception as e:
         logger.debug("Middleware: edge_inference dependency missing: %s", e)
     try:
         from whitemagic.core.intelligence.agentic.local_reasoning import reason_locally
+
         _reason_locally = reason_locally
     except Exception as e:
         logger.debug("Middleware: local_reasoning dependency missing: %s", e)
     try:
         from whitemagic.core.monitoring.green_score import get_green_score
+
         _get_green_score = get_green_score
     except Exception as e:
         logger.debug("Middleware: green_score dependency missing: %s", e)
     _cached = True
 
 
-# ---------------------------------------------------------------------------
-# Types
-# ---------------------------------------------------------------------------
-
 NextFn = Callable[["DispatchContext"], dict[str, Any] | None]
 MiddlewareFn = Callable[["DispatchContext", NextFn], dict[str, Any] | None]
 
-
-# ---------------------------------------------------------------------------
-# Context
-# ---------------------------------------------------------------------------
 
 @dataclass
 class DispatchContext:
@@ -168,10 +168,6 @@ class DispatchContext:
     meta: dict[str, Any] = field(default_factory=dict)
 
 
-# ---------------------------------------------------------------------------
-# Pipeline
-# ---------------------------------------------------------------------------
-
 class DispatchPipeline:
     """Composable middleware chain for tool dispatch.
 
@@ -181,7 +177,9 @@ class DispatchPipeline:
 
     def __init__(self) -> None:
         self._middlewares: list[tuple[str, MiddlewareFn]] = []
-        self._chain: NextFn | None = None  # Pre-built chain (frozen after first execute)
+        self._chain: NextFn | None = (
+            None  # Pre-built chain (frozen after first execute)
+        )
 
     def use(self, name: str, middleware: MiddlewareFn) -> DispatchPipeline:
         """Register a middleware.  Order matters — first registered runs first."""
@@ -220,9 +218,19 @@ class DispatchPipeline:
             try:
                 result = _compact_fn(result)
             except (ValueError, TypeError, AttributeError) as e:
-                logger.debug("Middleware: compaction failed for %s: %s", ctx.tool_name, e, exc_info=True)
+                logger.debug(
+                    "Middleware: compaction failed for %s: %s",
+                    ctx.tool_name,
+                    e,
+                    exc_info=True,
+                )
             except RuntimeError as e:
-                logger.warning("Middleware: unexpected compaction runtime error for %s: %s", ctx.tool_name, e, exc_info=True)
+                logger.warning(
+                    "Middleware: unexpected compaction runtime error for %s: %s",
+                    ctx.tool_name,
+                    e,
+                    exc_info=True,
+                )
 
         return result
 
@@ -240,12 +248,16 @@ def _terminal(ctx: DispatchContext) -> dict[str, Any] | None:
         "message": f"Tool {ctx.tool_name} not yet implemented in unified_api or bridge",
         "degraded_mode": runtime_status.get("degraded_mode", False),
         "degraded_reasons": runtime_status.get("degraded_reasons", []),
-        "resolution": {"suggested_action": "verify_tool_name_or_use_prat_gana", "debug_hint": "Set WM_DEBUG=1 for verbose diagnostics"},
+        "resolution": {
+            "suggested_action": "verify_tool_name_or_use_prat_gana",
+            "debug_hint": "Set WM_DEBUG=1 for verbose diagnostics",
+        },
     }
 
 
 def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
     """Wrap a middleware + next into a single NextFn with safety net."""
+
     def wrapped(ctx: DispatchContext) -> dict[str, Any] | None:
         """
         Perform the wrapped operation.
@@ -264,18 +276,23 @@ def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
             if e.__class__.__name__ == "ToolExecutionError":
                 raise
             # Log middleware errors at WARNING level for visibility
-            logger.warning("Middleware '%s' error: %s: %s", name, e.__class__.__name__, e, exc_info=True)
+            logger.warning(
+                "Middleware '%s' error: %s: %s",
+                name,
+                e.__class__.__name__,
+                e,
+                exc_info=True,
+            )
             # Record error in context for downstream inspection
             if "middleware_errors" not in ctx.meta:
                 ctx.meta["middleware_errors"] = []
-            ctx.meta["middleware_errors"].append({"middleware": name, "error": str(e), "type": e.__class__.__name__})
+            ctx.meta["middleware_errors"].append(
+                {"middleware": name, "error": str(e), "type": e.__class__.__name__}
+            )
             return next_fn(ctx)
+
     return wrapped
 
-
-# =========================================================================
-# Built-in middlewares
-# =========================================================================
 
 def mw_input_sanitizer(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Validate tool arguments before any processing."""
@@ -286,7 +303,9 @@ def mw_input_sanitizer(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
             if result is not None:
                 return cast(dict[str, Any], result)
         except Exception as e:
-            logger.debug("Input sanitizer failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Input sanitizer failed for %s: %s", ctx.tool_name, e, exc_info=True
+            )
     return next_fn(ctx)
 
 
@@ -303,7 +322,12 @@ def mw_circuit_breaker(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
                 if calm is not None:
                     return cast(dict[str, Any], calm)
         except (ImportError, AttributeError, ValueError, RuntimeError) as e:
-            logger.debug("Middleware: circuit breaker lookup failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: circuit breaker lookup failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
             breaker = None
 
     result = next_fn(ctx)
@@ -325,6 +349,7 @@ def mw_circuit_breaker(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
 def mw_observability(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Record tool metrics to Prometheus and OpenTelemetry."""
     import time
+
     _ensure_cached()
 
     start = time.perf_counter()
@@ -343,14 +368,24 @@ def mw_observability(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
         try:
             _get_prometheus().record_tool_call(ctx.tool_name, duration, status)
         except (AttributeError, RuntimeError) as e:
-            logger.debug("Middleware: prometheus recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: prometheus recording failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
 
     # Record to OTel
     if _get_otel is not None:
         try:
             _get_otel().record_tool_span(ctx.tool_name, duration, status)
         except (AttributeError, RuntimeError) as e:
-            logger.debug("Middleware: otel recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: otel recording failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
 
     return result
 
@@ -367,7 +402,12 @@ def mw_rate_limiter(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | N
             if result is not None:
                 return result
         except (AttributeError, RuntimeError) as e:
-            logger.debug("Middleware: rate limit check failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: rate limit check failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
     return next_fn(ctx)
 
 
@@ -380,7 +420,12 @@ def mw_tool_permissions(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             if perm_result is not None:
                 return perm_result  # type: ignore[return-value]
         except (AttributeError, RuntimeError) as e:
-            logger.debug("Middleware: permission check failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: permission check failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
     return next_fn(ctx)
 
 
@@ -395,15 +440,26 @@ def mw_maturity_gate(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
             if mat_result is not None:
                 return mat_result  # type: ignore[return-value]
         except (AttributeError, RuntimeError) as e:
-            logger.debug("Middleware: maturity check failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: maturity check failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
     return next_fn(ctx)
 
 
 def mw_security_monitor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Edgerunner Violet: anomaly detection for suspicious tool-call patterns."""
     _ensure_cached()
-    quiet_internal = os.getenv("WM_BENCHMARK_QUIET", "").strip().lower() in ("1", "true", "yes")
-    quiet_internal = quiet_internal and bool(ctx.meta.get("quiet_internal_benchmark", False))
+    quiet_internal = os.getenv("WM_BENCHMARK_QUIET", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    quiet_internal = quiet_internal and bool(
+        ctx.meta.get("quiet_internal_benchmark", False)
+    )
     if _get_security_monitor is not None and not quiet_internal:
         try:
             safety = ctx.kwargs.get("safety", "READ")
@@ -422,7 +478,12 @@ def mw_security_monitor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
                     "alert": alert,
                 }
         except (AttributeError, KeyError, ValueError) as e:
-            logger.debug("Security monitor call recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Security monitor call recording failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
         except RuntimeError as e:
             logger.warning("Security monitor runtime failure: %s", e, exc_info=True)
     return next_fn(ctx)
@@ -438,18 +499,32 @@ def mw_governor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
             if not validation.safe:
                 try:
                     from whitemagic.tools.unified_api import _emit_gan_ying
-                    _emit_gan_ying("GOVERNOR_BLOCKED", {
-                        "tool": ctx.tool_name, "reason": validation.reason,
-                    })
+
+                    _emit_gan_ying(
+                        "GOVERNOR_BLOCKED",
+                        {
+                            "tool": ctx.tool_name,
+                            "reason": validation.reason,
+                        },
+                    )
                 except (ImportError, AttributeError, RuntimeError) as e:
-                    logger.debug("Middleware: governor gan-ying emit failed: %s", e, exc_info=True)
+                    logger.debug(
+                        "Middleware: governor gan-ying emit failed: %s",
+                        e,
+                        exc_info=True,
+                    )
                 return {
                     "status": "error",
                     "error": f"Governor Blocked: {validation.reason}",
                     "risk_level": validation.risk_level.name,
                 }
         except (AttributeError, RuntimeError) as e:
-            logger.debug("Middleware: governor validation failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Middleware: governor validation failed for %s: %s",
+                ctx.tool_name,
+                e,
+                exc_info=True,
+            )
     return next_fn(ctx)
 
 
@@ -462,6 +537,7 @@ def mw_cognitive_mode(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] |
     """
     try:
         from whitemagic.core.intelligence.cognitive_modes import get_cognitive_modes
+
         cm = get_cognitive_modes()
         mode = cm._effective_mode()
 
@@ -481,11 +557,18 @@ def mw_cognitive_mode(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] |
         ctx.meta["cognitive_preferred"] = hints["preferred_tools"]
         ctx.meta["cognitive_context_multiplier"] = hints["context_multiplier"]
     except Exception as e:
-        logger.debug("Middleware: cognitive mode check failed for %s: %s", ctx.tool_name, e, exc_info=True)
+        logger.debug(
+            "Middleware: cognitive mode check failed for %s: %s",
+            ctx.tool_name,
+            e,
+            exc_info=True,
+        )
     return next_fn(ctx)
 
 
-def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+def mw_sutra_auto_execute(
+    ctx: DispatchContext, next_fn: NextFn
+) -> dict[str, Any] | None:
     """Dharma-gated Auto-Execution (GATED: disabled by default).
     Checks the Sutra Kernel to determine if a tool can auto-execute without human approval.
     - Sattvic (Read/Observe): Auto-executes immediately.
@@ -495,42 +578,58 @@ def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, An
     NOTE: This middleware is disabled by default. Enable with WM_ENABLE_SUTRA_AUTO_EXECUTE=1.
     """
     # Gate behind feature flag - disabled by default as Sutra Kernel is not fully integrated
-    if os.environ.get("WM_ENABLE_SUTRA_AUTO_EXECUTE", "").strip().lower() not in ("1", "true", "yes"):
+    if os.environ.get("WM_ENABLE_SUTRA_AUTO_EXECUTE", "").strip().lower() not in (
+        "1",
+        "true",
+        "yes",
+    ):
         return next_fn(ctx)
 
     try:
         from whitemagic.core.bridge.sutra_bridge import get_sutra_kernel
+
         sutra = get_sutra_kernel()
 
         # We estimate intent and karma from the tool metadata or context
         # (For now, use defaults or dummy values, real implementation would extract from Gnosis/Karma)
         verdict = sutra.evaluate_action(
-            action_type=ctx.tool_name,
-            intent_score=1.0,
-            karma_debt=0.0
+            action_type=ctx.tool_name, intent_score=1.0, karma_debt=0.0
         )
 
         if verdict.startswith("Panic") or verdict.startswith("Intervene"):
             # Block and push to UI for Karmic Consent
             try:
                 from whitemagic.core.ipc_bridge import publish_json
-                publish_json("wm/commands", {
-                    "type": "karmic_consent_required",
-                    "tool": ctx.tool_name,
-                    "reason": verdict
-                })
+
+                publish_json(
+                    "wm/commands",
+                    {
+                        "type": "karmic_consent_required",
+                        "tool": ctx.tool_name,
+                        "reason": verdict,
+                    },
+                )
             except Exception as e:
-                logger.warning("Failed to push consent to Nexus UI: %s", e, exc_info=True)
+                logger.warning(
+                    "Failed to push consent to Nexus UI: %s", e, exc_info=True
+                )
 
             return {
                 "status": "paused",
                 "error": f"Sutra Kernel Intervention: {verdict}. Awaiting Karmic Consent.",
-                "action_required": "user_approval"
+                "action_required": "user_approval",
             }
     except ImportError as e:
-        logger.debug("Middleware: sutra_bridge missing for %s: %s", ctx.tool_name, e, exc_info=True)
+        logger.debug(
+            "Middleware: sutra_bridge missing for %s: %s",
+            ctx.tool_name,
+            e,
+            exc_info=True,
+        )
     except (ImportError, ModuleNotFoundError) as e:
-        logger.warning("Middleware: sutra_auto_execute unexpected error: %s", e, exc_info=True)
+        logger.warning(
+            "Middleware: sutra_auto_execute unexpected error: %s", e, exc_info=True
+        )
         logger.warning("Sutra Auto-Execute Middleware failed: %s", e, exc_info=True)
 
     return next_fn(ctx)
@@ -561,7 +660,9 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
                     ctx.meta["zodiac_amplified"] = True
                     ctx.meta["resonance_multiplier"] = 1.5
     except Exception as e:
-        logger.debug("Zodiac Resonance middleware pre-processing failed: %s", e, exc_info=True)
+        logger.debug(
+            "Zodiac Resonance middleware pre-processing failed: %s", e, exc_info=True
+        )
 
     result = next_fn(ctx)
 
@@ -569,6 +670,7 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
     if ctx.meta.get("zodiac_amplified") and isinstance(result, dict):
         try:
             from whitemagic.core.zodiac import get_zodiac_clock
+
             zodiac = get_zodiac_clock().current_phase
 
             # Inject semantic boost markers
@@ -582,21 +684,35 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             boost_msg = f"🌌 Zodiacal Resonance: {zodiac} Amplification detected."
             result["note"] = f"{boost_msg} {note}".strip()
         except (ImportError, AttributeError, KeyError) as e:
-            logger.debug("Zodiac Resonance middleware post-processing failed: %s", e, exc_info=True)
+            logger.debug(
+                "Zodiac Resonance middleware post-processing failed: %s",
+                e,
+                exc_info=True,
+            )
         except RuntimeError as e:
-            logger.warning("Zodiac Resonance post-processor runtime failure: %s", e, exc_info=True)
+            logger.warning(
+                "Zodiac Resonance post-processor runtime failure: %s", e, exc_info=True
+            )
 
     return result
 
 
-# =========================================================================
-# Inference Router Middleware — P0: Wire InferenceRouter into Dispatch
-# =========================================================================
-
 _INFERENCE_TOOL_PATTERNS = (
-    "ollama", "chat", "generate", "reason", "think", "analyze",
-    "infer", "bitnet", "complete", "answer", "query_llm",
-    "bicameral", "multi_spectral", "ensemble", "edge_infer",
+    "ollama",
+    "chat",
+    "generate",
+    "reason",
+    "think",
+    "analyze",
+    "infer",
+    "bitnet",
+    "complete",
+    "answer",
+    "query_llm",
+    "bicameral",
+    "multi_spectral",
+    "ensemble",
+    "edge_infer",
 )
 
 
@@ -616,7 +732,8 @@ def _extract_prompt(tool_name: str, kwargs: dict[str, Any]) -> str | None:
 
 
 def mw_inference_router(
-    ctx: DispatchContext, next_fn: NextFn,
+    ctx: DispatchContext,
+    next_fn: NextFn,
 ) -> dict[str, Any] | None:
     """Try to resolve inference-type tool calls locally before hitting LLM/cloud.
 
@@ -642,6 +759,7 @@ def mw_inference_router(
         from whitemagic.core.intelligence.agentic.compositional_reasoning import (
             get_compositional_reasoner,
         )
+
         reasoner = get_compositional_reasoner()
         if reasoner.can_resolve(prompt):
             comp_result = reasoner.resolve(prompt)
@@ -668,7 +786,9 @@ def mw_inference_router(
                     "matches": comp_result.matches[:3],
                 }
     except Exception as e:
-        logger.debug("Compositional reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True)
+        logger.debug(
+            "Compositional reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True
+        )
 
     # Tier 0: Edge inference (fast, zero tokens, Rust PatternEngine)
     if _get_edge_inference is not None:
@@ -696,7 +816,9 @@ def mw_inference_router(
                     "latency_ms": round(result.latency_ms, 2),
                 }
         except Exception as e:
-            logger.debug("Edge inference failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Edge inference failed for %s: %s", ctx.tool_name, e, exc_info=True
+            )
 
     # Tier 1: Local reasoning (CPU + clone army + embedding search)
     if _reason_locally is not None:
@@ -722,26 +844,39 @@ def mw_inference_router(
                     "tokens_saved": tokens_saved,
                     "latency_ms": round(result.duration_ms, 2),
                     "insights": [
-                        {"source": i.source, "content": i.content[:200], "relevance": i.relevance}
+                        {
+                            "source": i.source,
+                            "content": i.content[:200],
+                            "relevance": i.relevance,
+                        }
                         for i in result.insights[:5]
                     ],
                 }
         except Exception as e:
-            logger.debug("Local reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True)
+            logger.debug(
+                "Local reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True
+            )
 
     # Not resolved locally — pass through to normal handler
     ctx.meta["local_inference_attempted"] = True
     return next_fn(ctx)
 
 
-# =========================================================================
-# Semantic Cache Middleware — T3: short-circuit repeated queries
-# =========================================================================
-
 _CACHEABLE_TOOL_PATTERNS = (
-    "ollama", "chat", "generate", "reason", "think", "analyze",
-    "infer", "complete", "answer", "query_llm", "ensemble",
-    "bicameral", "multi_spectral", "edge_infer",
+    "ollama",
+    "chat",
+    "generate",
+    "reason",
+    "think",
+    "analyze",
+    "infer",
+    "complete",
+    "answer",
+    "query_llm",
+    "ensemble",
+    "bicameral",
+    "multi_spectral",
+    "edge_infer",
 )
 
 
@@ -754,6 +889,7 @@ def _is_cacheable_tool(tool_name: str) -> bool:
 def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
     """Build a deterministic cache key from tool name + prompt kwargs."""
     import hashlib
+
     prompt_parts = []
     for key in ("prompt", "query", "message", "text", "input", "question"):
         val = kwargs.get(key)
@@ -765,7 +901,8 @@ def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
 
 
 def mw_semantic_cache(
-    ctx: DispatchContext, next_fn: NextFn,
+    ctx: DispatchContext,
+    next_fn: NextFn,
 ) -> dict[str, Any] | None:
     """Semantic cache for inference-type tool calls.
 
@@ -789,6 +926,7 @@ def mw_semantic_cache(
     # 0. Check speculative prefetch cache (pre-warmed by Markov prediction)
     try:
         from whitemagic.tools.speculative_prefetch import get_prefetcher
+
         prefetcher = get_prefetcher()
         prefetched = prefetcher.get_cached(ctx.tool_name)
         if prefetched and isinstance(prefetched, dict) and prefetched.get("prefetched"):
@@ -806,14 +944,18 @@ def mw_semantic_cache(
     # Try unified cache first (Rust if available, Python fallback)
     try:
         from whitemagic.core.cache import get_unified_cache
+
         unified = get_unified_cache()
         cached_raw = unified.get("semantic", key)
         if cached_raw:
             import json as _json
+
             cached = _json.loads(cached_raw)
             logger.debug(
                 "Semantic cache HIT (backend=%s) for %s (key=%s)",
-                unified.backend, ctx.tool_name, key,
+                unified.backend,
+                ctx.tool_name,
+                key,
             )
             return {
                 "status": "success",
@@ -833,10 +975,13 @@ def mw_semantic_cache(
     try:
         from whitemagic.config.paths import CACHE_DIR
         from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
+
         legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
         cached = legacy_cache.get(key)
         if cached:
-            logger.debug("Semantic cache HIT (legacy) for %s (key=%s)", ctx.tool_name, key)
+            logger.debug(
+                "Semantic cache HIT (legacy) for %s (key=%s)", ctx.tool_name, key
+            )
             return {
                 "status": "success",
                 "tool": ctx.tool_name,
@@ -856,7 +1001,11 @@ def mw_semantic_cache(
     result = next_fn(ctx)
 
     # Cache successful results in both unified and legacy cache
-    if result and isinstance(result, dict) and result.get("status") in ("success", "ok"):
+    if (
+        result
+        and isinstance(result, dict)
+        and result.get("status") in ("success", "ok")
+    ):
         answer = result.get("result", result.get("answer", ""))
         if answer and isinstance(answer, str):
             output_tokens = max(1, len(answer) // 4)
@@ -865,13 +1014,18 @@ def mw_semantic_cache(
                 import json as _json
 
                 from whitemagic.core.cache import get_unified_cache
+
                 unified = get_unified_cache()
-                cache_payload = _json.dumps({
-                    "result": answer,
-                    "tokens_saved": output_tokens,
-                    "tool": ctx.tool_name,
-                })
-                unified.set("semantic", key, cache_payload, ttl_seconds=86400.0)  # 24h TTL
+                cache_payload = _json.dumps(
+                    {
+                        "result": answer,
+                        "tokens_saved": output_tokens,
+                        "tool": ctx.tool_name,
+                    }
+                )
+                unified.set(
+                    "semantic", key, cache_payload, ttl_seconds=86400.0
+                )  # 24h TTL
             except Exception:
                 pass
             # Also store in legacy cache for backward compat
@@ -880,7 +1034,10 @@ def mw_semantic_cache(
                 from whitemagic.core.intelligence.agentic.token_optimizer import (
                     QueryCache,
                 )
-                legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
+
+                legacy_cache = QueryCache(
+                    cache_file=CACHE_DIR / "dispatch_query_cache.json"
+                )
                 legacy_cache.set(key, answer, output_tokens)
             except Exception:
                 pass
@@ -889,6 +1046,7 @@ def mw_semantic_cache(
     try:
         from whitemagic.tools.prat_mappings import TOOL_TO_GANA
         from whitemagic.tools.speculative_prefetch import get_prefetcher
+
         gana = TOOL_TO_GANA.get(ctx.tool_name)
         if gana:
             get_prefetcher().on_call_complete(gana)
@@ -898,13 +1056,15 @@ def mw_semantic_cache(
     return result
 
 
-# =========================================================================
-# Draft-Review Middleware — T4: local model drafts, cloud reviews/patches
-# =========================================================================
-
 _DRAFT_REVIEW_TOOLS = (
-    "ollama.chat", "ollama.generate", "query_llm", "infer",
-    "reason", "think", "analyze", "ensemble.query",
+    "ollama.chat",
+    "ollama.generate",
+    "query_llm",
+    "infer",
+    "reason",
+    "think",
+    "analyze",
+    "ensemble.query",
 )
 
 
@@ -930,7 +1090,8 @@ def _is_draft_review_candidate(tool_name: str, kwargs: dict[str, Any]) -> bool:
 
 
 def mw_draft_review(
-    ctx: DispatchContext, next_fn: NextFn,
+    ctx: DispatchContext,
+    next_fn: NextFn,
 ) -> dict[str, Any] | None:
     """Draft-review flow: local model drafts, cloud reviews/patches.
 
@@ -966,7 +1127,6 @@ def mw_draft_review(
     if not prompt:
         return next_fn(ctx)
 
-    # Step 1: Generate draft with local model
     try:
         draft_result = handle_ollama_chat(
             prompt=prompt,
@@ -984,7 +1144,6 @@ def mw_draft_review(
         logger.debug("Draft-review: local draft failed: %s", e)
         return next_fn(ctx)
 
-    # Step 2: Build review prompt for cloud model
     review_instruction = (
         "Review the following draft answer. If it is correct and complete, "
         "return it unchanged. If it needs fixes, return only the corrected "
@@ -996,7 +1155,6 @@ def mw_draft_review(
 
     review_tokens = max(1, len(review_instruction) // 4)
 
-    # Step 3: Dispatch the review prompt through the normal pipeline
     review_kwargs = dict(ctx.kwargs)
     review_kwargs["prompt"] = review_instruction
     review_kwargs["_draft_review"] = True  # Prevent re-entry
@@ -1014,7 +1172,11 @@ def mw_draft_review(
     # Call next_fn with the review prompt
     result = next_fn(ctx)
 
-    if result and isinstance(result, dict) and result.get("status") in ("success", "ok"):
+    if (
+        result
+        and isinstance(result, dict)
+        and result.get("status") in ("success", "ok")
+    ):
         # If the review is very similar to the draft, the cloud model
         # accepted it — we saved the full generation cost
         result.setdefault("metadata", {})
@@ -1029,6 +1191,7 @@ def mw_draft_review(
         # Record to GreenScore
         try:
             from whitemagic.core.monitoring.green_score import get_green_score
+
             gs = get_green_score()
             gs.record_inference(
                 locality="local_llm",

@@ -8,9 +8,24 @@ class TestLexicalRerank:
         from whitemagic.core.intelligence.reranker import lexical_rerank
 
         results = [
-            {"id": "1", "title": "Python programming", "content": "Learn Python basics", "score": 0.5},
-            {"id": "2", "title": "Java guide", "content": "Java enterprise patterns", "score": 0.8},
-            {"id": "3", "title": "Python advanced", "content": "Advanced Python techniques and patterns", "score": 0.3},
+            {
+                "id": "1",
+                "title": "Python programming",
+                "content": "Learn Python basics",
+                "score": 0.5,
+            },
+            {
+                "id": "2",
+                "title": "Java guide",
+                "content": "Java enterprise patterns",
+                "score": 0.8,
+            },
+            {
+                "id": "3",
+                "title": "Python advanced",
+                "content": "Advanced Python techniques and patterns",
+                "score": 0.3,
+            },
         ]
         ranked = lexical_rerank("Python patterns", results, top_k=3)
         assert len(ranked) == 3
@@ -36,17 +51,29 @@ class TestLexicalRerank:
     def test_top_k_limit(self):
         from whitemagic.core.intelligence.reranker import lexical_rerank
 
-        results = [{"id": str(i), "title": f"Title {i}", "content": f"Content {i}", "score": 0.5} for i in range(10)]
+        results = [
+            {
+                "id": str(i),
+                "title": f"Title {i}",
+                "content": f"Content {i}",
+                "score": 0.5,
+            }
+            for i in range(10)
+        ]
         ranked = lexical_rerank("content", results, top_k=3)
         assert len(ranked) == 3
 
     def test_ranked_result_combined_score(self):
         from whitemagic.core.intelligence.reranker import RankedResult
 
-        r = RankedResult(memory_id="1", title="T", content="C", original_score=1.0, rerank_score=1.0)
+        r = RankedResult(
+            memory_id="1", title="T", content="C", original_score=1.0, rerank_score=1.0
+        )
         assert r.combined_score == 1.0
 
-        r2 = RankedResult(memory_id="2", title="T", content="C", original_score=0.0, rerank_score=0.0)
+        r2 = RankedResult(
+            memory_id="2", title="T", content="C", original_score=0.0, rerank_score=0.0
+        )
         assert r2.combined_score == 0.0
 
 

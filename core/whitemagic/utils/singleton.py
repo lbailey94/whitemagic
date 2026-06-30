@@ -4,6 +4,7 @@ This module provides a decorator to register singleton instances and a
 centralized reset mechanism for test isolation. Replaces manual conftest
 tracking of singleton module-level variables.
 """
+
 # ruff: noqa: BLE001
 import functools
 import logging
@@ -13,7 +14,7 @@ from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 # Global registry of singleton wrappers and module-level vars.
 # Format: list of (wrapper_fn | None, module_name | None, var_name | None)
@@ -39,6 +40,7 @@ def singleton(var_name: str | None = None) -> Callable[[F], F]:
     The decorator tracks the singleton instance in the global registry
     for automated test cleanup via reset_all_singletons().
     """
+
     def decorator(func: F) -> F:
         """
         Perform the decorator operation.
@@ -61,6 +63,7 @@ def singleton(var_name: str | None = None) -> Callable[[F], F]:
                 Any
             """
             from typing import cast
+
             w = cast(Any, wrapper)
             if not hasattr(w, "_instance"):
                 w._instance = func(*args, **kwargs)
@@ -71,7 +74,9 @@ def singleton(var_name: str | None = None) -> Callable[[F], F]:
             _SINGLETON_REGISTRY.append((wrapper, module_name, tracked_var))
 
         from typing import cast
+
         return cast(F, wrapper)
+
     return decorator
 
 
@@ -99,6 +104,7 @@ def reset_all_singletons() -> None:
     Should be called in test fixtures to ensure test isolation.
     """
     import importlib
+
     with _REGISTRY_LOCK:
         for wrapper_fn, module_name, var_name in _SINGLETON_REGISTRY:
             # 1. Clear the decorator's cached _instance
@@ -108,7 +114,12 @@ def reset_all_singletons() -> None:
                 except AttributeError:
                     pass  # Attribute already absent — harmless
                 except Exception as e:
-                    logger.debug("Unexpected error clearing singleton %s: %s", wrapper_fn, e, exc_info=True)
+                    logger.debug(
+                        "Unexpected error clearing singleton %s: %s",
+                        wrapper_fn,
+                        e,
+                        exc_info=True,
+                    )
 
             # 2. Clear the module-level variable
             if module_name and var_name:
@@ -130,4 +141,3 @@ def get_registered_singletons() -> list[tuple[Any, str | None, str | None]]:
     """
     with _REGISTRY_LOCK:
         return list(_SINGLETON_REGISTRY)
-

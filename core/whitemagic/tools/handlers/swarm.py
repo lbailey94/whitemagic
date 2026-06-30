@@ -6,6 +6,7 @@ from typing import Any, cast
 def handle_swarm_decompose(**kwargs: Any) -> dict[str, Any]:
     """Decompose a goal into subtasks with capability requirements."""
     from whitemagic.agents.swarm import get_swarm
+
     goal = kwargs.get("goal", "")
     if not goal:
         return {"status": "error", "error": "goal is required"}
@@ -18,40 +19,52 @@ def handle_swarm_decompose(**kwargs: Any) -> dict[str, Any]:
 def handle_swarm_route(**kwargs: Any) -> dict[str, Any]:
     """Route subtasks to agents by capability matching."""
     from whitemagic.agents.swarm import get_swarm
+
     plan_id = kwargs.get("plan_id", "")
     if not plan_id:
         return {"status": "error", "error": "plan_id is required"}
     engagement_token_id = kwargs.get("engagement_token_id", None)
-    return cast("dict[str, Any]", get_swarm().route(plan_id, engagement_token_id=engagement_token_id))
+    return cast(
+        "dict[str, Any]",
+        get_swarm().route(plan_id, engagement_token_id=engagement_token_id),
+    )
 
 
 def handle_swarm_complete(**kwargs: Any) -> dict[str, Any]:
     """Mark a subtask as completed or failed."""
     from whitemagic.agents.swarm import get_swarm
+
     plan_id = kwargs.get("plan_id", "")
     task_id = kwargs.get("task_id", "")
     if not plan_id or not task_id:
         return {"status": "error", "error": "plan_id and task_id required"}
     result = kwargs.get("result", None)
     success = kwargs.get("success", True)
-    return cast("dict[str, Any]", get_swarm().complete_task(plan_id, task_id, result=result, success=success))
+    return cast(
+        "dict[str, Any]",
+        get_swarm().complete_task(plan_id, task_id, result=result, success=success),
+    )
 
 
 def handle_swarm_vote(**kwargs: Any) -> dict[str, Any]:
     """Record a vote from an agent on a consensus topic."""
     from whitemagic.agents.swarm import get_swarm
+
     topic = kwargs.get("topic_id", "")
     agent = kwargs.get("agent_id", "")
     value = kwargs.get("value", "")
     if not topic or not agent:
         return {"status": "error", "error": "topic_id and agent_id required"}
     confidence = float(kwargs.get("confidence", 1.0))
-    return cast("dict[str, Any]", get_swarm().vote(topic, agent, value, confidence=confidence))
+    return cast(
+        "dict[str, Any]", get_swarm().vote(topic, agent, value, confidence=confidence)
+    )
 
 
 def handle_swarm_resolve(**kwargs: Any) -> dict[str, Any]:
     """Resolve a consensus vote."""
     from whitemagic.agents.swarm import ConsensusStrategy, get_swarm
+
     topic = kwargs.get("topic_id", "")
     if not topic:
         return {"status": "error", "error": "topic_id is required"}
@@ -66,6 +79,7 @@ def handle_swarm_resolve(**kwargs: Any) -> dict[str, Any]:
 def handle_swarm_assign_house(**kwargs: Any) -> dict[str, Any]:
     """Assign an agent to a tricameral house."""
     from whitemagic.agents.swarm import get_swarm
+
     agent_id = kwargs.get("agent_id", "")
     house = kwargs.get("house", "")
     if not agent_id or not house:
@@ -76,6 +90,7 @@ def handle_swarm_assign_house(**kwargs: Any) -> dict[str, Any]:
 def handle_swarm_prune(**kwargs: Any) -> dict[str, Any]:
     """Prune stale plans and votes (Proof-of-Utility)."""
     from whitemagic.agents.swarm import get_swarm
+
     max_age = kwargs.get("max_age_seconds")
     if max_age is not None:
         max_age = float(max_age)
@@ -85,6 +100,7 @@ def handle_swarm_prune(**kwargs: Any) -> dict[str, Any]:
 def handle_swarm_plan(**kwargs: Any) -> dict[str, Any]:
     """Get a specific swarm plan by ID."""
     from whitemagic.agents.swarm import get_swarm
+
     plan_id = kwargs.get("plan_id", "")
     if not plan_id:
         return {"status": "error", "error": "plan_id is required"}
@@ -97,4 +113,5 @@ def handle_swarm_plan(**kwargs: Any) -> dict[str, Any]:
 def handle_swarm_status(**kwargs: Any) -> dict[str, Any]:
     """Get swarm coordination status."""
     from whitemagic.agents.swarm import get_swarm
+
     return {"status": "success", **get_swarm().status()}

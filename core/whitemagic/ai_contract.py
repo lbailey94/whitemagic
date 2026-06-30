@@ -65,12 +65,14 @@ class ContractEnforcer:
 
     def log_violation(self, agent_id: str, action: str, reason: str) -> None:
         """Log a contract violation."""
-        self.violations.append({
-            "agent_id": agent_id,
-            "action": action,
-            "reason": reason,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self.violations.append(
+            {
+                "agent_id": agent_id,
+                "action": action,
+                "reason": reason,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def get_violations(self, agent_id: str) -> list[dict[str, Any]]:
         """Get violations for an agent."""

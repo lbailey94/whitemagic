@@ -18,7 +18,7 @@ def fix_file(path: Path) -> int:
     while i < len(lines):
         line = lines[i]
         # Find bare except Exception: lines
-        match = re.match(r'^(\s*)except Exception:\s*$', line)
+        match = re.match(r"^(\s*)except Exception:\s*$", line)
         if match:
             indent = match.group(1)
             # Look backward for the try block to classify
@@ -33,13 +33,15 @@ def fix_file(path: Path) -> int:
             try_text = "\n".join(try_body).lower()
 
             # Classify
-            if re.search(r'from\s+\S+\s+import', try_text):
+            if re.search(r"from\s+\S+\s+import", try_text):
                 line = f"{indent}except (ImportError, AttributeError):"
                 fixes += 1
             elif "json.loads" in try_text or "json.load" in try_text:
                 line = f"{indent}except (json.JSONDecodeError, TypeError):"
                 fixes += 1
-            elif any(k in try_text for k in ["read_text", "write_text", "open(", "readlines"]):
+            elif any(
+                k in try_text for k in ["read_text", "write_text", "open(", "readlines"]
+            ):
                 line = f"{indent}except (OSError, UnicodeDecodeError):"
                 fixes += 1
             elif any(k in try_text for k in ["subprocess", "popen", "terminate"]):
@@ -55,7 +57,9 @@ def fix_file(path: Path) -> int:
                     if next_indent > len(indent):
                         # Insert logger.debug line
                         new_lines.append(line)
-                        new_lines.append(f"{indent}    logger.debug(\"Operation failed: %s\", e)")
+                        new_lines.append(
+                            f'{indent}    logger.debug("Operation failed: %s", e)'
+                        )
                         i += 1
                         fixes += 1
                         continue
@@ -71,7 +75,7 @@ def fix_file(path: Path) -> int:
         # Find a good place to insert
         last_import = -1
         for idx, line in enumerate(new_lines):
-            if re.match(r'^(import|from)\s+', line.strip()):
+            if re.match(r"^(import|from)\s+", line.strip()):
                 last_import = idx
         if last_import >= 0:
             if "import logging" not in new_content:
@@ -101,7 +105,9 @@ def main() -> int:
             files_changed += 1
             print(f"  {pyfile}: {fixes} fixes")
 
-    print(f"\nDone: {total_fixes} bare except blocks fixed across {files_changed} files.")
+    print(
+        f"\nDone: {total_fixes} bare except blocks fixed across {files_changed} files."
+    )
     return 0
 
 

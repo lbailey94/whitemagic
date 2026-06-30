@@ -33,15 +33,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 # The Great Year: ~25,920 years for full precessional cycle
 # (72 years per degree × 360 degrees)
@@ -58,8 +54,18 @@ PISCES_AGE_START_YEAR = 1  # Approximate
 # Aries → Pisces → Aquarius → Capricorn → Sagittarius → Scorpio → Libra →
 # Virgo → Leo → Cancer → Gemini → Taurus → Aries (cycle repeats)
 ZODIAC_AGES_ORDER = [
-    "aries", "taurus", "gemini", "cancer", "leo", "virgo",
-    "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+    "aries",
+    "taurus",
+    "gemini",
+    "cancer",
+    "leo",
+    "virgo",
+    "libra",
+    "scorpio",
+    "sagittarius",
+    "capricorn",
+    "aquarius",
+    "pisces",
 ]
 
 # Age themes — based on historical/cultural patterns, not deterministic predictions
@@ -139,7 +145,12 @@ AGE_THEMES: dict[str, dict[str, Any]] = {
         "modality": "fixed",
         "theme": "Collective intelligence, technological acceleration, decentralization, networks",
         "historical_examples": "Digital revolution, AI emergence, open-source culture, networked societies",
-        "qualities": ["innovation", "collective consciousness", "technology", "equality"],
+        "qualities": [
+            "innovation",
+            "collective consciousness",
+            "technology",
+            "equality",
+        ],
         "current_relevance": (
             "We are in the transition into the Age of Aquarius. Key markers: "
             "1962 seven-planet pile-up in Aquarius (seeding), "
@@ -196,18 +207,15 @@ YUGA_SYSTEM: dict[str, dict[str, Any]] = {
 
 # Harmonic constants from the user's Vedic research
 HARMONIC_144K = 144000  # 12² × 1000 — the "quorum" frequency
-HARMONIC_72 = 72        # Precession integer (360° ÷ 72 = 5° per age)
-HARMONIC_108 = 108      # Sacred number (Sun/Moon distance ratio)
-HARMONIC_432 = 432      # Cosmic tuning (4.32 MHz, 432 Hz music)
+HARMONIC_72 = 72  # Precession integer (360° ÷ 72 = 5° per age)
+HARMONIC_108 = 108  # Sacred number (Sun/Moon distance ratio)
+HARMONIC_432 = 432  # Cosmic tuning (4.32 MHz, 432 Hz music)
 
-
-# ---------------------------------------------------------------------------
-# Data Structures
-# ---------------------------------------------------------------------------
 
 @dataclass
 class PrecessionalPosition:
     """Current position in the Great Year cycle."""
+
     current_age: str
     age_progress: float  # 0.0-1.0, how far into the current age
     years_into_age: float
@@ -227,6 +235,7 @@ class TemporalContext:
     snapshot that the AI or human can consider when making decisions.
     It is explicitly NON-BINDING.
     """
+
     timestamp: datetime
     precessional: PrecessionalPosition
     yuga: dict[str, Any]
@@ -257,10 +266,6 @@ class TemporalContext:
         }
 
 
-# ---------------------------------------------------------------------------
-# Great Year Engine
-# ---------------------------------------------------------------------------
-
 class GreatYearEngine:
     """Calculates precessional position and provides temporal context.
 
@@ -274,7 +279,9 @@ class GreatYearEngine:
         """Initialize with a reference year for the start of the Age of Pisces."""
         self.reference_year = reference_year
 
-    def get_precessional_position(self, when: datetime | None = None) -> PrecessionalPosition:
+    def get_precessional_position(
+        self, when: datetime | None = None
+    ) -> PrecessionalPosition:
         """Calculate the current precessional position.
 
         Args:
@@ -284,7 +291,7 @@ class GreatYearEngine:
             PrecessionalPosition with current age and progress
         """
         if when is None:
-            when = datetime.now(timezone.utc)
+            when = datetime.now(UTC)
 
         current_year = when.year + (when.timetuple().tm_yday / 365.25)
 
@@ -303,9 +310,20 @@ class GreatYearEngine:
         # The ages go backward: Pisces(0), Aquarius(1), Capricorn(2), ...
         # But we need to map this to the zodiac order
         # Starting from Pisces, going backward:
-        backward_order = ["pisces", "aquarius", "capricorn", "sagittarius",
-                         "scorpio", "libra", "virgo", "leo", "cancer",
-                         "gemini", "taurus", "aries"]
+        backward_order = [
+            "pisces",
+            "aquarius",
+            "capricorn",
+            "sagittarius",
+            "scorpio",
+            "libra",
+            "virgo",
+            "leo",
+            "cancer",
+            "gemini",
+            "taurus",
+            "aries",
+        ]
 
         age_idx = age_index % 12
         current_age = backward_order[age_idx]
@@ -341,7 +359,7 @@ class GreatYearEngine:
         based on the Sun's apparent position relative to the vernal equinox.
         """
         if when is None:
-            when = datetime.now(timezone.utc)
+            when = datetime.now(UTC)
 
         # Approximate zodiac dates (tropical)
         # Note: these are approximate; the Sun enters each sign on
@@ -394,7 +412,7 @@ class GreatYearEngine:
                 "started_approx": "1700 CE",
                 "years_elapsed": 2026 - 1700,
                 "note": "Sri Yukteswar's precession-based calculation; "
-                        "argues Kali Yuga ended ~1700 CE and we are in ascending Dwapara",
+                "argues Kali Yuga ended ~1700 CE and we are in ascending Dwapara",
             },
             "harmonic_constants": {
                 "HARMONIC_144K": HARMONIC_144K,
@@ -402,9 +420,9 @@ class GreatYearEngine:
                 "HARMONIC_108": HARMONIC_108,
                 "HARMONIC_432": HARMONIC_432,
                 "note": "144,000 = 12² × 1000 (quorum frequency); "
-                        "72 = precession integer (360° ÷ 72 = 5° per age); "
-                        "108 = Sun/Moon distance ratio; "
-                        "432 = cosmic tuning frequency",
+                "72 = precession integer (360° ÷ 72 = 5° per age); "
+                "108 = Sun/Moon distance ratio; "
+                "432 = cosmic tuning frequency",
             },
         }
 
@@ -418,7 +436,7 @@ class GreatYearEngine:
         The binding_warning reminds that this is awareness, not control.
         """
         if when is None:
-            when = datetime.now(timezone.utc)
+            when = datetime.now(UTC)
 
         precessional = self.get_precessional_position(when)
         zodiac_season = self.get_current_zodiac_season(when)
@@ -468,10 +486,6 @@ class GreatYearEngine:
             binding_warning=binding_warning,
         )
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine: GreatYearEngine | None = None
 

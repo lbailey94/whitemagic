@@ -2,10 +2,12 @@
 
 Optional FastAPI dependency — gracefully degrades when FastAPI is unavailable.
 """
+
 from typing import Any
 
 try:
     from fastapi import APIRouter, HTTPException
+
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
@@ -37,10 +39,14 @@ if HAS_FASTAPI:
     router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
     @router.post("/{action}")
-    async def webhook_trigger(action: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def webhook_trigger(
+        action: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Execute a whitelisted tool via webhook."""
         if action not in ALLOWED_ACTIONS:
-            raise HTTPException(status_code=404, detail=f"Action '{action}' not in whitelist")
+            raise HTTPException(
+                status_code=404, detail=f"Action '{action}' not in whitelist"
+            )
 
         config = ALLOWED_ACTIONS[action]
         from whitemagic.tools.unified_api import call_tool

@@ -69,16 +69,14 @@ class NowAwareness:
 
         # Emit to Gan Ying
         if self.bus and ResonanceEvent and EventType:
-            self.bus.emit(ResonanceEvent(
-                source="presence_now",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "event": "now_awareness",
-                    "notice": what,
-                    "quality": quality
-                },
-                confidence=quality
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="presence_now",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={"event": "now_awareness", "notice": what, "quality": quality},
+                    confidence=quality,
+                )
+            )
 
         return f"Present: {what}"
 
@@ -93,7 +91,11 @@ class NowAwareness:
             return 0.5  # Neutral
 
         # Recent moments matter more
-        recent = self.moments_today[-5:] if len(self.moments_today) >= 5 else self.moments_today
+        recent = (
+            self.moments_today[-5:]
+            if len(self.moments_today) >= 5
+            else self.moments_today
+        )
         avg_quality = sum(m.quality for m in recent) / len(recent)
 
         return avg_quality
@@ -154,10 +156,12 @@ class NowAwareness:
                 "score": 0.0,
                 "moments_noticed": 0,
                 "avg_quality": 0.0,
-                "message": "No awareness recorded today"
+                "message": "No awareness recorded today",
             }
 
-        avg_quality = sum(m.quality for m in self.moments_today) / len(self.moments_today)
+        avg_quality = sum(m.quality for m in self.moments_today) / len(
+            self.moments_today
+        )
         total_time_aware = sum(m.duration for m in self.moments_today)
 
         return {
@@ -165,7 +169,7 @@ class NowAwareness:
             "moments_noticed": len(self.moments_today),
             "total_time_aware": total_time_aware,
             "avg_quality": avg_quality,
-            "message": self._interpret_presence(avg_quality)
+            "message": self._interpret_presence(avg_quality),
         }
 
     def _interpret_presence(self, score: float) -> str:
@@ -181,7 +185,9 @@ class NowAwareness:
 
     def save_daily_awareness(self):
         """Persist today's awareness"""
-        filepath = self.awareness_dir / f"presence_{datetime.now().strftime('%Y%m%d')}.json"
+        filepath = (
+            self.awareness_dir / f"presence_{datetime.now().strftime('%Y%m%d')}.json"
+        )
 
         data = {
             "date": datetime.now().isoformat(),
@@ -190,12 +196,12 @@ class NowAwareness:
                     "timestamp": m.timestamp.isoformat(),
                     "awareness": m.awareness,
                     "quality": m.quality,
-                    "duration": m.duration
+                    "duration": m.duration,
                 }
                 for m in self.moments_today
             ],
-            "score": self.presence_score_today()
+            "score": self.presence_score_today(),
         }
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(data, f, indent=2)

@@ -28,10 +28,6 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Rust availability check
-# ---------------------------------------------------------------------------
-
 _RUST_AVAILABLE = False
 _RUST_V131 = False
 _rs: Any = None
@@ -63,10 +59,6 @@ def rust_v131_available() -> bool:
     """Check if v13.1 Rust accelerators (holographic, minhash, sqlite) are available."""
     return _RUST_V131
 
-
-# ---------------------------------------------------------------------------
-# Galactic Batch Scoring
-# ---------------------------------------------------------------------------
 
 def galactic_batch_score(
     memories: list[dict[str, Any]],
@@ -100,12 +92,18 @@ def galactic_batch_score(
 
 
 def _galactic_batch_score_python(
-    memories: list[dict[str, Any]], quick: bool,
+    memories: list[dict[str, Any]],
+    quick: bool,
 ) -> list[dict[str, Any]]:
     """Pure-Python fallback for galactic batch scoring."""
     results = []
     for m in memories:
-        if m.get("is_protected") or m.get("is_core_identity") or m.get("is_sacred") or m.get("is_pinned"):
+        if (
+            m.get("is_protected")
+            or m.get("is_core_identity")
+            or m.get("is_sacred")
+            or m.get("is_pinned")
+        ):
             distance = 0.0
             retention = 1.0
         elif quick:
@@ -145,19 +143,17 @@ def _galactic_batch_score_python(
         else:
             zone = "far_edge"
 
-        results.append({
-            "id": m.get("id", ""),
-            "retention_score": round(retention, 4),
-            "galactic_distance": distance,
-            "zone": zone,
-        })
+        results.append(
+            {
+                "id": m.get("id", ""),
+                "retention_score": round(retention, 4),
+                "galactic_distance": distance,
+                "zone": zone,
+            }
+        )
 
     return results
 
-
-# ---------------------------------------------------------------------------
-# Association Mining
-# ---------------------------------------------------------------------------
 
 def association_mine(
     texts: list[tuple[str, str]],
@@ -181,7 +177,10 @@ def association_mine(
         try:
             texts_json = json.dumps(texts)
             result_json = _rs.association_mine_fast(
-                texts_json, max_keywords, min_score, max_results,
+                texts_json,
+                max_keywords,
+                min_score,
+                max_results,
             )
             parsed: dict[str, Any] = json.loads(result_json)
             return parsed
@@ -203,12 +202,62 @@ def _association_mine_python(
     from collections import defaultdict
 
     stop_words = {
-        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-        "of", "with", "by", "from", "is", "it", "this", "that", "was", "are",
-        "were", "be", "been", "being", "have", "has", "had", "do", "does",
-        "did", "will", "would", "could", "should", "may", "might", "shall",
-        "can", "not", "no", "nor", "so", "if", "then", "than", "too", "very",
-        "just", "about", "up", "out", "into", "over", "after", "before",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "it",
+        "this",
+        "that",
+        "was",
+        "are",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "not",
+        "no",
+        "nor",
+        "so",
+        "if",
+        "then",
+        "than",
+        "too",
+        "very",
+        "just",
+        "about",
+        "up",
+        "out",
+        "into",
+        "over",
+        "after",
+        "before",
     }
     word_re = re.compile(r"\w+")
 
@@ -242,13 +291,15 @@ def _association_mine_python(
             count_bonus = min(1.0, len(shared) / 5.0) * 0.3
             score = min(1.0, raw_jaccard + count_bonus)
             if score >= min_score:
-                overlaps.append({
-                    "source_id": texts[i][0],
-                    "target_id": texts[j][0],
-                    "overlap_score": round(score, 4),
-                    "shared_count": len(shared),
-                    "shared_keywords": sorted(shared)[:5],
-                })
+                overlaps.append(
+                    {
+                        "source_id": texts[i][0],
+                        "target_id": texts[j][0],
+                        "overlap_score": round(score, 4),
+                        "shared_count": len(shared),
+                        "shared_keywords": sorted(shared)[:5],
+                    }
+                )
 
     overlaps.sort(key=lambda x: cast(float, x["overlap_score"]), reverse=True)
     overlaps = overlaps[:max_results]
@@ -259,10 +310,6 @@ def _association_mine_python(
         "overlaps": overlaps,
     }
 
-
-# ---------------------------------------------------------------------------
-# 5D Spatial Index
-# ---------------------------------------------------------------------------
 
 _index_5d: Any = None
 
@@ -310,7 +357,9 @@ class PythonSpatialIndex5D:
         dists.sort(key=lambda x: x[1])
         return dists[:n]
 
-    def query_within_radius(self, vector: list[float], radius_sq: float) -> list[tuple[str, float]]:
+    def query_within_radius(
+        self, vector: list[float], radius_sq: float
+    ) -> list[tuple[str, float]]:
         results = []
         for mid, pt in self._points:
             d = sum((a - b) ** 2 for a, b in zip(vector, pt))
@@ -328,13 +377,10 @@ class PythonSpatialIndex5D:
         self._points.clear()
 
 
-# ---------------------------------------------------------------------------
-# v13.1 — 5D Holographic Encoder (Rust Rayon batch)
-# ---------------------------------------------------------------------------
-
 def _prepare_memory_for_rust(memory: dict[str, Any]) -> dict[str, Any]:
     """Normalize a memory dict to the shape expected by Rust MemoryInput."""
     from datetime import datetime
+
     content = str(memory.get("content", ""))
     title = str(memory.get("title", ""))
     combined = f"{title} {content}" if title else content
@@ -343,7 +389,12 @@ def _prepare_memory_for_rust(memory: dict[str, Any]) -> dict[str, Any]:
     age_days = 0.0
     ts = memory.get("created_at") or memory.get("timestamp")
     if ts and isinstance(ts, str):
-        for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        for fmt in (
+            "%Y-%m-%dT%H:%M:%S.%f",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d",
+        ):
             try:
                 dt = datetime.strptime(ts[:26], fmt)
                 age_days = max(0.0, (datetime.now() - dt).total_seconds() / 86400.0)
@@ -448,17 +499,15 @@ def holographic_nearest_5d(
         query_json = json.dumps(query)
         coords_json = json.dumps(coords)
         weights_json = json.dumps(weights) if weights else ""
-        result_json = _rs.holographic_nearest_5d(query_json, coords_json, k, weights_json)
+        result_json = _rs.holographic_nearest_5d(
+            query_json, coords_json, k, weights_json
+        )
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
         logger.debug("Rust holographic nearest 5D failed: %s", e)
         return None
 
-
-# ---------------------------------------------------------------------------
-# v13.1 — MinHash LSH (near-duplicate detection)
-# ---------------------------------------------------------------------------
 
 def minhash_find_duplicates(
     keyword_sets: list[list[str]],
@@ -511,10 +560,6 @@ def minhash_signatures(
         logger.debug("Rust MinHash signatures failed: %s", e)
         return None
 
-
-# ---------------------------------------------------------------------------
-# v13.1 — SQLite Accelerator (batch operations)
-# ---------------------------------------------------------------------------
 
 def sqlite_batch_update_galactic(
     db_path: str,
@@ -622,17 +667,15 @@ def sqlite_export_for_mining(
     if not _RUST_V131:
         return None
     try:
-        result_json = _rs.sqlite_export_for_mining(db_path, max_distance, min_importance, limit)
+        result_json = _rs.sqlite_export_for_mining(
+            db_path, max_distance, min_importance, limit
+        )
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
         logger.debug("Rust SQLite export for mining failed: %s", e)
         return None
 
-
-# ---------------------------------------------------------------------------
-# v13.2 — BM25 Full-Text Search Engine
-# ---------------------------------------------------------------------------
 
 _RUST_SEARCH = False
 try:
@@ -757,10 +800,6 @@ def search_stats() -> dict[str, Any] | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# v13.2 — Atomic Rate Limiter
-# ---------------------------------------------------------------------------
-
 _RUST_RATE_LIMITER = False
 try:
     if _rs is not None and hasattr(_rs, "rate_check"):
@@ -871,10 +910,6 @@ def rate_check_batch(tool_names: list[str]) -> list[dict[str, Any]] | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# v13.3.2 — Multi-pass Retrieval Pipeline
-# ---------------------------------------------------------------------------
-
 _RUST_PIPELINE = False
 try:
     if _rs and hasattr(_rs, "retrieval_pipeline"):
@@ -919,10 +954,12 @@ def retrieval_pipeline(
             if isinstance(native_results, list):
                 return [item for item in native_results if isinstance(item, dict)]
         # Fallback to JSON path
-        input_data = json.dumps({
-            "candidates": candidates,
-            "config": config or {},
-        })
+        input_data = json.dumps(
+            {
+                "candidates": candidates,
+                "config": config or {},
+            }
+        )
         result_json = _rs.retrieval_pipeline(input_data)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
@@ -930,10 +967,6 @@ def retrieval_pipeline(
         logger.debug("Rust retrieval_pipeline failed: %s", e)
         return None
 
-
-# ---------------------------------------------------------------------------
-# v13.3.2 — Keyword Extraction (replaces Zig ctypes path)
-# ---------------------------------------------------------------------------
 
 _RUST_KEYWORDS = False
 try:
@@ -966,7 +999,9 @@ def keyword_extract(text: str, max_keywords: int = 50) -> set[str] | None:
         return None
 
 
-def keyword_extract_batch(texts: list[str], max_keywords: int = 50) -> list[set[str]] | None:
+def keyword_extract_batch(
+    texts: list[str], max_keywords: int = 50
+) -> list[set[str]] | None:
     """Batch extract keywords from multiple texts using Rust.
 
     Returns a list of keyword sets, or None if Rust is unavailable.
@@ -980,10 +1015,6 @@ def keyword_extract_batch(texts: list[str], max_keywords: int = 50) -> list[set[
         logger.debug("Rust keyword_extract_batch failed: %s", e)
         return None
 
-
-# ---------------------------------------------------------------------------
-# v14.5 — Arrow IPC Bridge (zero-copy columnar interchange)
-# ---------------------------------------------------------------------------
 
 _RUST_ARROW = False
 try:
@@ -1054,10 +1085,6 @@ def arrow_roundtrip_bench(n: int = 1000) -> tuple[int, int, int] | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# v14.5 — Tokio Clone Army (massively parallel exploration)
-# ---------------------------------------------------------------------------
-
 _RUST_TOKIO_CLONES = False
 try:
     if _rs is not None and hasattr(_rs, "tokio_deploy_clones"):
@@ -1120,10 +1147,6 @@ def tokio_clone_stats() -> dict[str, Any] | None:
         logger.debug("Rust tokio_clone_stats failed: %s", e)
         return None
 
-
-# ---------------------------------------------------------------------------
-# v14.5 — IPC Bridge (Iceoryx2 shared memory)
-# ---------------------------------------------------------------------------
 
 _RUST_IPC = False
 try:

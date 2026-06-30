@@ -240,10 +240,6 @@ pub fn arrow_to_memories(batch: &RecordBatch) -> Vec<MemoryRecord> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
-// PyO3 bindings
-// ---------------------------------------------------------------------------
-
 /// Convert JSON memory array to Arrow IPC bytes (zero-copy interchange format).
 /// Input: JSON array of memory objects.
 /// Output: Arrow IPC file bytes.

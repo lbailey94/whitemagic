@@ -32,6 +32,7 @@ class GratitudeChannel(StrEnum):
         XRPL
         X402
         MANUAL"""
+
     XRPL = "xrpl"
     X402 = "x402"
     MANUAL = "manual"
@@ -40,6 +41,7 @@ class GratitudeChannel(StrEnum):
 @dataclass
 class GratitudeEvent:
     """A single gratitude contribution."""
+
     channel: str
     amount: float
     currency: str = "XRP"
@@ -70,6 +72,7 @@ class GratitudeLedger:
     def __init__(self, ledger_path: Path | None = None):
         if ledger_path is None:
             from whitemagic.config.paths import GRATITUDE_DIR
+
             self._path = GRATITUDE_DIR / "ledger.jsonl"
         else:
             self._path = ledger_path
@@ -101,7 +104,9 @@ class GratitudeLedger:
                 with open(self._path, "a", encoding="utf-8") as f:
                     f.write(_json_dumps(event.to_dict(), default=str) + "\n")
             except Exception as exc:
-                logger.warning("Failed to persist gratitude event: %s", exc, exc_info=True)
+                logger.warning(
+                    "Failed to persist gratitude event: %s", exc, exc_info=True
+                )
 
     def get_stats(self) -> dict[str, Any]:
         """Aggregate gratitude statistics."""
@@ -135,10 +140,7 @@ class GratitudeLedger:
     def is_grateful_agent(self, agent_id: str) -> bool:
         """Check if an agent has contributed (for Proof of Gratitude boosts)."""
         with self._lock:
-            return any(
-                e.agent_id == agent_id and e.verified
-                for e in self._events
-            )
+            return any(e.agent_id == agent_id and e.verified for e in self._events)
 
     def get_agent_contribution(self, agent_id: str) -> dict[str, Any]:
         """Get total contribution for an agent."""
@@ -152,10 +154,6 @@ class GratitudeLedger:
                 "grateful_agent": self.is_grateful_agent(agent_id),
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _ledger: GratitudeLedger | None = None
 _ledger_lock = threading.Lock()

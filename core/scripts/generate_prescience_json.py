@@ -16,7 +16,9 @@ from whitemagic.forecasting.temporal_db import TemporalForecastDB
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate prescience.json from TemporalForecastDB")
+    parser = argparse.ArgumentParser(
+        description="Generate prescience.json from TemporalForecastDB"
+    )
     parser.add_argument(
         "--output",
         type=Path,

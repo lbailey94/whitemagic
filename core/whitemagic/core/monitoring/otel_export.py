@@ -39,6 +39,7 @@ try:
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+
     HAS_OTEL = True
 except ImportError:
     pass
@@ -49,6 +50,7 @@ try:
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
         OTLPSpanExporter,  # type: ignore[import-not-found]
     )
+
     HAS_OTLP = True
 except ImportError:
     pass
@@ -105,8 +107,12 @@ class OTelExporter:
             # Tracer
             provider = TracerProvider(resource=resource)
             if HAS_OTLP:
-                endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-                provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
+                endpoint = os.environ.get(
+                    "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+                )
+                provider.add_span_processor(
+                    SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint))
+                )
             else:
                 provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
@@ -170,7 +176,7 @@ class OTelExporter:
         with self._lock:
             self._buffer.append(record)
             if len(self._buffer) > self._max_buffer:
-                self._buffer = self._buffer[-self._max_buffer:]
+                self._buffer = self._buffer[-self._max_buffer :]
 
     def record_harmony_metrics(self, harmony_snapshot: dict[str, float]) -> None:
         """Record Harmony Vector dimensions as metrics — graceful fallback."""
@@ -223,7 +229,12 @@ class OTelExporter:
                     "errors": errors,
                     "error_rate": round(errors / max(count, 1), 3),
                     "avg_ms": round(sum(durations) / max(len(durations), 1), 2),
-                    "p95_ms": round(sorted(durations)[int(len(durations) * 0.95)] if durations else 0, 2),
+                    "p95_ms": round(
+                        sorted(durations)[int(len(durations) * 0.95)]
+                        if durations
+                        else 0,
+                        2,
+                    ),
                 }
 
             return {
@@ -232,7 +243,11 @@ class OTelExporter:
                 "otel_enabled": self._enabled and HAS_OTEL,
                 "otlp_available": HAS_OTLP,
                 "buffer_size": len(self._buffer),
-                "top_tools": dict(sorted(tool_stats.items(), key=lambda x: x[1]["calls"], reverse=True)[:10]),
+                "top_tools": dict(
+                    sorted(
+                        tool_stats.items(), key=lambda x: x[1]["calls"], reverse=True
+                    )[:10]
+                ),
             }
 
     def status(self) -> dict[str, Any]:
@@ -251,10 +266,6 @@ class OTelExporter:
             "total_spans": self._total_spans,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _otel: OTelExporter | None = None
 _otel_lock = threading.Lock()
@@ -275,6 +286,8 @@ def get_otel() -> OTelExporter:
     return _otel
 
 
-def record_tool_span(tool_name: str, duration: float, status: str, **attrs: Any) -> None:
+def record_tool_span(
+    tool_name: str, duration: float, status: str, **attrs: Any
+) -> None:
     """Convenience: record a tool span."""
     get_otel().record_tool_span(tool_name, duration, status, attrs)

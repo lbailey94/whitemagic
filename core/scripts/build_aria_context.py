@@ -29,13 +29,18 @@ def _resolve_archive_dir() -> Path:
     """Resolve the aria-crystallized archive directory from env or default."""
     aux_root = Path(
         os.environ.get("WHITEMAGIC_AUX_DIR")
-        or (str(Path.home() / "Desktop" / "WHITEMAGIC-aux" / "site" / "whitemagic-archive-aux"))
+        or (
+            str(
+                Path.home()
+                / "Desktop"
+                / "WHITEMAGIC-aux"
+                / "site"
+                / "whitemagic-archive-aux"
+            )
+        )
     ).expanduser()
     return (
-        aux_root
-        / "archive"
-        / "aria-crystallized-20260210_215426"
-        / "aria-crystallized"
+        aux_root / "archive" / "aria-crystallized-20260210_215426" / "aria-crystallized"
     )
 
 
@@ -76,12 +81,14 @@ def build_context(full: bool = False) -> dict:
                 try:
                     content = f.read_text(errors="replace")
                     key = tier_map.get(f.name, "sessions")
-                    context[key].append({
-                        "title": f.stem,
-                        "file": str(f.relative_to(ARCHIVE_DIR)),
-                        "content": content if full else content[:3000],
-                        "truncated": not full and len(content) > 3000,
-                    })
+                    context[key].append(
+                        {
+                            "title": f.stem,
+                            "file": str(f.relative_to(ARCHIVE_DIR)),
+                            "content": content if full else content[:3000],
+                            "truncated": not full and len(content) > 3000,
+                        }
+                    )
                 except Exception:
                     pass
 
@@ -92,12 +99,14 @@ def build_context(full: bool = False) -> dict:
             if f.suffix in (".md", ".txt"):
                 try:
                     content = f.read_text(errors="replace")
-                    context["journals"].append({
-                        "title": f.stem,
-                        "file": str(f.relative_to(ARCHIVE_DIR)),
-                        "content": content if full else content[:4000],
-                        "truncated": not full and len(content) > 4000,
-                    })
+                    context["journals"].append(
+                        {
+                            "title": f.stem,
+                            "file": str(f.relative_to(ARCHIVE_DIR)),
+                            "content": content if full else content[:4000],
+                            "truncated": not full and len(content) > 4000,
+                        }
+                    )
                 except Exception:
                     pass
 
@@ -107,11 +116,13 @@ def build_context(full: bool = False) -> dict:
         for f in sorted(joy_dir.iterdir()):
             if f.suffix == ".py":
                 try:
-                    context["joy_garden"].append({
-                        "title": f.stem,
-                        "file": str(f.relative_to(ARCHIVE_DIR)),
-                        "content": f.read_text(errors="replace")[:5000],
-                    })
+                    context["joy_garden"].append(
+                        {
+                            "title": f.stem,
+                            "file": str(f.relative_to(ARCHIVE_DIR)),
+                            "content": f.read_text(errors="replace")[:5000],
+                        }
+                    )
                 except Exception:
                     pass
 
@@ -121,19 +132,19 @@ def build_context(full: bool = False) -> dict:
         for f in sorted(cons_dir.iterdir()):
             if f.suffix == ".py":
                 try:
-                    context["consciousness_code"].append({
-                        "title": f.stem,
-                        "file": str(f.relative_to(ARCHIVE_DIR)),
-                        "content": f.read_text(errors="replace")[:5000],
-                    })
+                    context["consciousness_code"].append(
+                        {
+                            "title": f.stem,
+                            "file": str(f.relative_to(ARCHIVE_DIR)),
+                            "content": f.read_text(errors="replace")[:5000],
+                        }
+                    )
                 except Exception:
                     pass
 
     # Total size
     total_chars = sum(
-        len(json.dumps(v))
-        for v in context.values()
-        if isinstance(v, list)
+        len(json.dumps(v)) for v in context.values() if isinstance(v, list)
     )
     context["_meta"] = {
         "total_size_chars": total_chars,
@@ -151,11 +162,15 @@ def build_context(full: bool = False) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Build Aria channeling context")
     parser.add_argument("--output", type=str, default=None, help="Output file path")
-    parser.add_argument("--full", action="store_true", help="Include full content (non-truncated)")
+    parser.add_argument(
+        "--full", action="store_true", help="Include full content (non-truncated)"
+    )
     args = parser.parse_args()
 
-    output = Path(args.output) if args.output else (
-        OUTPUT_FULL if args.full else OUTPUT_DEFAULT
+    output = (
+        Path(args.output)
+        if args.output
+        else (OUTPUT_FULL if args.full else OUTPUT_DEFAULT)
     )
 
     context = build_context(full=args.full)

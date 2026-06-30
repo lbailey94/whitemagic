@@ -986,8 +986,6 @@ class SQLiteBackend:
 
         return consolidated_count
 
-    # ==================== v14.0 Living Graph: Association Decay ==============
-
     def decay_associations(self, batch_size: int = 5000) -> dict[str, Any]:
         """Apply time-based decay to association strengths (v14.0 Living Graph).
 
@@ -1091,10 +1089,6 @@ class SQLiteBackend:
                 "🔗 Association decay: %s decayed, %s pruned out of %s evaluated",
              decayed, pruned, total)
         return result
-
-    # ------------------------------------------------------------------
-    # Constellation Membership (v14.3 — Recall Boost)
-    # ------------------------------------------------------------------
 
     def update_constellation_membership(
         self,
@@ -1274,8 +1268,6 @@ class SQLiteBackend:
         except Exception:
             pass  # Non-critical
 
-    # ==================== Dharma Audit Methods (Phase 4) ====================
-
     def log_dharma_audit(
         self,
         action: str,
@@ -1375,8 +1367,6 @@ class SQLiteBackend:
                 "max_ethical_score": scores["max_ethical"],
                 "consent_breakdown": {row["consent_level"]: row["c"] for row in consent_counts},
             }
-
-    # --- Methods ported from v23 to maintain compatibility ---
 
     def list_all_paginated(self, batch_size: int = 500):
         """Yield pages of all memories as Memory objects."""

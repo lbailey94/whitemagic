@@ -1,10 +1,12 @@
 # ruff: noqa: BLE001
 """Gan Ying event bus tool handlers."""
+
 from typing import Any
 
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
@@ -31,6 +33,7 @@ def handle_ganying_history(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.resonance.gan_ying import get_bus
+
         bus = get_bus()
         limit = kwargs.get("limit", 50)
         events = bus.get_history(limit=limit)
@@ -39,7 +42,9 @@ def handle_ganying_history(**kwargs: Any) -> dict[str, Any]:
             "count": len(events),
             "events": [
                 {
-                    "type": str(e.event_type.value) if hasattr(e.event_type, "value") else str(e.event_type),
+                    "type": str(e.event_type.value)
+                    if hasattr(e.event_type, "value")
+                    else str(e.event_type),
                     "source": e.source,
                     "timestamp": str(e.timestamp),
                 }
@@ -59,12 +64,17 @@ def handle_ganying_listeners(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.resonance.gan_ying import get_bus
+
         bus = get_bus()
         listeners = {
             str(k.value) if hasattr(k, "value") else str(k): len(v)
             for k, v in getattr(bus, "_listeners", {}).items()
         }
-        return {"status": "success", "listeners": listeners, "total": sum(listeners.values())}
+        return {
+            "status": "success",
+            "listeners": listeners,
+            "total": sum(listeners.values()),
+        }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -109,6 +119,7 @@ def handle_resonance_stats(**kwargs: Any) -> dict[str, Any]:
 
         # Quadrant activation (Wu Xing)
         from whitemagic.core.engines.registry import ENGINE_REGISTRY, Quadrant
+
         quadrant_activation: dict[str, float] = {
             "east_wood": 0.0,
             "south_fire": 0.0,
@@ -130,11 +141,16 @@ def handle_resonance_stats(**kwargs: Any) -> dict[str, Any]:
             "status": "success",
             "garden_count": len(activations),
             "active_gardens": sum(1 for v in activations.values() if v > 0.01),
-            "activations": {k: round(v, 3) for k, v in sorted(activations.items(), key=lambda x: -x[1])},
+            "activations": {
+                k: round(v, 3)
+                for k, v in sorted(activations.items(), key=lambda x: -x[1])
+            },
             "entropy": round(entropy, 3),
             "balance_ratio": round(balance_ratio, 3),
             "cascade_stats": cascade_stats,
-            "quadrant_activation": {k: round(v, 3) for k, v in quadrant_activation.items()},
+            "quadrant_activation": {
+                k: round(v, 3) for k, v in quadrant_activation.items()
+            },
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -151,6 +167,7 @@ def handle_resonance_trace(**kwargs: Any) -> dict[str, Any]:
         from datetime import datetime, timedelta
 
         from whitemagic.core.resonance.gan_ying import get_bus
+
         bus = get_bus()
         duration = kwargs.get("duration", 5)
         events = bus.get_history(limit=100)
@@ -162,7 +179,9 @@ def handle_resonance_trace(**kwargs: Any) -> dict[str, Any]:
             "duration_minutes": duration,
             "events": [
                 {
-                    "type": str(e.event_type.value) if hasattr(e.event_type, "value") else str(e.event_type),
+                    "type": str(e.event_type.value)
+                    if hasattr(e.event_type, "value")
+                    else str(e.event_type),
                     "source": e.source,
                     "timestamp": str(e.timestamp),
                 }

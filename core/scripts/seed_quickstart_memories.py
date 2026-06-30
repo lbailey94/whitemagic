@@ -102,7 +102,15 @@ SEED_MEMORIES = [
             "Additionally: Circuit Breakers prevent cascading failures (5 failures in 60s triggers OPEN state). "
             "Maturity Gates unlock capabilities progressively (SEED→BICAMERAL→REFLECTIVE→RADIANT→COLLECTIVE→LOGOS)."
         ),
-        "tags": {"quickstart", "system", "governance", "dharma", "karma", "harmony", "guide"},
+        "tags": {
+            "quickstart",
+            "system",
+            "governance",
+            "dharma",
+            "karma",
+            "harmony",
+            "guide",
+        },
         "importance": 0.85,
     },
     # ── Living Graph ─────────────────────────────────────────────
@@ -137,7 +145,14 @@ SEED_MEMORIES = [
             "2-7 seconds depending on memory count. Serendipity surface (gana_abundance → serendipity_surface) "
             "can find unexpected connections between memories at any time."
         ),
-        "tags": {"quickstart", "system", "dream", "consolidation", "lifecycle", "guide"},
+        "tags": {
+            "quickstart",
+            "system",
+            "dream",
+            "consolidation",
+            "lifecycle",
+            "guide",
+        },
         "importance": 0.8,
     },
     # ── Multi-Galaxy ─────────────────────────────────────────────
@@ -170,7 +185,15 @@ SEED_MEMORIES = [
             "All polyglot accelerators have Python fallbacks — the system works without any compiled "
             "extensions, just slower. Check status via gana_root → rust_status and gana_tail → simd.status."
         ),
-        "tags": {"quickstart", "system", "polyglot", "rust", "zig", "performance", "guide"},
+        "tags": {
+            "quickstart",
+            "system",
+            "polyglot",
+            "rust",
+            "zig",
+            "performance",
+            "guide",
+        },
         "importance": 0.75,
     },
     # ── Local AI Integration ─────────────────────────────────────
@@ -205,7 +228,14 @@ SEED_MEMORIES = [
             "health_report — Full system health including version, Rust bridge, garden status. "
             "These tools enable metacognition — AI reasoning about its own state and capabilities."
         ),
-        "tags": {"quickstart", "system", "introspection", "gnosis", "self-awareness", "guide"},
+        "tags": {
+            "quickstart",
+            "system",
+            "introspection",
+            "gnosis",
+            "self-awareness",
+            "guide",
+        },
         "importance": 0.75,
     },
     # ── Quick Reference ──────────────────────────────────────────
@@ -327,9 +357,11 @@ SEED_MEMORIES = [
 
 def main():
     import os
+
     os.environ["WM_SILENT_INIT"] = "1"
 
     from whitemagic.core.memory.unified import get_unified_memory
+
     um = get_unified_memory()
 
     print(f"Seeding {len(SEED_MEMORIES)} quickstart memories...")
@@ -347,7 +379,7 @@ def main():
             existing = um.search(safe_query, limit=3)
         except Exception:
             existing = []
-        if existing and any(getattr(m, 'title', '') == title for m in existing):
+        if existing and any(getattr(m, "title", "") == title for m in existing):
             print(f"  ⏭️  {title} (already exists)")
             skipped += 1
             continue

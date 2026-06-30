@@ -8,7 +8,4 @@ from __future__ import annotations
 
 
 def _disabled_error() -> RuntimeError:
-    return RuntimeError(
-        "Local Model Integration is archived and no longer available."
-    )
-
+    return RuntimeError("Local Model Integration is archived and no longer available.")

@@ -42,13 +42,13 @@ logger = logging.getLogger(__name__)
 class NeurotransmitterSnapshot:
     """Immutable snapshot safe for JSON serialization."""
 
-    dopamine: float = 0.5      # reward prediction error
-    oxytocin: float = 0.5      # trust / social bonding
-    serotonin: float = 0.5     # mood stability
-    cortisol: float = 0.5      # stress / alarm
-    acetylcholine: float = 0.5 # attention / focus
-    gaba: float = 0.5          # inhibition / calm
-    glutamate: float = 0.5     # excitation / drive
+    dopamine: float = 0.5  # reward prediction error
+    oxytocin: float = 0.5  # trust / social bonding
+    serotonin: float = 0.5  # mood stability
+    cortisol: float = 0.5  # stress / alarm
+    acetylcholine: float = 0.5  # attention / focus
+    gaba: float = 0.5  # inhibition / calm
+    glutamate: float = 0.5  # excitation / drive
 
     # Interpretation
     dominant: str = "baseline"
@@ -70,7 +70,9 @@ class _SignalWindow:
 
     def __init__(self, window_seconds: float = 300.0, max_events: int = 2000):
         self._lock = threading.Lock()
-        self._events: deque[tuple[float, float]] = deque(maxlen=max_events)  # (timestamp, value)
+        self._events: deque[tuple[float, float]] = deque(
+            maxlen=max_events
+        )  # (timestamp, value)
         self._window = window_seconds
 
     def push(self, value: float) -> None:
@@ -151,11 +153,9 @@ class NeurotransmitterVector:
             timestamp=datetime.now().isoformat(),
         )
 
-    # ------------------------------------------------------------------
-    # Signal collectors
-    # ------------------------------------------------------------------
-
-    def record_tool_call(self, success: bool, result: dict[str, Any] | None = None) -> None:
+    def record_tool_call(
+        self, success: bool, result: dict[str, Any] | None = None
+    ) -> None:
         """Called on every tool invocation."""
         with self._lock:
             self._tool_calls_total += 1
@@ -170,7 +170,9 @@ class NeurotransmitterVector:
         if self._tool_calls_total > 10:
             actual_rate = self._tool_calls_success / self._tool_calls_total
             reward_error = actual_rate - expected_success_rate
-            dopamine_val = 0.5 + (reward_error * 5.0)  # scale: ±0.1 rate → ±0.5 dopamine
+            dopamine_val = 0.5 + (
+                reward_error * 5.0
+            )  # scale: ±0.1 rate → ±0.5 dopamine
             self._dopamine.push(max(0.0, min(1.0, dopamine_val)))
         else:
             self._dopamine.push(0.5)
@@ -193,7 +195,10 @@ class NeurotransmitterVector:
 
             # Oxytocin: cooperation signals (multi-agent, mesh, voting)
             tool_name = result.get("tool", "")
-            if any(t in tool_name for t in ("agent.", "mesh.", "vote.", "swarm.", "broker.")):
+            if any(
+                t in tool_name
+                for t in ("agent.", "mesh.", "vote.", "swarm.", "broker.")
+            ):
                 self._oxytocin.push(0.8)
             else:
                 self._oxytocin.push(0.4)
@@ -239,10 +244,6 @@ class NeurotransmitterVector:
         """Called when rate limiter throttles a call."""
         self._cortisol.push(0.85)
 
-    # ------------------------------------------------------------------
-    # Snapshot
-    # ------------------------------------------------------------------
-
     def snapshot(self) -> NeurotransmitterSnapshot:
         """Return current neurotransmitter profile."""
         snap = NeurotransmitterSnapshot(
@@ -273,19 +274,31 @@ class NeurotransmitterVector:
         # Generate interpretation
         interpretations = []
         if snap.cortisol > 0.7:
-            interpretations.append("System is stressed — errors or throttling detected.")
+            interpretations.append(
+                "System is stressed — errors or throttling detected."
+            )
         if snap.dopamine > 0.7:
-            interpretations.append("Reward signals are strong — tools are succeeding above expectation.")
+            interpretations.append(
+                "Reward signals are strong — tools are succeeding above expectation."
+            )
         if snap.glutamate > 0.7:
-            interpretations.append("Creative drive is high — many novel connections being explored.")
+            interpretations.append(
+                "Creative drive is high — many novel connections being explored."
+            )
         if snap.serotonin < 0.3:
             interpretations.append("Mood instability — error variance is high.")
         if snap.oxytocin > 0.7:
-            interpretations.append("Social bonding is active — multi-agent coordination thriving.")
+            interpretations.append(
+                "Social bonding is active — multi-agent coordination thriving."
+            )
         if snap.acetylcholine > 0.7:
-            interpretations.append("Attention is highly focused — salient events dominating.")
+            interpretations.append(
+                "Attention is highly focused — salient events dominating."
+            )
         if snap.gaba > 0.7:
-            interpretations.append("Inhibition is high — many caution signals being raised.")
+            interpretations.append(
+                "Inhibition is high — many caution signals being raised."
+            )
         if not interpretations:
             interpretations.append("System is in baseline biochemical state.")
 

@@ -10,6 +10,7 @@ be distributed across processes. The design maps directly to Elixir GenServers.
 Actor state: {prior, posterior, outcome_count, confidence, bandit_params}
 Messages: {:outcome, success, gain}, {:query, field}, {:transfer, from_hypothesis}
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from whitemagic.core.evolution._elixir_actor_bridge import ElixirActorBridge
+
     _elixir_bridge: ElixirActorBridge | None = ElixirActorBridge()
 except ImportError:
     _elixir_bridge = None
@@ -33,6 +35,7 @@ class HypothesisActor:
     In Elixir, this would be a GenServer process. In Python, it's an
     independent state object that can be pickled and distributed.
     """
+
     hypothesis_id: str
     prior: float = 0.5
     posterior: float = 0.5
@@ -40,7 +43,7 @@ class HypothesisActor:
     success_count: int = 0
     confidence: float = 0.5
     alpha: float = 1.0  # Beta distribution parameter
-    beta: float = 1.0   # Beta distribution parameter
+    beta: float = 1.0  # Beta distribution parameter
     last_update: float = field(default_factory=time.time)
     mailbox: list[tuple[str, Any]] = field(default_factory=list)
 
@@ -69,7 +72,9 @@ class HypothesisActor:
             "posterior": self.posterior,
             "confidence": self.confidence,
             "outcome_count": self.outcome_count,
-            "success_rate": self.success_count / self.outcome_count if self.outcome_count > 0 else 0.0,
+            "success_rate": self.success_count / self.outcome_count
+            if self.outcome_count > 0
+            else 0.0,
         }
 
     def handle_query(self, field_name: str) -> Any:
@@ -127,7 +132,9 @@ class ActorSupervisor:
     def start_actor(self, hypothesis_id: str, prior: float = 0.5) -> HypothesisActor:
         """Start a new actor for a hypothesis."""
         if self._use_elixir:
-            result = _elixir_bridge.call("start_actor", hypothesis_id=hypothesis_id, prior=prior)
+            result = _elixir_bridge.call(
+                "start_actor", hypothesis_id=hypothesis_id, prior=prior
+            )
             if result is not None:
                 logger.debug("Started Elixir actor for %s", hypothesis_id)
         # Always create Python-side actor for local state tracking
@@ -138,10 +145,14 @@ class ActorSupervisor:
     def get_actor(self, hypothesis_id: str) -> HypothesisActor | None:
         return self._actors.get(hypothesis_id)
 
-    def send_outcome(self, hypothesis_id: str, success: bool, gain: float = 0.0) -> dict[str, Any] | None:
+    def send_outcome(
+        self, hypothesis_id: str, success: bool, gain: float = 0.0
+    ) -> dict[str, Any] | None:
         """Send an outcome message to an actor."""
         if self._use_elixir:
-            result = _elixir_bridge.call("send_outcome", hypothesis_id=hypothesis_id, success=success, gain=gain)
+            result = _elixir_bridge.call(
+                "send_outcome", hypothesis_id=hypothesis_id, success=success, gain=gain
+            )
             if result is not None:
                 # Update Python-side actor state too for consistency
                 actor = self._actors.get(hypothesis_id)
@@ -153,7 +164,9 @@ class ActorSupervisor:
             return None
         return actor.handle_outcome(success, gain)
 
-    def broadcast_outcome(self, success: bool, gain: float = 0.0) -> dict[str, dict[str, Any]]:
+    def broadcast_outcome(
+        self, success: bool, gain: float = 0.0
+    ) -> dict[str, dict[str, Any]]:
         """Broadcast an outcome to all actors (for global updates)."""
         results = {}
         for hid, actor in self._actors.items():
@@ -175,7 +188,9 @@ class ActorSupervisor:
         if hypothesis_id in self._actors:
             prior = self._actors[hypothesis_id].prior
         actor = self.start_actor(hypothesis_id, prior=prior)
-        self._restart_count[hypothesis_id] = self._restart_count.get(hypothesis_id, 0) + 1
+        self._restart_count[hypothesis_id] = (
+            self._restart_count.get(hypothesis_id, 0) + 1
+        )
         self._failed.discard(hypothesis_id)
         return actor
 

@@ -1,5 +1,4 @@
-"""Polyglot Memory Tools — Route holographic memory queries to Julia/Elixir/Haskell/Rust backends.
-"""
+"""Polyglot Memory Tools — Route holographic memory queries to Julia/Elixir/Haskell/Rust backends."""
 
 from whitemagic.tools.tool_types import (
     ToolCategory,
@@ -24,7 +23,12 @@ TOOLS: list[ToolDefinition] = [
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["encode", "nearest_neighbors", "constellation_detect", "coherence_score"],
+                    "enum": [
+                        "encode",
+                        "nearest_neighbors",
+                        "constellation_detect",
+                        "coherence_score",
+                    ],
                     "description": "Holographic memory operation to execute",
                 },
                 "text": {
@@ -82,7 +86,11 @@ TOOLS: list[ToolDefinition] = [
                     "items": {"type": "string"},
                     "description": "Pool of texts to search against",
                 },
-                "k": {"type": "integer", "default": 5, "description": "Number of results"},
+                "k": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "Number of results",
+                },
                 "backend": {
                     "type": "string",
                     "enum": ["auto", "julia", "elixir", "haskell", "rust", "koka"],
@@ -131,15 +139,30 @@ TOOLS: list[ToolDefinition] = [
                 "operation": {
                     "type": "string",
                     "enum": [
-                        "shannon_entropy", "kl_divergence", "information_gain",
-                        "system_uncertainty", "adapt_weights", "exploration_score",
-                        "thermo_cool", "thermo_reheat", "thermo_adapt",
-                        "boltzmann_probabilities", "boltzmann_select",
-                        "hrr_encode", "hrr_bind", "hrr_unbind",
-                        "hrr_superposition", "hrr_synergy", "hrr_similarity",
-                        "mc_run_trials", "mc_importance_sampling",
-                        "mc_control_variates", "mc_antithetic_variates",
-                        "cf_project_forward", "cf_bootstrap_ci", "cf_estimate_impact",
+                        "shannon_entropy",
+                        "kl_divergence",
+                        "information_gain",
+                        "system_uncertainty",
+                        "adapt_weights",
+                        "exploration_score",
+                        "thermo_cool",
+                        "thermo_reheat",
+                        "thermo_adapt",
+                        "boltzmann_probabilities",
+                        "boltzmann_select",
+                        "hrr_encode",
+                        "hrr_bind",
+                        "hrr_unbind",
+                        "hrr_superposition",
+                        "hrr_synergy",
+                        "hrr_similarity",
+                        "mc_run_trials",
+                        "mc_importance_sampling",
+                        "mc_control_variates",
+                        "mc_antithetic_variates",
+                        "cf_project_forward",
+                        "cf_bootstrap_ci",
+                        "cf_estimate_impact",
                     ],
                     "description": "Evolution operation to execute",
                 },
@@ -168,8 +191,11 @@ TOOLS: list[ToolDefinition] = [
                 "operation": {
                     "type": "string",
                     "enum": [
-                        "value_at", "duration", "fit_parameters",
-                        "portfolio_duration", "select_by_horizon",
+                        "value_at",
+                        "duration",
+                        "fit_parameters",
+                        "portfolio_duration",
+                        "select_by_horizon",
                         "detect_regime_change",
                     ],
                     "description": "Yield curve operation to execute",
@@ -209,8 +235,12 @@ TOOLS: list[ToolDefinition] = [
                 "operation": {
                     "type": "string",
                     "enum": [
-                        "start_actor", "send_outcome", "broadcast_outcome",
-                        "transfer_belief", "get_posteriors", "get_stats",
+                        "start_actor",
+                        "send_outcome",
+                        "broadcast_outcome",
+                        "transfer_belief",
+                        "get_posteriors",
+                        "get_stats",
                     ],
                     "description": "Actor operation to execute",
                 },

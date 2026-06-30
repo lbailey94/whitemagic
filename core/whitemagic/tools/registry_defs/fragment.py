@@ -16,9 +16,19 @@ TOOLS: list[ToolDefinition] = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query text"},
-                "path": {"type": "string", "description": "Path to the codebase root directory"},
-                "top": {"type": "integer", "description": "Number of results to return", "default": 10},
-                "index_dir": {"type": "string", "description": "Custom index directory path (default: <path>/.fragment)"},
+                "path": {
+                    "type": "string",
+                    "description": "Path to the codebase root directory",
+                },
+                "top": {
+                    "type": "integer",
+                    "description": "Number of results to return",
+                    "default": 10,
+                },
+                "index_dir": {
+                    "type": "string",
+                    "description": "Custom index directory path (default: <path>/.fragment)",
+                },
             },
             "required": ["query"],
         },
@@ -31,9 +41,20 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "Path to the codebase to index"},
-                "mode": {"type": "string", "enum": ["quick", "deep"], "default": "quick"},
-                "force": {"type": "boolean", "default": False, "description": "Force rebuild from scratch"},
+                "path": {
+                    "type": "string",
+                    "description": "Path to the codebase to index",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["quick", "deep"],
+                    "default": "quick",
+                },
+                "force": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Force rebuild from scratch",
+                },
             },
             "required": ["path"],
         },
@@ -47,7 +68,10 @@ TOOLS: list[ToolDefinition] = [
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "Path to the codebase"},
-                "index_dir": {"type": "string", "description": "Custom index directory path"},
+                "index_dir": {
+                    "type": "string",
+                    "description": "Custom index directory path",
+                },
             },
             "required": ["path"],
         },

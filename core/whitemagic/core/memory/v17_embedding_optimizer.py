@@ -245,7 +245,6 @@ class V17EmbeddingOptimizer:
         """
         t0 = time.perf_counter()
 
-        # Step 1: Fetch texts to index (single DB query)
         tasks = await self._fetch_texts(memory_type, limit, skip_cached)
         if not tasks:
             return {
@@ -258,7 +257,6 @@ class V17EmbeddingOptimizer:
         total_to_index = len(tasks)
         logger.info("V17: Indexing %s memories with bounded concurrency", total_to_index, exc_info=True)
 
-        # Step 2: Process in batches with bounded concurrency
         all_tasks: list[EmbeddingTask] = []
         processed = 0
 
@@ -283,13 +281,11 @@ class V17EmbeddingOptimizer:
                     "(%.1f%%) | Rate: %.0f embeds/sec"
                 , len(all_tasks), total_to_index, progress, current_rate)
 
-        # Step 3: Final bulk insert for any remaining
         final_inserted = await self._bulk_insert_embeddings(
             [t for t in all_tasks if t.result is not None and t not in all_tasks[:processed]]
         )
         total_inserted = processed + final_inserted
 
-        # Step 4: Lazy cache invalidation (once at end, not per-item!)
         self.engine._invalidate_vec_cache()
 
         elapsed = time.perf_counter() - t0

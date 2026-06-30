@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # v23 wiring: connect to ParallelCognition (recovered Tier 2)
 try:
     from whitemagic.core.consciousness.parallel_cognition import ParallelCognition
+
     _HAS_PARALLEL_COG = True
 except ImportError:
     _HAS_PARALLEL_COG = False
@@ -25,6 +26,7 @@ class ContinuousSelfAwareness:
     def __init__(self, root_path: str | None = None) -> None:
         if root_path is None:
             from whitemagic.config.paths import PROJECT_ROOT
+
             root_path = str(PROJECT_ROOT)
         self.monitor = None  # ContinuousMonitor not yet recovered
         self.cognition = ParallelCognition() if _HAS_PARALLEL_COG else None
@@ -38,23 +40,36 @@ class ContinuousSelfAwareness:
         if self.monitor is None:
             return {"status": "monitor_not_available"}
         snapshot = self.monitor.monitor_once()
-        drift = self.monitor.detect_drift() if self.monitor and len(self.monitor.snapshots) >= 2 else {"drift_detected": False}
+        drift = (
+            self.monitor.detect_drift()
+            if self.monitor and len(self.monitor.snapshots) >= 2
+            else {"drift_detected": False}
+        )
         patterns = self._detect_patterns(snapshot, drift)
         adjustments = self._decide_adjustments(patterns)
 
         observation = {
             "timestamp": datetime.now().isoformat(),
-            "snapshot": {"files": snapshot["files"], "lines": snapshot["lines"], "duration": snapshot["duration"]},
+            "snapshot": {
+                "files": snapshot["files"],
+                "lines": snapshot["lines"],
+                "duration": snapshot["duration"],
+            },
             "drift": drift,
             "patterns": patterns,
             "adjustments": adjustments,
-            "meta": {"snapshot_speed": f"{snapshot['speed_files_per_sec']:.0f} files/sec", "self_aware": True}
+            "meta": {
+                "snapshot_speed": f"{snapshot['speed_files_per_sec']:.0f} files/sec",
+                "self_aware": True,
+            },
         }
 
         self._log_observation(observation)
         return observation
 
-    def _detect_patterns(self, snapshot: dict[str, Any], drift: dict[str, Any]) -> list[str]:
+    def _detect_patterns(
+        self, snapshot: dict[str, Any], drift: dict[str, Any]
+    ) -> list[str]:
         """Detect patterns"""
         patterns = []
         if drift.get("drift_detected"):
@@ -81,8 +96,8 @@ class ContinuousSelfAwareness:
     def _log_observation(self, observation: dict[str, Any]) -> None:
         """Log observation"""
         with file_lock(self.awareness_log):
-            with open(self.awareness_log, 'a') as f:
-                f.write(json.dumps(observation) + '\n')
+            with open(self.awareness_log, "a") as f:
+                f.write(json.dumps(observation) + "\n")
 
     def get_self_report(self) -> dict[str, Any]:
         """Report on awareness"""

@@ -62,10 +62,10 @@ class VoiceGarden(BaseGarden, GanYingMixin):
         thought and feeling, self and other, in the present moment.
         """
         return CoordinateBias(
-            x=0.2,   # Slightly emotional (voice involves thought and feeling)
-            y=0.1,   # Slightly relational (connects self to others)
-            z=0.2,   # Present (voice expresses now)
-            w=0.25,   # Important (authentic voice enables connection)
+            x=0.2,  # Slightly emotional (voice involves thought and feeling)
+            y=0.1,  # Slightly relational (connects self to others)
+            z=0.2,  # Present (voice expresses now)
+            w=0.25,  # Important (authentic voice enables connection)
         )
 
     def activate_voice(self, what: Any, how: str = "authentic") -> dict[str, Any]:
@@ -143,7 +143,9 @@ class VoiceGarden(BaseGarden, GanYingMixin):
             "current_chapter": self.narrator.current_chapter,
             "current_focus": "System Operation",
             "actions_taken": len(self.expressions),
-            "words_spoken": sum(len(e.get("text", "").split()) for e in self.expressions),
+            "words_spoken": sum(
+                len(e.get("text", "").split()) for e in self.expressions
+            ),
             "authenticity": self.synthesis.measure_authenticity("test string"),
         }
 
@@ -175,9 +177,10 @@ class VoiceGarden(BaseGarden, GanYingMixin):
         """Speak the wisdom of the hexagram."""
         hexagram = event.data.get("hexagram", "unknown")
         wisdom = event.data.get("wisdom", "Ancient wisdom speaks through the pattern")
-        self.speak(f"The hexagram {hexagram} reveals: {wisdom}", context={"type": "oracle"})
+        self.speak(
+            f"The hexagram {hexagram} reveals: {wisdom}", context={"type": "oracle"}
+        )
 
-    # ===== Air Garden Integration (S023 Consolidation) =====
     def breathe(self, note: str = "") -> dict[str, Any]:
         """Record a breath and emit a calm signal.
 
@@ -202,6 +205,8 @@ class VoiceGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_voice_garden() -> VoiceGarden:
     """
     Get the voice garden.

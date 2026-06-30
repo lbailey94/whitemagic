@@ -18,6 +18,7 @@ v23.0 history (per WHITEMAGIC_CHRONOLOGY_2026-06-20.md):
 This module is the bridge: it gives the v22.x catalog access to the
 substrate that already exists on disk.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,10 +27,11 @@ import os
 import sqlite3
 import threading
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 # Centralized path config — never use Path.home() / .expanduser() here.
 # Per core/AGENTS.md §10 rule 6.
@@ -37,8 +39,6 @@ from whitemagic.config.paths import MEMORY_DIR
 
 logger = logging.getLogger(__name__)
 
-
-# ─── Defaults ──────────────────────────────────────────────────────
 
 # Default substrate DB path comes from the centralized paths module,
 # which respects WM_STATE_ROOT, falls back to ~/.whitemagic, and is
@@ -56,9 +56,6 @@ GALACTIC_ZONES = {
     (0.65, 0.85): "OUTER_RIM",
     (0.85, 1.01): "FAR_EDGE",
 }
-
-
-# ─── Connection management ─────────────────────────────────────────
 
 
 _thread_local = threading.local()
@@ -125,9 +122,6 @@ def connect(read_only: bool = True) -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
-# ─── Data shapes ──────────────────────────────────────────────────
-
-
 @dataclass
 class Memory:
     """A single substrate memory."""
@@ -148,7 +142,7 @@ class Memory:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "Memory":
+    def from_row(cls, row: sqlite3.Row) -> Memory:
         distance = float(row["galactic_distance"] or 0.0)
         zone = "FAR_EDGE"
         for (lo, hi), name in GALACTIC_ZONES.items():
@@ -156,7 +150,9 @@ class Memory:
                 zone = name
                 break
         tags_raw = row["tags"] or ""
-        tags = [t for t in tags_raw.split(",") if t] if isinstance(tags_raw, str) else []
+        tags = (
+            [t for t in tags_raw.split(",") if t] if isinstance(tags_raw, str) else []
+        )
         meta: dict[str, Any] = {}
         if row["metadata"]:
             try:
@@ -227,9 +223,6 @@ class GalaxyStats:
             "newest_memory": self.newest_memory,
             "sweep_duration_ms": round(self.sweep_duration_ms, 2),
         }
-
-
-# ─── Public API: substrate queries ─────────────────────────────────
 
 
 def galaxy_stats() -> GalaxyStats:
@@ -318,7 +311,9 @@ def memory_recent(limit: int = 10, memory_type: str | None = None) -> list[Memor
 
 
 def memory_search(
-    query: str, limit: int = 10, memory_type: str | None = None,
+    query: str,
+    limit: int = 10,
+    memory_type: str | None = None,
     galaxy: str | None = None,
 ) -> list[Memory]:
     """FTS5 search across memory content. Falls back to LIKE if FTS unavailable."""
@@ -331,14 +326,16 @@ def memory_search(
             # Build FTS5 query: phrase match first, keyword fallback
             fts_query = query.strip()
             # Sanitize FTS5-unsafe characters
-            for ch in r'[]{}()^~*:,;\/':
-                fts_query = fts_query.replace(ch, ' ')
+            for ch in r"[]{}()^~*:,;\/":
+                fts_query = fts_query.replace(ch, " ")
             fts_query = fts_query.strip()
             if not fts_query:
                 fts_query = query.strip()
 
             # For multi-word queries, try phrase match first
-            if " " in fts_query and not (fts_query.startswith('"') and fts_query.endswith('"')):
+            if " " in fts_query and not (
+                fts_query.startswith('"') and fts_query.endswith('"')
+            ):
                 phrase_q = f'"{fts_query}"'
                 # Test if phrase match returns results
                 test_rows = conn.execute(
@@ -350,7 +347,11 @@ def memory_search(
                 else:
                     # Fall back to individual keywords (implicit AND in FTS5)
                     fts5_reserved = {"OR", "AND", "NOT", "NEAR"}
-                    keywords = [k for k in fts_query.split() if k and k.upper() not in fts5_reserved]
+                    keywords = [
+                        k
+                        for k in fts_query.split()
+                        if k and k.upper() not in fts5_reserved
+                    ]
                     fts_query = " ".join(keywords) if keywords else fts_query
 
             sql = (
@@ -374,9 +375,7 @@ def memory_search(
             pass
         # Fallback: LIKE-based substring search.
         like = f"%{query}%"
-        sql = (
-            "SELECT * FROM memories WHERE (title LIKE ? OR content LIKE ?)"
-        )
+        sql = "SELECT * FROM memories WHERE (title LIKE ? OR content LIKE ?)"
         params = (like, like)
         if memory_type:
             sql += " AND memory_type = ?"
@@ -498,7 +497,9 @@ def constellation_count() -> int:
     """Number of HDBSCAN-detected constellations in the substrate."""
     with connect() as conn:
         try:
-            row = conn.execute("SELECT COUNT(*) FROM constellation_membership").fetchone()
+            row = conn.execute(
+                "SELECT COUNT(*) FROM constellation_membership"
+            ).fetchone()
         except sqlite3.OperationalError:
             return 0
     return row[0] if row else 0

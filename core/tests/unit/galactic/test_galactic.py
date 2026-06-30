@@ -9,6 +9,7 @@ The substrate is real: 12,238 memories, 21,087 associations, 12,638 embeddings
 as of v23.0.0-alpha.1 (per the chronology doc). These tests are integration
 tests against that real state, not against mocks.
 """
+
 from __future__ import annotations
 
 import os
@@ -159,12 +160,31 @@ def test_galactic_zone_classification():
 
         row = _Row()
         for col in [
-            "id", "content", "title", "tags", "created_at", "updated_at",
-            "memory_type", "importance", "access_count", "accessed_at",
-            "emotional_valence", "neuro_score", "novelty_score", "recall_count",
-            "half_life_days", "is_protected", "galactic_distance", "retention_score",
-            "last_retention_sweep", "metadata", "event_time", "ingestion_time",
-            "is_private", "model_exclude", "content_hash",
+            "id",
+            "content",
+            "title",
+            "tags",
+            "created_at",
+            "updated_at",
+            "memory_type",
+            "importance",
+            "access_count",
+            "accessed_at",
+            "emotional_valence",
+            "neuro_score",
+            "novelty_score",
+            "recall_count",
+            "half_life_days",
+            "is_protected",
+            "galactic_distance",
+            "retention_score",
+            "last_retention_sweep",
+            "metadata",
+            "event_time",
+            "ingestion_time",
+            "is_private",
+            "model_exclude",
+            "content_hash",
         ]:
             row[col] = None
         row["id"] = "test"
@@ -228,7 +248,9 @@ def test_substrate_health_returns_alive(substrate_path):
     assert h["total_memories"] > 0
     assert h["total_associations"] > 0
     # We have at least 12K+ memories per Phase 5 audit.
-    assert h["total_memories"] >= 100, f"expected >= 100 memories, got {h['total_memories']}"
+    assert h["total_memories"] >= 100, (
+        f"expected >= 100 memories, got {h['total_memories']}"
+    )
 
 
 def test_galaxy_stats_returns_valid_distribution(substrate_path):

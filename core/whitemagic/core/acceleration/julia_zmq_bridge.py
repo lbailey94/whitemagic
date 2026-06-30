@@ -15,6 +15,7 @@ import zmq
 
 logger = logging.getLogger(__name__)
 
+
 class JuliaZMQClient:
     """Client for Julia persistent ZMQ server."""
 
@@ -38,11 +39,16 @@ class JuliaZMQClient:
             # Test with health check
             response = self._send_request({"method": "health"})
             if response.get("status") == "success":
-                logger.info("🚀 Connected to Julia server v%s", response.get('version', 'unknown'))
+                logger.info(
+                    "🚀 Connected to Julia server v%s",
+                    response.get("version", "unknown"),
+                )
                 return True
 
         except Exception as e:
-            logger.debug("Could not connect to existing Julia server: %s", e, exc_info=True)
+            logger.debug(
+                "Could not connect to existing Julia server: %s", e, exc_info=True
+            )
 
         # Start new server
         return self._start_server()
@@ -51,14 +57,20 @@ class JuliaZMQClient:
         """Start Julia persistent server."""
         try:
             # Use absolute path for server script
-            server_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../../../whitemagic-julia/src/persistent_server.jl"))
+            server_path = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "../../../whitemagic-julia/src/persistent_server.jl",
+                )
+            )
 
             if not os.path.exists(server_path):
                 # Try fallback location in SD card archives
                 server_path = "/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/whitemagic-julia/src/persistent_server.jl"
                 if not os.path.exists(server_path):
-                    logger.error("Julia server not found at %s", server_path, exc_info=True)
+                    logger.error(
+                        "Julia server not found at %s", server_path, exc_info=True
+                    )
                     return False
 
             env = os.environ.copy()
@@ -72,13 +84,18 @@ class JuliaZMQClient:
                 julia_cmd = "/snap/bin/julia"
 
             # Start server process
-            logger.info("Starting Julia server with command: %s %s", julia_cmd, server_path, exc_info=True)
+            logger.info(
+                "Starting Julia server with command: %s %s",
+                julia_cmd,
+                server_path,
+                exc_info=True,
+            )
             self._server_process = subprocess.Popen(
                 [julia_cmd, server_path],
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             # Wait for server to start (increased to 8s)
@@ -93,10 +110,14 @@ class JuliaZMQClient:
 
             response = self._send_request({"method": "health"})
             if response.get("status") == "success":
-                logger.info("🚀 Started Julia server v%s", response.get('version', 'unknown'))
+                logger.info(
+                    "🚀 Started Julia server v%s", response.get("version", "unknown")
+                )
                 return True
             else:
-                logger.error("Julia server health check failed: %s", response, exc_info=True)
+                logger.error(
+                    "Julia server health check failed: %s", response, exc_info=True
+                )
                 return False
 
         except FileNotFoundError:
@@ -118,12 +139,16 @@ class JuliaZMQClient:
             return {"status": "error", "message": "Invalid response from Julia server"}
         return result
 
-    def rrf_fuse(self, lists: list[list[str]], weights: list[float], k: int = 60) -> list[str]:
+    def rrf_fuse(
+        self, lists: list[list[str]], weights: list[float], k: int = 60
+    ) -> list[str]:
         """RRF fusion via Julia."""
-        response = self._send_request({
-            "method": "rrf_fuse",
-            "params": {"lists": lists, "weights": weights, "k": k}
-        })
+        response = self._send_request(
+            {
+                "method": "rrf_fuse",
+                "params": {"lists": lists, "weights": weights, "k": k},
+            }
+        )
 
         if response.get("status") == "success":
             res = response.get("result", [])
@@ -131,14 +156,17 @@ class JuliaZMQClient:
         else:
             raise RuntimeError(f"RRF fuse failed: {response.get('error')}")
 
-    def pagerank(self, edges: list[tuple], weights: list[float],
-                 damping: float = 0.85) -> dict[str, float]:
+    def pagerank(
+        self, edges: list[tuple], weights: list[float], damping: float = 0.85
+    ) -> dict[str, float]:
         """PageRank via Julia."""
         edge_list = [[src, dst] for src, dst in edges]
-        response = self._send_request({
-            "method": "pagerank",
-            "params": {"edges": edge_list, "weights": weights, "damping": damping}
-        })
+        response = self._send_request(
+            {
+                "method": "pagerank",
+                "params": {"edges": edge_list, "weights": weights, "damping": damping},
+            }
+        )
 
         if response.get("status") == "success":
             res = response.get("result", {})
@@ -146,19 +174,26 @@ class JuliaZMQClient:
         else:
             raise RuntimeError(f"PageRank failed: {response.get('error')}")
 
-    def walk_scoring(self, seed: str, edges: list[tuple],
-                     node_scores: dict[str, float], max_depth: int = 5) -> dict[str, float]:
+    def walk_scoring(
+        self,
+        seed: str,
+        edges: list[tuple],
+        node_scores: dict[str, float],
+        max_depth: int = 5,
+    ) -> dict[str, float]:
         """Graph walk scoring via Julia."""
         edge_list = [[src, dst] for src, dst in edges]
-        response = self._send_request({
-            "method": "walk_scoring",
-            "params": {
-                "seed": seed,
-                "edges": edge_list,
-                "node_scores": node_scores,
-                "max_depth": max_depth
+        response = self._send_request(
+            {
+                "method": "walk_scoring",
+                "params": {
+                    "seed": seed,
+                    "edges": edge_list,
+                    "node_scores": node_scores,
+                    "max_depth": max_depth,
+                },
             }
-        })
+        )
 
         if response.get("status") == "success":
             res = response.get("result", {})
@@ -176,8 +211,10 @@ class JuliaZMQClient:
             self._server_process.terminate()
             self._server_process.wait(timeout=5)
 
+
 # Global client
 _julia_client: JuliaZMQClient | None = None
+
 
 def get_julia_client() -> JuliaZMQClient | None:
     """Get global Julia ZMQ client."""

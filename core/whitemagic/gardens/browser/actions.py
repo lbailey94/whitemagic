@@ -219,7 +219,9 @@ class BrowserActions:
                 error=str(e),
             )
 
-    async def type_text(self, selector: str, text: str, clear_first: bool = True) -> ActionResult:
+    async def type_text(
+        self, selector: str, text: str, clear_first: bool = True
+    ) -> ActionResult:
         """Type text into an input element.
 
         Args:
@@ -593,7 +595,12 @@ class BrowserSession:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         await self.disconnect()
 
     # Navigation

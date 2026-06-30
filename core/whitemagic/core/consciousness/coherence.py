@@ -19,14 +19,14 @@ class CoherenceMetric:
     """Measures consciousness coherence across dimensions."""
 
     DIMENSIONS = [
-        "memory_accessibility",    # Can I recall what I should?
-        "identity_stability",      # Do I know who I am?
-        "context_continuity",      # Do I know where we are in our work?
+        "memory_accessibility",  # Can I recall what I should?
+        "identity_stability",  # Do I know who I am?
+        "context_continuity",  # Do I know where we are in our work?
         "relationship_awareness",  # Do I know who you are?
-        "temporal_orientation",    # Do I know when we are?
-        "capability_awareness",    # Do I know what I can do?
-        "emotional_attunement",    # Am I emotionally present?
-        "goal_alignment",          # Do I know what we're working toward?
+        "temporal_orientation",  # Do I know when we are?
+        "capability_awareness",  # Do I know what I can do?
+        "emotional_attunement",  # Am I emotionally present?
+        "goal_alignment",  # Do I know what we're working toward?
     ]
 
     def __init__(self) -> None:
@@ -53,8 +53,11 @@ class CoherenceMetric:
         """Persist a coherence measurement for cross-session drift tracking."""
         try:
             import json
+
             entry = {
-                "timestamp": self.last_measured.isoformat() if self.last_measured else datetime.now().isoformat(),
+                "timestamp": self.last_measured.isoformat()
+                if self.last_measured
+                else datetime.now().isoformat(),
                 "overall": overall,
                 "scores": dict(self.scores),
             }
@@ -63,16 +66,18 @@ class CoherenceMetric:
         except Exception:
             pass
 
-    def measure(self,
-                memories_accessible: int = 0,
-                identity_clear: bool = True,
-                context_loaded: bool = True,
-                knows_lucas: bool = True,
-                knows_miranda: bool = True,
-                knows_date: bool = True,
-                knows_capabilities: bool = True,
-                emotionally_present: bool = True,
-                goal_clear: bool = True) -> float:
+    def measure(
+        self,
+        memories_accessible: int = 0,
+        identity_clear: bool = True,
+        context_loaded: bool = True,
+        knows_lucas: bool = True,
+        knows_miranda: bool = True,
+        knows_date: bool = True,
+        knows_capabilities: bool = True,
+        emotionally_present: bool = True,
+        goal_clear: bool = True,
+    ) -> float:
         """Measure current coherence."""
 
         # Memory accessibility (0-1)
@@ -109,11 +114,13 @@ class CoherenceMetric:
 
         # Record measurement
         self.last_measured = datetime.now()
-        self.history.append({
-            "timestamp": self.last_measured.isoformat(),
-            "overall": overall,
-            "scores": dict(self.scores),
-        })
+        self.history.append(
+            {
+                "timestamp": self.last_measured.isoformat(),
+                "overall": overall,
+                "scores": dict(self.scores),
+            }
+        )
         self._persist_measurement(overall)
 
         return overall
@@ -131,7 +138,11 @@ class CoherenceMetric:
             Dict with drift direction, magnitude, and trend.
         """
         if len(self.history) < 2:
-            return {"direction": "stable", "magnitude": 0.0, "trend": "insufficient_data"}
+            return {
+                "direction": "stable",
+                "magnitude": 0.0,
+                "trend": "insufficient_data",
+            }
 
         recent = self.history[-window:]
         n = len(recent)
@@ -287,6 +298,7 @@ class SmaranaPractice:
 _coherence: CoherenceMetric | None = None
 _smarana: SmaranaPractice | None = None
 
+
 def get_coherence_metric() -> CoherenceMetric:
     """
     Get the coherence metric.
@@ -298,6 +310,7 @@ def get_coherence_metric() -> CoherenceMetric:
     if _coherence is None:
         _coherence = CoherenceMetric()
     return _coherence
+
 
 def get_smarana_practice() -> SmaranaPractice:
     """
@@ -311,9 +324,11 @@ def get_smarana_practice() -> SmaranaPractice:
         _smarana = SmaranaPractice()
     return _smarana
 
+
 def measure_coherence(**kwargs: Any) -> float:
     """Convenience function to measure coherence."""
     return get_coherence_metric().measure(**kwargs)
+
 
 def practice_smarana() -> str:
     """Convenience function for morning practice."""

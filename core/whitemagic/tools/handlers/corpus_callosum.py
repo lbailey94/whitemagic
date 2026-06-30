@@ -22,7 +22,9 @@ def handle_corpus_callosum_debate(params: dict[str, Any]) -> dict[str, Any]:
 
         topic = params.get("topic", "")
         if not topic:
-            return make_result("corpus_callosum.debate", {}, error="Missing 'topic' parameter")
+            return make_result(
+                "corpus_callosum.debate", {}, error="Missing 'topic' parameter"
+            )
 
         bus = get_corpus_callosum_bus()
         result = bus.debate(topic)
@@ -30,7 +32,9 @@ def handle_corpus_callosum_debate(params: dict[str, Any]) -> dict[str, Any]:
 
         # If escalated, emit a warning in the response
         if result.escalated:
-            data["warning"] = "Tension exceeded safe threshold. Wisdom Council review recommended."
+            data["warning"] = (
+                "Tension exceeded safe threshold. Wisdom Council review recommended."
+            )
 
         return make_result("corpus_callosum.debate", data)
     except Exception as exc:

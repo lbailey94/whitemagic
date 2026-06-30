@@ -18,10 +18,6 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::collections::HashSet;
 
-// ---------------------------------------------------------------------------
-// Pipeline stage definitions
-// ---------------------------------------------------------------------------
-
 /// A candidate memory flowing through the pipeline.
 #[derive(Clone, Debug)]
 struct Candidate {
@@ -80,10 +76,6 @@ impl Default for PipelineConfig {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Pipeline stages
-// ---------------------------------------------------------------------------
 
 /// Stage 1: Initial scoring (BM25-like term frequency scoring)
 fn stage_text_score(candidates: &mut Vec<Candidate>, query: &str) {
@@ -265,10 +257,6 @@ fn stage_finalize(candidates: &mut Vec<Candidate>, limit: usize) {
     candidates.truncate(limit);
 }
 
-// ---------------------------------------------------------------------------
-// Pipeline executor
-// ---------------------------------------------------------------------------
-
 fn run_pipeline(mut candidates: Vec<Candidate>, config: &PipelineConfig) -> Vec<Candidate> {
     stage_text_score(&mut candidates, &config.query);
     stage_type_filter(&mut candidates, config);
@@ -280,10 +268,6 @@ fn run_pipeline(mut candidates: Vec<Candidate>, config: &PipelineConfig) -> Vec<
     stage_finalize(&mut candidates, config.limit);
     candidates
 }
-
-// ---------------------------------------------------------------------------
-// PyO3 bindings
-// ---------------------------------------------------------------------------
 
 /// Execute a multi-pass retrieval pipeline on candidate memories.
 ///
@@ -414,10 +398,6 @@ pub fn retrieval_pipeline(input_json: &str) -> PyResult<String> {
     Ok(format!("[{}]", result_strs.join(",")))
 }
 
-// ---------------------------------------------------------------------------
-// Native Python type bindings (v14 — zero-copy FFI)
-// ---------------------------------------------------------------------------
-
 fn extract_string(dict: &Bound<'_, PyDict>, key: &str) -> String {
     if let Ok(Some(val)) = dict.get_item(key) {
         val.extract::<String>().unwrap_or_default()
@@ -544,10 +524,6 @@ pub fn retrieval_pipeline_native<'py>(
 
     Ok(result_list.into_any().unbind())
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

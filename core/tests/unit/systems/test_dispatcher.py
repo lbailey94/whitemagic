@@ -1,4 +1,5 @@
 """Tests for the tool dispatcher — routing, unknown tools, gana prefix, error paths."""
+
 import json
 import sys
 from pathlib import Path

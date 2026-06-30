@@ -59,11 +59,11 @@ logger = logging.getLogger(__name__)
 class CognitiveMode(Enum):
     """Available cognitive modes."""
 
-    EXPLORER = "explorer"     # Sattvic: curiosity, discovery
-    EXECUTOR = "executor"     # Rajasic: action, completion
-    REFLECTOR = "reflector"   # Tamasic: contemplation, synthesis
-    BALANCED = "balanced"     # Adaptive, no dominant guna
-    GUARDIAN = "guardian"      # Safety override
+    EXPLORER = "explorer"  # Sattvic: curiosity, discovery
+    EXECUTOR = "executor"  # Rajasic: action, completion
+    REFLECTOR = "reflector"  # Tamasic: contemplation, synthesis
+    BALANCED = "balanced"  # Adaptive, no dominant guna
+    GUARDIAN = "guardian"  # Safety override
 
 
 @dataclass
@@ -74,7 +74,7 @@ class ModeProfile:
     preferred_tools: list[str]
     avoided_tools: list[str]
     context_window_multiplier: float  # 1.0 = normal, >1 = broader, <1 = narrower
-    dream_phase_priority: list[str]   # preferred dream phase order
+    dream_phase_priority: list[str]  # preferred dream phase order
     description: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,37 +99,72 @@ MODE_PROFILES: dict[CognitiveMode, ModeProfile] = {
     CognitiveMode.EXPLORER: ModeProfile(
         mode=CognitiveMode.EXPLORER,
         preferred_tools=[
-            "search_memories", "hybrid_recall", "graph_walk",
-            "serendipity_surface", "pattern_search", "research_topic",
-            "archaeology", "kg.query", "web_search_and_read",
+            "search_memories",
+            "hybrid_recall",
+            "graph_walk",
+            "serendipity_surface",
+            "pattern_search",
+            "research_topic",
+            "archaeology",
+            "kg.query",
+            "web_search_and_read",
         ],
         avoided_tools=["delete_memory"],
         context_window_multiplier=1.5,
-        dream_phase_priority=["serendipity", "consolidation", "kaizen", "oracle", "governance", "decay"],
+        dream_phase_priority=[
+            "serendipity",
+            "consolidation",
+            "kaizen",
+            "oracle",
+            "governance",
+            "decay",
+        ],
         description="Curiosity-driven exploration. Broadens searches, favors discovery.",
     ),
     CognitiveMode.EXECUTOR: ModeProfile(
         mode=CognitiveMode.EXECUTOR,
         preferred_tools=[
-            "create_memory", "pipeline.create", "task.distribute",
-            "swarm.decompose", "execute_cascade", "kaizen_apply_fixes",
+            "create_memory",
+            "pipeline.create",
+            "task.distribute",
+            "swarm.decompose",
+            "execute_cascade",
+            "kaizen_apply_fixes",
             "ollama.agent",
         ],
         avoided_tools=[],
         context_window_multiplier=0.8,
-        dream_phase_priority=["kaizen", "consolidation", "oracle", "governance", "serendipity", "decay"],
+        dream_phase_priority=[
+            "kaizen",
+            "consolidation",
+            "oracle",
+            "governance",
+            "serendipity",
+            "decay",
+        ],
         description="Action-oriented execution. Focuses on task completion.",
     ),
     CognitiveMode.REFLECTOR: ModeProfile(
         mode=CognitiveMode.REFLECTOR,
         preferred_tools=[
-            "gnosis", "reasoning.bicameral", "memory.consolidate",
-            "graph_topology", "selfmodel.forecast", "harmony_vector",
+            "gnosis",
+            "reasoning.bicameral",
+            "memory.consolidate",
+            "graph_topology",
+            "selfmodel.forecast",
+            "harmony_vector",
             "salience.spotlight",
         ],
         avoided_tools=["swarm.decompose", "execute_cascade"],
         context_window_multiplier=1.2,
-        dream_phase_priority=["governance", "consolidation", "decay", "serendipity", "kaizen", "oracle"],
+        dream_phase_priority=[
+            "governance",
+            "consolidation",
+            "decay",
+            "serendipity",
+            "kaizen",
+            "oracle",
+        ],
         description="Contemplative reflection. Favors introspection and synthesis.",
     ),
     CognitiveMode.BALANCED: ModeProfile(
@@ -137,21 +172,43 @@ MODE_PROFILES: dict[CognitiveMode, ModeProfile] = {
         preferred_tools=[],
         avoided_tools=[],
         context_window_multiplier=1.0,
-        dream_phase_priority=["consolidation", "serendipity", "governance", "kaizen", "oracle", "decay"],
+        dream_phase_priority=[
+            "consolidation",
+            "serendipity",
+            "governance",
+            "kaizen",
+            "oracle",
+            "decay",
+        ],
         description="Adaptive balance. Lets natural signals guide behavior.",
     ),
     CognitiveMode.GUARDIAN: ModeProfile(
         mode=CognitiveMode.GUARDIAN,
         preferred_tools=[
-            "gnosis", "health_report", "harmony_vector",
-            "search_memories", "read_memory", "capabilities",
+            "gnosis",
+            "health_report",
+            "harmony_vector",
+            "search_memories",
+            "read_memory",
+            "capabilities",
         ],
         avoided_tools=[
-            "delete_memory", "execute_cascade", "swarm.decompose",
-            "pipeline.create", "sandbox.set_limits", "ollama.agent",
+            "delete_memory",
+            "execute_cascade",
+            "swarm.decompose",
+            "pipeline.create",
+            "sandbox.set_limits",
+            "ollama.agent",
         ],
         context_window_multiplier=0.5,
-        dream_phase_priority=["governance", "decay", "consolidation", "oracle", "kaizen", "serendipity"],
+        dream_phase_priority=[
+            "governance",
+            "decay",
+            "consolidation",
+            "oracle",
+            "kaizen",
+            "serendipity",
+        ],
         description="Safety mode. Restricts to read-only and introspection tools.",
     ),
 }
@@ -171,10 +228,6 @@ class CognitiveModes:
         self._safety_override: CognitiveMode | None = None
         self._mode_history: list[dict[str, Any]] = []
         self._auto_detect_enabled = True
-
-    # ------------------------------------------------------------------
-    # Mode management
-    # ------------------------------------------------------------------
 
     def current_mode(self) -> dict[str, Any]:
         """Get the current cognitive mode and its profile."""
@@ -199,7 +252,11 @@ class CognitiveModes:
                 self._manual_override = None
                 self._auto_detect_enabled = True
             self._record_transition("auto", "Manual override cleared")
-            return {"status": "ok", "mode": self._effective_mode().value, "auto_detect": True}
+            return {
+                "status": "ok",
+                "mode": self._effective_mode().value,
+                "auto_detect": True,
+            }
 
         try:
             mode = CognitiveMode(mode_name.lower())
@@ -238,18 +295,16 @@ class CognitiveModes:
             self._safety_override = None
 
         self._record_transition(
-            self._effective_mode().value, "Guardian deactivated",
+            self._effective_mode().value,
+            "Guardian deactivated",
         )
         return {"status": "ok", "mode": self._effective_mode().value}
-
-    # ------------------------------------------------------------------
-    # Auto-detection from Harmony Vector
-    # ------------------------------------------------------------------
 
     def auto_detect(self) -> CognitiveMode:
         """Auto-detect mode from Harmony Vector guna percentages."""
         try:
             from whitemagic.harmony.vector import get_harmony_vector
+
             hv = get_harmony_vector()
             snap = hv.snapshot()
 
@@ -269,7 +324,11 @@ class CognitiveModes:
                 return CognitiveMode.BALANCED
 
         except Exception as e:
-            logger.debug("Cognitive mode detection failed, defaulting to BALANCED: %s", e, exc_info=True)
+            logger.debug(
+                "Cognitive mode detection failed, defaulting to BALANCED: %s",
+                e,
+                exc_info=True,
+            )
             return CognitiveMode.BALANCED
 
     def _effective_mode(self) -> CognitiveMode:
@@ -290,10 +349,6 @@ class CognitiveModes:
             return detected
 
         return self._mode
-
-    # ------------------------------------------------------------------
-    # Tool hints
-    # ------------------------------------------------------------------
 
     def get_tool_hints(self) -> dict[str, Any]:
         """Get tool selection hints for the current mode.
@@ -323,24 +378,18 @@ class CognitiveModes:
         profile = MODE_PROFILES.get(mode, MODE_PROFILES[CognitiveMode.BALANCED])
         return tool_name in profile.avoided_tools
 
-    # ------------------------------------------------------------------
-    # History & introspection
-    # ------------------------------------------------------------------
-
     def _record_transition(self, new_mode: str, reason: str) -> None:
         """Record a mode transition."""
         with self._lock:
-            self._mode_history.append({
-                "mode": new_mode,
-                "reason": reason,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self._mode_history.append(
+                {
+                    "mode": new_mode,
+                    "reason": reason,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
             if len(self._mode_history) > 50:
                 self._mode_history = self._mode_history[-50:]
-
-    # ------------------------------------------------------------------
-    # Zodiacal Procession integration
-    # ------------------------------------------------------------------
 
     def from_procession_event(self, event: dict[str, Any]) -> None:
         """Adjust cognitive mode based on ZodiacalProcession events.
@@ -360,8 +409,12 @@ class CognitiveModes:
         # Fixed sign events take precedence within a phase
         if event.get("is_fixed") or "sign" in event and event.get("bidirectional"):
             self._mode = CognitiveMode.BALANCED
-            self._record_transition("balanced", f"Procession fixed sign: {event.get('sign', '?')}")
-            logger.info("☯️ Cognitive mode → BALANCED (fixed sign %s)", event.get("sign", "?"))
+            self._record_transition(
+                "balanced", f"Procession fixed sign: {event.get('sign', '?')}"
+            )
+            logger.info(
+                "☯️ Cognitive mode → BALANCED (fixed sign %s)", event.get("sign", "?")
+            )
             return
 
         # Phase change events
@@ -380,18 +433,18 @@ class CognitiveModes:
         with self._lock:
             return {
                 "current_mode": self._effective_mode().value,
-                "manual_override": self._manual_override.value if self._manual_override else None,
-                "safety_override": self._safety_override.value if self._safety_override else None,
+                "manual_override": self._manual_override.value
+                if self._manual_override
+                else None,
+                "safety_override": self._safety_override.value
+                if self._safety_override
+                else None,
                 "auto_detect_enabled": self._auto_detect_enabled,
                 "mode_transitions": len(self._mode_history),
                 "recent_transitions": self._mode_history[-5:],
                 "available_modes": [m.value for m in CognitiveMode],
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _cognitive_modes: CognitiveModes | None = None
 _cm_lock = threading.Lock()

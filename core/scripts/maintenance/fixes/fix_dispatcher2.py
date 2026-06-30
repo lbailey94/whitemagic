@@ -1,4 +1,3 @@
-
 with open("whitemagic/core/acceleration/hybrid_dispatcher_v2.py") as f:
     content = f.read()
 
@@ -29,7 +28,7 @@ content = content.replace(
 
         latency = (time.perf_counter() - start) * 1_000_000
         self._record_latency(False, latency, operation)
-        return result"""
+        return result""",
 )
 
 # Fix get_successor instance method
@@ -59,7 +58,7 @@ content = content.replace(
 
         latency = (time.perf_counter() - start) * 1_000_000
         self._record_latency(False, latency, operation)
-        return result"""
+        return result""",
 )
 
 with open("whitemagic/core/acceleration/hybrid_dispatcher_v2.py", "w") as f:

@@ -80,12 +80,24 @@ class TestQFHRRRealisticEmbeddings(unittest.TestCase):
         unrelated_qhrr = np.mean(qhrr_sims[0:3, 3:5])
 
         print(f"\n  Semantic similarity preservation:")
-        print(f"    HRR  — related: {related_hrr:.3f}, unrelated: {unrelated_hrr:.3f}, gap: {related_hrr - unrelated_hrr:.3f}")
-        print(f"    qFHRR — related: {related_qhrr:.3f}, unrelated: {unrelated_qhrr:.3f}, gap: {related_qhrr - unrelated_qhrr:.3f}")
+        print(
+            f"    HRR  — related: {related_hrr:.3f}, unrelated: {unrelated_hrr:.3f}, gap: {related_hrr - unrelated_hrr:.3f}"
+        )
+        print(
+            f"    qFHRR — related: {related_qhrr:.3f}, unrelated: {unrelated_qhrr:.3f}, gap: {related_qhrr - unrelated_qhrr:.3f}"
+        )
 
         # Both should show a positive gap between related and unrelated
-        self.assertGreater(related_hrr - unrelated_hrr, 0, "HRR should distinguish related from unrelated")
-        self.assertGreater(related_qhrr - unrelated_qhrr, 0, "qFHRR should also distinguish related from unrelated")
+        self.assertGreater(
+            related_hrr - unrelated_hrr,
+            0,
+            "HRR should distinguish related from unrelated",
+        )
+        self.assertGreater(
+            related_qhrr - unrelated_qhrr,
+            0,
+            "qFHRR should also distinguish related from unrelated",
+        )
 
     def test_project_accuracy_with_realistic_embeddings(self) -> None:
         """Test HRR projection accuracy with realistic embeddings."""
@@ -110,8 +122,14 @@ class TestQFHRRRealisticEmbeddings(unittest.TestCase):
         print(f"    qFHRR roundtrip similarity: {qhrr_sim:.3f}")
 
         # Both should preserve some similarity through roundtrip
-        self.assertGreater(hrr_sim, 0.2, "HRR should preserve similarity through project/inverse_project")
-        self.assertGreater(qhrr_sim, -0.1, "qFHRR should not be anti-correlated through roundtrip")
+        self.assertGreater(
+            hrr_sim,
+            0.2,
+            "HRR should preserve similarity through project/inverse_project",
+        )
+        self.assertGreater(
+            qhrr_sim, -0.1, "qFHRR should not be anti-correlated through roundtrip"
+        )
 
     def test_bind_unbind_with_semantic_content(self) -> None:
         """Test bind/unbind with semantically meaningful content."""
@@ -136,7 +154,9 @@ class TestQFHRRRealisticEmbeddings(unittest.TestCase):
             # qFHRR
             q_bound = self.qhrr.bind(a, b)
             q_recovered = self.qhrr.unbind(q_bound, b)
-            qhrr_sims.append(self.qhrr.similarity(self.qhrr._to_quantized(a), q_recovered))
+            qhrr_sims.append(
+                self.qhrr.similarity(self.qhrr._to_quantized(a), q_recovered)
+            )
 
         avg_hrr = np.mean(hrr_sims)
         avg_qhrr = np.mean(qhrr_sims)
@@ -146,8 +166,14 @@ class TestQFHRRRealisticEmbeddings(unittest.TestCase):
             print(f"    '{a}' + '{b}': HRR={hrr_sims[i]:.3f}, qFHRR={qhrr_sims[i]:.3f}")
         print(f"    Average: HRR={avg_hrr:.3f}, qFHRR={avg_qhrr:.3f}")
 
-        self.assertGreater(avg_hrr, 0.3, "HRR should preserve semantic content through bind/unbind")
-        self.assertGreater(avg_qhrr, -0.1, "qFHRR should not destroy semantic content through bind/unbind")
+        self.assertGreater(
+            avg_hrr, 0.3, "HRR should preserve semantic content through bind/unbind"
+        )
+        self.assertGreater(
+            avg_qhrr,
+            -0.1,
+            "qFHRR should not destroy semantic content through bind/unbind",
+        )
 
     def test_superposition_preserves_relevance(self) -> None:
         """Test that superposed vectors preserve relevance ranking."""
@@ -167,7 +193,9 @@ class TestQFHRRRealisticEmbeddings(unittest.TestCase):
 
         hrr_scores = [self.hrr.similarity(query_emb, c) for c in context_embs]
         qhrr_scores = [
-            self.qhrr.similarity(self.qhrr._to_quantized(query_emb), self.qhrr._to_quantized(c))
+            self.qhrr.similarity(
+                self.qhrr._to_quantized(query_emb), self.qhrr._to_quantized(c)
+            )
             for c in context_embs
         ]
 
@@ -177,7 +205,9 @@ class TestQFHRRRealisticEmbeddings(unittest.TestCase):
 
         print(f"\n  Relevance ranking preservation:")
         for i, ctx in enumerate(contexts):
-            print(f"    HRR={hrr_scores[i]:+.3f}  qFHRR={qhrr_scores[i]:+.3f}  {ctx[:50]}")
+            print(
+                f"    HRR={hrr_scores[i]:+.3f}  qFHRR={qhrr_scores[i]:+.3f}  {ctx[:50]}"
+            )
         print(f"    HRR top:   #{hrr_top} ({contexts[hrr_top][:40]}...)")
         print(f"    qFHRR top: #{qhrr_top} ({contexts[qhrr_top][:40]}...)")
 

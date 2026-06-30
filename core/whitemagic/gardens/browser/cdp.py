@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 WebSocketClientProtocol = Any
 try:
     import websockets
+
     HAS_WEBSOCKETS = True
 except ImportError:
     HAS_WEBSOCKETS = False
@@ -35,6 +36,7 @@ except ImportError:
 # Optional httpx import for discovery
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
@@ -47,7 +49,9 @@ def _validate_url(url: str) -> None:
         raise ValueError(f"URL must include scheme: {url}")
     allowed_schemes = {"http", "https"}
     if parsed.scheme not in allowed_schemes:
-        raise ValueError(f"URL scheme '{parsed.scheme}' not allowed. Only {allowed_schemes} are permitted.")
+        raise ValueError(
+            f"URL scheme '{parsed.scheme}' not allowed. Only {allowed_schemes} are permitted."
+        )
 
 
 def _validate_javascript(expression: str) -> None:
@@ -58,10 +62,18 @@ def _validate_javascript(expression: str) -> None:
     if len(expression) > 100000:
         raise ValueError("JavaScript expression too long (max 100000 characters)")
     # Basic check for obviously dangerous patterns (not exhaustive, just defense-in-depth)
-    dangerous_patterns = ["eval(", "execScript(", "document.cookie", "localStorage.", "sessionStorage."]
+    dangerous_patterns = [
+        "eval(",
+        "execScript(",
+        "document.cookie",
+        "localStorage.",
+        "sessionStorage.",
+    ]
     for pattern in dangerous_patterns:
         if pattern in expression:
-            raise ValueError(f"JavaScript expression contains potentially dangerous pattern: {pattern}")
+            raise ValueError(
+                f"JavaScript expression contains potentially dangerous pattern: {pattern}"
+            )
 
 
 @dataclass
@@ -143,15 +155,25 @@ class CDPConnection:
         # Validate WebSocket URL
         parsed = urllib.parse.urlparse(ws_url)
         if parsed.scheme not in {"ws", "wss"}:
-            raise ValueError(f"WebSocket URL must use ws:// or wss:// scheme, got: {ws_url}")
-        if not parsed.hostname or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
-            raise ValueError(f"WebSocket URL must connect to localhost for security, got: {ws_url}")
+            raise ValueError(
+                f"WebSocket URL must use ws:// or wss:// scheme, got: {ws_url}"
+            )
+        if not parsed.hostname or parsed.hostname not in {
+            "localhost",
+            "127.0.0.1",
+            "::1",
+        }:
+            raise ValueError(
+                f"WebSocket URL must connect to localhost for security, got: {ws_url}"
+            )
 
         self.ws_url = ws_url
         self._ws: WebSocketClientProtocol | None = None
         self._message_id = 0
         self._pending: dict[int, asyncio.Future] = {}
-        self._event_handlers: dict[str, list[Callable[[CDPEvent], Awaitable[None]]]] = {}
+        self._event_handlers: dict[
+            str, list[Callable[[CDPEvent], Awaitable[None]]]
+        ] = {}
         self._receiver_task: asyncio.Task | None = None
         self._connected = False
 
@@ -177,10 +199,17 @@ class CDPConnection:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         await self.disconnect()
 
-    async def send(self, method: str, params: dict[str, Any] | None = None) -> CDPResponse:
+    async def send(
+        self, method: str, params: dict[str, Any] | None = None
+    ) -> CDPResponse:
         """Send a CDP command and wait for response.
 
         Args:
@@ -215,7 +244,9 @@ class CDPConnection:
             return await asyncio.wait_for(future, timeout=30.0)
         except TimeoutError:
             del self._pending[msg_id]
-            return CDPResponse(id=msg_id, error={"message": "Timeout waiting for response"})
+            return CDPResponse(
+                id=msg_id, error={"message": "Timeout waiting for response"}
+            )
 
     async def _receive_messages(self) -> None:
         """Background task to receive and route messages."""
@@ -259,9 +290,13 @@ class CDPConnection:
                 await handler(event)
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
-                logger.debug("CDP event handler error, skipping handler")  # Don't let handler errors break event loop
+                logger.debug(
+                    "CDP event handler error, skipping handler"
+                )  # Don't let handler errors break event loop
 
-    def on(self, event_name: str, handler: Callable[[CDPEvent], Awaitable[None]]) -> None:
+    def on(
+        self, event_name: str, handler: Callable[[CDPEvent], Awaitable[None]]
+    ) -> None:
         """Register an event handler.
 
         Args:
@@ -273,7 +308,9 @@ class CDPConnection:
             self._event_handlers[event_name] = []
         self._event_handlers[event_name].append(handler)
 
-    def off(self, event_name: str, handler: Callable[[CDPEvent], Awaitable[None]]) -> None:
+    def off(
+        self, event_name: str, handler: Callable[[CDPEvent], Awaitable[None]]
+    ) -> None:
         """Remove an event handler."""
         if event_name in self._event_handlers:
             try:
@@ -306,10 +343,13 @@ class CDPConnection:
 
     async def query_selector(self, node_id: int, selector: str) -> CDPResponse:
         """Find element by CSS selector."""
-        return await self.send("DOM.querySelector", {
-            "nodeId": node_id,
-            "selector": selector,
-        })
+        return await self.send(
+            "DOM.querySelector",
+            {
+                "nodeId": node_id,
+                "selector": selector,
+            },
+        )
 
     async def get_outer_html(self, node_id: int) -> CDPResponse:
         """Get outer HTML of a node."""
@@ -318,10 +358,13 @@ class CDPConnection:
     async def evaluate(self, expression: str) -> CDPResponse:
         """Evaluate JavaScript in the page context."""
         _validate_javascript(expression)
-        return await self.send("Runtime.evaluate", {
-            "expression": expression,
-            "returnByValue": True,
-        })
+        return await self.send(
+            "Runtime.evaluate",
+            {
+                "expression": expression,
+                "returnByValue": True,
+            },
+        )
 
     async def screenshot(self, format: str = "png", quality: int = 80) -> CDPResponse:
         """Capture page screenshot."""
@@ -331,7 +374,9 @@ class CDPConnection:
         return await self.send("Page.captureScreenshot", params)
 
 
-async def discover_targets(host: str = "localhost", port: int = 9222) -> list[dict[str, Any]]:
+async def discover_targets(
+    host: str = "localhost", port: int = 9222
+) -> list[dict[str, Any]]:
     """Discover available Chrome debugging targets.
 
     Args:
@@ -380,4 +425,6 @@ async def connect_to_chrome(
                 await connection.connect()
                 return connection
 
-    raise RuntimeError(f"No {target_type} target found. Is Chrome running with --remote-debugging-port={port}?")
+    raise RuntimeError(
+        f"No {target_type} target found. Is Chrome running with --remote-debugging-port={port}?"
+    )

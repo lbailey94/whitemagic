@@ -1,4 +1,5 @@
 """Tests for Objective V — Guna-Based Improvement Classification."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.guna_classifier import (
@@ -19,7 +20,9 @@ class TestClassification:
 
     def test_tamasic(self):
         clf = GunaClassifier()
-        assert clf.classify("codebase_quality", "Technical debt cleanup") == Guna.TAMASIC
+        assert (
+            clf.classify("codebase_quality", "Technical debt cleanup") == Guna.TAMASIC
+        )
 
     def test_default_by_category(self):
         clf = GunaClassifier()
@@ -33,7 +36,7 @@ class TestGunaPriors:
         clf = GunaClassifier()
         mean, var = clf.get_prior(Guna.SATTVIC)
         assert mean > 0.7  # High mean
-        assert var < 0.1   # Low variance
+        assert var < 0.1  # Low variance
 
     def test_rajasic_high_variance(self):
         clf = GunaClassifier()
@@ -48,7 +51,7 @@ class TestOutcomes:
         clf.record_outcome(Guna.SATTVIC, success=True)
         clf.record_outcome(Guna.SATTVIC, success=False)
         rate = clf.get_success_rate(Guna.SATTVIC)
-        assert abs(rate - 2/3) < 1e-6
+        assert abs(rate - 2 / 3) < 1e-6
 
     def test_default_success_rate(self):
         clf = GunaClassifier()

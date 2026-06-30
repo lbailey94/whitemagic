@@ -44,10 +44,6 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Result types
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ProjectionPoint:
     """A single projected memory point."""
@@ -109,10 +105,6 @@ class ProjectionResult:
             "points": [p.to_dict() for p in self.points],
         }
 
-
-# ---------------------------------------------------------------------------
-# Core projector
-# ---------------------------------------------------------------------------
 
 class UMAPProjector:
     """Projects memory embeddings into low-dimensional space for visualization."""
@@ -317,10 +309,6 @@ class UMAPProjector:
             "cached_count": self._cached_vec_count if cached else 0,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _projector_instance: UMAPProjector | None = None
 _projector_lock = threading.Lock()

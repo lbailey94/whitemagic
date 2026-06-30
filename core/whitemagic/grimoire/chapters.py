@@ -44,9 +44,9 @@ _CHAPTERS_28: list[Chapter] = [
     # Like spring shoots breaking through soil, these systems initiate,
     # stabilize, protect, connect, accelerate, and search.
     # ══════════════════════════════════════════════════════════════
-
     Chapter(
-        1, "The Horn — Session Initiation",
+        1,
+        "The Horn — Session Initiation",
         "The Horn (角 Jiǎo) is the first mansion and the sharp point of "
         "every new beginning. This chapter governs session lifecycle: "
         "bootstrapping a new session with full context injection (recent "
@@ -59,14 +59,26 @@ _CHAPTERS_28: list[Chapter] = [
         "(Ch 5) for mid-session context, Encampment (Ch 27) for "
         "cross-session handoff. Tools: session_bootstrap, create_session, "
         "resume_session, checkpoint_session.",
-        ["start", "session", "begin", "init", "bootstrap", "handoff",
-         "checkpoint", "resume", "lifecycle"],
-        gana="gana_horn", garden="courage", quadrant="East",
-        chinese="角", pinyin="Jiǎo",
+        [
+            "start",
+            "session",
+            "begin",
+            "init",
+            "bootstrap",
+            "handoff",
+            "checkpoint",
+            "resume",
+            "lifecycle",
+        ],
+        gana="gana_horn",
+        garden="courage",
+        quadrant="East",
+        chinese="角",
+        pinyin="Jiǎo",
     ),
-
     Chapter(
-        2, "The Neck — Memory Stability",
+        2,
+        "The Neck — Memory Stability",
         "The Neck (亢 Kàng) represents stability through consistent "
         "practice. This chapter governs the core memory CRUD operations "
         "that form the backbone of persistent cognition: creating new "
@@ -81,14 +93,26 @@ _CHAPTERS_28: list[Chapter] = [
         "association mining, and Abundance (Ch 14) for lifecycle sweeps. "
         "Tools: create_memory, update_memory, import_memories, "
         "delete_memory.",
-        ["memory", "create", "update", "store", "consolidate", "delete",
-         "import", "persist", "crud"],
-        gana="gana_neck", garden="stillness", quadrant="East",
-        chinese="亢", pinyin="Kàng",
+        [
+            "memory",
+            "create",
+            "update",
+            "store",
+            "consolidate",
+            "delete",
+            "import",
+            "persist",
+            "crud",
+        ],
+        gana="gana_neck",
+        garden="stillness",
+        quadrant="East",
+        chinese="亢",
+        pinyin="Kàng",
     ),
-
     Chapter(
-        3, "The Root — System Foundation",
+        3,
+        "The Root — System Foundation",
         "The Root (氐 Dǐ) is the structural foundation beneath "
         "everything. This chapter provides system health diagnostics: "
         "the health_report aggregates subsystem status into a single "
@@ -103,14 +127,26 @@ _CHAPTERS_28: list[Chapter] = [
         "(Ch 18) for detailed debugging, Dipper (Ch 22) for strategic "
         "maturity assessment. Tools: health_report, rust_status, "
         "rust_similarity, ship.check, state.paths, state.summary.",
-        ["health", "foundation", "root", "integrity", "diagnosis",
-         "doctor", "status", "ship", "state"],
-        gana="gana_root", garden="healing", quadrant="East",
-        chinese="氐", pinyin="Dǐ",
+        [
+            "health",
+            "foundation",
+            "root",
+            "integrity",
+            "diagnosis",
+            "doctor",
+            "status",
+            "ship",
+            "state",
+        ],
+        gana="gana_root",
+        garden="healing",
+        quadrant="East",
+        chinese="氐",
+        pinyin="Dǐ",
     ),
-
     Chapter(
-        4, "The Room — Resource Sanctuary",
+        4,
+        "The Room — Resource Sanctuary",
         "The Room (房 Fáng) provides sanctuary — safe enclosures where "
         "sensitive operations can run without interference. This chapter "
         "manages distributed resource locks (sangha_lock for multi-agent "
@@ -126,14 +162,26 @@ _CHAPTERS_28: list[Chapter] = [
         "sandbox.status, sandbox.violations, mcp_integrity.snapshot, "
         "mcp_integrity.verify, mcp_integrity.status, security.alerts, "
         "security.monitor_status.",
-        ["lock", "resource", "sanctuary", "sandbox", "privacy",
-         "security", "integrity", "breaker", "immune"],
-        gana="gana_room", garden="sanctuary", quadrant="East",
-        chinese="房", pinyin="Fáng",
+        [
+            "lock",
+            "resource",
+            "sanctuary",
+            "sandbox",
+            "privacy",
+            "security",
+            "integrity",
+            "breaker",
+            "immune",
+        ],
+        gana="gana_room",
+        garden="sanctuary",
+        quadrant="East",
+        chinese="房",
+        pinyin="Fáng",
     ),
-
     Chapter(
-        5, "The Heart — Context & Pulse",
+        5,
+        "The Heart — Context & Pulse",
         "The Heart (心 Xīn) is the vital pulse that keeps context alive "
         "within a session. The scratchpad provides ephemeral working "
         "memory for multi-step reasoning (write notes, read them back, "
@@ -146,14 +194,25 @@ _CHAPTERS_28: list[Chapter] = [
         "Encampment (Ch 27, community handoff), forming the temporal "
         "spine of continuity. Tools: scratchpad, session.handoff, "
         "context.pack, context.status.",
-        ["context", "connection", "scratchpad", "handoff", "pulse",
-         "working memory", "session state", "continuity"],
-        gana="gana_heart", garden="love", quadrant="East",
-        chinese="心", pinyin="Xīn",
+        [
+            "context",
+            "connection",
+            "scratchpad",
+            "handoff",
+            "pulse",
+            "working memory",
+            "session state",
+            "continuity",
+        ],
+        gana="gana_heart",
+        garden="love",
+        quadrant="East",
+        chinese="心",
+        pinyin="Xīn",
     ),
-
     Chapter(
-        6, "The Tail — Performance & Acceleration",
+        6,
+        "The Tail — Performance & Acceleration",
         "The Tail (尾 Wěi) is the passionate drive that cuts through "
         "computational bottlenecks. This chapter manages the polyglot "
         "acceleration layer: Rust (PyO3) for holographic encoding, "
@@ -171,14 +230,28 @@ _CHAPTERS_28: list[Chapter] = [
         "Adjacent: Winnowing Basket (Ch 7) for vector search, Turtle "
         "Beak (Ch 20) for edge inference. Tools: execute_cascade, "
         "list_cascade_patterns, simd.batch, simd.cosine, simd.status.",
-        ["performance", "acceleration", "rust", "zig", "simd", "speed",
-         "ffi", "polyglot", "mojo", "cascade", "latency"],
-        gana="gana_tail", garden="courage", quadrant="East",
-        chinese="尾", pinyin="Wěi",
+        [
+            "performance",
+            "acceleration",
+            "rust",
+            "zig",
+            "simd",
+            "speed",
+            "ffi",
+            "polyglot",
+            "mojo",
+            "cascade",
+            "latency",
+        ],
+        gana="gana_tail",
+        garden="courage",
+        quadrant="East",
+        chinese="尾",
+        pinyin="Wěi",
     ),
-
     Chapter(
-        7, "The Winnowing Basket — Wisdom & Search",
+        7,
+        "The Winnowing Basket — Wisdom & Search",
         "The Winnowing Basket (箕 Jī) separates grain from chaff — "
         "signal from noise. This is the primary retrieval chapter, "
         "offering multiple search modalities: keyword search via FTS5, "
@@ -196,21 +269,34 @@ _CHAPTERS_28: list[Chapter] = [
         "resolution. Tools: search_memories, hybrid_recall, graph_walk, "
         "read_memory, fast_read_memory, batch_read_memories, "
         "list_memories, vector.search, vector.index, vector.status.",
-        ["search", "recall", "wisdom", "filter", "vector", "hybrid",
-         "semantic", "graph", "fts", "embedding", "retrieval"],
-        gana="gana_winnowing_basket", garden="wisdom", quadrant="East",
-        chinese="箕", pinyin="Jī",
+        [
+            "search",
+            "recall",
+            "wisdom",
+            "filter",
+            "vector",
+            "hybrid",
+            "semantic",
+            "graph",
+            "fts",
+            "embedding",
+            "retrieval",
+        ],
+        gana="gana_winnowing_basket",
+        garden="wisdom",
+        quadrant="East",
+        chinese="箕",
+        pinyin="Jī",
     ),
-
     # ══════════════════════════════════════════════════════════════
     # SOUTHERN QUADRANT — Vermilion Bird (朱雀), Summer, Fire Element
     # Chapters 8-14: The expansive, illuminating systems. Like summer
     # fire, these systems introspect, play, govern, connect, export,
     # excavate, and regenerate.
     # ══════════════════════════════════════════════════════════════
-
     Chapter(
-        8, "The Ghost — Introspection & Self-Model",
+        8,
+        "The Ghost — Introspection & Self-Model",
         "The Ghost (鬼 Guǐ) dwells in shadow, seeing what others miss. "
         "This is the system's introspection engine — the largest Gana "
         "with 15 nested tools. Gnosis produces a comprehensive self-"
@@ -230,14 +316,27 @@ _CHAPTERS_28: list[Chapter] = [
         "drive.event, drive.snapshot, explain_this, "
         "get_telemetry_summary, graph_topology, manifest, repo.summary, "
         "selfmodel.alerts, selfmodel.forecast, surprise_stats.",
-        ["introspect", "gnosis", "metrics", "telemetry", "self-model",
-         "capability", "surprise", "drive", "graph", "manifest"],
-        gana="gana_ghost", garden="grief", quadrant="South",
-        chinese="鬼", pinyin="Guǐ",
+        [
+            "introspect",
+            "gnosis",
+            "metrics",
+            "telemetry",
+            "self-model",
+            "capability",
+            "surprise",
+            "drive",
+            "graph",
+            "manifest",
+        ],
+        gana="gana_ghost",
+        garden="grief",
+        quadrant="South",
+        chinese="鬼",
+        pinyin="Guǐ",
     ),
-
     Chapter(
-        9, "The Willow — Resilience & Play",
+        9,
+        "The Willow — Resilience & Play",
         "The Willow (柳 Liǔ) bends but does not break. This chapter "
         "manages resilience through flexibility: the Grimoire spell "
         "system (cast, recommend, suggest, walkthrough, auto-status) "
@@ -253,14 +352,26 @@ _CHAPTERS_28: list[Chapter] = [
         "knowledge. Tools: grimoire_cast, grimoire_recommend, "
         "grimoire_suggest, grimoire_walkthrough, grimoire_auto_status, "
         "rate_limiter.stats.",
-        ["dream", "play", "resilience", "flexibility", "grimoire",
-         "spell", "cast", "rate limit", "walkthrough"],
-        gana="gana_willow", garden="humor", quadrant="South",
-        chinese="柳", pinyin="Liǔ",
+        [
+            "dream",
+            "play",
+            "resilience",
+            "flexibility",
+            "grimoire",
+            "spell",
+            "cast",
+            "rate limit",
+            "walkthrough",
+        ],
+        gana="gana_willow",
+        garden="humor",
+        quadrant="South",
+        chinese="柳",
+        pinyin="Liǔ",
     ),
-
     Chapter(
-        10, "The Star — Governance & Illumination",
+        10,
+        "The Star — Governance & Illumination",
         "The Star (星 Xīng) illuminates what is right. This chapter "
         "governs the ethical and administrative backbone: the Governor "
         "validates tool calls against risk budgets and maturity gates, "
@@ -278,14 +389,28 @@ _CHAPTERS_28: list[Chapter] = [
         "governor_set_goal, governor_check_drift, dharma.reload, "
         "set_dharma_profile, forge.status, forge.reload, "
         "forge.validate.",
-        ["governance", "dharma", "rules", "profile", "karma", "ethics",
-         "governor", "forge", "extension", "yaml", "illumination"],
-        gana="gana_star", garden="voice", quadrant="South",
-        chinese="星", pinyin="Xīng",
+        [
+            "governance",
+            "dharma",
+            "rules",
+            "profile",
+            "karma",
+            "ethics",
+            "governor",
+            "forge",
+            "extension",
+            "yaml",
+            "illumination",
+        ],
+        gana="gana_star",
+        garden="voice",
+        quadrant="South",
+        chinese="星",
+        pinyin="Xīng",
     ),
-
     Chapter(
-        11, "The Extended Net — Pattern Connectivity",
+        11,
+        "The Extended Net — Pattern Connectivity",
         "The Extended Net (张 Zhāng) weaves connections between "
         "seemingly unrelated things. This chapter manages semantic "
         "association mining: pattern_search discovers recurring themes "
@@ -302,14 +427,27 @@ _CHAPTERS_28: list[Chapter] = [
         "(Ch 7) for retrieval, Abundance (Ch 14) for entity resolution. "
         "Tools: pattern_search, cluster_stats, learning.patterns, "
         "learning.status, learning.suggest, tool.graph.",
-        ["pattern", "connection", "association", "cluster", "learning",
-         "constellation", "graph", "affinity", "mining", "net"],
-        gana="gana_extended_net", garden="sangha", quadrant="South",
-        chinese="张", pinyin="Zhāng",
+        [
+            "pattern",
+            "connection",
+            "association",
+            "cluster",
+            "learning",
+            "constellation",
+            "graph",
+            "affinity",
+            "mining",
+            "net",
+        ],
+        gana="gana_extended_net",
+        garden="sangha",
+        quadrant="South",
+        chinese="张",
+        pinyin="Zhāng",
     ),
-
     Chapter(
-        12, "The Wings — Expansion & Export",
+        12,
+        "The Wings — Expansion & Export",
         "The Wings (翼 Yì) carry knowledge beyond the local system. "
         "This chapter manages memory portability and distribution: "
         "export_memories serializes memories to JSON/JSONL for backup "
@@ -321,14 +459,27 @@ _CHAPTERS_28: list[Chapter] = [
         "by other agents. Adjacent: Encampment (Ch 27) for community "
         "coordination, Neck (Ch 2) for import. Tools: export_memories, "
         "audit.export, mesh.broadcast, mesh.status.",
-        ["export", "deploy", "expand", "adventure", "audit", "mesh",
-         "portability", "backup", "transfer", "grpc"],
-        gana="gana_wings", garden="beauty", quadrant="South",
-        chinese="翼", pinyin="Yì",
+        [
+            "export",
+            "deploy",
+            "expand",
+            "adventure",
+            "audit",
+            "mesh",
+            "portability",
+            "backup",
+            "transfer",
+            "grpc",
+        ],
+        gana="gana_wings",
+        garden="beauty",
+        quadrant="South",
+        chinese="翼",
+        pinyin="Yì",
     ),
-
     Chapter(
-        13, "The Chariot — Archaeology & Knowledge Graph",
+        13,
+        "The Chariot — Archaeology & Knowledge Graph",
         "The Chariot (轸 Zhěn) moves through time, excavating the past "
         "to inform the present. The archaeology system tracks which "
         "files have been read, written, and changed, producing daily "
@@ -343,14 +494,27 @@ _CHAPTERS_28: list[Chapter] = [
         "search. Adjacent: Extended Net (Ch 11) for association mining, "
         "Ghost (Ch 8) for graph topology. Tools: archaeology, "
         "kg.extract, kg.query, kg.status, kg.top.",
-        ["archaeology", "code", "navigation", "history", "transformation",
-         "knowledge graph", "entity", "relationship", "dig", "wisdom"],
-        gana="gana_chariot", garden="adventure", quadrant="South",
-        chinese="轸", pinyin="Zhěn",
+        [
+            "archaeology",
+            "code",
+            "navigation",
+            "history",
+            "transformation",
+            "knowledge graph",
+            "entity",
+            "relationship",
+            "dig",
+            "wisdom",
+        ],
+        gana="gana_chariot",
+        garden="adventure",
+        quadrant="South",
+        chinese="轸",
+        pinyin="Zhěn",
     ),
-
     Chapter(
-        14, "Abundance — Regeneration & Dream Cycle",
+        14,
+        "Abundance — Regeneration & Dream Cycle",
         "Abundance (豐 Fēng) is the harvest — regeneration through "
         "cycles of rest and renewal. This chapter manages the Dream "
         "Cycle (6-phase cognitive maintenance: CONSOLIDATION → PRUNING "
@@ -368,21 +532,33 @@ _CHAPTERS_28: list[Chapter] = [
         "memory.lifecycle, memory.retention_sweep, "
         "serendipity_mark_accessed, serendipity_surface, "
         "whitemagic.tip.",
-        ["dream", "regeneration", "serendipity", "entity", "joy",
-         "lifecycle", "consolidation", "gratitude", "tip", "cycle"],
-        gana="gana_abundance", garden="joy", quadrant="South",
-        chinese="豐", pinyin="Fēng",
+        [
+            "dream",
+            "regeneration",
+            "serendipity",
+            "entity",
+            "joy",
+            "lifecycle",
+            "consolidation",
+            "gratitude",
+            "tip",
+            "cycle",
+        ],
+        gana="gana_abundance",
+        garden="joy",
+        quadrant="South",
+        chinese="豐",
+        pinyin="Fēng",
     ),
-
     # ══════════════════════════════════════════════════════════════
     # WESTERN QUADRANT — White Tiger (白虎), Autumn, Metal Element
     # Chapters 15-21: The refining, judging systems. Like autumn's
     # harvest, these systems evaluate ethics, measure metrics,
     # manage energy, debug, capture patterns, validate, and judge.
     # ══════════════════════════════════════════════════════════════
-
     Chapter(
-        15, "Straddling Legs — Ethical Balance",
+        15,
+        "Straddling Legs — Ethical Balance",
         "Straddling Legs (奎 Kuí) stands with one foot in each world, "
         "balancing competing forces. This chapter provides ethical "
         "evaluation: evaluate_ethics assesses the moral implications "
@@ -399,14 +575,27 @@ _CHAPTERS_28: list[Chapter] = [
         "security enforcement. Tools: evaluate_ethics, check_boundaries, "
         "verify_consent, get_ethical_score, get_dharma_guidance, "
         "harmony_vector.",
-        ["ethics", "balance", "harmony", "consent", "boundaries",
-         "patience", "moral", "evaluation", "dharma", "vector"],
-        gana="gana_straddling_legs", garden="awe", quadrant="West",
-        chinese="奎", pinyin="Kuí",
+        [
+            "ethics",
+            "balance",
+            "harmony",
+            "consent",
+            "boundaries",
+            "patience",
+            "moral",
+            "evaluation",
+            "dharma",
+            "vector",
+        ],
+        gana="gana_straddling_legs",
+        garden="awe",
+        quadrant="West",
+        chinese="奎",
+        pinyin="Kuí",
     ),
-
     Chapter(
-        16, "The Mound — Metrics & Accumulation",
+        16,
+        "The Mound — Metrics & Accumulation",
         "The Mound (娄 Lóu) accumulates gradually, layer upon layer. "
         "This chapter manages quantitative tracking: view_hologram "
         "renders the 5D holographic memory view (XYZWV coordinates "
@@ -422,14 +611,27 @@ _CHAPTERS_28: list[Chapter] = [
         "anomaly detection. Tools: view_hologram, track_metric, "
         "get_metrics_summary, record_yin_yang_activity, "
         "get_yin_yang_balance.",
-        ["metrics", "hologram", "yin-yang", "gratitude", "accumulation",
-         "tracking", "balance", "5D", "statistics", "quantitative"],
-        gana="gana_mound", garden="gratitude", quadrant="West",
-        chinese="娄", pinyin="Lóu",
+        [
+            "metrics",
+            "hologram",
+            "yin-yang",
+            "gratitude",
+            "accumulation",
+            "tracking",
+            "balance",
+            "5D",
+            "statistics",
+            "quantitative",
+        ],
+        gana="gana_mound",
+        garden="gratitude",
+        quadrant="West",
+        chinese="娄",
+        pinyin="Lóu",
     ),
-
     Chapter(
-        17, "The Stomach — Energy & Task Management",
+        17,
+        "The Stomach — Energy & Task Management",
         "The Stomach (胃 Wèi) digests raw input into useful energy. "
         "This chapter manages task pipelines and work distribution: "
         "pipeline orchestrates multi-step tool sequences, "
@@ -441,14 +643,26 @@ _CHAPTERS_28: list[Chapter] = [
         "(Ch 23) for long-running swarm tasks, Dipper (Ch 22) for "
         "strategic planning. Tools: pipeline, task.distribute, "
         "task.route_smart, task.status, task.list, task.complete.",
-        ["pipeline", "task", "energy", "healing", "digestion",
-         "distribute", "route", "workflow", "orchestration"],
-        gana="gana_stomach", garden="creation", quadrant="West",
-        chinese="胃", pinyin="Wèi",
+        [
+            "pipeline",
+            "task",
+            "energy",
+            "healing",
+            "digestion",
+            "distribute",
+            "route",
+            "workflow",
+            "orchestration",
+        ],
+        gana="gana_stomach",
+        garden="creation",
+        quadrant="West",
+        chinese="胃",
+        pinyin="Wèi",
     ),
-
     Chapter(
-        18, "The Hairy Head — Detail & Debug",
+        18,
+        "The Hairy Head — Detail & Debug",
         "The Hairy Head (昴 Mǎo) attends to every strand. This chapter "
         "provides fine-grained debugging and attention tools: "
         "salience.spotlight highlights what matters most in the current "
@@ -463,14 +677,27 @@ _CHAPTERS_28: list[Chapter] = [
         "Adjacent: Root (Ch 3) for health overview, Ghost (Ch 8) for "
         "high-level introspection. Tools: salience.spotlight, anomaly, "
         "otel, karma_report, karmic_trace, dharma_rules.",
-        ["detail", "debug", "anomaly", "salience", "presence",
-         "attention", "trace", "karma", "otel", "observability"],
-        gana="gana_hairy_head", garden="presence", quadrant="West",
-        chinese="昴", pinyin="Mǎo",
+        [
+            "detail",
+            "debug",
+            "anomaly",
+            "salience",
+            "presence",
+            "attention",
+            "trace",
+            "karma",
+            "otel",
+            "observability",
+        ],
+        gana="gana_hairy_head",
+        garden="presence",
+        quadrant="West",
+        chinese="昴",
+        pinyin="Mǎo",
     ),
-
     Chapter(
-        19, "The Net — Pattern Capture & Filtering",
+        19,
+        "The Net — Pattern Capture & Filtering",
         "The Net (毕 Bì) captures what passes through. This chapter "
         "manages prompt engineering and template rendering: "
         "prompt.render fills a registered template with variables, "
@@ -484,14 +711,27 @@ _CHAPTERS_28: list[Chapter] = [
         "Extended Net (Ch 11) for pattern discovery. Tools: "
         "prompt.render, prompt.list, prompt.reload, "
         "karma.verify_chain.",
-        ["prompt", "capture", "filter", "mystery", "pattern",
-         "template", "render", "verify", "chain", "tamper"],
-        gana="gana_net", garden="play", quadrant="West",
-        chinese="毕", pinyin="Bì",
+        [
+            "prompt",
+            "capture",
+            "filter",
+            "mystery",
+            "pattern",
+            "template",
+            "render",
+            "verify",
+            "chain",
+            "tamper",
+        ],
+        gana="gana_net",
+        garden="play",
+        quadrant="West",
+        chinese="毕",
+        pinyin="Bì",
     ),
-
     Chapter(
-        20, "The Turtle Beak — Precision & Inference",
+        20,
+        "The Turtle Beak — Precision & Inference",
         "The Turtle Beak (觜 Zī) speaks with precision — not a word "
         "wasted. This chapter manages local AI inference: edge_infer "
         "runs inference through lightweight local models, "
@@ -505,14 +745,27 @@ _CHAPTERS_28: list[Chapter] = [
         "CPU. Adjacent: Tail (Ch 6) for SIMD acceleration, Roof "
         "(Ch 26) for Ollama integration. Tools: edge_infer, "
         "edge_batch_infer, edge_stats, bitnet_infer, bitnet_status.",
-        ["precision", "validation", "inference", "voice", "edge",
-         "bitnet", "local", "quantized", "batch", "model"],
-        gana="gana_turtle_beak", garden="practice", quadrant="West",
-        chinese="觜", pinyin="Zī",
+        [
+            "precision",
+            "validation",
+            "inference",
+            "voice",
+            "edge",
+            "bitnet",
+            "local",
+            "quantized",
+            "batch",
+            "model",
+        ],
+        gana="gana_turtle_beak",
+        garden="practice",
+        quadrant="West",
+        chinese="觜",
+        pinyin="Zī",
     ),
-
     Chapter(
-        21, "Three Stars — The Wisdom Council",
+        21,
+        "Three Stars — The Wisdom Council",
         "Three Stars (参 Shēn) represents the tribunal of judgment — "
         "Orion's Belt in the Western sky. This chapter provides "
         "multi-perspective reasoning: bicameral reasoning splits a "
@@ -534,21 +787,33 @@ _CHAPTERS_28: list[Chapter] = [
         "ensemble, reasoning.bicameral, solve_optimization, "
         "kaizen_analyze, kaizen_apply_fixes, sabha.convene, "
         "sabha.status.",
-        ["judgment", "council", "ensemble", "reasoning", "dharma",
-         "kaizen", "sabha", "bicameral", "optimization", "wisdom"],
-        gana="gana_three_stars", garden="reverence", quadrant="West",
-        chinese="参", pinyin="Shēn",
+        [
+            "judgment",
+            "council",
+            "ensemble",
+            "reasoning",
+            "dharma",
+            "kaizen",
+            "sabha",
+            "bicameral",
+            "optimization",
+            "wisdom",
+        ],
+        gana="gana_three_stars",
+        garden="reverence",
+        quadrant="West",
+        chinese="参",
+        pinyin="Shēn",
     ),
-
     # ══════════════════════════════════════════════════════════════
     # NORTHERN QUADRANT — Black Tortoise (玄武), Winter, Water Element
     # Chapters 22-28: The deep, enduring systems. Like winter's
     # stillness, these systems strategize, endure, nurture, empty,
     # shelter, gather, and bound.
     # ══════════════════════════════════════════════════════════════
-
     Chapter(
-        22, "The Dipper — Strategy & Governance",
+        22,
+        "The Dipper — Strategy & Governance",
         "The Dipper (斗 Dǒu) measures the heavens and sets direction. "
         "This chapter provides strategic oversight: homeostasis "
         "monitors the Harmony Vector and applies graduated corrections "
@@ -564,14 +829,27 @@ _CHAPTERS_28: list[Chapter] = [
         "pole of the mandala. Adjacent: Star (Ch 10) for governance "
         "rules, Three Stars (Ch 21) for judgment. Tools: homeostasis, "
         "maturity.assess, starter_packs.",
-        ["strategy", "governance", "maturity", "homeostasis", "awe",
-         "balance", "correction", "oversight", "starter", "direction"],
-        gana="gana_dipper", garden="dharma", quadrant="North",
-        chinese="斗", pinyin="Dǒu",
+        [
+            "strategy",
+            "governance",
+            "maturity",
+            "homeostasis",
+            "awe",
+            "balance",
+            "correction",
+            "oversight",
+            "starter",
+            "direction",
+        ],
+        gana="gana_dipper",
+        garden="dharma",
+        quadrant="North",
+        chinese="斗",
+        pinyin="Dǒu",
     ),
-
     Chapter(
-        23, "The Ox — Endurance & Swarm Intelligence",
+        23,
+        "The Ox — Endurance & Swarm Intelligence",
         "The Ox (牛 Niú) pulls the heaviest loads without complaint. "
         "This chapter manages long-running, multi-step swarm "
         "operations: swarm.decompose breaks a complex task into "
@@ -587,14 +865,27 @@ _CHAPTERS_28: list[Chapter] = [
         "Girl (Ch 24) for agent management. Tools: swarm.decompose, "
         "swarm.route, swarm.plan, swarm.vote, swarm.complete, "
         "swarm.resolve, swarm.status, worker.status.",
-        ["swarm", "endurance", "worker", "persistence", "reverence",
-         "decompose", "distributed", "parallel", "vote", "plan"],
-        gana="gana_ox", garden="patience", quadrant="North",
-        chinese="牛", pinyin="Niú",
+        [
+            "swarm",
+            "endurance",
+            "worker",
+            "persistence",
+            "reverence",
+            "decompose",
+            "distributed",
+            "parallel",
+            "vote",
+            "plan",
+        ],
+        gana="gana_ox",
+        garden="patience",
+        quadrant="North",
+        chinese="牛",
+        pinyin="Niú",
     ),
-
     Chapter(
-        24, "The Girl — Nurture & Agent Profiles",
+        24,
+        "The Girl — Nurture & Agent Profiles",
         "The Girl (女 Nǚ) nurtures growth in others. This chapter "
         "manages multi-agent coordination: agent.register adds a new "
         "agent to the known roster with capabilities and trust level, "
@@ -609,14 +900,27 @@ _CHAPTERS_28: list[Chapter] = [
         "communication. Tools: agent.register, agent.heartbeat, "
         "agent.list, agent.capabilities, agent.deregister, "
         "agent.trust.",
-        ["agent", "nurture", "register", "trust", "wonder",
-         "heartbeat", "capability", "multi-agent", "roster", "social"],
-        gana="gana_girl", garden="connection", quadrant="North",
-        chinese="女", pinyin="Nǚ",
+        [
+            "agent",
+            "nurture",
+            "register",
+            "trust",
+            "wonder",
+            "heartbeat",
+            "capability",
+            "multi-agent",
+            "roster",
+            "social",
+        ],
+        gana="gana_girl",
+        garden="connection",
+        quadrant="North",
+        chinese="女",
+        pinyin="Nǚ",
     ),
-
     Chapter(
-        25, "The Void — Stillness & Galaxy Management",
+        25,
+        "The Void — Stillness & Galaxy Management",
         "The Void (虚 Xū) is the emptiness that makes fullness "
         "possible. This chapter manages the Multi-Galaxy system and "
         "Garden consciousness: galaxy.create spawns a new isolated "
@@ -634,14 +938,26 @@ _CHAPTERS_28: list[Chapter] = [
         "galactic.dashboard, galaxy.create, galaxy.switch, "
         "galaxy.list, galaxy.status, galaxy.ingest, galaxy.delete, "
         "garden_activate, garden_status, garden_health.",
-        ["galaxy", "stillness", "void", "meditation", "garden",
-         "multi-galaxy", "isolate", "activate", "consciousness"],
-        gana="gana_void", garden="mystery", quadrant="North",
-        chinese="虚", pinyin="Xū",
+        [
+            "galaxy",
+            "stillness",
+            "void",
+            "meditation",
+            "garden",
+            "multi-galaxy",
+            "isolate",
+            "activate",
+            "consciousness",
+        ],
+        gana="gana_void",
+        garden="mystery",
+        quadrant="North",
+        chinese="虚",
+        pinyin="Xū",
     ),
-
     Chapter(
-        26, "The Roof — Shelter & Local AI",
+        26,
+        "The Roof — Shelter & Local AI",
         "The Roof (危 Wēi) shelters what is vulnerable. This chapter "
         "manages local AI model operations via Ollama and model "
         "security: ollama.models lists available local models, "
@@ -659,14 +975,28 @@ _CHAPTERS_28: list[Chapter] = [
         "ollama.models, ollama.generate, ollama.chat, ollama.agent, "
         "model.register, model.verify, model.list, model.hash, "
         "model.signing_status.",
-        ["ollama", "shelter", "protection", "local", "ai", "model",
-         "signing", "verify", "agent", "inference", "trust"],
-        gana="gana_roof", garden="protection", quadrant="North",
-        chinese="危", pinyin="Wēi",
+        [
+            "ollama",
+            "shelter",
+            "protection",
+            "local",
+            "ai",
+            "model",
+            "signing",
+            "verify",
+            "agent",
+            "inference",
+            "trust",
+        ],
+        gana="gana_roof",
+        garden="protection",
+        quadrant="North",
+        chinese="危",
+        pinyin="Wēi",
     ),
-
     Chapter(
-        27, "The Encampment — Community & Communication",
+        27,
+        "The Encampment — Community & Communication",
         "The Encampment (室 Shì) is where the community gathers. "
         "This chapter manages inter-agent and inter-session "
         "communication: sangha_chat_send and sangha_chat_read "
@@ -682,14 +1012,27 @@ _CHAPTERS_28: list[Chapter] = [
         "(Ch 12) for cross-system export. Tools: sangha_chat_send, "
         "sangha_chat_read, broker.publish, broker.history, "
         "broker.status.",
-        ["sangha", "community", "chat", "broker", "encampment",
-         "pubsub", "event", "message", "communication", "ganying"],
-        gana="gana_encampment", garden="transformation", quadrant="North",
-        chinese="室", pinyin="Shì",
+        [
+            "sangha",
+            "community",
+            "chat",
+            "broker",
+            "encampment",
+            "pubsub",
+            "event",
+            "message",
+            "communication",
+            "ganying",
+        ],
+        gana="gana_encampment",
+        garden="transformation",
+        quadrant="North",
+        chinese="室",
+        pinyin="Shì",
     ),
-
     Chapter(
-        28, "The Wall — Boundaries & Governance Tokens",
+        28,
+        "The Wall — Boundaries & Governance Tokens",
         "The Wall (壁 Bì) defines where one domain ends and another "
         "begins. This chapter manages democratic governance and "
         "access control: vote.create initiates a proposal, vote.cast "
@@ -707,10 +1050,24 @@ _CHAPTERS_28: list[Chapter] = [
         "vote.create, vote.cast, vote.analyze, vote.list, "
         "vote.record_outcome, engagement.issue, engagement.validate, "
         "engagement.revoke, engagement.list, engagement.status.",
-        ["vote", "boundary", "wall", "air", "invisible", "token",
-         "engagement", "hmac", "governance", "democratic", "scope"],
-        gana="gana_wall", garden="truth", quadrant="North",
-        chinese="壁", pinyin="Bì",
+        [
+            "vote",
+            "boundary",
+            "wall",
+            "air",
+            "invisible",
+            "token",
+            "engagement",
+            "hmac",
+            "governance",
+            "democratic",
+            "scope",
+        ],
+        gana="gana_wall",
+        garden="truth",
+        quadrant="North",
+        chinese="壁",
+        pinyin="Bì",
     ),
 ]
 

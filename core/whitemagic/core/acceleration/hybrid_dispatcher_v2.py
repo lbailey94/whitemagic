@@ -42,14 +42,16 @@ class DispatchMode(Enum):
         SPEED
         SAFETY
         ADAPTIVE"""
-    SPEED = "speed"      # Python in-memory only
-    SAFETY = "safety"    # Koka IPC only
+
+    SPEED = "speed"  # Python in-memory only
+    SAFETY = "safety"  # Koka IPC only
     ADAPTIVE = "adaptive"  # Choose based on complexity + runtime perf
 
 
 @dataclass
 class LatencyStats:
     """Rolling latency statistics for runtime adaptation."""
+
     samples: deque = field(default_factory=lambda: deque(maxlen=100))
     total_calls: int = 0
     total_time_us: float = 0.0
@@ -96,6 +98,7 @@ class LatencyStats:
 @dataclass
 class OperationProfile:
     """Profile for operation complexity."""
+
     name: str
     has_state: bool
     has_effects: bool
@@ -119,9 +122,12 @@ class OperationProfile:
 OPERATION_PROFILES = {
     # Simple lookups - Python fast path
     "prat_route": OperationProfile("prat_route", False, False, False, 0.1),
-    "resonance_predecessor": OperationProfile("resonance_predecessor", False, False, False, 0.1),
-    "resonance_successor": OperationProfile("resonance_successor", False, False, False, 0.1),
-
+    "resonance_predecessor": OperationProfile(
+        "resonance_predecessor", False, False, False, 0.1
+    ),
+    "resonance_successor": OperationProfile(
+        "resonance_successor", False, False, False, 0.1
+    ),
     # Stateful operations - Koka safe path
     "circuit_check": OperationProfile("circuit_check", True, True, False, 0.6),
     "circuit_record": OperationProfile("circuit_record", True, True, False, 0.7),
@@ -144,13 +150,34 @@ class PythonFastPath:
     }
 
     GANA_ORDER = [
-        "gana_horn", "gana_neck", "gana_root", "gana_room", "gana_heart",
-        "gana_tail", "gana_winnowing_basket", "gana_ghost", "gana_willow",
-        "gana_star", "gana_extended_net", "gana_wings", "gana_chariot",
-        "gana_abundance", "gana_straddling_legs", "gana_mound", "gana_stomach",
-        "gana_hairy_head", "gana_net", "gana_turtle_beak", "gana_three_stars",
-        "gana_dipper", "gana_ox", "gana_girl", "gana_void", "gana_roof",
-        "gana_encampment", "gana_wall"
+        "gana_horn",
+        "gana_neck",
+        "gana_root",
+        "gana_room",
+        "gana_heart",
+        "gana_tail",
+        "gana_winnowing_basket",
+        "gana_ghost",
+        "gana_willow",
+        "gana_star",
+        "gana_extended_net",
+        "gana_wings",
+        "gana_chariot",
+        "gana_abundance",
+        "gana_straddling_legs",
+        "gana_mound",
+        "gana_stomach",
+        "gana_hairy_head",
+        "gana_net",
+        "gana_turtle_beak",
+        "gana_three_stars",
+        "gana_dipper",
+        "gana_ox",
+        "gana_girl",
+        "gana_void",
+        "gana_roof",
+        "gana_encampment",
+        "gana_wall",
     ]
     GANA_INDEX = {name: i for i, name in enumerate(GANA_ORDER)}
 
@@ -171,6 +198,7 @@ class PythonFastPath:
         """
         try:
             from whitemagic.optimization import rust_accelerators
+
             if hasattr(rust_accelerators, "prat_route"):
                 return str(rust_accelerators.prat_route(tool))
             return cls.TOOL_TO_GANA.get(tool, "gana_ghost")
@@ -191,6 +219,7 @@ class PythonFastPath:
         """
         try:
             from whitemagic.optimization import rust_accelerators
+
             if hasattr(rust_accelerators, "resonance_predecessor"):
                 return str(rust_accelerators.resonance_predecessor(gana))
             idx = cls.GANA_INDEX.get(gana, 0)
@@ -213,6 +242,7 @@ class PythonFastPath:
         """
         try:
             from whitemagic.optimization import rust_accelerators
+
             if hasattr(rust_accelerators, "resonance_successor"):
                 return str(rust_accelerators.resonance_successor(gana))
             idx = cls.GANA_INDEX.get(gana, 0)
@@ -247,7 +277,10 @@ class PythonFastPath:
         """
         successes = cast(int, cls.circuit_state["successes"])
         cls.circuit_state["successes"] = successes + 1
-        if cls.circuit_state["state"] == "half-open" and cast(int, cls.circuit_state["successes"]) >= 3:
+        if (
+            cls.circuit_state["state"] == "half-open"
+            and cast(int, cls.circuit_state["successes"]) >= 3
+        ):
             cls.circuit_state["state"] = "closed"
             cls.circuit_state["failures"] = 0
         return "ok"
@@ -266,7 +299,10 @@ class PythonFastPath:
         failures = cast(int, cls.circuit_state["failures"])
         cls.circuit_state["failures"] = failures + 1
         threshold = cast(int, cls.circuit_state["threshold"])
-        if cls.circuit_state["state"] == "closed" and cast(int, cls.circuit_state["failures"]) >= threshold:
+        if (
+            cls.circuit_state["state"] == "closed"
+            and cast(int, cls.circuit_state["failures"]) >= threshold
+        ):
             cls.circuit_state["state"] = "open"
         elif cls.circuit_state["state"] == "half-open":
             cls.circuit_state["state"] = "open"
@@ -296,7 +332,7 @@ class KokaProcess:
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        text=True
+                        text=True,
                     )
                     return True
                 except Exception as e:
@@ -305,7 +341,9 @@ class KokaProcess:
                     return False
         return self._proc is not None
 
-    def _readline_with_timeout(self, timeout: float = _DEFAULT_KOKA_PROCESS_TIMEOUT_S) -> str | None:
+    def _readline_with_timeout(
+        self, timeout: float = _DEFAULT_KOKA_PROCESS_TIMEOUT_S
+    ) -> str | None:
         proc = self._proc
         if proc is None or proc.stdout is None:
             return None
@@ -324,7 +362,11 @@ class KokaProcess:
                 logger.debug("Koka stdout read failed: %s", e)
                 result_queue.put(None)
 
-        thread = threading.Thread(target=_reader, name=f"hybrid-koka-{self.binary_name}-{self.pool_id}", daemon=True)
+        thread = threading.Thread(
+            target=_reader,
+            name=f"hybrid-koka-{self.binary_name}-{self.pool_id}",
+            daemon=True,
+        )
         thread.start()
 
         try:
@@ -357,7 +399,7 @@ class KokaProcess:
                 return {"error": "Process or stdin not available", "healthy": False}
 
             try:
-                proc.stdin.write(json.dumps(request) + '\n')
+                proc.stdin.write(json.dumps(request) + "\n")
                 proc.stdin.flush()
                 response = self._readline_with_timeout()
                 self._call_count += 1
@@ -387,7 +429,7 @@ class KokaProcess:
 
             try:
                 for req in requests:
-                    proc.stdin.write(json.dumps(req) + '\n')
+                    proc.stdin.write(json.dumps(req) + "\n")
                     proc.stdin.flush()
                     response = self._readline_with_timeout()
                     if response:
@@ -576,7 +618,14 @@ class HybridDispatcherV2:
             return
 
         # Start pools for commonly used binaries
-        for binary in ["circuit", "resonance", "dream_cycle", "gan_ying", "hot_paths", "unified_runtime"]:
+        for binary in [
+            "circuit",
+            "resonance",
+            "dream_cycle",
+            "gan_ying",
+            "hot_paths",
+            "unified_runtime",
+        ]:
             pool = KokaProcessPool(binary, pool_size=self.pool_size)
             pool.start()
             self._koka_pools[binary] = pool
@@ -606,7 +655,9 @@ class HybridDispatcherV2:
         if len(self._operation_history) >= 3:
             recent = list(self._operation_history)[-3:]
             # If we see circuit ops followed by dream ops, pre-warm unified_runtime
-            if any("circuit" in op for op in recent) and any("dream" in op for op in recent):
+            if any("circuit" in op for op in recent) and any(
+                "dream" in op for op in recent
+            ):
                 predicted.append("unified_runtime")
 
         return predicted
@@ -618,7 +669,9 @@ class HybridDispatcherV2:
 
         for binary in binaries:
             if binary not in self._koka_pools:
-                pool = KokaProcessPool(binary, pool_size=1)  # Single process for predicted
+                pool = KokaProcessPool(
+                    binary, pool_size=1
+                )  # Single process for predicted
                 pool.start()
                 self._koka_pools[binary] = pool
 
@@ -667,7 +720,6 @@ class HybridDispatcherV2:
             else:
                 return False
 
-
         if self.mode == DispatchMode.SPEED:
             return False
         if self.mode == DispatchMode.SAFETY:
@@ -692,7 +744,9 @@ class HybridDispatcherV2:
             self._koka_pools[binary] = pool
         return self._koka_pools[binary]
 
-    def _record_latency(self, is_koka: bool, latency_us: float, operation: str, success: bool = True) -> None:
+    def _record_latency(
+        self, is_koka: bool, latency_us: float, operation: str, success: bool = True
+    ) -> None:
         """Record latency for runtime adaptation."""
         if is_koka:
             self._koka_stats.record(latency_us)
@@ -928,11 +982,13 @@ class HybridDispatcherV2:
         # Pair up results
         paired = []
         for i in range(0, len(results), 2):
-            paired.append({
-                "gana": ganas[i // 2],
-                "predecessor": results[i].get("predecessor", "gana_horn"),
-                "successor": results[i + 1].get("successor", "gana_horn"),
-            })
+            paired.append(
+                {
+                    "gana": ganas[i // 2],
+                    "predecessor": results[i].get("predecessor", "gana_horn"),
+                    "successor": results[i + 1].get("successor", "gana_horn"),
+                }
+            )
         return paired
 
     # ── Lifecycle ────────────────────────────────────────────────────────────
@@ -979,6 +1035,7 @@ class HybridDispatcherV2:
         """Poll the Unified Fast Brain for its status via Elixir or direct Koka check."""
         try:
             from whitemagic.core.acceleration.koka_native_bridge import get_koka_bridge
+
             b = get_koka_bridge()
             if "unified_fast_brain" in b._binaries:
                 return {"active": True, "shm_ring": True}
@@ -1004,7 +1061,7 @@ class HybridDispatcherV2:
             "overall_healthy": healthy,
             "pools": details,
             "python_available": True,
-            "fast_brain": self.check_unified_fast_brain()
+            "fast_brain": self.check_unified_fast_brain(),
         }
 
 

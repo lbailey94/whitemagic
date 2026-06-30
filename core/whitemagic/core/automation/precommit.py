@@ -50,7 +50,11 @@ class PreCommitAutoFix:
         for attempt in range(self.max_retries):
             success, output = self.run_precommit()
             if success:
-                return {"success": True, "attempts": attempt + 1, "fixes": self.fixes_applied}
+                return {
+                    "success": True,
+                    "attempts": attempt + 1,
+                    "fixes": self.fixes_applied,
+                }
 
             fixes = self.apply_fixes(output)
             if fixes:
@@ -64,4 +68,8 @@ class PreCommitAutoFix:
                     "fixes": self.fixes_applied,
                 }
 
-        return {"success": False, "attempts": self.max_retries, "fixes": self.fixes_applied}
+        return {
+            "success": False,
+            "attempts": self.max_retries,
+            "fixes": self.fixes_applied,
+        }

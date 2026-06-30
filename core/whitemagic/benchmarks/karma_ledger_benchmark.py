@@ -17,6 +17,7 @@ At the aggregate level we approximate this as:
 
 where max_possible_debt is the sum of worst-case debt for every scenario.
 """
+
 from __future__ import annotations
 
 import argparse

@@ -66,9 +66,18 @@ def mesh_memory_sync(
                 "memory_id": memory_id,
                 "source_node": "local",
                 "timestamp": time.time(),
-                **{k: v for k, v in payload.items() if k in (
-                    "title", "memory_type", "tags", "importance", "zone",
-                )},
+                **{
+                    k: v
+                    for k, v in payload.items()
+                    if k
+                    in (
+                        "title",
+                        "memory_type",
+                        "tags",
+                        "importance",
+                        "zone",
+                    )
+                },
             }
 
             # If peers are connected, queue for Redis broadcast
@@ -79,7 +88,8 @@ def mesh_memory_sync(
                     broadcast_queued = True
                     logger.info(
                         "Memory sync announced to %d peers: %s",
-                        peer_count, memory_id,
+                        peer_count,
+                        memory_id,
                     )
                 except Exception as e:
                     logger.debug("Mesh broadcast failed: %s", e)
@@ -107,7 +117,9 @@ def mesh_memory_sync(
             if peer_count > 0:
                 try:
                     mesh.record_event(request_event)
-                    logger.info("Memory sync requested from %d peers: %s", peer_count, memory_id)
+                    logger.info(
+                        "Memory sync requested from %d peers: %s", peer_count, memory_id
+                    )
                     return {
                         "operation": "request",
                         "memory_id": memory_id,

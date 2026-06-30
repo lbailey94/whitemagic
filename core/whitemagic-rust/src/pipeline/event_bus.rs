@@ -63,7 +63,6 @@ pub fn event_bus_try_emit(
     confidence: f64,
     source: &str,
 ) -> PyResult<bool> {
-    // --- Stillness check (single atomic load, ~2ns) ---
     if IS_STILL.load(Ordering::Relaxed) && source != "stillness_manager" {
         let is_allowed = event_type.starts_with("system_")
             || event_type.starts_with("emergence_")
@@ -77,7 +76,6 @@ pub fn event_bus_try_emit(
         }
     }
 
-    // --- Dampening check (atomic load + compare, ~5ns) ---
     let now = now_ms();
 
     let state = EVENT_STATES
@@ -169,10 +167,6 @@ pub fn event_bus_reset() -> PyResult<()> {
     IS_STILL.store(false, Ordering::Relaxed);
     Ok(())
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

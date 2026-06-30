@@ -23,6 +23,7 @@ from whitemagic.core.memory.embeddings import EmbeddingEngine
 
 logger = logging.getLogger(__name__)
 
+
 class AlbedoPurifier:
     """Vectorizes and clusters novelty memories."""
 
@@ -37,7 +38,7 @@ class AlbedoPurifier:
         memories: list of {'id': str, 'content': str, ...}
         """
         logger.info("Vectorizing %s memories...", len(memories))
-        texts = [m.get('content', '') for m in memories]
+        texts = [m.get("content", "") for m in memories]
 
         # Batch encode
         embeddings = self.engine.encode_batch(texts, batch_size=64)
@@ -45,12 +46,14 @@ class AlbedoPurifier:
         results = []
         for i, m in enumerate(memories):
             if embeddings and i < len(embeddings):
-                m['embedding'] = embeddings[i]
+                m["embedding"] = embeddings[i]
                 results.append(m)
 
         return results
 
-    def cluster(self, vectorized_memories: list[dict[str, Any]], n_clusters: int = 20) -> list[dict[str, Any]]:
+    def cluster(
+        self, vectorized_memories: list[dict[str, Any]], n_clusters: int = 20
+    ) -> list[dict[str, Any]]:
         """
         Group memories into semantic clusters.
         Returns list of clusters: {'id': int, 'items': [memories], 'centroid': vec}
@@ -59,7 +62,7 @@ class AlbedoPurifier:
             return []
 
         # Extract vectors
-        X = np.array([m['embedding'] for m in vectorized_memories])
+        X = np.array([m["embedding"] for m in vectorized_memories])
 
         # KMeans clustering
         # In a real system, we might use HDBSCAN for density-based,
@@ -77,13 +80,15 @@ class AlbedoPurifier:
         output = []
         for label, items in clusters.items():
             centroid = kmeans.cluster_centers_[label]
-            output.append({
-                "cluster_id": label,
-                "size": len(items),
-                "items": items,
-                "centroid": centroid.tolist()
-            })
+            output.append(
+                {
+                    "cluster_id": label,
+                    "size": len(items),
+                    "items": items,
+                    "centroid": centroid.tolist(),
+                }
+            )
 
         # Sort by size (most common patterns first)
-        output.sort(key=lambda x: x['size'], reverse=True)
+        output.sort(key=lambda x: x["size"], reverse=True)
         return output

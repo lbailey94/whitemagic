@@ -9,6 +9,7 @@ weighted by confidence.
 
 Feeds into C (counterfactual estimation) as the primary data source.
 """
+
 from __future__ import annotations
 
 import time
@@ -19,6 +20,7 @@ from typing import Any
 
 class EffectType(Enum):
     """Type of effect recorded in the causal ledger."""
+
     INTENDED = "intended"
     UNINTENDED = "unintended"
     SIDE_EFFECT = "side_effect"
@@ -27,13 +29,16 @@ class EffectType(Enum):
 @dataclass
 class CausalEffect:
     """A single causal effect recorded in the ledger."""
+
     effect_id: str
     improvement_id: str
     effect_type: EffectType
-    effect_metric: str       # What changed (e.g., "recall_quality")
+    effect_metric: str  # What changed (e.g., "recall_quality")
     effect_magnitude: float  # How much it changed (signed)
     effect_timestamp: float = field(default_factory=time.time)
-    effect_confidence: float = 0.5  # How confident we are this was caused by the improvement
+    effect_confidence: float = (
+        0.5  # How confident we are this was caused by the improvement
+    )
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -110,12 +115,16 @@ class CausalLedger:
             elif e.effect_type == EffectType.UNINTENDED:
                 utility -= abs(e.effect_magnitude) * e.effect_confidence
             elif e.effect_type == EffectType.SIDE_EFFECT:
-                utility -= abs(e.effect_magnitude) * e.effect_confidence * 0.5  # Side effects weighted less
+                utility -= (
+                    abs(e.effect_magnitude) * e.effect_confidence * 0.5
+                )  # Side effects weighted less
         return utility
 
     def get_all_utilities(self) -> dict[str, float]:
         """Get causal utility for all improvements."""
-        return {imp_id: self.get_causal_utility(imp_id) for imp_id in self._by_improvement}
+        return {
+            imp_id: self.get_causal_utility(imp_id) for imp_id in self._by_improvement
+        }
 
     def get_metric_history(
         self,
@@ -131,7 +140,11 @@ class CausalLedger:
         Returns:
             List of (timestamp, magnitude) tuples sorted by time.
         """
-        effects = self._effects if improvement_id is None else self.get_effects(improvement_id)
+        effects = (
+            self._effects
+            if improvement_id is None
+            else self.get_effects(improvement_id)
+        )
         history = [
             (e.effect_timestamp, e.effect_magnitude)
             for e in effects
@@ -176,7 +189,9 @@ class CausalLedger:
         split = timestamps[len(timestamps) // 2]
 
         pre = [e.effect_magnitude for e in metric_effects if e.effect_timestamp < split]
-        post = [e.effect_magnitude for e in metric_effects if e.effect_timestamp >= split]
+        post = [
+            e.effect_magnitude for e in metric_effects if e.effect_timestamp >= split
+        ]
 
         pre_mean = sum(pre) / len(pre) if pre else 0.0
         post_mean = sum(post) / len(post) if post else 0.0

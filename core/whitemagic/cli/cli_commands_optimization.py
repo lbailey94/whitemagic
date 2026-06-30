@@ -17,6 +17,7 @@ def optimization_cli():
     """🚀 Optimization tools (Skeletonizer, etc.)"""
     pass
 
+
 @optimization_cli.command(name="skeleton")
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--output", "-o", help="Output file path (default: stdout)")

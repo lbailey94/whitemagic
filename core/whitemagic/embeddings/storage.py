@@ -4,7 +4,6 @@ import hashlib
 import logging
 import pickle
 from pathlib import Path
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ except ImportError:
 
 
 class EmbeddingCache:
-    def __init__(self, database_url: Optional[str] = None):
+    def __init__(self, database_url: str | None = None):
         self.enabled = HAS_ASYNCPG and database_url
         self.database_url = database_url
         self._pool = None
@@ -30,19 +29,22 @@ class EmbeddingCache:
         if self._pool:
             await self._pool.close()
 
-    async def get(self, memory_id: str) -> Optional[List[float]]:
+    async def get(self, memory_id: str) -> list[float] | None:
         if not self.enabled or not self._pool:
             return None
         try:
             async with self._pool.acquire() as conn:
                 row = await conn.fetchrow(
-                    "SELECT embedding FROM memory_embeddings WHERE memory_id = $1", memory_id
+                    "SELECT embedding FROM memory_embeddings WHERE memory_id = $1",
+                    memory_id,
                 )
                 return list(row["embedding"]) if row else None
         except Exception:
             return None
 
-    async def set(self, memory_id: str, embedding: List[float], content: str, model: str) -> bool:
+    async def set(
+        self, memory_id: str, embedding: list[float], content: str, model: str
+    ) -> bool:
         if not self.enabled or not self._pool:
             return False
         try:
@@ -57,7 +59,7 @@ class EmbeddingCache:
                     embedding,
                     content[:64],
                     model,
-                    len(embedding)
+                    len(embedding),
                 )
             return True
         except Exception:
@@ -72,7 +74,7 @@ class FileBasedEmbeddingCache:
     Perfect for local-first usage.
     """
 
-    def __init__(self, cache_dir: Optional[Path] = None):
+    def __init__(self, cache_dir: Path | None = None):
         """
         Initialize file-based cache.
 
@@ -82,6 +84,7 @@ class FileBasedEmbeddingCache:
         if cache_dir is None:
             try:
                 from whitemagic.config.paths import CACHE_DIR
+
                 cache_dir = CACHE_DIR / "embeddings"
             except ImportError:
                 cache_dir = Path("/tmp/whitemagic/cache/embeddings")
@@ -100,7 +103,7 @@ class FileBasedEmbeddingCache:
         """Get cache file path for a key."""
         return self.cache_dir / f"{cache_key}.emb"
 
-    async def get(self, file_path: Path, model: str) -> Optional[List[float]]:
+    async def get(self, file_path: Path, model: str) -> list[float] | None:
         """
         Get cached embedding for a file.
 
@@ -127,33 +130,50 @@ class FileBasedEmbeddingCache:
                 data = f.read()
                 # Try JSON first (safer), fallback to pickle if needed
                 try:
-                    return json.loads(data.decode('utf-8'))
+                    return json.loads(data.decode("utf-8"))
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     # Legacy pickle files - use RestrictedUnpickler for safety
-                    logger.warning("Loading legacy pickle cache for %s - consider regenerating", file_path)
+                    logger.warning(
+                        "Loading legacy pickle cache for %s - consider regenerating",
+                        file_path,
+                    )
                     import io
-                    
+
                     class RestrictedUnpickler(pickle.Unpickler):
                         """Restricted unpickler that only allows safe types."""
+
                         def find_class(self, module, name):
                             # Only allow safe types for embeddings
-                            if module == "builtins" and name in ("dict", "list", "str", "int", "float", "bool", "tuple"):
+                            if module == "builtins" and name in (
+                                "dict",
+                                "list",
+                                "str",
+                                "int",
+                                "float",
+                                "bool",
+                                "tuple",
+                            ):
                                 return getattr(__import__(module), name)
-                            if module == "numpy" and name in ("ndarray", "float64", "float32"):
+                            if module == "numpy" and name in (
+                                "ndarray",
+                                "float64",
+                                "float32",
+                            ):
                                 try:
                                     import numpy
+
                                     return getattr(numpy, name)
                                 except ImportError:
                                     pass
                             raise pickle.UnpicklingError(f"Forbidden: {module}.{name}")
-                    
+
                     return RestrictedUnpickler(io.BytesIO(data)).load()
         except Exception as e:
             logger.debug("Failed to load cache for %s: %s", file_path, e)
             cache_path.unlink(missing_ok=True)
             return None
 
-    async def set(self, file_path: Path, model: str, embedding: List[float]) -> bool:
+    async def set(self, file_path: Path, model: str, embedding: list[float]) -> bool:
         """
         Cache embedding for a file.
 
@@ -172,7 +192,6 @@ class FileBasedEmbeddingCache:
         cache_path = self._get_cache_path(cache_key)
 
         try:
-
             with open(cache_path, "wb") as f:
                 pickle.dump(embedding, f)
             return True
@@ -187,7 +206,7 @@ class FileBasedEmbeddingCache:
             try:
                 cache_file.unlink()
                 count += 1
-            except IOError:
+            except OSError:
                 pass
         return count
 

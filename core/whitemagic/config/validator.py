@@ -20,6 +20,7 @@ from whitemagic.config.paths import WM_ROOT
 
 logger = logging.getLogger(__name__)
 
+
 def _silent_init() -> bool:
     return os.getenv("WM_SILENT_INIT", "").strip().lower() in {"1", "true", "yes", "on"}
 
@@ -51,7 +52,9 @@ class ConfigValidator:
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
         if not _silent_init():
-            logger.info("ConfigValidator initialized with config_dir: %s", self.config_dir)
+            logger.info(
+                "ConfigValidator initialized with config_dir: %s", self.config_dir
+            )
 
     def validate_or_create_secrets(self) -> dict[str, str]:
         """Ensure JWT secret exists and is secure.
@@ -73,7 +76,11 @@ class ConfigValidator:
                     logger.info("Loaded existing secrets from config")
 
                 # Validate secrets are not defaults
-                if secrets_data.get("jwt_secret") in (None, "", "CHANGE_ME_IN_PRODUCTION"):
+                if secrets_data.get("jwt_secret") in (
+                    None,
+                    "",
+                    "CHANGE_ME_IN_PRODUCTION",
+                ):
                     logger.warning("Found default JWT secret, regenerating...")
                     secrets_data = self._generate_secrets()
                     self._save_secrets(secrets_data)
@@ -104,7 +111,7 @@ class ConfigValidator:
         """
         return {
             "jwt_secret": secrets.token_urlsafe(64),  # 512 bits
-            "api_key": secrets.token_urlsafe(32),     # 256 bits
+            "api_key": secrets.token_urlsafe(32),  # 256 bits
             "csrf_secret": secrets.token_urlsafe(32),  # 256 bits
         }
 
@@ -199,8 +206,7 @@ class ConfigValidator:
         db_url = os.getenv("DATABASE_URL")
         if db_url and "localhost" in db_url:
             logger.warning(
-                "Cloud mode with localhost database - "
-                "ensure this is intentional",
+                "Cloud mode with localhost database - ensure this is intentional",
             )
 
         if not _silent_init():

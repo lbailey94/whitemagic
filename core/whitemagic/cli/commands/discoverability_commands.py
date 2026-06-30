@@ -19,11 +19,19 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 # wm manifest — Tool format export
 # ---------------------------------------------------------------------------
 
+
 @click.command()
-@click.option("--format", "fmt", type=click.Choice(["openai", "mcp", "whitemagic", "summary"]),
-              default="summary", help="Export format")
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["openai", "mcp", "whitemagic", "summary"]),
+    default="summary",
+    help="Export format",
+)
 @click.option("--include-schemas", is_flag=True, help="Include input schemas in export")
-@click.option("--json", "json_flag", is_flag=True, help="Output as JSON (always on for manifest)")
+@click.option(
+    "--json", "json_flag", is_flag=True, help="Output as JSON (always on for manifest)"
+)
 @click.pass_context
 def manifest(ctx, fmt: str, include_schemas: bool, json_flag: bool) -> None:
     """Export tool manifest in OpenAI, MCP, or WhiteMagic format.
@@ -48,6 +56,7 @@ def manifest(ctx, fmt: str, include_schemas: bool, json_flag: bool) -> None:
 # wm tools search — Semantic tool discovery
 # ---------------------------------------------------------------------------
 
+
 @click.command(name="search")
 @click.argument("query")
 @click.option("--limit", "-n", default=10, help="Max results")
@@ -62,7 +71,11 @@ def tools_search(ctx, query: str, limit: int, json_flag: bool) -> None:
     """
     from whitemagic.tools.registry import get_all_tools
 
-    json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = json_flag or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
 
     query_lower = query.lower()
     tools = get_all_tools()
@@ -72,7 +85,11 @@ def tools_search(ctx, query: str, limit: int, json_flag: bool) -> None:
         score = 0
         name = tool.name.lower()
         desc = (tool.description or "").lower()
-        category = tool.category.value.lower() if hasattr(tool.category, 'value') else str(tool.category).lower()
+        category = (
+            tool.category.value.lower()
+            if hasattr(tool.category, "value")
+            else str(tool.category).lower()
+        )
 
         if name == query_lower:
             score += 100
@@ -104,8 +121,12 @@ def tools_search(ctx, query: str, limit: int, json_flag: bool) -> None:
                 {
                     "name": t.name,
                     "description": t.description,
-                    "category": t.category.value if hasattr(t.category, 'value') else str(t.category),
-                    "safety": t.safety.value if hasattr(t.safety, 'value') else str(t.safety),
+                    "category": t.category.value
+                    if hasattr(t.category, "value")
+                    else str(t.category),
+                    "safety": t.safety.value
+                    if hasattr(t.safety, "value")
+                    else str(t.safety),
                     "score": score,
                 }
                 for score, t in results
@@ -117,13 +138,23 @@ def tools_search(ctx, query: str, limit: int, json_flag: bool) -> None:
             click.echo(f"No tools found matching '{query}'")
             return
 
-        click.echo(f"\n🔍 Found {len(scored)} tools matching '{query}' (showing top {len(results)}):")
+        click.echo(
+            f"\n🔍 Found {len(scored)} tools matching '{query}' (showing top {len(results)}):"
+        )
         click.echo("=" * 60)
         for score, tool in results:
-            cat = tool.category.value if hasattr(tool.category, 'value') else str(tool.category)
+            cat = (
+                tool.category.value
+                if hasattr(tool.category, "value")
+                else str(tool.category)
+            )
             click.echo(f"  [{score:>3}] {tool.name:<30} ({cat})")
             if tool.description:
-                desc = tool.description[:80] + "..." if len(tool.description) > 80 else tool.description
+                desc = (
+                    tool.description[:80] + "..."
+                    if len(tool.description) > 80
+                    else tool.description
+                )
                 click.echo(f"         {desc}")
 
 
@@ -131,11 +162,19 @@ def tools_search(ctx, query: str, limit: int, json_flag: bool) -> None:
 # wm tools schema — JSON schema export for a tool
 # ---------------------------------------------------------------------------
 
+
 @click.command(name="schema")
 @click.argument("tool_name")
-@click.option("--format", "fmt", type=click.Choice(["json", "openai", "mcp"]),
-              default="json", help="Schema format")
-@click.option("--json", "json_flag", is_flag=True, help="Output as JSON (always on for schema)")
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "openai", "mcp"]),
+    default="json",
+    help="Schema format",
+)
+@click.option(
+    "--json", "json_flag", is_flag=True, help="Output as JSON (always on for schema)"
+)
 @click.pass_context
 def tools_schema(ctx, tool_name: str, fmt: str, json_flag: bool) -> None:
     """Show JSON schema for a specific tool.
@@ -166,9 +205,12 @@ def tools_schema(ctx, tool_name: str, fmt: str, json_flag: bool) -> None:
 # wm capabilities --deep — Full capability snapshot
 # ---------------------------------------------------------------------------
 
+
 @click.command()
 @click.option("--deep", is_flag=True, help="Include full tool list and schemas")
-@click.option("--include-schemas", is_flag=True, help="Include input schemas for each tool")
+@click.option(
+    "--include-schemas", is_flag=True, help="Include input schemas for each tool"
+)
 @click.option("--json", "json_flag", is_flag=True, help="Output as JSON")
 @click.pass_context
 def capabilities(ctx, deep: bool, include_schemas: bool, json_flag: bool) -> None:
@@ -181,9 +223,15 @@ def capabilities(ctx, deep: bool, include_schemas: bool, json_flag: bool) -> Non
     """
     from whitemagic.tools.unified_api import call_tool
 
-    json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+    json_output = json_flag or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
 
-    result = call_tool("capabilities", include_tools=deep, include_schemas=include_schemas)
+    result = call_tool(
+        "capabilities", include_tools=deep, include_schemas=include_schemas
+    )
     data = result.get("details", result) if isinstance(result, dict) else result
 
     if json_output:

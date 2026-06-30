@@ -26,7 +26,9 @@ def _type_ok(expected: str, value: Any) -> bool:
     return True  # unknown types: don't block
 
 
-def validate_params(schema: dict[str, Any], params: dict[str, Any]) -> tuple[bool, str, dict[str, Any]]:
+def validate_params(
+    schema: dict[str, Any], params: dict[str, Any]
+) -> tuple[bool, str, dict[str, Any]]:
     """Validate tool params against a simple schema.
 
     Returns:
@@ -77,17 +79,16 @@ def _type_suggestion(expected: str, value: Any) -> str:
     if expected == "array" and isinstance(value, str):
         return "Pass a list instead, e.g. ['a', 'b'] not 'a,b'"
     if expected == "string" and isinstance(value, (int, float)):
-        return f"Wrap in quotes: \"{value}\""
+        return f'Wrap in quotes: "{value}"'
     if expected == "integer" and isinstance(value, str):
         try:
             int(value)
-            return f"Remove quotes: {value} not \"{value}\""
+            return f'Remove quotes: {value} not "{value}"'
         except ValueError:
             return ""
     if expected == "boolean" and isinstance(value, str):
         if value.lower() in ("true", "false"):
-            return f"Use boolean: {value.lower() == 'true'} not \"{value}\""
+            return f'Use boolean: {value.lower() == "true"} not "{value}"'
     if expected == "object" and isinstance(value, str):
         return "Pass a dict/object, not a string"
     return ""
-

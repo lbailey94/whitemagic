@@ -25,6 +25,7 @@ Usage:
     ]
     results = client.execute_batch(batch)
 """
+
 from __future__ import annotations
 
 import logging
@@ -53,6 +54,7 @@ class BatchMode(Enum):
     Members:
         SEQUENTIAL
         PARALLEL"""
+
     SEQUENTIAL = "sequential"
     PARALLEL = "parallel"
 
@@ -60,6 +62,7 @@ class BatchMode(Enum):
 @dataclass
 class BatchCommand:
     """A single command in a batch."""
+
     op: str
     payload: dict[str, Any] = field(default_factory=dict)
     id: int = 0  # Assigned by client
@@ -81,6 +84,7 @@ class BatchCommand:
 @dataclass
 class BatchResult:
     """Result of a single command execution."""
+
     id: int
     status: str
     result: dict[str, Any]
@@ -109,6 +113,7 @@ class BatchResult:
 @dataclass
 class BatchResponse:
     """Response from a batch execution."""
+
     request_id: str
     results: list[BatchResult]
     total_latency_ms: float
@@ -159,7 +164,9 @@ class KokaBatchClient:
         if binary_path:
             self._binary_path = Path(binary_path)
         else:
-            base = Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-koka"
+            base = (
+                Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-koka"
+            )
             self._binary_path = base / "batch_ipc"  # Compiled binary name
 
         self._started = False
@@ -202,7 +209,9 @@ class KokaBatchClient:
                     logger.info("Koka batch client started: %s", self._binary_path)
                     return True
                 else:
-                    logger.warning("Unexpected startup from Koka: %s", (banner or "")[:100])
+                    logger.warning(
+                        "Unexpected startup from Koka: %s", (banner or "")[:100]
+                    )
                     self._discard_process(proc)
                     return False
 
@@ -246,7 +255,9 @@ class KokaBatchClient:
             except (ProcessLookupError, OSError):
                 pass
 
-    def _readline_with_timeout(self, proc: subprocess.Popen, timeout: float = _DEFAULT_BATCH_READ_TIMEOUT_S) -> str | None:
+    def _readline_with_timeout(
+        self, proc: subprocess.Popen, timeout: float = _DEFAULT_BATCH_READ_TIMEOUT_S
+    ) -> str | None:
         if proc.stdout is None:
             return None
 
@@ -263,7 +274,9 @@ class KokaBatchClient:
                 logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
-        thread = threading.Thread(target=_reader, name='wm-koka-batch-readline', daemon=True)
+        thread = threading.Thread(
+            target=_reader, name="wm-koka-batch-readline", daemon=True
+        )
         thread.start()
 
         try:
@@ -347,8 +360,10 @@ class KokaBatchClient:
         if not proc:
             return BatchResponse(
                 request_id="",
-                results=[BatchResult(0, "failed", {"error": "no_process"}, 0.0)
-                        for _ in commands],
+                results=[
+                    BatchResult(0, "failed", {"error": "no_process"}, 0.0)
+                    for _ in commands
+                ],
                 total_latency_ms=0.0,
                 commands_processed=0,
             )
@@ -374,8 +389,10 @@ class KokaBatchClient:
                 elapsed_ms = (time.perf_counter() - start_time) * 1000
                 return BatchResponse(
                     request_id=request_id,
-                    results=[BatchResult(i, "failed", {"error": "stdin_unavailable"}, 0.0)
-                            for i in range(len(commands))],
+                    results=[
+                        BatchResult(i, "failed", {"error": "stdin_unavailable"}, 0.0)
+                        for i in range(len(commands))
+                    ],
                     total_latency_ms=elapsed_ms,
                     commands_processed=0,
                 )
@@ -402,8 +419,10 @@ class KokaBatchClient:
                 self._discard_process(proc)
                 return BatchResponse(
                     request_id=request_id,
-                    results=[BatchResult(i, "failed", {"error": "no_response"}, 0.0)
-                            for i in range(len(commands))],
+                    results=[
+                        BatchResult(i, "failed", {"error": "no_response"}, 0.0)
+                        for i in range(len(commands))
+                    ],
                     total_latency_ms=elapsed_ms,
                     commands_processed=0,
                 )
@@ -415,8 +434,10 @@ class KokaBatchClient:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             return BatchResponse(
                 request_id=request_id,
-                results=[BatchResult(i, "failed", {"error": str(e)}, 0.0)
-                        for i in range(len(commands))],
+                results=[
+                    BatchResult(i, "failed", {"error": str(e)}, 0.0)
+                    for i in range(len(commands))
+                ],
                 total_latency_ms=elapsed_ms,
                 commands_processed=0,
             )
@@ -455,7 +476,12 @@ class KokaBatchClient:
                         stdin.write(_json_dumps({"op": "quit"}) + "\n")
                         stdin.flush()
                     proc.wait(timeout=2.0)
-                except (subprocess.TimeoutExpired, ProcessLookupError, OSError, BrokenPipeError):
+                except (
+                    subprocess.TimeoutExpired,
+                    ProcessLookupError,
+                    OSError,
+                    BrokenPipeError,
+                ):
                     proc.terminate()
                     try:
                         proc.wait(timeout=1.0)
@@ -534,7 +560,9 @@ def benchmark_batch_vs_single(
         results["batch_latencies_us"].append(elapsed_us)
 
     # Calculate stats
-    single_avg = sum(results["single_latencies_us"]) / len(results["single_latencies_us"])
+    single_avg = sum(results["single_latencies_us"]) / len(
+        results["single_latencies_us"]
+    )
     batch_avg = sum(results["batch_latencies_us"]) / len(results["batch_latencies_us"])
 
     # Per-command comparison
@@ -544,7 +572,9 @@ def benchmark_batch_vs_single(
     results["single_avg_us"] = single_avg
     results["batch_avg_us"] = batch_avg
     results["batch_per_cmd_us"] = batch_per_cmd
-    results["speedup_factor"] = single_per_cmd / batch_per_cmd if batch_per_cmd > 0 else 0
+    results["speedup_factor"] = (
+        single_per_cmd / batch_per_cmd if batch_per_cmd > 0 else 0
+    )
     results["target_met"] = results["speedup_factor"] >= 2.0  # 10 commands < 5x single
 
     return results

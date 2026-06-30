@@ -30,8 +30,6 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# --- SCHEMA ---
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS memories (
     id TEXT PRIMARY KEY,
@@ -42,8 +40,6 @@ CREATE TABLE IF NOT EXISTS memories (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
-
-# --- BACKEND ---
 
 class SQLiteBackend:
     """Low-level SQLite backend for persistent memories."""
@@ -61,8 +57,6 @@ class SQLiteBackend:
         Get the connection.
         """
         return sqlite3.connect(self.db_path)
-
-# --- MANAGER ---
 
 class MemoryManager:
     """High-level facade for memory operations."""
@@ -84,7 +78,6 @@ class MemoryManager:
         logger.info("Stored memory %s: %s", memory_id, title)
         return memory_id
 
-# --- SINGLETONS ---
 _manager: MemoryManager | None = None
 
 def get_memory_manager() -> MemoryManager:

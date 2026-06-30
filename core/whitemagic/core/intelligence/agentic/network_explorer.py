@@ -13,13 +13,15 @@ from whitemagic.core.memory.unified_types import Memory
 
 logger = logging.getLogger(__name__)
 
+
 class LinkType(Enum):
     """Types of relationships between memories."""
 
-    SEMANTIC = "semantic"      # Similar content/FTS relevance
-    HOLOGRAPHIC = "holographic" # Spatial proximity in 4D
-    TEMPORAL = "temporal"      # Created/Updated around the same time
-    SEQUENCE = "sequence"      # Logical progression (e.g. conversational turns)
+    SEMANTIC = "semantic"  # Similar content/FTS relevance
+    HOLOGRAPHIC = "holographic"  # Spatial proximity in 4D
+    TEMPORAL = "temporal"  # Created/Updated around the same time
+    SEQUENCE = "sequence"  # Logical progression (e.g. conversational turns)
+
 
 @dataclass
 class MemoryNode:
@@ -32,6 +34,7 @@ class MemoryNode:
     depth: int
     summary: str
 
+
 @dataclass
 class MemoryLink:
     """Link between two memories."""
@@ -40,6 +43,7 @@ class MemoryLink:
     to_id: str
     link_type: LinkType
     strength: float
+
 
 @dataclass
 class MemoryGraph:
@@ -50,6 +54,7 @@ class MemoryGraph:
     links: list[MemoryLink]
     clusters: list[list[str]]
 
+
 class MemoryNetworkExplorer:
     """Explores the Data Sea by following links and finding clusters.
     Uses SQL-level aggregations for high performance on 276K records.
@@ -58,6 +63,7 @@ class MemoryNetworkExplorer:
     def __init__(self):
         self.um = get_unified_memory()
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = DB_PATH
 
     async def build_cluster_map(
@@ -118,39 +124,50 @@ class MemoryNetworkExplorer:
         # This leverages the SQL holographic_coords table and tag counts
         with sqlite3.connect(self.db_path) as conn:
             # Simple tag-based density first
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT tag, COUNT(memory_id) as density
                 FROM tags
                 GROUP BY tag
                 HAVING density > 10
                 ORDER BY density DESC
                 LIMIT ?
-            """, (limit,))
+            """,
+                (limit,),
+            )
 
             top_tags = cursor.fetchall()
             clusters = []
             for tag, density in top_tags:
-                tag_cursor = conn.execute("SELECT memory_id FROM tags WHERE tag = ? LIMIT 20", (tag,))
+                tag_cursor = conn.execute(
+                    "SELECT memory_id FROM tags WHERE tag = ? LIMIT 20", (tag,)
+                )
                 ids = [r[0] for r in tag_cursor.fetchall()]
                 clusters.append(ids)
 
             return clusters
 
-    async def _get_neighbors(self, memory_id: str, min_strength: float) -> list[tuple[str, LinkType, float]]:
+    async def _get_neighbors(
+        self, memory_id: str, min_strength: float
+    ) -> list[tuple[str, LinkType, float]]:
         """Find linked memories via DB associations and holographic proximity."""
         neighbors = []
 
         with sqlite3.connect(self.db_path) as conn:
             # 1. Explicit associations
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT target_id, strength FROM associations
                 WHERE source_id = ? AND strength >= ?
-            """, (memory_id, min_strength))
+            """,
+                (memory_id, min_strength),
+            )
             for target_id, strength in cursor.fetchall():
                 neighbors.append((target_id, LinkType.SEMANTIC, strength))
 
             # 2. Tag-based neighbors (Semantic overlap)
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT t2.memory_id, count(*) as overlap
                 FROM tags t1
                 JOIN tags t2 ON t1.tag = t2.tag
@@ -158,10 +175,14 @@ class MemoryNetworkExplorer:
                 GROUP BY t2.memory_id
                 ORDER BY overlap DESC
                 LIMIT 5
-            """, (memory_id,))
+            """,
+                (memory_id,),
+            )
             for neighbor_id, overlap in cursor.fetchall():
                 # Score: overlap normalized
-                neighbors.append((neighbor_id, LinkType.SEMANTIC, min(1.0, overlap / 5.0)))
+                neighbors.append(
+                    (neighbor_id, LinkType.SEMANTIC, min(1.0, overlap / 5.0))
+                )
 
         return neighbors
 
@@ -175,7 +196,9 @@ class MemoryNetworkExplorer:
             summary=str(mem.content)[:100] + "...",
         )
 
-    def _identify_clusters(self, nodes: dict[str, MemoryNode], links: list[MemoryLink]) -> list[list[str]]:
+    def _identify_clusters(
+        self, nodes: dict[str, MemoryNode], links: list[MemoryLink]
+    ) -> list[list[str]]:
         """Simple connected components for local sub-graph clustering."""
         adj: dict[str, set[str]] = {nid: set() for nid in nodes}
         for link in links:
@@ -197,6 +220,7 @@ class MemoryNetworkExplorer:
                 if len(cluster) > 1:
                     clusters.append(cluster)
         return clusters
+
 
 def get_network_explorer() -> MemoryNetworkExplorer:
     return MemoryNetworkExplorer()

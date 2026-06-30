@@ -150,6 +150,7 @@ _ARG_CODES_REV: dict[str, str] = {v: k for k, v in _ARG_CODES.items()}
 
 # ── Engine ────────────────────────────────────────────────────────────────
 
+
 class PratCompressor:
     """Bi-directional PRAT tool-call compressor.
 
@@ -186,7 +187,9 @@ class PratCompressor:
             return payload
         return self._decompress_value(payload)
 
-    def stats(self, original: dict[str, Any], compressed: dict[str, Any]) -> dict[str, Any]:
+    def stats(
+        self, original: dict[str, Any], compressed: dict[str, Any]
+    ) -> dict[str, Any]:
         """Return token-savings estimate for the payload pair."""
         orig_json = json.dumps(original, ensure_ascii=False, default=str)
         comp_json = json.dumps(compressed, ensure_ascii=False, default=str)
@@ -266,7 +269,11 @@ class PratCompressor:
         dg = self._gana_rev.get(gana_code, gana_code)
         dt = self._tool_rev.get(tool_code, tool_code) if tool_code else None
         da = self._decompress_value(args_compressed)
-        do = self._arg_rev.get(operation_code, operation_code) if operation_code else None
+        do = (
+            self._arg_rev.get(operation_code, operation_code)
+            if operation_code
+            else None
+        )
         return dg, dt, da, do
 
 

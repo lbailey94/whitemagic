@@ -297,10 +297,6 @@ class BridgeSynthesizer:
             }
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _synthesizer: BridgeSynthesizer | None = None
 _synth_lock = threading.Lock()
 

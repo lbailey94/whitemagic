@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 class ToolRisk(StrEnum):
     """Tool risk classification for security gating."""
 
-    SAFE = "safe"           # Read-only, no external access
-    MODERATE = "moderate"   # Write to allowed paths only
+    SAFE = "safe"  # Read-only, no external access
+    MODERATE = "moderate"  # Write to allowed paths only
     RESTRICTED = "restricted"  # Requires explicit permission
-    DANGEROUS = "dangerous"    # Disabled in cloud mode
+    DANGEROUS = "dangerous"  # Disabled in cloud mode
 
 
 # Tools classified by risk level
@@ -53,7 +53,6 @@ TOOL_RISK_CLASSIFICATION: dict[str, ToolRisk] = {
     "state.summary": ToolRisk.SAFE,
     "repo.summary": ToolRisk.SAFE,
     "ship.check": ToolRisk.SAFE,
-
     # MODERATE - Write to WhiteMagic data only
     "create_memory": ToolRisk.MODERATE,
     "update_memory": ToolRisk.MODERATE,
@@ -62,7 +61,6 @@ TOOL_RISK_CLASSIFICATION: dict[str, ToolRisk] = {
     "consolidate": ToolRisk.MODERATE,
     "track_metric": ToolRisk.MODERATE,
     "garden_activate": ToolRisk.MODERATE,
-
     # RESTRICTED - Requires explicit cloud mode permission
     "fast_read_memory": ToolRisk.RESTRICTED,  # Can read arbitrary files
     "batch_read_memories": ToolRisk.RESTRICTED,
@@ -73,7 +71,6 @@ TOOL_RISK_CLASSIFICATION: dict[str, ToolRisk] = {
     "windsurf_stats": ToolRisk.RESTRICTED,
     "archaeology_find_unread": ToolRisk.RESTRICTED,
     "rust_audit": ToolRisk.RESTRICTED,
-
     # DANGEROUS - Disabled in cloud mode by default
     "execute_command": ToolRisk.DANGEROUS,
     "browser_automation": ToolRisk.DANGEROUS,
@@ -95,17 +92,19 @@ class PathValidator:
     allowed_bases: set[Path] = field(default_factory=set)
 
     # Explicitly blocked paths (sensitive system files)
-    blocked_paths: set[str] = field(default_factory=lambda: {
-        "/etc/passwd",
-        "/etc/shadow",
-        "/etc/sudoers",
-        "~/.ssh",          # Pattern: expanded at validation time for any user
-        "~/.gnupg",        # Pattern: expanded at validation time for any user
-        "~/.aws",          # Pattern: expanded at validation time for any user
-        "~/.config/gcloud",  # Pattern: expanded at validation time for any user
-        "/proc",
-        "/sys",
-    })
+    blocked_paths: set[str] = field(
+        default_factory=lambda: {
+            "/etc/passwd",
+            "/etc/shadow",
+            "/etc/sudoers",
+            "~/.ssh",  # Pattern: expanded at validation time for any user
+            "~/.gnupg",  # Pattern: expanded at validation time for any user
+            "~/.aws",  # Pattern: expanded at validation time for any user
+            "~/.config/gcloud",  # Pattern: expanded at validation time for any user
+            "/proc",
+            "/sys",
+        }
+    )
 
     def __post_init__(self) -> None:
         """Initialize allowed paths from environment/config."""
@@ -161,8 +160,7 @@ class PathValidator:
         return False, f"Path {path} is outside allowed directories"
 
     def sanitize_path(self, path: str) -> Path | None:
-        """Sanitize and validate a path, returning None if invalid.
-        """
+        """Sanitize and validate a path, returning None if invalid."""
         allowed, reason = self.is_path_allowed(path)
         if not allowed:
             logger.warning("Path blocked: %s - %s", path, reason, exc_info=True)
@@ -194,12 +192,20 @@ class ToolGate:
         self.deployment_mode = validator.validate_deployment_mode()
 
         # Check environment overrides
-        self.allow_restricted_in_cloud = os.getenv(
-            "WHITEMAGIC_ALLOW_RESTRICTED_TOOLS", "false",
-        ).lower() == "true"
-        self.allow_dangerous_in_cloud = os.getenv(
-            "WHITEMAGIC_ALLOW_DANGEROUS_TOOLS", "false",
-        ).lower() == "true"
+        self.allow_restricted_in_cloud = (
+            os.getenv(
+                "WHITEMAGIC_ALLOW_RESTRICTED_TOOLS",
+                "false",
+            ).lower()
+            == "true"
+        )
+        self.allow_dangerous_in_cloud = (
+            os.getenv(
+                "WHITEMAGIC_ALLOW_DANGEROUS_TOOLS",
+                "false",
+            ).lower()
+            == "true"
+        )
 
         # Cloud mode: do not allow arbitrary cwd access unless explicitly allowed
         if self.deployment_mode == "cloud":
@@ -251,6 +257,7 @@ class ToolGate:
         """Report blocked tool to immune system for pattern learning."""
         try:
             from whitemagic.core.immune.security_integration import report_threat
+
             report_threat(
                 threat_type="tool_blocked",
                 tool=tool_name,
@@ -262,7 +269,9 @@ class ToolGate:
             logger.debug("Failed to report to immune system: %s", e, exc_info=True)
 
     def validate_tool_params(
-        self, tool_name: str, params: dict[str, Any],
+        self,
+        tool_name: str,
+        params: dict[str, Any],
     ) -> tuple[bool, str, dict[str, Any]]:
         """Validate and sanitize tool parameters.
 
@@ -282,7 +291,9 @@ class ToolGate:
                     allowed, reason = self.path_validator.is_path_allowed(path_value)
                     if not allowed:
                         # Report to immune system
-                        self._report_path_violation(tool_name, param, path_value, reason)
+                        self._report_path_violation(
+                            tool_name, param, path_value, reason
+                        )
                         return False, f"Invalid {param}: {reason}", {}
 
         # URL validation for browser tools
@@ -299,10 +310,13 @@ class ToolGate:
 
         return True, "Parameters valid", sanitized
 
-    def _report_path_violation(self, tool_name: str, param: str, path: str, reason: str) -> None:
+    def _report_path_violation(
+        self, tool_name: str, param: str, path: str, reason: str
+    ) -> None:
         """Report path violation to immune system."""
         try:
             from whitemagic.core.immune.security_integration import report_threat
+
             report_threat(
                 threat_type="path_violation",
                 tool=tool_name,
@@ -317,6 +331,7 @@ class ToolGate:
         """Report URL violation to immune system."""
         try:
             from whitemagic.core.immune.security_integration import report_threat
+
             report_threat(
                 threat_type="url_blocked",
                 tool=tool_name,
@@ -371,7 +386,12 @@ class ToolGate:
                 ip_str = addr_info[4][0]
                 try:
                     ip = ipaddress.ip_address(ip_str)
-                    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    if (
+                        ip.is_private
+                        or ip.is_loopback
+                        or ip.is_link_local
+                        or ip.is_reserved
+                    ):
                         return False
                 except OSError:
                     continue
@@ -397,6 +417,7 @@ class ToolGate:
 
         # Remove file paths
         import re
+
         error_str = re.sub(r"/[^\s:]+\.py", "[file]", error_str)
         error_str = re.sub(r"/home/[^\s:]+", "[path]", error_str)
         error_str = re.sub(r"line \d+", "line [N]", error_str)
@@ -417,17 +438,20 @@ def get_tool_gate() -> ToolGate:
 
 
 def check_tool_execution(
-    tool_name: str, params: dict[str, Any],
+    tool_name: str,
+    params: dict[str, Any],
 ) -> tuple[bool, str, dict[str, Any]]:
     """Check if a tool can be executed with given parameters."""
 
     # NEW: SutraCode Kernel check (hard stop)
     try:
         import whitemagic_rust
-        sk_mod = getattr(whitemagic_rust, 'sutra_kernel', None)
-        if sk_mod is not None and hasattr(sk_mod, 'SutraKernel'):
+
+        sk_mod = getattr(whitemagic_rust, "sutra_kernel", None)
+        if sk_mod is not None and hasattr(sk_mod, "SutraKernel"):
             kernel = sk_mod.SutraKernel()
             import json
+
             # Serialize params for the Rust kernel
             payload_str = json.dumps(params, default=str)
             # This will panic and crash the thread if a violation is found

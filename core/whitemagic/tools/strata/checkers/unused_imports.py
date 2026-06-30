@@ -1,6 +1,5 @@
 import ast
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
 
 from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
@@ -47,14 +46,16 @@ def _is_in_type_checking(node: ast.AST, tree: ast.AST) -> bool:
 
 def _has_noqa_f401(node: ast.AST, source_lines: list) -> bool:
     """Check if the import line has a # noqa: F401 comment (explicit re-export)."""
-    if hasattr(node, 'lineno') and node.lineno <= len(source_lines):
+    if hasattr(node, "lineno") and node.lineno <= len(source_lines):
         line = source_lines[node.lineno - 1]
-        return 'noqa' in line and 'F401' in line
+        return "noqa" in line and "F401" in line
     return False
 
 
 @register
-def check_unused_imports(project_path: Path, file_index: FileIndex, findings: List[Finding]):
+def check_unused_imports(
+    project_path: Path, file_index: FileIndex, findings: list[Finding]
+):
     """Detect unused imports in Python files.
 
     Skips false positives:
@@ -101,10 +102,10 @@ def check_unused_imports(project_path: Path, file_index: FileIndex, findings: Li
 
         source_lines = py_file.read_text(encoding="utf-8", errors="ignore").splitlines()
 
-        imports: Dict[str, Tuple[int, str]] = {}  # name -> (line, original_import)
+        imports: dict[str, tuple[int, str]] = {}  # name -> (line, original_import)
         used_names: set = set()
         # Track which import nodes are in try/except or function scope
-        skipped_names: Set[str] = set()
+        skipped_names: set[str] = set()
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -114,7 +115,11 @@ def check_unused_imports(project_path: Path, file_index: FileIndex, findings: Li
                         continue
                     name = alias.asname or alias.name
                     # Skip if inside try/except, function body, or TYPE_CHECKING block
-                    if _is_in_try_except(node, tree) or _is_in_function(node, tree) or _is_in_type_checking(node, tree):
+                    if (
+                        _is_in_try_except(node, tree)
+                        or _is_in_function(node, tree)
+                        or _is_in_type_checking(node, tree)
+                    ):
                         skipped_names.add(name)
                         continue
                     # Skip if has # noqa: F401 comment (explicit re-export)
@@ -131,7 +136,11 @@ def check_unused_imports(project_path: Path, file_index: FileIndex, findings: Li
                 for alias in node.names:
                     name = alias.asname or alias.name
                     # Skip if inside try/except, function body, or TYPE_CHECKING block
-                    if _is_in_try_except(node, tree) or _is_in_function(node, tree) or _is_in_type_checking(node, tree):
+                    if (
+                        _is_in_try_except(node, tree)
+                        or _is_in_function(node, tree)
+                        or _is_in_type_checking(node, tree)
+                    ):
                         skipped_names.add(name)
                         continue
                     # Skip if has # noqa: F401 comment (explicit re-export)
@@ -151,11 +160,13 @@ def check_unused_imports(project_path: Path, file_index: FileIndex, findings: Li
 
         for name, (line_num, original) in imports.items():
             if name not in used_names:
-                findings.append(Finding(
-                    severity=FindingSeverity.INFO,
-                    category="unused_import",
-                    file=str(py_file.relative_to(project_path)),
-                    line=line_num,
-                    message=f"Import '{original}' appears unused.",
-                    suggestion="Remove the import or verify it is used dynamically."
-                ))
+                findings.append(
+                    Finding(
+                        severity=FindingSeverity.INFO,
+                        category="unused_import",
+                        file=str(py_file.relative_to(project_path)),
+                        line=line_num,
+                        message=f"Import '{original}' appears unused.",
+                        suggestion="Remove the import or verify it is used dynamically.",
+                    )
+                )

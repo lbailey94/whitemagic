@@ -84,7 +84,9 @@ def benchmark_zig_cosine(dim: int, iterations: int = 1000) -> dict[str, float] |
     }
 
 
-def benchmark_py_batch(dim: int, corpus_size: int, iterations: int = 100) -> dict[str, float]:
+def benchmark_py_batch(
+    dim: int, corpus_size: int, iterations: int = 100
+) -> dict[str, float]:
     import math
 
     query = _generate_vector(dim)
@@ -115,7 +117,9 @@ def benchmark_py_batch(dim: int, corpus_size: int, iterations: int = 100) -> dic
     }
 
 
-def benchmark_zig_batch(dim: int, corpus_size: int, iterations: int = 100) -> dict[str, float] | None:
+def benchmark_zig_batch(
+    dim: int, corpus_size: int, iterations: int = 100
+) -> dict[str, float] | None:
     try:
         from whitemagic.core.acceleration.simd_cosine import batch_cosine
     except ImportError:
@@ -179,7 +183,9 @@ def main() -> dict[str, Any]:
         print(f"  Python   mean={py['mean_ms']:.4f}ms  p95={py['p95_ms']:.4f}ms")
         if zig:
             speedup = py["mean_ms"] / zig["mean_ms"] if zig["mean_ms"] > 0 else 0
-            print(f"  Zig SIMD mean={zig['mean_ms']:.4f}ms  p95={zig['p95_ms']:.4f}ms  ({speedup:.1f}×)")
+            print(
+                f"  Zig SIMD mean={zig['mean_ms']:.4f}ms  p95={zig['p95_ms']:.4f}ms  ({speedup:.1f}×)"
+            )
         else:
             print("  Zig SIMD — not available")
         print()
@@ -190,10 +196,14 @@ def main() -> dict[str, Any]:
             py = results["batch_cosine"][key]["python"]
             zig = results["batch_cosine"][key]["zig_simd"]
             print(f"Batch cosine —  dim={dim:4d}  corpus={corpus:5d}")
-            print(f"  Python   mean={py['mean_ms']:.2f}ms  throughput={py['throughput_vecs_per_sec']:,.0f} vec/s")
+            print(
+                f"  Python   mean={py['mean_ms']:.2f}ms  throughput={py['throughput_vecs_per_sec']:,.0f} vec/s"
+            )
             if zig:
                 speedup = py["mean_ms"] / zig["mean_ms"] if zig["mean_ms"] > 0 else 0
-                print(f"  Zig SIMD mean={zig['mean_ms']:.2f}ms  throughput={zig['throughput_vecs_per_sec']:,.0f} vec/s  ({speedup:.1f}×)")
+                print(
+                    f"  Zig SIMD mean={zig['mean_ms']:.2f}ms  throughput={zig['throughput_vecs_per_sec']:,.0f} vec/s  ({speedup:.1f}×)"
+                )
             else:
                 print("  Zig SIMD — not available")
             print()

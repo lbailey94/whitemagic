@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from whitemagic_rs import get_harmony_vector  # type: ignore
+
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
@@ -38,7 +39,11 @@ class HarmonyMonitor:
         """Get current harmony state, updating if needed."""
         now = time.time()
 
-        if force_update or self._current is None or (now - self.last_update) >= self.update_interval:
+        if (
+            force_update
+            or self._current is None
+            or (now - self.last_update) >= self.update_interval
+        ):
             if RUST_AVAILABLE:
                 hv = get_harmony_vector()
                 self._current = {
@@ -81,7 +86,8 @@ class HarmonyMonitor:
 
         return {
             "heavy_processing": state["harmony_score"] > 0.6,  # Lowered from 0.7
-            "parallel_execution": state["cpu_load"] < 0.8 and state["harmony_score"] > 0.5,  # Lowered from 0.6
+            "parallel_execution": state["cpu_load"] < 0.8
+            and state["harmony_score"] > 0.5,  # Lowered from 0.6
             "disk_io": state["io_wait"] < 0.6,  # More lenient (was 0.5)
             "network_io": state["harmony_score"] > 0.45,  # Lowered from 0.5
             "recommended_action": self._get_recommendation(state),
@@ -124,6 +130,7 @@ class HarmonyMonitor:
 # Global singleton for easy access
 _monitor: HarmonyMonitor | None = None
 
+
 def get_harmony_monitor() -> HarmonyMonitor:
     """Get or create global HarmonyMonitor singleton."""
     global _monitor
@@ -155,7 +162,10 @@ if __name__ == "__main__":
 
     result = check_embodiment()
 
-    logger.info("Rust acceleration: %s", "✅ Available" if result["rust_available"] else "⚠️  Fallback")
+    logger.info(
+        "Rust acceleration: %s",
+        "✅ Available" if result["rust_available"] else "⚠️  Fallback",
+    )
     logger.info("\nHarmony Vector:")
     for key, val in result["harmony_vector"].items():
         if key != "timestamp":

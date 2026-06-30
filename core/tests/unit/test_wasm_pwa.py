@@ -114,7 +114,9 @@ class TestWasmRsStructure:
     def test_get_stats_uses_serde_json(self):
         content = WASM_RS.read_text()
         # get_stats should use serde_json::json! not format!
-        stats_section = content[content.index("pub fn get_stats"):content.index("pub fn get_stats") + 300]
+        stats_section = content[
+            content.index("pub fn get_stats") : content.index("pub fn get_stats") + 300
+        ]
         assert "serde_json::json!" in stats_section
         assert "format!" not in stats_section
 
@@ -124,25 +126,27 @@ class TestCargoTomlWasmGating:
 
     def test_rayon_is_optional(self):
         cargo = (REPO_ROOT / "core" / "whitemagic-rust" / "Cargo.toml").read_text()
-        assert 'rayon = { version' in cargo
+        assert "rayon = { version" in cargo
         assert 'rayon = "1.8"' not in cargo  # Should NOT be non-optional
 
     def test_memmap2_is_optional(self):
         cargo = (REPO_ROOT / "core" / "whitemagic-rust" / "Cargo.toml").read_text()
-        assert 'memmap2 = { version' in cargo
+        assert "memmap2 = { version" in cargo
 
     def test_walkdir_is_optional(self):
         cargo = (REPO_ROOT / "core" / "whitemagic-rust" / "Cargo.toml").read_text()
-        assert 'walkdir = { version' in cargo
+        assert "walkdir = { version" in cargo
 
     def test_libc_is_optional(self):
         cargo = (REPO_ROOT / "core" / "whitemagic-rust" / "Cargo.toml").read_text()
-        assert 'libc = { version' in cargo
+        assert "libc = { version" in cargo
 
     def test_python_feature_includes_native_deps(self):
         cargo = (REPO_ROOT / "core" / "whitemagic-rust" / "Cargo.toml").read_text()
         # The python feature should list rayon, memmap2, walkdir, libc
-        python_line = [line for line in cargo.splitlines() if line.startswith("python = ")][0]
+        python_line = [
+            line for line in cargo.splitlines() if line.startswith("python = ")
+        ][0]
         assert "rayon" in python_line
         assert "memmap2" in python_line
         assert "walkdir" in python_line
@@ -150,7 +154,9 @@ class TestCargoTomlWasmGating:
 
     def test_wasm_feature_does_not_include_native_deps(self):
         cargo = (REPO_ROOT / "core" / "whitemagic-rust" / "Cargo.toml").read_text()
-        wasm_line = [line for line in cargo.splitlines() if line.startswith("wasm = ")][0]
+        wasm_line = [line for line in cargo.splitlines() if line.startswith("wasm = ")][
+            0
+        ]
         assert "rayon" not in wasm_line
         assert "memmap2" not in wasm_line
         assert "walkdir" not in wasm_line
@@ -187,7 +193,16 @@ class TestLocalTransport:
 
     def test_handles_all_namespaces(self):
         content = SDK_LOCAL.read_text()
-        for ns in ["memory", "dharma", "karma", "gnosis", "edge", "similarity", "search", "system"]:
+        for ns in [
+            "memory",
+            "dharma",
+            "karma",
+            "gnosis",
+            "edge",
+            "similarity",
+            "search",
+            "system",
+        ]:
             assert f'"{ns}"' in content, f"LocalTransport should handle namespace: {ns}"
 
 
@@ -208,6 +223,7 @@ class TestPWAShell:
 
     def test_manifest_valid_json(self):
         import json
+
         manifest = json.loads(PWA_MANIFEST.read_text())
         assert manifest["name"] == "WhiteMagic — Local Memory OS"
         assert manifest["display"] == "standalone"

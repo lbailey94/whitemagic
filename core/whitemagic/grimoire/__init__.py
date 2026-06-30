@@ -1,5 +1,4 @@
-"""The Grimoire - The Living Spellbook
-"""
+"""The Grimoire - The Living Spellbook"""
 
 from .chapters import Chapter, ChapterIndex, find_chapter
 from .core import (

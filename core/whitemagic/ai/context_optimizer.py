@@ -28,11 +28,11 @@ class ContextItem:
 
     id: str
     content: str
-    source: str = ""          # e.g. "memory", "session", "tool_result"
-    importance: float = 0.5   # 0.0 - 1.0
-    recency: float = 0.5     # 0.0 (old) - 1.0 (fresh)
-    relevance: float = 0.5   # 0.0 - 1.0 (query-specific)
-    tokens: int = 0           # estimated token count (auto-calculated if 0)
+    source: str = ""  # e.g. "memory", "session", "tool_result"
+    importance: float = 0.5  # 0.0 - 1.0
+    recency: float = 0.5  # 0.0 (old) - 1.0 (fresh)
+    relevance: float = 0.5  # 0.0 - 1.0 (query-specific)
+    tokens: int = 0  # estimated token count (auto-calculated if 0)
 
     def salience_score(self) -> float:
         """Combined salience: weighted blend of importance, recency, relevance."""
@@ -46,7 +46,7 @@ class PackedContext:
     items: list[ContextItem]
     total_tokens: int
     budget: int
-    utilization: float      # 0.0 - 1.0
+    utilization: float  # 0.0 - 1.0
     dropped_count: int
     strategy: str
 
@@ -149,14 +149,16 @@ class ContextOptimizer:
                     age_days = (time.time() - created.timestamp()) / 86400
                     recency = max(0.0, 1.0 - (age_days / 365))
 
-                items.append(ContextItem(
-                    id=mem.id,
-                    content=f"[{mem.title or 'untitled'}] {mem.content[:2000]}",
-                    source="memory",
-                    importance=getattr(mem, "importance", 0.5) or 0.5,
-                    recency=recency,
-                    relevance=0.5,
-                ))
+                items.append(
+                    ContextItem(
+                        id=mem.id,
+                        content=f"[{mem.title or 'untitled'}] {mem.content[:2000]}",
+                        source="memory",
+                        importance=getattr(mem, "importance", 0.5) or 0.5,
+                        recency=recency,
+                        relevance=0.5,
+                    )
+                )
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Memory pack failed: %s", e)
 
@@ -172,20 +174,23 @@ class ContextOptimizer:
         items = []
         try:
             from whitemagic.alchemy.holocron import Holocron
+
             holocron = Holocron()
             holocron.load()
             rules = holocron.get_relevant_rules(query, limit=limit)
 
             for rule in rules:
-                items.append(ContextItem(
-                    id=rule["id"],
-                    content=f"GOLDEN RULE: {rule['title']}\n{rule['description']}",
-                    source="holocron",
-                    importance=1.0, # High importance for wisdom
-                    recency=1.0,    # Timeless
-                    relevance=0.9,  # Assumed high if returned by get_relevant_rules
-                    tokens=0
-                ))
+                items.append(
+                    ContextItem(
+                        id=rule["id"],
+                        content=f"GOLDEN RULE: {rule['title']}\n{rule['description']}",
+                        source="holocron",
+                        importance=1.0,  # High importance for wisdom
+                        recency=1.0,  # Timeless
+                        relevance=0.9,  # Assumed high if returned by get_relevant_rules
+                        tokens=0,
+                    )
+                )
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Wisdom pack failed: %s", e)
 
@@ -204,19 +209,22 @@ class ContextOptimizer:
         # 1. Get Wisdom
         try:
             from whitemagic.alchemy.holocron import Holocron
+
             holocron = Holocron()
             holocron.load()
             rules = holocron.get_relevant_rules(query, limit=wisdom_limit)
             for rule in rules:
-                items.append(ContextItem(
-                    id=rule["id"],
-                    content=f"GOLDEN RULE: {rule['title']}\n{rule['description']}",
-                    source="holocron",
-                    importance=1.0,
-                    recency=1.0,
-                    relevance=0.9,
-                    tokens=0
-                ))
+                items.append(
+                    ContextItem(
+                        id=rule["id"],
+                        content=f"GOLDEN RULE: {rule['title']}\n{rule['description']}",
+                        source="holocron",
+                        importance=1.0,
+                        recency=1.0,
+                        relevance=0.9,
+                        tokens=0,
+                    )
+                )
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Wisdom fetch failed: %s", e)
 
@@ -225,6 +233,7 @@ class ContextOptimizer:
             import time
 
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             results = um.search(query, limit=memory_limit)
 
@@ -235,14 +244,16 @@ class ContextOptimizer:
                     age_days = (time.time() - created.timestamp()) / 86400
                     recency = max(0.0, 1.0 - (age_days / 365))
 
-                items.append(ContextItem(
-                    id=mem.id,
-                    content=f"[{mem.title or 'untitled'}] {mem.content[:2000]}",
-                    source="memory",
-                    importance=getattr(mem, "importance", 0.5) or 0.5,
-                    recency=recency,
-                    relevance=0.5,
-                ))
+                items.append(
+                    ContextItem(
+                        id=mem.id,
+                        content=f"[{mem.title or 'untitled'}] {mem.content[:2000]}",
+                        source="memory",
+                        importance=getattr(mem, "importance", 0.5) or 0.5,
+                        recency=recency,
+                        relevance=0.5,
+                    )
+                )
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Memory fetch failed: %s", e)
 
@@ -262,8 +273,8 @@ class ContextOptimizer:
         # Top 25% go to front, next 25% go to back, rest in middle
         quarter = max(1, len(by_salience) // 4)
         front = by_salience[:quarter]
-        back = by_salience[quarter:quarter * 2]
-        middle = by_salience[quarter * 2:]
+        back = by_salience[quarter : quarter * 2]
+        middle = by_salience[quarter * 2 :]
 
         return front + middle + list(reversed(back))
 
@@ -283,10 +294,6 @@ class ContextOptimizer:
             "strategy": "salience_primacy_recency",
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _optimizer: ContextOptimizer | None = None
 _opt_lock = threading.Lock()

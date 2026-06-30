@@ -65,6 +65,7 @@ class PoolConfig:
         **kwargs: Any,
     ) -> None:
         from whitemagic.config.concurrency import CPU_WORKERS, IO_WORKERS
+
         self.io_workers = io_workers or IO_WORKERS
         self.cpu_workers = cpu_workers or CPU_WORKERS
         self.api_workers = api_workers or (IO_WORKERS // 2)
@@ -102,17 +103,20 @@ class ThreadingManager:
             return
 
         self._io_pool = ThreadPoolExecutor(
-            max_workers=self.config.io_workers, thread_name_prefix="wm-io-",
+            max_workers=self.config.io_workers,
+            thread_name_prefix="wm-io-",
         )
 
         self._cpu_pool = ProcessPoolExecutor(max_workers=self.config.cpu_workers)
 
         self._api_pool = ThreadPoolExecutor(
-            max_workers=self.config.api_workers, thread_name_prefix="wm-api-",
+            max_workers=self.config.api_workers,
+            thread_name_prefix="wm-api-",
         )
 
         self._db_pool = ThreadPoolExecutor(
-            max_workers=self.config.db_workers, thread_name_prefix="wm-db-",
+            max_workers=self.config.db_workers,
+            thread_name_prefix="wm-db-",
         )
 
         self._active = True
@@ -139,23 +143,33 @@ class ThreadingManager:
             self.start()
 
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._io_pool, functools.partial(func, *args, **kwargs))
+        return await loop.run_in_executor(
+            self._io_pool, functools.partial(func, *args, **kwargs)
+        )
 
-    async def run_cpu_task(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    async def run_cpu_task(
+        self, func: Callable[..., T], *args: Any, **kwargs: Any
+    ) -> T:
         """Run CPU-bound task in process pool."""
         if not self._active:
             self.start()
 
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._cpu_pool, functools.partial(func, *args, **kwargs))
+        return await loop.run_in_executor(
+            self._cpu_pool, functools.partial(func, *args, **kwargs)
+        )
 
-    async def run_api_task(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    async def run_api_task(
+        self, func: Callable[..., T], *args: Any, **kwargs: Any
+    ) -> T:
         """Run API call in dedicated pool."""
         if not self._active:
             self.start()
 
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._api_pool, functools.partial(func, *args, **kwargs))
+        return await loop.run_in_executor(
+            self._api_pool, functools.partial(func, *args, **kwargs)
+        )
 
     async def run_db_task(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """Run database operation in dedicated pool."""
@@ -163,10 +177,14 @@ class ThreadingManager:
             self.start()
 
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._db_pool, functools.partial(func, *args, **kwargs))
+        return await loop.run_in_executor(
+            self._db_pool, functools.partial(func, *args, **kwargs)
+        )
 
     async def run_batch(
-        self, tasks: list[tuple[Callable, tuple, dict]], pool_type: str = "io",
+        self,
+        tasks: list[tuple[Callable, tuple, dict]],
+        pool_type: str = "io",
     ) -> list[Any]:
         """Run batch of tasks in parallel.
 

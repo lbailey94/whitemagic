@@ -1,4 +1,5 @@
 """Unit tests for probabilistic data structures — HLL, Count-Min Sketch, MemoryAnalytics."""
+
 from whitemagic.core.memory.probabilistic import (
     CountMinSketch,
     HyperLogLog,
@@ -36,7 +37,9 @@ class TestHyperLogLog:
             hll.add(f"item_{i}")
         estimate = hll.estimate()
         # Within ~5% for 10K with p=14
-        assert abs(estimate - 10000) / 10000 < 0.10, f"Estimate {estimate} too far from 10000"
+        assert abs(estimate - 10000) / 10000 < 0.10, (
+            f"Estimate {estimate} too far from 10000"
+        )
 
     def test_merge(self):
         hll1 = HyperLogLog(precision=12)
@@ -47,7 +50,9 @@ class TestHyperLogLog:
             hll2.add(f"item_{i}")
         hll1.merge(hll2)
         estimate = hll1.estimate()
-        assert abs(estimate - 1000) < 150, f"Merged estimate {estimate} too far from 1000"
+        assert abs(estimate - 1000) < 150, (
+            f"Merged estimate {estimate} too far from 1000"
+        )
 
     def test_merge_different_precision_raises(self):
         hll1 = HyperLogLog(precision=10)
@@ -218,7 +223,9 @@ class TestMemoryAnalytics:
             analytics.observe_memory(f"mem_{i}", tags=[f"tag_{i % 10}"], source="test")
         analytics_bytes = analytics.memory_bytes()
         # Should be well under 1MB (4 CMS instances + HLL = ~508KB)
-        assert analytics_bytes < 600_000, f"Analytics using {analytics_bytes} bytes, expected < 600K"
+        assert analytics_bytes < 600_000, (
+            f"Analytics using {analytics_bytes} bytes, expected < 600K"
+        )
         # Estimate should be reasonable
         est = analytics.estimate_distinct_count()
         assert abs(est - 100_000) / 100_000 < 0.10, f"Estimate {est} too far from 100K"

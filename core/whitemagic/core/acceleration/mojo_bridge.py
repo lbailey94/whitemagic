@@ -19,6 +19,7 @@ Usage:
         mojo_batch_encode, mojo_quantize, mojo_neuro_score, mojo_status
     )
 """
+
 from __future__ import annotations
 
 import logging
@@ -51,13 +52,44 @@ def _find_mojo() -> tuple[str | None, Path | None]:
         os.environ.get("MOJO_PATH", ""),
         # Dev venv modular package (pip install max) — binary present but runfiles broken upstream
         # Fixed when Modular ships magic CLI or fixes pip packaging for Linux
-        str(base / ".venv" / "lib" / "python3.12" / "site-packages" / "modular" / "bin" / "mojo"),
+        str(
+            base
+            / ".venv"
+            / "lib"
+            / "python3.12"
+            / "site-packages"
+            / "modular"
+            / "bin"
+            / "mojo"
+        ),
         # Archive venv modular package
-        str(archive_base / "wm_archive" / "WM" / "whitemagic" / ".venv"
-            / "lib" / "python3.12" / "site-packages" / "modular" / "bin" / "mojo"),
+        str(
+            archive_base
+            / "wm_archive"
+            / "WM"
+            / "whitemagic"
+            / ".venv"
+            / "lib"
+            / "python3.12"
+            / "site-packages"
+            / "modular"
+            / "bin"
+            / "mojo"
+        ),
         # Pixi-managed Mojo (also broken — missing runfiles)
-        str(archive_base / "wm_archive" / "WM" / "whitemagic" / "whitemagic-mojo"
-            / "mojo-env" / ".pixi" / "envs" / "default" / "bin" / "mojo"),
+        str(
+            archive_base
+            / "wm_archive"
+            / "WM"
+            / "whitemagic"
+            / "whitemagic-mojo"
+            / "mojo-env"
+            / ".pixi"
+            / "envs"
+            / "default"
+            / "bin"
+            / "mojo"
+        ),
         # Pixi Mojo 0.26.1 (working)
         str(base / "whitemagic-mojo" / ".pixi" / "envs" / "default" / "bin" / "mojo"),
         "pixi",  # Will be resolved via shutil.which
@@ -89,10 +121,6 @@ def _init_mojo() -> Any:
             logger.debug("Mojo binary not found — using Python fallback")
 
 
-# ---------------------------------------------------------------------------
-# Batch 5D Holographic Encoding
-# ---------------------------------------------------------------------------
-
 def mojo_batch_encode(
     memories: list[dict[str, Any]],
 ) -> list[tuple[float, float, float, float, float]] | None:
@@ -121,10 +149,6 @@ def mojo_batch_encode(
         logger.debug("Mojo batch_encode failed: %s", e)
     return None
 
-
-# ---------------------------------------------------------------------------
-# Embedding Quantization
-# ---------------------------------------------------------------------------
 
 def mojo_quantize(
     vectors: list[list[float]],
@@ -156,10 +180,6 @@ def mojo_quantize(
     return None
 
 
-# ---------------------------------------------------------------------------
-# Neuro Importance Scoring
-# ---------------------------------------------------------------------------
-
 def mojo_neuro_score(
     memories: list[dict[str, Any]],
 ) -> list[dict[str, Any]] | None:
@@ -190,10 +210,6 @@ def mojo_neuro_score(
         logger.debug("Mojo neuro_score failed: %s", e)
     return None
 
-
-# ---------------------------------------------------------------------------
-# Internal: subprocess call to Mojo
-# ---------------------------------------------------------------------------
 
 def _call_mojo(module_name: str, request: dict[str, Any]) -> dict[str, Any] | None:
     """Call a Mojo module via subprocess with JSON stdin/stdout."""
@@ -228,10 +244,6 @@ def _call_mojo(module_name: str, request: dict[str, Any]) -> dict[str, Any] | No
     return None
 
 
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
 def mojo_status() -> dict[str, Any]:
     """Get Mojo bridge status."""
     _init_mojo()
@@ -240,9 +252,17 @@ def mojo_status() -> dict[str, Any]:
         "mojo_bin": _mojo_bin or "not found",
         "mojo_dir": str(_MOJO_DIR) if _MOJO_DIR else "not found",
         "modules": {
-            "batch_encoder": (_MOJO_DIR / "src" / "batch_encoder.mojo").exists() if _MOJO_DIR else False,
-            "embedding_quantize": (_MOJO_DIR / "src" / "embedding_quantize.mojo").exists() if _MOJO_DIR else False,
-            "neuro_batch": (_MOJO_DIR / "src" / "neuro_batch.mojo").exists() if _MOJO_DIR else False,
+            "batch_encoder": (_MOJO_DIR / "src" / "batch_encoder.mojo").exists()
+            if _MOJO_DIR
+            else False,
+            "embedding_quantize": (
+                _MOJO_DIR / "src" / "embedding_quantize.mojo"
+            ).exists()
+            if _MOJO_DIR
+            else False,
+            "neuro_batch": (_MOJO_DIR / "src" / "neuro_batch.mojo").exists()
+            if _MOJO_DIR
+            else False,
         },
         "backend": "mojo_simd" if _HAS_MOJO else "python_fallback",
     }

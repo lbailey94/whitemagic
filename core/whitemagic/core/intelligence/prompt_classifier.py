@@ -7,31 +7,58 @@ Used by the Auto-Prompting Supervisor to identify the "70%" of routine work.
 """
 
 
-
 class PromptClassifier:
     """Classifies prompts into SOP categories."""
 
     PATTERNS = {
         "review": [
-            r"review", r"check", r"audit", r"verify", r"look over", r"sanity check",
-            r"find bugs", r"security scan"
+            r"review",
+            r"check",
+            r"audit",
+            r"verify",
+            r"look over",
+            r"sanity check",
+            r"find bugs",
+            r"security scan",
         ],
         "handoff": [
-            r"handoff", r"summary", r"summarize", r"wrap up", r"session end",
-            r"checkpoint", r"save state", r"what did we do"
+            r"handoff",
+            r"summary",
+            r"summarize",
+            r"wrap up",
+            r"session end",
+            r"checkpoint",
+            r"save state",
+            r"what did we do",
         ],
         "synthesize": [
-            r"synthesize", r"consolidate", r"merge", r"combine", r"refactor",
-            r"clean up", r"organize", r"structure"
+            r"synthesize",
+            r"consolidate",
+            r"merge",
+            r"combine",
+            r"refactor",
+            r"clean up",
+            r"organize",
+            r"structure",
         ],
         "plan": [
-            r"plan", r"roadmap", r"strategy", r"next steps", r"what's next",
-            r"create a plan", r"break down"
+            r"plan",
+            r"roadmap",
+            r"strategy",
+            r"next steps",
+            r"what's next",
+            r"create a plan",
+            r"break down",
         ],
         "implementation": [
-            r"implement", r"code", r"write", r"create file", r"build", r"make a",
-            r"generate"
-        ]
+            r"implement",
+            r"code",
+            r"write",
+            r"create file",
+            r"build",
+            r"make a",
+            r"generate",
+        ],
     }
 
     def classify(self, prompt: str) -> tuple[str, float]:

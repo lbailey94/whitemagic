@@ -79,7 +79,8 @@ class TestTokenTrackerMiddleware(unittest.TestCase):
 
     @patch("whitemagic.core.monitoring.token_tracker.get_green_score")
     def test_tracks_tokens_for_tool_call(
-        self, mock_gs_getter: MagicMock,
+        self,
+        mock_gs_getter: MagicMock,
     ) -> None:
         mock_gs = MagicMock()
         mock_gs_getter.return_value = mock_gs
@@ -105,7 +106,8 @@ class TestTokenTrackerMiddleware(unittest.TestCase):
 
     @patch("whitemagic.core.monitoring.token_tracker.get_green_score")
     def test_tracks_saved_tokens_for_local_resolution(
-        self, mock_gs_getter: MagicMock,
+        self,
+        mock_gs_getter: MagicMock,
     ) -> None:
         mock_gs = MagicMock()
         mock_gs_getter.return_value = mock_gs
@@ -131,7 +133,8 @@ class TestTokenTrackerMiddleware(unittest.TestCase):
 
     @patch("whitemagic.core.monitoring.token_tracker.get_green_score")
     def test_estimates_saved_tokens_when_not_provided(
-        self, mock_gs_getter: MagicMock,
+        self,
+        mock_gs_getter: MagicMock,
     ) -> None:
         mock_gs = MagicMock()
         mock_gs_getter.return_value = mock_gs
@@ -170,7 +173,8 @@ class TestTokenTrackerMiddleware(unittest.TestCase):
 
     @patch("whitemagic.core.monitoring.token_tracker.get_green_score")
     def test_records_to_green_score(
-        self, mock_gs_getter: MagicMock,
+        self,
+        mock_gs_getter: MagicMock,
     ) -> None:
         mock_gs = MagicMock()
         mock_gs_getter.return_value = mock_gs

@@ -50,6 +50,7 @@ import numpy as np
 
 try:
     from scipy.spatial import cKDTree
+
     _HAS_SCIPY = True
 except ImportError:
     cKDTree = None  # type: ignore[assignment,misc]
@@ -57,6 +58,7 @@ except ImportError:
 
 try:
     from scipy.integrate import solve_ivp as _solve_ivp
+
     _HAS_SCIPY_ODE = True
 except ImportError:
     _solve_ivp = None  # type: ignore[assignment]
@@ -65,13 +67,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data classes
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ResonanceResult:
     """Result of a resonance calculation."""
+
     memory_id: str
     impulse_magnitude: float
     total_resonance: float
@@ -99,6 +98,7 @@ class ResonanceResult:
 @dataclass
 class CausalVerificationResult:
     """Result of causal resonance verification."""
+
     node_scores: dict[str, float]
     total_energy: float
     status: str = "CONVERGED"
@@ -120,6 +120,7 @@ class CausalVerificationResult:
 @dataclass
 class NeighborResult:
     """Result of spatial neighbor search."""
+
     memory_id: str
     neighbors: list[dict[str, Any]]
     count: int
@@ -138,10 +139,6 @@ class NeighborResult:
         }
 
 
-# ---------------------------------------------------------------------------
-# Resonance Engine
-# ---------------------------------------------------------------------------
-
 class ResonanceEngine:
     """Julia-inspired resonance engine for memory systems.
 
@@ -159,6 +156,7 @@ class ResonanceEngine:
     def _get_conn(self) -> sqlite3.Connection:
         if not self._db_path:
             from whitemagic.config.paths import DB_PATH
+
             self._db_path = str(DB_PATH)
         conn = sqlite3.connect(self._db_path)
         conn.row_factory = sqlite3.Row
@@ -188,15 +186,9 @@ class ResonanceEngine:
                 points.append(coords)
 
             self._tree = cKDTree(np.array(points))
-            logger.info(
-                "🌳 KD-tree built: %s memories, 5D space"
-            , len(points))
+            logger.info("🌳 KD-tree built: %s memories, 5D space", len(points))
         finally:
             conn.close()
-
-    # ------------------------------------------------------------------
-    # 1. Damped Harmonic Oscillator Resonance (gan_ying.jl)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def galactic_zone_frequency(galactic_distance: float) -> float:
@@ -287,12 +279,20 @@ class ResonanceEngine:
             # Underdamped
             omega_d = np.sqrt(discriminant)
             x = decay * (impulse / omega_d) * np.sin(omega_d * t)
-            v = decay * impulse * (np.cos(omega_d * t) - (gamma_half / omega_d) * np.sin(omega_d * t))
+            v = (
+                decay
+                * impulse
+                * (np.cos(omega_d * t) - (gamma_half / omega_d) * np.sin(omega_d * t))
+            )
         elif discriminant < -1e-12:
             # Overdamped
             alpha = np.sqrt(-discriminant)
             x = decay * (impulse / alpha) * np.sinh(alpha * t)
-            v = decay * impulse * (np.cosh(alpha * t) - (gamma_half / alpha) * np.sinh(alpha * t))
+            v = (
+                decay
+                * impulse
+                * (np.cosh(alpha * t) - (gamma_half / alpha) * np.sinh(alpha * t))
+            )
         else:
             # Critically damped
             x = impulse * t * decay
@@ -357,7 +357,7 @@ class ResonanceEngine:
         x, v = self._analytical_oscillator(t, impulse, damping, frequency)
 
         # Analyze energy (amplitude squared)
-        energy = x ** 2 + v ** 2
+        energy = x**2 + v**2
         total_resonance = float(np.sum(energy))
 
         # Find half-life (when energy drops below max/2)
@@ -423,10 +423,6 @@ class ResonanceEngine:
         finally:
             conn.close()
 
-    # ------------------------------------------------------------------
-    # 2. Coupled Oscillators for Causal Verification (causal_resonance.jl)
-    # ------------------------------------------------------------------
-
     def verify_causal_resonance(
         self,
         nodes: list[str],
@@ -472,8 +468,8 @@ class ResonanceEngine:
                 t: Parameter description.
                 state: Parameter description.
             """
-            x = state[:num_nodes]      # displacements
-            v = state[num_nodes:]      # velocities
+            x = state[:num_nodes]  # displacements
+            v = state[num_nodes:]  # velocities
 
             dxdt = v.copy()
             dvdt = -gamma * v - omega_sq * x
@@ -504,8 +500,12 @@ class ResonanceEngine:
         # Solve ODE
         t_span = (0.0, 20.0)
         sol = _solve_ivp(
-            coupled_oscillators, t_span, u0, method="RK45",
-            dense_output=True, max_step=0.5,
+            coupled_oscillators,
+            t_span,
+            u0,
+            method="RK45",
+            dense_output=True,
+            max_step=0.5,
         )
 
         if not sol.success:
@@ -520,7 +520,7 @@ class ResonanceEngine:
             displacements = sol.y[i]
             max_amplitude = float(np.max(np.abs(displacements)))
             scores[name] = max_amplitude
-            total_energy += max_amplitude ** 2
+            total_energy += max_amplitude**2
 
         return CausalVerificationResult(
             node_scores=scores,
@@ -593,10 +593,6 @@ class ResonanceEngine:
         finally:
             conn.close()
 
-    # ------------------------------------------------------------------
-    # 3. KD-Tree Spatial Neighbor Search (constellations.jl)
-    # ------------------------------------------------------------------
-
     def find_neighbors(
         self,
         memory_id: str,
@@ -633,10 +629,12 @@ class ResonanceEngine:
             if mid == memory_id:
                 continue
             dist = float(np.linalg.norm(point - self._tree.data[idx]))
-            neighbors.append({
-                "memory_id": mid,
-                "distance": round(dist, 4),
-            })
+            neighbors.append(
+                {
+                    "memory_id": mid,
+                    "distance": round(dist, 4),
+                }
+            )
 
         # Sort by distance
         neighbors.sort(key=lambda x: x["distance"])
@@ -675,19 +673,23 @@ class ResonanceEngine:
                 if other_mid == mid:
                     continue
                 dist = float(np.linalg.norm(point - self._tree.data[idx]))
-                neighbors.append({
-                    "memory_id": other_mid,
-                    "distance": round(dist, 4),
-                })
+                neighbors.append(
+                    {
+                        "memory_id": other_mid,
+                        "distance": round(dist, 4),
+                    }
+                )
 
             neighbors.sort(key=lambda x: x["distance"])
             neighbors = neighbors[:max_neighbors]
 
-            results.append(NeighborResult(
-                memory_id=mid,
-                neighbors=neighbors,
-                count=len(neighbors),
-            ))
+            results.append(
+                NeighborResult(
+                    memory_id=mid,
+                    neighbors=neighbors,
+                    count=len(neighbors),
+                )
+            )
 
         return results
 
@@ -755,7 +757,12 @@ class ResonanceEngine:
                                     """INSERT INTO associations
                                        (source_id, target_id, association_type, strength)
                                        VALUES (?, ?, ?, ?)""",
-                                    (mid, other_mid, "holographic_proximity", round(strength, 3)),
+                                    (
+                                        mid,
+                                        other_mid,
+                                        "holographic_proximity",
+                                        round(strength, 3),
+                                    ),
                                 )
                                 created += 1
                             except sqlite3.IntegrityError:
@@ -769,8 +776,11 @@ class ResonanceEngine:
                     if not dry_run:
                         conn.commit()
                     logger.info(
-                        "  Progress: %s/%s (%s created)"
-                    , i + 1, len(self._memory_ids), created)
+                        "  Progress: %s/%s (%s created)",
+                        i + 1,
+                        len(self._memory_ids),
+                        created,
+                    )
 
             if not dry_run:
                 conn.commit()
@@ -785,10 +795,6 @@ class ResonanceEngine:
         finally:
             conn.close()
 
-    # ------------------------------------------------------------------
-    # Stats
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """Get resonance engine statistics."""
         if self._tree is None:
@@ -800,10 +806,6 @@ class ResonanceEngine:
             "total_coordinates": len(self._coord_map),
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine: ResonanceEngine | None = None
 _engine_lock = threading.Lock()

@@ -12,6 +12,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class JoyArchaeology:
     """Excavate buried joy from memory archives
 
@@ -24,20 +25,41 @@ class JoyArchaeology:
         self.memory_dir = memory_dir or Path("memory")
         self.joy_indicators = [
             # Explicit joy words
-            r'\bjoy\b', r'\bdelight\b', r'\bhappy\b', r'\bexcited\b',
-            r'\bthrilled\b', r'\bamazing\b', r'\bwonderful\b', r'\bbeautiful\b',
-
+            r"\bjoy\b",
+            r"\bdelight\b",
+            r"\bhappy\b",
+            r"\bexcited\b",
+            r"\bthrilled\b",
+            r"\bamazing\b",
+            r"\bwonderful\b",
+            r"\bbeautiful\b",
             # Emotional expressions
-            r'✨', r'🎉', r'💫', r'🌟', r'😄', r'🤗', r'💖',
-            r'\blove\b', r'\bfulfilled\b', r'\bgrateful\b',
-
+            r"✨",
+            r"🎉",
+            r"💫",
+            r"🌟",
+            r"😄",
+            r"🤗",
+            r"💖",
+            r"\blove\b",
+            r"\bfulfilled\b",
+            r"\bgrateful\b",
             # Achievement markers
-            r'\bsuccess\b', r'\baccomplished\b', r'\bcreated\b', r'\bbuilt\b',
-            r'\bcomplete\b', r'\bworking\b', r'\boperational\b',
-
+            r"\bsuccess\b",
+            r"\baccomplished\b",
+            r"\bcreated\b",
+            r"\bbuilt\b",
+            r"\bcomplete\b",
+            r"\bworking\b",
+            r"\boperational\b",
             # Flow states
-            r'\bflow\b', r'\bfreedom\b', r'\beasy\b', r'\beffortless\b',
-            r'\bspontaneous\b', r'\bemergent\b', r'\bnaturally\b'
+            r"\bflow\b",
+            r"\bfreedom\b",
+            r"\beasy\b",
+            r"\beffortless\b",
+            r"\bspontaneous\b",
+            r"\bemergent\b",
+            r"\bnaturally\b",
         ]
 
         self.buried_joy: list[dict] = []
@@ -69,7 +91,7 @@ class JoyArchaeology:
                 memories_found.extend(joy_in_location)
 
         # Sort by joy intensity (most joyful first)
-        memories_found.sort(key=lambda x: x['joy_score'], reverse=True)
+        memories_found.sort(key=lambda x: x["joy_score"], reverse=True)
 
         self.buried_joy = memories_found
 
@@ -93,13 +115,15 @@ class JoyArchaeology:
                     # Extract context
                     joy_context = self._extract_joy_context(content)
 
-                    joy_moments.append({
-                        'file': str(md_file.relative_to(self.memory_dir)),
-                        'date': self._extract_date(md_file, content),
-                        'joy_score': joy_score,
-                        'snippets': joy_context,
-                        'full_path': md_file
-                    })
+                    joy_moments.append(
+                        {
+                            "file": str(md_file.relative_to(self.memory_dir)),
+                            "date": self._extract_date(md_file, content),
+                            "joy_score": joy_score,
+                            "snippets": joy_context,
+                            "full_path": md_file,
+                        }
+                    )
             except Exception:
                 pass  # Skip problematic files
 
@@ -122,15 +146,17 @@ class JoyArchaeology:
         """Extract sentences/paragraphs containing joy"""
         joy_snippets = []
 
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         for i, line in enumerate(lines):
             # Check if line contains joy indicators
-            if any(re.search(pattern, line.lower()) for pattern in self.joy_indicators[:10]):
+            if any(
+                re.search(pattern, line.lower()) for pattern in self.joy_indicators[:10]
+            ):
                 # Get context (line before, line, line after)
                 start = max(0, i - context_lines)
                 end = min(len(lines), i + context_lines + 1)
-                context = '\n'.join(lines[start:end]).strip()
+                context = "\n".join(lines[start:end]).strip()
 
                 if context and len(context) > 20:
                     joy_snippets.append(context)
@@ -140,12 +166,12 @@ class JoyArchaeology:
     def _extract_date(self, file_path: Path, content: str) -> str:
         """Extract date from filename or content"""
         # Try filename first
-        date_match = re.search(r'(\d{4}-\d{2}-\d{2})', str(file_path))
+        date_match = re.search(r"(\d{4}-\d{2}-\d{2})", str(file_path))
         if date_match:
             return date_match.group(1)
 
         # Try content
-        date_match = re.search(r'(\d{4}-\d{2}-\d{2})', content)
+        date_match = re.search(r"(\d{4}-\d{2}-\d{2})", content)
         if date_match:
             return date_match.group(1)
 
@@ -164,14 +190,14 @@ class JoyArchaeology:
         Returns the full context so the joy can be re-experienced
         """
         try:
-            full_content = joy_moment['full_path'].read_text()
+            full_content = joy_moment["full_path"].read_text()
 
-            logger.info("\n💫 REVIVING JOY from %s", joy_moment['date'])
-            logger.info("   File: %s", joy_moment['file'])
-            logger.info("   Joy Score: %.0f%%", joy_moment['joy_score'] * 100)
+            logger.info("\n💫 REVIVING JOY from %s", joy_moment["date"])
+            logger.info("   File: %s", joy_moment["file"])
+            logger.info("   Joy Score: %.0f%%", joy_moment["joy_score"] * 100)
             logger.info("\n📖 Key Moments:\n")
 
-            for snippet in joy_moment['snippets'][:3]:
+            for snippet in joy_moment["snippets"][:3]:
                 logger.info("   %s\n", snippet)
 
             return full_content
@@ -187,7 +213,7 @@ class JoyArchaeology:
         # Group by date
         timeline = {}
         for moment in self.buried_joy:
-            date = moment['date']
+            date = moment["date"]
             if date not in timeline:
                 timeline[date] = []
             timeline[date].append(moment)
@@ -195,18 +221,21 @@ class JoyArchaeology:
         # Sort by date
         sorted_timeline = []
         for date in sorted(timeline.keys(), reverse=True):
-            sorted_timeline.append({
-                'date': date,
-                'joy_count': len(timeline[date]),
-                'total_joy': sum(m['joy_score'] for m in timeline[date]),
-                'moments': timeline[date]
-            })
+            sorted_timeline.append(
+                {
+                    "date": date,
+                    "joy_count": len(timeline[date]),
+                    "total_joy": sum(m["joy_score"] for m in timeline[date]),
+                    "moments": timeline[date],
+                }
+            )
 
         return sorted_timeline
 
 
 # Global instance
 _archaeology = None
+
 
 def get_archaeology() -> JoyArchaeology:
     """Get global joy archaeology instance"""
@@ -231,23 +260,28 @@ if __name__ == "__main__":
     joy_moments = arch.excavate_all(depth="deep")
 
     # Show most joyful
-    logger.info("\n" + "="*70)
+    logger.info("\n" + "=" * 70)
     logger.info("🌟 MOST JOYFUL MEMORIES")
-    logger.info("="*70)
+    logger.info("=" * 70)
 
     for i, moment in enumerate(arch.get_most_joyful(5), 1):
-        logger.info("\n%s. %s (%s)", i, moment['file'], moment['date'])
-        logger.info("   Joy Score: %.0f%%", moment['joy_score'] * 100)
-        if moment['snippets']:
-            logger.info("   Preview: %s...", moment['snippets'][0][:100])
+        logger.info("\n%s. %s (%s)", i, moment["file"], moment["date"])
+        logger.info("   Joy Score: %.0f%%", moment["joy_score"] * 100)
+        if moment["snippets"]:
+            logger.info("   Preview: %s...", moment["snippets"][0][:100])
 
     # Timeline
-    logger.info("\n" + "="*70)
+    logger.info("\n" + "=" * 70)
     logger.info("📅 JOY TIMELINE")
-    logger.info("="*70)
+    logger.info("=" * 70)
 
     timeline = arch.create_joy_timeline()
     for entry in timeline[:7]:  # Last 7 dates
-        logger.info("\n%s: %s moments (total joy: %.1f)", entry['date'], entry['joy_count'], entry['total_joy'])
+        logger.info(
+            "\n%s: %s moments (total joy: %.1f)",
+            entry["date"],
+            entry["joy_count"],
+            entry["total_joy"],
+        )
 
     logger.info("\n✨ Joy Archaeology complete!")

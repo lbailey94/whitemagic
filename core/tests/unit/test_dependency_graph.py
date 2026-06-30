@@ -1,4 +1,5 @@
 """Tests for Objective U — W-Relational Axis for Improvement Dependencies."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.dependency_graph import (
@@ -80,9 +81,13 @@ class TestConditionalProbability:
         g.add_edge("h1", "h2")
         # Simulate multiple outcomes where A helps B
         for _ in range(5):
-            g.update_conditional_probability("h1", "h2", a_applied=True, b_succeeded=True)
+            g.update_conditional_probability(
+                "h1", "h2", a_applied=True, b_succeeded=True
+            )
         for _ in range(5):
-            g.update_conditional_probability("h1", "h2", a_applied=False, b_succeeded=False)
+            g.update_conditional_probability(
+                "h1", "h2", a_applied=False, b_succeeded=False
+            )
         edge = g.get_edge("h1", "h2")
         assert edge.edge_type == DependencyType.SYNERGY
 

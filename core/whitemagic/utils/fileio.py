@@ -32,7 +32,9 @@ except ImportError:
 
 
 @contextmanager
-def file_lock(filepath: str | Path, timeout: float = 5.0) -> Generator[None, None, None]:
+def file_lock(
+    filepath: str | Path, timeout: float = 5.0
+) -> Generator[None, None, None]:
     """Context manager providing an advisory lock on ``filepath``.
 
     Uses ``fcntl`` on POSIX and ``msvcrt`` on Windows. If neither backend
@@ -71,7 +73,9 @@ def file_lock(filepath: str | Path, timeout: float = 5.0) -> Generator[None, Non
                     break
                 except OSError:
                     if timeout is not None and (time.time() - start) >= timeout:
-                        raise TimeoutError(f"Timed out acquiring lock for {filepath}") from None
+                        raise TimeoutError(
+                            f"Timed out acquiring lock for {filepath}"
+                        ) from None
                     time.sleep(0.05)
             yield
         finally:
@@ -89,8 +93,7 @@ def file_lock(filepath: str | Path, timeout: float = 5.0) -> Generator[None, Non
 
 
 def atomic_write(filepath: str | Path, content: str) -> None:
-    """Write ``content`` to ``filepath`` atomically via write-then-replace.
-    """
+    """Write ``content`` to ``filepath`` atomically via write-then-replace."""
     filepath = Path(filepath)
     temp_fd, temp_path = tempfile.mkstemp(
         dir=filepath.parent,

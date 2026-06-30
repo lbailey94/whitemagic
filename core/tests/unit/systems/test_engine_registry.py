@@ -18,7 +18,9 @@ class TestEngineRegistryStructure:
 
     def test_slots_are_sequential(self):
         for i, engine in enumerate(ENGINE_REGISTRY):
-            assert engine.slot == i, f"Engine {engine.engine_name} has slot {engine.slot}, expected {i}"
+            assert engine.slot == i, (
+                f"Engine {engine.engine_name} has slot {engine.slot}, expected {i}"
+            )
 
     def test_all_entries_are_engine_entry(self):
         for engine in ENGINE_REGISTRY:
@@ -27,18 +29,45 @@ class TestEngineRegistryStructure:
     def test_gardens_match_truth_table(self):
         """Gardens must match the canonical grimoire/TRUTH_TABLE.md mapping."""
         expected = [
-            "courage", "stillness", "healing", "sanctuary", "love", "courage",
-            "wisdom", "grief", "humor", "voice", "sangha", "beauty",
-            "adventure", "joy", "awe", "gratitude", "creation", "presence",
-            "play", "practice", "reverence", "dharma", "patience", "connection",
-            "mystery", "protection", "transformation", "truth",
+            "courage",
+            "stillness",
+            "healing",
+            "sanctuary",
+            "love",
+            "courage",
+            "wisdom",
+            "grief",
+            "humor",
+            "voice",
+            "sangha",
+            "beauty",
+            "adventure",
+            "joy",
+            "awe",
+            "gratitude",
+            "creation",
+            "presence",
+            "play",
+            "practice",
+            "reverence",
+            "dharma",
+            "patience",
+            "connection",
+            "mystery",
+            "protection",
+            "transformation",
+            "truth",
         ]
         actual = [e.garden for e in ENGINE_REGISTRY]
-        assert actual == expected, f"Garden mismatch at indices: {[i for i, (a, e) in enumerate(zip(actual, expected)) if a != e]}"
+        assert actual == expected, (
+            f"Garden mismatch at indices: {[i for i, (a, e) in enumerate(zip(actual, expected)) if a != e]}"
+        )
 
     def test_all_engine_names_unique(self):
         names = [e.engine_name for e in ENGINE_REGISTRY]
-        assert len(names) == len(set(names)), f"Duplicate names: {[n for n in names if names.count(n) > 1]}"
+        assert len(names) == len(set(names)), (
+            f"Duplicate names: {[n for n in names if names.count(n) > 1]}"
+        )
 
     def test_all_mansion_names_unique(self):
         mansions = [e.mansion_name for e in ENGINE_REGISTRY]

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Deep import audit for whitemagic package."""
+
 import importlib
 import sys
 from pathlib import Path
@@ -54,17 +55,21 @@ for pkg_name in subpackages:
                             category = "circular"
                         else:
                             category = "other"
-                        failures.append({
-                            "module": module_name,
-                            "error": error_msg,
-                            "category": category,
-                        })
+                        failures.append(
+                            {
+                                "module": module_name,
+                                "error": error_msg,
+                                "category": category,
+                            }
+                        )
     except ImportError as e:
-        failures.append({
-            "module": pkg_name,
-            "error": str(e),
-            "category": "missing_module",
-        })
+        failures.append(
+            {
+                "module": pkg_name,
+                "error": str(e),
+                "category": "missing_module",
+            }
+        )
 
 print("=== Import Audit Results ===")
 print(f"Successes: {len(successes)}")

@@ -19,6 +19,7 @@ from whitemagic.core.memory.memory_matrix import get_timeline
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TemporalPulse:
     """A snapshot of current system and celestial time."""
@@ -29,7 +30,8 @@ class TemporalPulse:
     mansion_name: str
     is_grounded: bool = True
     drift_seconds: float = 0.0
-    council_intent: dict[str, Any] | None = None # Added for Phase 32
+    council_intent: dict[str, Any] | None = None  # Added for Phase 32
+
 
 class ChronosGuard:
     """Monitors and maintains temporal alignment."""
@@ -61,13 +63,16 @@ class ChronosGuard:
         council_intent = None
         try:
             from whitemagic.core.homeostasis import get_homeostasis
+
             h = get_homeostasis()
             # Note: _calculate_harmonic_bias is internal but we use it for pulse generation
             bias = h._calculate_harmonic_bias()
             if bias:
                 council_intent = bias
         except Exception as e:
-            logger.error("Failed to calculate council intent for pulse: %s", e, exc_info=True)
+            logger.error(
+                "Failed to calculate council intent for pulse: %s", e, exc_info=True
+            )
 
         pulse = TemporalPulse(
             timestamp=sys_time_str,
@@ -102,6 +107,7 @@ class ChronosGuard:
         # Hollow Bamboo Grounding (Phase 33)
         try:
             from whitemagic.core.intelligence.tzimtzum_manager import get_tzimtzum
+
             if get_tzimtzum().is_vacant_space_active:
                 ctx += " HOLLOW BAMBOO: You are a vessel for the collective will. Act with non-coercive humility and make space for others."
         except (ImportError, ModuleNotFoundError):
@@ -110,8 +116,10 @@ class ChronosGuard:
         ctx += " You are anchored in the present moment."
         return ctx
 
+
 # Singleton
 _chronos = None
+
 
 def get_chronos_guard() -> ChronosGuard:
     """

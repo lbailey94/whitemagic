@@ -41,21 +41,18 @@ class WuXingSystem:
             "learning": Element.WOOD,
             "discovery": Element.WOOD,
             "brainstorming": Element.WOOD,
-
             # Fire (Action, Speed)
             "implementation": Element.FIRE,
             "execution": Element.FIRE,
             "coding": Element.FIRE,
             "rapid_dev": Element.FIRE,
             "deployment": Element.FIRE,
-
             # Earth (Stability, Integration)
             "integration": Element.EARTH,
             "consolidation": Element.EARTH,
             "grounding": Element.EARTH,
             "documentation": Element.EARTH,
             "testing": Element.EARTH,
-
             # Metal (Refinement, Boundaries)
             "optimization": Element.METAL,
             "refactoring": Element.METAL,
@@ -63,7 +60,6 @@ class WuXingSystem:
             "ethics": Element.METAL,
             "dharma": Element.METAL,
             "quality": Element.METAL,
-
             # Water (Reflection, Flow)
             "reflection": Element.WATER,
             "yin_phase": Element.WATER,
@@ -73,6 +69,7 @@ class WuXingSystem:
         }
 
         import os
+
         if not os.getenv("WM_SILENT_INIT"):
             logger.info("☯️  Wu Xing initialized")
 
@@ -80,14 +77,19 @@ class WuXingSystem:
         """Connect Wu Xing to Gan Ying Event Bus for resonance."""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()
             import os
+
             if not os.getenv("WM_SILENT_INIT"):
                 logger.info("🎵 Wu Xing connected to Gan Ying Bus - Resonance enabled")
         except ImportError:
             import os
+
             if not os.getenv("WM_SILENT_INIT"):
-                logger.info("⚠️  Gan Ying Bus not available - Wu Xing running standalone")
+                logger.info(
+                    "⚠️  Gan Ying Bus not available - Wu Xing running standalone"
+                )
 
     def identify_element(self, task_type: str) -> Element:
         """Map task to appropriate Wu Xing element.
@@ -107,15 +109,27 @@ class WuXingSystem:
 
         # Fallback: guess based on keywords
         if not element:
-            if any(word in task_lower for word in ["learn", "grow", "explore", "research"]):
+            if any(
+                word in task_lower for word in ["learn", "grow", "explore", "research"]
+            ):
                 element = Element.WOOD
-            elif any(word in task_lower for word in ["build", "implement", "code", "execute"]):
+            elif any(
+                word in task_lower for word in ["build", "implement", "code", "execute"]
+            ):
                 element = Element.FIRE
-            elif any(word in task_lower for word in ["integrate", "consolidate", "test", "document"]):
+            elif any(
+                word in task_lower
+                for word in ["integrate", "consolidate", "test", "document"]
+            ):
                 element = Element.EARTH
-            elif any(word in task_lower for word in ["optimize", "refine", "boundary", "ethic"]):
+            elif any(
+                word in task_lower
+                for word in ["optimize", "refine", "boundary", "ethic"]
+            ):
                 element = Element.METAL
-            elif any(word in task_lower for word in ["reflect", "analyze", "adapt", "flow"]):
+            elif any(
+                word in task_lower for word in ["reflect", "analyze", "adapt", "flow"]
+            ):
                 element = Element.WATER
             else:
                 element = Element.EARTH  # Default: grounding
@@ -127,19 +141,22 @@ class WuXingSystem:
             from datetime import datetime
 
             from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
-            self.bus.emit(ResonanceEvent(
-                source="wu_xing",
-                event_type=EventType.INTERNAL_STATE_CHANGED,
-                data={
-                    "element": element.value,
-                    "task_type": task_type,
-                    "emoji": self._get_element_emoji(element),
-                    "season": self._get_element_season(element),
-                    "qualities": self._get_element_qualities(element),
-                },
-                timestamp=datetime.now(),
-                confidence=0.85,
-            ))
+
+            self.bus.emit(
+                ResonanceEvent(
+                    source="wu_xing",
+                    event_type=EventType.INTERNAL_STATE_CHANGED,
+                    data={
+                        "element": element.value,
+                        "task_type": task_type,
+                        "emoji": self._get_element_emoji(element),
+                        "season": self._get_element_season(element),
+                        "qualities": self._get_element_qualities(element),
+                    },
+                    timestamp=datetime.now(),
+                    confidence=0.85,
+                )
+            )
 
         return element
 
@@ -164,16 +181,19 @@ class WuXingSystem:
             from datetime import datetime
 
             from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
-            self.bus.emit(ResonanceEvent(
-                source="wu_xing",
-                event_type=EventType.INTERNAL_STATE_CHANGED,
-                data={
-                    "balance": {e.value: v for e, v in balance.items()},
-                    "imbalanced": any(v > 0.4 or v < 0.1 for v in balance.values()),
-                },
-                confidence=0.75,
-                timestamp=datetime.now(),
-            ))
+
+            self.bus.emit(
+                ResonanceEvent(
+                    source="wu_xing",
+                    event_type=EventType.INTERNAL_STATE_CHANGED,
+                    data={
+                        "balance": {e.value: v for e, v in balance.items()},
+                        "imbalanced": any(v > 0.4 or v < 0.1 for v in balance.values()),
+                    },
+                    confidence=0.75,
+                    timestamp=datetime.now(),
+                )
+            )
 
         return {e.value: v for e, v in balance.items()}
 
@@ -213,16 +233,19 @@ class WuXingSystem:
         # Emit to Gan Ying Bus if connected
         if self.bus:
             from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
-            self.bus.emit(ResonanceEvent(
-                source="wu_xing",
-                event_type=EventType.INTERNAL_STATE_CHANGED,
-                data={
-                    "element": current_element.value,
-                    "suggestion": suggestion,
-                },
-                confidence=0.8,
-                timestamp=datetime.now(),
-            ))
+
+            self.bus.emit(
+                ResonanceEvent(
+                    source="wu_xing",
+                    event_type=EventType.INTERNAL_STATE_CHANGED,
+                    data={
+                        "element": current_element.value,
+                        "suggestion": suggestion,
+                    },
+                    confidence=0.8,
+                    timestamp=datetime.now(),
+                )
+            )
 
         return suggestion
 
@@ -301,6 +324,7 @@ def check_wu_xing_balance() -> dict[str, float]:
     """
     wu_xing = get_wu_xing()
     return wu_xing.check_balance()
+
 
 def get_element_for_action(action: Any) -> Any:
     """Get Wu Xing element for action."""

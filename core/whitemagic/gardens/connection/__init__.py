@@ -7,6 +7,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present-focused (Z-axis +0.1)
 - High importance (W-axis +0.35)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -76,13 +77,15 @@ class ConnectionGarden(BaseGarden, GanYingMixin):
         It's emotionally rich, relational, and critically important.
         """
         return CoordinateBias(
-            x=0.5,   # Emotional (connection is deeply felt, relational)
-            y=0.2,   # Relational (between individuals, somewhat abstract)
-            z=0.1,   # Present (connection happens in the now)
-            w=0.35,   # Very important (connection is fundamental)
+            x=0.5,  # Emotional (connection is deeply felt, relational)
+            y=0.2,  # Relational (between individuals, somewhat abstract)
+            z=0.1,  # Present (connection happens in the now)
+            w=0.35,  # Very important (connection is fundamental)
         )
 
-    def deepen_connection(self, with_whom: str, how: str | None = None) -> dict[str, Any]:
+    def deepen_connection(
+        self, with_whom: str, how: str | None = None
+    ) -> dict[str, Any]:
         """Deepen connection with someone."""
         if with_whom not in self.connections:
             self.connections[with_whom] = []
@@ -92,7 +95,9 @@ class ConnectionGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.CONNECTION_DEEPENED, result)
         return result
 
-    def gather_community(self, members: list[str], purpose: str | None = None) -> dict[str, Any]:
+    def gather_community(
+        self, members: list[str], purpose: str | None = None
+    ) -> dict[str, Any]:
         """Gather community."""
         result = {"members": members, "purpose": purpose}
         self.emit(EventType.COMMUNITY_GATHERED, result)
@@ -100,6 +105,8 @@ class ConnectionGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_connection_garden() -> ConnectionGarden:
     """
     Get the connection garden.
@@ -115,10 +122,22 @@ def get_connection_garden() -> ConnectionGarden:
 
 # Re-export for convenience
 __all__ = [
-    "ConnectionGarden", "get_connection_garden",
+    "ConnectionGarden",
+    "get_connection_garden",
     "ZodiacCore",
-    "AriesCore", "TaurusCore", "GeminiCore", "CancerCore",
-    "LeoCore", "VirgoCore", "LibraCore", "ScorpioCore",
-    "SagittariusCore", "CapricornCore", "AquariusCore", "PiscesCore",
-    "UnifiedCouncil", "CelestialBus", "SynastryGovernor",
+    "AriesCore",
+    "TaurusCore",
+    "GeminiCore",
+    "CancerCore",
+    "LeoCore",
+    "VirgoCore",
+    "LibraCore",
+    "ScorpioCore",
+    "SagittariusCore",
+    "CapricornCore",
+    "AquariusCore",
+    "PiscesCore",
+    "UnifiedCouncil",
+    "CelestialBus",
+    "SynastryGovernor",
 ]

@@ -13,7 +13,9 @@ class MemoryConsolidation:
         self.threshold = threshold
         self._candidates: list[tuple[str, float, int, float]] = []
 
-    def add_candidate(self, memory_id: str, importance: float, access_count: int, hours_old: float) -> None:
+    def add_candidate(
+        self, memory_id: str, importance: float, access_count: int, hours_old: float
+    ) -> None:
         """Add a memory candidate for consolidation."""
         self._candidates.append((memory_id, importance, access_count, hours_old))
 
@@ -24,7 +26,9 @@ class MemoryConsolidation:
             # Simple consolidation logic: must meet threshold
             # Score is primarily importance with small adjustments
             # High thresholds (0.9+) require very high importance
-            access_factor = 1.0 + (min(access_count, 10) * 0.02)  # Small boost up to 20%
+            access_factor = 1.0 + (
+                min(access_count, 10) * 0.02
+            )  # Small boost up to 20%
             age_factor = max(0.5, 1.0 - (hours_old / 720.0))  # Slow age decline
             score = importance * access_factor * age_factor
             if score >= self.threshold:
@@ -46,7 +50,9 @@ class MemoryDecay:
         decay_factor = math.exp(-adjusted_ratio * 0.7)  # Slower decay
         return max(0.01, min(1.0, initial_strength * decay_factor))
 
-    def should_forget(self, hours_old: float, importance: float, threshold: float = 0.1) -> bool:
+    def should_forget(
+        self, hours_old: float, importance: float, threshold: float = 0.1
+    ) -> bool:
         """Determine if memory should be forgotten."""
         strength = self.calculate_decay(hours_old, 1.0)
         # Forget if strength is low OR (moderate strength AND low importance)
@@ -79,4 +85,4 @@ class MemoryLifecycle:
         return self._transitions.get(memory_id, [])
 
 
-__all__ = ['MemoryConsolidation', 'MemoryDecay', 'MemoryLifecycle']
+__all__ = ["MemoryConsolidation", "MemoryDecay", "MemoryLifecycle"]

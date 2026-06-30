@@ -12,14 +12,21 @@ import json
 from whitemagic.tools.unified_api import call_tool
 from whitemagic.optimization.polyglot_router import get_router
 
+
 def test_ghost_deep_search():
     print("\n--- Testing GhostGana Deep Search (Rust) ---")
     start = time.time()
-    result = call_tool("gana_ghost", operation="search", task="deep_search", pattern="TODO", context_lines=1)
+    result = call_tool(
+        "gana_ghost",
+        operation="search",
+        task="deep_search",
+        pattern="TODO",
+        context_lines=1,
+    )
     duration = time.time() - start
-    
+
     # print(json.dumps(result, indent=2))
-    
+
     if result.get("status") == "success":
         details = result.get("details", {})
         output = details.get("output", {})
@@ -29,6 +36,7 @@ def test_ghost_deep_search():
     else:
         print(f"Failed: {result.get('error')}")
 
+
 def test_tail_acceleration():
     print("\n--- Testing TailGana Acceleration (Mojo/Rust) ---")
     payload = {
@@ -36,13 +44,19 @@ def test_tail_acceleration():
         "access_count": 10,
         "total_memories": 1000,
         "days_since_access": 5.0,
-        "importance": 0.8
+        "importance": 0.8,
     }
-    
+
     start = time.time()
-    result = call_tool("gana_tail", operation="transform", task="accelerated_task", task_name="neuro_scoring", payload=payload)
+    result = call_tool(
+        "gana_tail",
+        operation="transform",
+        task="accelerated_task",
+        task_name="neuro_scoring",
+        payload=payload,
+    )
     duration = time.time() - start
-    
+
     if result.get("status") == "success":
         details = result.get("details", {})
         output = details.get("output", {})
@@ -51,10 +65,12 @@ def test_tail_acceleration():
     else:
         print(f"Failed: {result.get('error')}")
 
+
 def test_bridge_stubs():
     print("\n--- Testing Bridge Stubs (Haskell, Zig) ---")
     try:
         from whitemagic.core.bridge.haskell import get_haskell_bridge
+
         haskell = get_haskell_bridge().calculate_balance([0.1, 0.9])
         print(f"Haskell: {haskell.get('status', 'no status')}")
     except (ImportError, AttributeError) as e:
@@ -62,17 +78,19 @@ def test_bridge_stubs():
 
     try:
         from whitemagic.core.bridge.zig import get_zig_bridge
+
         zig = get_zig_bridge().process_genome([1, 0, 1])
         print(f"Zig: {zig.get('status', 'no status')}")
     except (ImportError, AttributeError) as e:
         print(f"Zig bridge unavailable: {e}")
+
 
 if __name__ == "__main__":
     print("=== POLYGLOT INTEGRATION VERIFICATION ===")
     test_ghost_deep_search()
     test_tail_acceleration()
     test_bridge_stubs()
-    
+
     router = get_router()
     stats = router.get_stats()
     print("\n=== POLYGLOT ROUTER STATS ===")

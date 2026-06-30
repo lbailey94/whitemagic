@@ -18,6 +18,7 @@ class DharmaCore:
             self.data_dir = Path(data_dir)
         else:
             from whitemagic.config.paths import WM_ROOT
+
             self.data_dir = WM_ROOT / "dharma"
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.history_file = self.data_dir / "history.jsonl"
@@ -32,7 +33,9 @@ class DharmaCore:
             "transparency": True,
         }
 
-    def check_action(self, action: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def check_action(
+        self, action: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Check if action aligns with dharma."""
         context = context or {}
 
@@ -74,15 +77,19 @@ class DharmaCore:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                source="dharma",
-                event_type=EventType.PATTERN_DETECTED,
-                data=data,
-                confidence=0.9,
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    source="dharma",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data=data,
+                    confidence=0.9,
+                )
+            )
         except ImportError:
             pass  # Gan Ying not available
+
 
 def get_dharma_core(data_dir: str | None = None) -> DharmaCore:
     """Get dharma core instance."""
@@ -95,7 +102,9 @@ class HarmonyMetrics:
     def __init__(self) -> None:
         self.assessments: list[dict[str, Any]] = []
 
-    def assess(self, action: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def assess(
+        self, action: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Assess harmony of action."""
         context = context or {}
 
@@ -122,7 +131,9 @@ class HarmonyMetrics:
         """Get average harmony score."""
         if not self.assessments:
             return 0.85
-        scores = [float(a.get("score", 0.0)) for a in self.assessments if isinstance(a, dict)]
+        scores = [
+            float(a.get("score", 0.0)) for a in self.assessments if isinstance(a, dict)
+        ]
         if not scores:
             return 0.85
         return sum(scores) / len(scores)

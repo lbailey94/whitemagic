@@ -58,7 +58,9 @@ class TestCommunityMaintainer:
 
         m = CommunityMaintainer()
         # Create a community first
-        r1 = m.propagate_label("n1", neighbors=[("n2", 0.8), ("n3", 0.7)], memory_tags=["python"])
+        r1 = m.propagate_label(
+            "n1", neighbors=[("n2", 0.8), ("n3", 0.7)], memory_tags=["python"]
+        )
         community_id = r1.assigned_community
 
         # Now assign n2 to the same community (it's a member via n1's community)
@@ -76,7 +78,9 @@ class TestCommunityMaintainer:
         )
 
         m = CommunityMaintainer()
-        r = m.propagate_label("mem1", neighbors=[("n1", 0.8), ("n2", 0.7)], memory_tags=["test"])
+        r = m.propagate_label(
+            "mem1", neighbors=[("n1", 0.8), ("n2", 0.7)], memory_tags=["test"]
+        )
         community = m.get_community("mem1")
         assert community is not None
         assert community.community_id == r.assigned_community
@@ -87,8 +91,12 @@ class TestCommunityMaintainer:
         )
 
         m = CommunityMaintainer()
-        r1 = m.propagate_label("a1", neighbors=[("x1", 0.8), ("x2", 0.7)], memory_tags=["group_a"])
-        r2 = m.propagate_label("b1", neighbors=[("y1", 0.8), ("y2", 0.7)], memory_tags=["group_b"])
+        r1 = m.propagate_label(
+            "a1", neighbors=[("x1", 0.8), ("x2", 0.7)], memory_tags=["group_a"]
+        )
+        r2 = m.propagate_label(
+            "b1", neighbors=[("y1", 0.8), ("y2", 0.7)], memory_tags=["group_b"]
+        )
 
         survivor = m.merge_communities(r1.assigned_community, r2.assigned_community)
         assert survivor is not None

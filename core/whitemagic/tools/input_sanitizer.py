@@ -26,14 +26,10 @@ from whitemagic.utils.fast_regex import compile as re_compile
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
-MAX_ARG_DEPTH = 10          # Max nesting depth for dicts/lists
+MAX_ARG_DEPTH = 10  # Max nesting depth for dicts/lists
 MAX_STRING_LENGTH = 100_000  # 100KB per string value
-MAX_TOTAL_SIZE = 1_000_000   # 1MB total serialized size estimate
-MAX_LIST_LENGTH = 1000       # Max items in any list argument
+MAX_TOTAL_SIZE = 1_000_000  # 1MB total serialized size estimate
+MAX_LIST_LENGTH = 1000  # Max items in any list argument
 
 # Prompt injection patterns (case-insensitive)
 _INJECTION_PATTERNS: list[re.Pattern] = [
@@ -48,21 +44,21 @@ _INJECTION_PATTERNS: list[re.Pattern] = [
 
 # Path traversal patterns
 _PATH_TRAVERSAL_PATTERNS: list[re.Pattern] = [
-    re_compile(r"\.\./"),              # ../
-    re_compile(r"\.\.\\"),           # ..\
+    re_compile(r"\.\./"),  # ../
+    re_compile(r"\.\.\\"),  # ..\
     re_compile(r"/etc/(passwd|shadow|hosts)"),
     re_compile(r"~root"),
     re_compile(r"%2e%2e[/%5c]", re.IGNORECASE),  # URL-encoded ../
-    re_compile(r"\.\.%2f", re.IGNORECASE),        # ..%2f
-    re_compile(r"/proc/self/"),                    # Linux proc filesystem
+    re_compile(r"\.\.%2f", re.IGNORECASE),  # ..%2f
+    re_compile(r"/proc/self/"),  # Linux proc filesystem
 ]
 
 # Shell injection patterns (for string values that might hit shell)
 _SHELL_INJECTION_PATTERNS: list[re.Pattern] = [
     re_compile(r";\s*(rm|cat|curl|wget|bash|sh|python)\s", re.IGNORECASE),
     re_compile(r"\|\s*(bash|sh|python)", re.IGNORECASE),
-    re_compile(r"\$\(.*\)"),          # $(command)
-    re_compile(r"`.*`"),              # `command`
+    re_compile(r"\$\(.*\)"),  # $(command)
+    re_compile(r"`.*`"),  # `command`
 ]
 
 # Tools exempt from content scanning (their args are expected to contain code/text)
@@ -138,10 +134,6 @@ _CONTENT_SCAN_EXEMPT: set = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Sanitization functions
-# ---------------------------------------------------------------------------
-
 def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any] | None:
     """Validate and sanitize tool arguments.
 
@@ -150,19 +142,33 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
     # 0. Total payload size estimate
     try:
         from whitemagic.utils.fast_json import dumps as _fj_dumps
+
         payload_size = len(_fj_dumps(kwargs, default=str))
         if payload_size > MAX_TOTAL_SIZE:
-            logger.warning("Sanitizer blocked %s: payload too large (%s bytes)", tool_name, payload_size)
-            return {"status": "error", "error": f"Payload too large: {payload_size} bytes (max {MAX_TOTAL_SIZE})", "error_code": "input_invalid"}
+            logger.warning(
+                "Sanitizer blocked %s: payload too large (%s bytes)",
+                tool_name,
+                payload_size,
+            )
+            return {
+                "status": "error",
+                "error": f"Payload too large: {payload_size} bytes (max {MAX_TOTAL_SIZE})",
+                "error_code": "input_invalid",
+            }
     except (ImportError, ModuleNotFoundError) as e:
         import logging
+
         logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     # 1. Structural checks
     err = _check_structure(kwargs)
     if err:
         logger.warning("Sanitizer blocked %s: %s", tool_name, err, exc_info=True)
-        return {"status": "error", "error": f"Input validation: {err}", "error_code": "input_invalid"}
+        return {
+            "status": "error",
+            "error": f"Input validation: {err}",
+            "error_code": "input_invalid",
+        }
 
     # 2. Strip internal keys BEFORE content scanning so that internally-injected
     #    fields (e.g. _working_memory_context from call_tool) don't trigger
@@ -177,22 +183,37 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
                 haskell_check_boundaries,
             )
             from whitemagic.utils.fast_json import dumps_str as _fj_dumps_str
+
             args_str = _fj_dumps_str(kwargs, default=str)[:10000]
             violations = haskell_check_boundaries(tool_name, "", args_str)
             if violations:
                 critical = [v for v in violations if v.get("severity", 0) >= 3]
                 if critical:
                     msg = critical[0].get("message", "Boundary violation")
-                    logger.warning("Haskell boundary check blocked %s: %s", tool_name, msg, exc_info=True)
-                    return {"status": "error", "error": f"Input rejected: {msg}", "error_code": "input_rejected"}
+                    logger.warning(
+                        "Haskell boundary check blocked %s: %s",
+                        tool_name,
+                        msg,
+                        exc_info=True,
+                    )
+                    return {
+                        "status": "error",
+                        "error": f"Input rejected: {msg}",
+                        "error_code": "input_rejected",
+                    }
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         err = _scan_content(kwargs)
         if err:
             logger.warning("Sanitizer blocked %s: %s", tool_name, err, exc_info=True)
-            return {"status": "error", "error": f"Input rejected: {err}", "error_code": "input_rejected"}
+            return {
+                "status": "error",
+                "error": f"Input rejected: {err}",
+                "error_code": "input_rejected",
+            }
 
     return None  # Clean
 
@@ -220,7 +241,9 @@ def _check_structure(obj: Any, depth: int = 0, path: str = "root") -> str | None
 
     elif isinstance(obj, str):
         if len(obj) > MAX_STRING_LENGTH:
-            return f"String too long at {path}: {len(obj)} chars (max {MAX_STRING_LENGTH})"
+            return (
+                f"String too long at {path}: {len(obj)} chars (max {MAX_STRING_LENGTH})"
+            )
         # Null byte injection check
         if "\x00" in obj:
             return f"Null byte detected at {path}"
@@ -272,7 +295,14 @@ def _scan_content(obj: Any, path: str = "root") -> str | None:
 
 def _strip_internal_keys(kwargs: dict[str, Any]) -> None:
     """Remove internal-only keys that external callers shouldn't be able to set."""
-    internal_prefixes = ("_agent_id", "_internal_", "_bypass_", "_sudo_", "_working_memory_context", "_zig_prevalidated")
+    internal_prefixes = (
+        "_agent_id",
+        "_internal_",
+        "_bypass_",
+        "_sudo_",
+        "_working_memory_context",
+        "_zig_prevalidated",
+    )
     to_remove = [k for k in kwargs if k.startswith(internal_prefixes)]
     for k in to_remove:
         del kwargs[k]

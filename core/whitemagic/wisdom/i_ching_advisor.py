@@ -11,7 +11,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from whitemagic.core.intelligence.wisdom.i_ching import IChingAdvisor as _CanonicalIChing
+from whitemagic.core.intelligence.wisdom.i_ching import (
+    IChingAdvisor as _CanonicalIChing,
+)
 
 logger = logging.getLogger(__name__)
 

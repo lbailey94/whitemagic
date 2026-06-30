@@ -19,4 +19,11 @@ except ImportError:
     ThreatLevel = None  # type: ignore[assignment,misc]
     ThreatType = None  # type: ignore[assignment,misc]
 
-__all__ = ["AntibodyLibrary", "ImmuneMemory", "ImmuneResponse", "ThreatDetector", "ThreatLevel", "ThreatType"]
+__all__ = [
+    "AntibodyLibrary",
+    "ImmuneMemory",
+    "ImmuneResponse",
+    "ThreatDetector",
+    "ThreatLevel",
+    "ThreatType",
+]

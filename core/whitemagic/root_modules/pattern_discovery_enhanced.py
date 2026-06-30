@@ -26,12 +26,15 @@ class EnhancedPatternDiscovery:
     def _check_rust(self) -> None:
         try:
             import importlib
+
             importlib.import_module("whitemagic_rust")
             self._rust_available = True
         except ImportError:
             pass
 
-    def discover_patterns(self, root: Path | None = None, max_files: int = 100) -> list[dict[str, Any]]:
+    def discover_patterns(
+        self, root: Path | None = None, max_files: int = 100
+    ) -> list[dict[str, Any]]:
         """Discover patterns in codebase."""
         if root is None:
             root = Path(".")
@@ -54,12 +57,14 @@ class EnhancedPatternDiscovery:
                 classes = re.findall(r"class (\w+)", content)
 
                 if funcs or classes:
-                    discovered.append({
-                        "file": str(f.relative_to(root)),
-                        "functions": funcs[:10],
-                        "classes": classes[:5],
-                        "size": len(content),
-                    })
+                    discovered.append(
+                        {
+                            "file": str(f.relative_to(root)),
+                            "functions": funcs[:10],
+                            "classes": classes[:5],
+                            "size": len(content),
+                        }
+                    )
                 files_scanned += 1
             except Exception:
                 continue

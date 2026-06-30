@@ -1,4 +1,5 @@
 """Tests for Objective M — Elixir Actor-Based Concurrent Outcome Processing."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.actor_outcome import (

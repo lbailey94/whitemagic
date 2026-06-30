@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 class GovernanceAction(Enum):
     """Actions the governor can take."""
 
-    ALLOW = "allow"        # Proceed normally
-    WARN = "warn"          # Proceed but log warning/emit event
-    BLOCK = "block"        # Stop execution
-    MODIFY = "modify"      # Modify parameters (advanced, future)
+    ALLOW = "allow"  # Proceed normally
+    WARN = "warn"  # Proceed but log warning/emit event
+    BLOCK = "block"  # Stop execution
+    MODIFY = "modify"  # Modify parameters (advanced, future)
 
 
 @dataclass
@@ -52,7 +52,9 @@ class DharmaGovernor:
         self.dharma = get_dharma_system()
         self.strictness = strictness
 
-    def govern(self, task_description: str, context: dict[str, Any] | None = None) -> GovernanceDecision:
+    def govern(
+        self, task_description: str, context: dict[str, Any] | None = None
+    ) -> GovernanceDecision:
         """Evaluate a task and return a binding decision.
 
         Coherence-aware: when system coherence is low, strictness increases
@@ -110,11 +112,14 @@ class DharmaGovernor:
         """
         try:
             from whitemagic.core.consciousness.coherence import get_coherence_metric
+
             metric = get_coherence_metric()
             # Measure with actual memory count for accurate assessment
             try:
                 import sqlite3
+
                 from whitemagic.config.paths import WM_ROOT
+
                 db_path = WM_ROOT / "memory" / "whitemagic.db"
                 if db_path.exists():
                     conn = sqlite3.connect(str(db_path))
@@ -137,8 +142,10 @@ class DharmaGovernor:
         except Exception:
             return self.strictness
 
+
 # Global singleton
 _governor: DharmaGovernor | None = None
+
 
 def get_governor(strictness: float = 0.7) -> DharmaGovernor:
     """

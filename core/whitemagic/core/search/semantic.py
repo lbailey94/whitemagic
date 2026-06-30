@@ -158,7 +158,9 @@ class SemanticSearcher:
 
             return {
                 "id": memory_path.name,
-                "title": metadata.get("title", memory_path.stem.replace("_", " ").title()),
+                "title": metadata.get(
+                    "title", memory_path.stem.replace("_", " ").title()
+                ),
                 "content": content_text,
                 "type": metadata.get("type", "short_term"),
                 "tags": metadata.get("tags", []),
@@ -263,7 +265,9 @@ class SemanticSearcher:
             if self.cache and hasattr(self.cache, "get"):
                 # Get memory file path for cache lookup
                 memory_path = (
-                    self.manager.base_dir / memory.get("type", "short_term") / memory["id"]
+                    self.manager.base_dir
+                    / memory.get("type", "short_term")
+                    / memory["id"]
                 )
                 if not memory_path.exists():
                     # Try alternate paths
@@ -278,7 +282,10 @@ class SemanticSearcher:
                             memory_path = alt_path
                             break
 
-                if isinstance(self.cache, FileBasedEmbeddingCache) and memory_path.exists():
+                if (
+                    isinstance(self.cache, FileBasedEmbeddingCache)
+                    and memory_path.exists()
+                ):
                     cached = await self.cache.get(memory_path, model_name)
                     if cached:
                         memory_embeddings.append(cached)
@@ -301,7 +308,9 @@ class SemanticSearcher:
                 if self.cache and isinstance(self.cache, FileBasedEmbeddingCache):
                     memory = memories[idx]
                     memory_path = (
-                        self.manager.base_dir / memory.get("type", "short_term") / memory["id"]
+                        self.manager.base_dir
+                        / memory.get("type", "short_term")
+                        / memory["id"]
                     )
                     if not memory_path.exists():
                         alt_paths = [
@@ -353,12 +362,13 @@ class SemanticSearcher:
         Uses the existing MemoryManager search functionality.
         """
         # Use existing search
-        raw_results = self.manager.search_memories(query=query, memory_type=memory_type, tags=tags)
+        raw_results = self.manager.search_memories(
+            query=query, memory_type=memory_type, tags=tags
+        )
 
         # Convert to SearchResult objects
         results = []
-        for i, memory in enumerate(raw_results[:
-            k]):
+        for i, memory in enumerate(raw_results[:k]):
             # Simple relevance score based on rank
             score = 1.0 - (i * 0.05)  # Decreases by 0.05 per rank
 
@@ -430,7 +440,11 @@ class SemanticSearcher:
         )
 
         semantic_results = await self.semantic_search(
-            query=query, k=k * 2, threshold=threshold, memory_type=memory_type, tags=tags,
+            query=query,
+            k=k * 2,
+            threshold=threshold,
+            memory_type=memory_type,
+            tags=tags,
         )
 
         # Apply Reciprocal Rank Fusion (RRF)
@@ -463,8 +477,9 @@ class SemanticSearcher:
         # Sort by combined score
         combined_results = [
             result
-            for score, result in sorted(rrf_scores.values(), key=lambda x:
-                x[0], reverse=True)
+            for score, result in sorted(
+                rrf_scores.values(), key=lambda x: x[0], reverse=True
+            )
         ]
 
         return combined_results[:k]
@@ -497,10 +512,16 @@ class SemanticSearcher:
 
         """
         if mode == SearchMode.KEYWORD:
-            return await self.keyword_search(query=query, k=k, memory_type=memory_type, tags=tags)
+            return await self.keyword_search(
+                query=query, k=k, memory_type=memory_type, tags=tags
+            )
         if mode == SearchMode.SEMANTIC:
             return await self.semantic_search(
-                query=query, k=k, threshold=threshold, memory_type=memory_type, tags=tags,
+                query=query,
+                k=k,
+                threshold=threshold,
+                memory_type=memory_type,
+                tags=tags,
             )
         if mode == SearchMode.HYBRID:
             return await self.hybrid_search(

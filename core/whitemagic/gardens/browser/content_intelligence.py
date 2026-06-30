@@ -23,19 +23,14 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- Optional imports ---
-
 try:
     from bs4 import BeautifulSoup, Tag
+
     HAS_BS4 = True
 except ImportError:
     HAS_BS4 = False
     Tag = None  # type: ignore[assignment, misc]
 
-
-# ---------------------------------------------------------------------------
-# Data classes
-# ---------------------------------------------------------------------------
 
 @dataclass
 class ContentChunk:
@@ -71,10 +66,6 @@ class EnhancedContent:
     overlap: int
     summarizer_used: str  # "ollama" | "extractive" | "none"
 
-
-# ---------------------------------------------------------------------------
-# Outline Builder — extract heading structure from HTML
-# ---------------------------------------------------------------------------
 
 class OutlineBuilder:
     """Extracts heading structure from HTML before text conversion.
@@ -118,8 +109,12 @@ class OutlineBuilder:
     def _build_with_regex(self, html: str) -> list[OutlineNode]:
         """Fallback: build outline using regex on HTML tags."""
         # Remove script/style content first
-        clean = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-        clean = re.sub(r"<style[^>]*>.*?</style>", "", clean, flags=re.DOTALL | re.IGNORECASE)
+        clean = re.sub(
+            r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE
+        )
+        clean = re.sub(
+            r"<style[^>]*>.*?</style>", "", clean, flags=re.DOTALL | re.IGNORECASE
+        )
 
         heading_pattern = r"<h([1-6])[^>]*>(.*?)</h\1>"
         matches = re.findall(heading_pattern, clean, re.IGNORECASE | re.DOTALL)
@@ -166,24 +161,24 @@ class OutlineBuilder:
                 lines.append(self.to_markdown(node.children, indent + 1))
         return "\n".join(lines)
 
-    def to_flat_list(self, nodes: list[OutlineNode], depth: int = 0) -> list[dict[str, Any]]:
+    def to_flat_list(
+        self, nodes: list[OutlineNode], depth: int = 0
+    ) -> list[dict[str, Any]]:
         """Convert outline to a flat list of dicts (for JSON output)."""
         result: list[dict[str, Any]] = []
         for node in nodes:
-            result.append({
-                "level": node.level,
-                "text": node.text,
-                "depth": depth,
-                "children_count": len(node.children),
-            })
+            result.append(
+                {
+                    "level": node.level,
+                    "text": node.text,
+                    "depth": depth,
+                    "children_count": len(node.children),
+                }
+            )
             if node.children:
                 result.extend(self.to_flat_list(node.children, depth + 1))
         return result
 
-
-# ---------------------------------------------------------------------------
-# Content Chunker — split text into semantic chunks with overlap
-# ---------------------------------------------------------------------------
 
 class ContentChunker:
     """Splits text into ~N-char semantic chunks with overlap.
@@ -246,10 +241,16 @@ class ContentChunker:
 
             # If adding this paragraph would exceed chunk size, flush current chunk
             if current_text and len(current_text) + len(para) + 2 > self.chunk_size:
-                chunks.append(self._make_chunk(len(chunks), current_text, current_heading))
+                chunks.append(
+                    self._make_chunk(len(chunks), current_text, current_heading)
+                )
 
                 # Start new chunk with overlap from end of previous
-                overlap_text = current_text[-self.overlap :] if len(current_text) > self.overlap else current_text
+                overlap_text = (
+                    current_text[-self.overlap :]
+                    if len(current_text) > self.overlap
+                    else current_text
+                )
                 current_text = overlap_text + "\n\n" + para
             else:
                 if current_text:
@@ -273,10 +274,6 @@ class ContentChunker:
             token_estimate=len(text) // 4,  # Rough: 4 chars per token
         )
 
-
-# ---------------------------------------------------------------------------
-# Content Summarizer — LLM-powered with extractive fallback
-# ---------------------------------------------------------------------------
 
 class ContentSummarizer:
     """Summarizes content using Ollama (local LLM) with extractive fallback.
@@ -315,7 +312,9 @@ class ContentSummarizer:
             if summary:
                 return summary[: self.max_summary_chars], "ollama"
         except Exception as exc:
-            logger.debug("Ollama summarization failed: %s, falling back to extractive", exc)
+            logger.debug(
+                "Ollama summarization failed: %s, falling back to extractive", exc
+            )
 
         # Fallback: extractive summarization
         return self._summarize_extractive(text, focus), "extractive"
@@ -348,7 +347,11 @@ class ContentSummarizer:
                     "stream": False,
                     "options": {"temperature": 0.3, "num_predict": 200},
                 }
-                async with session.post(f"{ollama_url}/api/generate", json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                async with session.post(
+                    f"{ollama_url}/api/generate",
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp:
                     if resp.status != 200:
                         return None
                     data = await resp.json()
@@ -405,7 +408,9 @@ class ContentSummarizer:
             focus_score = 0.0
             if focus_lower:
                 focus_words = focus_lower.split()
-                focus_score = sum(1 for fw in focus_words if fw in sent.lower()) / max(len(focus_words), 1)
+                focus_score = sum(1 for fw in focus_words if fw in sent.lower()) / max(
+                    len(focus_words), 1
+                )
 
             # Combined score
             total = (tf_score * 0.4) + (pos_score * 0.3) + (focus_score * 0.3)
@@ -419,10 +424,6 @@ class ContentSummarizer:
         summary = " ".join(s[2] for s in selected)
         return summary[: self.max_summary_chars]
 
-
-# ---------------------------------------------------------------------------
-# Orchestrator — combine outline + chunk + summarize
-# ---------------------------------------------------------------------------
 
 def process_content(
     html: str,
@@ -485,7 +486,9 @@ def process_content(
     )
 
 
-def enhanced_to_dict(enhanced: EnhancedContent, include_chunks: bool = True) -> dict[str, Any]:
+def enhanced_to_dict(
+    enhanced: EnhancedContent, include_chunks: bool = True
+) -> dict[str, Any]:
     """Convert EnhancedContent to a JSON-serializable dict.
 
     Args:
@@ -505,7 +508,9 @@ def enhanced_to_dict(enhanced: EnhancedContent, include_chunks: bool = True) -> 
         "chunks": [
             {
                 "index": c.index,
-                "text": c.text if include_chunks else f"[chunk {c.index}, {c.char_count} chars]",
+                "text": c.text
+                if include_chunks
+                else f"[chunk {c.index}, {c.char_count} chars]",
                 "char_count": c.char_count,
                 "heading": c.heading,
                 "token_estimate": c.token_estimate,

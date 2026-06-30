@@ -105,13 +105,21 @@ class TestPipelineProfiling(unittest.TestCase):
 
         print(f"\n  Pipeline Profiling ({iterations} iterations):")
         print(f"    Without new middlewares (10 stages):")
-        print(f"      avg: {avg_old:.3f}ms  median: {median_old:.3f}ms  p99: {p99_old:.3f}ms")
+        print(
+            f"      avg: {avg_old:.3f}ms  median: {median_old:.3f}ms  p99: {p99_old:.3f}ms"
+        )
         print(f"    With new middlewares (12 stages):")
-        print(f"      avg: {avg_new:.3f}ms  median: {median_new:.3f}ms  p99: {p99_new:.3f}ms")
+        print(
+            f"      avg: {avg_new:.3f}ms  median: {median_new:.3f}ms  p99: {p99_new:.3f}ms"
+        )
         print(f"    Overhead: {overhead_ms:.3f}ms ({overhead_pct:.1f}%)")
 
         # Overhead should be minimal (< 1ms for non-inference tools)
-        self.assertLess(overhead_ms, 2.0, f"Middleware overhead should be <2ms, got {overhead_ms:.3f}ms")
+        self.assertLess(
+            overhead_ms,
+            2.0,
+            f"Middleware overhead should be <2ms, got {overhead_ms:.3f}ms",
+        )
 
     def test_token_tracker_overhead_isolated(self) -> None:
         """Measure token_tracker middleware overhead in isolation."""
@@ -130,7 +138,9 @@ class TestPipelineProfiling(unittest.TestCase):
 
         # Should be sub-millisecond; allow 3ms under xdist parallel load
         threshold = 5.0 if _UNDER_XDIST else 2.0
-        self.assertLess(avg, threshold, f"Token tracker should be <{threshold}ms, got {avg:.3f}ms")
+        self.assertLess(
+            avg, threshold, f"Token tracker should be <{threshold}ms, got {avg:.3f}ms"
+        )
 
     @pytest.mark.skip(
         reason="Timing-dependent: fails under full-suite CPU load. Passes in isolation. Needs performance isolation or relaxed threshold."
@@ -151,7 +161,11 @@ class TestPipelineProfiling(unittest.TestCase):
 
         # For non-inference tools, should be very fast (just a name check)
         threshold = 5.0 if _UNDER_XDIST else 2.0
-        self.assertLess(avg, threshold, f"Inference router pass-through should be <{threshold}ms, got {avg:.3f}ms")
+        self.assertLess(
+            avg,
+            threshold,
+            f"Inference router pass-through should be <{threshold}ms, got {avg:.3f}ms",
+        )
 
 
 if __name__ == "__main__":

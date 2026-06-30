@@ -55,7 +55,9 @@ def _handle_pattern_consultation(event: Any) -> None:
 
     # Emit council response if high confidence
     if responses and responses[0].confidence > 0.7:
-        insight_event = getattr(EventType, "INSIGHT_GENERATED", EventType.WISDOM_RECEIVED)
+        insight_event = getattr(
+            EventType, "INSIGHT_GENERATED", EventType.WISDOM_RECEIVED
+        )
         response_event = ResonanceEvent(
             source="zodiac_council",
             event_type=insight_event,  # type: ignore[arg-type]
@@ -88,7 +90,9 @@ def _handle_anomaly_consultation(event: Any) -> None:
     # Emit council decision
     decision_event = ResonanceEvent(
         source="zodiac_council",
-        event_type=EventType.SOLUTION_FOUND if decision["has_consensus"] else EventType.WARNING_ISSUED,
+        event_type=EventType.SOLUTION_FOUND
+        if decision["has_consensus"]
+        else EventType.WARNING_ISSUED,
         data={
             "query": query,
             "top_cores": decision["top_cores"],

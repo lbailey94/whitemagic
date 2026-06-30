@@ -7,11 +7,13 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class NovelBehavior:
     """NovelBehavior: novel behavior.
 
     Value object: equality and repr are field-based."""
+
     name: str
     description: str
     trigger: str  # What caused this to emerge
@@ -20,6 +22,7 @@ class NovelBehavior:
     confidence: float
     emerged_at: datetime
     context: dict[str, Any]
+
 
 class EmergenceDetector:
     """Detect when novel solutions emerge spontaneously."""
@@ -89,8 +92,10 @@ class EmergenceDetector:
             for b in behaviors
         ]
 
+
 # Global detector
 _detector: EmergenceDetector | None = None
+
 
 def get_detector() -> EmergenceDetector:
     """

@@ -79,7 +79,7 @@ class MemoryConsolidator:
             Consolidation report with stats
 
         """
-        logger.info("Starting consolidation for session: %s", session_id or 'recent')
+        logger.info("Starting consolidation for session: %s", session_id or "recent")
 
         # Get episodic memories to consolidate
         episodic = self._get_episodic_memories(session_id, minutes)
@@ -104,7 +104,9 @@ class MemoryConsolidator:
         logger.info(
             "Consolidation complete: %s semantic memories created, "
             "%s episodic archived",
-         len(created), archived_count)
+            len(created),
+            archived_count,
+        )
 
         return {
             "status": "success",
@@ -136,9 +138,13 @@ class MemoryConsolidator:
 
         # Filter for episodic type (or untyped recent ones)
         episodic = [
-            m for m in memories
+            m
+            for m in memories
             if "episodic" in getattr(m, "tags", [])
-            or ("session" in getattr(m, "tags", []) and getattr(m, "recall_count", 0) < 3)
+            or (
+                "session" in getattr(m, "tags", [])
+                and getattr(m, "recall_count", 0) < 3
+            )
         ]
 
         return episodic  # type: ignore[return-value]
@@ -162,23 +168,30 @@ class MemoryConsolidator:
 
                         # Only extract meaningful knowledge (not too short)
                         if len(knowledge_content) > 10:
-                            extracted.append(ExtractedKnowledge(
-                                content=knowledge_content,
-                                type=knowledge_type,
-                                tags=[knowledge_type, "consolidated"] + list(mem.tags),
-                                confidence=self._calculate_confidence(mem, knowledge_type),
-                                source_memory_ids=[mem.id],
-                            ))
+                            extracted.append(
+                                ExtractedKnowledge(
+                                    content=knowledge_content,
+                                    type=knowledge_type,
+                                    tags=[knowledge_type, "consolidated"]
+                                    + list(mem.tags),
+                                    confidence=self._calculate_confidence(
+                                        mem, knowledge_type
+                                    ),
+                                    source_memory_ids=[mem.id],
+                                )
+                            )
 
             # Also extract high-importance memories as-is
             if mem.emotional_weight > 0.7 or mem.recall_count > 2:
-                extracted.append(ExtractedKnowledge(
-                    content=mem.content,
-                    type="important_event",
-                    tags=["important", "consolidated"] + list(mem.tags),
-                    confidence=min(mem.emotional_weight, 0.9),
-                    source_memory_ids=[mem.id],
-                ))
+                extracted.append(
+                    ExtractedKnowledge(
+                        content=mem.content,
+                        type="important_event",
+                        tags=["important", "consolidated"] + list(mem.tags),
+                        confidence=min(mem.emotional_weight, 0.9),
+                        source_memory_ids=[mem.id],
+                    )
+                )
 
         # Deduplicate similar knowledge
         extracted = self._deduplicate(extracted)
@@ -211,7 +224,9 @@ class MemoryConsolidator:
 
         return float(min(confidence, 1.0))
 
-    def _deduplicate(self, extracted: list[ExtractedKnowledge]) -> list[ExtractedKnowledge]:
+    def _deduplicate(
+        self, extracted: list[ExtractedKnowledge]
+    ) -> list[ExtractedKnowledge]:
         """Remove duplicate or very similar knowledge."""
         unique = []
         seen_content: set[str] = set()
@@ -250,7 +265,9 @@ class MemoryConsolidator:
                 "important_event": "Important:",
             }
 
-            title = f"{title_prefixes.get(knowledge.type, '')} {knowledge.content[:50]}..."
+            title = (
+                f"{title_prefixes.get(knowledge.type, '')} {knowledge.content[:50]}..."
+            )
 
             mem = self.memory.create_memory(
                 content=knowledge.content,
@@ -293,7 +310,9 @@ class MemoryConsolidator:
                 archived += 1
 
             except Exception as e:
-                logger.warning("Failed to archive memory %s: %s", mem.id, e, exc_info=True)
+                logger.warning(
+                    "Failed to archive memory %s: %s", mem.id, e, exc_info=True
+                )
 
         return archived
 

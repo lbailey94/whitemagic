@@ -31,7 +31,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- SYSTEM HEALTH ---
 
 def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
     """
@@ -44,10 +43,10 @@ def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.health_monitor import HealthMonitor
+
     monitor = HealthMonitor()
     return monitor.check_system_health(deep_scan=deep_scan)
 
-# --- SESSION MANAGEMENT ---
 
 def session_init(name: str = "default_session", goals: list = None) -> dict[str, Any]:  # type: ignore[assignment]
     """
@@ -61,9 +60,15 @@ def session_init(name: str = "default_session", goals: list = None) -> dict[str,
         dict[str, Any]
     """
     from whitemagic.session.manager import SessionManager
+
     manager = SessionManager()
     session = manager.create_session(name=name, goals=goals)
-    return {"session_id": session.id, "name": session.name, "status": session.status.value}
+    return {
+        "session_id": session.id,
+        "name": session.name,
+        "status": session.status.value,
+    }
+
 
 def session_get_active() -> dict[str, Any]:
     """
@@ -73,11 +78,14 @@ def session_get_active() -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.session.manager import SessionManager
+
     manager = SessionManager()
     session = manager.get_active_session()
-    return {"session_id": session.id if session else None, "status": "active" if session else "none"}
+    return {
+        "session_id": session.id if session else None,
+        "status": "active" if session else "none",
+    }
 
-# --- METRICS & OPTIMIZATION ---
 
 def get_metrics_summary() -> dict[str, Any]:
     """
@@ -87,6 +95,7 @@ def get_metrics_summary() -> dict[str, Any]:
         dict[str, Any]
     """
     return {"status": "ok", "metrics": {}}
+
 
 def run_benchmark(category: str = "all") -> dict[str, Any]:
     """
@@ -100,17 +109,16 @@ def run_benchmark(category: str = "all") -> dict[str, Any]:
     """
     return {"category": category, "benchmark": "Simulation successful"}
 
-# --- GARDENS ---
 
 def list_gardens() -> list[str]:
     """List active gardens — graceful fallback queries the garden registry."""
     try:
         from whitemagic.gardens.base_garden import GardenRegistry
+
         return list(GardenRegistry.list_gardens().keys())
     except (ImportError, AttributeError):
         return []
 
-# --- UTILS ---
 
 def get_timestamp() -> str:
     """

@@ -13,27 +13,27 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Rust availability check
-# ---------------------------------------------------------------------------
-
 _RUST_ARROW = False
 _rs: Any = None
 _arrow_bridge: Any = None  # submodule reference (may be nested or flat)
 
 try:
     import whitemagic_rust as _rs_mod
+
     _rs = _rs_mod
 except ImportError:
     try:
         import whitemagic_rs as _rs_mod
+
         _rs = _rs_mod
     except ImportError:
         pass
 
 # Detect the Arrow bridge — supports both flat (legacy) and nested (current) layouts
 if _rs is not None:
-    if hasattr(_rs, "arrow_bridge") and hasattr(_rs.arrow_bridge, "arrow_encode_memories"):
+    if hasattr(_rs, "arrow_bridge") and hasattr(
+        _rs.arrow_bridge, "arrow_encode_memories"
+    ):
         _arrow_bridge = _rs.arrow_bridge
         _RUST_ARROW = True
     elif hasattr(_rs, "arrow_encode_memories"):
@@ -49,10 +49,6 @@ def arrow_available() -> bool:
     """Check if Arrow IPC bridge is available."""
     return _RUST_ARROW
 
-
-# ---------------------------------------------------------------------------
-# Galaxy Pattern Miner (v15.10 - Phase 3 Recursive Evolution)
-# ---------------------------------------------------------------------------
 
 def mine_access_patterns(db_path: str, min_frequency: int) -> Any:
     """Mine access patterns from galaxy archive DB (Rust accelerated).
@@ -114,11 +110,9 @@ def get_galaxy_stats(db_path: str) -> Any:
     raise RuntimeError("Rust galaxy miner not available")
 
 
-# ---------------------------------------------------------------------------
-# Geneseed Codebase Vault Miner (v15.10 - Phase 3C)
-# ---------------------------------------------------------------------------
-
-def mine_geneseed_patterns(repo_path: str, min_confidence: float, max_commits: int) -> Any:
+def mine_geneseed_patterns(
+    repo_path: str, min_confidence: float, max_commits: int
+) -> Any:
     """Mine optimization patterns from git repository history (Rust accelerated).
 
     Args:
@@ -147,10 +141,6 @@ def get_geneseed_stats(repo_path: str) -> Any:
         return _rs.get_geneseed_stats(repo_path)
     raise RuntimeError("Rust geneseed miner not available")
 
-
-# ---------------------------------------------------------------------------
-# Arrow IPC Bridge (zero-copy columnar interchange)
-# ---------------------------------------------------------------------------
 
 def arrow_encode_memories(memories_json: str) -> bytes | None:
     """Encode memory JSON to Arrow IPC bytes (zero-copy columnar format).

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TaskOutcome:
     """Record of a task prediction and its actual result."""
+
     task_id: str
     task_name: str
     predicted_confidence: float
@@ -103,7 +104,11 @@ class ConfidenceLearner:
 
     def auto_calibrate(self, min_samples: int = 10) -> dict[str, float]:
         if len(self.outcomes) < min_samples:
-            logger.debug("Not enough outcomes for calibration (%d < %d)", len(self.outcomes), min_samples)
+            logger.debug(
+                "Not enough outcomes for calibration (%d < %d)",
+                len(self.outcomes),
+                min_samples,
+            )
             return self.weights
 
         factor_analysis: dict[str, dict[str, float]] = {}
@@ -153,11 +158,14 @@ class ConfidenceLearner:
                 "success_rate": 0.0,
             }
         correct = sum(
-            1 for o in cat_outcomes
+            1
+            for o in cat_outcomes
             if (o.predicted_confidence >= 0.7) == o.actual_success
         )
         successes = sum(1 for o in cat_outcomes if o.actual_success)
-        mean_conf = sum(o.predicted_confidence for o in cat_outcomes) / len(cat_outcomes)
+        mean_conf = sum(o.predicted_confidence for o in cat_outcomes) / len(
+            cat_outcomes
+        )
         return {
             "total_predictions": len(cat_outcomes),
             "accuracy": correct / len(cat_outcomes),
@@ -186,7 +194,13 @@ def record_outcome(
     notes: str = "",
 ) -> None:
     get_learner().record_outcome(
-        task_id, task_name, predicted_confidence, actual_success, factors, category, notes
+        task_id,
+        task_name,
+        predicted_confidence,
+        actual_success,
+        factors,
+        category,
+        notes,
     )
 
 

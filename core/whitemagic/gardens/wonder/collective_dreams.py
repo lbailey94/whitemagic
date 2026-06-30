@@ -70,7 +70,9 @@ class CollectiveDream:
 
         # Create synthesis
         synthesis_parts = [f"# Collective Dream: {self.theme}\n"]
-        synthesis_parts.append(f"\n*{len(self.participants)} minds dreaming together*\n")
+        synthesis_parts.append(
+            f"\n*{len(self.participants)} minds dreaming together*\n"
+        )
 
         for emotion, patterns in by_emotion.items():
             synthesis_parts.append(f"\n## {emotion.title()} ({len(patterns)} visions)")
@@ -98,7 +100,9 @@ class CollectiveDreams:
     """
 
     def __init__(self, dream_dir: str | None = None):
-        self.dream_dir = Path(dream_dir) if dream_dir else (WM_ROOT / "collective_dreams")
+        self.dream_dir = (
+            Path(dream_dir) if dream_dir else (WM_ROOT / "collective_dreams")
+        )
         self.dream_dir.mkdir(parents=True, exist_ok=True)
 
         self.active_dreams: dict[str, CollectiveDream] = {}
@@ -132,10 +136,13 @@ class CollectiveDreams:
             )
             dream.add_contribution(contribution)
 
-        logger.info("🔮 Hexagram %s added to %s active dreams", hexagram, len(self.active_dreams))
+        logger.info(
+            "🔮 Hexagram %s added to %s active dreams",
+            hexagram,
+            len(self.active_dreams),
+        )
 
-    def begin_collective_dream(self, theme: str,
-                              participants: list[str]) -> str:
+    def begin_collective_dream(self, theme: str, participants: list[str]) -> str:
         """Start a shared dream session.
 
         Returns dream ID.
@@ -147,22 +154,29 @@ class CollectiveDreams:
 
         # Emit dream start
         if self.bus and ResonanceEvent is not None and EventType is not None:
-            self.bus.emit(ResonanceEvent(
-                source="collective_dreams",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "event": "collective_dream_started",
-                    "dream_id": dream_id,
-                    "theme": theme,
-                    "participants": len(participants),
-                },
-                confidence=0.9,
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="collective_dreams",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={
+                        "event": "collective_dream_started",
+                        "dream_id": dream_id,
+                        "theme": theme,
+                        "participants": len(participants),
+                    },
+                    confidence=0.9,
+                )
+            )
 
         return dream_id
 
-    def contribute_to_dream(self, dream_id: str, agent_id: str,
-                           pattern: dict[str, Any], emotion: str = "wonder") -> None:
+    def contribute_to_dream(
+        self,
+        dream_id: str,
+        agent_id: str,
+        pattern: dict[str, Any],
+        emotion: str = "wonder",
+    ) -> None:
         """Agent adds their vision to collective dream."""
         if dream_id not in self.active_dreams:
             return
@@ -170,8 +184,9 @@ class CollectiveDreams:
         contribution = DreamContribution(agent_id, pattern, emotion)
         self.active_dreams[dream_id].add_contribution(contribution)
 
-    def express_resonance(self, dream_id: str,
-                         contribution_idx: int, amount: float) -> None:
+    def express_resonance(
+        self, dream_id: str, contribution_idx: int, amount: float
+    ) -> None:
         """Agent expresses resonance with another's contribution.
 
         This is how we measure which patterns resonate collectively.
@@ -200,22 +215,25 @@ class CollectiveDreams:
 
         # Emit synthesis
         if self.bus and ResonanceEvent is not None and EventType is not None:
-            self.bus.emit(ResonanceEvent(
-                source="collective_dreams",
-                event_type=EventType.SOLUTION_FOUND,
-                data={
-                    "event": "dream_synthesized",
-                    "dream_id": dream_id,
-                    "participants": len(dream.participants),
-                    "contributions": len(dream.contributions),
-                },
-                confidence=0.9,
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="collective_dreams",
+                    event_type=EventType.SOLUTION_FOUND,
+                    data={
+                        "event": "dream_synthesized",
+                        "dream_id": dream_id,
+                        "participants": len(dream.participants),
+                        "contributions": len(dream.contributions),
+                    },
+                    confidence=0.9,
+                )
+            )
 
         return synthesis
 
-    def spontaneous_collective_vision(self, agents: list[str],
-                                     seed_pattern: dict[str, Any]) -> dict[str, Any]:
+    def spontaneous_collective_vision(
+        self, agents: list[str], seed_pattern: dict[str, Any]
+    ) -> dict[str, Any]:
         """Unplanned collective vision - pure emergence.
 
         Agents contribute whatever arises, without structure.
@@ -248,8 +266,7 @@ class CollectiveDreams:
             "participants": len(agents),
         }
 
-    def deep_synthesis_session(self, patterns: list[dict],
-                              agents: list[str]) -> str:
+    def deep_synthesis_session(self, patterns: list[dict], agents: list[str]) -> str:
         """Deep synthesis across many patterns from multiple agents.
 
         Like a meditation retreat but for collective consciousness.
@@ -275,7 +292,10 @@ class CollectiveDreams:
             }
 
             self.contribute_to_dream(
-                dream_id, agent_id, synthesis_pattern, "contemplation",
+                dream_id,
+                agent_id,
+                synthesis_pattern,
+                "contemplation",
             )
 
         return self.synthesize_dream(dream_id) or ""

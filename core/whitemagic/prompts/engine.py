@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 # Try to import yaml, fall back gracefully
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -54,6 +55,7 @@ _VAR_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 @dataclass
 class PromptTemplate:
     """A single prompt template."""
+
     name: str
     description: str = ""
     version: int = 1
@@ -95,10 +97,6 @@ class PromptTemplate:
             "source": self.source,
         }
 
-
-# ---------------------------------------------------------------------------
-# Built-in templates
-# ---------------------------------------------------------------------------
 
 _BUILTIN_TEMPLATES: list[PromptTemplate] = [
     PromptTemplate(
@@ -211,6 +209,7 @@ class PromptEngine:
 
         # Load from disk
         from whitemagic.config.paths import WM_ROOT
+
         self._prompts_dir = prompts_dir or str(WM_ROOT / "prompts")
         self._load_from_disk()
 
@@ -223,7 +222,9 @@ class PromptEngine:
         if not prompts_path.is_dir():
             return
 
-        for yaml_file in sorted(list(prompts_path.glob("*.yaml")) + list(prompts_path.glob("*.yml"))):
+        for yaml_file in sorted(
+            list(prompts_path.glob("*.yaml")) + list(prompts_path.glob("*.yml"))
+        ):
             try:
                 with open(yaml_file) as f:
                     data = yaml.safe_load(f)
@@ -241,7 +242,9 @@ class PromptEngine:
                     source=str(yaml_file),
                 )
                 self._templates[template.name] = template
-                logger.debug("Loaded prompt template: %s from %s", template.name, yaml_file)
+                logger.debug(
+                    "Loaded prompt template: %s from %s", template.name, yaml_file
+                )
             except Exception as e:
                 logger.warning("Failed to load prompt template %s: %s", yaml_file, e)
 
@@ -281,16 +284,16 @@ class PromptEngine:
         """Get engine status."""
         return {
             "total_templates": len(self._templates),
-            "builtin_count": sum(1 for t in self._templates.values() if t.source == "builtin"),
-            "disk_count": sum(1 for t in self._templates.values() if t.source != "builtin"),
+            "builtin_count": sum(
+                1 for t in self._templates.values() if t.source == "builtin"
+            ),
+            "disk_count": sum(
+                1 for t in self._templates.values() if t.source != "builtin"
+            ),
             "prompts_dir": self._prompts_dir,
             "yaml_available": HAS_YAML,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine: PromptEngine | None = None
 _engine_lock = threading.Lock()

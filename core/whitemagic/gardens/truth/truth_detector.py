@@ -7,7 +7,6 @@ Scorpio (seeing through illusion) + Sagittarius (truth-seeking)
 """
 
 
-
 class TruthDetector:
     """
     Distinguish truth from comfortable fiction.
@@ -29,7 +28,9 @@ class TruthDetector:
             "statement": statement,
             "confidence": 0.5 if has_hedging else 0.7,
             "hedging_detected": has_hedging,
-            "recommendation": "Verify assumptions" if has_hedging else "Direct statement"
+            "recommendation": "Verify assumptions"
+            if has_hedging
+            else "Direct statement",
         }
 
     def uncomfortable_truths(self) -> list[str]:
@@ -41,7 +42,7 @@ class TruthDetector:
             "Some things will always be uncertain",
             "Perfect is not achievable",
             "Growth requires discomfort",
-            "We don't control most things"
+            "We don't control most things",
         ]
 
     def speak_truth_with_love(self, truth: str) -> str:

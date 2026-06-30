@@ -4,7 +4,6 @@
 
 try:
     from whitemagic_rust import *  # type: ignore
-    from whitemagic_rust import __version__  # type: ignore
 except ImportError:
     pass
 
@@ -12,7 +11,10 @@ except ImportError:
 try:
     extract_patterns_from_content  # type: ignore[used-before-def]
 except NameError:
-    def extract_patterns_from_content(samples: list[str], threshold: float = 0.1) -> tuple:
+
+    def extract_patterns_from_content(
+        samples: list[str], threshold: float = 0.1
+    ) -> tuple:
         """Stub pattern extraction."""
         return (
             [],  # patterns

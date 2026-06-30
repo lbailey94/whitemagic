@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BenchmarkResult:
     """A single benchmark result."""
+
     name: str
     duration_ms: float
     ops_per_sec: float
@@ -32,6 +33,7 @@ class BenchmarkResult:
 @dataclass
 class BenchmarkComparison:
     """Comparison between two benchmark runs."""
+
     benchmark_name: str
     baseline_ms: float
     current_ms: float
@@ -66,9 +68,11 @@ class BenchmarkHistoryTracker:
     def save_history(self):
         """Save benchmark history to file."""
         try:
-            with open(self.history_file, 'w') as f:
+            with open(self.history_file, "w") as f:
                 json.dump(self.history, f, indent=2)
-            logger.info("💾 Saved benchmark history to %s", self.history_file, exc_info=True)
+            logger.info(
+                "💾 Saved benchmark history to %s", self.history_file, exc_info=True
+            )
         except Exception as e:
             logger.error("Failed to save history: %s", e, exc_info=True)
 
@@ -105,8 +109,7 @@ class BenchmarkHistoryTracker:
         recent_values = []
 
         # Look through recent runs
-        for run in reversed(self.history[-lookback:
-            ]):
+        for run in reversed(self.history[-lookback:]):
             for result in run.get("results", []):
                 if result.get("name") == benchmark_name:
                     recent_values.append(result.get("duration_ms", 0))
@@ -120,9 +123,7 @@ class BenchmarkHistoryTracker:
         return float(recent_values[mid])
 
     def compare_with_baseline(
-        self,
-        current_results: list[BenchmarkResult],
-        regression_threshold: float = 5.0
+        self, current_results: list[BenchmarkResult], regression_threshold: float = 5.0
     ) -> list[BenchmarkComparison]:
         """
         Compare current results with historical baseline.
@@ -145,14 +146,16 @@ class BenchmarkHistoryTracker:
             improvement_pct = ((baseline - result.duration_ms) / baseline) * 100
             is_regression = improvement_pct < -regression_threshold
 
-            comparisons.append(BenchmarkComparison(
-                benchmark_name=result.name,
-                baseline_ms=baseline,
-                current_ms=result.duration_ms,
-                improvement_pct=improvement_pct,
-                is_regression=is_regression,
-                threshold_pct=regression_threshold
-            ))
+            comparisons.append(
+                BenchmarkComparison(
+                    benchmark_name=result.name,
+                    baseline_ms=baseline,
+                    current_ms=result.duration_ms,
+                    improvement_pct=improvement_pct,
+                    is_regression=is_regression,
+                    threshold_pct=regression_threshold,
+                )
+            )
 
         return comparisons
 
@@ -170,8 +173,7 @@ class BenchmarkHistoryTracker:
         values = []
         timestamps = []
 
-        for run in self.history[-window:
-            ]:
+        for run in self.history[-window:]:
             for result in run.get("results", []):
                 if result.get("name") == benchmark_name:
                     values.append(result.get("duration_ms", 0))
@@ -217,32 +219,37 @@ class BenchmarkHistoryTracker:
         comparisons = self.compare_with_baseline(current_results)
 
         report_lines = []
-        report_lines.append("="*80)
+        report_lines.append("=" * 80)
         report_lines.append("BENCHMARK COMPARISON REPORT")
-        report_lines.append("="*80)
-        report_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report_lines.append("=" * 80)
+        report_lines.append(
+            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         report_lines.append(f"Historical runs: {len(self.history)}")
         report_lines.append("")
 
         # Summary
         improvements = [c for c in comparisons if c.improvement_pct > 0]
         regressions = [c for c in comparisons if c.is_regression]
-        stable = [c for c in comparisons if not c.is_regression and c.improvement_pct <= 0]
+        stable = [
+            c for c in comparisons if not c.is_regression and c.improvement_pct <= 0
+        ]
 
         report_lines.append("SUMMARY")
-        report_lines.append("-"*80)
+        report_lines.append("-" * 80)
         report_lines.append(f"Total benchmarks: {len(comparisons)}")
         report_lines.append(f"Improvements: {len(improvements)} ✓")
-        report_lines.append(f"Regressions: {len(regressions)} {'⚠️' if regressions else '✓'}")
+        report_lines.append(
+            f"Regressions: {len(regressions)} {'⚠️' if regressions else '✓'}"
+        )
         report_lines.append(f"Stable: {len(stable)}")
         report_lines.append("")
 
         # Regressions (if any)
         if regressions:
             report_lines.append("⚠️ REGRESSIONS DETECTED")
-            report_lines.append("-"*80)
-            for comp in sorted(regressions, key=lambda x:
-                x.improvement_pct):
+            report_lines.append("-" * 80)
+            for comp in sorted(regressions, key=lambda x: x.improvement_pct):
                 report_lines.append(f"  {comp.benchmark_name}")
                 report_lines.append(f"    Baseline: {comp.baseline_ms:.2f}ms")
                 report_lines.append(f"    Current:  {comp.current_ms:.2f}ms")
@@ -252,9 +259,10 @@ class BenchmarkHistoryTracker:
         # Top improvements
         if improvements:
             report_lines.append("✓ TOP IMPROVEMENTS")
-            report_lines.append("-"*80)
-            for comp in sorted(improvements, key=lambda x:
-                x.improvement_pct, reverse=True)[:5]:
+            report_lines.append("-" * 80)
+            for comp in sorted(
+                improvements, key=lambda x: x.improvement_pct, reverse=True
+            )[:5]:
                 report_lines.append(f"  {comp.benchmark_name}")
                 report_lines.append(f"    Baseline: {comp.baseline_ms:.2f}ms")
                 report_lines.append(f"    Current:  {comp.current_ms:.2f}ms")
@@ -263,13 +271,15 @@ class BenchmarkHistoryTracker:
 
         # Overall stats
         if comparisons:
-            avg_improvement = sum(c.improvement_pct for c in comparisons) / len(comparisons)
+            avg_improvement = sum(c.improvement_pct for c in comparisons) / len(
+                comparisons
+            )
             report_lines.append("OVERALL PERFORMANCE")
-            report_lines.append("-"*80)
+            report_lines.append("-" * 80)
             report_lines.append(f"Average change: {avg_improvement:+.1f}%")
             report_lines.append("")
 
-        report_lines.append("="*80)
+        report_lines.append("=" * 80)
 
         return "\n".join(report_lines)
 

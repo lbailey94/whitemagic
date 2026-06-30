@@ -64,6 +64,7 @@ class ForesightEngine:
         """Project constellation centroids forward based on drift vectors."""
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
             drift_data = detector.get_drift_vectors(window_days=self.horizon_days)
         except Exception as exc:
@@ -83,13 +84,21 @@ class ForesightEngine:
                 "w": item["current_centroid"]["w"] + dv.get("dw", 0) * factor,
                 "v": item["current_centroid"]["v"] + dv.get("dv", 0) * factor,
             }
-            projections.append({
-                "name": item["name"],
-                "current_centroid": item["current_centroid"],
-                "projected_centroid": {k: round(v, 4) for k, v in projected.items()},
-                "drift_magnitude": item.get("drift_magnitude", 0.0),
-                "confidence": "low" if item.get("samples", 0) < 3 else "medium" if item.get("samples", 0) < 7 else "high",
-            })
+            projections.append(
+                {
+                    "name": item["name"],
+                    "current_centroid": item["current_centroid"],
+                    "projected_centroid": {
+                        k: round(v, 4) for k, v in projected.items()
+                    },
+                    "drift_magnitude": item.get("drift_magnitude", 0.0),
+                    "confidence": "low"
+                    if item.get("samples", 0) < 3
+                    else "medium"
+                    if item.get("samples", 0) < 7
+                    else "high",
+                }
+            )
         return projections
 
     def _predict_decay(self) -> list[dict[str, Any]]:
@@ -98,6 +107,7 @@ class ForesightEngine:
             import sqlite3
 
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             backend = um.backend
         except Exception as exc:
@@ -129,15 +139,17 @@ class ForesightEngine:
             importance = r["importance"] or 0.5
             decay_score = (distance * 0.5) + ((1.0 - importance) * 0.3)
             if decay_score > 0.6:
-                predictions.append({
-                    "memory_id": r["id"][:8],
-                    "title": r["title"][:40] if r["title"] else "",
-                    "memory_type": r["memory_type"],
-                    "decay_score": round(decay_score, 3),
-                    "galactic_distance": round(distance, 3),
-                    "importance": round(importance, 3),
-                    "risk": "high" if decay_score > 0.8 else "medium",
-                })
+                predictions.append(
+                    {
+                        "memory_id": r["id"][:8],
+                        "title": r["title"][:40] if r["title"] else "",
+                        "memory_type": r["memory_type"],
+                        "decay_score": round(decay_score, 3),
+                        "galactic_distance": round(distance, 3),
+                        "importance": round(importance, 3),
+                        "risk": "high" if decay_score > 0.8 else "medium",
+                    }
+                )
         return predictions
 
     def _detect_convergence(self) -> list[dict[str, Any]]:
@@ -149,8 +161,7 @@ class ForesightEngine:
         warnings: list[dict[str, Any]] = []
         # Simple O(n²) pairwise check — fine for small constellation counts
         for i, a in enumerate(projections):
-            for b in projections[i + 1:
-                ]:
+            for b in projections[i + 1 :]:
                 pa = a["projected_centroid"]
                 pb = b["projected_centroid"]
                 distance = math.sqrt(
@@ -162,13 +173,19 @@ class ForesightEngine:
                 )
                 # Convergence threshold: if projected distance < 0.3 in 5D space
                 if distance < 0.3:
-                    warnings.append({
-                        "constellation_a": a["name"],
-                        "constellation_b": b["name"],
-                        "projected_distance": round(distance, 4),
-                        "severity": "merge_imminent" if distance < 0.15 else "converging",
-                        "confidence": min(a.get("confidence", "low"), b.get("confidence", "low")),
-                    })
+                    warnings.append(
+                        {
+                            "constellation_a": a["name"],
+                            "constellation_b": b["name"],
+                            "projected_distance": round(distance, 4),
+                            "severity": "merge_imminent"
+                            if distance < 0.15
+                            else "converging",
+                            "confidence": min(
+                                a.get("confidence", "low"), b.get("confidence", "low")
+                            ),
+                        }
+                    )
         return warnings
 
 

@@ -13,6 +13,7 @@ try:
     from skyfield.framelib import (
         ecliptic_frame as eclipsic_j2000,  # type: ignore[import-not-found]
     )
+
     SKYFIELD_AVAILABLE = True
 except ImportError:
     SKYFIELD_AVAILABLE = False
@@ -31,7 +32,13 @@ def get_current_lunar_phase() -> float:
     ts = load.timescale()
     t = ts.now()
     # Point to the new centralized data directory
-    data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))), "data", "de421.bsp")
+    data_path = os.path.join(
+        os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        ),
+        "data",
+        "de421.bsp",
+    )
     planets = load(data_path)
     earth = planets["earth"]
     moon = planets["moon"]
@@ -49,6 +56,7 @@ def get_current_lunar_phase() -> float:
     result: float = phase_angle / 360.0
     return result
 
+
 def get_current_lunar_mansion() -> LunarMansion:
     """Calculate which of 28 mansions Moon currently occupies.
     Each mansion = ~12.86 degrees of ecliptic longitude.
@@ -59,7 +67,13 @@ def get_current_lunar_mansion() -> LunarMansion:
     ts = load.timescale()
     t = ts.now()
     # Point to the new centralized data directory
-    request_data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))), "data", "de421.bsp")
+    request_data_path = os.path.join(
+        os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        ),
+        "data",
+        "de421.bsp",
+    )
     planets = load(request_data_path)
     earth = planets["earth"]
     moon = planets["moon"]
@@ -85,16 +99,20 @@ def get_current_lunar_mansion() -> LunarMansion:
     # Find enum
     return next((m for m in LunarMansion if m.number == mansion_num), LunarMansion.HORN)
 
+
 def _mock_lunar_phase() -> float:
     """Mock phase based on time."""
     import time
+
     days_since_epoch = time.time() / 86400
     lunar_cycle = days_since_epoch % 29.53059
     return lunar_cycle / 29.53059
 
+
 def _mock_lunar_mansion() -> LunarMansion:
     """Mock mansion based on time."""
     import time
+
     # Moon takes ~27.32 days to orbit (sidereal month) for mansions
     days_since_epoch = time.time() / 86400
     sidereal_cycle = days_since_epoch % 27.321661

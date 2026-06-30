@@ -41,5 +41,9 @@ SESSION_CONFIG: dict[SessionType, dict[str, Any]] = {
     SessionType.CONTINUATION: {"context_tokens": 1000, "load_full": False},
     SessionType.NEW_CONTRIBUTOR: {"context_tokens": 8000, "load_full": True},
     SessionType.DEBUG: {"context_tokens": 3000, "load_full": False, "focus": "errors"},
-    SessionType.EXPLORATION: {"context_tokens": 5000, "load_full": False, "focus": "breadth"},
+    SessionType.EXPLORATION: {
+        "context_tokens": 5000,
+        "load_full": False,
+        "focus": "breadth",
+    },
 }

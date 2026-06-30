@@ -97,8 +97,7 @@ def benchmark(count, batch_size, max_concurrent):
 
         # Create test objectives
         objectives = [
-            Objective(description=f"Benchmark objective {i}")
-            for i in range(count)
+            Objective(description=f"Benchmark objective {i}") for i in range(count)
         ]
 
         click.echo("\n🚀 Benchmarking objectives")
@@ -119,9 +118,13 @@ def benchmark(count, batch_size, max_concurrent):
         click.echo("\n✅ Benchmark Complete")
         click.echo(f"   Duration: {duration:.2f} s")
         click.echo(f"   Throughput: {count / duration:.0f} objectives/sec")
-        click.echo(f"   Success rate: {successes} / {count} ({successes / count * 100:.1f}%)")
+        click.echo(
+            f"   Success rate: {successes} / {count} ({successes / count * 100:.1f}%)"
+        )
 
     asyncio.run(run_benchmark())
+
+
 @autonomous.command()
 @click.argument("protocol_name")
 @click.option("--background", is_flag=True, help="Run protocol in a background process")

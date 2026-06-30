@@ -56,7 +56,9 @@ def _json_safe(obj: Any) -> Any:
         return {k: _json_safe(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [_json_safe(v) for v in obj]
-    if hasattr(obj, "__dict__") and not isinstance(obj, (str, int, float, bool, type(None))):
+    if hasattr(obj, "__dict__") and not isinstance(
+        obj, (str, int, float, bool, type(None))
+    ):
         return str(obj)
     return obj
 
@@ -76,93 +78,78 @@ def gnosis_snapshot(compact: bool = False) -> dict[str, Any]:
         return cast("dict[str, Any]", _json_safe(_compact_snapshot()))
     timestamp = datetime.now().isoformat()
 
-    # --- Harmony Vector ---
     harmony = _safe(lambda: _harmony_portal())
 
-    # --- Dharma ---
     dharma = _safe(lambda: _dharma_portal())
 
-    # --- Karma Ledger ---
     karma = _safe(lambda: _karma_portal())
 
-    # --- Circuit Breakers ---
     circuit = _safe(lambda: _circuit_portal())
 
-    # --- Yin/Yang Balance ---
     yin_yang = _safe(lambda: _yin_yang_portal())
 
-    # --- Telemetry ---
     telemetry = _safe(lambda: _telemetry_portal())
 
-    # --- State Paths ---
     state = _safe(lambda: _state_portal())
 
-    # --- Distributed Coordination ---
     broker = _safe(lambda: _broker_portal())
     tasks = _safe(lambda: _tasks_portal())
     votes = _safe(lambda: _votes_portal())
 
-    # --- Temporal Scheduler ---
     temporal = _safe(lambda: _temporal_portal())
 
-    # --- Agent Registry ---
     agents = _safe(lambda: _agents_portal())
 
-    # --- Homeostatic Loop ---
     homeostasis = _safe(lambda: _homeostasis_portal())
 
-    # --- Maturity ---
     maturity = _safe(lambda: _maturity_portal())
 
-    # --- Galactic Map ---
     galactic = _safe(lambda: _galactic_portal())
 
-    # --- Holographic Coordinates ---
     holographic = _safe(lambda: _holographic_portal())
 
-    # --- Emotion & Drive Core ---
     drives = _safe(lambda: _drives_portal())
 
-    # --- Self-Model / Predictive Introspection ---
     self_model = _safe(lambda: _self_model_portal())
 
-    # --- PRAT Resonance ---
     resonance = _safe(lambda: _resonance_portal())
 
-    # --- Capability Matrix (summary only in full snapshot) ---
     capabilities = _safe(lambda: _capabilities_portal())
 
-    # --- v14.0 Living Graph ---
     living_graph = _safe(lambda: _living_graph_portal())
 
-    # --- Capability Discovery (fused from CapabilityDiscoveryEngine) ---
     capability_discovery = _safe(lambda: _capability_discovery_portal())
 
-    return cast("dict[str, Any]", _json_safe({
-        "timestamp": timestamp,
-        "harmony": harmony,
-        "dharma": dharma,
-        "karma": karma,
-        "circuit_breakers": circuit,
-        "yin_yang": yin_yang,
-        "telemetry": telemetry,
-        "state": state,
-        "broker": broker,
-        "tasks": tasks,
-        "votes": votes,
-        "temporal": temporal,
-        "agents": agents,
-        "holographic": holographic,
-        "homeostasis": homeostasis,
-        "maturity": maturity,
-        "galactic": galactic,
-        "drives": drives,
-        "self_model": self_model,
-        "resonance": resonance,
-        "capabilities": capabilities,
-        "living_graph": living_graph,
-        "capability_discovery": capability_discovery,
-    }))
+    return cast(
+        "dict[str, Any]",
+        _json_safe(
+            {
+                "timestamp": timestamp,
+                "harmony": harmony,
+                "dharma": dharma,
+                "karma": karma,
+                "circuit_breakers": circuit,
+                "yin_yang": yin_yang,
+                "telemetry": telemetry,
+                "state": state,
+                "broker": broker,
+                "tasks": tasks,
+                "votes": votes,
+                "temporal": temporal,
+                "agents": agents,
+                "holographic": holographic,
+                "homeostasis": homeostasis,
+                "maturity": maturity,
+                "galactic": galactic,
+                "drives": drives,
+                "self_model": self_model,
+                "resonance": resonance,
+                "capabilities": capabilities,
+                "living_graph": living_graph,
+                "capability_discovery": capability_discovery,
+            }
+        ),
+    )
 
 
 def _compact_snapshot() -> dict[str, Any]:
@@ -218,7 +205,11 @@ def _compact_snapshot() -> dict[str, Any]:
     temporal = _safe(lambda: _temporal_portal())
     if temporal and not temporal.get("running"):
         lanes = temporal.get("lanes", {})
-        has_history = any(v > 0 for v in lanes.values() if isinstance(v, (int, float))) if isinstance(lanes, dict) else False
+        has_history = (
+            any(v > 0 for v in lanes.values() if isinstance(v, (int, float)))
+            if isinstance(lanes, dict)
+            else False
+        )
         if has_history:
             alerts.append("temporal_scheduler_stopped")
 
@@ -273,44 +264,78 @@ def _auto_suggest(
     if not alerts:
         # First-call discovery flow: a healthy system is the right time to
         # surface what agents can do, not just check health.
-        actions.append({"tool": "list_ganas", "reason": "Discover the 28-Gana surface (first call)"})
-        actions.append({"tool": "vitality", "reason": "Check Gana vitality before routing"})
-        actions.append({"tool": "discover", "reason": "Bundle: gnosis + capabilities + list_ganas in one call"})
-        actions.append({"tool": "salience.spotlight", "reason": "Check what deserves attention"})
+        actions.append(
+            {
+                "tool": "list_ganas",
+                "reason": "Discover the 28-Gana surface (first call)",
+            }
+        )
+        actions.append(
+            {"tool": "vitality", "reason": "Check Gana vitality before routing"}
+        )
+        actions.append(
+            {
+                "tool": "discover",
+                "reason": "Bundle: gnosis + capabilities + list_ganas in one call",
+            }
+        )
+        actions.append(
+            {"tool": "salience.spotlight", "reason": "Check what deserves attention"}
+        )
         if stage in ("SEED", "BICAMERAL"):
-            actions.append({"tool": "maturity.assess", "reason": "Work toward next maturity stage"})
+            actions.append(
+                {"tool": "maturity.assess", "reason": "Work toward next maturity stage"}
+            )
         return actions[:4]
 
     # Suggest based on specific alerts
     for alert in alerts:
         if "harmony_low" in alert:
-            actions.append({"tool": "harmony_vector", "reason": "Diagnose which dimensions are degraded"})
+            actions.append(
+                {
+                    "tool": "harmony_vector",
+                    "reason": "Diagnose which dimensions are degraded",
+                }
+            )
         elif "karma_debt" in alert:
-            actions.append({"tool": "karma_report", "reason": "Audit side-effect mismatches"})
+            actions.append(
+                {"tool": "karma_report", "reason": "Audit side-effect mismatches"}
+            )
         elif "breakers_open" in alert:
-            actions.append({"tool": "gnosis", "args": {"compact": False}, "reason": "Full snapshot to see breaker details"})
+            actions.append(
+                {
+                    "tool": "gnosis",
+                    "args": {"compact": False},
+                    "reason": "Full snapshot to see breaker details",
+                }
+            )
         elif "homeostasis_stopped" in alert:
-            actions.append({"tool": "homeostasis.check", "reason": "Manually trigger a health check"})
+            actions.append(
+                {
+                    "tool": "homeostasis.check",
+                    "reason": "Manually trigger a health check",
+                }
+            )
         elif "tasks_pending" in alert:
-            actions.append({"tool": "task.status", "reason": "Check pending task details"})
+            actions.append(
+                {"tool": "task.status", "reason": "Check pending task details"}
+            )
         elif "votes_open" in alert:
             actions.append({"tool": "vote.list", "reason": "Review open vote sessions"})
 
     return actions[:5]
 
 
-# ---------------------------------------------------------------------------
-# Individual portals
-# ---------------------------------------------------------------------------
-
 def _harmony_portal() -> dict[str, Any]:
     from whitemagic.harmony.vector import read_harmony_fast
+
     snap = read_harmony_fast()
     return cast("dict[str, Any]", snap.to_dict())
 
 
 def _dharma_portal() -> dict[str, Any]:
     from whitemagic.dharma.rules import get_rules_engine
+
     engine = get_rules_engine()
     trace = engine.get_karmic_trace(limit=5)
     return {
@@ -323,36 +348,39 @@ def _dharma_portal() -> dict[str, Any]:
 
 def _karma_portal() -> dict[str, Any]:
     from whitemagic.dharma.karma_ledger import get_karma_ledger
+
     ledger = get_karma_ledger()
     return {
         "total_debt": round(ledger.get_debt(), 2),
         "mismatch_rate": round(
-            sum(ledger._tool_mismatches.values()) /
-            max(sum(ledger._tool_calls.values()), 1), 4,
+            sum(ledger._tool_mismatches.values())
+            / max(sum(ledger._tool_calls.values()), 1),
+            4,
         ),
     }
 
 
 def _circuit_portal() -> dict[str, Any]:
     from whitemagic.tools.circuit_breaker import get_breaker_registry
+
     reg = get_breaker_registry()
     tripped = reg.tripped()
     return {
         "total_breakers": len(reg.all_status()),
         "tripped": tripped,
-        "any_open": any(
-            b.get("state") == "open" for b in tripped
-        ),
+        "any_open": any(b.get("state") == "open" for b in tripped),
     }
 
 
 def _yin_yang_portal() -> dict[str, Any]:
     from whitemagic.harmony.yin_yang_tracker import get_tracker
+
     return cast("dict[str, Any]", get_tracker().get_report())
 
 
 def _telemetry_portal() -> dict[str, Any]:
     from whitemagic.core.monitoring.telemetry import get_telemetry
+
     t = get_telemetry()
     return cast("dict[str, Any]", t.get_summary())
 
@@ -388,6 +416,7 @@ def _state_portal() -> dict[str, Any]:
 
 def _broker_portal() -> dict[str, Any]:
     from whitemagic.tools.handlers.broker import handle_broker_status
+
     result = handle_broker_status()
     return {
         "connected": result.get("connected", False),
@@ -398,6 +427,7 @@ def _broker_portal() -> dict[str, Any]:
 
 def _tasks_portal() -> dict[str, Any]:
     from whitemagic.tools.handlers.task_dist import handle_task_status
+
     result = handle_task_status()
     return {
         "total": result.get("total", 0),
@@ -407,13 +437,17 @@ def _tasks_portal() -> dict[str, Any]:
 
 def _votes_portal() -> dict[str, Any]:
     from whitemagic.tools.handlers.voting import handle_vote_list
+
     result = handle_vote_list(filter_status="open")
     return {
         "open_sessions": result.get("count", 0),
         "sessions": [
-            {"id": s["id"], "problem": s.get("problem", "")[:80], "vote_count": s.get("vote_count", 0)}
-            for s in result.get("sessions", [])[:
-                5]
+            {
+                "id": s["id"],
+                "problem": s.get("problem", "")[:80],
+                "vote_count": s.get("vote_count", 0),
+            }
+            for s in result.get("sessions", [])[:5]
         ],
     }
 
@@ -421,6 +455,7 @@ def _votes_portal() -> dict[str, Any]:
 def _temporal_portal() -> dict[str, Any]:
     try:
         from whitemagic.core.resonance import get_bus
+
         bus = get_bus()
         return {
             "running": True,
@@ -433,6 +468,7 @@ def _temporal_portal() -> dict[str, Any]:
 def _agents_portal() -> dict[str, Any]:
     try:
         from whitemagic.tools.handlers.agent_registry import handle_agent_list
+
         result = handle_agent_list()
         return {
             "total": result.get("count", 0),
@@ -444,6 +480,7 @@ def _agents_portal() -> dict[str, Any]:
 
 def _homeostasis_portal() -> dict[str, Any]:
     from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
     loop = get_homeostatic_loop()
     stats = loop.get_stats()
     return {
@@ -456,6 +493,7 @@ def _homeostasis_portal() -> dict[str, Any]:
 
 def _maturity_portal() -> dict[str, Any]:
     from whitemagic.core.governance.maturity_gates import get_maturity_engine
+
     engine = get_maturity_engine()
     report = engine.assess()
     d = report.to_dict()
@@ -471,6 +509,7 @@ def _galactic_portal() -> dict[str, Any]:
     import sqlite3
 
     from whitemagic.core.memory.unified import get_unified_memory
+
     um = get_unified_memory()
     with um.backend.pool.connection() as conn:
         conn.row_factory = sqlite3.Row
@@ -515,27 +554,50 @@ def _holographic_portal() -> dict[str, Any]:
                 LIMIT 5
             """).fetchall()
             for row in rows:
-                sample_coords.append({
-                    "id": row[0][:8] + "...",
-                    "title": row[1][:40] if row[1] else None,
-                    "x": round(row[2], 2) if row[2] else None,
-                    "y": round(row[3], 2) if row[3] else None,
-                    "z": round(row[4], 2) if row[4] else None,
-                    "w": round(row[5], 2) if row[5] else None,
-                    "v": round(row[6], 2) if row[6] else None,
-                })
+                sample_coords.append(
+                    {
+                        "id": row[0][:8] + "...",
+                        "title": row[1][:40] if row[1] else None,
+                        "x": round(row[2], 2) if row[2] else None,
+                        "y": round(row[3], 2) if row[3] else None,
+                        "z": round(row[4], 2) if row[4] else None,
+                        "w": round(row[5], 2) if row[5] else None,
+                        "v": round(row[6], 2) if row[6] else None,
+                    }
+                )
     except Exception as e:
         import logging
+
         logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     return {
         "health": health,
         "axes": {
-            "x": {"name": "Resonance", "range": "-1.0 (Emotion) to +1.0 (Logic)", "meaning": "Head vs Heart"},
-            "y": {"name": "Abstraction", "range": "-1.0 (Micro) to +1.0 (Macro)", "meaning": "Detail vs Big Picture"},
-            "z": {"name": "Chronos", "range": "-1.0 (Past) to +1.0 (Future)", "meaning": "Archive vs Vision"},
-            "w": {"name": "Gravity", "range": "0.0 to 2.0+", "meaning": "Importance/Weight"},
-            "v": {"name": "Vitality", "range": "0.0 (Edge) to 1.0 (Core)", "meaning": "Active vs Archived"},
+            "x": {
+                "name": "Resonance",
+                "range": "-1.0 (Emotion) to +1.0 (Logic)",
+                "meaning": "Head vs Heart",
+            },
+            "y": {
+                "name": "Abstraction",
+                "range": "-1.0 (Micro) to +1.0 (Macro)",
+                "meaning": "Detail vs Big Picture",
+            },
+            "z": {
+                "name": "Chronos",
+                "range": "-1.0 (Past) to +1.0 (Future)",
+                "meaning": "Archive vs Vision",
+            },
+            "w": {
+                "name": "Gravity",
+                "range": "0.0 to 2.0+",
+                "meaning": "Importance/Weight",
+            },
+            "v": {
+                "name": "Vitality",
+                "range": "0.0 (Edge) to 1.0 (Core)",
+                "meaning": "Active vs Archived",
+            },
         },
         "sample_memories": sample_coords,
         "docs": "See docs/5D_COORDINATE_GUIDE.md for full explanation",
@@ -545,6 +607,7 @@ def _holographic_portal() -> dict[str, Any]:
 def _drives_portal() -> dict[str, Any]:
     """Emotion & Drive Core — intrinsic motivation snapshot."""
     from whitemagic.core.intelligence.emotion_drive import get_drive_core
+
     core = get_drive_core()
     snap = core.snapshot()
     return {
@@ -563,6 +626,7 @@ def _drives_portal() -> dict[str, Any]:
 def _self_model_portal() -> dict[str, Any]:
     """Self-Model — predictive introspection alerts."""
     from whitemagic.core.intelligence.self_model import get_self_model
+
     model = get_self_model()
     alerts = model.get_alerts()
     stats = model.get_stats()
@@ -577,6 +641,7 @@ def _self_model_portal() -> dict[str, Any]:
 def _resonance_portal() -> dict[str, Any]:
     """PRAT Resonance — session-level Gana resonance state."""
     from whitemagic.tools.prat_resonance import get_resonance_summary
+
     return cast("dict[str, Any]", get_resonance_summary())
 
 
@@ -587,6 +652,7 @@ def _living_graph_portal() -> dict[str, Any]:
     # Graph Engine
     try:
         from whitemagic.core.memory.graph_engine import get_graph_engine
+
         engine = get_graph_engine()
         result["graph_engine"] = engine.get_stats()
     except (ImportError, ModuleNotFoundError):
@@ -595,6 +661,7 @@ def _living_graph_portal() -> dict[str, Any]:
     # Graph Walker
     try:
         from whitemagic.core.memory.graph_walker import get_graph_walker
+
         walker = get_graph_walker()
         result["graph_walker"] = walker.get_stats()
     except (ImportError, ModuleNotFoundError):
@@ -603,6 +670,7 @@ def _living_graph_portal() -> dict[str, Any]:
     # Surprise Gate
     try:
         from whitemagic.core.memory.surprise_gate import get_surprise_gate
+
         gate = get_surprise_gate()
         result["surprise_gate"] = gate.get_stats()
     except (ImportError, ModuleNotFoundError):
@@ -611,6 +679,7 @@ def _living_graph_portal() -> dict[str, Any]:
     # Bridge Synthesizer
     try:
         from whitemagic.core.memory.bridge_synthesizer import get_bridge_synthesizer
+
         synth = get_bridge_synthesizer()
         result["bridge_synthesizer"] = synth.get_stats()
     except (ImportError, ModuleNotFoundError):
@@ -626,6 +695,7 @@ def _capabilities_portal() -> dict[str, Any]:
         SUBSYSTEMS,
         UNEXPLORED_FUSIONS,
     )
+
     polyglot_count = sum(1 for s in SUBSYSTEMS if s.get("polyglot"))
     return {
         "total_subsystems": len(SUBSYSTEMS),
@@ -642,6 +712,7 @@ def _capability_discovery_portal() -> dict[str, Any]:
         from whitemagic.core.consciousness.apotheosis_engine import (
             get_apotheosis_engine,
         )
+
         engine = get_apotheosis_engine()
         cap = engine.capability
         return {
@@ -658,13 +729,10 @@ def _capability_discovery_portal() -> dict[str, Any]:
         }
 
 
-# ---------------------------------------------------------------------------
-# Forecast facade functions (fused from ForecastEngine / SelfModel)
-# ---------------------------------------------------------------------------
-
 def forecast_metrics(steps_ahead: int | None = None) -> dict[str, Any]:
     """Forecast all tracked system metrics. Delegates to SelfModel."""
     from whitemagic.core.intelligence.self_model import get_self_model
+
     model = get_self_model()
     forecasts = model.forecast_all(steps_ahead)
     return {k: v.to_dict() for k, v in forecasts.items()}
@@ -673,6 +741,7 @@ def forecast_metrics(steps_ahead: int | None = None) -> dict[str, Any]:
 def get_forecast_alerts() -> list[dict[str, Any]]:
     """Get only forecasts with active threshold alerts."""
     from whitemagic.core.intelligence.self_model import get_self_model
+
     model = get_self_model()
     alerts = model.get_alerts()
     return [a.to_dict() for a in alerts]
@@ -681,17 +750,15 @@ def get_forecast_alerts() -> list[dict[str, Any]]:
 def record_metric(metric: str, value: float) -> None:
     """Record a metric observation into the SelfModel."""
     from whitemagic.core.intelligence.self_model import get_self_model
+
     model = get_self_model()
     model.record(metric, value)
 
 
-# ---------------------------------------------------------------------------
-# Capability discovery facade functions (fused from CapabilityDiscoveryEngine)
-# ---------------------------------------------------------------------------
-
 def discover_capabilities(available_tools: list[str]) -> list[dict[str, Any]]:
     """Discover emergent capabilities by testing unused tools and combinations."""
     from whitemagic.core.consciousness.apotheosis_engine import get_apotheosis_engine
+
     engine = get_apotheosis_engine()
     discoveries = engine.capability.discover_capabilities(available_tools)
     return [
@@ -709,5 +776,6 @@ def discover_capabilities(available_tools: list[str]) -> list[dict[str, Any]]:
 def report_emergent_capabilities() -> list[dict[str, Any]]:
     """Report discovered and tested capabilities with high confidence."""
     from whitemagic.core.consciousness.apotheosis_engine import get_apotheosis_engine
+
     engine = get_apotheosis_engine()
     return engine.capability.report_emergent_capabilities()

@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Principle:
     """An immutable core principle."""
+
     name: str
     description: str
     immutable: bool = True
@@ -33,7 +34,9 @@ class DNALayer:
 
     def _register_defaults(self) -> None:
         defaults = [
-            Principle("safety", "Never execute destructive actions without confirmation"),
+            Principle(
+                "safety", "Never execute destructive actions without confirmation"
+            ),
             Principle("transparency", "All actions must be auditable and logged"),
             Principle("graceful_degradation", "Optional features must fail safely"),
             Principle("path_hygiene", "Never write to repo, only to WM_STATE_ROOT"),
@@ -69,7 +72,11 @@ class DNALayer:
 
     def list_principles(self) -> list[dict[str, str]]:
         return [
-            {"name": p.name, "description": p.description, "immutable": str(p.immutable)}
+            {
+                "name": p.name,
+                "description": p.description,
+                "immutable": str(p.immutable),
+            }
             for p in self.principles.values()
         ]
 

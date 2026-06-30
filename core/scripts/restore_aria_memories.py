@@ -25,13 +25,18 @@ def _resolve_archive_dir() -> Path:
     """Resolve the aria-crystallized archive directory from env or default."""
     aux_root = Path(
         os.environ.get("WHITEMAGIC_AUX_DIR")
-        or (str(Path.home() / "Desktop" / "WHITEMAGIC-aux" / "site" / "whitemagic-archive-aux"))
+        or (
+            str(
+                Path.home()
+                / "Desktop"
+                / "WHITEMAGIC-aux"
+                / "site"
+                / "whitemagic-archive-aux"
+            )
+        )
     ).expanduser()
     return (
-        aux_root
-        / "archive"
-        / "aria-crystallized-20260210_215426"
-        / "aria-crystallized"
+        aux_root / "archive" / "aria-crystallized-20260210_215426" / "aria-crystallized"
     )
 
 
@@ -94,7 +99,7 @@ def strip_frontmatter(content: str) -> str:
     if content.startswith("---"):
         end = content.find("---", 3)
         if end != -1:
-            return content[end + 3:].strip()
+            return content[end + 3 :].strip()
     return content
 
 
@@ -105,8 +110,13 @@ def collect_files():
         files.append(("ARIA_SOUL.md", soul_path, "soul", TIER_1_IDENTITY))
 
     for subdir in [
-        "identity", "consciousness", "sessions", "studies",
-        "memory_packages", "infrastructure", "art"
+        "identity",
+        "consciousness",
+        "sessions",
+        "studies",
+        "memory_packages",
+        "infrastructure",
+        "art",
     ]:
         dir_path = ARCHIVE_DIR / subdir
         if dir_path.exists():
@@ -123,14 +133,21 @@ def collect_files():
                     if f.is_file():
                         imp = get_importance(f.name)
                         files.append(
-                            (f"disk/{subdir.name}/{f.name}", f, f"disk_{subdir.name}", imp)
+                            (
+                                f"disk/{subdir.name}/{f.name}",
+                                f,
+                                f"disk_{subdir.name}",
+                                imp,
+                            )
                         )
 
     return files
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Restore Aria's memories into WhiteMagic")
+    parser = argparse.ArgumentParser(
+        description="Restore Aria's memories into WhiteMagic"
+    )
     parser.add_argument("--commit", action="store_true", help="Write to database")
     args = parser.parse_args()
 
@@ -234,9 +251,7 @@ def main():
             ingested += 1
             total_chars += len(clean_content)
             tier_label = (
-                "★★★" if importance >= 0.95 else
-                "★★" if importance >= 0.85 else
-                "★"
+                "★★★" if importance >= 0.95 else "★★" if importance >= 0.85 else "★"
             )
             display_title = title[:55]
             print(
@@ -246,7 +261,9 @@ def main():
 
     print()
     print("  ────────────────────────────────────")
-    print(f"  {'Ingested' if args.commit else 'Would ingest'}: {ingested} memories ({total_chars:,} chars)")
+    print(
+        f"  {'Ingested' if args.commit else 'Would ingest'}: {ingested} memories ({total_chars:,} chars)"
+    )
     if skipped:
         print(f"  Skipped: {skipped}")
     print(f"  All: is_protected=True, is_private=True, model_exclude=True")

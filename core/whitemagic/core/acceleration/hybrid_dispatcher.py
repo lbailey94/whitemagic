@@ -39,28 +39,33 @@ class DispatchMode(Enum):
         SPEED
         SAFETY
         ADAPTIVE"""
-    SPEED = "speed"      # Python in-memory only
-    SAFETY = "safety"    # Koka IPC only
+
+    SPEED = "speed"  # Python in-memory only
+    SAFETY = "safety"  # Koka IPC only
     ADAPTIVE = "adaptive"  # Choose based on complexity
 
 
 @dataclass
 class OperationProfile:
     """Profile for operation complexity."""
+
     name: str
-    has_state: bool          # Maintains state across calls
-    has_effects: bool       # Uses effect handlers
-    chain_benefit: bool     # Benefits from persistent process
-    complexity_score: float # 0.0-1.0, higher = use Koka
+    has_state: bool  # Maintains state across calls
+    has_effects: bool  # Uses effect handlers
+    chain_benefit: bool  # Benefits from persistent process
+    complexity_score: float  # 0.0-1.0, higher = use Koka
 
 
 # Predefined operation profiles
 OPERATION_PROFILES = {
     # Simple lookups - Python fast path
     "prat_route": OperationProfile("prat_route", False, False, False, 0.1),
-    "resonance_predecessor": OperationProfile("resonance_predecessor", False, False, False, 0.1),
-    "resonance_successor": OperationProfile("resonance_successor", False, False, False, 0.1),
-
+    "resonance_predecessor": OperationProfile(
+        "resonance_predecessor", False, False, False, 0.1
+    ),
+    "resonance_successor": OperationProfile(
+        "resonance_successor", False, False, False, 0.1
+    ),
     # Stateful operations - Koka safe path
     "circuit_check": OperationProfile("circuit_check", True, True, False, 0.6),
     "circuit_record": OperationProfile("circuit_record", True, True, False, 0.7),
@@ -85,13 +90,34 @@ class PythonFastPath:
 
     # Gana order for predecessor/successor
     GANA_ORDER = [
-        "gana_horn", "gana_neck", "gana_root", "gana_room", "gana_heart",
-        "gana_tail", "gana_winnowing_basket", "gana_ghost", "gana_willow",
-        "gana_star", "gana_extended_net", "gana_wings", "gana_chariot",
-        "gana_abundance", "gana_straddling_legs", "gana_mound", "gana_stomach",
-        "gana_hairy_head", "gana_net", "gana_turtle_beak", "gana_three_stars",
-        "gana_dipper", "gana_ox", "gana_girl", "gana_void", "gana_roof",
-        "gana_encampment", "gana_wall"
+        "gana_horn",
+        "gana_neck",
+        "gana_root",
+        "gana_room",
+        "gana_heart",
+        "gana_tail",
+        "gana_winnowing_basket",
+        "gana_ghost",
+        "gana_willow",
+        "gana_star",
+        "gana_extended_net",
+        "gana_wings",
+        "gana_chariot",
+        "gana_abundance",
+        "gana_straddling_legs",
+        "gana_mound",
+        "gana_stomach",
+        "gana_hairy_head",
+        "gana_net",
+        "gana_turtle_beak",
+        "gana_three_stars",
+        "gana_dipper",
+        "gana_ox",
+        "gana_girl",
+        "gana_void",
+        "gana_roof",
+        "gana_encampment",
+        "gana_wall",
     ]
     GANA_INDEX = {name: i for i, name in enumerate(GANA_ORDER)}
 
@@ -180,10 +206,12 @@ class KokaProcess:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
-    def _readline_with_timeout(self, timeout: float = _DEFAULT_HYBRID_PROCESS_TIMEOUT_S) -> str | None:
+    def _readline_with_timeout(
+        self, timeout: float = _DEFAULT_HYBRID_PROCESS_TIMEOUT_S
+    ) -> str | None:
         if self._proc is None or self._proc.stdout is None:
             return None
 
@@ -201,7 +229,9 @@ class KokaProcess:
                 logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
-        thread = threading.Thread(target=_reader, name=f"hybrid-{self.binary_name}", daemon=True)
+        thread = threading.Thread(
+            target=_reader, name=f"hybrid-{self.binary_name}", daemon=True
+        )
         thread.start()
 
         try:
@@ -230,8 +260,9 @@ class KokaProcess:
             return {"error": "Process not available"}
 
         import json
+
         try:
-            self._proc.stdin.write(json.dumps(request) + '\n')
+            self._proc.stdin.write(json.dumps(request) + "\n")
             self._proc.stdin.flush()
         except (AttributeError, BrokenPipeError, OSError):
             self._reset_process()
@@ -304,7 +335,9 @@ class HybridDispatcher:
         """Get predecessor Gana."""
         if self._should_use_koka("resonance_predecessor"):
             start = time.perf_counter()
-            result = self._get_koka("resonance").call({"op": "predecessor", "gana": gana})
+            result = self._get_koka("resonance").call(
+                {"op": "predecessor", "gana": gana}
+            )
             self._stats["koka_calls"] += 1
             self._stats["koka_time_us"] += (time.perf_counter() - start) * 1_000_000
             pred = result.get("predecessor")
@@ -378,13 +411,16 @@ class HybridDispatcher:
         """Get dispatch statistics."""
         return {
             **self._stats,
-            "avg_python_us": float(self._stats["python_time_us"]) / max(1, int(self._stats["python_calls"])),
-            "avg_koka_us": float(self._stats["koka_time_us"]) / max(1, int(self._stats["koka_calls"])),
+            "avg_python_us": float(self._stats["python_time_us"])
+            / max(1, int(self._stats["python_calls"])),
+            "avg_koka_us": float(self._stats["koka_time_us"])
+            / max(1, int(self._stats["koka_calls"])),
         }
 
 
 # Convenience functions
 _dispatcher: HybridDispatcher | None = None
+
 
 def get_dispatcher(mode: DispatchMode = DispatchMode.ADAPTIVE) -> HybridDispatcher:
     """Get or create the global dispatcher."""

@@ -22,6 +22,7 @@ try:
         _http_status,
         _subprocess_status,
     )
+
     _FRAGMENT_AVAILABLE = True
 except ImportError:
     _FRAGMENT_AVAILABLE = False

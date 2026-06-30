@@ -24,6 +24,7 @@ Usage via dispatch:
     dispatch("wm_read", mode="constellation", tags=["rust", "memory"])
     dispatch("wm_read", mode="temporal", time_window="30d")
 """
+
 import logging
 from typing import Any
 
@@ -44,7 +45,8 @@ def _filter_private(memories: list[Any], include_private: bool) -> list[Any]:
     if include_private:
         return memories
     return [
-        m for m in memories
+        m
+        for m in memories
         if not _flag_enabled(getattr(m, "is_private", False))
         and not _flag_enabled(getattr(m, "model_exclude", False))
     ]
@@ -56,12 +58,16 @@ def _memory_to_dict(m: Any) -> dict[str, Any]:
         "id": m.id,
         "title": m.title,
         "content": str(m.content)[:500] if m.content else "",
-        "memory_type": m.memory_type.name if hasattr(m.memory_type, "name") else str(m.memory_type),
+        "memory_type": m.memory_type.name
+        if hasattr(m.memory_type, "name")
+        else str(m.memory_type),
         "importance": m.importance,
         "neuro_score": getattr(m, "neuro_score", 1.0),
         "novelty_score": getattr(m, "novelty_score", 1.0),
         "tags": list(m.tags) if m.tags else [],
-        "created_at": m.created_at.isoformat() if hasattr(m.created_at, "isoformat") else str(m.created_at),
+        "created_at": m.created_at.isoformat()
+        if hasattr(m.created_at, "isoformat")
+        else str(m.created_at),
         "galactic_distance": getattr(m, "galactic_distance", None),
     }
 
@@ -135,7 +141,9 @@ def handle_wm_read(**kwargs: Any) -> dict[str, Any]:
         elif mode == "hybrid":
             result = _read_hybrid(query, limit, include_cold, include_private)
         elif mode == "graph_walk":
-            result = _read_graph_walk(query, limit, include_cold, include_private, kwargs)
+            result = _read_graph_walk(
+                query, limit, include_cold, include_private, kwargs
+            )
         elif mode == "semantic":
             result = _read_semantic(query, limit, include_cold, include_private)
         elif mode == "lexical":
@@ -155,8 +163,17 @@ def handle_wm_read(**kwargs: Any) -> dict[str, Any]:
                 "status": "error",
                 "error": f"Unknown read mode: {mode}",
                 "available_modes": [
-                    "auto", "hybrid", "graph_walk", "semantic", "lexical",
-                    "spatial", "constellation", "temporal", "codebase", "strata", "id",
+                    "auto",
+                    "hybrid",
+                    "graph_walk",
+                    "semantic",
+                    "lexical",
+                    "spatial",
+                    "constellation",
+                    "temporal",
+                    "codebase",
+                    "strata",
+                    "id",
                 ],
             }
 
@@ -166,10 +183,16 @@ def handle_wm_read(**kwargs: Any) -> dict[str, Any]:
                 from whitemagic.core.intelligence.working_memory import (
                     get_working_memory,
                 )
+
                 wm = get_working_memory()
                 for entry in (result.get("results") or [])[:3]:
                     mid = entry.get("memory_id") or entry.get("id") or ""
-                    content = entry.get("content") or entry.get("preview") or entry.get("analysis") or ""
+                    content = (
+                        entry.get("content")
+                        or entry.get("preview")
+                        or entry.get("analysis")
+                        or ""
+                    )
                     if mid and content:
                         wm.attend(
                             memory_id=str(mid),
@@ -196,9 +219,11 @@ def handle_wm_read(**kwargs: Any) -> dict[str, Any]:
 # Mode Implementations
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def _read_by_id(query: str, include_private: bool) -> dict[str, Any]:
     """Direct memory recall by ID with galactic promotion."""
     from whitemagic.core.memory.unified import get_unified_memory
+
     mem = get_unified_memory()
     memory = mem.recall(query)
     if memory is None:
@@ -209,8 +234,10 @@ def _read_by_id(query: str, include_private: bool) -> dict[str, Any]:
             "results": [],
             "note": f"No memory found with id={query}",
         }
-    if not include_private and (_flag_enabled(getattr(memory, "is_private", False)) or
-                                 _flag_enabled(getattr(memory, "model_exclude", False))):
+    if not include_private and (
+        _flag_enabled(getattr(memory, "is_private", False))
+        or _flag_enabled(getattr(memory, "model_exclude", False))
+    ):
         return {
             "status": "success",
             "mode": "id",
@@ -226,12 +253,15 @@ def _read_by_id(query: str, include_private: bool) -> dict[str, Any]:
     }
 
 
-def _read_hybrid(query: str, limit: int, include_cold: bool, include_private: bool) -> dict[str, Any]:
+def _read_hybrid(
+    query: str, limit: int, include_cold: bool, include_private: bool
+) -> dict[str, Any]:
     """Vector + graph RRF fusion via CoreAccessLayer.
 
     Auto-fallback to cold storage when hot results are insufficient (v23.1).
     """
     from whitemagic.core.intelligence.core_access import get_core_access
+
     cal = get_core_access()
     results = cal.hybrid_recall(query, k=limit, include_cold=include_cold)
 
@@ -254,12 +284,20 @@ def _read_hybrid(query: str, limit: int, include_cold: bool, include_private: bo
         # Try to fetch full memory for richer data
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory().recall(r.memory_id)
-            if mem and (include_private or (
-                not _flag_enabled(getattr(mem, "is_private", False)) and
-                not _flag_enabled(getattr(mem, "model_exclude", False))
-            )):
-                entry["memory_type"] = mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type)
+            if mem and (
+                include_private
+                or (
+                    not _flag_enabled(getattr(mem, "is_private", False))
+                    and not _flag_enabled(getattr(mem, "model_exclude", False))
+                )
+            ):
+                entry["memory_type"] = (
+                    mem.memory_type.name
+                    if hasattr(mem.memory_type, "name")
+                    else str(mem.memory_type)
+                )
                 entry["importance"] = mem.importance
                 entry["neuro_score"] = getattr(mem, "neuro_score", 1.0)
                 entry["tags"] = list(mem.tags) if mem.tags else []
@@ -282,14 +320,20 @@ def _read_hybrid(query: str, limit: int, include_cold: bool, include_private: bo
     }
 
 
-def _read_graph_walk(query: str, limit: int, include_cold: bool, include_private: bool,
-                     kwargs: dict[str, Any]) -> dict[str, Any]:
+def _read_graph_walk(
+    query: str,
+    limit: int,
+    include_cold: bool,
+    include_private: bool,
+    kwargs: dict[str, Any],
+) -> dict[str, Any]:
     """Anchor search + multi-hop graph walk via GraphWalker."""
     hops = int(kwargs.get("hops", 2))
     anchor_limit = int(kwargs.get("anchor_limit", 5))
 
     try:
         from whitemagic.core.memory.graph_walker import get_graph_walker
+
         walker = get_graph_walker()
         results = walker.hybrid_recall(
             query=query,
@@ -311,9 +355,12 @@ def _read_graph_walk(query: str, limit: int, include_cold: bool, include_private
         return _read_hybrid(query, limit, include_cold, include_private)
 
 
-def _read_semantic(query: str, limit: int, include_cold: bool, include_private: bool) -> dict[str, Any]:
+def _read_semantic(
+    query: str, limit: int, include_cold: bool, include_private: bool
+) -> dict[str, Any]:
     """Embedding similarity search via EmbeddingEngine."""
     from whitemagic.core.memory.embeddings import get_embedding_engine
+
     engine = get_embedding_engine()
     hits = engine.search_similar(query, limit=limit, include_cold=include_cold)
 
@@ -323,19 +370,29 @@ def _read_semantic(query: str, limit: int, include_cold: bool, include_private: 
         entry = {
             "memory_id": mid,
             "title": hit.get("title"),
-            "content_preview": hit.get("content", "")[:200] if hit.get("content") else "",
+            "content_preview": hit.get("content", "")[:200]
+            if hit.get("content")
+            else "",
             "similarity": hit.get("similarity", 0.0),
             "sources": ["vector"],
         }
         # Hydrate with full memory if available
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory().recall(mid)
-            if mem and (include_private or (
-                not _flag_enabled(getattr(mem, "is_private", False)) and
-                not _flag_enabled(getattr(mem, "model_exclude", False))
-            )):
-                entry["memory_type"] = mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type)
+            if mem and (
+                include_private
+                or (
+                    not _flag_enabled(getattr(mem, "is_private", False))
+                    and not _flag_enabled(getattr(mem, "model_exclude", False))
+                )
+            ):
+                entry["memory_type"] = (
+                    mem.memory_type.name
+                    if hasattr(mem.memory_type, "name")
+                    else str(mem.memory_type)
+                )
                 entry["importance"] = mem.importance
                 entry["tags"] = list(mem.tags) if mem.tags else []
                 entry["galactic_distance"] = getattr(mem, "galactic_distance", None)
@@ -357,6 +414,7 @@ def _read_semantic(query: str, limit: int, include_cold: bool, include_private: 
 def _read_lexical(query: str, limit: int, include_private: bool) -> dict[str, Any]:
     """FTS5 BM25 full-text search via UnifiedMemory."""
     from whitemagic.core.memory.unified import get_unified_memory
+
     mem = get_unified_memory()
     memories = mem.search(query=query, limit=limit)
     memories = _filter_private(memories, include_private)
@@ -371,9 +429,12 @@ def _read_lexical(query: str, limit: int, include_private: bool) -> dict[str, An
     }
 
 
-def _read_spatial(kwargs: dict[str, Any], limit: int, include_private: bool) -> dict[str, Any]:
+def _read_spatial(
+    kwargs: dict[str, Any], limit: int, include_private: bool
+) -> dict[str, Any]:
     """5D holographic KNN via CoreAccessLayer."""
     from whitemagic.core.intelligence.core_access import get_core_access
+
     cal = get_core_access()
     coords = kwargs.get("coords")
     if not coords or len(coords) != 5:
@@ -383,7 +444,9 @@ def _read_spatial(kwargs: dict[str, Any], limit: int, include_private: bool) -> 
         }
 
     neighbors = cal.query_holographic_neighbors(
-        coords=tuple(coords), k=limit, include_cold=kwargs.get("include_cold", False),
+        coords=tuple(coords),
+        k=limit,
+        include_cold=kwargs.get("include_cold", False),
     )
 
     return {
@@ -392,13 +455,20 @@ def _read_spatial(kwargs: dict[str, Any], limit: int, include_private: bool) -> 
         "count": len(neighbors),
         "results": [n.to_dict() for n in neighbors],
         "strategy": "5D holographic KNN (Euclidean distance in coordinate space)",
-        "coords": {"x": coords[0], "y": coords[1], "z": coords[2], "w": coords[3], "v": coords[4]},
+        "coords": {
+            "x": coords[0],
+            "y": coords[1],
+            "z": coords[2],
+            "w": coords[3],
+            "v": coords[4],
+        },
     }
 
 
 def _read_constellation(kwargs: dict[str, Any], limit: int) -> dict[str, Any]:
     """Constellation context query via CoreAccessLayer."""
     from whitemagic.core.intelligence.core_access import get_core_access
+
     cal = get_core_access()
     tags = kwargs.get("tags")
     coords = kwargs.get("coords")
@@ -418,6 +488,7 @@ def _read_constellation(kwargs: dict[str, Any], limit: int) -> dict[str, Any]:
 def _read_temporal(kwargs: dict[str, Any]) -> dict[str, Any]:
     """Time-bucketed activity metrics via CoreAccessLayer."""
     from whitemagic.core.intelligence.core_access import get_core_access
+
     cal = get_core_access()
     time_window = kwargs.get("time_window", "7d")
     bucket = kwargs.get("bucket", "1d")
@@ -447,6 +518,7 @@ def _read_codebase(query: str, kwargs: dict[str, Any], limit: int) -> dict[str, 
     # Try Fragment acceleration
     try:
         from whitemagic.tools.handlers.fragment import fragment_accelerated_search
+
         accel = fragment_accelerated_search(query, path=path, top=limit)
         if accel is not None:
             return {
@@ -466,6 +538,7 @@ def _read_codebase(query: str, kwargs: dict[str, Any], limit: int) -> dict[str, 
     # Fallback to vector search with codebase path
     try:
         from whitemagic.tools.handlers.vector_search import handle_vector_search
+
         result = handle_vector_search(query=query, path=path, limit=limit)
         if result.get("status") == "success":
             result["mode"] = "codebase"
@@ -497,6 +570,7 @@ def _read_strata(query: str, kwargs: dict[str, Any], limit: int) -> dict[str, An
 
     try:
         from whitemagic.tools.handlers.strata import handle_strata_analyze
+
         result = handle_strata_analyze(
             path=path,
             format=kwargs.get("format", "json"),
@@ -525,8 +599,17 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     status: dict[str, Any] = {
         "status": "success",
         "modes": [
-            "auto", "hybrid", "graph_walk", "semantic", "lexical",
-            "spatial", "constellation", "temporal", "codebase", "strata", "id",
+            "auto",
+            "hybrid",
+            "graph_walk",
+            "semantic",
+            "lexical",
+            "spatial",
+            "constellation",
+            "temporal",
+            "codebase",
+            "strata",
+            "id",
         ],
         "backends": {},
     }
@@ -534,6 +617,7 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     # Check CoreAccessLayer
     try:
         from whitemagic.core.intelligence.core_access import get_core_access
+
         cal = get_core_access()
         status["backends"]["core_access"] = "available"
         status["association_stats"] = cal.get_association_stats()
@@ -544,14 +628,18 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     # Check EmbeddingEngine
     try:
         from whitemagic.core.memory.embeddings import get_embedding_engine
+
         engine = get_embedding_engine()
-        status["backends"]["embedding_engine"] = "available" if engine._model is not None else "lazy_loaded"
+        status["backends"]["embedding_engine"] = (
+            "available" if engine._model is not None else "lazy_loaded"
+        )
     except Exception:
         status["backends"]["embedding_engine"] = "unavailable"
 
     # Check GraphWalker
     try:
         from whitemagic.core.memory.graph_walker import get_graph_walker
+
         get_graph_walker()
         status["backends"]["graph_walker"] = "available"
     except Exception:
@@ -560,6 +648,7 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     # Check Fragment
     try:
         from whitemagic.tools.handlers.fragment import _get_pyo3
+
         pyo3 = _get_pyo3()
         status["backends"]["fragment"] = "pyo3" if pyo3 else "unavailable"
     except Exception:
@@ -568,9 +657,12 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     # Check UnifiedMemory
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         mem = get_unified_memory()
         status["backends"]["unified_memory"] = "available"
-        status["memory_count"] = mem.backend.count() if hasattr(mem.backend, "count") else None
+        status["memory_count"] = (
+            mem.backend.count() if hasattr(mem.backend, "count") else None
+        )
     except Exception:
         status["backends"]["unified_memory"] = "unavailable"
 

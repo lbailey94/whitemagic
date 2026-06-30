@@ -10,6 +10,7 @@ from whitemagic.core.memory.unified_types import Memory
 
 logger = logging.getLogger(__name__)
 
+
 class RefiningFire:
     """Refining Fire — The Tikkun Engine.
     Processes fading memories to extract eternal patterns (Sparks) before the record is lost.
@@ -17,13 +18,17 @@ class RefiningFire:
 
     def __init__(self) -> None:
         self.library = get_solution_library()
-        self.refinement_threshold = 0.3 # Memories below this importance are considered "Husks"
+        self.refinement_threshold = (
+            0.3  # Memories below this importance are considered "Husks"
+        )
 
     def refine_memory(self, memory: Memory) -> str | None:
         """Process a fading memory. If a 'Spark' is found, add it to the Solution Library.
         Returns the solution_id if a spark was extracted, else None.
         """
-        if memory.importance > self.refinement_threshold and not memory.metadata.get("force_refinement"):
+        if memory.importance > self.refinement_threshold and not memory.metadata.get(
+            "force_refinement"
+        ):
             return None
 
         content_str = str(memory.content)
@@ -45,7 +50,14 @@ class RefiningFire:
         # B. Strategic/Insight Spark
         elif memory.importance > 0.15 and len(content_str) > 100:
             # Look for keywords indicating an insight or decision
-            keywords = ["decided", "learned", "observed", "resonance", "alignment", "conflict"]
+            keywords = [
+                "decided",
+                "learned",
+                "observed",
+                "resonance",
+                "alignment",
+                "conflict",
+            ]
             if any(k in content_str.lower() for k in keywords):
                 spark_found = True
                 spark_title = f"Refined Strategic Insight (from {memory.id})"
@@ -62,7 +74,8 @@ class RefiningFire:
                 description=spark_desc,
                 code_snippet=content_str if spark_type == "solution" else None,
                 pattern_type=spark_type,
-                confidence=memory.importance + 0.2, # Give it a slight boost for surviving refinement
+                confidence=memory.importance
+                + 0.2,  # Give it a slight boost for surviving refinement
                 tags=list(memory.tags) + ["refined", "tikkun"],
                 metadata={
                     "source_memory": memory.id,
@@ -72,7 +85,9 @@ class RefiningFire:
             )
 
             self.library.add_solution(solution)
-            logger.info("🔥 Refining Fire: Extracted spark '%s' from husk %s", sol_id, memory.id)
+            logger.info(
+                "🔥 Refining Fire: Extracted spark '%s' from husk %s", sol_id, memory.id
+            )
             return sol_id
 
         return None
@@ -86,8 +101,10 @@ class RefiningFire:
                 results[mem.id] = sol_id
         return results
 
+
 # Singleton
 _refining_fire = None
+
 
 def get_refining_fire() -> RefiningFire:
     """

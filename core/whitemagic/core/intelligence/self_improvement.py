@@ -36,7 +36,7 @@ import logging
 import tempfile
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -137,7 +137,11 @@ class SelfImprovementPipeline:
                 result.iterations.append(iteration)
 
                 if iteration.strata_score >= self.score_threshold:
-                    logger.info("Self-improvement converged at iteration %d (score=%.2f)", i, iteration.strata_score)
+                    logger.info(
+                        "Self-improvement converged at iteration %d (score=%.2f)",
+                        i,
+                        iteration.strata_score,
+                    )
                     break
 
                 if i < self.max_iterations:
@@ -149,7 +153,9 @@ class SelfImprovementPipeline:
                 best = max(result.iterations, key=lambda x: x.strata_score)
                 result.final_code = best.code
                 result.final_score = best.strata_score
-                result.total_strata_issues = sum(len(i.strata_issues) for i in result.iterations)
+                result.total_strata_issues = sum(
+                    len(i.strata_issues) for i in result.iterations
+                )
                 result.success = result.final_score >= self.score_threshold
 
             # Persist lessons
@@ -172,34 +178,30 @@ class SelfImprovementPipeline:
         """Run a single iteration of the pipeline."""
         result = IterationResult(iteration=iteration_num)
 
-        # Step 1: Parallel reasoning explores approaches
         reasoning_result = await self._run_reasoning(prompt)
         result.reasoning_branch = reasoning_result.get("best_branch", "")
         result.reasoning_score = reasoning_result.get("best_score", 0.0)
 
-        # Step 2: CodeGenome generates code
         code = self._generate_code(prompt, reasoning_result)
         result.code = code
 
         if not code:
             return result
 
-        # Step 3: STRATA analyzes the code
         strata_result = self._run_strata(code)
         result.strata_issues = strata_result.get("issues", [])
         result.strata_score = strata_result.get("score", 0.5)
 
-        # Step 4: Monte Carlo scores confidence
-        result.mc_confidence = self._run_monte_carlo(result.strata_score, len(result.strata_issues))
+        result.mc_confidence = self._run_monte_carlo(
+            result.strata_score, len(result.strata_issues)
+        )
 
-        # Step 5: Check if improved over previous
         if previous_iterations:
             prev_best = max(previous_iterations, key=lambda x: x.strata_score)
             result.improved = result.strata_score > prev_best.strata_score
         else:
             result.improved = True
 
-        # Step 6: Extract lessons
         self._extract_lessons(result)
 
         return result
@@ -207,30 +209,42 @@ class SelfImprovementPipeline:
     async def _run_reasoning(self, prompt: str) -> dict[str, Any]:
         """Run ParallelReasoningTree to explore implementation approaches."""
         try:
-            from whitemagic.core.intelligence.parallel_reasoning import ParallelReasoningTree
+            from whitemagic.core.intelligence.parallel_reasoning import (
+                ParallelReasoningTree,
+            )
 
             tree = ParallelReasoningTree(question=f"Best approach for: {prompt}")
             result = await tree.explore(max_branches=4, max_depth=4)
 
             return {
                 "best_branch": result.best_branch_id,
-                "best_score": max(b.score for b in result.branches) if result.branches else 0.0,
+                "best_score": max(b.score for b in result.branches)
+                if result.branches
+                else 0.0,
                 "synthesis": result.synthesis[:500],
                 "branch_count": len(result.branches),
             }
         except Exception as e:
             logger.debug("Reasoning step skipped: %s", e)
-            return {"best_branch": "default", "best_score": 0.5, "synthesis": "", "branch_count": 0}
+            return {
+                "best_branch": "default",
+                "best_score": 0.5,
+                "synthesis": "",
+                "branch_count": 0,
+            }
 
     def _generate_code(self, prompt: str, reasoning: dict[str, Any]) -> str:
         """Generate code using CodeGenome/GeneseedVault."""
         try:
             from whitemagic.codegenome.vault import get_geneseed_vault
+
             vault = get_geneseed_vault()
 
             # Use reasoning synthesis as additional context
             synthesis = reasoning.get("synthesis", "")
-            enhanced_prompt = f"{prompt}" + (f"\nContext: {synthesis[:200]}" if synthesis else "")
+            enhanced_prompt = f"{prompt}" + (
+                f"\nContext: {synthesis[:200]}" if synthesis else ""
+            )
 
             result = vault.vibe_render(enhanced_prompt)
             if result.get("status") == "success":
@@ -256,17 +270,20 @@ class SelfImprovementPipeline:
             issues = []
             if hasattr(report, "issues"):
                 for issue in report.issues[:20]:
-                    issues.append({
-                        "rule": getattr(issue, "rule", "unknown"),
-                        "message": getattr(issue, "message", ""),
-                        "severity": getattr(issue, "severity", "info"),
-                    })
+                    issues.append(
+                        {
+                            "rule": getattr(issue, "rule", "unknown"),
+                            "message": getattr(issue, "message", ""),
+                            "severity": getattr(issue, "severity", "info"),
+                        }
+                    )
 
             # Score: fewer issues = higher score
             issue_count = len(issues)
             score = max(0.0, 1.0 - (issue_count * 0.1))
 
             import os
+
             os.unlink(temp_path)
 
             return {"issues": issues, "score": score, "issue_count": issue_count}
@@ -281,14 +298,16 @@ class SelfImprovementPipeline:
 
             enhancer = MCForecastEnhancer()
             # Create a claim representing our confidence in the code
-            claims = [{
-                "id": f"codegen_{int(time.time())}",
-                "claim": "Generated code meets quality standards",
-                "confidence": strata_score,
-                "outcome": 1.0 if strata_score >= 0.7 else 0.0,
-                "status": "validated" if strata_score >= 0.7 else "falsified",
-                "category": "code_quality",
-            }]
+            claims = [
+                {
+                    "id": f"codegen_{int(time.time())}",
+                    "claim": "Generated code meets quality standards",
+                    "confidence": strata_score,
+                    "outcome": 1.0 if strata_score >= 0.7 else 0.0,
+                    "status": "validated" if strata_score >= 0.7 else "falsified",
+                    "category": "code_quality",
+                }
+            ]
 
             result = enhancer.run_calibrated(claims, n_trials=1000)
             mc_result = result.get("mc_result", {})
@@ -300,7 +319,9 @@ class SelfImprovementPipeline:
             logger.debug("Monte Carlo scoring skipped: %s", e)
             return strata_score
 
-    def _build_revision_prompt(self, original_prompt: str, iteration: IterationResult) -> str:
+    def _build_revision_prompt(
+        self, original_prompt: str, iteration: IterationResult
+    ) -> str:
         """Build a revised prompt incorporating STRATA feedback."""
         issues_text = "; ".join(
             f"{i.get('rule', '')}: {i.get('message', '')[:60]}"
@@ -311,18 +332,27 @@ class SelfImprovementPipeline:
     def _extract_lessons(self, iteration: IterationResult) -> None:
         """Extract lessons from an iteration."""
         if iteration.improved:
-            self._lessons.append(f"Iteration {iteration.iteration}: Improved score to {iteration.strata_score:.2f}")
+            self._lessons.append(
+                f"Iteration {iteration.iteration}: Improved score to {iteration.strata_score:.2f}"
+            )
         else:
-            self._lessons.append(f"Iteration {iteration.iteration}: Score {iteration.strata_score:.2f} did not improve")
+            self._lessons.append(
+                f"Iteration {iteration.iteration}: Score {iteration.strata_score:.2f} did not improve"
+            )
 
         if iteration.strata_issues:
             top_issue = iteration.strata_issues[0]
-            self._lessons.append(f"Common issue: {top_issue.get('rule', 'unknown')} - {top_issue.get('message', '')[:80]}")
+            self._lessons.append(
+                f"Common issue: {top_issue.get('rule', 'unknown')} - {top_issue.get('message', '')[:80]}"
+            )
 
     def _persist_lessons(self) -> None:
         """Persist lessons to AutonomousLearner."""
         try:
-            from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import get_autonomous_learner
+            from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import (
+                get_autonomous_learner,
+            )
+
             learner = get_autonomous_learner()
             for lesson in self._lessons:
                 if "Improved" in lesson:
@@ -359,6 +389,7 @@ def run_self_improvement(
     try:
         asyncio.get_running_loop()
         from concurrent.futures import ThreadPoolExecutor
+
         with ThreadPoolExecutor(max_workers=1) as executor:
             result = executor.submit(asyncio.run, pipeline.run(prompt)).result()
     except RuntimeError:

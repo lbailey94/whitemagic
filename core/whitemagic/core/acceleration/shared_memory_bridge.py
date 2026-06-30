@@ -36,6 +36,7 @@ SHM_NAME = "whitemagic_embed_bridge"
 
 class SharedMemoryHeader(ctypes.Structure):
     """Header structure for shared memory segment."""
+
     _fields_ = [
         ("magic", ctypes.c_uint32),
         ("version", ctypes.c_uint32),
@@ -75,7 +76,9 @@ class SharedMemoryBridge:
             except FileNotFoundError:
                 pass
 
-            self._shm = shared_memory.SharedMemory(name=self.name, create=True, size=SEGMENT_SIZE)
+            self._shm = shared_memory.SharedMemory(
+                name=self.name, create=True, size=SEGMENT_SIZE
+            )
             buf = self._shm.buf
             if buf is None:
                 raise RuntimeError("Shared memory buffer is None")
@@ -90,7 +93,12 @@ class SharedMemoryBridge:
             self._header.total_read = 0
             self._header.last_write_ts = 0.0
             self._header.last_read_ts = 0.0
-            logger.info("Created shared memory: %s (%s bytes)", self.name, SEGMENT_SIZE, exc_info=True)
+            logger.info(
+                "Created shared memory: %s (%s bytes)",
+                self.name,
+                SEGMENT_SIZE,
+                exc_info=True,
+            )
         except Exception as e:
             logger.error("Failed to create shared memory: %s", e, exc_info=True)
             raise
@@ -121,13 +129,17 @@ class SharedMemoryBridge:
             bool
         """
         if len(vector) != EMBEDDING_DIM:
-            raise ValueError(f"Vector dimension mismatch: {len(vector)} != {EMBEDDING_DIM}")
+            raise ValueError(
+                f"Vector dimension mismatch: {len(vector)} != {EMBEDDING_DIM}"
+            )
 
         with self._lock:
             if self._header is None:
                 return False
             if self._header.count >= self._header.capacity:
-                self._header.read_pos = (self._header.read_pos + 1) % self._header.capacity
+                self._header.read_pos = (
+                    self._header.read_pos + 1
+                ) % self._header.capacity
 
             pos = self._header.write_pos
             offset = HEADER_SIZE + (pos * SLOT_SIZE)
@@ -139,8 +151,8 @@ class SharedMemoryBridge:
 
             header_bytes = struct.pack("<II", memory_id, 1)
             vector_bytes = struct.pack(f"<{EMBEDDING_DIM}f", *vector)
-            shm.buf[offset:offset + 8] = header_bytes
-            shm.buf[offset + 8:offset + SLOT_SIZE] = vector_bytes
+            shm.buf[offset : offset + 8] = header_bytes
+            shm.buf[offset + 8 : offset + SLOT_SIZE] = vector_bytes
 
             self._header.write_pos = (pos + 1) % self._header.capacity
             if self._header.count < self._header.capacity:
@@ -161,7 +173,9 @@ class SharedMemoryBridge:
             int
         """
         if vectors.shape[1] != EMBEDDING_DIM:
-            raise ValueError(f"Vector dimension mismatch: {vectors.shape[1]} != {EMBEDDING_DIM}")
+            raise ValueError(
+                f"Vector dimension mismatch: {vectors.shape[1]} != {EMBEDDING_DIM}"
+            )
 
         n = len(ids)
         written = 0
@@ -173,15 +187,17 @@ class SharedMemoryBridge:
 
             for i in range(n):
                 if self._header.count >= self._header.capacity:
-                    self._header.read_pos = (self._header.read_pos + 1) % self._header.capacity
+                    self._header.read_pos = (
+                        self._header.read_pos + 1
+                    ) % self._header.capacity
 
                 pos = self._header.write_pos
                 offset = HEADER_SIZE + (pos * SLOT_SIZE)
 
                 header_bytes = struct.pack("<II", int(ids[i]), 1)
                 vec_bytes = vectors[i].astype(np.float32).tobytes()
-                shm.buf[offset:offset + 8] = header_bytes
-                shm.buf[offset + 8:offset + SLOT_SIZE] = vec_bytes
+                shm.buf[offset : offset + 8] = header_bytes
+                shm.buf[offset + 8 : offset + SLOT_SIZE] = vec_bytes
 
                 self._header.write_pos = (pos + 1) % self._header.capacity
                 if self._header.count < self._header.capacity:
@@ -201,22 +217,27 @@ class SharedMemoryBridge:
         """
         with self._lock:
             shm = self._shm
-            if self._header is None or self._header.count == 0 or shm is None or shm.buf is None:
+            if (
+                self._header is None
+                or self._header.count == 0
+                or shm is None
+                or shm.buf is None
+            ):
                 return None
 
             pos = self._header.read_pos
             offset = HEADER_SIZE + (pos * SLOT_SIZE)
 
-            header_bytes = bytes(shm.buf[offset:offset + 8])
+            header_bytes = bytes(shm.buf[offset : offset + 8])
             memory_id, flags = struct.unpack("<II", header_bytes)
 
             if flags != 1:
                 return None
 
-            vector_bytes = bytes(shm.buf[offset + 8:offset + SLOT_SIZE])
+            vector_bytes = bytes(shm.buf[offset + 8 : offset + SLOT_SIZE])
             vector = list(struct.unpack(f"<{EMBEDDING_DIM}f", vector_bytes))
 
-            shm.buf[offset + 4:offset + 8] = struct.pack("<I", 0)
+            shm.buf[offset + 4 : offset + 8] = struct.pack("<I", 0)
 
             self._header.read_pos = (pos + 1) % self._header.capacity
             self._header.count -= 1
@@ -236,8 +257,15 @@ class SharedMemoryBridge:
         """
         with self._lock:
             shm = self._shm
-            if self._header is None or self._header.count == 0 or shm is None or shm.buf is None:
-                return np.array([], dtype=np.int32), np.zeros((0, EMBEDDING_DIM), dtype=np.float32)
+            if (
+                self._header is None
+                or self._header.count == 0
+                or shm is None
+                or shm.buf is None
+            ):
+                return np.array([], dtype=np.int32), np.zeros(
+                    (0, EMBEDDING_DIM), dtype=np.float32
+                )
 
             count = min(max_count, self._header.count)
             ids = np.zeros(count, dtype=np.int32)
@@ -247,15 +275,17 @@ class SharedMemoryBridge:
                 pos = (self._header.read_pos + i) % self._header.capacity
                 offset = HEADER_SIZE + (pos * SLOT_SIZE)
 
-                header_bytes = bytes(shm.buf[offset:offset + 8])
+                header_bytes = bytes(shm.buf[offset : offset + 8])
                 ids[i], _ = struct.unpack("<II", header_bytes)
 
-                vector_bytes = bytes(shm.buf[offset + 8:offset + SLOT_SIZE])
+                vector_bytes = bytes(shm.buf[offset + 8 : offset + SLOT_SIZE])
                 vectors[i] = np.frombuffer(vector_bytes, dtype=np.float32)
 
-                shm.buf[offset + 4:offset + 8] = struct.pack("<I", 0)
+                shm.buf[offset + 4 : offset + 8] = struct.pack("<I", 0)
 
-            self._header.read_pos = (self._header.read_pos + count) % self._header.capacity
+            self._header.read_pos = (
+                self._header.read_pos + count
+            ) % self._header.capacity
             self._header.count -= count
             self._header.total_read += count
             self._header.last_read_ts = time.time()
@@ -372,7 +402,9 @@ def benchmark_transfer(n_embeddings: int = 1000) -> dict[str, Any]:
             "read_time_ms": read_time,
             "total_time_ms": total_time,
             "target_met": total_time < 1.0,
-            "throughput_emb_per_sec": n_embeddings / (total_time / 1000) if total_time > 0 else 0,
+            "throughput_emb_per_sec": n_embeddings / (total_time / 1000)
+            if total_time > 0
+            else 0,
         }
     finally:
         bridge.destroy()
@@ -381,9 +413,13 @@ def benchmark_transfer(n_embeddings: int = 1000) -> dict[str, Any]:
 if __name__ == "__main__":
     print("Testing shared memory bridge...")
     result = benchmark_transfer(1000)
-    print(f"Write: {result['write_time_ms']:.2f}ms, Read: {result['read_time_ms']:.2f}ms, Total: {result['total_time_ms']:.2f}ms")
+    print(
+        f"Write: {result['write_time_ms']:.2f}ms, Read: {result['read_time_ms']:.2f}ms, Total: {result['total_time_ms']:.2f}ms"
+    )
     print(f"Throughput: {result['throughput_emb_per_sec']:.0f} embeddings/sec")
     if result["target_met"]:
         print("✅ VC-05 target met")
     else:
-        print(f"❌ VC-05: {result['total_time_ms']:.2f}ms (target <1ms) — note: Python overhead, Koka consumer will be faster")
+        print(
+            f"❌ VC-05: {result['total_time_ms']:.2f}ms (target <1ms) — note: Python overhead, Koka consumer will be faster"
+        )

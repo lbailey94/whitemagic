@@ -13,6 +13,7 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.tree import Tree
+
     HAS_RICH = True
     console: Console | None = Console()
 except ImportError:
@@ -52,10 +53,11 @@ def gana_list(quadrant: str) -> None:
             if quadrant != "all" and quadrant != quad_key:
                 continue
             branch = tree.add(f"[{color}]{label}[/{color}]")
-            for i, gana in enumerate(ganas[start:
-                end], start + 1):
+            for i, gana in enumerate(ganas[start:end], start + 1):
                 mansion = gana.mansion
-                branch.add(f"{i}. {mansion.name} ({mansion.value}) - {gana.__class__.__name__}")
+                branch.add(
+                    f"{i}. {mansion.name} ({mansion.value}) - {gana.__class__.__name__}"
+                )
         console.print(tree)
         return
 
@@ -64,10 +66,11 @@ def gana_list(quadrant: str) -> None:
         if quadrant != "all" and quadrant != quad_key:
             continue
         click.echo(f"\n{label}")
-        for i, gana in enumerate(ganas[start:
-            end], start + 1):
+        for i, gana in enumerate(ganas[start:end], start + 1):
             mansion = gana.mansion
-            click.echo(f"{i}. {mansion.name} ({mansion.value}) - {gana.__class__.__name__}")
+            click.echo(
+                f"{i}. {mansion.name} ({mansion.value}) - {gana.__class__.__name__}"
+            )
 
 
 @gana_group.command(name="invoke")
@@ -80,7 +83,9 @@ def gana_invoke(tool_name: str, args: str) -> None:
     try:
         args_dict = _json_loads(args)
         if HAS_RICH and console:
-            with console.status(f"[cyan]Invoking {tool_name} through Gana...", spinner="moon"):
+            with console.status(
+                f"[cyan]Invoking {tool_name} through Gana...", spinner="moon"
+            ):
                 result = invoke_gana(target_tool=tool_name, tool_args=args_dict)  # type: ignore[call-arg]
         else:
             result = invoke_gana(target_tool=tool_name, tool_args=args_dict)  # type: ignore[call-arg]
@@ -120,7 +125,9 @@ def gana_status() -> None:
 
     ganas = get_all_ganas()
     if HAS_RICH and console:
-        table = Table(title="🌙 Gana System Status", show_header=True, header_style="bold magenta")
+        table = Table(
+            title="🌙 Gana System Status", show_header=True, header_style="bold magenta"
+        )
         table.add_column("Quadrant", style="cyan")
         table.add_column("Ganas", justify="center")
         table.add_column("Tools Mapped", justify="center")
@@ -128,24 +135,50 @@ def gana_status() -> None:
         table.add_row(
             "🐉 Eastern (Spring)",
             "7",
-            str(sum(1 for t in TOOL_TO_GANA if TOOL_TO_GANA[t] in [type(g) for g in ganas[:7]])),
+            str(
+                sum(
+                    1
+                    for t in TOOL_TO_GANA
+                    if TOOL_TO_GANA[t] in [type(g) for g in ganas[:7]]
+                )
+            ),
         )
         table.add_row(
             "🦅 Southern (Summer)",
             "7",
-            str(sum(1 for t in TOOL_TO_GANA if TOOL_TO_GANA[t] in [type(g) for g in ganas[7:14]])),
+            str(
+                sum(
+                    1
+                    for t in TOOL_TO_GANA
+                    if TOOL_TO_GANA[t] in [type(g) for g in ganas[7:14]]
+                )
+            ),
         )
         table.add_row(
             "🐯 Western (Autumn)",
             "7",
-            str(sum(1 for t in TOOL_TO_GANA if TOOL_TO_GANA[t] in [type(g) for g in ganas[14:21]])),
+            str(
+                sum(
+                    1
+                    for t in TOOL_TO_GANA
+                    if TOOL_TO_GANA[t] in [type(g) for g in ganas[14:21]]
+                )
+            ),
         )
         table.add_row(
             "🐢 Northern (Winter)",
             "7",
-            str(sum(1 for t in TOOL_TO_GANA if TOOL_TO_GANA[t] in [type(g) for g in ganas[21:28]])),
+            str(
+                sum(
+                    1
+                    for t in TOOL_TO_GANA
+                    if TOOL_TO_GANA[t] in [type(g) for g in ganas[21:28]]
+                )
+            ),
         )
-        table.add_row("[bold]Total[/bold]", "[bold]28[/bold]", f"[bold]{len(TOOL_TO_GANA)}[/bold]")
+        table.add_row(
+            "[bold]Total[/bold]", "[bold]28[/bold]", f"[bold]{len(TOOL_TO_GANA)}[/bold]"
+        )
         console.print(table)
         console.print("\n[green]✅ All 28 Ganas operational and resonating[/green]")
         return

@@ -50,6 +50,7 @@ try:
     BACKEND = "orjson"
 
 except ImportError:
+
     def dumps(obj: Any, **kwargs: Any) -> bytes:
         """Serialize to JSON bytes using stdlib json."""
         return _json.dumps(obj, **kwargs).encode("utf-8")

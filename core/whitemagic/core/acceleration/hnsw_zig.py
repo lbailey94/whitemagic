@@ -11,6 +11,7 @@ Usage:
     index.add(vector)  # Add vectors
     results = index.search(query, k=10)  # Find nearest neighbors
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -33,12 +34,17 @@ _HAS_HNSW = False
 
 class Connection(ctypes.Structure):
     """Connection: connection."""
+
     _fields_ = [("node_id", ctypes.c_uint32), ("distance", ctypes.c_float)]
 
 
 def _find_zig_lib() -> str | None:
     """Locate the compiled Zig shared library."""
-    base = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "whitemagic-zig"
+    base = (
+        Path(__file__).resolve().parent.parent.parent.parent.parent
+        / "polyglot"
+        / "whitemagic-zig"
+    )
     candidates = [
         os.environ.get("WM_ZIG_LIB", ""),
         str(base / "zig-out" / "lib" / "libwhitemagic.so"),
@@ -67,8 +73,11 @@ def _load_lib() -> Any:
 
         # wm_hnsw_create(dim, m, ef_construction, ef_search, max_elements) -> handle
         lib.wm_hnsw_create.argtypes = [
-            ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t,
-            ctypes.c_size_t, ctypes.c_size_t,
+            ctypes.c_size_t,
+            ctypes.c_size_t,
+            ctypes.c_size_t,
+            ctypes.c_size_t,
+            ctypes.c_size_t,
         ]
         lib.wm_hnsw_create.restype = ctypes.c_void_p
 
@@ -82,8 +91,10 @@ def _load_lib() -> Any:
 
         # wm_hnsw_search(handle, query_ptr, k, results_ptr) -> count
         lib.wm_hnsw_search.argtypes = [
-            ctypes.c_void_p, ctypes.POINTER(ctypes.c_float),
-            ctypes.c_size_t, ctypes.POINTER(Connection),
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_float),
+            ctypes.c_size_t,
+            ctypes.POINTER(Connection),
         ]
         lib.wm_hnsw_search.restype = ctypes.c_size_t
 
@@ -132,7 +143,9 @@ class HnswIndex:
 
         lib = _load_lib()
         if lib is not None:
-            self._handle = lib.wm_hnsw_create(dim, m, ef_construction, ef_search, max_elements)
+            self._handle = lib.wm_hnsw_create(
+                dim, m, ef_construction, ef_search, max_elements
+            )
             if self._handle is None:
                 raise RuntimeError("Failed to create HNSW index")
 
@@ -163,7 +176,9 @@ class HnswIndex:
 
         return int(lib.wm_hnsw_add(self._handle, vec_ptr))
 
-    def search(self, query: np.ndarray | list[float], k: int = 10) -> list[tuple[int, float]]:
+    def search(
+        self, query: np.ndarray | list[float], k: int = 10
+    ) -> list[tuple[int, float]]:
         """Search for k nearest neighbors.
 
         Returns:
@@ -185,7 +200,9 @@ class HnswIndex:
         results = (Connection * k)()
         count = lib.wm_hnsw_search(self._handle, q_ptr, k, results)
 
-        return [(int(results[i].node_id), float(results[i].distance)) for i in range(count)]
+        return [
+            (int(results[i].node_id), float(results[i].distance)) for i in range(count)
+        ]
 
     @property
     def count(self) -> int:

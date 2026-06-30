@@ -3,14 +3,17 @@
 
 class CognitiveEpisode:
     """CognitiveEpisode: cognitive episode."""
+
     def __init__(self, id: str, embeddings: list[float], tags: list[str]):
         self.id = id
         self.embeddings = embeddings
         self.tags = tags
         self.score = 0.0
 
+
 class ThoughtGalaxy:
     """ThoughtGalaxy: thought galaxy."""
+
     def __init__(self):
         self.episodes = []
 
@@ -27,7 +30,7 @@ class ThoughtGalaxy:
     def _recalculate_gravity(self):
         # Simulated gravity clustering based on tag overlap and vector similarity
         for ep in self.episodes:
-            ep.score = len(ep.tags) * 1.5 # Placeholder scoring
+            ep.score = len(ep.tags) * 1.5  # Placeholder scoring
 
     def recall(self, query_tags: list[str], top_k: int = 5) -> list[CognitiveEpisode]:
         # Simple intersection scoring for now

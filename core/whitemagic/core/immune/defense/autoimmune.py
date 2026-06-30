@@ -34,6 +34,7 @@ class AntiPattern:
     """AntiPattern: anti pattern.
 
     Value object: equality and repr are field-based."""
+
     pattern_id: str
     title: str
     confidence: float
@@ -56,6 +57,7 @@ class PatternViolation:
     """PatternViolation: pattern violation.
 
     Value object: equality and repr are field-based."""
+
     file_path: Path
     line_number: int
     pattern: AntiPattern
@@ -110,7 +112,9 @@ class AutoimmuneSystem:
 
         return keywords[:5]  # Top 5 keywords
 
-    def scan_file(self, file_path: Path, min_confidence: float = 0.7) -> list[PatternViolation]:
+    def scan_file(
+        self, file_path: Path, min_confidence: float = 0.7
+    ) -> list[PatternViolation]:
         """Scan a file for anti-pattern violations."""
         violations: list[PatternViolation] = []
 
@@ -123,26 +127,34 @@ class AutoimmuneSystem:
 
             # Only check high-confidence patterns
             high_conf_patterns = [
-                p for p in self.anti_patterns.values()
+                p
+                for p in self.anti_patterns.values()
                 if p.confidence >= min_confidence and p.keywords
             ]
 
             for line_num, line in enumerate(lines, 1):
                 for pattern in high_conf_patterns:
                     if pattern.matches(line):
-                        violations.append(PatternViolation(
-                            file_path=file_path,
-                            line_number=line_num,
-                            pattern=pattern,
-                            matched_text=line.strip()[:100],  # Limit length
-                        ))
+                        violations.append(
+                            PatternViolation(
+                                file_path=file_path,
+                                line_number=line_num,
+                                pattern=pattern,
+                                matched_text=line.strip()[:100],  # Limit length
+                            )
+                        )
 
         except Exception as e:
             logger.info("⚠️  Error scanning %s: %s", file_path, e, exc_info=True)
 
         return violations
 
-    def scan_directory(self, directory: Path, extensions: list[str] | None = None, min_confidence: float = 0.7) -> list[PatternViolation]:
+    def scan_directory(
+        self,
+        directory: Path,
+        extensions: list[str] | None = None,
+        min_confidence: float = 0.7,
+    ) -> list[PatternViolation]:
         """Scan directory for violations."""
         if extensions is None:
             extensions = [".py", ".js", ".ts", ".md"]
@@ -163,6 +175,7 @@ class AutoimmuneSystem:
 # Global instance
 _immune_system = None
 
+
 def get_immune_system() -> AutoimmuneSystem:
     """Get global immune system instance."""
     global _immune_system
@@ -181,13 +194,17 @@ def detect_autoimmune() -> list[dict]:
     # Convert to pattern format
     patterns = []
     for v in violations[:20]:  # Top 20
-        patterns.append({
-            "type": "autoimmune_violation",
-            "pattern_id": v.pattern.pattern_id,
-            "title": v.pattern.title,
-            "confidence": v.pattern.confidence,
-            "file": str(v.file_path.relative_to(Path("."))) if v.file_path.is_relative_to(Path(".")) else str(v.file_path),
-        })
+        patterns.append(
+            {
+                "type": "autoimmune_violation",
+                "pattern_id": v.pattern.pattern_id,
+                "title": v.pattern.title,
+                "confidence": v.pattern.confidence,
+                "file": str(v.file_path.relative_to(Path(".")))
+                if v.file_path.is_relative_to(Path("."))
+                else str(v.file_path),
+            }
+        )
 
     return patterns
 
@@ -195,6 +212,7 @@ def detect_autoimmune() -> list[dict]:
 # Move auto_heal into class
 class AutoimmuneSystemExtended(AutoimmuneSystem):
     """AutoimmuneSystemExtended: autoimmune system extended."""
+
     def auto_heal(self, violations: list[PatternViolation]) -> int:
         """Auto-fix high-confidence violations. Returns count of fixes."""
         fixed = 0

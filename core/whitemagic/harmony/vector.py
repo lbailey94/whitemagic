@@ -43,16 +43,12 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Guna classification (MandalaOS concept)
-# ---------------------------------------------------------------------------
-
 class Guna(StrEnum):
     """Process temperament tags inspired by Vedic gunas."""
 
-    SATTVIC = "sattvic"    # Balanced, interactive, light
-    RAJASIC = "rajasic"    # Active, CPU-heavy, write-intensive
-    TAMASIC = "tamasic"    # Idle, blocked, read-only
+    SATTVIC = "sattvic"  # Balanced, interactive, light
+    RAJASIC = "rajasic"  # Active, CPU-heavy, write-intensive
+    TAMASIC = "tamasic"  # Idle, blocked, read-only
 
     @classmethod
     def classify_tool(cls, tool_name: str, safety: str = "READ") -> Guna:
@@ -62,26 +58,44 @@ class Guna(StrEnum):
             return cls.RAJASIC
         # Read-only introspection tools are Sattvic (balanced, observing)
         _sattvic_prefixes = (
-            "get_", "list_", "search_", "read_", "capabilities",
-            "manifest", "state.", "repo.", "ship.", "health",
-            "archaeology_find", "archaeology_stats", "archaeology_report",
-            "ganying_history", "ganying_listeners", "resonance_trace",
-            "watcher_status", "watcher_list", "watcher_stats",
-            "governor_stats", "governor_check",
-            "get_yin_yang", "get_ethical", "get_dharma",
-            "cluster_stats", "pattern_search", "token_report",
-            "edge_stats", "rust_status", "sangha_lock_list",
-            "scratchpad_", "view_",
+            "get_",
+            "list_",
+            "search_",
+            "read_",
+            "capabilities",
+            "manifest",
+            "state.",
+            "repo.",
+            "ship.",
+            "health",
+            "archaeology_find",
+            "archaeology_stats",
+            "archaeology_report",
+            "ganying_history",
+            "ganying_listeners",
+            "resonance_trace",
+            "watcher_status",
+            "watcher_list",
+            "watcher_stats",
+            "governor_stats",
+            "governor_check",
+            "get_yin_yang",
+            "get_ethical",
+            "get_dharma",
+            "cluster_stats",
+            "pattern_search",
+            "token_report",
+            "edge_stats",
+            "rust_status",
+            "sangha_lock_list",
+            "scratchpad_",
+            "view_",
         )
         if any(tool_name.startswith(p) for p in _sattvic_prefixes):
             return cls.SATTVIC
         # Default: Rajasic (doing something)
         return cls.RAJASIC
 
-
-# ---------------------------------------------------------------------------
-# Rolling window for time-series metrics
-# ---------------------------------------------------------------------------
 
 @dataclass
 class _ToolEvent:
@@ -93,8 +107,8 @@ class _ToolEvent:
     duration_s: float
     success: bool
     declared_safety: str
-    actual_writes: int        # count of writes in the response
-    karma_mismatch: bool      # declared safety != actual writes pattern
+    actual_writes: int  # count of writes in the response
+    karma_mismatch: bool  # declared safety != actual writes pattern
 
 
 class _RollingWindow:
@@ -129,10 +143,6 @@ class _RollingWindow:
         with self._lock:
             return [e for e in self._events if e.timestamp >= cutoff]
 
-
-# ---------------------------------------------------------------------------
-# Harmony Vector
-# ---------------------------------------------------------------------------
 
 # Dimension weights for the composite harmony score
 _DEFAULT_WEIGHTS: dict[str, float] = {
@@ -219,10 +229,6 @@ class HarmonyVector:
             timestamp=datetime.now().isoformat(),
         )
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def record_call(
         self,
         tool_name: str,
@@ -267,17 +273,21 @@ class HarmonyVector:
         # Feed anomaly detector
         try:
             from whitemagic.harmony.anomaly_detector import get_anomaly_detector
-            get_anomaly_detector().ingest({
-                "balance": self._latest.balance,
-                "throughput": self._latest.throughput,
-                "latency": self._latest.latency,
-                "error_rate": self._latest.error_rate,
-                "dharma": self._latest.dharma,
-                "karma_debt": self._latest.karma_debt,
-                "energy": self._latest.energy,
-            })
+
+            get_anomaly_detector().ingest(
+                {
+                    "balance": self._latest.balance,
+                    "throughput": self._latest.throughput,
+                    "latency": self._latest.latency,
+                    "error_rate": self._latest.error_rate,
+                    "dharma": self._latest.dharma,
+                    "karma_debt": self._latest.karma_debt,
+                    "energy": self._latest.energy,
+                }
+            )
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         return self._latest
@@ -295,10 +305,6 @@ class HarmonyVector:
         with self._karma_debt_lock:
             self._karma_debt_total = max(0.0, self._karma_debt_total - amount)
 
-    # ------------------------------------------------------------------
-    # StateBoard coupling (Leap 7 Nervous System)
-    # ------------------------------------------------------------------
-
     def _push_to_state_board(self, snap: HarmonySnapshot) -> None:
         """Push the 7 harmony dimensions to the shared-memory StateBoard.
 
@@ -307,6 +313,7 @@ class HarmonyVector:
         """
         try:
             from whitemagic.core.acceleration.state_board_bridge import get_state_board
+
             board = get_state_board()
             board.write_harmony(
                 balance=snap.balance,
@@ -319,11 +326,8 @@ class HarmonyVector:
             )
         except Exception as e:
             import logging
-            logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
-    # ------------------------------------------------------------------
-    # Galactic Map coupling (A4 synthesis)
-    # ------------------------------------------------------------------
+            logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     def _galactic_vitality(self) -> float:
         """Compute memory vitality from Galactic Map zone distribution.
@@ -339,6 +343,7 @@ class HarmonyVector:
         """
         try:
             from whitemagic.core.memory.galactic_map import get_galactic_map
+
             gmap = get_galactic_map()
             zone_counts = gmap.get_zone_counts()
             if not zone_counts:
@@ -365,10 +370,6 @@ class HarmonyVector:
             logger.debug("Operation failed: %s", e)
             return 0.7  # Neutral fallback
 
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
-
     def _compute(self) -> HarmonySnapshot:
         events = self._window.recent()
         now_iso = datetime.now().isoformat()
@@ -386,7 +387,6 @@ class HarmonyVector:
         errors = sum(1 for e in events if not e.success)
         karma_mismatches = sum(1 for e in events if e.karma_mismatch)
 
-        # --- Guna distribution ---
         guna_counts: dict[str, int] = {"sattvic": 0, "rajasic": 0, "tamasic": 0}
         for e in events:
             guna_counts[e.guna] = guna_counts.get(e.guna, 0) + 1
@@ -394,15 +394,11 @@ class HarmonyVector:
         rajasic_pct = guna_counts["rajasic"] / total
         tamasic_pct = guna_counts.get("tamasic", 0) / total
 
-        # --- Balance dimension ---
-        # Optimal: ~40-60% sattvic.  Extreme skew either way is imbalance.
         sattvic_pct + tamasic_pct  # "yin" side
-        rajasic_ratio = rajasic_pct                        # "yang" side
+        rajasic_ratio = rajasic_pct  # "yang" side
         deviation = abs(rajasic_ratio - 0.5)
         balance_score = max(0.0, 1.0 - deviation * 2.0)
 
-        # --- Throughput dimension ---
-        # Healthy: 1-60 calls/min.  Very high = spam, very low = stall.
         window_minutes = self._window_seconds / 60.0
         calls_per_min = total / max(window_minutes, 0.01)
         if calls_per_min < 1.0:
@@ -412,7 +408,6 @@ class HarmonyVector:
         else:
             throughput_score = max(0.2, 1.0 - (calls_per_min - 60.0) / 200.0)
 
-        # --- Latency dimension ---
         durations = sorted(e.duration_s for e in events)
         p50 = durations[len(durations) // 2]
         p95_idx = min(int(len(durations) * 0.95), len(durations) - 1)
@@ -426,27 +421,21 @@ class HarmonyVector:
         else:
             latency_score = max(0.2, 0.7 - (p95 - 2.0) * 0.0625)
 
-        # --- Error rate dimension ---
         error_rate = errors / total
         error_score = max(0.0, 1.0 - error_rate * 5.0)  # 20% errors → 0.0
 
-        # --- Dharma dimension ---
         try:
             from whitemagic.dharma import get_dharma_system
+
             dharma_score = get_dharma_system(with_audit=False).get_ethical_score()
         except (ImportError, ModuleNotFoundError):
             dharma_score = 1.0  # No violations is fine
 
-        # --- Karma debt dimension ---
         with self._karma_debt_lock:
             debt = self._karma_debt_total
         # Score degrades as debt accumulates: 10 mismatches → 0.0
         karma_score = max(0.0, 1.0 - debt / 10.0)
 
-        # --- Energy dimension ---
-        # Blends two signals:
-        #   (1) Slow-call ratio (runtime pressure)
-        #   (2) Galactic Map zone vitality (memory health) — A4 synthesis
         slow_calls = sum(1 for e in events if e.duration_s > 1.0)
         slow_ratio = slow_calls / total
         runtime_energy = max(0.0, 1.0 - slow_ratio * 2.0)
@@ -455,7 +444,6 @@ class HarmonyVector:
         # Blend: 60% runtime, 40% galactic vitality
         energy_score = 0.6 * runtime_energy + 0.4 * galactic_vitality
 
-        # --- Composite ---
         dimensions = {
             "balance": balance_score,
             "throughput": throughput_score,
@@ -465,9 +453,7 @@ class HarmonyVector:
             "karma_debt": karma_score,
             "energy": energy_score,
         }
-        harmony = sum(
-            dimensions[k] * self._weights.get(k, 0.0) for k in dimensions
-        )
+        harmony = sum(dimensions[k] * self._weights.get(k, 0.0) for k in dimensions)
 
         return HarmonySnapshot(
             balance=round(balance_score, 4),
@@ -490,10 +476,6 @@ class HarmonyVector:
             timestamp=now_iso,
         )
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _harmony_vector: HarmonyVector | None = None
 _hv_lock = threading.Lock()
@@ -526,15 +508,25 @@ def read_harmony_fast() -> HarmonySnapshot:
     # Fast path: StateBoard
     try:
         from whitemagic.core.acceleration.state_board_bridge import get_state_board
+
         board = get_state_board()
         tick = board.read_tick()
         if tick > 0:
             # Board has been written to at least once
             hs = board.read_harmony()
             # Compute composite from the 7 dimensions using default weights
-            dims = [hs.balance, hs.throughput, hs.latency, hs.error_rate,
-                    hs.dharma, hs.karma_debt, hs.energy]
-            harmony_score = sum(d * w for d, w in zip(dims, [0.15, 0.15, 0.15, 0.15, 0.15, 0.10, 0.15]))
+            dims = [
+                hs.balance,
+                hs.throughput,
+                hs.latency,
+                hs.error_rate,
+                hs.dharma,
+                hs.karma_debt,
+                hs.energy,
+            ]
+            harmony_score = sum(
+                d * w for d, w in zip(dims, [0.15, 0.15, 0.15, 0.15, 0.15, 0.10, 0.15])
+            )
             return HarmonySnapshot(
                 balance=hs.balance,
                 throughput=hs.throughput,
@@ -547,6 +539,7 @@ def read_harmony_fast() -> HarmonySnapshot:
             )
     except Exception as e:
         import logging
+
         logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
     # Fallback: Python singleton (if already initialized)

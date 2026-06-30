@@ -8,17 +8,20 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SpecialistResult:
     """SpecialistResult: specialist result.
 
     Value object: equality and repr are field-based."""
+
     specialist: str
     language: str
     success: bool
     result: Any
     execution_time_ms: float
     fallback_used: bool = False
+
 
 class PolyglotSpecialists:
     """8 language specialists for optimal performance.
@@ -29,13 +32,24 @@ class PolyglotSpecialists:
     """
 
     # Specialists that are pure-Python stubs (no native runtime yet)
-    STUB_SPECIALISTS: frozenset[str] = frozenset({"ConcurrencyManager", "NetworkManager"})
+    STUB_SPECIALISTS: frozenset[str] = frozenset(
+        {"ConcurrencyManager", "NetworkManager"}
+    )
 
     def __init__(self):
         from whitemagic.optimization.polyglot_router import get_router
+
         self.router = get_router()
-        self.stats = {"rust": 0, "zig": 0, "mojo": 0, "haskell": 0,
-                      "elixir": 0, "go": 0, "julia": 0, "python": 0}
+        self.stats = {
+            "rust": 0,
+            "zig": 0,
+            "mojo": 0,
+            "haskell": 0,
+            "elixir": 0,
+            "go": 0,
+            "julia": 0,
+            "python": 0,
+        }
 
     # Specialist 1: Pattern Matching (Rust)
     def extract_patterns(self, content: str, limit: int = 50) -> SpecialistResult:
@@ -52,16 +66,30 @@ class PolyglotSpecialists:
         start = time.time()
         try:
             import whitemagic_rs
+
             patterns = whitemagic_rs.extract_patterns_py(content, limit)
             self.stats["rust"] += 1
-            return SpecialistResult("PatternMatcher", "rust", True, patterns,
-                                   (time.time() - start) * 1000, False)
+            return SpecialistResult(
+                "PatternMatcher",
+                "rust",
+                True,
+                patterns,
+                (time.time() - start) * 1000,
+                False,
+            )
         except (ImportError, ModuleNotFoundError):
             import re
-            patterns = list(set(re.findall(r'\b[a-zA-Z]{3,}\b', content)))[:limit]
+
+            patterns = list(set(re.findall(r"\b[a-zA-Z]{3,}\b", content)))[:limit]
             self.stats["python"] += 1
-            return SpecialistResult("PatternMatcher", "python", True, patterns,
-                                   (time.time() - start) * 1000, True)
+            return SpecialistResult(
+                "PatternMatcher",
+                "python",
+                True,
+                patterns,
+                (time.time() - start) * 1000,
+                True,
+            )
 
     # Specialist 2: SIMD Operations (Zig)
     def distance_matrix(self, vectors: list[list[float]]) -> SpecialistResult:
@@ -82,17 +110,31 @@ class PolyglotSpecialists:
             from whitemagic.core.acceleration.simd_distance import (
                 pairwise_distance_matrix,
             )
+
             matrix = pairwise_distance_matrix(cast(list[Sequence[float]], vectors))
             self.stats["zig"] += 1
-            return SpecialistResult("SIMDProcessor", "zig", True, matrix,
-                                   (time.time() - start) * 1000, False)
+            return SpecialistResult(
+                "SIMDProcessor",
+                "zig",
+                True,
+                matrix,
+                (time.time() - start) * 1000,
+                False,
+            )
         except (ImportError, AttributeError):
             import numpy as np
+
             # SpecialistResult expects Any, but we should be careful with types if we can
             matrix_fallback = np.zeros((len(vectors), len(vectors)))
             self.stats["python"] += 1
-            return SpecialistResult("SIMDProcessor", "python", True, matrix_fallback,
-                                   (time.time() - start) * 1000, True)
+            return SpecialistResult(
+                "SIMDProcessor",
+                "python",
+                True,
+                matrix_fallback,
+                (time.time() - start) * 1000,
+                True,
+            )
 
     # Specialist 3: Tensor Operations (Python)
     def batch_encode(self, memories: list[dict], current_time: int) -> SpecialistResult:
@@ -110,8 +152,14 @@ class PolyglotSpecialists:
         coords = self.router.encode_holographic_batch(memories, current_time)
         lang = "python"
         self.stats[lang] += 1
-        return SpecialistResult("TensorProcessor", lang, True, coords,
-                               (time.time() - start) * 1000, lang == "python")
+        return SpecialistResult(
+            "TensorProcessor",
+            lang,
+            True,
+            coords,
+            (time.time() - start) * 1000,
+            lang == "python",
+        )
 
     # Specialist 4: Type Safety (Haskell)
     def evaluate_rules(self, action: str, context: dict) -> SpecialistResult:
@@ -128,15 +176,28 @@ class PolyglotSpecialists:
         start = time.time()
         try:
             from haskell.haskell_bridge import dharma_evaluate
+
             result = dharma_evaluate(action, context)
             self.stats["haskell"] += 1
-            return SpecialistResult("RuleEvaluator", "haskell", True, result,
-                                   (time.time() - start) * 1000, False)
+            return SpecialistResult(
+                "RuleEvaluator",
+                "haskell",
+                True,
+                result,
+                (time.time() - start) * 1000,
+                False,
+            )
         except (ImportError, ModuleNotFoundError):
             result = {"decision": "ALLOW", "confidence": 0.5}
             self.stats["python"] += 1
-            return SpecialistResult("RuleEvaluator", "python", True, result,
-                                   (time.time() - start) * 1000, True)
+            return SpecialistResult(
+                "RuleEvaluator",
+                "python",
+                True,
+                result,
+                (time.time() - start) * 1000,
+                True,
+            )
 
     # Specialist 5: Concurrency (Elixir fallback to Python ThreadPool)
     def parallel_tasks(self, tasks: list[dict]) -> SpecialistResult:
@@ -162,14 +223,24 @@ class PolyglotSpecialists:
             Returns:
                 dict
             """
-            return {"task_id": task.get("id"), "status": "completed", "result": task.get("payload")}
+            return {
+                "task_id": task.get("id"),
+                "status": "completed",
+                "result": task.get("payload"),
+            }
 
         max_workers = min(len(tasks), 4)
         with ThreadPoolExecutor(max_workers=max_workers) as exe:
             results = list(exe.map(run_task, tasks))
         self.stats["python"] += 1
-        return SpecialistResult("ConcurrencyManager", "python", True, results,
-                               (time.time() - start) * 1000, True)
+        return SpecialistResult(
+            "ConcurrencyManager",
+            "python",
+            True,
+            results,
+            (time.time() - start) * 1000,
+            True,
+        )
 
     # Specialist 6: Networking (Go fallback to Python)
     def mesh_discovery(self, seed_nodes: list[str] | None = None) -> SpecialistResult:
@@ -183,10 +254,13 @@ class PolyglotSpecialists:
             SpecialistResult
         """
         start = time.time()
-        peers: list[dict[str, Any]] = [{"node": node, "status": "online"} for node in (seed_nodes or [])]
+        peers: list[dict[str, Any]] = [
+            {"node": node, "status": "online"} for node in (seed_nodes or [])
+        ]
         self.stats["python"] += 1
-        return SpecialistResult("NetworkManager", "python", True, peers,
-                               (time.time() - start) * 1000, True)
+        return SpecialistResult(
+            "NetworkManager", "python", True, peers, (time.time() - start) * 1000, True
+        )
 
     # Specialist 7: Statistics (Julia)
     def statistical_analysis(self, data: list[float]) -> SpecialistResult:
@@ -204,16 +278,30 @@ class PolyglotSpecialists:
             from whitemagic.core.acceleration.julia_bridge import (
                 julia_importance_distribution,
             )
+
             stats = julia_importance_distribution(data)
             self.stats["julia"] += 1
-            return SpecialistResult("StatisticalAnalyzer", "julia", True, stats,
-                                   (time.time() - start) * 1000, False)
+            return SpecialistResult(
+                "StatisticalAnalyzer",
+                "julia",
+                True,
+                stats,
+                (time.time() - start) * 1000,
+                False,
+            )
         except (ImportError, ModuleNotFoundError):
             import statistics
+
             stats = {"mean": statistics.mean(data) if data else 0}
             self.stats["python"] += 1
-            return SpecialistResult("StatisticalAnalyzer", "python", True, stats,
-                                   (time.time() - start) * 1000, True)
+            return SpecialistResult(
+                "StatisticalAnalyzer",
+                "python",
+                True,
+                stats,
+                (time.time() - start) * 1000,
+                True,
+            )
 
     # Specialist 8: Orchestration (Python)
     def orchestrate(self, workflow: dict) -> SpecialistResult:
@@ -229,8 +317,9 @@ class PolyglotSpecialists:
         start = time.time()
         result = {"workflow_id": workflow.get("id"), "status": "orchestrated"}
         self.stats["python"] += 1
-        return SpecialistResult("Orchestrator", "python", True, result,
-                               (time.time() - start) * 1000, False)
+        return SpecialistResult(
+            "Orchestrator", "python", True, result, (time.time() - start) * 1000, False
+        )
 
     def get_stats(self) -> dict:
         """
@@ -245,5 +334,5 @@ class PolyglotSpecialists:
             "total_calls": total,
             "native_calls": native,
             "native_usage_pct": (native / total * 100) if total > 0 else 0,
-            "by_language": self.stats
+            "by_language": self.stats,
         }

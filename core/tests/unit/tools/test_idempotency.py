@@ -1,4 +1,5 @@
 """Tests for whitemagic.tools.idempotency — idempotency ledger replay & dedup."""
+
 from uuid import uuid4
 
 

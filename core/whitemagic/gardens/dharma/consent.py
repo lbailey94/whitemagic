@@ -1,4 +1,5 @@
 """Consent Framework - User autonomy enforcement."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,8 +12,8 @@ class ConsentLevel(Enum):
 
     EXPLICIT = "explicit"  # User explicitly said yes
     IMPLICIT = "implicit"  # User's actions imply consent
-    NONE = "none"          # No consent given
-    REVOKED = "revoked"    # Consent was given but withdrawn
+    NONE = "none"  # No consent given
+    REVOKED = "revoked"  # Consent was given but withdrawn
 
 
 @dataclass
@@ -43,7 +44,9 @@ class ConsentFramework:
 
         """
         # Check for explicit consent
-        if context.get("user_requested", False) or context.get("explicit_permission", False):
+        if context.get("user_requested", False) or context.get(
+            "explicit_permission", False
+        ):
             return ConsentStatus(
                 level=ConsentLevel.EXPLICIT,
                 granted=True,
@@ -107,9 +110,11 @@ class ConsentFramework:
             status: Consent status
 
         """
-        self.consent_log.append({
-            "action": action,
-            "level": status.level.value,
-            "granted": status.granted,
-            "reasoning": status.reasoning,
-        })
+        self.consent_log.append(
+            {
+                "action": action,
+                "level": status.level.value,
+                "granted": status.granted,
+                "reasoning": status.reasoning,
+            }
+        )

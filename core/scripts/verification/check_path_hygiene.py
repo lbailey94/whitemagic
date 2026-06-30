@@ -77,12 +77,14 @@ def find_path_violations(whitemagic_root: Path) -> list[dict]:
 
             for pattern, description in path_patterns:
                 if re.search(pattern, code_part):
-                    violations.append({
-                        "file": rel_path,
-                        "line": line_num,
-                        "code": line.strip(),
-                        "violation": description,
-                    })
+                    violations.append(
+                        {
+                            "file": rel_path,
+                            "line": line_num,
+                            "code": line.strip(),
+                            "violation": description,
+                        }
+                    )
 
     return violations
 

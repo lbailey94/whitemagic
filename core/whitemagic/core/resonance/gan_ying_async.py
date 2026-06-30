@@ -14,6 +14,7 @@ from ..async_layer import async_compat
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class AsyncEvent:
     """Async event structure."""
@@ -24,6 +25,7 @@ class AsyncEvent:
     source: str = "unknown"
     id: str = field(default_factory=lambda: f"evt_{datetime.now().timestamp()}")
 
+
 @dataclass
 class BatchedAsyncEvent:
     """A batch of async events to reduce bus overhead."""
@@ -32,6 +34,7 @@ class BatchedAsyncEvent:
     timestamp: datetime = field(default_factory=datetime.now)
     source: str = "batch_processor"
     id: str = field(default_factory=lambda: f"batch_{datetime.now().timestamp()}")
+
 
 class AsyncGanYingBus:
     """Async event bus for high-throughput scenarios.
@@ -79,7 +82,9 @@ class AsyncGanYingBus:
                 pass
         logger.info("Async Gan Ying Bus stopped")
 
-    async def emit(self, event_type: str, data: dict[str, Any], source: str = "unknown") -> None:
+    async def emit(
+        self, event_type: str, data: dict[str, Any], source: str = "unknown"
+    ) -> None:
         """Emit an event asynchronously.
 
         Args:
@@ -95,7 +100,9 @@ class AsyncGanYingBus:
         )
         await self.queue_event(event)
 
-    async def emit_batch(self, events: list[tuple[str, dict[str, Any]]], source: str = "batch_source") -> None:
+    async def emit_batch(
+        self, events: list[tuple[str, dict[str, Any]]], source: str = "batch_source"
+    ) -> None:
         """Emit a batch of events to reduce overhead."""
         async_events = []
         for etype, data in events:
@@ -106,7 +113,9 @@ class AsyncGanYingBus:
             self._queue.put_nowait(batch)
         except asyncio.QueueFull:
             self._metrics["events_dropped"] += len(async_events)
-            logger.warning("Event queue full, dropping batch of %s events", len(async_events))
+            logger.warning(
+                "Event queue full, dropping batch of %s events", len(async_events)
+            )
 
     async def queue_event(self, event: AsyncEvent) -> None:
         """Internal helper to queue a single event with filtering."""
@@ -221,8 +230,10 @@ class AsyncGanYingBus:
                 raise TimeoutError("Queue not empty after timeout")
             await asyncio.sleep(0.01)
 
+
 # Global instance
 _async_bus: AsyncGanYingBus | None = None
+
 
 def get_async_bus() -> AsyncGanYingBus:
     """Get or create global async bus."""
@@ -231,12 +242,16 @@ def get_async_bus() -> AsyncGanYingBus:
         _async_bus = AsyncGanYingBus()
     return _async_bus
 
+
 # Backward compatibility with sync bus
 @async_compat
-async def emit_async(event_type: str, data: dict[str, Any], source: str = "unknown") -> None:
+async def emit_async(
+    event_type: str, data: dict[str, Any], source: str = "unknown"
+) -> None:
     """Emit event using async bus (works in sync context)."""
     bus = get_async_bus()
     await bus.emit(event_type, data, source)
+
 
 @async_compat
 async def start_async_bus() -> None:
@@ -244,11 +259,13 @@ async def start_async_bus() -> None:
     bus = get_async_bus()
     await bus.start()
 
+
 @async_compat
 async def stop_async_bus() -> None:
     """Stop async bus (works in sync context)."""
     bus = get_async_bus()
     await bus.stop()
+
 
 # Utility functions for common patterns
 class EventSubscriber:
@@ -292,6 +309,7 @@ class EventSubscriber:
         finally:
             self.bus.off(event_type, handler)
 
+
 # Performance monitoring
 class PerformanceMonitor:
     """Monitor bus performance."""
@@ -317,6 +335,7 @@ class PerformanceMonitor:
                 "events_per_second": events_per_sec,
                 "queue_size": current["queue_size"],
                 "error_rate": current["errors"] / max(1, current["events_processed"]),
-                "handler_efficiency": current["handlers_called"] / max(1, current["events_processed"]),
+                "handler_efficiency": current["handlers_called"]
+                / max(1, current["events_processed"]),
             }
         return current

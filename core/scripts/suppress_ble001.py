@@ -9,6 +9,7 @@ Usage:
     python scripts/suppress_ble001.py --dry-run
     python scripts/suppress_ble001.py --apply
 """
+
 import re
 import subprocess
 import sys
@@ -23,9 +24,22 @@ HEADER_MARKER = "# ruff: noqa: BLE001"
 def get_statistics() -> dict[str, int]:
     """Return {file_path: violation_count} from ruff's --output-format=concise."""
     result = subprocess.run(
-        ["python3", "-m", "ruff", "check", str(ROOT), "--select", "BLE001",
-         "--ignore", "E501", "--output-format", "concise", "--no-fix"],
-        capture_output=True, text=True,
+        [
+            "python3",
+            "-m",
+            "ruff",
+            "check",
+            str(ROOT),
+            "--select",
+            "BLE001",
+            "--ignore",
+            "E501",
+            "--output-format",
+            "concise",
+            "--no-fix",
+        ],
+        capture_output=True,
+        text=True,
     )
     counts: dict[str, int] = {}
     # Concise output: "whitemagic/core/fusions.py:39:12: BLE001 Do not catch ..."
@@ -58,6 +72,7 @@ def add_marker(path: Path) -> None:
     1-3 or after the leading docstring), this is a no-op.
     """
     import ast
+
     content = path.read_text()
     lines = content.splitlines(keepends=True)
     insert_at = 0
@@ -65,14 +80,22 @@ def add_marker(path: Path) -> None:
     if lines and lines[0].startswith("#!"):
         insert_at = 1
     # Skip coding declaration (must stay in first 2 lines per PEP 263)
-    if insert_at < len(lines) and "coding" in lines[insert_at] and lines[insert_at].lstrip().startswith("#"):
+    if (
+        insert_at < len(lines)
+        and "coding" in lines[insert_at]
+        and lines[insert_at].lstrip().startswith("#")
+    ):
         insert_at += 1
     # Use ast to find end of module docstring (the first Expr with
     # a Constant string in the module body)
     try:
         tree = ast.parse(content)
         for node in tree.body:
-            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+            if (
+                isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            ):
                 # node.end_lineno is 1-indexed, last line of the docstring
                 insert_at = max(insert_at, node.end_lineno)
                 break

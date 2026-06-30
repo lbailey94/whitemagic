@@ -1,4 +1,3 @@
-
 with open("whitemagic/core/memory/db_manager.py") as f:
     content = f.read()
 
@@ -23,9 +22,8 @@ content = content.replace(
             FOREIGN KEY (source_id) REFERENCES memories(id),
             FOREIGN KEY (target_id) REFERENCES memories(id),
             UNIQUE(source_id, target_id)
-        );"""
+        );""",
 )
 
 with open("whitemagic/core/memory/db_manager.py", "w") as f:
     f.write(content)
-

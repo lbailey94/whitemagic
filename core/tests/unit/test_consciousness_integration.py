@@ -6,6 +6,7 @@ Tests the wiring between:
 - CoherenceMetric — 8-dimension coherence measurement
 - HomeostaticLoop._check_apotheosis() — apotheosis integration in homeostatic loop
 """
+
 import pytest
 
 
@@ -18,6 +19,7 @@ class TestApotheosisCapabilityTesting:
             CapabilityDiscoveryEngine,
             DiscoveredCapability,
         )
+
         engine = CapabilityDiscoveryEngine()
         cap = DiscoveredCapability(
             capability_name="test_cap",
@@ -45,6 +47,7 @@ class TestApotheosisCapabilityTesting:
             CapabilityDiscoveryEngine,
             DiscoveredCapability,
         )
+
         engine = CapabilityDiscoveryEngine()
         cap = DiscoveredCapability(
             capability_name="nonexistent",
@@ -72,6 +75,7 @@ class TestFlowStateAutoDetect:
             FlowIndicator,
             get_flow_state,
         )
+
         fs = FlowState()
         detected = fs.auto_detect_indicators(
             tool_call_rate=6.0,
@@ -86,14 +90,18 @@ class TestFlowStateAutoDetect:
     def test_auto_detect_enters_flow(self):
         """auto_detect_indicators should auto-enter flow when >= 3 indicators."""
         from whitemagic.gardens.presence.flow_state import FlowState
+
         fs = FlowState()
         assert fs.flow_start is None
-        fs.auto_detect_indicators(tool_call_rate=6.0, coherence=0.8, session_duration_min=45)
+        fs.auto_detect_indicators(
+            tool_call_rate=6.0, coherence=0.8, session_duration_min=45
+        )
         assert fs.flow_start is not None
 
     def test_flow_score_zero_when_not_in_flow(self):
         """flow_score should return 0.0 when not in flow."""
         from whitemagic.gardens.presence.flow_state import FlowState
+
         fs = FlowState()
         assert fs.flow_score() == 0.0
 
@@ -103,6 +111,7 @@ class TestFlowStateAutoDetect:
             FlowState,
             FlowIndicator,
         )
+
         fs = FlowState()
         fs.enter_flow("test")
         fs.detect_indicator(FlowIndicator.CLEAR_GOALS)
@@ -113,6 +122,7 @@ class TestFlowStateAutoDetect:
     def test_get_flow_state_singleton(self):
         """get_flow_state should return the same instance."""
         from whitemagic.gardens.presence.flow_state import get_flow_state
+
         a = get_flow_state()
         b = get_flow_state()
         assert a is b
@@ -123,6 +133,7 @@ class TestMultiAgentWonderWiring:
 
     def test_agent_role_enum(self):
         from whitemagic.gardens.wonder.multi_agent import AgentRole
+
         assert AgentRole.ANALYST.value == "analyst"
         assert AgentRole.EXPLORER.value == "explorer"
 
@@ -131,6 +142,7 @@ class TestMultiAgentWonderWiring:
             AgentRole,
             MultiAgentCoordinator,
         )
+
         coord = MultiAgentCoordinator()
         agent_id = coord.spawn_agent(AgentRole.ANALYST, "test_agent")
         assert isinstance(agent_id, str)
@@ -139,6 +151,7 @@ class TestMultiAgentWonderWiring:
     def test_clone_grimoire_fusion_imports(self):
         """clone_grimoire_fusion should import and work."""
         from whitemagic.gardens.wonder.clone_grimoire_fusion import CloneGrimoireFusion
+
         fusion = CloneGrimoireFusion()
         result = fusion.iching_clone_array("test question")
         assert result["type"] == "iching_array"
@@ -160,6 +173,7 @@ class TestIChingDeduplication:
     def test_gardens_reexport_same_singleton(self):
         from whitemagic.gardens.wisdom.i_ching import get_i_ching
         from whitemagic.core.intelligence.wisdom.i_ching import get_i_ching as get_core
+
         a = get_i_ching()
         b = get_core()
         assert a is b

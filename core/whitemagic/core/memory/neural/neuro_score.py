@@ -55,9 +55,6 @@ class ScoreBreakdown:
         }
 
 
-# === SCORE WEIGHTS ===
-# How much each component contributes to final score
-
 WEIGHTS = {
     "recency": 0.30,      # 30% - Recent access matters most
     "frequency": 0.30,    # 30% - Frequent use strengthens
@@ -266,7 +263,6 @@ class NeuroScoreEngine:
         return self._engine.get_neuro_stats(memories)
 
 
-# === SINGLETON ===
 _engine: NeuroScoreEngine | None = None
 
 

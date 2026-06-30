@@ -22,6 +22,7 @@ Usage:
     # Memory operations
     duplicates = accel.find_duplicates(memories)
 """
+
 from __future__ import annotations
 
 import logging
@@ -60,6 +61,7 @@ class PolyglotAccelerator:
         # Check Rust
         try:
             from importlib.util import find_spec
+
             if find_spec("whitemagic_rs") is not None:
                 self._rust_available = True
                 logger.info("🦀 Rust acceleration available")
@@ -69,16 +71,20 @@ class PolyglotAccelerator:
         # Check Zig SIMD
         try:
             from whitemagic.core.acceleration.simd_cosine import simd_status
+
             status = simd_status()
             if status["has_zig_simd"]:
                 self._zig_available = True
-                logger.info("⚡ Zig SIMD available (lane_width=%s)", status['lane_width'])
+                logger.info(
+                    "⚡ Zig SIMD available (lane_width=%s)", status["lane_width"]
+                )
         except (ImportError, AttributeError):
             pass
 
         # Check Mojo
         try:
             from whitemagic.optimization.polyglot_router import get_router
+
             router = get_router()
             if router._mojo_available:
                 self._mojo_available = True
@@ -87,11 +93,9 @@ class PolyglotAccelerator:
             pass
 
         if not any([self._rust_available, self._zig_available, self._mojo_available]):
-            logger.warning("⚠️  No native accelerators available - using Python fallback")
-
-    # ========================================================================
-    # Vector Operations
-    # ========================================================================
+            logger.warning(
+                "⚠️  No native accelerators available - using Python fallback"
+            )
 
     def cosine_similarity(self, a: Sequence[float], b: Sequence[float]) -> float:
         """Compute cosine similarity between two vectors.
@@ -107,8 +111,11 @@ class PolyglotAccelerator:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                if hasattr(whitemagic_rs, 'simd_cosine_similarity'):
-                    result = float(whitemagic_rs.simd_cosine_similarity(list(a), list(b)))
+
+                if hasattr(whitemagic_rs, "simd_cosine_similarity"):
+                    result = float(
+                        whitemagic_rs.simd_cosine_similarity(list(a), list(b))
+                    )
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
                     return result
@@ -119,6 +126,7 @@ class PolyglotAccelerator:
         if self._zig_available:
             try:
                 from whitemagic.core.acceleration import cosine_similarity_zig
+
                 result = float(cosine_similarity_zig(list(a), list(b)))
                 self.zig_calls += 1
                 self.total_time_ms += (time.time() - start) * 1000
@@ -132,7 +140,9 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return result
 
-    def batch_cosine(self, query: Sequence[float], vectors: list[Sequence[float]]) -> list[float]:
+    def batch_cosine(
+        self, query: Sequence[float], vectors: list[Sequence[float]]
+    ) -> list[float]:
         """Compute cosine similarity between query and batch of vectors.
 
         Backend priority: Rust batch > Zig batch > Python
@@ -146,7 +156,8 @@ class PolyglotAccelerator:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                if hasattr(whitemagic_rs, 'simd_cosine_batch'):
+
+                if hasattr(whitemagic_rs, "simd_cosine_batch"):
                     # Convert to list of lists for Rust
                     vecs_list = [list(v) for v in vectors]
                     result = whitemagic_rs.simd_cosine_batch(list(query), vecs_list)
@@ -162,6 +173,7 @@ class PolyglotAccelerator:
                 from whitemagic.core.acceleration.simd_cosine import (
                     batch_cosine as zig_batch,
                 )
+
                 result = zig_batch(query, vectors)
                 self.zig_calls += 1
                 self.total_time_ms += (time.time() - start) * 1000
@@ -175,11 +187,9 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return result
 
-    # ========================================================================
-    # Pattern Operations
-    # ========================================================================
-
-    def extract_patterns(self, content: str | list[str], limit: int = 10) -> list[dict[str, Any]]:
+    def extract_patterns(
+        self, content: str | list[str], limit: int = 10
+    ) -> list[dict[str, Any]]:
         """Extract patterns from content.
 
         Backend priority: Rust > Python
@@ -190,24 +200,26 @@ class PolyglotAccelerator:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                if hasattr(whitemagic_rs, 'extract_patterns_from_content'):
+
+                if hasattr(whitemagic_rs, "extract_patterns_from_content"):
                     # Rust function expects Vec<String> and Option<f64>
                     memories = content if isinstance(content, list) else [content]
-                    min_conf = float(limit) / 100.0  # Convert limit to confidence threshold
-                    result = whitemagic_rs.extract_patterns_from_content(memories, min_conf)
+                    min_conf = (
+                        float(limit) / 100.0
+                    )  # Convert limit to confidence threshold
+                    result = whitemagic_rs.extract_patterns_from_content(
+                        memories, min_conf
+                    )
                     # Rust returns (total, found, solutions, anti, heuristics, opts, duration)
                     total, found, solutions, anti, heuristics, opts, duration = result
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
-                    return [
-                        {"type": "solution", "description": s} for s in solutions
-                    ] + [
-                        {"type": "anti_pattern", "description": s} for s in anti
-                    ] + [
-                        {"type": "heuristic", "description": s} for s in heuristics
-                    ] + [
-                        {"type": "optimization", "description": s} for s in opts
-                    ]
+                    return (
+                        [{"type": "solution", "description": s} for s in solutions]
+                        + [{"type": "anti_pattern", "description": s} for s in anti]
+                        + [{"type": "heuristic", "description": s} for s in heuristics]
+                        + [{"type": "optimization", "description": s} for s in opts]
+                    )
             except Exception as e:
                 logger.debug("Rust pattern extraction failed: %s", e, exc_info=True)
 
@@ -217,7 +229,9 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return result  # type: ignore[return-value]
 
-    def find_duplicates(self, texts: list[str], threshold: float = 0.9) -> list[tuple[int, int, float]]:
+    def find_duplicates(
+        self, texts: list[str], threshold: float = 0.9
+    ) -> list[tuple[int, int, float]]:
         """Find duplicate texts using MinHash LSH.
 
         Backend priority: Rust > Python
@@ -228,7 +242,8 @@ class PolyglotAccelerator:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                if hasattr(whitemagic_rs, 'minhash_find_duplicates'):
+
+                if hasattr(whitemagic_rs, "minhash_find_duplicates"):
                     result = whitemagic_rs.minhash_find_duplicates(texts, threshold)
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
@@ -242,12 +257,13 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return result
 
-    # ========================================================================
-    # Search Operations
-    # ========================================================================
-
-    def search_memories(self, query: str, memories: list[tuple[str, str]],
-                       threshold: float = 0.7, limit: int = 10) -> list[tuple[str, float]]:
+    def search_memories(
+        self,
+        query: str,
+        memories: list[tuple[str, str]],
+        threshold: float = 0.7,
+        limit: int = 10,
+    ) -> list[tuple[str, float]]:
         """Search memories using fast text matching.
 
         Backend priority: Rust > Python
@@ -260,13 +276,18 @@ class PolyglotAccelerator:
                 import json as _json
 
                 import whitemagic_rs
-                if hasattr(whitemagic_rs, 'search_query'):
+
+                if hasattr(whitemagic_rs, "search_query"):
                     # Build index — Rust expects JSON string, returns (doc_count, vocab_size)
                     docs = [{"id": m[0], "content": m[1]} for m in memories]
                     whitemagic_rs.search_build_index(_json.dumps(docs))
                     # Query — Rust returns JSON string of [{id, score}]
                     raw_results = whitemagic_rs.search_query(query, limit)
-                    results = _json.loads(raw_results) if isinstance(raw_results, str) else raw_results
+                    results = (
+                        _json.loads(raw_results)
+                        if isinstance(raw_results, str)
+                        else raw_results
+                    )
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
                     return [(r["id"], r["score"]) for r in results]
@@ -279,10 +300,6 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return result
 
-    # ========================================================================
-    # Evolution Operations (Rust-accelerated with Python fallback)
-    # ========================================================================
-
     def _get_evo_backend(self) -> Any:
         """Try to get a RustEvolutionBackend instance."""
         global _evo_backend, _evo_backend_time
@@ -292,10 +309,17 @@ class PolyglotAccelerator:
         try:
             import sys
             from pathlib import Path
-            _bridge = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "bridges" / "python"
+
+            _bridge = (
+                Path(__file__).resolve().parent.parent.parent.parent.parent
+                / "polyglot"
+                / "bridges"
+                / "python"
+            )
             if str(_bridge) not in sys.path:
                 sys.path.insert(0, str(_bridge))
             from whitemagic_polyglot import RustEvolutionBackend
+
             backend = RustEvolutionBackend()
             backend.call("ping", timeout=5.0)
             _evo_backend = backend
@@ -325,13 +349,21 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return result
 
-    def boltzmann_select(self, energies: list[float], temperature: float, k: int = 1, seed: int = 42) -> list[int]:
+    def boltzmann_select(
+        self, energies: list[float], temperature: float, k: int = 1, seed: int = 42
+    ) -> list[int]:
         """Select k indices using Boltzmann sampling."""
         start = time.time()
         backend = self._get_evo_backend()
         if backend is not None:
             try:
-                raw = backend.call("boltzmann_select", energies=energies, temperature=temperature, k=k, seed=seed)
+                raw = backend.call(
+                    "boltzmann_select",
+                    energies=energies,
+                    temperature=temperature,
+                    k=k,
+                    seed=seed,
+                )
                 if raw.get("status") == "ok":
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
@@ -340,6 +372,7 @@ class PolyglotAccelerator:
                 pass
         # Python fallback: proportional sampling
         import random
+
         rng = random.Random(seed)
         if not energies or temperature <= 0:
             return list(range(min(k, len(energies))))
@@ -351,13 +384,17 @@ class PolyglotAccelerator:
         self.total_time_ms += (time.time() - start) * 1000
         return selected
 
-    def hrr_encode(self, description: str, dim: int = 384, impact: float = 0.5) -> list[float]:
+    def hrr_encode(
+        self, description: str, dim: int = 384, impact: float = 0.5
+    ) -> list[float]:
         """Encode a hypothesis as an HRR vector."""
         start = time.time()
         backend = self._get_evo_backend()
         if backend is not None:
             try:
-                raw = backend.call("hrr_encode", description=description, dim=dim, impact=impact)
+                raw = backend.call(
+                    "hrr_encode", description=description, dim=dim, impact=impact
+                )
                 if raw.get("status") == "ok":
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
@@ -366,18 +403,15 @@ class PolyglotAccelerator:
                 pass
         # Python fallback: deterministic hash-based vector
         import hashlib
+
         result = []
         for i in range(dim):
             h = hashlib.sha256(f"{description}:{i}:{impact}".encode()).digest()
-            val = (int.from_bytes(h[:8], 'little') / 2**64 - 0.5) * 2 * impact
+            val = (int.from_bytes(h[:8], "little") / 2**64 - 0.5) * 2 * impact
             result.append(val)
         self.python_calls += 1
         self.total_time_ms += (time.time() - start) * 1000
         return result
-
-    # ========================================================================
-    # Python Fallbacks
-    # ====================================================================
 
     @staticmethod
     def _py_cosine(a: Sequence[float], b: Sequence[float]) -> float:
@@ -399,17 +433,22 @@ class PolyglotAccelerator:
                 word_freq[word] = word_freq.get(word, 0) + 1
 
         patterns = []
-        for word, freq in sorted(word_freq.items(), key=lambda x:
-            x[1], reverse=True)[:limit]:
-            patterns.append({
-                "pattern": word,
-                "frequency": freq,
-                "score": freq / len(words) if words else 0.0
-            })
+        for word, freq in sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[
+            :limit
+        ]:
+            patterns.append(
+                {
+                    "pattern": word,
+                    "frequency": freq,
+                    "score": freq / len(words) if words else 0.0,
+                }
+            )
         return patterns
 
     @staticmethod
-    def _py_find_duplicates(texts: list[str], threshold: float) -> list[tuple[int, int, float]]:
+    def _py_find_duplicates(
+        texts: list[str], threshold: float
+    ) -> list[tuple[int, int, float]]:
         """Simple Python duplicate detection."""
         duplicates = []
         for i in range(len(texts)):
@@ -419,10 +458,12 @@ class PolyglotAccelerator:
         return duplicates
 
     @staticmethod
-    def _py_search_memories(query: str, memories: list[tuple[str, str]],
-                           threshold: float, limit: int) -> list[tuple[str, float]]:
+    def _py_search_memories(
+        query: str, memories: list[tuple[str, str]], threshold: float, limit: int
+    ) -> list[tuple[str, float]]:
         """Simple Python memory search."""
         from difflib import SequenceMatcher
+
         results = []
         for mid, content in memories:
             score = SequenceMatcher(None, query.lower(), content.lower()).ratio()
@@ -431,13 +472,11 @@ class PolyglotAccelerator:
         results.sort(key=lambda x: x[1], reverse=True)
         return results[:limit]
 
-    # ========================================================================
-    # Status & Metrics
-    # ========================================================================
-
     def get_stats(self) -> dict[str, Any]:
         """Get acceleration statistics."""
-        total_calls = self.rust_calls + self.zig_calls + self.mojo_calls + self.python_calls
+        total_calls = (
+            self.rust_calls + self.zig_calls + self.mojo_calls + self.python_calls
+        )
         native_calls = self.rust_calls + self.zig_calls + self.mojo_calls
 
         return {

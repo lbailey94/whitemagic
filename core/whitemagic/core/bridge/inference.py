@@ -103,7 +103,10 @@ def run_local_inference(
             quick_recall,
         )
     except ImportError:
-        return {"error": "Local inference backend not available", "reason": "whitemagic.cascade.local_inference not implemented"}
+        return {
+            "error": "Local inference backend not available",
+            "reason": "whitemagic.cascade.local_inference not implemented",
+        }
 
     import asyncio
 
@@ -120,17 +123,26 @@ def run_local_inference(
     if op == "quick_recall":
         try:
             quick_coro = quick_recall(query, provider=provider)
-            quick_result = asyncio.run(asyncio.wait_for(quick_coro, timeout=timeout_seconds))
+            quick_result = asyncio.run(
+                asyncio.wait_for(quick_coro, timeout=timeout_seconds)
+            )
             return {"answer": quick_result}
         except TimeoutError:
-            return {"error": "Local inference timed out", "timeout_seconds": timeout_seconds}
+            return {
+                "error": "Local inference timed out",
+                "timeout_seconds": timeout_seconds,
+            }
         except Exception as exc:
             return {"error": str(exc)}
 
     if op == "memory_grounded":
         try:
-            memory_coro = memory_grounded_generate(query, provider=provider, memory_limit=memory_limit)
-            memory_result = asyncio.run(asyncio.wait_for(memory_coro, timeout=timeout_seconds))
+            memory_coro = memory_grounded_generate(
+                query, provider=provider, memory_limit=memory_limit
+            )
+            memory_result = asyncio.run(
+                asyncio.wait_for(memory_coro, timeout=timeout_seconds)
+            )
 
             if isinstance(memory_result, dict):
                 return {
@@ -149,7 +161,10 @@ def run_local_inference(
                 "provider": getattr(memory_result, "provider", provider),
             }
         except TimeoutError:
-            return {"error": "Local inference timed out", "timeout_seconds": timeout_seconds}
+            return {
+                "error": "Local inference timed out",
+                "timeout_seconds": timeout_seconds,
+            }
         except Exception as exc:
             return {"error": str(exc)}
 
@@ -161,10 +176,15 @@ def run_local_inference(
                 memory_limit=memory_limit,
                 provider=provider,
             )
-            analyze_result = asyncio.run(asyncio.wait_for(analyze_coro, timeout=timeout_seconds))
+            analyze_result = asyncio.run(
+                asyncio.wait_for(analyze_coro, timeout=timeout_seconds)
+            )
             return analyze_result
         except TimeoutError:
-            return {"error": "Local inference timed out", "timeout_seconds": timeout_seconds}
+            return {
+                "error": "Local inference timed out",
+                "timeout_seconds": timeout_seconds,
+            }
         except Exception as exc:
             return {"error": str(exc)}
 
@@ -175,10 +195,18 @@ def run_local_inference(
         for item in prompts:
             try:
                 batch_coro = quick_recall(item, provider=provider)
-                answer = asyncio.run(asyncio.wait_for(batch_coro, timeout=timeout_seconds))
+                answer = asyncio.run(
+                    asyncio.wait_for(batch_coro, timeout=timeout_seconds)
+                )
                 results.append({"prompt": item, "answer": answer})
             except TimeoutError:
-                results.append({"prompt": item, "error": "Local inference timed out", "timeout_seconds": timeout_seconds})
+                results.append(
+                    {
+                        "prompt": item,
+                        "error": "Local inference timed out",
+                        "timeout_seconds": timeout_seconds,
+                    }
+                )
             except Exception as exc:
                 results.append({"prompt": item, "error": str(exc)})
         return {"mode": "batch", "results": results}

@@ -23,6 +23,7 @@ class SubCluster:
     centroid: tuple[float, float, float, float]
     size: int
 
+
 class SubClusteringEngine:
     """Subdivide large memory clusters."""
 
@@ -35,9 +36,11 @@ class SubClusteringEngine:
 
     def __init__(self, db_path: str | None = None) -> None:
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = db_path or str(DB_PATH)
         try:
             from pathlib import Path
+
             Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
         except OSError:
             pass
@@ -64,7 +67,8 @@ class SubClusteringEngine:
         cur = conn.cursor()
 
         # Cluster by rounding coordinates
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 CAST(ROUND(x * 5) AS TEXT) || '_' || CAST(ROUND(y * 5) AS TEXT) as cluster_id,
                 COUNT(*) as size
@@ -72,7 +76,9 @@ class SubClusteringEngine:
             GROUP BY cluster_id
             HAVING size > ?
             ORDER BY size DESC
-        """, (threshold,))
+        """,
+            (threshold,),
+        )
 
         return [(r["cluster_id"], r["size"]) for r in cur.fetchall()]
 
@@ -86,11 +92,14 @@ class SubClusteringEngine:
         cx, cy = float(parts[0]) / 5, float(parts[1]) / 5
 
         # Find all memories in this cluster
-        cur.execute("""
+        cur.execute(
+            """
             SELECT memory_id, x, y, z, w
             FROM holographic_coords
             WHERE ROUND(x * 5) = ? AND ROUND(y * 5) = ?
-        """, (int(float(parts[0])), int(float(parts[1]))))
+        """,
+            (int(float(parts[0])), int(float(parts[1]))),
+        )
 
         memories = cur.fetchall()
 
@@ -106,19 +115,22 @@ class SubClusteringEngine:
                 avg_z = sum(m["z"] for m in quadrant_mems) / len(quadrant_mems)
                 avg_w = sum(m["w"] for m in quadrant_mems) / len(quadrant_mems)
 
-                sub_clusters.append(SubCluster(
-                    id=f"{cluster_id}_{y_name}_{x_name}",
-                    parent_cluster=cluster_id,
-                    quadrant=f"{y_name}_{x_name}",
-                    memory_ids=[m["memory_id"] for m in quadrant_mems],
-                    centroid=(avg_x, avg_y, avg_z, avg_w),
-                    size=len(quadrant_mems),
-                ))
+                sub_clusters.append(
+                    SubCluster(
+                        id=f"{cluster_id}_{y_name}_{x_name}",
+                        parent_cluster=cluster_id,
+                        quadrant=f"{y_name}_{x_name}",
+                        memory_ids=[m["memory_id"] for m in quadrant_mems],
+                        centroid=(avg_x, avg_y, avg_z, avg_w),
+                        size=len(quadrant_mems),
+                    )
+                )
 
         return sub_clusters
 
-    def subdivide_large_clusters(self, threshold: int = 20,
-                                  dry_run: bool = False) -> dict[str, list[SubCluster]]:
+    def subdivide_large_clusters(
+        self, threshold: int = 20, dry_run: bool = False
+    ) -> dict[str, list[SubCluster]]:
         """Subdivide all large clusters."""
         large = self.find_large_clusters(threshold)
         results = {}
@@ -160,8 +172,10 @@ class SubClusteringEngine:
             "large_clusters": len([s for s in sizes if s > 20]),
         }
 
+
 # Global instance
 _sub_clustering_engine: SubClusteringEngine | None = None
+
 
 def get_sub_clustering_engine() -> SubClusteringEngine:
     """

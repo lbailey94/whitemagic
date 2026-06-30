@@ -13,6 +13,7 @@ Note: cross-process subscriber testing requires two real processes.
 This test exercises the in-process path which is sufficient for
 verifying the publisher side and the API surface.
 """
+
 import os
 import time
 
@@ -26,6 +27,7 @@ CLEANUP_PREFIXES = ("sem.iox2_", "iox2_", "wm/", "sem.wm_")
 @pytest.fixture(autouse=True)
 def clean_shm():
     """Wipe iceoryx2 shared-memory state before/after each test."""
+
     def _wipe():
         for name in os.listdir(SHM_SCRATCH):
             if any(name.startswith(p) for p in ("sem.iox2_", "iox2_", "sem.wm_")):
@@ -42,13 +44,16 @@ def clean_shm():
 def test_ipc_try_receive_is_exposed():
     """ipc_try_receive must be exposed as a Python-callable function."""
     import whitemagic_rust
-    assert hasattr(whitemagic_rust.ipc_bridge, "ipc_try_receive"), \
+
+    assert hasattr(whitemagic_rust.ipc_bridge, "ipc_try_receive"), (
         "ipc_try_receive is not exposed on whitemagic_rust.ipc_bridge"
+    )
 
 
 def test_publish_then_status_increments_counter():
     """Each successful publish must increment the published counter in status."""
     import whitemagic_rust
+
     node = f"test_pub_counter_{os.getpid()}_{int(time.time())}"
     assert whitemagic_rust.ipc_bridge.ipc_init(node) is None
 
@@ -62,6 +67,7 @@ def test_publish_then_status_increments_counter():
 def test_publish_json_helper_round_trip():
     """publish_json must serialize dicts and accept the json helper back via try_receive_json."""
     from whitemagic.core.ipc_bridge import init_ipc, publish_json
+
     node = f"test_pub_json_{os.getpid()}_{int(time.time())}"
     init_ipc(node)
 
@@ -73,6 +79,7 @@ def test_publish_json_helper_round_trip():
 def test_try_receive_returns_list():
     """try_receive must return a list (possibly empty)."""
     from whitemagic.core.ipc_bridge import init_ipc, try_receive, shutdown_ipc
+
     node = f"test_recv_{os.getpid()}_{int(time.time())}"
     init_ipc(node)
 
@@ -84,6 +91,7 @@ def test_try_receive_returns_list():
 def test_publish_stress_1000():
     """1000 publishes with 0 errors — matches the 4000-publish baseline from the polyglot survey."""
     import whitemagic_rust
+
     node = f"test_stress_{os.getpid()}_{int(time.time())}"
     whitemagic_rust.ipc_bridge.ipc_init(node)
 
@@ -101,12 +109,14 @@ def test_publish_stress_1000():
 def test_status_reports_backend():
     """Status must report the backend name (iceoryx2 or fallback)."""
     from whitemagic.core.ipc_bridge import init_ipc, get_status, shutdown_ipc
+
     node = f"test_backend_{os.getpid()}_{int(time.time())}"
     init_ipc(node)
 
     status = get_status()
     assert "backend" in status, "status dict must include 'backend'"
-    assert status["backend"] in ("iceoryx2", "fallback"), \
+    assert status["backend"] in ("iceoryx2", "fallback"), (
         f"unexpected backend value: {status['backend']!r}"
+    )
     assert status["iceoryx2_compiled"] in ("true", "false")
     shutdown_ipc()

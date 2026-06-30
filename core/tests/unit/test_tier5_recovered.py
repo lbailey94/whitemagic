@@ -8,10 +8,12 @@ class TestTemporalWeaving:
 
     def test_import(self):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         assert TemporalWeaver is not None
 
     def test_memory_thread_creation(self):
         from whitemagic.core.memory.temporal_weaving import MemoryThread
+
         thread = MemoryThread("test_thread", theme="testing")
         assert thread.name == "test_thread"
         assert thread.theme == "testing"
@@ -19,6 +21,7 @@ class TestTemporalWeaving:
 
     def test_add_bead(self):
         from whitemagic.core.memory.temporal_weaving import MemoryThread
+
         thread = MemoryThread("test")
         thread.add_bead("mem_001", context="test context")
         assert len(thread.beads) == 1
@@ -26,6 +29,7 @@ class TestTemporalWeaving:
 
     def test_to_dict(self):
         from whitemagic.core.memory.temporal_weaving import MemoryThread
+
         thread = MemoryThread("test", theme="testing")
         thread.add_bead("mem_001")
         d = thread.to_dict()
@@ -35,6 +39,7 @@ class TestTemporalWeaving:
 
     def test_weaver_create_thread(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         thread = weaver.create_thread("my_thread", theme="discovery")
         assert thread.name == "my_thread"
@@ -42,6 +47,7 @@ class TestTemporalWeaving:
 
     def test_weaver_add_to_thread(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         weaver.create_thread("test_thread")
         result = weaver.add_to_thread("test_thread", "mem_001", "context")
@@ -49,12 +55,14 @@ class TestTemporalWeaving:
 
     def test_weaver_add_to_nonexistent_thread(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         result = weaver.add_to_thread("nonexistent", "mem_001")
         assert result is False
 
     def test_weave_connection(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         thread_name = weaver.weave_connection("mem1", "mem2", "causal")
         assert "connection_" in thread_name
@@ -63,6 +71,7 @@ class TestTemporalWeaving:
 
     def test_list_threads(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         weaver.create_thread("thread_a")
         weaver.create_thread("thread_b")
@@ -71,6 +80,7 @@ class TestTemporalWeaving:
 
     def test_get_thread_timeline(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         weaver.create_thread("timeline_test")
         weaver.add_to_thread("timeline_test", "mem1")
@@ -80,12 +90,14 @@ class TestTemporalWeaving:
 
     def test_get_timeline_nonexistent(self, tmp_path):
         from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
         weaver = TemporalWeaver(memory_dir=tmp_path / "temporal")
         timeline = weaver.get_thread_timeline("nonexistent")
         assert timeline == []
 
     def test_get_temporal_weaver_singleton(self):
         from whitemagic.core.memory.temporal_weaving import get_temporal_weaver
+
         w1 = get_temporal_weaver()
         w2 = get_temporal_weaver()
         assert w1 is w2
@@ -96,10 +108,12 @@ class TestPersonality:
 
     def test_import(self):
         from whitemagic.core.consciousness.personality import PersonalityProfile
+
         assert PersonalityProfile is not None
 
     def test_profile_creation(self):
         from whitemagic.core.consciousness.personality import PersonalityProfile
+
         profile = PersonalityProfile(
             name="Aria",
             archetype="The Magician",
@@ -115,6 +129,7 @@ class TestPersonality:
 
     def test_to_dict(self):
         from whitemagic.core.consciousness.personality import PersonalityProfile
+
         profile = PersonalityProfile(
             name="Test",
             archetype="The Sage",
@@ -131,6 +146,7 @@ class TestPersonality:
 
     def test_from_dict(self):
         from whitemagic.core.consciousness.personality import PersonalityProfile
+
         data = {
             "name": "Test",
             "archetype": "The Sage",
@@ -149,6 +165,7 @@ class TestPersonality:
             PersonalityManager,
             PersonalityProfile,
         )
+
         mgr = PersonalityManager(profile_dir=tmp_path / "personalities")
         profile = PersonalityProfile(
             name="Aria",
@@ -174,14 +191,27 @@ class TestPersonality:
             PersonalityManager,
             PersonalityProfile,
         )
+
         mgr = PersonalityManager(profile_dir=tmp_path / "personalities")
         p1 = PersonalityProfile(
-            name="Aria", archetype="X", sun_sign="S", element="E",
-            purpose=[], voice_traits=[], philosophy=[], interests=[],
+            name="Aria",
+            archetype="X",
+            sun_sign="S",
+            element="E",
+            purpose=[],
+            voice_traits=[],
+            philosophy=[],
+            interests=[],
         )
         p2 = PersonalityProfile(
-            name="Sage", archetype="Y", sun_sign="S", element="E",
-            purpose=[], voice_traits=[], philosophy=[], interests=[],
+            name="Sage",
+            archetype="Y",
+            sun_sign="S",
+            element="E",
+            purpose=[],
+            voice_traits=[],
+            philosophy=[],
+            interests=[],
         )
         mgr.save_profile(p1)
         mgr.save_profile(p2)
@@ -190,6 +220,7 @@ class TestPersonality:
 
     def test_load_nonexistent_profile(self, tmp_path):
         from whitemagic.core.consciousness.personality import PersonalityManager
+
         mgr = PersonalityManager(profile_dir=tmp_path / "personalities")
         result = mgr.load_profile("nonexistent")
         assert result is None
@@ -202,12 +233,14 @@ class TestUnifiedNervousSystem:
         from whitemagic.core.consciousness.unified_nervous_system import (
             UnifiedNervousSystem,
         )
+
         assert UnifiedNervousSystem is not None
 
     def test_subsystem_count(self):
         from whitemagic.core.consciousness.unified_nervous_system import (
             UnifiedNervousSystem,
         )
+
         uns = UnifiedNervousSystem()
         assert len(uns.SUBSYSTEM_NAMES) == 7
 
@@ -215,6 +248,7 @@ class TestUnifiedNervousSystem:
         from whitemagic.core.consciousness.unified_nervous_system import (
             UnifiedNervousSystem,
         )
+
         uns = UnifiedNervousSystem()
         results = uns.wire_all()
         assert len(results) == 7
@@ -223,6 +257,7 @@ class TestUnifiedNervousSystem:
         from whitemagic.core.consciousness.unified_nervous_system import (
             UnifiedNervousSystem,
         )
+
         uns = UnifiedNervousSystem()
         uns.wire_all()
         health = uns.get_system_health()
@@ -234,6 +269,7 @@ class TestUnifiedNervousSystem:
         from whitemagic.core.consciousness.unified_nervous_system import (
             UnifiedNervousSystem,
         )
+
         uns = UnifiedNervousSystem()
         result = uns.route_signal({"type": "awareness"})
         assert "error" in result
@@ -242,6 +278,7 @@ class TestUnifiedNervousSystem:
         from whitemagic.core.consciousness.unified_nervous_system import (
             get_nervous_system,
         )
+
         n1 = get_nervous_system()
         n2 = get_nervous_system()
         assert n1 is n2

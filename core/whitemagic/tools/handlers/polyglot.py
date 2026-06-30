@@ -72,7 +72,11 @@ def handle_polyglot_memory_query(**kwargs: Any) -> dict[str, Any]:
     try:
         backend_ctx = _resolve_backend(backend_name)
     except RuntimeError as e:
-        return {"status": "error", "error": str(e), "error_code": "polyglot_unavailable"}
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_code": "polyglot_unavailable",
+        }
     except ValueError as e:
         return {"status": "error", "error": str(e), "error_code": "invalid_backend"}
 
@@ -90,26 +94,42 @@ def handle_polyglot_memory_query(**kwargs: Any) -> dict[str, Any]:
                 k = kwargs.get("k", 5)
                 raw = backend.call("nearest_neighbors", query=query, texts=texts, k=k)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
-                return {"status": "success", "operation": "nearest_neighbors", "result": result}
+                return {
+                    "status": "success",
+                    "operation": "nearest_neighbors",
+                    "result": result,
+                }
 
             elif operation == "constellation_detect":
                 coords = kwargs.get("coords", [])
                 raw = backend.call("constellation_detect", coords=coords)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
-                return {"status": "success", "operation": "constellation_detect", "result": result}
+                return {
+                    "status": "success",
+                    "operation": "constellation_detect",
+                    "result": result,
+                }
 
             elif operation == "coherence_score":
                 coords = kwargs.get("coords", [])
                 raw = backend.call("coherence_score", coords=coords)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
-                return {"status": "success", "operation": "coherence_score", "result": result}
+                return {
+                    "status": "success",
+                    "operation": "coherence_score",
+                    "result": result,
+                }
 
             else:
                 return {"status": "error", "error": f"Unknown operation: {operation}"}
 
         except Exception as e:
             logger.exception("Polyglot %s.%s failed", backend_name, operation)
-            return {"status": "error", "error": str(e), "error_code": "polyglot_execution_error"}
+            return {
+                "status": "error",
+                "error": str(e),
+                "error_code": "polyglot_execution_error",
+            }
 
 
 def handle_polyglot_search(**kwargs: Any) -> dict[str, Any]:
@@ -127,7 +147,11 @@ def handle_polyglot_search(**kwargs: Any) -> dict[str, Any]:
     try:
         backend_ctx = _resolve_backend(backend_name)
     except RuntimeError as e:
-        return {"status": "error", "error": str(e), "error_code": "polyglot_unavailable"}
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_code": "polyglot_unavailable",
+        }
     except ValueError as e:
         return {"status": "error", "error": str(e), "error_code": "invalid_backend"}
 
@@ -149,7 +173,11 @@ def handle_polyglot_search(**kwargs: Any) -> dict[str, Any]:
             }
         except Exception as e:
             logger.exception("Polyglot %s.search failed", backend_name)
-            return {"status": "error", "error": str(e), "error_code": "polyglot_execution_error"}
+            return {
+                "status": "error",
+                "error": str(e),
+                "error_code": "polyglot_execution_error",
+            }
 
 
 _status_cache: dict[str, Any] = {"result": None, "time": 0.0}
@@ -211,10 +239,6 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
     return result
 
 
-# ============================================================================
-# Specialized Backend Handlers
-# ============================================================================
-
 _evolution_cache: dict[str, Any] = {"backend": None, "time": 0.0}
 
 
@@ -223,7 +247,10 @@ def _get_evolution_backend() -> Any:
     if _wp is None:
         raise RuntimeError("Polyglot bridge unavailable")
     now = _time.monotonic()
-    if _evolution_cache["backend"] is not None and (now - _evolution_cache["time"]) < 300.0:
+    if (
+        _evolution_cache["backend"] is not None
+        and (now - _evolution_cache["time"]) < 300.0
+    ):
         return _evolution_cache["backend"]
     backend = _wp.RustEvolutionBackend()
     backend.call("ping", timeout=5.0)
@@ -250,7 +277,11 @@ def handle_polyglot_evolution(**kwargs: Any) -> dict[str, Any]:
     try:
         backend = _get_evolution_backend()
     except Exception as e:
-        return {"status": "error", "error": str(e), "error_code": "evolution_unavailable"}
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_code": "evolution_unavailable",
+        }
 
     try:
         params = {k: v for k, v in kwargs.items() if k != "operation"}
@@ -259,7 +290,11 @@ def handle_polyglot_evolution(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "operation": operation, "result": result}
     except Exception as e:
         logger.exception("Evolution backend %s failed", operation)
-        return {"status": "error", "error": str(e), "error_code": "evolution_execution_error"}
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_code": "evolution_execution_error",
+        }
 
 
 _yield_cache: dict[str, Any] = {"backend": None, "time": 0.0}
@@ -301,7 +336,11 @@ def handle_polyglot_yield(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "operation": operation, "result": result}
     except Exception as e:
         logger.exception("Yield backend %s failed", operation)
-        return {"status": "error", "error": str(e), "error_code": "yield_execution_error"}
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_code": "yield_execution_error",
+        }
 
 
 _actor_cache: dict[str, Any] = {"backend": None, "time": 0.0}
@@ -343,4 +382,8 @@ def handle_polyglot_actor(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "operation": operation, "result": result}
     except Exception as e:
         logger.exception("Actor backend %s failed", operation)
-        return {"status": "error", "error": str(e), "error_code": "actor_execution_error"}
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_code": "actor_execution_error",
+        }

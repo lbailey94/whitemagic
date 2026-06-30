@@ -23,7 +23,9 @@ class CompassionateAction:
             action = f"Offer support and presence for: {situation}"
         else:
             action = f"Hold space and witness: {situation}"
-        self._actions.append({"situation": situation, "action": action, "compassion": compassion_level})
+        self._actions.append(
+            {"situation": situation, "action": action, "compassion": compassion_level}
+        )
         return action
 
     def summary(self) -> dict[str, Any]:

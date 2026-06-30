@@ -10,6 +10,7 @@ import click
 try:
     from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
     from whitemagic.zodiac.zodiac_round_cycle import get_zodiacal_round
+
     HAS_ZODIAC = True
 except ImportError as e:
     HAS_ZODIAC = False
@@ -74,12 +75,13 @@ def activate_core(core_name: str, operation: str, intention: str) -> None:
 
 @zodiac_cli.command(name="cycle")
 @click.option("--num-cycles", "-n", default=1, help="Number of full cycles to run")
-@click.option("--intention", "-i", default="harmonious_evolution", help="Cycle intention")
+@click.option(
+    "--intention", "-i", default="harmonious_evolution", help="Cycle intention"
+)
 def run_cycle(num_cycles: int, intention: str) -> None:
     """Run the Zodiacal Round autonomous cycle."""
     click.echo(f"🌀 Starting Zodiacal Round: {num_cycles} cycle(s)")
     click.echo("=" * 60)
-
 
     async def run():
         """
@@ -95,7 +97,9 @@ def run_cycle(num_cycles: int, intention: str) -> None:
     click.echo("\nPhase Summary:")
 
     for i, response in enumerate(responses, 1):
-        click.echo(f"{i:2}. {response.core_name.title():<12} | {response.wisdom[:50]}...")
+        click.echo(
+            f"{i:2}. {response.core_name.title():<12} | {response.wisdom[:50]}..."
+        )
 
 
 @zodiac_cli.command(name="stats")
@@ -111,8 +115,9 @@ def show_stats() -> None:
     click.echo(f"Total Activations: {total_activations}")
     click.echo("\nPer-Core Stats:")
 
-    for name, data in sorted(stats.items(), key=lambda x:
-        x[1]["activations"], reverse=True):
+    for name, data in sorted(
+        stats.items(), key=lambda x: x[1]["activations"], reverse=True
+    ):
         click.echo(f"\n{name.title()}:")
         click.echo(f"  Activations: {data['activations']}")
         click.echo(f"  Frequency: {data['frequency']:.2f} Hz")

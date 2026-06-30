@@ -67,10 +67,14 @@ class TestCompositionalReasoner(unittest.TestCase):
         self.assertFalse(reasoner.can_resolve("what is the version?"))
         self.assertFalse(reasoner.can_resolve("hello"))
 
-    @patch("whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine")
+    @patch(
+        "whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine"
+    )
     @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
     def test_resolve_returns_unresolved_when_no_embedding(
-        self, mock_embed_cls: MagicMock, mock_hrr_getter: MagicMock,
+        self,
+        mock_embed_cls: MagicMock,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = None
@@ -82,17 +86,29 @@ class TestCompositionalReasoner(unittest.TestCase):
         self.assertFalse(result.resolved)
         self.assertEqual(result.method, "encoding_failed")
 
-    @patch("whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine")
+    @patch(
+        "whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine"
+    )
     @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
     def test_resolve_returns_result_with_matches(
-        self, mock_embed_cls: MagicMock, mock_hrr_getter: MagicMock,
+        self,
+        mock_embed_cls: MagicMock,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         # Setup embedding engine
         mock_engine = MagicMock()
         mock_engine.encode.return_value = [0.1] * 384
         mock_engine.search_similar_by_vector.return_value = [
-            {"memory_id": "abc123", "similarity": 0.85, "content": "The bug was caused by a race condition"},
-            {"memory_id": "def456", "similarity": 0.72, "content": "Related to concurrent access"},
+            {
+                "memory_id": "abc123",
+                "similarity": 0.85,
+                "content": "The bug was caused by a race condition",
+            },
+            {
+                "memory_id": "def456",
+                "similarity": 0.72,
+                "content": "Related to concurrent access",
+            },
         ]
         mock_embed_cls.return_value = mock_engine
 
@@ -110,10 +126,14 @@ class TestCompositionalReasoner(unittest.TestCase):
         self.assertGreater(result.tokens_saved, 0)
         mock_hrr.inverse_project.assert_called_once()
 
-    @patch("whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine")
+    @patch(
+        "whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine"
+    )
     @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
     def test_resolve_uses_project_for_forward_direction(
-        self, mock_embed_cls: MagicMock, mock_hrr_getter: MagicMock,
+        self,
+        mock_embed_cls: MagicMock,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = [0.1] * 384
@@ -143,7 +163,10 @@ class TestCompositionalResult(unittest.TestCase):
 
     def test_default_values(self) -> None:
         result = CompositionalResult(
-            resolved=False, answer="", method="none", confidence=0.0,
+            resolved=False,
+            answer="",
+            method="none",
+            confidence=0.0,
         )
         self.assertFalse(result.resolved)
         self.assertEqual(result.matches, [])

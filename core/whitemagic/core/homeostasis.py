@@ -31,8 +31,7 @@ class SystemMetrics:
 
 
 class HomeostasisSystem:
-    """Maintains system balance through continuous monitoring and adjustment.
-    """
+    """Maintains system balance through continuous monitoring and adjustment."""
 
     def __init__(self) -> None:
         self.target_coherence = 0.8
@@ -57,6 +56,7 @@ class HomeostasisSystem:
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 get_coherence,
             )
+
             persistent_coherence = get_coherence().get_level() / 100.0
             metrics.coherence = (metrics.coherence + persistent_coherence) / 2
         except (ImportError, ModuleNotFoundError):
@@ -70,13 +70,17 @@ class HomeostasisSystem:
 
         # Equilibrium calculation
         yin = metrics.coherence
-        yang = (metrics.event_rate / 100.0)
+        yang = metrics.event_rate / 100.0
 
         # Apply Harmonic Resonance (Gravitational Pull)
         # Instead of override, we calculate a non-coercive bias from the Zodiac Council
         h_bias = self._calculate_harmonic_bias()
         if h_bias:
-            logger.info("🌌 Harmonic Gravity detected: %s pull (%s)", h_bias['mode'], h_bias['intensity'])
+            logger.info(
+                "🌌 Harmonic Gravity detected: %s pull (%s)",
+                h_bias["mode"],
+                h_bias["intensity"],
+            )
             # Bias shifts equilibrium target slightly
             if h_bias["mode"] == "analytical":
                 # Push toward Yin
@@ -88,12 +92,16 @@ class HomeostasisSystem:
         # Apply Tzimtzum (Vacant Space) bias (Phase 33)
         try:
             from whitemagic.core.intelligence.tzimtzum_manager import get_tzimtzum
+
             tz = get_tzimtzum()
             if tz.is_vacant_space_active:
                 # Vacant Space is a form of Yin (contraction/making room)
                 tz_intensity = 1.0 - tz.intensity_cap
                 yin = min(1.0, yin + (tz_intensity * 0.2))
-                logger.info("🌌 Tzimtzum Bias Applied: +%s Yin", format(tz_intensity * 0.2, ".2f"))
+                logger.info(
+                    "🌌 Tzimtzum Bias Applied: +%s Yin",
+                    format(tz_intensity * 0.2, ".2f"),
+                )
         except (ImportError, AttributeError):
             pass
 
@@ -101,25 +109,38 @@ class HomeostasisSystem:
 
         adjustments = []
         if yin < 0.4:
-            adjustments.append("Critical Yin deficiency: System entering entropy state. Reinforce memory foundations.")
+            adjustments.append(
+                "Critical Yin deficiency: System entering entropy state. Reinforce memory foundations."
+            )
         if yang > 0.9:
-            adjustments.append("Yang excess: High action velocity detected. Apply dampening to prevent cascade failure.")
+            adjustments.append(
+                "Yang excess: High action velocity detected. Apply dampening to prevent cascade failure."
+            )
 
         if equilibrium < 0.5:
-            adjustments.append("Harmony Broken: Yin and Yang out of balance. Recalibrate core Gana weights.")
+            adjustments.append(
+                "Harmony Broken: Yin and Yang out of balance. Recalibrate core Gana weights."
+            )
 
-        self.adjustment_history.append({
-            "metrics": metrics,
-            "yin": yin,
-            "yang": yang,
-            "equilibrium": equilibrium,
-            "adjustments": adjustments,
-            "timestamp": datetime.now(),
-        })
+        self.adjustment_history.append(
+            {
+                "metrics": metrics,
+                "yin": yin,
+                "yang": yang,
+                "equilibrium": equilibrium,
+                "adjustments": adjustments,
+                "timestamp": datetime.now(),
+            }
+        )
 
         return {
             "health": "optimal" if not adjustments else "needs_adjustment",
-            "metrics": {**metrics.__dict__, "yin": yin, "yang": yang, "equilibrium": equilibrium},
+            "metrics": {
+                **metrics.__dict__,
+                "yin": yin,
+                "yang": yang,
+                "equilibrium": equilibrium,
+            },
             "adjustments": adjustments,
             "harmonic_bias": h_bias,
         }
@@ -128,6 +149,7 @@ class HomeostasisSystem:
         """Calculate non-coercive bias from active Council resonance."""
         try:
             from whitemagic.core.governance.zodiac_council import get_council
+
             council = get_council()
             # Find open proposal with highest importance
             max_importance = 0.0
@@ -145,7 +167,13 @@ class HomeostasisSystem:
                 # Threshold for detectable gravity
                 logic = best_prop.get("logic", 0.5)
                 # Logic > 0.7 = Analytical (Yin), Logic < 0.3 = Intuitive (Yang)
-                mode = "analytical" if logic > 0.7 else "intuitive" if logic < 0.3 else "balanced"
+                mode = (
+                    "analytical"
+                    if logic > 0.7
+                    else "intuitive"
+                    if logic < 0.3
+                    else "balanced"
+                )
                 return {
                     "mode": mode,
                     "intensity": max_importance,
@@ -158,6 +186,7 @@ class HomeostasisSystem:
 
 
 _homeostasis: HomeostasisSystem | None = None
+
 
 def get_homeostasis() -> HomeostasisSystem:
     """

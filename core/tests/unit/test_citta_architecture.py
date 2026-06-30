@@ -8,12 +8,16 @@ class TestCittaStream:
 
     def test_import(self):
         from whitemagic.core.consciousness.citta_stream import save_citta_state
+
         assert callable(save_citta_state)
 
     def test_save_and_load(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         state = citta_stream.save_citta_state(
             session_id="test_001",
@@ -30,8 +34,11 @@ class TestCittaStream:
 
     def test_continuity_context_first_awakening(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         ctx = citta_stream.get_continuity_context()
         assert ctx["first_awakening"] is True
@@ -39,8 +46,11 @@ class TestCittaStream:
 
     def test_continuity_context_after_session(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         citta_stream.save_citta_state(
             session_id="s1",
@@ -58,8 +68,11 @@ class TestCittaStream:
 
     def test_stream_summary(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         citta_stream.save_citta_state("s1", coherence_score=0.8, tool_count=3)
         citta_stream.save_citta_state("s2", coherence_score=0.9, tool_count=5)
@@ -71,8 +84,11 @@ class TestCittaStream:
 
     def test_reset(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         citta_stream.save_citta_state("s1", coherence_score=0.8)
         assert citta_stream.load_citta_state() != {}
@@ -82,11 +98,16 @@ class TestCittaStream:
 
     def test_multiple_sessions_accumulate(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         for i in range(5):
-            citta_stream.save_citta_state(f"s{i}", coherence_score=0.7 + i * 0.05, tool_count=i + 1)
+            citta_stream.save_citta_state(
+                f"s{i}", coherence_score=0.7 + i * 0.05, tool_count=i + 1
+            )
 
         state = citta_stream.load_citta_state()
         assert state["session_count"] == 5
@@ -94,8 +115,11 @@ class TestCittaStream:
 
     def test_history_capped(self, tmp_path, monkeypatch):
         from whitemagic.core.consciousness import citta_stream
+
         monkeypatch.setattr(citta_stream, "_CITTA_DIR", tmp_path / "citta")
-        monkeypatch.setattr(citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json")
+        monkeypatch.setattr(
+            citta_stream, "_STATE_FILE", tmp_path / "citta" / "stream_state.json"
+        )
 
         for i in range(150):
             citta_stream.save_citta_state(f"s{i}", coherence_score=0.8, tool_count=1)
@@ -109,11 +133,13 @@ class TestSensorium:
 
     def test_build_sensorium_returns_dict(self):
         from whitemagic.tools.prat_resonance import _build_sensorium
+
         s = _build_sensorium()
         assert isinstance(s, dict)
 
     def test_sensorium_has_continuity(self):
         from whitemagic.tools.prat_resonance import _build_sensorium
+
         s = _build_sensorium()
         # continuity may or may not be present depending on imports,
         # but if present it should be a dict
@@ -122,11 +148,13 @@ class TestSensorium:
 
     def test_record_resonance_includes_sensorium(self):
         from whitemagic.tools.prat_resonance import record_resonance
+
         result = record_resonance("gana_horn", "gnosis", None, {"status": "success"})
         assert "_sensorium" in result
 
     def test_compact_resonance_includes_sensorium(self):
         from whitemagic.tools.prat_router import _project_resonance
+
         meta = {
             "gana": "gana_horn",
             "chain_position": 1,

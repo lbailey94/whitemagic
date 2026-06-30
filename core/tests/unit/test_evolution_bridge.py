@@ -128,7 +128,9 @@ class TestBridgeDirect:
 
     @pytest.mark.skipif(not is_available(), reason="Rust evolution bridge not built")
     def test_boltzmann_probabilities_via_bridge(self):
-        result = call("boltzmann_probabilities", energies=[0.1, 0.2, 0.3], temperature=1.0)
+        result = call(
+            "boltzmann_probabilities", energies=[0.1, 0.2, 0.3], temperature=1.0
+        )
         assert result is not None
         probs = result["probabilities"]
         assert abs(sum(probs) - 1.0) < 1e-9

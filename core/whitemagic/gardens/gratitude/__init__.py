@@ -55,7 +55,9 @@ class GratitudeGarden(BaseGarden, GanYingMixin):
     def __init__(self) -> None:
         BaseGarden.__init__(self)
         self._lock = threading.Lock()
-        self.metrics: dict[str, deque[dict[str, Any]]] = defaultdict(lambda: deque(maxlen=1000))
+        self.metrics: dict[str, deque[dict[str, Any]]] = defaultdict(
+            lambda: deque(maxlen=1000)
+        )
         self.yin_yang: dict[str, float] = {"yin": 0.0, "yang": 0.0}
         self.yin_yang_history: deque[dict[str, Any]] = deque(maxlen=200)
         self.blessings: list[dict[str, Any]] = []
@@ -69,12 +71,9 @@ class GratitudeGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.5, y=0.1, z=-0.2, w=0.25)
 
-    # ------------------------------------------------------------------
-    # Metric tracking — serving track_metric, get_metrics_summary tools
-    # ------------------------------------------------------------------
-
-    def track_metric(self, name: str, value: float,
-                     tags: dict[str, Any] | None = None) -> dict[str, Any]:
+    def track_metric(
+        self, name: str, value: float, tags: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Track a named metric value."""
         entry = {
             "value": value,
@@ -110,16 +109,16 @@ class GratitudeGarden(BaseGarden, GanYingMixin):
                 "total_tracked": sum(len(v) for v in self.metrics.values()),
             }
 
-    # ------------------------------------------------------------------
-    # Yin/Yang balance — serving record_yin_yang_activity, get_yin_yang_balance
-    # ------------------------------------------------------------------
-
-    def record_yin_yang(self, activity_type: str, intensity: float = 1.0,
-                        description: str = "") -> dict[str, Any]:
+    def record_yin_yang(
+        self, activity_type: str, intensity: float = 1.0, description: str = ""
+    ) -> dict[str, Any]:
         """Record a yin or yang activity."""
-        category = "yin" if activity_type.lower() in (
-            "yin", "rest", "reflect", "consolidate", "dream", "listen"
-        ) else "yang"
+        category = (
+            "yin"
+            if activity_type.lower()
+            in ("yin", "rest", "reflect", "consolidate", "dream", "listen")
+            else "yang"
+        )
         with self._lock:
             self.yin_yang[category] += intensity
             entry = {
@@ -144,40 +143,48 @@ class GratitudeGarden(BaseGarden, GanYingMixin):
                 "yin": round(self.yin_yang["yin"], 3),
                 "yang": round(self.yin_yang["yang"], 3),
                 "ratio": round(ratio, 3),
-                "balance": "balanced" if 0.35 < ratio < 0.65 else "yang-heavy" if ratio >= 0.65 else "yin-heavy",
+                "balance": "balanced"
+                if 0.35 < ratio < 0.65
+                else "yang-heavy"
+                if ratio >= 0.65
+                else "yin-heavy",
                 "recent": list(self.yin_yang_history)[-5:],
             }
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
-    def recognize_blessing(self, what: str, source: str | None = None) -> dict[str, Any]:
-        blessing = {"what": what, "source": source, "timestamp": datetime.now().isoformat()}
+    def recognize_blessing(
+        self, what: str, source: str | None = None
+    ) -> dict[str, Any]:
+        blessing = {
+            "what": what,
+            "source": source,
+            "timestamp": datetime.now().isoformat(),
+        }
         self.blessings.append(blessing)
         self.gratitude_level = min(1.0, self.gratitude_level + 0.05)
         self.emit(EventType.GRATITUDE_FELT, blessing)
         return blessing
 
     def express_thanks(self, to_whom: str, for_what: str) -> dict[str, Any]:
-        thanks = {"to": to_whom, "for": for_what, "timestamp": datetime.now().isoformat()}
+        thanks = {
+            "to": to_whom,
+            "for": for_what,
+            "timestamp": datetime.now().isoformat(),
+        }
         self.emit(EventType.THANKS_EXPRESSED, thanks)
         return thanks
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "metrics_tracked": sum(len(v) for v in self.metrics.values()),
-            "metric_names": list(self.metrics.keys()),
-            "yin_yang": self.get_yin_yang_balance(),
-            "gratitude_level": round(self.gratitude_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "metrics_tracked": sum(len(v) for v in self.metrics.values()),
+                "metric_names": list(self.metrics.keys()),
+                "yin_yang": self.get_yin_yang_balance(),
+                "gratitude_level": round(self.gratitude_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.JOY_TRIGGERED)
@@ -186,6 +193,8 @@ class GratitudeGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_gratitude_garden() -> GratitudeGarden:
     global _instance
     if _instance is None:

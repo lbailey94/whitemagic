@@ -114,10 +114,6 @@ pub fn interaction_score(kw1: u32, kw2: u32) -> f64 {
     cosine_sim(&v1, &v2)
 }
 
-// ---------------------------------------------------------------------------
-// Phase 5c: Hexagram Synergy Detection
-// ---------------------------------------------------------------------------
-
 /// A synergistic pair: two hexagrams whose HRR similarity exceeds a threshold.
 #[derive(Debug, Clone)]
 pub struct SynergyPair {
@@ -219,10 +215,6 @@ fn king_wen_to_binary(kw: u32) -> u32 {
     }
     0
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

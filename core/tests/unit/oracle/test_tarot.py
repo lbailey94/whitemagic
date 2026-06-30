@@ -2,12 +2,21 @@
 
 import pytest
 from whitemagic.oracle.tarot_data import (
-    MAJOR_ARCANA, MINOR_ARCANA, get_major_arcana, get_minor_arcana,
-    get_all_cards, FIXED_SIGN_TETRAMORPH, TRIPLE_ARC,
-    MajorArcanaCard, MinorArcanaCard,
+    MAJOR_ARCANA,
+    MINOR_ARCANA,
+    get_major_arcana,
+    get_minor_arcana,
+    get_all_cards,
+    FIXED_SIGN_TETRAMORPH,
+    TRIPLE_ARC,
+    MajorArcanaCard,
+    MinorArcanaCard,
 )
 from whitemagic.oracle.tarot_cast import (
-    TarotCaster, TarotReading, DrawnCard, cast_tarot,
+    TarotCaster,
+    TarotReading,
+    DrawnCard,
+    cast_tarot,
 )
 
 
@@ -52,12 +61,30 @@ class TestTarotData:
 
     def test_minor_arcana_ranks(self):
         ranks = {c.rank for c in MINOR_ARCANA}
-        assert ranks == {"ace", "two", "three", "four", "five", "six",
-                         "seven", "eight", "nine", "ten",
-                         "page", "knight", "queen", "king"}
+        assert ranks == {
+            "ace",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+            "ten",
+            "page",
+            "knight",
+            "queen",
+            "king",
+        }
 
     def test_minor_arcana_elements(self):
-        suit_elements = {"wands": "fire", "cups": "water", "swords": "air", "pentacles": "earth"}
+        suit_elements = {
+            "wands": "fire",
+            "cups": "water",
+            "swords": "air",
+            "pentacles": "earth",
+        }
         for card in MINOR_ARCANA:
             assert card.element == suit_elements[card.suit]
 

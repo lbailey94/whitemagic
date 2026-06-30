@@ -32,7 +32,9 @@ class TestDreamArtifactDataclass:
     def test_roundtrip_dict(self):
         a = DreamArtifact(
             dream_id="d1",
-            created_at=__import__("datetime").datetime.now(__import__("datetime").timezone.utc),
+            created_at=__import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            ),
             source="test",
             confidence=0.42,
             tension_score=0.78,
@@ -76,14 +78,38 @@ class TestDreamArtifactWriter:
 
     def test_list_dreams(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        writer.write_artifact(query="q1", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
-        writer.write_artifact(query="q2", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        writer.write_artifact(
+            query="q1",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
+        writer.write_artifact(
+            query="q2",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         dreams = list_dreams()
         assert len(dreams) == 2
 
     def test_read_dream(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="read_test", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="read_test",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         data = read_dream(art.dream_id)
         assert data is not None
         assert data["dream_id"] == art.dream_id
@@ -93,7 +119,15 @@ class TestDreamArtifactWriter:
 
     def test_promote_dream(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="promote_test", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="promote_test",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         result = promote_dream(art.dream_id, memory_id="mem_123")
         assert result is not None
         assert result["status"] == "promoted"
@@ -101,21 +135,45 @@ class TestDreamArtifactWriter:
 
     def test_expire_dream(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="expire_test", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="expire_test",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         result = expire_dream(art.dream_id)
         assert result is not None
         assert result["status"] == "expired"
 
     def test_archive_dream(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="archive_test", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="archive_test",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         result = archive_dream(art.dream_id)
         assert result is not None
         assert result["status"] == "archived"
 
     def test_revisit_dream(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="revisit_test", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="revisit_test",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         result = revisit_dream(art.dream_id)
         assert result is not None
         assert result["revisit_count"] == 1
@@ -124,7 +182,15 @@ class TestDreamArtifactWriter:
 
     def test_list_filter_by_status(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="filter_test", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="filter_test",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         expire_dream(art.dream_id)
         all_dreams = list_dreams()
         assert len(all_dreams) == 1
@@ -135,6 +201,7 @@ class TestDreamArtifactWriter:
 
     def test_event_listener_writes(self, tmp_dreams_dir: Path):
         from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
+
         writer = DreamArtifactWriter()
         writer.start_listening()
         event = ResonanceEvent(
@@ -157,7 +224,15 @@ class TestDreamArtifactWriter:
 
     def test_yaml_is_safe(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="yaml_safe", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="yaml_safe",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         path = tmp_dreams_dir / f"{art.dream_id}_yaml_safe.yaml"
         assert path.exists()
         text = path.read_text()
@@ -167,7 +242,15 @@ class TestDreamArtifactWriter:
 class TestDreamConsolidator:
     def test_promote_high_revisit(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="consolidate_promote", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="consolidate_promote",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         for _ in range(5):
             revisit_dream(art.dream_id)
         cons = DreamConsolidator()
@@ -176,8 +259,17 @@ class TestDreamConsolidator:
 
     def test_expire_old_archived(self, tmp_dreams_dir: Path):
         import yaml
+
         writer = DreamArtifactWriter()
-        art = writer.write_artifact(query="consolidate_expire", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        art = writer.write_artifact(
+            query="consolidate_expire",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         archive_dream(art.dream_id)
         # Patch created_at to be 60 days ago
         for path in tmp_dreams_dir.glob("*.yaml"):
@@ -185,16 +277,33 @@ class TestDreamConsolidator:
                 with open(path, "r", encoding="utf-8") as fp:
                     data = yaml.safe_load(fp)
                 from datetime import datetime, timedelta, timezone
-                data["created_at"] = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
+
+                data["created_at"] = (
+                    datetime.now(timezone.utc) - timedelta(days=60)
+                ).isoformat()
                 with open(path, "w", encoding="utf-8") as fp:
-                    yaml.dump(data, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                    yaml.dump(
+                        data,
+                        fp,
+                        default_flow_style=False,
+                        sort_keys=False,
+                        allow_unicode=True,
+                    )
         cons = DreamConsolidator()
         report = cons.consolidate()
         assert art.dream_id in report.expired
 
     def test_skip_recent_incubating(self, tmp_dreams_dir: Path):
         writer = DreamArtifactWriter()
-        writer.write_artifact(query="skip", left="l", right="r", synthesis="s", confidence=0.3, tension=0.5, dominant="r")
+        writer.write_artifact(
+            query="skip",
+            left="l",
+            right="r",
+            synthesis="s",
+            confidence=0.3,
+            tension=0.5,
+            dominant="r",
+        )
         cons = DreamConsolidator()
         report = cons.consolidate()
         assert report.skipped == 1

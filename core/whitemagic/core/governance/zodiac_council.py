@@ -7,28 +7,35 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Proposal:
     """Proposal: proposal.
 
     Value object: equality and repr are field-based."""
+
     id: str
     title: str
     description: str
     proposer_id: str
     created_at: datetime = field(default_factory=datetime.now)
-    status: str = "open" # open, resolved, rejected
-    votes: dict[str, dict[str, float]] = field(default_factory=dict) # agent_id -> spectrum
+    status: str = "open"  # open, resolved, rejected
+    votes: dict[str, dict[str, float]] = field(
+        default_factory=dict
+    )  # agent_id -> spectrum
+
 
 @dataclass
 class VoteSpectrum:
     """VoteSpectrum: vote spectrum.
 
     Value object: equality and repr are field-based."""
-    logic: float = 0.5 # 0.0 (intuitive) to 1.0 (analytical)
-    micro: float = 0.5 # 0.0 (macro/global) to 1.0 (precise/local)
+
+    logic: float = 0.5  # 0.0 (intuitive) to 1.0 (analytical)
+    micro: float = 0.5  # 0.0 (macro/global) to 1.0 (precise/local)
     time: float = 0.5  # 0.0 (historical) to 1.0 (future-vision)
-    importance: float = 0.5 # 0.0 (minor) to 1.0 (critical)
+    importance: float = 0.5  # 0.0 (minor) to 1.0 (critical)
+
 
 class ZodiacCouncil:
     """The Zodiac Council Engine.
@@ -94,6 +101,7 @@ class ZodiacCouncil:
             return {"status": "no_votes"}
 
         from whitemagic.gardens.sangha.collective_memory import get_collective
+
         coll = get_collective()
         context = coll.get_shared_context("system")
         resonance_index = context.resonance_index
@@ -101,6 +109,7 @@ class ZodiacCouncil:
         # Get local node identity for DGA distance
         try:
             from whitemagic.core.intelligence.hologram.dga_engine import get_dga_engine
+
             dga = get_dga_engine()
             local_sig = dga.generate_signature()
         except ImportError:
@@ -121,7 +130,7 @@ class ZodiacCouncil:
                 # Using agent_id as sig proxy for demo
                 try:
                     dist = dga.calculate_distance(local_sig, agent_id)
-                    a_weight = 1.0 + (1.0 - dist) # Closer = more weight
+                    a_weight = 1.0 + (1.0 - dist)  # Closer = more weight
                 except Exception as e:
                     logger.debug("Operation failed: %s", e)
                     pass
@@ -139,14 +148,18 @@ class ZodiacCouncil:
         if total_weight == 0:
             return {"status": "error", "message": "zero_weight"}
 
-        consensus: dict[str, Any] = {dim: val / total_weight for dim, val in totals.items()}
+        consensus: dict[str, Any] = {
+            dim: val / total_weight for dim, val in totals.items()
+        }
         consensus["proposal_id"] = proposal_id
         consensus["total_weight"] = total_weight
         consensus["voter_count"] = len(proposal.votes)
 
         return consensus
 
+
 _council: ZodiacCouncil | None = None
+
 
 def get_council() -> ZodiacCouncil:
     """

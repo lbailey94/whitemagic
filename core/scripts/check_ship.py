@@ -1,4 +1,5 @@
 """Ship surface validation script for make check-ship."""
+
 import json
 import sys
 from whitemagic.tools.unified_api import call_tool
@@ -57,4 +58,3 @@ if not output["ok"]:
     sys.exit(1)
 else:
     print("\n✓ Ship surface is clean")
-

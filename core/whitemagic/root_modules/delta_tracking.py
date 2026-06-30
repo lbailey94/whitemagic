@@ -28,12 +28,14 @@ class DeltaTracker:
 
     def record_delta(self, key: str, old_value: Any, new_value: Any) -> None:
         """Record a change."""
-        self._deltas.append({
-            "key": key,
-            "old": old_value,
-            "new": new_value,
-            "timestamp": time.time(),
-        })
+        self._deltas.append(
+            {
+                "key": key,
+                "old": old_value,
+                "new": new_value,
+                "timestamp": time.time(),
+            }
+        )
 
     def compare(self, current: dict[str, Any]) -> list[dict[str, Any]]:
         """Compare current state against baseline and record deltas."""

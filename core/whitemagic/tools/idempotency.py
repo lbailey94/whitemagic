@@ -47,6 +47,7 @@ class IdempotencyRecord:
     """IdempotencyRecord: idempotency record.
 
     Value object: equality and repr are field-based."""
+
     tool: str
     key: str
     stored_at: str
@@ -112,6 +113,8 @@ def put_record(tool: str, key: str, response: dict[str, Any]) -> None:
         None
     """
     path = _record_path(tool, key)
-    record = IdempotencyRecord(tool=tool, key=key, stored_at=_utc_now_iso(), response=response)
+    record = IdempotencyRecord(
+        tool=tool, key=key, stored_at=_utc_now_iso(), response=response
+    )
     with file_lock(path):
         atomic_write(path, _json_dumps(record.to_dict(), indent=2, sort_keys=True))

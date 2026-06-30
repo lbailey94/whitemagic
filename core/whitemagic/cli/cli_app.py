@@ -6,6 +6,7 @@ Phase 1: Core Commands for Production Readiness
 
 **SHIP_SURFACE**: 🎯 Core Tier - Essential runtime component
 """
+
 import logging
 import os
 import sys
@@ -44,9 +45,18 @@ bootstrap_env_from_argv(sys.argv)
     "--db-path",
     help="Override WM_DB_PATH for this run (SQLite DB file path).",
 )
-@click.option("--json", "json_output", is_flag=True, help="Emit full tool envelopes as JSON (AI-friendly).")
+@click.option(
+    "--json",
+    "json_output",
+    is_flag=True,
+    help="Emit full tool envelopes as JSON (AI-friendly).",
+)
 @click.option("--now", help="ISO timestamp override for deterministic tool runs.")
-@click.option("--silent-init", is_flag=True, help="Set WM_SILENT_INIT=1 to suppress noisy initialization logs.")
+@click.option(
+    "--silent-init",
+    is_flag=True,
+    help="Set WM_SILENT_INIT=1 to suppress noisy initialization logs.",
+)
 @click.pass_context
 def main(
     ctx,
@@ -77,26 +87,32 @@ def main(
     if not json_output:
         try:
             from whitemagic.core.update_checker import check_for_update
+
             update_msg = check_for_update()
             if update_msg:
                 click.echo(update_msg, err=True)
         except (ImportError, ModuleNotFoundError):
             pass
 
+
 from whitemagic.cli.commands.diagnostics_commands import status_command
 
 # --- Global Memory Helper ---
 _memory = None
+
+
 def get_memory():  # type: ignore[return]
     """Get or create memory instance (respects WM_STATE_ROOT)."""
     global _memory
     if _memory is None:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             _memory = get_unified_memory()
         except ImportError:
             pass
     return _memory
+
 
 # Register all plugins and extensions
 register_all_commands(main, get_memory, status_command, _json_dumps)

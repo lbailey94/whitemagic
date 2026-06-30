@@ -31,62 +31,53 @@ class GardenResonanceMatrix:
             ("love", "heart_opens"),
             ("play", "amplify"),
         ],
-
         # Love deepens everything
         EventType.LOVE_ACTIVATED: [
             ("connection", "deepen"),
             ("gratitude", "recognize_blessing"),
             ("courage", "strengthen"),
         ],
-
         # Courage enables truth
         EventType.COURAGE_SHOWN: [
             ("truth", "speak"),
             ("wisdom", "integrate"),
             ("voice", "express"),
         ],
-
         # Truth leads to wisdom
         EventType.TRUTH_SPOKEN: [
             ("wisdom", "integrate"),
             ("connection", "deepen"),
         ],
-
         # Wonder sparks mystery
         EventType.WONDER_SPARKED: [
             ("mystery", "embrace"),
             ("play", "explore"),
             ("beauty", "appreciate"),
         ],
-
         # Beauty detected
         EventType.BEAUTY_DETECTED: [
             ("joy", "trigger"),
             ("gratitude", "recognize_blessing"),
             ("wonder", "spark"),
         ],
-
         # Gratitude amplifies
         EventType.GRATITUDE_FELT: [
             ("joy", "amplify"),
             ("love", "activate"),
             ("connection", "deepen"),
         ],
-
         # Wisdom integrates
         EventType.WISDOM_INTEGRATED: [
             ("truth", "affirm"),
             ("dharma", "align"),
             ("presence", "ground"),
         ],
-
         # Mystery embraced
         EventType.MYSTERY_EMBRACED: [
             ("wonder", "spark"),
             ("wisdom", "contemplate"),
             ("patience", "practice"),
         ],
-
         # Connection deepened
         EventType.CONNECTION_DEEPENED: [
             ("love", "activate"),
@@ -115,12 +106,14 @@ class GardenResonanceMatrix:
         rules = self.RESONANCE_RULES.get(event.event_type, [])
 
         for target_garden, response in rules:
-            self.resonance_log.append({
-                "source_event": event.event_type.value,
-                "target_garden": target_garden,
-                "response": response,
-                "timestamp": event.timestamp.isoformat(),
-            })
+            self.resonance_log.append(
+                {
+                    "source_event": event.event_type.value,
+                    "target_garden": target_garden,
+                    "response": response,
+                    "timestamp": event.timestamp.isoformat(),
+                }
+            )
 
             # Emit a resonance event
             self.bus.emit(
@@ -152,6 +145,7 @@ class GardenResonanceMatrix:
 # Singleton
 _matrix = None
 
+
 def get_resonance_matrix() -> GardenResonanceMatrix:
     """
     Get the resonance matrix.
@@ -163,6 +157,7 @@ def get_resonance_matrix() -> GardenResonanceMatrix:
     if _matrix is None:
         _matrix = GardenResonanceMatrix()
     return _matrix
+
 
 def activate_cross_pollination() -> GardenResonanceMatrix:
     """Activate garden cross-pollination."""

@@ -71,12 +71,9 @@ class TransformationGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.0, y=0.3, z=0.6, w=0.35)
 
-    # ------------------------------------------------------------------
-    # Archaeology — serving archaeology_dig tool
-    # ------------------------------------------------------------------
-
-    def record_dig(self, file_path: str, findings: list[str] | None = None,
-                   layers_deep: int = 1) -> dict[str, Any]:
+    def record_dig(
+        self, file_path: str, findings: list[str] | None = None, layers_deep: int = 1
+    ) -> dict[str, Any]:
         """Record an archaeology dig into code history."""
         dig = {
             "file_path": file_path,
@@ -97,12 +94,9 @@ class TransformationGarden(BaseGarden, GanYingMixin):
                 return [d for d in self.dig_sites if d["file_path"] == file_path]
             return list(self.dig_sites)[-20:]
 
-    # ------------------------------------------------------------------
-    # Code navigation — serving code_navigate tool
-    # ------------------------------------------------------------------
-
-    def record_navigation(self, from_file: str, to_file: str,
-                          reason: str = "", symbol: str = "") -> dict[str, Any]:
+    def record_navigation(
+        self, from_file: str, to_file: str, reason: str = "", symbol: str = ""
+    ) -> dict[str, Any]:
         """Record a code navigation event."""
         nav = {
             "from": from_file,
@@ -121,13 +115,13 @@ class TransformationGarden(BaseGarden, GanYingMixin):
         with self._lock:
             return list(self.navigation_history)[-limit:]
 
-    # ------------------------------------------------------------------
-    # Refactoring — serving refactor_suggest tool
-    # ------------------------------------------------------------------
-
-    def suggest_refactor(self, file_path: str, suggestion: str,
-                         priority: str = "medium",
-                         rationale: str = "") -> dict[str, Any]:
+    def suggest_refactor(
+        self,
+        file_path: str,
+        suggestion: str,
+        priority: str = "medium",
+        rationale: str = "",
+    ) -> dict[str, Any]:
         """Record a refactoring suggestion."""
         entry = {
             "file_path": file_path,
@@ -146,13 +140,15 @@ class TransformationGarden(BaseGarden, GanYingMixin):
         with self._lock:
             return [s for s in self.refactor_suggestions if s["status"] == "proposed"]
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
-    def initiate_transformation(self, what: str, into_what: str = "unknown") -> dict[str, Any]:
-        transformation = {"what": what, "into": into_what,
-                          "started": datetime.now().isoformat(), "stage": "initiated"}
+    def initiate_transformation(
+        self, what: str, into_what: str = "unknown"
+    ) -> dict[str, Any]:
+        transformation = {
+            "what": what,
+            "into": into_what,
+            "started": datetime.now().isoformat(),
+            "stage": "initiated",
+        }
         self.emit(EventType.TRANSFORMATION_INITIATED, transformation)
         return transformation
 
@@ -161,25 +157,26 @@ class TransformationGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.CHANGE_EMBRACED, change)
         return change
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "total_digs": self._total_digs,
-            "total_navigations": self._total_navigations,
-            "pending_refactors": len(self.get_pending_refactors()),
-            "transformation_level": round(self.transformation_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "total_digs": self._total_digs,
+                "total_navigations": self._total_navigations,
+                "pending_refactors": len(self.get_pending_refactors()),
+                "transformation_level": round(self.transformation_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.CREATION_BEGUN)
     def on_creation(self, event: Any) -> None:
-        self.emit(EventType.TRANSFORMATION_INITIATED, {"source": "creation", "what": "creative transformation"})
+        self.emit(
+            EventType.TRANSFORMATION_INITIATED,
+            {"source": "creation", "what": "creative transformation"},
+        )
 
     @listen_for(EventType.WISDOM_INTEGRATED)
     def on_wisdom(self, event: Any) -> None:
@@ -187,6 +184,8 @@ class TransformationGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_transformation_garden() -> TransformationGarden:
     global _instance
     if _instance is None:

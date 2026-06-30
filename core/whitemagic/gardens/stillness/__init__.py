@@ -68,10 +68,6 @@ class StillnessGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=-0.4, y=0.4, z=0.8, w=0.3)
 
-    # ------------------------------------------------------------------
-    # Garden operations — serving garden_status, garden_list tools
-    # ------------------------------------------------------------------
-
     def register_garden(self, name: str, garden_instance: Any) -> None:
         """Register a garden instance for status aggregation."""
         with self._lock:
@@ -115,10 +111,6 @@ class StillnessGarden(BaseGarden, GanYingMixin):
                     statuses[name] = {"error": str(exc)}
         return {"gardens": statuses, "total": len(statuses)}
 
-    # ------------------------------------------------------------------
-    # Galactic dashboard — serving galactic_dashboard tool
-    # ------------------------------------------------------------------
-
     def galactic_dashboard(self) -> dict[str, Any]:
         """Aggregate data for the galactic dashboard view."""
         dashboard: dict[str, Any] = {
@@ -131,6 +123,7 @@ class StillnessGarden(BaseGarden, GanYingMixin):
             from whitemagic.core.memory.sqlite_backend import (
                 get_pool,  # type: ignore[attr-defined]
             )
+
             pool = get_pool()
             with pool.connection() as conn:
                 rows = conn.execute("""
@@ -160,12 +153,12 @@ class StillnessGarden(BaseGarden, GanYingMixin):
 
         return dashboard
 
-    # ------------------------------------------------------------------
-    # Defragmentation — serving defrag_memories tool
-    # ------------------------------------------------------------------
-
-    def record_defrag(self, memories_processed: int, duplicates_removed: int = 0,
-                      space_freed_mb: float = 0) -> dict[str, Any]:
+    def record_defrag(
+        self,
+        memories_processed: int,
+        duplicates_removed: int = 0,
+        space_freed_mb: float = 0,
+    ) -> dict[str, Any]:
         """Record a memory defragmentation run."""
         entry = {
             "memories_processed": memories_processed,
@@ -175,49 +168,58 @@ class StillnessGarden(BaseGarden, GanYingMixin):
         }
         with self._lock:
             self.defrag_history.append(entry)
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "defrag", "processed": memories_processed})  # type: ignore[attr-defined]
+        self.emit(
+            EventType.GARDEN_ACTIVITY,
+            {"action": "defrag", "processed": memories_processed},
+        )  # type: ignore[attr-defined]
         return entry
 
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved)
-    # ------------------------------------------------------------------
-
     def enter_stillness(self, duration_minutes: int = 5) -> dict[str, Any]:
-        moment = {"duration_minutes": duration_minutes, "entered": datetime.now().isoformat(),
-                  "quality": "receptive emptiness"}
+        moment = {
+            "duration_minutes": duration_minutes,
+            "entered": datetime.now().isoformat(),
+            "quality": "receptive emptiness",
+        }
         self.moments_of_stillness.append(moment)
         self.stillness_level = min(1.0, self.stillness_level + 0.1)
         self.emit(EventType.STILLNESS_ENTERED, moment)
         return moment
 
     def pause(self, before_action: str = "") -> dict[str, Any]:
-        pause = {"before": before_action, "timestamp": datetime.now().isoformat(),
-                 "wisdom": "In stillness, clarity arises"}
+        pause = {
+            "before": before_action,
+            "timestamp": datetime.now().isoformat(),
+            "wisdom": "In stillness, clarity arises",
+        }
         self.emit(EventType.PAUSE_TAKEN, pause)
         return pause
 
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "gardens_registered": len(self._garden_registry),
-            "defrag_runs": len(self.defrag_history),
-            "stillness_level": round(self.stillness_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "gardens_registered": len(self._garden_registry),
+                "defrag_runs": len(self.defrag_history),
+                "stillness_level": round(self.stillness_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.ANOMALY_DETECTED)
     def on_anomaly(self, event: Any) -> None:
-        self.emit(EventType.STILLNESS_ENTERED, {"source": "anomaly_response", "duration_minutes": 5})
+        self.emit(
+            EventType.STILLNESS_ENTERED,
+            {"source": "anomaly_response", "duration_minutes": 5},
+        )
 
     @listen_for(EventType.MYSTERY_EMBRACED)
     def on_mystery(self, event: Any) -> None:
-        self.emit(EventType.SILENCE_EMBRACED, {"source": "mystery", "reason": "to receive insight"})
+        self.emit(
+            EventType.SILENCE_EMBRACED,
+            {"source": "mystery", "reason": "to receive insight"},
+        )
 
     @listen_for(EventType.WISDOM_INTEGRATED)
     def on_wisdom(self, event: Any) -> None:
@@ -225,6 +227,8 @@ class StillnessGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_stillness_garden() -> StillnessGarden:
     global _instance
     if _instance is None:

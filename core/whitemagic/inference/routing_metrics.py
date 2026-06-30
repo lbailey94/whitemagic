@@ -12,6 +12,7 @@ Tracks:
   - Routing decision reasons
   - Circuit breaker state per tier
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,6 +32,7 @@ _WINDOW_SIZE = 1000  # Rolling window for latency samples
 @dataclass
 class TierStats:
     """Statistics for a single inference tier."""
+
     total_requests: int = 0
     successful: int = 0
     failed: int = 0
@@ -51,7 +53,9 @@ class TierStats:
             return 0.0
         return self.escalated / self.total_requests
 
-    def record(self, latency_ms: float, confidence: float, success: bool, reason: str = "") -> None:
+    def record(
+        self, latency_ms: float, confidence: float, success: bool, reason: str = ""
+    ) -> None:
         self.total_requests += 1
         self.latencies.append(latency_ms)
         self.confidences.append(confidence)
@@ -98,7 +102,9 @@ class TierStats:
             "p95_ms": round(self.p95(), 2),
             "p99_ms": round(self.p99(), 2),
             "avg_confidence": round(self.avg_confidence(), 3),
-            "top_reasons": dict(sorted(self.decision_reasons.items(), key=lambda x: -x[1])[:5]),
+            "top_reasons": dict(
+                sorted(self.decision_reasons.items(), key=lambda x: -x[1])[:5]
+            ),
         }
 
 
@@ -143,7 +149,10 @@ class RoutingMetrics:
             self._tier_stats[from_tier].record_escalation()
             logger.debug(
                 "Escalation %s → %s (reason: %s). Total escalations: %d",
-                from_tier.name, to_tier.name, reason, self._total_escalations,
+                from_tier.name,
+                to_tier.name,
+                reason,
+                self._total_escalations,
             )
 
     def summary(self) -> dict[str, Any]:
@@ -186,7 +195,8 @@ class RoutingMetrics:
 
                 # Compare recent escalation rate to historical
                 recent_escalations = sum(
-                    1 for i in range(min(window, len(stats.latencies)))
+                    1
+                    for i in range(min(window, len(stats.latencies)))
                     if i < stats.escalated  # Approximate
                 )
                 recent_rate = recent_escalations / min(window, stats.total_requests)
@@ -194,12 +204,14 @@ class RoutingMetrics:
 
                 if historical_rate > 0 and abs(recent_rate - historical_rate) > 0.15:
                     drift["status"] = "drift_detected"
-                    drift["recommendations"].append({
-                        "tier": tier.name,
-                        "historical_rate": f"{historical_rate:.1%}",
-                        "recent_rate": f"{recent_rate:.1%}",
-                        "action": "Consider adjusting confidence threshold or complexity patterns",
-                    })
+                    drift["recommendations"].append(
+                        {
+                            "tier": tier.name,
+                            "historical_rate": f"{historical_rate:.1%}",
+                            "recent_rate": f"{recent_rate:.1%}",
+                            "action": "Consider adjusting confidence threshold or complexity patterns",
+                        }
+                    )
 
             return drift
 

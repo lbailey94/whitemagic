@@ -80,6 +80,7 @@ class VSAContextCompressor:
     def _get_embedding_engine(self) -> Any:
         if self._embedding_engine is None:
             from whitemagic.core.memory.embeddings import EmbeddingEngine
+
             self._embedding_engine = EmbeddingEngine()
         return self._embedding_engine
 
@@ -175,7 +176,10 @@ class VSAContextCompressor:
         else:
             selected_summaries = item_summaries[:max_text_items]
 
-        summary = f"[VSA Compressed: {len(bound_vectors)} items → 1 vector]\n" + "\n".join(selected_summaries)
+        summary = (
+            f"[VSA Compressed: {len(bound_vectors)} items → 1 vector]\n"
+            + "\n".join(selected_summaries)
+        )
 
         # The compressed vector is ~384 floats = ~1536 bytes
         # vs original text which could be thousands of tokens
@@ -207,10 +211,6 @@ class VSAContextCompressor:
         role_vec = hrr.get_relation_vector(role)
         return hrr.unbind(compressed_vector, role_vec).tolist()
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _compressor: VSAContextCompressor | None = None
 

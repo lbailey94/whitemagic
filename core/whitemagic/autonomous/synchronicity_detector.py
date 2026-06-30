@@ -22,14 +22,18 @@ class SynchronicityDetector:
         self._events: list[dict[str, Any]] = []
         self._synchronicities: list[dict[str, Any]] = []
 
-    def record_event(self, stream: str, event: str, metadata: dict[str, Any] | None = None) -> None:
+    def record_event(
+        self, stream: str, event: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Record an event from a data stream."""
-        self._events.append({
-            "stream": stream,
-            "event": event,
-            "metadata": metadata or {},
-            "timestamp": time.time(),
-        })
+        self._events.append(
+            {
+                "stream": stream,
+                "event": event,
+                "metadata": metadata or {},
+                "timestamp": time.time(),
+            }
+        )
 
     def detect(self, time_window: float = 60.0) -> list[dict[str, Any]]:
         """Detect synchronistic events within a time window."""
@@ -37,7 +41,7 @@ class SynchronicityDetector:
         found: list[dict[str, Any]] = []
 
         for i, e1 in enumerate(recent):
-            for e2 in recent[i + 1:]:
+            for e2 in recent[i + 1 :]:
                 if e1["stream"] != e2["stream"]:
                     time_diff = abs(e1["timestamp"] - e2["timestamp"])
                     if time_diff <= time_window:

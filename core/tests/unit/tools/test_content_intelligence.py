@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Unit tests for content_intelligence module — chunker, outline builder, summarizer."""
+
 from __future__ import annotations
 
 import pytest
@@ -16,6 +17,7 @@ from whitemagic.gardens.browser.content_intelligence import (
 # ---------------------------------------------------------------------------
 # OutlineBuilder tests
 # ---------------------------------------------------------------------------
+
 
 class TestOutlineBuilder:
     def test_build_from_html_with_headings(self):
@@ -63,10 +65,15 @@ class TestOutlineBuilder:
 
     def test_to_markdown(self):
         from whitemagic.gardens.browser.content_intelligence import OutlineNode
+
         nodes = [
-            OutlineNode(level=1, text="Title", children=[
-                OutlineNode(level=2, text="Sub"),
-            ]),
+            OutlineNode(
+                level=1,
+                text="Title",
+                children=[
+                    OutlineNode(level=2, text="Sub"),
+                ],
+            ),
         ]
         builder = OutlineBuilder()
         md = builder.to_markdown(nodes)
@@ -75,10 +82,15 @@ class TestOutlineBuilder:
 
     def test_to_flat_list(self):
         from whitemagic.gardens.browser.content_intelligence import OutlineNode
+
         nodes = [
-            OutlineNode(level=1, text="Title", children=[
-                OutlineNode(level=2, text="Sub"),
-            ]),
+            OutlineNode(
+                level=1,
+                text="Title",
+                children=[
+                    OutlineNode(level=2, text="Sub"),
+                ],
+            ),
         ]
         builder = OutlineBuilder()
         flat = builder.to_flat_list(nodes)
@@ -92,6 +104,7 @@ class TestOutlineBuilder:
 # ---------------------------------------------------------------------------
 # ContentChunker tests
 # ---------------------------------------------------------------------------
+
 
 class TestContentChunker:
     def test_chunk_short_text(self):
@@ -140,7 +153,10 @@ class TestContentChunker:
 
     def test_chunk_with_headings(self):
         chunker = ContentChunker(chunk_size=500, overlap=50)
-        text = "Introduction\n\nSome content here. " * 10 + "\n\nMethods\n\nMethods content. " * 10
+        text = (
+            "Introduction\n\nSome content here. " * 10
+            + "\n\nMethods\n\nMethods content. " * 10
+        )
         headings = ["Introduction", "Methods"]
         chunks = chunker.chunk(text, headings=headings)
         assert len(chunks) > 0
@@ -159,6 +175,7 @@ class TestContentChunker:
 # ---------------------------------------------------------------------------
 # ContentSummarizer tests
 # ---------------------------------------------------------------------------
+
 
 class TestContentSummarizer:
     def test_summarize_short_text_returns_as_is(self):
@@ -216,6 +233,7 @@ class TestContentSummarizer:
 # process_content / enhanced_to_dict tests
 # ---------------------------------------------------------------------------
 
+
 class TestProcessContent:
     def test_process_content_basic(self):
         html = """
@@ -264,7 +282,10 @@ class TestProcessContent:
         text = "Title\n\nContent here."
 
         enhanced = process_content(
-            html=html, text=text, title="Test", summarize=False,
+            html=html,
+            text=text,
+            title="Test",
+            summarize=False,
         )
 
         d = enhanced_to_dict(enhanced, include_chunks=True)
@@ -281,7 +302,10 @@ class TestProcessContent:
         text = "Title\n\nContent here."
 
         enhanced = process_content(
-            html=html, text=text, title="Test", summarize=False,
+            html=html,
+            text=text,
+            title="Test",
+            summarize=False,
         )
 
         d = enhanced_to_dict(enhanced, include_chunks=False)
@@ -290,7 +314,10 @@ class TestProcessContent:
 
     def test_process_content_empty(self):
         enhanced = process_content(
-            html="", text="", title="", summarize=False,
+            html="",
+            text="",
+            title="",
+            summarize=False,
         )
         assert enhanced.title == ""
         assert enhanced.outline == []

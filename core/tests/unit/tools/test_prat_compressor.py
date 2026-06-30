@@ -109,6 +109,7 @@ class TestPratCompressor:
 
     def test_get_prat_compressor_singleton(self):
         import whitemagic.tools.prat_compressor as _pc
+
         old = os.environ.get("WM_VECTORIZED")
         try:
             # Reset singleton so env change is respected

@@ -78,8 +78,10 @@ class SelfImprovingCascade:
         return {
             "total_improvements": len(self.improvements),
             "avg_issues_fixed": (
-                sum(i["issues_fixed"] for i in self.improvements) / len(self.improvements)
-                if self.improvements else 0.0
+                sum(i["issues_fixed"] for i in self.improvements)
+                / len(self.improvements)
+                if self.improvements
+                else 0.0
             ),
         }
 

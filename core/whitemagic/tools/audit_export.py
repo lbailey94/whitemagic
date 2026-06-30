@@ -49,6 +49,7 @@ def export_audit_log(
     # 1. Gather karmic trace entries (Dharma evaluations)
     try:
         from whitemagic.dharma.rules import get_rules_engine
+
         engine = get_rules_engine()
         trace = engine.get_karmic_trace(limit=limit)
         for t in trace:
@@ -61,6 +62,7 @@ def export_audit_log(
     # 2. Gather telemetry entries (tool call records)
     try:
         from whitemagic.core.monitoring.telemetry import get_telemetry
+
         tel = get_telemetry()
         summary = tel.get_summary()
         recent_events = summary.get("recent_events", [])
@@ -78,38 +80,44 @@ def export_audit_log(
     # 3. Gather circuit breaker events
     try:
         from whitemagic.tools.circuit_breaker import get_breaker_registry
+
         reg = get_breaker_registry()
         for status in reg.all_status():
             if status.get("state") != "closed":
-                entries.append({
-                    "timestamp": datetime.now().isoformat(),
-                    "tool_name": status.get("tool", "unknown"),
-                    "agent_id": "*",
-                    "action": "circuit_open",
-                    "duration_ms": 0,
-                    "result_status": "blocked",
-                    "metadata": {
-                        "breaker_state": status.get("state"),
-                        "failure_count": status.get("failure_count", 0),
-                    },
-                })
+                entries.append(
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "tool_name": status.get("tool", "unknown"),
+                        "agent_id": "*",
+                        "action": "circuit_open",
+                        "duration_ms": 0,
+                        "result_status": "blocked",
+                        "metadata": {
+                            "breaker_state": status.get("state"),
+                            "failure_count": status.get("failure_count", 0),
+                        },
+                    }
+                )
     except Exception as e:
         logger.debug("Circuit breaker data unavailable: %s", e, exc_info=True)
 
     # 4. Gather rate limiter stats
     try:
         from whitemagic.tools.rate_limiter import get_rate_limiter
+
         rl_stats = get_rate_limiter().get_stats()
         if rl_stats.get("total_blocked", 0) > 0:
-            entries.append({
-                "timestamp": datetime.now().isoformat(),
-                "tool_name": "*",
-                "agent_id": "*",
-                "action": "rate_limit_summary",
-                "duration_ms": 0,
-                "result_status": "info",
-                "metadata": rl_stats,
-            })
+            entries.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "tool_name": "*",
+                    "agent_id": "*",
+                    "action": "rate_limit_summary",
+                    "duration_ms": 0,
+                    "result_status": "info",
+                    "metadata": rl_stats,
+                }
+            )
     except (ImportError, AttributeError):
         pass
 
@@ -117,13 +125,18 @@ def export_audit_log(
     entries.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
     entries = entries[:limit]
 
-    return cast("dict[str, Any]", _json_safe({
-        "status": "success",
-        "format": format,
-        "entry_count": len(entries),
-        "entries": entries,
-        "export_timestamp": datetime.now().isoformat(),
-    }))
+    return cast(
+        "dict[str, Any]",
+        _json_safe(
+            {
+                "status": "success",
+                "format": format,
+                "entry_count": len(entries),
+                "entries": entries,
+                "export_timestamp": datetime.now().isoformat(),
+            }
+        ),
+    )
 
 
 def _json_safe(obj: Any) -> Any:

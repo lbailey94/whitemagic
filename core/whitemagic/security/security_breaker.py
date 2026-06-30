@@ -35,9 +35,9 @@ logger = logging.getLogger(__name__)
 class SecurityAlert:
     """A security anomaly detection alert."""
 
-    pattern: str          # e.g., "rapid_fire", "escalation", "lateral_movement"
-    severity: float       # 0.0–1.0
-    action: str           # "log", "warn", "throttle", "block"
+    pattern: str  # e.g., "rapid_fire", "escalation", "lateral_movement"
+    severity: float  # 0.0–1.0
+    action: str  # "log", "warn", "throttle", "block"
     tool: str
     detail: str
     timestamp: float
@@ -70,7 +70,9 @@ class SecurityMonitor:
 
         # State
         self._call_log: deque[dict[str, Any]] = deque(maxlen=10000)
-        self._per_tool_times: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=200))
+        self._per_tool_times: dict[str, deque[float]] = defaultdict(
+            lambda: deque(maxlen=200)
+        )
         self._alerts: list[SecurityAlert] = []
         self._total_calls: int = 0
         self._blocked_count: int = 0
@@ -115,7 +117,11 @@ class SecurityMonitor:
 
             logger.warning(
                 "Security alert [%s]: %s (tool=%s, severity=%.1f, action=%s)",
-                alert.pattern, alert.detail, alert.tool, alert.severity, alert.action,
+                alert.pattern,
+                alert.detail,
+                alert.tool,
+                alert.severity,
+                alert.action,
             )
 
             return {
@@ -178,7 +184,9 @@ class SecurityMonitor:
             )
         return None
 
-    def _check_escalation(self, tool: str, safety: str, now: float) -> SecurityAlert | None:
+    def _check_escalation(
+        self, tool: str, safety: str, now: float
+    ) -> SecurityAlert | None:
         """Detect privilege escalation patterns (READ→WRITE→DELETE in sequence)."""
         if safety not in ("WRITE", "DELETE"):
             return None
@@ -262,8 +270,7 @@ class SecurityMonitor:
                         "tool": a.tool,
                         "timestamp": a.timestamp,
                     }
-                    for a in self._alerts[-5:
-                        ]
+                    for a in self._alerts[-5:]
                 ],
                 "config": {
                     "rapid_fire_threshold": self._rapid_fire_threshold,
@@ -283,10 +290,6 @@ class SecurityMonitor:
             self._total_calls = 0
             self._blocked_count = 0
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _monitor: SecurityMonitor | None = None
 _monitor_lock = threading.Lock()

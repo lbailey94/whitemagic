@@ -1,4 +1,5 @@
 """Community Dharma - Collective ethical consensus."""
+
 from __future__ import annotations
 
 import json
@@ -23,7 +24,7 @@ class EthicalConsensus:
     scenario: str
     assessment: str  # Aligned, neutral, or violation
     consensus_score: float  # 0.0-1.0
-    vote_spectrum: dict[str, float] # Multidimensional center of mass
+    vote_spectrum: dict[str, float]  # Multidimensional center of mass
     votes: list[dict[str, Any]]  # Session votes
     created_at: datetime
 
@@ -47,6 +48,7 @@ class CommunityDharma:
         """Connect to Gan Ying Bus."""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()  # type: ignore[assignment]
             logger.info("🎵 Community Dharma connected to Gan Ying Bus")
         except ImportError:
@@ -72,6 +74,7 @@ class CommunityDharma:
         # Get individual Dharma assessment
         try:
             from whitemagic.gardens.dharma import HarmonyMetrics
+
             metrics = HarmonyMetrics()
             individual = metrics.assess(action, context)
         except ImportError:
@@ -86,7 +89,11 @@ class CommunityDharma:
         consensus = self._get_consensus_for_action(action)
 
         if consensus:
-            logger.info("☸️  Community consensus found: %s ({consensus.consensus_score:.2f})", consensus.assessment, exc_info=True)
+            logger.info(
+                "☸️  Community consensus found: %s ({consensus.consensus_score:.2f})",
+                consensus.assessment,
+                exc_info=True,
+            )
 
             return {
                 "action": action,
@@ -152,7 +159,12 @@ class CommunityDharma:
                 scenario=action,
                 assessment=assessment,
                 consensus_score=score,
-                vote_spectrum={"logic": 0.5, "micro": 0.5, "time": 0.5, "importance": 0.5},
+                vote_spectrum={
+                    "logic": 0.5,
+                    "micro": 0.5,
+                    "time": 0.5,
+                    "importance": 0.5,
+                },
                 votes=[],
                 created_at=datetime.now(),
             )
@@ -170,10 +182,13 @@ class CommunityDharma:
         consensus.votes.append(vote)
 
         # Recalculate consensus
-        consensus.consensus_score = sum(v["score"] for v in consensus.votes) / len(consensus.votes)
+        consensus.consensus_score = sum(v["score"] for v in consensus.votes) / len(
+            consensus.votes
+        )
 
         # Calculate Spectra center of mass
         from whitemagic.core.governance.zodiac_council import get_council
+
         get_council()
 
         # Determine consensus assessment (majority vote)
@@ -185,32 +200,41 @@ class CommunityDharma:
         spectrum_totals = {d: 0.0 for d in dims}
         for v in consensus.votes:
             # If vote has spectrum info, use it, else use defaults
-            v_spec = v.get("spectrum", {"logic": 0.5, "micro": 0.5, "time": 0.5, "importance": 0.5})
+            v_spec = v.get(
+                "spectrum", {"logic": 0.5, "micro": 0.5, "time": 0.5, "importance": 0.5}
+            )
             for d in dims:
                 spectrum_totals[d] += v_spec.get(d, 0.5)
 
-        consensus.vote_spectrum = {d: val / len(consensus.votes) for d, val in spectrum_totals.items()}
+        consensus.vote_spectrum = {
+            d: val / len(consensus.votes) for d, val in spectrum_totals.items()
+        }
 
         self._save_consensuses(consensuses)
 
-        logger.info("🙏 Assessment contributed to community (votes: %s)", len(consensus.votes))
+        logger.info(
+            "🙏 Assessment contributed to community (votes: %s)", len(consensus.votes)
+        )
 
         # Emit to Gan Ying
         if self.bus and len(consensus.votes) >= 3:
             try:
                 from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
-                self.bus.emit(ResonanceEvent(
-                    source="community_dharma",
-                    event_type=EventType.PATTERN_DETECTED,
-                    data={
-                        "consensus_reached": True,
-                        "action": action,
-                        "assessment": consensus.assessment,
-                        "score": consensus.consensus_score,
-                        "votes": len(consensus.votes),
-                    },
-                    confidence=consensus.consensus_score,
-                ))
+
+                self.bus.emit(
+                    ResonanceEvent(
+                        source="community_dharma",
+                        event_type=EventType.PATTERN_DETECTED,
+                        data={
+                            "consensus_reached": True,
+                            "action": action,
+                            "assessment": consensus.assessment,
+                            "score": consensus.consensus_score,
+                            "votes": len(consensus.votes),
+                        },
+                        confidence=consensus.consensus_score,
+                    )
+                )
             except (ImportError, AttributeError):
                 pass
 
@@ -225,8 +249,7 @@ class CommunityDharma:
 
         # Filter for strong consensus (>= 3 votes, >= 0.8 score)
         guidelines = [
-            c for c in consensuses
-            if len(c.votes) >= 3 and c.consensus_score >= 0.8
+            c for c in consensuses if len(c.votes) >= 3 and c.consensus_score >= 0.8
         ]
 
         # Sort by consensus strength
@@ -280,7 +303,10 @@ class CommunityDharma:
                     scenario=c["scenario"],
                     assessment=c["assessment"],
                     consensus_score=c["consensus_score"],
-                    vote_spectrum=c.get("vote_spectrum", {"logic": 0.5, "micro": 0.5, "time": 0.5, "importance": 0.5}),
+                    vote_spectrum=c.get(
+                        "vote_spectrum",
+                        {"logic": 0.5, "micro": 0.5, "time": 0.5, "importance": 0.5},
+                    ),
                     votes=c["votes"],
                     created_at=parse_datetime(c["created_at"]),
                 )

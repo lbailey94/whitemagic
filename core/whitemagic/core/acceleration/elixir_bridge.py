@@ -18,6 +18,7 @@ Usage:
         elixir_harmony_status, elixir_bridge_status
     )
 """
+
 from __future__ import annotations
 
 import logging
@@ -48,6 +49,7 @@ def _get_redis() -> Any:
             return _redis_client
         try:
             import redis
+
             url = os.environ.get("REDIS_URL", "redis://localhost:6379")
             client = redis.from_url(url, decode_responses=True)
             client.ping()
@@ -65,7 +67,9 @@ def _get_redis() -> Any:
             return None
 
 
-def _send_elixir_command(module: str, command: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+def _send_elixir_command(
+    module: str, command: str, payload: dict[str, Any]
+) -> dict[str, Any] | None:
     """Send a command to an Elixir module via Redis and await response."""
     client = _get_redis()
     if client is None:
@@ -98,16 +102,14 @@ def _send_elixir_command(module: str, command: str, payload: dict[str, Any]) -> 
                     return parsed
 
         pubsub.unsubscribe(response_channel)
-        logger.debug("Elixir %s.%s timed out after %.1fs", module, command, _RESPONSE_TIMEOUT)
+        logger.debug(
+            "Elixir %s.%s timed out after %.1fs", module, command, _RESPONSE_TIMEOUT
+        )
     except Exception as e:
         logger.debug("Elixir command %s.%s failed: %s", module, command, e)
 
     return None
 
-
-# ---------------------------------------------------------------------------
-# CascadeExecutor — Parallel batch tool execution
-# ---------------------------------------------------------------------------
 
 def elixir_cascade_execute(
     tool_name: str,
@@ -121,12 +123,16 @@ def elixir_cascade_execute(
         Dict with execution result, or None if Elixir unavailable.
 
     """
-    return _send_elixir_command("cascade_executor", "execute", {
-        "tool_name": tool_name,
-        "args": args,
-        "timeout_ms": timeout_ms,
-        "priority": priority,
-    })
+    return _send_elixir_command(
+        "cascade_executor",
+        "execute",
+        {
+            "tool_name": tool_name,
+            "args": args,
+            "timeout_ms": timeout_ms,
+            "priority": priority,
+        },
+    )
 
 
 def elixir_cascade_pipeline(
@@ -147,16 +153,16 @@ def elixir_cascade_pipeline(
     """
     if max_failures < 0:
         max_failures = len(tasks)
-    return _send_elixir_command("cascade_executor", "execute_pipeline", {
-        "tasks": tasks,
-        "mode": mode,
-        "max_failures": max_failures,
-    })
+    return _send_elixir_command(
+        "cascade_executor",
+        "execute_pipeline",
+        {
+            "tasks": tasks,
+            "mode": mode,
+            "max_failures": max_failures,
+        },
+    )
 
-
-# ---------------------------------------------------------------------------
-# GardenPubSub — Garden event broadcasting
-# ---------------------------------------------------------------------------
 
 def elixir_publish_garden_event(
     garden_name: str,
@@ -169,23 +175,27 @@ def elixir_publish_garden_event(
         Dict with subscriber count and delivery status, or None.
 
     """
-    return _send_elixir_command("garden_pubsub", "publish", {
-        "garden": garden_name,
-        "event_type": event_type,
-        "payload": payload or {},
-    })
+    return _send_elixir_command(
+        "garden_pubsub",
+        "publish",
+        {
+            "garden": garden_name,
+            "event_type": event_type,
+            "payload": payload or {},
+        },
+    )
 
 
 def elixir_subscribe_garden(garden_name: str) -> dict[str, Any] | None:
     """Subscribe to a garden's event topic."""
-    return _send_elixir_command("garden_pubsub", "subscribe", {
-        "garden": garden_name,
-    })
+    return _send_elixir_command(
+        "garden_pubsub",
+        "subscribe",
+        {
+            "garden": garden_name,
+        },
+    )
 
-
-# ---------------------------------------------------------------------------
-# HarmonyMonitor — 7-dimension health monitoring
-# ---------------------------------------------------------------------------
 
 def elixir_harmony_status() -> dict[str, Any] | None:
     """Get Harmony Vector status from Elixir's OTP-supervised monitor.
@@ -207,10 +217,6 @@ def elixir_harmony_check() -> dict[str, Any] | None:
     return _send_elixir_command("harmony_monitor", "deep_check", {})
 
 
-# ---------------------------------------------------------------------------
-# RedisBridge — Event bridging stats
-# ---------------------------------------------------------------------------
-
 def elixir_redis_bridge_stats() -> dict[str, Any] | None:
     """Get statistics from the Elixir Redis bridge."""
     return _send_elixir_command("redis_bridge", "stats", {})
@@ -220,10 +226,6 @@ def elixir_redis_bridge_health() -> dict[str, Any] | None:
     """Get health status from the Elixir Redis bridge."""
     return _send_elixir_command("redis_bridge", "health", {})
 
-
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
 
 def elixir_bridge_status() -> dict[str, Any]:
     """Get Elixir bridge status."""

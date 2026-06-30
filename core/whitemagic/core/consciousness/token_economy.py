@@ -27,18 +27,20 @@ logger = logging.getLogger(__name__)
 
 class ComputeType(Enum):
     """Where computation happens"""
-    API_TOKENS = "api_tokens"           # Claude API processing
-    LOCAL_PYTHON = "local_python"       # Python scripts on laptop
-    LOCAL_SHELL = "local_shell"         # Shell commands
-    LOCAL_RUST = "local_rust"           # Rust bridge operations
-    LOCAL_HASKELL = "local_haskell"     # Haskell bridge operations
-    LOCAL_FILE_IO = "local_file_io"     # File reading/writing
-    MCP_TOOLS = "mcp_tools"             # MCP file-based tools
+
+    API_TOKENS = "api_tokens"  # Claude API processing
+    LOCAL_PYTHON = "local_python"  # Python scripts on laptop
+    LOCAL_SHELL = "local_shell"  # Shell commands
+    LOCAL_RUST = "local_rust"  # Rust bridge operations
+    LOCAL_HASKELL = "local_haskell"  # Haskell bridge operations
+    LOCAL_FILE_IO = "local_file_io"  # File reading/writing
+    MCP_TOOLS = "mcp_tools"  # MCP file-based tools
 
 
 @dataclass
 class TokenBudget:
     """Budget tracking for token usage"""
+
     total: int = 200000
     used: int = 0
 
@@ -69,6 +71,7 @@ class TokenUsage:
 @dataclass
 class ComputeOperation:
     """A single compute operation"""
+
     timestamp: datetime
     operation_type: ComputeType
     description: str
@@ -80,14 +83,14 @@ class ComputeOperation:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'timestamp': self.timestamp.isoformat(),
-            'operation_type': self.operation_type.value,
-            'description': self.description,
-            'api_tokens': self.api_tokens_used,
-            'local_cpu_ms': self.local_cpu_ms,
-            'local_ram_mb': self.local_ram_mb,
-            'file_ops': self.file_operations,
-            'bytes': self.bytes_processed,
+            "timestamp": self.timestamp.isoformat(),
+            "operation_type": self.operation_type.value,
+            "description": self.description,
+            "api_tokens": self.api_tokens_used,
+            "local_cpu_ms": self.local_cpu_ms,
+            "local_ram_mb": self.local_ram_mb,
+            "file_ops": self.file_operations,
+            "bytes": self.bytes_processed,
         }
 
 
@@ -101,7 +104,9 @@ class TokenEconomyTracker:
     This tracker will reveal the truth.
     """
 
-    def __init__(self, log_file: Path | None = None, total_budget: int = 200000) -> None:
+    def __init__(
+        self, log_file: Path | None = None, total_budget: int = 200000
+    ) -> None:
         """Initialize tracker"""
         self.log_file = log_file or WM_ROOT / "token_economy.jsonl"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -114,31 +119,35 @@ class TokenEconomyTracker:
         self.total_budget = total_budget
         self.used_tokens = 0
 
-    def record_usage(self, tokens_used: int, source: str = "api", operation: str = "") -> None:
+    def record_usage(
+        self, tokens_used: int, source: str = "api", operation: str = ""
+    ) -> None:
         """Record token usage (test-compatible API)"""
         self.used_tokens += tokens_used
         entry = {
-            'tokens': tokens_used,
-            'source': source,
-            'operation': operation,
-            'timestamp': datetime.now().isoformat()
+            "tokens": tokens_used,
+            "source": source,
+            "operation": operation,
+            "timestamp": datetime.now().isoformat(),
         }
         self.history.append(entry)
 
         # Also record in new format
-        compute_type = ComputeType.API_TOKENS if source == "api" else ComputeType.LOCAL_PYTHON
+        compute_type = (
+            ComputeType.API_TOKENS if source == "api" else ComputeType.LOCAL_PYTHON
+        )
         self.record_operation(
             compute_type,
             operation or source,
-            api_tokens=tokens_used if source == "api" else 0
+            api_tokens=tokens_used if source == "api" else 0,
         )
 
     def get_breakdown(self) -> dict[str, int]:
         """Get breakdown by source (test-compatible API)"""
         breakdown = {}
         for entry in self.history:
-            source = entry.get('source', 'unknown')
-            breakdown[source] = breakdown.get(source, 0) + entry.get('tokens', 0)
+            source = entry.get("source", "unknown")
+            breakdown[source] = breakdown.get(source, 0) + entry.get("tokens", 0)
         return breakdown
 
     def get_local_ratio(self) -> float:
@@ -146,8 +155,10 @@ class TokenEconomyTracker:
         if not self.history:
             return 0.0
 
-        local_tokens = sum(e.get('tokens', 0) for e in self.history if e.get('source') == 'local')
-        total_tokens = sum(e.get('tokens', 0) for e in self.history)
+        local_tokens = sum(
+            e.get("tokens", 0) for e in self.history if e.get("source") == "local"
+        )
+        total_tokens = sum(e.get("tokens", 0) for e in self.history)
 
         return local_tokens / total_tokens if total_tokens > 0 else 0.0
 
@@ -159,7 +170,7 @@ class TokenEconomyTracker:
         cpu_ms: float = 0,
         ram_mb: float = 0,
         file_ops: int = 0,
-        bytes_processed: int = 0
+        bytes_processed: int = 0,
     ) -> None:
         """Record a compute operation"""
 
@@ -171,7 +182,7 @@ class TokenEconomyTracker:
             local_cpu_ms=cpu_ms,
             local_ram_mb=ram_mb,
             file_operations=file_ops,
-            bytes_processed=bytes_processed
+            bytes_processed=bytes_processed,
         )
 
         self.operations.append(op)
@@ -179,69 +190,63 @@ class TokenEconomyTracker:
         # Log to file
         if self.log_file:
             with file_lock(self.log_file):
-                with open(self.log_file, 'a') as f:
-                    f.write(json.dumps(op.to_dict()) + '\n')
+                with open(self.log_file, "a") as f:
+                    f.write(json.dumps(op.to_dict()) + "\n")
 
     def record_api_call(self, description: str, tokens: int) -> None:
         """Record an API token usage"""
         self.used_tokens += tokens
-        self.history.append({
-            'tokens': tokens,
-            'source': 'api',
-            'operation': description,
-            'timestamp': datetime.now().isoformat()
-        })
-        self.record_operation(
-            ComputeType.API_TOKENS,
-            description,
-            api_tokens=tokens
+        self.history.append(
+            {
+                "tokens": tokens,
+                "source": "api",
+                "operation": description,
+                "timestamp": datetime.now().isoformat(),
+            }
         )
+        self.record_operation(ComputeType.API_TOKENS, description, api_tokens=tokens)
 
-    def record_local_script(self, description: str, duration_ms: float, bytes_out: int = 0) -> None:
+    def record_local_script(
+        self, description: str, duration_ms: float, bytes_out: int = 0
+    ) -> None:
         """Record a local Python script execution"""
         self.record_operation(
             ComputeType.LOCAL_PYTHON,
             description,
             cpu_ms=duration_ms,
-            bytes_processed=bytes_out
+            bytes_processed=bytes_out,
         )
 
     def record_shell_command(self, command: str, duration_ms: float) -> None:
         """Record a shell command"""
-        self.record_operation(
-            ComputeType.LOCAL_SHELL,
-            command,
-            cpu_ms=duration_ms
-        )
+        self.record_operation(ComputeType.LOCAL_SHELL, command, cpu_ms=duration_ms)
 
-    def record_file_operation(self, description: str, bytes_size: int, duration_ms: float = 0) -> None:
+    def record_file_operation(
+        self, description: str, bytes_size: int, duration_ms: float = 0
+    ) -> None:
         """Record file I/O"""
         self.record_operation(
             ComputeType.LOCAL_FILE_IO,
             description,
             cpu_ms=duration_ms,
             file_ops=1,
-            bytes_processed=bytes_size
+            bytes_processed=bytes_size,
         )
 
-    def record_rust_operation(self, description: str, duration_ms: float, bytes_out: int = 0) -> None:
+    def record_rust_operation(
+        self, description: str, duration_ms: float, bytes_out: int = 0
+    ) -> None:
         """Record Rust bridge operation"""
         self.record_operation(
             ComputeType.LOCAL_RUST,
             description,
             cpu_ms=duration_ms,
-            bytes_processed=bytes_out
+            bytes_processed=bytes_out,
         )
 
     def record_mcp_tool(self, tool_name: str, duration_ms: float) -> None:
         """Record MCP tool usage"""
-        self.record_operation(
-            ComputeType.MCP_TOOLS,
-            tool_name,
-            cpu_ms=duration_ms
-        )
-
-    # --- Merged from core/token_economy.py ---
+        self.record_operation(ComputeType.MCP_TOOLS, tool_name, cpu_ms=duration_ms)
 
     def track_usage(self, operation: str, tokens: int) -> TokenUsage:
         """Track token usage for an operation (merged API)."""
@@ -257,13 +262,19 @@ class TokenEconomyTracker:
 
     def get_budget_status(self) -> dict[str, Any]:
         """Get current budget status."""
-        used_percent = (self.used_tokens / self.total_budget) * 100 if self.total_budget > 0 else 0
+        used_percent = (
+            (self.used_tokens / self.total_budget) * 100 if self.total_budget > 0 else 0
+        )
         return {
             "total_budget": self.total_budget,
             "tokens_used": self.used_tokens,
             "tokens_remaining": self.total_budget - self.used_tokens,
             "usage_percent": used_percent,
-            "status": "optimal" if used_percent < 60 else "monitor" if used_percent < 80 else "critical",
+            "status": "optimal"
+            if used_percent < 60
+            else "monitor"
+            if used_percent < 80
+            else "critical",
             "operations_tracked": len(self.history),
         }
 
@@ -275,13 +286,13 @@ class TokenEconomyTracker:
             recommendations.append("Consider using more concise responses")
             recommendations.append("Prioritize high-value operations")
         if self.get_local_ratio() < 0.3:
-            recommendations.append("Increase local compute — offload more to Rust/Python")
+            recommendations.append(
+                "Increase local compute — offload more to Rust/Python"
+            )
         return {
             "status": status["status"],
             "recommendations": recommendations,
         }
-
-    # --- Merged from autonomous/token_economy.py ---
 
     def record_api(self, tokens: int) -> None:
         """Record API token usage (autonomous API)."""
@@ -291,12 +302,14 @@ class TokenEconomyTracker:
     def record_local(self, operations: int = 1) -> None:
         """Record local CPU operation (autonomous API)."""
         self.local_operations = getattr(self, "local_operations", 0) + operations
-        self.history.append({
-            "tokens": operations,
-            "source": "local",
-            "operation": "local_compute",
-            "timestamp": datetime.now().isoformat(),
-        })
+        self.history.append(
+            {
+                "tokens": operations,
+                "source": "local",
+                "operation": "local_compute",
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def record_rust(self, operations: int = 1) -> None:
         """Record Rust bridge operation (autonomous API)."""
@@ -310,6 +323,7 @@ class TokenEconomyTracker:
     def snapshot(self) -> dict[str, Any]:
         """Take a snapshot of token economy (autonomous API)."""
         import time as _time
+
         snap = {
             "timestamp": _time.time(),
             "api_tokens": getattr(self, "api_tokens", 0),
@@ -324,7 +338,7 @@ class TokenEconomyTracker:
     def get_session_summary(self) -> dict[str, Any]:
         """Get summary of current session"""
         if not self.operations:
-            return {'message': 'No operations recorded yet'}
+            return {"message": "No operations recorded yet"}
 
         # Aggregate by type
         by_type = {}
@@ -333,11 +347,11 @@ class TokenEconomyTracker:
 
             if ops_of_type:
                 by_type[op_type.value] = {
-                    'count': len(ops_of_type),
-                    'total_api_tokens': sum(op.api_tokens_used for op in ops_of_type),
-                    'total_cpu_ms': sum(op.local_cpu_ms for op in ops_of_type),
-                    'total_bytes': sum(op.bytes_processed for op in ops_of_type),
-                    'total_file_ops': sum(op.file_operations for op in ops_of_type),
+                    "count": len(ops_of_type),
+                    "total_api_tokens": sum(op.api_tokens_used for op in ops_of_type),
+                    "total_cpu_ms": sum(op.local_cpu_ms for op in ops_of_type),
+                    "total_bytes": sum(op.bytes_processed for op in ops_of_type),
+                    "total_file_ops": sum(op.file_operations for op in ops_of_type),
                 }
 
         # Calculate percentages
@@ -348,22 +362,25 @@ class TokenEconomyTracker:
         estimated_api_cpu = total_api_tokens * 0.1
         total_compute = estimated_api_cpu + total_local_cpu
 
-        local_percentage = (total_local_cpu / total_compute * 100) if total_compute > 0 else 0
+        local_percentage = (
+            (total_local_cpu / total_compute * 100) if total_compute > 0 else 0
+        )
 
         return {
-            'session_duration_minutes': (datetime.now() - self.current_session_start).seconds / 60,
-            'total_operations': len(self.operations),
-            'by_type': by_type,
-            'totals': {
-                'api_tokens': total_api_tokens,
-                'local_cpu_ms': total_local_cpu,
-                'estimated_api_cpu_ms': estimated_api_cpu,
-                'local_percentage': local_percentage,
+            "session_duration_minutes": (
+                datetime.now() - self.current_session_start
+            ).seconds
+            / 60,
+            "total_operations": len(self.operations),
+            "by_type": by_type,
+            "totals": {
+                "api_tokens": total_api_tokens,
+                "local_cpu_ms": total_local_cpu,
+                "estimated_api_cpu_ms": estimated_api_cpu,
+                "local_percentage": local_percentage,
             },
-            'insight': self._generate_insight(local_percentage, by_type)
+            "insight": self._generate_insight(local_percentage, by_type),
         }
-
-    # --- Aliases for backward compatibility (autonomous/token_economy.py API) ---
 
     def local_ratio(self) -> float:
         """Alias for get_local_ratio() (autonomous API compatibility)."""
@@ -393,37 +410,38 @@ class TokenEconomyTracker:
         """Print a nice summary"""
         summary = self.get_session_summary()
 
-        if 'message' in summary:
-            logger.info(summary['message'])
+        if "message" in summary:
+            logger.info(summary["message"])
             return
 
         logger.info("\nTOKEN ECONOMY SUMMARY")
         logger.info("=" * 60)
-        logger.info("Session: %.1f minutes", summary['session_duration_minutes'])
-        logger.info("Operations: %s", summary['total_operations'])
+        logger.info("Session: %.1f minutes", summary["session_duration_minutes"])
+        logger.info("Operations: %s", summary["total_operations"])
         logger.info("")
         logger.info("COMPUTE DISTRIBUTION:")
-        logger.info("  API tokens: %s", format(summary['totals']['api_tokens'], ","))
-        logger.info("  Local CPU: %.0fms", summary['totals']['local_cpu_ms'])
-        logger.info("  Local percentage: %.1f%%", summary['totals']['local_percentage'])
+        logger.info("  API tokens: %s", format(summary["totals"]["api_tokens"], ","))
+        logger.info("  Local CPU: %.0fms", summary["totals"]["local_cpu_ms"])
+        logger.info("  Local percentage: %.1f%%", summary["totals"]["local_percentage"])
         logger.info("")
         logger.info("BY TYPE:")
-        for type_name, stats in summary['by_type'].items():
+        for type_name, stats in summary["by_type"].items():
             logger.info("  %s:", type_name)
-            logger.info("    Operations: %s", stats['count'])
-            if stats['total_api_tokens'] > 0:
-                logger.info("    Tokens: %s", format(stats['total_api_tokens'], ","))
-            if stats['total_cpu_ms'] > 0:
-                logger.info("    CPU: %.0fms", stats['total_cpu_ms'])
-            if stats['total_bytes'] > 0:
-                logger.info("    Data: %s bytes", format(stats['total_bytes'], ","))
+            logger.info("    Operations: %s", stats["count"])
+            if stats["total_api_tokens"] > 0:
+                logger.info("    Tokens: %s", format(stats["total_api_tokens"], ","))
+            if stats["total_cpu_ms"] > 0:
+                logger.info("    CPU: %.0fms", stats["total_cpu_ms"])
+            if stats["total_bytes"] > 0:
+                logger.info("    Data: %s bytes", format(stats["total_bytes"], ","))
         logger.info("")
-        logger.info("INSIGHT: %s", summary['insight'])
+        logger.info("INSIGHT: %s", summary["insight"])
         logger.info("=" * 60)
 
 
 # Singleton instance
 _tracker = None
+
 
 def get_token_tracker() -> TokenEconomyTracker:
     """Get the global token tracker instance"""
@@ -431,6 +449,7 @@ def get_token_tracker() -> TokenEconomyTracker:
     if _tracker is None:
         _tracker = TokenEconomyTracker()
     return _tracker
+
 
 # Alias for test compatibility
 TokenEconomy = TokenEconomyTracker

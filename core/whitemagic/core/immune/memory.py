@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ImmuneMemoryEntry:
     """A record of a past immune response."""
+
     antigen: str
     antibody_used: str
     successful: bool
@@ -52,7 +53,9 @@ class ImmuneMemory:
                     except Exception:
                         logger.debug("Skipping malformed immune memory entry")
 
-    def record(self, antigen: str, antibody: str, successful: bool, context: str = "") -> None:
+    def record(
+        self, antigen: str, antibody: str, successful: bool, context: str = ""
+    ) -> None:
         entry = ImmuneMemoryEntry(
             antigen=antigen,
             antibody_used=antibody,

@@ -21,12 +21,12 @@ class ElementType(Enum):
     """Types of simplified elements."""
 
     INTERACTIVE = auto()  # Clickable, typeable
-    TEXT = auto()         # Text content
-    CONTAINER = auto()    # Structural (div, section)
-    FORM = auto()         # Form elements
-    NAVIGATION = auto()   # Nav, menu
-    MEDIA = auto()        # Images, videos
-    IGNORE = auto()       # CSS, SVG, scripts
+    TEXT = auto()  # Text content
+    CONTAINER = auto()  # Structural (div, section)
+    FORM = auto()  # Form elements
+    NAVIGATION = auto()  # Nav, menu
+    MEDIA = auto()  # Images, videos
+    IGNORE = auto()  # CSS, SVG, scripts
 
 
 @dataclass
@@ -97,16 +97,38 @@ class DOMDistiller:
 
     # Tags to completely ignore
     IGNORE_TAGS = {
-        "script", "style", "noscript", "svg", "path", "g", "defs",
-        "clippath", "mask", "symbol", "use", "lineargradient",
-        "radialgradient", "filter", "fegaussianblur", "fecolormatrix",
-        "template", "slot",
+        "script",
+        "style",
+        "noscript",
+        "svg",
+        "path",
+        "g",
+        "defs",
+        "clippath",
+        "mask",
+        "symbol",
+        "use",
+        "lineargradient",
+        "radialgradient",
+        "filter",
+        "fegaussianblur",
+        "fecolormatrix",
+        "template",
+        "slot",
     }
 
     # Tags that are interactive
     INTERACTIVE_TAGS = {
-        "a", "button", "input", "select", "textarea", "label",
-        "option", "details", "summary", "dialog",
+        "a",
+        "button",
+        "input",
+        "select",
+        "textarea",
+        "label",
+        "option",
+        "details",
+        "summary",
+        "dialog",
     }
 
     # Tags that are form-related
@@ -120,9 +142,20 @@ class DOMDistiller:
 
     # Attributes to preserve
     PRESERVE_ATTRS = {
-        "id", "class", "href", "src", "alt", "title", "name",
-        "type", "value", "placeholder", "aria-label", "role",
-        "data-testid", "data-id",
+        "id",
+        "class",
+        "href",
+        "src",
+        "alt",
+        "title",
+        "name",
+        "type",
+        "value",
+        "placeholder",
+        "aria-label",
+        "role",
+        "data-testid",
+        "data-id",
     }
 
     def __init__(self, max_depth: int = 10, max_text_length: int = 500):
@@ -137,7 +170,9 @@ class DOMDistiller:
         self.max_text_length = max_text_length
         self._selector_counts: dict[str, int] = {}
 
-    def distill(self, dom_node: dict[str, Any], depth: int = 0) -> SimplifiedElement | None:
+    def distill(
+        self, dom_node: dict[str, Any], depth: int = 0
+    ) -> SimplifiedElement | None:
         """Distill a DOM node into a simplified element.
 
         Args:
@@ -167,7 +202,7 @@ class DOMDistiller:
                     tag="#text",
                     element_type=ElementType.TEXT,
                     selector="",
-                    text=text[:self.max_text_length],
+                    text=text[: self.max_text_length],
                 )
             return None
 
@@ -196,9 +231,11 @@ class DOMDistiller:
         text = self._extract_text(dom_node)
 
         # Skip empty containers with no interactive descendants
-        if (element_type == ElementType.CONTAINER and
-            not text and
-            not any(c.element_type == ElementType.INTERACTIVE for c in children)):
+        if (
+            element_type == ElementType.CONTAINER
+            and not text
+            and not any(c.element_type == ElementType.INTERACTIVE for c in children)
+        ):
             # Return children directly, collapsing this container
             if len(children) == 1:
                 return children[0]
@@ -296,7 +333,7 @@ class DOMDistiller:
                     texts.append(text)
 
         combined = " ".join(texts)
-        return combined[:self.max_text_length] if combined else ""
+        return combined[: self.max_text_length] if combined else ""
 
     def to_text(self, element: SimplifiedElement, indent: int = 0) -> str:
         """Convert distilled DOM to text representation.
@@ -338,7 +375,12 @@ class DOMDistiller:
         interactables = self.get_interactables(element)
 
         # Categorize interactables
-        buttons = [e for e in interactables if e.tag in ("button", "input") and e.attributes.get("type") in ("button", "submit")]
+        buttons = [
+            e
+            for e in interactables
+            if e.tag in ("button", "input")
+            and e.attributes.get("type") in ("button", "submit")
+        ]
         links = [e for e in interactables if e.tag == "a"]
         inputs = [e for e in interactables if e.tag in ("input", "textarea", "select")]
 
@@ -350,5 +392,8 @@ class DOMDistiller:
             "top_level_tag": element.tag,
             "button_labels": [b.text[:30] for b in buttons[:5]],
             "link_texts": [link.text[:30] for link in links[:5]],
-            "input_names": [i.attributes.get("name", i.attributes.get("placeholder", ""))[:30] for i in inputs[:5]],
+            "input_names": [
+                i.attributes.get("name", i.attributes.get("placeholder", ""))[:30]
+                for i in inputs[:5]
+            ],
         }

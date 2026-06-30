@@ -8,6 +8,7 @@ Algorithm:
 2. Compute title overlap score (Jaccard or exact match)
 3. Combine: final_score = vector_sim * (1 + title_boost * title_match)
 """
+
 from __future__ import annotations
 
 import re
@@ -18,11 +19,11 @@ from whitemagic.core.acceleration.simd_cosine import batch_cosine
 def _tokenize(text: str) -> set[str]:
     """Tokenization for title matching - handles snake_case, kebab-case, CamelCase."""
     # Normalize: replace separators with spaces
-    normalized = re.sub(r'[_\-\.]', ' ', text)
+    normalized = re.sub(r"[_\-\.]", " ", text)
     # Split CamelCase
-    normalized = re.sub(r'([a-z])([A-Z])', r'\1 \2', normalized)
+    normalized = re.sub(r"([a-z])([A-Z])", r"\1 \2", normalized)
     # Extract words (3+ chars)
-    return set(re.findall(r'\b[a-zA-Z]{3,}\b', normalized.lower()))
+    return set(re.findall(r"\b[a-zA-Z]{3,}\b", normalized.lower()))
 
 
 def _title_match_score(query: str, title: str) -> float:
@@ -42,8 +43,8 @@ def _title_match_score(query: str, title: str) -> float:
     jaccard = intersection / union
 
     # Strong bonus for exact substring match (either direction)
-    query_lower = query.lower().replace(' ', '').replace('_', '').replace('-', '')
-    title_lower = title.lower().replace(' ', '').replace('_', '').replace('-', '')
+    query_lower = query.lower().replace(" ", "").replace("_", "").replace("-", "")
+    title_lower = title.lower().replace(" ", "").replace("_", "").replace("-", "")
 
     if query_lower in title_lower:
         # Query is substring of title
@@ -78,18 +79,19 @@ def search_title_boosted(
 
     if query_embedding is None:
         from whitemagic.core.memory.embeddings import get_embedding_engine
+
         engine_obj = get_embedding_engine()
         query_embedding = engine_obj.encode(query)
-        if hasattr(query_embedding, 'tolist'):
+        if hasattr(query_embedding, "tolist"):
             query_embedding = query_embedding.tolist()  # type: ignore[union-attr]
 
     mem_embeddings = []
     valid_memories = []
 
     for m in memories:
-        emb = m.get('embedding')
+        emb = m.get("embedding")
         if emb is not None:
-            if hasattr(emb, 'tolist'):
+            if hasattr(emb, "tolist"):
                 emb = emb.tolist()
             mem_embeddings.append(emb)
             valid_memories.append(m)
@@ -105,18 +107,18 @@ def search_title_boosted(
         if sim < min_similarity:
             continue
 
-        title = mem.get('title', '') or mem.get('content', '')[:100]
+        title = mem.get("title", "") or mem.get("content", "")[:100]
         title_match = _title_match_score(query, title)
 
         combined_score = sim * (1 + title_boost * title_match)
 
         mem_copy = dict(mem)
-        mem_copy['vector_similarity'] = sim
-        mem_copy['title_match_score'] = title_match
-        mem_copy['combined_score'] = combined_score
+        mem_copy["vector_similarity"] = sim
+        mem_copy["title_match_score"] = title_match
+        mem_copy["combined_score"] = combined_score
         scored_results.append(mem_copy)
 
-    scored_results.sort(key=lambda x: x['combined_score'], reverse=True)
+    scored_results.sort(key=lambda x: x["combined_score"], reverse=True)
 
     return scored_results[:top_k]
 
@@ -133,7 +135,7 @@ def hybrid_search_with_dedup(
     deduped = []
 
     for m in memories:
-        content = m.get('content', '')
+        content = m.get("content", "")
         content_hash = hash(content[:200].lower().strip())
 
         if content_hash not in seen_hashes:
@@ -154,12 +156,12 @@ def hybrid_search_with_dedup(
     seen_embeddings: list[list[float]] = []
 
     for r in results:
-        emb = r.get('embedding')
+        emb = r.get("embedding")
         if emb is None:
             final_results.append(r)
             continue
 
-        if hasattr(emb, 'tolist'):
+        if hasattr(emb, "tolist"):
             emb = emb.tolist()
 
         is_duplicate = False

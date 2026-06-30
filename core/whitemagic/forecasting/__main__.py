@@ -64,7 +64,9 @@ def summary() -> None:
     click.echo(f"  Brier score:        {s['brier_score']}")
     click.echo(f"  Brier skill score:  {s['brier_skill_score']}")
     click.echo(f"  Brier Index:        {s['brier_index']}%  (superforecasters ≈ 71%)")
-    click.echo(f"  Calibration gap:    {s['calibration_gap']:+.3f}  (- = underconfident)")
+    click.echo(
+        f"  Calibration gap:    {s['calibration_gap']:+.3f}  (- = underconfident)"
+    )
     click.echo()
     click.echo("Categories:")
     for cat, count in s["categories"].items():
@@ -74,7 +76,9 @@ def summary() -> None:
 @cli.command()
 @click.option(
     "--status",
-    type=click.Choice(["validated", "pending", "falsified", "expired"], case_sensitive=False),
+    type=click.Choice(
+        ["validated", "pending", "falsified", "expired"], case_sensitive=False
+    ),
     help="Filter by claim status.",
 )
 @click.option("--json-out", is_flag=True, help="Output raw JSON instead of table.")
@@ -99,7 +103,11 @@ def claims(status: str | None, json_out: bool) -> None:
         date = r.get("source_date", "?")[:10]
         stat = r.get("status", "?")[:12]
         pts = f"{r.get('points', 0):>5.0f}" if r.get("points") is not None else "    —"
-        cat = (r.get("category", "?")[:18] + "..") if len(r.get("category", "")) > 20 else r.get("category", "?")
+        cat = (
+            (r.get("category", "?")[:18] + "..")
+            if len(r.get("category", "")) > 20
+            else r.get("category", "?")
+        )
         claim_text = r.get("claim", "?")[:60]
         click.echo(f"{date:<12} {stat:<12} {pts:>6} {cat:<20} {claim_text}")
 
@@ -120,9 +128,7 @@ def calibration() -> None:
         mo = bucket["mean_outcome"]
         cnt = bucket["count"]
         mo_str = f"{mo:.3f}" if mo == mo else "—"
-        click.echo(
-            f"[{low:.1f}, {high:.1f})   {mf:<15.3f} {mo_str:<15} {cnt:>6}"
-        )
+        click.echo(f"[{low:.1f}, {high:.1f})   {mf:<15.3f} {mo_str:<15} {cnt:>6}")
 
 
 @cli.command()
@@ -143,7 +149,15 @@ def brier() -> None:
 
     click.echo("Brier Decomposition")
     click.echo("=" * 30)
-    for key in ("brier_score", "reliability", "resolution", "uncertainty", "bss", "brier_index", "calibration_gap"):
+    for key in (
+        "brier_score",
+        "reliability",
+        "resolution",
+        "uncertainty",
+        "bss",
+        "brier_index",
+        "calibration_gap",
+    ):
         val = decomp[key]
         if key == "brier_index":
             click.echo(f"  {key:<15}: {val:.1f}%")
@@ -152,7 +166,9 @@ def brier() -> None:
 
 
 @cli.command()
-@click.option("--output", "-o", type=click.Path(), help="Write JSON to file instead of stdout.")
+@click.option(
+    "--output", "-o", type=click.Path(), help="Write JSON to file instead of stdout."
+)
 def json_dump(output: str | None) -> None:
     """Export full ledger state (summary + claims + calibration) as JSON."""
     db = _db()
@@ -165,7 +181,12 @@ def json_dump(output: str | None) -> None:
 
 
 @cli.command()
-@click.option("--actions-taken", type=int, default=None, help="Known count of actions taken on predictions.")
+@click.option(
+    "--actions-taken",
+    type=int,
+    default=None,
+    help="Known count of actions taken on predictions.",
+)
 def tzpf_cmd(actions_taken: int | None) -> None:
     """Print Transition-Zone Prescience Framework (TZPF) scorecard."""
     db = _db()
@@ -183,19 +204,33 @@ def tzpf_cmd(actions_taken: int | None) -> None:
     click.echo("-" * 30)
     click.echo(f"  Directional Foresight (DFI):   {comp['directional_prescience']:.0f}")
     tar = comp.get("timeline_calibration")
-    click.echo(f"  Temporal Acceleration (TAR):   {tar:.2f}" if tar else "  Temporal Acceleration (TAR):   N/A")
+    click.echo(
+        f"  Temporal Acceleration (TAR):   {tar:.2f}"
+        if tar
+        else "  Temporal Acceleration (TAR):   N/A"
+    )
     click.echo(f"  Hyperstition (HC):             {comp['hyperstitional_potency']:.2f}")
     sg = comp.get("confidence_shyness")
-    click.echo(f"  Shyness Gap (BCI):             {sg:+.3f}" if sg is not None else "  Shyness Gap (BCI):             N/A")
-    click.echo(f"  Partial Validation (PVS):      {comp['validation_completeness']:.2f}")
+    click.echo(
+        f"  Shyness Gap (BCI):             {sg:+.3f}"
+        if sg is not None
+        else "  Shyness Gap (BCI):             N/A"
+    )
+    click.echo(
+        f"  Partial Validation (PVS):      {comp['validation_completeness']:.2f}"
+    )
     click.echo(f"  Narrative Resonance (NRS):     {comp['narrative_resonance']:.1f}")
-    click.echo(f"  Positioning (PI):              {comp['action_orientation']:.2f}  [{scorecard['metrics']['pi']['status']}]")
+    click.echo(
+        f"  Positioning (PI):              {comp['action_orientation']:.2f}  [{scorecard['metrics']['pi']['status']}]"
+    )
     click.echo()
 
     click.echo("DFI by Category")
     click.echo("-" * 30)
     for cat, data in scorecard["metrics"]["dfi"]["by_category"].items():
-        click.echo(f"  {cat:<20} raw={data['raw_points']:>6.0f}  w={data['weighted']:>7.0f}")
+        click.echo(
+            f"  {cat:<20} raw={data['raw_points']:>6.0f}  w={data['weighted']:>7.0f}"
+        )
 
     if comp["action_orientation"] is not None and comp["action_orientation"] < 0.5:
         click.echo()
@@ -224,8 +259,12 @@ def machine_time() -> None:
         click.echo("-" * 50)
         click.echo(f"{'Tool':<30} {'Count':>6} {'Median':>10} {'P90':>10} {'Mean':>10}")
         click.echo("-" * 50)
-        for tool, stats in sorted(profile["tool_profiles"].items(), key=lambda x: x[1]["count"], reverse=True):
-            click.echo(f"{tool[:28]:<30} {stats['count']:>6} {stats['median']:>10.6f} {stats['p90']:>10.6f} {stats['mean']:>10.6f}")
+        for tool, stats in sorted(
+            profile["tool_profiles"].items(), key=lambda x: x[1]["count"], reverse=True
+        ):
+            click.echo(
+                f"{tool[:28]:<30} {stats['count']:>6} {stats['median']:>10.6f} {stats['p90']:>10.6f} {stats['mean']:>10.6f}"
+            )
         click.echo()
 
     if profile["type_profiles"]:
@@ -233,8 +272,12 @@ def machine_time() -> None:
         click.echo("-" * 50)
         click.echo(f"{'Type':<20} {'Count':>6} {'Median':>10} {'P90':>10}")
         click.echo("-" * 50)
-        for op_type, stats in sorted(profile["type_profiles"].items(), key=lambda x: x[1]["count"], reverse=True):
-            click.echo(f"{op_type[:18]:<20} {stats['count']:>6} {stats['median']:>10.6f} {stats['p90']:>10.6f}")
+        for op_type, stats in sorted(
+            profile["type_profiles"].items(), key=lambda x: x[1]["count"], reverse=True
+        ):
+            click.echo(
+                f"{op_type[:18]:<20} {stats['count']:>6} {stats['median']:>10.6f} {stats['p90']:>10.6f}"
+            )
         click.echo()
 
     click.echo("CRPS Calibration Summary")
@@ -251,7 +294,9 @@ def machine_time() -> None:
             click.echo()
             click.echo("  By Operation Type:")
             for op_type, stats in crps_summary["per_type"].items():
-                click.echo(f"    {op_type:<20} count={stats['count']:>4}  mean_crps={stats['mean_crps']}")
+                click.echo(
+                    f"    {op_type:<20} count={stats['count']:>4}  mean_crps={stats['mean_crps']}"
+                )
 
 
 @cli.command()
@@ -263,6 +308,7 @@ def crps() -> None:
 
     # Load prediction records from log
     import json
+
     predictions: list[float] = []
     actuals: list[float] = []
     sigmas: list[float] = []

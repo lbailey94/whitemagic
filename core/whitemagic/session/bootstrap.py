@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SessionContext:
     """Context loaded at session start."""
+
     session_id: str = ""
     started_at: float = field(default_factory=time.time)
     recent_memories: list[dict[str, Any]] = field(default_factory=list)
@@ -56,6 +57,7 @@ class SessionBootstrap:
     def _load_recent_memories(self) -> list[dict[str, Any]]:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             if hasattr(mem, "recent"):
                 return mem.recent(limit=10)
@@ -66,6 +68,7 @@ class SessionBootstrap:
     def _discover_tools(self) -> list[str]:
         try:
             from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
             return list(DISPATCH_TABLE.keys())[:20]
         except Exception:
             return []
@@ -73,6 +76,7 @@ class SessionBootstrap:
     def _load_seen_count(self) -> int:
         try:
             from whitemagic.memory_matrix.seen_registry import get_seen_registry
+
             return get_seen_registry().summary()["total_seen"]
         except Exception:
             return 0
@@ -89,21 +93,27 @@ class SessionBootstrap:
     def _load_grimoire(self) -> list[str]:
         try:
             from whitemagic.agentic.grimoire_check import get_grimoire_checker
+
             return get_grimoire_checker().list_chapters()
         except Exception:
             return []
 
     def _save_context(self, ctx: SessionContext) -> None:
         ctx_file = self.state_root / "session_context.json"
-        ctx_file.write_text(json.dumps({
-            "session_id": ctx.session_id,
-            "started_at": ctx.started_at,
-            "recent_memories": ctx.recent_memories,
-            "available_tools": ctx.available_tools,
-            "seen_items": ctx.seen_items,
-            "in_progress": ctx.in_progress,
-            "grimoire_chapters": ctx.grimoire_chapters,
-        }, indent=2))
+        ctx_file.write_text(
+            json.dumps(
+                {
+                    "session_id": ctx.session_id,
+                    "started_at": ctx.started_at,
+                    "recent_memories": ctx.recent_memories,
+                    "available_tools": ctx.available_tools,
+                    "seen_items": ctx.seen_items,
+                    "in_progress": ctx.in_progress,
+                    "grimoire_chapters": ctx.grimoire_chapters,
+                },
+                indent=2,
+            )
+        )
 
 
 def quick_bootstrap(session_id: str = "") -> SessionContext:

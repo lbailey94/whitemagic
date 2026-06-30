@@ -80,7 +80,8 @@ def _determine_locality(ctx: DispatchContext, result: dict[str, Any] | None) -> 
 
 
 def mw_token_tracker(
-    ctx: DispatchContext, next_fn: NextFn,
+    ctx: DispatchContext,
+    next_fn: NextFn,
 ) -> dict[str, Any] | None:
     """Track token usage for every tool call in the dispatch pipeline.
 
@@ -131,6 +132,7 @@ def mw_token_tracker(
     # Record to Token Economy (consciousness system)
     try:
         from whitemagic.core.consciousness.token_economy import get_token_tracker
+
         economy = get_token_tracker()
         total_tokens = input_tokens + output_tokens
         if locality == InferenceLocality.CLOUD:

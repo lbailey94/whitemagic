@@ -112,7 +112,9 @@ class BoundedExecutor:
             if path.exists() and path.is_dir():
                 for file_path in path.rglob("*.py"):
                     try:
-                        self.state.file_mtimes[str(file_path)] = file_path.stat().st_mtime
+                        self.state.file_mtimes[str(file_path)] = (
+                            file_path.stat().st_mtime
+                        )
                     except (OSError, PermissionError):
                         pass
 
@@ -157,11 +159,17 @@ class BoundedExecutor:
         # 1. Time limit
         elapsed = (now - self.state.start_time).total_seconds()
         if elapsed >= self.conditions.max_duration_seconds:
-            return True, f"Time limit reached ({elapsed:.1f}s / {self.conditions.max_duration_seconds}s)"
+            return (
+                True,
+                f"Time limit reached ({elapsed:.1f}s / {self.conditions.max_duration_seconds}s)",
+            )
 
         # 2. Iteration limit
         if self.state.iteration_count >= self.conditions.max_iterations:
-            return True, f"Iteration limit reached ({self.state.iteration_count} / {self.conditions.max_iterations})"
+            return (
+                True,
+                f"Iteration limit reached ({self.state.iteration_count} / {self.conditions.max_iterations})",
+            )
 
         # 3. Completion criteria (if provided)
         if self.conditions.completion_check and self.conditions.completion_check():
@@ -181,13 +189,19 @@ class BoundedExecutor:
                 self.state.plateau_strikes += 1
 
                 if self.state.plateau_strikes >= self.conditions.plateau_threshold:
-                    return True, f"Progress plateau detected (no changes in {time_since_progress:.1f}s, {self.state.plateau_strikes} strikes)"
+                    return (
+                        True,
+                        f"Progress plateau detected (no changes in {time_since_progress:.1f}s, {self.state.plateau_strikes} strikes)",
+                    )
 
         # 5. Resource limits
         process = psutil.Process(os.getpid())
         memory_mb = process.memory_info().rss / 1024 / 1024
         if memory_mb > self.conditions.max_memory_mb:
-            return True, f"Memory limit exceeded ({memory_mb:.1f}MB / {self.conditions.max_memory_mb}MB)"
+            return (
+                True,
+                f"Memory limit exceeded ({memory_mb:.1f}MB / {self.conditions.max_memory_mb}MB)",
+            )
 
         cpu_percent = process.cpu_percent(interval=0.1)
         if cpu_percent > self.conditions.max_cpu_percent:
@@ -283,7 +297,9 @@ class BoundedExecutor:
         finally:
             # Record final state
             result["iterations"] = self.state.iteration_count
-            result["duration_seconds"] = (datetime.now() - self.state.start_time).total_seconds()
+            result["duration_seconds"] = (
+                datetime.now() - self.state.start_time
+            ).total_seconds()
             result["file_changes"] = self.state.file_change_count
 
         return result
@@ -328,6 +344,7 @@ def check_session_completion(session_file: Path) -> bool:
 
     try:
         import json
+
         with open(session_file) as f:
             session = json.load(f)
 

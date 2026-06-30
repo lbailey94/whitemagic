@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class DispatchResult(IntEnum):
     """Result of a dispatch pipeline check."""
+
     ALLOW = 0
     RATE_LIMITED = 1
     CIRCUIT_OPEN = 2
@@ -33,6 +34,7 @@ class DispatchResult(IntEnum):
 
 class ToolId(IntEnum):
     """Tool IDs matching the 28-engine manifest."""
+
     SESSION = 0
     CONSOLIDATION = 1
     BOUNDARY = 2
@@ -74,6 +76,7 @@ class Maturity(IntEnum):
         BETA
         STABLE
         MATURE"""
+
     EXPERIMENTAL = 0
     BETA = 1
     STABLE = 2
@@ -82,34 +85,34 @@ class Maturity(IntEnum):
 
 # Python fallback maturity table (mirrors Zig comptime table)
 _MATURITY_TABLE: dict[int, Maturity] = {
-    0: Maturity.MATURE,     # session
-    1: Maturity.MATURE,     # consolidation
-    2: Maturity.STABLE,     # boundary
-    3: Maturity.STABLE,     # circuit_breaker
-    4: Maturity.STABLE,     # nurturing
-    5: Maturity.STABLE,     # acceleration
-    6: Maturity.MATURE,     # serendipity
-    7: Maturity.MATURE,     # introspection
-    8: Maturity.STABLE,     # resilience
-    9: Maturity.MATURE,     # governance
-    10: Maturity.MATURE,    # association
-    11: Maturity.STABLE,    # export
-    12: Maturity.STABLE,    # archaeology
-    13: Maturity.MATURE,    # resonance
-    14: Maturity.BETA,      # solver
-    15: Maturity.MATURE,    # embedding
-    16: Maturity.STABLE,    # lifecycle
-    17: Maturity.MATURE,    # kaizen
-    18: Maturity.MATURE,    # pattern
-    19: Maturity.STABLE,    # narrative
-    20: Maturity.STABLE,    # ethics
-    21: Maturity.MATURE,    # predictive
-    22: Maturity.STABLE,    # galactic
-    23: Maturity.STABLE,    # clone_army
-    24: Maturity.STABLE,    # forgetting
-    25: Maturity.STABLE,    # sanitization
-    26: Maturity.STABLE,    # swarm
-    27: Maturity.BETA,      # emergence
+    0: Maturity.MATURE,  # session
+    1: Maturity.MATURE,  # consolidation
+    2: Maturity.STABLE,  # boundary
+    3: Maturity.STABLE,  # circuit_breaker
+    4: Maturity.STABLE,  # nurturing
+    5: Maturity.STABLE,  # acceleration
+    6: Maturity.MATURE,  # serendipity
+    7: Maturity.MATURE,  # introspection
+    8: Maturity.STABLE,  # resilience
+    9: Maturity.MATURE,  # governance
+    10: Maturity.MATURE,  # association
+    11: Maturity.STABLE,  # export
+    12: Maturity.STABLE,  # archaeology
+    13: Maturity.MATURE,  # resonance
+    14: Maturity.BETA,  # solver
+    15: Maturity.MATURE,  # embedding
+    16: Maturity.STABLE,  # lifecycle
+    17: Maturity.MATURE,  # kaizen
+    18: Maturity.MATURE,  # pattern
+    19: Maturity.STABLE,  # narrative
+    20: Maturity.STABLE,  # ethics
+    21: Maturity.MATURE,  # predictive
+    22: Maturity.STABLE,  # galactic
+    23: Maturity.STABLE,  # clone_army
+    24: Maturity.STABLE,  # forgetting
+    25: Maturity.STABLE,  # sanitization
+    26: Maturity.STABLE,  # swarm
+    27: Maturity.BETA,  # emergence
 }
 
 # Handler ID routing table (mirrors Zig)
@@ -122,10 +125,26 @@ _MIN_MATURITY = Maturity.BETA
 def _find_zig_lib() -> Path | None:
     """Locate the compiled Zig dispatch shared library."""
     candidates = [
-        Path(__file__).parent.parent.parent.parent / "whitemagic-zig" / "zig-out" / "lib" / "libwhitemagic.so",
-        Path(__file__).parent.parent.parent.parent / "whitemagic-zig" / "zig-out" / "lib" / "libwhitemagic.dylib",
-        Path(__file__).parent.parent.parent.parent / "whitemagic-zig" / "zig-out" / "lib" / "libdispatch_core.so",
-        Path(__file__).parent.parent.parent.parent / "whitemagic-zig" / "zig-out" / "lib" / "libdispatch_core.dylib",
+        Path(__file__).parent.parent.parent.parent
+        / "whitemagic-zig"
+        / "zig-out"
+        / "lib"
+        / "libwhitemagic.so",
+        Path(__file__).parent.parent.parent.parent
+        / "whitemagic-zig"
+        / "zig-out"
+        / "lib"
+        / "libwhitemagic.dylib",
+        Path(__file__).parent.parent.parent.parent
+        / "whitemagic-zig"
+        / "zig-out"
+        / "lib"
+        / "libdispatch_core.so",
+        Path(__file__).parent.parent.parent.parent
+        / "whitemagic-zig"
+        / "zig-out"
+        / "lib"
+        / "libdispatch_core.dylib",
     ]
     for p in candidates:
         if p.exists():
@@ -156,7 +175,8 @@ class DispatchBridge:
                 self._zig_lib = ctypes.CDLL(str(lib_path))
                 # Set up function signatures
                 self._zig_lib.wm_dispatch_check.argtypes = [
-                    ctypes.c_uint32, ctypes.c_void_p,
+                    ctypes.c_uint32,
+                    ctypes.c_void_p,
                 ]
                 self._zig_lib.wm_dispatch_check.restype = ctypes.c_int32
                 self._zig_lib.wm_dispatch_route.argtypes = [ctypes.c_uint32]
@@ -173,6 +193,7 @@ class DispatchBridge:
         """Lazy-load the StateBoard bridge."""
         if self._board_bridge is None:
             from whitemagic.core.acceleration.state_board_bridge import get_state_board
+
             self._board_bridge = get_state_board()
         return self._board_bridge
 

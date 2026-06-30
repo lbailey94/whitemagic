@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class InferenceResult:
     """Result of a CPU inference query."""
+
     query: str
     answer: str
     confidence: float = 0.0
@@ -113,7 +114,9 @@ class CPUInferenceEngine:
             )
 
         if "markdown" in ql or "doc" in ql:
-            count = len([f for f in self.project_root.rglob("*.md") if ".git" not in str(f)])
+            count = len(
+                [f for f in self.project_root.rglob("*.md") if ".git" not in str(f)]
+            )
             return InferenceResult(
                 query=query,
                 answer=f"There are {count} markdown files.",
@@ -125,6 +128,7 @@ class CPUInferenceEngine:
         if "garden" in ql:
             try:
                 from whitemagic.gardens import get_all_gardens
+
                 gardens = get_all_gardens()
                 return InferenceResult(
                     query=query,
@@ -137,10 +141,13 @@ class CPUInferenceEngine:
                 pass
 
         if "python" in ql or "file" in ql:
-            count = len([
-                f for f in self.project_root.rglob("*.py")
-                if ".git" not in str(f) and "__pycache__" not in str(f)
-            ])
+            count = len(
+                [
+                    f
+                    for f in self.project_root.rglob("*.py")
+                    if ".git" not in str(f) and "__pycache__" not in str(f)
+                ]
+            )
             return InferenceResult(
                 query=query,
                 answer=f"There are {count} Python files in the project.",
@@ -184,6 +191,7 @@ class CPUInferenceEngine:
         if "garden" in ql:
             try:
                 from whitemagic.gardens import get_all_gardens
+
                 gardens = get_all_gardens()
                 return InferenceResult(
                     query=query,

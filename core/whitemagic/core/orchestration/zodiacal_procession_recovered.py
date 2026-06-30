@@ -20,15 +20,25 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 ZODIAC_ORDER = [
-    "aries", "taurus", "gemini", "cancer", "leo", "virgo",
-    "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+    "aries",
+    "taurus",
+    "gemini",
+    "cancer",
+    "leo",
+    "virgo",
+    "libra",
+    "scorpio",
+    "sagittarius",
+    "capricorn",
+    "aquarius",
+    "pisces",
 ]
 
 FIXED_SIGNS = {"taurus", "leo", "scorpio", "aquarius"}
 
 
 class ProcessionDirection(Enum):
-    YIN = "yin"   # Receptive: Pisces → Aries
+    YIN = "yin"  # Receptive: Pisces → Aries
     YANG = "yang"  # Creative: Aries → Pisces
 
 

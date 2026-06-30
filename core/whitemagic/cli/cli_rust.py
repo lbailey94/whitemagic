@@ -16,10 +16,12 @@ def _load_rust() -> tuple[Any | None, Exception | None]:
     """Load Rust bridge with graceful fallback."""
     try:
         import whitemagic_rust as rs
+
         return rs, None
     except ImportError:
         try:
             import whitemagic_rs as rs_compat
+
             return rs_compat, None
         except ImportError as exc:
             return None, exc
@@ -41,16 +43,18 @@ def rust_search(
 
     try:
         results = rust.fast_search(
-            root_path, pattern, limit,
-            extensions, max_file_size,
+            root_path,
+            pattern,
+            limit,
+            extensions,
+            max_file_size,
         )
         if output_json:
             payload = [{"path": r[0], "score": r[1]} for r in results]
             logger.info(_json_dumps(payload, indent=2))
         else:
             logger.info("🔍 Found %s results:", len(results))
-            for path, score in results[:
-                20]:
+            for path, score in results[:20]:
                 logger.info("  %s  %s", score, path)
             if len(results) > 20:
                 logger.info("  ... and %s more", len(results) - 20)
@@ -90,7 +94,9 @@ def rust_consolidate(
 
     try:
         result = rust.consolidate_memories(
-            short_term_dir, top_n, similarity_threshold,
+            short_term_dir,
+            top_n,
+            similarity_threshold,
         )
         payload = {
             "short_term_count": result[0],
@@ -103,10 +109,10 @@ def rust_consolidate(
             logger.info(_json_dumps(payload, indent=2))
         else:
             logger.info("🧠 Consolidation complete:")
-            logger.info("   Short-term: %s", payload['short_term_count'])
-            logger.info("   Long-term created: %s", payload['long_term_created'])
-            logger.info("   Clusters: %s", payload['clusters_found'])
-            logger.info("   Duration: %ss", payload['duration_seconds'])
+            logger.info("   Short-term: %s", payload["short_term_count"])
+            logger.info("   Long-term created: %s", payload["long_term_created"])
+            logger.info("   Clusters: %s", payload["clusters_found"])
+            logger.info("   Duration: %ss", payload["duration_seconds"])
         return 0
     except Exception as e:
         logger.info("❌ Consolidation error: %s", e, exc_info=True)
@@ -149,7 +155,11 @@ def register_rust_commands(cli: Any) -> Any:
     @click.pass_context
     def search(ctx, root_path, pattern, limit, extensions, max_size, output_json):
         """Fast file search via Rust SIMD."""
-        json_output = output_json or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+        json_output = output_json or (
+            (ctx.obj or {}).get("json_output", False)
+            if isinstance(ctx.obj, dict)
+            else False
+        )
         ext_list = list(extensions) if extensions else None
         return rust_search(root_path, pattern, limit, ext_list, max_size, json_output)
 
@@ -168,7 +178,11 @@ def register_rust_commands(cli: Any) -> Any:
     @click.pass_context
     def consolidate(ctx, short_term_dir, top_n, threshold, output_json):
         """Consolidate memories via Rust."""
-        json_output = output_json or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+        json_output = output_json or (
+            (ctx.obj or {}).get("json_output", False)
+            if isinstance(ctx.obj, dict)
+            else False
+        )
         return rust_consolidate(short_term_dir, top_n, threshold, json_output)
 
     @rust.command()

@@ -16,9 +16,20 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "Path to the codebase to analyze"},
-                "incremental": {"type": "boolean", "default": True, "description": "Only analyze changed files"},
-                "severity": {"type": "string", "enum": ["error", "warning", "info"], "description": "Minimum severity to report"},
+                "path": {
+                    "type": "string",
+                    "description": "Path to the codebase to analyze",
+                },
+                "incremental": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Only analyze changed files",
+                },
+                "severity": {
+                    "type": "string",
+                    "enum": ["error", "warning", "info"],
+                    "description": "Minimum severity to report",
+                },
             },
             "required": ["path"],
         },
@@ -31,7 +42,10 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "Path to the codebase to survey"},
+                "path": {
+                    "type": "string",
+                    "description": "Path to the codebase to survey",
+                },
             },
             "required": ["path"],
         },
@@ -47,12 +61,28 @@ TOOLS: list[ToolDefinition] = [
                 "path": {"type": "string", "description": "Path to the codebase"},
                 "subcommand": {
                     "type": "string",
-                    "enum": ["excavate", "fossil", "extinction", "composition", "temper"],
+                    "enum": [
+                        "excavate",
+                        "fossil",
+                        "extinction",
+                        "composition",
+                        "temper",
+                    ],
                     "description": "Archaeology subcommand to run",
                 },
-                "top": {"type": "integer", "default": 10, "description": "Top N results"},
-                "layer": {"type": "string", "description": "Git layer/commit for excavate"},
-                "file_path": {"type": "string", "description": "File filter for temper"},
+                "top": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Top N results",
+                },
+                "layer": {
+                    "type": "string",
+                    "description": "Git layer/commit for excavate",
+                },
+                "file_path": {
+                    "type": "string",
+                    "description": "File filter for temper",
+                },
             },
             "required": ["path", "subcommand"],
         },

@@ -25,11 +25,11 @@ from typing import Any
 class AttentionState(Enum):
     """States of attention."""
 
-    FOCUSED = "focused"      # Single-pointed concentration
-    DIFFUSE = "diffuse"      # Broad, exploratory awareness
-    SHIFTING = "shifting"    # Transitioning between foci
-    DISTRACTED = "distracted" # Unintentional drift
-    FLOW = "flow"            # Peak state, effortless focus
+    FOCUSED = "focused"  # Single-pointed concentration
+    DIFFUSE = "diffuse"  # Broad, exploratory awareness
+    SHIFTING = "shifting"  # Transitioning between foci
+    DISTRACTED = "distracted"  # Unintentional drift
+    FLOW = "flow"  # Peak state, effortless focus
 
 
 @dataclass
@@ -310,11 +310,11 @@ class AttentionSystem:
         # Calculate metrics
         total_duration = sum(f.duration_seconds() or 0 for f in recent)
         flow_duration = sum(
-            f.duration_seconds() or 0 for f in recent
-            if f.state == AttentionState.FLOW
+            f.duration_seconds() or 0 for f in recent if f.state == AttentionState.FLOW
         )
         focused_duration = sum(
-            f.duration_seconds() or 0 for f in recent
+            f.duration_seconds() or 0
+            for f in recent
             if f.state == AttentionState.FOCUSED
         )
 
@@ -336,8 +336,12 @@ class AttentionSystem:
             "total_shifts": len(recent),
             "voluntary_shifts": voluntary_count,
             "involuntary_shifts": involuntary_count,
-            "flow_time_percent": (flow_duration / total_duration * 100) if total_duration > 0 else 0,
-            "focus_time_percent": (focused_duration / total_duration * 100) if total_duration > 0 else 0,
+            "flow_time_percent": (flow_duration / total_duration * 100)
+            if total_duration > 0
+            else 0,
+            "focus_time_percent": (focused_duration / total_duration * 100)
+            if total_duration > 0
+            else 0,
         }
 
     def get_lifetime_metrics(self) -> dict[str, Any]:
@@ -352,10 +356,14 @@ class AttentionSystem:
             "total_attention_moments": total_moments,
             "total_duration_minutes": total_duration / 60,
             "flow_duration_minutes": self.flow_duration_total / 60,
-            "flow_percentage": (self.flow_duration_total / total_duration * 100) if total_duration > 0 else 0,
+            "flow_percentage": (self.flow_duration_total / total_duration * 100)
+            if total_duration > 0
+            else 0,
             "voluntary_shifts": self.voluntary_shifts,
             "involuntary_shifts": self.involuntary_shifts,
-            "voluntary_ratio": (self.voluntary_shifts / total_moments * 100) if total_moments > 0 else 0,
+            "voluntary_ratio": (self.voluntary_shifts / total_moments * 100)
+            if total_moments > 0
+            else 0,
         }
 
     def _log_focus(self, focus: Focus) -> None:
@@ -364,10 +372,15 @@ class AttentionSystem:
             return
 
         with open(self.log_file, "a") as f:
-            f.write(json.dumps({
-                "type": "focus",
-                "data": focus.to_dict(),
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "type": "focus",
+                        "data": focus.to_dict(),
+                    }
+                )
+                + "\n"
+            )
 
     def _log_intention(self, intention: Intention) -> None:
         """Log intention to file."""
@@ -375,10 +388,15 @@ class AttentionSystem:
             return
 
         with open(self.log_file, "a") as f:
-            f.write(json.dumps({
-                "type": "intention",
-                "data": intention.to_dict(),
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "type": "intention",
+                        "data": intention.to_dict(),
+                    }
+                )
+                + "\n"
+            )
 
 
 # Convenience alias

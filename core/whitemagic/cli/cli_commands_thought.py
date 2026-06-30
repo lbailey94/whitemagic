@@ -17,11 +17,15 @@ def thought_cli() -> None:
     """🧠 Thought Galaxy & Meta-Cognition"""
     pass
 
+
 def _get_galaxy():
-    db_path = paths.get_state_root() / "memory" / "galaxies" / "thought_traces" / "galaxy.db"
+    db_path = (
+        paths.get_state_root() / "memory" / "galaxies" / "thought_traces" / "galaxy.db"
+    )
     if not db_path.parent.exists():
         db_path.parent.mkdir(parents=True, exist_ok=True)
     return ThoughtGalaxy(str(db_path))
+
 
 @thought_cli.command(name="status")
 def status_cmd() -> None:
@@ -33,8 +37,11 @@ def status_cmd() -> None:
     click.echo(f"Total Episodes: {stats['total_episodes']}")
     click.echo(f"Average Score:  {stats['average_score']:.2f}")
     click.echo("\n🏆 Top Strategies:")
-    for strat in stats['top_strategies']:
-        click.echo(f"  - {strat['strategy']}: {strat['avg_score']:.2f} (n={strat['count']})")
+    for strat in stats["top_strategies"]:
+        click.echo(
+            f"  - {strat['strategy']}: {strat['avg_score']:.2f} (n={strat['count']})"
+        )
+
 
 @thought_cli.command(name="recall")
 @click.argument("task_type")
@@ -53,6 +60,7 @@ def recall_cmd(task_type: str) -> None:
         click.echo(f"   Context: {ep.context_summary}")
         click.echo(f"   Trace: {ep.thought_trace[:100]}...")
 
+
 @thought_cli.command(name="score")
 @click.option("--manual", type=float, help="Manual score (-1.0 to 1.0)")
 def score_cmd(manual: float | None) -> None:
@@ -68,6 +76,8 @@ def score_cmd(manual: float | None) -> None:
             galaxy.score_episode(episode.id, score)
             click.echo(f"Scored episode {episode.id}: {score:.2f}")
         else:
-            click.echo(f"Most recent episode {episode.id} has score {episode.outcome_score:.2f}")
+            click.echo(
+                f"Most recent episode {episode.id} has score {episode.outcome_score:.2f}"
+            )
     except Exception as e:
         click.echo(f"Scoring failed: {e}")

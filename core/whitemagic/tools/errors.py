@@ -10,6 +10,7 @@ from typing import Any
 
 class ErrorCode:
     """ErrorCode: error code."""
+
     TOOL_NOT_FOUND = "tool_not_found"
     INVALID_PARAMS = "invalid_params"
     POLICY_BLOCKED = "policy_blocked"
@@ -46,4 +47,3 @@ class ToolExecutionError(Exception):
         self.error_code = error_code
         self.details = details or {}
         self.retryable = retryable
-

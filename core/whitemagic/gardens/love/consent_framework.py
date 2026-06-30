@@ -16,8 +16,10 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+
 class ConsentStatus(Enum):
     """Status of consent"""
+
     GRANTED = "granted"
     DENIED = "denied"
     WITHDRAWN = "withdrawn"
@@ -28,6 +30,7 @@ class ConsentStatus(Enum):
 @dataclass
 class ConsentCheck:
     """Record of consent verification"""
+
     action: str  # What action requires consent
     requester: str  # Who requests
     grantor: str  # Who grants/denies
@@ -59,11 +62,7 @@ class ConsentFramework:
         self.consent_checks: list[ConsentCheck] = []
 
     def check_consent(
-        self,
-        action: str,
-        requester: str,
-        grantor: str,
-        context: dict | None = None
+        self, action: str, requester: str, grantor: str, context: dict | None = None
     ) -> ConsentCheck:
         """Check if consent exists for action
 
@@ -85,7 +84,7 @@ class ConsentFramework:
             grantor=grantor,
             status=ConsentStatus.PENDING,
             reasoning=f"Awaiting explicit consent for: {action}",
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         )
 
         self.consent_checks.append(check)
@@ -103,7 +102,7 @@ class ConsentFramework:
         action: str,
         grantor: str,
         reasoning: str | None = None,
-        duration: str | None = None
+        duration: str | None = None,
     ):
         """Grant consent for an action
 
@@ -149,7 +148,11 @@ class ConsentFramework:
     def withdraw_consent(self, action: str, grantor: str, reasoning: str | None = None):
         """Withdraw previously granted consent"""
         for check in self.consent_checks:
-            if check.action == action and check.grantor == grantor and check.status == ConsentStatus.GRANTED:
+            if (
+                check.action == action
+                and check.grantor == grantor
+                and check.status == ConsentStatus.GRANTED
+            ):
                 check.status = ConsentStatus.WITHDRAWN
                 check.reasoning = reasoning or "Consent withdrawn"
 
@@ -172,6 +175,7 @@ class ConsentFramework:
 
 # Global instance
 _consent = None
+
 
 def get_consent_framework() -> ConsentFramework:
     """Get consent framework"""

@@ -45,7 +45,10 @@ from typing import Any
 # Ensure whitemagic is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.x25519 import (
+    X25519PrivateKey,
+    X25519PublicKey,
+)
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes, serialization
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -76,6 +79,7 @@ _api_cache = get_api_cache()
 # Try Rust backend for hot paths
 try:
     import whitemagic_rs
+
     HAS_RUST = True
 except ImportError:
     HAS_RUST = False
@@ -83,7 +87,12 @@ except ImportError:
 
 # Try Zig SIMD backend for hot paths
 try:
-    from whitemagic.core.acceleration.simd_cosine import cosine_similarity as zig_cosine, batch_cosine as zig_batch_cosine, simd_status as zig_status
+    from whitemagic.core.acceleration.simd_cosine import (
+        cosine_similarity as zig_cosine,
+        batch_cosine as zig_batch_cosine,
+        simd_status as zig_status,
+    )
+
     HAS_ZIG = True
 except ImportError:
     HAS_ZIG = False
@@ -93,7 +102,11 @@ except ImportError:
 
 # Try Haskell spatial core
 try:
-    from whitemagic.core.acceleration.haskell_bridge import hs_spatial_status as hs_status, hs_create_hexagram
+    from whitemagic.core.acceleration.haskell_bridge import (
+        hs_spatial_status as hs_status,
+        hs_create_hexagram,
+    )
+
     HAS_HASKELL = True
 except ImportError:
     HAS_HASKELL = False
@@ -151,6 +164,7 @@ app.add_middleware(
 
 # ── Request/Response Models ──────────────────────────────────────────────
 
+
 class ToolRequest(BaseModel):
     tool: str
     args: dict[str, Any] = {}
@@ -171,6 +185,7 @@ class ToolResponse(BaseModel):
 
 
 # ── Security: Token Bucket, Nonce Cache, WebSocket Validation ────────────
+
 
 class TokenBucket:
     """In-memory token bucket for WebSocket rate limiting."""
@@ -229,12 +244,15 @@ class SyncSession:
         self.presence_since: float = time.time()
         self.current_view: str | None = None
         self.editing_node: str | None = None
-        self.cursor_band: tuple[int, int, int] | None = None  # Quantized to galactic band
+        self.cursor_band: tuple[int, int, int] | None = (
+            None  # Quantized to galactic band
+        )
         self.incognito: bool = False
 
 
 class SyncMessage(BaseModel):
     """Validated WebSocket message schema."""
+
     type: str
     userId: str = Field(..., min_length=3, max_length=64)
     timestamp: float = Field(..., gt=0)
@@ -245,22 +263,31 @@ class SyncMessage(BaseModel):
 
 # ── WebSocket Sync Manager ───────────────────────────────────────────────
 
+
 class SyncManager:
     """Manages WebSocket connections for real-time sync."""
 
     def __init__(self):
         self.sessions: dict[str, list[SyncSession]] = {}  # user_id -> [sessions]
-        self.vector_clocks: dict[str, dict[str, int]] = {}  # user_id -> {user_id: clock}
+        self.vector_clocks: dict[
+            str, dict[str, int]
+        ] = {}  # user_id -> {user_id: clock}
         self.pending_ops: dict[str, list[dict]] = {}  # user_id -> [ops]
         self.nonce_cache = NonceCache()
         self.server_private_key = X25519PrivateKey.generate()
         self.server_public_key = self.server_private_key.public_key()
 
-    def add_session(self, user_id: str, ws: WebSocket, session_key: bytes) -> SyncSession:
+    def add_session(
+        self, user_id: str, ws: WebSocket, session_key: bytes
+    ) -> SyncSession:
         session = SyncSession(user_id, ws, session_key)
         self.sessions.setdefault(user_id, []).append(session)
         self.vector_clocks.setdefault(user_id, {})
-        logger.info("Sync client authenticated: %s (total sessions: %d)", user_id, len(self.sessions[user_id]))
+        logger.info(
+            "Sync client authenticated: %s (total sessions: %d)",
+            user_id,
+            len(self.sessions[user_id]),
+        )
         return session
 
     def remove_session(self, user_id: str, ws: WebSocket):
@@ -309,11 +336,14 @@ class SyncManager:
     async def broadcast_presence(self, exclude_user: str | None = None):
         """Broadcast presence list to all connected users."""
         presence_list = self.get_presence_list(exclude_user)
-        await self.broadcast({
-            "type": "presence_update",
-            "users": presence_list,
-            "timestamp": datetime.now().isoformat(),
-        }, exclude_user=exclude_user)
+        await self.broadcast(
+            {
+                "type": "presence_update",
+                "users": presence_list,
+                "timestamp": datetime.now().isoformat(),
+            },
+            exclude_user=exclude_user,
+        )
 
     async def broadcast(self, message: dict, exclude_user: str | None = None):
         """Broadcast message to all connected users."""
@@ -342,7 +372,9 @@ class SyncManager:
         for uid, ws in dead:
             self.remove_session(uid, ws)
 
-    def merge_vector_clock(self, user_id: str, remote_clock: dict[str, int]) -> dict[str, int]:
+    def merge_vector_clock(
+        self, user_id: str, remote_clock: dict[str, int]
+    ) -> dict[str, int]:
         """Merge remote vector clock with local."""
         local = self.vector_clocks.setdefault(user_id, {})
         for key, value in remote_clock.items():
@@ -388,7 +420,9 @@ def _derive_session_key(shared_secret: bytes) -> bytes:
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
-def e2ee_encrypt(plaintext: bytes, key: bytes, associated_data: bytes | None = None) -> dict:
+def e2ee_encrypt(
+    plaintext: bytes, key: bytes, associated_data: bytes | None = None
+) -> dict:
     """Encrypt plaintext with AES-256-GCM.
 
     Args:
@@ -408,7 +442,12 @@ def e2ee_encrypt(plaintext: bytes, key: bytes, associated_data: bytes | None = N
     }
 
 
-def e2ee_decrypt(nonce_b64: str, ciphertext_b64: str, key: bytes, associated_data: bytes | None = None) -> bytes:
+def e2ee_decrypt(
+    nonce_b64: str,
+    ciphertext_b64: str,
+    key: bytes,
+    associated_data: bytes | None = None,
+) -> bytes:
     """Decrypt AES-256-GCM ciphertext.
 
     Raises cryptography.exceptions.InvalidTag if authentication fails.
@@ -433,16 +472,24 @@ def e2ee_decrypt_json(nonce_b64: str, ciphertext_b64: str, key: bytes) -> dict:
 
 # ── Audit Logger ─────────────────────────────────────────────────────────
 
+
 class AuditLogger:
     """Append-only security audit log."""
 
     def __init__(self, log_path: Path | None = None):
         from whitemagic.config.paths import get_state_root
+
         state_root = get_state_root()
         state_root.mkdir(exist_ok=True, parents=True)
         self.log_path = log_path or state_root / "security_audit.jsonl"
 
-    def log(self, event_type: str, user_id: str | None = None, details: dict | None = None, severity: str = "info"):
+    def log(
+        self,
+        event_type: str,
+        user_id: str | None = None,
+        details: dict | None = None,
+        severity: str = "info",
+    ):
         entry = {
             "timestamp": datetime.now().isoformat(),
             "event_type": event_type,
@@ -506,6 +553,7 @@ def _emit_event(event_type: str, source: str, data: dict):
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 def health():
@@ -653,7 +701,11 @@ def refresh_cache():
 
         # Invalidate API cache since data has changed
         cleared = _api_cache.clear()
-        return {"status": "ok", "message": "Cache refreshed", "api_cache_cleared": cleared}
+        return {
+            "status": "ok",
+            "message": "Cache refreshed",
+            "api_cache_cleared": cleared,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -677,6 +729,7 @@ def gana_tools(gana_name: str):
 
 # ── Dashboard Endpoints ──────────────────────────────────────────────────
 
+
 def get_db_conn() -> sqlite3.Connection:
     """Get a read-only database connection."""
     conn = sqlite3.connect(str(DB_PATH))
@@ -686,7 +739,9 @@ def get_db_conn() -> sqlite3.Connection:
 
 
 @app.get("/memories")
-def list_memories(q: str = "", limit: int = 50, offset: int = 0, include_coords: bool = False):
+def list_memories(
+    q: str = "", limit: int = 50, offset: int = 0, include_coords: bool = False
+):
     """List/search memories for the dashboard."""
     try:
         conn = get_db_conn()
@@ -703,7 +758,9 @@ def list_memories(q: str = "", limit: int = 50, offset: int = 0, include_coords:
                 ORDER BY importance DESC
                 LIMIT ? OFFSET ?
             """
-            rows = conn.execute(base_query, (pattern, pattern, limit, offset)).fetchall()
+            rows = conn.execute(
+                base_query, (pattern, pattern, limit, offset)
+            ).fetchall()
         else:
             base_query = """
                 SELECT id, title, content, memory_type, importance,
@@ -745,7 +802,7 @@ def list_memories(q: str = "", limit: int = 50, offset: int = 0, include_coords:
             if include_coords:
                 coord_row = conn.execute(
                     "SELECT x, y, z, w, v FROM holographic_coords WHERE memory_id = ?",
-                    (row["id"],)
+                    (row["id"],),
                 ).fetchone()
                 if coord_row:
                     mem["coords"] = {
@@ -762,7 +819,7 @@ def list_memories(q: str = "", limit: int = 50, offset: int = 0, include_coords:
         if q:
             total = conn.execute(
                 "SELECT COUNT(*) FROM memories WHERE title LIKE ? OR content LIKE ?",
-                (pattern, pattern)
+                (pattern, pattern),
             ).fetchone()[0]
         else:
             total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
@@ -810,25 +867,31 @@ def list_gardens():
         for row in rows:
             garden_name = row["garden"] or "core_garden"
             if garden_name in all_gardens:
-                gardens.append({
-                    "name": garden_name,
-                    "active": True,
-                    "health": round(float(row["avg_importance"] or 0.5) * 0.5 + 0.5, 2),
-                    "resonance": round(1.0 - float(row["avg_distance"] or 0.5), 2),
-                    "memory_count": row["memory_count"],
-                })
+                gardens.append(
+                    {
+                        "name": garden_name,
+                        "active": True,
+                        "health": round(
+                            float(row["avg_importance"] or 0.5) * 0.5 + 0.5, 2
+                        ),
+                        "resonance": round(1.0 - float(row["avg_distance"] or 0.5), 2),
+                        "memory_count": row["memory_count"],
+                    }
+                )
 
         # Add gardens with no memories
         existing_names = {g["name"] for g in gardens}
         for name, defaults in all_gardens.items():
             if name not in existing_names:
-                gardens.append({
-                    "name": name,
-                    "active": defaults["active"],
-                    "health": defaults["health"],
-                    "resonance": defaults["resonance"],
-                    "memory_count": 0,
-                })
+                gardens.append(
+                    {
+                        "name": name,
+                        "active": defaults["active"],
+                        "health": defaults["health"],
+                        "resonance": defaults["resonance"],
+                        "memory_count": 0,
+                    }
+                )
 
         conn.close()
 
@@ -869,14 +932,14 @@ def galaxy_nodes(limit: int = 500, zone: str = "", include_content: bool = False
 
         # Zone color mapping (galactic bands)
         zone_colors = {
-            "core_garden": "#fbbf24",       # Gold — core memories
-            "joy_garden": "#22c55e",        # Green — joyful memories
-            "creative_garden": "#a855f7",   # Purple — creative
-            "system_garden": "#3b82f6",     # Blue — system
-            "truth_garden": "#ef4444",      # Red — truth
-            "courage_garden": "#f97316",    # Orange — courage
-            "wonder_garden": "#eab308",     # Yellow — wonder
-            "wisdom_garden": "#8b5cf6",     # Violet — wisdom
+            "core_garden": "#fbbf24",  # Gold — core memories
+            "joy_garden": "#22c55e",  # Green — joyful memories
+            "creative_garden": "#a855f7",  # Purple — creative
+            "system_garden": "#3b82f6",  # Blue — system
+            "truth_garden": "#ef4444",  # Red — truth
+            "courage_garden": "#f97316",  # Orange — courage
+            "wonder_garden": "#eab308",  # Yellow — wonder
+            "wisdom_garden": "#8b5cf6",  # Violet — wisdom
         }
 
         nodes = []
@@ -941,17 +1004,23 @@ def galaxy_nodes(limit: int = 500, zone: str = "", include_content: bool = False
                     if i == j:
                         continue
                     nj = nodes[j]
-                    d = ((ni["x"]-nj["x"])**2 + (ni["y"]-nj["y"])**2 + (ni["z"]-nj["z"])**2)**0.5
+                    d = (
+                        (ni["x"] - nj["x"]) ** 2
+                        + (ni["y"] - nj["y"]) ** 2
+                        + (ni["z"] - nj["z"]) ** 2
+                    ) ** 0.5
                     neighbors.append((j, d))
                 neighbors.sort(key=lambda x: x[1])
                 for j, d in neighbors[:5]:
                     strength = max(0, 1.0 - d / 2.0)
                     if strength > 0.3:
-                        edges.append({
-                            "source": ni["id"],
-                            "target": nodes[j]["id"],
-                            "strength": round(strength, 3),
-                        })
+                        edges.append(
+                            {
+                                "source": ni["id"],
+                                "target": nodes[j]["id"],
+                                "strength": round(strength, 3),
+                            }
+                        )
 
         return {
             "nodes": nodes,
@@ -970,7 +1039,9 @@ def galaxy_stats():
         conn = get_db_conn()
 
         total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-        with_coords = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[0]
+        with_coords = conn.execute(
+            "SELECT COUNT(*) FROM holographic_coords"
+        ).fetchone()[0]
 
         # Zone distribution by galactic_distance
         zones = []
@@ -988,11 +1059,13 @@ def galaxy_stats():
             FROM memories
             GROUP BY zone
         """):
-            zones.append({
-                "name": row["zone"],
-                "count": row["count"],
-                "avg_importance": round(float(row["avg_importance"] or 0), 3),
-            })
+            zones.append(
+                {
+                    "name": row["zone"],
+                    "count": row["count"],
+                    "avg_importance": round(float(row["avg_importance"] or 0), 3),
+                }
+            )
 
         conn.close()
 
@@ -1075,6 +1148,7 @@ async def event_stream():
 
 # ── WebSocket Sync Endpoint ──────────────────────────────────────────────
 
+
 @app.websocket("/sync")
 async def sync_websocket(ws: WebSocket):
     """WebSocket endpoint with X25519 key-exchange auth, nonce replay protection, and rate limiting.
@@ -1100,7 +1174,9 @@ async def sync_websocket(ws: WebSocket):
         timestamp = handshake.get("timestamp")
 
         if not all([user_id, client_public_b64, client_nonce, timestamp]):
-            audit_logger.log("auth_failed", details={"reason": "missing_fields"}, severity="warning")
+            audit_logger.log(
+                "auth_failed", details={"reason": "missing_fields"}, severity="warning"
+            )
             await ws.send_json({"type": "error", "error": "Missing handshake fields"})
             await ws.close(code=4001, reason="Incomplete handshake")
             return
@@ -1114,7 +1190,12 @@ async def sync_websocket(ws: WebSocket):
             return
 
         if abs(time.time() - ts) > 300:
-            audit_logger.log("auth_failed", user_id=user_id, details={"reason": "timestamp_expired"}, severity="warning")
+            audit_logger.log(
+                "auth_failed",
+                user_id=user_id,
+                details={"reason": "timestamp_expired"},
+                severity="warning",
+            )
             await ws.send_json({"type": "error", "error": "Timestamp expired"})
             await ws.close(code=4002, reason="Timestamp expired")
             return
@@ -1132,7 +1213,12 @@ async def sync_websocket(ws: WebSocket):
                 _b64decode(client_public_b64)
             )
         except Exception:
-            audit_logger.log("auth_failed", user_id=user_id, details={"reason": "invalid_public_key"}, severity="warning")
+            audit_logger.log(
+                "auth_failed",
+                user_id=user_id,
+                details={"reason": "invalid_public_key"},
+                severity="warning",
+            )
             await ws.send_json({"type": "error", "error": "Invalid public key"})
             await ws.close(code=4004, reason="Bad key")
             return
@@ -1148,23 +1234,27 @@ async def sync_websocket(ws: WebSocket):
         )
         server_nonce = secrets.token_hex(16)
 
-        await ws.send_json({
-            "type": "auth_ack",
-            "server_public_key": server_public_b64,
-            "nonce": server_nonce,
-            "timestamp": time.time(),
-        })
+        await ws.send_json(
+            {
+                "type": "auth_ack",
+                "server_public_key": server_public_b64,
+                "nonce": server_nonce,
+                "timestamp": time.time(),
+            }
+        )
 
         # Register session
         sync_manager.add_session(user_id, ws, session_key)
         audit_logger.log("auth_success", user_id=user_id, details={"method": "x25519"})
 
         # Send initial presence list to new user
-        await ws.send_json({
-            "type": "presence_list",
-            "users": sync_manager.get_presence_list(exclude_user=user_id),
-            "timestamp": datetime.now().isoformat(),
-        })
+        await ws.send_json(
+            {
+                "type": "presence_list",
+                "users": sync_manager.get_presence_list(exclude_user=user_id),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         # Notify others about new user
         await sync_manager.broadcast_presence(exclude_user=user_id)
 
@@ -1181,7 +1271,9 @@ async def sync_websocket(ws: WebSocket):
 
             # Check nonce replay
             if not sync_manager.nonce_cache.check_and_add(msg.nonce):
-                audit_logger.log("nonce_replay", user_id=msg.userId, severity="critical")
+                audit_logger.log(
+                    "nonce_replay", user_id=msg.userId, severity="critical"
+                )
                 await ws.send_json({"type": "error", "error": "Nonce replayed"})
                 await ws.close(code=4003, reason="Replay detected")
                 return
@@ -1202,12 +1294,14 @@ async def sync_websocket(ws: WebSocket):
                 if user_id in sync_manager.sessions and sync_manager.sessions[user_id]:
                     session = sync_manager.sessions[user_id][0]
                     session.presence_since = time.time()
-                await ws.send_json({
-                    "type": "heartbeat",
-                    "userId": "server",
-                    "timestamp": datetime.now().isoformat(),
-                    "vectorClock": sync_manager.vector_clocks.get(user_id, {}),
-                })
+                await ws.send_json(
+                    {
+                        "type": "heartbeat",
+                        "userId": "server",
+                        "timestamp": datetime.now().isoformat(),
+                        "vectorClock": sync_manager.vector_clocks.get(user_id, {}),
+                    }
+                )
                 continue
 
             # Handle presence update
@@ -1225,22 +1319,33 @@ async def sync_websocket(ws: WebSocket):
                     if "cursor_band" in payload:
                         band = payload["cursor_band"]
                         if isinstance(band, list) and len(band) == 3:
-                            session.cursor_band = (int(band[0]), int(band[1]), int(band[2]))
+                            session.cursor_band = (
+                                int(band[0]),
+                                int(band[1]),
+                                int(band[2]),
+                            )
                     if "incognito" in payload:
                         session.incognito = payload["incognito"]
                 # Broadcast updated presence to everyone
                 await sync_manager.broadcast_presence(exclude_user=user_id)
                 # Send back full presence list to sender
-                await ws.send_json({
-                    "type": "presence_list",
-                    "users": sync_manager.get_presence_list(exclude_user=user_id),
-                    "timestamp": datetime.now().isoformat(),
-                })
+                await ws.send_json(
+                    {
+                        "type": "presence_list",
+                        "users": sync_manager.get_presence_list(exclude_user=user_id),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
                 continue
 
             # Handle sync operations
-            if msg.type in ("memory_created", "memory_updated", "memory_deleted",
-                           "association_created", "association_deleted"):
+            if msg.type in (
+                "memory_created",
+                "memory_updated",
+                "memory_deleted",
+                "association_created",
+                "association_deleted",
+            ):
                 remote_clock = msg.vectorClock or {}
                 clock = sync_manager.merge_vector_clock(user_id, remote_clock)
 
@@ -1257,21 +1362,26 @@ async def sync_websocket(ws: WebSocket):
 
                 clock = sync_manager.increment_clock(user_id)
 
-                await sync_manager.broadcast({
-                    "type": msg.type,
-                    "userId": user_id,
-                    "timestamp": datetime.now().isoformat(),
-                    "vectorClock": clock,
-                    "payload": payload,
-                }, exclude_user=user_id)
+                await sync_manager.broadcast(
+                    {
+                        "type": msg.type,
+                        "userId": user_id,
+                        "timestamp": datetime.now().isoformat(),
+                        "vectorClock": clock,
+                        "payload": payload,
+                    },
+                    exclude_user=user_id,
+                )
 
-                await ws.send_json({
-                    "type": "sync_response",
-                    "userId": "server",
-                    "timestamp": datetime.now().isoformat(),
-                    "vectorClock": clock,
-                    "payload": {"status": "synced", "op": msg.type},
-                })
+                await ws.send_json(
+                    {
+                        "type": "sync_response",
+                        "userId": "server",
+                        "timestamp": datetime.now().isoformat(),
+                        "vectorClock": clock,
+                        "payload": {"status": "synced", "op": msg.type},
+                    }
+                )
 
                 _emit_event(
                     event_type="sync_operation",
@@ -1296,21 +1406,38 @@ def _store_synced_memory(payload: dict, user_id: str):
         content = payload.get("content", "")
         garden = payload.get("garden", "unknown")
         mem_type = payload.get("type", "memory")
-        embedding = json.dumps(payload["embedding"]) if payload.get("embedding") else None
+        embedding = (
+            json.dumps(payload["embedding"]) if payload.get("embedding") else None
+        )
 
-        conn.execute("""
+        conn.execute(
+            """
             INSERT OR REPLACE INTO memories (id, title, content, memory_type, importance, metadata)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (mem_id, content[:100], content, mem_type, 0.5, json.dumps({
-            "synced_from": user_id,
-            "garden": garden,
-        })))
+        """,
+            (
+                mem_id,
+                content[:100],
+                content,
+                mem_type,
+                0.5,
+                json.dumps(
+                    {
+                        "synced_from": user_id,
+                        "garden": garden,
+                    }
+                ),
+            ),
+        )
 
         if embedding:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR REPLACE INTO memory_embeddings (memory_id, embedding)
                 VALUES (?, ?)
-            """, (mem_id, embedding))
+            """,
+                (mem_id, embedding),
+            )
 
         conn.commit()
     finally:
@@ -1340,7 +1467,9 @@ def _update_synced_memory(payload: dict, user_id: str):
         if updates:
             updates.append("updated_at = datetime('now')")
             params.append(mem_id)
-            conn.execute(f"UPDATE memories SET {', '.join(updates)} WHERE id = ?", params)
+            conn.execute(
+                f"UPDATE memories SET {', '.join(updates)} WHERE id = ?", params
+            )
             conn.commit()
     finally:
         conn.close()
@@ -1361,12 +1490,15 @@ def _delete_synced_memory(payload: dict, user_id: str):
 
 # ── Resonance Analysis Endpoints ─────────────────────────────────────────
 
+
 @app.get("/sync/status")
 def sync_status():
     """WebSocket sync server status."""
     return {
         "connected_users": len(sync_manager.sessions),
-        "total_sessions": sum(len(sessions) for sessions in sync_manager.sessions.values()),
+        "total_sessions": sum(
+            len(sessions) for sessions in sync_manager.sessions.values()
+        ),
         "users": list(sync_manager.sessions.keys()),
         "vector_clocks": sync_manager.vector_clocks,
         "nonce_cache_size": len(sync_manager.nonce_cache._set),
@@ -1390,13 +1522,16 @@ def resonance_analysis(limit: int = 500):
 
     try:
         conn = get_db_conn()
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT id, importance, galactic_distance, access_count, recall_count,
                    json_extract(metadata, '$.resonance') as resonance
             FROM memories
             ORDER BY importance DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         memories = []
         for row in rows:
@@ -1445,14 +1580,17 @@ def resonance_patterns(min_cluster_size: int = 3, limit: int = 500):
 
     try:
         conn = get_db_conn()
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT id, importance,
                    json_extract(metadata, '$.resonance') as resonance
             FROM memories
             WHERE json_extract(metadata, '$.resonance') IS NOT NULL
             ORDER BY importance DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         memories = []
         for row in rows:
@@ -1467,7 +1605,9 @@ def resonance_patterns(min_cluster_size: int = 3, limit: int = 500):
         conn.close()
 
         detector = PatternResonanceDetector()
-        patterns = detector.find_resonant_patterns(memories, min_cluster_size=min_cluster_size)
+        patterns = detector.find_resonant_patterns(
+            memories, min_cluster_size=min_cluster_size
+        )
         cross = detector.find_cross_garden_resonance(memories)
 
         result = {
@@ -1491,10 +1631,13 @@ def resonance_decay(memory_id: str = "", importance: float = 0.5, age_days: floa
 
         if memory_id:
             conn = get_db_conn()
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT importance, galactic_distance, access_count, recall_count, created_at
                 FROM memories WHERE id = ?
-            """, (memory_id,)).fetchone()
+            """,
+                (memory_id,),
+            ).fetchone()
             conn.close()
 
             if row:
@@ -1503,6 +1646,7 @@ def resonance_decay(memory_id: str = "", importance: float = 0.5, age_days: floa
                 recall_count = int(row["recall_count"] or 0)
 
                 from datetime import datetime
+
                 if row["created_at"]:
                     ts = datetime.fromisoformat(str(row["created_at"])[:26])
                     age_days = (datetime.now() - ts).days
@@ -1578,18 +1722,23 @@ def resonance_harmony():
 
 
 @app.get("/resonance/constellations")
-def resonance_constellations(overlap_threshold: float = 0.3, limit: int = 500, use_rust: bool = True):
+def resonance_constellations(
+    overlap_threshold: float = 0.3, limit: int = 500, use_rust: bool = True
+):
     """Constellation analysis in 5D holographic space (Rust-accelerated)."""
     try:
         conn = get_db_conn()
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT m.id, m.importance,
                    hc.x, hc.y, hc.z, hc.w, hc.v
             FROM memories m
             JOIN holographic_coords hc ON m.id = hc.memory_id
             ORDER BY m.importance DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         # Build coordinate arrays
         ids = []
@@ -1597,8 +1746,15 @@ def resonance_constellations(overlap_threshold: float = 0.3, limit: int = 500, u
         importances = []
         for row in rows:
             ids.append(str(row["id"]))
-            coords.append((float(row["x"]), float(row["y"]), float(row["z"]),
-                          float(row["w"]), float(row["v"])))
+            coords.append(
+                (
+                    float(row["x"]),
+                    float(row["y"]),
+                    float(row["z"]),
+                    float(row["w"]),
+                    float(row["v"]),
+                )
+            )
             importances.append(float(row["importance"] or 0.5))
 
         conn.close()
@@ -1633,13 +1789,15 @@ def resonance_constellations(overlap_threshold: float = 0.3, limit: int = 500, u
                                 math.sqrt(sum((a - b) ** 2 for a, b in zip(center, c)))
                                 for c in member_coords
                             )
-                            constellations.append({
-                                "constellation_id": int(cluster_id),
-                                "member_ids": [ids[i] for i in members],
-                                "center": tuple(round(c, 4) for c in center),
-                                "radius": round(radius, 4),
-                                "size": len(members),
-                            })
+                            constellations.append(
+                                {
+                                    "constellation_id": int(cluster_id),
+                                    "member_ids": [ids[i] for i in members],
+                                    "center": tuple(round(c, 4) for c in center),
+                                    "radius": round(radius, 4),
+                                    "size": len(members),
+                                }
+                            )
 
                     return {
                         "total_constellations": len(constellations),
@@ -1647,7 +1805,9 @@ def resonance_constellations(overlap_threshold: float = 0.3, limit: int = 500, u
                         "constellations": constellations[:50],
                     }
             except Exception as e:
-                logger.warning("Rust constellation failed, falling back to Python: %s", e)
+                logger.warning(
+                    "Rust constellation failed, falling back to Python: %s", e
+                )
 
         # Python fallback
         # Greedy clustering
@@ -1666,27 +1826,38 @@ def resonance_constellations(overlap_threshold: float = 0.3, limit: int = 500, u
             for j, (other_id, other_coord) in enumerate(zip(ids, coords)):
                 if j in used:
                     continue
-                dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(center_list, other_coord)))
+                dist = math.sqrt(
+                    sum((a - b) ** 2 for a, b in zip(center_list, other_coord))
+                )
                 if dist < cluster_radius:
                     members.append(other_id)
                     used.add(j)
-                    center_list = [(c * (len(members) - 1) + other_coord[k]) / len(members)
-                                  for k, c in enumerate(center_list)]
+                    center_list = [
+                        (c * (len(members) - 1) + other_coord[k]) / len(members)
+                        for k, c in enumerate(center_list)
+                    ]
 
             if len(members) >= 2:
-                radius = max(
-                    math.sqrt(sum((a - b) ** 2 for a, b in zip(center_list, c)))
-                    for mid in members
-                    for c in coords if ids[ids.index(mid)] == mid
-                ) if members else 0
+                radius = (
+                    max(
+                        math.sqrt(sum((a - b) ** 2 for a, b in zip(center_list, c)))
+                        for mid in members
+                        for c in coords
+                        if ids[ids.index(mid)] == mid
+                    )
+                    if members
+                    else 0
+                )
 
-                constellations.append({
-                    "constellation_id": len(constellations),
-                    "member_ids": members,
-                    "center": tuple(round(c, 4) for c in center_list),
-                    "radius": round(radius, 4),
-                    "size": len(members),
-                })
+                constellations.append(
+                    {
+                        "constellation_id": len(constellations),
+                        "member_ids": members,
+                        "center": tuple(round(c, 4) for c in center_list),
+                        "radius": round(radius, 4),
+                        "size": len(members),
+                    }
+                )
 
         return {
             "total_constellations": len(constellations),
@@ -1806,12 +1977,14 @@ def resonance_similarity(query: str, top_k: int = 20):
             content_words = set(content.lower().split())
             overlap = len(query_words & content_words) / max(1, len(query_words))
 
-            results.append({
-                "id": str(row["id"]),
-                "title": str(row["title"] or "")[:100],
-                "importance": float(row["importance"] or 0.5),
-                "similarity": round(overlap, 4),
-            })
+            results.append(
+                {
+                    "id": str(row["id"]),
+                    "title": str(row["title"] or "")[:100],
+                    "importance": float(row["importance"] or 0.5),
+                    "similarity": round(overlap, 4),
+                }
+            )
 
         # Sort by similarity
         results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -1839,6 +2012,7 @@ def resonance_benchmarks():
     if HAS_RUST and whitemagic_rs:
         # Benchmark Rust cosine
         import numpy as np
+
         a = np.random.rand(384).astype(np.float32).tolist()
         b = np.random.rand(384).astype(np.float32).tolist()
 
@@ -1994,21 +2168,30 @@ def create_hexagram(lines: list[int]):
 
 # ── Main ─────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="WhiteMagic REST API Server")
     parser.add_argument("--host", default="127.0.0.1", help="Bind address")
     parser.add_argument("--port", type=int, default=8770, help="Port")
-    parser.add_argument("--reload", action="store_true", help="Auto-reload on code changes")
+    parser.add_argument(
+        "--reload", action="store_true", help="Auto-reload on code changes"
+    )
     args = parser.parse_args()
 
     logger.info("WhiteMagic REST API starting on http://%s:%s", args.host, args.port)
-    logger.info(f"Endpoints: /tool, /gana/{{gana}}, /tools, /ganas, /health, /query, /galaxy")
+    logger.info(
+        f"Endpoints: /tool, /gana/{{gana}}, /tools, /ganas, /health, /query, /galaxy"
+    )
     logger.info(f"Dashboard: /memories, /gardens, /dream/*, /events/stream")
-    logger.info(f"Resonance: /resonance/analysis, /patterns, /decay, /harmony, /constellations, /stats, /forecast")
+    logger.info(
+        f"Resonance: /resonance/analysis, /patterns, /decay, /harmony, /constellations, /stats, /forecast"
+    )
     logger.info(f"WebSocket: /sync (real-time bidirectional sync)")
     logger.info(f"Tools available: {len(TOOL_TO_GANA)} across {len(GANA_TO_TOOLS)}")
 
-    config = Config(app, host=args.host, port=args.port, log_level="info", lifespan=lifespan)
+    config = Config(
+        app, host=args.host, port=args.port, log_level="info", lifespan=lifespan
+    )
     server = Server(config)
     server.run()
 

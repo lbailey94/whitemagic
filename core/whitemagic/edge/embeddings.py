@@ -36,7 +36,11 @@ class LocalEmbeddings:
     @staticmethod
     def _ngrams(text: str, n: int = 3) -> set[str]:
         text = text.lower().replace(" ", "")
-        return {text[i:i + n] for i in range(len(text) - n + 1)} if len(text) >= n else {text}
+        return (
+            {text[i : i + n] for i in range(len(text) - n + 1)}
+            if len(text) >= n
+            else {text}
+        )
 
     def jaccard_similarity(self, text_a: str, text_b: str) -> float:
         """Jaccard similarity between two texts."""

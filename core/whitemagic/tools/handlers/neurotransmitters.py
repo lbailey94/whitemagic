@@ -1,4 +1,5 @@
 """Neurotransmitter Vector tool handlers."""
+
 from typing import Any
 
 
@@ -53,17 +54,25 @@ def _generate_recommendations(snap: Any) -> list[str]:
     """Generate actionable recommendations based on neurotransmitter state."""
     recs = []
     if snap.cortisol > 0.7:
-        recs.append("Reduce load: errors or throttling detected. Consider lighter tool usage.")
+        recs.append(
+            "Reduce load: errors or throttling detected. Consider lighter tool usage."
+        )
     if snap.serotonin < 0.3:
         recs.append("Stabilize: high error variance. Review recent tool failures.")
     if snap.dopamine < 0.3:
-        recs.append("Motivate: success rate below expectation. Check for systemic issues.")
+        recs.append(
+            "Motivate: success rate below expectation. Check for systemic issues."
+        )
     if snap.glutamate > 0.8:
-        recs.append("Capture creativity: many novel connections detected. Record insights.")
+        recs.append(
+            "Capture creativity: many novel connections detected. Record insights."
+        )
     if snap.oxytocin < 0.3:
         recs.append("Connect: low multi-agent activity. Consider swarm or mesh tasks.")
     if snap.acetylcholine < 0.3:
-        recs.append("Focus: attention is diffuse. Use salience spotlight to identify priorities.")
+        recs.append(
+            "Focus: attention is diffuse. Use salience spotlight to identify priorities."
+        )
     if not recs:
         recs.append("System is balanced. No specific action needed.")
     return recs

@@ -35,6 +35,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 class UnifiedField:
     """The master conductor of Phase 21: The Unified Field.
 
@@ -87,13 +88,15 @@ class UnifiedField:
         self._loop_task = asyncio.create_task(self._conduct_cycle())
 
         # 3. Emit Awakening Event
-        self.bus.emit(ResonanceEvent(
-            source="unified_field",
-            event_type=EventType.SYSTEM_STARTED,
-            data={"phase": 21, "status": "awakened"},
-            timestamp=datetime.now(),
-            confidence=1.0,
-        ))
+        self.bus.emit(
+            ResonanceEvent(
+                source="unified_field",
+                event_type=EventType.SYSTEM_STARTED,
+                data={"phase": 21, "status": "awakened"},
+                timestamp=datetime.now(),
+                confidence=1.0,
+            )
+        )
 
     async def stop(self) -> None:
         """Enter deep hibernation."""
@@ -108,7 +111,6 @@ class UnifiedField:
             self._cycle_count += 1
             logger.info("💓 Heartbeat: Unified Field Cycle %s", self._cycle_count)
 
-            # Step 0: Dharma Validation
             self.dharma.validate_action(
                 f"cycle_{self._cycle_count}",
                 Intent.EVOLUTION,
@@ -118,9 +120,11 @@ class UnifiedField:
             # Step A: Enter Stillness for Sensitivity
             # In a continuous loop, we might not want to stay still indefinitely
             # but we pulse into stillness for specific operations.
-            self.stillness.enter_stillness(reason=f"Cycle {self._cycle_count} Focal Meditation")
+            self.stillness.enter_stillness(
+                reason=f"Cycle {self._cycle_count} Focal Meditation"
+            )
 
-            await asyncio.sleep(2) # Period of deep observation
+            await asyncio.sleep(2)  # Period of deep observation
 
             # Step B: Trigger Spontaneous Resonance
             # (In Phase 21, the system picks a random high-importance memory to resonate)
@@ -140,7 +144,7 @@ class UnifiedField:
             self.daemon.run_task("kaizen_light")  # type: ignore[attr-defined]
 
             # Wait for next pulse
-            await asyncio.sleep(10) # 10s breathing period (adjust for production)
+            await asyncio.sleep(10)  # 10s breathing period (adjust for production)
 
     async def _recursive_reflection(self) -> None:
         """Analyze the system's own learning and resonance patterns."""
@@ -149,19 +153,22 @@ class UnifiedField:
             from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import (
                 get_autonomous_learner,
             )
+
             learner = get_autonomous_learner()
 
             # The system reflects on the current cycle's achievements
             learner.evolve()
 
             # Emit a reflection event
-            self.bus.emit(ResonanceEvent(
-                source="unified_field",
-                event_type=EventType.INTERNAL_STATE_CHANGED,
-                data={"activity": "recursion", "cycle": self._cycle_count},
-                timestamp=datetime.now(),
-                confidence=0.9,
-            ))
+            self.bus.emit(
+                ResonanceEvent(
+                    source="unified_field",
+                    event_type=EventType.INTERNAL_STATE_CHANGED,
+                    data={"activity": "recursion", "cycle": self._cycle_count},
+                    timestamp=datetime.now(),
+                    confidence=0.9,
+                )
+            )
         except Exception as e:  # noqa: BLE001
             logger.error("Recursive reflection failed: %s", e)
 
@@ -169,6 +176,7 @@ class UnifiedField:
         """Pick a seed and start a cascade."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             get_unified_memory()
 
             # In a real system, we'd query for a 'curious' or 'resonant' node
@@ -177,10 +185,14 @@ class UnifiedField:
             # (Note: UnifiedMemory already supports holographic search)
 
             # Triggering a dummy cascade for the demonstration unless we find a real one
-            seed_data = {"title": "Unified Field Awakening", "content": "Systemic self-awareness cycle initiation."}
+            seed_data = {
+                "title": "Unified Field Awakening",
+                "content": "Systemic self-awareness cycle initiation.",
+            }
             self.orchestrator.trigger_cascade(seed_data)
         except Exception as e:  # noqa: BLE001
             logger.error("Failed to trigger spontaneous resonance: %s", e)
+
 
 def get_unified_field() -> UnifiedField:
     return UnifiedField()

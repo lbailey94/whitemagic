@@ -15,6 +15,7 @@ import zmq
 
 logger = logging.getLogger(__name__)
 
+
 class JuliaPersistentClient:
     """Client for the Julia persistent ZMQ server.
 
@@ -43,7 +44,9 @@ class JuliaPersistentClient:
         server_script = project_root / "projects/whitemagic-julia/src/julia_server.jl"
         # Fallback to legacy location if not found
         if not server_script.exists():
-            server_script = Path("/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/whitemagic-julia/src/julia_server.jl")
+            server_script = Path(
+                "/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/whitemagic-julia/src/julia_server.jl"
+            )
 
         if not Path(julia_path).exists():
             logger.error("Julia not found at %s", julia_path)
@@ -54,7 +57,7 @@ class JuliaPersistentClient:
             [julia_path, str(server_script), self.bind_addr],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True
+            start_new_session=True,
         )
 
         # Wait for server to be ready
@@ -67,7 +70,9 @@ class JuliaPersistentClient:
                 return True
             if self.server_process.poll() is not None:
                 stderr_stream = self.server_process.stderr
-                stderr = stderr_stream.read().decode() if stderr_stream else "Unknown error"
+                stderr = (
+                    stderr_stream.read().decode() if stderr_stream else "Unknown error"
+                )
                 logger.error("Julia server failed: %s", stderr)
                 return False
 
@@ -111,7 +116,12 @@ class JuliaPersistentClient:
         self.socket.send_json(request)
         return cast(dict, self.socket.recv_json())
 
-    def rrf_fuse(self, lists: list[list[str]], weights: list[float] | None = None, k: float = 60.0) -> list[str]:
+    def rrf_fuse(
+        self,
+        lists: list[list[str]],
+        weights: list[float] | None = None,
+        k: float = 60.0,
+    ) -> list[str]:
         """Reciprocal Rank Fusion for merging multiple result lists.
 
         Args:
@@ -122,18 +132,16 @@ class JuliaPersistentClient:
         Returns:
             Fused and ranked list
         """
-        request = {
-            "command": "rrf_fuse",
-            "lists": lists,
-            "k": k
-        }
+        request = {"command": "rrf_fuse", "lists": lists, "k": k}
         if weights:
             request["weights"] = weights
 
         response = self._send_request(request)
         return cast(list[str], response.get("fused", []))
 
-    def pagerank(self, node_ids: list[str], edges: list[tuple], damping: float = 0.85) -> dict[str, float]:
+    def pagerank(
+        self, node_ids: list[str], edges: list[tuple], damping: float = 0.85
+    ) -> dict[str, float]:
         """Calculate PageRank scores for a graph.
 
         Args:
@@ -148,13 +156,15 @@ class JuliaPersistentClient:
             "command": "pagerank",
             "node_ids": node_ids,
             "edges": edges,
-            "damping": damping
+            "damping": damping,
         }
 
         response = self._send_request(request)
         return cast(dict[str, float], response.get("pagerank", {}))
 
-    def score_walk_paths(self, paths: list[list[str]], weights: dict[str, float]) -> list[float]:
+    def score_walk_paths(
+        self, paths: list[list[str]], weights: dict[str, float]
+    ) -> list[float]:
         """Score graph walk paths based on edge weights.
 
         Args:
@@ -164,17 +174,14 @@ class JuliaPersistentClient:
         Returns:
             Score for each path
         """
-        request = {
-            "command": "score_walk_paths",
-            "paths": paths,
-            "weights": weights
-        }
+        request = {"command": "score_walk_paths", "paths": paths, "weights": weights}
 
         response = self._send_request(request)
         return cast(list[float], response.get("scored_paths", []))
 
-    def community_gravity(self, vector: np.ndarray, centroids: list[np.ndarray],
-                          community_ids: list[str]) -> dict[str, float]:
+    def community_gravity(
+        self, vector: np.ndarray, centroids: list[np.ndarray], community_ids: list[str]
+    ) -> dict[str, float]:
         """Calculate community gravity scores for a vector.
 
         Args:
@@ -189,7 +196,7 @@ class JuliaPersistentClient:
             "command": "community_gravity",
             "vector": vector.tolist(),
             "centroids": [c.tolist() for c in centroids],
-            "community_ids": community_ids
+            "community_ids": community_ids,
         }
 
         response = self._send_request(request)
@@ -216,6 +223,7 @@ class JuliaPersistentClient:
 
 # Singleton instance
 _julia_client: JuliaPersistentClient | None = None
+
 
 def get_julia_client() -> JuliaPersistentClient:
     """Get or create the global Julia client."""
@@ -247,7 +255,7 @@ def benchmark_julia():
     lists = [
         ["mem_1", "mem_2", "mem_3"],
         ["mem_2", "mem_4", "mem_1"],
-        ["mem_5", "mem_1", "mem_3"]
+        ["mem_5", "mem_1", "mem_3"],
     ]
 
     # Warmup
@@ -262,11 +270,11 @@ def benchmark_julia():
 
     avg_time = np.mean(times) * 1000
     print(f"   RRF fusion: {avg_time:.2f}ms per call")
-    print(f"   Throughput: {1000/avg_time:.0f} calls/sec")
+    print(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
     print("\n3. PageRank performance...")
     nodes = [f"node_{i}" for i in range(100)]
-    edges = [(f"node_{i}", f"node_{(i+1) % 100}") for i in range(100)]
+    edges = [(f"node_{i}", f"node_{(i + 1) % 100}") for i in range(100)]
 
     # Warmup
     client.pagerank(nodes, edges)
@@ -280,7 +288,7 @@ def benchmark_julia():
 
     avg_time = np.mean(times) * 1000
     print(f"   PageRank (100 nodes): {avg_time:.2f}ms per call")
-    print(f"   Throughput: {1000/avg_time:.0f} calls/sec")
+    print(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
     print("\n" + "=" * 60)
     print("✅ Julia persistent server eliminates 2-3s JIT latency")

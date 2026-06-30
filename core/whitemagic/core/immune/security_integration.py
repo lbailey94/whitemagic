@@ -155,7 +155,9 @@ class SecurityAntibody:
         base_cooldown = 60  # 1 minute
         return int(base_cooldown * (1.0 + self.effectiveness))
 
-    def update_effectiveness(self, outcome: bool, is_false_positive: bool = False) -> None:
+    def update_effectiveness(
+        self, outcome: bool, is_false_positive: bool = False
+    ) -> None:
         """Update antibody effectiveness based on outcomes (Hebbian learning)."""
         if is_false_positive:
             self.false_positives += 1
@@ -221,7 +223,9 @@ class SecurityImmuneSystem:
 
             logger.info("SecurityImmuneSystem connected to Gan Ying bus")
         except ImportError:
-            logger.warning("Gan Ying not available - security events will not be coordinated")
+            logger.warning(
+                "Gan Ying not available - security events will not be coordinated"
+            )
 
     def report_threat(
         self,
@@ -267,13 +271,15 @@ class SecurityImmuneSystem:
             )
 
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                source="security_immune",
-                event_type=EventType.PATTERN_DETECTED,  # Generic for now
-                data=event.to_dict(),
-                confidence=0.9,
-                timestamp=event.timestamp,
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    source="security_immune",
+                    event_type=EventType.PATTERN_DETECTED,  # Generic for now
+                    data=event.to_dict(),
+                    confidence=0.9,
+                    timestamp=event.timestamp,
+                )
+            )
         except Exception as e:
             logger.debug("Failed to emit security event: %s", e)
 
@@ -296,9 +302,10 @@ class SecurityImmuneSystem:
                 self.antibodies[antibody.antibody_id] = antibody
 
                 logger.warning(
-                    "New threat pattern detected: %s "
-                    "(frequency=%s)",
-                 pattern.pattern_type, pattern.frequency)
+                    "New threat pattern detected: %s (frequency=%s)",
+                    pattern.pattern_type,
+                    pattern.frequency,
+                )
 
                 # Emit emergence event
                 self._emit_emergence(pattern, antibody)
@@ -332,6 +339,7 @@ class SecurityImmuneSystem:
                 pattern_type = self._classify_pattern(tool_events)
 
                 from uuid import uuid4
+
                 return ThreatPattern(
                     pattern_id=str(uuid4()),
                     pattern_type=pattern_type,
@@ -364,7 +372,9 @@ class SecurityImmuneSystem:
         severity_order = ["low", "medium", "high", "critical"]
 
         for event in events:
-            if severity_order.index(event.severity) > severity_order.index(max_severity):
+            if severity_order.index(event.severity) > severity_order.index(
+                max_severity
+            ):
                 max_severity = event.severity
 
         # Escalate if high frequency
@@ -386,7 +396,9 @@ class SecurityImmuneSystem:
         logger.info("Generated security antibody for %s", pattern.pattern_type)
         return antibody
 
-    def _emit_emergence(self, pattern: ThreatPattern, antibody: SecurityAntibody) -> None:
+    def _emit_emergence(
+        self, pattern: ThreatPattern, antibody: SecurityAntibody
+    ) -> None:
         """Emit emergence event for novel threat."""
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
@@ -396,20 +408,24 @@ class SecurityImmuneSystem:
             )
 
             bus = get_bus()
-            emergence_event = getattr(EventType, "EMERGENCE_DETECTED", EventType.PATTERN_DETECTED)
-            bus.emit(ResonanceEvent(
-                source="security_immune",
-                event_type=emergence_event,
-                data={
-                    "pattern_id": pattern.pattern_id,
-                    "pattern_type": pattern.pattern_type,
-                    "severity": pattern.severity,
-                    "antibody_id": antibody.antibody_id,
-                    "indicators": pattern.indicators,
-                },
-                confidence=pattern.confidence,
-                timestamp=datetime.now(),
-            ))
+            emergence_event = getattr(
+                EventType, "EMERGENCE_DETECTED", EventType.PATTERN_DETECTED
+            )
+            bus.emit(
+                ResonanceEvent(
+                    source="security_immune",
+                    event_type=emergence_event,
+                    data={
+                        "pattern_id": pattern.pattern_id,
+                        "pattern_type": pattern.pattern_type,
+                        "severity": pattern.severity,
+                        "antibody_id": antibody.antibody_id,
+                        "indicators": pattern.indicators,
+                    },
+                    confidence=pattern.confidence,
+                    timestamp=datetime.now(),
+                )
+            )
         except Exception as e:
             logger.debug("Failed to emit emergence event: %s", e)
 
@@ -453,18 +469,21 @@ class SecurityImmuneSystem:
                     ResonanceEvent,
                     get_bus,
                 )
+
                 bus = get_bus()
-                bus.emit(ResonanceEvent(
-                    source="security_immune",
-                    event_type=EventType.SOLUTION_FOUND,
-                    data={
-                        "antibody_id": best_match.antibody_id,
-                        "event_id": event.event_id,
-                        "response": response.action,
-                        "match_score": best_score,
-                    },
-                    confidence=best_match.effectiveness,
-                ))
+                bus.emit(
+                    ResonanceEvent(
+                        source="security_immune",
+                        event_type=EventType.SOLUTION_FOUND,
+                        data={
+                            "antibody_id": best_match.antibody_id,
+                            "event_id": event.event_id,
+                            "response": response.action,
+                            "match_score": best_score,
+                        },
+                        confidence=best_match.effectiveness,
+                    )
+                )
             except Exception:
                 pass
 
@@ -477,12 +496,10 @@ class SecurityImmuneSystem:
         # Count recent high-severity events
         cutoff = datetime.now() - timedelta(minutes=5)
         recent_critical = sum(
-            1 for e in self.events
-            if e.timestamp > cutoff and e.severity == "critical"
+            1 for e in self.events if e.timestamp > cutoff and e.severity == "critical"
         )
         recent_high = sum(
-            1 for e in self.events
-            if e.timestamp > cutoff and e.severity == "high"
+            1 for e in self.events if e.timestamp > cutoff and e.severity == "high"
         )
 
         if recent_critical > 5:
@@ -505,8 +522,10 @@ class SecurityImmuneSystem:
             "antibodies_active": len(self.antibodies),
             "threat_level": self.threat_level.value,
             "avg_antibody_effectiveness": (
-                sum(a.effectiveness for a in self.antibodies.values()) / len(self.antibodies)
-                if self.antibodies else 0.0
+                sum(a.effectiveness for a in self.antibodies.values())
+                / len(self.antibodies)
+                if self.antibodies
+                else 0.0
             ),
         }
 
@@ -538,12 +557,16 @@ class SecurityAutoimmune:
             if fp_rate > self.false_positive_threshold:
                 logger.warning(
                     "Antibody %s has high false positive rate: %s",
-                 antibody.antibody_id, format(fp_rate, ".2%"))
+                    antibody.antibody_id,
+                    format(fp_rate, ".2%"),
+                )
 
                 if fp_rate > 0.5:
                     # Remove overly aggressive antibody
                     del self.immune.antibodies[antibody.antibody_id]
-                    logger.info("Removed antibody %s (too aggressive)", antibody.antibody_id)
+                    logger.info(
+                        "Removed antibody %s (too aggressive)", antibody.antibody_id
+                    )
 
                     # Emit autoimmune event
                     self._emit_autoimmune_event(antibody, "removed")
@@ -562,19 +585,25 @@ class SecurityAutoimmune:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
-            healed_event = getattr(EventType, "SYSTEM_HEALED", EventType.SYSTEM_HEALTH_CHANGED)
-            bus.emit(ResonanceEvent(
-                source="security_autoimmune",
-                event_type=healed_event,
-                data={
-                    "antibody_id": antibody.antibody_id,
-                    "action": action,
-                    "false_positive_rate": antibody.false_positives / antibody.applications,
-                    "reason": "high_false_positive_rate",
-                },
-                confidence=0.8,
-            ))
+            healed_event = getattr(
+                EventType, "SYSTEM_HEALED", EventType.SYSTEM_HEALTH_CHANGED
+            )
+            bus.emit(
+                ResonanceEvent(
+                    source="security_autoimmune",
+                    event_type=healed_event,
+                    data={
+                        "antibody_id": antibody.antibody_id,
+                        "action": action,
+                        "false_positive_rate": antibody.false_positives
+                        / antibody.applications,
+                        "reason": "high_false_positive_rate",
+                    },
+                    confidence=0.8,
+                )
+            )
         except Exception:
             pass
 

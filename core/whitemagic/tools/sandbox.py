@@ -12,6 +12,7 @@ Usage:
     sandbox = get_sandbox()
     result = sandbox.execute(tool_name, handler_fn, kwargs, limits)
 """
+
 # ruff: noqa: BLE001
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 HAS_RESOURCE = False
 try:
     import resource
+
     HAS_RESOURCE = True
 except ImportError:
     pass
@@ -40,9 +42,9 @@ except ImportError:
 class ResourceLimits:
     """Resource limits for a single tool execution."""
 
-    timeout_s: float = 30.0       # Max execution time in seconds
-    max_memory_mb: int = 512      # Max memory in MB (Linux only)
-    max_cpu_s: float = 10.0       # Max CPU time in seconds (Linux only)
+    timeout_s: float = 30.0  # Max execution time in seconds
+    max_memory_mb: int = 512  # Max memory in MB (Linux only)
+    max_cpu_s: float = 10.0  # Max CPU time in seconds (Linux only)
     max_output_bytes: int = 10_000_000  # Max output size
 
     def to_dict(self) -> dict[str, Any]:
@@ -77,7 +79,10 @@ class SandboxResult:
         Returns:
             dict[str, Any]
         """
-        d: dict[str, Any] = {"success": self.success, "duration_s": round(self.duration_s, 4)}
+        d: dict[str, Any] = {
+            "success": self.success,
+            "duration_s": round(self.duration_s, 4),
+        }
         if self.result is not None:
             d["result"] = self.result
         if self.error:
@@ -138,9 +143,13 @@ class ToolSandbox:
             start = time.time()
             try:
                 result = handler(**kwargs)
-                return SandboxResult(success=True, result=result, duration_s=time.time() - start)
+                return SandboxResult(
+                    success=True, result=result, duration_s=time.time() - start
+                )
             except Exception as e:
-                return SandboxResult(success=False, error=str(e), duration_s=time.time() - start)
+                return SandboxResult(
+                    success=False, error=str(e), duration_s=time.time() - start
+                )
 
         limits = self.get_limits(tool_name, safety)
         start = time.time()
@@ -148,7 +157,12 @@ class ToolSandbox:
         # Track stats
         with self._lock:
             if tool_name not in self._stats:
-                self._stats[tool_name] = {"calls": 0, "timeouts": 0, "errors": 0, "limit_hits": 0}
+                self._stats[tool_name] = {
+                    "calls": 0,
+                    "timeouts": 0,
+                    "errors": 0,
+                    "limit_hits": 0,
+                }
             self._stats[tool_name]["calls"] += 1
 
         def _run() -> Any:
@@ -175,28 +189,40 @@ class ToolSandbox:
             duration = time.time() - start
             with self._lock:
                 self._stats[tool_name]["timeouts"] += 1
-                self._violations.append({
-                    "tool": tool_name, "limit": "timeout",
-                    "value": limits.timeout_s, "time": time.time(),
-                })
+                self._violations.append(
+                    {
+                        "tool": tool_name,
+                        "limit": "timeout",
+                        "value": limits.timeout_s,
+                        "time": time.time(),
+                    }
+                )
                 if len(self._violations) > 500:
                     self._violations = self._violations[-250:]
             return SandboxResult(
-                success=False, error=f"Timeout after {limits.timeout_s}s",
-                duration_s=duration, exceeded_limit="timeout",
+                success=False,
+                error=f"Timeout after {limits.timeout_s}s",
+                duration_s=duration,
+                exceeded_limit="timeout",
             )
 
         except MemoryError:
             duration = time.time() - start
             with self._lock:
                 self._stats[tool_name]["limit_hits"] += 1
-                self._violations.append({
-                    "tool": tool_name, "limit": "memory",
-                    "value": limits.max_memory_mb, "time": time.time(),
-                })
+                self._violations.append(
+                    {
+                        "tool": tool_name,
+                        "limit": "memory",
+                        "value": limits.max_memory_mb,
+                        "time": time.time(),
+                    }
+                )
             return SandboxResult(
-                success=False, error=f"Memory limit exceeded ({limits.max_memory_mb}MB)",
-                duration_s=duration, exceeded_limit="memory",
+                success=False,
+                error=f"Memory limit exceeded ({limits.max_memory_mb}MB)",
+                duration_s=duration,
+                exceeded_limit="memory",
             )
 
         except Exception as e:
@@ -225,6 +251,7 @@ class ToolSandbox:
 # Singleton
 _sandbox: ToolSandbox | None = None
 _sandbox_lock = threading.Lock()
+
 
 def get_sandbox() -> ToolSandbox:
     """

@@ -9,9 +9,11 @@ from __future__ import annotations
 
 from whitemagic.core.consciousness.depth_gauge import (
     ConsciousnessDepthGauge,
-    ConsciousnessLayer as DepthLayer,
     DepthReading,
     get_depth_gauge,
+)
+from whitemagic.core.consciousness.depth_gauge import (
+    ConsciousnessLayer as DepthLayer,
 )
 
 __all__ = [

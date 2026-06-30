@@ -1,4 +1,3 @@
-
 with open("tests/unit/autonomous/executor/test_continuous_executor.py") as f:
     content = f.read()
 
@@ -12,7 +11,7 @@ content = content.replace(
         with patch.object(executor, 'execute_batch_async', new_callable=AsyncMock) as mock_batch:
             executor.limits.should_stop.side_effect = [(False, None), (True, "Stop for test")]
             await executor.run_continuous()
-            mock_self_direct.assert_called()"""
+            mock_self_direct.assert_called()""",
 )
 
 with open("tests/unit/autonomous/executor/test_continuous_executor.py", "w") as f:

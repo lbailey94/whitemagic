@@ -1,6 +1,5 @@
 import ast
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
 
 from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
@@ -8,11 +7,17 @@ from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 
 @register
-def check_protocol_dead_code(project_path: Path, file_index: FileIndex, findings: List[Finding]):
+def check_protocol_dead_code(
+    project_path: Path, file_index: FileIndex, findings: list[Finding]
+):
     """Detect Protocol classes whose methods are never called (type-aware dead code)."""
-    protocol_classes: Dict[str, Tuple[Path, int, List[str]]] = {}  # class_name -> (file, line, methods)
-    all_calls: Set[str] = set()
-    protocol_references: Set[str] = set()  # classes referenced in isinstance or type annotations
+    protocol_classes: dict[
+        str, tuple[Path, int, list[str]]
+    ] = {}  # class_name -> (file, line, methods)
+    all_calls: set[str] = set()
+    protocol_references: set[str] = (
+        set()
+    )  # classes referenced in isinstance or type annotations
 
     for py_file in file_index.python_files():
         if FileIndex.is_test_file(py_file):
@@ -60,7 +65,9 @@ def check_protocol_dead_code(project_path: Path, file_index: FileIndex, findings
                 elif isinstance(node.annotation, ast.Subscript):
                     if isinstance(node.annotation.value, ast.Name):
                         protocol_references.add(node.annotation.value.id)
-            elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
+            elif isinstance(node, ast.FunctionDef) or isinstance(
+                node, ast.AsyncFunctionDef
+            ):
                 # Check return type annotations
                 if node.returns and isinstance(node.returns, ast.Name):
                     protocol_references.add(node.returns.id)
@@ -73,14 +80,16 @@ def check_protocol_dead_code(project_path: Path, file_index: FileIndex, findings
     for class_name, (file_path, line_num, methods) in protocol_classes.items():
         # If the Protocol itself is never referenced, flag the whole class
         if class_name not in protocol_references and class_name not in all_calls:
-            findings.append(Finding(
-                severity=FindingSeverity.INFO,
-                category="dead_code",
-                file=str(file_path.relative_to(project_path)),
-                line=line_num,
-                message=f"Protocol '{class_name}' may be unused (never referenced in isinstance or type annotations).",
-                suggestion="Verify this Protocol is still needed or remove it."
-            ))
+            findings.append(
+                Finding(
+                    severity=FindingSeverity.INFO,
+                    category="dead_code",
+                    file=str(file_path.relative_to(project_path)),
+                    line=line_num,
+                    message=f"Protocol '{class_name}' may be unused (never referenced in isinstance or type annotations).",
+                    suggestion="Verify this Protocol is still needed or remove it.",
+                )
+            )
             continue
 
         # Check individual Protocol methods
@@ -90,14 +99,27 @@ def check_protocol_dead_code(project_path: Path, file_index: FileIndex, findings
             if method_name in all_calls:
                 continue
             # Common protocol methods that are often called implicitly
-            if method_name in {"__iter__", "__enter__", "__exit__", "__len__", "__getitem__",
-                               "close", "read", "write", "flush", "send", "recv"}:
+            if method_name in {
+                "__iter__",
+                "__enter__",
+                "__exit__",
+                "__len__",
+                "__getitem__",
+                "close",
+                "read",
+                "write",
+                "flush",
+                "send",
+                "recv",
+            }:
                 continue
-            findings.append(Finding(
-                severity=FindingSeverity.INFO,
-                category="dead_code",
-                file=str(file_path.relative_to(project_path)),
-                line=line_num,
-                message=f"Protocol method '{class_name}.{method_name}' may be unused.",
-                suggestion="If part of a public interface, it may be called externally. Verify before removing."
-            ))
+            findings.append(
+                Finding(
+                    severity=FindingSeverity.INFO,
+                    category="dead_code",
+                    file=str(file_path.relative_to(project_path)),
+                    line=line_num,
+                    message=f"Protocol method '{class_name}.{method_name}' may be unused.",
+                    suggestion="If part of a public interface, it may be called externally. Verify before removing.",
+                )
+            )

@@ -10,6 +10,7 @@ activity rhythms, and improvement trajectories.
 This is physics-inspired transfer learning: instead of semantic similarity,
 we use dynamic similarity (do these systems oscillate in phase?).
 """
+
 from __future__ import annotations
 
 import math
@@ -20,9 +21,10 @@ from typing import Any
 @dataclass
 class ResonanceSignature:
     """Frequency-domain signature of a subsystem."""
+
     subsystem_id: str
     frequencies: list[float] = field(default_factory=list)  # Dominant frequencies
-    amplitudes: list[float] = field(default_factory=list)   # Amplitude at each frequency
+    amplitudes: list[float] = field(default_factory=list)  # Amplitude at each frequency
     error_pattern: list[float] = field(default_factory=list)  # Time-series error rates
     activity_rhythm: list[float] = field(default_factory=list)  # Activity over time
 
@@ -40,6 +42,7 @@ class ResonanceSignature:
 @dataclass
 class TransferProposal:
     """A proposal to transfer an improvement from one subsystem to another."""
+
     source_id: str
     target_id: str
     improvement_id: str
@@ -66,7 +69,9 @@ class ResonanceTransferEngine:
         """Register a subsystem's resonance signature."""
         self._signatures[signature.subsystem_id] = signature
         # Invalidate cache for this subsystem
-        keys_to_remove = [k for k in self._resonance_cache if signature.subsystem_id in k]
+        keys_to_remove = [
+            k for k in self._resonance_cache if signature.subsystem_id in k
+        ]
         for k in keys_to_remove:
             del self._resonance_cache[k]
 
@@ -98,7 +103,9 @@ class ResonanceTransferEngine:
         freq_sim = self._cosine_similarity(sig_a.to_vector(), sig_b.to_vector())
 
         # 3. Activity rhythm correlation
-        activity_corr = self._cross_correlation(sig_a.activity_rhythm, sig_b.activity_rhythm)
+        activity_corr = self._cross_correlation(
+            sig_a.activity_rhythm, sig_b.activity_rhythm
+        )
 
         # Weighted combination
         resonance = 0.4 * abs(error_corr) + 0.3 * freq_sim + 0.3 * abs(activity_corr)
@@ -120,7 +127,9 @@ class ResonanceTransferEngine:
         mean_a = sum(a_padded) / n
         mean_b = sum(b_padded) / n
 
-        numerator = sum((a_padded[i] - mean_a) * (b_padded[i] - mean_b) for i in range(n))
+        numerator = sum(
+            (a_padded[i] - mean_a) * (b_padded[i] - mean_b) for i in range(n)
+        )
         var_a = sum((x - mean_a) ** 2 for x in a_padded)
         var_b = sum((x - mean_b) ** 2 for x in b_padded)
 
@@ -190,7 +199,11 @@ class ResonanceTransferEngine:
         """Get transfer proposals, optionally filtered by subsystem."""
         if subsystem_id is None:
             return list(self._transfers)
-        return [t for t in self._transfers if t.source_id == subsystem_id or t.target_id == subsystem_id]
+        return [
+            t
+            for t in self._transfers
+            if t.source_id == subsystem_id or t.target_id == subsystem_id
+        ]
 
     def get_stats(self) -> dict[str, Any]:
         return {
@@ -198,6 +211,7 @@ class ResonanceTransferEngine:
             "total_transfers": len(self._transfers),
             "avg_resonance": (
                 sum(t.resonance_score for t in self._transfers) / len(self._transfers)
-                if self._transfers else 0.0
+                if self._transfers
+                else 0.0
             ),
         }

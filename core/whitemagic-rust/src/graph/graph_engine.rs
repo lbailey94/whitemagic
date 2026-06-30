@@ -289,10 +289,6 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
-// S026 VC2: Additional hot path functions
-// ---------------------------------------------------------------------------
-
 /// Calculate bridging centrality for nodes
 ///
 /// bridging_centrality(v) = betweenness(v) * bridging_coefficient(v)
@@ -489,10 +485,6 @@ pub fn py_batch_node_distances(
     distances.truncate(limit);
     distances
 }
-
-// ---------------------------------------------------------------------------
-// Python module registration
-// ---------------------------------------------------------------------------
 
 #[cfg(feature = "python")]
 pub fn graph_engine(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {

@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DreamSequence:
     """A single dream sequence for memory consolidation."""
+
     timestamp: float = field(default_factory=time.time)
     memories_processed: int = 0
     connections_found: int = 0
@@ -81,13 +82,16 @@ class DreamState:
 
         logger.info(
             "Dream cycle complete: %d memories, %d connections, %d patterns",
-            seq.memories_processed, seq.connections_found, seq.patterns_synthesized,
+            seq.memories_processed,
+            seq.connections_found,
+            seq.patterns_synthesized,
         )
         return seq
 
     def _consolidate_memories(self) -> int:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             recent = mem.recent(limit=50) if hasattr(mem, "recent") else []
             return len(recent)
@@ -97,6 +101,7 @@ class DreamState:
     def _find_connections(self) -> int:
         try:
             from whitemagic.core.memory.temporal_weaving import TemporalWeaver
+
             weaver = TemporalWeaver()
             threads = weaver.list_threads() if hasattr(weaver, "list_threads") else []
             return len(threads)
@@ -106,6 +111,7 @@ class DreamState:
     def _synthesize_patterns(self) -> int:
         try:
             from whitemagic.emergence.detector import get_detector
+
             detector = get_detector()
             recent = detector.recent_behaviors(limit=5)
             return len(recent)
@@ -125,7 +131,9 @@ class DreamState:
             "total_dreams": len(self.sequences),
             "currently_dreaming": self._dreaming,
             "last_dream_time": last.timestamp if last else 0,
-            "total_memories_processed": sum(s.memories_processed for s in self.sequences),
+            "total_memories_processed": sum(
+                s.memories_processed for s in self.sequences
+            ),
             "total_connections": sum(s.connections_found for s in self.sequences),
         }
 

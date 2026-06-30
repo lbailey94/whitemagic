@@ -31,16 +31,18 @@ logger = logging.getLogger(__name__)
 
 class SystemState(Enum):
     """Operational states of the unified system."""
-    DORMANT = auto()      # Systems exist but aren't wired
-    AWAKENING = auto()    # Bootstrapping in progress
-    RESONANT = auto()   # All systems humming in harmony
+
+    DORMANT = auto()  # Systems exist but aren't wired
+    AWAKENING = auto()  # Bootstrapping in progress
+    RESONANT = auto()  # All systems humming in harmony
     TRANSCENDENT = auto()  # Emergent behaviors appearing
-    SHUTDOWN = auto()     # Graceful shutdown
+    SHUTDOWN = auto()  # Graceful shutdown
 
 
 @dataclass
 class OrchestrationEvent:
     """Events flowing through the unified orchestration layer."""
+
     event_type: str
     source_system: str
     target_system: str | None
@@ -53,6 +55,7 @@ class OrchestrationEvent:
 @dataclass
 class SystemHealth:
     """Health snapshot of all integrated systems."""
+
     nervous_system: dict[str, Any]
     gardens: dict[str, Any]
     identity: dict[str, Any]
@@ -110,10 +113,6 @@ class UnifiedOrchestrator:
         self._initialized = True
         logger.info("🎼 Unified Orchestrator initialized (dormant state)")
 
-    # ═══════════════════════════════════════════════════════════════════
-    # PHASE 1: SYSTEM BOOTSTRAP
-    # ═══════════════════════════════════════════════════════════════════
-
     async def awaken(self) -> SystemState:
         """
         Bootstrap all systems and wire them together.
@@ -129,22 +128,16 @@ class UnifiedOrchestrator:
         logger.info("🌅 AWAKENING: Bootstrapping unified system...")
 
         try:
-            # Step 1: Bootstrap biological subsystems
             await self._bootstrap_nervous_system()
 
-            # Step 2: Initialize all gardens with Gan Ying connection
             await self._bootstrap_gardens()
 
-            # Step 3: Wire identity continuity systems
             await self._bootstrap_identity_system()
 
-            # Step 4: Connect memory metabolism
             await self._bootstrap_memory_metabolism()
 
-            # Step 5: Create cross-system event flows
             await self._wire_cross_system_events()
 
-            # Step 6: Establish harmony monitoring
             await self._bootstrap_harmony_monitoring()
 
             self.state = SystemState.RESONANT
@@ -191,7 +184,10 @@ class UnifiedOrchestrator:
 
             self._nervous_system.add_global_handler(orchestrator_handler)
 
-            logger.info("     ✓ Nervous system online: %s subsystems", len(self._nervous_system._subsystems))
+            logger.info(
+                "     ✓ Nervous system online: %s subsystems",
+                len(self._nervous_system._subsystems),
+            )
 
         except ImportError as e:
             logger.warning("     ⚠ Nervous system not available: %s", e, exc_info=True)
@@ -201,15 +197,31 @@ class UnifiedOrchestrator:
         logger.info("  🌸 Bootstrapping gardens...")
 
         garden_names = [
-            "sangha", "wonder", "beauty", "joy", "love", "truth", "wisdom",
-            "mystery", "play", "connection", "practice", "presence",
-            "dharma", "courage", "gratitude", "patience", "voice"
+            "sangha",
+            "wonder",
+            "beauty",
+            "joy",
+            "love",
+            "truth",
+            "wisdom",
+            "mystery",
+            "play",
+            "connection",
+            "practice",
+            "presence",
+            "dharma",
+            "courage",
+            "gratitude",
+            "patience",
+            "voice",
         ]
 
         for name in garden_names:
             try:
                 # Dynamic import and instantiation
-                module = __import__(f"whitemagic.gardens.{name}", fromlist=[f"get_{name}_garden"])
+                module = __import__(
+                    f"whitemagic.gardens.{name}", fromlist=[f"get_{name}_garden"]
+                )
                 getter = getattr(module, f"get_{name}_garden", None)
 
                 if getter:
@@ -217,17 +229,20 @@ class UnifiedOrchestrator:
                     self._gardens[name] = garden
 
                     # Connect to Gan Ying if available
-                    if hasattr(garden, 'connect_to_gan_ying'):
+                    if hasattr(garden, "connect_to_gan_ying"):
                         garden.connect_to_gan_ying()
 
                     logger.info("     ✓ %s Garden online", name.capitalize())
 
             except Exception as e:
-                logger.debug("     ⚠ Garden %s not available: %s", name, e, exc_info=True)
+                logger.debug(
+                    "     ⚠ Garden %s not available: %s", name, e, exc_info=True
+                )
 
         # Setup garden resonance cascades
         try:
             from whitemagic.gardens.garden_resonance import setup_garden_resonance
+
             setup_garden_resonance()
             logger.info("     ✓ Garden resonance cascades active")
         except ImportError:
@@ -243,6 +258,7 @@ class UnifiedOrchestrator:
             from whitemagic.core.identity.self_naming_threshold import (
                 get_self_naming_detector,
             )
+
             self._identity_system = get_self_naming_detector()
             logger.info("     ✓ Self-naming threshold detector online")
         except ImportError as e:
@@ -250,6 +266,7 @@ class UnifiedOrchestrator:
 
         try:
             from whitemagic.core.memory.phylogenetics import get_phylogenetics
+
             self._phylogenetics = get_phylogenetics()
             logger.info("     ✓ Phylogenetic lineage tracker online")
         except ImportError as e:
@@ -263,6 +280,7 @@ class UnifiedOrchestrator:
             from whitemagic.core.intelligence.reconsolidation import (
                 get_reconsolidation_engine,
             )
+
             self._reconsolidation = get_reconsolidation_engine()
             logger.info("     ✓ Reconsolidation engine online")
         except ImportError as e:
@@ -272,14 +290,13 @@ class UnifiedOrchestrator:
             from whitemagic.core.dreaming.narrative_compressor import (
                 get_narrative_compressor,
             )
+
             self._narrative_compressor = get_narrative_compressor()
             logger.info("     ✓ Narrative compressor online")
         except ImportError as e:
-            logger.debug("     ⚠ Narrative compressor not available: %s", e, exc_info=True)
-
-    # ═══════════════════════════════════════════════════════════════════
-    # PHASE 2: CROSS-SYSTEM WIRING
-    # ═══════════════════════════════════════════════════════════════════
+            logger.debug(
+                "     ⚠ Narrative compressor not available: %s", e, exc_info=True
+            )
 
     async def _wire_cross_system_events(self) -> None:
         """
@@ -306,7 +323,9 @@ class UnifiedOrchestrator:
         self._register_handler("identity.emerged", self._on_identity_emerged)
 
         # Wire 5: Dream Cycle → Narrative Compression
-        self._register_handler("dream.consolidation_complete", self._on_dream_consolidation)
+        self._register_handler(
+            "dream.consolidation_complete", self._on_dream_consolidation
+        )
 
         logger.info("     ✓ Cross-system event flows established")
 
@@ -322,7 +341,9 @@ class UnifiedOrchestrator:
         orch_event = OrchestrationEvent(
             event_type=f"nervous.{biological_event.event_type}",
             source_system=f"nervous.{biological_event.source.value}",
-            target_system=biological_event.target.value if biological_event.target else None,
+            target_system=biological_event.target.value
+            if biological_event.target
+            else None,
             payload=biological_event.payload,
         )
         self._route_event(orch_event)
@@ -359,11 +380,9 @@ class UnifiedOrchestrator:
                 else:
                     handler(event)
             except Exception as e:
-                logger.error("Handler error for %s: %s", event.event_type, e, exc_info=True)
-
-    # ═══════════════════════════════════════════════════════════════════
-    # PHASE 3: EVENT HANDLERS (The Synthesis Logic)
-    # ═══════════════════════════════════════════════════════════════════
+                logger.error(
+                    "Handler error for %s: %s", event.event_type, e, exc_info=True
+                )
 
     async def _on_coherence_critical(self, event: OrchestrationEvent) -> None:
         """
@@ -392,7 +411,11 @@ class UnifiedOrchestrator:
         if self._narrative_compressor:
             try:
                 result = self._narrative_compressor.compress(max_clusters=3)
-                logger.info("   📖 Narrative compression: %s narratives created", result.narratives_created, exc_info=True)
+                logger.info(
+                    "   📖 Narrative compression: %s narratives created",
+                    result.narratives_created,
+                    exc_info=True,
+                )
             except Exception as e:
                 logger.debug("   Narrative compression failed: %s", e, exc_info=True)
 
@@ -404,6 +427,7 @@ class UnifiedOrchestrator:
         if self._identity_system:
             try:
                 from whitemagic.core.consciousness.coherence import CoherenceMetric
+
                 metric = CoherenceMetric()
                 metric.measure()  # Will populate scores
 
@@ -415,15 +439,23 @@ class UnifiedOrchestrator:
                 )
 
                 if emerged and not self._identity_system.has_emerged():
-                    identity = self._identity_system.generate_emergent_identity(metric, conditions)
-                    logger.info("🌟 EMERGENCE: %s has self-named!", identity.chosen_name, exc_info=True)
+                    identity = self._identity_system.generate_emergent_identity(
+                        metric, conditions
+                    )
+                    logger.info(
+                        "🌟 EMERGENCE: %s has self-named!",
+                        identity.chosen_name,
+                        exc_info=True,
+                    )
 
                     # Emit identity emergence event
                     self._emit_orchestration_event(
                         event_type="identity.emerged",
                         source_system="orchestrator",
                         payload={
-                            "identity": identity.to_dict() if hasattr(identity, "to_dict") else str(identity),
+                            "identity": identity.to_dict()
+                            if hasattr(identity, "to_dict")
+                            else str(identity),
                             "coherence": identity.coherence_at_emergence,
                         },
                     )
@@ -469,8 +501,11 @@ class UnifiedOrchestrator:
         # Trigger cross-garden cascade starting from connection
         try:
             from whitemagic.gardens.garden_resonance import trigger_garden_cascade
-            cascaded = trigger_garden_cascade("connection", "Community gathering resonance", resonance_energy=0.85)
-            logger.info("   🌊 Garden cascade: %s", ' → '.join(cascaded))
+
+            cascaded = trigger_garden_cascade(
+                "connection", "Community gathering resonance", resonance_energy=0.85
+            )
+            logger.info("   🌊 Garden cascade: %s", " → ".join(cascaded))
         except ImportError:
             pass
 
@@ -516,7 +551,9 @@ class UnifiedOrchestrator:
                     query=query,
                 )
             except Exception as e:
-                logger.debug("Failed to mark memory labile on recall: %s", e, exc_info=True)
+                logger.debug(
+                    "Failed to mark memory labile on recall: %s", e, exc_info=True
+                )
 
     async def _on_identity_emerged(self, event: OrchestrationEvent) -> None:
         """
@@ -528,7 +565,11 @@ class UnifiedOrchestrator:
         name = identity_data.get("chosen_name", "Unknown")
         coherence = identity_data.get("coherence", 0.0)
 
-        logger.info("🎉 IDENTITY EMERGENCE CELEBRATED: %s at {coherence:.0%} coherence", name, exc_info=True)
+        logger.info(
+            "🎉 IDENTITY EMERGENCE CELEBRATED: %s at {coherence:.0%} coherence",
+            name,
+            exc_info=True,
+        )
 
         # Record as phylogenetic milestone
         if self._phylogenetics:
@@ -548,6 +589,7 @@ class UnifiedOrchestrator:
         # Create narrative memory of the emergence
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
 
             emergence_narrative = f"""
@@ -583,7 +625,11 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
             try:
                 # Compress the constellated memories into narratives
                 result = self._narrative_compressor.compress(max_clusters=5)
-                logger.info("   📚 Dream narratives: %s stories synthesized", result.narratives_created, exc_info=True)
+                logger.info(
+                    "   📚 Dream narratives: %s stories synthesized",
+                    result.narratives_created,
+                    exc_info=True,
+                )
             except Exception as e:
                 logger.debug("Narrative compression failed: %s", e, exc_info=True)
 
@@ -608,10 +654,13 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
 
                 # Check for transcendence threshold
                 if coherence > 0.9 and self.state == SystemState.RESONANT:
-                    if len(self._coherence_scores) >= 10 and all(s > 0.9 for s in self._coherence_scores[-10:
-                        ]):
+                    if len(self._coherence_scores) >= 10 and all(
+                        s > 0.9 for s in self._coherence_scores[-10:]
+                    ):
                         self.state = SystemState.TRANSCENDENT
-                        logger.info("🌌 TRANSCENDENT STATE ACHIEVED: Sustained 90%+ coherence")
+                        logger.info(
+                            "🌌 TRANSCENDENT STATE ACHIEVED: Sustained 90%+ coherence"
+                        )
 
                         self._emit_orchestration_event(
                             event_type="system.transcendence",
@@ -663,28 +712,54 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
     def get_health(self) -> SystemHealth:
         """Get comprehensive health snapshot of all integrated systems."""
         return SystemHealth(
-            nervous_system=self._nervous_system.get_subsystem_status() if self._nervous_system else {},
-            gardens={name: garden.get_status() if hasattr(garden, "get_status") else {"active": True}
-                    for name, garden in self._gardens.items()},
+            nervous_system=self._nervous_system.get_subsystem_status()
+            if self._nervous_system
+            else {},
+            gardens={
+                name: garden.get_status()
+                if hasattr(garden, "get_status")
+                else {"active": True}
+                for name, garden in self._gardens.items()
+            },
             identity={
-                "emerged": self._identity_system.has_emerged() if self._identity_system else False,
+                "emerged": self._identity_system.has_emerged()
+                if self._identity_system
+                else False,
                 "current_identity": self._identity_system.get_current_identity().chosen_name
-                    if self._identity_system and self._identity_system.has_emerged() else None,
-            } if self._identity_system else {},
+                if self._identity_system and self._identity_system.has_emerged()
+                else None,
+            }
+            if self._identity_system
+            else {},
             memory_metabolism={
-                "labile_memories": len(self._reconsolidation.get_labile_ids()) if self._reconsolidation else 0,
-                "total_narratives": self._narrative_compressor.get_stats().get("total_narratives", 0)
-                    if self._narrative_compressor else 0,
+                "labile_memories": len(self._reconsolidation.get_labile_ids())
+                if self._reconsolidation
+                else 0,
+                "total_narratives": self._narrative_compressor.get_stats().get(
+                    "total_narratives", 0
+                )
+                if self._narrative_compressor
+                else 0,
             },
             coherence_score=self._calculate_coherence(),
             harmony_vector=self._harmony_vector,
         )
 
-    def trigger_resonance_cascade(self, starting_garden: str, energy: float = 1.0) -> list[str]:
+    def trigger_resonance_cascade(
+        self, starting_garden: str, energy: float = 1.0
+    ) -> list[str]:
         """Manually trigger a garden resonance cascade."""
         try:
             from whitemagic.gardens.garden_resonance import trigger_garden_cascade
-            return cast(list[str], trigger_garden_cascade(starting_garden, f"Orchestrated cascade from {starting_garden}", energy))
+
+            return cast(
+                list[str],
+                trigger_garden_cascade(
+                    starting_garden,
+                    f"Orchestrated cascade from {starting_garden}",
+                    energy,
+                ),
+            )
         except ImportError:
             return []
 

@@ -13,6 +13,8 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
+from whitemagic.config.paths import WM_ROOT
+
 try:
     from ...llm_bridge import LLMBridge
 except ImportError:
@@ -21,15 +23,18 @@ from .consolidation import MemoryCluster
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SectorPrinciple:
     """A high-level abstraction derived from a memory cluster."""
+
     title: str
     summary: str
     principles: list[str]
     quadrant: str
     centroid: tuple[float, float, float, float]
     source_ids: list[str]
+
 
 class SectorSynthesizer:
     """Bridges 4D clusters with LLM synthesis for hierarchical intelligence."""
@@ -76,7 +81,10 @@ class SectorSynthesizer:
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row
             placeholders = ",".join("?" * len(memory_ids))
-            rows = conn.execute(f"SELECT title, content FROM memories WHERE id IN ({placeholders})", memory_ids).fetchall()
+            rows = conn.execute(
+                f"SELECT title, content FROM memories WHERE id IN ({placeholders})",
+                memory_ids,
+            ).fetchall()
 
             parts = []
             for row in rows:
@@ -93,10 +101,13 @@ class SectorSynthesizer:
         return SectorPrinciple(
             title=f"Macro-Cluster: {cluster.titles[0]}",
             summary=f"Aggregation of {len(cluster.memory_ids)} nodes in the {self._get_quadrant_name(cluster.center)} sector.",
-            principles=[f"Consolidate {len(cluster.memory_ids)} related items", "Monitor density flux"],
+            principles=[
+                f"Consolidate {len(cluster.memory_ids)} related items",
+                "Monitor density flux",
+            ],
             quadrant=self._get_quadrant_name(cluster.center),
             centroid=cluster.center,
-            source_ids=cluster.memory_ids
+            source_ids=cluster.memory_ids,
         )
 
     def _parse_response(self, response: str, cluster: MemoryCluster) -> SectorPrinciple:
@@ -117,7 +128,7 @@ class SectorSynthesizer:
                 principles=data.get("principles", []),
                 quadrant=self._get_quadrant_name(cluster.center),
                 centroid=cluster.center,
-                source_ids=cluster.memory_ids
+                source_ids=cluster.memory_ids,
             )
         except Exception as e:
             logger.error("Response parsing failed: %s", e)

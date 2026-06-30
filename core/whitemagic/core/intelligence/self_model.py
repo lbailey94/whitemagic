@@ -43,22 +43,18 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data Structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class Forecast:
     """A single metric forecast."""
 
     metric: str
     current: float
-    predicted: float          # Predicted value N steps ahead
-    trend: str                # "rising", "falling", "stable"
-    slope: float              # Rate of change per step
-    confidence: float         # How reliable the forecast is (0-1)
-    steps_ahead: int          # How many steps into the future
-    alert: str | None      # Warning message if threshold likely crossed
+    predicted: float  # Predicted value N steps ahead
+    trend: str  # "rising", "falling", "stable"
+    slope: float  # Rate of change per step
+    confidence: float  # How reliable the forecast is (0-1)
+    steps_ahead: int  # How many steps into the future
+    alert: str | None  # Warning message if threshold likely crossed
     threshold_eta: int | None  # Steps until threshold is crossed (None if safe)
 
     def to_dict(self) -> dict[str, Any]:
@@ -82,26 +78,23 @@ class Forecast:
 
 
 # Metric definitions: name -> (warn_low, warn_high, critical_low, critical_high)
-_METRIC_THRESHOLDS: dict[str, tuple[float | None, float | None,
-                                     float | None, float | None]] = {
-    "energy":        (0.3, None, 0.15, None),
-    "karma_debt":    (None, 0.5, None, 0.8),
-    "error_rate":    (None, 0.15, None, 0.30),
-    "dharma_score":  (0.5, None, 0.3, None),
+_METRIC_THRESHOLDS: dict[
+    str, tuple[float | None, float | None, float | None, float | None]
+] = {
+    "energy": (0.3, None, 0.15, None),
+    "karma_debt": (None, 0.5, None, 0.8),
+    "error_rate": (None, 0.15, None, 0.30),
+    "dharma_score": (0.5, None, 0.3, None),
     "drive_composite": (0.25, None, 0.15, None),
     "breaker_trips": (None, 3.0, None, 5.0),
-    "latency":       (None, 0.5, None, 1.0),
-    "throughput":     (0.3, None, 0.1, None),
-    "balance":       (0.3, None, 0.15, None),
+    "latency": (None, 0.5, None, 1.0),
+    "throughput": (0.3, None, 0.1, None),
+    "balance": (0.3, None, 0.15, None),
 }
 
 _DEFAULT_WINDOW = 100
 _DEFAULT_FORECAST_STEPS = 10
 
-
-# ---------------------------------------------------------------------------
-# SelfModel
-# ---------------------------------------------------------------------------
 
 class SelfModel:
     """Predictive introspection engine.
@@ -110,17 +103,18 @@ class SelfModel:
     regression to forecast trends and generate early warnings.
     """
 
-    def __init__(self, window_size: int = _DEFAULT_WINDOW,
-                 forecast_steps: int = _DEFAULT_FORECAST_STEPS):
+    def __init__(
+        self,
+        window_size: int = _DEFAULT_WINDOW,
+        forecast_steps: int = _DEFAULT_FORECAST_STEPS,
+    ):
         self._lock = threading.Lock()
         self._window_size = window_size
         self._forecast_steps = forecast_steps
-        self._series: dict[str, deque[tuple[float, float]]] = {}  # metric -> deque of (time, value)
+        self._series: dict[
+            str, deque[tuple[float, float]]
+        ] = {}  # metric -> deque of (time, value)
         self._record_count = 0
-
-    # ------------------------------------------------------------------
-    # Recording
-    # ------------------------------------------------------------------
 
     def record(self, metric: str, value: float) -> None:
         """Record a metric observation."""
@@ -134,10 +128,6 @@ class SelfModel:
         """Record multiple metrics at once."""
         for metric, value in observations.items():
             self.record(metric, value)
-
-    # ------------------------------------------------------------------
-    # Forecasting
-    # ------------------------------------------------------------------
 
     def forecast(self, metric: str, steps_ahead: int | None = None) -> Forecast | None:
         """Forecast a single metric."""
@@ -165,8 +155,9 @@ class SelfModel:
             predicted = current + slope * steps
 
             # Confidence based on R² and sample size
-            ss_res = sum((v - (y_mean + slope * (i - x_mean))) ** 2
-                         for i, v in enumerate(values))
+            ss_res = sum(
+                (v - (y_mean + slope * (i - x_mean))) ** 2 for i, v in enumerate(values)
+            )
             ss_tot = sum((v - y_mean) ** 2 for v in values)
             r_squared = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
             size_factor = min(1.0, n / self._window_size)
@@ -192,15 +183,19 @@ class SelfModel:
                     steps_to_crit = (crit_low - current) / slope
                     if 0 < steps_to_crit <= steps * 2:
                         threshold_eta = int(steps_to_crit)
-                        alert = (f"{metric} predicted to hit critical low "
-                                 f"({crit_low}) in ~{threshold_eta} steps")
+                        alert = (
+                            f"{metric} predicted to hit critical low "
+                            f"({crit_low}) in ~{threshold_eta} steps"
+                        )
 
                 if crit_high is not None and slope > 0:
                     steps_to_crit = (crit_high - current) / slope
                     if 0 < steps_to_crit <= steps * 2:
                         threshold_eta = int(steps_to_crit)
-                        alert = (f"{metric} predicted to hit critical high "
-                                 f"({crit_high}) in ~{threshold_eta} steps")
+                        alert = (
+                            f"{metric} predicted to hit critical high "
+                            f"({crit_high}) in ~{threshold_eta} steps"
+                        )
 
                 # Then warning thresholds
                 if alert is None:
@@ -208,15 +203,19 @@ class SelfModel:
                         steps_to_warn = (warn_low - current) / slope
                         if 0 < steps_to_warn <= steps * 2:
                             threshold_eta = int(steps_to_warn)
-                            alert = (f"{metric} trending toward warning low "
-                                     f"({warn_low}) in ~{threshold_eta} steps")
+                            alert = (
+                                f"{metric} trending toward warning low "
+                                f"({warn_low}) in ~{threshold_eta} steps"
+                            )
 
                     if warn_high is not None and slope > 0:
                         steps_to_warn = (warn_high - current) / slope
                         if 0 < steps_to_warn <= steps * 2:
                             threshold_eta = int(steps_to_warn)
-                            alert = (f"{metric} trending toward warning high "
-                                     f"({warn_high}) in ~{threshold_eta} steps")
+                            alert = (
+                                f"{metric} trending toward warning high "
+                                f"({warn_high}) in ~{threshold_eta} steps"
+                            )
 
             return Forecast(
                 metric=metric,
@@ -237,6 +236,7 @@ class SelfModel:
         # Try Julia batch forecasting first (Holt-Winters with confidence intervals)
         try:
             from whitemagic.core.acceleration.julia_bridge import julia_batch_forecast
+
             metrics_data = {}
             with self._lock:
                 for metric, series in self._series.items():
@@ -250,14 +250,20 @@ class SelfModel:
                     for metric, fc in julia_result["forecasts"].items():
                         values = metrics_data.get(metric, [])
                         current = values[-1] if values else 0.0
-                        predicted = fc.get("forecasts", [current])[-1] if fc.get("forecasts") else current
+                        predicted = (
+                            fc.get("forecasts", [current])[-1]
+                            if fc.get("forecasts")
+                            else current
+                        )
                         trend_dir = fc.get("trend_direction", "stable")
                         slope = fc.get("trend", 0.0)
                         results[metric] = Forecast(
                             metric=metric,
                             current=current,
                             predicted=predicted,
-                            trend="rising" if trend_dir == "increasing" else ("falling" if trend_dir == "decreasing" else "stable"),
+                            trend="rising"
+                            if trend_dir == "increasing"
+                            else ("falling" if trend_dir == "decreasing" else "stable"),
                             slope=slope,
                             confidence=min(1.0, 1.0 - fc.get("residual_std", 0.5)),
                             steps_ahead=steps,
@@ -282,10 +288,6 @@ class SelfModel:
         """Return only forecasts that have active alerts."""
         all_forecasts = self.forecast_all()
         return [f for f in all_forecasts.values() if f.alert is not None]
-
-    # ------------------------------------------------------------------
-    # Gnosis integration
-    # ------------------------------------------------------------------
 
     def gnosis_portal(self) -> dict[str, Any]:
         """Return a Gnosis-compatible introspection dict."""
@@ -312,10 +314,6 @@ class SelfModel:
                 "series_lengths": {k: len(v) for k, v in self._series.items()},
             }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _instance: SelfModel | None = None
 _instance_lock = threading.Lock()

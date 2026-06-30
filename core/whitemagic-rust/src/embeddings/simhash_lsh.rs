@@ -185,9 +185,6 @@ pub fn find_embedding_duplicates_simhash(
     sorted
 }
 
-// Python bindings
-// ---------------------------------------------------------------------------
-
 /// Find near-duplicate memory pairs using SimHash LSH on embedding vectors.
 /// Input: Flat array of f32 values + embedding dimension.
 /// Output: JSON array of {idx_a, idx_b, similarity}.

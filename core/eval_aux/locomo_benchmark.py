@@ -23,7 +23,6 @@ import argparse
 import hashlib
 import json
 import logging
-import math
 import random
 import re
 import sqlite3
@@ -42,10 +41,6 @@ if str(REPO_ROOT) not in sys.path:
 logger = logging.getLogger(__name__)
 
 DB_PATH = Path.home() / ".whitemagic" / "memory" / "whitemagic.db"
-
-# ---------------------------------------------------------------------------
-# Test corpus generation
-# ---------------------------------------------------------------------------
 
 @dataclass
 class TestQuestion:
@@ -108,8 +103,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
     questions: list[TestQuestion] = []
     per_type = n_questions // 4
 
-    # --- 1. Single-hop recall ---
-    # Use 2-3 distinctive keywords from title (how users actually search)
     stopwords = {'the', 'this', 'that', 'with', 'from', 'into', 'have', 'been', 'were',
                  'will', 'your', 'more', 'some', 'than', 'them', 'only', 'also', 'each',
                  'when', 'what', 'which', 'complete', 'session', 'update', 'system',
@@ -142,8 +135,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
         if len([q for q in questions if q.qtype == "single_hop"]) >= per_type:
             break
 
-    # --- 2. Multi-hop recall ---
-    # "Find memories that share the tag [X] with [memory Y]"
     multi_hop_mems = [m for m in memories if m["id"] in tag_map and len(tag_map[m["id"]]) >= 2]
     for mem in multi_hop_mems[:per_type * 2]:
         tags = tag_map[mem["id"]]
@@ -175,8 +166,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
         if len([q for q in questions if q.qtype == "multi_hop"]) >= per_type:
             break
 
-    # --- 3. Temporal recall ---
-    # Use distinctive keywords from title (same filtering as single-hop)
     dated_mems = [m for m in memories if m.get("created_at") and len(m.get("created_at", "")) > 5]
     for mem in dated_mems[:per_type * 3]:
         title = mem["title"]
@@ -197,9 +186,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
         if len([q for q in questions if q.qtype == "temporal"]) >= per_type:
             break
 
-    # --- 4. Open-domain recall ---
-    # Extract a unique natural-language sentence from content (not title) as query
-    # VALIDATION: Ensure the query actually matches the memory via embedding similarity
     _code_pattern = re.compile(
         r'^(import |from |def |class |return |if |for |while |#|//|  |'
         r'\w+\s*=\s*\w|self\.|logger\.|print\(|assert |raise |try:|except|'
@@ -302,10 +288,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
             metadata={"query_source": "validated_content_sentence", "quality_score": score},
         ))
 
-    # --- 5. Adversarial recall ---
-    # Questions designed to test hallucination resistance:
-    # "Which memory mentions X?" where X is a real fact but the phrasing
-    # could match multiple memories. Ground truth = the specific source memory.
     adversarial_count = n_questions // 8  # ~12.5% adversarial
     adversarial_mems = [m for m in memories if len(m.get("content", "")) > 800]
     for mem in adversarial_mems[:adversarial_count * 4]:
@@ -349,10 +331,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
     rng.shuffle(questions)
     return questions
 
-
-# ---------------------------------------------------------------------------
-# Retrieval strategies (direct SQLite, no dispatch overhead)
-# ---------------------------------------------------------------------------
 
 _BACKEND = None
 
@@ -490,7 +468,6 @@ def retrieve_expanded(query: str, limit: int = 20) -> list[dict]:
     then re-runs vector_graph. Merges both result sets via dedup.
     """
     try:
-        # Step 1: get initial vector hits to mine expansion terms
         vec_hits = retrieve_vector(query, limit=5)
         expansion_terms: list[str] = []
         if vec_hits:
@@ -509,20 +486,17 @@ def retrieve_expanded(query: str, limit: int = 20) -> list[dict]:
             except Exception:
                 pass
 
-        # Step 2: build expanded query (append top 3 expansion terms)
         if expansion_terms:
             expanded_query = query + " " + " ".join(expansion_terms[:3])
         else:
             expanded_query = query
 
-        # Step 3: run vector_graph on both original and expanded
         orig = retrieve_vector_graph(query, limit)
         if expanded_query != query:
             expanded = retrieve_vector_graph(expanded_query, limit)
         else:
             expanded = []
 
-        # Step 4: merge by score (orig first, then fill with expanded)
         seen: set[str] = set()
         merged = []
         for r in orig:
@@ -874,10 +848,6 @@ STRATEGIES = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Evaluation
-# ---------------------------------------------------------------------------
-
 @dataclass
 class EvalResult:
     """Result for a single question."""
@@ -1115,7 +1085,6 @@ def main():
     print("V004: LoCoMo Memory Retrieval Benchmark")
     print("=" * 60)
 
-    # Phase 1: Generate test corpus
     print(f"\n[Phase 1] Generating {args.questions} test questions from DB...")
     questions = generate_test_corpus(Path(args.db), args.questions, args.seed)
     if not questions:
@@ -1129,11 +1098,9 @@ def main():
     for qt, c in sorted(qtype_counts.items()):
         print(f"    {qt}: {c}")
 
-    # Phase 2: Run benchmark
     print(f"\n[Phase 2] Running benchmark ({', '.join(args.strategies)})...")
     report = run_benchmark(questions, args.strategies, args.top_k)
 
-    # Phase 3: Generate reports
     print("\n[Phase 3] Generating reports...")
     reports_dir = REPO_ROOT / "reports"
     reports_dir.mkdir(exist_ok=True)

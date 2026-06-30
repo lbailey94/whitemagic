@@ -40,11 +40,11 @@ class Synchronicity:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'timestamp': self.timestamp.isoformat(),
-            'type': self.type.value,
-            'value': self.value,
-            'context': self.context,
-            'significance': self.significance
+            "timestamp": self.timestamp.isoformat(),
+            "type": self.type.value,
+            "value": self.value,
+            "context": self.context,
+            "significance": self.significance,
         }
 
 
@@ -52,12 +52,25 @@ class SynchronicityDetector:
     """Detect sacred patterns - universe speaks through numbers"""
 
     SACRED = {
-        '3': 'Creation (Tesla)', '6': 'Balance (Tesla)', '9': 'Completion (Tesla)',
-        '369': 'Keys to Universe', '11': 'Intuition', '22': 'Master Builder',
-        '33': 'Master Teacher', '44': 'Master Healer', '111': 'Manifestation',
-        '222': 'Harmony', '333': 'Divine Protection', '444': 'Angels Present',
-        '555': 'Change', '666': 'Balance Spirit/Matter', '777': 'Awakening',
-        '888': 'Abundance', '999': 'Completion', '1111': 'Portal', '1212': 'Growth',
+        "3": "Creation (Tesla)",
+        "6": "Balance (Tesla)",
+        "9": "Completion (Tesla)",
+        "369": "Keys to Universe",
+        "11": "Intuition",
+        "22": "Master Builder",
+        "33": "Master Teacher",
+        "44": "Master Healer",
+        "111": "Manifestation",
+        "222": "Harmony",
+        "333": "Divine Protection",
+        "444": "Angels Present",
+        "555": "Change",
+        "666": "Balance Spirit/Matter",
+        "777": "Awakening",
+        "888": "Abundance",
+        "999": "Completion",
+        "1111": "Portal",
+        "1212": "Growth",
     }
 
     def __init__(self, log_file: Path | None = None) -> None:
@@ -73,8 +86,11 @@ class SynchronicityDetector:
         for num, meaning in self.SACRED.items():
             if num in s:
                 sync = Synchronicity(
-                    datetime.now(), SyncType.SACRED, str(value),
-                    context, f"Contains {num}: {meaning}"
+                    datetime.now(),
+                    SyncType.SACRED,
+                    str(value),
+                    context,
+                    f"Contains {num}: {meaning}",
                 )
                 self._log(sync)
                 return sync
@@ -82,8 +98,11 @@ class SynchronicityDetector:
         # Repeating digits (111, 222, etc)
         if len(s) >= 3 and len(set(s)) == 1:
             sync = Synchronicity(
-                datetime.now(), SyncType.REPEATING, str(value),
-                context, f"All {s[0]}s - Amplified energy!"
+                datetime.now(),
+                SyncType.REPEATING,
+                str(value),
+                context,
+                f"All {s[0]}s - Amplified energy!",
             )
             self._log(sync)
             return sync
@@ -91,8 +110,11 @@ class SynchronicityDetector:
         # Sequential (123, 345, etc)
         if len(s) >= 3 and self._is_sequential(s):
             sync = Synchronicity(
-                datetime.now(), SyncType.SEQUENTIAL, str(value),
-                context, "Sequential - Flow and progression!"
+                datetime.now(),
+                SyncType.SEQUENTIAL,
+                str(value),
+                context,
+                "Sequential - Flow and progression!",
             )
             self._log(sync)
             return sync
@@ -100,8 +122,11 @@ class SynchronicityDetector:
         # Palindrome (121, 1221, etc)
         if len(s) >= 3 and s == s[::-1]:
             sync = Synchronicity(
-                datetime.now(), SyncType.PALINDROME, str(value),
-                context, "Palindrome - Perfect reflection!"
+                datetime.now(),
+                SyncType.PALINDROME,
+                str(value),
+                context,
+                "Palindrome - Perfect reflection!",
             )
             self._log(sync)
             return sync
@@ -120,7 +145,7 @@ class SynchronicityDetector:
         try:
             nums = [int(c) for c in s]
             for i in range(len(nums) - 1):
-                if nums[i+1] != nums[i] + 1:
+                if nums[i + 1] != nums[i] + 1:
                     return False
             return True
         except Exception:
@@ -130,8 +155,8 @@ class SynchronicityDetector:
         """Log synchronicity to file"""
         self.detections.append(sync)
         with file_lock(self.log_file):
-            with open(self.log_file, 'a') as f:
-                f.write(json.dumps(sync.to_dict()) + '\n')
+            with open(self.log_file, "a") as f:
+                f.write(json.dumps(sync.to_dict()) + "\n")
 
     def get_recent(self, count: int = 10) -> list[Synchronicity]:
         """Get recent detections"""
@@ -163,6 +188,7 @@ class SynchronicityDetector:
 
 # Global instance
 _detector = None
+
 
 def get_detector() -> SynchronicityDetector:
     global _detector

@@ -16,6 +16,7 @@ from rich.text import Text
 
 class GalaxyExplorer:
     """GalaxyExplorer: galaxy explorer."""
+
     def __init__(self, memories: list[dict[str, Any]]):
         self.memories = memories
         self.console = Console()
@@ -88,9 +89,16 @@ class GalaxyExplorer:
     def run_static(self) -> None:
         """Standard static render for CLI output."""
         layout = self.get_layout()
-        layout["map"].update(Panel(self.generate_map(60, 20), title="[bold cyan]4D Holographic Galaxy[/]", border_style="cyan"))
+        layout["map"].update(
+            Panel(
+                self.generate_map(60, 20),
+                title="[bold cyan]4D Holographic Galaxy[/]",
+                border_style="cyan",
+            )
+        )
         layout["details"].update(self.render_details())
         self.console.print(layout)
+
 
 def wm_galaxy_main() -> None:
     """CLI Entry point for `wm galaxy`."""
@@ -98,18 +106,27 @@ def wm_galaxy_main() -> None:
         from whitemagic.core.intelligence.vector_lake import (
             get_vector_lake,  # type: ignore[import-not-found]
         )
+
         lake = get_vector_lake()
         # Fetch a sample of memories for the map
         memories = lake.get_holographic_sample(limit=100)
     except (ImportError, ModuleNotFoundError):
         # Fallback test data
         memories = [
-            {"id": f"mem_{i}", "title": f"Test Memory {i}", "x": math.cos(i), "y": math.sin(i), "w": 0.5, "quadrant": "test"}
+            {
+                "id": f"mem_{i}",
+                "title": f"Test Memory {i}",
+                "x": math.cos(i),
+                "y": math.sin(i),
+                "w": 0.5,
+                "quadrant": "test",
+            }
             for i in range(20)
         ]
 
     explorer = GalaxyExplorer(memories)
     explorer.run_static()
+
 
 if __name__ == "__main__":
     wm_galaxy_main()

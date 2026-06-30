@@ -16,7 +16,9 @@ Usage:
 from typing import Any, cast
 
 
-def explain_coordinates(x: float, y: float, z: float, w: float, v: float) -> dict[str, Any]:
+def explain_coordinates(
+    x: float, y: float, z: float, w: float, v: float
+) -> dict[str, Any]:
     """Convert raw 5D coordinates into human-readable interpretation.
 
     Args:
@@ -141,13 +143,44 @@ def explain_coordinates(x: float, y: float, z: float, w: float, v: float) -> dic
         "characteristics": characteristics,
         "zone": zone,
         "axes": {
-            "x": {"value": round(x, 3), "label": "Resonance", "description": x_desc, "emoji": x_emoji},
-            "y": {"value": round(y, 3), "label": "Abstraction", "description": y_desc, "emoji": y_emoji},
-            "z": {"value": round(z, 3), "label": "Chronos", "description": z_desc, "emoji": z_emoji},
-            "w": {"value": round(w, 3), "label": "Gravity", "description": w_desc, "emoji": w_emoji},
-            "v": {"value": round(v, 3), "label": "Vitality", "description": v_desc, "emoji": v_emoji},
+            "x": {
+                "value": round(x, 3),
+                "label": "Resonance",
+                "description": x_desc,
+                "emoji": x_emoji,
+            },
+            "y": {
+                "value": round(y, 3),
+                "label": "Abstraction",
+                "description": y_desc,
+                "emoji": y_emoji,
+            },
+            "z": {
+                "value": round(z, 3),
+                "label": "Chronos",
+                "description": z_desc,
+                "emoji": z_emoji,
+            },
+            "w": {
+                "value": round(w, 3),
+                "label": "Gravity",
+                "description": w_desc,
+                "emoji": w_emoji,
+            },
+            "v": {
+                "value": round(v, 3),
+                "label": "Vitality",
+                "description": v_desc,
+                "emoji": v_emoji,
+            },
         },
-        "coordinate_vector": [round(x, 3), round(y, 3), round(z, 3), round(w, 3), round(v, 3)],
+        "coordinate_vector": [
+            round(x, 3),
+            round(y, 3),
+            round(z, 3),
+            round(w, 3),
+            round(v, 3),
+        ],
     }
 
 
@@ -215,7 +248,9 @@ if __name__ == "__main__":
         print(result["summary"])
         print()
         for axis, info in result["axes"].items():
-            print(f"  {info['emoji']} {axis.upper()} ({info['label']}): {info['value']:+.3f} — {info['description']}")
+            print(
+                f"  {info['emoji']} {axis.upper()} ({info['label']}): {info['value']:+.3f} — {info['description']}"
+            )
     else:
         print("Usage: python coordinate_explainer.py <x> <y> <z> <w> <v>")
         print("  x: Resonance    (-1.0=emotion to +1.0=logic)")

@@ -4,6 +4,7 @@
 Tracks phase timing, logs to memories, and provides timing reports.
 Can be used standalone or integrated into campaign deployments.
 """
+
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -13,6 +14,7 @@ from typing import Any, Literal
 @dataclass
 class PhaseTiming:
     """Record of a single phase's timing."""
+
     phase_name: str
     start_time: float  # Unix timestamp
     end_time: float | None = None
@@ -40,9 +42,11 @@ class PhaseTiming:
         return {
             "phase_name": self.phase_name,
             "start_iso": datetime.fromtimestamp(self.start_time, tz=UTC).isoformat(),
-            "end_iso": datetime.fromtimestamp(self.end_time, tz=UTC).isoformat() if self.end_time else None,
+            "end_iso": datetime.fromtimestamp(self.end_time, tz=UTC).isoformat()
+            if self.end_time
+            else None,
             "duration_seconds": self.duration_seconds,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
@@ -57,14 +61,14 @@ class PhaseTimer:
     def __enter__(self) -> "PhaseTimer":
         start = time.time()
         self._timing = PhaseTiming(
-            phase_name=self.phase_name,
-            start_time=start,
-            metadata=self.metadata
+            phase_name=self.phase_name, start_time=start, metadata=self.metadata
         )
         print(f"⏱️  Phase '{self.phase_name}' started at {self._start_iso()}")
         return self
 
-    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any | None) -> Literal[False]:
+    def __exit__(
+        self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any | None
+    ) -> Literal[False]:
         if self._timing is None:
             return False
         self._timing.end_time = time.time()
@@ -109,7 +113,9 @@ class WorkflowTimer:
     def end_workflow(self) -> None:
         """Mark workflow end time."""
         self._workflow_end = time.time()
-        duration: float = self._workflow_end - self._workflow_start if self._workflow_start else 0.0
+        duration: float = (
+            self._workflow_end - self._workflow_start if self._workflow_start else 0.0
+        )
         print(f"\n✅ Workflow '{self.workflow_name}' completed in {duration:.2f}s")
 
     def phase(self, phase_name: str, metadata: dict | None = None) -> PhaseTimer:
@@ -130,27 +136,31 @@ class WorkflowTimer:
 
         return {
             "workflow_name": self.workflow_name,
-            "started": datetime.fromtimestamp(self._workflow_start, tz=UTC).isoformat() if self._workflow_start else None,
-            "completed": datetime.fromtimestamp(self._workflow_end, tz=UTC).isoformat() if self._workflow_end else None,
+            "started": datetime.fromtimestamp(self._workflow_start, tz=UTC).isoformat()
+            if self._workflow_start
+            else None,
+            "completed": datetime.fromtimestamp(self._workflow_end, tz=UTC).isoformat()
+            if self._workflow_end
+            else None,
             "total_seconds": total_duration,
             "phases": [p.to_dict() for p in self.phases],
-            "phase_count": len(self.phases)
+            "phase_count": len(self.phases),
         }
 
     def print_report(self) -> None:
         """Print formatted timing report."""
         report = self.get_report()
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📊 TIMING REPORT: {report['workflow_name']}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Started:  {report['started']}")
         print(f"Completed: {report['completed']}")
         print(f"Total: {report['total_seconds']:.2f}s")
         print(f"\nPhases ({report['phase_count']}):")
-        for phase in report['phases']:
-            duration = phase['duration_seconds']
+        for phase in report["phases"]:
+            duration = phase["duration_seconds"]
             print(f"  • {phase['phase_name']}: {duration:.2f}s")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
 
 # Convenience functions for quick usage
@@ -167,6 +177,7 @@ def get_current_time() -> str:
 def get_local_time(tz_name: str = "America/New_York") -> str:
     """Get local time for a given timezone."""
     from zoneinfo import ZoneInfo
+
     return datetime.now(ZoneInfo(tz_name)).isoformat()
 
 
@@ -175,12 +186,10 @@ if __name__ == "__main__":
     workflow = WorkflowTimer("demo_workflow")
     workflow.start_workflow()
 
-    with workflow.phase("initialization", {"priority":
-        "high"}):
+    with workflow.phase("initialization", {"priority": "high"}):
         time.sleep(0.5)
 
-    with workflow.phase("processing", {"items":
-        100}):
+    with workflow.phase("processing", {"items": 100}):
         time.sleep(1.0)
 
     with workflow.phase("cleanup"):

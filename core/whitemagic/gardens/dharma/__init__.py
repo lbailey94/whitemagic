@@ -53,21 +53,28 @@ class DharmaGarden(BaseGarden, GanYingMixin):
         """
         return CoordinateBias(
             x=-0.3,  # Principled reasoning (logical but with compassion)
-            y=0.6,   # Abstract (ethical frameworks, universal principles)
-            z=0.0,   # Timeless (ethics endure)
-            w=0.4,    # Critically important (ethics guide all action)
+            y=0.6,  # Abstract (ethical frameworks, universal principles)
+            z=0.0,  # Timeless (ethics endure)
+            w=0.4,  # Critically important (ethics guide all action)
         )
 
-    def assess_action(self, description: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def assess_action(
+        self, description: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Assess an action for dharmic alignment."""
         result = self.metrics.assess(description, context or {})
-        self.emit(EventType.DHARMA_ASSESSED, {  # type: ignore[attr-defined]
-            "description": description,
-            "score": result.get("score", 0),
-        })
+        self.emit(
+            EventType.DHARMA_ASSESSED,
+            {  # type: ignore[attr-defined]
+                "description": description,
+                "score": result.get("score", 0),
+            },
+        )
         return result
 
-    def check_boundary(self, action: str, context: dict[str, Any] | None = None) -> bool:
+    def check_boundary(
+        self, action: str, context: dict[str, Any] | None = None
+    ) -> bool:
         """Check if action respects boundaries."""
         result = self.boundaries.detect(action, context or {})
         return result.boundary_type != BoundaryType.INTERFERING
@@ -78,6 +85,7 @@ class DharmaGarden(BaseGarden, GanYingMixin):
 
 
 _garden = None
+
 
 def get_dharma_garden() -> DharmaGarden:
     """Get the Dharma Garden singleton."""

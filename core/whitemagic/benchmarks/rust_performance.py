@@ -21,9 +21,12 @@ class RustBenchmark:
     def __init__(self) -> None:
         self.results: list[dict[str, Any]] = []
 
-    def benchmark_cosine_similarity(self, n: int = 1000, dim: int = 128) -> dict[str, Any]:
+    def benchmark_cosine_similarity(
+        self, n: int = 1000, dim: int = 128
+    ) -> dict[str, Any]:
         """Benchmark cosine similarity Rust vs Python."""
         from whitemagic.performance.rust_embeddings import get_rust_embeddings
+
         bridge = get_rust_embeddings()
 
         vec_a = [random.random() for _ in range(dim)]
@@ -45,9 +48,12 @@ class RustBenchmark:
         self.results.append(result)
         return result
 
-    def benchmark_batch_similarity(self, n: int = 100, dim: int = 128, batch: int = 50) -> dict[str, Any]:
+    def benchmark_batch_similarity(
+        self, n: int = 100, dim: int = 128, batch: int = 50
+    ) -> dict[str, Any]:
         """Benchmark batch similarity."""
         from whitemagic.performance.rust_embeddings import get_rust_embeddings
+
         bridge = get_rust_embeddings()
 
         query = [random.random() for _ in range(dim)]

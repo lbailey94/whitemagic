@@ -64,10 +64,14 @@ def handle_dream_promote(params: dict[str, Any]) -> dict[str, Any]:
         dream_id = params.get("dream_id", "")
         memory_id = params.get("memory_id")
         if not dream_id:
-            return make_result("dream.promote", {}, error="Missing 'dream_id' parameter")
+            return make_result(
+                "dream.promote", {}, error="Missing 'dream_id' parameter"
+            )
         result = promote_dream(dream_id, memory_id=memory_id)
         if result is None:
-            return make_result("dream.promote", {}, error=f"Dream not found: {dream_id}")
+            return make_result(
+                "dream.promote", {}, error=f"Dream not found: {dream_id}"
+            )
         return make_result(
             "dream.promote",
             {

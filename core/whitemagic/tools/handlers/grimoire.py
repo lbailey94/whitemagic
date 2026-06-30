@@ -20,19 +20,23 @@ def handle_grimoire_suggest(**kwargs: Any) -> dict[str, Any]:
 
     grimoire = get_grimoire_engine()
     grimoire.awaken()
-    grimoire.update_context(task=task, emotional_state=emotional_state, keywords=keywords)
+    grimoire.update_context(
+        task=task, emotional_state=emotional_state, keywords=keywords
+    )
 
     recommendations = grimoire.recommend_spells(max_results=limit)
 
     result_list = []
     for r in recommendations:
-        result_list.append({
-            "spell_name": r.spell_name,
-            "chapter": r.chapter,
-            "confidence": round(r.confidence, 3),
-            "reason": r.reason,
-            "auto_cast": r.auto_cast,
-        })
+        result_list.append(
+            {
+                "spell_name": r.spell_name,
+                "chapter": r.chapter,
+                "confidence": round(r.confidence, 3),
+                "reason": r.reason,
+                "auto_cast": r.auto_cast,
+            }
+        )
 
     # Return with context info
     ctx = grimoire.context
@@ -45,7 +49,7 @@ def handle_grimoire_suggest(**kwargs: Any) -> dict[str, Any]:
         "unified_cycle_phase": {
             "wu_xing": ctx.wu_xing.value,
             "yin_yang": ctx.yin_yang.value,
-        }
+        },
     }
 
 
@@ -54,7 +58,10 @@ def handle_grimoire_cast(**kwargs: Any) -> dict[str, Any]:
     spell_name = kwargs.get("spell_name", "")
     if not spell_name:
         return {"status": "error", "message": "spell_name is required for casting"}
-    return {"status": "error", "message": "Direct spell casting is handled natively via tool sequence in Grimoire 2.0. Use 'grimoire_suggest' then execute the individual tools."}
+    return {
+        "status": "error",
+        "message": "Direct spell casting is handled natively via tool sequence in Grimoire 2.0. Use 'grimoire_suggest' then execute the individual tools.",
+    }
 
 
 def handle_grimoire_recommend(**kwargs: Any) -> dict[str, Any]:

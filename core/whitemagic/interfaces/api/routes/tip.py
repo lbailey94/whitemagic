@@ -37,45 +37,59 @@ async def tip_status() -> dict[str, Any]:
     """Get current wallet status and last known balance."""
     wallet = get_wallet()
     if not wallet.enabled:
-        return _build_response({
-            "enabled": False,
-            "message": "Wallet not configured. Set WM_XRP_ADDRESS to enable.",
-        })
-    return _build_response({
-        "enabled": True,
-        "address": wallet.public_address,
-        "last_balance": wallet.last_balance,
-        "currency": "XRP",
-    })
+        return _build_response(
+            {
+                "enabled": False,
+                "message": "Wallet not configured. Set WM_XRP_ADDRESS to enable.",
+            }
+        )
+    return _build_response(
+        {
+            "enabled": True,
+            "address": wallet.public_address,
+            "last_balance": wallet.last_balance,
+            "currency": "XRP",
+        }
+    )
 
 
 async def tip_scan() -> dict[str, Any]:
     """Scan XRPL for new tips to the configured address."""
     wallet = get_wallet()
     if not wallet.enabled:
-        raise (HTTPException(status_code=503, detail="Wallet not configured")
-               if HAS_FASTAPI else RuntimeError("Wallet not configured"))
+        raise (
+            HTTPException(status_code=503, detail="Wallet not configured")
+            if HAS_FASTAPI
+            else RuntimeError("Wallet not configured")
+        )
     tip = await wallet.check_for_tips()
     if tip is not None and tip > 0:
-        return _build_response({
-            "tip_detected": True,
-            "amount": round(tip, 6),
-            "currency": "XRP",
-            "message": f"Gratitude resonance detected: {tip} XRP",
-        })
-    return _build_response({
-        "tip_detected": False,
-        "amount": 0.0,
-        "message": "No new tips detected",
-    })
+        return _build_response(
+            {
+                "tip_detected": True,
+                "amount": round(tip, 6),
+                "currency": "XRP",
+                "message": f"Gratitude resonance detected: {tip} XRP",
+            }
+        )
+    return _build_response(
+        {
+            "tip_detected": False,
+            "amount": 0.0,
+            "message": "No new tips detected",
+        }
+    )
 
 
 async def tip_settle(amount: float) -> dict[str, Any]:
     """Propose a gratitude settlement split across beneficiaries."""
     wallet = get_wallet()
     if not wallet.enabled:
-        raise (HTTPException(status_code=503, detail="Wallet not configured")
-               if HAS_FASTAPI else RuntimeError("Wallet not configured"))
+        raise (
+            HTTPException(status_code=503, detail="Wallet not configured")
+            if HAS_FASTAPI
+            else RuntimeError("Wallet not configured")
+        )
     proposal = wallet.propose_gratitude_settlement(amount)
     return _build_response(proposal)
 

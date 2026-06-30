@@ -27,6 +27,7 @@ class SessionStatus(Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+
 @dataclass
 class Session:
     """Represents a work session."""
@@ -49,8 +50,12 @@ class Session:
     metrics: dict[str, Any] = field(default_factory=dict)
 
     # Enhanced Context (v4.3.0)
-    accumulated_context: list[str] = field(default_factory=list)  # Summary of key insights/events
-    resonance_scores: dict[str, float] = field(default_factory=dict)  # Resonance by category
+    accumulated_context: list[str] = field(
+        default_factory=list
+    )  # Summary of key insights/events
+    resonance_scores: dict[str, float] = field(
+        default_factory=dict
+    )  # Resonance by category
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -79,6 +84,7 @@ class Session:
 
         # Ensure all fields for cls(**data) exist (backward compatibility for v4.3.0)
         import inspect
+
         sig = inspect.signature(cls)
         for param in sig.parameters.values():
             if param.name not in data and param.default is inspect.Parameter.empty:
@@ -98,6 +104,7 @@ class Session:
 
         return cls(**data)
 
+
 class SessionManager:
     """Manages session lifecycle and persistence."""
 
@@ -112,7 +119,9 @@ class SessionManager:
     def _session_path(self, session_id: str) -> Path:
         return self.base_dir / f"{session_id}.json"
 
-    def create_session(self, name: str, goals: list[str] | None = None, tags: list[str] | None = None) -> Session:
+    def create_session(
+        self, name: str, goals: list[str] | None = None, tags: list[str] | None = None
+    ) -> Session:
         """Create a new session."""
         session = Session(
             name=name,
@@ -140,7 +149,9 @@ class SessionManager:
         except (OSError, UnicodeDecodeError):
             return None
 
-    def list_sessions(self, status: SessionStatus | None = None, limit: int = 10) -> list[Session]:
+    def list_sessions(
+        self, status: SessionStatus | None = None, limit: int = 10
+    ) -> list[Session]:
         """List sessions."""
         sessions = []
         for path in self.base_dir.glob("*.json"):

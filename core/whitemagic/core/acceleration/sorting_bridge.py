@@ -3,6 +3,7 @@
 
 Phase 1 VC3: Translate deploy_grand_army.py sorting to Rust.
 """
+
 from __future__ import annotations
 
 import logging
@@ -10,7 +11,7 @@ from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Try to load Rust module
 _rs: Any = None
@@ -30,7 +31,7 @@ def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:
         return sorted(data, key=key, reverse=reverse)
 
     # Try Rust parallel sort for large collections
-    if _rs is not None and hasattr(_rs, 'parallel_sort'):
+    if _rs is not None and hasattr(_rs, "parallel_sort"):
         try:
             if key is None:
                 return list(_rs.parallel_sort(data, reverse))
@@ -57,9 +58,7 @@ def fast_sort_inplace(data: list[T], key: Any = None, reverse: bool = False) -> 
 
 
 def parallel_sort_by_key(
-    data: list[dict[str, Any]],
-    key_field: str,
-    reverse: bool = False
+    data: list[dict[str, Any]], key_field: str, reverse: bool = False
 ) -> list[dict[str, Any]]:
     """Sort list of dicts by key field with parallel acceleration.
 
@@ -69,7 +68,7 @@ def parallel_sort_by_key(
         return []
 
     # Try Rust fast path for dict sorting
-    if _rs is not None and hasattr(_rs, 'sort_dicts_by_field'):
+    if _rs is not None and hasattr(_rs, "sort_dicts_by_field"):
         try:
             return list(_rs.sort_dicts_by_field(data, key_field, reverse))
         except Exception as e:
@@ -93,13 +92,10 @@ class ParallelSorter:
     """Parallel sorting engine for batch operations."""
 
     def __init__(self) -> None:
-        self._rust_available = _rs is not None and hasattr(_rs, 'parallel_sort_batch')
+        self._rust_available = _rs is not None and hasattr(_rs, "parallel_sort_batch")
 
     def sort_batches(
-        self,
-        batches: list[list[T]],
-        key: Any = None,
-        reverse: bool = False
+        self, batches: list[list[T]], key: Any = None, reverse: bool = False
     ) -> list[list[T]]:
         """Sort multiple batches in parallel.
 

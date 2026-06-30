@@ -260,6 +260,8 @@ class HNSWIndex:
             return False
         try:
             with open(self.db_path, 'rb') as f:
+                # Security: pickle.load is safe here — db_path is under
+                # WM_STATE_ROOT and only written by this class's save() method.
                 data = pickle.load(f)
                 self.nodes = data['nodes']
                 self.entry_point = data['entry_point']

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EmergentBehavior:
     """Record of an emergent behavior."""
+
     pattern: str
     context: str = ""
     confidence: float = 0.0
@@ -71,7 +72,8 @@ class EmergenceDetector:
             "total_behaviors": len(self.behaviors),
             "avg_novelty": (
                 sum(b.novelty_score for b in self.behaviors) / len(self.behaviors)
-                if self.behaviors else 0.0
+                if self.behaviors
+                else 0.0
             ),
             "known_patterns": len(self._known_patterns),
         }

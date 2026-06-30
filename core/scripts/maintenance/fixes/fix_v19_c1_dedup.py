@@ -1,4 +1,3 @@
-
 with open("scripts/execute_v19_c1_dedup.py") as f:
     content = f.read()
 
@@ -58,7 +57,7 @@ content = content.replace(
             \"\"\", (arch_id,))
             archived += 1
 
-        resolved += 1"""
+        resolved += 1""",
 )
 
 with open("scripts/execute_v19_c1_dedup.py", "w") as f:

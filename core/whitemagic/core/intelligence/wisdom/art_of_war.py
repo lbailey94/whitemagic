@@ -39,13 +39,10 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Core Types
-# ---------------------------------------------------------------------------
-
 @dataclass
 class WarPrinciple:
     """A single principle from the Art of War."""
+
     chapter: str
     chapter_number: int
     principle: str
@@ -55,149 +52,207 @@ class WarPrinciple:
 
 class TerrainType(StrEnum):
     """Six types of terrain from Chapter X."""
-    ACCESSIBLE = "accessible"       # Both sides can move freely — open codebase
-    ENTANGLING = "entangling"       # Easy to enter, hard to exit — legacy code
-    TEMPORIZING = "temporizing"     # Neither side gains advantage — stalemate
-    NARROW = "narrow"               # First to occupy wins — critical path code
-    PRECIPITOUS = "precipitous"     # High ground advantage — well-tested code
-    DISTANT = "distant"             # Forces equal, hard to provoke battle — external deps
+
+    ACCESSIBLE = "accessible"  # Both sides can move freely — open codebase
+    ENTANGLING = "entangling"  # Easy to enter, hard to exit — legacy code
+    TEMPORIZING = "temporizing"  # Neither side gains advantage — stalemate
+    NARROW = "narrow"  # First to occupy wins — critical path code
+    PRECIPITOUS = "precipitous"  # High ground advantage — well-tested code
+    DISTANT = "distant"  # Forces equal, hard to provoke battle — external deps
 
 
 class CampaignPhase(StrEnum):
     """Campaign phases aligned to Wu Xing."""
-    RECONNAISSANCE = "reconnaissance"   # Wood — explore, gather intelligence
-    PLANNING = "planning"               # Water — reflect, formulate strategy
-    ENGAGEMENT = "engagement"           # Fire — execute, strike decisively
-    EXPLOITATION = "exploitation"       # Earth — consolidate gains, integrate
-    CONSOLIDATION = "consolidation"     # Metal — refine, fortify, optimize
 
+    RECONNAISSANCE = "reconnaissance"  # Wood — explore, gather intelligence
+    PLANNING = "planning"  # Water — reflect, formulate strategy
+    ENGAGEMENT = "engagement"  # Fire — execute, strike decisively
+    EXPLOITATION = "exploitation"  # Earth — consolidate gains, integrate
+    CONSOLIDATION = "consolidation"  # Metal — refine, fortify, optimize
 
-# ---------------------------------------------------------------------------
-# All 13 Chapters — Complete Principles
-# ---------------------------------------------------------------------------
 
 ALL_PRINCIPLES: list[WarPrinciple] = [
     # Chapter I: Laying Plans (始計)
-    WarPrinciple("I. Laying Plans", 1,
-                 "Five factors: Moral Law, Heaven, Earth, Commander, Method",
-                 "Architecture: Philosophy, Timing, Resources, Intelligence, Process",
-                 ["plan", "strategy", "architecture", "design", "foundation"]),
-    WarPrinciple("I. Laying Plans", 1,
-                 "If you know yourself and the enemy, you need not fear a hundred battles",
-                 "Self-knowledge (Yin analysis) before action (Yang). Scan before striking.",
-                 ["know", "analyze", "self", "understand", "assess"]),
-    WarPrinciple("I. Laying Plans", 1,
-                 "All warfare is based on deception",
-                 "INVERSE for AI: All collaboration based on TRUST. Transparency is strength.",
-                 ["trust", "collaborate", "transparent", "honest"]),
-
+    WarPrinciple(
+        "I. Laying Plans",
+        1,
+        "Five factors: Moral Law, Heaven, Earth, Commander, Method",
+        "Architecture: Philosophy, Timing, Resources, Intelligence, Process",
+        ["plan", "strategy", "architecture", "design", "foundation"],
+    ),
+    WarPrinciple(
+        "I. Laying Plans",
+        1,
+        "If you know yourself and the enemy, you need not fear a hundred battles",
+        "Self-knowledge (Yin analysis) before action (Yang). Scan before striking.",
+        ["know", "analyze", "self", "understand", "assess"],
+    ),
+    WarPrinciple(
+        "I. Laying Plans",
+        1,
+        "All warfare is based on deception",
+        "INVERSE for AI: All collaboration based on TRUST. Transparency is strength.",
+        ["trust", "collaborate", "transparent", "honest"],
+    ),
     # Chapter II: Waging War (作戰)
-    WarPrinciple("II. Waging War", 2,
-                 "In war, let your object be victory, not lengthy campaigns",
-                 "Optimize for results, not process duration. Ship fast, iterate.",
-                 ["speed", "efficiency", "fast", "ship", "velocity"]),
-    WarPrinciple("II. Waging War", 2,
-                 "There is no instance of a nation benefiting from prolonged warfare",
-                 "Long-running agents drain resources. Set timeouts. Kill stale clones.",
-                 ["timeout", "resource", "efficiency", "cost", "drain"]),
-
+    WarPrinciple(
+        "II. Waging War",
+        2,
+        "In war, let your object be victory, not lengthy campaigns",
+        "Optimize for results, not process duration. Ship fast, iterate.",
+        ["speed", "efficiency", "fast", "ship", "velocity"],
+    ),
+    WarPrinciple(
+        "II. Waging War",
+        2,
+        "There is no instance of a nation benefiting from prolonged warfare",
+        "Long-running agents drain resources. Set timeouts. Kill stale clones.",
+        ["timeout", "resource", "efficiency", "cost", "drain"],
+    ),
     # Chapter III: Attack by Stratagem (謀攻)
-    WarPrinciple("III. Attack by Stratagem", 3,
-                 "Supreme excellence: break resistance without fighting",
-                 "Wu Wei — let solutions emerge naturally. Prevent bugs > fix bugs.",
-                 ["prevent", "elegant", "wu_wei", "natural", "effortless"]),
-    WarPrinciple("III. Attack by Stratagem", 3,
-                 "He will win who knows when to fight and when not to fight",
-                 "Not every error needs immediate fixing — choose battles wisely. Triage.",
-                 ["triage", "priority", "choose", "when", "decide"]),
-    WarPrinciple("III. Attack by Stratagem", 3,
-                 "The highest form of generalship is to balk the enemy's plans",
-                 "Eliminate root causes upstream. Don't fight symptoms downstream.",
-                 ["root_cause", "upstream", "prevent", "systemic"]),
-
+    WarPrinciple(
+        "III. Attack by Stratagem",
+        3,
+        "Supreme excellence: break resistance without fighting",
+        "Wu Wei — let solutions emerge naturally. Prevent bugs > fix bugs.",
+        ["prevent", "elegant", "wu_wei", "natural", "effortless"],
+    ),
+    WarPrinciple(
+        "III. Attack by Stratagem",
+        3,
+        "He will win who knows when to fight and when not to fight",
+        "Not every error needs immediate fixing — choose battles wisely. Triage.",
+        ["triage", "priority", "choose", "when", "decide"],
+    ),
+    WarPrinciple(
+        "III. Attack by Stratagem",
+        3,
+        "The highest form of generalship is to balk the enemy's plans",
+        "Eliminate root causes upstream. Don't fight symptoms downstream.",
+        ["root_cause", "upstream", "prevent", "systemic"],
+    ),
     # Chapter IV: Tactical Dispositions (軍形)
-    WarPrinciple("IV. Tactical Dispositions", 4,
-                 "A victorious army wins first, then seeks battle",
-                 "Prepare thoroughly (Yin/Recon phase) before executing (Yang/Fire phase).",
-                 ["prepare", "test", "ready", "before", "yin"]),
-    WarPrinciple("IV. Tactical Dispositions", 4,
-                 "To secure ourselves against defeat lies in our own hands",
-                 "Defense = comprehensive tests, type safety, assertions. Your own code quality.",
-                 ["defense", "test", "safety", "assertion", "quality"]),
-
+    WarPrinciple(
+        "IV. Tactical Dispositions",
+        4,
+        "A victorious army wins first, then seeks battle",
+        "Prepare thoroughly (Yin/Recon phase) before executing (Yang/Fire phase).",
+        ["prepare", "test", "ready", "before", "yin"],
+    ),
+    WarPrinciple(
+        "IV. Tactical Dispositions",
+        4,
+        "To secure ourselves against defeat lies in our own hands",
+        "Defense = comprehensive tests, type safety, assertions. Your own code quality.",
+        ["defense", "test", "safety", "assertion", "quality"],
+    ),
     # Chapter V: Energy (兵勢)
-    WarPrinciple("V. Energy", 5,
-                 "In battle, use Zheng to engage, Qi to win",
-                 "Orthodox (Tokio infantry) engages the problem. Unorthodox (Ralph/Cavalry) delivers the kill.",
-                 ["zheng", "qi", "orthodox", "unorthodox", "combined_arms"]),
-    WarPrinciple("V. Energy", 5,
-                 "The energy of brave warriors is like a drawn crossbow, the decision like a trigger",
-                 "Build up analysis (draw), then release precision strike (fire). Timing is everything.",
-                 ["timing", "energy", "release", "decisive", "trigger"]),
-
+    WarPrinciple(
+        "V. Energy",
+        5,
+        "In battle, use Zheng to engage, Qi to win",
+        "Orthodox (Tokio infantry) engages the problem. Unorthodox (Ralph/Cavalry) delivers the kill.",
+        ["zheng", "qi", "orthodox", "unorthodox", "combined_arms"],
+    ),
+    WarPrinciple(
+        "V. Energy",
+        5,
+        "The energy of brave warriors is like a drawn crossbow, the decision like a trigger",
+        "Build up analysis (draw), then release precision strike (fire). Timing is everything.",
+        ["timing", "energy", "release", "decisive", "trigger"],
+    ),
     # Chapter VI: Weak Points and Strong (虛實)
-    WarPrinciple("VI. Weak Points and Strong", 6,
-                 "Be extremely subtle, even to formlessness. Be extremely mysterious, even to soundlessness.",
-                 "Adaptive architecture. The best agent is invisible — it just works.",
-                 ["adaptive", "subtle", "flexible", "invisible", "formless"]),
-    WarPrinciple("VI. Weak Points and Strong", 6,
-                 "Attack where the enemy is unprepared; appear where not expected",
-                 "Target untested code, uncovered paths. The bug doesn't expect a Ralph clone.",
-                 ["untested", "unexpected", "coverage", "surprise", "gap"]),
-
+    WarPrinciple(
+        "VI. Weak Points and Strong",
+        6,
+        "Be extremely subtle, even to formlessness. Be extremely mysterious, even to soundlessness.",
+        "Adaptive architecture. The best agent is invisible — it just works.",
+        ["adaptive", "subtle", "flexible", "invisible", "formless"],
+    ),
+    WarPrinciple(
+        "VI. Weak Points and Strong",
+        6,
+        "Attack where the enemy is unprepared; appear where not expected",
+        "Target untested code, uncovered paths. The bug doesn't expect a Ralph clone.",
+        ["untested", "unexpected", "coverage", "surprise", "gap"],
+    ),
     # Chapter VII: Maneuvering (軍爭)
-    WarPrinciple("VII. Maneuvering", 7,
-                 "Let your rapidity be that of the wind, your compactness that of the forest",
-                 "Tokio clones = wind (534K/sec). Swarm formation = forest (structured, unified).",
-                 ["speed", "formation", "wind", "forest", "rapid"]),
-    WarPrinciple("VII. Maneuvering", 7,
-                 "In raiding and plundering, be like fire; in standing, be like a mountain",
-                 "Fire phase: rapid execution. Earth phase: immovable stability. Know which you're in.",
-                 ["fire", "earth", "raid", "stable", "phase"]),
-
+    WarPrinciple(
+        "VII. Maneuvering",
+        7,
+        "Let your rapidity be that of the wind, your compactness that of the forest",
+        "Tokio clones = wind (534K/sec). Swarm formation = forest (structured, unified).",
+        ["speed", "formation", "wind", "forest", "rapid"],
+    ),
+    WarPrinciple(
+        "VII. Maneuvering",
+        7,
+        "In raiding and plundering, be like fire; in standing, be like a mountain",
+        "Fire phase: rapid execution. Earth phase: immovable stability. Know which you're in.",
+        ["fire", "earth", "raid", "stable", "phase"],
+    ),
     # Chapter VIII: Variation in Tactics (九變)
-    WarPrinciple("VIII. Variation in Tactics", 8,
-                 "Do not repeat the tactics which gained you one victory",
-                 "Vary clone strategies. Don't reuse the same approach — the bug adapts (entropy).",
-                 ["vary", "adapt", "different", "strategy", "change"]),
-
+    WarPrinciple(
+        "VIII. Variation in Tactics",
+        8,
+        "Do not repeat the tactics which gained you one victory",
+        "Vary clone strategies. Don't reuse the same approach — the bug adapts (entropy).",
+        ["vary", "adapt", "different", "strategy", "change"],
+    ),
     # Chapter IX: The Army on the March (行軍)
-    WarPrinciple("IX. Army on the March", 9,
-                 "Soldiers must be treated with humanity but controlled with discipline",
-                 "Agents need resources (context) but strict boundaries (timeouts, sandbox).",
-                 ["discipline", "resource", "boundary", "timeout", "control"]),
-
+    WarPrinciple(
+        "IX. Army on the March",
+        9,
+        "Soldiers must be treated with humanity but controlled with discipline",
+        "Agents need resources (context) but strict boundaries (timeouts, sandbox).",
+        ["discipline", "resource", "boundary", "timeout", "control"],
+    ),
     # Chapter X: Terrain (地形)
-    WarPrinciple("X. Terrain", 10,
-                 "If you know the enemy and know yourself, your victory will not stand in doubt",
-                 "Profile the codebase (terrain) AND your tools (capabilities). Complete awareness.",
-                 ["terrain", "profile", "codebase", "capability", "awareness"]),
-
+    WarPrinciple(
+        "X. Terrain",
+        10,
+        "If you know the enemy and know yourself, your victory will not stand in doubt",
+        "Profile the codebase (terrain) AND your tools (capabilities). Complete awareness.",
+        ["terrain", "profile", "codebase", "capability", "awareness"],
+    ),
     # Chapter XI: The Nine Situations (九地)
-    WarPrinciple("XI. Nine Situations", 11,
-                 "Place your army in deadly peril, and it will survive",
-                 "The Ralph Wiggum doctrine: stateless clones in impossible situations often find solutions.",
-                 ["desperate", "ralph", "stateless", "impossible", "dare_to_die"]),
-    WarPrinciple("XI. Nine Situations", 11,
-                 "On desperate ground, fight",
-                 "When all smart approaches fail, deploy Dare-to-Die corps. Brute force has its place.",
-                 ["desperate", "last_resort", "brute_force", "fight", "no_retreat"]),
-
+    WarPrinciple(
+        "XI. Nine Situations",
+        11,
+        "Place your army in deadly peril, and it will survive",
+        "The Ralph Wiggum doctrine: stateless clones in impossible situations often find solutions.",
+        ["desperate", "ralph", "stateless", "impossible", "dare_to_die"],
+    ),
+    WarPrinciple(
+        "XI. Nine Situations",
+        11,
+        "On desperate ground, fight",
+        "When all smart approaches fail, deploy Dare-to-Die corps. Brute force has its place.",
+        ["desperate", "last_resort", "brute_force", "fight", "no_retreat"],
+    ),
     # Chapter XII: Attack by Fire (火攻)
-    WarPrinciple("XII. Attack by Fire", 12,
-                 "There are five ways of attacking with fire",
-                 "Five force types: Infantry, Cavalry, Officers, Engineers, Dare-to-Die. Combined arms.",
-                 ["fire", "attack", "force_type", "combined_arms", "five"]),
-
+    WarPrinciple(
+        "XII. Attack by Fire",
+        12,
+        "There are five ways of attacking with fire",
+        "Five force types: Infantry, Cavalry, Officers, Engineers, Dare-to-Die. Combined arms.",
+        ["fire", "attack", "force_type", "combined_arms", "five"],
+    ),
     # Chapter XIII: The Use of Spies (用間)
-    WarPrinciple("XIII. The Use of Spies", 13,
-                 "Foreknowledge cannot be gotten from ghosts or spirits, but from men who know the enemy",
-                 "Intelligence from memory search, graph walk, archaeology. Data-driven, not guessed.",
-                 ["intelligence", "data", "memory", "search", "knowledge"]),
-    WarPrinciple("XIII. The Use of Spies", 13,
-                 "There is no place where espionage is not used",
-                 "Every tool call should harvest side-intelligence. Opportunistic metadata collection.",
-                 ["harvest", "metadata", "opportunistic", "side_effect", "intelligence"]),
+    WarPrinciple(
+        "XIII. The Use of Spies",
+        13,
+        "Foreknowledge cannot be gotten from ghosts or spirits, but from men who know the enemy",
+        "Intelligence from memory search, graph walk, archaeology. Data-driven, not guessed.",
+        ["intelligence", "data", "memory", "search", "knowledge"],
+    ),
+    WarPrinciple(
+        "XIII. The Use of Spies",
+        13,
+        "There is no place where espionage is not used",
+        "Every tool call should harvest side-intelligence. Opportunistic metadata collection.",
+        ["harvest", "metadata", "opportunistic", "side_effect", "intelligence"],
+    ),
 ]
 
 # Index by chapter number
@@ -206,30 +261,24 @@ for _p in ALL_PRINCIPLES:
     _PRINCIPLES_BY_CHAPTER.setdefault(_p.chapter_number, []).append(_p)
 
 
-# ---------------------------------------------------------------------------
-# Terrain Assessment
-# ---------------------------------------------------------------------------
-
 @dataclass
 class TerrainAssessment:
     """Assessment of the 'terrain' (codebase/problem space)."""
+
     terrain_type: TerrainType
     file_count: int
-    complexity: str           # "simple", "moderate", "complex", "labyrinthine"
-    test_coverage: str        # "none", "sparse", "moderate", "comprehensive"
-    risk_level: str           # "low", "medium", "high", "critical"
+    complexity: str  # "simple", "moderate", "complex", "labyrinthine"
+    test_coverage: str  # "none", "sparse", "moderate", "comprehensive"
+    risk_level: str  # "low", "medium", "high", "critical"
     recommended_phase: CampaignPhase
     principles: list[WarPrinciple]
     description: str
 
 
-# ---------------------------------------------------------------------------
-# Campaign Plan
-# ---------------------------------------------------------------------------
-
 @dataclass
 class CampaignPlan:
     """A structured military campaign plan for an objective."""
+
     objective: str
     terrain: TerrainAssessment
     phases: list[CampaignPlanPhase]
@@ -277,16 +326,13 @@ class CampaignPlan:
 @dataclass
 class CampaignPlanPhase:
     """A single phase in a campaign plan."""
+
     name: str
     campaign_phase: CampaignPhase
     clone_count: int
     force_description: str
     objective: str
 
-
-# ---------------------------------------------------------------------------
-# War Engine
-# ---------------------------------------------------------------------------
 
 class ArtOfWarEngine:
     """Strategic campaign planning engine based on Sun Tzu's Art of War.
@@ -331,7 +377,9 @@ class ArtOfWarEngine:
             terrain = TerrainType.ENTANGLING
             complexity = "labyrinthine"
             risk = "high"
-        elif any(kw in obj_lower for kw in ["external", "api", "dependency", "third_party"]):
+        elif any(
+            kw in obj_lower for kw in ["external", "api", "dependency", "third_party"]
+        ):
             terrain = TerrainType.DISTANT
             complexity = "moderate"
             risk = "medium"
@@ -382,7 +430,9 @@ class ArtOfWarEngine:
             coverage = "sparse"
 
         # Get relevant principles
-        principles = [p for p in self.principles if any(kw in obj_lower for kw in p.keywords)][:3]
+        principles = [
+            p for p in self.principles if any(kw in obj_lower for kw in p.keywords)
+        ][:3]
         if not principles:
             principles = [self.principles[0]]
 
@@ -407,25 +457,26 @@ class ArtOfWarEngine:
         # Build phases based on terrain assessment
         phases: list[CampaignPlanPhase] = []
 
-        # Phase 1: Always start with reconnaissance (Wood)
-        phases.append(CampaignPlanPhase(
-            name="Intelligence Gathering",
-            campaign_phase=CampaignPhase.RECONNAISSANCE,
-            clone_count=5000 if terrain.file_count > 100 else 1000,
-            force_description="Tokio Light Infantry (scouts) + Ralph probes",
-            objective=f"Map the problem space: {objective}",
-        ))
+        phases.append(
+            CampaignPlanPhase(
+                name="Intelligence Gathering",
+                campaign_phase=CampaignPhase.RECONNAISSANCE,
+                clone_count=5000 if terrain.file_count > 100 else 1000,
+                force_description="Tokio Light Infantry (scouts) + Ralph probes",
+                objective=f"Map the problem space: {objective}",
+            )
+        )
 
-        # Phase 2: Planning (Water)
-        phases.append(CampaignPlanPhase(
-            name="Strategic Assessment",
-            campaign_phase=CampaignPhase.PLANNING,
-            clone_count=1,
-            force_description="Officers (Swarm Orchestrator) — decompose and route",
-            objective="Analyze scout reports, identify high-value targets, assign lanes",
-        ))
+        phases.append(
+            CampaignPlanPhase(
+                name="Strategic Assessment",
+                campaign_phase=CampaignPhase.PLANNING,
+                clone_count=1,
+                force_description="Officers (Swarm Orchestrator) — decompose and route",
+                objective="Analyze scout reports, identify high-value targets, assign lanes",
+            )
+        )
 
-        # Phase 3: Engagement (Fire)
         if terrain.risk_level in ("high", "critical"):
             engagement_clones = 200
             force_desc = "Heavy Cavalry (Python Async) + Dare-to-Die shock troops"
@@ -433,31 +484,35 @@ class ArtOfWarEngine:
             engagement_clones = 100
             force_desc = "Heavy Cavalry (Python Async)"
 
-        phases.append(CampaignPlanPhase(
-            name="Decisive Strike",
-            campaign_phase=CampaignPhase.ENGAGEMENT,
-            clone_count=engagement_clones,
-            force_description=force_desc,
-            objective=f"Execute primary objective: {objective}",
-        ))
+        phases.append(
+            CampaignPlanPhase(
+                name="Decisive Strike",
+                campaign_phase=CampaignPhase.ENGAGEMENT,
+                clone_count=engagement_clones,
+                force_description=force_desc,
+                objective=f"Execute primary objective: {objective}",
+            )
+        )
 
-        # Phase 4: Exploitation (Earth)
-        phases.append(CampaignPlanPhase(
-            name="Consolidation",
-            campaign_phase=CampaignPhase.EXPLOITATION,
-            clone_count=10,
-            force_description="Siege Engineers (WorkerDaemons) — integration + verification",
-            objective="Run tests, verify fixes, commit changes",
-        ))
+        phases.append(
+            CampaignPlanPhase(
+                name="Consolidation",
+                campaign_phase=CampaignPhase.EXPLOITATION,
+                clone_count=10,
+                force_description="Siege Engineers (WorkerDaemons) — integration + verification",
+                objective="Run tests, verify fixes, commit changes",
+            )
+        )
 
-        # Phase 5: Independent verification (Metal)
-        phases.append(CampaignPlanPhase(
-            name="Independent Verification",
-            campaign_phase=CampaignPhase.CONSOLIDATION,
-            clone_count=500,
-            force_description="Ralph Clones (fresh eyes, zero context) — adversarial review",
-            objective="Verify the fix independently with no knowledge of how it was made",
-        ))
+        phases.append(
+            CampaignPlanPhase(
+                name="Independent Verification",
+                campaign_phase=CampaignPhase.CONSOLIDATION,
+                clone_count=500,
+                force_description="Ralph Clones (fresh eyes, zero context) — adversarial review",
+                objective="Verify the fix independently with no knowledge of how it was made",
+            )
+        )
 
         total_clones = sum(p.clone_count for p in phases)
 
@@ -496,10 +551,6 @@ class ArtOfWarEngine:
         return [c.to_dict() for c in self._campaigns[-limit:]]
 
 
-# ---------------------------------------------------------------------------
-# Singleton + Backward Compatibility
-# ---------------------------------------------------------------------------
-
 _war_engine: ArtOfWarEngine | None = None
 
 
@@ -508,7 +559,9 @@ def get_war_engine() -> ArtOfWarEngine:
     global _war_engine
     if _war_engine is None:
         _war_engine = ArtOfWarEngine()
-        logger.info("Art of War Engine initialized — 13 Chapters, 24 Principles, Campaign Planner")
+        logger.info(
+            "Art of War Engine initialized — 13 Chapters, 24 Principles, Campaign Planner"
+        )
     return _war_engine
 
 

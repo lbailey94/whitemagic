@@ -30,6 +30,7 @@ class SurfacedMemory:
     reason: str  # Why this was surfaced
     relevance_score: float
 
+
 class SerendipityEngine:
     """Surfaces dormant knowledge through weighted random selection.
 
@@ -43,11 +44,13 @@ class SerendipityEngine:
 
     def __init__(self, db_path: str | None = None) -> None:
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = db_path or str(DB_PATH)
         self._core_access: Any | None = None
         # Ensure parent directory exists for restricted/sandbox environments.
         try:
             from pathlib import Path
+
             Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
         except OSError:
             pass
@@ -68,8 +71,9 @@ class SerendipityEngine:
             self._conn = conn
         return self._conn
 
-    def surface(self, context: str | None = None, count: int = 5,
-                mode: str = "balanced") -> list[SurfacedMemory]:
+    def surface(
+        self, context: str | None = None, count: int = 5, mode: str = "balanced"
+    ) -> list[SurfacedMemory]:
         """Surface memories based on mode."""
 
         if mode == "dormant":
@@ -86,7 +90,7 @@ class SerendipityEngine:
             return self._surface_association_orphans(count)
         elif mode == "quantum":
             return self._surface_quantum(context, count)
-        else :
+        else:
             # balanced
             results = []
             results.extend(self._surface_dormant(max(1, count // 3)))
@@ -123,7 +127,7 @@ class SerendipityEngine:
             # Expand one hop to build graph
             for node_id in list(all_node_ids):
                 mem = um.recall(node_id)
-                if mem and hasattr(mem, 'associations'):
+                if mem and hasattr(mem, "associations"):
                     neighbors = list(mem.associations.keys())
                     local_graph[node_id] = neighbors
                     all_node_ids.update(neighbors)
@@ -131,7 +135,9 @@ class SerendipityEngine:
             # 3. Perform superposition walks from each seed
             walk_results = []
             for seed in seeds:
-                walk_results.append(engine.superposition_walk(local_graph, seed.id, hops=2))
+                walk_results.append(
+                    engine.superposition_walk(local_graph, seed.id, hops=2)
+                )
 
             # 4. Interference fusion of results
             fused_probs = engine.interference_fusion(walk_results)
@@ -144,16 +150,18 @@ class SerendipityEngine:
                     break
                 mem = um.recall(mid)
                 if mem:
-                    surfaced.append(SurfacedMemory(
-                        id=mem.id,
-                        title=mem.title or "Untitled",
-                        content_preview=str(mem.content)[:200],
-                        gravity=getattr(mem, 'importance', 0.5),
-                        last_accessed=getattr(mem, 'accessed_at', None),
-                        access_count=getattr(mem, 'access_count', 0),
-                        reason="Quantum Superposition Walk",
-                        relevance_score=prob
-                    ))
+                    surfaced.append(
+                        SurfacedMemory(
+                            id=mem.id,
+                            title=mem.title or "Untitled",
+                            content_preview=str(mem.content)[:200],
+                            gravity=getattr(mem, "importance", 0.5),
+                            last_accessed=getattr(mem, "accessed_at", None),
+                            access_count=getattr(mem, "access_count", 0),
+                            reason="Quantum Superposition Walk",
+                            relevance_score=prob,
+                        )
+                    )
             return surfaced
         except Exception as e:
             logger.warning("Quantum serendipity failed: %s", e, exc_info=True)
@@ -164,7 +172,8 @@ class SerendipityEngine:
         conn = self._get_conn()
         cur = conn.cursor()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
                    h.w as gravity, m.accessed_at, m.access_count
             FROM memories m
@@ -172,7 +181,9 @@ class SerendipityEngine:
             WHERE h.w > 0.5
             ORDER BY (1.0 / MAX(1, m.access_count)) * h.w DESC
             LIMIT ?
-        """, (count * 2,))
+        """,
+            (count * 2,),
+        )
 
         candidates = cur.fetchall()
 
@@ -184,18 +195,25 @@ class SerendipityEngine:
         total = sum(weights)
         weights = [w / total for w in weights]
 
-        selected = random.choices(candidates, weights=weights, k=min(count, len(candidates)))
+        selected = random.choices(
+            candidates, weights=weights, k=min(count, len(candidates))
+        )
 
-        return [SurfacedMemory(
-            id=m["id"],
-            title=m["title"] or "Untitled",
-            content_preview=m["preview"] or "",
-            gravity=m["gravity"],
-            last_accessed=parse_datetime(m["accessed_at"]) if m["accessed_at"] else None,
-            access_count=m["access_count"] or 0,
-            reason="High gravity, rarely accessed",
-            relevance_score=m["gravity"],
-        ) for m in selected]
+        return [
+            SurfacedMemory(
+                id=m["id"],
+                title=m["title"] or "Untitled",
+                content_preview=m["preview"] or "",
+                gravity=m["gravity"],
+                last_accessed=parse_datetime(m["accessed_at"])
+                if m["accessed_at"]
+                else None,
+                access_count=m["access_count"] or 0,
+                reason="High gravity, rarely accessed",
+                relevance_score=m["gravity"],
+            )
+            for m in selected
+        ]
 
     def _surface_ancient(self, count: int) -> list[SurfacedMemory]:
         """Surface old memories that may be forgotten."""
@@ -204,7 +222,8 @@ class SerendipityEngine:
 
         threshold = (datetime.now() - timedelta(days=30)).isoformat()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
                    h.w as gravity, m.accessed_at, m.access_count, m.created_at
             FROM memories m
@@ -212,20 +231,27 @@ class SerendipityEngine:
             WHERE m.created_at < ? AND h.w > 0.3
             ORDER BY RANDOM()
             LIMIT ?
-        """, (threshold, count))
+        """,
+            (threshold, count),
+        )
 
         memories = cur.fetchall()
 
-        return [SurfacedMemory(
-            id=m["id"],
-            title=m["title"] or "Untitled",
-            content_preview=m["preview"] or "",
-            gravity=m["gravity"],
-            last_accessed=parse_datetime(m["accessed_at"]) if m["accessed_at"] else None,
-            access_count=m["access_count"] or 0,
-            reason="Ancient memory (>30 days old)",
-            relevance_score=m["gravity"] * 0.8,
-        ) for m in memories]
+        return [
+            SurfacedMemory(
+                id=m["id"],
+                title=m["title"] or "Untitled",
+                content_preview=m["preview"] or "",
+                gravity=m["gravity"],
+                last_accessed=parse_datetime(m["accessed_at"])
+                if m["accessed_at"]
+                else None,
+                access_count=m["access_count"] or 0,
+                reason="Ancient memory (>30 days old)",
+                relevance_score=m["gravity"] * 0.8,
+            )
+            for m in memories
+        ]
 
     def _surface_bridges(self, count: int) -> list[SurfacedMemory]:
         """Surface memories that could bridge clusters."""
@@ -233,7 +259,8 @@ class SerendipityEngine:
         cur = conn.cursor()
 
         # Find memories near cluster boundaries (x or y near 0)
-        cur.execute("""
+        cur.execute(
+            """
             SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
                    h.w as gravity, m.accessed_at, m.access_count,
                    ABS(h.x) + ABS(h.y) as boundary_distance
@@ -242,47 +269,62 @@ class SerendipityEngine:
             WHERE ABS(h.x) < 0.3 OR ABS(h.y) < 0.3
             ORDER BY RANDOM()
             LIMIT ?
-        """, (count,))
+        """,
+            (count,),
+        )
 
         memories = cur.fetchall()
 
-        return [SurfacedMemory(
-            id=m["id"],
-            title=m["title"] or "Untitled",
-            content_preview=m["preview"] or "",
-            gravity=m["gravity"],
-            last_accessed=parse_datetime(m["accessed_at"]) if m["accessed_at"] else None,
-            access_count=m["access_count"] or 0,
-            reason="Bridge memory (near cluster boundary)",
-            relevance_score=m["gravity"] * 0.9,
-        ) for m in memories]
+        return [
+            SurfacedMemory(
+                id=m["id"],
+                title=m["title"] or "Untitled",
+                content_preview=m["preview"] or "",
+                gravity=m["gravity"],
+                last_accessed=parse_datetime(m["accessed_at"])
+                if m["accessed_at"]
+                else None,
+                access_count=m["access_count"] or 0,
+                reason="Bridge memory (near cluster boundary)",
+                relevance_score=m["gravity"] * 0.9,
+            )
+            for m in memories
+        ]
 
     def _surface_random(self, count: int) -> list[SurfacedMemory]:
         """Pure random selection."""
         conn = self._get_conn()
         cur = conn.cursor()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
                    h.w as gravity, m.accessed_at, m.access_count
             FROM memories m
             JOIN holographic_coords h ON m.id = h.memory_id
             ORDER BY RANDOM()
             LIMIT ?
-        """, (count,))
+        """,
+            (count,),
+        )
 
         memories = cur.fetchall()
 
-        return [SurfacedMemory(
-            id=m["id"],
-            title=m["title"] or "Untitled",
-            content_preview=m["preview"] or "",
-            gravity=m["gravity"],
-            last_accessed=parse_datetime(m["accessed_at"]) if m["accessed_at"] else None,
-            access_count=m["access_count"] or 0,
-            reason="Random discovery",
-            relevance_score=m["gravity"] * 0.7,
-        ) for m in memories]
+        return [
+            SurfacedMemory(
+                id=m["id"],
+                title=m["title"] or "Untitled",
+                content_preview=m["preview"] or "",
+                gravity=m["gravity"],
+                last_accessed=parse_datetime(m["accessed_at"])
+                if m["accessed_at"]
+                else None,
+                access_count=m["access_count"] or 0,
+                reason="Random discovery",
+                relevance_score=m["gravity"] * 0.7,
+            )
+            for m in memories
+        ]
 
     def mark_accessed(self, memory_id: str) -> None:
         """Mark a memory as accessed and emit Gan Ying event."""
@@ -321,6 +363,7 @@ class SerendipityEngine:
                 ResonanceEvent,
                 get_bus,
             )
+
             bus = get_bus()
             event = ResonanceEvent(
                 source="serendipity_engine",
@@ -338,6 +381,7 @@ class SerendipityEngine:
         if self._core_access is None:
             try:
                 from whitemagic.core.intelligence.core_access import get_core_access
+
                 self._core_access = get_core_access()
             except ImportError:
                 pass
@@ -394,19 +438,23 @@ class SerendipityEngine:
             if not row:
                 continue
             bridge = mid_to_bridge[mid]
-            results.append(SurfacedMemory(
-                id=row["id"],
-                title=row["title"] or "Untitled",
-                content_preview=row["preview"] or "",
-                gravity=row["gravity"] or 0.5,
-                last_accessed=parse_datetime(row["accessed_at"]) if row["accessed_at"] else None,
-                access_count=row["access_count"] or 0,
-                reason=(
-                    f"Bridges constellations '{bridge.get('constellation_1', '?')}' "
-                    f"and '{bridge.get('constellation_2', '?')}'"
-                ),
-                relevance_score=bridge.get("strength", 0.5) * 1.2,
-            ))
+            results.append(
+                SurfacedMemory(
+                    id=row["id"],
+                    title=row["title"] or "Untitled",
+                    content_preview=row["preview"] or "",
+                    gravity=row["gravity"] or 0.5,
+                    last_accessed=parse_datetime(row["accessed_at"])
+                    if row["accessed_at"]
+                    else None,
+                    access_count=row["access_count"] or 0,
+                    reason=(
+                        f"Bridges constellations '{bridge.get('constellation_1', '?')}' "
+                        f"and '{bridge.get('constellation_2', '?')}'"
+                    ),
+                    relevance_score=bridge.get("strength", 0.5) * 1.2,
+                )
+            )
             if len(results) >= count:
                 break
 
@@ -447,16 +495,20 @@ class SerendipityEngine:
         for orphan in orphans:
             mid = orphan.get("id", "")
             row = row_map.get(mid)
-            results.append(SurfacedMemory(
-                id=mid,
-                title=orphan.get("title") or "Untitled",
-                content_preview=(row["preview"] if row else "") or "",
-                gravity=orphan.get("gravity", 0.5),
-                last_accessed=parse_datetime(row["accessed_at"]) if row and row["accessed_at"] else None,
-                access_count=(row["access_count"] if row else 0) or 0,
-                reason=f"High-gravity orphan (gravity={orphan.get('gravity', 0):.2f}, {orphan.get('assoc_count', 0)} associations)",
-                relevance_score=orphan.get("gravity", 0.5) * 1.1,
-            ))
+            results.append(
+                SurfacedMemory(
+                    id=mid,
+                    title=orphan.get("title") or "Untitled",
+                    content_preview=(row["preview"] if row else "") or "",
+                    gravity=orphan.get("gravity", 0.5),
+                    last_accessed=parse_datetime(row["accessed_at"])
+                    if row and row["accessed_at"]
+                    else None,
+                    access_count=(row["access_count"] if row else 0) or 0,
+                    reason=f"High-gravity orphan (gravity={orphan.get('gravity', 0):.2f}, {orphan.get('assoc_count', 0)} associations)",
+                    relevance_score=orphan.get("gravity", 0.5) * 1.1,
+                )
+            )
 
             if len(results) >= count:
                 break
@@ -467,6 +519,7 @@ class SerendipityEngine:
         """Start listening to Gan Ying for pattern events."""
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import EventType, get_bus
+
             bus = get_bus()
             bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
         except (ImportError, AttributeError) as e:
@@ -482,8 +535,10 @@ class SerendipityEngine:
         # Acknowledge event; surfacing logic deferred until context mapping is ready.
         _ = event
 
+
 # Global instance
 _serendipity_engine = None
+
 
 def get_serendipity_engine() -> SerendipityEngine:
     """

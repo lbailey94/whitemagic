@@ -3,6 +3,7 @@
 
 Monitors context and automatically casts appropriate spells.
 """
+
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass, field
@@ -22,10 +23,10 @@ _SPELL_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="spell-ca
 class CastMode(Enum):
     """How aggressively to auto-cast"""
 
-    SUGGEST_ONLY = "suggest"     # Only suggest, never auto-cast
-    ASK_FIRST = "ask"            # Ask before casting
-    HIGH_CONFIDENCE = "high"     # Auto-cast if >80% confidence
-    ALWAYS = "always"            # Auto-cast any match
+    SUGGEST_ONLY = "suggest"  # Only suggest, never auto-cast
+    ASK_FIRST = "ask"  # Ask before casting
+    HIGH_CONFIDENCE = "high"  # Auto-cast if >80% confidence
+    ALWAYS = "always"  # Auto-cast any match
 
 
 @dataclass
@@ -126,7 +127,9 @@ class AutoCaster:
                     outcome = future.result(timeout=10.0)  # 10s max per spell
                     auto_cast = True
                 except TimeoutError:
-                    logger.warning("Spell %s timed out during auto-cast", spell.name, exc_info=True)
+                    logger.warning(
+                        "Spell %s timed out during auto-cast", spell.name, exc_info=True
+                    )
                     outcome = SpellOutcome.FAILED
                     auto_cast = False
                 except Exception as e:
@@ -196,19 +199,30 @@ class AutoCaster:
             bias = 0.0
             # High curiosity → boost exploration/discovery/search spells
             if snap.get("curiosity", 0.5) > 0.7:
-                if any(k in task_lower for k in ("explore", "search", "discover", "pattern", "wonder")):
+                if any(
+                    k in task_lower
+                    for k in ("explore", "search", "discover", "pattern", "wonder")
+                ):
                     bias += 0.1
             # High caution → boost safety/audit/check spells
             if snap.get("caution", 0.5) > 0.7:
-                if any(k in task_lower for k in ("check", "audit", "verify", "protect", "safe")):
+                if any(
+                    k in task_lower
+                    for k in ("check", "audit", "verify", "protect", "safe")
+                ):
                     bias += 0.1
             # Low energy → boost maintenance/consolidation spells
             if snap.get("energy", 0.5) < 0.3:
-                if any(k in task_lower for k in ("consolidat", "maintenance", "optimize", "clean")):
+                if any(
+                    k in task_lower
+                    for k in ("consolidat", "maintenance", "optimize", "clean")
+                ):
                     bias += 0.1
             # High satisfaction → boost creative/synthesis spells
             if snap.get("satisfaction", 0.5) > 0.7:
-                if any(k in task_lower for k in ("create", "synth", "compose", "dream")):
+                if any(
+                    k in task_lower for k in ("create", "synth", "compose", "dream")
+                ):
                     bias += 0.1
 
             return bias
@@ -233,7 +247,9 @@ class AutoCaster:
         spells = self.spell_book.find_for_context(task)
         return [f"{spell.name}: {spell.description}" for spell in spells[:5]]
 
-    def quick_cast(self, spell_name: str, context: CastContext | None = None) -> CastResult:
+    def quick_cast(
+        self, spell_name: str, context: CastContext | None = None
+    ) -> CastResult:
         """Quickly cast a spell by name"""
         spell = self.spell_book.find_spell(spell_name)
 
@@ -261,8 +277,8 @@ class AutoCaster:
         """Get auto-caster status"""
         status = f"""
 ⚡ AUTO-CASTER STATUS
-{'='*50}
-Active: {'✅ Yes' if self.active else '❌ No'}
+{"=" * 50}
+Active: {"✅ Yes" if self.active else "❌ No"}
 Mode: {self.mode.value}
 Spells Available: {len(self.spell_book)}
 Spells Cast: {len(self.cast_history)}
@@ -270,17 +286,16 @@ Spells Cast: {len(self.cast_history)}
 
         if self.cast_history:
             status += "\nRecent Casts:\n"
-            for result in self.cast_history[-5:
-                ]:
+            for result in self.cast_history[-5:]:
                 if result.spell:
                     status += f"  ✨ {result.spell.name} - {result.outcome.value}\n"
 
         return status
 
 
-
 # Singleton
 _auto_caster: AutoCaster | None = None
+
 
 def get_auto_caster(mode: CastMode = CastMode.HIGH_CONFIDENCE) -> AutoCaster:
     """Get the global AutoCaster singleton."""

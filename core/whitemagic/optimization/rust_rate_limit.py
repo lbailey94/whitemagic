@@ -12,19 +12,17 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Rust availability check
-# ---------------------------------------------------------------------------
-
 _RUST_RATE_LIMITER = False
 _rs: Any = None
 
 try:
     import whitemagic_rust as _rs_mod
+
     _rs = _rs_mod
 except ImportError:
     try:
         import whitemagic_rs as _rs_mod
+
         _rs = _rs_mod
     except ImportError:
         pass

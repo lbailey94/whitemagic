@@ -141,13 +141,15 @@ def solve(task: str, parallel: int) -> None:
 
         # Define approaches (simplified)
         approaches = [
-            lambda: f"Approach {i+1}: Analyzing from perspective {i+1}"
+            lambda: f"Approach {i + 1}: Analyzing from perspective {i + 1}"
             for i in range(parallel)
         ]
 
         result = pc.problem_solve_parallel(task, approaches)
 
-        click.echo(f"Successful approaches: {result['successful']}/{result['approaches_tried']}")
+        click.echo(
+            f"Successful approaches: {result['successful']}/{result['approaches_tried']}"
+        )
 
         if result.get("best_solution"):
             click.echo(f"\nBest solution:\n{result['best_solution']}")

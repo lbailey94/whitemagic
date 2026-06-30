@@ -3,6 +3,7 @@
 
 Reads a JSON event from stdin and returns context to prepend to the LLM prompt.
 """
+
 from __future__ import annotations
 
 import json

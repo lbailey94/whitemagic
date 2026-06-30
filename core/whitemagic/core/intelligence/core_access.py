@@ -41,10 +41,6 @@ from typing import Any, cast
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data structures returned by the access layer
-# ---------------------------------------------------------------------------
-
 @dataclass
 class ConstellationContext:
     """Constellation query result."""
@@ -66,9 +62,13 @@ class ConstellationContext:
         return {
             "name": self.name,
             "size": self.size,
-            "centroid": {"x": self.centroid[0], "y": self.centroid[1],
-                         "z": self.centroid[2], "w": self.centroid[3],
-                         "v": self.centroid[4]},
+            "centroid": {
+                "x": self.centroid[0],
+                "y": self.centroid[1],
+                "z": self.centroid[2],
+                "w": self.centroid[3],
+                "v": self.centroid[4],
+            },
             "dominant_tags": self.dominant_tags,
             "zone": self.zone,
             "distance": round(self.distance, 3),
@@ -172,10 +172,6 @@ class HybridResult:
         }
 
 
-# ---------------------------------------------------------------------------
-# Core Access Layer
-# ---------------------------------------------------------------------------
-
 class CoreAccessLayer:
     """Unified read interface to the holographic galactic core.
 
@@ -204,29 +200,44 @@ class CoreAccessLayer:
 
             from whitemagic.config.paths import DB_PATH
 
-            self._conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
+            self._conn = sqlite3.connect(
+                str(DB_PATH), timeout=30, check_same_thread=False
+            )
             self._conn.row_factory = sqlite3.Row
 
-            # --- BITEMPORAL MEMORY OPTIMIZATION: Rust SIMD Extension ---
             try:
                 self._conn.enable_load_extension(True)
                 ext_path_params = [
-                    os.path.join(os.path.dirname(__file__), "../../../whitemagic-rust/target/release/libwhitemagic_rust.so"),
+                    os.path.join(
+                        os.path.dirname(__file__),
+                        "../../../whitemagic-rust/target/release/libwhitemagic_rust.so",
+                    ),
                 ]
                 for ext_path in ext_path_params:
                     if os.path.exists(ext_path):
                         self._conn.load_extension(ext_path)
-                        logger.info("Successfully injected native SIMD SQLite extension: %s", ext_path)
+                        logger.info(
+                            "Successfully injected native SIMD SQLite extension: %s",
+                            ext_path,
+                        )
                         break
             except AttributeError:
-                logger.warning("SQLite extension loading not available in this Python build (requires sqlite3 compiled with enable-load-extension).")
+                logger.warning(
+                    "SQLite extension loading not available in this Python build (requires sqlite3 compiled with enable-load-extension)."
+                )
             except (sqlite3.Error, sqlite3.OperationalError) as e:
-                logger.debug("Could not load native SQLite SIMD extension: %s. Falling back to standard graph calculations.", e, exc_info=True)
+                logger.debug(
+                    "Could not load native SQLite SIMD extension: %s. Falling back to standard graph calculations.",
+                    e,
+                    exc_info=True,
+                )
             finally:
                 try:
                     self._conn.enable_load_extension(False)
                 except (sqlite3.Error, sqlite3.OperationalError) as e:
-                    logger.debug("Failed to disable load extension: %s", e, exc_info=True)
+                    logger.debug(
+                        "Failed to disable load extension: %s", e, exc_info=True
+                    )
 
             try:
                 self._conn.execute("PRAGMA journal_mode = WAL")
@@ -235,10 +246,6 @@ class CoreAccessLayer:
             except (sqlite3.Error, sqlite3.OperationalError) as e:
                 logger.debug("Failed to set PRAGMA busy_timeout: %s", e, exc_info=True)
         return self._conn
-
-    # ------------------------------------------------------------------
-    # 1. Constellation Queries
-    # ------------------------------------------------------------------
 
     def query_constellation_context(
         self,
@@ -254,6 +261,7 @@ class CoreAccessLayer:
         """
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
             # Use TTL-cached detection (avoids re-running detect on every query)
             cached = detector.get_cached_or_detect(sample_limit=10000)
@@ -271,8 +279,10 @@ class CoreAccessLayer:
         for c in raw_constellations:
             centroid_dict = c.get("centroid", {})
             centroid = (
-                centroid_dict.get("x", 0), centroid_dict.get("y", 0),
-                centroid_dict.get("z", 0), centroid_dict.get("w", 0),
+                centroid_dict.get("x", 0),
+                centroid_dict.get("y", 0),
+                centroid_dict.get("z", 0),
+                centroid_dict.get("w", 0),
                 centroid_dict.get("v", 0),
             )
 
@@ -286,29 +296,35 @@ class CoreAccessLayer:
             coord_dist = float("inf")
             if coords:
                 import math
-                coord_dist = math.sqrt(sum(
-                    (a - b) ** 2 for a, b in zip(coords, centroid)
-                ))
+
+                coord_dist = math.sqrt(
+                    sum((a - b) ** 2 for a, b in zip(coords, centroid))
+                )
 
             # Include if matches tags or is spatially close
             if tag_score > 0 or (coords and coord_dist < 2.0):
-                results.append(ConstellationContext(
-                    name=c["name"],
-                    size=c.get("size", 0),
-                    centroid=centroid,
-                    dominant_tags=c.get("dominant_tags", []),
-                    zone=c.get("zone", "unknown"),
-                    distance=coord_dist if coords else 0.0,
-                ))
+                results.append(
+                    ConstellationContext(
+                        name=c["name"],
+                        size=c.get("size", 0),
+                        centroid=centroid,
+                        dominant_tags=c.get("dominant_tags", []),
+                        zone=c.get("zone", "unknown"),
+                        distance=coord_dist if coords else 0.0,
+                    )
+                )
 
         # Sort: tag matches first (by overlap), then by distance
-        results.sort(key=lambda r: (-len(set(tags or []) & set(r.dominant_tags)), r.distance))
+        results.sort(
+            key=lambda r: (-len(set(tags or []) & set(r.dominant_tags)), r.distance)
+        )
         return results[:k]
 
     def get_all_constellations(self) -> list[ConstellationContext]:
         """Return all detected constellations (TTL-cached)."""
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
             cached = detector.get_cached_or_detect(sample_limit=10000)
             report = cached.to_dict() if cached else None
@@ -321,19 +337,22 @@ class CoreAccessLayer:
         results = []
         for c in report["constellations"]:
             cd = c.get("centroid", {})
-            results.append(ConstellationContext(
-                name=c["name"],
-                size=c.get("size", 0),
-                centroid=(cd.get("x", 0), cd.get("y", 0), cd.get("z", 0),
-                          cd.get("w", 0), cd.get("v", 0)),
-                dominant_tags=c.get("dominant_tags", []),
-                zone=c.get("zone", "unknown"),
-            ))
+            results.append(
+                ConstellationContext(
+                    name=c["name"],
+                    size=c.get("size", 0),
+                    centroid=(
+                        cd.get("x", 0),
+                        cd.get("y", 0),
+                        cd.get("z", 0),
+                        cd.get("w", 0),
+                        cd.get("v", 0),
+                    ),
+                    dominant_tags=c.get("dominant_tags", []),
+                    zone=c.get("zone", "unknown"),
+                )
+            )
         return results
-
-    # ------------------------------------------------------------------
-    # 2. Association Graph Traversal
-    # ------------------------------------------------------------------
 
     def query_association_subgraph(
         self,
@@ -350,16 +369,18 @@ class CoreAccessLayer:
         Uses Rust rusqlite accelerator when available (single call,
         no Python↔SQLite round trips per hop). Falls back to Python BFS.
         """
-        # --- Rust-accelerated path ---
-        # Skip when a custom connection was injected (e.g. in-memory test DBs)
-        # because the Rust path opens DB_PATH directly, bypassing self._conn.
         try:
             if self._conn_injected:
                 raise RuntimeError("injected conn — use Python path")
             import whitemagic_rs
             from whitemagic.config.paths import DB_PATH
+
             walk_nodes = whitemagic_rs.association_walk(
-                str(DB_PATH), seed_ids, depth, min_strength, max_nodes,
+                str(DB_PATH),
+                seed_ids,
+                depth,
+                min_strength,
+                max_nodes,
             )
             nodes = [
                 AssociationNode(
@@ -375,7 +396,6 @@ class CoreAccessLayer:
         except Exception as e:
             logger.debug("Failed to execute core access query: %s", e, exc_info=True)
 
-        # --- Python fallback ---
         conn = self._get_conn()
         visited: dict[str, AssociationNode] = {}
         frontier = list(seed_ids)
@@ -391,7 +411,10 @@ class CoreAccessLayer:
             except (sqlite3.Error, sqlite3.OperationalError):
                 title = None
             visited[sid] = AssociationNode(
-                memory_id=sid, title=title, strength=1.0, depth=0,
+                memory_id=sid,
+                title=title,
+                strength=1.0,
+                depth=0,
             )
 
         while current_depth < depth and frontier and len(visited) < max_nodes:
@@ -399,7 +422,9 @@ class CoreAccessLayer:
             next_frontier = []
 
             # Batch all frontier association queries into one IN(...) query per depth level
-            frontier_neighbors: dict[str, list[tuple[str, float]]] = {mid: [] for mid in frontier}
+            frontier_neighbors: dict[str, list[tuple[str, float]]] = {
+                mid: [] for mid in frontier
+            }
             if frontier:
                 try:
                     ph = ",".join("?" * len(frontier))
@@ -418,9 +443,13 @@ class CoreAccessLayer:
                     for r in batch_rows:
                         src = r["source_id"]
                         if src in frontier_neighbors:
-                            frontier_neighbors[src].append((r["neighbor_id"], r["strength"]))
+                            frontier_neighbors[src].append(
+                                (r["neighbor_id"], r["strength"])
+                            )
                 except Exception as e:
-                    logger.debug("Failed to process frontier neighbors: %s", e, exc_info=True)
+                    logger.debug(
+                        "Failed to process frontier neighbors: %s", e, exc_info=True
+                    )
 
             # Collect all new neighbor IDs, then batch-fetch titles (N+1 fix)
             new_nids = [
@@ -439,7 +468,9 @@ class CoreAccessLayer:
                     ).fetchall()
                     neighbor_titles = {r["id"]: r["title"] for r in title_rows}
                 except (sqlite3.Error, sqlite3.OperationalError) as e:
-                    logger.debug("Failed to resolve neighbor titles: %s", e, exc_info=True)
+                    logger.debug(
+                        "Failed to resolve neighbor titles: %s", e, exc_info=True
+                    )
 
             for neighbors in frontier_neighbors.values():
                 for nid, strength in neighbors:
@@ -463,7 +494,9 @@ class CoreAccessLayer:
         return nodes
 
     def _record_traversals(
-        self, visited: dict[str, AssociationNode], conn: sqlite3.Connection,
+        self,
+        visited: dict[str, AssociationNode],
+        conn: sqlite3.Connection,
     ) -> None:
         """Update last_traversed_at and traversal_count for walked edges."""
         now = datetime.now().isoformat()
@@ -474,16 +507,21 @@ class CoreAccessLayer:
                     continue  # Skip seeds
                 batch_params.append((now, node.memory_id, node.memory_id))
             if batch_params:
-                conn.executemany("""
+                conn.executemany(
+                    """
                     UPDATE associations
                     SET last_traversed_at = ?,
                         traversal_count = COALESCE(traversal_count, 0) + 1
                     WHERE (source_id = ? OR target_id = ?)
                     AND strength >= 0.3
-                """, batch_params)
+                """,
+                    batch_params,
+                )
                 conn.commit()
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.debug("Non-critical commit error in core_access: %s", e, exc_info=True)
+            logger.debug(
+                "Non-critical commit error in core_access: %s", e, exc_info=True
+            )
 
     def get_association_stats(self) -> dict[str, Any]:
         """Get association graph statistics."""
@@ -509,7 +547,8 @@ class CoreAccessLayer:
         """Find high-strength associations where one end has drifted to FAR_EDGE."""
         conn = self._get_conn()
         try:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT a.source_id, a.target_id, a.strength,
                        m1.galactic_distance as src_distance,
                        m2.galactic_distance as tgt_distance,
@@ -521,14 +560,12 @@ class CoreAccessLayer:
                 AND (m1.galactic_distance > 0.85 OR m2.galactic_distance > 0.85)
                 ORDER BY a.strength DESC
                 LIMIT ?
-            """, (limit,)).fetchall()
+            """,
+                (limit,),
+            ).fetchall()
             return [dict(r) for r in rows]
         except sqlite3.Error:
             return []
-
-    # ------------------------------------------------------------------
-    # 3. Temporal Activity Queries
-    # ------------------------------------------------------------------
 
     def query_temporal_activity(
         self,
@@ -553,22 +590,28 @@ class CoreAccessLayer:
 
         try:
             # Memory creation by date
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT DATE(created_at) as day, COUNT(*) as cnt
                 FROM memories
                 WHERE created_at > ?
                 GROUP BY day ORDER BY day
-            """, (threshold,)).fetchall()
+            """,
+                (threshold,),
+            ).fetchall()
 
             creation_by_day: dict[str, int] = {r["day"]: r["cnt"] for r in rows}
 
             # Memory access by date
-            access_rows = conn.execute("""
+            access_rows = conn.execute(
+                """
                 SELECT DATE(accessed_at) as day, COUNT(*) as cnt
                 FROM memories
                 WHERE accessed_at > ? AND accessed_at IS NOT NULL
                 GROUP BY day ORDER BY day
-            """, (threshold,)).fetchall()
+            """,
+                (threshold,),
+            ).fetchall()
 
             access_by_day: dict[str, int] = {r["day"]: r["cnt"] for r in access_rows}
         except sqlite3.Error:
@@ -591,11 +634,13 @@ class CoreAccessLayer:
                 accessed += access_by_day.get(day_str, 0)
                 d += timedelta(days=1)
 
-            buckets.append(TemporalBucket(
-                period=current.strftime("%Y-%m-%d"),
-                memories_created=created,
-                memories_accessed=accessed,
-            ))
+            buckets.append(
+                TemporalBucket(
+                    period=current.strftime("%Y-%m-%d"),
+                    memories_created=created,
+                    memories_accessed=accessed,
+                )
+            )
             current = bucket_end
 
         return buckets
@@ -615,7 +660,9 @@ class CoreAccessLayer:
 
             last_7d = row["last_7d"]
             last_30d = row["last_30d"]
-            acceleration = (last_7d / 7) / max(0.01, last_30d / 30) if last_30d > 0 else 1.0
+            acceleration = (
+                (last_7d / 7) / max(0.01, last_30d / 30) if last_30d > 0 else 1.0
+            )
 
             return {
                 "total": row["total"],
@@ -628,10 +675,6 @@ class CoreAccessLayer:
             }
         except (sqlite3.Error, TypeError):
             return {"total": 0}
-
-    # ------------------------------------------------------------------
-    # 4. Holographic Neighbor Queries
-    # ------------------------------------------------------------------
 
     def query_holographic_neighbors(
         self,
@@ -649,7 +692,8 @@ class CoreAccessLayer:
 
         try:
             # SQL-based brute force with distance calculation
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT hc.memory_id,
                        m.title,
                        hc.x, hc.y, hc.z, hc.w, hc.v,
@@ -663,9 +707,12 @@ class CoreAccessLayer:
                 WHERE hc.x IS NOT NULL
                 ORDER BY dist_sq ASC
                 LIMIT ?
-            """, (x, x, y, y, z, z, w, w, v, v, k)).fetchall()
+            """,
+                (x, x, y, y, z, z, w, w, v, v, k),
+            ).fetchall()
 
             import math
+
             return [
                 HolographicNeighbor(
                     memory_id=r["memory_id"],
@@ -678,10 +725,6 @@ class CoreAccessLayer:
         except Exception as e:
             logger.debug("Holographic neighbor query failed: %s", e, exc_info=True)
             return []
-
-    # ------------------------------------------------------------------
-    # 5. Hybrid Recall (Vector + Graph RRF)
-    # ------------------------------------------------------------------
 
     def invalidate_hrr_cache(self) -> None:
         """Invalidate the HRR pre-filter cache.
@@ -729,6 +772,7 @@ class CoreAccessLayer:
                     emb = r["embedding"]
                     if emb:
                         import json
+
                         vec = json.loads(emb) if isinstance(emb, str) else list(emb)
                         if len(vec) >= 64:
                             ids.append(r["memory_id"])
@@ -742,9 +786,9 @@ class CoreAccessLayer:
 
                 # Quantize all embeddings with qFHRR (8-bit for balanced speed/precision)
                 engine = get_quantized_hrr_engine(bits=8, dim=len(embeddings[0]))
-                quantized = np.array([
-                    engine._to_quantized(emb) for emb in embeddings
-                ], dtype=np.uint8)
+                quantized = np.array(
+                    [engine._to_quantized(emb) for emb in embeddings], dtype=np.uint8
+                )
 
                 self._hrr_cache_ids = ids
                 self._hrr_cache_vecs = quantized
@@ -756,7 +800,9 @@ class CoreAccessLayer:
                 self._hrr_cache_count = 0
 
     def _hrr_prefilter(
-        self, query: str, top_n: int = 40,
+        self,
+        query: str,
+        top_n: int = 40,
     ) -> list[tuple[str, float]]:
         """Pre-filter candidates using quantized HRR similarity.
 
@@ -772,7 +818,11 @@ class CoreAccessLayer:
         if self._hrr_cache_vecs is None or self._hrr_cache_count == 0:
             self._refresh_hrr_cache()
 
-        if not self._hrr_cache_ids or self._hrr_cache_vecs is None or self._hrr_cache_count == 0:
+        if (
+            not self._hrr_cache_ids
+            or self._hrr_cache_vecs is None
+            or self._hrr_cache_count == 0
+        ):
             return []
 
         try:
@@ -836,12 +886,8 @@ class CoreAccessLayer:
         """
         k_rrf = 60  # RRF constant (standard value from literature)
         vector_results: list[tuple[str, float]] = []  # (memory_id, similarity)
-        graph_results: list[tuple[str, float]] = []    # (memory_id, strength)
+        graph_results: list[tuple[str, float]] = []  # (memory_id, strength)
 
-        # --- HRR Pre-filter channel ---
-        # Use quantized HRR similarity to rapidly pre-filter candidates
-        # before expensive embedding search. This is O(N) with cheap
-        # integer operations vs O(N) with float dot products + model loading.
         hrr_candidates: list[tuple[str, float]] = []
         if use_hrr_prefilter:
             try:
@@ -849,32 +895,35 @@ class CoreAccessLayer:
                 if hrr_candidates:
                     logger.debug(
                         "HRR pre-filter: %d candidates from %d total (top sim=%.3f)",
-                        len(hrr_candidates), self._hrr_cache_count,
+                        len(hrr_candidates),
+                        self._hrr_cache_count,
                         hrr_candidates[0][1],
                     )
             except Exception as e:
                 logger.debug("HRR pre-filter failed: %s", e, exc_info=True)
 
-        # --- Vector channel ---
-        # If HRR pre-filter produced candidates, use them as a narrowed
-        # search space for the embedding engine. Otherwise, fall back to
-        # full embedding search.
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
+
             engine = get_embedding_engine()
             if hrr_candidates:
                 # Use HRR candidates as filter — only search embeddings for these IDs
                 candidate_ids = {mid for mid, _ in hrr_candidates}
                 vec_hits = engine.search_similar(
-                    query, limit=k * 2, include_cold=include_cold,
+                    query,
+                    limit=k * 2,
+                    include_cold=include_cold,
                 )
                 # Filter to HRR pre-selected candidates
                 vec_hits = [
-                    h for h in vec_hits
+                    h
+                    for h in vec_hits
                     if (h.get("memory_id") or h.get("id", "")) in candidate_ids
                 ]
             else:
-                vec_hits = engine.search_similar(query, limit=k * 2, include_cold=include_cold)
+                vec_hits = engine.search_similar(
+                    query, limit=k * 2, include_cold=include_cold
+                )
             for hit in vec_hits:
                 mid = hit.get("memory_id") or hit.get("id", "")
                 sim = hit.get("similarity", 0.0)
@@ -884,31 +933,37 @@ class CoreAccessLayer:
             # If embedding search fails but HRR pre-filter succeeded,
             # use HRR scores as fallback vector channel
             if hrr_candidates:
-                vector_results = hrr_candidates[:k * 2]
+                vector_results = hrr_candidates[: k * 2]
 
-        # --- Graph channel ---
-        # Use top vector results as seeds, then walk associations
         if vector_results:
             seed_ids = [mid for mid, _ in vector_results[:5]]
             graph_nodes = self.query_association_subgraph(
-                seed_ids, depth=graph_depth, min_strength=0.3, max_nodes=k * 3,
+                seed_ids,
+                depth=graph_depth,
+                min_strength=0.3,
+                max_nodes=k * 3,
             )
             for node in graph_nodes:
                 if node.depth > 0:
                     # Skip seeds themselves
                     graph_results.append((node.memory_id, node.strength))
 
-        # --- Reciprocal Rank Fusion ---
-        # Try Rust-accelerated RRF first, fall back to Python
         vec_ids = [mid for mid, _ in vector_results]
-        graph_ids_sorted = [mid for mid, _ in sorted(graph_results, key=lambda x: -x[1])]
+        graph_ids_sorted = [
+            mid for mid, _ in sorted(graph_results, key=lambda x: -x[1])
+        ]
 
         scored: list[tuple[str, float, list[str]]] = []
         try:
             import whitemagic_rs
+
             rrf_results = whitemagic_rs.rrf_fuse(
-                vec_ids, graph_ids_sorted,
-                vector_weight, graph_weight, k_rrf, k,
+                vec_ids,
+                graph_ids_sorted,
+                vector_weight,
+                graph_weight,
+                k_rrf,
+                k,
             )
             for r in rrf_results:
                 sources = []
@@ -946,8 +1001,7 @@ class CoreAccessLayer:
         # Fetch titles and previews for top results
         conn = self._get_conn()
         results: list[HybridResult] = []
-        for mid, score, sources in scored[:
-            k]:
+        for mid, score, sources in scored[:k]:
             title = None
             preview = ""
             try:
@@ -961,19 +1015,17 @@ class CoreAccessLayer:
             except Exception as e:
                 logger.debug("Failed to get row preview info: %s", e, exc_info=True)
 
-            results.append(HybridResult(
-                memory_id=mid,
-                title=title,
-                content_preview=preview,
-                score=score,
-                sources=sources,
-            ))
+            results.append(
+                HybridResult(
+                    memory_id=mid,
+                    title=title,
+                    content_preview=preview,
+                    score=score,
+                    sources=sources,
+                )
+            )
 
         return results
-
-    # ------------------------------------------------------------------
-    # 6. Cross-Constellation Analysis
-    # ------------------------------------------------------------------
 
     def find_constellation_bridges(self, limit: int = 10) -> list[dict[str, Any]]:
         """Find memories that sit between two constellations.
@@ -988,6 +1040,7 @@ class CoreAccessLayer:
         # Build set of member IDs per constellation
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
             report = detector.get_last_report()
             if not report:
@@ -1034,13 +1087,15 @@ class CoreAccessLayer:
                     for sid in sample_set:
                         for target_id, strength in assoc_by_src.get(sid, []):
                             if target_id in c2_ids:
-                                bridges.append({
-                                    "source_id": sid,
-                                    "target_id": target_id,
-                                    "strength": strength,
-                                    "constellation_1": c1_name,
-                                    "constellation_2": c2_name,
-                                })
+                                bridges.append(
+                                    {
+                                        "source_id": sid,
+                                        "target_id": target_id,
+                                        "strength": strength,
+                                        "constellation_1": c1_name,
+                                        "constellation_2": c2_name,
+                                    }
+                                )
                     if len(bridges) >= limit:
                         break
         except Exception as e:
@@ -1056,20 +1111,27 @@ class CoreAccessLayer:
         """
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector
+
             detector = get_constellation_detector()
-            return cast(list[dict[str, Any]], detector.get_drift_vectors(window_days=window_days))
+            return cast(
+                list[dict[str, Any]],
+                detector.get_drift_vectors(window_days=window_days),
+            )
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Drift query failed: %s", e, exc_info=True)
             return []
 
-    def find_association_orphans(self, min_gravity: float = 0.6, limit: int = 20) -> list[dict[str, Any]]:
+    def find_association_orphans(
+        self, min_gravity: float = 0.6, limit: int = 20
+    ) -> list[dict[str, Any]]:
         """Find high-gravity memories with few or no associations.
 
         These are isolated knowledge nodes that should be connected.
         """
         conn = self._get_conn()
         try:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT m.id, m.title, h.w as gravity,
                        (SELECT COUNT(*) FROM associations
                         WHERE source_id = m.id OR target_id = m.id) as assoc_count
@@ -1079,14 +1141,12 @@ class CoreAccessLayer:
                 HAVING assoc_count < 3
                 ORDER BY h.w DESC
                 LIMIT ?
-            """, (min_gravity, limit)).fetchall()
+            """,
+                (min_gravity, limit),
+            ).fetchall()
             return [dict(r) for r in rows]
         except sqlite3.Error:
             return []
-
-    # ------------------------------------------------------------------
-    # 8. VSA Context Compression
-    # ------------------------------------------------------------------
 
     def compress_context(
         self,
@@ -1110,8 +1170,11 @@ class CoreAccessLayer:
         """
         try:
             from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+
             compressor = get_vsa_context_compressor()
-            result = compressor.compress(items, query=query, max_text_items=max_text_items)
+            result = compressor.compress(
+                items, query=query, max_text_items=max_text_items
+            )
             return {
                 "summary": result.summary,
                 "vector": result.vector,
@@ -1124,12 +1187,17 @@ class CoreAccessLayer:
             }
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("VSA compressor unavailable: %s", e, exc_info=True)
-            summaries = [f"- [{i.get('source', '?')}] {str(i.get('content', ''))[:150]}" for i in items[:max_text_items]]
+            summaries = [
+                f"- [{i.get('source', '?')}] {str(i.get('content', ''))[:150]}"
+                for i in items[:max_text_items]
+            ]
             return {
                 "summary": "\n".join(summaries),
                 "vector": None,
                 "item_count": len(items),
-                "original_tokens": sum(len(str(i.get("content", ""))) // 4 for i in items),
+                "original_tokens": sum(
+                    len(str(i.get("content", ""))) // 4 for i in items
+                ),
                 "compressed_tokens": len("\n".join(summaries)) // 4,
                 "compression_ratio": 0.0,
                 "method": "truncation_fallback",
@@ -1152,15 +1220,12 @@ class CoreAccessLayer:
         """
         try:
             from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+
             compressor = get_vsa_context_compressor()
             return compressor.probe(compressed_vector, role)
         except (ImportError, ModuleNotFoundError):
             return []
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _instance: CoreAccessLayer | None = None
 _instance_lock = threading.Lock()

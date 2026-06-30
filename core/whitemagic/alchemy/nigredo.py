@@ -12,16 +12,44 @@ Usage:
 """
 
 
-
 class NigredoClassifier:
     """Classifies memories for transmutation."""
 
-    NOISE_TITLES = ["Checkpoint", "Session Handoff", "Twice-daily", "Summary", "Update", "Backup"]
-    ROUTINE_CONTENT = ["traceback", "error", "exception", "lint", "mypy", "fix", "debug", "todo list"]
+    NOISE_TITLES = [
+        "Checkpoint",
+        "Session Handoff",
+        "Twice-daily",
+        "Summary",
+        "Update",
+        "Backup",
+    ]
+    ROUTINE_CONTENT = [
+        "traceback",
+        "error",
+        "exception",
+        "lint",
+        "mypy",
+        "fix",
+        "debug",
+        "todo list",
+    ]
     NOVELTY_KEYWORDS = [
-        "concept", "architecture", "strategy", "philosophy", "insight", "discovery",
-        "pattern", "synthesis", "manifesto", "protocol", "framework", "system design",
-        "golden rule", "lesson learned", "post-mortem", "root cause"
+        "concept",
+        "architecture",
+        "strategy",
+        "philosophy",
+        "insight",
+        "discovery",
+        "pattern",
+        "synthesis",
+        "manifesto",
+        "protocol",
+        "framework",
+        "system design",
+        "golden rule",
+        "lesson learned",
+        "post-mortem",
+        "root cause",
     ]
 
     def classify(self, content: str, title: str = "") -> tuple[str, float]:
@@ -46,7 +74,9 @@ class NigredoClassifier:
                 return "Noise", 0.85
 
         # 2. Novelty Detection
-        novelty_hits: float = float(sum(1 for k in self.NOVELTY_KEYWORDS if k in content_lower))
+        novelty_hits: float = float(
+            sum(1 for k in self.NOVELTY_KEYWORDS if k in content_lower)
+        )
 
         # Structure bonus: Markdown headers often indicate structured thought
         if content.count("# ") + content.count("## ") > 2:
@@ -55,7 +85,7 @@ class NigredoClassifier:
         # Code vs Text ratio: High text density often means documentation/insight
         # Simple heuristic: space count / length
         text_density = content.count(" ") / max(len(content), 1)
-        if text_density > 0.15: # English text is usually around 0.15-0.20
+        if text_density > 0.15:  # English text is usually around 0.15-0.20
             novelty_hits += 0.5
 
         if novelty_hits >= 2.5:

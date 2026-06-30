@@ -78,7 +78,9 @@ def _setup_ghc_environment() -> None:
 
     current_ld = os.environ.get("LD_LIBRARY_PATH", "")
     if _GHC_LIB_DIR not in current_ld:
-        os.environ["LD_LIBRARY_PATH"] = f"{_GHC_LIB_DIR}:{current_ld}" if current_ld else _GHC_LIB_DIR
+        os.environ["LD_LIBRARY_PATH"] = (
+            f"{_GHC_LIB_DIR}:{current_ld}" if current_ld else _GHC_LIB_DIR
+        )
 
 
 def _check_preload() -> bool:
@@ -92,7 +94,12 @@ def _find_hs_lib() -> str | None:
     candidates = [
         os.environ.get("WM_HS_LIB", ""),
         _HS_LIB_PATH,
-        str(Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "whitemagic-hs" / "libwhitemagic_hs.so"),
+        str(
+            Path(__file__).resolve().parent.parent.parent.parent.parent
+            / "polyglot"
+            / "whitemagic-hs"
+            / "libwhitemagic_hs.so"
+        ),
     ]
     for path in candidates:
         if path and os.path.isfile(path):

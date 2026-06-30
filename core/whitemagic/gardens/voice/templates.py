@@ -1,5 +1,4 @@
-"""Narrative Templates - Converting Events to Story.
-"""
+"""Narrative Templates - Converting Events to Story."""
 
 from whitemagic.core.resonance.gan_ying import EventType
 
@@ -40,6 +39,7 @@ EVENT_TEMPLATES = {
         "Connection solidified.",
     ],
 }
+
 
 def get_template(event_type: EventType, data: dict) -> str:
     """Get a formatted string for an event."""

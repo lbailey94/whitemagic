@@ -5,6 +5,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class BackgroundDreamer:
     """Phase 6.4: Continuous Background Dreaming.
 
@@ -23,6 +24,7 @@ class BackgroundDreamer:
         # Subscribe to IPC if available to listen for system idle events
         try:
             from whitemagic.core.ipc_bridge import init_ipc
+
             init_ipc()
         except ImportError:
             pass
@@ -41,6 +43,7 @@ class BackgroundDreamer:
     def _dream_loop(self):
         try:
             import time
+
             # Simulate heavy background processing via Zig/WASM
             time.sleep(2)
 
@@ -50,9 +53,12 @@ class BackgroundDreamer:
                 "zodiac_ledger_verified": True,
                 "optimizations_found": [
                     {"type": "dead_code", "file": "whitemagic/legacy/old_router.py"},
-                    {"type": "missing_test", "file": "whitemagic/core/memory/sqlite_backend.py"}
+                    {
+                        "type": "missing_test",
+                        "file": "whitemagic/core/memory/sqlite_backend.py",
+                    },
                 ],
-                "holographic_drift": 0.02
+                "holographic_drift": 0.02,
             }
 
             logger.info("✨ Dream Cycle Complete. Report ready.")
@@ -60,10 +66,11 @@ class BackgroundDreamer:
             # Publish dream report via IPC to Nexus UI
             try:
                 from whitemagic.core.ipc_bridge import publish_json
-                publish_json("wm/events", {
-                    "type": "dream_report_ready",
-                    "data": self._last_dream_report
-                })
+
+                publish_json(
+                    "wm/events",
+                    {"type": "dream_report_ready", "data": self._last_dream_report},
+                )
             except (ImportError, ModuleNotFoundError):
                 pass
 
@@ -79,7 +86,10 @@ class BackgroundDreamer:
         """
         return self._last_dream_report or {"status": "No dreams recorded yet"}
 
+
 _dreamer_instance = None
+
+
 def get_background_dreamer() -> BackgroundDreamer:
     """
     Get the background dreamer.

@@ -22,11 +22,7 @@ _BRIDGE_PATH = (
     / "actor_bridge.exs"
 )
 
-_ELIXIR_DIR = (
-    Path(__file__).parent.parent.parent.parent.parent
-    / "polyglot"
-    / "elixir"
-)
+_ELIXIR_DIR = Path(__file__).parent.parent.parent.parent.parent / "polyglot" / "elixir"
 
 _proc: subprocess.Popen | None = None
 _available: bool | None = None

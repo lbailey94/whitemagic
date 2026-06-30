@@ -18,7 +18,9 @@ from typing import Any
 from whitemagic.tools.prat_router import route_prat_call
 
 
-def gana_invoke(tool_name: str, args: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def gana_invoke(
+    tool_name: str, args: dict[str, Any] | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Invoke a Gana meta-tool through the PRAT router.
 
     Args:

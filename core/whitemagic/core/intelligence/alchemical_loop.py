@@ -49,14 +49,19 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 ALCHEMICAL_STAGES = [
-    "calcination", "dissolution", "separation", "conjunction",
-    "fermentation", "distillation", "coagulation",
+    "calcination",
+    "dissolution",
+    "separation",
+    "conjunction",
+    "fermentation",
+    "distillation",
+    "coagulation",
 ]
 
 
@@ -202,7 +207,9 @@ class AlchemicalLoop:
                 result.cycles.append(cycle)
 
                 if self._context.get("converged", False):
-                    logger.info("Alchemical procession converged at cycle %d", cycle_num)
+                    logger.info(
+                        "Alchemical procession converged at cycle %d", cycle_num
+                    )
                     break
 
             result.final_output = self._context
@@ -239,7 +246,6 @@ class AlchemicalLoop:
         cycle_start = time.monotonic()
         cycle = CycleResult(cycle_number=cycle_num)
 
-        # --- YANG PHASE: 12-step creative outward action ---
         yang_output: dict[str, Any] = {}
 
         for step in YANG_PROCESSION:
@@ -257,21 +263,22 @@ class AlchemicalLoop:
                 if not hub_result.success:
                     logger.warning(
                         "%s checkpoint FAILED at cycle %d: %s",
-                        step.sign.title(), cycle_num,
+                        step.sign.title(),
+                        cycle_num,
                         get_checkpoint_description(step.sign),
                     )
                     self._context[f"{step.sign}_warning"] = True
 
-        # --- ORACLE CONSULTATION at phase boundary ---
         cycle.oracle_guidance = await self._consult_oracle()
         self._context["oracle_guidance"] = cycle.oracle_guidance
 
-        # --- YIN PHASE: 12-step receptive inward reflection ---
         yin_input = yang_output.get("pisces", yang_output.get("aries", {}))
         yin_output: dict[str, Any] = {}
 
         for step in YIN_PROCESSION:
-            stage_result = await self._run_yin_step(step, cycle_num, yin_input, yin_output)
+            stage_result = await self._run_yin_step(
+                step, cycle_num, yin_input, yin_output
+            )
             cycle.yin_stages.append(stage_result)
 
             if stage_result.success:
@@ -292,7 +299,6 @@ class AlchemicalLoop:
                         cycle_num,
                     )
 
-        # --- YIN -> YANG CHAINING for next cycle ---
         if "aries" in yin_output:
             self._context["previous_cycle_lessons"] = yin_output["aries"]
             oracle_phase = cycle.oracle_guidance.get("phase", "yang")
@@ -307,9 +313,9 @@ class AlchemicalLoop:
 
         return cycle
 
-    # --- 12-Step Yang Dispatcher ---
-
-    async def _run_yang_step(self, step, cycle_num: int, chained_input: dict[str, Any] | None = None) -> StageResult:
+    async def _run_yang_step(
+        self, step, cycle_num: int, chained_input: dict[str, Any] | None = None
+    ) -> StageResult:
         """Run a single yang procession step with tool dispatch.
 
         Dispatches to the appropriate tool based on the step's yang_tool hint,
@@ -395,7 +401,12 @@ class AlchemicalLoop:
 
                 elif step.sign == "taurus":
                     # Materialization: establish foundation
-                    result.output = {"foundation": "established", "components": len(self._context.get("task_components", [self.task]))}
+                    result.output = {
+                        "foundation": "established",
+                        "components": len(
+                            self._context.get("task_components", [self.task])
+                        ),
+                    }
 
                 elif step.sign == "gemini":
                     # Proliferation: generate multiple approaches
@@ -405,7 +416,10 @@ class AlchemicalLoop:
 
                 elif step.sign == "cancer":
                     # Incubation: nurture approaches
-                    result.output = {"incubating": True, "approach": self._context.get("approach", self.task)[:100]}
+                    result.output = {
+                        "incubating": True,
+                        "approach": self._context.get("approach", self.task)[:100],
+                    }
 
                 elif step.sign == "virgo":
                     # Refinement: select and purify
@@ -415,7 +429,10 @@ class AlchemicalLoop:
 
                 elif step.sign == "libra":
                     # Harmonization: balance creative tensions
-                    result.output = {"balanced": True, "approach": self._context.get("approach", "")[:100]}
+                    result.output = {
+                        "balanced": True,
+                        "approach": self._context.get("approach", "")[:100],
+                    }
 
                 elif step.sign == "capricorn":
                     # Crystallization: fix structure
@@ -443,9 +460,13 @@ class AlchemicalLoop:
             self._tools_invoked.append(f"yang.{step.sign}:{result.tool_called}")
         return result
 
-    # --- 12-Step Yin Dispatcher ---
-
-    async def _run_yin_step(self, step, cycle_num: int, chained_input: dict[str, Any] | None = None, prev_output: dict[str, Any] | None = None) -> StageResult:
+    async def _run_yin_step(
+        self,
+        step,
+        cycle_num: int,
+        chained_input: dict[str, Any] | None = None,
+        prev_output: dict[str, Any] | None = None,
+    ) -> StageResult:
         """Run a single yin procession step with tool dispatch.
 
         Dispatches to the appropriate tool based on the step's yin_tool hint,
@@ -516,9 +537,13 @@ class AlchemicalLoop:
                 oracle = self._context.get("oracle_guidance", {})
                 oracle_element = oracle.get("element", "")
                 if oracle_element in ("fire", "air"):
-                    mc_scores["oracle_adjusted"] = min(1.0, mc_scores.get("confidence", 0.5) + 0.1)
+                    mc_scores["oracle_adjusted"] = min(
+                        1.0, mc_scores.get("confidence", 0.5) + 0.1
+                    )
                 elif oracle_element in ("water", "earth"):
-                    mc_scores["oracle_adjusted"] = max(0.0, mc_scores.get("confidence", 0.5) - 0.05)
+                    mc_scores["oracle_adjusted"] = max(
+                        0.0, mc_scores.get("confidence", 0.5) - 0.05
+                    )
                 else:
                     mc_scores["oracle_adjusted"] = mc_scores.get("confidence", 0.5)
                 result.output = mc_scores
@@ -568,10 +593,9 @@ class AlchemicalLoop:
             self._tools_invoked.append(f"yin.{step.sign}:{result.tool_called}")
         return result
 
-
-    # --- Yang Stage Implementations (Creative/Outward) ---
-
-    async def _run_yang_stage(self, stage: str, cycle_num: int, chained_input: dict[str, Any] | None = None) -> StageResult:
+    async def _run_yang_stage(
+        self, stage: str, cycle_num: int, chained_input: dict[str, Any] | None = None
+    ) -> StageResult:
         """Run a yang (creative) stage with actual tool calls.
 
         Args:
@@ -609,13 +633,23 @@ class AlchemicalLoop:
                 # Research via rabbit_hole_research
                 # Use components from calcination as research focus
                 result.tool_called = "rabbit_hole_research"
-                components = chained_input.get("components", [self.task]) if chained_input else [self.task]
+                components = (
+                    chained_input.get("components", [self.task])
+                    if chained_input
+                    else [self.task]
+                )
                 if self.enable_web:
                     research_data = await self._call_rabbit_hole()
-                    result.output = {**research_data, "researched_components": len(components)}
+                    result.output = {
+                        **research_data,
+                        "researched_components": len(components),
+                    }
                     self._context["research"] = research_data
                 else:
-                    result.output = {"skipped": "web disabled", "components": len(components)}
+                    result.output = {
+                        "skipped": "web disabled",
+                        "components": len(components),
+                    }
                 result.success = True
 
             elif stage == "separation":
@@ -667,9 +701,13 @@ class AlchemicalLoop:
             self._tools_invoked.append(f"yang.{stage}:{result.tool_called}")
         return result
 
-    # --- Yin Stage Implementations (Receptive/Inward) ---
-
-    async def _run_yin_stage(self, stage: str, cycle_num: int, chained_input: dict[str, Any] | None = None, prev_output: dict[str, Any] | None = None) -> StageResult:
+    async def _run_yin_stage(
+        self,
+        stage: str,
+        cycle_num: int,
+        chained_input: dict[str, Any] | None = None,
+        prev_output: dict[str, Any] | None = None,
+    ) -> StageResult:
         """Run a yin (receptive) stage with actual tool calls.
 
         Args:
@@ -733,9 +771,13 @@ class AlchemicalLoop:
                 oracle_element = oracle.get("element", "")
                 # Fire/air elements boost confidence, water/earth ground it
                 if oracle_element in ("fire", "air"):
-                    mc_scores["oracle_adjusted"] = min(1.0, mc_scores.get("confidence", 0.5) + 0.1)
+                    mc_scores["oracle_adjusted"] = min(
+                        1.0, mc_scores.get("confidence", 0.5) + 0.1
+                    )
                 elif oracle_element in ("water", "earth"):
-                    mc_scores["oracle_adjusted"] = max(0.0, mc_scores.get("confidence", 0.5) - 0.05)
+                    mc_scores["oracle_adjusted"] = max(
+                        0.0, mc_scores.get("confidence", 0.5) - 0.05
+                    )
                 else:
                     mc_scores["oracle_adjusted"] = mc_scores.get("confidence", 0.5)
                 result.output = mc_scores
@@ -770,8 +812,6 @@ class AlchemicalLoop:
         if result.tool_called:
             self._tools_invoked.append(f"yin.{stage}:{result.tool_called}")
         return result
-
-    # --- Fixed Hub Implementations ---
 
     async def _run_fixed_hub(self, hub: str, cycle_num: int) -> StageResult:
         """Run a fixed sign stability checkpoint."""
@@ -816,12 +856,11 @@ class AlchemicalLoop:
             self._tools_invoked.append(f"hub.{hub}:{result.tool_called}")
         return result
 
-    # --- Oracle Consultation ---
-
     async def _consult_oracle(self) -> dict[str, Any]:
         """Consult oracle at phase boundary (yang->yin transition)."""
         try:
             from whitemagic.core.orchestration.zodiacal_procession import get_procession
+
             proc = get_procession()
             oracle = proc.consult_oracle()
             self._tools_invoked.append("oracle:cast_oracle")
@@ -829,8 +868,6 @@ class AlchemicalLoop:
         except Exception as e:
             logger.debug("Oracle consultation skipped: %s", e)
             return {"guidance": "Proceed with balance", "error": str(e)}
-
-    # --- Tool Call Implementations ---
 
     def _decompose_task(self) -> list[str]:
         """Break down the task into core components."""
@@ -853,6 +890,7 @@ class AlchemicalLoop:
         """Call rabbit_hole_research for the task topic."""
         try:
             from whitemagic.gardens.wisdom.rabbit_hole import RabbitHoleExplorer
+
             explorer = RabbitHoleExplorer(max_depth=2)
             report = await explorer.web_explore(
                 topic=self.task,
@@ -878,6 +916,7 @@ class AlchemicalLoop:
         """Filter research results via hybrid_recall."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             results = mem.search(self.task, limit=5)
             return {
@@ -899,14 +938,19 @@ class AlchemicalLoop:
     async def _run_parallel_reasoning(self) -> dict[str, Any]:
         """Run ParallelReasoningTree with memory injection."""
         try:
-            from whitemagic.core.intelligence.parallel_reasoning import ParallelReasoningTree
+            from whitemagic.core.intelligence.parallel_reasoning import (
+                ParallelReasoningTree,
+            )
+
             approach = self._context.get("approach", self.task)
             tree = ParallelReasoningTree(question=f"Best approach for: {approach}")
             result = await tree.explore(max_branches=4, max_depth=4)
             return {
                 "branches": len(result.branches),
                 "best_branch": result.best_branch_id,
-                "best_score": max(b.score for b in result.branches) if result.branches else 0.0,
+                "best_score": max(b.score for b in result.branches)
+                if result.branches
+                else 0.0,
                 "synthesis": result.synthesis[:300],
                 "memory_contexts": len(tree._memory_context),
                 "anti_patterns": len(tree._anti_patterns),
@@ -920,10 +964,13 @@ class AlchemicalLoop:
         """Generate code via CodeGenome."""
         try:
             from whitemagic.codegenome.vault import get_geneseed_vault
+
             vault = get_geneseed_vault()
             reasoning = self._context.get("reasoning", {})
             synthesis = reasoning.get("synthesis", "")
-            prompt = f"{self.task}\nContext: {synthesis[:200]}" if synthesis else self.task
+            prompt = (
+                f"{self.task}\nContext: {synthesis[:200]}" if synthesis else self.task
+            )
             result = vault.vibe_render(prompt)
             return {
                 "status": result.get("status", "unknown"),
@@ -936,7 +983,10 @@ class AlchemicalLoop:
     async def _run_self_improvement(self) -> dict[str, Any]:
         """Run SelfImprovementPipeline."""
         try:
-            from whitemagic.core.intelligence.self_improvement import SelfImprovementPipeline
+            from whitemagic.core.intelligence.self_improvement import (
+                SelfImprovementPipeline,
+            )
+
             pipeline = SelfImprovementPipeline(max_iterations=2, score_threshold=0.7)
             result = await pipeline.run(self.task)
             return {
@@ -964,6 +1014,7 @@ class AlchemicalLoop:
         """Check for anomalies in the output."""
         try:
             from whitemagic.core.intelligence.parallel_reasoning import _HAS_ANTIPATTERN
+
             return {"anomalies_found": 0, "antipattern_system": _HAS_ANTIPATTERN}
         except Exception as e:
             return {"error": str(e)}
@@ -972,10 +1023,13 @@ class AlchemicalLoop:
         """Check output against anti-pattern library."""
         try:
             from whitemagic.core.intelligence.parallel_reasoning import _HAS_ANTIPATTERN
+
             if _HAS_ANTIPATTERN:
                 import tempfile
                 from pathlib import Path
+
                 from whitemagic.core.immune.defense.autoimmune import AutoimmuneSystem
+
                 immune = AutoimmuneSystem(base_dir=Path(tempfile.gettempdir()))
                 return {
                     "patterns_loaded": len(immune.anti_patterns),
@@ -989,11 +1043,15 @@ class AlchemicalLoop:
         """Mine associative memories for connections."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             results = mem.search(self.task, limit=3)
             return {
                 "associations": [
-                    {"content": getattr(r, "content", str(r))[:100], "score": getattr(r, "score", 0.0)}
+                    {
+                        "content": getattr(r, "content", str(r))[:100],
+                        "score": getattr(r, "score", 0.0),
+                    }
                     for r in results
                 ],
             }
@@ -1004,16 +1062,19 @@ class AlchemicalLoop:
         """Run Monte Carlo confidence scoring."""
         try:
             from whitemagic.forecasting.mc_integration import MCForecastEnhancer
+
             enhancer = MCForecastEnhancer()
             strata_score = self._context.get("strata_analysis", {}).get("score", 0.5)
-            claims = [{
-                "id": f"alchemical_{int(time.time())}",
-                "claim": f"Output for task '{self.task[:50]}' meets quality standards",
-                "confidence": strata_score,
-                "outcome": 1.0 if strata_score >= 0.7 else 0.0,
-                "status": "validated" if strata_score >= 0.7 else "falsified",
-                "category": "alchemical_quality",
-            }]
+            claims = [
+                {
+                    "id": f"alchemical_{int(time.time())}",
+                    "claim": f"Output for task '{self.task[:50]}' meets quality standards",
+                    "confidence": strata_score,
+                    "outcome": 1.0 if strata_score >= 0.7 else 0.0,
+                    "status": "validated" if strata_score >= 0.7 else "falsified",
+                    "category": "alchemical_quality",
+                }
+            ]
             result = enhancer.run_calibrated(claims, n_trials=1000)
             mc = result.get("mc_result", {})
             bss = mc.get("brier_skill_score", {}).get("mean", 0.0)
@@ -1032,19 +1093,29 @@ class AlchemicalLoop:
         confidence = mc.get("confidence", 0.5)
 
         if confidence > 0.7:
-            lessons.append(f"Cycle {cycle_num}: High confidence ({confidence:.2f}) approach effective")
+            lessons.append(
+                f"Cycle {cycle_num}: High confidence ({confidence:.2f}) approach effective"
+            )
         else:
-            lessons.append(f"Cycle {cycle_num}: Low confidence ({confidence:.2f}) — needs refinement")
+            lessons.append(
+                f"Cycle {cycle_num}: Low confidence ({confidence:.2f}) — needs refinement"
+            )
 
         strata = self._context.get("strata_analysis", {})
         if strata.get("issues", 0) > 0:
-            lessons.append(f"Cycle {cycle_num}: {strata['issues']} structural issues found")
+            lessons.append(
+                f"Cycle {cycle_num}: {strata['issues']} structural issues found"
+            )
 
         # Persist to AutonomousLearner
         try:
             from whitemagic.core.intelligence.parallel_reasoning import _HAS_LEARNER
+
             if _HAS_LEARNER:
-                from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import get_autonomous_learner
+                from whitemagic.core.patterns.pattern_consciousness.autonomous_learner import (
+                    get_autonomous_learner,
+                )
+
                 learner = get_autonomous_learner()
                 for lesson in lessons:
                     if "High confidence" in lesson:
@@ -1060,6 +1131,7 @@ class AlchemicalLoop:
         """Consolidate learnings into persistent memory."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             combined = "; ".join(self._lessons[-5:])
             mem_id = mem.store(
@@ -1104,14 +1176,18 @@ class AlchemicalLoop:
         yang_ok = sum(1 for s in cycle.yang_stages if s.success)
         yin_ok = sum(1 for s in cycle.yin_stages if s.success)
         hubs_ok = sum(1 for s in cycle.fixed_hub_results if s.success)
-        tools_used = sum(1 for s in cycle.yang_stages + cycle.yin_stages if s.tool_called)
+        tools_used = sum(
+            1 for s in cycle.yang_stages + cycle.yin_stages if s.tool_called
+        )
 
         oracle_hex = cycle.oracle_guidance.get("hexagram", "?")
         oracle_phase = cycle.oracle_guidance.get("phase", "?")
         oracle_element = cycle.oracle_guidance.get("element", "?")
 
         next_mode = self._context.get("next_cycle_mode", "generative")
-        prev_lessons = self._context.get("previous_cycle_lessons", {}).get("consolidated", 0)
+        prev_lessons = self._context.get("previous_cycle_lessons", {}).get(
+            "consolidated", 0
+        )
 
         return (
             f"Cycle {cycle.cycle_number}: "
@@ -1146,6 +1222,7 @@ def run_alchemical_cycle(
     try:
         asyncio.get_running_loop()
         from concurrent.futures import ThreadPoolExecutor
+
         with ThreadPoolExecutor(max_workers=1) as executor:
             result = executor.submit(asyncio.run, loop.run()).result()
     except RuntimeError:

@@ -51,6 +51,7 @@ class ObjectiveGenerator:
     def __init__(self, base_dir: Path | None = None):
         if base_dir is None:
             from whitemagic.config import PROJECT_ROOT
+
             base_dir = PROJECT_ROOT
         self.base_dir = base_dir
         self.last_research: Research | None = None
@@ -82,10 +83,16 @@ class ObjectiveGenerator:
 
         # Unpack results (handling any exceptions)
         todos = list(results[0]) if not isinstance(results[0], BaseException) else []
-        test_gaps = list(results[1]) if not isinstance(results[1], BaseException) else []
+        test_gaps = (
+            list(results[1]) if not isinstance(results[1], BaseException) else []
+        )
         doc_gaps = list(results[2]) if not isinstance(results[2], BaseException) else []
-        incomplete_features = list(results[3]) if not isinstance(results[3], BaseException) else []
-        technical_debt = list(results[4]) if not isinstance(results[4], BaseException) else []
+        incomplete_features = (
+            list(results[3]) if not isinstance(results[3], BaseException) else []
+        )
+        technical_debt = (
+            list(results[4]) if not isinstance(results[4], BaseException) else []
+        )
 
         return CodebaseScan(
             todos=todos,
@@ -111,13 +118,21 @@ class ObjectiveGenerator:
             """
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "grep", "-r", "-n", "TODO", dir_path,
+                    "grep",
+                    "-r",
+                    "-n",
+                    "TODO",
+                    dir_path,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
                 if stdout:
-                    return [line.strip() for line in stdout.decode().splitlines()[:50] if line.strip()]
+                    return [
+                        line.strip()
+                        for line in stdout.decode().splitlines()[:50]
+                        if line.strip()
+                    ]
             except (TimeoutError, Exception):
                 return []
             return []
@@ -134,19 +149,32 @@ class ObjectiveGenerator:
         try:
             # Find source files and test files in parallel
             src_task = asyncio.create_subprocess_exec(
-                "find", str(self.base_dir / "whitemagic"), "-name", "*.py", "-not", "-path", "*/tests/*",
+                "find",
+                str(self.base_dir / "whitemagic"),
+                "-name",
+                "*.py",
+                "-not",
+                "-path",
+                "*/tests/*",
                 stdout=asyncio.subprocess.PIPE,
             )
             test_task = asyncio.create_subprocess_exec(
-                "find", str(self.base_dir / "tests"), "-name", "test_*.py",
+                "find",
+                str(self.base_dir / "tests"),
+                "-name",
+                "test_*.py",
                 stdout=asyncio.subprocess.PIPE,
             )
 
             src_proc, test_proc = await asyncio.gather(
-                src_task, test_task, return_exceptions=True,
+                src_task,
+                test_task,
+                return_exceptions=True,
             )
 
-            if isinstance(src_proc, BaseException) or isinstance(test_proc, BaseException):
+            if isinstance(src_proc, BaseException) or isinstance(
+                test_proc, BaseException
+            ):
                 return []
 
             src_stdout, _ = await asyncio.wait_for(src_proc.communicate(), timeout=30)
@@ -171,7 +199,13 @@ class ObjectiveGenerator:
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                "find", str(self.base_dir / "whitemagic"), "-name", "*.py", "-not", "-path", "*/tests/*",
+                "find",
+                str(self.base_dir / "whitemagic"),
+                "-name",
+                "*.py",
+                "-not",
+                "-path",
+                "*/tests/*",
                 stdout=asyncio.subprocess.PIPE,
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
@@ -182,8 +216,7 @@ class ObjectiveGenerator:
                 try:
                     with open(src_file, encoding="utf-8") as f:
                         content = f.read()
-                        if "def " in content and '"""' not in content[:
-                            200]:
+                        if "def " in content and '"""' not in content[:200]:
                             gaps.append(src_file)
                 except (OSError, FileNotFoundError, PermissionError):
                     continue
@@ -207,13 +240,21 @@ class ObjectiveGenerator:
             """
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "grep", "-r", "-n", "TODO implement", dir_path,
+                    "grep",
+                    "-r",
+                    "-n",
+                    "TODO implement",
+                    dir_path,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
                 if stdout:
-                    return [line.strip() for line in stdout.decode().splitlines()[:50] if line.strip()]
+                    return [
+                        line.strip()
+                        for line in stdout.decode().splitlines()[:50]
+                        if line.strip()
+                    ]
             except (TimeoutError, Exception):
                 return []
             return []
@@ -237,13 +278,22 @@ class ObjectiveGenerator:
             """
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "grep", "-r", "-n", "-E", "FIXME|HACK", dir_path,
+                    "grep",
+                    "-r",
+                    "-n",
+                    "-E",
+                    "FIXME|HACK",
+                    dir_path,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
                 if stdout:
-                    return [line.strip() for line in stdout.decode().splitlines()[:50] if line.strip()]
+                    return [
+                        line.strip()
+                        for line in stdout.decode().splitlines()[:50]
+                        if line.strip()
+                    ]
             except (TimeoutError, Exception):
                 return []
             return []
@@ -262,55 +312,71 @@ class ObjectiveGenerator:
         if scan.todos:
             insights.append(f"Found {len(scan.todos)} TODO items to address")
             for todo in scan.todos[:5]:  # Limit to 5 for brevity
-                opportunities.append({
-                    "type": "todo",
-                    "description": f"Address TODO: {todo.split(':', 2)[-1]}",
-                    "file": todo.split(":", 1)[0] if ":" in todo else "unknown",
-                })
+                opportunities.append(
+                    {
+                        "type": "todo",
+                        "description": f"Address TODO: {todo.split(':', 2)[-1]}",
+                        "file": todo.split(":", 1)[0] if ":" in todo else "unknown",
+                    }
+                )
 
         # Analyze test gaps
         if scan.test_gaps:
-            insights.append(f"Found {len(scan.test_gaps)} files without corresponding tests")
-            for gap in scan.test_gaps[:
-                5]:
-                opportunities.append({
-                    "type": "test_gap",
-                    "description": f"Create test for {Path(gap).name}",
-                    "file": gap,
-                })
+            insights.append(
+                f"Found {len(scan.test_gaps)} files without corresponding tests"
+            )
+            for gap in scan.test_gaps[:5]:
+                opportunities.append(
+                    {
+                        "type": "test_gap",
+                        "description": f"Create test for {Path(gap).name}",
+                        "file": gap,
+                    }
+                )
 
         # Analyze documentation gaps
         if scan.doc_gaps:
-            insights.append(f"Found {len(scan.doc_gaps)} files potentially missing documentation")
-            for gap in scan.doc_gaps[:
-                5]:
-                opportunities.append({
-                    "type": "doc_gap",
-                    "description": f"Add documentation for {Path(gap).name}",
-                    "file": gap,
-                })
+            insights.append(
+                f"Found {len(scan.doc_gaps)} files potentially missing documentation"
+            )
+            for gap in scan.doc_gaps[:5]:
+                opportunities.append(
+                    {
+                        "type": "doc_gap",
+                        "description": f"Add documentation for {Path(gap).name}",
+                        "file": gap,
+                    }
+                )
 
         # Analyze incomplete features
         if scan.incomplete_features:
-            insights.append(f"Found {len(scan.incomplete_features)} incomplete features")
-            for feature in scan.incomplete_features[:
-                5]:
-                opportunities.append({
-                    "type": "incomplete_feature",
-                    "description": f"Complete feature: {feature.split(':', 2)[-1]}",
-                    "file": feature.split(":", 1)[0] if ":" in feature else "unknown",
-                })
+            insights.append(
+                f"Found {len(scan.incomplete_features)} incomplete features"
+            )
+            for feature in scan.incomplete_features[:5]:
+                opportunities.append(
+                    {
+                        "type": "incomplete_feature",
+                        "description": f"Complete feature: {feature.split(':', 2)[-1]}",
+                        "file": feature.split(":", 1)[0]
+                        if ":" in feature
+                        else "unknown",
+                    }
+                )
 
         # Analyze technical debt
         if scan.technical_debt:
-            insights.append(f"Found {len(scan.technical_debt)} instances of technical debt")
-            for debt in scan.technical_debt[:
-                5]:
-                opportunities.append({
-                    "type": "technical_debt",
-                    "description": f"Resolve tech debt: {debt.split(':', 2)[-1]}",
-                    "file": debt.split(":", 1)[0] if ":" in debt else "unknown",
-                })
+            insights.append(
+                f"Found {len(scan.technical_debt)} instances of technical debt"
+            )
+            for debt in scan.technical_debt[:5]:
+                opportunities.append(
+                    {
+                        "type": "technical_debt",
+                        "description": f"Resolve tech debt: {debt.split(':', 2)[-1]}",
+                        "file": debt.split(":", 1)[0] if ":" in debt else "unknown",
+                    }
+                )
 
         # Simple strategy based on counts
         if len(opportunities) > 0:
@@ -327,7 +393,12 @@ class ObjectiveGenerator:
             patterns.append("Significant technical debt accumulation")
 
         # Store the research for later use in generate_objectives
-        self.last_research = Research(insights=insights, patterns=patterns, strategy=strategy, opportunities=opportunities)
+        self.last_research = Research(
+            insights=insights,
+            patterns=patterns,
+            strategy=strategy,
+            opportunities=opportunities,
+        )
         return self.last_research
 
     async def consult_grimoire(self, research: Research) -> Guidance:
@@ -408,61 +479,131 @@ class ObjectiveGenerator:
         goal = strategy.get("goal", "Complete autonomous execution system")
 
         if "TODO" in goal:
-            objectives.extend([
-                Objective(description="Resolve 5 TODO items in codebase", success_criteria=["5 TODOs resolved"]),
-                Objective(description="Review remaining TODOs for priority", success_criteria=["TODO list prioritized"]),
-            ])
+            objectives.extend(
+                [
+                    Objective(
+                        description="Resolve 5 TODO items in codebase",
+                        success_criteria=["5 TODOs resolved"],
+                    ),
+                    Objective(
+                        description="Review remaining TODOs for priority",
+                        success_criteria=["TODO list prioritized"],
+                    ),
+                ]
+            )
         elif "test coverage" in goal.lower():
-            objectives.extend([
-                Objective(description="Create tests for 3 critical modules", success_criteria=["3 test files created"]),
-                Objective(description="Run test coverage report", success_criteria=["Coverage report generated"]),
-            ])
+            objectives.extend(
+                [
+                    Objective(
+                        description="Create tests for 3 critical modules",
+                        success_criteria=["3 test files created"],
+                    ),
+                    Objective(
+                        description="Run test coverage report",
+                        success_criteria=["Coverage report generated"],
+                    ),
+                ]
+            )
         elif "documentation" in goal.lower():
-            objectives.extend([
-                Objective(description="Document core API modules", success_criteria=["Core APIs documented"]),
-                Objective(description="Update README with new features", success_criteria=["README updated"]),
-            ])
+            objectives.extend(
+                [
+                    Objective(
+                        description="Document core API modules",
+                        success_criteria=["Core APIs documented"],
+                    ),
+                    Objective(
+                        description="Update README with new features",
+                        success_criteria=["README updated"],
+                    ),
+                ]
+            )
         elif "feature" in goal.lower():
-            objectives.extend([
-                Objective(description="Complete 1 incomplete feature", success_criteria=["Feature completed"]),
-                Objective(description="Test completed feature", success_criteria=["Feature tests passing"]),
-            ])
+            objectives.extend(
+                [
+                    Objective(
+                        description="Complete 1 incomplete feature",
+                        success_criteria=["Feature completed"],
+                    ),
+                    Objective(
+                        description="Test completed feature",
+                        success_criteria=["Feature tests passing"],
+                    ),
+                ]
+            )
         elif "technical debt" in goal.lower():
-            objectives.extend([
-                Objective(description="Resolve 3 instances of technical debt", success_criteria=["3 debt items resolved"]),
-                Objective(description="Document remaining technical debt", success_criteria=["Debt list updated"]),
-            ])
+            objectives.extend(
+                [
+                    Objective(
+                        description="Resolve 3 instances of technical debt",
+                        success_criteria=["3 debt items resolved"],
+                    ),
+                    Objective(
+                        description="Document remaining technical debt",
+                        success_criteria=["Debt list updated"],
+                    ),
+                ]
+            )
         else:
-            objectives.append(Objective(description="Implement objective generator", success_criteria=["Objective generator complete"]))
+            objectives.append(
+                Objective(
+                    description="Implement objective generator",
+                    success_criteria=["Objective generator complete"],
+                )
+            )
 
         # Enhance objectives with specific targets from research if available
         if hasattr(self, "last_research") and self.last_research:
             research = self.last_research
             if research.opportunities:
                 if "TODO" in goal:
-                    for opp in research.opportunities[:
-                        5]:
+                    for opp in research.opportunities[:5]:
                         if opp["type"] == "todo":
-                            objectives.append(Objective(description=f"Resolve TODO in {opp['file']}: {opp['description']}", success_criteria=[f"file_exists:{opp['file']}"], priority=7))
+                            objectives.append(
+                                Objective(
+                                    description=f"Resolve TODO in {opp['file']}: {opp['description']}",
+                                    success_criteria=[f"file_exists:{opp['file']}"],
+                                    priority=7,
+                                )
+                            )
                 elif "test coverage" in goal.lower():
-                    for opp in research.opportunities[:
-                        3]:
+                    for opp in research.opportunities[:3]:
                         if opp["type"] == "test_gap":
-                            objectives.append(Objective(description=f"Create test for {opp['file']}", success_criteria=["tests_pass"], priority=8))
+                            objectives.append(
+                                Objective(
+                                    description=f"Create test for {opp['file']}",
+                                    success_criteria=["tests_pass"],
+                                    priority=8,
+                                )
+                            )
                 elif "documentation" in goal.lower():
-                    for opp in research.opportunities[:
-                        2]:
+                    for opp in research.opportunities[:2]:
                         if opp["type"] == "doc_gap":
-                            objectives.append(Objective(description=f"Add documentation to {opp['file']}", success_criteria=[f"file_exists:{opp['file']}"], priority=6))
+                            objectives.append(
+                                Objective(
+                                    description=f"Add documentation to {opp['file']}",
+                                    success_criteria=[f"file_exists:{opp['file']}"],
+                                    priority=6,
+                                )
+                            )
                 elif "feature" in goal.lower():
-                    for opp in research.opportunities[:
-                        2]:
+                    for opp in research.opportunities[:2]:
                         if opp["type"] == "incomplete_feature":
-                            objectives.append(Objective(description=f"Complete feature in {opp['file']}: {opp['description']}", success_criteria=["Feature completed"], priority=7))
+                            objectives.append(
+                                Objective(
+                                    description=f"Complete feature in {opp['file']}: {opp['description']}",
+                                    success_criteria=["Feature completed"],
+                                    priority=7,
+                                )
+                            )
                 elif "technical debt" in goal.lower():
-                    for opp in research.opportunities[:
-                        3]:
+                    for opp in research.opportunities[:3]:
                         if opp["type"] == "technical_debt":
-                            objectives.append(Objective(description=f"Resolve technical debt in {opp['file']}: {opp['description']}", success_criteria=["Debt resolved"], priority=6))
+                            objectives.append(
+                                Objective(
+                                    description=f"Resolve technical debt in {opp['file']}: {opp['description']}",
+                                    success_criteria=["Debt resolved"],
+                                    priority=6,
+                                )
+                            )
 
         return objectives

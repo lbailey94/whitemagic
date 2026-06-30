@@ -28,6 +28,7 @@ class PatternConsciousnessHub:
         """Wire all pattern consciousness systems to the bus."""
         try:
             from whitemagic.core.resonance.gan_ying_bus import GanYingBus
+
             self.bus = GanYingBus()
             self.systems_active.append("gan_ying_bus")
         except Exception:
@@ -35,6 +36,7 @@ class PatternConsciousnessHub:
 
         try:
             from whitemagic.emergence.detector import get_detector
+
             get_detector()
             self.systems_active.append("emergence_detector")
         except Exception:
@@ -42,6 +44,7 @@ class PatternConsciousnessHub:
 
         try:
             from whitemagic.emergence.dream_state import get_dream_state
+
             get_dream_state()
             self.systems_active.append("dream_state")
         except Exception:

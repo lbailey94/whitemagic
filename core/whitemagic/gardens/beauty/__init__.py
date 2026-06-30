@@ -6,6 +6,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present-focused (Z-axis 0.0)
 - Moderate importance (W-axis +0.2)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -44,13 +45,15 @@ class BeautyGarden(BaseGarden, GanYingMixin):
         Present-focused (encountered now), enriching but not critical.
         """
         return CoordinateBias(
-            x=0.4,   # Emotional (beauty is felt, appreciated aesthetically)
-            y=0.2,   # Somewhat universal (beauty has patterns)
-            z=0.0,   # Present-moment (beauty is encountered now)
-            w=0.2,    # Enriching (beauty matters, but not always critical)
+            x=0.4,  # Emotional (beauty is felt, appreciated aesthetically)
+            y=0.2,  # Somewhat universal (beauty has patterns)
+            z=0.0,  # Present-moment (beauty is encountered now)
+            w=0.2,  # Enriching (beauty matters, but not always critical)
         )
 
-    def recognize_beauty(self, subject: Any, qualities: list[str] | None = None) -> dict[str, Any]:
+    def recognize_beauty(
+        self, subject: Any, qualities: list[str] | None = None
+    ) -> dict[str, Any]:
         """Recognize beauty in something."""
         memory = {
             "subject": subject,
@@ -75,7 +78,9 @@ class BeautyGarden(BaseGarden, GanYingMixin):
                 return 1.0
         return 0.8
 
+
 _instance = None
+
 
 def get_beauty_garden() -> BeautyGarden:
     """Get singleton instance."""
@@ -94,7 +99,14 @@ class BeautyDetector:
     def detect(self, content: str) -> dict[str, Any]:
         """Detect beauty in content."""
         # Simple heuristic detection
-        beauty_words = ["beautiful", "elegant", "graceful", "sublime", "harmonious", "aesthetic"]
+        beauty_words = [
+            "beautiful",
+            "elegant",
+            "graceful",
+            "sublime",
+            "harmonious",
+            "aesthetic",
+        ]
         score = sum(1 for w in beauty_words if w in content.lower()) / len(beauty_words)
 
         result = {
@@ -118,7 +130,9 @@ class EleganceRecognizer:
         lines = code.split("\n")
         avg_length = sum(len(line) for line in lines) / max(len(lines), 1)
 
-        elegance_score = 1.0 - min(avg_length / 100, 1.0)  # Shorter lines = more elegant
+        elegance_score = 1.0 - min(
+            avg_length / 100, 1.0
+        )  # Shorter lines = more elegant
 
         result = {
             "lines": len(lines),

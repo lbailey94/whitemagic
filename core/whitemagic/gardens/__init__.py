@@ -157,6 +157,7 @@ def __getattr__(name: str) -> Any:
 
     raise AttributeError(f"module 'whitemagic.gardens' has no attribute '{name}'")
 
+
 logger = logging.getLogger(__name__)
 
 # Read version from canonical source to avoid drift
@@ -243,25 +244,34 @@ __all__ = [
     "get_garden_count",
 ]
 
+
 def _build_garden_getters() -> dict[str, Callable[..., Any]]:
     """Build GARDEN_GETTERS dict with lazy-loaded functions."""
-    return {name: lambda n=name: _get_garden_getter(n)() for name in _GARDEN_MODULES.keys()}  # type: ignore[misc]
+    return {
+        name: lambda n=name: _get_garden_getter(n)() for name in _GARDEN_MODULES.keys()
+    }  # type: ignore[misc]
+
 
 # Lazy-built on first access
 _garden_getters_cache = None
+
 
 def _get_garden_getters() -> dict[str, Callable[..., Any] | None]:
     """Get GARDEN_GETTERS (built lazily)."""
     global _garden_getters_cache
     if _garden_getters_cache is None:
-        _garden_getters_cache = {name: _get_garden_getter(name) for name in _GARDEN_MODULES.keys()}
+        _garden_getters_cache = {
+            name: _get_garden_getter(name) for name in _GARDEN_MODULES.keys()
+        }
     return _garden_getters_cache
+
 
 # For backward compatibility - expose as module-level dict (built on first access)
 # Note: This is a function call, not a property, for module-level use
 def get_garden_getters() -> dict[str, Callable[..., Any] | None]:
     """Get the GARDEN_GETTERS dict (lazy loaded)."""
     return _get_garden_getters()
+
 
 # Create a lazy dict-like object for backward compatibility
 class _LazyGardenGetters:
@@ -315,7 +325,9 @@ class _LazyGardenGetters:
     def __iter__(self) -> Any:
         return iter(_get_garden_getters())
 
+
 GARDEN_GETTERS = _LazyGardenGetters()
+
 
 def get_all_gardens() -> dict[str, Any]:
     """Get all garden instances (lazy loaded)."""
@@ -325,6 +337,7 @@ def get_all_gardens() -> dict[str, Any]:
         if getter:
             result[name] = getter()
     return result
+
 
 def get_garden(name: str) -> Any:
     """Get a garden by name with lazy loading.
@@ -352,9 +365,12 @@ def get_garden(name: str) -> Any:
             _garden_cache[name] = getter()
         else:
             available = ", ".join(sorted(GARDEN_GETTERS.keys()))
-            raise ValueError(f"Garden '{name}' not found. Available gardens: {available}")
+            raise ValueError(
+                f"Garden '{name}' not found. Available gardens: {available}"
+            )
 
     return _garden_cache.get(name)
+
 
 def init_all_gardens() -> dict[str, Any]:
     """Initialize all gardens and wire to Gan Ying."""
@@ -362,9 +378,11 @@ def init_all_gardens() -> dict[str, Any]:
     logger.info("✅ Initialized %s gardens!", len(gardens))
     return gardens
 
+
 # Auto-wire gardens to Gan Ying on import
 try:
     from whitemagic.gardens.gan_ying_wiring import ensure_wired
+
     _wired_count: int = ensure_wired()
 except ImportError:
     _wired_count = 0
@@ -378,6 +396,7 @@ def list_gardens() -> list[str]:
 
     """
     return sorted(GARDEN_GETTERS.keys())
+
 
 def get_garden_count() -> int:
     """Get total number of available gardens."""

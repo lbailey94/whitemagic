@@ -1,5 +1,4 @@
-import React from 'react';
-import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { CheckCircle, Clock } from "lucide-react";
 
 export default function DreamCycleMonitor({ data, loading }) {
   if (loading) return <div className="animate-pulse h-48 bg-gray-100 rounded-lg"></div>;

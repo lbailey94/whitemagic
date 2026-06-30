@@ -3,12 +3,12 @@ strata
 Analyze codebases using AGENTS.md directives.
 Detects structural stubs, archive drift, config inconsistencies, and dead code.
 """
+
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 # Import checkers package to trigger auto-registration
-import whitemagic.tools.strata.checkers  # noqa: F401  triggers auto-registration
 from whitemagic.tools.strata.config import load_config
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
@@ -20,21 +20,28 @@ __all__ = ["Strata", "Finding", "FindingSeverity", "main"]
 class Strata:
     """Analyze a codebase and report issues based on AGENTS.md directives."""
 
-    def __init__(self, project_path: str, disabled_categories: Optional[List[str]] = None, baseline_path: Optional[str] = None, since_ref: Optional[str] = None, diff_base: Optional[str] = None):
+    def __init__(
+        self,
+        project_path: str,
+        disabled_categories: list[str] | None = None,
+        baseline_path: str | None = None,
+        since_ref: str | None = None,
+        diff_base: str | None = None,
+    ):
         self.project_path = Path(project_path).resolve()
-        self.agents_md: Optional[str] = None
-        self.readme_md: Optional[str] = None
-        self.findings: List[Finding] = []
+        self.agents_md: str | None = None
+        self.readme_md: str | None = None
+        self.findings: list[Finding] = []
         self.config = load_config(self.project_path)
-        self.severity_overrides: Dict[str, FindingSeverity] = {}
+        self.severity_overrides: dict[str, FindingSeverity] = {}
         self._parse_config()
         extra_skip = set(self.config.get("skip", []))
         self.file_index = FileIndex(self.project_path, extra_skip=extra_skip or None)
         self.disabled_categories: set = set(disabled_categories or [])
         self.disabled_categories.update(self.config.get("disable", []))
         self.baseline: set = set()
-        self.since_ref_files: Optional[set] = None
-        self.diff_base_lines: Optional[Dict[str, set]] = None
+        self.since_ref_files: set | None = None
+        self.diff_base_lines: dict[str, set] | None = None
         if since_ref:
             self.since_ref_files = self._changed_files_since(since_ref)
         if diff_base:
@@ -71,12 +78,18 @@ class Strata:
         if baseline_file.exists():
             data = json.loads(baseline_file.read_text(encoding="utf-8"))
             for entry in data:
-                key = (entry.get("category"), entry.get("file"), entry.get("line"), entry.get("message"))
+                key = (
+                    entry.get("category"),
+                    entry.get("file"),
+                    entry.get("line"),
+                    entry.get("message"),
+                )
                 self.baseline.add(key)
 
-    def _changed_files_since(self, ref: str) -> Optional[set]:
+    def _changed_files_since(self, ref: str) -> set | None:
         """Return set of file paths changed since the given git ref."""
         import subprocess
+
         try:
             result = subprocess.run(
                 ["git", "diff", "--name-only", ref, "--"],
@@ -95,10 +108,11 @@ class Strata:
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             return None
 
-    def _changed_lines_since(self, ref: str) -> Optional[Dict[str, set]]:
+    def _changed_lines_since(self, ref: str) -> dict[str, set] | None:
         """Return mapping of file paths to sets of changed line numbers since the given git ref."""
         import re as _re
         import subprocess
+
         try:
             result = subprocess.run(
                 ["git", "diff", "-U0", ref, "--"],
@@ -112,20 +126,22 @@ class Strata:
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             return None
 
-        changed_lines: Dict[str, set] = {}
-        current_file: Optional[str] = None
+        changed_lines: dict[str, set] = {}
+        current_file: str | None = None
         for line in result.stdout.splitlines():
             if line.startswith("diff --git "):
                 current_file = None
             elif line.startswith("+++ b/"):
                 current_file = line[6:]
             elif line.startswith("@@") and current_file is not None:
-                match = _re.match(r'@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', line)
+                match = _re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", line)
                 if match:
                     start = int(match.group(1))
                     count = int(match.group(2)) if match.group(2) else 1
                     if count > 0:
-                        changed_lines.setdefault(current_file, set()).update(range(start, start + count))
+                        changed_lines.setdefault(current_file, set()).update(
+                            range(start, start + count)
+                        )
         return changed_lines
 
     def _is_suppressed(self, finding: Finding, content: str) -> bool:
@@ -146,38 +162,46 @@ class Strata:
                     return True
                 # Check that it's not a different category-specific suppression
                 import re as _re
-                if _re.search(r'# strata: ignore\[', line_text):
+
+                if _re.search(r"# strata: ignore\[", line_text):
                     continue
                 return True
         return False
 
-    def analyze(self, parallel: bool = False, incremental: bool = False) -> List[Finding]:
+    def analyze(
+        self, parallel: bool = False, incremental: bool = False
+    ) -> list[Finding]:
         """Run all analysis checks."""
         self.findings = []
 
         if not self.agents_md:
-            self.findings.append(Finding(
-                severity=FindingSeverity.WARNING,
-                category="agents.md",
-                file=str(self.project_path),
-                line=None,
-                message="No AGENTS.md found. Consider creating one for agent context.",
-                suggestion="Create AGENTS.md with project context, conventions, and safety rules."
-            ))
+            self.findings.append(
+                Finding(
+                    severity=FindingSeverity.WARNING,
+                    category="agents.md",
+                    file=str(self.project_path),
+                    line=None,
+                    message="No AGENTS.md found. Consider creating one for agent context.",
+                    suggestion="Create AGENTS.md with project context, conventions, and safety rules.",
+                )
+            )
             return self.findings
 
         self.file_index.incremental = incremental
 
         # Run all registered plugin checkers
         from whitemagic.tools.strata.checkers import get_checkers
+
         checkers = get_checkers()
 
         if parallel:
             from concurrent.futures import ThreadPoolExecutor
-            def _run_checker(checker) -> List[Finding]:
-                local_findings: List[Finding] = []
+
+            def _run_checker(checker) -> list[Finding]:
+                local_findings: list[Finding] = []
                 checker(self.project_path, self.file_index, local_findings)
                 return local_findings
+
             with ThreadPoolExecutor() as executor:
                 results = executor.map(_run_checker, checkers)
             for local_findings in results:
@@ -195,15 +219,18 @@ class Strata:
         # Apply since-ref filter (only show findings in changed files)
         if self.since_ref_files is not None:
             self.findings = [
-                f for f in self.findings
+                f
+                for f in self.findings
                 if f.line is None or f.file is None or f.file in self.since_ref_files
             ]
 
         # Apply diff-base filter (only show findings on changed lines)
         if self.diff_base_lines is not None:
             self.findings = [
-                f for f in self.findings
-                if f.line is not None and f.file is not None
+                f
+                for f in self.findings
+                if f.line is not None
+                and f.file is not None
                 and f.file in self.diff_base_lines
                 and f.line in self.diff_base_lines[f.file]
             ]
@@ -225,8 +252,8 @@ class Strata:
 
     def _apply_filters(self) -> None:
         """Filter findings based on disabled categories, inline suppressions, and baseline."""
-        filtered: List[Finding] = []
-        file_cache: Dict[str, str] = {}
+        filtered: list[Finding] = []
+        file_cache: dict[str, str] = {}
 
         for finding in self.findings:
             # Skip disabled categories
@@ -260,14 +287,19 @@ class Strata:
         build_dirs = {"release", "build", "dist", "out", "target", "deploy"}
 
         # Group findings by normalized key (category, message, line, path_without_first_dir)
-        groups: Dict[tuple, List[Finding]] = {}
+        groups: dict[tuple, list[Finding]] = {}
         for finding in self.findings:
             if finding.file is None or finding.line is None:
                 continue
             parts = finding.file.split("/")
             if len(parts) < 2:
                 continue
-            normalized = (finding.category, finding.message, finding.line, "/".join(parts[1:]))
+            normalized = (
+                finding.category,
+                finding.message,
+                finding.line,
+                "/".join(parts[1:]),
+            )
             groups.setdefault(normalized, []).append(finding)
 
         to_remove: set = set()
@@ -290,16 +322,18 @@ class Strata:
 
     def _report_sarif(self) -> str:
         """Generate a SARIF v2.1.0 report."""
-        runs = [{
-            "tool": {
-                "driver": {
-                    "name": "STRATA",
-                    "informationUri": "https://github.com/example/strata",
-                    "rules": []
-                }
-            },
-            "results": []
-        }]
+        runs = [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "STRATA",
+                        "informationUri": "https://github.com/example/strata",
+                        "rules": [],
+                    }
+                },
+                "results": [],
+            }
+        ]
         rules = {}
         for f in self.findings:
             rule_id = f.category
@@ -307,30 +341,41 @@ class Strata:
                 rules[rule_id] = {
                     "id": rule_id,
                     "name": rule_id,
-                    "shortDescription": {"text": f.message}
+                    "shortDescription": {"text": f.message},
                 }
             result = {
                 "ruleId": rule_id,
                 "message": {"text": f.message},
                 "level": f.severity.value,
-                "locations": []
+                "locations": [],
             }
             if f.line is not None:
-                result["locations"].append({
-                    "physicalLocation": {
-                        "artifactLocation": {"uri": f.file},
-                        "region": {"startLine": f.line}
+                result["locations"].append(
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": f.file},
+                            "region": {"startLine": f.line},
+                        }
                     }
-                })
+                )
             runs[0]["results"].append(result)
         runs[0]["tool"]["driver"]["rules"] = list(rules.values())
-        return json.dumps({"version": "2.1.0", "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json", "runs": runs}, indent=2)
+        return json.dumps(
+            {
+                "version": "2.1.0",
+                "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+                "runs": runs,
+            },
+            indent=2,
+        )
 
     def _report_html(self) -> str:
         """Generate a self-contained HTML report."""
         severity_counts = {"error": 0, "warning": 0, "info": 0}
         for f in self.findings:
-            severity_counts[f.severity.value] = severity_counts.get(f.severity.value, 0) + 1
+            severity_counts[f.severity.value] = (
+                severity_counts.get(f.severity.value, 0) + 1
+            )
 
         rows = []
         for f in self.findings:
@@ -339,11 +384,11 @@ class Strata:
             rows.append(
                 f'<tr data-severity="{f.severity.value}">'
                 f'<td><span class="badge {f.severity.value}">{f.severity.value.upper()}</span></td>'
-                f'<td>{f.category}</td>'
-                f'<td><code>{loc}</code></td>'
-                f'<td>{f.message}</td>'
-                f'<td>{suggestion}</td>'
-                f'</tr>'
+                f"<td>{f.category}</td>"
+                f"<td><code>{loc}</code></td>"
+                f"<td>{f.message}</td>"
+                f"<td>{suggestion}</td>"
+                f"</tr>"
             )
 
         return f"""<!DOCTYPE html>
@@ -380,9 +425,9 @@ class Strata:
 <h1>STRATA Report</h1>
 <div class="meta">{self.project_path.name} &middot; {len(self.findings)} finding(s)</div>
 <div class="stats">
-  <div class="stat"><strong style="color:var(--error)">{severity_counts['error']}</strong>Errors</div>
-  <div class="stat"><strong style="color:var(--warning)">{severity_counts['warning']}</strong>Warnings</div>
-  <div class="stat"><strong style="color:var(--info)">{severity_counts['info']}</strong>Info</div>
+  <div class="stat"><strong style="color:var(--error)">{severity_counts["error"]}</strong>Errors</div>
+  <div class="stat"><strong style="color:var(--warning)">{severity_counts["warning"]}</strong>Warnings</div>
+  <div class="stat"><strong style="color:var(--info)">{severity_counts["info"]}</strong>Info</div>
 </div>
 <div class="filters">
   <button class="active" onclick="filter('all')">All</button>
@@ -396,7 +441,7 @@ class Strata:
 <tr><th>Severity</th><th>Category</th><th>Location</th><th>Message</th><th>Suggestion</th></tr>
 </thead>
 <tbody id="findings">
-{''.join(rows)}
+{"".join(rows)}
 </tbody>
 </table>
 <script>
@@ -419,21 +464,30 @@ function search() {{
 </body>
 </html>"""
 
-    def report(self, format: str = "text", stratify: bool = False, context: bool = False) -> str:
+    def report(
+        self, format: str = "text", stratify: bool = False, context: bool = False
+    ) -> str:
         """Generate a formatted report."""
         if stratify:
             from whitemagic.tools.strata.stratigraphy import StratigraphyReport
+
             return StratigraphyReport(self.project_path, self.findings).render()
 
         if format == "json":
-            return json.dumps([{
-                "severity": f.severity.value,
-                "category": f.category,
-                "file": f.file,
-                "line": f.line,
-                "message": f.message,
-                "suggestion": f.suggestion,
-            } for f in self.findings], indent=2)
+            return json.dumps(
+                [
+                    {
+                        "severity": f.severity.value,
+                        "category": f.category,
+                        "file": f.file,
+                        "line": f.line,
+                        "message": f.message,
+                        "suggestion": f.suggestion,
+                    }
+                    for f in self.findings
+                ],
+                indent=2,
+            )
 
         if format == "sarif":
             return self._report_sarif()
@@ -451,7 +505,9 @@ function search() {{
 
         severity_counts = {}
         for f in self.findings:
-            severity_counts[f.severity.value] = severity_counts.get(f.severity.value, 0) + 1
+            severity_counts[f.severity.value] = (
+                severity_counts.get(f.severity.value, 0) + 1
+            )
 
         for sev in ["error", "warning", "info"]:
             count = severity_counts.get(sev, 0)
@@ -463,10 +519,17 @@ function search() {{
         enricher = None
         if context:
             from whitemagic.tools.strata.context import ContextEnricher
+
             enricher = ContextEnricher(self.project_path)
 
         for f in self.findings:
-            icon = "🔴" if f.severity == FindingSeverity.ERROR else "🟡" if f.severity == FindingSeverity.WARNING else "🔵"
+            icon = (
+                "🔴"
+                if f.severity == FindingSeverity.ERROR
+                else "🟡"
+                if f.severity == FindingSeverity.WARNING
+                else "🔵"
+            )
             loc = f":{f.line}" if f.line else ""
             ctx = ""
             if enricher and f.line is not None and f.file:
@@ -484,54 +547,138 @@ function search() {{
 
 def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="STRATA — analyze codebases using AGENTS.md")
+
+    parser = argparse.ArgumentParser(
+        description="STRATA — analyze codebases using AGENTS.md"
+    )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # --- analyze (default) ---
-    analyze_parser = subparsers.add_parser("analyze", help="Run code analysis (default)")
-    analyze_parser.add_argument("path", nargs="?", default=".", help="Project path to analyze")
-    analyze_parser.add_argument("--format", choices=["text", "json", "sarif", "html"], default="text", help="Output format")
-    analyze_parser.add_argument("--fail-on-error", action="store_true", help="Exit with non-zero code if errors found")
-    analyze_parser.add_argument("--disable", action="append", default=[], help="Disable a check category (can be used multiple times)")
-    analyze_parser.add_argument("--baseline", default=".strata-baseline.json", help="Path to baseline file for suppressing known findings")
-    analyze_parser.add_argument("--generate-baseline", action="store_true", help="Generate a baseline from current findings and exit")
-    analyze_parser.add_argument("--stratify", action="store_true", help="Group findings by geological age layers via git blame")
-    analyze_parser.add_argument("--since-ref", default=None, help="Only analyze files changed since the given git ref")
-    analyze_parser.add_argument("--diff-base", default=None, help="Only report findings on lines changed since the given git ref")
-    analyze_parser.add_argument("--survey", action="store_true", help="Fast surface survey using file metadata and git history")
-    analyze_parser.add_argument("--watch", action="store_true", help="Watch for file changes and re-run analysis")
-    analyze_parser.add_argument("--parallel", action="store_true", help="Run checkers in parallel using threads")
-    analyze_parser.add_argument("--context", action="store_true", help="Show enclosing function/class context in text reports")
-    analyze_parser.add_argument("--incremental", action="store_true", help="Skip unchanged files based on content hash cache")
-    analyze_parser.add_argument("--list-checks", action="store_true", help="List all registered checkers and their categories, then exit")
+    analyze_parser = subparsers.add_parser(
+        "analyze", help="Run code analysis (default)"
+    )
+    analyze_parser.add_argument(
+        "path", nargs="?", default=".", help="Project path to analyze"
+    )
+    analyze_parser.add_argument(
+        "--format",
+        choices=["text", "json", "sarif", "html"],
+        default="text",
+        help="Output format",
+    )
+    analyze_parser.add_argument(
+        "--fail-on-error",
+        action="store_true",
+        help="Exit with non-zero code if errors found",
+    )
+    analyze_parser.add_argument(
+        "--disable",
+        action="append",
+        default=[],
+        help="Disable a check category (can be used multiple times)",
+    )
+    analyze_parser.add_argument(
+        "--baseline",
+        default=".strata-baseline.json",
+        help="Path to baseline file for suppressing known findings",
+    )
+    analyze_parser.add_argument(
+        "--generate-baseline",
+        action="store_true",
+        help="Generate a baseline from current findings and exit",
+    )
+    analyze_parser.add_argument(
+        "--stratify",
+        action="store_true",
+        help="Group findings by geological age layers via git blame",
+    )
+    analyze_parser.add_argument(
+        "--since-ref",
+        default=None,
+        help="Only analyze files changed since the given git ref",
+    )
+    analyze_parser.add_argument(
+        "--diff-base",
+        default=None,
+        help="Only report findings on lines changed since the given git ref",
+    )
+    analyze_parser.add_argument(
+        "--survey",
+        action="store_true",
+        help="Fast surface survey using file metadata and git history",
+    )
+    analyze_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Watch for file changes and re-run analysis",
+    )
+    analyze_parser.add_argument(
+        "--parallel", action="store_true", help="Run checkers in parallel using threads"
+    )
+    analyze_parser.add_argument(
+        "--context",
+        action="store_true",
+        help="Show enclosing function/class context in text reports",
+    )
+    analyze_parser.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Skip unchanged files based on content hash cache",
+    )
+    analyze_parser.add_argument(
+        "--list-checks",
+        action="store_true",
+        help="List all registered checkers and their categories, then exit",
+    )
 
-    # --- archaeology ---
-    arch_parser = subparsers.add_parser("archaeology", aliases=["arch"], help="Code Archaeology Kit — geological git history analysis")
-    arch_sub = arch_parser.add_subparsers(dest="arch_command", help="Archaeology subcommands")
+    arch_parser = subparsers.add_parser(
+        "archaeology",
+        aliases=["arch"],
+        help="Code Archaeology Kit — geological git history analysis",
+    )
+    arch_sub = arch_parser.add_subparsers(
+        dest="arch_command", help="Archaeology subcommands"
+    )
 
-    excavate_p = arch_sub.add_parser("excavate", help="Show code that existed in a time layer")
+    excavate_p = arch_sub.add_parser(
+        "excavate", help="Show code that existed in a time layer"
+    )
     excavate_p.add_argument("path", nargs="?", default=".", help="Project path")
-    excavate_p.add_argument("--layer", required=True, help="Time layer: YYYY, YYYY-QN, or YYYY-MM")
-    excavate_p.add_argument("--file", default=None, help="Filter to files containing this substring")
+    excavate_p.add_argument(
+        "--layer", required=True, help="Time layer: YYYY, YYYY-QN, or YYYY-MM"
+    )
+    excavate_p.add_argument(
+        "--file", default=None, help="Filter to files containing this substring"
+    )
 
     fossil_p = arch_sub.add_parser("fossil", help="Timeline of a file's evolution")
     fossil_p.add_argument("path", nargs="?", default=".", help="Project path")
     fossil_p.add_argument("--file", required=True, help="File path to trace")
     fossil_p.add_argument("--commits", type=int, default=20, help="Max commits to show")
 
-    extinction_p = arch_sub.add_parser("extinction", help="Find deleted code still referenced")
+    extinction_p = arch_sub.add_parser(
+        "extinction", help="Find deleted code still referenced"
+    )
     extinction_p.add_argument("path", nargs="?", default=".", help="Project path")
 
-    comp_p = arch_sub.add_parser("composition", help="Analyze codebase composition by contributor")
+    comp_p = arch_sub.add_parser(
+        "composition", help="Analyze codebase composition by contributor"
+    )
     comp_p.add_argument("path", nargs="?", default=".", help="Project path")
-    comp_p.add_argument("--top", type=int, default=10, help="Number of top contributors")
+    comp_p.add_argument(
+        "--top", type=int, default=10, help="Number of top contributors"
+    )
 
-    temper_p = arch_sub.add_parser("temper", help="Measure how 'heated' a file's history is")
+    temper_p = arch_sub.add_parser(
+        "temper", help="Measure how 'heated' a file's history is"
+    )
     temper_p.add_argument("path", nargs="?", default=".", help="Project path")
-    temper_p.add_argument("--file", default=None, help="Filter to files containing this substring")
+    temper_p.add_argument(
+        "--file", default=None, help="Filter to files containing this substring"
+    )
     temper_p.add_argument("--top", type=int, default=10, help="Number of top files")
 
     import sys
+
     subcommands = {"analyze", "archaeology", "arch"}
     if any(arg in subcommands for arg in sys.argv[1:] if not arg.startswith("-")):
         args = parser.parse_args()
@@ -544,14 +691,21 @@ def main() -> None:
         import re as _re
 
         from whitemagic.tools.strata.checkers import get_checkers
+
         print("Registered STRATA checkers:")
         print("-" * 60)
         for checker in get_checkers():
             name = checker.__name__
-            doc = (checker.__doc__ or "").strip().splitlines()[0] if checker.__doc__ else ""
+            doc = (
+                (checker.__doc__ or "").strip().splitlines()[0]
+                if checker.__doc__
+                else ""
+            )
             try:
                 source = inspect.getsource(checker)
-                categories = sorted(set(_re.findall(r'category\s*=\s*"([^"]+)"', source)))
+                categories = sorted(
+                    set(_re.findall(r'category\s*=\s*"([^"]+)"', source))
+                )
             except (OSError, TypeError):
                 categories = []
             cat_str = f"  categories: {', '.join(categories)}" if categories else ""
@@ -562,41 +716,63 @@ def main() -> None:
 
     if args.command in ("archaeology", "arch"):
         from whitemagic.tools.strata.archaeology import archaeology_main
+
         archaeology_main(args)
         return
 
     if args.command == "analyze":
         if args.survey:
             from whitemagic.tools.strata.survey import SurveyReport
+
             print(SurveyReport(Path(args.path)).render())
             return
 
         def _run() -> None:
             baseline_path = args.baseline if Path(args.baseline).exists() else None
-            arch = Strata(args.path, disabled_categories=args.disable, baseline_path=baseline_path, since_ref=args.since_ref, diff_base=args.diff_base)
+            arch = Strata(
+                args.path,
+                disabled_categories=args.disable,
+                baseline_path=baseline_path,
+                since_ref=args.since_ref,
+                diff_base=args.diff_base,
+            )
             arch.analyze(parallel=args.parallel, incremental=args.incremental)
 
             if args.generate_baseline:
-                baseline_data = [{
-                    "category": f.category,
-                    "file": f.file,
-                    "line": f.line,
-                    "message": f.message,
-                } for f in arch.findings]
+                baseline_data = [
+                    {
+                        "category": f.category,
+                        "file": f.file,
+                        "line": f.line,
+                        "message": f.message,
+                    }
+                    for f in arch.findings
+                ]
                 baseline_file = Path(args.baseline)
-                baseline_file.write_text(json.dumps(baseline_data, indent=2), encoding="utf-8")
-                print(f"Baseline written to {baseline_file} ({len(baseline_data)} findings)")
+                baseline_file.write_text(
+                    json.dumps(baseline_data, indent=2), encoding="utf-8"
+                )
+                print(
+                    f"Baseline written to {baseline_file} ({len(baseline_data)} findings)"
+                )
                 return
 
-            print(arch.report(format=args.format, stratify=args.stratify, context=args.context))
+            print(
+                arch.report(
+                    format=args.format, stratify=args.stratify, context=args.context
+                )
+            )
 
             if args.fail_on_error:
-                errors = [f for f in arch.findings if f.severity == FindingSeverity.ERROR]
+                errors = [
+                    f for f in arch.findings if f.severity == FindingSeverity.ERROR
+                ]
                 if errors:
                     exit(1)
 
         if args.watch:
             from whitemagic.tools.strata.watch import FileWatcher
+
             watcher = FileWatcher(Path(args.path))
             watcher.run(_run)
         else:

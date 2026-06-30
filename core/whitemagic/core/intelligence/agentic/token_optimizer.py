@@ -72,11 +72,11 @@ class TokenBudget:
         """Get current usage tier for token efficiency guidance."""
         pct = self.used / self.allocated if self.allocated > 0 else 0
         if pct < 0.60:
-            return "safe"      # Under 60% - safe zone
+            return "safe"  # Under 60% - safe zone
         elif pct < 0.70:
-            return "wrap_up"   # 60-70% - start wrapping up
+            return "wrap_up"  # 60-70% - start wrapping up
         else:
-            return "checkpoint" # Over 70% - checkpoint immediately
+            return "checkpoint"  # Over 70% - checkpoint immediately
 
     @property
     def rate_limit_remaining(self) -> int:
@@ -119,6 +119,7 @@ class TokenBudget:
     def record_call(self) -> None:
         """Record an API call for rate limiting."""
         from datetime import datetime
+
         current_hour = datetime.now().strftime("%Y%m%d%H")
         if self.hour_started != current_hour:
             self.calls_this_hour = 0
@@ -141,14 +142,16 @@ class TokenBudget:
         Returns:
             str
         """
-        tier_emoji = {"safe": "🟢", "wrap_up": "🟡", "checkpoint": "🔴"}[self.usage_tier]
+        tier_emoji = {"safe": "🟢", "wrap_up": "🟡", "checkpoint": "🔴"}[
+            self.usage_tier
+        ]
         return (
             f"Token Budget Report:\n"
             f"  Allocated: {self.allocated:,}\n"
-            f"  Used: {self.used:,} ({100*self.used/self.allocated:.1f}%) {tier_emoji}\n"
+            f"  Used: {self.used:,} ({100 * self.used / self.allocated:.1f}%) {tier_emoji}\n"
             f"  Saved: {self.saved:,}\n"
             f"  Remaining: {self.remaining:,}\n"
-            f"  Efficiency: {100*self.efficiency:.1f}% savings rate\n"
+            f"  Efficiency: {100 * self.efficiency:.1f}% savings rate\n"
             f"  Rate Limit: {self.calls_this_hour}/{self.max_calls_per_hour} calls/hour\n"
             f"  Status: {self.usage_tier.upper()}"
         )
@@ -183,6 +186,7 @@ class QueryCache:
 
     def __init__(self, cache_file: Path | None = None) -> None:
         from whitemagic.config.paths import CACHE_DIR
+
         self.cache_file = cache_file or (CACHE_DIR / "query_cache.json")
         self._cache: dict[str, CachedResult] = {}
         self._load()
@@ -319,7 +323,9 @@ class ContextCompressor:
             line_lower = line.lower()
             if any(kw.lower() in line_lower for kw in keywords):
                 # Add this line + context
-                for j in range(max(0, i - context_lines), min(len(lines), i + context_lines + 1)):
+                for j in range(
+                    max(0, i - context_lines), min(len(lines), i + context_lines + 1)
+                ):
                     relevant_indices.add(j)
 
         if not relevant_indices:
@@ -370,7 +376,9 @@ class TokenOptimizer:
                     optimized_context = compressed
                     tokens_saved += saved
                 else:
-                    compressed, saved = self.compressor.truncate_to_budget(context, 2000)
+                    compressed, saved = self.compressor.truncate_to_budget(
+                        context, 2000
+                    )
                     optimized_context = compressed
                     tokens_saved += saved
             else:
@@ -383,6 +391,7 @@ class TokenOptimizer:
             from whitemagic.core.intelligence.agentic.local_reasoning import (
                 reason_locally,
             )
+
             result = reason_locally(query)
             if result.insights and not result.ready_for_ai:
                 total_saved = tokens_saved + result.total_tokens_saved
@@ -397,7 +406,9 @@ class TokenOptimizer:
         # 4. Extract relevant lines from context using query keywords
         if context and len(context) > 500:
             keywords = [w for w in query.split() if len(w) > 3]
-            compressed, saved = self.compressor.extract_relevant_lines(context, keywords)
+            compressed, saved = self.compressor.extract_relevant_lines(
+                context, keywords
+            )
             if saved > 0 and len(compressed) < len(optimized_context):
                 optimized_context = compressed
                 tokens_saved += saved
@@ -480,8 +491,6 @@ class TokenOptimizer:
             f"  Tokens saved via cache: {cache_stats['total_tokens_saved']:,}"
         )
 
-
-# === SINGLETON ===
 
 _optimizer: TokenOptimizer | None = None
 

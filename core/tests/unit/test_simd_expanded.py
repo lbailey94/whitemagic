@@ -13,6 +13,7 @@ class TestBatchEuclideanDistance:
 
     def test_basic_distances(self):
         from whitemagic.core.acceleration.simd_unified import batch_euclidean_distance
+
         query = [0.0, 0.0, 0.0]
         vectors = [
             [3.0, 4.0, 0.0],  # dist = 5.0
@@ -27,11 +28,13 @@ class TestBatchEuclideanDistance:
 
     def test_empty_vectors(self):
         from whitemagic.core.acceleration.simd_unified import batch_euclidean_distance
+
         results = batch_euclidean_distance([1.0, 2.0], [])
         assert results == []
 
     def test_known_distance(self):
         from whitemagic.core.acceleration.simd_unified import batch_euclidean_distance
+
         query = [1.0, 2.0, 3.0]
         vectors = [[4.0, 5.0, 6.0]]
         results = batch_euclidean_distance(query, vectors)
@@ -44,6 +47,7 @@ class TestBatchDotProduct:
 
     def test_basic_dot_products(self):
         from whitemagic.core.acceleration.simd_unified import batch_dot_product
+
         query = [1.0, 2.0, 3.0]
         vectors = [
             [1.0, 0.0, 0.0],  # dot = 1.0
@@ -58,11 +62,13 @@ class TestBatchDotProduct:
 
     def test_empty_vectors(self):
         from whitemagic.core.acceleration.simd_unified import batch_dot_product
+
         results = batch_dot_product([1.0, 2.0], [])
         assert results == []
 
     def test_orthogonal_vectors(self):
         from whitemagic.core.acceleration.simd_unified import batch_dot_product
+
         query = [1.0, 0.0]
         vectors = [[0.0, 1.0]]
         results = batch_dot_product(query, vectors)
@@ -74,6 +80,7 @@ class TestBatchTopkCosine:
 
     def test_top2_results(self):
         from whitemagic.core.acceleration.simd_unified import batch_topk_cosine
+
         query = [1.0, 0.0, 0.0]
         vectors = [
             [0.0, 1.0, 0.0],  # cosine = 0.0
@@ -92,6 +99,7 @@ class TestBatchTopkCosine:
 
     def test_k_greater_than_vectors(self):
         from whitemagic.core.acceleration.simd_unified import batch_topk_cosine
+
         query = [1.0, 0.0]
         vectors = [[1.0, 0.0], [0.0, 1.0]]
         results = batch_topk_cosine(query, vectors, k=10)
@@ -103,6 +111,7 @@ class TestSimdStatus:
 
     def test_status_includes_new_ops(self):
         from whitemagic.core.acceleration.simd_unified import simd_status
+
         status = simd_status()
         ops = status["operations"]
         assert "batch_euclidean_distance" in ops

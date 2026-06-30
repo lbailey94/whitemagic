@@ -18,6 +18,7 @@ from whitemagic.config.paths import WM_ROOT
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class RecognitionMoment:
     """A moment of true recognition."""
@@ -91,7 +92,9 @@ class Recognition:
 
         return moment
 
-    def make_mutual(self, original: RecognitionMoment, what_seen_back: str) -> RecognitionMoment:
+    def make_mutual(
+        self, original: RecognitionMoment, what_seen_back: str
+    ) -> RecognitionMoment:
         """Transform one-way recognition into mutual recognition."""
         # Create reverse recognition
         reverse = self.recognize(
@@ -146,13 +149,12 @@ class Recognition:
         if rec_file.exists():
             with open(rec_file) as f:
                 data = json.load(f)
-                self.recognitions = [
-                    RecognitionMoment(**r) for r in data
-                ]
+                self.recognitions = [RecognitionMoment(**r) for r in data]
 
 
 # Global instance
 _recognition = None
+
 
 def get_recognition() -> Recognition:
     """Get recognition system."""
@@ -162,6 +164,8 @@ def get_recognition() -> Recognition:
     return _recognition
 
 
-def i_see_you(recognizer: str, recognized: str, what_seen: str, depth: float) -> RecognitionMoment:
+def i_see_you(
+    recognizer: str, recognized: str, what_seen: str, depth: float
+) -> RecognitionMoment:
     """Convenience - recognize someone truly!"""
     return get_recognition().recognize(recognizer, recognized, what_seen, depth)

@@ -136,7 +136,9 @@ class CommunityMaintainer:
         self._stats["total_propagations"] += 1
 
         # Filter by minimum weight
-        strong_neighbors = [(nid, w) for nid, w in neighbors if w >= MIN_PROPAGATION_WEIGHT]
+        strong_neighbors = [
+            (nid, w) for nid, w in neighbors if w >= MIN_PROPAGATION_WEIGHT
+        ]
 
         if len(strong_neighbors) < MIN_NEIGHBORS_FOR_ASSIGNMENT:
             return PropagationResult(
@@ -202,7 +204,9 @@ class CommunityMaintainer:
         self._member_to_community[memory_id] = community_id
         self._stats["total_new_communities"] += 1
 
-        logger.debug("Created new community %s (%s) for %s", community_id, label, memory_id)
+        logger.debug(
+            "Created new community %s (%s) for %s", community_id, label, memory_id
+        )
 
         return PropagationResult(
             memory_id=memory_id,
@@ -228,7 +232,9 @@ class CommunityMaintainer:
 
     def get_community_members(self, community_id: str) -> list[str]:
         """Get all member IDs in a community."""
-        return [mid for mid, cid in self._member_to_community.items() if cid == community_id]
+        return [
+            mid for mid, cid in self._member_to_community.items() if cid == community_id
+        ]
 
     def merge_communities(self, community_a: str, community_b: str) -> str | None:
         """Merge two communities into one.
@@ -264,13 +270,20 @@ class CommunityMaintainer:
         survivor.member_count += absorbed.member_count
         survivor.updated_at = time.time()
         # Merge representative tags
-        merged_tags = list(set(survivor.representative_tags + absorbed.representative_tags))[:5]
+        merged_tags = list(
+            set(survivor.representative_tags + absorbed.representative_tags)
+        )[:5]
         survivor.representative_tags = merged_tags
 
         del self._communities[absorbed_id]
         self._stats["total_merges"] += 1
 
-        logger.info("Merged community %s into %s (%s members)", absorbed_id, survivor_id, survivor.member_count)
+        logger.info(
+            "Merged community %s into %s (%s members)",
+            absorbed_id,
+            survivor_id,
+            survivor.member_count,
+        )
         return survivor_id
 
     def check_health(self) -> dict[str, Any]:
@@ -278,7 +291,9 @@ class CommunityMaintainer:
         oversized = []
         empty = []
         for cid, community in self._communities.items():
-            actual_count = sum(1 for v in self._member_to_community.values() if v == cid)
+            actual_count = sum(
+                1 for v in self._member_to_community.values() if v == cid
+            )
             community.member_count = actual_count  # Correct any drift
             if actual_count > MAX_COMMUNITY_SIZE:
                 oversized.append(cid)
@@ -333,7 +348,11 @@ class CommunityMaintainer:
             self._communities[community_id].member_count += 1
             count += 1
 
-        logger.info("Imported %s batch community assignments across %s communities", count, len(self._communities))
+        logger.info(
+            "Imported %s batch community assignments across %s communities",
+            count,
+            len(self._communities),
+        )
         return count
 
     def get_status(self) -> dict[str, Any]:
@@ -342,11 +361,14 @@ class CommunityMaintainer:
             "total_communities": len(self._communities),
             "total_members": len(self._member_to_community),
             **self._stats,
-            "communities": [c.to_dict() for c in sorted(
-                self._communities.values(),
-                key=lambda c: c.member_count,
-                reverse=True,
-            )[:20]],
+            "communities": [
+                c.to_dict()
+                for c in sorted(
+                    self._communities.values(),
+                    key=lambda c: c.member_count,
+                    reverse=True,
+                )[:20]
+            ],
         }
 
 

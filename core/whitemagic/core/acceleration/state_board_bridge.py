@@ -71,6 +71,7 @@ class Quadrant(IntEnum):
 @dataclass
 class HarmonySnapshot:
     """Snapshot of the Harmony Vector from the StateBoard."""
+
     balance: float = 0.0
     throughput: float = 0.0
     latency: float = 0.0
@@ -83,6 +84,7 @@ class HarmonySnapshot:
 @dataclass
 class ResonanceSnapshot:
     """Snapshot of resonance state from the StateBoard."""
+
     current_gana: int = 0
     predecessor: int = 0
     successor: int = 0
@@ -94,6 +96,7 @@ class ResonanceSnapshot:
 @dataclass
 class BoardSnapshot:
     """Complete snapshot of the StateBoard."""
+
     tick: int = 0
     harmony: HarmonySnapshot | None = None
     resonance: ResonanceSnapshot | None = None
@@ -117,6 +120,7 @@ class StateBoardBridge:
     def _try_rust(self) -> None:
         try:
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "board_read_harmony"):
                 self._rust_available = True
                 logger.info("🦀 StateBoard: Rust path active")
@@ -131,6 +135,7 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 board_get_path = getattr(whitemagic_rs, "board_get_path", None)
                 if board_get_path:
                     path = Path(board_get_path())
@@ -155,15 +160,15 @@ class StateBoardBridge:
     @staticmethod
     def _default_path() -> Path:
         from whitemagic.config.paths import CACHE_DIR
-        return CACHE_DIR / "state_board.bin"
 
-    # --- Read API ---
+        return CACHE_DIR / "state_board.bin"
 
     def read_harmony(self) -> HarmonySnapshot:
         """Read the Harmony Vector. ~100ns via Rust, ~1µs via mmap."""
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 board_read_harmony = getattr(whitemagic_rs, "board_read_harmony", None)
                 if board_read_harmony:
                     hv = board_read_harmony()
@@ -192,6 +197,7 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 board_read_state = getattr(whitemagic_rs, "board_read_state", None)
                 if board_read_state:
                     state = board_read_state()
@@ -225,6 +231,7 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 board_read_state = getattr(whitemagic_rs, "board_read_state", None)
                 if board_read_state:
                     state = board_read_state()
@@ -245,6 +252,7 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 board_read_breaker = getattr(whitemagic_rs, "board_read_breaker", None)
                 if board_read_breaker:
                     state, failures = board_read_breaker(tool_slot)
@@ -267,8 +275,6 @@ class StateBoardBridge:
             resonance=self.read_resonance(),
         )
 
-    # --- Write API ---
-
     def write_harmony(
         self,
         balance: float = 0.0,
@@ -283,10 +289,19 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                board_write_harmony = getattr(whitemagic_rs, "board_write_harmony", None)
+
+                board_write_harmony = getattr(
+                    whitemagic_rs, "board_write_harmony", None
+                )
                 if board_write_harmony:
                     tick = board_write_harmony(
-                        balance, throughput, latency, error_rate, dharma, karma_debt, energy,
+                        balance,
+                        throughput,
+                        latency,
+                        error_rate,
+                        dharma,
+                        karma_debt,
+                        energy,
                     )
                     if isinstance(tick, (int, float)):
                         return int(tick)
@@ -296,9 +311,18 @@ class StateBoardBridge:
         mm = self._ensure_mmap()
         if mm is None:
             return 0
-        struct.pack_into("<7d", mm, _OFF_HV,
-                         balance, throughput, latency, error_rate,
-                         dharma, karma_debt, energy)
+        struct.pack_into(
+            "<7d",
+            mm,
+            _OFF_HV,
+            balance,
+            throughput,
+            latency,
+            error_rate,
+            dharma,
+            karma_debt,
+            energy,
+        )
         # Increment tick
         tick = int(struct.unpack_from("<Q", mm, _OFF_TICK)[0]) + 1
         struct.pack_into("<Q", mm, _OFF_TICK, tick)
@@ -317,10 +341,18 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
-                board_write_resonance = getattr(whitemagic_rs, "board_write_resonance", None)
+
+                board_write_resonance = getattr(
+                    whitemagic_rs, "board_write_resonance", None
+                )
                 if board_write_resonance:
                     tick = board_write_resonance(
-                        current_gana, predecessor, successor, quadrant, wu_xing, guna,
+                        current_gana,
+                        predecessor,
+                        successor,
+                        quadrant,
+                        wu_xing,
+                        guna,
                     )
                     if isinstance(tick, (int, float)):
                         return int(tick)
@@ -330,19 +362,32 @@ class StateBoardBridge:
         mm = self._ensure_mmap()
         if mm is None:
             return 0
-        struct.pack_into("<6Q", mm, _OFF_GUNA,
-                         guna, wu_xing, current_gana,
-                         predecessor, successor, quadrant)
+        struct.pack_into(
+            "<6Q",
+            mm,
+            _OFF_GUNA,
+            guna,
+            wu_xing,
+            current_gana,
+            predecessor,
+            successor,
+            quadrant,
+        )
         tick = int(struct.unpack_from("<Q", mm, _OFF_TICK)[0]) + 1
         struct.pack_into("<Q", mm, _OFF_TICK, tick)
         return int(tick)
 
-    def write_breaker(self, tool_slot: int, state: BreakerState, failures: int = 0) -> None:
+    def write_breaker(
+        self, tool_slot: int, state: BreakerState, failures: int = 0
+    ) -> None:
         """Write a circuit breaker state."""
         if self._rust_available:
             try:
                 import whitemagic_rs
-                board_write_breaker = getattr(whitemagic_rs, "board_write_breaker", None)
+
+                board_write_breaker = getattr(
+                    whitemagic_rs, "board_write_breaker", None
+                )
                 if board_write_breaker:
                     board_write_breaker(tool_slot, int(state), failures)
                     return
@@ -361,8 +406,11 @@ class StateBoardBridge:
         if self._rust_available:
             try:
                 import whitemagic_rs
+
                 whitemagic_rs.board_reset()
-                logger.info("StateBoard: reset all breakers via Rust PyO3 (board_reset)")
+                logger.info(
+                    "StateBoard: reset all breakers via Rust PyO3 (board_reset)"
+                )
                 return 64  # All slots reset
             except Exception:
                 pass
@@ -402,6 +450,7 @@ def get_state_board() -> StateBoardBridge:
         _board = StateBoardBridge()
         # R&D mode: reset all breaker slots in StateBoard mmap on startup
         import os
+
         if os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
             _board.reset_all_breakers()
     return _board

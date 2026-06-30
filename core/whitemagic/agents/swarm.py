@@ -15,6 +15,7 @@ Usage:
     assignments = swarm.route(plan)
     result = swarm.execute(assignments)
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,6 +40,7 @@ class TaskStatus(StrEnum):
         RUNNING
         COMPLETED
         FAILED"""
+
     PENDING = "pending"
     ASSIGNED = "assigned"
     RUNNING = "running"
@@ -57,6 +59,7 @@ class ConsensusStrategy(StrEnum):
         FIRST_WINS
         WEIGHTED
         TRICAMERAL"""
+
     MAJORITY = "majority"
     UNANIMOUS = "unanimous"
     FIRST_WINS = "first_wins"
@@ -69,6 +72,7 @@ class SubTask:
     """SubTask: sub task.
 
     Value object: equality and repr are field-based."""
+
     id: str
     description: str
     required_capabilities: list[str] = field(default_factory=list)
@@ -102,6 +106,7 @@ class SwarmPlan:
     """SwarmPlan: swarm plan.
 
     Value object: equality and repr are field-based."""
+
     id: str
     goal: str
     subtasks: list[SubTask] = field(default_factory=list)
@@ -131,11 +136,14 @@ class Vote:
     """Vote: vote.
 
     Value object: equality and repr are field-based."""
+
     agent_id: str
     value: Any
     confidence: float = 1.0
     timestamp: float = 0.0
-    house: str | None = None  # For TRICAMERAL: "older_brothers" | "younger_brothers" | "firekeeper"
+    house: str | None = (
+        None  # For TRICAMERAL: "older_brothers" | "younger_brothers" | "firekeeper"
+    )
 
 
 class AgentSwarm:
@@ -185,24 +193,28 @@ class AgentSwarm:
                 for kw, c in keywords_to_caps.items():
                     if kw in hint.lower():
                         caps.extend(c)
-                subtasks.append(SubTask(
-                    id=f"{plan_id}_t{i}",
-                    description=hint,
-                    required_capabilities=caps or ["general"],
-                    priority=len(hints) - i,
-                ))
+                subtasks.append(
+                    SubTask(
+                        id=f"{plan_id}_t{i}",
+                        description=hint,
+                        required_capabilities=caps or ["general"],
+                        priority=len(hints) - i,
+                    )
+                )
         else:
             # Auto-generate subtasks from detected capabilities
             if not detected_caps:
                 detected_caps = {"general"}
 
             for i, cap in enumerate(sorted(detected_caps)):
-                subtasks.append(SubTask(
-                    id=f"{plan_id}_t{i}",
-                    description=f"{cap}: {goal}",
-                    required_capabilities=[cap],
-                    priority=i,
-                ))
+                subtasks.append(
+                    SubTask(
+                        id=f"{plan_id}_t{i}",
+                        description=f"{cap}: {goal}",
+                        required_capabilities=[cap],
+                        priority=i,
+                    )
+                )
 
         plan = SwarmPlan(
             id=plan_id,
@@ -215,13 +227,14 @@ class AgentSwarm:
             self._plans[plan_id] = plan
             if len(self._plans) > self._max_plans:
                 oldest = sorted(self._plans.values(), key=lambda p: p.created_at)
-                for p in oldest[:
-                    10]:
+                for p in oldest[:10]:
                     del self._plans[p.id]
 
         return plan
 
-    def route(self, plan_id: str, engagement_token_id: str | None = None) -> dict[str, Any]:
+    def route(
+        self, plan_id: str, engagement_token_id: str | None = None
+    ) -> dict[str, Any]:
         """Route subtasks to available agents based on capability matching.
         Uses the agent registry to find suitable agents.
 
@@ -241,6 +254,7 @@ class AgentSwarm:
         if engagement_token_id:
             try:
                 from whitemagic.security.engagement_tokens import get_token_manager
+
                 result = get_token_manager().validate(
                     token_id=engagement_token_id,
                     tool="swarm_route",
@@ -287,7 +301,9 @@ class AgentSwarm:
 
             for agent in agents:
                 # Score = number of matching capabilities
-                match = len(set(task.required_capabilities) & set(agent["capabilities"]))
+                match = len(
+                    set(task.required_capabilities) & set(agent["capabilities"])
+                )
                 if match > best_score:
                     best_score = match
                     best_agent = agent["agent_id"]
@@ -295,18 +311,22 @@ class AgentSwarm:
             if best_agent:
                 task.assigned_to = best_agent
                 task.status = TaskStatus.ASSIGNED
-                assignments.append({
-                    "task_id": task.id,
-                    "agent_id": best_agent,
-                    "capabilities_matched": best_score,
-                    "engagement_token": engagement_token_id,
-                })
+                assignments.append(
+                    {
+                        "task_id": task.id,
+                        "agent_id": best_agent,
+                        "capabilities_matched": best_score,
+                        "engagement_token": engagement_token_id,
+                    }
+                )
             else:
-                assignments.append({
-                    "task_id": task.id,
-                    "agent_id": None,
-                    "reason": "no matching agent found",
-                })
+                assignments.append(
+                    {
+                        "task_id": task.id,
+                        "agent_id": None,
+                        "reason": "no matching agent found",
+                    }
+                )
 
         # Emit Gan Ying event for task routing
         try:
@@ -315,16 +335,20 @@ class AgentSwarm:
                 ResonanceEvent,
                 get_bus,
             )
-            get_bus().emit(ResonanceEvent(
-                source="agent_swarm",
-                event_type=EventType.TASK_CREATED,
-                data={
-                    "plan_id": plan_id,
-                    "assignments": len(assignments),
-                    "agents_available": len(agents),
-                    "engagement_token": engagement_token_id,
-                },
-            ), async_dispatch=True)
+
+            get_bus().emit(
+                ResonanceEvent(
+                    source="agent_swarm",
+                    event_type=EventType.TASK_CREATED,
+                    data={
+                        "plan_id": plan_id,
+                        "assignments": len(assignments),
+                        "agents_available": len(agents),
+                        "engagement_token": engagement_token_id,
+                    },
+                ),
+                async_dispatch=True,
+            )
         except Exception:
             pass
 
@@ -336,8 +360,9 @@ class AgentSwarm:
             "engagement_token_validated": engagement_token_id is not None,
         }
 
-    def complete_task(self, plan_id: str, task_id: str, result: Any = None,
-                      success: bool = True) -> dict[str, Any]:
+    def complete_task(
+        self, plan_id: str, task_id: str, result: Any = None, success: bool = True
+    ) -> dict[str, Any]:
         """Mark a subtask as completed or failed."""
         with self._lock:
             plan = self._plans.get(plan_id)
@@ -353,7 +378,10 @@ class AgentSwarm:
                 return {"status": "error", "error": "Task not found"}
 
             # Check if plan is complete
-            all_done = all(t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED) for t in plan.subtasks)
+            all_done = all(
+                t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED)
+                for t in plan.subtasks
+            )
             if all_done:
                 plan.completed_at = time.time()
 
@@ -364,33 +392,47 @@ class AgentSwarm:
                 ResonanceEvent,
                 get_bus,
             )
-            get_bus().emit(ResonanceEvent(
-                source="agent_swarm",
-                event_type=EventType.TASK_COMPLETED if success else EventType.TASK_FAILED,
-                data={
-                    "plan_id": plan_id,
-                    "task_id": task_id,
-                    "success": success,
-                    "all_done": all_done,
-                },
-            ), async_dispatch=True)
+
+            get_bus().emit(
+                ResonanceEvent(
+                    source="agent_swarm",
+                    event_type=EventType.TASK_COMPLETED
+                    if success
+                    else EventType.TASK_FAILED,
+                    data={
+                        "plan_id": plan_id,
+                        "task_id": task_id,
+                        "success": success,
+                        "all_done": all_done,
+                    },
+                ),
+                async_dispatch=True,
+            )
         except Exception:
             pass
 
         return {"status": "success", "plan": plan.to_dict()}
 
-    def vote(self, topic_id: str, agent_id: str, value: Any,
-             confidence: float = 1.0) -> dict[str, Any]:
+    def vote(
+        self, topic_id: str, agent_id: str, value: Any, confidence: float = 1.0
+    ) -> dict[str, Any]:
         """Record a vote from an agent on a topic."""
-        v = Vote(agent_id=agent_id, value=value, confidence=confidence, timestamp=time.time())
+        v = Vote(
+            agent_id=agent_id, value=value, confidence=confidence, timestamp=time.time()
+        )
         with self._lock:
             if topic_id not in self._votes:
                 self._votes[topic_id] = []
             self._votes[topic_id].append(v)
-        return {"status": "success", "topic_id": topic_id, "votes_count": len(self._votes[topic_id])}
+        return {
+            "status": "success",
+            "topic_id": topic_id,
+            "votes_count": len(self._votes[topic_id]),
+        }
 
-    def resolve(self, topic_id: str,
-                strategy: ConsensusStrategy = ConsensusStrategy.MAJORITY) -> dict[str, Any]:
+    def resolve(
+        self, topic_id: str, strategy: ConsensusStrategy = ConsensusStrategy.MAJORITY
+    ) -> dict[str, Any]:
         """Resolve a consensus vote using the specified strategy."""
         with self._lock:
             votes = self._votes.get(topic_id, [])
@@ -400,16 +442,27 @@ class AgentSwarm:
 
         if strategy == ConsensusStrategy.FIRST_WINS:
             first_winner = votes[0]
-            return {"status": "success", "result": first_winner.value,
-                    "strategy": strategy.value, "votes": len(votes)}
+            return {
+                "status": "success",
+                "result": first_winner.value,
+                "strategy": strategy.value,
+                "votes": len(votes),
+            }
 
         if strategy == ConsensusStrategy.UNANIMOUS:
             values = set(str(v.value) for v in votes)
             if len(values) == 1:
-                return {"status": "success", "result": votes[0].value,
-                        "strategy": strategy.value, "unanimous": True}
-            return {"status": "no_consensus", "strategy": strategy.value,
-                    "distinct_values": len(values)}
+                return {
+                    "status": "success",
+                    "result": votes[0].value,
+                    "strategy": strategy.value,
+                    "unanimous": True,
+                }
+            return {
+                "status": "no_consensus",
+                "strategy": strategy.value,
+                "distinct_values": len(values),
+            }
 
         if strategy == ConsensusStrategy.WEIGHTED:
             weighted: dict[str, float] = {}
@@ -417,8 +470,12 @@ class AgentSwarm:
                 key = str(v.value)
                 weighted[key] = weighted.get(key, 0) + v.confidence
             weighted_winner = max(weighted, key=lambda k: weighted[k])
-            return {"status": "success", "result": weighted_winner,
-                    "strategy": strategy.value, "weight": weighted[weighted_winner]}
+            return {
+                "status": "success",
+                "result": weighted_winner,
+                "strategy": strategy.value,
+                "weight": weighted[weighted_winner],
+            }
 
         if strategy == ConsensusStrategy.TRICAMERAL:
             return self._resolve_tricameral(topic_id, votes)
@@ -429,8 +486,13 @@ class AgentSwarm:
             key = str(v.value)
             counts[key] = counts.get(key, 0) + 1
         majority_winner = max(counts, key=lambda k: counts[k])
-        return {"status": "success", "result": majority_winner,
-                "strategy": strategy.value, "count": counts[majority_winner], "total": len(votes)}
+        return {
+            "status": "success",
+            "result": majority_winner,
+            "strategy": strategy.value,
+            "count": counts[majority_winner],
+            "total": len(votes),
+        }
 
     def _resolve_tricameral(self, topic_id: str, votes: list[Vote]) -> dict[str, Any]:
         """Tricameral consensus — Iroquois-inspired two-house review + Sutra Firekeeper.
@@ -458,7 +520,6 @@ class AgentSwarm:
                 "younger_count": len(younger_votes),
             }
 
-        # Phase 1: Older Brothers resolve by weighted majority
         older_weighted: dict[str, float] = {}
         for v in older_votes:
             key = str(v.value)
@@ -466,26 +527,28 @@ class AgentSwarm:
         older_winner = max(older_weighted, key=lambda k: older_weighted[k])
         older_score = older_weighted[older_winner]
 
-        # Phase 2: Younger Brothers audit via Dharma Engine
-        # Evaluate the winning proposal for ethical alignment
         dharma_ok = True
         dharma_score = 1.0
         dharma_reason = "No Dharma concerns."
         try:
             from whitemagic.dharma.rules import get_rules_engine
+
             engine = get_rules_engine()
-            decision = engine.evaluate({
-                "tool": "swarm_consensus",
-                "description": f"Tricameral consensus on topic {topic_id}: value {older_winner}",
-                "safety": "READ",
-            })
+            decision = engine.evaluate(
+                {
+                    "tool": "swarm_consensus",
+                    "description": f"Tricameral consensus on topic {topic_id}: value {older_winner}",
+                    "safety": "READ",
+                }
+            )
             dharma_score = decision.score
             dharma_ok = decision.action.value != "block"
             dharma_reason = decision.explain
         except Exception as e:
-            logger.debug("Dharma engine evaluation failed for tricameral: %s", e, exc_info=True)
+            logger.debug(
+                "Dharma engine evaluation failed for tricameral: %s", e, exc_info=True
+            )
 
-        # Phase 3: Younger Brothers resolve their own weighted preference
         younger_weighted: dict[str, float] = {}
         for v in younger_votes:
             key = str(v.value)
@@ -493,8 +556,6 @@ class AgentSwarm:
         younger_winner = max(younger_weighted, key=lambda k: younger_weighted[k])
         younger_score = younger_weighted[younger_winner]
 
-        # Phase 4: Firekeeper (Sutra Kernel) — both houses must agree on the same value
-        # If they disagree, the Firekeeper blocks and requests reconciliation
         firekeeper_verdict = "proceed"
         firekeeper_reason = "Both houses agree."
         if older_winner != younger_winner:
@@ -511,6 +572,7 @@ class AgentSwarm:
             # Optional: Sutra Kernel deep evaluation
             try:
                 from whitemagic.core.bridge.sutra_bridge import get_sutra_kernel
+
                 sutra = get_sutra_kernel()
                 verdict = sutra.evaluate_action(
                     action_type="swarm_consensus",
@@ -521,7 +583,11 @@ class AgentSwarm:
                     firekeeper_verdict = "block"
                     firekeeper_reason = f"Sutra Kernel intervention: {verdict}"
             except Exception as e:
-                logger.debug("Sutra Kernel evaluation failed for tricameral: %s", e, exc_info=True)
+                logger.debug(
+                    "Sutra Kernel evaluation failed for tricameral: %s",
+                    e,
+                    exc_info=True,
+                )
 
         # Firekeeper override check
         if firekeeper_votes:
@@ -553,13 +619,17 @@ class AgentSwarm:
         # Emit Gan Ying event for audit trail
         try:
             from whitemagic.tools.unified_api import _emit_gan_ying
-            _emit_gan_ying("TRICAMERAL_CONSENSUS", {
-                "topic_id": topic_id,
-                "result": result["status"],
-                "older_winner": older_winner,
-                "younger_winner": younger_winner,
-                "firekeeper_verdict": firekeeper_verdict,
-            })
+
+            _emit_gan_ying(
+                "TRICAMERAL_CONSENSUS",
+                {
+                    "topic_id": topic_id,
+                    "result": result["status"],
+                    "older_winner": older_winner,
+                    "younger_winner": younger_winner,
+                    "firekeeper_verdict": firekeeper_verdict,
+                },
+            )
         except Exception as e:
             logger.debug("Gan Ying emit failed for tricameral: %s", e, exc_info=True)
 
@@ -575,7 +645,10 @@ class AgentSwarm:
         """
         valid_houses = {"older_brothers", "younger_brothers", "firekeeper"}
         if house not in valid_houses:
-            return {"status": "error", "error": f"Invalid house. Choose from {valid_houses}"}
+            return {
+                "status": "error",
+                "error": f"Invalid house. Choose from {valid_houses}",
+            }
         with self._lock:
             self._agent_houses[agent_id] = house
         return {"status": "success", "agent_id": agent_id, "house": house}
@@ -594,7 +667,8 @@ class AgentSwarm:
         with self._lock:
             # Prune stale plans
             stale_plans = [
-                pid for pid, plan in self._plans.items()
+                pid
+                for pid, plan in self._plans.items()
                 if plan.completed_at and (now - plan.completed_at) > threshold
             ]
             for pid in stale_plans:
@@ -604,7 +678,8 @@ class AgentSwarm:
 
             # Prune stale vote topics
             stale_topics = [
-                tid for tid, vote_list in self._votes.items()
+                tid
+                for tid, vote_list in self._votes.items()
                 if vote_list and (now - max(v.timestamp for v in vote_list)) > threshold
             ]
             for tid in stale_topics:
@@ -615,13 +690,17 @@ class AgentSwarm:
         if pruned_plans or pruned_votes:
             try:
                 from whitemagic.tools.unified_api import _emit_gan_ying
-                _emit_gan_ying("RITUAL_OF_PRUNING", {
-                    "pruned_plans": pruned_plans,
-                    "pruned_vote_topics": pruned_votes,
-                    "archived_plan_ids": archived_plan_ids,
-                    "threshold_seconds": threshold,
-                    "reason": "Proof-of-Utility: entities exceeded max_age without contributing",
-                })
+
+                _emit_gan_ying(
+                    "RITUAL_OF_PRUNING",
+                    {
+                        "pruned_plans": pruned_plans,
+                        "pruned_vote_topics": pruned_votes,
+                        "archived_plan_ids": archived_plan_ids,
+                        "threshold_seconds": threshold,
+                        "reason": "Proof-of-Utility: entities exceeded max_age without contributing",
+                    },
+                )
             except Exception as e:
                 logger.debug("Gan Ying emit failed for pruning: %s", e, exc_info=True)
 
@@ -657,7 +736,9 @@ class AgentSwarm:
             list[dict[str, Any]]
         """
         with self._lock:
-            plans = sorted(self._plans.values(), key=lambda p: p.created_at, reverse=True)
+            plans = sorted(
+                self._plans.values(), key=lambda p: p.created_at, reverse=True
+            )
             return [p.to_dict() for p in plans[:limit]]
 
     def status(self) -> dict[str, Any]:
@@ -680,6 +761,7 @@ class AgentSwarm:
 # Singleton
 _swarm: AgentSwarm | None = None
 _swarm_lock = threading.Lock()
+
 
 def get_swarm() -> AgentSwarm:
     """

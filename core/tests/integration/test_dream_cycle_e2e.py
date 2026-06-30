@@ -7,6 +7,7 @@ governance, narrative, kaizen (harmony hints), oracle (grimoire), and decay (lif
 
 Also verifies galactic promotion of strategy memories after consolidation.
 """
+
 import time
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Set
@@ -25,6 +26,7 @@ from whitemagic.core.dreaming.dream_cycle import (
 # ---------------------------------------------------------------------------
 # Synthetic memory objects for consolidation / association tests
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FakeMemory:
@@ -47,45 +49,52 @@ def _make_memories(n: int = 20) -> List[FakeMemory]:
     mems = []
     # Cluster 1: Python/ML theme (7 mems, high importance, frequently accessed)
     for i in range(7):
-        mems.append(FakeMemory(
-            id=f"py-{i}",
-            title=f"Python ML note {i}",
-            content=f"Machine learning model training run {i}",
-            tags={"python", "ml", "training"},
-            importance=0.7 + i * 0.02,
-            access_count=5 + i,
-            emotional_valence=0.3,
-            memory_type="SHORT_TERM",
-        ))
+        mems.append(
+            FakeMemory(
+                id=f"py-{i}",
+                title=f"Python ML note {i}",
+                content=f"Machine learning model training run {i}",
+                tags={"python", "ml", "training"},
+                importance=0.7 + i * 0.02,
+                access_count=5 + i,
+                emotional_valence=0.3,
+                memory_type="SHORT_TERM",
+            )
+        )
     # Cluster 2: DevOps theme (6 mems)
     for i in range(6):
-        mems.append(FakeMemory(
-            id=f"ops-{i}",
-            title=f"DevOps deploy note {i}",
-            content=f"Deployment pipeline stage {i}",
-            tags={"devops", "deploy", "ci"},
-            importance=0.5 + i * 0.01,
-            access_count=3 + i,
-            emotional_valence=0.1,
-            memory_type="SHORT_TERM",
-        ))
+        mems.append(
+            FakeMemory(
+                id=f"ops-{i}",
+                title=f"DevOps deploy note {i}",
+                content=f"Deployment pipeline stage {i}",
+                tags={"devops", "deploy", "ci"},
+                importance=0.5 + i * 0.01,
+                access_count=3 + i,
+                emotional_valence=0.1,
+                memory_type="SHORT_TERM",
+            )
+        )
     # Cluster 3: scattered (no strong cluster)
     for i in range(n - 13):
-        mems.append(FakeMemory(
-            id=f"misc-{i}",
-            title=f"Miscellaneous note {i}",
-            content=f"Random thought {i}",
-            tags={f"tag-{i}"},
-            importance=0.3,
-            access_count=1,
-            emotional_valence=0.0,
-        ))
+        mems.append(
+            FakeMemory(
+                id=f"misc-{i}",
+                title=f"Miscellaneous note {i}",
+                content=f"Random thought {i}",
+                tags={f"tag-{i}"},
+                importance=0.3,
+                access_count=1,
+                emotional_valence=0.0,
+            )
+        )
     return mems
 
 
 # ---------------------------------------------------------------------------
 # Phase-level tests
 # ---------------------------------------------------------------------------
+
 
 class TestDreamPhaseConsolidation:
     """Test the CONSOLIDATION phase with synthetic memories."""
@@ -150,13 +159,19 @@ class TestDreamPhaseSerendipity:
             ("m2", "python deep learning neural network inference optimization"),
             ("m3", "javascript react frontend web development deployment"),
         ]
-        result = _association_mine_python(texts, max_keywords=50, min_score=0.1, max_results=100)
+        result = _association_mine_python(
+            texts, max_keywords=50, min_score=0.1, max_results=100
+        )
         assert result["memory_count"] == 3
         assert "overlaps" in result
         # m1+m2 share more keywords than m1+m3
         overlaps = result["overlaps"]
-        m1_m2 = [o for o in overlaps if {o["source_id"], o["target_id"]} == {"m1", "m2"}]
-        m1_m3 = [o for o in overlaps if {o["source_id"], o["target_id"]} == {"m1", "m3"}]
+        m1_m2 = [
+            o for o in overlaps if {o["source_id"], o["target_id"]} == {"m1", "m2"}
+        ]
+        m1_m3 = [
+            o for o in overlaps if {o["source_id"], o["target_id"]} == {"m1", "m3"}
+        ]
         if m1_m2 and m1_m3:
             assert m1_m2[0]["overlap_score"] > m1_m3[0]["overlap_score"]
 
@@ -214,6 +229,7 @@ class TestDreamPhaseDecay:
 # Full E2E cycle test
 # ---------------------------------------------------------------------------
 
+
 class TestDreamCycleE2E:
     """End-to-end: run all 5 phases sequentially and verify rotation."""
 
@@ -249,7 +265,20 @@ class TestDreamCycleE2E:
             assert r.duration_ms >= 0
             assert isinstance(r.details, dict)
             d = r.to_dict()
-            assert d["phase"] in ("triage", "consolidation", "serendipity", "governance", "narrative", "kaizen", "oracle", "decay", "constellation", "prediction", "enrichment", "harmonize")
+            assert d["phase"] in (
+                "triage",
+                "consolidation",
+                "serendipity",
+                "governance",
+                "narrative",
+                "kaizen",
+                "oracle",
+                "decay",
+                "constellation",
+                "prediction",
+                "enrichment",
+                "harmonize",
+            )
 
     @pytest.mark.asyncio
     async def test_phase_rotation_wraps_around(self):
@@ -271,7 +300,9 @@ class TestDreamCycleE2E:
         status = dc.status()
         assert status["total_cycles"] == 2
         assert len(status["recent_dreams"]) == 2
-        assert status["current_phase"] == "serendipity"  # next phase after 2 runs (v15.3: triage=0, consolidation=1, serendipity=2)
+        assert (
+            status["current_phase"] == "serendipity"
+        )  # next phase after 2 runs (v15.3: triage=0, consolidation=1, serendipity=2)
 
     @pytest.mark.asyncio
     async def test_consolidation_with_mock_memories_and_galactic_promotion(self):

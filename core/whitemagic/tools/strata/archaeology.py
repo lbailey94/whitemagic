@@ -12,12 +12,11 @@ Subcommands:
 import re
 import subprocess
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
 
-def _git(args: List[str], cwd: Path, timeout: int = 30) -> str:
+def _git(args: list[str], cwd: Path, timeout: int = 30) -> str:
     """Run a git command and return stdout."""
     result = subprocess.run(
         ["git"] + args,
@@ -31,7 +30,7 @@ def _git(args: List[str], cwd: Path, timeout: int = 30) -> str:
     return result.stdout
 
 
-def _git_json(args: List[str], cwd: Path, timeout: int = 30) -> List[dict]:
+def _git_json(args: list[str], cwd: Path, timeout: int = 30) -> list[dict]:
     """Run git log with JSON format."""
     result = subprocess.run(
         ["git", "log", "--format=%H|%an|%ae|%at|%s"] + args,
@@ -46,21 +45,19 @@ def _git_json(args: List[str], cwd: Path, timeout: int = 30) -> List[dict]:
     for line in result.stdout.strip().splitlines():
         parts = line.split("|", 4)
         if len(parts) == 5:
-            entries.append({
-                "hash": parts[0],
-                "author": parts[1],
-                "email": parts[2],
-                "timestamp": int(parts[3]),
-                "subject": parts[4],
-            })
+            entries.append(
+                {
+                    "hash": parts[0],
+                    "author": parts[1],
+                    "email": parts[2],
+                    "timestamp": int(parts[3]),
+                    "subject": parts[4],
+                }
+            )
     return entries
 
 
-# ------------------------------------------------------------------
-# excavate — show code that existed in a time layer
-# ------------------------------------------------------------------
-
-def excavate(project_path: Path, layer: str, file_filter: Optional[str] = None) -> str:
+def excavate(project_path: Path, layer: str, file_filter: str | None = None) -> str:
     """Show files and their content as they existed in a given time layer.
 
     Layer formats:
@@ -87,15 +84,25 @@ def excavate(project_path: Path, layer: str, file_filter: Optional[str] = None) 
         try:
             # Get the last commit in this layer that touched the file
             blame = _git(
-                ["log", f"--since={since.isoformat()}", f"--until={until.isoformat()}",
-                 "--format=%H", "-n1", "--", f],
-                project_path, timeout=10
+                [
+                    "log",
+                    f"--since={since.isoformat()}",
+                    f"--until={until.isoformat()}",
+                    "--format=%H",
+                    "-n1",
+                    "--",
+                    f,
+                ],
+                project_path,
+                timeout=10,
             ).strip()
             if blame:
                 found += 1
                 lines.append(f"📄 {f}")
                 # Show author of that version
-                author = _git(["show", "-s", "--format=%an (%ar)", blame], project_path, timeout=5).strip()
+                author = _git(
+                    ["show", "-s", "--format=%an (%ar)", blame], project_path, timeout=5
+                ).strip()
                 lines.append(f"   Last touched: {author}")
         except RuntimeError:
             continue
@@ -105,14 +112,17 @@ def excavate(project_path: Path, layer: str, file_filter: Optional[str] = None) 
     return "\n".join(lines)
 
 
-def _parse_layer(layer: str) -> Tuple[datetime, datetime]:
+def _parse_layer(layer: str) -> tuple[datetime, datetime]:
     """Parse a layer string into (since, until) datetimes."""
     import re as _re
-    if _re.match(r'^\d{4}$', layer):
+
+    if _re.match(r"^\d{4}$", layer):
         year = int(layer)
-        return (datetime(year, 1, 1, tzinfo=timezone.utc),
-                datetime(year + 1, 1, 1, tzinfo=timezone.utc))
-    if _re.match(r'^\d{4}-Q[1-4]$', layer):
+        return (
+            datetime(year, 1, 1, tzinfo=UTC),
+            datetime(year + 1, 1, 1, tzinfo=UTC),
+        )
+    if _re.match(r"^\d{4}-Q[1-4]$", layer):
         year, q = int(layer[:4]), int(layer[3])
         start_month = (q - 1) * 3 + 1
         end_month = q * 3 + 1
@@ -120,27 +130,28 @@ def _parse_layer(layer: str) -> Tuple[datetime, datetime]:
         if end_month > 12:
             end_month = 1
             end_year += 1
-        return (datetime(year, start_month, 1, tzinfo=timezone.utc),
-                datetime(end_year, end_month, 1, tzinfo=timezone.utc))
-    if _re.match(r'^\d{4}-\d{2}$', layer):
+        return (
+            datetime(year, start_month, 1, tzinfo=UTC),
+            datetime(end_year, end_month, 1, tzinfo=UTC),
+        )
+    if _re.match(r"^\d{4}-\d{2}$", layer):
         year, month = int(layer[:4]), int(layer[5:7])
         if month == 12:
-            return (datetime(year, 12, 1, tzinfo=timezone.utc),
-                    datetime(year + 1, 1, 1, tzinfo=timezone.utc))
-        return (datetime(year, month, 1, tzinfo=timezone.utc),
-                datetime(year, month + 1, 1, tzinfo=timezone.utc))
+            return (
+                datetime(year, 12, 1, tzinfo=UTC),
+                datetime(year + 1, 1, 1, tzinfo=UTC),
+            )
+        return (
+            datetime(year, month, 1, tzinfo=UTC),
+            datetime(year, month + 1, 1, tzinfo=UTC),
+        )
     raise ValueError(f"Unknown layer format: {layer}. Use YYYY, YYYY-QN, YYYY-MM")
 
-
-# ------------------------------------------------------------------
-# fossil — timeline of a file's evolution
-# ------------------------------------------------------------------
 
 def fossil(project_path: Path, file_path: str, max_commits: int = 20) -> str:
     """Show the evolution timeline of a single file."""
     entries = _git_json(
-        [f"-n{max_commits}", "--follow", "--", file_path],
-        project_path, timeout=15
+        [f"-n{max_commits}", "--follow", "--", file_path], project_path, timeout=15
     )
 
     if not entries:
@@ -153,7 +164,7 @@ def fossil(project_path: Path, file_path: str, max_commits: int = 20) -> str:
     ]
 
     for entry in entries:
-        dt = datetime.fromtimestamp(entry["timestamp"], tz=timezone.utc)
+        dt = datetime.fromtimestamp(entry["timestamp"], tz=UTC)
         lines.append(f"[{entry['hash'][:7]}] {dt.strftime('%Y-%m-%d')}")
         lines.append(f"   {entry['author']}: {entry['subject']}")
         lines.append("")
@@ -161,16 +172,13 @@ def fossil(project_path: Path, file_path: str, max_commits: int = 20) -> str:
     return "\n".join(lines)
 
 
-# ------------------------------------------------------------------
-# extinction — find deleted code still referenced
-# ------------------------------------------------------------------
-
 def extinction(project_path: Path) -> str:
     """Find symbols (functions, classes) that were deleted but are still referenced."""
     # Get recently deleted files
     deleted_raw = _git(
         ["log", "--diff-filter=D", "--summary", "--name-only", "-n50"],
-        project_path, timeout=15
+        project_path,
+        timeout=15,
     )
     deleted_files = set()
     for line in deleted_raw.splitlines():
@@ -187,12 +195,16 @@ def extinction(project_path: Path) -> str:
     ]
 
     # Extract function/class names from deleted files (via git show)
-    extinct_symbols: Set[str] = set()
+    extinct_symbols: set[str] = set()
     for f in list(deleted_files)[:20]:
         try:
             content = _git(["show", f"HEAD:{f}"], project_path, timeout=5)
             # Naive extraction: def/class lines
-            for match in re.finditer(r'^(?:def|class|function|fn|pub fn)\s+([A-Za-z_]\w*)', content, re.MULTILINE):
+            for match in re.finditer(
+                r"^(?:def|class|function|fn|pub fn)\s+([A-Za-z_]\w*)",
+                content,
+                re.MULTILINE,
+            ):
                 extinct_symbols.add(match.group(1))
         except RuntimeError:
             continue
@@ -203,10 +215,23 @@ def extinction(project_path: Path) -> str:
 
     # Search current codebase for references to extinct symbols
     alive_files = _git(["ls-files"], project_path).strip().splitlines()
-    references: Dict[str, List[str]] = defaultdict(list)
+    references: dict[str, list[str]] = defaultdict(list)
 
     for f in alive_files:
-        if not any(f.endswith(ext) for ext in ['.py', '.js', '.ts', '.rs', '.go', '.java', '.c', '.cpp', '.zig']):
+        if not any(
+            f.endswith(ext)
+            for ext in [
+                ".py",
+                ".js",
+                ".ts",
+                ".rs",
+                ".go",
+                ".java",
+                ".c",
+                ".cpp",
+                ".zig",
+            ]
+        ):
             continue
         try:
             content = (project_path / f).read_text(encoding="utf-8", errors="ignore")
@@ -234,10 +259,6 @@ def extinction(project_path: Path) -> str:
     return "\n".join(lines)
 
 
-# ------------------------------------------------------------------
-# composition — contributor analysis
-# ------------------------------------------------------------------
-
 def composition(project_path: Path, top_n: int = 10) -> str:
     """Analyze codebase composition by contributor."""
     log = _git_json(["--no-merges"], project_path, timeout=30)
@@ -248,11 +269,11 @@ def composition(project_path: Path, top_n: int = 10) -> str:
     author_commits = Counter()
     author_lines = Counter()
     # author_files tracking removed — was unused
-    monthly_commits: Dict[str, int] = defaultdict(int)
+    monthly_commits: dict[str, int] = defaultdict(int)
 
     for entry in log:
         author_commits[entry["author"]] += 1
-        dt = datetime.fromtimestamp(entry["timestamp"], tz=timezone.utc)
+        dt = datetime.fromtimestamp(entry["timestamp"], tz=UTC)
         monthly_commits[dt.strftime("%Y-%m")] += 1
 
     # For line counts, use git blame on a sample of files
@@ -294,11 +315,7 @@ def composition(project_path: Path, top_n: int = 10) -> str:
     return "\n".join(lines)
 
 
-# ------------------------------------------------------------------
-# temper — measure how heated a file's history is
-# ------------------------------------------------------------------
-
-def temper(project_path: Path, file_path: Optional[str] = None, top_n: int = 10) -> str:
+def temper(project_path: Path, file_path: str | None = None, top_n: int = 10) -> str:
     """Measure how 'heated' a file's history is — revert wars, force pushes, rapid changes."""
     # Get all commits with subjects
     log = _git_json(["--no-merges"], project_path, timeout=30)
@@ -308,12 +325,19 @@ def temper(project_path: Path, file_path: Optional[str] = None, top_n: int = 10)
     fixup_keywords = ["fixup", "amend", "fix", "patch", "hotfix"]
     conflict_keywords = ["merge", "conflict", "resolve"]
 
-    file_heat: Dict[str, Dict[str, int]] = defaultdict(lambda: {
-        "commits": 0, "reverts": 0, "fixups": 0, "conflicts": 0,
-        "authors": 0, "first": 0, "last": 0
-    })
+    file_heat: dict[str, dict[str, int]] = defaultdict(
+        lambda: {
+            "commits": 0,
+            "reverts": 0,
+            "fixups": 0,
+            "conflicts": 0,
+            "authors": 0,
+            "first": 0,
+            "last": 0,
+        }
+    )
 
-    author_sets: Dict[str, Set[str]] = defaultdict(set)
+    author_sets: dict[str, set[str]] = defaultdict(set)
 
     for entry in log:
         subject = entry["subject"].lower()
@@ -321,10 +345,15 @@ def temper(project_path: Path, file_path: Optional[str] = None, top_n: int = 10)
 
         # Find files touched by this commit
         try:
-            files = _git(
-                ["diff-tree", "--no-commit-id", "--name-only", "-r", entry["hash"]],
-                project_path, timeout=5
-            ).strip().splitlines()
+            files = (
+                _git(
+                    ["diff-tree", "--no-commit-id", "--name-only", "-r", entry["hash"]],
+                    project_path,
+                    timeout=5,
+                )
+                .strip()
+                .splitlines()
+            )
         except RuntimeError:
             continue
 
@@ -349,7 +378,7 @@ def temper(project_path: Path, file_path: Optional[str] = None, top_n: int = 10)
 
     # Calculate heat score
     scored = []
-    now = datetime.now(tz=timezone.utc).timestamp()
+    now = datetime.now(tz=UTC).timestamp()
     for f, h in file_heat.items():
         if h["commits"] < 2:
             continue
@@ -377,17 +406,19 @@ def temper(project_path: Path, file_path: Optional[str] = None, top_n: int = 10)
         age_days = max(1, (now - h["first"]) / 86400)
         bar = "🔥" * min(int(heat / 5), 10)
         lines.append(f"{bar} {f}")
-        lines.append(f"   Heat: {heat:.1f} | Commits: {h['commits']} | Authors: {authors}")
-        lines.append(f"   Reverts: {h['reverts']} | Fixups: {h['fixups']} | Conflicts: {h['conflicts']}")
-        lines.append(f"   Age: {age_days:.0f} days | Rate: {h['commits']/age_days:.2f}/day")
+        lines.append(
+            f"   Heat: {heat:.1f} | Commits: {h['commits']} | Authors: {authors}"
+        )
+        lines.append(
+            f"   Reverts: {h['reverts']} | Fixups: {h['fixups']} | Conflicts: {h['conflicts']}"
+        )
+        lines.append(
+            f"   Age: {age_days:.0f} days | Rate: {h['commits'] / age_days:.2f}/day"
+        )
         lines.append("")
 
     return "\n".join(lines)
 
-
-# ------------------------------------------------------------------
-# CLI integration helpers
-# ------------------------------------------------------------------
 
 def archaeology_main(args) -> None:
     """Entry point for archaeology subcommands."""

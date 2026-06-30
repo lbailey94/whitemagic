@@ -224,10 +224,6 @@ fn now_ns() -> u64 {
         .as_nanos() as u64
 }
 
-// ---------------------------------------------------------------------------
-// Public Rust API (used by other Rust modules)
-// ---------------------------------------------------------------------------
-
 /// Advance the tick counter and update timestamp. Returns new tick.
 pub fn tick() -> u64 {
     init_board();
@@ -291,10 +287,6 @@ pub fn increment_counter(tool_slot: usize) -> u64 {
         .map(|a| a.fetch_add(1, Ordering::Relaxed) + 1)
         .unwrap_or(0)
 }
-
-// ---------------------------------------------------------------------------
-// PyO3 bindings
-// ---------------------------------------------------------------------------
 
 /// Write the full Harmony Vector from Python.
 #[pyfunction]

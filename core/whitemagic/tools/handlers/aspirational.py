@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Aspirational tool handlers — Grimoire auto-cast, session context, wisdom council."""
+
 from typing import Any
 
 
@@ -7,7 +8,11 @@ def handle_navigate_grimoire(**kwargs: Any) -> dict[str, Any]:
     """Auto-cast: find the best Gana chapter for the current task."""
     query = kwargs.get("query", "")
     if not query:
-        return {"status": "error", "error_code": "invalid_params", "message": "query is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "query is required",
+        }
 
     from whitemagic.core.intelligence.garden_gana_registry import (
         calculate_resonance,
@@ -28,7 +33,11 @@ def handle_navigate_grimoire(**kwargs: Any) -> dict[str, Any]:
     top_garden = list(resonance.keys())[0]
     entry = get_by_garden(top_garden)
     if not entry:
-        return {"status": "error", "error_code": "internal_error", "message": f"Garden {top_garden} not found in registry"}
+        return {
+            "status": "error",
+            "error_code": "internal_error",
+            "message": f"Garden {top_garden} not found in registry",
+        }
 
     return {
         "status": "success",
@@ -56,22 +65,31 @@ def handle_get_session_context(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.memory.manager import MemoryManager
+
         mm = MemoryManager()
-        context["memory"]["db_path"] = str(mm.db_path) if hasattr(mm, "db_path") else "unknown"
+        context["memory"]["db_path"] = (
+            str(mm.db_path) if hasattr(mm, "db_path") else "unknown"
+        )
         context["memory"]["initialized"] = True
     except Exception as e:
         context["memory"]["error"] = str(e)
 
     try:
         from whitemagic.core.resonance import get_bus
+
         bus = get_bus()
-        context["resonance"]["queue_size"] = bus.queue.qsize() if hasattr(bus, "queue") else 0
-        context["resonance"]["history_count"] = len(bus._history) if hasattr(bus, "_history") else 0
+        context["resonance"]["queue_size"] = (
+            bus.queue.qsize() if hasattr(bus, "queue") else 0
+        )
+        context["resonance"]["history_count"] = (
+            len(bus._history) if hasattr(bus, "_history") else 0
+        )
     except Exception as e:
         context["resonance"]["error"] = str(e)
 
     try:
         from whitemagic.core.health_monitor import HealthMonitor
+
         hm = HealthMonitor()
         health = hm.check_system_health(deep_scan=False)
         context["health"] = health
@@ -85,7 +103,11 @@ def handle_consult_wisdom_council(**kwargs: Any) -> dict[str, Any]:
     """Multi-perspective deliberation — Wisdom Council."""
     query = kwargs.get("query", "")
     if not query:
-        return {"status": "error", "error_code": "invalid_params", "message": "query is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "query is required",
+        }
 
     # Simulate perspectives from the 28 Ganas
     perspectives = []
@@ -94,27 +116,33 @@ def handle_consult_wisdom_council(**kwargs: Any) -> dict[str, Any]:
         GARDEN_GANA_REGISTRY,
         calculate_resonance,
     )
+
     resonance = calculate_resonance(query)
     top_gardens = list(resonance.keys())[:5]
 
     for garden_name in top_gardens:
         for entry in GARDEN_GANA_REGISTRY:
             if entry.garden == garden_name:
-                perspectives.append({
-                    "gana": entry.gana,
-                    "garden": entry.garden,
-                    "perspective": f"From the garden of {entry.garden}: consider {entry.primary_emotion.lower()} as your guide.",
-                    "resonance_score": resonance[garden_name]["score"],
-                })
+                perspectives.append(
+                    {
+                        "gana": entry.gana,
+                        "garden": entry.garden,
+                        "perspective": f"From the garden of {entry.garden}: consider {entry.primary_emotion.lower()} as your guide.",
+                        "resonance_score": resonance[garden_name]["score"],
+                    }
+                )
                 break
 
     # Add mandatory perspectives
-    perspectives.insert(0, {
-        "gana": "Three Stars (Shen)",
-        "garden": "reverence",
-        "perspective": "The council asks: what is the deepest truth beneath this question?",
-        "resonance_score": 1,
-    })
+    perspectives.insert(
+        0,
+        {
+            "gana": "Three Stars (Shen)",
+            "garden": "reverence",
+            "perspective": "The council asks: what is the deepest truth beneath this question?",
+            "resonance_score": 1,
+        },
+    )
 
     return {
         "status": "success",

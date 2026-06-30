@@ -1,4 +1,3 @@
-
 with open("whitemagic/autonomous/executor/continuous_executor.py") as f:
     content = f.read()
 
@@ -27,7 +26,7 @@ content = content.replace(
             from whitemagic.core.intelligence.nervous_system import get_nervous_system
             self.nervous_system = get_nervous_system()
         except ImportError:
-            self.nervous_system = None"""
+            self.nervous_system = None""",
 )
 
 # Update run_continuous pulse
@@ -54,7 +53,7 @@ content = content.replace(
                         try:
                             self.nervous_system.pulse()
                         except Exception as e:
-                            self.log(f"Nervous system pulse failed: {e}", "WARN")"""
+                            self.log(f"Nervous system pulse failed: {e}", "WARN")""",
 )
 
 with open("whitemagic/autonomous/executor/continuous_executor.py", "w") as f:

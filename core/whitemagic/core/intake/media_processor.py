@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 class ProcessedMedia:
     """Result of processing a media file."""
 
-    text: str                                  # Extracted text content
+    text: str  # Extracted text content
     metadata: dict[str, Any] = field(default_factory=dict)  # Structured metadata
     holographic_bias: dict[str, float] = field(default_factory=dict)  # XYZW biases
-    media_type: str = "unknown"                # e.g., "pdf", "image", "audio"
+    media_type: str = "unknown"  # e.g., "pdf", "image", "audio"
     source_path: str = ""
-    pages: int = 0                             # For documents
-    duration_seconds: float = 0.0              # For audio/video
+    pages: int = 0  # For documents
+    duration_seconds: float = 0.0  # For audio/video
     dimensions: tuple[int, int] | None = None  # For images (width, height)
 
 
@@ -63,10 +63,6 @@ class MediaProcessor(Protocol):
         """
         ...
 
-
-# ---------------------------------------------------------------------------
-# PDF Processor
-# ---------------------------------------------------------------------------
 
 class PDFProcessor:
     """Extract text and metadata from PDF files using PyMuPDF (fitz)."""
@@ -99,6 +95,7 @@ class PDFProcessor:
             return self._available
         try:
             import fitz  # noqa: F401  (PyMuPDF)
+
             self._available = True
         except ImportError:
             self._available = False
@@ -143,10 +140,10 @@ class PDFProcessor:
                     "pdf_creator": metadata.get("creator", ""),
                 },
                 holographic_bias={
-                    "x": -0.3,   # Documents tend toward logical
-                    "y": 0.2,    # Documents tend toward abstract/macro
-                    "z": -0.2,   # Documents are often historical
-                    "w": 0.3,    # Documents carry weight
+                    "x": -0.3,  # Documents tend toward logical
+                    "y": 0.2,  # Documents tend toward abstract/macro
+                    "z": -0.2,  # Documents are often historical
+                    "w": 0.3,  # Documents carry weight
                 },
                 media_type="pdf",
                 source_path=str(path),
@@ -156,10 +153,6 @@ class PDFProcessor:
             logger.warning("PDF extraction failed for %s: %s", path, e, exc_info=True)
             return None
 
-
-# ---------------------------------------------------------------------------
-# DOCX Processor
-# ---------------------------------------------------------------------------
 
 class DocxProcessor:
     """Extract text from DOCX files using python-docx."""
@@ -192,6 +185,7 @@ class DocxProcessor:
             return self._available
         try:
             import docx  # noqa: F401
+
             self._available = True
         except ImportError:
             self._available = False
@@ -237,10 +231,6 @@ class DocxProcessor:
             return None
 
 
-# ---------------------------------------------------------------------------
-# Image Processor
-# ---------------------------------------------------------------------------
-
 class ImageProcessor:
     """Extract text descriptions from images using BLIP-2 or Ollama vision."""
 
@@ -256,7 +246,10 @@ class ImageProcessor:
         Returns:
             bool
         """
-        return path.suffix.lower() in self.supported_extensions() and self._check_available()
+        return (
+            path.suffix.lower() in self.supported_extensions()
+            and self._check_available()
+        )
 
     def supported_extensions(self) -> set[str]:
         """
@@ -273,6 +266,7 @@ class ImageProcessor:
         # Check for Pillow (minimum requirement)
         try:
             from PIL import Image  # noqa: F401
+
             self._available = True
         except ImportError:
             self._available = False
@@ -313,13 +307,15 @@ class ImageProcessor:
                     "image_height": height,
                     "image_mode": mode,
                     "image_format": img_format,
-                    "captioning_method": "ollama" if "ollama" not in caption[:20].lower() else "basic",
+                    "captioning_method": "ollama"
+                    if "ollama" not in caption[:20].lower()
+                    else "basic",
                 },
                 holographic_bias={
-                    "x": 0.3,    # Images are emotional/perceptual
-                    "y": -0.3,   # Images are concrete/micro
-                    "z": 0.0,    # Timeless by default
-                    "w": 0.2,    # Moderate weight
+                    "x": 0.3,  # Images are emotional/perceptual
+                    "y": -0.3,  # Images are concrete/micro
+                    "z": 0.0,  # Timeless by default
+                    "w": 0.2,  # Moderate weight
                 },
                 media_type="image",
                 source_path=str(path),
@@ -341,12 +337,14 @@ class ImageProcessor:
             # Read and base64-encode the image
             image_data = base64.b64encode(path.read_bytes()).decode("utf-8")
 
-            payload = _json_dumps({
-                "model": "llava",  # Common vision model
-                "prompt": "Describe this image in detail. What do you see?",
-                "images": [image_data],
-                "stream": False,
-            }).encode("utf-8")
+            payload = _json_dumps(
+                {
+                    "model": "llava",  # Common vision model
+                    "prompt": "Describe this image in detail. What do you see?",
+                    "images": [image_data],
+                    "stream": False,
+                }
+            ).encode("utf-8")
 
             req = urllib.request.Request(
                 "http://localhost:11434/api/generate",
@@ -360,7 +358,12 @@ class ImageProcessor:
             return ""
 
     def _caption_basic(
-        self, path: Path, width: int, height: int, mode: str, fmt: str,
+        self,
+        path: Path,
+        width: int,
+        height: int,
+        mode: str,
+        fmt: str,
     ) -> str:
         """Basic metadata-based description when no vision model available."""
         name = path.stem.replace("_", " ").replace("-", " ")
@@ -370,10 +373,6 @@ class ImageProcessor:
             f"File: {path.name}"
         )
 
-
-# ---------------------------------------------------------------------------
-# Audio Processor
-# ---------------------------------------------------------------------------
 
 class AudioProcessor:
     """Transcribe audio files using Whisper."""
@@ -390,7 +389,10 @@ class AudioProcessor:
         Returns:
             bool
         """
-        return path.suffix.lower() in self.supported_extensions() and self._check_available()
+        return (
+            path.suffix.lower() in self.supported_extensions()
+            and self._check_available()
+        )
 
     def supported_extensions(self) -> set[str]:
         """
@@ -406,15 +408,19 @@ class AudioProcessor:
             return self._available
         try:
             import whisper  # noqa: F401
+
             self._available = True
         except ImportError:
             # Try faster-whisper as alternative
             try:
                 from faster_whisper import WhisperModel  # noqa: F401
+
                 self._available = True
             except ImportError:
                 self._available = False
-                logger.debug("Neither whisper nor faster-whisper installed — audio processing unavailable")
+                logger.debug(
+                    "Neither whisper nor faster-whisper installed — audio processing unavailable"
+                )
         return self._available
 
     def extract(self, path: Path) -> ProcessedMedia | None:
@@ -444,10 +450,10 @@ class AudioProcessor:
                     "audio_format": path.suffix.lstrip("."),
                 },
                 holographic_bias={
-                    "x": 0.2,    # Audio tends emotional
-                    "y": -0.1,   # Often concrete/specific
-                    "z": 0.0,    # Varies
-                    "w": 0.2,    # Moderate weight
+                    "x": 0.2,  # Audio tends emotional
+                    "y": -0.1,  # Often concrete/specific
+                    "z": 0.0,  # Varies
+                    "w": 0.2,  # Moderate weight
                 },
                 media_type="audio",
                 source_path=str(path),
@@ -462,6 +468,7 @@ class AudioProcessor:
         # Try faster-whisper first (more efficient)
         try:
             from faster_whisper import WhisperModel
+
             model = WhisperModel("base", device="cpu", compute_type="int8")
             segments, info = model.transcribe(str(path))
             text = " ".join(seg.text for seg in segments)
@@ -472,6 +479,7 @@ class AudioProcessor:
         # Fallback to openai-whisper
         try:
             import whisper
+
             model = whisper.load_model("base")
             result = model.transcribe(str(path))
             return result["text"].strip(), result.get("duration", 0.0)
@@ -480,10 +488,6 @@ class AudioProcessor:
 
         return "", 0.0
 
-
-# ---------------------------------------------------------------------------
-# Spreadsheet Processor
-# ---------------------------------------------------------------------------
 
 class SpreadsheetProcessor:
     """Extract text from CSV/XLSX files."""
@@ -519,6 +523,7 @@ class SpreadsheetProcessor:
             return self._available
         try:
             import openpyxl  # type: ignore[import-untyped]  # noqa: F401
+
             self._available = True
         except ImportError:
             self._available = False
@@ -542,11 +547,14 @@ class SpreadsheetProcessor:
             elif ext in {".xlsx", ".xls"}:
                 return self._extract_xlsx(path)
         except Exception as e:
-            logger.warning("Spreadsheet extraction failed for %s: %s", path, e, exc_info=True)
+            logger.warning(
+                "Spreadsheet extraction failed for %s: %s", path, e, exc_info=True
+            )
         return None
 
     def _extract_csv(self, path: Path) -> ProcessedMedia | None:
         import csv
+
         rows: list[str] = []
         with open(path, newline="", encoding="utf-8", errors="ignore") as f:
             reader = csv.reader(f)
@@ -567,6 +575,7 @@ class SpreadsheetProcessor:
 
     def _extract_xlsx(self, path: Path) -> ProcessedMedia | None:
         import openpyxl
+
         wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
         sheets_text: list[str] = []
         total_rows = 0
@@ -598,10 +607,6 @@ class SpreadsheetProcessor:
         )
 
 
-# ---------------------------------------------------------------------------
-# Processor Chain
-# ---------------------------------------------------------------------------
-
 class ProcessorChain:
     """Ordered chain of media processors. First matching processor wins."""
 
@@ -619,9 +624,11 @@ class ProcessorChain:
                 result = proc.extract(path)
                 if result:
                     logger.info(
-                        "Processed %s via %s "
-                        "(%s chars)",
-                     path.name, proc.__class__.__name__, len(result.text))
+                        "Processed %s via %s (%s chars)",
+                        path.name,
+                        proc.__class__.__name__,
+                        len(result.text),
+                    )
                     return result
         return None
 
@@ -639,17 +646,15 @@ class ProcessorChain:
             name = proc.__class__.__name__
             exts = proc.supported_extensions()
             available = hasattr(proc, "_available") and proc._available is not False  # type: ignore[union-attr]
-            info.append({
-                "name": name,
-                "extensions": sorted(exts),
-                "available": available,
-            })
+            info.append(
+                {
+                    "name": name,
+                    "extensions": sorted(exts),
+                    "available": available,
+                }
+            )
         return info
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _chain: ProcessorChain | None = None
 

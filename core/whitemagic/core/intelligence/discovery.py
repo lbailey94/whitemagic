@@ -31,40 +31,43 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- TYPES ---
 
 @dataclass
 class Entity:
     """Entity: entity.
 
     Value object: equality and repr are field-based."""
+
     name: str
     entity_type: str
     confidence: float
     metadata: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class Relation:
     """Relation: relation.
 
     Value object: equality and repr are field-based."""
+
     subject: str
     predicate: str
     object: str
     confidence: float
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class ExtractionResult:
     """ExtractionResult: extraction result.
 
     Value object: equality and repr are field-based."""
+
     entities: list[Entity]
     relations: list[Relation]
     method: str = "regex"
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
-# --- LLM PROMPTS ---
 
 _EXTRACTION_PROMPT = """Extract entities and their relationships from the following text into JSON format.
 Entities should have 'name' and 'type' (CONCEPT, PERSON, PLACE, TOOL, ORGANIZATION).
@@ -72,12 +75,13 @@ Relations should have 'subject', 'predicate', and 'object'.
 Text:
 """
 
-# --- ENTITY EXTRACTOR ---
 
 class EntityExtractor:
     """Extracts entities and relations using LLM (Ollama) or regex fallbacks."""
 
-    def __init__(self, ollama_url: str = "http://localhost:11434", model: str = "mistral:v0.3"):
+    def __init__(
+        self, ollama_url: str = "http://localhost:11434", model: str = "mistral:v0.3"
+    ):
         self._ollama_url = ollama_url
         self._model = model
         self._lock = threading.Lock()
@@ -101,11 +105,15 @@ class EntityExtractor:
     def _extract_regex(self, text: str) -> ExtractionResult:
         entities = []
         # Proper nouns
-        for m in re.finditer(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b', text):
-            entities.append(Entity(name=m.group(1), entity_type="CONCEPT", confidence=0.5))
+        for m in re.finditer(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", text):
+            entities.append(
+                Entity(name=m.group(1), entity_type="CONCEPT", confidence=0.5)
+            )
         # Acronyms
-        for m in re.finditer(r'\b([A-Z]{2,})\b', text):
-            entities.append(Entity(name=m.group(1), entity_type="CONCEPT", confidence=0.4))
+        for m in re.finditer(r"\b([A-Z]{2,})\b", text):
+            entities.append(
+                Entity(name=m.group(1), entity_type="CONCEPT", confidence=0.4)
+            )
 
         return ExtractionResult(entities=entities[:10], relations=[], method="regex")
 
@@ -124,10 +132,10 @@ class EntityExtractor:
         # Add persistence logic if needed (similar to old entity_extractor.py)
         return result
 
-# --- PROMPT CLASSIFIER ---
 
 class PromptClassifier:
     """Classifies user prompts into intent categories."""
+
     INTENTS = {
         "coding": [r"rewrite", r"fix", r"implement", r"code", r"refactor"],
         "research": [r"explain", r"who is", r"what is", r"research", r"tell me about"],
@@ -151,8 +159,9 @@ class PromptClassifier:
             scores[intent] = matches / len(patterns)
         return scores
 
-# --- SINGLETONS ---
+
 _extractor: EntityExtractor | None = None
+
 
 def get_entity_extractor() -> EntityExtractor:
     """

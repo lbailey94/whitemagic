@@ -50,7 +50,7 @@ def find_library(
             candidates.append(str(base_path / rel_path))
 
     # Common library names
-    extensions = ['.so', '.dylib', '.dll']
+    extensions = [".so", ".dylib", ".dll"]
     for ext in extensions:
         candidates.append(str(base_path / (lib_name + ext)))
         candidates.append(str(base_path / "zig-out" / "lib" / (lib_name + ext)))
@@ -134,7 +134,9 @@ class LibraryLoader:
                 logger.info("Library %s loaded from: %s", self.lib_name, path)
                 return lib
             except Exception as e:
-                logger.warning("Failed to load library %s: %s", self.lib_name, e, exc_info=True)
+                logger.warning(
+                    "Failed to load library %s: %s", self.lib_name, e, exc_info=True
+                )
                 self._available = False
                 return None
 
@@ -153,7 +155,7 @@ class LibraryLoader:
 
 def create_string_buffer(text: str) -> ctypes.Array:
     """Create a ctypes string buffer from text."""
-    return ctypes.create_string_buffer(text.encode('utf-8'))
+    return ctypes.create_string_buffer(text.encode("utf-8"))
 
 
 def create_output_buffer(size: int) -> ctypes.Array:
@@ -173,11 +175,11 @@ def parse_null_separated_output(buffer: bytes, max_items: int = 100) -> list[str
         List of parsed strings
     """
     result = []
-    for item_bytes in buffer.split(b'\x00'):
+    for item_bytes in buffer.split(b"\x00"):
         if not item_bytes:
             continue
         try:
-            item = item_bytes.decode('utf-8', errors='replace').strip()
+            item = item_bytes.decode("utf-8", errors="replace").strip()
             if item:
                 result.append(item)
                 if len(result) >= max_items:

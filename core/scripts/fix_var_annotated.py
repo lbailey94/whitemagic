@@ -21,6 +21,7 @@ by `var[key] = value` becomes `var: dict[type, type] = {}` based
 on the assignment. It also handles `var = []` followed by
 `var.append(x)`.
 """
+
 import re
 from pathlib import Path
 
@@ -53,6 +54,7 @@ def add_var_annotation(path: Path, line_no: int) -> bool:
     # Verify it parses
     try:
         import ast
+
         ast.parse(new_content)
     except SyntaxError:
         return False
@@ -62,10 +64,13 @@ def add_var_annotation(path: Path, line_no: int) -> bool:
 
 def main() -> None:
     import subprocess
+
     # Get list of (file, line) for var-annotated errors
     result = subprocess.run(
         [".venv/bin/mypy", "whitemagic/"],
-        capture_output=True, text=True, cwd="<WHITEMAGIC_ROOT>/core",
+        capture_output=True,
+        text=True,
+        cwd="<WHITEMAGIC_ROOT>/core",
     )
     # mypy writes errors to stderr
     output = result.stdout + result.stderr
@@ -83,7 +88,11 @@ def main() -> None:
     for file_path, line_no in sorted(set(targets)):
         # targets have file_path like "whitemagic/foo.py" and ROOT is "whitemagic"
         # so the full path is just ROOT / "foo.py"
-        rel = file_path[len("whitemagic/"):] if file_path.startswith("whitemagic/") else file_path
+        rel = (
+            file_path[len("whitemagic/") :]
+            if file_path.startswith("whitemagic/")
+            else file_path
+        )
         path = Path("<WHITEMAGIC_ROOT>/core") / file_path
         if not path.exists():
             continue

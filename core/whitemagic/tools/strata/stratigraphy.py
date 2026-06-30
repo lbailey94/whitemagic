@@ -1,14 +1,15 @@
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 from whitemagic.tools.strata.models import Finding
 
 __all__ = ["StratigraphyReport"]
 
 
-def _git_blame_timestamp(project_path: Path, file_rel: str, line: int) -> Optional[datetime]:
+def _git_blame_timestamp(
+    project_path: Path, file_rel: str, line: int
+) -> datetime | None:
     """Return the author timestamp for a specific line via git blame --porcelain."""
     try:
         result = subprocess.run(
@@ -23,7 +24,7 @@ def _git_blame_timestamp(project_path: Path, file_rel: str, line: int) -> Option
         for blame_line in result.stdout.splitlines():
             if blame_line.startswith("author-time "):
                 timestamp = int(blame_line.split(" ", 1)[1])
-                return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                return datetime.fromtimestamp(timestamp, tz=UTC)
     except (subprocess.TimeoutExpired, ValueError, FileNotFoundError, OSError):
         return None
     return None
@@ -38,12 +39,12 @@ class StratigraphyReport:
         ("legacy", "Legacy Substrate (1+ years)", None),
     ]
 
-    def __init__(self, project_path: Path, findings: List[Finding]):
+    def __init__(self, project_path: Path, findings: list[Finding]):
         self.project_path = project_path
         self.findings = findings
-        self._blame_cache: Dict[Tuple[str, int], Optional[datetime]] = {}
+        self._blame_cache: dict[tuple[str, int], datetime | None] = {}
 
-    def _age_days(self, finding: Finding) -> Optional[int]:
+    def _age_days(self, finding: Finding) -> int | None:
         if finding.line is None or not finding.file:
             return None
         key = (finding.file, finding.line)
@@ -53,10 +54,10 @@ class StratigraphyReport:
             self._blame_cache[key] = cached
         if cached is None:
             return None
-        delta = datetime.now(timezone.utc) - cached
+        delta = datetime.now(UTC) - cached
         return delta.days
 
-    def _layer_for(self, days: Optional[int]) -> str:
+    def _layer_for(self, days: int | None) -> str:
         if days is None:
             return "unknown"
         for key, _label, threshold in self.LAYERS:
@@ -66,8 +67,8 @@ class StratigraphyReport:
                 return key
         return "legacy"
 
-    def group(self) -> Dict[str, List[Finding]]:
-        groups: Dict[str, List[Finding]] = {
+    def group(self) -> dict[str, list[Finding]]:
+        groups: dict[str, list[Finding]] = {
             "recent": [],
             "established": [],
             "legacy": [],
@@ -99,7 +100,13 @@ class StratigraphyReport:
             lines.append(f"📂 {label} — {len(items)} finding(s)")
             lines.append("-" * 40)
             for f in items:
-                icon = "🔴" if f.severity.name == "ERROR" else "🟡" if f.severity.name == "WARNING" else "🔵"
+                icon = (
+                    "🔴"
+                    if f.severity.name == "ERROR"
+                    else "🟡"
+                    if f.severity.name == "WARNING"
+                    else "🔵"
+                )
                 loc = f":{f.line}" if f.line else ""
                 age = self._age_days(f)
                 age_str = f" ({age}d)" if age is not None else ""
@@ -112,7 +119,13 @@ class StratigraphyReport:
             lines.append(f"📂 Unknown Age — {len(unknown)} finding(s)")
             lines.append("-" * 40)
             for f in unknown:
-                icon = "🔴" if f.severity.name == "ERROR" else "🟡" if f.severity.name == "WARNING" else "🔵"
+                icon = (
+                    "🔴"
+                    if f.severity.name == "ERROR"
+                    else "🟡"
+                    if f.severity.name == "WARNING"
+                    else "🔵"
+                )
                 loc = f":{f.line}" if f.line else ""
                 lines.append(f"  {icon} [{f.category}] {f.file}{loc}")
                 lines.append(f"     {f.message}")

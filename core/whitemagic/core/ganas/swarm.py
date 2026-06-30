@@ -18,6 +18,7 @@ from .chain import GanaChain
 
 logger = logging.getLogger(__name__)
 
+
 class GanaSwarm:
     """Orchestrates thousands of parallel Gana invocations.
 
@@ -52,24 +53,32 @@ class GanaSwarm:
 
         # Get harmony monitor for Yin/Yang adaptation
         from whitemagic.core.embodiment import get_harmony_monitor
+
         self.harmony_monitor = get_harmony_monitor()
 
-    async def add_task(self,
-                      sequence: list[LunarMansion],
-                      task: str,
-                      state: dict[str, Any] | None = None) -> None:
+    async def add_task(
+        self,
+        sequence: list[LunarMansion],
+        task: str,
+        state: dict[str, Any] | None = None,
+    ) -> None:
         """Add a task to the swarm queue to be processed in next breath."""
-        # --- DHARMA GOVERNANCE ---
         try:
             from whitemagic.dharma.governor import GovernanceAction, get_governor
+
             governor = get_governor()
             decision = governor.govern(task, context=state)
 
             if decision.action == GovernanceAction.BLOCK:
-                logger.info("🛑 Dharma Governor BLOCKED task: %s... Reason: %s", task[:50], decision.concerns)
+                logger.info(
+                    "🛑 Dharma Governor BLOCKED task: %s... Reason: %s",
+                    task[:50],
+                    decision.concerns,
+                )
                 # Emit rejection event
                 try:
                     from whitemagic.core.resonance.gan_ying import EventType, emit_event
+
                     emit_event(
                         source="gana_swarm",
                         event_type=EventType.INTERVENTION_TRIGGERED,
@@ -85,7 +94,11 @@ class GanaSwarm:
                 return  # Do not add to queue
 
             elif decision.action == GovernanceAction.WARN:
-                logger.info("⚠️ Dharma Governor WARNED task: {task[:50]}... Concerns: %s", decision.concerns, exc_info=True)
+                logger.info(
+                    "⚠️ Dharma Governor WARNED task: {task[:50]}... Concerns: %s",
+                    decision.concerns,
+                    exc_info=True,
+                )
                 # We could attach a warning flag to the state if we wanted
                 if state is None:
                     state = {}
@@ -109,8 +122,6 @@ class GanaSwarm:
         while self.breathing:
             start_time = time.time()
 
-            # --- ADAPTATION (Yin/Yang) ---
-            # Adjust breath based on system state
             harmony = self.harmony_monitor.get_current()
             guna = harmony.get("guna_tag", "Sattva")
 
@@ -130,7 +141,6 @@ class GanaSwarm:
 
             # Log adaptation if it changes (or periodically, but let's just log it if we inhale)
 
-            # --- INHALE (Gather) ---
             batch: list[tuple[list[LunarMansion], str, dict[str, Any] | None]] = []
             try:
                 # Gather up to current_batch_size tasks
@@ -140,18 +150,20 @@ class GanaSwarm:
                 pass
 
             if batch:
-                logger.info("🫁 Inhale (%s): Processing {len(batch)} tasks...", adaptation, exc_info=True)
+                logger.info(
+                    "🫁 Inhale (%s): Processing {len(batch)} tasks...",
+                    adaptation,
+                    exc_info=True,
+                )
                 # Spawn parallel executions
                 results = await self._process_batch(batch)
 
-                # --- EXHALE (Consolidate) ---
                 await self._consolidate(results)
 
                 self.total_processed += len(batch)
 
             self.total_breaths += 1
 
-            # --- PULSE (Wait) ---
             elapsed = time.time() - start_time
             sleep_time = max(0, self.pulse_interval - elapsed)
 
@@ -163,7 +175,9 @@ class GanaSwarm:
                 # If overran, yield control briefly to avoid starving other tasks
                 await asyncio.sleep(0)
 
-    async def _process_batch(self, batch: list[tuple[Any, ...]]) -> list[list[GanaResult]]:
+    async def _process_batch(
+        self, batch: list[tuple[Any, ...]]
+    ) -> list[list[GanaResult]]:
         """Process a batch of tasks in parallel."""
         tasks = []
         for sequence, task_desc, state in batch:
@@ -202,7 +216,11 @@ class GanaSwarm:
         try:
             consolidated_count = manager.consolidate()
             if consolidated_count > 0:
-                logger.info("🫁 GanaSwarm: Consolidated %s memory items in SQLite.", consolidated_count, exc_info=True)
+                logger.info(
+                    "🫁 GanaSwarm: Consolidated %s memory items in SQLite.",
+                    consolidated_count,
+                    exc_info=True,
+                )
         except Exception as e:
             logger.info("⚠️ Swarm consolidation error: %s", e, exc_info=True)
 
@@ -214,7 +232,12 @@ class GanaSwarm:
                 if res.output and isinstance(res.output, str):
                     report = pattern_engine.extract_patterns(res.output)  # type: ignore[arg-type]
                     # Iterate over all categories in the report
-                    all_patterns = report.solutions + report.anti_patterns + report.heuristics + report.optimizations
+                    all_patterns = (
+                        report.solutions
+                        + report.anti_patterns
+                        + report.heuristics
+                        + report.optimizations
+                    )
                     for p in all_patterns:
                         # Emit via resonance if available
                         try:
@@ -222,6 +245,7 @@ class GanaSwarm:
                                 EventType,
                                 emit_event,
                             )
+
                             emit_event(
                                 source="gana_swarm",
                                 event_type=EventType.PATTERN_DISCOVERED,

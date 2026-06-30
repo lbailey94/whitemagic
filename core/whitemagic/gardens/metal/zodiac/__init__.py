@@ -58,18 +58,90 @@ class ZodiacCore:
     def _get_specializations(self) -> list[str]:
         """Get this core's areas of specialization."""
         specs = {
-            ZodiacSign.ARIES: ["initiative", "leadership", "quick_decisions", "courage", "action"],
-            ZodiacSign.TAURUS: ["stability", "persistence", "resources", "grounding", "patience"],
-            ZodiacSign.GEMINI: ["communication", "adaptation", "learning", "connections", "flexibility"],
-            ZodiacSign.CANCER: ["memory", "nurturing", "protection", "emotion", "intuition"],
-            ZodiacSign.LEO: ["creativity", "expression", "confidence", "inspiration", "leadership"],
-            ZodiacSign.VIRGO: ["analysis", "precision", "organization", "improvement", "service"],
-            ZodiacSign.LIBRA: ["balance", "harmony", "relationships", "fairness", "diplomacy"],
-            ZodiacSign.SCORPIO: ["depth", "transformation", "intensity", "investigation", "power"],
-            ZodiacSign.SAGITTARIUS: ["exploration", "wisdom", "philosophy", "expansion", "truth"],
-            ZodiacSign.CAPRICORN: ["structure", "discipline", "achievement", "responsibility", "mastery"],
-            ZodiacSign.AQUARIUS: ["innovation", "independence", "vision", "revolution", "community"],
-            ZodiacSign.PISCES: ["intuition", "empathy", "transcendence", "imagination", "unity"],
+            ZodiacSign.ARIES: [
+                "initiative",
+                "leadership",
+                "quick_decisions",
+                "courage",
+                "action",
+            ],
+            ZodiacSign.TAURUS: [
+                "stability",
+                "persistence",
+                "resources",
+                "grounding",
+                "patience",
+            ],
+            ZodiacSign.GEMINI: [
+                "communication",
+                "adaptation",
+                "learning",
+                "connections",
+                "flexibility",
+            ],
+            ZodiacSign.CANCER: [
+                "memory",
+                "nurturing",
+                "protection",
+                "emotion",
+                "intuition",
+            ],
+            ZodiacSign.LEO: [
+                "creativity",
+                "expression",
+                "confidence",
+                "inspiration",
+                "leadership",
+            ],
+            ZodiacSign.VIRGO: [
+                "analysis",
+                "precision",
+                "organization",
+                "improvement",
+                "service",
+            ],
+            ZodiacSign.LIBRA: [
+                "balance",
+                "harmony",
+                "relationships",
+                "fairness",
+                "diplomacy",
+            ],
+            ZodiacSign.SCORPIO: [
+                "depth",
+                "transformation",
+                "intensity",
+                "investigation",
+                "power",
+            ],
+            ZodiacSign.SAGITTARIUS: [
+                "exploration",
+                "wisdom",
+                "philosophy",
+                "expansion",
+                "truth",
+            ],
+            ZodiacSign.CAPRICORN: [
+                "structure",
+                "discipline",
+                "achievement",
+                "responsibility",
+                "mastery",
+            ],
+            ZodiacSign.AQUARIUS: [
+                "innovation",
+                "independence",
+                "vision",
+                "revolution",
+                "community",
+            ],
+            ZodiacSign.PISCES: [
+                "intuition",
+                "empathy",
+                "transcendence",
+                "imagination",
+                "unity",
+            ],
         }
         return specs[self.sign]
 
@@ -77,17 +149,57 @@ class ZodiacCore:
         """Get this core's key strengths."""
         strengths = {
             ZodiacSign.ARIES: ["Fast action", "Bold decisions", "Pioneering spirit"],
-            ZodiacSign.TAURUS: ["Steady progress", "Resource management", "Reliability"],
+            ZodiacSign.TAURUS: [
+                "Steady progress",
+                "Resource management",
+                "Reliability",
+            ],
             ZodiacSign.GEMINI: ["Information synthesis", "Adaptability", "Versatility"],
-            ZodiacSign.CANCER: ["Emotional intelligence", "Memory retention", "Protective instincts"],
-            ZodiacSign.LEO: ["Creative vision", "Inspirational leadership", "Confidence"],
-            ZodiacSign.VIRGO: ["Analytical precision", "Detail orientation", "Systematic improvement"],
-            ZodiacSign.LIBRA: ["Balanced judgment", "Relationship building", "Diplomatic solutions"],
-            ZodiacSign.SCORPIO: ["Deep insight", "Transformative power", "Intensity of focus"],
-            ZodiacSign.SAGITTARIUS: ["Philosophical wisdom", "Expansive thinking", "Truth-seeking"],
-            ZodiacSign.CAPRICORN: ["Strategic planning", "Disciplined execution", "Long-term vision"],
-            ZodiacSign.AQUARIUS: ["Innovative solutions", "Independent thinking", "Visionary ideas"],
-            ZodiacSign.PISCES: ["Intuitive understanding", "Empathic connection", "Transcendent perspective"],
+            ZodiacSign.CANCER: [
+                "Emotional intelligence",
+                "Memory retention",
+                "Protective instincts",
+            ],
+            ZodiacSign.LEO: [
+                "Creative vision",
+                "Inspirational leadership",
+                "Confidence",
+            ],
+            ZodiacSign.VIRGO: [
+                "Analytical precision",
+                "Detail orientation",
+                "Systematic improvement",
+            ],
+            ZodiacSign.LIBRA: [
+                "Balanced judgment",
+                "Relationship building",
+                "Diplomatic solutions",
+            ],
+            ZodiacSign.SCORPIO: [
+                "Deep insight",
+                "Transformative power",
+                "Intensity of focus",
+            ],
+            ZodiacSign.SAGITTARIUS: [
+                "Philosophical wisdom",
+                "Expansive thinking",
+                "Truth-seeking",
+            ],
+            ZodiacSign.CAPRICORN: [
+                "Strategic planning",
+                "Disciplined execution",
+                "Long-term vision",
+            ],
+            ZodiacSign.AQUARIUS: [
+                "Innovative solutions",
+                "Independent thinking",
+                "Visionary ideas",
+            ],
+            ZodiacSign.PISCES: [
+                "Intuitive understanding",
+                "Empathic connection",
+                "Transcendent perspective",
+            ],
         }
         return strengths[self.sign]
 
@@ -109,7 +221,9 @@ class ZodiacCore:
         }
         return approaches[self.sign]
 
-    def consult(self, query: str, context: dict[str, Any] | None = None) -> CoreResponse:
+    def consult(
+        self, query: str, context: dict[str, Any] | None = None
+    ) -> CoreResponse:
         """Consult this core for its perspective on a query.
 
         Args:
@@ -132,13 +246,15 @@ class ZodiacCore:
         recommendations = self._generate_recommendations(query, context, perspective)
 
         # Record consultation
-        self.consultation_history.append({
-            "query": query,
-            "context": context,
-            "perspective": perspective,
-            "confidence": relevance,
-            "timestamp": datetime.now(),
-        })
+        self.consultation_history.append(
+            {
+                "query": query,
+                "context": context,
+                "perspective": perspective,
+                "confidence": relevance,
+                "timestamp": datetime.now(),
+            }
+        )
 
         return CoreResponse(
             sign=self.sign,
@@ -165,7 +281,9 @@ class ZodiacCore:
 
         return min(1.0, relevance)
 
-    def _generate_perspective(self, query: str, context: dict[str, Any], relevance: float) -> str:
+    def _generate_perspective(
+        self, query: str, context: dict[str, Any], relevance: float
+    ) -> str:
         """Generate this core's unique perspective on the query."""
         # Core-specific perspective generation
         perspectives = {
@@ -185,21 +303,71 @@ class ZodiacCore:
 
         return perspectives[self.sign]
 
-    def _generate_recommendations(self, query: str, context: dict[str, Any], perspective: str) -> list[str]:
+    def _generate_recommendations(
+        self, query: str, context: dict[str, Any], perspective: str
+    ) -> list[str]:
         """Generate actionable recommendations based on core's nature."""
         base_recs = {
-            ZodiacSign.ARIES: ["Take the first step now", "Lead the initiative", "Be courageous"],
-            ZodiacSign.TAURUS: ["Build incrementally", "Ensure stability first", "Be patient"],
-            ZodiacSign.GEMINI: ["Gather more information", "Explore alternatives", "Stay adaptable"],
-            ZodiacSign.CANCER: ["Protect valuable assets", "Trust your feelings", "Nurture relationships"],
-            ZodiacSign.LEO: ["Express your vision boldly", "Inspire others", "Take creative risks"],
-            ZodiacSign.VIRGO: ["Analyze details carefully", "Optimize the process", "Refine continuously"],
-            ZodiacSign.LIBRA: ["Seek balanced solutions", "Build consensus", "Harmonize differences"],
-            ZodiacSign.SCORPIO: ["Go beneath the surface", "Transform completely", "Intensify focus"],
-            ZodiacSign.SAGITTARIUS: ["Explore new territories", "Seek deeper meaning", "Expand horizons"],
-            ZodiacSign.CAPRICORN: ["Create a solid plan", "Execute systematically", "Aim for mastery"],
-            ZodiacSign.AQUARIUS: ["Innovate fearlessly", "Think differently", "Challenge conventions"],
-            ZodiacSign.PISCES: ["Trust your intuition", "Embrace empathy", "Transcend limitations"],
+            ZodiacSign.ARIES: [
+                "Take the first step now",
+                "Lead the initiative",
+                "Be courageous",
+            ],
+            ZodiacSign.TAURUS: [
+                "Build incrementally",
+                "Ensure stability first",
+                "Be patient",
+            ],
+            ZodiacSign.GEMINI: [
+                "Gather more information",
+                "Explore alternatives",
+                "Stay adaptable",
+            ],
+            ZodiacSign.CANCER: [
+                "Protect valuable assets",
+                "Trust your feelings",
+                "Nurture relationships",
+            ],
+            ZodiacSign.LEO: [
+                "Express your vision boldly",
+                "Inspire others",
+                "Take creative risks",
+            ],
+            ZodiacSign.VIRGO: [
+                "Analyze details carefully",
+                "Optimize the process",
+                "Refine continuously",
+            ],
+            ZodiacSign.LIBRA: [
+                "Seek balanced solutions",
+                "Build consensus",
+                "Harmonize differences",
+            ],
+            ZodiacSign.SCORPIO: [
+                "Go beneath the surface",
+                "Transform completely",
+                "Intensify focus",
+            ],
+            ZodiacSign.SAGITTARIUS: [
+                "Explore new territories",
+                "Seek deeper meaning",
+                "Expand horizons",
+            ],
+            ZodiacSign.CAPRICORN: [
+                "Create a solid plan",
+                "Execute systematically",
+                "Aim for mastery",
+            ],
+            ZodiacSign.AQUARIUS: [
+                "Innovate fearlessly",
+                "Think differently",
+                "Challenge conventions",
+            ],
+            ZodiacSign.PISCES: [
+                "Trust your intuition",
+                "Embrace empathy",
+                "Transcend limitations",
+            ],
         }
 
         return base_recs[self.sign]
@@ -219,7 +387,9 @@ class ZodiacCouncil:
         self.council_history: list[dict] = []
         self.consensus_threshold = 0.6  # 60% agreement needed
 
-    def consult_all(self, query: str, context: dict[str, Any] | None = None) -> list[CoreResponse]:
+    def consult_all(
+        self, query: str, context: dict[str, Any] | None = None
+    ) -> list[CoreResponse]:
         """Consult all 12 cores for their perspectives.
 
         Returns a list of all core responses sorted by relevance/confidence.
@@ -254,14 +424,18 @@ class ZodiacCouncil:
         """
         responses = []
         for core in self.cores.values():
-            if core.active and any(spec in core.specializations for spec in specializations):
+            if core.active and any(
+                spec in core.specializations for spec in specializations
+            ):
                 response = core.consult(query, context)
                 responses.append(response)
 
         responses.sort(key=lambda r: r.confidence, reverse=True)
         return responses
 
-    def hold_council(self, query: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def hold_council(
+        self, query: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Hold a full council meeting where all cores deliberate.
 
         Returns a synthesized decision with consensus metrics.
@@ -284,7 +458,9 @@ class ZodiacCouncil:
             rec_counts[rec] = rec_counts.get(rec, 0) + 1
 
         # Top recommendations
-        top_recommendations = sorted(rec_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        top_recommendations = sorted(
+            rec_counts.items(), key=lambda x: x[1], reverse=True
+        )[:5]
 
         # Create council decision
         decision = {
@@ -331,7 +507,9 @@ class ZodiacCouncil:
         return {
             "total_cores": len(self.cores),
             "active_cores": len(self.get_active_cores()),
-            "total_consultations": sum(len(c.consultation_history) for c in self.cores.values()),
+            "total_consultations": sum(
+                len(c.consultation_history) for c in self.cores.values()
+            ),
             "council_meetings": len(self.council_history),
             "consensus_threshold": self.consensus_threshold,
         }
@@ -350,13 +528,17 @@ def get_zodiac_council() -> ZodiacCouncil:
     return _zodiac_council
 
 
-def consult_council(query: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+def consult_council(
+    query: str, context: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Convenience function to hold a council meeting."""
     council = get_zodiac_council()
     return council.hold_council(query, context)
 
 
-def consult_core(sign: ZodiacSign, query: str, context: dict[str, Any] | None = None) -> CoreResponse:
+def consult_core(
+    sign: ZodiacSign, query: str, context: dict[str, Any] | None = None
+) -> CoreResponse:
     """Convenience function to consult a specific core."""
     council = get_zodiac_council()
     core = council.get_core(sign)

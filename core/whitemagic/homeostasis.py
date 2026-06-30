@@ -30,6 +30,7 @@ class HomeostaticMonitor:
         if self._hv is None:
             try:
                 from whitemagic.harmony.vector import get_harmony_vector
+
                 self._hv = get_harmony_vector()  # type: ignore[assignment]
             except Exception:
                 pass
@@ -39,6 +40,7 @@ class HomeostaticMonitor:
         if self._loop is None:
             try:
                 from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+
                 self._loop = get_homeostatic_loop()  # type: ignore[assignment]
             except Exception:
                 pass
@@ -121,7 +123,8 @@ class HomeostaticMonitor:
         """Set alert threshold (no-op — thresholds live in HomeostaticConfig)."""
         logger.debug(
             "set_threshold(%s, %s) is a no-op; configure HomeostaticConfig instead.",
-            metric, threshold,
+            metric,
+            threshold,
         )
 
     def get_balance(self) -> float:
@@ -137,6 +140,7 @@ class HomeostaticMonitor:
 
 class Homeostasis(HomeostaticMonitor):
     """Alias kept for backward compatibility."""
+
     pass
 
 

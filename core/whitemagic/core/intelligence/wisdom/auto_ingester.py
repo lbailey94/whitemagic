@@ -16,11 +16,14 @@ logger = logging.getLogger(__name__)
 # Try aiohttp, fall back to urllib
 try:
     import aiohttp
+
     HAS_AIOHTTP = True
 except ImportError:
     import urllib.request
+
     HAS_AIOHTTP = False
     logger.info("⚠ aiohttp not available, using urllib (slower)")
+
 
 def validate_wisdom_url(url: str) -> bool:
     """SSRF protection: Only allow sacred-texts.com for auto-ingestion."""
@@ -32,6 +35,7 @@ class WisdomText:
     """WisdomText: wisdom text.
 
     Value object: equality and repr are field-based."""
+
     name: str
     base_url: str
     tags: list[str]
@@ -40,13 +44,17 @@ class WisdomText:
 TEXTS = [
     WisdomText("Dao De Jing", "https://sacred-texts.com/tao/taote.htm", ["daoism"]),
     WisdomText("I Ching", "https://sacred-texts.com/ich/index.htm", ["iching"]),
-    WisdomText("Art of War", "https://sacred-texts.com/tao/aow/index.htm", ["strategy"]),
+    WisdomText(
+        "Art of War", "https://sacred-texts.com/tao/aow/index.htm", ["strategy"]
+    ),
     WisdomText("Yang Chu", "https://sacred-texts.com/tao/ycgp/index.htm", ["yang-chu"]),
     WisdomText("Tai Shang", "https://sacred-texts.com/tao/ts/index.htm", ["morality"]),
     WisdomText("Yin Classic", "https://sacred-texts.com/tao/ycc/index.htm", ["yin"]),
     WisdomText("Zhuangzi", "https://sacred-texts.com/tao/mcm/index.htm", ["zhuangzi"]),
     WisdomText("Teachings", "https://sacred-texts.com/tao/tt/index.htm", ["teachings"]),
-    WisdomText("SBE 39", "https://sacred-texts.com/tao/sbe39/index.htm", ["translation"]),
+    WisdomText(
+        "SBE 39", "https://sacred-texts.com/tao/sbe39/index.htm", ["translation"]
+    ),
 ]
 
 
@@ -63,7 +71,9 @@ async def ingest_all_async() -> dict[str, int]:
                 continue
             try:
                 await asyncio.sleep(2)  # Rate limit
-                async with session.get(text.base_url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                async with session.get(
+                    text.base_url, timeout=aiohttp.ClientTimeout(total=30)
+                ) as resp:
                     if resp.status == 200:
                         content = await resp.text()
                         memory.create_memory(
@@ -86,6 +96,7 @@ async def ingest_all_async() -> dict[str, int]:
 def ingest_all_sync() -> dict[str, int]:
     """Ingest all 9 wisdom texts (sync fallback)."""
     import time
+
     memory = MemoryManager()
     stats = {"success": 0, "failed": 0}
 
@@ -129,4 +140,4 @@ if __name__ == "__main__":
         stats = asyncio.run(ingest_all())
     else:
         stats = ingest_all_sync()
-    logger.info("\nIngested: %s/9 texts", stats['success'])
+    logger.info("\nIngested: %s/9 texts", stats["success"])

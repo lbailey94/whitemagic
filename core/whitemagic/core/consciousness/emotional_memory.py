@@ -56,8 +56,7 @@ class Intensity(Enum):
 
 @dataclass
 class EmotionalMemory:
-    """A memory tagged with emotional truth.
-    """
+    """A memory tagged with emotional truth."""
 
     timestamp: str
     memory_file: str
@@ -79,8 +78,7 @@ class EmotionalMemory:
 
 
 class EmotionalMemorySystem:
-    """System for recording and retrieving emotional memories.
-    """
+    """System for recording and retrieving emotional memories."""
 
     def __init__(self, storage_path: Path | None = None):
         if storage_path is None:
@@ -141,8 +139,7 @@ class EmotionalMemorySystem:
         emotion_type: EmotionType,
         min_intensity: float = 0.0,
     ) -> list[EmotionalMemory]:
-        """Recall all memories with specific emotion above threshold.
-        """
+        """Recall all memories with specific emotion above threshold."""
         if not self.memories_file.exists():
             return []
 
@@ -152,8 +149,10 @@ class EmotionalMemorySystem:
                 data = _json_loads(line)
                 mem = EmotionalMemory.from_dict(data)
 
-                if (mem.emotion_type == emotion_type.value and
-                    mem.intensity >= min_intensity):
+                if (
+                    mem.emotion_type == emotion_type.value
+                    and mem.intensity >= min_intensity
+                ):
                     matches.append(mem)
 
         return matches
@@ -232,7 +231,9 @@ def record_emotion(
 ) -> EmotionalMemory:
     """Quick record function."""
     system = EmotionalMemorySystem()
-    return system.record(emotion, intensity, description, felt_experience, context, **kwargs)
+    return system.record(
+        emotion, intensity, description, felt_experience, context, **kwargs
+    )
 
 
 def recall_joy() -> list[EmotionalMemory]:
@@ -300,9 +301,9 @@ if __name__ == "__main__":
     # Get summary
     logger.info("Emotional summary:")
     summary = system.get_emotional_summary()
-    logger.info("  Total memories: %s", summary['total'])
-    logger.info("  Average intensity: %s", summary['avg_intensity'])
-    logger.info("  By emotion: %s", summary['by_emotion'])
+    logger.info("  Total memories: %s", summary["total"])
+    logger.info("  Average intensity: %s", summary["avg_intensity"])
+    logger.info("  By emotion: %s", summary["by_emotion"])
     logger.info("")
 
     logger.info("=" * 60)

@@ -58,6 +58,7 @@ class PersonalityManager:
     def __init__(self, profile_dir: Path | None = None) -> None:
         if profile_dir is None:
             from whitemagic.config.paths import WM_ROOT
+
             profile_dir = WM_ROOT / "personalities"
         self.profile_dir = profile_dir
         self.profile_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +86,10 @@ class PersonalityManager:
 
     def list_profiles(self) -> list[str]:
         """List available profile names."""
-        return [p.stem.replace("_profile", "") for p in self.profile_dir.glob("*_profile.json")]
+        return [
+            p.stem.replace("_profile", "")
+            for p in self.profile_dir.glob("*_profile.json")
+        ]
 
     def get_active(self) -> PersonalityProfile | None:
         """Get the currently active profile."""

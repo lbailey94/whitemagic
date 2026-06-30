@@ -17,13 +17,13 @@ from whitemagic.gardens.voice.templates import get_template
 
 logger = logging.getLogger(__name__)
 
+
 class Narrator:
-    """The Narrator listens to the Gan Ying Bus and weaves events into stories.
-    """
+    """The Narrator listens to the Gan Ying Bus and weaves events into stories."""
 
     def __init__(self, base_dir: Path | None = None):
         self.bus = get_bus()
-        self.engine = get_narrative_engine() # Uses narrative.py singleton
+        self.engine = get_narrative_engine()  # Uses narrative.py singleton
         self._listening = False
         self.current_story = "Session-" + datetime.now().strftime("%Y-%m-%d")
         self.current_chapter = "Stream"
@@ -132,8 +132,10 @@ class Narrator:
         except Exception as e:
             logger.info("⚠️ Narrator error: %s", e, exc_info=True)
 
+
 # Singleton
 _narrator = None
+
 
 def get_narrator() -> Narrator:
     """

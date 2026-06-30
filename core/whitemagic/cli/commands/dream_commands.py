@@ -20,6 +20,7 @@ try:
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
+
     # Markdown import removed — unused, add back if needed
     HAS_RICH = True
     console: Console | None = Console()
@@ -52,19 +53,23 @@ def dream_start(interval: int, idle_threshold: int) -> None:
     dc.start()
 
     if HAS_RICH and console:
-        console.print(Panel(
-            f"[green]Dream Cycle started[/green]\n"
-            f"  Interval: {interval}s\n"
-            f"  Idle threshold: {idle_threshold}s\n"
-            f"  Phases: 12 (triage → consolidation → serendipity → governance →\n"
-            f"           narrative → kaizen → oracle → decay → constellation →\n"
-            f"           prediction → enrichment → harmonize)\n\n"
-            f"The system will dream when idle. Use [cyan]wm dream status[/cyan] to check.",
-            title="Dream Cycle",
-            border_style="green",
-        ))
+        console.print(
+            Panel(
+                f"[green]Dream Cycle started[/green]\n"
+                f"  Interval: {interval}s\n"
+                f"  Idle threshold: {idle_threshold}s\n"
+                f"  Phases: 12 (triage → consolidation → serendipity → governance →\n"
+                f"           narrative → kaizen → oracle → decay → constellation →\n"
+                f"           prediction → enrichment → harmonize)\n\n"
+                f"The system will dream when idle. Use [cyan]wm dream status[/cyan] to check.",
+                title="Dream Cycle",
+                border_style="green",
+            )
+        )
     else:
-        click.echo(f"Dream Cycle started (interval={interval}s, idle={idle_threshold}s)")
+        click.echo(
+            f"Dream Cycle started (interval={interval}s, idle={idle_threshold}s)"
+        )
 
 
 @dream_group.command(name="stop")
@@ -138,24 +143,29 @@ def dream_run() -> None:
     dc.touch()  # Reset idle timer
 
     import asyncio
+
     try:
         asyncio.run(dc._run_phase())
         # Get the last dream report from history
         if dc._history:
             report = dc._history[-1]
             if HAS_RICH and console:
-                console.print(Panel(
-                    f"[green]Dream cycle complete[/green]\n"
-                    f"  Phase: {report.phase.value}\n"
-                    f"  Duration: {report.duration_ms:.0f}ms\n"
-                    f"  Success: {report.success}\n"
-                    + (f"  Error: {report.error}\n" if report.error else "")
-                    + (f"\n  Details: {report.details}" if report.details else ""),
-                    title="Dream Report",
-                    border_style="green",
-                ))
+                console.print(
+                    Panel(
+                        f"[green]Dream cycle complete[/green]\n"
+                        f"  Phase: {report.phase.value}\n"
+                        f"  Duration: {report.duration_ms:.0f}ms\n"
+                        f"  Success: {report.success}\n"
+                        + (f"  Error: {report.error}\n" if report.error else "")
+                        + (f"\n  Details: {report.details}" if report.details else ""),
+                        title="Dream Report",
+                        border_style="green",
+                    )
+                )
             else:
-                click.echo(f"Dream complete: phase={report.phase.value}, success={report.success}, duration={report.duration_ms:.0f}ms")
+                click.echo(
+                    f"Dream complete: phase={report.phase.value}, success={report.success}, duration={report.duration_ms:.0f}ms"
+                )
         else:
             click.echo("Dream cycle ran but produced no report")
     except Exception as e:
@@ -176,6 +186,7 @@ def dream_report(limit: int) -> None:
     """
     try:
         from whitemagic.core.dreaming.dream_artifacts import list_dreams
+
         dreams = list_dreams()
         if limit > 0:
             dreams = dreams[:limit]
@@ -188,15 +199,17 @@ def dream_report(limit: int) -> None:
 
     if not dreams:
         if HAS_RICH and console:
-            console.print(Panel(
-                "[dim]No dreams yet. The system dreams when idle.[/dim]\n\n"
-                "To trigger a dream manually:\n"
-                "  [cyan]wm dream run[/cyan]\n\n"
-                "Or start automatic dreaming:\n"
-                "  [cyan]wm dream start[/cyan]",
-                title="Dream Journal",
-                border_style="dim",
-            ))
+            console.print(
+                Panel(
+                    "[dim]No dreams yet. The system dreams when idle.[/dim]\n\n"
+                    "To trigger a dream manually:\n"
+                    "  [cyan]wm dream run[/cyan]\n\n"
+                    "Or start automatic dreaming:\n"
+                    "  [cyan]wm dream start[/cyan]",
+                    title="Dream Journal",
+                    border_style="dim",
+                )
+            )
         else:
             click.echo("No dreams yet. Use 'wm dream run' to dream manually.")
         return
@@ -218,10 +231,14 @@ def dream_report(limit: int) -> None:
                 str(dream.get("revisit_count", 0)),
             )
         console.print(table)
-        console.print(f"\n[dim]{len(dreams)} dream artifacts. Use 'wm dream read <id>' for details.[/dim]")
+        console.print(
+            f"\n[dim]{len(dreams)} dream artifacts. Use 'wm dream read <id>' for details.[/dim]"
+        )
     else:
         for i, dream in enumerate(dreams[:limit], 1):
-            click.echo(f"  {i}. [{dream.get('phase', '?')}] {dream.get('status', '?')} — {dream.get('created_at', '?')[:19]}")
+            click.echo(
+                f"  {i}. [{dream.get('phase', '?')}] {dream.get('status', '?')} — {dream.get('created_at', '?')[:19]}"
+            )
 
 
 @dream_group.command(name="read")
@@ -230,6 +247,7 @@ def dream_read(dream_id: str) -> None:
     """Read a specific dream artifact by ID."""
     try:
         from whitemagic.core.dreaming.dream_artifacts import read_dream
+
         dream = read_dream(dream_id)
     except Exception as e:
         click.echo(f"Error: {e}")
@@ -246,8 +264,12 @@ def dream_read(dream_id: str) -> None:
         success = content.get("success", True)
 
         panel_content = f"[bold cyan]Phase:[/bold cyan] {phase}\n"
-        panel_content += f"[bold]Status:[/bold] {'✅ success' if success else '❌ failed'}\n"
-        panel_content += f"[bold]Duration:[/bold] {content.get('duration_ms', 0):.0f}ms\n"
+        panel_content += (
+            f"[bold]Status:[/bold] {'✅ success' if success else '❌ failed'}\n"
+        )
+        panel_content += (
+            f"[bold]Duration:[/bold] {content.get('duration_ms', 0):.0f}ms\n"
+        )
         panel_content += f"[bold]Created:[/bold] {content.get('created_at', '?')}\n"
         panel_content += f"[bold]Revisits:[/bold] {content.get('revisit_count', 0)}\n\n"
 
@@ -264,7 +286,9 @@ def dream_read(dream_id: str) -> None:
             for insight in content.get("insights", [])[:5]:
                 panel_content += f"  • {insight}\n"
 
-        console.print(Panel(panel_content, title=f"Dream: {dream_id}", border_style="cyan"))
+        console.print(
+            Panel(panel_content, title=f"Dream: {dream_id}", border_style="cyan")
+        )
     else:
         click.echo(f"Dream: {dream_id}")
         click.echo(f"  Phase: {dream.get('phase', '?')}")
@@ -308,10 +332,13 @@ def dream_promote(dream_id: str) -> None:
     """Promote a dream artifact to a permanent memory."""
     try:
         from whitemagic.core.dreaming.dream_artifacts import promote_dream
+
         result = promote_dream(dream_id)
         if result:
             if HAS_RICH and console:
-                console.print(f"[green]Dream {dream_id} promoted to memory: {result.get('promoted_to_memory_id', '?')}[/green]")
+                console.print(
+                    f"[green]Dream {dream_id} promoted to memory: {result.get('promoted_to_memory_id', '?')}[/green]"
+                )
             else:
                 click.echo(f"Promoted: {result.get('promoted_to_memory_id', '?')}")
         else:

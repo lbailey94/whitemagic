@@ -1,4 +1,5 @@
 """Tests for Objective O — Bicameral Improvement Debate."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.bicameral_debate import BicameralDebate

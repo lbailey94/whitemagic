@@ -13,6 +13,7 @@ velocity vectors over cycles to detect convergence and drift.
 Convergence: multiple improvements heading toward the same region
 Drift: importance (v) decreasing over cycles → deprioritize
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,6 +26,7 @@ from typing import Any
 @dataclass
 class HolographicPosition:
     """5D position of an improvement hypothesis."""
+
     x: float = 0.0  # temporal
     y: float = 0.0  # semantic
     z: float = 0.0  # emotional valence
@@ -48,6 +50,7 @@ class HolographicPosition:
 @dataclass
 class VelocityVector:
     """Velocity of a hypothesis in 5D space."""
+
     dx: float = 0.0
     dy: float = 0.0
     dz: float = 0.0
@@ -67,6 +70,7 @@ class VelocityVector:
 @dataclass
 class TrajectoryPoint:
     """A single point in a hypothesis trajectory."""
+
     cycle: int
     timestamp: float
     position: HolographicPosition
@@ -75,12 +79,17 @@ class TrajectoryPoint:
 @dataclass
 class HypothesisTrajectory:
     """Full trajectory of a hypothesis across cycles."""
+
     hypothesis_id: str
     points: list[TrajectoryPoint] = field(default_factory=list)
 
-    def add_point(self, cycle: int, position: HolographicPosition, timestamp: float | None = None) -> None:
+    def add_point(
+        self, cycle: int, position: HolographicPosition, timestamp: float | None = None
+    ) -> None:
         ts = timestamp or time.time()
-        self.points.append(TrajectoryPoint(cycle=cycle, timestamp=ts, position=position))
+        self.points.append(
+            TrajectoryPoint(cycle=cycle, timestamp=ts, position=position)
+        )
 
     @property
     def latest(self) -> TrajectoryPoint | None:
@@ -173,7 +182,9 @@ class TrajectoryTracker:
         )
 
         if hypothesis_id not in self._trajectories:
-            self._trajectories[hypothesis_id] = HypothesisTrajectory(hypothesis_id=hypothesis_id)
+            self._trajectories[hypothesis_id] = HypothesisTrajectory(
+                hypothesis_id=hypothesis_id
+            )
         self._trajectories[hypothesis_id].add_point(cycle, pos)
 
         return pos
@@ -208,7 +219,11 @@ class TrajectoryTracker:
         Returns:
             List of convergence groups (each is a list of hypothesis IDs).
         """
-        active = [(hid, traj) for hid, traj in self._trajectories.items() if traj.latest is not None]
+        active = [
+            (hid, traj)
+            for hid, traj in self._trajectories.items()
+            if traj.latest is not None
+        ]
         if len(active) < 2:
             return []
 
@@ -235,8 +250,10 @@ class TrajectoryTracker:
                     if vel_a is not None and vel_b is not None:
                         # Dot product of velocity vectors (normalized)
                         dot = (
-                            vel_a.dx * vel_b.dx + vel_a.dy * vel_b.dy
-                            + vel_a.dz * vel_b.dz + vel_a.dw * vel_b.dw
+                            vel_a.dx * vel_b.dx
+                            + vel_a.dy * vel_b.dy
+                            + vel_a.dz * vel_b.dz
+                            + vel_a.dw * vel_b.dw
                             + vel_a.dv * vel_b.dv
                         )
                         if dot > 0:  # Moving in similar direction
@@ -257,7 +274,9 @@ class TrajectoryTracker:
     def get_stats(self) -> dict[str, Any]:
         """Get summary statistics."""
         total = len(self._trajectories)
-        with_velocity = sum(1 for t in self._trajectories.values() if len(t.points) >= 2)
+        with_velocity = sum(
+            1 for t in self._trajectories.values() if len(t.points) >= 2
+        )
         drifting = len(self.detect_drifting())
         converging = len(self.detect_convergence())
         return {

@@ -40,7 +40,9 @@ class WisdomAutoIngester:
                     except Exception:
                         pass
 
-    def ingest(self, content: str, source: str = "", tags: list[str] | None = None) -> dict[str, Any]:
+    def ingest(
+        self, content: str, source: str = "", tags: list[str] | None = None
+    ) -> dict[str, Any]:
         """Ingest a piece of wisdom."""
         entry = {
             "content": content,
@@ -58,6 +60,7 @@ class WisdomAutoIngester:
         ingested: list[dict[str, Any]] = []
         try:
             from whitemagic.memory_matrix.matrix import get_matrix
+
             matrix = get_matrix()
             recent = matrix.get_interactions(limit=20)
             for interaction in recent:
@@ -83,7 +86,8 @@ class WisdomAutoIngester:
         """Search ingested wisdom."""
         query_lower = query.lower()
         results = [
-            entry for entry in self.ingested
+            entry
+            for entry in self.ingested
             if query_lower in entry.get("content", "").lower()
         ]
         return results[-limit:]

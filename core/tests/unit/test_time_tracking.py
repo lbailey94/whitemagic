@@ -1,4 +1,5 @@
 """Tests for time_tracking module."""
+
 import time
 
 import pytest
@@ -27,7 +28,12 @@ class TestPhaseTiming:
 
     def test_to_dict(self):
         start = time.time()
-        pt = PhaseTiming(phase_name="test", start_time=start, end_time=start + 1.0, metadata={"key": "val"})
+        pt = PhaseTiming(
+            phase_name="test",
+            start_time=start,
+            end_time=start + 1.0,
+            metadata={"key": "val"},
+        )
         d = pt.to_dict()
         assert d["phase_name"] == "test"
         assert d["duration_seconds"] == pytest.approx(1.0, abs=0.01)

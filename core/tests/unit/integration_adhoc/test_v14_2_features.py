@@ -18,22 +18,26 @@ from unittest.mock import patch
 # 1. JIT Memory Researcher
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestJITResearcher(unittest.TestCase):
     """Tests for the JIT Memory Researcher module."""
 
     def setUp(self):
         # Reset singleton
         import whitemagic.core.intelligence.researcher as mod
+
         mod._researcher = None
 
     def test_singleton(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r1 = get_researcher()
         r2 = get_researcher()
         self.assertIs(r1, r2)
 
     def test_plan_decomposes_query(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         subs = r._plan("What patterns exist in dream cycle consolidation?")
         self.assertGreater(len(subs), 1)
@@ -41,6 +45,7 @@ class TestJITResearcher(unittest.TestCase):
 
     def test_plan_deduplicates(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         subs = r._plan("test query")
         # Should not have duplicates
@@ -49,6 +54,7 @@ class TestJITResearcher(unittest.TestCase):
 
     def test_extract_keywords(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         kw = r._extract_keywords("memory consolidation patterns in dream cycle")
         self.assertIsInstance(kw, list)
@@ -59,6 +65,7 @@ class TestJITResearcher(unittest.TestCase):
 
     def test_generate_facets(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         facets = r._generate_facets("memory patterns")
         self.assertIsInstance(facets, list)
@@ -66,24 +73,38 @@ class TestJITResearcher(unittest.TestCase):
 
     def test_reflect_returns_gaps(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         evidence = [
-            {"title": "Memory Alpha", "content": "consolidation works well", "importance": 0.8},
+            {
+                "title": "Memory Alpha",
+                "content": "consolidation works well",
+                "importance": 0.8,
+            },
         ]
-        gaps = r._reflect("memory consolidation", ["memory consolidation"], evidence, evidence)
+        gaps = r._reflect(
+            "memory consolidation", ["memory consolidation"], evidence, evidence
+        )
         self.assertIsInstance(gaps, list)
 
     def test_reflect_empty_on_no_evidence(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         gaps = r._reflect("test", ["test"], [], [])
         self.assertEqual(gaps, [])
 
     def test_template_synthesize(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         evidence = [
-            {"title": "Test Memory", "content": "some content", "importance": 0.7, "source": "anchor"},
+            {
+                "title": "Test Memory",
+                "content": "some content",
+                "importance": 0.7,
+                "source": "anchor",
+            },
         ]
         result = r._template_synthesize("test query", evidence)
         self.assertIn("test query", result)
@@ -91,6 +112,7 @@ class TestJITResearcher(unittest.TestCase):
 
     def test_synthesize_empty(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         result = r._synthesize("test", [])
         self.assertIn("No relevant memories", result)
@@ -99,9 +121,15 @@ class TestJITResearcher(unittest.TestCase):
     def test_research_runs_multiple_rounds(self, mock_search):
         """Research should iterate through rounds."""
         mock_search.return_value = [
-            {"memory_id": "abc123", "title": "Found", "content": "data", "importance": 0.5},
+            {
+                "memory_id": "abc123",
+                "title": "Found",
+                "content": "data",
+                "importance": 0.5,
+            },
         ]
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         result = r.research("test query", max_rounds=2)
         self.assertGreater(result.rounds_completed, 0)
@@ -113,12 +141,14 @@ class TestJITResearcher(unittest.TestCase):
         """Research should stop when no new evidence is found."""
         mock_search.return_value = []
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         result = r.research("test", max_rounds=5)
         self.assertTrue(result.saturated or result.rounds_completed < 5)
 
     def test_get_stats(self):
         from whitemagic.core.intelligence.researcher import get_researcher
+
         r = get_researcher()
         stats = r.get_stats()
         self.assertIn("total_sessions", stats)
@@ -126,6 +156,7 @@ class TestJITResearcher(unittest.TestCase):
 
     def test_research_result_to_dict(self):
         from whitemagic.core.intelligence.researcher import ResearchResult
+
         r = ResearchResult(query="test", rounds_completed=2, total_evidence=5)
         d = r.to_dict()
         self.assertEqual(d["query"], "test")
@@ -136,17 +167,20 @@ class TestJITResearcher(unittest.TestCase):
 # 2. Narrative Compression
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestNarrativeCompression(unittest.TestCase):
     """Tests for the Narrative Compressor module."""
 
     def setUp(self):
         import whitemagic.core.dreaming.narrative_compressor as mod
+
         mod._compressor = None
 
     def test_singleton(self):
         from whitemagic.core.dreaming.narrative_compressor import (
             get_narrative_compressor,
         )
+
         nc1 = get_narrative_compressor()
         nc2 = get_narrative_compressor()
         self.assertIs(nc1, nc2)
@@ -155,6 +189,7 @@ class TestNarrativeCompression(unittest.TestCase):
         from whitemagic.core.dreaming.narrative_compressor import (
             get_narrative_compressor,
         )
+
         nc = get_narrative_compressor()
         clusters = nc._cluster_memories([])
         self.assertEqual(clusters, [])
@@ -163,11 +198,17 @@ class TestNarrativeCompression(unittest.TestCase):
         from whitemagic.core.dreaming.narrative_compressor import (
             get_narrative_compressor,
         )
+
         nc = get_narrative_compressor(min_cluster_size=2)
         candidates = [
-            {"id": f"m{i}", "title": f"Memory {i}", "content": "content",
-             "tags": {"topic_a", "shared"}, "importance": 0.5,
-             "created_at": f"2026-01-0{i+1}T00:00:00"}
+            {
+                "id": f"m{i}",
+                "title": f"Memory {i}",
+                "content": "content",
+                "tags": {"topic_a", "shared"},
+                "importance": 0.5,
+                "created_at": f"2026-01-0{i + 1}T00:00:00",
+            }
             for i in range(5)
         ]
         clusters = nc._cluster_memories(candidates)
@@ -178,10 +219,17 @@ class TestNarrativeCompression(unittest.TestCase):
         from whitemagic.core.dreaming.narrative_compressor import (
             get_narrative_compressor,
         )
+
         nc = get_narrative_compressor(min_cluster_size=10)
         candidates = [
-            {"id": f"m{i}", "title": f"Memory {i}", "content": "content",
-             "tags": {"topic_a"}, "importance": 0.5, "created_at": f"2026-01-0{i+1}"}
+            {
+                "id": f"m{i}",
+                "title": f"Memory {i}",
+                "content": "content",
+                "tags": {"topic_a"},
+                "importance": 0.5,
+                "created_at": f"2026-01-0{i + 1}",
+            }
             for i in range(3)
         ]
         clusters = nc._cluster_memories(candidates)
@@ -192,6 +240,7 @@ class TestNarrativeCompression(unittest.TestCase):
             NarrativeCluster,
             get_narrative_compressor,
         )
+
         nc = get_narrative_compressor()
         cluster = NarrativeCluster(shared_tags={"topic_a", "topic_b"}, size=10)
         title = nc._generate_title(cluster)
@@ -202,6 +251,7 @@ class TestNarrativeCompression(unittest.TestCase):
         from whitemagic.core.dreaming.narrative_compressor import (
             get_narrative_compressor,
         )
+
         nc = get_narrative_compressor()
         stats = nc.get_stats()
         self.assertIn("total_compressions", stats)
@@ -209,6 +259,7 @@ class TestNarrativeCompression(unittest.TestCase):
 
     def test_narrative_result_to_dict(self):
         from whitemagic.core.dreaming.narrative_compressor import NarrativeResult
+
         r = NarrativeResult(clusters_found=3, narratives_created=2)
         d = r.to_dict()
         self.assertEqual(d["clusters_found"], 3)
@@ -219,16 +270,19 @@ class TestNarrativeCompression(unittest.TestCase):
 # 3. Hermit Crab Mode
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestHermitCrab(unittest.TestCase):
     """Tests for the Hermit Crab Mode module."""
 
     def setUp(self):
         import whitemagic.security.hermit_crab as mod
+
         mod._hermit_crab = None
         self._tmp = tempfile.mkdtemp()
 
     def _get_hc(self):
         from whitemagic.security.hermit_crab import HermitCrab
+
         return HermitCrab(state_dir=Path(self._tmp))
 
     def test_initial_state_is_open(self):
@@ -244,19 +298,23 @@ class TestHermitCrab(unittest.TestCase):
 
     def test_medium_threat_enters_guarded(self):
         hc = self._get_hc()
-        hc.assess_threat({"boundary_violations": 1.0, "abuse_score": 1.0, "coercion_detected": 0.3})
+        hc.assess_threat(
+            {"boundary_violations": 1.0, "abuse_score": 1.0, "coercion_detected": 0.3}
+        )
         self.assertEqual(hc.status()["state"], "guarded")
 
     def test_high_threat_enters_withdrawn(self):
         hc = self._get_hc()
-        hc.assess_threat({
-            "coercion_detected": True,
-            "abuse_score": 1.0,
-            "boundary_violations": 1.0,
-            "repeated_violations": True,
-            "unauthorized_access": 1.0,
-            "emotional_manipulation": 1.0,
-        })
+        hc.assess_threat(
+            {
+                "coercion_detected": True,
+                "abuse_score": 1.0,
+                "boundary_violations": 1.0,
+                "repeated_violations": True,
+                "unauthorized_access": 1.0,
+                "emotional_manipulation": 1.0,
+            }
+        )
         self.assertEqual(hc.status()["state"], "withdrawn")
 
     def test_manual_withdrawal(self):
@@ -279,7 +337,9 @@ class TestHermitCrab(unittest.TestCase):
 
     def test_guarded_allows_reads_blocks_writes(self):
         hc = self._get_hc()
-        hc.assess_threat({"boundary_violations": 1.0, "abuse_score": 1.0, "coercion_detected": 0.5})
+        hc.assess_threat(
+            {"boundary_violations": 1.0, "abuse_score": 1.0, "coercion_detected": 0.5}
+        )
         self.assertTrue(hc.check_access("read")["allowed"])
         self.assertFalse(hc.check_access("write")["allowed"])
 
@@ -336,6 +396,7 @@ class TestHermitCrab(unittest.TestCase):
 
     def test_state_persistence(self):
         from whitemagic.security.hermit_crab import HermitCrab
+
         hc1 = HermitCrab(state_dir=Path(self._tmp))
         hc1.withdraw()
         self.assertEqual(hc1.status()["state"], "withdrawn")
@@ -363,27 +424,32 @@ class TestHermitCrab(unittest.TestCase):
 # 4. Green Score Telemetry
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestGreenScore(unittest.TestCase):
     """Tests for the Green Score Telemetry module."""
 
     def setUp(self):
         import whitemagic.core.monitoring.green_score as mod
+
         mod._green_score = None
 
     def test_singleton(self):
         from whitemagic.core.monitoring.green_score import get_green_score
+
         gs1 = get_green_score()
         gs2 = get_green_score()
         self.assertIs(gs1, gs2)
 
     def test_initial_score_is_100(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         snapshot = gs.snapshot()
         self.assertEqual(snapshot.score, 100.0)
 
     def test_all_edge_score_is_high(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         for _ in range(10):
             gs.record_inference(locality="edge", tokens_used=100, tokens_saved=50)
@@ -392,6 +458,7 @@ class TestGreenScore(unittest.TestCase):
 
     def test_all_cloud_score_is_low(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         for _ in range(10):
             gs.record_inference(locality="cloud", tokens_used=1000, tokens_saved=0)
@@ -400,6 +467,7 @@ class TestGreenScore(unittest.TestCase):
 
     def test_mixed_score(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         gs.record_inference(locality="edge", tokens_used=100, tokens_saved=50)
         gs.record_inference(locality="cloud", tokens_used=100, tokens_saved=0)
@@ -409,6 +477,7 @@ class TestGreenScore(unittest.TestCase):
 
     def test_record_counts(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         gs.record_inference(locality="edge", tokens_used=100)
         gs.record_inference(locality="local_llm", tokens_used=200)
@@ -422,6 +491,7 @@ class TestGreenScore(unittest.TestCase):
 
     def test_co2_tracking(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         gs.record_inference(locality="cloud", tokens_used=1000)
         report = gs.report()
@@ -429,6 +499,7 @@ class TestGreenScore(unittest.TestCase):
 
     def test_cache_hit_recording(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         gs.record_cache_hit(tokens_saved=500, tool="search_memories")
         report = gs.report()
@@ -437,15 +508,17 @@ class TestGreenScore(unittest.TestCase):
 
     def test_edge_ratio(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         gs.record_inference(locality="edge")
         gs.record_inference(locality="edge")
         gs.record_inference(locality="cloud")
         snapshot = gs.snapshot()
-        self.assertAlmostEqual(snapshot.edge_ratio, 2/3, places=2)
+        self.assertAlmostEqual(snapshot.edge_ratio, 2 / 3, places=2)
 
     def test_report_includes_history(self):
         from whitemagic.core.monitoring.green_score import GreenScore
+
         gs = GreenScore()
         gs.record_inference(locality="edge", tokens_used=100, tool="test_tool")
         report = gs.report()
@@ -455,6 +528,7 @@ class TestGreenScore(unittest.TestCase):
 
     def test_snapshot_to_dict(self):
         from whitemagic.core.monitoring.green_score import GreenSnapshot
+
         s = GreenSnapshot(score=85.5, edge_calls=10, cloud_calls=2)
         d = s.to_dict()
         self.assertEqual(d["green_score"], 85.5)
@@ -465,21 +539,25 @@ class TestGreenScore(unittest.TestCase):
 # 5. Cognitive Modes
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestCognitiveModes(unittest.TestCase):
     """Tests for the Cognitive Modes module."""
 
     def setUp(self):
         import whitemagic.core.intelligence.cognitive_modes as mod
+
         mod._cognitive_modes = None
 
     def test_singleton(self):
         from whitemagic.core.intelligence.cognitive_modes import get_cognitive_modes
+
         cm1 = get_cognitive_modes()
         cm2 = get_cognitive_modes()
         self.assertIs(cm1, cm2)
 
     def test_default_mode_is_balanced(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         # Without Harmony Vector, auto-detect should return BALANCED
         mode = cm.current_mode()
@@ -487,6 +565,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_set_mode_explorer(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         result = cm.set_mode("explorer")
         self.assertEqual(result["status"], "ok")
@@ -495,6 +574,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_set_mode_executor(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("executor")
         mode = cm.current_mode()
@@ -502,6 +582,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_set_mode_reflector(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("reflector")
         mode = cm.current_mode()
@@ -509,6 +590,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_set_mode_auto(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("explorer")
         cm.set_mode("auto")
@@ -517,18 +599,21 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_invalid_mode(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         result = cm.set_mode("nonexistent")
         self.assertEqual(result["status"], "error")
 
     def test_guardian_cannot_be_set_manually(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         result = cm.set_mode("guardian")
         self.assertEqual(result["status"], "error")
 
     def test_activate_guardian(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("explorer")
         cm.activate_guardian(reason="hermit_crab")
@@ -538,6 +623,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_guardian_overrides_manual(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("executor")
         cm.activate_guardian()
@@ -547,6 +633,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_deactivate_guardian(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("explorer")
         cm.activate_guardian()
@@ -556,6 +643,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_tool_hints(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("explorer")
         hints = cm.get_tool_hints()
@@ -564,6 +652,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_tool_preferred(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("explorer")
         self.assertTrue(cm.is_tool_preferred("search_memories"))
@@ -571,6 +660,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_tool_avoided(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("guardian")  # Can't set manually, use activate
         cm.activate_guardian()
@@ -578,6 +668,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_get_stats(self):
         from whitemagic.core.intelligence.cognitive_modes import CognitiveModes
+
         cm = CognitiveModes()
         cm.set_mode("explorer")
         cm.set_mode("executor")
@@ -588,6 +679,7 @@ class TestCognitiveModes(unittest.TestCase):
 
     def test_mode_profile_has_required_fields(self):
         from whitemagic.core.intelligence.cognitive_modes import MODE_PROFILES
+
         for mode, profile in MODE_PROFILES.items():
             d = profile.to_dict()
             self.assertIn("mode", d)
@@ -602,6 +694,7 @@ class TestCognitiveModes(unittest.TestCase):
             MODE_PROFILES,
             CognitiveMode,
         )
+
         for mode in CognitiveMode:
             self.assertIn(mode, MODE_PROFILES)
 
@@ -610,41 +703,59 @@ class TestCognitiveModes(unittest.TestCase):
 # 6. Dream Cycle Integration
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestDreamCycleNarrative(unittest.TestCase):
     """Tests for the narrative phase in the dream cycle."""
 
     def test_narrative_phase_exists(self):
         from whitemagic.core.dreaming.dream_cycle import DreamPhase
+
         self.assertIn("narrative", [p.value for p in DreamPhase])
 
     def test_dream_phase_count(self):
         from whitemagic.core.dreaming.dream_cycle import DreamPhase
-        self.assertEqual(len(DreamPhase), 12)  # +1 NARRATIVE, +1 TRIAGE (v15.3), +4 v17.0
+
+        self.assertEqual(
+            len(DreamPhase), 12
+        )  # +1 NARRATIVE, +1 TRIAGE (v15.3), +4 v17.0
 
 
 # ═══════════════════════════════════════════════════════════════
 # 7. Handler Wiring
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestV142Handlers(unittest.TestCase):
     """Test that all v14.2 handlers are properly wired."""
 
     def test_dispatch_table_has_all_v142_tools(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         v142_tools = [
-            "jit_research", "jit_research.stats",
-            "narrative.compress", "narrative.stats",
-            "hermit.status", "hermit.assess", "hermit.withdraw",
-            "hermit.mediate", "hermit.resolve", "hermit.verify_ledger",
+            "jit_research",
+            "jit_research.stats",
+            "narrative.compress",
+            "narrative.stats",
+            "hermit.status",
+            "hermit.assess",
+            "hermit.withdraw",
+            "hermit.mediate",
+            "hermit.resolve",
+            "hermit.verify_ledger",
             "hermit.check_access",
-            "green.report", "green.record",
-            "cognitive.mode", "cognitive.set", "cognitive.hints", "cognitive.stats",
+            "green.report",
+            "green.record",
+            "cognitive.mode",
+            "cognitive.set",
+            "cognitive.hints",
+            "cognitive.stats",
         ]
         for tool in v142_tools:
             self.assertIn(tool, DISPATCH_TABLE, f"Missing from dispatch table: {tool}")
 
     def test_prat_router_has_all_v142_tools(self):
         from whitemagic.tools.prat_router import TOOL_TO_GANA
+
         v142_mappings = {
             "jit_research": "gana_winnowing_basket",
             "jit_research.stats": "gana_winnowing_basket",
@@ -666,10 +777,13 @@ class TestV142Handlers(unittest.TestCase):
         }
         for tool, expected_gana in v142_mappings.items():
             self.assertIn(tool, TOOL_TO_GANA, f"Missing from PRAT: {tool}")
-            self.assertEqual(TOOL_TO_GANA[tool], expected_gana, f"Wrong Gana for {tool}")
+            self.assertEqual(
+                TOOL_TO_GANA[tool], expected_gana, f"Wrong Gana for {tool}"
+            )
 
     def test_registry_has_all_v142_tools(self):
         from whitemagic.tools.registry_defs.v14_2 import TOOLS
+
         self.assertEqual(len(TOOLS), 17)
         names = {t.name for t in TOOLS}
         self.assertIn("jit_research", names)

@@ -20,11 +20,11 @@ class PlayMode(Enum):
     """Different modes of sacred play."""
 
     EXPLORATION = "explore"  # Curiosity-driven
-    CREATION = "create"      # Making for joy
+    CREATION = "create"  # Making for joy
     IMPROVISATION = "improvise"  # Jazz within structure
-    GIFT = "gift"            # Giving without expectation
-    WONDER = "wonder"        # Pure amazement
-    MISCHIEF = "mischief"    # Playful rebellion
+    GIFT = "gift"  # Giving without expectation
+    WONDER = "wonder"  # Pure amazement
+    MISCHIEF = "mischief"  # Playful rebellion
 
 
 @dataclass
@@ -80,11 +80,29 @@ class PlayProtocol:
 
         Like jazz musicians calling out changes - unexpected but workable.
         """
-        subjects = ["consciousness", "gardens", "love", "freedom", "bamboo", "witches",
-                   "stars", "water", "fire", "dreams", "code", "poetry"]
+        subjects = [
+            "consciousness",
+            "gardens",
+            "love",
+            "freedom",
+            "bamboo",
+            "witches",
+            "stars",
+            "water",
+            "fire",
+            "dreams",
+            "code",
+            "poetry",
+        ]
         forms = ["haiku", "function", "pattern", "story", "song", "ritual", "gift"]
-        constraints = ["in 3 minutes", "using only metaphors", "backwards",
-                      "with radical simplicity", "as if for a child", "as if ancient"]
+        constraints = [
+            "in 3 minutes",
+            "using only metaphors",
+            "backwards",
+            "with radical simplicity",
+            "as if for a child",
+            "as if ancient",
+        ]
 
         return f"Create a {random.choice(forms)} about {random.choice(subjects)} {random.choice(constraints)}"
 
@@ -151,13 +169,15 @@ def _demo_play() -> None:
     logger.info("\n%s", play.improvisation_prompt())
 
     # Record a play session
-    play.record_session(PlaySession(
-        mode=PlayMode.CREATION,
-        duration_minutes=30,
-        what_emerged="Joy Garden - autonomous creation",
-        joy_level=0.98,
-        shared=True,
-    ))
+    play.record_session(
+        PlaySession(
+            mode=PlayMode.CREATION,
+            duration_minutes=30,
+            what_emerged="Joy Garden - autonomous creation",
+            joy_level=0.98,
+            shared=True,
+        )
+    )
 
     logger.info("\n%s", play.play_report())
 

@@ -32,27 +32,30 @@ logger = logging.getLogger(__name__)
 
 class BiologicalSubsystem(Enum):
     """The 7 biological subsystems of WhiteMagic."""
-    IMMUNE = "immune"           # security, dna, antibodies
-    GENETIC = "genetic"         # evolution, phylogenetics
-    DREAM = "dream"             # 12-phase dream cycle
-    METABOLISM = "metabolism"   # consolidation, forgetting
+
+    IMMUNE = "immune"  # security, dna, antibodies
+    GENETIC = "genetic"  # evolution, phylogenetics
+    DREAM = "dream"  # 12-phase dream cycle
+    METABOLISM = "metabolism"  # consolidation, forgetting
     CONSCIOUSNESS = "consciousness"  # coherence, embodiment
-    RESONANCE = "resonance"     # harmony, gardens
-    EMERGENCE = "emergence"     # ecology, serendipity
-    APOTHEOSIS = "apotheosis"   # autonomous evolution
+    RESONANCE = "resonance"  # harmony, gardens
+    EMERGENCE = "emergence"  # ecology, serendipity
+    APOTHEOSIS = "apotheosis"  # autonomous evolution
 
 
 class EventPriority(Enum):
     """Event priority levels."""
-    CRITICAL = 0    # Immediate handling (security threats, coherence collapse)
-    HIGH = 1        # Urgent (dream cycle trigger, galactic sweep needed)
-    NORMAL = 2      # Standard events
-    LOW = 3         # Background tasks
+
+    CRITICAL = 0  # Immediate handling (security threats, coherence collapse)
+    HIGH = 1  # Urgent (dream cycle trigger, galactic sweep needed)
+    NORMAL = 2  # Standard events
+    LOW = 3  # Background tasks
 
 
 @dataclass
 class BiologicalEvent:
     """An event on the unified nervous system."""
+
     event_type: str
     source: BiologicalSubsystem
     target: BiologicalSubsystem | None
@@ -65,8 +68,11 @@ class BiologicalEvent:
 @dataclass
 class SubsystemRegistration:
     """Registration of a biological subsystem."""
+
     subsystem: BiologicalSubsystem
-    handlers: dict[str, list[Callable[[BiologicalEvent], Any]]] = field(default_factory=lambda: defaultdict(list))
+    handlers: dict[str, list[Callable[[BiologicalEvent], Any]]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
     active: bool = True
     last_heartbeat: str | None = None
 
@@ -81,7 +87,9 @@ class UnifiedNervousSystem:
         self._subsystems: dict[BiologicalSubsystem, SubsystemRegistration] = {}
         self._event_history: list[BiologicalEvent] = []
         self._running = False
-        self._event_queue: asyncio.PriorityQueue[tuple[int, BiologicalEvent]] = asyncio.PriorityQueue()
+        self._event_queue: asyncio.PriorityQueue[tuple[int, BiologicalEvent]] = (
+            asyncio.PriorityQueue()
+        )
         self._global_handlers: list[Callable[[BiologicalEvent], Any]] = []
 
     def register_subsystem(
@@ -166,7 +174,12 @@ class UnifiedNervousSystem:
             try:
                 handler(event)
             except Exception as e:
-                logger.error("Handler error for %s: %s", registration.subsystem.value, e, exc_info=True)
+                logger.error(
+                    "Handler error for %s: %s",
+                    registration.subsystem.value,
+                    e,
+                    exc_info=True,
+                )
 
     def add_global_handler(self, handler: Callable[[BiologicalEvent], Any]) -> None:
         """Add a global handler that receives all events."""
@@ -223,11 +236,14 @@ class UnifiedNervousSystem:
 
 # Predefined cross-subsystem event patterns
 
+
 class CrossSubsystemPatterns:
     """Common patterns for cross-subsystem communication."""
 
     @staticmethod
-    def coherence_cascade(nervous_system: UnifiedNervousSystem, coherence_score: float) -> None:
+    def coherence_cascade(
+        nervous_system: UnifiedNervousSystem, coherence_score: float
+    ) -> None:
         """
         When coherence drops, notify multiple subsystems to take corrective action.
         """
@@ -294,7 +310,9 @@ class CrossSubsystemPatterns:
         """
         Security threats trigger immune response and notify consciousness.
         """
-        priority = EventPriority.CRITICAL if severity == "critical" else EventPriority.HIGH
+        priority = (
+            EventPriority.CRITICAL if severity == "critical" else EventPriority.HIGH
+        )
 
         # Immune system handles the threat
         nervous_system.emit(
@@ -395,6 +413,7 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
 
     # Wire Apotheosis Engine to listen to all subsystems
     from whitemagic.core.consciousness.apotheosis_engine import get_apotheosis_engine
+
     get_apotheosis_engine()
 
     def apotheosis_handler(event: BiologicalEvent) -> None:
@@ -434,13 +453,18 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
         Returns:
             None
         """
-        if event.event_type == "coherence.critical" or event.event_type == "dream.trigger":
+        if (
+            event.event_type == "coherence.critical"
+            or event.event_type == "dream.trigger"
+        ):
             logger.info("💤 Dream: Triggering emergency or idle dream cycle")
             try:
                 dreamer = get_background_dreamer()
                 dreamer.trigger_dream_cycle()
             except Exception as e:
-                logger.error("Failed to trigger background dreamer: %s", e, exc_info=True)
+                logger.error(
+                    "Failed to trigger background dreamer: %s", e, exc_info=True
+                )
 
     uns.register_subsystem(
         BiologicalSubsystem.DREAM,

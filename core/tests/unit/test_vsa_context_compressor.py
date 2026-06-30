@@ -25,7 +25,9 @@ class TestVSAContextCompressor(unittest.TestCase):
     @patch("whitemagic.ai.vsa_context_compressor.get_hrr_engine")
     @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
     def test_compress_multiple_items(
-        self, mock_embed_cls: MagicMock, mock_hrr_getter: MagicMock,
+        self,
+        mock_embed_cls: MagicMock,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = [0.1] * 384
@@ -39,9 +41,21 @@ class TestVSAContextCompressor(unittest.TestCase):
 
         compressor = VSAContextCompressor(hrr=mock_hrr)
         items = [
-            {"content": "Memory about the bug that was found in the threading module causing a race condition during concurrent access to shared state variables", "source": "memory", "id": "1"},
-            {"content": "Session scratchpad note documenting the investigation steps taken so far including the initial diagnosis and potential fixes being considered", "source": "session", "id": "2"},
-            {"content": "Tool result output from the debugger showing the stack trace and variable states at the time of the crash with full diagnostic information", "source": "tool_result", "id": "3"},
+            {
+                "content": "Memory about the bug that was found in the threading module causing a race condition during concurrent access to shared state variables",
+                "source": "memory",
+                "id": "1",
+            },
+            {
+                "content": "Session scratchpad note documenting the investigation steps taken so far including the initial diagnosis and potential fixes being considered",
+                "source": "session",
+                "id": "2",
+            },
+            {
+                "content": "Tool result output from the debugger showing the stack trace and variable states at the time of the crash with full diagnostic information",
+                "source": "tool_result",
+                "id": "3",
+            },
         ]
 
         result = compressor.compress(items)
@@ -55,7 +69,9 @@ class TestVSAContextCompressor(unittest.TestCase):
     @patch("whitemagic.ai.vsa_context_compressor.get_hrr_engine")
     @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
     def test_compress_with_query_ranks_summaries(
-        self, mock_embed_cls: MagicMock, mock_hrr_getter: MagicMock,
+        self,
+        mock_embed_cls: MagicMock,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = [0.1] * 384
@@ -77,7 +93,9 @@ class TestVSAContextCompressor(unittest.TestCase):
             {"content": "Even more unrelated stuff", "source": "session"},
         ]
 
-        result = compressor.compress(items, query="race condition bug", max_text_items=2)
+        result = compressor.compress(
+            items, query="race condition bug", max_text_items=2
+        )
 
         # Should select items most relevant to "race condition bug"
         self.assertEqual(len(result.item_summaries), 2)
@@ -88,7 +106,9 @@ class TestVSAContextCompressor(unittest.TestCase):
     @patch("whitemagic.ai.vsa_context_compressor.get_hrr_engine")
     @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
     def test_compress_handles_encoding_failure(
-        self, mock_embed_cls: MagicMock, mock_hrr_getter: MagicMock,
+        self,
+        mock_embed_cls: MagicMock,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = None  # Encoding fails
@@ -111,7 +131,8 @@ class TestVSAContextCompressor(unittest.TestCase):
 
     @patch("whitemagic.ai.vsa_context_compressor.get_hrr_engine")
     def test_probe_recovers_role_filler(
-        self, mock_hrr_getter: MagicMock,
+        self,
+        mock_hrr_getter: MagicMock,
     ) -> None:
         mock_hrr = MagicMock()
         mock_hrr.get_relation_vector.return_value = [0.5] * 384

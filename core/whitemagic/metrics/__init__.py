@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Global metrics collector instance
 _tracker = None
 
+
 def get_tracker() -> MetricsCollector:
     """Get the global metrics tracker instance."""
     global _tracker
@@ -19,8 +20,14 @@ def get_tracker() -> MetricsCollector:
         _tracker = MetricsCollector()
     return _tracker
 
+
 # Simple metric tracking function for backward compatibility
-def track_metric(category: str, metric: str | None = None, value: float = 1.0, context: str | None = "") -> dict[str, Any]:
+def track_metric(
+    category: str,
+    metric: str | None = None,
+    value: float = 1.0,
+    context: str | None = "",
+) -> dict[str, Any]:
     """Track a metric value and persist to JSONL."""
     if metric is None:
         metric = category
@@ -48,4 +55,5 @@ def track_metric(category: str, metric: str | None = None, value: float = 1.0, c
     logger.info("METRIC: %s.%s=%s @ %s", category, metric, value, timestamp)
     return {"success": True}
 
-__all__ = ['MetricsCollector', 'track_metric', 'get_tracker']
+
+__all__ = ["MetricsCollector", "track_metric", "get_tracker"]

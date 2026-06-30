@@ -56,23 +56,45 @@ SECTION_HEADERS = re.compile(
     re.MULTILINE,
 )
 
-QUESTION_MARKERS = re.compile(
-    r"(?:^|\n)([A-Z][^.!?\n]{20,200}\?)", re.MULTILINE
-)
+QUESTION_MARKERS = re.compile(r"(?:^|\n)([A-Z][^.!?\n]{20,200}\?)", re.MULTILINE)
 
-CLAIM_MARKERS = re.compile(
-    r"(?:^|\n)([A-Z][^.!?\n]{40,300}\.)", re.MULTILINE
-)
+CLAIM_MARKERS = re.compile(r"(?:^|\n)([A-Z][^.!?\n]{40,300}\.)", re.MULTILINE)
 
 # Keywords that indicate a novel concept vs. generic chat
 CONCEPT_INDICATORS = [
-    "architecture", "framework", "protocol", "model", "system",
-    "hypothesis", "theory", "proposal", "design", "invention",
-    "manifesto", "strategy", "blueprint", "specification",
-    "governance", "economic", "consciousness", "emergence",
-    "karma", "dharma", "holographic", "resonance", "galactic",
-    "cognitive", "neural", "synthesis", "fusion", "polyglot",
-    "mandala", "gana", "grimoire", "constellation", "coherence",
+    "architecture",
+    "framework",
+    "protocol",
+    "model",
+    "system",
+    "hypothesis",
+    "theory",
+    "proposal",
+    "design",
+    "invention",
+    "manifesto",
+    "strategy",
+    "blueprint",
+    "specification",
+    "governance",
+    "economic",
+    "consciousness",
+    "emergence",
+    "karma",
+    "dharma",
+    "holographic",
+    "resonance",
+    "galactic",
+    "cognitive",
+    "neural",
+    "synthesis",
+    "fusion",
+    "polyglot",
+    "mandala",
+    "gana",
+    "grimoire",
+    "constellation",
+    "coherence",
 ]
 
 
@@ -90,9 +112,7 @@ def extract_concepts(text: str, source_file: str) -> list[dict]:
 
         # Score for concept density
         lowered = section.lower()
-        indicator_count = sum(
-            1 for kw in CONCEPT_INDICATORS if kw in lowered
-        )
+        indicator_count = sum(1 for kw in CONCEPT_INDICATORS if kw in lowered)
 
         # Find title/header
         title_match = re.search(r"^(?:#+\s*)?(.{10,120})$", section, re.MULTILINE)
@@ -105,22 +125,24 @@ def extract_concepts(text: str, source_file: str) -> list[dict]:
         questions = QUESTION_MARKERS.findall(section)
 
         if indicator_count >= 2 or (claims and indicator_count >= 1):
-            concept_id = hashlib.sha256(
-                f"{source_file}::{title}".encode()
-            ).hexdigest()[:16]
+            concept_id = hashlib.sha256(f"{source_file}::{title}".encode()).hexdigest()[
+                :16
+            ]
 
-            concepts.append({
-                "id": concept_id,
-                "source_file": source_file,
-                "title": title[:120],
-                "indicator_score": indicator_count,
-                "claim_count": len(claims),
-                "question_count": len(questions),
-                "char_length": len(section),
-                "preview": section[:800],
-                "sample_claims": claims[:5],
-                "sample_questions": questions[:3],
-            })
+            concepts.append(
+                {
+                    "id": concept_id,
+                    "source_file": source_file,
+                    "title": title[:120],
+                    "indicator_score": indicator_count,
+                    "claim_count": len(claims),
+                    "question_count": len(questions),
+                    "char_length": len(section),
+                    "preview": section[:800],
+                    "sample_claims": claims[:5],
+                    "sample_questions": questions[:3],
+                }
+            )
 
     return concepts
 
@@ -130,10 +152,10 @@ def build_library2_template(concept: dict) -> str:
     source = concept["source_file"]
     preview = concept["preview"][:400]
 
-    return f"""# {concept['title']}
+    return f"""# {concept["title"]}
 
 **Source:** `{source}`
-**Concept ID:** `{concept['id']}`
+**Concept ID:** `{concept["id"]}`
 
 ## Claim
 
@@ -200,7 +222,9 @@ def bootstrap_library2(concepts: list[dict], top_n: int = 50):
 
     for c in top:
         # Create subdirectory by category
-        source_dir = c["source_file"].split("/")[0] if "/" in c["source_file"] else "root"
+        source_dir = (
+            c["source_file"].split("/")[0] if "/" in c["source_file"] else "root"
+        )
         cat_dir = LIBRARY2_ROOT / source_dir
         cat_dir.mkdir(exist_ok=True)
 
@@ -217,10 +241,18 @@ def bootstrap_library2(concepts: list[dict], top_n: int = 50):
 
 def main():
     parser = argparse.ArgumentParser(description="LIBRARY Distiller")
-    parser.add_argument("--scan", action="store_true", help="Scan and index all concepts")
-    parser.add_argument("--extract", action="store_true", help="Extract concepts to JSON")
-    parser.add_argument("--bootstrap", action="store_true", help="Create LIBRARY2 with top templates")
-    parser.add_argument("--top", type=int, default=50, help="Number of concepts to bootstrap")
+    parser.add_argument(
+        "--scan", action="store_true", help="Scan and index all concepts"
+    )
+    parser.add_argument(
+        "--extract", action="store_true", help="Extract concepts to JSON"
+    )
+    parser.add_argument(
+        "--bootstrap", action="store_true", help="Create LIBRARY2 with top templates"
+    )
+    parser.add_argument(
+        "--top", type=int, default=50, help="Number of concepts to bootstrap"
+    )
     parser.add_argument("--show", type=int, default=10, help="Show top N concepts")
     args = parser.parse_args()
 
@@ -243,8 +275,10 @@ def main():
     for i, c in enumerate(concepts[:show_n]):
         score = c["indicator_score"]
         stars = "★" * min(score, 5) + "☆" * max(0, 5 - score)
-        print(f"  {i+1:2d}. {stars} [{score}] {c['title'][:80]}")
-        print(f"      {c['source_file']}  ({c['char_length']:,} chars, {c['claim_count']} claims)")
+        print(f"  {i + 1:2d}. {stars} [{score}] {c['title'][:80]}")
+        print(
+            f"      {c['source_file']}  ({c['char_length']:,} chars, {c['claim_count']} claims)"
+        )
         if c["sample_claims"]:
             print(f"      Claim: {c['sample_claims'][0][:120]}...")
         print()

@@ -11,6 +11,7 @@ The botched placement is the marker appearing inside a function
 docstring (e.g. line 8+ on a file with a function def at line 6
 that has a multi-line docstring starting at line 7).
 """
+
 from pathlib import Path
 
 ROOT = Path("whitemagic")

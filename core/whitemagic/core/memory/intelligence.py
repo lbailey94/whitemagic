@@ -28,8 +28,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- HOLOGRAPHIC STORAGE ---
-
 class HolographicStorage:
     """Stores information using high-dimensional holographic vectors."""
     def encode(self, data: Any) -> list[float]:
@@ -43,8 +41,6 @@ class HolographicStorage:
             list[float]
         """
         return [0.0] * 512
-
-# --- HRR (Holographic Reduced Representations) ---
 
 class HRREngine:
     """Handles vector binding and unbinding using circular convolution."""
@@ -63,8 +59,6 @@ class HRREngine:
         """
         return a
 
-# --- CONSOLIDATION & LIFECYCLE ---
-
 class MemoryLifecycle:
     """Manages the lifecycle of memories: short-term to long-term consolidation."""
     def consolidate(self):
@@ -73,7 +67,6 @@ class MemoryLifecycle:
         """
         logger.info("Consolidating memories...")
 
-# --- SINGLETONS ---
 _holographic: HolographicStorage | None = None
 _hrr: HRREngine | None = None
 _lifecycle: MemoryLifecycle | None = None

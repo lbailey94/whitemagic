@@ -42,6 +42,7 @@ log = logging.getLogger("resonance_diversity")
 
 def get_db_path() -> Path:
     from whitemagic.config.paths import DB_PATH
+
     return DB_PATH
 
 
@@ -55,28 +56,40 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 
 # Garden resonance profiles (damping, frequency, phase_offset)
 GARDEN_PROFILES = {
-    "core_garden": (0.05, 1.5, 0.0),      # Clear, sustained resonance
-    "knowledge_garden": (0.1, 2.0, 0.0),   # High frequency, precise
-    "wisdom_garden": (0.03, 0.8, 0.0),     # Deep, slow resonance
-    "ephemeral_garden": (0.4, 1.0, 0.0),   # Quick decay
-    "dream_garden": (0.08, 0.5, 0.5),      # Low frequency, phase-shifted
-    "emotion_garden": (0.15, 0.6, 0.3),    # Moderate damping, emotional
-    "code_garden": (0.12, 2.5, 0.0),       # High frequency, technical
-    "research_garden": (0.07, 1.8, 0.0),   # Balanced, analytical
-    "creative_garden": (0.06, 1.2, 0.4),   # Creative, flowing
-    "system_garden": (0.04, 1.0, 0.0),     # System-level, stable
+    "core_garden": (0.05, 1.5, 0.0),  # Clear, sustained resonance
+    "knowledge_garden": (0.1, 2.0, 0.0),  # High frequency, precise
+    "wisdom_garden": (0.03, 0.8, 0.0),  # Deep, slow resonance
+    "ephemeral_garden": (0.4, 1.0, 0.0),  # Quick decay
+    "dream_garden": (0.08, 0.5, 0.5),  # Low frequency, phase-shifted
+    "emotion_garden": (0.15, 0.6, 0.3),  # Moderate damping, emotional
+    "code_garden": (0.12, 2.5, 0.0),  # High frequency, technical
+    "research_garden": (0.07, 1.8, 0.0),  # Balanced, analytical
+    "creative_garden": (0.06, 1.2, 0.4),  # Creative, flowing
+    "system_garden": (0.04, 1.0, 0.0),  # System-level, stable
 }
 
 # Gana harmonic patterns
 GANA_HARMONICS = {
-    "Vasus": {"base_freq": 1.0, "harmonic": 2.0, "phase": 0.0},      # Material, grounded
-    "Rudras": {"base_freq": 1.5, "harmonic": 3.0, "phase": 0.2},     # Dynamic, transformative
-    "Adityas": {"base_freq": 0.8, "harmonic": 1.5, "phase": 0.4},    # Illuminating, cosmic
-    "Maruts": {"base_freq": 2.0, "harmonic": 4.0, "phase": 0.1},     # Storm, energetic
+    "Vasus": {"base_freq": 1.0, "harmonic": 2.0, "phase": 0.0},  # Material, grounded
+    "Rudras": {
+        "base_freq": 1.5,
+        "harmonic": 3.0,
+        "phase": 0.2,
+    },  # Dynamic, transformative
+    "Adityas": {
+        "base_freq": 0.8,
+        "harmonic": 1.5,
+        "phase": 0.4,
+    },  # Illuminating, cosmic
+    "Maruts": {"base_freq": 2.0, "harmonic": 4.0, "phase": 0.1},  # Storm, energetic
     "Rakshasas": {"base_freq": 0.6, "harmonic": 1.2, "phase": 0.6},  # Shadow, deep
-    "Yakshas": {"base_freq": 1.2, "harmonic": 2.5, "phase": 0.3},    # Nature, fertile
-    "Gandharvas": {"base_freq": 1.8, "harmonic": 3.5, "phase": 0.5}, # Musical, artistic
-    "Apsaras": {"base_freq": 1.3, "harmonic": 2.8, "phase": 0.7},    # Graceful, fluid
+    "Yakshas": {"base_freq": 1.2, "harmonic": 2.5, "phase": 0.3},  # Nature, fertile
+    "Gandharvas": {
+        "base_freq": 1.8,
+        "harmonic": 3.5,
+        "phase": 0.5,
+    },  # Musical, artistic
+    "Apsaras": {"base_freq": 1.3, "harmonic": 2.8, "phase": 0.7},  # Graceful, fluid
 }
 
 
@@ -209,7 +222,9 @@ def calculate_resonance_params(mem: sqlite3.Row) -> dict:
     )
 
     # Gana harmonic modulation
-    gana_profile = GANA_HARMONICS.get(gana, {"base_freq": 1.0, "harmonic": 2.0, "phase": 0.0})
+    gana_profile = GANA_HARMONICS.get(
+        gana, {"base_freq": 1.0, "harmonic": 2.0, "phase": 0.0}
+    )
     gana_freq = gana_profile["base_freq"]
     gana_harmonic = gana_profile["harmonic"]
     gana_phase = gana_profile["phase"]
@@ -225,20 +240,20 @@ def calculate_resonance_params(mem: sqlite3.Row) -> dict:
     # Final damping (lower = longer ring)
     damping = garden_damping
     # Importance reduces damping (important memories ring longer)
-    damping *= (1.0 - importance * 0.5)
+    damping *= 1.0 - importance * 0.5
     # Complexity slightly increases damping (complex signals decay faster)
-    damping *= (1.0 + complexity * 0.2)
+    damping *= 1.0 + complexity * 0.2
     # Emotion can increase or decrease damping based on valence
     if emotional_valence > 0:
-        damping *= (1.0 - emotion_factor * 0.3)  # Positive = longer ring
+        damping *= 1.0 - emotion_factor * 0.3  # Positive = longer ring
     else:
-        damping *= (1.0 + emotion_factor * 0.2)  # Negative = faster decay
+        damping *= 1.0 + emotion_factor * 0.2  # Negative = faster decay
     damping = max(0.01, min(1.0, damping))
 
     # Final frequency
     frequency = garden_freq * gana_freq
     # Importance increases frequency
-    frequency *= (1.0 + importance * 0.5)
+    frequency *= 1.0 + importance * 0.5
     # Complexity adds harmonic richness
     frequency += gana_harmonic * complexity * 0.3
     frequency = max(0.1, min(5.0, frequency))
@@ -250,7 +265,7 @@ def calculate_resonance_params(mem: sqlite3.Row) -> dict:
 
     # Amplitude (how strong the resonance is)
     amplitude = neuro_score * (0.5 + importance * 0.5)
-    amplitude *= (1.0 + emotion_factor * 0.3)
+    amplitude *= 1.0 + emotion_factor * 0.3
     amplitude = max(0.1, min(2.0, amplitude))
 
     # Quality factor (Q = frequency / (2 * damping))
@@ -330,7 +345,7 @@ def build_resonance_diversity(limit: int = 0, dry_run: bool = False) -> dict:
 
             conn.execute(
                 "UPDATE memories SET metadata = ? WHERE id = ?",
-                (json.dumps(metadata), mem["id"])
+                (json.dumps(metadata), mem["id"]),
             )
             updated += 1
 

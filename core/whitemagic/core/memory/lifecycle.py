@@ -122,10 +122,6 @@ class MemoryLifecycleManager:
         )
         self._sweep_thread.start()
 
-    # ------------------------------------------------------------------
-    # Temporal Scheduler integration
-    # ------------------------------------------------------------------
-
     def attach(self) -> bool:
         """Hook into the temporal scheduler's SLOW lane post-flush."""
         if self._attached:
@@ -161,10 +157,6 @@ class MemoryLifecycleManager:
                 # Sweep already in progress or queued, skip this one
                 pass
 
-    # ------------------------------------------------------------------
-    # Core sweep
-    # ------------------------------------------------------------------
-
     def run_sweep(self, persist: bool | None = None) -> dict[str, Any]:
         """Run a full retention sweep + galactic rotation.
 
@@ -178,7 +170,6 @@ class MemoryLifecycleManager:
 
         start = time.perf_counter()
 
-        # Phase 1: Retention sweep
         report = None
         try:
             from whitemagic.core.memory.mindful_forgetting import get_retention_engine
@@ -198,7 +189,6 @@ class MemoryLifecycleManager:
                 protected=0,
             )
 
-        # Phase 2: Galactic rotation (update distances from retention scores)
         galactic_report = None
         try:
             from whitemagic.core.memory.galactic_map import get_galactic_map
@@ -209,7 +199,6 @@ class MemoryLifecycleManager:
         except Exception as e:
             logger.debug("Galactic rotation skipped: %s", e)
 
-        # Phase 3: Decay drift (inactive memories drift outward)
         drift_report = None
         try:
             from whitemagic.core.memory.galactic_map import get_galactic_map
@@ -218,7 +207,6 @@ class MemoryLifecycleManager:
         except Exception as e:
             logger.debug("Decay drift skipped: %s", e)
 
-        # Phase 4: Association strength decay (v14.0 Living Graph)
         assoc_decay_report = None
         try:
             from whitemagic.core.memory.unified import get_unified_memory
@@ -324,10 +312,6 @@ class MemoryLifecycleManager:
         except (ImportError, AttributeError):
             pass
 
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -348,10 +332,6 @@ class MemoryLifecycleManager:
         """
         return self._attached
 
-    # ------------------------------------------------------------------
-    # Async versions for PSR-013
-    # ------------------------------------------------------------------
-
     async def run_sweep_async(self, persist: bool | None = None) -> dict[str, Any]:
         """Async version of run_sweep for non-blocking lifecycle operations."""
         if persist is None:
@@ -360,7 +340,6 @@ class MemoryLifecycleManager:
         start = time.perf_counter()
         loop = asyncio.get_event_loop()
 
-        # Phase 1: Retention sweep (run in executor)
         def run_retention_sweep() -> Any:
             """
             Run the retention sweep operation.
@@ -378,7 +357,6 @@ class MemoryLifecycleManager:
         if report is None:
             return {"status": "error", "message": "Retention engine returned no report"}
 
-        # Phase 2: Galactic rotation (async version)
         galactic_report = None
         try:
             from whitemagic.core.memory.galactic_map import get_galactic_map
@@ -394,7 +372,6 @@ class MemoryLifecycleManager:
         except Exception as e:
             logger.debug("Galactic rotation skipped: %s", e)
 
-        # Phase 3: Decay drift
         drift_report = None
         try:
             from whitemagic.core.memory.galactic_map import get_galactic_map
@@ -404,7 +381,6 @@ class MemoryLifecycleManager:
         except Exception as e:
             logger.debug("Decay drift skipped: %s", e)
 
-        # Phase 4: Association strength decay
         assoc_decay_report = None
         try:
             from whitemagic.core.memory.unified import get_unified_memory
@@ -474,10 +450,6 @@ class MemoryLifecycleManager:
         return summary
 
 
-    # ------------------------------------------------------------------
-    # DGA facade methods (fused from DGAEngine)
-    # ------------------------------------------------------------------
-
     _dga_engine_instance: Any = None
 
     def _get_dga_engine(self):
@@ -495,10 +467,6 @@ class MemoryLifecycleManager:
         """Calculate evolutionary distance between two DGA signatures."""
         return self._get_dga_engine().calculate_distance(sig_a, sig_b)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _manager: MemoryLifecycleManager | None = None
 _manager_lock = threading.Lock()

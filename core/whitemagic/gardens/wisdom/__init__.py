@@ -16,6 +16,7 @@ Holographic Integration:
 - Past-informed (Z-axis -0.2) — wisdom learns from experience
 - High importance (W-axis +0.35) — wisdom guides all else
 """
+
 from __future__ import annotations
 
 import logging
@@ -69,8 +70,9 @@ class WisdomGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=-0.1, y=0.5, z=-0.2, w=0.35)
 
-    def record_query(self, query: str, result_count: int = 0,
-                     quality_score: float = 0.0) -> dict[str, Any]:
+    def record_query(
+        self, query: str, result_count: int = 0, quality_score: float = 0.0
+    ) -> dict[str, Any]:
         """Record a search query for pattern analysis."""
         entry = {
             "query": query,
@@ -85,8 +87,9 @@ class WisdomGarden(BaseGarden, GanYingMixin):
                 self.recall_quality_scores.append(quality_score)
         return entry
 
-    def record_insight(self, insight: str, source: str = "unknown",
-                       confidence: float = 0.7) -> dict[str, Any]:
+    def record_insight(
+        self, insight: str, source: str = "unknown", confidence: float = 0.7
+    ) -> dict[str, Any]:
         """Record a wisdom insight — a distilled understanding."""
         entry = {
             "insight": insight,
@@ -104,8 +107,11 @@ class WisdomGarden(BaseGarden, GanYingMixin):
     def get_search_summary(self) -> dict[str, Any]:
         """Get summary of search activity for the Winnowing Basket tools."""
         with self._lock:
-            avg_quality = (sum(self.recall_quality_scores) / len(self.recall_quality_scores)
-                           if self.recall_quality_scores else 0.0)
+            avg_quality = (
+                sum(self.recall_quality_scores) / len(self.recall_quality_scores)
+                if self.recall_quality_scores
+                else 0.0
+            )
             return {
                 "total_queries": self._total_queries,
                 "total_insights": self._total_insights,
@@ -116,13 +122,15 @@ class WisdomGarden(BaseGarden, GanYingMixin):
 
     def get_status(self) -> dict[str, Any]:
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "total_queries": self._total_queries,
-            "total_insights": self._total_insights,
-            "wisdom_level": round(self.wisdom_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "total_queries": self._total_queries,
+                "total_insights": self._total_insights,
+                "wisdom_level": round(self.wisdom_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.TRUTH_SPOKEN)
@@ -133,10 +141,14 @@ class WisdomGarden(BaseGarden, GanYingMixin):
     @listen_for(EventType.PATTERN_DETECTED)
     def on_pattern(self, event: Any) -> None:
         """Pattern detection feeds wisdom."""
-        self.record_insight("Pattern recognized as wisdom", source="pattern", confidence=0.7)
+        self.record_insight(
+            "Pattern recognized as wisdom", source="pattern", confidence=0.7
+        )
 
 
 _instance = None
+
+
 def get_wisdom_garden() -> WisdomGarden:
     global _instance
     if _instance is None:

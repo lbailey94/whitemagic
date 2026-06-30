@@ -9,11 +9,14 @@ class GlobalWorkspace:
     A high-bandwidth bus where all cores publish state events.
     Enforces arbitration based on salience score (urgency + novelty).
     """
+
     def __init__(self):
         self.events = []
         self.active_core = None
 
-    def publish_event(self, core_id: str, event_type: str, payload: dict[str, Any], salience: float):
+    def publish_event(
+        self, core_id: str, event_type: str, payload: dict[str, Any], salience: float
+    ):
         """
         Publish or send a event event.
 
@@ -28,7 +31,7 @@ class GlobalWorkspace:
             "core": core_id,
             "type": event_type,
             "payload": payload,
-            "salience": salience
+            "salience": salience,
         }
         self.events.append(event)
         self._arbitrate()
@@ -49,7 +52,4 @@ class GlobalWorkspace:
         """
         Get the state.
         """
-        return {
-            "active_core": self.active_core,
-            "event_backlog": len(self.events)
-        }
+        return {"active_core": self.active_core, "event_backlog": len(self.events)}

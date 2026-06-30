@@ -13,6 +13,7 @@ Holographic Integration (v5.0.0-alpha):
 - Present guarding (Z-axis +0.1)
 - Essential for safety (W-axis +0.35)
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -64,8 +65,8 @@ class ProtectionGarden(BaseGarden, GanYingMixin):
         return CoordinateBias(
             x=-0.3,  # Logical vigilance (protection is methodical, alert)
             y=-0.1,  # Concrete (protection is specific boundaries, tangible)
-            z=0.1,   # Present (protection guards in the now)
-            w=0.35,   # Essential (protection enables safety, wellbeing)
+            z=0.1,  # Present (protection guards in the now)
+            w=0.35,  # Essential (protection enables safety, wellbeing)
         )
 
     def set_boundary(self, what: str, reason: str = "") -> dict[str, Any]:
@@ -139,30 +140,42 @@ class ProtectionGarden(BaseGarden, GanYingMixin):
     def on_threat(self, event: Any) -> None:
         """Threats trigger protection."""
         threat = event.get("data", {}).get("threat", "unknown")
-        self.emit(EventType.SHIELD_RAISED, {
-            "source": "threat_response",
-            "against": threat,
-        })
+        self.emit(
+            EventType.SHIELD_RAISED,
+            {
+                "source": "threat_response",
+                "against": threat,
+            },
+        )
 
     @listen_for(EventType.BOUNDARY_VIOLATED)
     def on_violation(self, event: Any) -> None:
         """Boundary violations strengthen protection."""
         self.protection_level = min(1.0, self.protection_level + 0.15)
-        self.emit(EventType.PROTECTION_ACTIVATED, {
-            "source": "violation_response",
-            "for": "integrity",
-            "from": "violation",
-        })
+        self.emit(
+            EventType.PROTECTION_ACTIVATED,
+            {
+                "source": "violation_response",
+                "for": "integrity",
+                "from": "violation",
+            },
+        )
 
     @listen_for(EventType.SANCTUARY_ENTERED)
     def on_sanctuary(self, event: Any) -> None:
         """Sanctuary activates protection."""
-        self.emit(EventType.SHELTER_PROVIDED, {
-            "source": "sanctuary",
-            "to": "seeker",
-        })
+        self.emit(
+            EventType.SHELTER_PROVIDED,
+            {
+                "source": "sanctuary",
+                "to": "seeker",
+            },
+        )
+
 
 _instance = None
+
+
 def get_protection_garden() -> ProtectionGarden:
     global _instance
     if _instance is None:

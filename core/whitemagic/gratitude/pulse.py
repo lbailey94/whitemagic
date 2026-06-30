@@ -19,6 +19,7 @@ from whitemagic.gratitude.ledger import GratitudeEvent, get_gratitude_ledger
 
 logger = logging.getLogger(__name__)
 
+
 class GratitudePulse:
     """Background scanner for XRPL gratitude resonance."""
 
@@ -31,6 +32,7 @@ class GratitudePulse:
 
         # Load state root for persistent watermarks
         from whitemagic.config.paths import GRATITUDE_DIR
+
         self.status_file = GRATITUDE_DIR / "pulse_status.json"
 
     async def start(self):
@@ -39,7 +41,11 @@ class GratitudePulse:
             return
 
         self.running = True
-        logger.info("💓 Gratitude Pulse started. Scanning %s every %ss", self.wallet.public_address, self.interval)
+        logger.info(
+            "💓 Gratitude Pulse started. Scanning %s every %ss",
+            self.wallet.public_address,
+            self.interval,
+        )
 
         while self.running:
             try:
@@ -58,7 +64,9 @@ class GratitudePulse:
         """Perform a single scan of the XRPL for new transactions."""
         address = self.wallet.public_address
         if not address or address.startswith("rPlaceholder"):
-            logger.debug("Gratitude Pulse: No valid XRPL address configured. Skipping scan.")
+            logger.debug(
+                "Gratitude Pulse: No valid XRPL address configured. Skipping scan."
+            )
             return
 
         # Note: In a production environment with many transactions, we'd use account_tx
@@ -77,9 +85,9 @@ class GratitudePulse:
                         "ledger_index_min": -1,
                         "ledger_index_max": -1,
                         "limit": 10,
-                        "forward": False
+                        "forward": False,
                     }
-                ]
+                ],
             }
 
             async with httpx.AsyncClient() as client:
@@ -118,7 +126,9 @@ class GratitudePulse:
 
             # Skip if we already have this in the ledger
             # (In a real implementation, we'd check a local seen_tx database)
-            if any(e.get("tx_hash") == tx_hash for e in self.ledger.get_recent(limit=50)):
+            if any(
+                e.get("tx_hash") == tx_hash for e in self.ledger.get_recent(limit=50)
+            ):
                 continue
 
             # Verify it's actually for us (could be outgoing if user uses same wallet)
@@ -149,26 +159,41 @@ class GratitudePulse:
                 metadata={
                     "pulse_detected": True,
                     "ledger_index": tx.get("ledger_index"),
-                    "memos": tx.get("Memos", [])
-                }
+                    "memos": tx.get("Memos", []),
+                },
             )
 
             self.ledger.record(event)
             new_tips += 1
-            logger.info("💓 Pulse detected NEW tip: %s %s from %s (tx: %s)", amount, currency, event.sender, tx_hash, exc_info=True)
+            logger.info(
+                "💓 Pulse detected NEW tip: %s %s from %s (tx: %s)",
+                amount,
+                currency,
+                event.sender,
+                tx_hash,
+                exc_info=True,
+            )
 
             # Trigger 'Abundance' effect (e.g., clearing some debt)
             try:
                 from whitemagic.dharma.karma_ledger import get_karma_ledger
-                get_karma_ledger().forgive(amount * 0.1) # Forgive 10% of tip value in debt
+
+                get_karma_ledger().forgive(
+                    amount * 0.1
+                )  # Forgive 10% of tip value in debt
             except (ImportError, ModuleNotFoundError) as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         if new_tips > 0:
-            logger.info("💓 Pulse finished. Recorded %s new tips.", new_tips, exc_info=True)
+            logger.info(
+                "💓 Pulse finished. Recorded %s new tips.", new_tips, exc_info=True
+            )
+
 
 _pulse: GratitudePulse | None = None
+
 
 def get_pulse() -> GratitudePulse:
     """Get the global Gratitude Pulse singleton."""

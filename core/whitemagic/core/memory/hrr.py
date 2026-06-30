@@ -97,10 +97,6 @@ class HRREngine:
             raise ValueError(f"Expected dim={self._dim}, got shape={arr.shape}")
         return cast(np.ndarray, arr)
 
-    # ------------------------------------------------------------------
-    # Core HRR operations
-    # ------------------------------------------------------------------
-
     def bind(
         self, a: list[float] | np.ndarray, b: list[float] | np.ndarray,
     ) -> np.ndarray:
@@ -171,10 +167,6 @@ class HRREngine:
             return 0.0
         return float(dot / (norm_a * norm_b))
 
-    # ------------------------------------------------------------------
-    # Relation operations
-    # ------------------------------------------------------------------
-
     def get_relation_vector(self, relation: str) -> np.ndarray:
         """Get the canonical vector for a named relation.
 
@@ -222,10 +214,6 @@ class HRREngine:
         rel_vec = self.get_relation_vector(relation)
         return self.unbind(embedding, rel_vec)
 
-    # ------------------------------------------------------------------
-    # Composite event encoding
-    # ------------------------------------------------------------------
-
     def encode_event(
         self,
         agent: list[float] | np.ndarray | None = None,
@@ -270,10 +258,6 @@ class HRREngine:
         """
         return self.unbind(event, self.get_relation_vector(role))
 
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         return {
             "dim": self._dim,
@@ -284,10 +268,6 @@ class HRREngine:
     def available_relations(self) -> list[str]:
         return sorted(self._relation_vectors.keys())
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _engine: HRREngine | None = None
 _engine_lock = threading.Lock()

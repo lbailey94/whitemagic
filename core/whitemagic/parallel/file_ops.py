@@ -64,10 +64,14 @@ class ParallelFileReader:
 
         try:
             if not path.exists():
-                return FileReadResult(path=path, error=f"File not found: {path}", success=False)
+                return FileReadResult(
+                    path=path, error=f"File not found: {path}", success=False
+                )
 
             if not path.is_file():
-                return FileReadResult(path=path, error=f"Not a file: {path}", success=False)
+                return FileReadResult(
+                    path=path, error=f"Not a file: {path}", success=False
+                )
 
             content = path.read_text(encoding=self.encoding)
             size = path.stat().st_size
@@ -78,7 +82,9 @@ class ParallelFileReader:
             return FileReadResult(path=path, error=str(e), success=False)
 
     async def read_batch(
-        self, paths: list[str | Path], fail_fast: bool = False,
+        self,
+        paths: list[str | Path],
+        fail_fast: bool = False,
     ) -> list[FileReadResult]:
         """Read multiple files in parallel.
 
@@ -94,7 +100,9 @@ class ParallelFileReader:
             return []
 
         # Prepare tasks
-        tasks: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [(self._read_single_file, (path,), {}) for path in paths]
+        tasks: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+            (self._read_single_file, (path,), {}) for path in paths
+        ]
 
         # Execute in parallel
         results = await self.manager.run_batch(tasks, pool_type="io")
@@ -187,7 +195,9 @@ class ParallelFileReader:
 
 
 async def batch_read_files(
-    paths: list[str | Path], max_workers: int = 64, encoding: str = "utf-8",
+    paths: list[str | Path],
+    max_workers: int = 64,
+    encoding: str = "utf-8",
 ) -> list[FileReadResult]:
     """Convenience function to read multiple files in parallel.
 
@@ -219,7 +229,8 @@ async def batch_read_files(
 
 
 async def batch_read_files_dict(
-    paths: list[str | Path], max_workers: int = 64,
+    paths: list[str | Path],
+    max_workers: int = 64,
 ) -> dict[str, str]:
     """Read multiple files and return as dictionary.
 

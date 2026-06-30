@@ -29,6 +29,7 @@ def handle_bitnet_infer(**kwargs: Any) -> dict[str, Any]:
     # Emit Gan Ying event
     try:
         from whitemagic.inference.bitnet_bridge import _emit_inference_event
+
         _emit_inference_event(result, prompt)
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced bitnet execute error: %s", e, exc_info=True)

@@ -14,6 +14,7 @@ Cooling schedule:
 
 T_{t+1} = T_t · cooling_rate + emergence_signal · reheat_amount
 """
+
 from __future__ import annotations
 
 import logging
@@ -33,12 +34,13 @@ except ImportError:
 @dataclass
 class ThermodynamicState:
     """State of the thermodynamic selection system."""
-    temperature: float = 1.0          # Current temperature T
-    cooling_rate: float = 0.95        # Multiplicative cooling per cycle
-    reheat_amount: float = 0.3        # Additive reheat on emergence signal
-    min_temperature: float = 0.01     # Minimum temperature (never fully cold)
-    max_temperature: float = 2.0      # Maximum temperature (cap)
-    cycle_count: int = 0              # Number of cycles elapsed
+
+    temperature: float = 1.0  # Current temperature T
+    cooling_rate: float = 0.95  # Multiplicative cooling per cycle
+    reheat_amount: float = 0.3  # Additive reheat on emergence signal
+    min_temperature: float = 0.01  # Minimum temperature (never fully cold)
+    max_temperature: float = 2.0  # Maximum temperature (cap)
+    cycle_count: int = 0  # Number of cycles elapsed
     discovery_rate_history: list[float] = field(default_factory=list)
 
     def cool(self) -> None:
@@ -80,7 +82,7 @@ class ThermodynamicState:
             previous = self.discovery_rate_history[-2]
             if recent < previous:
                 # Discovery slowing — cool faster
-                rate = self.cooling_rate ** 2
+                rate = self.cooling_rate**2
             else:
                 rate = self.cooling_rate
         else:
@@ -185,7 +187,9 @@ def boltzmann_probabilities(
         List of probabilities summing to 1.
     """
     if _rust_call is not None and energies:
-        result = _rust_call("boltzmann_probabilities", energies=energies, temperature=temperature)
+        result = _rust_call(
+            "boltzmann_probabilities", energies=energies, temperature=temperature
+        )
         if result is not None:
             return result["probabilities"]
 

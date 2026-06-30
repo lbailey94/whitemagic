@@ -59,12 +59,16 @@ class TestPathHygiene:
         readonly_temp.mkdir()
         readonly_temp.chmod(0o555)
 
-        with patch.dict(os.environ, {
-            "WM_STATE_ROOT": str(bad_root),
-            "WM_FALLBACK_TO_CWD": "false",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "WM_STATE_ROOT": str(bad_root),
+                "WM_FALLBACK_TO_CWD": "false",
+            },
+        ):
             # Mock tempfile.gettempdir to return the read-only path
             import tempfile as _tempfile_module
+
             original_gettempdir = _tempfile_module.gettempdir
             _tempfile_module.gettempdir = lambda: str(readonly_temp)
 
@@ -99,12 +103,16 @@ class TestPathHygiene:
         readonly_temp.mkdir()
         readonly_temp.chmod(0o555)
 
-        with patch.dict(os.environ, {
-            "WM_STATE_ROOT": str(bad_root),
-            "WM_FALLBACK_TO_CWD": "true",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "WM_STATE_ROOT": str(bad_root),
+                "WM_FALLBACK_TO_CWD": "true",
+            },
+        ):
             # Mock tempfile.gettempdir to return the read-only path
             import tempfile as _tempfile_module
+
             original_gettempdir = _tempfile_module.gettempdir
             _tempfile_module.gettempdir = lambda: str(readonly_temp)
 
@@ -194,13 +202,25 @@ class TestPathHygiene:
     def test_paths_are_absolute(self):
         """All critical paths must be absolute paths."""
         from whitemagic.config.paths import (
-            WM_ROOT, DATA_DIR, MEMORY_DIR, CACHE_DIR,
-            SESSIONS_DIR, LOGS_DIR, ARTIFACTS_DIR, DB_PATH,
+            WM_ROOT,
+            DATA_DIR,
+            MEMORY_DIR,
+            CACHE_DIR,
+            SESSIONS_DIR,
+            LOGS_DIR,
+            ARTIFACTS_DIR,
+            DB_PATH,
         )
 
         critical_paths = [
-            WM_ROOT, DATA_DIR, MEMORY_DIR, CACHE_DIR,
-            SESSIONS_DIR, LOGS_DIR, ARTIFACTS_DIR, DB_PATH,
+            WM_ROOT,
+            DATA_DIR,
+            MEMORY_DIR,
+            CACHE_DIR,
+            SESSIONS_DIR,
+            LOGS_DIR,
+            ARTIFACTS_DIR,
+            DB_PATH,
         ]
 
         for path in critical_paths:
@@ -225,7 +245,9 @@ class TestPathHygiene:
             stat = WM_ROOT.stat()
             mode = stat.st_mode & 0o777
             # Allow 0o700 or 0o755 (some environments need group read)
-            assert mode in (0o700, 0o755, 0o750), f"WM_ROOT has overly permissive mode: {oct(mode)}"
+            assert mode in (0o700, 0o755, 0o750), (
+                f"WM_ROOT has overly permissive mode: {oct(mode)}"
+            )
 
 
 class TestPathCICompliance:

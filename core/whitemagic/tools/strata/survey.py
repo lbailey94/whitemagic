@@ -1,14 +1,13 @@
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from whitemagic.tools.strata.file_index import FileIndex
 
 __all__ = ["SurveyReport"]
 
 
-def _git_file_dates(project_path: Path) -> Dict[str, Optional[datetime]]:
+def _git_file_dates(project_path: Path) -> dict[str, datetime | None]:
     """Return the last commit timestamp for every tracked file."""
     try:
         result = subprocess.run(
@@ -23,9 +22,9 @@ def _git_file_dates(project_path: Path) -> Dict[str, Optional[datetime]]:
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return {}
 
-    file_to_time: Dict[str, Optional[datetime]] = {}
-    current_sha: Optional[str] = None
-    current_time: Optional[datetime] = None
+    file_to_time: dict[str, datetime | None] = {}
+    current_sha: str | None = None
+    current_time: datetime | None = None
     for line in result.stdout.splitlines():
         stripped = line.strip()
         if not stripped:
@@ -35,7 +34,7 @@ def _git_file_dates(project_path: Path) -> Dict[str, Optional[datetime]]:
             if len(sha) == 40 and ts_str.isdigit():
                 current_sha = sha
                 try:
-                    current_time = datetime.fromtimestamp(int(ts_str), tz=timezone.utc)
+                    current_time = datetime.fromtimestamp(int(ts_str), tz=UTC)
                 except ValueError:
                     current_time = None
                 continue
@@ -47,9 +46,9 @@ def _git_file_dates(project_path: Path) -> Dict[str, Optional[datetime]]:
     return file_to_time
 
 
-def _recent_commits_by_file(project_path: Path, days: int = 7) -> Dict[str, int]:
+def _recent_commits_by_file(project_path: Path, days: int = 7) -> dict[str, int]:
     """Count how many times each file was touched in the last N days."""
-    since = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    since = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     since_str = since.strftime("%Y-%m-%d")
     try:
         result = subprocess.run(
@@ -64,7 +63,7 @@ def _recent_commits_by_file(project_path: Path, days: int = 7) -> Dict[str, int]
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return {}
 
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
     for line in result.stdout.splitlines():
         line = line.strip()
         if line:
@@ -79,14 +78,14 @@ class SurveyReport:
         self.project_path = project_path
         self.file_index = FileIndex(project_path)
 
-    def _collect_files(self) -> List[Path]:
+    def _collect_files(self) -> list[Path]:
         files = []
         for p in self.project_path.rglob("*"):
             if p.is_file() and not self.file_index.should_skip(p):
                 files.append(p)
         return files
 
-    def _fingerprint_frameworks(self) -> List[str]:
+    def _fingerprint_frameworks(self) -> list[str]:
         """Detect common framework/config fingerprints."""
         fingerprints = []
         checks = {
@@ -98,8 +97,14 @@ class SurveyReport:
             "Rust/Cargo": ("Cargo.toml",),
             "Go modules": ("go.mod",),
             "Node.js": ("package.json",),
-            "Pytest": ("pytest.ini", "pyproject.toml",),
-            "Docker": ("Dockerfile", "docker-compose.yml",),
+            "Pytest": (
+                "pytest.ini",
+                "pyproject.toml",
+            ),
+            "Docker": (
+                "Dockerfile",
+                "docker-compose.yml",
+            ),
             "GitHub Actions": (".github/workflows",),
         }
         for name, markers in checks.items():
@@ -111,14 +116,14 @@ class SurveyReport:
 
     def render(self) -> str:
         files = self._collect_files()
-        lines: List[str] = [
+        lines: list[str] = [
             f"STRATA Surface Survey: {self.project_path.name}",
             "=" * 60,
             "",
         ]
 
         # Language distribution
-        ext_counts: Dict[str, int] = {}
+        ext_counts: dict[str, int] = {}
         for f in files:
             ext = f.suffix.lower() or "(no ext)"
             ext_counts[ext] = ext_counts.get(ext, 0) + 1
@@ -130,7 +135,12 @@ class SurveyReport:
         lines.append("")
 
         # Largest files
-        file_sizes = [(f, len(f.read_text(encoding="utf-8", errors="ignore").splitlines())) for f in files if f.suffix in {".py", ".rs", ".go", ".js", ".ts", ".c", ".cpp", ".java", ".sh"}]
+        file_sizes = [
+            (f, len(f.read_text(encoding="utf-8", errors="ignore").splitlines()))
+            for f in files
+            if f.suffix
+            in {".py", ".rs", ".go", ".js", ".ts", ".c", ".cpp", ".java", ".sh"}
+        ]
         file_sizes.sort(key=lambda x: -x[1])
         if file_sizes:
             lines.append("🏔️  Largest Files (by line count)")
@@ -146,7 +156,7 @@ class SurveyReport:
         if last_commit:
             hot = []
             cold = []
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             for rel_path, ts in last_commit.items():
                 if ts is None:
                     continue

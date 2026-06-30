@@ -28,7 +28,7 @@ class SharedContext:
     active_goals: list[str]
     collective_state: dict[str, Any]
     resonance_index: dict[str, float]  # GratitudeIndex: agent_id -> score
-    lineage_tree: dict[str, list[str]] # PhylogeneticTree: parent_sig -> children_sigs
+    lineage_tree: dict[str, list[str]]  # PhylogeneticTree: parent_sig -> children_sigs
 
 
 class CollectiveMemory:
@@ -50,6 +50,7 @@ class CollectiveMemory:
         """Connect to Gan Ying Bus."""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self.bus = get_bus()
             logger.info("🎵 Collective Memory connected to Gan Ying Bus")
         except ImportError:
@@ -129,16 +130,19 @@ class CollectiveMemory:
         if self.bus:
             try:
                 from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
-                self.bus.emit(ResonanceEvent(
-                    source="sangha_collective",
-                    event_type=EventType.PATTERN_DETECTED,
-                    data={
-                        "insight": insight_entry["content"],
-                        "confidence": insight_entry["confidence"],
-                        "collective": True,
-                    },
-                    confidence=insight_entry["confidence"],
-                ))
+
+                self.bus.emit(
+                    ResonanceEvent(
+                        source="sangha_collective",
+                        event_type=EventType.PATTERN_DETECTED,
+                        data={
+                            "insight": insight_entry["content"],
+                            "confidence": insight_entry["confidence"],
+                            "collective": True,
+                        },
+                        confidence=insight_entry["confidence"],
+                    )
+                )
             except (ImportError, AttributeError):
                 pass
 
@@ -168,8 +172,7 @@ class CollectiveMemory:
         # Filter by tags if specified
         if tags:
             insights = [
-                i for i in insights
-                if any(tag in i.get("tags", []) for tag in tags)
+                i for i in insights if any(tag in i.get("tags", []) for tag in tags)
             ]
 
         # Sort by confidence * upvotes
@@ -212,11 +215,13 @@ class CollectiveMemory:
             if "completed_goals" not in context.collective_state:
                 context.collective_state["completed_goals"] = []
 
-            context.collective_state["completed_goals"].append({
-                "goal": goal,
-                "completed_by": session_id,
-                "completed_at": datetime.now().isoformat(),
-            })
+            context.collective_state["completed_goals"].append(
+                {
+                    "goal": goal,
+                    "completed_by": session_id,
+                    "completed_at": datetime.now().isoformat(),
+                }
+            )
 
             context.last_updated = datetime.now()
             self._save_context(context)
@@ -229,7 +234,12 @@ class CollectiveMemory:
         context.resonance_index[target_id] = current + intensity
         context.last_updated = datetime.now()
         self._save_context(context)
-        logger.info("🙏 Gratitude resonance recorded for %s: +%s", target_id, intensity, exc_info=True)
+        logger.info(
+            "🙏 Gratitude resonance recorded for %s: +%s",
+            target_id,
+            intensity,
+            exc_info=True,
+        )
 
     def record_lineage(self, parent_sig: str, child_sig: str) -> None:
         """Record a new fork in the phylogenetic tree."""
@@ -240,7 +250,9 @@ class CollectiveMemory:
             context.lineage_tree[parent_sig].append(child_sig)
             context.last_updated = datetime.now()
             self._save_context(context)
-            logger.info("🧬 Lineage link established: %s -> %s", parent_sig[:8], child_sig[:8])
+            logger.info(
+                "🧬 Lineage link established: %s -> %s", parent_sig[:8], child_sig[:8]
+            )
 
     def _save_context(self, context: SharedContext) -> None:
         """Save shared context to disk.

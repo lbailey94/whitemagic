@@ -11,6 +11,7 @@ from typing import Any
 
 try:
     import numpy as np
+
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
@@ -24,8 +25,8 @@ except ImportError:
 class HexagramType(Enum):
     """Types of hexagram changes"""
 
-    STATIC = "static"          # No changing lines
-    DYNAMIC = "dynamic"        # Changing lines present
+    STATIC = "static"  # No changing lines
+    DYNAMIC = "dynamic"  # Changing lines present
     TRANSFORMING = "transforming"  # Full transformation possible
 
 
@@ -71,7 +72,15 @@ class HexagramDatabase:
         from .hexagram_data import COMPLETE_HEXAGRAMS
 
         self.hexagrams: dict[int, dict[str, Any]] = {}
-        for number, name, chinese, judgment, image, symbol, guidance in COMPLETE_HEXAGRAMS:
+        for (
+            number,
+            name,
+            chinese,
+            judgment,
+            image,
+            symbol,
+            guidance,
+        ) in COMPLETE_HEXAGRAMS:
             normalized_name = name.replace("The ", "").strip()
             keywords = [normalized_name.split()[0].lower()] if normalized_name else []
             self.hexagrams[number] = {
@@ -86,14 +95,54 @@ class HexagramDatabase:
 
         # Trigram relationships
         self.trigrams = {
-            0: {"name": "Earth", "element": "earth", "direction": "SW", "family": "mother"},
-            1: {"name": "Thunder", "element": "wood", "direction": "E", "family": "eldest son"},
-            2: {"name": "Water", "element": "water", "direction": "N", "family": "middle son"},
-            3: {"name": "Mountain", "element": "earth", "direction": "NE", "family": "youngest son"},
-            4: {"name": "Wind", "element": "wood", "direction": "SE", "family": "eldest daughter"},
-            5: {"name": "Fire", "element": "fire", "direction": "S", "family": "middle daughter"},
-            6: {"name": "Lake", "element": "water", "direction": "W", "family": "youngest daughter"},
-            7: {"name": "Heaven", "element": "heaven", "direction": "NW", "family": "father"},
+            0: {
+                "name": "Earth",
+                "element": "earth",
+                "direction": "SW",
+                "family": "mother",
+            },
+            1: {
+                "name": "Thunder",
+                "element": "wood",
+                "direction": "E",
+                "family": "eldest son",
+            },
+            2: {
+                "name": "Water",
+                "element": "water",
+                "direction": "N",
+                "family": "middle son",
+            },
+            3: {
+                "name": "Mountain",
+                "element": "earth",
+                "direction": "NE",
+                "family": "youngest son",
+            },
+            4: {
+                "name": "Wind",
+                "element": "wood",
+                "direction": "SE",
+                "family": "eldest daughter",
+            },
+            5: {
+                "name": "Fire",
+                "element": "fire",
+                "direction": "S",
+                "family": "middle daughter",
+            },
+            6: {
+                "name": "Lake",
+                "element": "water",
+                "direction": "W",
+                "family": "youngest daughter",
+            },
+            7: {
+                "name": "Heaven",
+                "element": "heaven",
+                "direction": "NW",
+                "family": "father",
+            },
         }
 
     @lru_cache(maxsize=128)
@@ -124,7 +173,9 @@ class QuantumIChing:
         self.superposition_capacity = 64  # All hexagrams
 
     # Cache removed to allow quantum fluctuations
-    def consult(self, question: str, context: dict[str, Any] | None = None) -> ConsultationResult:
+    def consult(
+        self, question: str, context: dict[str, Any] | None = None
+    ) -> ConsultationResult:
         """Perform a quantum I Ching consultation"""
         context_data = context or {}
 
@@ -140,17 +191,25 @@ class QuantumIChing:
         # Calculate transformed hexagram if needed
         transformed_hexagram = None
         if changing_lines:
-            transformed_hexagram = self._calculate_transformed_hexagram(primary_hexagram, changing_lines)
+            transformed_hexagram = self._calculate_transformed_hexagram(
+                primary_hexagram, changing_lines
+            )
 
         # Get hexagram data
         primary_data = self._get_hexagram_or_default(primary_hexagram)
-        transformed_data = self.db.get_hexagram(transformed_hexagram) if transformed_hexagram else None
+        transformed_data = (
+            self.db.get_hexagram(transformed_hexagram) if transformed_hexagram else None
+        )
 
         # Generate wisdom
-        wisdom = self._generate_wisdom(primary_hexagram, changing_lines, question, context_data)
+        wisdom = self._generate_wisdom(
+            primary_hexagram, changing_lines, question, context_data
+        )
 
         # Generate guidance
-        guidance = self._generate_guidance(primary_hexagram, transformed_hexagram, question)
+        guidance = self._generate_guidance(
+            primary_hexagram, transformed_hexagram, question
+        )
 
         # Calculate resonance
         resonance = self._calculate_resonance(quantum_state, primary_hexagram)
@@ -164,7 +223,9 @@ class QuantumIChing:
             changing_lines=changing_lines,
             transformed_hexagram=transformed_hexagram,
             transformed_name=transformed_data["name"] if transformed_data else None,
-            transformed_judgment=transformed_data["judgment"] if transformed_data else None,
+            transformed_judgment=transformed_data["judgment"]
+            if transformed_data
+            else None,
             quantum_signature=self._generate_quantum_signature(quantum_state),
             resonance_score=resonance,
             wisdom=wisdom,
@@ -194,7 +255,9 @@ class QuantumIChing:
             "keywords": ["unknown"],
         }
 
-    def _create_quantum_state(self, question: str, context: dict[str, Any]) -> QuantumState:
+    def _create_quantum_state(
+        self, question: str, context: dict[str, Any]
+    ) -> QuantumState:
         """Create quantum superposition based on question and context"""
         # Hash the question to seed quantum state
         question_hash = hashlib.sha256(question.encode()).hexdigest()
@@ -222,7 +285,7 @@ class QuantumIChing:
                     amplitudes[i] *= modulation
 
         # Normalize amplitudes
-        total = sum(abs(a)**2 for a in amplitudes.values())
+        total = sum(abs(a) ** 2 for a in amplitudes.values())
         for i in amplitudes:
             amplitudes[i] = amplitudes[i] / math.sqrt(total)
 
@@ -300,7 +363,9 @@ class QuantumIChing:
 
         return sorted(changing_lines)
 
-    def _calculate_transformed_hexagram(self, primary: int, changing_lines: list[int]) -> int:
+    def _calculate_transformed_hexagram(
+        self, primary: int, changing_lines: list[int]
+    ) -> int:
         """Calculate the transformed hexagram from changing lines"""
         # Convert primary hexagram to binary representation
         primary_binary = self._hexagram_to_binary(primary)
@@ -325,8 +390,13 @@ class QuantumIChing:
         """Convert 6-bit binary to hexagram number"""
         return int(int(binary, 2) + 1)
 
-    def _generate_wisdom(self, hexagram: int, changing_lines: list[int],
-                        question: str, context: dict[str, Any] | None) -> str:
+    def _generate_wisdom(
+        self,
+        hexagram: int,
+        changing_lines: list[int],
+        question: str,
+        context: dict[str, Any] | None,
+    ) -> str:
         """Generate wisdom based on hexagram and context using Local Brain"""
         hex_data = self._get_hexagram_or_default(hexagram)
 
@@ -340,9 +410,9 @@ class QuantumIChing:
             Question: "{question}"
             Context: {context}
 
-            Hexagram #{hexagram}: {hex_data['name']} ({hex_data['chinese']})
-            Judgment: {hex_data['judgment']}
-            Image: {hex_data['image']}
+            Hexagram #{hexagram}: {hex_data["name"]} ({hex_data["chinese"]})
+            Judgment: {hex_data["judgment"]}
+            Image: {hex_data["image"]}
             Changing Lines: {changing_lines}
 
             Provide a profound, mystical, yet practical interpretation (max 3 sentences).
@@ -356,7 +426,7 @@ class QuantumIChing:
                     return response_text.strip()
 
         except ImportError:
-            pass # Fallback to template
+            pass  # Fallback to template
         except (ImportError, ModuleNotFoundError) as e:
             print(f"⚠️ Brain disconnect: {e}")
 
@@ -375,13 +445,19 @@ class QuantumIChing:
 
         return base_wisdom
 
-    def _generate_guidance(self, primary: int, transformed: int | None, question: str) -> str:
+    def _generate_guidance(
+        self, primary: int, transformed: int | None, question: str
+    ) -> str:
         """Generate practical guidance"""
         primary_data = self._get_hexagram_or_default(primary)
 
         guidance = "\n🎯 Practical Guidance:\n"
         primary_keywords = primary_data.get("keywords") if primary_data else None
-        primary_focus = primary_keywords[0] if primary_keywords else (primary_data.get("name") if primary_data else "unknown")
+        primary_focus = (
+            primary_keywords[0]
+            if primary_keywords
+            else (primary_data.get("name") if primary_data else "unknown")
+        )
         guidance += f"• Primary focus: {primary_focus}\n"
 
         if transformed:
@@ -421,10 +497,14 @@ class QuantumIChing:
     def _generate_quantum_signature(self, state: QuantumState) -> str:
         """Generate unique quantum signature"""
         # Create hash from quantum state
-        signature_data = f"{len(state.amplitudes)}:{state.coherence:.3f}:{len(state.entanglement)}"
+        signature_data = (
+            f"{len(state.amplitudes)}:{state.coherence:.3f}:{len(state.entanglement)}"
+        )
         return hashlib.md5(signature_data.encode()).hexdigest()[:12].upper()
 
-    def _analyze_context(self, question: str, context: dict[str, Any] | None) -> dict[str, Any]:
+    def _analyze_context(
+        self, question: str, context: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """Analyze the context of the consultation"""
         analysis = {
             "question_length": len(question),
@@ -511,11 +591,15 @@ class QuantumIChing:
         total_resonance = 0.0
 
         for c in self.consultation_history:
-            hexagram_counts[c.primary_hexagram] = hexagram_counts.get(c.primary_hexagram, 0) + 1
+            hexagram_counts[c.primary_hexagram] = (
+                hexagram_counts.get(c.primary_hexagram, 0) + 1
+            )
             total_resonance += c.resonance_score
 
         # Most common hexagrams
-        most_common = sorted(hexagram_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        most_common = sorted(hexagram_counts.items(), key=lambda x: x[1], reverse=True)[
+            :5
+        ]
 
         return {
             "total_consultations": total,
@@ -556,7 +640,9 @@ def quantum_iching_cli(question: str, context: str = "") -> Any:
     if result.changing_lines:
         print(f"\nChanging Lines: {', '.join(map(str, result.changing_lines))}")
         if result.transformed_hexagram:
-            print(f"\nTRANSFORMED HEXAGRAM: #{result.transformed_hexagram} - {result.transformed_name}")
+            print(
+                f"\nTRANSFORMED HEXAGRAM: #{result.transformed_hexagram} - {result.transformed_name}"
+            )
             print(f"Transformed Judgment: {result.transformed_judgment}")
 
     print("\n" + "─" * 40)

@@ -17,6 +17,7 @@ try:
     )
     from sqlalchemy.ext.asyncio import AsyncAttrs
     from sqlalchemy.orm import DeclarativeBase, relationship
+
     HAS_SQLALCHEMY = True
 
     class Base(DeclarativeBase):
@@ -26,21 +27,32 @@ try:
 
 except ImportError:
     HAS_SQLALCHEMY = False
+
     # Stub classes for when SQLAlchemy not available
     class DeclarativeBase:
         """DeclarativeBase: declarative base."""
+
         pass
+
     class AsyncAttrs:
         """AsyncAttrs: async attrs."""
+
         pass
+
     class Base:
         """Base: base."""
+
         pass
-    Column = Integer = String = DateTime = Boolean = ForeignKey = Float = Text = relationship = None
+
+    Column = Integer = String = DateTime = Boolean = ForeignKey = Float = Text = (
+        relationship
+    ) = None
 
 if HAS_SQLALCHEMY:
+
     class User(Base):
         """User: user."""
+
         __tablename__ = "users"
 
         id = Column(Integer, primary_key=True)
@@ -51,12 +63,17 @@ if HAS_SQLALCHEMY:
         is_active = Column(Boolean, default=True, nullable=False)
 
         # Relationships
-        api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-        quotas = relationship("Quota", back_populates="user", cascade="all, delete-orphan")
+        api_keys = relationship(
+            "APIKey", back_populates="user", cascade="all, delete-orphan"
+        )
+        quotas = relationship(
+            "Quota", back_populates="user", cascade="all, delete-orphan"
+        )
         usage_records = relationship("UsageRecord", back_populates="user")
 
     class APIKey(Base):
         """APIKey: api key."""
+
         __tablename__ = "api_keys"
 
         id = Column(Integer, primary_key=True)
@@ -73,6 +90,7 @@ if HAS_SQLALCHEMY:
 
     class Quota(Base):
         """Quota: quota."""
+
         __tablename__ = "quotas"
 
         id = Column(Integer, primary_key=True)
@@ -89,6 +107,7 @@ if HAS_SQLALCHEMY:
 
     class UsageRecord(Base):
         """UsageRecord: usage record."""
+
         __tablename__ = "usage_records"
 
         id = Column(Integer, primary_key=True)
@@ -98,13 +117,16 @@ if HAS_SQLALCHEMY:
         status_code = Column(Integer, nullable=False)
         response_time_ms = Column(Float, nullable=False)
         tokens_used = Column(Integer, default=0)
-        created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+        created_at = Column(
+            DateTime, default=datetime.utcnow, nullable=False, index=True
+        )
 
         # Relationships
         user = relationship("User", back_populates="usage_records")
 
     class Memory(Base):
         """Memory: memory."""
+
         __tablename__ = "memories"
 
         id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -117,14 +139,17 @@ if HAS_SQLALCHEMY:
         # Metadata
         importance = Column(Float, default=0.5)
         resonance = Column(Float, default=0.0)
-        tags = Column(Text, default="[]") # JSON string
-        embedding = Column(Text, nullable=True) # JSON string or Blob
+        tags = Column(Text, default="[]")  # JSON string
+        embedding = Column(Text, nullable=True)  # JSON string or Blob
 
         created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-        updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        updated_at = Column(
+            DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        )
 
     class MemoryLink(Base):
         """MemoryLink: memory link."""
+
         __tablename__ = "memory_links"
 
         id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -135,14 +160,24 @@ if HAS_SQLALCHEMY:
         target_id = Column(String(36), ForeignKey("memories.id"), nullable=False)
 
         created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-        updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        updated_at = Column(
+            DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        )
 
-        source = relationship("Memory", foreign_keys=[source_id], back_populates="links_outgoing")
-        target = relationship("Memory", foreign_keys=[target_id], back_populates="links_incoming")
+        source = relationship(
+            "Memory", foreign_keys=[source_id], back_populates="links_outgoing"
+        )
+        target = relationship(
+            "Memory", foreign_keys=[target_id], back_populates="links_incoming"
+        )
 
     # Add back_populates to Memory after defining MemoryLink
-    Memory.links_outgoing = relationship("MemoryLink", foreign_keys=[MemoryLink.source_id], back_populates="source")
-    Memory.links_incoming = relationship("MemoryLink", foreign_keys=[MemoryLink.target_id], back_populates="target")
+    Memory.links_outgoing = relationship(
+        "MemoryLink", foreign_keys=[MemoryLink.source_id], back_populates="source"
+    )
+    Memory.links_incoming = relationship(
+        "MemoryLink", foreign_keys=[MemoryLink.target_id], back_populates="target"
+    )
 
 else:
     # Fallback to simple dataclasses when SQLAlchemy not available
@@ -152,7 +187,8 @@ else:
     class User:
         """User: user.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         id: int = 0
         username: str = ""
         email: str = ""
@@ -162,7 +198,8 @@ else:
     class APIKey:
         """APIKey: api key.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         id: int = 0
         user_id: int = 0
         key_hash: str = ""
@@ -173,7 +210,8 @@ else:
     class Quota:
         """Quota: quota.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         id: int = 0
         user_id: int = 0
         plan: str = "free"
@@ -184,7 +222,8 @@ else:
     class UsageRecord:
         """UsageRecord: usage record.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         id: int = 0
         user_id: int = 0
         endpoint: str = ""
@@ -195,7 +234,8 @@ else:
     class Memory:
         """Memory: memory.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         id: str = ""
         title: str = ""
         content: str = ""
@@ -204,7 +244,8 @@ else:
     class MemoryLink:
         """MemoryLink: memory link.
 
-    Value object: equality and repr are field-based."""
+        Value object: equality and repr are field-based."""
+
         id: str = ""
         source_id: str = ""
         target_id: str = ""

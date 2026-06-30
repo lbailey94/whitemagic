@@ -100,7 +100,9 @@ class ClaimLog:
             self._prune_old()
         return claim_id
 
-    def verify(self, tool: str, params: dict[str, Any] | None = None) -> ClaimEntry | None:
+    def verify(
+        self, tool: str, params: dict[str, Any] | None = None
+    ) -> ClaimEntry | None:
         """Mark the oldest unverified claim for this tool as verified."""
         with self._lock:
             self._prune_old()
@@ -165,7 +167,9 @@ class VoiceAuditScanner:
         """Convenience: register a claim in the underlying log."""
         return self._claim_log.register(module, tool, params)
 
-    def verify_claim(self, tool: str, params: dict[str, Any] | None = None) -> ClaimEntry | None:
+    def verify_claim(
+        self, tool: str, params: dict[str, Any] | None = None
+    ) -> ClaimEntry | None:
         """Convenience: verify a claim in the underlying log."""
         return self._claim_log.verify(tool, params)
 
@@ -179,11 +183,14 @@ class VoiceAuditScanner:
         ledger_entries: list[dict[str, Any]] = []
         try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger
+
             ledger = get_karma_ledger()
             with ledger._lock:
                 ledger_entries = [e.to_dict() for e in ledger._entries[-5000:]]
         except Exception as exc:
-            logger.warning("VoiceAudit could not read karma ledger: %s", exc, exc_info=True)
+            logger.warning(
+                "VoiceAudit could not read karma ledger: %s", exc, exc_info=True
+            )
 
         # Build a lookup of recent tool calls from ledger
         ledger_tools: set[str] = {e["tool"] for e in ledger_entries}
@@ -192,13 +199,15 @@ class VoiceAuditScanner:
             if claim.tool in ledger_tools:
                 report.verified_claims += 1
             else:
-                report.hallucinated_claims.append({
-                    "claim_id": claim.claim_id,
-                    "module": claim.module,
-                    "tool": claim.tool,
-                    "params": claim.params,
-                    "claimed_at": claim.claimed_at.isoformat(),
-                })
+                report.hallucinated_claims.append(
+                    {
+                        "claim_id": claim.claim_id,
+                        "module": claim.module,
+                        "tool": claim.tool,
+                        "params": claim.params,
+                        "claimed_at": claim.claimed_at.isoformat(),
+                    }
+                )
 
         # Orphaned ledger entries: tools in ledger with no claim at all
         # (this is normal for direct tool calls; only report if configured)
@@ -210,8 +219,9 @@ class VoiceAuditScanner:
 
         if report.quarantine_triggered:
             logger.warning(
-                "VoiceAudit: %s hallucinated claims detected"
-            , len(report.hallucinated_claims))
+                "VoiceAudit: %s hallucinated claims detected",
+                len(report.hallucinated_claims),
+            )
 
         return report
 
@@ -227,10 +237,6 @@ class VoiceAuditScanner:
             "last_report": self._last_report.to_dict() if self._last_report else None,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _scanner_instance: VoiceAuditScanner | None = None
 _scanner_lock = threading.Lock()

@@ -22,15 +22,17 @@ logger = logging.getLogger(__name__)
 
 class GrimoireState(Enum):
     """Current state of the grimoire"""
-    DORMANT = "dormant"      # Not active
+
+    DORMANT = "dormant"  # Not active
     LISTENING = "listening"  # Monitoring context
-    CASTING = "casting"      # Actively casting spell
-    LEARNING = "learning"    # Processing outcomes
+    CASTING = "casting"  # Actively casting spell
+    LEARNING = "learning"  # Processing outcomes
 
 
 @dataclass
 class GrimoireContext:
     """Current context for spell selection"""
+
     task: str = ""
     emotional_state: str = "neutral"
     zodiac_sign: str = "aries"
@@ -72,6 +74,7 @@ class GrimoireContext:
 @dataclass
 class SpellRecommendation:
     """A recommended spell with confidence"""
+
     spell_name: str
     chapter: int
     confidence: float
@@ -205,19 +208,24 @@ class Grimoire:
                 reason_parts.append(f"Wu Xing {current_wu_xing.value}")
 
             if score > 0:
-                recommendations.append(SpellRecommendation(
-                    spell_name=f"Chapter {chapter_num} Spells",
-                    chapter=chapter_num,
-                    confidence=min(score, 1.0),
-                    reason=", ".join(reason_parts) if reason_parts else "general match",
-                    auto_cast=score >= 0.7,
-                ))
+                recommendations.append(
+                    SpellRecommendation(
+                        spell_name=f"Chapter {chapter_num} Spells",
+                        chapter=chapter_num,
+                        confidence=min(score, 1.0),
+                        reason=", ".join(reason_parts)
+                        if reason_parts
+                        else "general match",
+                        auto_cast=score >= 0.7,
+                    )
+                )
 
         recommendations.sort(key=lambda r: r.confidence, reverse=True)
         return recommendations[:max_results]
 
 
 _grimoire_engine_instance: Grimoire | None = None
+
 
 def get_grimoire_engine() -> Grimoire:
     """

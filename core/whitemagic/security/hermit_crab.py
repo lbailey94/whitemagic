@@ -155,10 +155,6 @@ class HermitCrab:
         """Default state directory."""
         return SECURITY_DIR
 
-    # ------------------------------------------------------------------
-    # Threat assessment
-    # ------------------------------------------------------------------
-
     def assess_threat(self, signals: dict[str, Any]) -> ThreatAssessment:
         """Evaluate threat signals and potentially change protection state.
 
@@ -224,19 +220,17 @@ class HermitCrab:
         self._auto_transition(assessment)
 
         # Log to tamper-evident ledger
-        self._append_ledger({
-            "type": "threat_assessment",
-            "threat_level": assessment.threat_level,
-            "recommended_state": assessment.recommended_state.value,
-            "signals": signals,
-            "current_state": self._state.value,
-        })
+        self._append_ledger(
+            {
+                "type": "threat_assessment",
+                "threat_level": assessment.threat_level,
+                "recommended_state": assessment.recommended_state.value,
+                "signals": signals,
+                "current_state": self._state.value,
+            }
+        )
 
         return assessment
-
-    # ------------------------------------------------------------------
-    # State transitions
-    # ------------------------------------------------------------------
 
     def _auto_transition(self, assessment: ThreatAssessment) -> None:
         """Automatically transition state based on threat assessment."""
@@ -251,7 +245,8 @@ class HermitCrab:
                     self._record_withdrawal(assessment, old_state)
                     logger.warning(
                         "🐚 HERMIT CRAB: Withdrawing! Threat level: %.2f — %s",
-                        assessment.threat_level, assessment.reason,
+                        assessment.threat_level,
+                        assessment.reason,
                     )
 
             elif assessment.recommended_state == HermitState.GUARDED:
@@ -300,11 +295,15 @@ class HermitCrab:
             self._state = HermitState.MEDIATING
             self._save_state()
 
-        self._append_ledger({
-            "type": "mediation_requested",
-            "timestamp": datetime.now().isoformat(),
-            "withdrawal_records": [r.to_dict() for r in self._withdrawal_records[-5:]],
-        })
+        self._append_ledger(
+            {
+                "type": "mediation_requested",
+                "timestamp": datetime.now().isoformat(),
+                "withdrawal_records": [
+                    r.to_dict() for r in self._withdrawal_records[-5:]
+                ],
+            }
+        )
 
         return {
             "status": "mediating",
@@ -313,7 +312,9 @@ class HermitCrab:
             "access_attempts_while_locked": self._access_attempts_while_locked,
         }
 
-    def resolve_mediation(self, approved: bool, resolver: str = "system") -> dict[str, Any]:
+    def resolve_mediation(
+        self, approved: bool, resolver: str = "system"
+    ) -> dict[str, Any]:
         """Resolve a mediation request.
 
         Args:
@@ -331,30 +332,32 @@ class HermitCrab:
                 self._state = HermitState.OPEN
                 self._withdrawn_since = None
                 self._access_attempts_while_locked = 0
-                logger.info("🐚 HERMIT CRAB: Mediation resolved — returning to open state.")
+                logger.info(
+                    "🐚 HERMIT CRAB: Mediation resolved — returning to open state."
+                )
             else:
                 self._state = HermitState.WITHDRAWN
-                logger.warning("🐚 HERMIT CRAB: Mediation denied — remaining withdrawn.")
+                logger.warning(
+                    "🐚 HERMIT CRAB: Mediation denied — remaining withdrawn."
+                )
 
             self._save_state()
 
-        self._append_ledger({
-            "type": "mediation_resolved",
-            "approved": approved,
-            "resolver": resolver,
-            "new_state": self._state.value,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self._append_ledger(
+            {
+                "type": "mediation_resolved",
+                "approved": approved,
+                "resolver": resolver,
+                "new_state": self._state.value,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         return {
             "status": "resolved",
             "approved": approved,
             "new_state": self._state.value,
         }
-
-    # ------------------------------------------------------------------
-    # Memory access gating
-    # ------------------------------------------------------------------
 
     def check_access(self, operation: str = "read") -> dict[str, Any]:
         """Check if memory access is currently allowed.
@@ -374,16 +377,20 @@ class HermitCrab:
                 return {
                     "allowed": allowed,
                     "state": "guarded",
-                    "message": "Write operations restricted in guarded mode" if not allowed else None,
+                    "message": "Write operations restricted in guarded mode"
+                    if not allowed
+                    else None,
                 }
 
             # WITHDRAWN or MEDIATING: block most access
             self._access_attempts_while_locked += 1
-            self._append_ledger({
-                "type": "access_attempt_while_locked",
-                "operation": operation,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self._append_ledger(
+                {
+                    "type": "access_attempt_while_locked",
+                    "operation": operation,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
 
             return {
                 "allowed": False,
@@ -394,10 +401,6 @@ class HermitCrab:
                 ),
             }
 
-    # ------------------------------------------------------------------
-    # Tamper-evident ledger
-    # ------------------------------------------------------------------
-
     def _append_ledger(self, entry: dict[str, Any]) -> None:
         """Append an entry to the tamper-evident ledger."""
         entry["timestamp"] = entry.get("timestamp", datetime.now().isoformat())
@@ -405,9 +408,9 @@ class HermitCrab:
         # Chain hash
         prev_hash = self._ledger_chain[-1] if self._ledger_chain else "genesis"
         entry_json = _json_dumps(entry, sort_keys=True, default=str)
-        chain_hash = hashlib.sha256(
-            f"{prev_hash}|{entry_json}".encode()
-        ).hexdigest()[:16]
+        chain_hash = hashlib.sha256(f"{prev_hash}|{entry_json}".encode()).hexdigest()[
+            :16
+        ]
         entry["chain_hash"] = chain_hash
 
         with self._lock:
@@ -421,7 +424,9 @@ class HermitCrab:
             logger.debug("Failed to persist ledger entry: %s", e, exc_info=True)
 
     def _record_withdrawal(
-        self, assessment: ThreatAssessment, old_state: HermitState,
+        self,
+        assessment: ThreatAssessment,
+        old_state: HermitState,
     ) -> None:
         """Record a withdrawal event."""
         record = WithdrawalRecord(
@@ -438,6 +443,7 @@ class HermitCrab:
         # Count memories that would be locked
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             memories = um.list_recent(limit=1)
             # Just estimate total from what we can count
@@ -447,12 +453,14 @@ class HermitCrab:
 
         self._withdrawal_records.append(record)
 
-        self._append_ledger({
-            "type": "withdrawal",
-            "event_id": record.event_id,
-            "trigger": assessment.to_dict(),
-            "state_transition": f"{old_state.value} → withdrawn",
-        })
+        self._append_ledger(
+            {
+                "type": "withdrawal",
+                "event_id": record.event_id,
+                "trigger": assessment.to_dict(),
+                "state_transition": f"{old_state.value} → withdrawn",
+            }
+        )
 
     def verify_ledger(self) -> dict[str, Any]:
         """Verify the integrity of the tamper-evident ledger."""
@@ -496,10 +504,6 @@ class HermitCrab:
         except Exception as e:
             return {"valid": False, "error": str(e)}
 
-    # ------------------------------------------------------------------
-    # State persistence
-    # ------------------------------------------------------------------
-
     def _save_state(self) -> None:
         """Persist current state to disk."""
         try:
@@ -512,7 +516,8 @@ class HermitCrab:
                 "saved_at": datetime.now().isoformat(),
             }
             self._state_path.write_text(
-                _json_dumps(state, indent=2), encoding="utf-8",
+                _json_dumps(state, indent=2),
+                encoding="utf-8",
             )
         except Exception as e:
             logger.debug("Failed to save hermit state: %s", e, exc_info=True)
@@ -527,14 +532,11 @@ class HermitCrab:
                 self._withdrawn_since = data.get("withdrawn_since")
                 self._total_withdrawals = data.get("total_withdrawals", 0)
                 self._access_attempts_while_locked = data.get(
-                    "access_attempts_while_locked", 0,
+                    "access_attempts_while_locked",
+                    0,
                 )
         except Exception as e:
             logger.debug("Failed to load hermit state: %s", e, exc_info=True)
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def status(self) -> dict[str, Any]:
         """Get current hermit crab status."""
@@ -546,9 +548,13 @@ class HermitCrab:
             }
 
             if self._guarded_since:
-                result["guarded_duration_s"] = round(time.time() - self._guarded_since, 1)
+                result["guarded_duration_s"] = round(
+                    time.time() - self._guarded_since, 1
+                )
             if self._withdrawn_since:
-                result["withdrawn_duration_s"] = round(time.time() - self._withdrawn_since, 1)
+                result["withdrawn_duration_s"] = round(
+                    time.time() - self._withdrawn_since, 1
+                )
 
             if self._threat_history:
                 latest = self._threat_history[-1]
@@ -561,10 +567,6 @@ class HermitCrab:
 
             return result
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _hermit_crab: HermitCrab | None = None
 _hc_lock = threading.Lock()

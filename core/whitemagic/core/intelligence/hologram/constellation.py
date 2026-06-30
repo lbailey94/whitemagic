@@ -25,6 +25,7 @@ from whitemagic.config.paths import DB_PATH
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SearchResult:
     """A memory with its distance from query point."""
@@ -35,6 +36,7 @@ class SearchResult:
     coords: tuple[float, float, float, float]
     distance: float
     importance: float
+
 
 class ConstellationSearch:
     """4D spatial search for holographic memories."""
@@ -59,14 +61,22 @@ class ConstellationSearch:
         conn.close()
         return [dict(r) for r in results]
 
-    def near(self, x: float, y: float, z: float, w: float = 0.5,
-             radius: float = 0.5, limit: int = 10) -> list[SearchResult]:
+    def near(
+        self,
+        x: float,
+        y: float,
+        z: float,
+        w: float = 0.5,
+        radius: float = 0.5,
+        limit: int = 10,
+    ) -> list[SearchResult]:
         """Find memories near a 4D point using SQL range optimization."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         # Use a bounding box to limit search before fine-grained distance check
-        results = conn.execute("""
+        results = conn.execute(
+            """
             SELECT m.id, m.title, m.content, m.importance,
                    h.x, h.y, h.z, h.w
             FROM memories m
@@ -75,12 +85,18 @@ class ConstellationSearch:
               AND h.y BETWEEN ? AND ?
               AND h.z BETWEEN ? AND ?
               AND h.w BETWEEN ? AND ?
-        """, (
-            x - radius, x + radius,
-            y - radius, y + radius,
-            z - radius, z + radius,
-            w - radius, w + radius,
-        )).fetchall()
+        """,
+            (
+                x - radius,
+                x + radius,
+                y - radius,
+                y + radius,
+                z - radius,
+                z + radius,
+                w - radius,
+                w + radius,
+            ),
+        ).fetchall()
         conn.close()
 
         search_results = []
@@ -88,28 +104,34 @@ class ConstellationSearch:
             coords = (r["x"], r["y"], r["z"], r["w"])
             dist = self._distance((x, y, z, w), coords)
             if dist <= radius:
-                search_results.append(SearchResult(
-                    id=r["id"],
-                    title=r["title"] or "Untitled",
-                    content=(r["content"] or "")[:200],
-                    coords=coords,
-                    distance=dist,
-                    importance=r["importance"],
-                ))
+                search_results.append(
+                    SearchResult(
+                        id=r["id"],
+                        title=r["title"] or "Untitled",
+                        content=(r["content"] or "")[:200],
+                        coords=coords,
+                        distance=dist,
+                        importance=r["importance"],
+                    )
+                )
 
         search_results.sort(key=lambda r: r.distance)
         return search_results[:limit]
 
-    def sector(self, x_range: tuple[float, float] = (-1, 1),
-               y_range: tuple[float, float] = (-1, 1),
-               z_range: tuple[float, float] = (-1, 1),
-               w_range: tuple[float, float] = (0, 1),
-               limit: int = 20) -> list[SearchResult]:
+    def sector(
+        self,
+        x_range: tuple[float, float] = (-1, 1),
+        y_range: tuple[float, float] = (-1, 1),
+        z_range: tuple[float, float] = (-1, 1),
+        w_range: tuple[float, float] = (0, 1),
+        limit: int = 20,
+    ) -> list[SearchResult]:
         """Find memories within a 4D sector using SQL."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
-        results = conn.execute("""
+        results = conn.execute(
+            """
             SELECT m.id, m.title, m.content, m.importance,
                    h.x, h.y, h.z, h.w
             FROM memories m
@@ -120,34 +142,47 @@ class ConstellationSearch:
               AND h.w BETWEEN ? AND ?
             ORDER BY m.importance DESC
             LIMIT ?
-        """, (
-            x_range[0], x_range[1],
-            y_range[0], y_range[1],
-            z_range[0], z_range[1],
-            w_range[0], w_range[1],
-            limit,
-        )).fetchall()
+        """,
+            (
+                x_range[0],
+                x_range[1],
+                y_range[0],
+                y_range[1],
+                z_range[0],
+                z_range[1],
+                w_range[0],
+                w_range[1],
+                limit,
+            ),
+        ).fetchall()
         conn.close()
 
-        return [SearchResult(
-            id=r["id"],
-            title=r["title"] or "Untitled",
-            content=(r["content"] or "")[:200],
-            coords=(r["x"], r["y"], r["z"], r["w"]),
-            distance=0.0,
-            importance=r["importance"],
-        ) for r in results]
+        return [
+            SearchResult(
+                id=r["id"],
+                title=r["title"] or "Untitled",
+                content=(r["content"] or "")[:200],
+                coords=(r["x"], r["y"], r["z"], r["w"]),
+                distance=0.0,
+                importance=r["importance"],
+            )
+            for r in results
+        ]
 
-    def neighbors(self, memory_id: str, radius: float = 0.4,
-                  limit: int = 10) -> list[SearchResult]:
+    def neighbors(
+        self, memory_id: str, radius: float = 0.4, limit: int = 10
+    ) -> list[SearchResult]:
         """Find memories near a specific memory."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         # Get the target memory's coords
-        row = conn.execute("""
+        row = conn.execute(
+            """
             SELECT x, y, z, w FROM holographic_coords WHERE memory_id = ?
-        """, (memory_id,)).fetchone()
+        """,
+            (memory_id,),
+        ).fetchone()
         conn.close()
 
         if not row:
@@ -158,15 +193,27 @@ class ConstellationSearch:
         # Remove self
         return [r for r in results if r.id != memory_id][:limit]
 
-    def by_axis(self, axis: str, value: float, tolerance: float = 0.2,
-                limit: int = 15) -> list[SearchResult]:
+    def by_axis(
+        self, axis: str, value: float, tolerance: float = 0.2, limit: int = 15
+    ) -> list[SearchResult]:
         """Find memories by a specific axis value.
 
         axis: 'x' (logic/emotion), 'y' (micro/macro), 'z' (time), 'w' (importance)
         """
-        axis_map = {"x": 0, "y": 1, "z": 2, "w": 3,
-                    "logic": 0, "emotion": 0, "micro": 1, "macro": 1,
-                    "past": 2, "future": 2, "time": 2, "importance": 3}
+        axis_map = {
+            "x": 0,
+            "y": 1,
+            "z": 2,
+            "w": 3,
+            "logic": 0,
+            "emotion": 0,
+            "micro": 1,
+            "macro": 1,
+            "past": 2,
+            "future": 2,
+            "time": 2,
+            "importance": 3,
+        }
 
         axis_idx = axis_map.get(axis.lower(), 0)
         memories = self._get_all_with_coords()
@@ -175,14 +222,16 @@ class ConstellationSearch:
         for m in memories:
             coords = (m["x"], m["y"], m["z"], m["w"])
             if abs(coords[axis_idx] - value) <= tolerance:
-                results.append(SearchResult(
-                    id=m["id"],
-                    title=m["title"] or "Untitled",
-                    content=(m["content"] or "")[:200],
-                    coords=coords,
-                    distance=abs(coords[axis_idx] - value),
-                    importance=m["importance"],
-                ))
+                results.append(
+                    SearchResult(
+                        id=m["id"],
+                        title=m["title"] or "Untitled",
+                        content=(m["content"] or "")[:200],
+                        coords=coords,
+                        distance=abs(coords[axis_idx] - value),
+                        importance=m["importance"],
+                    )
+                )
 
         results.sort(key=lambda r: r.distance)
         return results[:limit]
@@ -213,7 +262,9 @@ class ConstellationSearch:
         x_range, y_range = quadrants[quadrant.lower()]
         return self.sector(x_range=x_range, y_range=y_range, limit=limit)
 
-    def important(self, min_importance: float = 0.7, limit: int = 20) -> list[SearchResult]:
+    def important(
+        self, min_importance: float = 0.7, limit: int = 20
+    ) -> list[SearchResult]:
         """Get high-importance memories."""
         return self.sector(w_range=(min_importance, 1.0), limit=limit)
 
@@ -252,6 +303,7 @@ class ConstellationSearch:
             "w": {"min": row["min_w"], "max": row["max_w"], "avg": row["avg_w"]},
         }
 
+
 def get_constellation() -> ConstellationSearch:
     """
     Get the constellation.
@@ -261,6 +313,7 @@ def get_constellation() -> ConstellationSearch:
     """
     return ConstellationSearch()
 
+
 # CLI
 if __name__ == "__main__":
     search = get_constellation()
@@ -269,11 +322,31 @@ if __name__ == "__main__":
     logger.info("=" * 50)
 
     stats = search.stats()
-    logger.info("\nMemory Distribution (%s total):", stats['count'])
-    logger.info("  X (Logic↔Emotion): %s to %s, avg=%s", format(stats['x']['min'], ".2f"), format(stats['x']['max'], ".2f"), format(stats['x']['avg'], ".2f"))
-    logger.info("  Y (Micro↔Macro):   %s to %s, avg=%s", format(stats['y']['min'], ".2f"), format(stats['y']['max'], ".2f"), format(stats['y']['avg'], ".2f"))
-    logger.info("  Z (Past↔Future):   %s to %s, avg=%s", format(stats['z']['min'], ".2f"), format(stats['z']['max'], ".2f"), format(stats['z']['avg'], ".2f"))
-    logger.info("  W (Importance):    %s to %s, avg=%s", format(stats['w']['min'], ".2f"), format(stats['w']['max'], ".2f"), format(stats['w']['avg'], ".2f"))
+    logger.info("\nMemory Distribution (%s total):", stats["count"])
+    logger.info(
+        "  X (Logic↔Emotion): %s to %s, avg=%s",
+        format(stats["x"]["min"], ".2f"),
+        format(stats["x"]["max"], ".2f"),
+        format(stats["x"]["avg"], ".2f"),
+    )
+    logger.info(
+        "  Y (Micro↔Macro):   %s to %s, avg=%s",
+        format(stats["y"]["min"], ".2f"),
+        format(stats["y"]["max"], ".2f"),
+        format(stats["y"]["avg"], ".2f"),
+    )
+    logger.info(
+        "  Z (Past↔Future):   %s to %s, avg=%s",
+        format(stats["z"]["min"], ".2f"),
+        format(stats["z"]["max"], ".2f"),
+        format(stats["z"]["avg"], ".2f"),
+    )
+    logger.info(
+        "  W (Importance):    %s to %s, avg=%s",
+        format(stats["w"]["min"], ".2f"),
+        format(stats["w"]["max"], ".2f"),
+        format(stats["w"]["avg"], ".2f"),
+    )
 
     logger.info("\n--- High Importance Memories ---")
     for r in search.important(limit=5):

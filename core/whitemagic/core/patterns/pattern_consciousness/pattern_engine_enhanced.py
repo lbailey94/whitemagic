@@ -41,11 +41,13 @@ class EnhancedPatternEngine:
 
         # Polyglot Router integration
         from whitemagic.optimization.polyglot_router import get_router
+
         self.router = get_router()
 
         # Rust backend integration
         try:
             import whitemagic_rs
+
             self.rust_engine = whitemagic_rs.PatternEngine()
             self._rust_available = True
             logger.info("🚀 Rust Pattern Engine activated")
@@ -65,8 +67,12 @@ class EnhancedPatternEngine:
     def scan_continuously(self) -> None:
         """Run in background, always learning."""
         logger.info("🧠 Pattern Engine scanning continuously...")
-        logger.info("   ML features: %s", 'enabled' if self._scipy_available else 'disabled')
-        logger.info("   Rust backend: %s", 'enabled' if self._rust_available else 'disabled')
+        logger.info(
+            "   ML features: %s", "enabled" if self._scipy_available else "disabled"
+        )
+        logger.info(
+            "   Rust backend: %s", "enabled" if self._rust_available else "disabled"
+        )
 
     def extract_patterns(self, content: str) -> list[dict[str, Any]]:
         """Extract patterns from any content using Rust or ML when available."""
@@ -97,33 +103,39 @@ class EnhancedPatternEngine:
             # Zipf's Law check
             zipf_corr = metrics.get("zipf_correlation", 0.0)
             if zipf_corr < -0.7:
-                patterns.append({
-                    "type": "statistical",
-                    "pattern": "Natural language (Zipf distribution) [Rust]",
-                    "confidence": min(0.95, abs(zipf_corr)),
-                    "timestamp": datetime.now().isoformat(),
-                })
+                patterns.append(
+                    {
+                        "type": "statistical",
+                        "pattern": "Natural language (Zipf distribution) [Rust]",
+                        "confidence": min(0.95, abs(zipf_corr)),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
             # Entropy analysis
             entropy = metrics.get("entropy", 0.0)
             if entropy > 4.0:
-                patterns.append({
-                    "type": "statistical",
-                    "pattern": "High information density [Rust]",
-                    "confidence": min(0.9, entropy / 6.0),
-                    "entropy": entropy,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                patterns.append(
+                    {
+                        "type": "statistical",
+                        "pattern": "High information density [Rust]",
+                        "confidence": min(0.9, entropy / 6.0),
+                        "entropy": entropy,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
             # Repetition detection
             rep_ratio = metrics.get("repetition_ratio", 1.0)
             if rep_ratio < 0.5:
-                patterns.append({
-                    "type": "stylistic",
-                    "pattern": "Repetitive/rhythmic structure [Rust]",
-                    "confidence": 1.0 - rep_ratio,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                patterns.append(
+                    {
+                        "type": "stylistic",
+                        "pattern": "Repetitive/rhythmic structure [Rust]",
+                        "confidence": 1.0 - rep_ratio,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
         except Exception as e:
             logger.error("Rust pattern extraction failed: %s", e, exc_info=True)
@@ -166,13 +178,15 @@ class EnhancedPatternEngine:
 
                 if correlation < -0.7:
                     # Strong negative = Zipf pattern
-                    patterns.append({
-                        "type": "statistical",
-                        "pattern": "Natural language (Zipf distribution)",
-                        "confidence": min(0.95, abs(correlation)),
-                        "p_value": p_value,
-                        "timestamp": datetime.now().isoformat(),
-                    })
+                    patterns.append(
+                        {
+                            "type": "statistical",
+                            "pattern": "Natural language (Zipf distribution)",
+                            "confidence": min(0.95, abs(correlation)),
+                            "p_value": p_value,
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
 
             # Entropy analysis
             probs = np.array(frequencies) / sum(frequencies)
@@ -180,24 +194,28 @@ class EnhancedPatternEngine:
 
             if entropy > 4.0:
                 # High entropy = rich content
-                patterns.append({
-                    "type": "statistical",
-                    "pattern": "High information density",
-                    "confidence": min(0.9, entropy / 6.0),
-                    "entropy": float(entropy),
-                    "timestamp": datetime.now().isoformat(),
-                })
+                patterns.append(
+                    {
+                        "type": "statistical",
+                        "pattern": "High information density",
+                        "confidence": min(0.9, entropy / 6.0),
+                        "entropy": float(entropy),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
             # Repetition detection
             repetition_ratio = len(set(words)) / len(words) if words else 0
             if repetition_ratio < 0.5:
                 # Lots of repetition
-                patterns.append({
-                    "type": "stylistic",
-                    "pattern": "Repetitive/rhythmic structure",
-                    "confidence": 1.0 - repetition_ratio,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                patterns.append(
+                    {
+                        "type": "stylistic",
+                        "pattern": "Repetitive/rhythmic structure",
+                        "confidence": 1.0 - repetition_ratio,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
         except Exception as e:
             logger.debug("Operation failed: %s", e)
@@ -225,13 +243,15 @@ class EnhancedPatternEngine:
         for keyword, pattern_name in philosophical_keywords.items():
             if keyword in content_lower:
                 count = content_lower.count(keyword)
-                patterns.append({
-                    "type": "philosophical",
-                    "pattern": pattern_name,
-                    "confidence": min(0.95, 0.6 + count * 0.1),
-                    "occurrences": count,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                patterns.append(
+                    {
+                        "type": "philosophical",
+                        "pattern": pattern_name,
+                        "confidence": min(0.95, 0.6 + count * 0.1),
+                        "occurrences": count,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
         return patterns
 
@@ -253,9 +273,11 @@ class EnhancedPatternEngine:
                 timestamp=datetime.now(),
             )
             bus.emit(event)
-            logger.info("📡 Pattern emitted to Gan Ying: %s", pattern['pattern'])
+            logger.info("📡 Pattern emitted to Gan Ying: %s", pattern["pattern"])
         except ImportError:
-            logger.info("�� Emitting pattern (Gan Ying not available): %s", pattern['pattern'])
+            logger.info(
+                "�� Emitting pattern (Gan Ying not available): %s", pattern["pattern"]
+            )
 
     def synthesize_creative(self, patterns: list[dict[str, Any]]) -> str:
         """Creative synthesis of multiple patterns."""

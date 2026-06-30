@@ -1,4 +1,3 @@
-
 import json
 import logging
 import sys
@@ -12,6 +11,7 @@ from whitemagic.tools.unified_api import call_tool
 # Setup basic logging to see what's happening
 logging.basicConfig(level=logging.INFO)
 
+
 def test_tool(name, **kwargs):
     print(f"\n--- Testing Tool: {name} ---")
     try:
@@ -24,12 +24,15 @@ def test_tool(name, **kwargs):
                 print(result["details"]["traceback"])
         else:
             # Print a snippet of the result
-            output = {k: v for k, v in result.items() if k not in ["traceback", "details"]}
+            output = {
+                k: v for k, v in result.items() if k not in ["traceback", "details"]
+            }
             print(json.dumps(output, indent=2)[:500] + "...")
         return result
     except Exception as e:
         print(f"CRITICAL FAILURE: {e}")
         return None
+
 
 def main():
     print("🚀 Starting Deep MCP Tool Audit...")
@@ -62,6 +65,7 @@ def main():
 
     # 8. Gana Tail (Performance)
     test_tool("token_report")
+
 
 if __name__ == "__main__":
     main()

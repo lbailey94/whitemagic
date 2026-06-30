@@ -21,9 +21,6 @@ from .base import BaseGana, GanaCall, LunarMansion
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
-# 1. HORN (角 Jiao) - Sharp Initiation
-# ============================================================================
 class HornGana(BaseGana):
     """Horn (角 Jiao) - Sharp Initiation.
 
@@ -83,9 +80,6 @@ All great journeys start with a single, sharp step.
         }
 
 
-# ============================================================================
-# 5. HEART (心 Xin) - Vital Pulse
-# ============================================================================
 class HeartGana(BaseGana):
     """Heart (心 Xin) - Vital Pulse.
 
@@ -113,8 +107,8 @@ The heart beats for the whole.
         """Execute session context logic."""
 
         if "context" in call.task or "session" in call.task:
-             # Basic context retrieval simulation
-             return {
+            # Basic context retrieval simulation
+            return {
                 "mansion": self.mansion.name,
                 "garden": self.garden,
                 "action": "get_context",
@@ -166,6 +160,7 @@ Hold the head high, keep the neck stiff but flexible.
         """Execute stability logic - Create Memory."""
         try:
             from whitemagic.core.memory.manager import MemoryManager
+
             manager = MemoryManager()
 
             # Check if this call is for memory creation
@@ -188,7 +183,9 @@ Hold the head high, keep the neck stiff but flexible.
                     "garden": self.garden,
                     "status": "stabilized",
                     "action": "memory_created",
-                    "memory_id": getattr(memory, "id", "unknown") if hasattr(memory, "id") else str(memory),
+                    "memory_id": getattr(memory, "id", "unknown")
+                    if hasattr(memory, "id")
+                    else str(memory),
                     "memory_title": title,
                 }
         except ImportError:
@@ -204,10 +201,13 @@ Hold the head high, keep the neck stiff but flexible.
 
         if call.resonance_hints.predecessor_output:
             # Stabilize what Horn initiated
-            result["stabilized_context"] = str(call.resonance_hints.predecessor_output)[:50]
+            result["stabilized_context"] = str(call.resonance_hints.predecessor_output)[
+                :50
+            ]
             result["consolidated_items"] = 1
 
         return result
+
 
 class RootGana(BaseGana):
     """Root (氐 Di) - Foundation.
@@ -238,6 +238,7 @@ What is seen is supported by what is unseen.
         if "check_system_health" in call.task or "system_initialize" in call.task:
             try:
                 from whitemagic.core.embodiment import get_harmony_monitor
+
                 monitor = get_harmony_monitor()
                 # Deep scan if requested
                 force = call.state_vector.get("deep_scan", False)
@@ -246,9 +247,13 @@ What is seen is supported by what is unseen.
                 return {
                     "mansion": self.mansion.name,
                     "garden": self.garden,
-                    "integrity": "verified" if state["is_harmonious"] else "compromised",
+                    "integrity": "verified"
+                    if state["is_harmonious"]
+                    else "compromised",
                     "depth": "deep" if force else "standard",
-                    "health_check": "passed" if state["harmony_score"] > 0.4 else "warning",
+                    "health_check": "passed"
+                    if state["harmony_score"] > 0.4
+                    else "warning",
                     "metrics": state,
                 }
             except ImportError:
@@ -262,6 +267,7 @@ What is seen is supported by what is unseen.
             "depth": "deep",
             "health_check": "passed",
         }
+
 
 class RoomGana(BaseGana):
     """Room (房 Fang) - Enclosure.
@@ -290,6 +296,7 @@ A house needs walls to be a home.
         """Execute resource management."""
         try:
             from whitemagic.gardens.sangha.resources import get_resources
+
             resources = get_resources()
 
             task = call.task
@@ -303,7 +310,9 @@ A house needs walls to be a home.
                     ttl = call.state_vector.get("timeout_seconds", 300)
 
                     if resource_id:
-                        success = resources.acquire_lock(resource_id, agent_id, reason, ttl)
+                        success = resources.acquire_lock(
+                            resource_id, agent_id, reason, ttl
+                        )
                         return {
                             "mansion": self.mansion.name,
                             "garden": self.garden,
@@ -334,7 +343,9 @@ A house needs walls to be a home.
                         "mansion": self.mansion.name,
                         "garden": self.garden,
                         "action": "list_locks",
-                        "active_locks": [lock.__dict__ for lock in locks] if locks else [],
+                        "active_locks": [lock.__dict__ for lock in locks]
+                        if locks
+                        else [],
                         "count": len(locks),
                         "status": "listed",
                     }
@@ -349,6 +360,7 @@ A house needs walls to be a home.
             "resources_locked": [],
             "safe_mode": True,
         }
+
 
 class TailGana(BaseGana):
     """Tail (尾 Wei) - Passionate Drive.
@@ -377,9 +389,13 @@ The dragon's power is in its tail.
         """Execute acceleration logic."""
         try:
             from whitemagic.optimization.polyglot_router import get_router
+
             router = get_router()
 
-            if "enable_rust_acceleration" in call.task or "check_acceleration" in call.task:
+            if (
+                "enable_rust_acceleration" in call.task
+                or "check_acceleration" in call.task
+            ):
                 # Check all native backends
                 stats = router.get_stats()
 
@@ -389,7 +405,9 @@ The dragon's power is in its tail.
                     "rust_available": stats.get("rust", False),
                     "mojo_available": stats.get("mojo", False),
                     "zig_available": stats.get("zig", False),
-                    "acceleration": "enabled" if stats.get("rust") or stats.get("mojo") else "fallback",
+                    "acceleration": "enabled"
+                    if stats.get("rust") or stats.get("mojo")
+                    else "fallback",
                     "native_speedup": stats.get("speedup", 1.0),
                     "status": "accelerated",
                 }
@@ -431,6 +449,7 @@ The dragon's power is in its tail.
             "obstacles_cleared": 0,
         }
 
+
 class WinnowingBasketGana(BaseGana):
     """Winnowing Basket (箕 Ji) - Separation.
 
@@ -459,6 +478,7 @@ Wind blows away the chaff.
 
         try:
             from whitemagic.core.memory.manager import MemoryManager
+
             manager = MemoryManager()
 
             if "consolidate_memories" in call.task:
@@ -476,6 +496,7 @@ Wind blows away the chaff.
                     from whitemagic.core.intelligence.hologram.consolidation import (
                         get_consolidator,
                     )
+
                     consolidator = get_consolidator()
 
                     # Check for dry_run flag in state, default to False for real action if explicitly requested
@@ -484,7 +505,9 @@ Wind blows away the chaff.
                     dry_run = not call.state_vector.get("apply", False)
                     radius = call.state_vector.get("radius", 0.35)
 
-                    holo_result = await consolidator.consolidate(radius=radius, dry_run=dry_run)
+                    holo_result = await consolidator.consolidate(
+                        radius=radius, dry_run=dry_run
+                    )
 
                     holo_stats = {
                         "clusters_found": holo_result.clusters_found,
@@ -504,27 +527,40 @@ Wind blows away the chaff.
                         from whitemagic.core.intelligence.consolidation.attractors import (
                             AttractorManager,
                         )
+
                         attractor_mgr = AttractorManager(manager)
 
                         # Identify black holes
-                        attractors = attractor_mgr.identify_attractors(threshold_mass=call.state_vector.get("mass_threshold", 1.5))
+                        attractors = attractor_mgr.identify_attractors(
+                            threshold_mass=call.state_vector.get("mass_threshold", 1.5)
+                        )
 
                         # Calculate pull
                         # We need candidates - simple approach: all recent or specific subset
                         # For now, let's pull from recent memories
                         candidates_raw = manager.read_recent_memories(limit=100)
-                        candidates = [c["entry"] for c in candidates_raw if "entry" in c]
+                        candidates = [
+                            c["entry"] for c in candidates_raw if "entry" in c
+                        ]
 
-                        pull_plan = attractor_mgr.calculate_gravitational_pull(attractors, candidates)
+                        pull_plan = attractor_mgr.calculate_gravitational_pull(
+                            attractors, candidates
+                        )
 
                         # Execute
-                        dry_run_attractors = not call.state_vector.get("apply_attractors", False)
-                        attractor_results = attractor_mgr.execute_spaghettification(pull_plan, dry_run=dry_run_attractors)
+                        dry_run_attractors = not call.state_vector.get(
+                            "apply_attractors", False
+                        )
+                        attractor_results = attractor_mgr.execute_spaghettification(
+                            pull_plan, dry_run=dry_run_attractors
+                        )
 
                         attractor_stats = {
                             "black_holes_active": len(attractors),
                             "gravitational_events": len(pull_plan),
-                            "memories_absorbed": attractor_results.get("memories_absorbed", 0),
+                            "memories_absorbed": attractor_results.get(
+                                "memories_absorbed", 0
+                            ),
                             "dry_run": dry_run_attractors,
                         }
                     except ImportError:
@@ -569,6 +605,7 @@ Wind blows away the chaff.
             from whitemagic.core.intelligence.synthesis.tag_normalizer import (
                 get_tag_normalizer,
             )
+
             normalizer = get_tag_normalizer()
 
             if "normalize_tags" in call.task:

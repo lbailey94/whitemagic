@@ -32,6 +32,7 @@ os.environ.setdefault("WM_SILENT_INIT", "1")
 
 RESULTS: list[dict] = []
 
+
 def _fmt_time(ns: float) -> str:
     if ns < 1_000:
         return f"{ns:.0f}ns"
@@ -42,6 +43,7 @@ def _fmt_time(ns: float) -> str:
     else:
         return f"{ns / 1_000_000_000:.3f}s"
 
+
 def _fmt_rate(ops_per_sec: float) -> str:
     if ops_per_sec >= 1_000_000:
         return f"{ops_per_sec / 1_000_000:.2f}M ops/s"
@@ -49,6 +51,7 @@ def _fmt_rate(ops_per_sec: float) -> str:
         return f"{ops_per_sec / 1_000:.1f}K ops/s"
     else:
         return f"{ops_per_sec:.0f} ops/s"
+
 
 def bench(label: str, fn, iterations: int = 1000, warmup: int = 10, tier: int = 1):
     """Run a benchmark, collecting timing stats."""
@@ -72,7 +75,9 @@ def bench(label: str, fn, iterations: int = 1000, warmup: int = 10, tier: int = 
 
     if not times_ns:
         print(f"  ✗ {label}: ALL ERRORS ({errors}/{iterations})")
-        RESULTS.append({"label": label, "tier": tier, "status": "error", "errors": errors})
+        RESULTS.append(
+            {"label": label, "tier": tier, "status": "error", "errors": errors}
+        )
         return
 
     median = statistics.median(times_ns)
@@ -80,16 +85,29 @@ def bench(label: str, fn, iterations: int = 1000, warmup: int = 10, tier: int = 
     ops = len(times_ns) / (sum(times_ns) / 1e9) if sum(times_ns) > 0 else 0
 
     status = "✓" if errors == 0 else f"⚠ {errors} errs"
-    print(f"  {status} {label}: median={_fmt_time(median)}  p95={_fmt_time(p95)}  {_fmt_rate(ops)}  ({len(times_ns)} iters)")
+    print(
+        f"  {status} {label}: median={_fmt_time(median)}  p95={_fmt_time(p95)}  {_fmt_rate(ops)}  ({len(times_ns)} iters)"
+    )
 
-    RESULTS.append({
-        "label": label, "tier": tier, "status": "pass",
-        "median_ns": median, "p95_ns": p95, "ops_per_sec": ops,
-        "iterations": len(times_ns), "errors": errors,
-    })
+    RESULTS.append(
+        {
+            "label": label,
+            "tier": tier,
+            "status": "pass",
+            "median_ns": median,
+            "p95_ns": p95,
+            "ops_per_sec": ops,
+            "iterations": len(times_ns),
+            "errors": errors,
+        }
+    )
 
-def bench_async(label: str, coro_fn, iterations: int = 100, warmup: int = 5, tier: int = 1):
+
+def bench_async(
+    label: str, coro_fn, iterations: int = 100, warmup: int = 5, tier: int = 1
+):
     """Benchmark an async function."""
+
     async def _run():
         for _ in range(warmup):
             try:
@@ -111,7 +129,9 @@ def bench_async(label: str, coro_fn, iterations: int = 100, warmup: int = 5, tie
 
         if not times_ns:
             print(f"  ✗ {label}: ALL ERRORS ({errors}/{iterations})")
-            RESULTS.append({"label": label, "tier": tier, "status": "error", "errors": errors})
+            RESULTS.append(
+                {"label": label, "tier": tier, "status": "error", "errors": errors}
+            )
             return
 
         median = statistics.median(times_ns)
@@ -119,13 +139,22 @@ def bench_async(label: str, coro_fn, iterations: int = 100, warmup: int = 5, tie
         ops = len(times_ns) / (sum(times_ns) / 1e9) if sum(times_ns) > 0 else 0
 
         status = "✓" if errors == 0 else f"⚠ {errors} errs"
-        print(f"  {status} {label}: median={_fmt_time(median)}  p95={_fmt_time(p95)}  {_fmt_rate(ops)}  ({len(times_ns)} iters)")
+        print(
+            f"  {status} {label}: median={_fmt_time(median)}  p95={_fmt_time(p95)}  {_fmt_rate(ops)}  ({len(times_ns)} iters)"
+        )
 
-        RESULTS.append({
-            "label": label, "tier": tier, "status": "pass",
-            "median_ns": median, "p95_ns": p95, "ops_per_sec": ops,
-            "iterations": len(times_ns), "errors": errors,
-        })
+        RESULTS.append(
+            {
+                "label": label,
+                "tier": tier,
+                "status": "pass",
+                "median_ns": median,
+                "p95_ns": p95,
+                "ops_per_sec": ops,
+                "iterations": len(times_ns),
+                "errors": errors,
+            }
+        )
 
     asyncio.get_event_loop().run_until_complete(_run())
 
@@ -134,33 +163,50 @@ def bench_async(label: str, coro_fn, iterations: int = 100, warmup: int = 5, tie
 # TIER 1: Core Baselines
 # ═══════════════════════════════════════════════════════════════════
 
+
 def tier1_core():
     print("\n═══ TIER 1: Core Baselines ═══")
 
     # Memory store
     from whitemagic.core.memory.unified import UnifiedMemory, MemoryType
+
     um = UnifiedMemory()
 
-    bench("Memory store (SHORT_TERM)", lambda: um.store(
-        content="Benchmark test memory " + str(time.time()),
-        memory_type=MemoryType.SHORT_TERM,
-        title="bench_t1",
-        importance=0.5,
-    ), iterations=200, tier=1)
+    bench(
+        "Memory store (SHORT_TERM)",
+        lambda: um.store(
+            content="Benchmark test memory " + str(time.time()),
+            memory_type=MemoryType.SHORT_TERM,
+            title="bench_t1",
+            importance=0.5,
+        ),
+        iterations=200,
+        tier=1,
+    )
 
     # Memory search
-    bench("Memory search (top-5)", lambda: um.search("benchmark test", limit=5),
-          iterations=200, tier=1)
+    bench(
+        "Memory search (top-5)",
+        lambda: um.search("benchmark test", limit=5),
+        iterations=200,
+        tier=1,
+    )
 
     # Dispatch table lookup
     from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
     tools = list(DISPATCH_TABLE.keys())
-    bench("Dispatch table lookup", lambda: DISPATCH_TABLE.get(tools[0]),
-          iterations=10000, tier=1)
+    bench(
+        "Dispatch table lookup",
+        lambda: DISPATCH_TABLE.get(tools[0]),
+        iterations=10000,
+        tier=1,
+    )
 
     # Harmony vector
     try:
         from whitemagic.harmony import get_harmony_vector
+
         hv = get_harmony_vector()
         bench("Harmony vector snapshot", lambda: hv.snapshot(), iterations=5000, tier=1)
     except Exception as e:
@@ -171,14 +217,17 @@ def tier1_core():
 # TIER 2: Arrow IPC
 # ═══════════════════════════════════════════════════════════════════
 
+
 def tier2_arrow():
     print("\n═══ TIER 2: Arrow IPC ═══")
 
     from whitemagic.core.memory.unified import UnifiedMemory
+
     um = UnifiedMemory()
 
     # Arrow export
     arrow_bytes = None
+
     def _arrow_export():
         nonlocal arrow_bytes
         arrow_bytes = um.arrow_export(limit=100)
@@ -189,38 +238,71 @@ def tier2_arrow():
         print(f"    → Arrow payload: {len(arrow_bytes):,} bytes")
 
         # Arrow import (into same DB, will deduplicate)
-        bench("Arrow IPC import (100 memories)", lambda: um.arrow_import(arrow_bytes),
-              iterations=50, tier=2)
+        bench(
+            "Arrow IPC import (100 memories)",
+            lambda: um.arrow_import(arrow_bytes),
+            iterations=50,
+            tier=2,
+        )
 
     # Compare: JSON export baseline
     import json as _json
+
     def _json_export():
         memories = um.search(query=None, limit=100)
-        return _json.dumps([{"id": m.id, "title": m.title, "content": str(m.content)[:1000]} for m in memories])
+        return _json.dumps(
+            [
+                {"id": m.id, "title": m.title, "content": str(m.content)[:1000]}
+                for m in memories
+            ]
+        )
 
     bench("JSON export baseline (100 memories)", _json_export, iterations=100, tier=2)
 
     # Rust Arrow encode/decode directly
     try:
         from whitemagic.optimization.rust_accelerators import (
-            arrow_available, arrow_encode_memories, arrow_decode_memories,
+            arrow_available,
+            arrow_encode_memories,
+            arrow_decode_memories,
         )
-        if arrow_available():
-            sample = _json.dumps([{
-                "id": f"bench_{i}", "title": f"Test {i}", "content": f"Content {i}",
-                "importance": 0.5, "memory_type": "SHORT_TERM",
-                "x": 0.0, "y": 0.0, "z": 0.0, "w": 0.5, "v": 0.5,
-                "tags": ["bench"],
-            } for i in range(100)])
 
-            bench("Rust arrow_encode (100 docs)", lambda: arrow_encode_memories(sample),
-                  iterations=500, tier=2)
+        if arrow_available():
+            sample = _json.dumps(
+                [
+                    {
+                        "id": f"bench_{i}",
+                        "title": f"Test {i}",
+                        "content": f"Content {i}",
+                        "importance": 0.5,
+                        "memory_type": "SHORT_TERM",
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 0.5,
+                        "v": 0.5,
+                        "tags": ["bench"],
+                    }
+                    for i in range(100)
+                ]
+            )
+
+            bench(
+                "Rust arrow_encode (100 docs)",
+                lambda: arrow_encode_memories(sample),
+                iterations=500,
+                tier=2,
+            )
 
             ipc = arrow_encode_memories(sample)
             if ipc:
                 print(f"    → Rust Arrow IPC: {len(ipc):,} bytes")
-                bench("Rust arrow_decode (100 docs)", lambda: arrow_decode_memories(ipc),
-                      iterations=500, tier=2)
+                bench(
+                    "Rust arrow_decode (100 docs)",
+                    lambda: arrow_decode_memories(ipc),
+                    iterations=500,
+                    tier=2,
+                )
         else:
             print("  ⊘ Rust Arrow bridge not available")
     except ImportError:
@@ -231,23 +313,38 @@ def tier2_arrow():
 # TIER 3: Tokio Clone Army
 # ═══════════════════════════════════════════════════════════════════
 
+
 def tier3_tokio():
     print("\n═══ TIER 3: Tokio Clone Army ═══")
 
     try:
         from whitemagic.optimization.rust_accelerators import (
-            tokio_deploy_clones, tokio_clone_bench, tokio_clone_stats,
+            tokio_deploy_clones,
+            tokio_clone_bench,
+            tokio_clone_stats,
         )
 
         # Clone deployment benchmark
-        bench("Tokio deploy 10 clones", lambda: tokio_deploy_clones("benchmark consciousness", 10),
-              iterations=100, tier=3)
+        bench(
+            "Tokio deploy 10 clones",
+            lambda: tokio_deploy_clones("benchmark consciousness", 10),
+            iterations=100,
+            tier=3,
+        )
 
-        bench("Tokio deploy 100 clones", lambda: tokio_deploy_clones("benchmark consciousness", 100),
-              iterations=50, tier=3)
+        bench(
+            "Tokio deploy 100 clones",
+            lambda: tokio_deploy_clones("benchmark consciousness", 100),
+            iterations=50,
+            tier=3,
+        )
 
-        bench("Tokio deploy 1000 clones", lambda: tokio_deploy_clones("benchmark consciousness", 1000),
-              iterations=20, tier=3)
+        bench(
+            "Tokio deploy 1000 clones",
+            lambda: tokio_deploy_clones("benchmark consciousness", 1000),
+            iterations=20,
+            tier=3,
+        )
 
         # Tokio internal benchmark
         result = tokio_clone_bench(100)
@@ -266,19 +363,41 @@ def tier3_tokio():
     try:
         from whitemagic.core.bridge.reasoning import deploy_thought_clones
 
-        bench_async("Python async clones (10)", lambda: deploy_thought_clones(
-            query="What is consciousness?",
-            strategies=["analytical", "creative", "skeptical", "integrative", "historical"],
-            num_clones=10,
-            use_tokio=False,
-        ), iterations=20, tier=3)
+        bench_async(
+            "Python async clones (10)",
+            lambda: deploy_thought_clones(
+                query="What is consciousness?",
+                strategies=[
+                    "analytical",
+                    "creative",
+                    "skeptical",
+                    "integrative",
+                    "historical",
+                ],
+                num_clones=10,
+                use_tokio=False,
+            ),
+            iterations=20,
+            tier=3,
+        )
 
-        bench_async("Tokio-backed clones (10)", lambda: deploy_thought_clones(
-            query="What is consciousness?",
-            strategies=["analytical", "creative", "skeptical", "integrative", "historical"],
-            num_clones=10,
-            use_tokio=True,
-        ), iterations=20, tier=3)
+        bench_async(
+            "Tokio-backed clones (10)",
+            lambda: deploy_thought_clones(
+                query="What is consciousness?",
+                strategies=[
+                    "analytical",
+                    "creative",
+                    "skeptical",
+                    "integrative",
+                    "historical",
+                ],
+                num_clones=10,
+                use_tokio=True,
+            ),
+            iterations=20,
+            tier=3,
+        )
 
     except Exception as e:
         print(f"  ⊘ Thought clones benchmark: {e}")
@@ -288,13 +407,17 @@ def tier3_tokio():
 # TIER 4: Iceoryx2 IPC
 # ═══════════════════════════════════════════════════════════════════
 
+
 def tier4_iceoryx():
     print("\n═══ TIER 4: Iceoryx2 IPC ═══")
 
     try:
         from whitemagic.optimization.rust_accelerators import (
-            ipc_bridge_init, ipc_bridge_publish, ipc_bridge_status,
+            ipc_bridge_init,
+            ipc_bridge_publish,
+            ipc_bridge_status,
         )
+
         # Verify the bridge is actually available
         if ipc_bridge_status() is None:
             raise ImportError("IPC bridge compiled but not initialized")
@@ -303,14 +426,26 @@ def tier4_iceoryx():
         bench("Iceoryx2 bridge init", lambda: ipc_bridge_init(), iterations=50, tier=4)
 
         # Publish
-        bench("Iceoryx2 publish (small)", lambda: ipc_bridge_publish("bench", "hello"),
-              iterations=500, tier=4)
+        bench(
+            "Iceoryx2 publish (small)",
+            lambda: ipc_bridge_publish("bench", "hello"),
+            iterations=500,
+            tier=4,
+        )
 
-        bench("Iceoryx2 publish (1KB)", lambda: ipc_bridge_publish("bench", "x" * 1024),
-              iterations=500, tier=4)
+        bench(
+            "Iceoryx2 publish (1KB)",
+            lambda: ipc_bridge_publish("bench", "x" * 1024),
+            iterations=500,
+            tier=4,
+        )
 
-        bench("Iceoryx2 publish (10KB)", lambda: ipc_bridge_publish("bench", "x" * 10240),
-              iterations=200, tier=4)
+        bench(
+            "Iceoryx2 publish (10KB)",
+            lambda: ipc_bridge_publish("bench", "x" * 10240),
+            iterations=200,
+            tier=4,
+        )
 
         # Status
         status = ipc_bridge_status()
@@ -326,22 +461,41 @@ def tier4_iceoryx():
 # TIER 5: Holographic Encoding
 # ═══════════════════════════════════════════════════════════════════
 
+
 def tier5_holographic():
     print("\n═══ TIER 5: Holographic 5D Encoding ═══")
 
     try:
         import whitemagic_rs
+
         if hasattr(whitemagic_rs, "holographic_encode_5d"):
-            bench("Rust 5D encode (single)", lambda: whitemagic_rs.holographic_encode_5d(
-                "Test content for holographic encoding", 0.7, "LONG_TERM", "test,bench",
-            ), iterations=5000, tier=5)
+            bench(
+                "Rust 5D encode (single)",
+                lambda: whitemagic_rs.holographic_encode_5d(
+                    "Test content for holographic encoding",
+                    0.7,
+                    "LONG_TERM",
+                    "test,bench",
+                ),
+                iterations=5000,
+                tier=5,
+            )
 
             # Batch encoding
-            bench("Rust 5D encode (batch 100)", lambda: [
-                whitemagic_rs.holographic_encode_5d(
-                    f"Content {i}", 0.5 + i * 0.005, "SHORT_TERM", f"tag{i}",
-                ) for i in range(100)
-            ], iterations=50, tier=5)
+            bench(
+                "Rust 5D encode (batch 100)",
+                lambda: [
+                    whitemagic_rs.holographic_encode_5d(
+                        f"Content {i}",
+                        0.5 + i * 0.005,
+                        "SHORT_TERM",
+                        f"tag{i}",
+                    )
+                    for i in range(100)
+                ],
+                iterations=50,
+                tier=5,
+            )
         else:
             print("  ⊘ holographic_encode_5d not in Rust bridge")
     except ImportError:
@@ -350,22 +504,33 @@ def tier5_holographic():
     # Python fallback
     try:
         from whitemagic.core.memory.holographic import HolographicIndex
+
         hi = HolographicIndex()
-        bench("Python 5D encode (single)", lambda: hi.encode(
-            content="Test content for holographic encoding",
-            importance=0.7,
-            memory_type="LONG_TERM",
-            tags={"test", "bench"},
-        ), iterations=2000, tier=5)
+        bench(
+            "Python 5D encode (single)",
+            lambda: hi.encode(
+                content="Test content for holographic encoding",
+                importance=0.7,
+                memory_type="LONG_TERM",
+                tags={"test", "bench"},
+            ),
+            iterations=2000,
+            tier=5,
+        )
     except Exception as e:
         print(f"  ⊘ Python holographic: {e}")
 
     # BM25 search
     try:
         import whitemagic_rs
+
         if hasattr(whitemagic_rs, "bm25_search"):
-            bench("Rust BM25 search", lambda: whitemagic_rs.bm25_search("consciousness memory", 10),
-                  iterations=1000, tier=5)
+            bench(
+                "Rust BM25 search",
+                lambda: whitemagic_rs.bm25_search("consciousness memory", 10),
+                iterations=1000,
+                tier=5,
+            )
     except Exception:
         pass
 
@@ -373,6 +538,7 @@ def tier5_holographic():
 # ═══════════════════════════════════════════════════════════════════
 # Summary & Comparison
 # ═══════════════════════════════════════════════════════════════════
+
 
 def print_summary():
     print("\n" + "═" * 70)
@@ -386,7 +552,12 @@ def print_summary():
     # Find key comparisons
     arrow_export = next((r for r in RESULTS if "Arrow IPC export" in r["label"]), None)
     json_export = next((r for r in RESULTS if "JSON export" in r["label"]), None)
-    if arrow_export and json_export and arrow_export.get("median_ns") and json_export.get("median_ns"):
+    if (
+        arrow_export
+        and json_export
+        and arrow_export.get("median_ns")
+        and json_export.get("median_ns")
+    ):
         speedup = json_export["median_ns"] / arrow_export["median_ns"]
         print(f"\n  Arrow vs JSON export: {speedup:.1f}× speedup")
 
@@ -401,8 +572,12 @@ def print_summary():
         if tokio_1000 and tokio_1000.get("median_ns"):
             print(f"    1000 clones: {_fmt_time(tokio_1000['median_ns'])}")
 
-    rust_enc = next((r for r in RESULTS if "Rust 5D encode (single)" in r["label"]), None)
-    py_enc = next((r for r in RESULTS if "Python 5D encode (single)" in r["label"]), None)
+    rust_enc = next(
+        (r for r in RESULTS if "Rust 5D encode (single)" in r["label"]), None
+    )
+    py_enc = next(
+        (r for r in RESULTS if "Python 5D encode (single)" in r["label"]), None
+    )
     if rust_enc and py_enc and rust_enc.get("median_ns") and py_enc.get("median_ns"):
         speedup = py_enc["median_ns"] / rust_enc["median_ns"]
         print(f"\n  Rust vs Python 5D encode: {speedup:.1f}× speedup")
@@ -410,10 +585,14 @@ def print_summary():
     # Save results
     out_path = Path(__file__).parent / "benchmark_v3_results.json"
     with open(out_path, "w") as f:
-        json.dump({
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "results": RESULTS,
-        }, f, indent=2)
+        json.dump(
+            {
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "results": RESULTS,
+            },
+            f,
+            indent=2,
+        )
     print(f"\n  Results saved to: {out_path}")
     print("═" * 70)
 
@@ -422,8 +601,10 @@ def print_summary():
 # Main
 # ═══════════════════════════════════════════════════════════════════
 
+
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="WhiteMagic Benchmark Gauntlet v3")
     parser.add_argument("--tier", default="all", help="Tier to run: 1|2|3|4|5|all")
     parser.add_argument("--verbose", action="store_true")

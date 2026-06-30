@@ -19,6 +19,7 @@ class HealthStatus(Enum):
         DEGRADED
         CRITICAL
         UNKNOWN"""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     CRITICAL = "critical"
@@ -53,16 +54,20 @@ class HealthMetric:
 
 @dataclass
 class HealthCheck:
-    """System health check - runs diagnostics across all systems.
-    """
+    """System health check - runs diagnostics across all systems."""
 
     name: str = "WhiteMagic Health Check"
     metrics: dict[str, HealthMetric] = field(default_factory=dict)
     last_check: datetime | None = None
 
-    def add_metric(self, name: str, value: float,
-                   warning: float = 0.7, critical: float = 0.9,
-                   unit: str = "") -> "HealthCheck":
+    def add_metric(
+        self,
+        name: str,
+        value: float,
+        warning: float = 0.7,
+        critical: float = 0.9,
+        unit: str = "",
+    ) -> "HealthCheck":
         """Add a health metric."""
         self.metrics[name] = HealthMetric(
             name=name,
@@ -127,6 +132,7 @@ def create_system_health_check() -> HealthCheck:
 
 # Singleton
 _health_check: HealthCheck | None = None
+
 
 def get_health_check() -> HealthCheck:
     """

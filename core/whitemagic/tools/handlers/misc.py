@@ -1,4 +1,5 @@
 """Miscellaneous tool handlers — stubs, capabilities, immune, oracle, intelligence, metrics, grimoire, memory aliases, hologram, utility."""
+
 # ruff: noqa: BLE001
 import logging
 from typing import Any
@@ -25,6 +26,7 @@ def _stub(tool_name: str, **preview: Any) -> dict[str, Any]:
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
@@ -39,7 +41,6 @@ def _ensure_result_dict(result: Any, context: str) -> dict[str, Any]:
     }
 
 
-# --- Agent Capabilities ---
 def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get agent capabilities event.
@@ -54,19 +55,39 @@ def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
         "categories": {
             "Memory": {
                 "description": "Store, recall, and manage 4D holographic memories.",
-                "tools": ["create_memory", "memory_search", "memory_read", "batch_read_memories", "memory_update"],
+                "tools": [
+                    "create_memory",
+                    "memory_search",
+                    "memory_read",
+                    "batch_read_memories",
+                    "memory_update",
+                ],
             },
             "Archaeology": {
                 "description": "Scan the filesystem, track read/write history, and find new files.",
-                "tools": ["archaeology_scan_directory", "archaeology_read_file", "archaeology_mark_written"],
+                "tools": [
+                    "archaeology_scan_directory",
+                    "archaeology_read_file",
+                    "archaeology_mark_written",
+                ],
             },
             "Intelligence": {
                 "description": "Advanced reasoning, I Ching divination, and pattern detection.",
-                "tools": ["consult_full_council", "detect_patterns", "consult_iching", "run_kaizen_analysis"],
+                "tools": [
+                    "consult_full_council",
+                    "detect_patterns",
+                    "consult_iching",
+                    "run_kaizen_analysis",
+                ],
             },
             "Resonance": {
                 "description": "Interact with the Gan Ying event bus and Garden system.",
-                "tools": ["garden_activate", "ganying_emit", "manage_gardens", "record_yin_yang_activity"],
+                "tools": [
+                    "garden_activate",
+                    "ganying_emit",
+                    "manage_gardens",
+                    "record_yin_yang_activity",
+                ],
             },
         },
         "recommended_workflow": [
@@ -79,7 +100,6 @@ def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# --- Immune ---
 def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a immune scan event.
@@ -91,6 +111,7 @@ def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
         from pathlib import Path
 
         from whitemagic.core.immune.defense.autoimmune import get_immune_system
+
         immune = get_immune_system()
         directory = kwargs.get("directory", ".")
         violations = immune.scan_directory(Path(directory), min_confidence=0.7)
@@ -101,11 +122,12 @@ def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
                 {
                     "file": str(v.file_path),
                     "line": v.line_number,
-                    "pattern": v.pattern.name if hasattr(v.pattern, "name") else str(v.pattern),
+                    "pattern": v.pattern.name
+                    if hasattr(v.pattern, "name")
+                    else str(v.pattern),
                     "matched_text": v.matched_text[:100],
                 }
-                for v in violations[:
-                    20]
+                for v in violations[:20]
             ],
         }
     except Exception as e:
@@ -123,16 +145,20 @@ def handle_immune_heal(**kwargs: Any) -> dict[str, Any]:
         from pathlib import Path
 
         from whitemagic.core.immune.defense.autoimmune import AutoimmuneSystemExtended
+
         immune = AutoimmuneSystemExtended()
         directory = kwargs.get("directory", ".")
         violations = immune.scan_directory(Path(directory), min_confidence=0.9)
         healed = immune.auto_heal(violations)
-        return {"status": "success", "healed_count": healed, "scanned_violations": len(violations)}
+        return {
+            "status": "success",
+            "healed_count": healed,
+            "scanned_violations": len(violations),
+        }
     except (OSError, FileNotFoundError, PermissionError) as e:
         return {"status": "error", "error": str(e)}
 
 
-# --- DNA Validation ---
 def handle_dna_validate(**kwargs: Any) -> dict[str, Any]:
     """Validate a proposed fix against WhiteMagic's core DNA principles.
 
@@ -175,7 +201,9 @@ def handle_dna_validate(**kwargs: Any) -> dict[str, Any]:
 
         violation = validator.validate_proposed_fix(threat, None, fix_details)
         should_suppress, reason = regulator.should_suppress_response(
-            threat, None, fix_details,
+            threat,
+            None,
+            fix_details,
             recent_failures=kwargs.get("recent_failures", 0),
         )
 
@@ -204,13 +232,13 @@ def handle_dna_validate(**kwargs: Any) -> dict[str, Any]:
 def handle_dna_principles(**kwargs: Any) -> dict[str, Any]:
     """List all core DNA principles."""
     from whitemagic.core.intelligence.immune.dna import DNAPrinciple
+
     principles = {}
     for p in DNAPrinciple:
         principles[p.value] = p.name.replace("_", " ").title()
     return {"status": "success", "principles": principles, "count": len(principles)}
 
 
-# --- Symbolic / Oracle ---
 def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a cast oracle event.
@@ -220,6 +248,7 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.wisdom.i_ching import get_i_ching
+
         oracle = get_i_ching()
         question = kwargs.get("question", "What guidance do you offer?")
         hexagram = oracle.cast_hexagram(question)
@@ -236,6 +265,7 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
         # Auto-persist oracle reading as a dream memory
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             content = (
                 f"I Ching Reading — Hexagram {hexagram.number}: {getattr(hexagram, 'name', 'Unknown')}\n"
@@ -270,12 +300,15 @@ def handle_wu_xing_balance(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.wisdom.wu_xing import get_wu_xing
+
         wu_xing = get_wu_xing()
         balance = wu_xing.check_balance()
         phase = wu_xing.detect_current_phase()
         return {
             "status": "success",
-            "balance": {str(k): v for k, v in balance.items()} if isinstance(balance, dict) else balance,
+            "balance": {str(k): v for k, v in balance.items()}
+            if isinstance(balance, dict)
+            else balance,
             "current_phase": str(phase),
             "optimization": wu_xing.suggest_optimization(phase),
         }
@@ -283,7 +316,6 @@ def handle_wu_xing_balance(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-# --- Metrics ---
 def handle_track_metric(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a track metric event.
@@ -292,6 +324,7 @@ def handle_track_metric(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.bridge.metrics import track_metric
+
     return _ensure_result_dict(track_metric(**kwargs), "track_metric")
 
 
@@ -314,6 +347,7 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.core.bridge.metrics import get_metrics_summary
+
         base = _ensure_result_dict(get_metrics_summary(**kwargs), "get_metrics_summary")
         result.update(base)
     except ImportError:
@@ -322,6 +356,7 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
     # Enrich with physical metrics
     try:
         from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+
         source = get_physical_metrics_source()
         metrics = source.get_metrics()
         if metrics.is_available:
@@ -340,6 +375,7 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
     # Enrich with Prometheus export capability
     try:
         from whitemagic.harmony.metrics_exporter import get_metrics_exporter
+
         exporter = get_metrics_exporter()
         result["prometheus_available"] = True
         if kwargs.get("format") == "prometheus":
@@ -350,7 +386,6 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
     return result
 
 
-# --- Intelligence ---
 def handle_execute_cascade(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a execute cascade event.
@@ -359,6 +394,7 @@ def handle_execute_cascade(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.bridge.tools import execute_cascade
+
     # Fallback for verifier/no-arg calls
     if "pattern_name" not in kwargs:
         kwargs["pattern_name"] = "list"
@@ -376,18 +412,23 @@ def handle_thought_clone(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.tools.handlers.memory import handle_create_memory
+
         prompt = kwargs.get("prompt", "")
         count = int(kwargs.get("count", 1))
         results: list[str] = []
         for i in range(min(count, 5)):
             result = handle_create_memory(
-                content=f"Thought clone #{i+1}: {prompt}",
-                title=f"clone_{i+1}",
+                content=f"Thought clone #{i + 1}: {prompt}",
+                title=f"clone_{i + 1}",
                 tags=["thought_clone"],
                 type="short_term",
             )
-            results.append(result.get("details", {}).get("filename", f"clone_{i+1}"))
-        return {"status": "success", "clones_created": len(results), "clone_ids": results}
+            results.append(result.get("details", {}).get("filename", f"clone_{i + 1}"))
+        return {
+            "status": "success",
+            "clones_created": len(results),
+            "clone_ids": results,
+        }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -401,11 +442,17 @@ def handle_coherence_boost(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.consciousness.coherence import get_coherence_metric
+
         coherence = get_coherence_metric()
         score = coherence.measure()
         report = coherence.get_report()
         level = coherence.get_coherence_level()
-        return {"status": "success", "coherence_score": score, "level": level, "report": report}
+        return {
+            "status": "success",
+            "coherence_score": score,
+            "level": level,
+            "report": report,
+        }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -419,6 +466,7 @@ def handle_anti_loop_check(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.agentic.anti_loop import get_anti_loop
+
         detector = get_anti_loop()
         circuit_open = detector.is_circuit_open()
         stats = detector.get_stats()
@@ -441,6 +489,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.consciousness.token_economy import get_token_economy
+
         economy = get_token_economy()
         try:
             budget_status = economy.get_budget_status()
@@ -452,14 +501,18 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
                 "total_budget": getattr(economy, "total_budget", 200000),
                 "tokens_used": getattr(economy, "tokens_used", 0),
                 "error": str(budget_err),
-                "note": "Budget status retrieval partially failed"
+                "note": "Budget status retrieval partially failed",
             }
     except Exception as e:
         logger.error("Token economy initialization failed: %s", e, exc_info=True)
-        return {"status": "error", "error_code": "degraded", "error": str(e), "note": "Token economy subsystem unavailable"}
+        return {
+            "status": "error",
+            "error_code": "degraded",
+            "error": str(e),
+            "note": "Token economy subsystem unavailable",
+        }
 
 
-# --- Grimoire ---
 def handle_grimoire_list(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a grimoire list event.
@@ -469,6 +522,7 @@ def handle_grimoire_list(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.alignment.grimoire_audit import get_auditor
+
         auditor = get_auditor()
         report = auditor.generate_capability_report()
         return {"status": "success", **report}
@@ -485,6 +539,7 @@ def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.alignment.grimoire_audit import get_auditor
+
         auditor = get_auditor()
         spells = auditor.audit()
         category = kwargs.get("chapter", kwargs.get("category", ""))
@@ -494,16 +549,19 @@ def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
             "status": "success",
             "count": len(spells),
             "spells": [
-                {"id": s.id, "name": s.name, "path": str(s.path), "category": s.category}
-                for s in spells[:
-                    50]
+                {
+                    "id": s.id,
+                    "name": s.name,
+                    "path": str(s.path),
+                    "category": s.category,
+                }
+                for s in spells[:50]
             ],
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
 
-# --- Utility ---
 def handle_focus_session(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a focus session event.
@@ -526,6 +584,7 @@ def handle_capability_harness(**kwargs: Any) -> dict[str, Any]:
     """
     try:
         from whitemagic.maintenance.capability_harness import CapabilityHarness
+
         harness = CapabilityHarness()
         report = harness.run_all_combos()
         return {
@@ -547,7 +606,6 @@ def handle_capability_harness(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-# --- Hologram ---
 def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a view hologram event.
@@ -556,12 +614,17 @@ def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.intelligence.hologram.engine import get_hologram_engine
+
     engine = get_hologram_engine()
     operation = kwargs.get("operation", "snapshot")
     if operation == "status":
         return {"status": "success", "engine_stats": engine.get_stats()}
     if not engine.enabled:
-        return {"status": "error", "error_code": "degraded", "error": "Hologram engine not enabled (Rust backend missing)"}
+        return {
+            "status": "error",
+            "error_code": "degraded",
+            "error": "Hologram engine not enabled (Rust backend missing)",
+        }
     if operation == "snapshot":
         try:
             stats = engine.memory_index.get_stats()
@@ -579,10 +642,13 @@ def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
         results = engine.query_by_vector(vector, limit=limit)
         formatted = [{"id": pid, "distance": dist} for pid, dist in results]
         return {"status": "success", "query": vector, "results": formatted}
-    return {"status": "error", "error_code": "invalid_params", "error": f"Unknown operation: {operation}"}
+    return {
+        "status": "error",
+        "error_code": "invalid_params",
+        "error": f"Unknown operation: {operation}",
+    }
 
 
-# --- Memory aliases ---
 def handle_read_memory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a read memory event.
@@ -610,14 +676,20 @@ def handle_list_memories(**kwargs: Any) -> dict[str, Any]:
     # Convert to dict format
     results = []
     for mem in memories:
-        results.append({
-            "id": mem.id,
-            "title": mem.title or "Untitled",
-            "content": (mem.content[:200] + "..." if len(mem.content) > 200 else mem.content) if mem.content else "",
-            "memory_type": mem.memory_type,
-            "created_at": mem.created_at,
-            "importance": mem.importance,
-        })
+        results.append(
+            {
+                "id": mem.id,
+                "title": mem.title or "Untitled",
+                "content": (
+                    mem.content[:200] + "..." if len(mem.content) > 200 else mem.content
+                )
+                if mem.content
+                else "",
+                "memory_type": mem.memory_type,
+                "created_at": mem.created_at,
+                "importance": mem.importance,
+            }
+        )
 
     return {"status": "success", "results": results, "count": len(results)}
 
@@ -652,7 +724,6 @@ def handle_delete_memory(**kwargs: Any) -> dict[str, Any]:
     return _ensure_result_dict(memory_delete(**kwargs), "memory_delete")
 
 
-# --- Optimization ---
 def handle_solve_optimization(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a solve optimization event.
@@ -664,6 +735,7 @@ def handle_solve_optimization(**kwargs: Any) -> dict[str, Any]:
     edges = kwargs.pop("edges", [])
     scores = kwargs.pop("scores", {})
     from whitemagic.core.bridge.optimization import solve_optimization
+
     return _ensure_result_dict(
         solve_optimization(nodes=nodes, edges=edges, scores=scores, **kwargs),
         "solve_optimization",

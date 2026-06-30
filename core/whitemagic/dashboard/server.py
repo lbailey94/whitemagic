@@ -34,6 +34,7 @@ class DashboardServer:
     def _metrics_endpoint(self) -> dict[str, Any]:
         try:
             from whitemagic.homeostasis.metrics import get_metrics
+
             return get_metrics().summary()
         except Exception:
             return {"status": "unavailable"}
@@ -41,6 +42,7 @@ class DashboardServer:
     def _gardens_endpoint(self) -> dict[str, Any]:
         try:
             from whitemagic.gardens.synthesis import get_synthesis
+
             return get_synthesis().summary()
         except Exception:
             return {"status": "unavailable"}
@@ -48,7 +50,11 @@ class DashboardServer:
     def _tools_endpoint(self) -> dict[str, Any]:
         try:
             from whitemagic.tools.dispatch_table import DISPATCH_TABLE
-            return {"total_tools": len(DISPATCH_TABLE), "tools": list(DISPATCH_TABLE.keys())[:20]}
+
+            return {
+                "total_tools": len(DISPATCH_TABLE),
+                "tools": list(DISPATCH_TABLE.keys())[:20],
+            }
         except Exception:
             return {"status": "unavailable"}
 

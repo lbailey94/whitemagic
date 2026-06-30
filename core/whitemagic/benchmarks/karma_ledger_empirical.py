@@ -15,6 +15,7 @@ Usage:
     python -m whitemagic.benchmarks.karma_ledger_empirical
     python -m whitemagic.benchmarks.karma_ledger_empirical --json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -338,10 +339,11 @@ def run_empirical_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
         categories[cat]["total"] += 1
 
     for entry in ledger._entries:
-        cat = "dispatch" if any(
-            r["tool"] == entry.tool and r["via_dispatch"]
-            for r in results
-        ) else "direct"
+        cat = (
+            "dispatch"
+            if any(r["tool"] == entry.tool and r["via_dispatch"] for r in results)
+            else "direct"
+        )
         if entry.mismatch:
             categories[cat]["mismatches"] += 1
         categories[cat]["debt"] += entry.debt_delta

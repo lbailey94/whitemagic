@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from whitemagic.core.intelligence.agentic.token_optimizer import (
     CachedResult as CachedQuery,
+)
+from whitemagic.core.intelligence.agentic.token_optimizer import (
     ContextCompressor,
     QueryCache,
     TokenBudget,

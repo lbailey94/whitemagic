@@ -45,7 +45,9 @@ class DreamArtifact:
     creative_bridge: str
     keywords: list[str] = field(default_factory=list)
     revisit_count: int = 0
-    status: str = "incubating"  # incubating → reconsidered → promoted → archived → expired
+    status: str = (
+        "incubating"  # incubating → reconsidered → promoted → archived → expired
+    )
     last_revisited: datetime | None = None
     promoted_to_memory_id: str | None = None
 
@@ -68,7 +70,9 @@ class DreamArtifact:
             "keywords": self.keywords,
             "revisit_count": self.revisit_count,
             "status": self.status,
-            "last_revisited": self.last_revisited.isoformat() if self.last_revisited else None,
+            "last_revisited": self.last_revisited.isoformat()
+            if self.last_revisited
+            else None,
             "promoted_to_memory_id": self.promoted_to_memory_id,
         }
 
@@ -96,7 +100,9 @@ class DreamArtifact:
             keywords=data.get("keywords", []),
             revisit_count=data.get("revisit_count", 0),
             status=data.get("status", "incubating"),
-            last_revisited=datetime.fromisoformat(data["last_revisited"]) if data.get("last_revisited") else None,
+            last_revisited=datetime.fromisoformat(data["last_revisited"])
+            if data.get("last_revisited")
+            else None,
             promoted_to_memory_id=data.get("promoted_to_memory_id"),
         )
 
@@ -121,10 +127,38 @@ def _extract_keywords(left: str, right: str, bridge: str) -> list[str]:
     # Simple frequency-based extraction
     words = re.findall(r"\b[a-z]{4,}\b", text)
     stop = {
-        "should", "would", "could", "might", "maybe", "perhaps", "this", "that",
-        "with", "from", "have", "been", "were", "they", "them", "their", "there",
-        "what", "when", "where", "which", "while", "about", "into", "through",
-        "during", "before", "after", "above", "below", "between", "among",
+        "should",
+        "would",
+        "could",
+        "might",
+        "maybe",
+        "perhaps",
+        "this",
+        "that",
+        "with",
+        "from",
+        "have",
+        "been",
+        "were",
+        "they",
+        "them",
+        "their",
+        "there",
+        "what",
+        "when",
+        "where",
+        "which",
+        "while",
+        "about",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "among",
     }
     filtered = [w for w in words if w not in stop]
     # Return top 5 unique by frequency
@@ -134,10 +168,6 @@ def _extract_keywords(left: str, right: str, bridge: str) -> list[str]:
     top = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:5]
     return [w for w, _ in top]
 
-
-# ---------------------------------------------------------------------------
-# Writer — listens to Gan Ying bus
-# ---------------------------------------------------------------------------
 
 class DreamArtifactWriter:
     """Listens for CREATIVE_BRIDGE_LOW_CONFIDENCE and writes YAML artifacts."""
@@ -153,11 +183,16 @@ class DreamArtifactWriter:
                 return
             try:
                 from whitemagic.core.resonance import EventType, get_bus
-                get_bus().listen(EventType.CREATIVE_BRIDGE_LOW_CONFIDENCE, self._on_event)
+
+                get_bus().listen(
+                    EventType.CREATIVE_BRIDGE_LOW_CONFIDENCE, self._on_event
+                )
                 self._listening = True
                 logger.info("DreamArtifactWriter registered on Gan Ying bus")
             except Exception as exc:
-                logger.warning("DreamArtifactWriter failed to register: %s", exc, exc_info=True)
+                logger.warning(
+                    "DreamArtifactWriter failed to register: %s", exc, exc_info=True
+                )
 
     def _on_event(self, event: Any) -> None:
         data = getattr(event, "data", {})
@@ -207,15 +242,17 @@ class DreamArtifactWriter:
         )
 
         with open(path, "w", encoding="utf-8") as fp:
-            yaml.dump(artifact.to_dict(), fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            yaml.dump(
+                artifact.to_dict(),
+                fp,
+                default_flow_style=False,
+                sort_keys=False,
+                allow_unicode=True,
+            )
 
         logger.info("Dream artifact written: %s", path.name, exc_info=True)
         return artifact
 
-
-# ---------------------------------------------------------------------------
-# CRUD operations
-# ---------------------------------------------------------------------------
 
 def list_dreams(status_filter: str | None = None) -> list[dict[str, Any]]:
     """List all dream artifacts, optionally filtered by status."""
@@ -229,7 +266,9 @@ def list_dreams(status_filter: str | None = None) -> list[dict[str, Any]]:
                 data["_filename"] = path.name
                 results.append(data)
         except Exception as exc:
-            logger.debug("Skipping unreadable dream %s: %s", path.name, exc, exc_info=True)
+            logger.debug(
+                "Skipping unreadable dream %s: %s", path.name, exc, exc_info=True
+            )
     return results
 
 
@@ -245,7 +284,9 @@ def read_dream(dream_id: str) -> dict[str, Any] | None:
                     data["_filename"] = path.name
                     return data
             except Exception as exc:
-                logger.warning("Failed to read dream %s: %s", path.name, exc, exc_info=True)
+                logger.warning(
+                    "Failed to read dream %s: %s", path.name, exc, exc_info=True
+                )
     return None
 
 
@@ -262,11 +303,19 @@ def _update_dream_file(dream_id: str, **kwargs: Any) -> dict[str, Any] | None:
                 for k, v in kwargs.items():
                     data[k] = v
                 with open(path, "w", encoding="utf-8") as fp:
-                    yaml.dump(data, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                    yaml.dump(
+                        data,
+                        fp,
+                        default_flow_style=False,
+                        sort_keys=False,
+                        allow_unicode=True,
+                    )
                 data["_filename"] = path.name
                 return data
             except Exception as exc:
-                logger.warning("Failed to update dream %s: %s", path.name, exc, exc_info=True)
+                logger.warning(
+                    "Failed to update dream %s: %s", path.name, exc, exc_info=True
+                )
     return None
 
 

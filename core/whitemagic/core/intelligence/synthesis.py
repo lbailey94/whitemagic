@@ -27,10 +27,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- TITLE GENERATOR ---
 
 class TitleGenerator:
     """Generate descriptive titles for memories based on content analysis."""
+
     def generate(self, content: str) -> str:
         """
         Perform the generate operation.
@@ -49,10 +49,10 @@ class TitleGenerator:
             return match.group(1).strip()[:60]
         return content.split("\n")[0].strip()[:60]
 
-# --- SERENDIPITY ENGINE ---
 
 class SerendipityEngine:
     """Detects unexpected connections and novel insights (serendipity)."""
+
     def find_serendipity(self, pool: Any = None) -> list[dict[str, Any]]:
         """Find serendipitous connections across the memory pool.
 
@@ -62,27 +62,30 @@ class SerendipityEngine:
         results: list[dict[str, Any]] = []
         try:
             from whitemagic.core.intelligence.core_access import get_core_access_layer
+
             cal = get_core_access_layer()
             # Query for cross-cluster edges (associations between different constellations)
             cross_edges = cal.query_cross_cluster_associations(limit=20)
             for edge in cross_edges:
-                results.append({
-                    "source": edge.get("source_memory_id", ""),
-                    "target": edge.get("target_memory_id", ""),
-                    "edge_type": edge.get("association_type", "related"),
-                    "source_cluster": edge.get("source_cluster", ""),
-                    "target_cluster": edge.get("target_cluster", ""),
-                    "novelty_score": edge.get("weight", 0.5),
-                    "description": f"Cross-cluster link: {edge.get('source_cluster', '?')} → {edge.get('target_cluster', '?')}",
-                })
+                results.append(
+                    {
+                        "source": edge.get("source_memory_id", ""),
+                        "target": edge.get("target_memory_id", ""),
+                        "edge_type": edge.get("association_type", "related"),
+                        "source_cluster": edge.get("source_cluster", ""),
+                        "target_cluster": edge.get("target_cluster", ""),
+                        "novelty_score": edge.get("weight", 0.5),
+                        "description": f"Cross-cluster link: {edge.get('source_cluster', '?')} → {edge.get('target_cluster', '?')}",
+                    }
+                )
         except Exception:
             pass
         return results
 
-# --- SOLVER ENGINE ---
 
 class DharmicSolver:
     """Mathematical solver for causal constraints and ethical optimization."""
+
     def solve(self, nodes: list, edges: list, scores: dict) -> Any:
         # Simplified implementation
         """
@@ -98,10 +101,11 @@ class DharmicSolver:
         """
         return {n: 1.0 for n in nodes}
 
-# --- SINGLETONS ---
+
 _title_gen: TitleGenerator | None = None
 _serendipity: SerendipityEngine | None = None
 _solver: DharmicSolver | None = None
+
 
 def get_title_generator() -> TitleGenerator:
     """
@@ -115,6 +119,7 @@ def get_title_generator() -> TitleGenerator:
         _title_gen = TitleGenerator()
     return _title_gen
 
+
 def get_serendipity_engine() -> SerendipityEngine:
     """
     Get the serendipity engine.
@@ -126,6 +131,7 @@ def get_serendipity_engine() -> SerendipityEngine:
     if _serendipity is None:
         _serendipity = SerendipityEngine()
     return _serendipity
+
 
 def get_solver() -> DharmicSolver:
     """

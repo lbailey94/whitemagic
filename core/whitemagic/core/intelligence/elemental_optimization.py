@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 class ReasoningOptimization(Enum):
     """Wu Xing-based reasoning optimizations."""
 
-    WOOD_EXPLORATION = "wood_exploration"      # Parallel, broad
-    FIRE_DECISIVE = "fire_decisive"            # Fast, focused
+    WOOD_EXPLORATION = "wood_exploration"  # Parallel, broad
+    FIRE_DECISIVE = "fire_decisive"  # Fast, focused
     EARTH_CONSOLIDATION = "earth_consolidation"  # Synthesis, grounding
-    METAL_REFINEMENT = "metal_refinement"      # Precision, boundaries
-    WATER_REFLECTION = "water_reflection"      # Deep, adaptive
+    METAL_REFINEMENT = "metal_refinement"  # Precision, boundaries
+    WATER_REFLECTION = "water_reflection"  # Deep, adaptive
 
 
 class ElementalOptimizer:
@@ -34,14 +34,17 @@ class ElementalOptimizer:
         """Connect to Wu Xing system."""
         try:
             from whitemagic.core.intelligence.wisdom.wu_xing import get_wu_xing
+
             self.wu_xing = get_wu_xing()
         except ImportError:
             try:
                 from whitemagic.gardens.wisdom.wu_xing import get_wu_xing
+
                 self.wu_xing = get_wu_xing()
             except ImportError:
-                logger.debug("Wu Xing garden not available; elemental optimization runs in standalone mode")
-
+                logger.debug(
+                    "Wu Xing garden not available; elemental optimization runs in standalone mode"
+                )
 
     def get_optimization_strategy(self, task_type: str) -> dict[str, Any]:
         """Get optimization strategy based on task type."""
@@ -119,16 +122,37 @@ class ElementalOptimizer:
         """Suggest optimal lens sequence for element."""
         sequences = {
             "wood": ["i_ching", "wu_xing", "zodiac", "art_of_war"],  # Start with wisdom
-            "fire": ["art_of_war", "wu_xing", "zodiac", "i_ching"],  # Start with strategy
-            "earth": ["wu_xing", "zodiac", "i_ching", "art_of_war"],  # Start with grounding
-            "metal": ["zodiac", "art_of_war", "wu_xing", "i_ching"],  # Start with precision
-            "water": ["i_ching", "zodiac", "wu_xing", "art_of_war"],  # Start with oracle
+            "fire": [
+                "art_of_war",
+                "wu_xing",
+                "zodiac",
+                "i_ching",
+            ],  # Start with strategy
+            "earth": [
+                "wu_xing",
+                "zodiac",
+                "i_ching",
+                "art_of_war",
+            ],  # Start with grounding
+            "metal": [
+                "zodiac",
+                "art_of_war",
+                "wu_xing",
+                "i_ching",
+            ],  # Start with precision
+            "water": [
+                "i_ching",
+                "zodiac",
+                "wu_xing",
+                "art_of_war",
+            ],  # Start with oracle
         }
         return sequences.get(element, ["i_ching", "wu_xing", "art_of_war", "zodiac"])
 
 
 # Singleton
 _elemental_optimizer: ElementalOptimizer | None = None
+
 
 def get_elemental_optimizer() -> ElementalOptimizer:
     """Get global elemental optimizer."""

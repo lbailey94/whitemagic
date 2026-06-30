@@ -69,7 +69,9 @@ class PresenceGarden(BaseGarden, GanYingMixin):
         }
         with self._lock:
             self.presence_level = min(1.0, self.presence_level + 0.05)
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "breathe", "garden": "presence"})
+        self.emit(
+            EventType.GARDEN_ACTIVITY, {"action": "breathe", "garden": "presence"}
+        )
         return session
 
     def get_status(self) -> dict[str, Any]:
@@ -80,11 +82,13 @@ class PresenceGarden(BaseGarden, GanYingMixin):
             dict[str, Any]
         """
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "presence_level": round(self.presence_level, 3),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "presence_level": round(self.presence_level, 3),
+            }
+        )
         return base
 
     @listen_for(EventType.STILLNESS_DETECTED)
@@ -103,6 +107,8 @@ class PresenceGarden(BaseGarden, GanYingMixin):
 
 
 _instance = None
+
+
 def get_presence_garden() -> PresenceGarden:
     """
     Get the presence garden.

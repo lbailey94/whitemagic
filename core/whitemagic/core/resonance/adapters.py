@@ -13,6 +13,7 @@ warnings.warn(
     stacklevel=2,
 )
 
+
 # Stub for backward compatibility
 def setup_all_adapters():
     """Deprecated: Adapters are no longer needed in the unified resonance subsystem."""
@@ -22,5 +23,6 @@ def setup_all_adapters():
         stacklevel=2,
     )
     pass
+
 
 __all__ = ["setup_all_adapters"]

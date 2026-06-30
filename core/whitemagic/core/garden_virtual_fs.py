@@ -35,7 +35,9 @@ class GardenVirtualFS:
 
     def __init__(self, root: Path, registry_path: Path | None = None):
         self.root = root
-        self.registry_path = registry_path or root / "data" / "garden_file_registry.json"
+        self.registry_path = (
+            registry_path or root / "data" / "garden_file_registry.json"
+        )
         self._tree: VirtualNode | None = None
         self._garden_nodes: dict[str, VirtualNode] = {}
         self._loaded = False
@@ -170,7 +172,9 @@ class GardenVirtualFS:
             return node.physical_path
         return None
 
-    def get_garden_files(self, garden: str, file_type: str | None = None) -> list[VirtualNode]:
+    def get_garden_files(
+        self, garden: str, file_type: str | None = None
+    ) -> list[VirtualNode]:
         """Get all files for a garden, optionally filtered by type."""
         garden_node = self._garden_nodes.get(garden)
         if not garden_node:
@@ -220,7 +224,9 @@ class GardenVirtualFS:
                     None
                 """
                 if node.node_type == "file":
-                    if query_lower in node.virtual_path.lower() or (node.physical_path and query_lower in node.physical_path.lower()):
+                    if query_lower in node.virtual_path.lower() or (
+                        node.physical_path and query_lower in node.physical_path.lower()
+                    ):
                         results.append(node)
                 for child in node.children.values():
                     search_node(child)
@@ -263,6 +269,7 @@ class GardenVirtualFS:
 
     def to_json(self) -> str:
         """Export the virtual filesystem as JSON."""
+
         def node_to_dict(node: VirtualNode) -> dict[str, Any]:
             """
             Perform the node to dict operation.
@@ -295,6 +302,7 @@ def get_garden_virtual_fs(root: Path | None = None) -> GardenVirtualFS:
     global _virtual_fs
     if _virtual_fs is None:
         from pathlib import Path as P
+
         root = root or P.cwd()
         _virtual_fs = GardenVirtualFS(root)
         _virtual_fs.load()

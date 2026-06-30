@@ -1,4 +1,5 @@
 """Web research tool handlers — web_fetch, web_search, research_topic."""
+
 import asyncio
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
@@ -9,6 +10,7 @@ T = TypeVar("T")
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
@@ -49,7 +51,14 @@ def handle_web_fetch(**kwargs: Any) -> dict[str, Any]:
         "error": fetch_result.error,
     }
 
-    _emit("WEB_FETCH", {"url": url, "success": fetch_result.success, "length": fetch_result.content_length})
+    _emit(
+        "WEB_FETCH",
+        {
+            "url": url,
+            "success": fetch_result.success,
+            "length": fetch_result.content_length,
+        },
+    )
     return {"status": "success", **result}
 
 
@@ -90,17 +99,14 @@ def handle_web_search_and_read(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.gardens.browser.web_research import web_fetch, web_search
 
     async def _search_and_read() -> dict[str, Any]:
-        # Step 1: Search
         search_result = await web_search(query, num_results=num_results)
         if not search_result.success:
             return {"error": search_result.error, "results": []}
 
-        # Step 2: Fetch top results in parallel
         urls = [r.url for r in search_result.results[:max_fetch]]
         fetch_tasks = [web_fetch(u, max_chars=max_chars_per_page) for u in urls]
         fetched = await asyncio.gather(*fetch_tasks, return_exceptions=True)
 
-        # Step 3: Merge
         enriched = []
         for sr in search_result.results:
             entry: dict[str, Any] = sr.to_dict()
@@ -108,12 +114,16 @@ def handle_web_search_and_read(**kwargs: Any) -> dict[str, Any]:
             enriched.append(entry)
 
         for i, fetch_result in enumerate(fetched):
-            if isinstance(fetch_result, BaseException) or not hasattr(fetch_result, "success"):
+            if isinstance(fetch_result, BaseException) or not hasattr(
+                fetch_result, "success"
+            ):
                 continue
             if fetch_result.success and i < len(enriched):
                 enriched[i]["content"] = fetch_result.content  # type: ignore[union-attr]
                 enriched[i]["content_length"] = fetch_result.content_length  # type: ignore[union-attr]
-                enriched[i]["title"] = fetch_result.title or enriched[i].get("title", "")  # type: ignore[union-attr]
+                enriched[i]["title"] = fetch_result.title or enriched[i].get(
+                    "title", ""
+                )  # type: ignore[union-attr]
 
         return {
             "query": query,
@@ -123,7 +133,10 @@ def handle_web_search_and_read(**kwargs: Any) -> dict[str, Any]:
         }
 
     result = _run_async(_search_and_read())
-    _emit("WEB_SEARCH_AND_READ", {"query": query, "fetched": result.get("fetched_count", 0)})
+    _emit(
+        "WEB_SEARCH_AND_READ",
+        {"query": query, "fetched": result.get("fetched_count", 0)},
+    )
     return {"status": "success", **result}
 
 
@@ -163,11 +176,14 @@ def handle_research_topic(**kwargs: Any) -> dict[str, Any]:
         return data
 
     result = _run_async(_research())
-    _emit("RESEARCH_TOPIC", {
-        "topic": topic,
-        "sources": result.get("sources_fetched", 0),
-        "duration_ms": result.get("duration_ms"),
-    })
+    _emit(
+        "RESEARCH_TOPIC",
+        {
+            "topic": topic,
+            "sources": result.get("sources_fetched", 0),
+            "duration_ms": result.get("duration_ms"),
+        },
+    )
     return {"status": "success", **result}
 
 
@@ -184,11 +200,20 @@ def handle_web_search_category(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.gardens.browser.web_research import web_search
 
     async def _search() -> dict[str, Any]:
-        result = await web_search(query, num_results=num_results, timeout=timeout, category=category)
+        result = await web_search(
+            query, num_results=num_results, timeout=timeout, category=category
+        )
         return result.to_dict()
 
     result = _run_async(_search())
-    _emit("WEB_SEARCH", {"query": query, "category": category, "results": result.get("total_results", 0)})
+    _emit(
+        "WEB_SEARCH",
+        {
+            "query": query,
+            "category": category,
+            "results": result.get("total_results", 0),
+        },
+    )
     return {"status": "success", "category": category, **result}
 
 
@@ -220,7 +245,15 @@ def handle_deep_fetch(**kwargs: Any) -> dict[str, Any]:
         "error": fetch_result.error,
     }
 
-    _emit("DEEP_FETCH", {"url": url, "success": fetch_result.success, "length": fetch_result.content_length, "pages": fetch_result.pages_fetched})
+    _emit(
+        "DEEP_FETCH",
+        {
+            "url": url,
+            "success": fetch_result.success,
+            "length": fetch_result.content_length,
+            "pages": fetch_result.pages_fetched,
+        },
+    )
     return {"status": "success", **result}
 
 
@@ -234,14 +267,29 @@ def handle_research_repo(**kwargs: Any) -> dict[str, Any]:
     max_chars_per_page = int(kwargs.get("max_chars_per_page", 50_000))
     store_memories = kwargs.get("store_memories", True)
 
-    from whitemagic.gardens.browser.web_research import RepoResearchResult, research_repo
+    from whitemagic.gardens.browser.web_research import (
+        RepoResearchResult,
+        research_repo,
+    )
 
     async def _research() -> RepoResearchResult:
-        return await research_repo(repo, max_pages=max_pages, max_chars_per_page=max_chars_per_page, store_memories=store_memories)
+        return await research_repo(
+            repo,
+            max_pages=max_pages,
+            max_chars_per_page=max_chars_per_page,
+            store_memories=store_memories,
+        )
 
     result = _run_async(_research())
 
-    _emit("RESEARCH_REPO", {"repo": repo, "pages": result.pages_fetched, "memories": len(result.memory_ids)})
+    _emit(
+        "RESEARCH_REPO",
+        {
+            "repo": repo,
+            "pages": result.pages_fetched,
+            "memories": len(result.memory_ids),
+        },
+    )
     return {"status": "success", **result.to_dict()}
 
 
@@ -258,11 +306,16 @@ def handle_research_url(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.gardens.browser.web_research import URLResearchResult, research_url
 
     async def _research() -> URLResearchResult:
-        return await research_url(url, max_chars=max_chars, timeout=timeout, store_memory=store_memory)
+        return await research_url(
+            url, max_chars=max_chars, timeout=timeout, store_memory=store_memory
+        )
 
     result = _run_async(_research())
 
-    _emit("RESEARCH_URL", {"url": url, "success": result.success, "memory_id": result.memory_id})
+    _emit(
+        "RESEARCH_URL",
+        {"url": url, "success": result.success, "memory_id": result.memory_id},
+    )
     return {"status": "success", **result.to_dict()}
 
 
@@ -277,23 +330,36 @@ def handle_parallel_reason(**kwargs: Any) -> dict[str, Any]:
     fork_threshold = float(kwargs.get("fork_threshold", 0.5))
 
     import asyncio
+
     from whitemagic.core.intelligence.parallel_reasoning import ParallelReasoningTree
 
     tree = ParallelReasoningTree(question=question)
 
     async def _explore():
-        return await tree.explore(max_branches=max_branches, max_depth=max_depth, fork_threshold=fork_threshold)
+        return await tree.explore(
+            max_branches=max_branches,
+            max_depth=max_depth,
+            fork_threshold=fork_threshold,
+        )
 
     try:
         asyncio.get_running_loop()
         # We're in an async context, use thread pool
         from concurrent.futures import ThreadPoolExecutor
+
         with ThreadPoolExecutor(max_workers=1) as executor:
             result = executor.submit(asyncio.run, _explore()).result()
     except RuntimeError:
         result = asyncio.run(_explore())
 
-    _emit("PARALLEL_REASON", {"question": question, "branches": len(result.branches), "best": result.best_branch_id})
+    _emit(
+        "PARALLEL_REASON",
+        {
+            "question": question,
+            "branches": len(result.branches),
+            "best": result.best_branch_id,
+        },
+    )
     return {"status": "success", **result.to_dict()}
 
 
@@ -307,10 +373,18 @@ def handle_web_search_batch(**kwargs: Any) -> dict[str, Any]:
     timeout = float(kwargs.get("timeout", 10.0))
     category = kwargs.get("category")
 
-    from whitemagic.gardens.browser.web_research import BatchSearchResult, web_search_batch
+    from whitemagic.gardens.browser.web_research import (
+        BatchSearchResult,
+        web_search_batch,
+    )
 
     async def _batch() -> BatchSearchResult:
-        return await web_search_batch(queries, num_results_per_query=num_results, timeout=timeout, category=category)
+        return await web_search_batch(
+            queries,
+            num_results_per_query=num_results,
+            timeout=timeout,
+            category=category,
+        )
 
     result = _run_async(_batch())
     _emit("WEB_SEARCH_BATCH", {"queries": len(queries), "total": result.total_results})
@@ -389,13 +463,17 @@ def handle_rabbit_hole_research(**kwargs: Any) -> dict[str, Any]:
         ],
     }
 
-    _emit("RABBIT_HOLE", {"topic": topic, "entries": len(report.entries), "depth": max_depth})
+    _emit(
+        "RABBIT_HOLE",
+        {"topic": topic, "entries": len(report.entries), "depth": max_depth},
+    )
     return result
 
 
 def handle_web_cache_list(**kwargs: Any) -> dict[str, Any]:
     """List all cached web content files with metadata."""
     from whitemagic.gardens.browser.web_research import list_cached_content
+
     items = list_cached_content()
     return {"status": "success", "count": len(items), "items": items}
 
@@ -403,6 +481,7 @@ def handle_web_cache_list(**kwargs: Any) -> dict[str, Any]:
 def handle_web_cache_clear(**kwargs: Any) -> dict[str, Any]:
     """Clear cached web content. Optionally only older than N hours."""
     from whitemagic.gardens.browser.web_research import clear_cached_content
+
     older_than = kwargs.get("older_than_hours")
     if older_than:
         older_than = int(older_than)
@@ -439,7 +518,14 @@ def handle_codegenome_validate(**kwargs: Any) -> dict[str, Any]:
         repo_path=repo_path,
     )
 
-    _emit("CODEGENOME_VALIDATE", {"prompt": prompt[:50], "iterations": len(result.get("iterations", [])), "score": result.get("final_score", 0)})
+    _emit(
+        "CODEGENOME_VALIDATE",
+        {
+            "prompt": prompt[:50],
+            "iterations": len(result.get("iterations", [])),
+            "score": result.get("final_score", 0),
+        },
+    )
     return {"status": "success", **result}
 
 
@@ -465,13 +551,21 @@ def handle_alchemical_cycle(**kwargs: Any) -> dict[str, Any]:
 
     result = run_alchemical_cycle(task=task, cycles=cycles)
 
-    _emit("ALCHEMICAL_CYCLE", {"task": task[:50], "cycles": len(result.get("cycles", [])), "success": result.get("success")})
+    _emit(
+        "ALCHEMICAL_CYCLE",
+        {
+            "task": task[:50],
+            "cycles": len(result.get("cycles", [])),
+            "success": result.get("success"),
+        },
+    )
     return {"status": "success", **result}
 
 
 def handle_browser_session_status(**kwargs: Any) -> dict[str, Any]:
     """Get the status of the persistent browser session."""
     from whitemagic.gardens.browser.web_research import BrowserSessionManager
+
     mgr = BrowserSessionManager.get()
     return {"status": "success", **mgr.status()}
 
@@ -501,11 +595,11 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
     max_chars = int(kwargs.get("max_chars", 50_000))
     chunk_index = kwargs.get("chunk_index")
 
-    from whitemagic.gardens.browser.web_research import web_fetch
     from whitemagic.gardens.browser.content_intelligence import (
-        process_content,
         enhanced_to_dict,
+        process_content,
     )
+    from whitemagic.gardens.browser.web_research import web_fetch
 
     # Fetch the URL
     async def _fetch():
@@ -537,7 +631,10 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
         )
         idx = int(chunk_index)
         if idx < 0 or idx >= len(enhanced.chunks):
-            return {"status": "error", "error": f"chunk_index {idx} out of range (0-{len(enhanced.chunks) - 1})"}
+            return {
+                "status": "error",
+                "error": f"chunk_index {idx} out of range (0-{len(enhanced.chunks) - 1})",
+            }
         chunk = enhanced.chunks[idx]
         return {
             "status": "success",
@@ -556,15 +653,18 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
     raw_html = fetch_result.content  # Fallback: use text as-is
     try:
         import httpx
+
         async def _fetch_raw():
             async with httpx.AsyncClient(
-                follow_redirects=True, timeout=15.0,
+                follow_redirects=True,
+                timeout=15.0,
                 headers={"User-Agent": "WhiteMagic/1.0"},
             ) as client:
                 resp = await client.get(url)
                 if resp.status_code in range(200, 400):
                     return resp.text
                 return ""
+
         raw_html = _run_async(_fetch_raw()) or fetch_result.content
     except Exception:
         pass
@@ -584,11 +684,14 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
     result["status"] = "success"
     result["url"] = url
 
-    _emit("WEB_FETCH_ENHANCED", {
-        "url": url,
-        "outline_nodes": len(enhanced.outline),
-        "chunks": enhanced.total_chunks,
-        "summarizer": enhanced.summarizer_used,
-    })
+    _emit(
+        "WEB_FETCH_ENHANCED",
+        {
+            "url": url,
+            "outline_nodes": len(enhanced.outline),
+            "chunks": enhanced.total_chunks,
+            "summarizer": enhanced.summarizer_used,
+        },
+    )
 
     return result

@@ -13,7 +13,10 @@ def handle_otel(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 

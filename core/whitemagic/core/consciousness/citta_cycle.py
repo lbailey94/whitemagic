@@ -119,12 +119,14 @@ class CittaCycle:
 
             # Track depth transitions
             if depth_layer != self._last_depth:
-                self._depth_transitions.append({
-                    "from": self._last_depth,
-                    "to": depth_layer,
-                    "at_position": self._current_position,
-                    "timestamp": moment.timestamp,
-                })
+                self._depth_transitions.append(
+                    {
+                        "from": self._last_depth,
+                        "to": depth_layer,
+                        "at_position": self._current_position,
+                        "timestamp": moment.timestamp,
+                    }
+                )
                 self._last_depth = depth_layer
 
         return moment
@@ -189,8 +191,11 @@ class CittaCycle:
                 "depth_transitions": len(self._depth_transitions),
                 "emotional_coloring": self.get_emotional_coloring(),
                 "avg_coherence": (
-                    round(sum(self._coherence_history) / len(self._coherence_history), 4)
-                    if self._coherence_history else 1.0
+                    round(
+                        sum(self._coherence_history) / len(self._coherence_history), 4
+                    )
+                    if self._coherence_history
+                    else 1.0
                 ),
             }
 

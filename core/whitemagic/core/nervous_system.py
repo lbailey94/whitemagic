@@ -15,6 +15,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class OrganType(Enum):
     """OrganType: organ type.
 
@@ -28,6 +29,7 @@ class OrganType(Enum):
         CONSCIOUSNESS
         RESONANCE
         EMERGENCE"""
+
     IMMUNE = "immune"
     GENETICS = "genetics"
     DREAM = "dream"
@@ -35,6 +37,7 @@ class OrganType(Enum):
     CONSCIOUSNESS = "consciousness"
     RESONANCE = "resonance"
     EMERGENCE = "emergence"
+
 
 class NervousSystem:
     """
@@ -82,7 +85,12 @@ class NervousSystem:
                 try:
                     callback(data)
                 except Exception as e:
-                    logger.error("Error in signal handler for %s: %s", signal_type, e, exc_info=True)
+                    logger.error(
+                        "Error in signal handler for %s: %s",
+                        signal_type,
+                        e,
+                        exc_info=True,
+                    )
 
     def health_dashboard(self) -> dict[str, str]:
         """Return status of all registered organs."""
@@ -102,11 +110,11 @@ class NervousSystem:
                 status[name] = "ERROR"
         return status
 
-    # --- Specific Feedback Loops (V005) ---
-
     def signal_threat_detected(self, threat_level: float, details: dict[str, Any]):
         """Immune -> Dream: Threat triggers defensive dream cycle."""
-        self.dispatch_signal("threat_detected", {"level": threat_level, "details": details})
+        self.dispatch_signal(
+            "threat_detected", {"level": threat_level, "details": details}
+        )
 
         # Direct wiring if dream organ exists
         dream = self.get_organ(OrganType.DREAM)
@@ -130,6 +138,7 @@ class NervousSystem:
         genetics = self.get_organ(OrganType.GENETICS)
         if genetics and hasattr(genetics, "update_fitness"):
             genetics.update_fitness(insights)
+
 
 def get_nervous_system() -> NervousSystem:
     """Singleton accessor."""

@@ -10,9 +10,10 @@ from typing import Any
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    stream=sys.stderr
+    stream=sys.stderr,
 )
 logger = logging.getLogger("brain_bridge")
+
 
 def send_response(data: dict[str, Any]):
     """Send a base64-encoded JSON response to Elixir."""
@@ -23,6 +24,7 @@ def send_response(data: dict[str, Any]):
         sys.stdout.flush()
     except (OSError, FileNotFoundError, PermissionError) as e:
         logger.error("Error encoding response: %s", e, exc_info=True)
+
 
 def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
     """
@@ -36,6 +38,7 @@ def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
     """
     return {"status": "ok", "pong": True}
 
+
 def handle_consolidate(args: dict[str, Any]) -> dict[str, Any]:
     """
     Handle a consolidate event.
@@ -48,10 +51,12 @@ def handle_consolidate(args: dict[str, Any]) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.memory.unified import consolidate
+
         count = consolidate()
         return {"status": "ok", "stats": {"consolidated": count}}
     except (ImportError, ModuleNotFoundError) as e:
         return {"status": "error", "message": str(e)}
+
 
 def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
     """
@@ -65,6 +70,7 @@ def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
     """
     try:
         from whitemagic.grimoire.auto_cast import CastContext, get_auto_caster
+
         question = args.get("question", "")
         context = args.get("context", {})
 
@@ -73,7 +79,7 @@ def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
             task=question,
             emotional_state=context.get("emotional_state", "neutral"),
             wu_xing=context.get("wu_xing", "earth"),
-            yin_yang=context.get("yin_yang", "yin")
+            yin_yang=context.get("yin_yang", "yin"),
         )
         results = caster.process_context(ctx)
 
@@ -81,11 +87,13 @@ def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
             "status": "ok",
             "suggestions": [
                 {"spell": r.spell.name, "confidence": round(r.confidence, 3)}
-                for r in results if r.spell
-            ]
+                for r in results
+                if r.spell
+            ],
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
     """
@@ -99,6 +107,7 @@ def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
         phase = args.get("phase")
         dc = get_dream_cycle()
 
@@ -115,7 +124,7 @@ def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
             "constellation": dc._dream_constellation,
             "prediction": dc._dream_prediction,
             "enrichment": dc._dream_enrichment,
-            "harmonize": dc._dream_harmonize
+            "harmonize": dc._dream_harmonize,
         }
 
         if phase in phase_map:
@@ -126,6 +135,7 @@ def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         logger.error("Phase execution error: %s", traceback.format_exc())
         return {"status": "error", "message": str(e)}
+
 
 def main():
     """
@@ -163,6 +173,7 @@ def main():
             logger.debug("Operation failed: %s", e)
             logger.error("Unexpected error: %s", traceback.format_exc())
             send_response({"status": "error", "message": "Internal bridge error"})
+
 
 if __name__ == "__main__":
     main()

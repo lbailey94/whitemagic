@@ -134,8 +134,7 @@ def solve_optimization(
     lambda_reg: float = 0.01,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    """Solve a constrained optimization problem using the Universal Solver (Frank-Wolfe).
-    """
+    """Solve a constrained optimization problem using the Universal Solver (Frank-Wolfe)."""
     try:
         from whitemagic.core.intelligence.synthesis.solver_engine import DharmicSolver
 

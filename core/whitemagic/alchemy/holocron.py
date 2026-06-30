@@ -17,10 +17,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class Holocron:
     """The Holocron stores Golden Rules."""
 
     from whitemagic.config.paths import WM_ROOT
+
     DEFAULT_PATH = WM_ROOT / "wisdom" / "holocron.json"
 
     def __init__(self, path: Path | None = None):
@@ -31,11 +33,7 @@ class Holocron:
     def save(self, rules: list[dict[str, Any]]):
         """Save rules to the Holocron."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        data = {
-            "version": self.version,
-            "count": len(rules),
-            "rules": rules
-        }
+        data = {"version": self.version, "count": len(rules), "rules": rules}
         with open(self.path, "w") as f:
             json.dump(data, f, indent=2)
         logger.info("Holocron saved with %s rules to %s", len(rules), self.path)

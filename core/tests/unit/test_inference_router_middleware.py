@@ -59,6 +59,7 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
     def setUp(self) -> None:
         """Pre-cache middleware dependencies so @patch decorators aren't overridden."""
         from whitemagic.tools.middleware import _ensure_cached
+
         _ensure_cached()
 
     def test_non_inference_tool_passes_through(self) -> None:
@@ -90,7 +91,9 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
     @patch("whitemagic.tools.middleware._get_edge_inference")
     @patch("whitemagic.tools.middleware._get_green_score")
     def test_edge_inference_short_circuits_on_high_confidence(
-        self, mock_green: MagicMock, mock_edge_getter: MagicMock,
+        self,
+        mock_green: MagicMock,
+        mock_edge_getter: MagicMock,
     ) -> None:
         """When edge inference returns high confidence, should short-circuit."""
         mock_edge = MagicMock()
@@ -128,7 +131,8 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
     @patch("whitemagic.tools.middleware._reason_locally", None)
     @patch("whitemagic.tools.middleware._get_edge_inference")
     def test_edge_inference_low_confidence_passes_through(
-        self, mock_edge_getter: MagicMock,
+        self,
+        mock_edge_getter: MagicMock,
     ) -> None:
         """When edge inference returns low confidence, should pass through."""
         mock_edge = MagicMock()
@@ -160,11 +164,14 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
     @patch("whitemagic.tools.middleware._get_edge_inference", None)
     @patch("whitemagic.tools.middleware._reason_locally")
     def test_local_reasoning_short_circuits_when_ready(
-        self, mock_reason: MagicMock,
+        self,
+        mock_reason: MagicMock,
     ) -> None:
         """When local reasoning resolves fully, should short-circuit."""
         mock_result = MagicMock()
-        mock_result.insights = [MagicMock(source="test", content="answer", relevance=0.9)]
+        mock_result.insights = [
+            MagicMock(source="test", content="answer", relevance=0.9)
+        ]
         mock_result.ready_for_ai = False
         mock_result.summary = "Resolved locally"
         mock_result.total_tokens_saved = 100
@@ -192,11 +199,14 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
     @patch("whitemagic.tools.middleware._get_edge_inference", None)
     @patch("whitemagic.tools.middleware._reason_locally")
     def test_local_reasoning_passes_through_when_ai_needed(
-        self, mock_reason: MagicMock,
+        self,
+        mock_reason: MagicMock,
     ) -> None:
         """When local reasoning says AI needed, should pass through."""
         mock_result = MagicMock()
-        mock_result.insights = [MagicMock(source="test", content="partial", relevance=0.5)]
+        mock_result.insights = [
+            MagicMock(source="test", content="partial", relevance=0.5)
+        ]
         mock_result.ready_for_ai = True
         mock_result.summary = "Partial"
         mock_result.total_tokens_saved = 10
@@ -225,14 +235,19 @@ class TestCompositionalReasoningIntegration(unittest.TestCase):
     def setUp(self) -> None:
         """Pre-cache middleware dependencies so @patch decorators aren't overridden."""
         from whitemagic.tools.middleware import _ensure_cached
+
         _ensure_cached()
 
     @patch("whitemagic.tools.middleware._reason_locally", None)
     @patch("whitemagic.tools.middleware._get_edge_inference", None)
-    @patch("whitemagic.core.intelligence.agentic.compositional_reasoning.get_compositional_reasoner")
+    @patch(
+        "whitemagic.core.intelligence.agentic.compositional_reasoning.get_compositional_reasoner"
+    )
     def test_relation_query_short_circuits(self, mock_get_reasoner: MagicMock) -> None:
         """Relation queries should be resolved by compositional reasoning."""
-        from whitemagic.core.intelligence.agentic.compositional_reasoning import CompositionalResult
+        from whitemagic.core.intelligence.agentic.compositional_reasoning import (
+            CompositionalResult,
+        )
 
         mock_reasoner = MagicMock()
         mock_reasoner.can_resolve.return_value = True
@@ -243,7 +258,9 @@ class TestCompositionalReasoningIntegration(unittest.TestCase):
             confidence=0.75,
             relation="CAUSES",
             projected_query="the outage",
-            matches=[{"title": "config error", "content": "bad config", "similarity": 0.75}],
+            matches=[
+                {"title": "config error", "content": "bad config", "similarity": 0.75}
+            ],
             tokens_saved=50,
             latency_ms=0.5,
         )
@@ -261,7 +278,9 @@ class TestCompositionalReasoningIntegration(unittest.TestCase):
 
         result = mw_inference_router(ctx, next_fn)
 
-        self.assertFalse(called[0], "Should not pass through — resolved by compositional reasoning")
+        self.assertFalse(
+            called[0], "Should not pass through — resolved by compositional reasoning"
+        )
         self.assertTrue(result["resolved_locally"])
         self.assertEqual(result["method"], "hrr:inverse:CAUSES")
         self.assertEqual(result["relation"], "CAUSES")
@@ -269,8 +288,12 @@ class TestCompositionalReasoningIntegration(unittest.TestCase):
 
     @patch("whitemagic.tools.middleware._reason_locally", None)
     @patch("whitemagic.tools.middleware._get_edge_inference", None)
-    @patch("whitemagic.core.intelligence.agentic.compositional_reasoning.get_compositional_reasoner")
-    def test_non_relation_query_passes_through(self, mock_get_reasoner: MagicMock) -> None:
+    @patch(
+        "whitemagic.core.intelligence.agentic.compositional_reasoning.get_compositional_reasoner"
+    )
+    def test_non_relation_query_passes_through(
+        self, mock_get_reasoner: MagicMock
+    ) -> None:
         """Non-relation queries should not trigger compositional reasoning."""
         mock_reasoner = MagicMock()
         mock_reasoner.can_resolve.return_value = False
@@ -293,10 +316,14 @@ class TestCompositionalReasoningIntegration(unittest.TestCase):
 
     @patch("whitemagic.tools.middleware._reason_locally", None)
     @patch("whitemagic.tools.middleware._get_edge_inference", None)
-    @patch("whitemagic.core.intelligence.agentic.compositional_reasoning.get_compositional_reasoner")
+    @patch(
+        "whitemagic.core.intelligence.agentic.compositional_reasoning.get_compositional_reasoner"
+    )
     def test_low_confidence_passes_through(self, mock_get_reasoner: MagicMock) -> None:
         """Low-confidence compositional results should pass through to next tier."""
-        from whitemagic.core.intelligence.agentic.compositional_reasoning import CompositionalResult
+        from whitemagic.core.intelligence.agentic.compositional_reasoning import (
+            CompositionalResult,
+        )
 
         mock_reasoner = MagicMock()
         mock_reasoner.can_resolve.return_value = True

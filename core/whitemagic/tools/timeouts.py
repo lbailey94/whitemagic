@@ -17,15 +17,7 @@ Usage:
 import os
 from typing import Any
 
-# =============================================================================
-# Base Configuration
-# =============================================================================
-
 _DEFAULT_TOOL_TIMEOUT_S = float(os.getenv("WM_TOOL_DISPATCH_TIMEOUT_S", "30.0"))
-
-# =============================================================================
-# Timeout Class Budgets
-# =============================================================================
 
 _TIMEOUT_CLASS_BUDGETS: dict[str, float] = {
     # Status/introspection tools (fast, read-only)
@@ -57,10 +49,6 @@ _TIMEOUT_CLASS_BUDGETS: dict[str, float] = {
     "default": _DEFAULT_TOOL_TIMEOUT_S,
 }
 
-# =============================================================================
-# Tool-to-Timeout-Class Mapping
-# =============================================================================
-
 _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     # Status/introspection (cold_status)
     "vector.status": "cold_status",
@@ -73,7 +61,6 @@ _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     "ship.check": "introspection",
     "health_report": "health_check",
     "gnosis": "health_check",
-
     # Memory operations
     "create_memory": "memory_write",
     "update_memory": "memory_write",
@@ -82,13 +69,11 @@ _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     "read_memory": "memory_read",
     "batch_read_memories": "memory_read",
     "memory.consolidate": "memory_consolidate",
-
     # Ollama/local generation
     "ollama.generate": "local_generation",
     "ollama.chat": "local_generation",
     "ollama.models": "cold_status",
     "ollama.agent": "agent_generation",
-
     # File system operations
     "garden.list_files": "file_read",
     "garden.read_file": "file_read",
@@ -97,7 +82,6 @@ _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     "grimoire.read": "filesystem_scan",
     "archaeology.scan": "filesystem_scan",
     "fast_read_memory": "file_read",
-
     # External operations
     "browser_automation": "browser_automation",
     "browser_navigate": "browser_automation",
@@ -105,64 +89,56 @@ _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     "browser_type": "browser_automation",
     "browser_extract_dom": "browser_automation",
     "web_research": "network_request",
-
     # Data operations
     "export_memories": "data_export",
     "import_memories": "data_import",
     "kg.export": "data_export",
     "kg.import": "data_import",
-
     # Batch operations
     "batch_create_memories": "batch_operation",
 }
-
-# =============================================================================
-# Tool-Specific Timeout Overrides
-# (Highest priority - use sparingly for edge cases)
-# =============================================================================
 
 _TOOL_TIMEOUT_OVERRIDES: dict[str, float] = {
     # Individual tool overrides for special cases
     # Format: "tool_name": timeout_seconds
 }
 
-# =============================================================================
-# Tool Classification (Lightweight vs Heavyweight)
-# =============================================================================
-
 # Tools that are always fast and safe to call frequently
 # These bypass normal dispatch and go through _dispatch_lightweight_tool()
 # Only include tools that are handled in unified_api.py _dispatch_lightweight_tool()
-LIGHTWEIGHT_STATUS_TOOLS: frozenset[str] = frozenset([
-    "vector.status",
-    "prompt.list",
-    "forge.status",
-])
+LIGHTWEIGHT_STATUS_TOOLS: frozenset[str] = frozenset(
+    [
+        "vector.status",
+        "prompt.list",
+        "forge.status",
+    ]
+)
 
 # Fast interactive write tools (bypass some checks for responsiveness)
-FAST_INTERACTIVE_WRITE_TOOLS: frozenset[str] = frozenset([
-    "create_memory",
-])
+FAST_INTERACTIVE_WRITE_TOOLS: frozenset[str] = frozenset(
+    [
+        "create_memory",
+    ]
+)
 
 # Tools that should skip nervous system checks for performance
-SKIP_NERVOUS_SYSTEM_CHECK: frozenset[str] = frozenset([
-    "capabilities",
-    "manifest",
-    "state.paths",
-    "state.summary",
-    "repo.summary",
-    "ship.check",
-    "health_report",
-    "gnosis",
-    "get_telemetry_summary",
-    "rust_status",
-    "tool.graph",
-    "tool.graph_full",
-])
+SKIP_NERVOUS_SYSTEM_CHECK: frozenset[str] = frozenset(
+    [
+        "capabilities",
+        "manifest",
+        "state.paths",
+        "state.summary",
+        "repo.summary",
+        "ship.check",
+        "health_report",
+        "gnosis",
+        "get_telemetry_summary",
+        "rust_status",
+        "tool.graph",
+        "tool.graph_full",
+    ]
+)
 
-# =============================================================================
-# Public API
-# =============================================================================
 
 def get_timeout_for_tool(tool_name: str) -> float:
     """Get the timeout (in seconds) for a specific tool.

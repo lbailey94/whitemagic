@@ -46,12 +46,19 @@ class GardenFunctionRegistry:
     def __init__(self, registry_path: Path | None = None):
         if registry_path is None:
             from whitemagic.config.paths import WM_ROOT
+
             self.registry_path = WM_ROOT / "garden_function_registry.json"
         else:
             self.registry_path = registry_path
-        self._function_mappings: dict[str, FunctionGardenMapping] = {}  # key: "file_path:function_name"
-        self._garden_functions: dict[str, list[str]] = {}  # garden -> list of function keys
-        self._function_index: dict[str, list[str]] = {}  # function_name -> list of keys (for overloads)
+        self._function_mappings: dict[
+            str, FunctionGardenMapping
+        ] = {}  # key: "file_path:function_name"
+        self._garden_functions: dict[
+            str, list[str]
+        ] = {}  # garden -> list of function keys
+        self._function_index: dict[
+            str, list[str]
+        ] = {}  # function_name -> list of keys (for overloads)
         self._loaded = False
 
     def load(self) -> bool:
@@ -130,7 +137,9 @@ class GardenFunctionRegistry:
 
         self._loaded = True
 
-    def get_function(self, function_name: str, file_path: str | None = None) -> FunctionGardenMapping | None:
+    def get_function(
+        self, function_name: str, file_path: str | None = None
+    ) -> FunctionGardenMapping | None:
         """Get a function by name, optionally filtered by file."""
         if function_name not in self._function_index:
             return None
@@ -147,9 +156,13 @@ class GardenFunctionRegistry:
     def get_garden_functions(self, garden: str) -> list[FunctionGardenMapping]:
         """Get all functions for a garden."""
         keys = self._garden_functions.get(garden, [])
-        return [self._function_mappings[k] for k in keys if k in self._function_mappings]
+        return [
+            self._function_mappings[k] for k in keys if k in self._function_mappings
+        ]
 
-    def search_functions(self, query: str, gardens: list[str] | None = None) -> list[FunctionGardenMapping]:
+    def search_functions(
+        self, query: str, gardens: list[str] | None = None
+    ) -> list[FunctionGardenMapping]:
         """Search for functions by name."""
         results = []
         query_lower = query.lower()
@@ -183,12 +196,16 @@ class GardenFunctionRegistry:
                     if source_garden != target_garden:
                         if source_garden not in cross_calls:
                             cross_calls[source_garden] = {}
-                        cross_calls[source_garden][target_garden] = cross_calls[source_garden].get(target_garden, 0) + 1
+                        cross_calls[source_garden][target_garden] = (
+                            cross_calls[source_garden].get(target_garden, 0) + 1
+                        )
 
         # Convert to sorted lists
         result = {}
         for source, targets in cross_calls.items():
-            result[source] = [f"{t}:{c}" for t, c in sorted(targets.items(), key=lambda x: -x[1])]
+            result[source] = [
+                f"{t}:{c}" for t, c in sorted(targets.items(), key=lambda x: -x[1])
+            ]
 
         return result
 
@@ -202,7 +219,7 @@ class GardenFunctionRegistry:
             "private_functions": 0,
         }
 
-        garden_stats: dict[str, int] = stats["gardens"] # type: ignore
+        garden_stats: dict[str, int] = stats["gardens"]  # type: ignore
         for garden, keys in self._garden_functions.items():
             garden_stats[garden] = len(keys)
 
@@ -295,7 +312,9 @@ def get_functions_in_garden(garden: str) -> list[FunctionGardenMapping]:
     return get_function_registry().get_garden_functions(garden)
 
 
-def find_function(name: str, file_path: str | None = None) -> FunctionGardenMapping | None:
+def find_function(
+    name: str, file_path: str | None = None
+) -> FunctionGardenMapping | None:
     """Convenience function to find a function by name."""
     return get_function_registry().get_function(name, file_path)
 

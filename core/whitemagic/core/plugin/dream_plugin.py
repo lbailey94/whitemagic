@@ -2,6 +2,7 @@
 """Dream Plugin — REM Synthesis & Cache Catharsis (E4).
 Wraps the DreamSynthesizer for automated memory consolidation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -9,8 +10,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class DreamPlugin:
     """DreamPlugin: dream plugin."""
+
     name = "dream"
     version = "1.0.0"
     description = "Dream Synthesizer — Automated memory consolidation and cache catharsis during Yin phases"
@@ -27,6 +30,7 @@ class DreamPlugin:
             None
         """
         from whitemagic.core.intelligence.dream_synthesis import get_dream_synthesizer
+
         self._synthesizer = get_dream_synthesizer()
         self._synthesizer.awaken()
         self._running = True
@@ -57,8 +61,11 @@ class DreamPlugin:
             "name": self.name,
             "running": self._running,
             "rem_active": self._synthesizer.is_rem_active(),
-            "consolidated_count": self._synthesizer.get_stats().get("consolidations", 0)
+            "consolidated_count": self._synthesizer.get_stats().get(
+                "consolidations", 0
+            ),
         }
+
 
 def register():
     """
@@ -66,6 +73,7 @@ def register():
     """
     try:
         from whitemagic.core.plugin import get_registry
+
         get_registry().register(DreamPlugin())
     except (ImportError, ModuleNotFoundError):
         pass

@@ -23,19 +23,21 @@ logger = logging.getLogger(__name__)
 
 class Element(Enum):
     """The five elements of Wu Xing."""
-    WOOD = "wood"      # 木 - Growth, creativity, beginnings
-    FIRE = "fire"      # 火 - Transformation, passion, illumination
-    EARTH = "earth"    # 土 - Stability, nourishment, grounding
-    METAL = "metal"    # 金 - Structure, precision, refinement
-    WATER = "water"    # 水 - Flow, wisdom, reflection
+
+    WOOD = "wood"  # 木 - Growth, creativity, beginnings
+    FIRE = "fire"  # 火 - Transformation, passion, illumination
+    EARTH = "earth"  # 土 - Stability, nourishment, grounding
+    METAL = "metal"  # 金 - Structure, precision, refinement
+    WATER = "water"  # 水 - Flow, wisdom, reflection
 
 
 @dataclass
 class ElementalState:
     """The current state of an element."""
+
     element: Element
     energy: float  # 0.0 to 1.0
-    quality: str   # Descriptor of current quality
+    quality: str  # Descriptor of current quality
     timestamp: datetime | None = None
 
     def __post_init__(self) -> None:
@@ -66,14 +68,16 @@ class WuXingEngine:
             Element.FIRE: ElementalState(Element.FIRE, 0.5, "balanced"),
             Element.EARTH: ElementalState(Element.EARTH, 0.5, "balanced"),
             Element.METAL: ElementalState(Element.METAL, 0.5, "balanced"),
-            Element.WATER: ElementalState(Element.WATER, 0.5, "balanced")
+            Element.WATER: ElementalState(Element.WATER, 0.5, "balanced"),
         }
 
     def get_element(self, element: Element) -> ElementalState:
         """Get the current state of an element."""
         return self.elements[element]
 
-    def adjust_element(self, element: Element, energy_change: float, quality: str | None = None) -> None:
+    def adjust_element(
+        self, element: Element, energy_change: float, quality: str | None = None
+    ) -> None:
         """
         Adjust the energy of an element.
 
@@ -88,19 +92,21 @@ class WuXingEngine:
         self.elements[element] = ElementalState(
             element=element,
             energy=new_energy,
-            quality=quality or self._determine_quality(element, new_energy)
+            quality=quality or self._determine_quality(element, new_energy),
         )
 
         # Apply elemental interactions
         self._apply_interactions(element)
 
         # Record the change
-        self.cycle_history.append({
-            "element": element.value,
-            "energy_change": energy_change,
-            "new_energy": new_energy,
-            "timestamp": datetime.now()
-        })
+        self.cycle_history.append(
+            {
+                "element": element.value,
+                "energy_change": energy_change,
+                "new_energy": new_energy,
+                "timestamp": datetime.now(),
+            }
+        )
 
     def _determine_quality(self, element: Element, energy: float) -> str:
         """Determine quality descriptor based on energy level."""
@@ -110,7 +116,7 @@ class WuXingEngine:
                 Element.FIRE: "ember",
                 Element.EARTH: "barren",
                 Element.METAL: "corroded",
-                Element.WATER: "stagnant"
+                Element.WATER: "stagnant",
             }
         elif energy < 0.4:
             qualities = {
@@ -118,7 +124,7 @@ class WuXingEngine:
                 Element.FIRE: "flickering",
                 Element.EARTH: "fertile",
                 Element.METAL: "raw",
-                Element.WATER: "trickling"
+                Element.WATER: "trickling",
             }
         elif energy < 0.6:
             qualities = {
@@ -126,7 +132,7 @@ class WuXingEngine:
                 Element.FIRE: "burning",
                 Element.EARTH: "stable",
                 Element.METAL: "forging",
-                Element.WATER: "flowing"
+                Element.WATER: "flowing",
             }
         elif energy < 0.8:
             qualities = {
@@ -134,7 +140,7 @@ class WuXingEngine:
                 Element.FIRE: "radiant",
                 Element.EARTH: "nourishing",
                 Element.METAL: "polished",
-                Element.WATER: "streaming"
+                Element.WATER: "streaming",
             }
         else:
             qualities = {
@@ -142,7 +148,7 @@ class WuXingEngine:
                 Element.FIRE: "blazing",
                 Element.EARTH: "abundant",
                 Element.METAL: "luminous",
-                Element.WATER: "cascading"
+                Element.WATER: "cascading",
             }
 
         return qualities[element]
@@ -159,7 +165,7 @@ class WuXingEngine:
             self.elements[generating_target] = ElementalState(
                 generating_target,
                 new_energy,
-                self._determine_quality(generating_target, new_energy)
+                self._determine_quality(generating_target, new_energy),
             )
 
         # Overcoming cycle (what this element controls)
@@ -172,28 +178,28 @@ class WuXingEngine:
             self.elements[overcoming_target] = ElementalState(
                 overcoming_target,
                 new_energy,
-                self._determine_quality(overcoming_target, new_energy)
+                self._determine_quality(overcoming_target, new_energy),
             )
 
     def _get_generating_target(self, element: Element) -> Element | None:
         """Get what this element generates in the generating cycle."""
         generating_cycle = {
-            Element.WOOD: Element.FIRE,    # Wood feeds Fire
-            Element.FIRE: Element.EARTH,   # Fire creates Earth (ash)
+            Element.WOOD: Element.FIRE,  # Wood feeds Fire
+            Element.FIRE: Element.EARTH,  # Fire creates Earth (ash)
             Element.EARTH: Element.METAL,  # Earth bears Metal
             Element.METAL: Element.WATER,  # Metal collects Water
-            Element.WATER: Element.WOOD    # Water nourishes Wood
+            Element.WATER: Element.WOOD,  # Water nourishes Wood
         }
         return generating_cycle.get(element)
 
     def _get_overcoming_target(self, element: Element) -> Element | None:
         """Get what this element overcomes in the overcoming cycle."""
         overcoming_cycle = {
-            Element.WOOD: Element.EARTH,   # Wood penetrates Earth
+            Element.WOOD: Element.EARTH,  # Wood penetrates Earth
             Element.EARTH: Element.WATER,  # Earth absorbs Water
-            Element.WATER: Element.FIRE,   # Water extinguishes Fire
-            Element.FIRE: Element.METAL,   # Fire melts Metal
-            Element.METAL: Element.WOOD    # Metal cuts Wood
+            Element.WATER: Element.FIRE,  # Water extinguishes Fire
+            Element.FIRE: Element.METAL,  # Fire melts Metal
+            Element.METAL: Element.WOOD,  # Metal cuts Wood
         }
         return overcoming_cycle.get(element)
 
@@ -207,11 +213,41 @@ class WuXingEngine:
 
         # Identify dominant elements
         element_keywords = {
-            Element.WOOD: ["grow", "create", "begin", "start", "plant", "green", "life"],
-            Element.FIRE: ["transform", "passion", "energy", "light", "heat", "bright", "inspire"],
-            Element.EARTH: ["stabilize", "ground", "nourish", "support", "steady", "foundation"],
-            Element.METAL: ["structure", "refine", "precise", "analyze", "organize", "sharp"],
-            Element.WATER: ["flow", "reflect", "adapt", "wisdom", "deep", "intuitive"]
+            Element.WOOD: [
+                "grow",
+                "create",
+                "begin",
+                "start",
+                "plant",
+                "green",
+                "life",
+            ],
+            Element.FIRE: [
+                "transform",
+                "passion",
+                "energy",
+                "light",
+                "heat",
+                "bright",
+                "inspire",
+            ],
+            Element.EARTH: [
+                "stabilize",
+                "ground",
+                "nourish",
+                "support",
+                "steady",
+                "foundation",
+            ],
+            Element.METAL: [
+                "structure",
+                "refine",
+                "precise",
+                "analyze",
+                "organize",
+                "sharp",
+            ],
+            Element.WATER: ["flow", "reflect", "adapt", "wisdom", "deep", "intuitive"],
         }
 
         element_scores = {}
@@ -220,9 +256,15 @@ class WuXingEngine:
             element_scores[element] = score
 
         # Find primary and secondary elements
-        sorted_elements = sorted(element_scores.items(), key=lambda x: x[1], reverse=True)
+        sorted_elements = sorted(
+            element_scores.items(), key=lambda x: x[1], reverse=True
+        )
         primary = sorted_elements[0][0] if sorted_elements[0][1] > 0 else None
-        secondary = sorted_elements[1][0] if len(sorted_elements) > 1 and sorted_elements[1][1] > 0 else None
+        secondary = (
+            sorted_elements[1][0]
+            if len(sorted_elements) > 1 and sorted_elements[1][1] > 0
+            else None
+        )
 
         # Generate guidance
         guidance = self._generate_elemental_guidance(primary, secondary, situation)
@@ -232,17 +274,17 @@ class WuXingEngine:
             "primary_element": primary.value if primary else None,
             "secondary_element": secondary.value if secondary else None,
             "element_scores": {e.value: s for e, s in element_scores.items()},
-            "current_state": {e.value: {
-                "energy": state.energy,
-                "quality": state.quality
-            } for e, state in self.elements.items()},
+            "current_state": {
+                e.value: {"energy": state.energy, "quality": state.quality}
+                for e, state in self.elements.items()
+            },
             "guidance": guidance,
-            "timestamp": datetime.now()
+            "timestamp": datetime.now(),
         }
 
-    def _generate_elemental_guidance(self, primary: Element | None,
-                                   secondary: Element | None,
-                                   situation: str) -> str:
+    def _generate_elemental_guidance(
+        self, primary: Element | None, secondary: Element | None, situation: str
+    ) -> str:
         """Generate guidance based on elemental analysis."""
         if not primary:
             return "No clear elemental alignment detected. Consider the situation from multiple perspectives."
@@ -255,7 +297,7 @@ class WuXingEngine:
             Element.FIRE: "Embrace transformation and passion. This is a time for dynamic change and inspired action.",
             Element.EARTH: "Seek stability and grounding. Build solid foundations and nurture yourself and others.",
             Element.METAL: "Bring structure and precision. Analyze carefully and refine your approach.",
-            Element.WATER: "Go with the flow and trust your intuition. Allow wisdom to emerge from reflection."
+            Element.WATER: "Go with the flow and trust your intuition. Allow wisdom to emerge from reflection.",
         }
 
         guidance_parts.append(primary_guidance[primary])
@@ -269,9 +311,13 @@ class WuXingEngine:
         # Balance advice
         current_energy = self.elements[primary].energy
         if current_energy < 0.3:
-            guidance_parts.append(f"The {primary.value} element is weak. Consider activities that strengthen it.")
+            guidance_parts.append(
+                f"The {primary.value} element is weak. Consider activities that strengthen it."
+            )
         elif current_energy > 0.8:
-            guidance_parts.append(f"The {primary.value} element is very strong. Ensure it doesn't overwhelm other aspects.")
+            guidance_parts.append(
+                f"The {primary.value} element is very strong. Ensure it doesn't overwhelm other aspects."
+            )
 
         return " ".join(guidance_parts)
 
@@ -340,7 +386,7 @@ class WuXingEngine:
             Element.FIRE: "Fire Phase - Time for transformation, passion, and illumination",
             Element.EARTH: "Earth Phase - Time for stability, nourishment, and grounding",
             Element.METAL: "Metal Phase - Time for structure, precision, and refinement",
-            Element.WATER: "Water Phase - Time for flow, wisdom, and reflection"
+            Element.WATER: "Water Phase - Time for flow, wisdom, and reflection",
         }
 
         return cycle_descriptions[most_active[0]]
@@ -371,12 +417,9 @@ def get_elemental_balance() -> dict[str, Any]:
     return {
         "balance": engine.get_balance_score(),
         "harmony": engine.get_harmony_score(),
-        "cycle": engine.get_current_cycle()
+        "cycle": engine.get_current_cycle(),
     }
 
-# ---------------------------------------------------------------------------
-# Unified constants — single source of truth for Wu Xing cycles
-# ---------------------------------------------------------------------------
 
 # Generative cycle: Wood → Fire → Earth → Metal → Water → Wood
 GENERATIVE: dict[Element, Element] = {
@@ -407,10 +450,18 @@ ELEMENT_MEANINGS: dict[Element, str] = {
 
 # Zodiac → Wu Xing mapping (Western elements to Chinese elements)
 ZODIAC_TO_WUXING: dict[str, Element] = {
-    "aries": Element.FIRE, "leo": Element.FIRE, "sagittarius": Element.FIRE,
-    "taurus": Element.EARTH, "virgo": Element.EARTH, "capricorn": Element.EARTH,
-    "gemini": Element.METAL, "libra": Element.METAL, "aquarius": Element.METAL,
-    "cancer": Element.WATER, "scorpio": Element.WATER, "pisces": Element.WATER,
+    "aries": Element.FIRE,
+    "leo": Element.FIRE,
+    "sagittarius": Element.FIRE,
+    "taurus": Element.EARTH,
+    "virgo": Element.EARTH,
+    "capricorn": Element.EARTH,
+    "gemini": Element.METAL,
+    "libra": Element.METAL,
+    "aquarius": Element.METAL,
+    "cancer": Element.WATER,
+    "scorpio": Element.WATER,
+    "pisces": Element.WATER,
 }
 
 

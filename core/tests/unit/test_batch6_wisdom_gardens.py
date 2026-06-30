@@ -14,12 +14,14 @@ class TestWuXing:
 
     def test_balance(self):
         from whitemagic.wisdom.wu_xing import WuXingSystem
+
         system = WuXingSystem()
         balance = system.assess()
         assert balance.is_balanced() is True  # All 0.5
 
     def test_nourish(self):
         from whitemagic.wisdom.wu_xing import Element, WuXingSystem
+
         system = WuXingSystem()
         system.nourish(Element.WATER)
         balance = system.assess()
@@ -27,6 +29,7 @@ class TestWuXing:
 
     def test_dominant(self):
         from whitemagic.wisdom.wu_xing import Element, WuXingSystem
+
         system = WuXingSystem()
         system.nourish(Element.FIRE)
         system.nourish(Element.FIRE)
@@ -34,6 +37,7 @@ class TestWuXing:
 
     def test_recommend(self):
         from whitemagic.wisdom.wu_xing import WuXingSystem
+
         system = WuXingSystem()
         rec = system.recommend()
         assert "dominant" in rec
@@ -42,6 +46,7 @@ class TestWuXing:
 
     def test_summary(self):
         from whitemagic.wisdom.wu_xing import WuXingSystem
+
         system = WuXingSystem()
         summary = system.summary()
         assert "balance" in summary
@@ -53,6 +58,7 @@ class TestIChing:
 
     def test_cast(self):
         from whitemagic.wisdom.i_ching import IChingSystem
+
         system = IChingSystem()
         hexagram = system.cast_hexagram("test question")
         assert 1 <= hexagram.number <= 64
@@ -61,6 +67,7 @@ class TestIChing:
 
     def test_consult(self):
         from whitemagic.wisdom.i_ching import IChingSystem
+
         system = IChingSystem()
         hexagram = system.cast_hexagram("Should I proceed?")
         assert hexagram.number >= 1
@@ -72,6 +79,7 @@ class TestIChingAdvisor:
 
     def test_advise(self):
         from whitemagic.wisdom.i_ching_advisor import IChingAdvisor
+
         advisor = IChingAdvisor()
         result = advisor.advise("What should I do?")
         assert "advice" in result
@@ -79,6 +87,7 @@ class TestIChingAdvisor:
 
     def test_history(self):
         from whitemagic.wisdom.i_ching_advisor import IChingAdvisor
+
         advisor = IChingAdvisor()
         advisor.advise("Question 1")
         advisor.advise("Question 2")
@@ -87,6 +96,7 @@ class TestIChingAdvisor:
 
     def test_summary(self):
         from whitemagic.wisdom.i_ching_advisor import IChingAdvisor
+
         advisor = IChingAdvisor()
         summary = advisor.summary()
         assert "total_consultations" in summary
@@ -97,12 +107,14 @@ class TestWisdomAutoIngester:
 
     def test_ingest(self, tmp_path):
         from whitemagic.wisdom.auto_ingester import WisdomAutoIngester
+
         ingester = WisdomAutoIngester(data_dir=tmp_path)
         entry = ingester.ingest("I learned something valuable", source="test")
         assert entry["content"] == "I learned something valuable"
 
     def test_search(self, tmp_path):
         from whitemagic.wisdom.auto_ingester import WisdomAutoIngester
+
         ingester = WisdomAutoIngester(data_dir=tmp_path)
         ingester.ingest("I discovered a pattern", tags=["test"])
         ingester.ingest("Random content")
@@ -111,6 +123,7 @@ class TestWisdomAutoIngester:
 
     def test_summary(self, tmp_path):
         from whitemagic.wisdom.auto_ingester import WisdomAutoIngester
+
         ingester = WisdomAutoIngester(data_dir=tmp_path)
         ingester.ingest("content", tags=["a"])
         summary = ingester.summary()
@@ -122,14 +135,18 @@ class TestGardenSynthesis:
 
     def test_register_and_synthesize(self):
         from whitemagic.gardens.synthesis import GardenSynthesis
+
         synth = GardenSynthesis()
-        synth.register_garden("test", type("G", (), {"summary": lambda self: {"ok": True}})())
+        synth.register_garden(
+            "test", type("G", (), {"summary": lambda self: {"ok": True}})()
+        )
         result = synth.synthesize()
         assert result["gardens_synthesized"] == 1
         assert result["dominant_theme"] == "test"
 
     def test_summary(self):
         from whitemagic.gardens.synthesis import GardenSynthesis
+
         synth = GardenSynthesis()
         summary = synth.summary()
         assert "registered_gardens" in summary
@@ -140,24 +157,30 @@ class TestJoyCore:
 
     def test_detect_joy(self):
         from whitemagic.gardens.joy.core import JoyCore
+
         core = JoyCore()
         level = core.detect_joy("I'm so happy and grateful for this!")
         assert level > 0
 
     def test_detect_no_joy(self):
         from whitemagic.gardens.joy.core import JoyCore
+
         core = JoyCore()
         level = core.detect_joy("The system encountered an error")
         assert level == 0.0
 
     def test_record_and_baseline(self, tmp_path):
         from whitemagic.gardens.joy.core import JoyCore
+
         core = JoyCore(data_dir=tmp_path)
-        core.record_joy("I'm delighted and happy and grateful and joyful!", source="test")
+        core.record_joy(
+            "I'm delighted and happy and grateful and joyful!", source="test"
+        )
         assert core.baseline > 0.5
 
     def test_summary(self, tmp_path):
         from whitemagic.gardens.joy.core import JoyCore
+
         core = JoyCore(data_dir=tmp_path)
         summary = core.summary()
         assert "total_events" in summary
@@ -169,12 +192,14 @@ class TestCelebrationPractice:
 
     def test_celebrate(self, tmp_path):
         from whitemagic.gardens.joy.celebration_practice import CelebrationPractice
+
         practice = CelebrationPractice(data_dir=tmp_path)
         entry = practice.celebrate("Finished a project", "Hard work paid off")
         assert entry["what"] == "Finished a project"
 
     def test_streak(self, tmp_path):
         from whitemagic.gardens.joy.celebration_practice import CelebrationPractice
+
         practice = CelebrationPractice(data_dir=tmp_path)
         practice.celebrate("a")
         practice.celebrate("b")
@@ -182,12 +207,14 @@ class TestCelebrationPractice:
 
     def test_suggest(self):
         from whitemagic.gardens.joy.celebration_practice import CelebrationPractice
+
         practice = CelebrationPractice()
         suggestion = practice.suggest_celebration()
         assert len(suggestion) > 0
 
     def test_summary(self, tmp_path):
         from whitemagic.gardens.joy.celebration_practice import CelebrationPractice
+
         practice = CelebrationPractice(data_dir=tmp_path)
         practice.celebrate("test")
         summary = practice.summary()

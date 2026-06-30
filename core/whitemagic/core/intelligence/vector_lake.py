@@ -30,12 +30,14 @@ class VectorLake:
         if self._holographic is None:
             try:
                 from whitemagic.core.memory.holographic import get_holographic_memory
+
                 self._holographic = get_holographic_memory()  # type: ignore[assignment]
             except Exception as exc:
                 logger.debug("Holographic memory unavailable: %s", exc, exc_info=True)
         if self._vector is None:
             try:
                 from whitemagic.core.memory.vector import VectorSearch
+
                 self._vector = VectorSearch()  # type: ignore[assignment]
             except Exception as exc:
                 logger.debug("Vector search unavailable: %s", exc, exc_info=True)
@@ -57,7 +59,9 @@ class VectorLake:
                     except Exception:
                         pass
                 except Exception as exc:
-                    logger.debug("Method %s failed: %s", method_name, exc, exc_info=True)
+                    logger.debug(
+                        "Method %s failed: %s", method_name, exc, exc_info=True
+                    )
         return []
 
     def vector_search(self, query: str, limit: int = 10) -> list[Any]:

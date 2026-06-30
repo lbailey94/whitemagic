@@ -1,6 +1,5 @@
 """Tests for audit_signing Ed25519 module."""
 
-
 import pytest
 
 from whitemagic.security.audit_signing import (

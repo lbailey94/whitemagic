@@ -2,8 +2,12 @@
 
 import pytest
 from whitemagic.oracle.wisdom_synthesis import (
-    OracleSynthesizer, SynthesisResult, ResonancePattern,
-    NarrativeArc, synthesize_oracle, get_synthesizer,
+    OracleSynthesizer,
+    SynthesisResult,
+    ResonancePattern,
+    NarrativeArc,
+    synthesize_oracle,
+    get_synthesizer,
 )
 
 
@@ -128,12 +132,19 @@ class TestResonanceDetection:
 
     def test_creative_tension_resonance(self):
         oracle = {
-            "sign": "aries", "element": "fire", "modality": "cardinal",
-            "phase": "yang", "wu_xing": "metal",  # fire controls metal
-            "iching_number": 1, "iching_name": "Creative",
-            "iching_judgment": "Success", "iching_guidance": "Act",
-            "ifa_odu": "Eji Ogbe", "ifa_wisdom": "Begin with clarity",
-            "ifa_ire": "Success", "ifa_osogbo": "Arrogance",
+            "sign": "aries",
+            "element": "fire",
+            "modality": "cardinal",
+            "phase": "yang",
+            "wu_xing": "metal",  # fire controls metal
+            "iching_number": 1,
+            "iching_name": "Creative",
+            "iching_judgment": "Success",
+            "iching_guidance": "Act",
+            "ifa_odu": "Eji Ogbe",
+            "ifa_wisdom": "Begin with clarity",
+            "ifa_ire": "Success",
+            "ifa_osogbo": "Arrogance",
         }
         result = synthesize_oracle(oracle)
         tension = [r for r in result.resonances if r.theme == "Creative Tension"]
@@ -141,13 +152,19 @@ class TestResonanceDetection:
 
     def test_shared_vocabulary_resonance(self):
         oracle = {
-            "sign": "aries", "element": "fire", "modality": "cardinal",
-            "phase": "yang", "wu_xing": "fire",
-            "iching_number": 43, "iching_name": "Breakthrough",
+            "sign": "aries",
+            "element": "fire",
+            "modality": "cardinal",
+            "phase": "yang",
+            "wu_xing": "fire",
+            "iching_number": 43,
+            "iching_name": "Breakthrough",
             "iching_judgment": "Breakthrough requires resolve",
             "iching_guidance": "Speak truth with clarity and resolve",
-            "ifa_odu": "Eji Ogbe", "ifa_wisdom": "Honesty and clarity open the way. Speak truth.",
-            "ifa_ire": "Success", "ifa_osogbo": "Deception",
+            "ifa_odu": "Eji Ogbe",
+            "ifa_wisdom": "Honesty and clarity open the way. Speak truth.",
+            "ifa_ire": "Success",
+            "ifa_osogbo": "Deception",
         }
         result = synthesize_oracle(oracle)
         shared = [r for r in result.resonances if r.theme == "Shared Vocabulary"]
@@ -189,24 +206,38 @@ class TestElementalHarmony:
 
     def test_generative(self):
         oracle = {
-            "sign": "pisces", "element": "water", "modality": "mutable",
-            "phase": "yin", "wu_xing": "wood",
-            "iching_number": 1, "iching_name": "Test",
-            "iching_judgment": "Test", "iching_guidance": "Test",
-            "ifa_odu": "Test", "ifa_wisdom": "Test",
-            "ifa_ire": "", "ifa_osogbo": "",
+            "sign": "pisces",
+            "element": "water",
+            "modality": "mutable",
+            "phase": "yin",
+            "wu_xing": "wood",
+            "iching_number": 1,
+            "iching_name": "Test",
+            "iching_judgment": "Test",
+            "iching_guidance": "Test",
+            "ifa_odu": "Test",
+            "ifa_wisdom": "Test",
+            "ifa_ire": "",
+            "ifa_osogbo": "",
         }
         result = synthesize_oracle(oracle)
         assert "Generative" in result.elemental_harmony
 
     def test_tension(self):
         oracle = {
-            "sign": "aries", "element": "fire", "modality": "cardinal",
-            "phase": "yang", "wu_xing": "metal",
-            "iching_number": 1, "iching_name": "Test",
-            "iching_judgment": "Test", "iching_guidance": "Test",
-            "ifa_odu": "Test", "ifa_wisdom": "Test",
-            "ifa_ire": "", "ifa_osogbo": "",
+            "sign": "aries",
+            "element": "fire",
+            "modality": "cardinal",
+            "phase": "yang",
+            "wu_xing": "metal",
+            "iching_number": 1,
+            "iching_name": "Test",
+            "iching_judgment": "Test",
+            "iching_guidance": "Test",
+            "ifa_odu": "Test",
+            "ifa_wisdom": "Test",
+            "ifa_ire": "",
+            "ifa_osogbo": "",
         }
         result = synthesize_oracle(oracle)
         assert "Tension" in result.elemental_harmony
@@ -231,20 +262,30 @@ class TestEdgeCases:
 
     def test_missing_iching(self):
         oracle = {
-            "sign": "aries", "element": "fire", "modality": "cardinal",
-            "phase": "yang", "wu_xing": "fire",
-            "ifa_odu": "Eji Ogbe", "ifa_wisdom": "Begin with clarity",
-            "ifa_ire": "Success", "ifa_osogbo": "Arrogance",
+            "sign": "aries",
+            "element": "fire",
+            "modality": "cardinal",
+            "phase": "yang",
+            "wu_xing": "fire",
+            "ifa_odu": "Eji Ogbe",
+            "ifa_wisdom": "Begin with clarity",
+            "ifa_ire": "Success",
+            "ifa_osogbo": "Arrogance",
         }
         result = synthesize_oracle(oracle)
         assert "Eji Ogbe" in result.narrative.act_3
 
     def test_missing_ifa(self):
         oracle = {
-            "sign": "aries", "element": "fire", "modality": "cardinal",
-            "phase": "yang", "wu_xing": "fire",
-            "iching_number": 1, "iching_name": "Creative",
-            "iching_judgment": "Success", "iching_guidance": "Act",
+            "sign": "aries",
+            "element": "fire",
+            "modality": "cardinal",
+            "phase": "yang",
+            "wu_xing": "fire",
+            "iching_number": 1,
+            "iching_name": "Creative",
+            "iching_judgment": "Success",
+            "iching_guidance": "Act",
         }
         result = synthesize_oracle(oracle)
         assert "Creative" in result.narrative.act_2

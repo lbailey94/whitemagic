@@ -81,8 +81,7 @@ class PerformanceMetrics:
 
 
 class PolyglotRouter:
-    """Smart router that selects optimal backend for each operation.
-    """
+    """Smart router that selects optimal backend for each operation."""
 
     def __init__(self, prefer_backend: Backend = Backend.AUTO):
         self.prefer_backend = prefer_backend
@@ -90,6 +89,7 @@ class PolyglotRouter:
 
         # Use absolute path for robustness
         from whitemagic.config import PROJECT_ROOT
+
         self.base_path: Path = PROJECT_ROOT
 
         # Cache availability and handles
@@ -105,7 +105,9 @@ class PolyglotRouter:
             if self._rust_available:
                 logger.info("🦀 Rust bridge available - 10-100x speedup enabled")
             if self._zig_available:
-                logger.info("⚡ Zig determinism available - Low-level systems speedup enabled")
+                logger.info(
+                    "⚡ Zig determinism available - Low-level systems speedup enabled"
+                )
 
     def _load_zig_ffi(self) -> None:
         """Pre-load Zig library and bind function signatures."""
@@ -129,11 +131,13 @@ class PolyglotRouter:
         try:
             # Try actual import (find_spec doesn't work reliably with maturin packages)
             import whitemagic_rs
+
             return True
         except ImportError:
             # Try to help it find its dependencies
             try:
                 import sys
+
                 lib_path = self.base_path / "whitemagic-zig/zig-out/lib"
                 scripts_path = self.base_path / "tests&shells/scripts"
 
@@ -147,6 +151,7 @@ class PolyglotRouter:
                     os.environ["LD_LIBRARY_PATH"] += f":{lib_path}"
 
                 import whitemagic_rs  # noqa: F401
+
                 return True
             except ImportError:
                 return False
@@ -185,7 +190,9 @@ class PolyglotRouter:
 
         return self._call_python(operation_name, python_fn, *args, **kwargs)
 
-    def _call_rust(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    def _call_rust(
+        self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any
+    ) -> T:
         start = time.time()
         result = fn(*args, **kwargs)
         duration_ms = (time.time() - start) * 1000
@@ -194,7 +201,9 @@ class PolyglotRouter:
         logger.debug("🦀 Rust %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
-    def _call_zig(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    def _call_zig(
+        self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any
+    ) -> T:
         start = time.time()
         result = fn(*args, **kwargs)
         duration_ms = (time.time() - start) * 1000
@@ -203,7 +212,9 @@ class PolyglotRouter:
         logger.debug("⚡ Zig %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
-    def _call_python(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    def _call_python(
+        self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any
+    ) -> T:
         start = time.time()
         result = fn(*args, **kwargs)
         duration_ms = (time.time() - start) * 1000
@@ -212,10 +223,9 @@ class PolyglotRouter:
         logger.debug("🐍 Python %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
-    # --- High-level Tiered Operations ---
-
     def cast_iching(self) -> list[int]:
         """Tier 5: I Ching (Zig Optimized via FFI)"""
+
         def zig_impl() -> list[int]:
             """
             Perform the zig impl operation.
@@ -238,14 +248,19 @@ class PolyglotRouter:
                 list[int]
             """
             import random
+
             return [sum(random.choice([2, 3]) for _ in range(3)) for _ in range(6)]
 
         return self._route_operation("iching_cast", python_impl, zig_fn=zig_impl)
 
-    def send_sangha_signal(self, id: str, sender_id: str, content: str, channel: str, coords: list[float]) -> bool:
+    def send_sangha_signal(
+        self, id: str, sender_id: str, content: str, channel: str, coords: list[float]
+    ) -> bool:
         """Tier 3/5: Send a high-speed Sangha Signal (Rust -> Zig Optimized)"""
         if len(coords) != 5:
-            raise ValueError(f"Sangha coordinates must contain exactly 5 values, got {len(coords)}")
+            raise ValueError(
+                f"Sangha coordinates must contain exactly 5 values, got {len(coords)}"
+            )
 
         coords = [float(value) for value in coords]
         if not all(math.isfinite(value) for value in coords):
@@ -259,9 +274,16 @@ class PolyglotRouter:
                 bool
             """
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "sangha_push_signal"):
-                return bool(whitemagic_rs.sangha_push_signal(id, sender_id, content, channel, coords))
-            raise AttributeError("whitemagic_rs has no sangha_push_signal implementation")
+                return bool(
+                    whitemagic_rs.sangha_push_signal(
+                        id, sender_id, content, channel, coords
+                    )
+                )
+            raise AttributeError(
+                "whitemagic_rs has no sangha_push_signal implementation"
+            )
 
         def python_impl() -> bool:
             # Fallback: Just log it for now
@@ -271,13 +293,24 @@ class PolyglotRouter:
             Returns:
                 bool
             """
-            logger.info("Sangha Signal (Python Fallback) - %s in #%s: {content[:50]}... @ %s", sender_id, channel, coords, exc_info=True)
+            logger.info(
+                "Sangha Signal (Python Fallback) - %s in #%s: {content[:50]}... @ %s",
+                sender_id,
+                channel,
+                coords,
+                exc_info=True,
+            )
             return True
 
-        return self._route_operation("send_sangha_signal", python_impl, rust_fn=rust_impl)
+        return self._route_operation(
+            "send_sangha_signal", python_impl, rust_fn=rust_impl
+        )
 
-    def encode_holographic(self, memory_data: dict[str, Any], current_time: int) -> dict[str, float]:
+    def encode_holographic(
+        self, memory_data: dict[str, Any], current_time: int
+    ) -> dict[str, float]:
         """Tier 1: Holographic Core (Python CoordinateEncoder)"""
+
         def python_impl() -> dict[str, float]:
             """
             Perform the python impl operation.
@@ -286,14 +319,22 @@ class PolyglotRouter:
                 dict[str, float]
             """
             from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
+
             e = CoordinateEncoder()
-            return {"x": e._calculate_x(memory_data), "y": e._calculate_y(memory_data),
-                    "z": e._calculate_z(memory_data), "w": e._calculate_w(memory_data)}
+            return {
+                "x": e._calculate_x(memory_data),
+                "y": e._calculate_y(memory_data),
+                "z": e._calculate_z(memory_data),
+                "w": e._calculate_w(memory_data),
+            }
 
         return self._route_operation("encode_holographic", python_impl)
 
-    def encode_holographic_batch(self, memories: list[dict[str, Any]], current_time: int) -> list[dict[str, float]]:
+    def encode_holographic_batch(
+        self, memories: list[dict[str, Any]], current_time: int
+    ) -> list[dict[str, float]]:
         """Tier 1: Holographic Core (Python Batch Encoder)"""
+
         def python_impl() -> list[dict[str, float]]:
             # Use optimized batch encoder with null safety
             """
@@ -305,14 +346,18 @@ class PolyglotRouter:
             from whitemagic.core.intelligence.hologram.batch_encoder import (
                 FastBatchEncoder,
             )
+
             encoder = FastBatchEncoder()
             coords = encoder.encode_batch(memories)
             return [c.to_dict() for c in coords]
 
         return self._route_operation("encode_holographic_batch", python_impl)
 
-    def process_zodiac(self, name: str, element: str, mode: str, urgency: float = 0.5) -> dict[str, Any]:
+    def process_zodiac(
+        self, name: str, element: str, mode: str, urgency: float = 0.5
+    ) -> dict[str, Any]:
         """Tier 2: Zodiac Core (Python)"""
+
         def python_impl() -> dict[str, Any]:
             """
             Perform the python impl operation.
@@ -321,6 +366,7 @@ class PolyglotRouter:
                 dict[str, Any]
             """
             from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
+
             cores_mgr = get_zodiac_cores()
             core = cores_mgr.get_core(name)
             if not core:
@@ -335,9 +381,16 @@ class PolyglotRouter:
 
         return self._route_operation("process_zodiac", python_impl)
 
-    def calculate_neuro_score(self, current_score: float, access_count: int, total_memories: int,
-                             days_since_access: float, importance: float) -> dict[str, float]:
+    def calculate_neuro_score(
+        self,
+        current_score: float,
+        access_count: int,
+        total_memories: int,
+        days_since_access: float,
+        importance: float,
+    ) -> dict[str, float]:
         """Tier 4: Neuro Scoring (Python)"""
+
         def python_impl() -> dict[str, float]:
             """
             Perform the python impl operation.
@@ -350,10 +403,9 @@ class PolyglotRouter:
 
         return self._route_operation("neuro_scoring", python_impl)
 
-    # --- Standard Performance Routing ---
-
     def similarity(self, text1: str, text2: str) -> float:
         """Tier 3: Pattern Similarity (Rust Optimized)"""
+
         def rust_impl() -> float:
             """
             Perform the rust impl operation.
@@ -362,6 +414,7 @@ class PolyglotRouter:
                 float
             """
             import whitemagic_rs
+
             return float(whitemagic_rs.rust_similarity(text1, text2))
 
         def python_impl() -> float:
@@ -372,12 +425,20 @@ class PolyglotRouter:
                 float
             """
             from difflib import SequenceMatcher
+
             return SequenceMatcher(None, text1, text2).ratio()
 
         return self._route_operation("similarity", python_impl, rust_fn=rust_impl)
 
-    def search_memories(self, query: str, memories: list[tuple[str, str]], threshold: float = 0.7, limit: int = 10) -> list[tuple[str, float]]:
+    def search_memories(
+        self,
+        query: str,
+        memories: list[tuple[str, str]],
+        threshold: float = 0.7,
+        limit: int = 10,
+    ) -> list[tuple[str, float]]:
         """Tier 3: Memory Search (Rust Optimized)"""
+
         def rust_impl() -> list[tuple[str, float]]:
             """
             Perform the rust impl operation.
@@ -386,10 +447,19 @@ class PolyglotRouter:
                 list[tuple[str, float]]
             """
             import whitemagic_rs
+
             # Support both names (legacy match vs search_memories)
             if hasattr(whitemagic_rs, "rust_search_memories"):
-                return cast(list[tuple[str, float]], whitemagic_rs.rust_search_memories(query, memories, threshold, limit))
-            return cast(list[tuple[str, float]], whitemagic_rs.fast_search(query, memories, threshold, limit))
+                return cast(
+                    list[tuple[str, float]],
+                    whitemagic_rs.rust_search_memories(
+                        query, memories, threshold, limit
+                    ),
+                )
+            return cast(
+                list[tuple[str, float]],
+                whitemagic_rs.fast_search(query, memories, threshold, limit),
+            )
 
         def python_impl() -> list[tuple[str, float]]:
             """
@@ -399,6 +469,7 @@ class PolyglotRouter:
                 list[tuple[str, float]]
             """
             from difflib import SequenceMatcher
+
             res = []
             for mid, content in memories:
                 score = SequenceMatcher(None, query, content).ratio()
@@ -406,6 +477,7 @@ class PolyglotRouter:
                     res.append((mid, score))
             res.sort(key=lambda x: x[1], reverse=True)
             return res[:limit]
+
         return self._route_operation("search_memories", python_impl, rust_fn=rust_impl)
 
     def parallel_search(
@@ -432,17 +504,27 @@ class PolyglotRouter:
                 list[tuple[Any, ...]]
             """
             import whitemagic_rs
+
             # parallel_grep(root_path, pattern, extensions, context_lines)
             # Returns Vec<(String, usize, String)> -> (path, line, context)
             if hasattr(whitemagic_rs, "parallel_grep"):
-                raw_results = whitemagic_rs.parallel_grep(root_path, query, rust_exts, 0)
+                raw_results = whitemagic_rs.parallel_grep(
+                    root_path, query, rust_exts, 0
+                )
                 # Map to Gana-friendly format: (path, line, content, relevance, context)
                 return [(r[0], r[1], r[2], 1.0, "") for r in raw_results[:limit]]
 
             # Fallback to other variants if parallel_grep is missing for some reason
-            for fn_name in ["parallel_search_ultra", "parallel_search_fast", "parallel_search"]:
+            for fn_name in [
+                "parallel_search_ultra",
+                "parallel_search_fast",
+                "parallel_search",
+            ]:
                 if hasattr(whitemagic_rs, fn_name):
-                    fn = cast(Callable[[str, str, list[str], int], list[tuple[Any, ...]]], getattr(whitemagic_rs, fn_name))
+                    fn = cast(
+                        Callable[[str, str, list[str], int], list[tuple[Any, ...]]],
+                        getattr(whitemagic_rs, fn_name),
+                    )
                     return fn(root_path, query, py_exts, limit)
             raise AttributeError("whitemagic_rs has no parallel search implementation")
 
@@ -458,13 +540,19 @@ class PolyglotRouter:
             root = Path(root_path)
             for ext in py_exts:
                 for path in root.rglob(f"*{ext}"):
-                    if "target" in str(path) or ".venv" in str(path) or ".git" in str(path):
+                    if (
+                        "target" in str(path)
+                        or ".venv" in str(path)
+                        or ".git" in str(path)
+                    ):
                         continue
                     try:
                         content = path.read_text(errors="ignore")
                         for i, line in enumerate(content.splitlines()):
                             if query in line:
-                                results.append((str(path), i + 1, line.strip(), 1.0, ""))
+                                results.append(
+                                    (str(path), i + 1, line.strip(), 1.0, "")
+                                )
                                 if len(results) >= limit:
                                     return results
                     except (OSError, UnicodeDecodeError):
@@ -492,16 +580,20 @@ class PolyglotRouter:
                 list[dict[str, Any]]
             """
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "parallel_grep"):
                 # Returns Vec<(rel_path, line_num, context)>
-                results = whitemagic_rs.parallel_grep(root_path, pattern, extensions, context_lines)
+                results = whitemagic_rs.parallel_grep(
+                    root_path, pattern, extensions, context_lines
+                )
                 return [
                     {
                         "path": r[0],
                         "line": r[1],
                         "excerpt": r[2],
                         "engine": "rust_parallel_grep",
-                    } for r in results
+                    }
+                    for r in results
                 ]
             return []
 
@@ -513,11 +605,19 @@ class PolyglotRouter:
             Returns:
                 list[dict[str, Any]]
             """
-            return [{"path": "N/A", "error": "Rust parallel_grep fallback not fully implemented", "engine": "python_fallback"}]
+            return [
+                {
+                    "path": "N/A",
+                    "error": "Rust parallel_grep fallback not fully implemented",
+                    "engine": "python_fallback",
+                }
+            ]
 
         return self._route_operation("deep_search", python_impl, rust_fn=rust_impl)
 
-    def accelerated_task(self, task_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def accelerated_task(
+        self, task_name: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         """Generic Accelerated Task Proxy (Dispatches to best native backend)"""
         # Mapping for generic tasks to native implementations
         if task_name == "neuro_scoring":
@@ -530,6 +630,7 @@ class PolyglotRouter:
             )
 
         if task_name == "cross_pollinate":
+
             def rust_impl() -> dict[str, Any]:
                 """
                 Perform the rust impl operation.
@@ -538,17 +639,21 @@ class PolyglotRouter:
                     dict[str, Any]
                 """
                 import whitemagic_rs
+
                 if hasattr(whitemagic_rs, "extract_patterns_py"):
                     # Mock/Simulate complex pattern extraction bridge
                     return {"status": "rust_accelerated", "patterns_extracted": 42}
                 return {"status": "fallback"}
 
-            return self._route_operation("cross_pollinate", lambda: {"status": "python"}, rust_fn=rust_impl)
+            return self._route_operation(
+                "cross_pollinate", lambda: {"status": "python"}, rust_fn=rust_impl
+            )
 
         return {"status": "unknown_task", "engine": "fallback"}
 
     def cast_heavens_net(self, root_path: str, mode: str = "balanced") -> Any:
         """Heaven's Net v6: Intelligent Dragnet (Rust Optimized)"""
+
         def rust_impl() -> Any:
             """
             Perform the rust impl operation.
@@ -557,6 +662,7 @@ class PolyglotRouter:
                 Any
             """
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "cast_heavens_net"):
                 return whitemagic_rs.cast_heavens_net(root_path, mode)
             raise AttributeError("whitemagic_rs has no heavens_net implementation")
@@ -571,18 +677,22 @@ class PolyglotRouter:
             """
             root = Path(root_path)
             files = list(root.rglob("*"))
+
             class MockResult:
                 """MockResult: mock result."""
+
                 def __init__(self, count: int) -> None:
                     self.total_files = count
                     self.skipped_files = 0
                     self.features: list[Any] = []
+
             return MockResult(len(files))
 
         return self._route_operation("cast_heavens_net", python_impl, rust_fn=rust_impl)
 
     def scan_tree(self, root_path: str, pattern: str = "*.py") -> Any:
         """Tree Scanning with Metadata (Rust Optimized)"""
+
         def rust_impl() -> Any:
             """
             Perform the rust impl operation.
@@ -591,6 +701,7 @@ class PolyglotRouter:
                 Any
             """
             import whitemagic_rs
+
             if hasattr(whitemagic_rs, "scan_tree"):
                 return whitemagic_rs.scan_tree(root_path)
             raise AttributeError("whitemagic_rs has no scan_tree implementation")
@@ -603,16 +714,19 @@ class PolyglotRouter:
                 Any
             """
             from pathlib import Path
+
             results = []
             root = Path(root_path)
             for path in root.rglob(pattern):
                 try:
                     stat = path.stat()
-                    results.append({
-                        "path": str(path.relative_to(root)),
-                        "size": stat.st_size,
-                        "mtime": stat.st_mtime,
-                    })
+                    results.append(
+                        {
+                            "path": str(path.relative_to(root)),
+                            "size": stat.st_size,
+                            "mtime": stat.st_mtime,
+                        }
+                    )
                 except Exception as e:
                     logger.debug("Operation failed: %s", e)
                     pass
@@ -669,6 +783,7 @@ class PolyglotRouter:
 
 _global_router: PolyglotRouter | None = None
 
+
 def get_router(prefer_backend: Backend = Backend.AUTO) -> PolyglotRouter:
     """
     Get the router.
@@ -684,6 +799,7 @@ def get_router(prefer_backend: Backend = Backend.AUTO) -> PolyglotRouter:
         _global_router = PolyglotRouter(prefer_backend=prefer_backend)
     return _global_router
 
+
 def get_performance_stats() -> dict[str, Any]:
     """
     Get the performance stats.
@@ -693,8 +809,13 @@ def get_performance_stats() -> dict[str, Any]:
     """
     router = get_router()
     stats = router.get_stats()
-    logger.info("\n🚀 Polyglot v5.1 | Speedup: %sx | Native: %s%%", stats['speedup'], router.metrics.native_usage_rate)
+    logger.info(
+        "\n🚀 Polyglot v5.1 | Speedup: %sx | Native: %s%%",
+        stats["speedup"],
+        router.metrics.native_usage_rate,
+    )
     return stats
+
 
 if __name__ == "__main__":
     get_performance_stats()

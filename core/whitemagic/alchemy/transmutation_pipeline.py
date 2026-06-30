@@ -25,11 +25,15 @@ from whitemagic.alchemy.nigredo import NigredoClassifier  # noqa: E402
 from whitemagic.alchemy.rubedo import RubedoSynthesizer  # noqa: E402
 from whitemagic.config.paths import DB_PATH  # noqa: E402
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 class TransmutationPipeline:
     """TransmutationPipeline: transmutation pipeline."""
+
     def __init__(self):
         self.classifier = NigredoClassifier()
         self.purifier = AlbedoPurifier()
@@ -57,7 +61,10 @@ class TransmutationPipeline:
         cursor = conn.cursor()
 
         # Load active memories (LONG_TERM)
-        cursor.execute("SELECT id, title, content FROM memories WHERE memory_type != 'quarantined' ORDER BY importance DESC LIMIT ?", (limit,))
+        cursor.execute(
+            "SELECT id, title, content FROM memories WHERE memory_type != 'quarantined' ORDER BY importance DESC LIMIT ?",
+            (limit,),
+        )
         rows = cursor.fetchall()
         logger.info("Loaded %s active memories for transmutation.", len(rows))
 
@@ -71,12 +78,14 @@ class TransmutationPipeline:
             category, score = self.classifier.classify(content, title)
 
             if category == "Novelty":
-                novelty_memories.append({
-                    "id": row["id"],
-                    "title": title,
-                    "content": content,
-                    "score": score
-                })
+                novelty_memories.append(
+                    {
+                        "id": row["id"],
+                        "title": title,
+                        "content": content,
+                        "score": score,
+                    }
+                )
             elif category == "Routine":
                 routine_count += 1
             else:
@@ -112,6 +121,7 @@ class TransmutationPipeline:
         logger.info("=== Transmutation Complete in %ss ===", elapsed)
         logger.info("Philosopher's Stone created at %s", self.holocron.path)
 
+
 if __name__ == "__main__":
     pipeline = TransmutationPipeline()
-    pipeline.run(limit=50000) # Process up to 50k memories
+    pipeline.run(limit=50000)  # Process up to 50k memories

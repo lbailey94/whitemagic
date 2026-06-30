@@ -37,7 +37,9 @@ class SystemMetrics:
             cpu_percent=psutil.cpu_percent(interval=0.1),
             memory_percent=psutil.virtual_memory().percent,
             active_threads=psutil.Process(os.getpid()).num_threads(),
-            load_average=psutil.getloadavg()[0] if hasattr(psutil, "getloadavg") else 0.0,
+            load_average=psutil.getloadavg()[0]
+            if hasattr(psutil, "getloadavg")
+            else 0.0,
         )
 
 
@@ -70,7 +72,9 @@ class AdaptiveThreadingController:
         self._metrics_history: list = []
         self._max_history = 10
 
-    def recommend_tier(self, task_count: int, task_complexity: int = 50) -> ThreadingTier:
+    def recommend_tier(
+        self, task_count: int, task_complexity: int = 50
+    ) -> ThreadingTier:
         """Recommend threading tier based on current state.
 
         Args:
@@ -118,7 +122,9 @@ class AdaptiveThreadingController:
             recommended = list(ThreadingTier)[tier_value]
         elif task_complexity < 25:
             # Low complexity, can scale up
-            tier_value = min(len(ThreadingTier) - 1, list(ThreadingTier).index(recommended) + 1)
+            tier_value = min(
+                len(ThreadingTier) - 1, list(ThreadingTier).index(recommended) + 1
+            )
             recommended = list(ThreadingTier)[tier_value]
 
         self.current_tier = recommended
@@ -158,11 +164,17 @@ class AdaptiveThreadingController:
         """Get average CPU usage from history."""
         if not self._metrics_history:
             return 0.0
-        return float(sum(m.cpu_percent for m in self._metrics_history) / len(self._metrics_history))
+        return float(
+            sum(m.cpu_percent for m in self._metrics_history)
+            / len(self._metrics_history)
+        )
 
     @property
     def avg_memory_usage(self) -> float:
         """Get average memory usage from history."""
         if not self._metrics_history:
             return 0.0
-        return float(sum(m.memory_percent for m in self._metrics_history) / len(self._metrics_history))
+        return float(
+            sum(m.memory_percent for m in self._metrics_history)
+            / len(self._metrics_history)
+        )

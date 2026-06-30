@@ -77,14 +77,17 @@ try:
     from .csp import (
         get_default_csp_config as get_default_csp_config,
     )
-    __all__.extend([
-        "CSPBuilder",
-        "CSPConfig",
-        "CSPMiddleware",
-        "CSPReporter",
-        "SecurityHeadersConfig",
-        "create_security_middleware",
-        "get_default_csp_config",
-    ])
+
+    __all__.extend(
+        [
+            "CSPBuilder",
+            "CSPConfig",
+            "CSPMiddleware",
+            "CSPReporter",
+            "SecurityHeadersConfig",
+            "create_security_middleware",
+            "get_default_csp_config",
+        ]
+    )
 except ImportError:
     pass  # CSP requires FastAPI

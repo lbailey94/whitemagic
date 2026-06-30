@@ -54,6 +54,7 @@ class TerminalScratchpad:
             return False
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             mem = get_unified_memory()
             mem.store(
                 content=content,

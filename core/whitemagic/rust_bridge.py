@@ -11,10 +11,12 @@ logger = logging.getLogger(__name__)
 # Try to import Rust bindings
 try:
     import whitemagic_rs
+
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
     logger.warning("Rust bindings not available. Install with: maturin develop")
+
 
 class RustBridge:
     """Bridge between Python and Rust implementations"""
@@ -57,12 +59,15 @@ class RustBridge:
 
         return whitemagic_rs.MemoryConsolidation(threshold)
 
+
 # Global bridge instance
 _bridge = RustBridge()
+
 
 def get_rust_bridge() -> RustBridge:
     """Get global Rust bridge instance"""
     return _bridge
+
 
 def is_rust_available() -> bool:
     """Check if Rust bindings are available"""

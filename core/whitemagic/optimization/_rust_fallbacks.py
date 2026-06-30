@@ -3,6 +3,7 @@
 This module contains pure-Python fallback implementations used when
 the Rust extension (whitemagic_rs) is not available.
 """
+
 import logging
 from typing import Any, cast
 
@@ -19,12 +20,18 @@ def rust_fallback_available() -> bool:
 
 
 def _galactic_batch_score_python(
-    memories: list[dict[str, Any]], quick: bool,
+    memories: list[dict[str, Any]],
+    quick: bool,
 ) -> list[dict[str, Any]]:
     """Pure-Python fallback for galactic batch scoring."""
     results = []
     for m in memories:
-        if m.get("is_protected") or m.get("is_core_identity") or m.get("is_sacred") or m.get("is_pinned"):
+        if (
+            m.get("is_protected")
+            or m.get("is_core_identity")
+            or m.get("is_sacred")
+            or m.get("is_pinned")
+        ):
             distance = 0.0
             retention = 1.0
         elif quick:
@@ -61,12 +68,14 @@ def _galactic_batch_score_python(
         else:
             zone = "far_edge"
 
-        results.append({
-            "id": m.get("id", ""),
-            "retention_score": round(retention, 4),
-            "galactic_distance": distance,
-            "zone": zone,
-        })
+        results.append(
+            {
+                "id": m.get("id", ""),
+                "retention_score": round(retention, 4),
+                "galactic_distance": distance,
+                "zone": zone,
+            }
+        )
     return results
 
 
@@ -81,12 +90,62 @@ def _association_mine_python(
     from collections import defaultdict
 
     stop_words = {
-        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-        "of", "with", "by", "from", "is", "it", "this", "that", "was", "are",
-        "were", "be", "been", "being", "have", "has", "had", "do", "does",
-        "did", "will", "would", "could", "should", "may", "might", "shall",
-        "can", "not", "no", "nor", "so", "if", "then", "than", "too", "very",
-        "just", "about", "up", "out", "into", "over", "after", "before",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "it",
+        "this",
+        "that",
+        "was",
+        "are",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "not",
+        "no",
+        "nor",
+        "so",
+        "if",
+        "then",
+        "than",
+        "too",
+        "very",
+        "just",
+        "about",
+        "up",
+        "out",
+        "into",
+        "over",
+        "after",
+        "before",
     }
     word_re = re.compile(r"\w+")
 
@@ -118,13 +177,15 @@ def _association_mine_python(
             count_bonus = min(1.0, len(shared) / 5.0) * 0.3
             score = min(1.0, raw_jaccard + count_bonus)
             if score >= min_score:
-                overlaps.append({
-                    "source_id": texts[i][0],
-                    "target_id": texts[j][0],
-                    "overlap_score": round(score, 4),
-                    "shared_count": len(shared),
-                    "shared_keywords": sorted(shared)[:5],
-                })
+                overlaps.append(
+                    {
+                        "source_id": texts[i][0],
+                        "target_id": texts[j][0],
+                        "overlap_score": round(score, 4),
+                        "shared_count": len(shared),
+                        "shared_keywords": sorted(shared)[:5],
+                    }
+                )
 
     overlaps.sort(key=lambda x: cast(float, x["overlap_score"]), reverse=True)
     overlaps = overlaps[:max_results]
@@ -191,7 +252,9 @@ class PythonSpatialIndex5D:
         dists.sort(key=lambda x: x[1])
         return dists[:n]
 
-    def query_within_radius(self, vector: list[float], radius_sq: float) -> list[tuple[str, float]]:
+    def query_within_radius(
+        self, vector: list[float], radius_sq: float
+    ) -> list[tuple[str, float]]:
         """
         Perform the query within radius operation.
 

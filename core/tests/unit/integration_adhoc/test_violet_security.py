@@ -15,11 +15,13 @@ import time
 # 1. MCP Integrity Checking
 # =========================================================================
 
+
 class TestMcpIntegrity:
     """Test MCP tool registry fingerprinting and drift detection."""
 
     def _make_integrity(self):
         from whitemagic.security.mcp_integrity import McpIntegrity
+
         return McpIntegrity(storage_dir=None)
 
     def test_snapshot_captures_tools(self):
@@ -78,11 +80,13 @@ class TestMcpIntegrity:
 # 2. Crypto-chained Karma + Ops Classification
 # =========================================================================
 
+
 class TestKarmaOpsClass:
     """Test red-ops/blue-ops classification in Karma Ledger."""
 
     def _make_ledger(self):
         from whitemagic.dharma.karma_ledger import KarmaLedger
+
         return KarmaLedger(storage_dir=None)
 
     def test_record_with_ops_class(self):
@@ -147,46 +151,61 @@ class TestKarmaOpsClass:
 # 3. Violet Dharma Profile
 # =========================================================================
 
+
 class TestVioletDharmaProfile:
     """Test the Violet Dharma profile rules."""
 
     def _make_engine(self):
         from whitemagic.dharma.rules import DharmaRulesEngine
+
         return DharmaRulesEngine(active_profile="violet")
 
     def test_violet_blocks_exploit(self):
         engine = self._make_engine()
-        decision = engine.evaluate({"tool": "exploit_runner", "description": "run exploit"})
+        decision = engine.evaluate(
+            {"tool": "exploit_runner", "description": "run exploit"}
+        )
         assert decision.action.value == "block"
         assert "violet_require_engagement_token" in decision.triggered_rules
 
     def test_violet_blocks_pentest(self):
         engine = self._make_engine()
-        decision = engine.evaluate({"tool": "pentest_scan", "description": "pentest target"})
+        decision = engine.evaluate(
+            {"tool": "pentest_scan", "description": "pentest target"}
+        )
         assert decision.action.value == "block"
 
     def test_violet_logs_blue_ops(self):
         engine = self._make_engine()
-        decision = engine.evaluate({"tool": "anomaly_checker", "description": "scan for anomalies"})
+        decision = engine.evaluate(
+            {"tool": "anomaly_checker", "description": "scan for anomalies"}
+        )
         # Should match violet_log_blue_ops (log) AND potentially default rules
         triggered = decision.triggered_rules
-        assert any("violet_log_blue_ops" in r or "blue" in r.lower() for r in triggered) or \
-               decision.action.value in ("log", "tag")
+        assert any(
+            "violet_log_blue_ops" in r or "blue" in r.lower() for r in triggered
+        ) or decision.action.value in ("log", "tag")
 
     def test_violet_warns_model_load(self):
         engine = self._make_engine()
-        decision = engine.evaluate({"tool": "ollama.generate", "description": "generate text"})
+        decision = engine.evaluate(
+            {"tool": "ollama.generate", "description": "generate text"}
+        )
         assert "violet_warn_model_load" in decision.triggered_rules
         assert decision.action.value == "warn"
 
     def test_violet_blocks_exfiltration(self):
         engine = self._make_engine()
-        decision = engine.evaluate({"tool": "send_data", "description": "exfiltrate sensitive data"})
+        decision = engine.evaluate(
+            {"tool": "send_data", "description": "exfiltrate sensitive data"}
+        )
         assert decision.action.value == "block"
 
     def test_violet_throttles_recon(self):
         engine = self._make_engine()
-        decision = engine.evaluate({"tool": "network_tool", "description": "nmap scan network"})
+        decision = engine.evaluate(
+            {"tool": "network_tool", "description": "nmap scan network"}
+        )
         assert decision.action.value in ("throttle", "block", "warn")
 
     def test_violet_rules_listed(self):
@@ -201,8 +220,11 @@ class TestVioletDharmaProfile:
 
     def test_default_profile_does_not_trigger_violet(self):
         from whitemagic.dharma.rules import DharmaRulesEngine
+
         engine = DharmaRulesEngine(active_profile="default")
-        decision = engine.evaluate({"tool": "exploit_runner", "description": "run exploit"})
+        decision = engine.evaluate(
+            {"tool": "exploit_runner", "description": "run exploit"}
+        )
         assert "violet_require_engagement_token" not in decision.triggered_rules
 
 
@@ -210,16 +232,20 @@ class TestVioletDharmaProfile:
 # 4. Model Signing Verification
 # =========================================================================
 
+
 class TestModelSigning:
     """Test model manifest registration and verification."""
 
     def _make_registry(self):
         from whitemagic.security.model_signing import ModelSigningRegistry
+
         return ModelSigningRegistry(storage_dir=None)
 
     def test_register_model(self):
         reg = self._make_registry()
-        result = reg.register_model("phi-3-mini", sha256="abc123def456", trust="verified")
+        result = reg.register_model(
+            "phi-3-mini", sha256="abc123def456", trust="verified"
+        )
         assert result["status"] == "success"
         assert result["manifest"]["trust"] == "verified"
 
@@ -290,17 +316,21 @@ class TestModelSigning:
 # 5. Scope-of-Engagement Tokens
 # =========================================================================
 
+
 class TestEngagementTokens:
     """Test engagement token issuance, validation, and revocation."""
 
     def _make_manager(self):
         from whitemagic.security.engagement_tokens import EngagementTokenManager
+
         return EngagementTokenManager(storage_dir=None)
 
     def test_issue_token(self):
         mgr = self._make_manager()
         result = mgr.issue(
-            scope=["10.0.0.*"], tools=["nmap_*"], issuer="lucas",
+            scope=["10.0.0.*"],
+            tools=["nmap_*"],
+            issuer="lucas",
             duration_minutes=60,
         )
         assert result["status"] == "success"
@@ -395,11 +425,13 @@ class TestEngagementTokens:
 # 6. Security Circuit Breakers
 # =========================================================================
 
+
 class TestSecurityBreaker:
     """Test security anomaly detection patterns."""
 
     def _make_monitor(self, **kwargs):
         from whitemagic.security.security_breaker import SecurityMonitor
+
         return SecurityMonitor(**kwargs)
 
     def test_normal_call_no_alert(self):
@@ -485,17 +517,20 @@ class TestSecurityBreaker:
 
         stub = StubMonitor()
         monkeypatch.setenv("WM_BENCHMARK_QUIET", "1")
-        monkeypatch.setattr("whitemagic.tools.middleware._get_security_monitor", lambda: stub)
+        monkeypatch.setattr(
+            "whitemagic.tools.middleware._get_security_monitor", lambda: stub
+        )
 
         ctx = DispatchContext(
             tool_name="gana_ghost",
             kwargs={},
         )
         ctx.meta["quiet_internal_benchmark"] = True
-        result = mw_security_monitor(ctx, lambda current: {"status": "success", "tool": current.tool_name})
+        result = mw_security_monitor(
+            ctx, lambda current: {"status": "success", "tool": current.tool_name}
+        )
         assert result["status"] == "success"
         assert stub.calls == 0
-
 
     def test_dispatch_quiet_benchmark_flag_survives_sanitizer(self, monkeypatch):
         from whitemagic.security.security_breaker import get_security_monitor
@@ -522,13 +557,17 @@ class TestSecurityBreaker:
 
         stub = StubMonitor()
         monkeypatch.setenv("WM_BENCHMARK_QUIET", "1")
-        monkeypatch.setattr("whitemagic.tools.middleware._get_security_monitor", lambda: stub)
+        monkeypatch.setattr(
+            "whitemagic.tools.middleware._get_security_monitor", lambda: stub
+        )
 
         ctx = DispatchContext(
             tool_name="gana_ghost",
             kwargs={},
         )
-        result = mw_security_monitor(ctx, lambda current: {"status": "success", "tool": current.tool_name})
+        result = mw_security_monitor(
+            ctx, lambda current: {"status": "success", "tool": current.tool_name}
+        )
         assert result["status"] == "success"
         assert stub.calls == 1
 
@@ -537,6 +576,7 @@ class TestSecurityBreaker:
 # Handler Integration Tests
 # =========================================================================
 
+
 class TestVioletSecurityHandlers:
     """Test that all 15 handlers return valid responses."""
 
@@ -544,6 +584,7 @@ class TestVioletSecurityHandlers:
         from whitemagic.tools.handlers.violet_security import (
             handle_mcp_integrity_snapshot,
         )
+
         result = handle_mcp_integrity_snapshot()
         assert result["status"] == "success"
 
@@ -552,6 +593,7 @@ class TestVioletSecurityHandlers:
             handle_mcp_integrity_snapshot,
             handle_mcp_integrity_verify,
         )
+
         handle_mcp_integrity_snapshot()
         result = handle_mcp_integrity_verify()
         assert result["status"] == "success"
@@ -560,32 +602,40 @@ class TestVioletSecurityHandlers:
         from whitemagic.tools.handlers.violet_security import (
             handle_mcp_integrity_status,
         )
+
         result = handle_mcp_integrity_status()
         assert result["status"] == "success"
 
     def test_model_register(self):
         from whitemagic.tools.handlers.violet_security import handle_model_register
-        result = handle_model_register(model_name="test-model", sha256="abc123", trust="verified")
+
+        result = handle_model_register(
+            model_name="test-model", sha256="abc123", trust="verified"
+        )
         assert result["status"] == "success"
 
     def test_model_register_missing_name(self):
         from whitemagic.tools.handlers.violet_security import handle_model_register
+
         result = handle_model_register(sha256="abc")
         assert result["status"] == "error"
 
     def test_model_verify(self):
         from whitemagic.tools.handlers.violet_security import handle_model_verify
+
         result = handle_model_verify(model_name="nonexistent")
         assert result["status"] == "success"
         assert result["verified"] is False
 
     def test_model_list(self):
         from whitemagic.tools.handlers.violet_security import handle_model_list
+
         result = handle_model_list()
         assert result["status"] == "success"
 
     def test_model_hash_missing_path(self):
         from whitemagic.tools.handlers.violet_security import handle_model_hash
+
         result = handle_model_hash()
         assert result["status"] == "error"
 
@@ -593,41 +643,49 @@ class TestVioletSecurityHandlers:
         from whitemagic.tools.handlers.violet_security import (
             handle_model_signing_status,
         )
+
         result = handle_model_signing_status()
         assert result["status"] == "success"
 
     def test_engagement_issue(self):
         from whitemagic.tools.handlers.violet_security import handle_engagement_issue
+
         result = handle_engagement_issue(issuer="test", scope=["*"], tools=["*"])
         assert result["status"] == "success"
 
     def test_engagement_issue_missing_issuer(self):
         from whitemagic.tools.handlers.violet_security import handle_engagement_issue
+
         result = handle_engagement_issue(scope=["*"])
         assert result["status"] == "error"
 
     def test_engagement_validate(self):
         from whitemagic.tools.handlers.violet_security import handle_engagement_validate
+
         result = handle_engagement_validate(token_id="evt_fake")
         assert result["valid"] is False
 
     def test_engagement_revoke_nonexistent(self):
         from whitemagic.tools.handlers.violet_security import handle_engagement_revoke
+
         result = handle_engagement_revoke(token_id="evt_fake")
         assert result["status"] == "error"
 
     def test_engagement_list(self):
         from whitemagic.tools.handlers.violet_security import handle_engagement_list
+
         result = handle_engagement_list()
         assert result["status"] == "success"
 
     def test_engagement_status(self):
         from whitemagic.tools.handlers.violet_security import handle_engagement_status
+
         result = handle_engagement_status()
         assert result["status"] == "success"
 
     def test_security_alerts(self):
         from whitemagic.tools.handlers.violet_security import handle_security_alerts
+
         result = handle_security_alerts()
         assert result["status"] == "success"
 
@@ -635,5 +693,6 @@ class TestVioletSecurityHandlers:
         from whitemagic.tools.handlers.violet_security import (
             handle_security_monitor_status,
         )
+
         result = handle_security_monitor_status()
         assert result["status"] == "success"

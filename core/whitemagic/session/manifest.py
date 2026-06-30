@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SessionManifest:
     """Session state manifest for handoffs."""
+
     session_id: str = ""
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)

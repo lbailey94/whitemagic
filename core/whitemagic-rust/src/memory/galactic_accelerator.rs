@@ -14,10 +14,6 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Zone classification (matches Python's galactic_map.py)
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GalacticZone {
     Core,     // 0.00 - 0.15
@@ -53,10 +49,6 @@ impl GalacticZone {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Memory signals for retention scoring
-// ---------------------------------------------------------------------------
 
 /// Flat struct holding the signals needed for retention scoring.
 /// Designed for cache-friendly parallel iteration.
@@ -102,10 +94,6 @@ pub struct ScoringResult {
     pub galactic_distance: f64,
     pub zone: String,
 }
-
-// ---------------------------------------------------------------------------
-// Core scoring logic
-// ---------------------------------------------------------------------------
 
 /// Compute retention score from 7 weighted signals.
 #[inline]
@@ -156,10 +144,6 @@ fn quick_retention_estimate(signals: &MemorySignals) -> f64 {
     let total_weight = 1.0 + 0.9 + 0.6 + 0.5;
     (s1 + s2 + s3 + s4) / total_weight
 }
-
-// ---------------------------------------------------------------------------
-// Batch operations (parallel via Rayon)
-// ---------------------------------------------------------------------------
 
 /// Score a batch of memories in parallel using the full 7-signal model.
 /// Returns Vec<ScoringResult> sorted by distance ascending (core first).
@@ -234,10 +218,6 @@ pub fn batch_decay_drift(
         })
         .collect()
 }
-
-// ---------------------------------------------------------------------------
-// Python bindings
-// ---------------------------------------------------------------------------
 
 /// Batch score memories from Python dicts → JSON results.
 /// Input: list of dicts with keys matching MemorySignals fields.

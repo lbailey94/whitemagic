@@ -14,6 +14,7 @@ def check_daily_journal() -> dict[str, str]:
     today = date.today().isoformat()
     try:
         from whitemagic.config.paths import get_state_root
+
         journal_dir = get_state_root() / "narrative"
         journal_dir.mkdir(parents=True, exist_ok=True)
         journal_file = journal_dir / f"journal_{today}.md"

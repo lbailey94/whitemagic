@@ -92,7 +92,6 @@ class Memory:
     emotional_valence: float = 0.0  # -1.0 to 1.0 (Positive/Negative)
     importance: float = 0.5  # 0.0 to 1.0 (Static weight)
 
-    # === Neural / Hebbian Fields (v5.0 Integration) ===
     neuro_score: float = 1.0        # Overall strength (0.0-1.0)
     novelty_score: float = 1.0      # Decays as info becomes familiar
     recall_count: int = 0           # Independent of access_count for neural logic
@@ -106,12 +105,10 @@ class Memory:
     emotional_weight: float = 0.5   # Resonance score
     links: dict[str, MemoryLink] = field(default_factory=dict)
 
-    # === Galactic Map Fields (v11.1 Integration) ===
     galactic_distance: float = 0.0  # 0.0=core (active), 1.0=far edge (deep archive)
     retention_score: float = 0.5    # Composite score from multi-signal retention engine
     last_retention_sweep: datetime | None = None  # When last evaluated by retention engine
 
-    # === Galaxy Field (v23.1 — 6D Holographic Galaxy) ===
     galaxy: str = "universal"  # Which galaxy this memory belongs to
 
     # Metadata

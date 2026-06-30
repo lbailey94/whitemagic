@@ -20,6 +20,7 @@ Usage via dispatch:
     dispatch("wm_write", content="config data", mode="file", path="/tmp/config.json")
     dispatch("wm_write", content="creative idea", mode="dream", dream_type="bridge")
 """
+
 import logging
 from typing import Any
 
@@ -105,7 +106,15 @@ def handle_wm_write(**kwargs: Any) -> dict[str, Any]:
             return {
                 "status": "error",
                 "error": f"Unknown write mode: {mode}",
-                "available_modes": ["auto", "memory", "scratchpad", "file", "neural", "dream", "oms"],
+                "available_modes": [
+                    "auto",
+                    "memory",
+                    "scratchpad",
+                    "file",
+                    "neural",
+                    "dream",
+                    "oms",
+                ],
             }
 
         # v23.1 Harmonic: ensure consolidation daemon is running after writes
@@ -114,6 +123,7 @@ def handle_wm_write(**kwargs: Any) -> dict[str, Any]:
                 from whitemagic.core.memory.consolidation import (
                     get_consolidation_daemon,
                 )
+
                 daemon = get_consolidation_daemon()
                 if not daemon._started:
                     daemon.start()
@@ -133,6 +143,7 @@ def handle_wm_write(**kwargs: Any) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Mode Implementations
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
     """Store as a memory in UnifiedMemory with full enrichment pipeline."""
@@ -182,6 +193,7 @@ def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
     coords_populated = False
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         coords = um.backend.get_coords(mem.id)
         if coords and any(c is not None for c in coords):
@@ -194,7 +206,9 @@ def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
         "mode": "memory",
         "memory_id": str(mem.id),
         "title": mem.title,
-        "memory_type": mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type),
+        "memory_type": mem.memory_type.name
+        if hasattr(mem.memory_type, "name")
+        else str(mem.memory_type),
         "tags": list(mem.tags) if mem.tags else [],
         "importance": mem.importance,
         "holographic_coords_populated": coords_populated,
@@ -215,6 +229,7 @@ def _write_scratchpad(kwargs: dict[str, Any]) -> dict[str, Any]:
 
     try:
         from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
+
         mgr = ScratchpadManager()
         sp = mgr.get_or_create(scratchpad_id)
         sp.add_entry(content, title=title)
@@ -228,6 +243,7 @@ def _write_scratchpad(kwargs: dict[str, Any]) -> dict[str, Any]:
         logger.debug("Scratchpad write failed, using inline: %s", exc)
         # Fallback: store as short-term memory with scratchpad tag
         from whitemagic.core.memory.unified import remember
+
         mem = remember(
             content=content,
             title=title,
@@ -316,6 +332,7 @@ def _write_dream(kwargs: dict[str, Any]) -> dict[str, Any]:
     else:
         # Fallback: store as emotional memory with dream tag
         from whitemagic.core.memory.unified import remember
+
         mem = remember(
             content=content,
             title=title,
@@ -367,6 +384,7 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     # Check UnifiedMemory
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         get_unified_memory()
         status["backends"]["unified_memory"] = "available"
     except Exception:
@@ -375,6 +393,7 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     # Check Holographic Index
     try:
         from whitemagic.core.memory.unified import get_unified_memory
+
         um = get_unified_memory()
         holographic = um.holographic
         status["backends"]["holographic_index"] = "available" if holographic else "lazy"
@@ -384,14 +403,18 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     # Check Embedding Engine
     try:
         from whitemagic.core.memory.embeddings import get_embedding_engine
+
         engine = get_embedding_engine()
-        status["backends"]["embedding_engine"] = "available" if engine.available() else "unavailable"
+        status["backends"]["embedding_engine"] = (
+            "available" if engine.available() else "unavailable"
+        )
     except Exception:
         status["backends"]["embedding_engine"] = "unavailable"
 
     # Check ScratchpadManager
     try:
         from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
+
         ScratchpadManager()
         status["backends"]["scratchpad"] = "available"
     except Exception:
@@ -400,6 +423,7 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     # Check NeuralMemoryStore
     try:
         from whitemagic.core.memory.neural.persistence import NeuralMemoryStore
+
         NeuralMemoryStore()
         status["backends"]["neural_store"] = "available"
     except Exception:
@@ -408,6 +432,7 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     # Check DreamArtifactWriter
     try:
         from whitemagic.core.dreaming.dream_artifacts import DreamArtifactWriter
+
         DreamArtifactWriter()
         status["backends"]["dream_artifact_writer"] = "available"
     except Exception:
@@ -416,6 +441,7 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     # Check OMSManager
     try:
         from whitemagic.oms.manager import OMSManager
+
         OMSManager()
         status["backends"]["oms_manager"] = "available"
     except Exception:

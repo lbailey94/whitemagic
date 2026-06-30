@@ -9,6 +9,7 @@ import click
 try:
     from rich.console import Console
     from rich.panel import Panel
+
     HAS_RICH = True
     console = Console()
 except ImportError:
@@ -28,7 +29,11 @@ def wisdom_group() -> None:
     type=click.Choice(["full_council", "art_of_war", "iching", "synthesize"]),
     default="full_council",
 )
-@click.option("--urgency", type=click.Choice(["low", "normal", "high", "critical"]), default="normal")
+@click.option(
+    "--urgency",
+    type=click.Choice(["low", "normal", "high", "critical"]),
+    default="normal",
+)
 def wisdom_consult(question: str, source: str, urgency: str) -> None:
     """Consult the wisdom council"""
     from whitemagic.mcp_api_bridge import consult_full_council
@@ -36,9 +41,13 @@ def wisdom_consult(question: str, source: str, urgency: str) -> None:
     try:
         if HAS_RICH and console:
             with console.status(f"[yellow]Consulting {source}...", spinner="moon"):
-                result = consult_full_council(question=question, source=source, urgency=urgency)
+                result = consult_full_council(
+                    question=question, source=source, urgency=urgency
+                )
         else:
-            result = consult_full_council(question=question, source=source, urgency=urgency)
+            result = consult_full_council(
+                question=question, source=source, urgency=urgency
+            )
 
         if "error" in result:
             click.echo(f"❌ Error: {result['error']}")
@@ -70,7 +79,9 @@ def wisdom_iching(question: str) -> None:
     try:
         if HAS_RICH and console:
             with console.status("[yellow]Casting I Ching...", spinner="dots"):
-                result = consult_iching(operation="cast", question=question, method="coin")
+                result = consult_iching(
+                    operation="cast", question=question, method="coin"
+                )
         else:
             result = consult_iching(operation="cast", question=question, method="coin")
 

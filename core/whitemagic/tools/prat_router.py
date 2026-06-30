@@ -40,7 +40,9 @@ from whitemagic.tools.vectorized import (
 logger = logging.getLogger(__name__)
 
 
-def _is_quiet_internal_benchmark(kwargs: dict[str, Any] | None = None, args: dict[str, Any] | None = None) -> bool:
+def _is_quiet_internal_benchmark(
+    kwargs: dict[str, Any] | None = None, args: dict[str, Any] | None = None
+) -> bool:
     if os.getenv("WM_BENCHMARK_QUIET", "").strip().lower() not in ("1", "true", "yes"):
         return False
     kwargs = kwargs or {}
@@ -48,21 +50,13 @@ def _is_quiet_internal_benchmark(kwargs: dict[str, Any] | None = None, args: dic
     return bool(kwargs.get("_internal_benchmark") or args.get("_internal_benchmark"))
 
 
-# ──────────────────────────────────────────────────────────
-# Resonance verbosity — keep agent responses lean by default
-# ──────────────────────────────────────────────────────────
-# The full resonance block (lunar phase, garden, guna, zodiac, economics)
-# can roughly double the token weight of a small tool response. External
-# agents pay for that on every call. We therefore project the metadata to a
-# lean, agent-useful subset by default and let callers opt back into the full
-# block. The complete metadata is always recorded in session state regardless
-# of what is surfaced in the response.
-#
-# WM_RESONANCE:
-#   "compact" (default) — only navigation-relevant keys
-#   "full" / "verbose"  — the complete resonance block
-#   "off" / "none" / "0" — omit the _resonance block entirely
-_RESONANCE_COMPACT_KEYS = ("gana", "chain_position", "successor_hint", "vitality_warning", "_sensorium")
+_RESONANCE_COMPACT_KEYS = (
+    "gana",
+    "chain_position",
+    "successor_hint",
+    "vitality_warning",
+    "_sensorium",
+)
 
 
 def _resonance_verbosity() -> str:
@@ -91,7 +85,9 @@ def _project_resonance(meta: dict[str, Any]) -> dict[str, Any]:
     return {k: meta[k] for k in _RESONANCE_COMPACT_KEYS if k in meta}
 
 
-def _normalize_gana_native_result(gana_name: str, raw: dict[str, Any]) -> dict[str, Any]:
+def _normalize_gana_native_result(
+    gana_name: str, raw: dict[str, Any]
+) -> dict[str, Any]:
     details = build_native_gana_details(
         gana_name,
         operation=raw.get("operation"),
@@ -113,11 +109,27 @@ def _normalize_gana_native_result(gana_name: str, raw: dict[str, Any]) -> dict[s
         extra={
             key: value
             for key, value in raw.items()
-            if key not in {
-                "status", "gana", "operation", "mode", "note", "available_tools",
-                "output", "garden", "garden_status", "mansion", "successor_hint",
-                "execution_ms", "karma_trace", "predecessor_context", "predecessor",
-                "lunar_amplification", "_resonance", "_koka_latency_ms", "_koka_path",
+            if key
+            not in {
+                "status",
+                "gana",
+                "operation",
+                "mode",
+                "note",
+                "available_tools",
+                "output",
+                "garden",
+                "garden_status",
+                "mansion",
+                "successor_hint",
+                "execution_ms",
+                "karma_trace",
+                "predecessor_context",
+                "predecessor",
+                "lunar_amplification",
+                "_resonance",
+                "_koka_latency_ms",
+                "_koka_path",
             }
         },
     )
@@ -188,8 +200,12 @@ def build_prat_schema(gana_name: str, tool_registry: list) -> dict:
     }
 
 
-def route_prat_call(gana_name: str, tool: str | None = None,
-                    args: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def route_prat_call(
+    gana_name: str,
+    tool: str | None = None,
+    args: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
     """Route a PRAT call through the existing dispatch pipeline
     **with full Gana resonance**.
 
@@ -235,7 +251,13 @@ def route_prat_call(gana_name: str, tool: str | None = None,
     _koka_result = try_koka_handler(gana_name, tool, args)
     if _koka_result is not None:
         # Record resonance for Koka path too
-        resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, tool, "koka_dispatch", _koka_result))
+        resonance_meta = (
+            {}
+            if quiet_internal_benchmark
+            else _project_resonance(
+                record_resonance(gana_name, tool, "koka_dispatch", _koka_result)
+            )
+        )
         if isinstance(_koka_result, dict):
             _koka_result["_resonance"] = resonance_meta
             _koka_result["_koka_path"] = True
@@ -246,6 +268,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
     # ── Wu Xing quadrant boost (Fusion: Wu Xing → Gana) ──
     try:
         import whitemagic.core.fusions as _fusions
+
         get_wuxing = getattr(_fusions, "get_wuxing_quadrant_boost")
         wuxing_boost = get_wuxing(gana_name)
         resonance_ctx["wuxing_boost"] = wuxing_boost.get("boost_factor", 1.0)
@@ -260,6 +283,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         if meta:
             garden_name = meta[3].lower()  # index 3 = garden name
             from whitemagic.gardens import get_garden
+
             _garden_instance = get_garden(garden_name)
             if _garden_instance and hasattr(_garden_instance, "get_status"):
                 resonance_ctx["garden"] = garden_name
@@ -280,9 +304,18 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         # ── Leap 7: Zig dispatch pre-check (rate limit, circuit breaker, maturity) ──
         # Diagnostic tools are always allowed regardless of Zig dispatch state
         _DIAGNOSTIC_TOOLS = {
-            "capabilities", "manifest", "state_paths", "state_summary",
-            "repo_summary", "ship_check", "health_report", "gnosis",
-            "get_telemetry_summary", "rust_status", "tool_graph", "tool_graph_full",
+            "capabilities",
+            "manifest",
+            "state_paths",
+            "state_summary",
+            "repo_summary",
+            "ship_check",
+            "health_report",
+            "gnosis",
+            "get_telemetry_summary",
+            "rust_status",
+            "tool_graph",
+            "tool_graph_full",
         }
 
         if tool not in _DIAGNOSTIC_TOOLS:
@@ -291,9 +324,12 @@ def route_prat_call(gana_name: str, tool: str | None = None,
                     DispatchResult,
                     get_dispatch,
                 )
+
                 dispatch = get_dispatch()
                 meta = _GANA_META.get(gana_name)
-                engine_slot = (meta[0] - 1) if meta else None  # mansion_num is 1-indexed, slots are 0-indexed
+                engine_slot = (
+                    (meta[0] - 1) if meta else None
+                )  # mansion_num is 1-indexed, slots are 0-indexed
                 if engine_slot is not None and 0 <= engine_slot < 28:
                     check = dispatch.check(engine_slot)
                     if check != DispatchResult.ALLOW:
@@ -318,10 +354,15 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         _call_success = False
         try:
             result = call_tool(tool, **tool_args)
-            _call_success = not (isinstance(result, dict) and result.get("status") == "error")
+            _call_success = not (
+                isinstance(result, dict) and result.get("status") == "error"
+            )
             # Token economy: estimate tokens from result size
             try:
-                from whitemagic.core.consciousness.token_economy import get_token_tracker
+                from whitemagic.core.consciousness.token_economy import (
+                    get_token_tracker,
+                )
+
                 _econ = get_token_tracker()
                 _result_tokens = max(1, len(str(result)) // 4) if result else 0
                 _input_tokens = max(1, len(str(tool_args)) // 4) if tool_args else 0
@@ -337,8 +378,10 @@ def route_prat_call(gana_name: str, tool: str | None = None,
             _call_success = False
             try:
                 from whitemagic.tools.gana_vitality import get_vitality_monitor
+
                 get_vitality_monitor().record_call(
-                    gana_name, success=False,
+                    gana_name,
+                    success=False,
                     latency_ms=(__import__("time").time() - _call_start) * 1000,
                 )
             except (ImportError, AttributeError):
@@ -362,8 +405,10 @@ def route_prat_call(gana_name: str, tool: str | None = None,
             _call_success = False
             try:
                 from whitemagic.tools.gana_vitality import get_vitality_monitor
+
                 get_vitality_monitor().record_call(
-                    gana_name, success=False,
+                    gana_name,
+                    success=False,
                     latency_ms=(__import__("time").time() - _call_start) * 1000,
                 )
             except (ImportError, AttributeError):
@@ -382,12 +427,17 @@ def route_prat_call(gana_name: str, tool: str | None = None,
             }
 
         # ── Step 3: Record resonance state ──
-        resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, tool, None, result))
+        resonance_meta = (
+            {}
+            if quiet_internal_benchmark
+            else _project_resonance(record_resonance(gana_name, tool, None, result))
+        )
 
         # ── Fusion: Resonance → Emotion/Drive ──
         try:
             if not quiet_internal_benchmark:
                 from whitemagic.core.fusions import modulate_drive_from_resonance
+
                 modulate_drive_from_resonance(gana_name, tool)
         except (ImportError, ModuleNotFoundError):
             pass
@@ -399,11 +449,15 @@ def route_prat_call(gana_name: str, tool: str | None = None,
                     _garden_instance.record_tool_call(tool, tool_args, result)
                 if hasattr(_garden_instance, "emit"):
                     from whitemagic.core.resonance.gan_ying_enhanced import EventType
-                    _garden_instance.emit(EventType.GARDEN_ACTIVITY, {  # type: ignore[attr-defined]
-                        "action": "prat_tool_call",
-                        "gana": gana_name,
-                        "tool": tool,
-                    })
+
+                    _garden_instance.emit(
+                        EventType.GARDEN_ACTIVITY,
+                        {  # type: ignore[attr-defined]
+                            "action": "prat_tool_call",
+                            "gana": gana_name,
+                            "tool": tool,
+                        },
+                    )
             except (ImportError, AttributeError, KeyError, TypeError):
                 pass
 
@@ -425,8 +479,10 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         # ── Gana Vitality: record call outcome (12.108.20 + 12.108.29) ──
         try:
             from whitemagic.tools.gana_vitality import get_vitality_monitor
+
             get_vitality_monitor().record_call(
-                gana_name, success=_call_success,
+                gana_name,
+                success=_call_success,
                 latency_ms=(__import__("time").time() - _call_start) * 1000,
             )
         except (ImportError, ModuleNotFoundError):
@@ -436,6 +492,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         try:
             if not quiet_internal_benchmark:
                 from whitemagic.tools.speculative_prefetch import get_prefetcher
+
                 get_prefetcher().on_call_complete(gana_name)
         except (ImportError, ModuleNotFoundError):
             pass
@@ -477,13 +534,20 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         native_result["lunar_amplification"] = resonance_ctx["lunar_amplification"]
 
     # Record resonance for native operations too
-    resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, None, operation, native_result))
+    resonance_meta = (
+        {}
+        if quiet_internal_benchmark
+        else _project_resonance(
+            record_resonance(gana_name, None, operation, native_result)
+        )
+    )
     if resonance_meta:
         native_result["_resonance"] = resonance_meta
 
     # ── Gana Vitality: record native operation ──
     try:
         from whitemagic.tools.gana_vitality import get_vitality_monitor
+
         get_vitality_monitor().record_call(gana_name, success=True)
     except (ImportError, ModuleNotFoundError):
         pass
@@ -492,6 +556,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
     try:
         if not quiet_internal_benchmark:
             from whitemagic.core.fusions import modulate_drive_from_resonance
+
             modulate_drive_from_resonance(gana_name, None)
     except (ImportError, ModuleNotFoundError):
         pass

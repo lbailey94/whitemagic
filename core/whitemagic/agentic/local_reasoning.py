@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LocalInsight:
     """A single insight from local reasoning."""
+
     source: str
     content: str
     relevance: float = 0.0
@@ -32,6 +33,7 @@ class LocalInsight:
 @dataclass
 class ReasoningResult:
     """Result of local reasoning attempt."""
+
     query: str
     insights: list[LocalInsight] = field(default_factory=list)
     total_tokens_saved: int = 0
@@ -93,6 +95,7 @@ def version_rule(query: str) -> LocalInsight | None:
     if "version" in query.lower():
         try:
             from whitemagic.config import VERSION
+
             return LocalInsight(
                 source="whitemagic.config.VERSION",
                 content=f"WhiteMagic version is {VERSION}",
@@ -110,6 +113,7 @@ def garden_count_rule(query: str) -> LocalInsight | None:
     if "garden" in q and ("how many" in q or "count" in q or "number" in q):
         try:
             from whitemagic.gardens import get_all_gardens
+
             gardens = get_all_gardens()
             return LocalInsight(
                 source="whitemagic.gardens",

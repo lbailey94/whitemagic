@@ -1,4 +1,5 @@
 """Grimoire walkthrough handler."""
+
 from typing import Any
 
 
@@ -31,13 +32,21 @@ def handle_grimoire_walkthrough(**kwargs: Any) -> dict[str, Any]:
                 "keywords": entry.resonance_keywords,
                 "description": entry.description,
             }
-        return {"status": "error", "error_code": "not_found", "message": f"Chapter {chapter} not found"}
+        return {
+            "status": "error",
+            "error_code": "not_found",
+            "message": f"Chapter {chapter} not found",
+        }
 
     if quadrant:
         try:
             q = Quadrant(quadrant)
         except ValueError:
-            return {"status": "error", "error_code": "invalid_params", "message": f"Invalid quadrant: {quadrant}"}
+            return {
+                "status": "error",
+                "error_code": "invalid_params",
+                "message": f"Invalid quadrant: {quadrant}",
+            }
         entries = [e for e in GARDEN_GANA_REGISTRY if e.quadrant == q]
         return {
             "status": "success",

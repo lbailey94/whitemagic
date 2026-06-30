@@ -53,12 +53,20 @@ class MansionBridge:
     """
 
     # Project root
-    project_root: Path = field(default_factory=lambda: Path(__file__).resolve().parent.parent.parent.parent)
+    project_root: Path = field(
+        default_factory=lambda: Path(__file__).resolve().parent.parent.parent.parent
+    )
 
     # Backend status cache (initialized in __post_init__)
-    _rust_status: BackendStatus = field(default_factory=lambda: BackendStatus(available=False))
-    _mojo_status: BackendStatus = field(default_factory=lambda: BackendStatus(available=False))
-    _zig_status: BackendStatus = field(default_factory=lambda: BackendStatus(available=False))
+    _rust_status: BackendStatus = field(
+        default_factory=lambda: BackendStatus(available=False)
+    )
+    _mojo_status: BackendStatus = field(
+        default_factory=lambda: BackendStatus(available=False)
+    )
+    _zig_status: BackendStatus = field(
+        default_factory=lambda: BackendStatus(available=False)
+    )
 
     def __post_init__(self) -> None:
         self._init_backends()
@@ -70,17 +78,17 @@ class MansionBridge:
         self._zig_status = self._detect_zig()
 
         logger.info("MansionBridge initialized:")
-        logger.info("  Rust: %s", '✅' if self._rust_status.available else '❌')
-        logger.info("  Mojo: %s", '✅' if self._mojo_status.available else '❌')
-        logger.info("  Zig:  %s", '✅' if self._zig_status.available else '❌')
+        logger.info("  Rust: %s", "✅" if self._rust_status.available else "❌")
+        logger.info("  Mojo: %s", "✅" if self._mojo_status.available else "❌")
+        logger.info("  Zig:  %s", "✅" if self._zig_status.available else "❌")
 
     def _detect_rust(self) -> BackendStatus:
         """Detect Rust backend (whitemagic_rs)."""
         try:
             import whitemagic_rust
+
             functions = [
-                name for name in dir(whitemagic_rust)
-                if not name.startswith("_")
+                name for name in dir(whitemagic_rust) if not name.startswith("_")
             ]
             return BackendStatus(
                 available=True,
@@ -99,22 +107,27 @@ class MansionBridge:
 
         # Check root directory first (where binaries actually are)
         if mojo_dir.exists():
-             try:
+            try:
                 mojo_binaries = [
-                    f.name for f in mojo_dir.iterdir()
-                    if f.is_file() and not f.name.startswith(".") and f.is_file() and f.stat().st_mode & 0o111
+                    f.name
+                    for f in mojo_dir.iterdir()
+                    if f.is_file()
+                    and not f.name.startswith(".")
+                    and f.is_file()
+                    and f.stat().st_mode & 0o111
                 ]
-             except (OSError, FileNotFoundError, PermissionError):
+            except (OSError, FileNotFoundError, PermissionError):
                 pass
 
         # Fallback to bin directory if it exists
         if bin_dir.exists() and not mojo_binaries:
-             try:
+            try:
                 mojo_binaries = [
-                    f.name for f in bin_dir.iterdir()
+                    f.name
+                    for f in bin_dir.iterdir()
                     if f.is_file() and not f.name.startswith(".")
                 ]
-             except (OSError, FileNotFoundError, PermissionError):
+            except (OSError, FileNotFoundError, PermissionError):
                 pass
 
         # Check for mojo executable
@@ -131,7 +144,8 @@ class MansionBridge:
         """Detect Zig backend (via Rust FFI)."""
         if self._rust_status and self._rust_status.available:
             zig_functions = [
-                f for f in self._rust_status.functions
+                f
+                for f in self._rust_status.functions
                 if f.startswith("zig_py_") or f.startswith("zig_")
             ]
             if zig_functions:
@@ -141,8 +155,6 @@ class MansionBridge:
                     functions=zig_functions,
                 )
         return BackendStatus(available=False)
-
-    # === Status Methods ===
 
     def get_status(self) -> dict[str, BackendStatus]:
         """Get status of all backends."""
@@ -169,8 +181,6 @@ class MansionBridge:
             else:
                 print("Not available")
 
-    # === Core Operations ===
-
     def similarity(
         self,
         text1: str,
@@ -189,6 +199,7 @@ class MansionBridge:
         if self._rust_status.available:
             try:
                 import whitemagic_rs
+
                 similarity = getattr(whitemagic_rs, "fast_similarity")(text1, text2)
                 return float(similarity)
             except (ImportError, ModuleNotFoundError) as e:
@@ -200,6 +211,7 @@ class MansionBridge:
     def _similarity_python(self, text1: str, text2: str) -> float:
         """Python fallback for similarity."""
         from difflib import SequenceMatcher
+
         return SequenceMatcher(None, text1, text2).ratio()
 
     def extract_patterns(
@@ -214,12 +226,17 @@ class MansionBridge:
         if self._rust_status.available and backend != "python":
             try:
                 import whitemagic_rs
-                raw_patterns = getattr(whitemagic_rs, "extract_patterns_from_content")(content)
+
+                raw_patterns = getattr(whitemagic_rs, "extract_patterns_from_content")(
+                    content
+                )
                 if isinstance(raw_patterns, list):
                     normalized: list[tuple[str, str, str, str]] = []
                     for item in raw_patterns:
                         if isinstance(item, (tuple, list)) and len(item) >= 4:
-                            normalized.append((str(item[0]), str(item[1]), str(item[2]), str(item[3])))
+                            normalized.append(
+                                (str(item[0]), str(item[1]), str(item[2]), str(item[3]))
+                            )
                     return normalized
             except Exception as e:
                 logger.warning("Rust pattern extraction failed: %s", e, exc_info=True)
@@ -243,16 +260,13 @@ class MansionBridge:
 
         return patterns
 
-    # === Mojo Operations ===
-
     def run_mojo_binary(
         self,
         binary_name: str,
         args: list[str] | None = None,
         stdin: str | None = None,
     ) -> str | None:
-        """Run a compiled Mojo binary.
-        """
+        """Run a compiled Mojo binary."""
         if not self._mojo_status.available:
             logger.warning("Mojo not available")
             return None
@@ -293,8 +307,6 @@ class MansionBridge:
         """Run Mojo coordinate_encoder binary."""
         return self.run_mojo_binary("coordinate_encoder_mojo", stdin=data)
 
-    # === Zig Operations (via Rust) ===
-
     def iching_cast(self) -> dict[str, Any] | None:
         """Cast I Ching hexagram using Zig backend."""
         if not self._zig_status.available:
@@ -303,6 +315,7 @@ class MansionBridge:
 
         try:
             import whitemagic_rs
+
             result = getattr(whitemagic_rs, "zig_py_iching_cast")()
             if isinstance(result, dict):
                 return result
@@ -318,12 +331,11 @@ class MansionBridge:
 
         try:
             import whitemagic_rs
+
             return getattr(whitemagic_rs, "zig_py_holographic_project")(*args)
         except (ImportError, ModuleNotFoundError) as e:
             logger.error("Zig holographic failed: %s", e, exc_info=True)
             return None
-
-    # === Rust Holographic Operations ===
 
     def create_holographic_index(self) -> Any:
         """Create a 4D holographic index."""
@@ -333,6 +345,7 @@ class MansionBridge:
 
         try:
             import whitemagic_rs
+
             # Note: We updated this in previous work to SpatialIndex if needed,
             # but let's check what whitemagic_rs actually has.
             if hasattr(whitemagic_rs, "SpatialIndex"):
@@ -343,8 +356,6 @@ class MansionBridge:
         except Exception as e:
             logger.error("Failed to create holographic index: %s", e, exc_info=True)
             return None
-
-    # === Heaven's Net (Archaeology) ===
 
     def cast_heavens_net(
         self,
@@ -358,13 +369,12 @@ class MansionBridge:
 
         try:
             import whitemagic_rs
+
             return getattr(whitemagic_rs, "cast_heavens_net")(directory, limit)
         except (ImportError, ModuleNotFoundError) as e:
             logger.error("Heaven's Net failed: %s", e, exc_info=True)
             return None
 
-
-# === Singleton ===
 
 _bridge: MansionBridge | None = None
 

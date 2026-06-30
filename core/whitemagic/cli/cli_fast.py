@@ -6,12 +6,14 @@ making this module unnecessary. It remains for backwards compatibility.
 
 Version: 4.0.0
 """
+
 import sys
 
 
 def main_fast(argv: list[str] | None = None) -> int:
     """Fast CLI entry point — delegates to main CLI with lazy loading."""
     from whitemagic.cli.cli_app import main
+
     return main(argv or sys.argv[1:])  # type: ignore[no-any-return]
 
 

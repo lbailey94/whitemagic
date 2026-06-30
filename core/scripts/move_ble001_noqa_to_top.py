@@ -8,6 +8,7 @@ The fix: move the noqa comment to line 1 (or 2 after a shebang),
 which is the standard PEP 263 / PEP 8 location for module-level
 lint directives.
 """
+
 import re
 from pathlib import Path
 
@@ -30,7 +31,11 @@ def fix_file(path: Path) -> bool:
     if lines and lines[0].startswith("#!"):
         insert_at = 1
     # Skip coding declaration if present
-    if insert_at < len(lines) and "coding" in lines[insert_at] and lines[insert_at].lstrip().startswith("#"):
+    if (
+        insert_at < len(lines)
+        and "coding" in lines[insert_at]
+        and lines[insert_at].lstrip().startswith("#")
+    ):
         insert_at += 1
     # Insert the noqa at the top
     lines.insert(insert_at, "# ruff: noqa: BLE001\n")

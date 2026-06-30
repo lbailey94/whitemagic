@@ -10,15 +10,34 @@ from whitemagic.tools.tool_types import (
 )
 
 GANA_NAMES: list[str] = [
-    "gana_horn", "gana_neck", "gana_root", "gana_room",
-    "gana_heart", "gana_tail", "gana_winnowing_basket",
-    "gana_ghost", "gana_willow", "gana_star",
-    "gana_extended_net", "gana_wings", "gana_chariot",
-    "gana_abundance", "gana_straddling_legs", "gana_mound",
-    "gana_stomach", "gana_hairy_head", "gana_net",
-    "gana_turtle_beak", "gana_three_stars", "gana_dipper",
-    "gana_ox", "gana_girl", "gana_void", "gana_roof",
-    "gana_encampment", "gana_wall",
+    "gana_horn",
+    "gana_neck",
+    "gana_root",
+    "gana_room",
+    "gana_heart",
+    "gana_tail",
+    "gana_winnowing_basket",
+    "gana_ghost",
+    "gana_willow",
+    "gana_star",
+    "gana_extended_net",
+    "gana_wings",
+    "gana_chariot",
+    "gana_abundance",
+    "gana_straddling_legs",
+    "gana_mound",
+    "gana_stomach",
+    "gana_hairy_head",
+    "gana_net",
+    "gana_turtle_beak",
+    "gana_three_stars",
+    "gana_dipper",
+    "gana_ox",
+    "gana_girl",
+    "gana_void",
+    "gana_roof",
+    "gana_encampment",
+    "gana_wall",
 ]
 
 GANA_SHORT_DESC: dict[str, str] = {
@@ -84,7 +103,6 @@ def _apply_common_props(tools: list[ToolDefinition]) -> list[ToolDefinition]:
     return tools
 
 
-
 def collect_authored_tool_definitions() -> list[ToolDefinition]:
     """
     Perform the collect authored tool definitions operation.
@@ -102,7 +120,6 @@ def collect_authored_tool_definitions() -> list[ToolDefinition]:
     return _apply_common_props(tools)
 
 
-
 def get_gana_nested_tools() -> dict[str, list[str]]:
     """
     Get the gana nested tools.
@@ -113,7 +130,6 @@ def get_gana_nested_tools() -> dict[str, list[str]]:
     from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
 
     return {gana: sorted(tools) for gana, tools in GANA_TO_TOOLS.items()}
-
 
 
 def get_dispatch_tool_names() -> list[str]:
@@ -128,13 +144,15 @@ def get_dispatch_tool_names() -> list[str]:
     return sorted(DISPATCH_TABLE.keys())
 
 
-
-def _registry_tool_map(authored_tools: list[ToolDefinition]) -> dict[str, ToolDefinition]:
+def _registry_tool_map(
+    authored_tools: list[ToolDefinition],
+) -> dict[str, ToolDefinition]:
     return {tool.name: tool for tool in authored_tools}
 
 
-
-def synthesize_callable_tool_definitions(authored_tools: list[ToolDefinition]) -> list[ToolDefinition]:
+def synthesize_callable_tool_definitions(
+    authored_tools: list[ToolDefinition],
+) -> list[ToolDefinition]:
     """
     Perform the synthesize callable tool definitions operation.
 
@@ -178,7 +196,12 @@ def synthesize_callable_tool_definitions(authored_tools: list[ToolDefinition]) -
                             },
                             "operation": {
                                 "type": "string",
-                                "enum": ["search", "analyze", "transform", "consolidate"],
+                                "enum": [
+                                    "search",
+                                    "analyze",
+                                    "transform",
+                                    "consolidate",
+                                ],
                                 "description": "Polymorphic operation (when no specific tool is given).",
                             },
                             "context": {
@@ -195,7 +218,10 @@ def synthesize_callable_tool_definitions(authored_tools: list[ToolDefinition]) -
         # Infer safety from tool name pattern for better idempotency support
         safety = ToolSafety.READ
         name_lower = name.lower()
-        if any(name_lower.startswith(p) for p in ("create_", "delete_", "update_", "write_", "import_", "export_")):
+        if any(
+            name_lower.startswith(p)
+            for p in ("create_", "delete_", "update_", "write_", "import_", "export_")
+        ):
             safety = ToolSafety.WRITE
         elif any(name_lower.startswith(p) for p in ("destroy_", "remove_", "drop_")):
             safety = ToolSafety.DELETE

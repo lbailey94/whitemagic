@@ -285,9 +285,6 @@ impl ONNXEmbedder {
     }
 }
 
-// Python bindings
-// ---------------------------------------------------------------------------
-
 /// Python binding: Encode texts via ONNX with Arrow zero-copy I/O
 /// 
 /// Args:

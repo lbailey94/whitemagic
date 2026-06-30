@@ -1,4 +1,5 @@
 """Tests for whitemagic.config.paths — WM_STATE_ROOT fallback chain, path resolution."""
+
 import os
 import importlib
 
@@ -7,16 +8,17 @@ import pytest
 pytestmark = pytest.mark.core  # State-root behavior is release-critical
 
 
-
 def test_project_root_contains_pyproject(tmp_path):
     """PROJECT_ROOT should point to the directory containing pyproject.toml."""
     from whitemagic.config.paths import PROJECT_ROOT
+
     assert (PROJECT_ROOT / "pyproject.toml").exists()
 
 
 def test_wm_root_is_directory():
     """WM_ROOT should resolve to an existing directory."""
     from whitemagic.config.paths import WM_ROOT
+
     assert WM_ROOT.is_dir() or WM_ROOT.parent.is_dir()
 
 
@@ -29,6 +31,7 @@ def test_wm_state_root_env_override(tmp_path):
     os.environ["WM_STATE_ROOT"] = str(custom)
     try:
         import whitemagic.config.paths as paths_mod
+
         importlib.reload(paths_mod)
         assert paths_mod.WM_ROOT == custom
     finally:
@@ -42,6 +45,7 @@ def test_wm_state_root_env_override(tmp_path):
 def test_db_path_derivation():
     """DB_PATH should be under MEMORY_DIR by default."""
     from whitemagic.config.paths import DB_PATH, MEMORY_DIR
+
     # When WM_DB_PATH is unset, DB should be under the memory directory
     if not os.environ.get("WM_DB_PATH"):
         assert str(DB_PATH).startswith(str(MEMORY_DIR))
@@ -54,9 +58,18 @@ def test_ensure_paths_creates_dirs(tmp_path):
     os.environ["WM_STATE_ROOT"] = str(state)
     try:
         import whitemagic.config.paths as paths_mod
+
         importlib.reload(paths_mod)
         paths_mod.ensure_paths()
-        for subdir in ["data", "memory", "cache", "sessions", "logs", "artifacts", "restoration"]:
+        for subdir in [
+            "data",
+            "memory",
+            "cache",
+            "sessions",
+            "logs",
+            "artifacts",
+            "restoration",
+        ]:
             assert (paths_mod.WM_ROOT / subdir).is_dir(), f"{subdir} not created"
     finally:
         if old is not None:
@@ -69,6 +82,7 @@ def test_ensure_paths_creates_dirs(tmp_path):
 def test_scripts_dir_is_pathlib():
     """SCRIPTS_DIR should be a Path object under PROJECT_ROOT."""
     from whitemagic.config.paths import SCRIPTS_DIR, PROJECT_ROOT
+
     assert SCRIPTS_DIR == PROJECT_ROOT / "scripts"
 
 
@@ -105,8 +119,10 @@ def test_no_repo_local_fallback(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(
-    not str(__import__("pathlib").Path(__file__).resolve()).startswith(str(__import__("pathlib").Path.home())),
-    reason="Default path resolution only valid when repo is under the user home directory"
+    not str(__import__("pathlib").Path(__file__).resolve()).startswith(
+        str(__import__("pathlib").Path.home())
+    ),
+    reason="Default path resolution only valid when repo is under the user home directory",
 )
 def test_default_root_is_home_dotwhitemagic(monkeypatch):
     """When no env vars are set, WM_ROOT should default to ~/.whitemagic, not repo-relative."""

@@ -1,10 +1,20 @@
 """Archaeology tool handlers."""
+
 from typing import Any
 
 _ACTIONS = {
-    "mark_read", "mark_written", "have_read", "find_unread",
-    "find_changed", "recent_reads", "stats", "scan", "report",
-    "search", "process_wisdom", "daily_digest",
+    "mark_read",
+    "mark_written",
+    "have_read",
+    "find_unread",
+    "find_changed",
+    "recent_reads",
+    "stats",
+    "scan",
+    "report",
+    "search",
+    "process_wisdom",
+    "daily_digest",
 }
 
 
@@ -27,12 +37,16 @@ def handle_archaeology(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 
 def _arch() -> Any:
     from whitemagic.archaeology import get_archaeologist
+
     if get_archaeologist is None:
         raise ImportError("FileArchaeologist not available (module archived)")
     return get_archaeologist()
@@ -54,7 +68,10 @@ def handle_archaeology_scan_directory(**kwargs: Any) -> dict[str, Any]:
     arch = _arch()
     found_files = arch.find_unread(directory, patterns) if recursive else []
     stats = arch.stats(scan_disk=True)
-    file_list = [f if isinstance(f, str) else getattr(f, 'path', str(f)) for f in found_files[:100]]
+    file_list = [
+        f if isinstance(f, str) else getattr(f, "path", str(f))
+        for f in found_files[:100]
+    ]
     return {
         "status": "success",
         "directory": directory,
@@ -81,7 +98,10 @@ def handle_archaeology_mark_read(**kwargs: Any) -> dict[str, Any]:
         note=kwargs.get("note"),
         insight=kwargs.get("insight"),
     )
-    return {"status": "success", "entry": entry if isinstance(entry, dict) else entry.to_dict()}
+    return {
+        "status": "success",
+        "entry": entry if isinstance(entry, dict) else entry.to_dict(),
+    }
 
 
 def handle_archaeology_mark_written(**kwargs: Any) -> dict[str, Any]:
@@ -96,7 +116,10 @@ def handle_archaeology_mark_written(**kwargs: Any) -> dict[str, Any]:
         context=kwargs.get("context"),
         note=kwargs.get("note"),
     )
-    return {"status": "success", "entry": entry if isinstance(entry, dict) else entry.to_dict()}
+    return {
+        "status": "success",
+        "entry": entry if isinstance(entry, dict) else entry.to_dict(),
+    }
 
 
 def handle_archaeology_have_read(**kwargs: Any) -> dict[str, Any]:
@@ -136,8 +159,10 @@ def handle_archaeology_find_changed(**kwargs: Any) -> dict[str, Any]:
     arch = _arch()
     directory = kwargs.get("directory", "")
     changed = []
-    for entry in getattr(arch, '_history', []):
-        if entry.get("type") == "written" and (not directory or directory in entry.get("path", "")):
+    for entry in getattr(arch, "_history", []):
+        if entry.get("type") == "written" and (
+            not directory or directory in entry.get("path", "")
+        ):
             changed.append(entry)
     return {"status": "success", "changed_files": changed, "count": len(changed)}
 
@@ -150,7 +175,10 @@ def handle_archaeology_recent_reads(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     recent = _arch().get_recent_reads(kwargs.get("limit", 50))
-    return {"status": "success", "recent": [e if isinstance(e, dict) else e.to_dict() for e in recent]}
+    return {
+        "status": "success",
+        "recent": [e if isinstance(e, dict) else e.to_dict() for e in recent],
+    }
 
 
 def handle_archaeology_stats(**kwargs: Any) -> dict[str, Any]:
@@ -172,7 +200,7 @@ def handle_archaeology_stats(**kwargs: Any) -> dict[str, Any]:
             "total_files": 0,
             "disk_usage_mb": 0,
             "unread_count": 0,
-            "note": "FileArchaeologist module archived - no file tracking available"
+            "note": "FileArchaeologist module archived - no file tracking available",
         }
 
 
@@ -194,7 +222,10 @@ def handle_archaeology_search(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     results = _arch().search(kwargs.get("query", ""))
-    return {"status": "success", "results": [e if isinstance(e, dict) else e.to_dict() for e in results]}
+    return {
+        "status": "success",
+        "results": [e if isinstance(e, dict) else e.to_dict() for e in results],
+    }
 
 
 def handle_archaeology_process_wisdom(**kwargs: Any) -> dict[str, Any]:
@@ -205,6 +236,7 @@ def handle_archaeology_process_wisdom(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology import process_wisdom_archives
+
     result = process_wisdom_archives(
         limit_files=kwargs.get("limit_files", 1000),
         memory_type=kwargs.get("memory_type", "long_term"),
@@ -220,5 +252,6 @@ def handle_archaeology_daily_digest(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.archaeology import create_daily_wisdom_digest
+
     digest_path = create_daily_wisdom_digest()
     return {"status": "success", "digest_path": digest_path}

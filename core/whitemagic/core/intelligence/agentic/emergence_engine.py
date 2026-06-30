@@ -47,6 +47,7 @@ class EmergenceEngine:
     def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             from whitemagic.config.paths import DB_PATH
+
             self.db_path = str(DB_PATH)
         else:
             self.db_path = db_path
@@ -66,7 +67,10 @@ class EmergenceEngine:
             return
         try:
             from whitemagic.core.resonance import EventType, get_bus
-            get_bus().listen(EventType.CREATIVE_BRIDGE_LOW_CONFIDENCE, self._on_creative_tension)
+
+            get_bus().listen(
+                EventType.CREATIVE_BRIDGE_LOW_CONFIDENCE, self._on_creative_tension
+            )
             self._listening = True
             logger.debug("EmergenceEngine listening for bicameral creative tensions")
         except Exception as e:
@@ -77,13 +81,15 @@ class EmergenceEngine:
         data = getattr(event, "data", {})
         if not data:
             return
-        self._creative_tensions.append({
-            "query": data.get("query", ""),
-            "tension": data.get("tension", 0.0),
-            "confidence": data.get("confidence", 0.0),
-            "dominant": data.get("dominant", "balanced"),
-            "timestamp": datetime.now().isoformat(),
-        })
+        self._creative_tensions.append(
+            {
+                "query": data.get("query", ""),
+                "tension": data.get("tension", 0.0),
+                "confidence": data.get("confidence", 0.0),
+                "dominant": data.get("dominant", "balanced"),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         if len(self._creative_tensions) > 50:
             self._creative_tensions = self._creative_tensions[-50:]
 
@@ -99,14 +105,16 @@ class EmergenceEngine:
 
         # Store for later retrieval
         for ins in insights:
-            self._past_insights.append({
-                "id": ins.id,
-                "title": ins.title,
-                "description": ins.description,
-                "confidence": ins.confidence,
-                "source": ins.source,
-                "timestamp": ins.timestamp,
-            })
+            self._past_insights.append(
+                {
+                    "id": ins.id,
+                    "title": ins.title,
+                    "description": ins.description,
+                    "confidence": ins.confidence,
+                    "source": ins.source,
+                    "timestamp": ins.timestamp,
+                }
+            )
 
         # Keep only last 100 past insights
         if len(self._past_insights) > 100:
@@ -119,10 +127,6 @@ class EmergenceEngine:
         """Return past emergence insights."""
         return self._past_insights[-limit:]
 
-    # ------------------------------------------------------------------
-    # Detection modes
-    # ------------------------------------------------------------------
-
     def _detect_tag_clusters(self) -> list[EmergenceInsight]:
         """Find tags that co-occur more frequently than expected by chance."""
         conn = self._get_conn()
@@ -131,7 +135,8 @@ class EmergenceEngine:
         try:
             # Get tag co-occurrence pairs from recent memories (last 7 days)
             cutoff = (datetime.now() - timedelta(days=7)).isoformat()
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT t1.tag as tag_a, t2.tag as tag_b, COUNT(*) as co_count
                 FROM tags t1
                 JOIN tags t2 ON t1.memory_id = t2.memory_id AND t1.tag < t2.tag
@@ -141,7 +146,9 @@ class EmergenceEngine:
                 HAVING co_count >= 3
                 ORDER BY co_count DESC
                 LIMIT 10
-            """, (cutoff,))
+            """,
+                (cutoff,),
+            )
         except Exception as e:
             logger.debug("Tag cluster detection skipped: %s", e, exc_info=True)
             return []
@@ -150,15 +157,17 @@ class EmergenceEngine:
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag_a, tag_b, count = r["tag_a"], r["tag_b"], r["co_count"]
-            insights.append(EmergenceInsight(
-                id=f"tag_cluster_{tag_a}_{tag_b}",
-                title=f"Tag cluster: {tag_a} + {tag_b}",
-                description=f"Tags '{tag_a}' and '{tag_b}' co-occurred {count} times in the last 7 days — "
-                            f"above the emergence threshold. This may indicate a new topic nexus forming.",
-                confidence=min(0.95, 0.5 + count * 0.1),
-                source="tag_cluster",
-                metadata={"tag_a": tag_a, "tag_b": tag_b, "co_count": count},
-            ))
+            insights.append(
+                EmergenceInsight(
+                    id=f"tag_cluster_{tag_a}_{tag_b}",
+                    title=f"Tag cluster: {tag_a} + {tag_b}",
+                    description=f"Tags '{tag_a}' and '{tag_b}' co-occurred {count} times in the last 7 days — "
+                    f"above the emergence threshold. This may indicate a new topic nexus forming.",
+                    confidence=min(0.95, 0.5 + count * 0.1),
+                    source="tag_cluster",
+                    metadata={"tag_a": tag_a, "tag_b": tag_b, "co_count": count},
+                )
+            )
         return insights
 
     def _detect_resonance_cascades(self) -> list[EmergenceInsight]:
@@ -187,15 +196,17 @@ class EmergenceEngine:
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag, count = r["tag"], r["burst_count"]
-            insights.append(EmergenceInsight(
-                id=f"cascade_{tag}",
-                title=f"Resonance cascade: '{tag}'",
-                description=f"Tag '{tag}' appeared {count} times in the last 3 days — "
-                            f"a resonance cascade indicating heightened attention on this topic.",
-                confidence=min(0.95, 0.4 + count * 0.08),
-                source="resonance_cascade",
-                metadata={"tag": tag, "burst_count": count},
-            ))
+            insights.append(
+                EmergenceInsight(
+                    id=f"cascade_{tag}",
+                    title=f"Resonance cascade: '{tag}'",
+                    description=f"Tag '{tag}' appeared {count} times in the last 3 days — "
+                    f"a resonance cascade indicating heightened attention on this topic.",
+                    confidence=min(0.95, 0.4 + count * 0.08),
+                    source="resonance_cascade",
+                    metadata={"tag": tag, "burst_count": count},
+                )
+            )
         return insights
 
     def _detect_novelty_spikes(self) -> list[EmergenceInsight]:
@@ -241,23 +252,30 @@ class EmergenceEngine:
             else:
                 desc = f"Tag '{tag}' spiked from {hist} (30-day baseline) to {recent} (last 3 days) — "
                 desc += f"a {recent / max(hist, 1):.1f}x increase indicating a novelty spike."
-            insights.append(EmergenceInsight(
-                id=f"novelty_{tag}",
-                title=f"Novelty spike: '{tag}'",
-                description=desc,
-                confidence=min(0.95, 0.5 + (recent - hist) * 0.1),
-                source="novelty_spike",
-                metadata={"tag": tag, "recent_count": recent, "hist_count": hist},
-            ))
+            insights.append(
+                EmergenceInsight(
+                    id=f"novelty_{tag}",
+                    title=f"Novelty spike: '{tag}'",
+                    description=desc,
+                    confidence=min(0.95, 0.5 + (recent - hist) * 0.1),
+                    source="novelty_spike",
+                    metadata={"tag": tag, "recent_count": recent, "hist_count": hist},
+                )
+            )
         return insights
 
     def _detect_cross_domain_bridges(self) -> list[EmergenceInsight]:
         """Find memories that bridge previously separate constellations."""
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
+
             cal = get_core_access()
         except Exception as e:
-            logger.debug("Cross-domain bridge detection skipped (no CoreAccess): %s", e, exc_info=True)
+            logger.debug(
+                "Cross-domain bridge detection skipped (no CoreAccess): %s",
+                e,
+                exc_info=True,
+            )
             return []
 
         bridges = cal.find_constellation_bridges(limit=10) if cal else []
@@ -265,19 +283,24 @@ class EmergenceEngine:
             return []
 
         insights: list[EmergenceInsight] = []
-        for b in bridges[:
-            5]:
+        for b in bridges[:5]:
             c1, c2 = b.get("constellation_1", "?"), b.get("constellation_2", "?")
             strength = b.get("bridge_strength", 0.5)
-            insights.append(EmergenceInsight(
-                id=f"bridge_{c1}_{c2}",
-                title=f"Cross-domain bridge: {c1} ↔ {c2}",
-                description=f"Constellations '{c1}' and '{c2}' are forming a bridge "
-                            f"(strength: {strength:.2f}) — previously separate domains converging.",
-                confidence=min(0.95, strength),
-                source="cross_domain",
-                metadata={"constellation_1": c1, "constellation_2": c2, "strength": strength},
-            ))
+            insights.append(
+                EmergenceInsight(
+                    id=f"bridge_{c1}_{c2}",
+                    title=f"Cross-domain bridge: {c1} ↔ {c2}",
+                    description=f"Constellations '{c1}' and '{c2}' are forming a bridge "
+                    f"(strength: {strength:.2f}) — previously separate domains converging.",
+                    confidence=min(0.95, strength),
+                    source="cross_domain",
+                    metadata={
+                        "constellation_1": c1,
+                        "constellation_2": c2,
+                        "strength": strength,
+                    },
+                )
+            )
         return insights
 
     def _detect_creative_tensions(self) -> list[EmergenceInsight]:
@@ -309,31 +332,29 @@ class EmergenceEngine:
             if tension < 0.4:
                 continue
 
-            insights.append(EmergenceInsight(
-                id=f"creative_tension_{hash(query) % 100000}",
-                title=f"Creative tension: {query[:60]}",
-                description=(
-                    f"Bicameral reasoning produced a creative tension "
-                    f"(tension={tension:.2f}, confidence={confidence:.2f}, "
-                    f"dominant={dominant}). The analytical and creative "
-                    f"hemispheres disagree — this may indicate an emerging "
-                    f"problem space that requires novel approaches."
-                ),
-                confidence=min(0.9, 0.5 + tension * 0.3),
-                source="creative_tension",
-                metadata={
-                    "query": query,
-                    "tension": tension,
-                    "confidence": confidence,
-                    "dominant": dominant,
-                },
-            ))
+            insights.append(
+                EmergenceInsight(
+                    id=f"creative_tension_{hash(query) % 100000}",
+                    title=f"Creative tension: {query[:60]}",
+                    description=(
+                        f"Bicameral reasoning produced a creative tension "
+                        f"(tension={tension:.2f}, confidence={confidence:.2f}, "
+                        f"dominant={dominant}). The analytical and creative "
+                        f"hemispheres disagree — this may indicate an emerging "
+                        f"problem space that requires novel approaches."
+                    ),
+                    confidence=min(0.9, 0.5 + tension * 0.3),
+                    source="creative_tension",
+                    metadata={
+                        "query": query,
+                        "tension": tension,
+                        "confidence": confidence,
+                        "dominant": dominant,
+                    },
+                )
+            )
         return insights
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _emergence_engine: EmergenceEngine | None = None
 

@@ -45,6 +45,7 @@ class EdgeExporter:
         }
         try:
             from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
             config["tools"] = list(DISPATCH_TABLE.keys())[:50]
         except Exception:
             pass

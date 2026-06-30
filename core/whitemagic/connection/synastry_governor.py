@@ -24,19 +24,31 @@ class SynastryGovernor:
         """Resolve a conflict between two cores."""
         # Synastry logic: find the harmonious path
         complementary = {
-            ("aries", "libra"), ("taurus", "scorpio"), ("gemini", "sagittarius"),
-            ("cancer", "capricorn"), ("leo", "aquarius"), ("virgo", "pisces"),
+            ("aries", "libra"),
+            ("taurus", "scorpio"),
+            ("gemini", "sagittarius"),
+            ("cancer", "capricorn"),
+            ("leo", "aquarius"),
+            ("virgo", "pisces"),
         }
         pair = (core_a.lower(), core_b.lower())
         is_complementary = pair in complementary or pair[::-1] in complementary
 
         if is_complementary:
-            resolution = f"Complementary pair: {core_a} and {core_b} naturally balance. "
-            resolution += f"Use {core_a}'s energy to address {core_b}'s concern about {issue}."
+            resolution = (
+                f"Complementary pair: {core_a} and {core_b} naturally balance. "
+            )
+            resolution += (
+                f"Use {core_a}'s energy to address {core_b}'s concern about {issue}."
+            )
             strategy = "complementary"
         else:
-            resolution = f"Find the higher ground between {core_a} and {core_b} on {issue}. "
-            resolution += "Both perspectives have value — synthesize rather than compromise."
+            resolution = (
+                f"Find the higher ground between {core_a} and {core_b} on {issue}. "
+            )
+            resolution += (
+                "Both perspectives have value — synthesize rather than compromise."
+            )
             strategy = "synthesis"
 
         result = {

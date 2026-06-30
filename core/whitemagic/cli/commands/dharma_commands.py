@@ -1,5 +1,6 @@
 # ruff: noqa: BLE001
 """Dharma CLI commands — extracted from cli_app.py (PSR-028 decomposition)."""
+
 from __future__ import annotations
 
 import click
@@ -11,6 +12,7 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.tree import Tree
+
     HAS_RICH = True
     console = Console()
 except ImportError:
@@ -33,10 +35,16 @@ def dharma_evaluate(action: str, context: str) -> None:
     try:
         context_dict = _json_loads(context)
         if HAS_RICH and console:
-            with console.status("[yellow]Consulting ethical principles...", spinner="dots"):
-                result = dharma_evaluate_ethics(action={"description": action}, context=context_dict)
+            with console.status(
+                "[yellow]Consulting ethical principles...", spinner="dots"
+            ):
+                result = dharma_evaluate_ethics(
+                    action={"description": action}, context=context_dict
+                )
         else:
-            result = dharma_evaluate_ethics(action={"description": action}, context=context_dict)
+            result = dharma_evaluate_ethics(
+                action={"description": action}, context=context_dict
+            )
 
         score = result.get("score", 0)
         concerns = result.get("concerns", [])
@@ -75,7 +83,9 @@ def dharma_evaluate(action: str, context: str) -> None:
 
 
 @dharma_group.command(name="principles")
-@click.option("--level", help="Filter by level (universal, compassion, integrity, etc.)")
+@click.option(
+    "--level", help="Filter by level (universal, compassion, integrity, etc.)"
+)
 def dharma_principles(level: str | None) -> None:
     """List all ethical principles"""
     from whitemagic.mcp_api_bridge import dharma_list_principles
@@ -85,7 +95,11 @@ def dharma_principles(level: str | None) -> None:
         principles = result.get("principles", [])
 
         if HAS_RICH and console:
-            table = Table(title="☸️  Dharma Principles", show_header=True, header_style="bold yellow")
+            table = Table(
+                title="☸️  Dharma Principles",
+                show_header=True,
+                header_style="bold yellow",
+            )
             table.add_column("Principle", style="cyan")
             table.add_column("Level", style="magenta")
             table.add_column("Weight", justify="center")
@@ -112,14 +126,21 @@ def dharma_check_boundaries(action: str) -> None:
     try:
         if HAS_RICH and console:
             with console.status("[yellow]Checking boundaries...", spinner="dots"):
-                result = dharma_check_boundaries(action={"description": action}, context={})
+                result = dharma_check_boundaries(
+                    action={"description": action}, context={}
+                )
         else:
             result = dharma_check_boundaries(action={"description": action}, context={})
 
         violations = result.get("violations", [])
         if HAS_RICH and console:
             if not violations:
-                console.print(Panel("[green]✅ No boundary violations detected[/green]", border_style="green"))
+                console.print(
+                    Panel(
+                        "[green]✅ No boundary violations detected[/green]",
+                        border_style="green",
+                    )
+                )
             else:
                 tree = Tree("⚠️  Boundary Violations")
                 for v in violations:
@@ -133,6 +154,8 @@ def dharma_check_boundaries(action: str) -> None:
         else:
             click.echo("⚠️  Boundary Violations:")
             for v in violations:
-                click.echo(f"- {v.get('type', 'Unknown')}: {v.get('reason', 'No reason provided')}")
+                click.echo(
+                    f"- {v.get('type', 'Unknown')}: {v.get('reason', 'No reason provided')}"
+                )
     except Exception as e:
         click.echo(f"❌ Error: {e}")

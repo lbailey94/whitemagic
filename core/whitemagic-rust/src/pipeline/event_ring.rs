@@ -237,17 +237,9 @@ fn hash_source(source: &str) -> u64 {
     h
 }
 
-// ---------------------------------------------------------------------------
-// Global singleton
-// ---------------------------------------------------------------------------
-
 lazy_static::lazy_static! {
     static ref RING: RingBuffer = RingBuffer::new();
 }
-
-// ---------------------------------------------------------------------------
-// PyO3 bindings
-// ---------------------------------------------------------------------------
 
 /// Publish an event to the ring buffer. Returns sequence number.
 #[pyfunction]

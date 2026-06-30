@@ -18,9 +18,7 @@ from typing import Any
 
 
 def _disabled_error() -> RuntimeError:
-    return RuntimeError(
-        "Local model execution is archived and no longer available."
-    )
+    return RuntimeError("Local model execution is archived and no longer available.")
 
 
 def get_model_info() -> dict[str, object]:

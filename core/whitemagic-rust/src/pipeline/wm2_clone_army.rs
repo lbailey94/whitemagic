@@ -34,10 +34,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
-// ---------------------------------------------------------------------------
-// Army Types (synthesized from all existing systems)
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 pub enum ArmyType {
     Immortal,      // Persistent execution loops (immortal-clone.kk)
@@ -108,10 +104,6 @@ impl ArmyType {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Zodiac Router (from unified_zodiac_army.rs)
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ZodiacSign {
@@ -199,10 +191,6 @@ pub fn route_task(task: &str, use_zodiac: bool) -> ArmyType {
     }
 }
 
-// ---------------------------------------------------------------------------
-// UCB1 Strategy Selector (Monte Carlo bandit)
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UCB1Stats {
     pub army: ArmyType,
@@ -228,10 +216,6 @@ impl UCB1Stats {
         self.avg_score() + exploration
     }
 }
-
-// ---------------------------------------------------------------------------
-// Persistent Clone Memory (Arc<RwLock> — survives across deployments)
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct CloneMemory {
@@ -282,10 +266,6 @@ impl CloneMemory {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Clone Result
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CloneResult {
     pub clone_id: usize,
@@ -297,10 +277,6 @@ pub struct CloneResult {
     pub duration_ms: u64,
     pub findings: Vec<String>,
 }
-
-// ---------------------------------------------------------------------------
-// Deployment Config
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentConfig {
@@ -337,10 +313,6 @@ impl Default for DeploymentConfig {
 fn num_cpus() -> usize {
     std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)
 }
-
-// ---------------------------------------------------------------------------
-// Unified Commander — the WM2 synthesis
-// ---------------------------------------------------------------------------
 
 pub struct UnifiedCommander {
     pub memory: Arc<RwLock<CloneMemory>>,
@@ -496,10 +468,6 @@ impl UnifiedCommander {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Deployment Report
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentReport {
     pub deployment_id: u64,
@@ -514,10 +482,6 @@ pub struct DeploymentReport {
     pub tier: String,
     pub top_findings: Vec<String>,
 }
-
-// ---------------------------------------------------------------------------
-// Python Bridge (pyo3)
-// ---------------------------------------------------------------------------
 
 #[cfg(feature = "python")]
 #[pyclass]
@@ -589,10 +553,6 @@ impl PyWM2Army {
         self.commander.select_army(&config).name().to_string()
     }
 }
-
-// ---------------------------------------------------------------------------
-// Standalone binary entry point
-// ---------------------------------------------------------------------------
 
 #[cfg(not(feature = "python"))]
 pub fn run_demo() {

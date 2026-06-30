@@ -26,20 +26,20 @@ logger = logging.getLogger(__name__)
 class PredictionType(Enum):
     """Types of predictions the engine can generate."""
 
-    NEXT_FEATURE = "next_feature"           # What feature to build next
-    BOTTLENECK = "bottleneck"               # Where system will hit limits
-    OPPORTUNITY = "opportunity"             # Unexplored potential
-    MAINTENANCE = "maintenance"             # Upcoming maintenance needs
-    INTEGRATION = "integration"             # Systems to connect
-    EVOLUTION = "evolution"                 # Structural changes needed
+    NEXT_FEATURE = "next_feature"  # What feature to build next
+    BOTTLENECK = "bottleneck"  # Where system will hit limits
+    OPPORTUNITY = "opportunity"  # Unexplored potential
+    MAINTENANCE = "maintenance"  # Upcoming maintenance needs
+    INTEGRATION = "integration"  # Systems to connect
+    EVOLUTION = "evolution"  # Structural changes needed
 
 
 class Confidence(Enum):
     """Confidence levels for predictions."""
 
-    HIGH = "high"        # Strong pattern evidence
-    MEDIUM = "medium"    # Reasonable inference
-    LOW = "low"          # Speculative but valuable
+    HIGH = "high"  # Strong pattern evidence
+    MEDIUM = "medium"  # Reasonable inference
+    LOW = "low"  # Speculative but valuable
     EMERGENT = "emergent"  # Novel insight, needs validation
 
 
@@ -125,6 +125,7 @@ class PredictiveEngine:
 
     def __init__(self, db_path: str | None = None) -> None:
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = str(Path(db_path)) if db_path else str(DB_PATH)
         self._conn: sqlite3.Connection | None = None
 
@@ -139,6 +140,7 @@ class PredictiveEngine:
         """Lazy-load the CoreAccessLayer."""
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
+
             return get_core_access()
         except ImportError:
             return None
@@ -165,7 +167,8 @@ class PredictiveEngine:
         predictions = self._deduplicate_predictions(predictions)
         try:
             import whitemagic_rs
-            if hasattr(whitemagic_rs, 'parallel_sort'):
+
+            if hasattr(whitemagic_rs, "parallel_sort"):
                 # Extract impact scores to a separate array
                 [p.impact_score for p in predictions]
                 # parallel_sort returns sorted elements (we can't easily parallel sort Python objects directly in Rust)
@@ -202,6 +205,7 @@ class PredictiveEngine:
         """
         try:
             from whitemagic.forecasting.temporal_db import TemporalForecastDB
+
             db = TemporalForecastDB()
             summary = db.summary()
             return {
@@ -263,6 +267,7 @@ class PredictiveEngine:
 
         try:
             from whitemagic.forecasting.temporal_db import TemporalForecastDB
+
             db = TemporalForecastDB()
 
             for pred in report.predictions:
@@ -323,7 +328,14 @@ class PredictiveEngine:
             phase_mentions: dict[str, list[str]] = {}
             for m in milestones:
                 content = (m["content"] or "").lower()
-                for phase in ["phase 1", "phase 2", "phase 3", "phase 4", "phase 5", "phase 6"]:
+                for phase in [
+                    "phase 1",
+                    "phase 2",
+                    "phase 3",
+                    "phase 4",
+                    "phase 5",
+                    "phase 6",
+                ]:
                     if phase in content:
                         if phase not in phase_mentions:
                             phase_mentions[phase] = []
@@ -336,21 +348,23 @@ class PredictiveEngine:
                 next_phase = f"phase {phase_num + 1}"
 
                 if next_phase not in phase_mentions:
-                    predictions.append(Prediction(
-                        id=f"milestone_next_{next_phase.replace(' ', '_')}",
-                        prediction_type=PredictionType.NEXT_FEATURE,
-                        title=f"Next Phase: {next_phase.title()}",
-                        description=f"Based on milestone patterns, {next_phase} should be planned next.",
-                        confidence=Confidence.MEDIUM,
-                        time_horizon="short_term",
-                        evidence=[m["id"] for m in recent[:5]],
-                        suggested_actions=[
-                            f"Define goals for {next_phase}",
-                            "Review lessons from previous phases",
-                            "Create phase roadmap memory",
-                        ],
-                        impact_score=0.8,
-                    ))
+                    predictions.append(
+                        Prediction(
+                            id=f"milestone_next_{next_phase.replace(' ', '_')}",
+                            prediction_type=PredictionType.NEXT_FEATURE,
+                            title=f"Next Phase: {next_phase.title()}",
+                            description=f"Based on milestone patterns, {next_phase} should be planned next.",
+                            confidence=Confidence.MEDIUM,
+                            time_horizon="short_term",
+                            evidence=[m["id"] for m in recent[:5]],
+                            suggested_actions=[
+                                f"Define goals for {next_phase}",
+                                "Review lessons from previous phases",
+                                "Create phase roadmap memory",
+                            ],
+                            impact_score=0.8,
+                        )
+                    )
 
         return predictions
 
@@ -375,8 +389,16 @@ class PredictiveEngine:
 
         # Extract action items from roadmaps
         action_patterns = [
-            "TODO:", "NEXT:", "[ ]", "- [ ]", "upcoming:", "planned:",
-            "will implement", "need to", "should add", "consider adding",
+            "TODO:",
+            "NEXT:",
+            "[ ]",
+            "- [ ]",
+            "upcoming:",
+            "planned:",
+            "will implement",
+            "need to",
+            "should add",
+            "consider adding",
         ]
 
         unfulfilled_items = []
@@ -387,27 +409,32 @@ class PredictiveEngine:
                     # Extract the line containing the pattern
                     for line in content.split("\n"):
                         if pattern.lower() in line.lower():
-                            unfulfilled_items.append({
-                                "source": r["title"],
-                                "source_id": r["id"],
-                                "item": line.strip()[:100],
-                            })
+                            unfulfilled_items.append(
+                                {
+                                    "source": r["title"],
+                                    "source_id": r["id"],
+                                    "item": line.strip()[:100],
+                                }
+                            )
 
         if unfulfilled_items:
-            predictions.append(Prediction(
-                id="roadmap_unfulfilled",
-                prediction_type=PredictionType.NEXT_FEATURE,
-                title=f"Unfulfilled Roadmap Items ({len(unfulfilled_items)})",
-                description="Action items from roadmaps that may still be pending.",
-                confidence=Confidence.MEDIUM,
-                time_horizon="immediate",
-                evidence=[item["source_id"] for item in unfulfilled_items[:5]],
-                suggested_actions=[
-                    f"Review: {item['item'][:50]}..." for item in unfulfilled_items[:3]
-                ],
-                impact_score=0.7,
-                metadata={"items": unfulfilled_items[:10]},
-            ))
+            predictions.append(
+                Prediction(
+                    id="roadmap_unfulfilled",
+                    prediction_type=PredictionType.NEXT_FEATURE,
+                    title=f"Unfulfilled Roadmap Items ({len(unfulfilled_items)})",
+                    description="Action items from roadmaps that may still be pending.",
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="immediate",
+                    evidence=[item["source_id"] for item in unfulfilled_items[:5]],
+                    suggested_actions=[
+                        f"Review: {item['item'][:50]}..."
+                        for item in unfulfilled_items[:3]
+                    ],
+                    impact_score=0.7,
+                    metadata={"items": unfulfilled_items[:10]},
+                )
+            )
 
         return predictions
 
@@ -424,43 +451,59 @@ class PredictiveEngine:
 
         # 1. Accelerating Output (Memories)
         if mem_stats["last_7_days"] > (mem_stats["last_30_days"] / 4) * 1.5:
-            predictions.append(Prediction(
-                id="velocity_accelerating_memories",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title="Memory Generation Accelerating",
-                description=f"Output increased to {mem_stats['last_7_days']} memories/week. High capacity for synthesis.",
-                confidence=Confidence.HIGH,
-                time_horizon="immediate",
-                evidence=[],
-                suggested_actions=["Synthesize recent memories into patterns", "Execute multi-step plans"],
-                impact_score=0.7,
-            ))
+            predictions.append(
+                Prediction(
+                    id="velocity_accelerating_memories",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title="Memory Generation Accelerating",
+                    description=f"Output increased to {mem_stats['last_7_days']} memories/week. High capacity for synthesis.",
+                    confidence=Confidence.HIGH,
+                    time_horizon="immediate",
+                    evidence=[],
+                    suggested_actions=[
+                        "Synthesize recent memories into patterns",
+                        "Execute multi-step plans",
+                    ],
+                    impact_score=0.7,
+                )
+            )
 
         # 2. High Willpower (Tasks)
         if task_stats["willpower"] > 0.8:
-            predictions.append(Prediction(
-                id="velocity_high_willpower",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title="High Task Willpower Detected",
-                description=f"Task completion momentum is at {task_stats['willpower']*100:.0f}%. System is highly effective at execution.",
-                confidence=Confidence.HIGH,
-                time_horizon="immediate",
-                evidence=[],
-                suggested_actions=["Tackle high-risk tasks", "Expand project scope"],
-                impact_score=0.8,
-            ))
+            predictions.append(
+                Prediction(
+                    id="velocity_high_willpower",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title="High Task Willpower Detected",
+                    description=f"Task completion momentum is at {task_stats['willpower'] * 100:.0f}%. System is highly effective at execution.",
+                    confidence=Confidence.HIGH,
+                    time_horizon="immediate",
+                    evidence=[],
+                    suggested_actions=[
+                        "Tackle high-risk tasks",
+                        "Expand project scope",
+                    ],
+                    impact_score=0.8,
+                )
+            )
         elif task_stats["willpower"] < 0.3 and task_stats["tasks_total"] > 5:
-            predictions.append(Prediction(
-                id="velocity_low_willpower",
-                prediction_type=PredictionType.BOTTLENECK,
-                title="Low Task Momentum",
-                description=f"Task completion momentum is low ({task_stats['willpower']*100:.0f}%). May indicate burnout or blockers.",
-                confidence=Confidence.MEDIUM,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=["Audit blockers", "Simplify active tasks", "Focus on low-effort wins"],
-                impact_score=0.75,
-            ))
+            predictions.append(
+                Prediction(
+                    id="velocity_low_willpower",
+                    prediction_type=PredictionType.BOTTLENECK,
+                    title="Low Task Momentum",
+                    description=f"Task completion momentum is low ({task_stats['willpower'] * 100:.0f}%). May indicate burnout or blockers.",
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Audit blockers",
+                        "Simplify active tasks",
+                        "Focus on low-effort wins",
+                    ],
+                    impact_score=0.75,
+                )
+            )
 
         return predictions
 
@@ -471,44 +514,50 @@ class PredictiveEngine:
         cur = conn.cursor()
 
         # Gap 1: Detail + Future
-        cur.execute("SELECT COUNT(*) FROM holographic_coords WHERE y < -0.3 AND z > 0.2")
+        cur.execute(
+            "SELECT COUNT(*) FROM holographic_coords WHERE y < -0.3 AND z > 0.2"
+        )
         if cur.fetchone()[0] == 0:
-            predictions.append(Prediction(
-                id="gap_detail_future",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title="Knowledge Gap: Specific Implementation Plans",
-                description="No memories in Detail+Future quadrant. Create specific, dated implementation plans.",
-                confidence=Confidence.HIGH,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=[
-                    "Create 'Implementation Plan: [Feature]' memories",
-                    "Add specific dates and milestones",
-                    "Break roadmaps into concrete steps",
-                ],
-                impact_score=0.85,
-                metadata={"gap_location": "Y<-0.3, Z>0.2"},
-            ))
+            predictions.append(
+                Prediction(
+                    id="gap_detail_future",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title="Knowledge Gap: Specific Implementation Plans",
+                    description="No memories in Detail+Future quadrant. Create specific, dated implementation plans.",
+                    confidence=Confidence.HIGH,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Create 'Implementation Plan: [Feature]' memories",
+                        "Add specific dates and milestones",
+                        "Break roadmaps into concrete steps",
+                    ],
+                    impact_score=0.85,
+                    metadata={"gap_location": "Y<-0.3, Z>0.2"},
+                )
+            )
 
         # Gap 4: Strategic Vision (Future + High Importance)
         cur.execute("SELECT COUNT(*) FROM holographic_coords WHERE z > 0.3 AND w > 0.8")
         if cur.fetchone()[0] == 0:
-            predictions.append(Prediction(
-                id="gap_strategic_vision",
-                prediction_type=PredictionType.EVOLUTION,
-                title="Knowledge Gap: Strategic Vision Documents",
-                description="No critical future-oriented memories. Create high-level vision documents.",
-                confidence=Confidence.HIGH,
-                time_horizon="medium_term",
-                evidence=[],
-                suggested_actions=[
-                    "Create 'WhiteMagic 2027 Vision' memory",
-                    "Document long-term architectural goals",
-                    "Define success metrics for 6-12 months out",
-                ],
-                impact_score=0.9,
-                metadata={"gap_location": "Z>0.3, W>0.8"},
-            ))
+            predictions.append(
+                Prediction(
+                    id="gap_strategic_vision",
+                    prediction_type=PredictionType.EVOLUTION,
+                    title="Knowledge Gap: Strategic Vision Documents",
+                    description="No critical future-oriented memories. Create high-level vision documents.",
+                    confidence=Confidence.HIGH,
+                    time_horizon="medium_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Create 'WhiteMagic 2027 Vision' memory",
+                        "Document long-term architectural goals",
+                        "Define success metrics for 6-12 months out",
+                    ],
+                    impact_score=0.9,
+                    metadata={"gap_location": "Z>0.3, W>0.8"},
+                )
+            )
 
         return predictions
 
@@ -526,41 +575,44 @@ class PredictiveEngine:
         strong_pairs = [t for t in co_tags if t["co_count"] >= 8]
 
         if strong_pairs:
-            predictions.append(Prediction(
-                id="pattern_cooccurrence",
-                prediction_type=PredictionType.INTEGRATION,
-                title=f"Strong Topic Correlations ({len(strong_pairs)} pairs)",
-                description="Frequently co-occurring tags suggest natural integration points.",
-                confidence=Confidence.MEDIUM,
-                time_horizon="medium_term",
-                evidence=[],
-                suggested_actions=[
-                    f"Consider integrating '{p['tag1']}' + '{p['tag2']}' (appears {p['co_count']}x together)"
-                    for p in strong_pairs[:
-                        3]
-                ],
-                impact_score=0.65,
-                metadata={"pairs": strong_pairs[:10]},
-            ))
+            predictions.append(
+                Prediction(
+                    id="pattern_cooccurrence",
+                    prediction_type=PredictionType.INTEGRATION,
+                    title=f"Strong Topic Correlations ({len(strong_pairs)} pairs)",
+                    description="Frequently co-occurring tags suggest natural integration points.",
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="medium_term",
+                    evidence=[],
+                    suggested_actions=[
+                        f"Consider integrating '{p['tag1']}' + '{p['tag2']}' (appears {p['co_count']}x together)"
+                        for p in strong_pairs[:3]
+                    ],
+                    impact_score=0.65,
+                    metadata={"pairs": strong_pairs[:10]},
+                )
+            )
 
         # 2. Pattern Correlations (Cross-Engine)
         correlations = api.find_correlations()
         if correlations:
             top = correlations[0]
-            predictions.append(Prediction(
-                id=f"pattern_correlation_{top['pattern1_id'][:8]}",
-                prediction_type=PredictionType.EVOLUTION,
-                title="Cross-Engine Pattern Convergence",
-                description=f"High similarity ({top['similarity']:.2f}) detected between patterns in {top['engines'][0]} and {top['engines'][1]}.",
-                confidence=Confidence.HIGH,
-                time_horizon="short_term",
-                evidence=[top["pattern1_id"], top["pattern2_id"]],
-                suggested_actions=[
-                    f"Consolidate logic for '{top['pattern1_title']}'",
-                    "Update shared heuristics",
-                ],
-                impact_score=0.7,
-            ))
+            predictions.append(
+                Prediction(
+                    id=f"pattern_correlation_{top['pattern1_id'][:8]}",
+                    prediction_type=PredictionType.EVOLUTION,
+                    title="Cross-Engine Pattern Convergence",
+                    description=f"High similarity ({top['similarity']:.2f}) detected between patterns in {top['engines'][0]} and {top['engines'][1]}.",
+                    confidence=Confidence.HIGH,
+                    time_horizon="short_term",
+                    evidence=[top["pattern1_id"], top["pattern2_id"]],
+                    suggested_actions=[
+                        f"Consolidate logic for '{top['pattern1_title']}'",
+                        "Update shared heuristics",
+                    ],
+                    impact_score=0.7,
+                )
+            )
 
         return predictions
 
@@ -586,21 +638,23 @@ class PredictiveEngine:
         manual_count = cur.fetchone()["cnt"]
 
         if manual_count > auto_count:
-            predictions.append(Prediction(
-                id="automation_opportunity",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title="Automation Opportunity Detected",
-                description=f"Found {manual_count} mentions of manual processes vs {auto_count} automated ones.",
-                confidence=Confidence.MEDIUM,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=[
-                    "Review manual process mentions",
-                    "Prioritize automation of repetitive tasks",
-                    "Consider daemon/background processing",
-                ],
-                impact_score=0.7,
-            ))
+            predictions.append(
+                Prediction(
+                    id="automation_opportunity",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title="Automation Opportunity Detected",
+                    description=f"Found {manual_count} mentions of manual processes vs {auto_count} automated ones.",
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Review manual process mentions",
+                        "Prioritize automation of repetitive tasks",
+                        "Consider daemon/background processing",
+                    ],
+                    impact_score=0.7,
+                )
+            )
 
         return predictions
 
@@ -611,11 +665,18 @@ class PredictiveEngine:
         cur = conn.cursor()
 
         # Development gardens to analyze
-        dev_gardens = ["milestone", "automation", "roadmap", "strategy", "production_ready"]
+        dev_gardens = [
+            "milestone",
+            "automation",
+            "roadmap",
+            "strategy",
+            "production_ready",
+        ]
 
         # N+1 fix: batch-fetch all garden stats in one GROUP BY query
         ph = ",".join("?" * len(dev_gardens))
-        cur.execute(f"""
+        cur.execute(
+            f"""
             SELECT t.tag,
                    COUNT(*) as count,
                    MAX(m.created_at) as latest,
@@ -626,8 +687,12 @@ class PredictiveEngine:
             WHERE t.tag IN ({ph})
             AND m.memory_type != 'quarantined'
             GROUP BY t.tag
-        """, dev_gardens)
-        garden_activity = {g: {"count": 0, "latest": None, "avg_gravity": 0.5} for g in dev_gardens}
+        """,
+            dev_gardens,
+        )
+        garden_activity = {
+            g: {"count": 0, "latest": None, "avg_gravity": 0.5} for g in dev_gardens
+        }
         for row in cur.fetchall():
             garden_activity[row["tag"]] = {
                 "count": row["count"] or 0,
@@ -640,21 +705,23 @@ class PredictiveEngine:
         milestone_count = cast(int, garden_activity["milestone"]["count"])
         automation_count = cast(int, garden_activity["automation"]["count"])
         if milestone_count > 10 and automation_count < 5:
-            predictions.append(Prediction(
-                id="garden_automation_opportunity",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title="Automation Gap: Many milestones, few automations",
-                description=f"Found {garden_activity['milestone']['count']} milestones but only {garden_activity['automation']['count']} automations. Consider automating repetitive milestone patterns.",
-                confidence=Confidence.MEDIUM,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=[
-                    "Review milestone patterns for automation opportunities",
-                    "Create daemon for recurring tasks",
-                    "Auto-generate milestone memories on phase completion",
-                ],
-                impact_score=0.75,
-            ))
+            predictions.append(
+                Prediction(
+                    id="garden_automation_opportunity",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title="Automation Gap: Many milestones, few automations",
+                    description=f"Found {garden_activity['milestone']['count']} milestones but only {garden_activity['automation']['count']} automations. Consider automating repetitive milestone patterns.",
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Review milestone patterns for automation opportunities",
+                        "Create daemon for recurring tasks",
+                        "Auto-generate milestone memories on phase completion",
+                    ],
+                    impact_score=0.75,
+                )
+            )
 
         # 2. If roadmap is stale (no recent activity) -> suggest roadmap update
         roadmap_count = cast(int, garden_activity["roadmap"]["count"])
@@ -668,21 +735,23 @@ class PredictiveEngine:
             """)
             recent_roadmap = cur.fetchone()[0]
             if recent_roadmap == 0:
-                predictions.append(Prediction(
-                    id="garden_stale_roadmap",
-                    prediction_type=PredictionType.MAINTENANCE,
-                    title="Stale Roadmap: No updates in 14+ days",
-                    description="Roadmap memories haven't been updated recently. Consider refreshing strategic direction.",
-                    confidence=Confidence.MEDIUM,
-                    time_horizon="immediate",
-                    evidence=[],
-                    suggested_actions=[
-                        "Review and update roadmap memories",
-                        "Check if milestones align with current roadmap",
-                        "Create new roadmap for next phase",
-                    ],
-                    impact_score=0.7,
-                ))
+                predictions.append(
+                    Prediction(
+                        id="garden_stale_roadmap",
+                        prediction_type=PredictionType.MAINTENANCE,
+                        title="Stale Roadmap: No updates in 14+ days",
+                        description="Roadmap memories haven't been updated recently. Consider refreshing strategic direction.",
+                        confidence=Confidence.MEDIUM,
+                        time_horizon="immediate",
+                        evidence=[],
+                        suggested_actions=[
+                            "Review and update roadmap memories",
+                            "Check if milestones align with current roadmap",
+                            "Create new roadmap for next phase",
+                        ],
+                        impact_score=0.7,
+                    )
+                )
 
         # 3. High-gravity strategy memories -> prioritize their execution
         cur.execute("""
@@ -698,20 +767,25 @@ class PredictiveEngine:
         high_priority_strategies = cur.fetchall()
 
         if len(high_priority_strategies) >= 2:
-            predictions.append(Prediction(
-                id="garden_priority_strategies",
-                prediction_type=PredictionType.NEXT_FEATURE,
-                title=f"Priority: {len(high_priority_strategies)} high-gravity strategies",
-                description="Multiple high-importance strategy memories identified. These should drive development priorities.",
-                confidence=Confidence.HIGH,
-                time_horizon="immediate",
-                evidence=[s["id"] for s in high_priority_strategies],
-                suggested_actions=[
-                    f"Execute: {s['title'][:50]}..." for s in high_priority_strategies[:3]
-                ],
-                impact_score=0.85,
-                metadata={"strategies": [dict(s) for s in high_priority_strategies]},
-            ))
+            predictions.append(
+                Prediction(
+                    id="garden_priority_strategies",
+                    prediction_type=PredictionType.NEXT_FEATURE,
+                    title=f"Priority: {len(high_priority_strategies)} high-gravity strategies",
+                    description="Multiple high-importance strategy memories identified. These should drive development priorities.",
+                    confidence=Confidence.HIGH,
+                    time_horizon="immediate",
+                    evidence=[s["id"] for s in high_priority_strategies],
+                    suggested_actions=[
+                        f"Execute: {s['title'][:50]}..."
+                        for s in high_priority_strategies[:3]
+                    ],
+                    impact_score=0.85,
+                    metadata={
+                        "strategies": [dict(s) for s in high_priority_strategies]
+                    },
+                )
+            )
 
         # 4. Production readiness check
         cur.execute("""
@@ -725,21 +799,23 @@ class PredictiveEngine:
 
         production_ready_count = cast(int, garden_activity["production_ready"]["count"])
         if recent_prod_ready == 0 and production_ready_count > 0:
-            predictions.append(Prediction(
-                id="garden_prod_readiness",
-                prediction_type=PredictionType.MAINTENANCE,
-                title="Production Readiness: No recent validation",
-                description="No production-ready validations in the past week. Consider running readiness checks.",
-                confidence=Confidence.LOW,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=[
-                    "Run full test suite",
-                    "Verify MCP tool functionality",
-                    "Check Rust module integration",
-                ],
-                impact_score=0.6,
-            ))
+            predictions.append(
+                Prediction(
+                    id="garden_prod_readiness",
+                    prediction_type=PredictionType.MAINTENANCE,
+                    title="Production Readiness: No recent validation",
+                    description="No production-ready validations in the past week. Consider running readiness checks.",
+                    confidence=Confidence.LOW,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Run full test suite",
+                        "Verify MCP tool functionality",
+                        "Check Rust module integration",
+                    ],
+                    impact_score=0.6,
+                )
+            )
 
         return predictions
 
@@ -757,49 +833,58 @@ class PredictiveEngine:
         # 1. Identify the largest constellation — predict it will dominate
         largest = max(constellations, key=lambda c: c.size)
         if largest.size > 50:
-            predictions.append(Prediction(
-                id=f"constellation_dominant_{largest.name[:20]}",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title=f"Dominant Constellation: {largest.name}",
-                description=(
-                    f"Constellation '{largest.name}' has {largest.size} members in zone "
-                    f"{largest.zone}. Topics: {', '.join(largest.dominant_tags[:3])}. "
-                    f"Expect continued growth in this area."
-                ),
-                confidence=Confidence.HIGH,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=[
-                    f"Consolidate knowledge in '{largest.dominant_tags[0]}' domain" if largest.dominant_tags else "Review largest cluster",
-                    "Consider subdividing if cluster becomes too broad",
-                ],
-                impact_score=0.7,
-                metadata={"constellation": largest.name, "size": largest.size},
-            ))
+            predictions.append(
+                Prediction(
+                    id=f"constellation_dominant_{largest.name[:20]}",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title=f"Dominant Constellation: {largest.name}",
+                    description=(
+                        f"Constellation '{largest.name}' has {largest.size} members in zone "
+                        f"{largest.zone}. Topics: {', '.join(largest.dominant_tags[:3])}. "
+                        f"Expect continued growth in this area."
+                    ),
+                    confidence=Confidence.HIGH,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        f"Consolidate knowledge in '{largest.dominant_tags[0]}' domain"
+                        if largest.dominant_tags
+                        else "Review largest cluster",
+                        "Consider subdividing if cluster becomes too broad",
+                    ],
+                    impact_score=0.7,
+                    metadata={"constellation": largest.name, "size": largest.size},
+                )
+            )
 
         # 2. Find small isolated constellations — predict they need attention
         small = [c for c in constellations if c.size < 10]
         if small:
-            predictions.append(Prediction(
-                id="constellation_sparse_clusters",
-                prediction_type=PredictionType.MAINTENANCE,
-                title=f"{len(small)} Small Constellations Need Enrichment",
-                description=(
-                    "Small constellations may represent emerging themes that need "
-                    "more memories to crystallize. Topics: "
-                    + ", ".join(s.dominant_tags[0] for s in small[:3] if s.dominant_tags)
-                ),
-                confidence=Confidence.MEDIUM,
-                time_horizon="medium_term",
-                evidence=[],
-                suggested_actions=[
-                    f"Create more memories about '{s.dominant_tags[0]}'" if s.dominant_tags else f"Enrich constellation '{s.name}'"
-                    for s in small[:
-                        3]
-                ],
-                impact_score=0.6,
-                metadata={"small_constellations": [s.name for s in small]},
-            ))
+            predictions.append(
+                Prediction(
+                    id="constellation_sparse_clusters",
+                    prediction_type=PredictionType.MAINTENANCE,
+                    title=f"{len(small)} Small Constellations Need Enrichment",
+                    description=(
+                        "Small constellations may represent emerging themes that need "
+                        "more memories to crystallize. Topics: "
+                        + ", ".join(
+                            s.dominant_tags[0] for s in small[:3] if s.dominant_tags
+                        )
+                    ),
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="medium_term",
+                    evidence=[],
+                    suggested_actions=[
+                        f"Create more memories about '{s.dominant_tags[0]}'"
+                        if s.dominant_tags
+                        else f"Enrich constellation '{s.name}'"
+                        for s in small[:3]
+                    ],
+                    impact_score=0.6,
+                    metadata={"small_constellations": [s.name for s in small]},
+                )
+            )
 
         # 3. Cross-constellation bridges — predict integration opportunities
         bridges = cal.find_constellation_bridges(limit=5)
@@ -808,25 +893,26 @@ class PredictiveEngine:
             for b in bridges:
                 linked_pairs.add((b["constellation_1"], b["constellation_2"]))
 
-            predictions.append(Prediction(
-                id="constellation_bridge_opportunity",
-                prediction_type=PredictionType.INTEGRATION,
-                title=f"Cross-Constellation Bridges Detected ({len(bridges)})",
-                description=(
-                    f"Found {len(bridges)} association links bridging {len(linked_pairs)} "
-                    f"constellation pairs. These represent cross-domain knowledge connections."
-                ),
-                confidence=Confidence.HIGH,
-                time_horizon="immediate",
-                evidence=[b["source_id"] for b in bridges[:5]],
-                suggested_actions=[
-                    f"Strengthen bridge between '{p[0]}' and '{p[1]}'"
-                    for p in list(linked_pairs)[:
-                        3]
-                ],
-                impact_score=0.8,
-                metadata={"bridges": bridges[:5]},
-            ))
+            predictions.append(
+                Prediction(
+                    id="constellation_bridge_opportunity",
+                    prediction_type=PredictionType.INTEGRATION,
+                    title=f"Cross-Constellation Bridges Detected ({len(bridges)})",
+                    description=(
+                        f"Found {len(bridges)} association links bridging {len(linked_pairs)} "
+                        f"constellation pairs. These represent cross-domain knowledge connections."
+                    ),
+                    confidence=Confidence.HIGH,
+                    time_horizon="immediate",
+                    evidence=[b["source_id"] for b in bridges[:5]],
+                    suggested_actions=[
+                        f"Strengthen bridge between '{p[0]}' and '{p[1]}'"
+                        for p in list(linked_pairs)[:3]
+                    ],
+                    impact_score=0.8,
+                    metadata={"bridges": bridges[:5]},
+                )
+            )
 
         return predictions
 
@@ -840,47 +926,50 @@ class PredictiveEngine:
         # Find high-gravity orphans (valuable but disconnected knowledge)
         orphans = cal.find_association_orphans(min_gravity=0.6, limit=10)
         if orphans:
-            predictions.append(Prediction(
-                id="association_orphans",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title=f"Disconnected High-Value Memories ({len(orphans)})",
-                description=(
-                    "Found memories with high importance (gravity > 0.6) but fewer than "
-                    "3 associations. These are isolated knowledge that should be connected."
-                ),
-                confidence=Confidence.HIGH,
-                time_horizon="immediate",
-                evidence=[o.get("id", "") for o in orphans[:5]],
-                suggested_actions=[
-                    f"Connect '{o.get('title', 'Untitled')[:40]}' (gravity={o.get('gravity', 0):.2f})"
-                    for o in orphans[:
-                        3]
-                ],
-                impact_score=0.75,
-                metadata={"orphan_count": len(orphans)},
-            ))
+            predictions.append(
+                Prediction(
+                    id="association_orphans",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title=f"Disconnected High-Value Memories ({len(orphans)})",
+                    description=(
+                        "Found memories with high importance (gravity > 0.6) but fewer than "
+                        "3 associations. These are isolated knowledge that should be connected."
+                    ),
+                    confidence=Confidence.HIGH,
+                    time_horizon="immediate",
+                    evidence=[o.get("id", "") for o in orphans[:5]],
+                    suggested_actions=[
+                        f"Connect '{o.get('title', 'Untitled')[:40]}' (gravity={o.get('gravity', 0):.2f})"
+                        for o in orphans[:3]
+                    ],
+                    impact_score=0.75,
+                    metadata={"orphan_count": len(orphans)},
+                )
+            )
 
         # Find broken associations (high strength but one end at FAR_EDGE)
         broken = cal.find_broken_associations(limit=10)
         if broken:
-            predictions.append(Prediction(
-                id="association_broken_links",
-                prediction_type=PredictionType.MAINTENANCE,
-                title=f"Broken Associations ({len(broken)} links)",
-                description=(
-                    "High-strength associations where one memory has drifted to FAR_EDGE. "
-                    "These represent decayed knowledge connections that may need repair."
-                ),
-                confidence=Confidence.MEDIUM,
-                time_horizon="short_term",
-                evidence=[b.get("source_id", "") for b in broken[:5]],
-                suggested_actions=[
-                    "Run association strength recalibration",
-                    "Prune broken links or re-anchor drifted memories",
-                ],
-                impact_score=0.6,
-                metadata={"broken_count": len(broken)},
-            ))
+            predictions.append(
+                Prediction(
+                    id="association_broken_links",
+                    prediction_type=PredictionType.MAINTENANCE,
+                    title=f"Broken Associations ({len(broken)} links)",
+                    description=(
+                        "High-strength associations where one memory has drifted to FAR_EDGE. "
+                        "These represent decayed knowledge connections that may need repair."
+                    ),
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="short_term",
+                    evidence=[b.get("source_id", "") for b in broken[:5]],
+                    suggested_actions=[
+                        "Run association strength recalibration",
+                        "Prune broken links or re-anchor drifted memories",
+                    ],
+                    impact_score=0.6,
+                    metadata={"broken_count": len(broken)},
+                )
+            )
 
         return predictions
 
@@ -899,47 +988,51 @@ class PredictiveEngine:
 
         # Accelerating memory creation
         if acceleration > 1.5:
-            predictions.append(Prediction(
-                id="temporal_acceleration",
-                prediction_type=PredictionType.OPPORTUNITY,
-                title="Memory Creation Accelerating",
-                description=(
-                    f"Creation velocity is {acceleration:.1f}x the 30-day average. "
-                    f"Last 7 days: {metrics.get('last_7d', 0)} memories "
-                    f"(avg {metrics.get('daily_avg_7d', 0)}/day). "
-                    f"High capacity for consolidation and pattern extraction."
-                ),
-                confidence=Confidence.HIGH,
-                time_horizon="immediate",
-                evidence=[],
-                suggested_actions=[
-                    "Run consolidation to cluster recent memories",
-                    "Mine associations from the burst of new content",
-                    "Check constellation evolution after this growth period",
-                ],
-                impact_score=0.7,
-            ))
+            predictions.append(
+                Prediction(
+                    id="temporal_acceleration",
+                    prediction_type=PredictionType.OPPORTUNITY,
+                    title="Memory Creation Accelerating",
+                    description=(
+                        f"Creation velocity is {acceleration:.1f}x the 30-day average. "
+                        f"Last 7 days: {metrics.get('last_7d', 0)} memories "
+                        f"(avg {metrics.get('daily_avg_7d', 0)}/day). "
+                        f"High capacity for consolidation and pattern extraction."
+                    ),
+                    confidence=Confidence.HIGH,
+                    time_horizon="immediate",
+                    evidence=[],
+                    suggested_actions=[
+                        "Run consolidation to cluster recent memories",
+                        "Mine associations from the burst of new content",
+                        "Check constellation evolution after this growth period",
+                    ],
+                    impact_score=0.7,
+                )
+            )
 
         # Decelerating — possible stagnation
         elif acceleration < 0.5 and metrics.get("last_30d", 0) > 10:
-            predictions.append(Prediction(
-                id="temporal_deceleration",
-                prediction_type=PredictionType.BOTTLENECK,
-                title="Memory Creation Slowing Down",
-                description=(
-                    f"Creation velocity is {acceleration:.1f}x the 30-day average. "
-                    f"This deceleration may indicate reduced activity or saturation."
-                ),
-                confidence=Confidence.MEDIUM,
-                time_horizon="short_term",
-                evidence=[],
-                suggested_actions=[
-                    "Surface dormant memories via Serendipity",
-                    "Run Kaizen analysis to identify quality opportunities",
-                    "Check if constellations are stable or drifting",
-                ],
-                impact_score=0.6,
-            ))
+            predictions.append(
+                Prediction(
+                    id="temporal_deceleration",
+                    prediction_type=PredictionType.BOTTLENECK,
+                    title="Memory Creation Slowing Down",
+                    description=(
+                        f"Creation velocity is {acceleration:.1f}x the 30-day average. "
+                        f"This deceleration may indicate reduced activity or saturation."
+                    ),
+                    confidence=Confidence.MEDIUM,
+                    time_horizon="short_term",
+                    evidence=[],
+                    suggested_actions=[
+                        "Surface dormant memories via Serendipity",
+                        "Run Kaizen analysis to identify quality opportunities",
+                        "Check if constellations are stable or drifting",
+                    ],
+                    impact_score=0.6,
+                )
+            )
 
         # Check temporal activity pattern
         buckets = cal.query_temporal_activity(time_window="14d", bucket="1d")
@@ -950,34 +1043,39 @@ class PredictiveEngine:
             if recent_7 > 0 and earlier_7 > 0:
                 trend_ratio = recent_7 / earlier_7
                 if trend_ratio > 2.0:
-                    predictions.append(Prediction(
-                        id="temporal_surge",
-                        prediction_type=PredictionType.OPPORTUNITY,
-                        title="Recent Activity Surge Detected",
-                        description=(
-                            f"Last 7 days had {recent_7} memories vs {earlier_7} the week before "
-                            f"({trend_ratio:.1f}x). A burst of new knowledge is entering the system."
-                        ),
-                        confidence=Confidence.HIGH,
-                        time_horizon="immediate",
-                        evidence=[],
-                        suggested_actions=[
-                            "Run full constellation detection to find new clusters",
-                            "Mine associations in the new content",
-                        ],
-                        impact_score=0.75,
-                    ))
+                    predictions.append(
+                        Prediction(
+                            id="temporal_surge",
+                            prediction_type=PredictionType.OPPORTUNITY,
+                            title="Recent Activity Surge Detected",
+                            description=(
+                                f"Last 7 days had {recent_7} memories vs {earlier_7} the week before "
+                                f"({trend_ratio:.1f}x). A burst of new knowledge is entering the system."
+                            ),
+                            confidence=Confidence.HIGH,
+                            time_horizon="immediate",
+                            evidence=[],
+                            suggested_actions=[
+                                "Run full constellation detection to find new clusters",
+                                "Mine associations in the new content",
+                            ],
+                            impact_score=0.75,
+                        )
+                    )
 
         return predictions
 
-    def _deduplicate_predictions(self, predictions: list[Prediction]) -> list[Prediction]:
+    def _deduplicate_predictions(
+        self, predictions: list[Prediction]
+    ) -> list[Prediction]:
         """Combine highly similar predictions to avoid spam."""
         if not predictions:
             return []
 
         try:
             import whitemagic_rs
-            if hasattr(whitemagic_rs, 'parallel_sort'):
+
+            if hasattr(whitemagic_rs, "parallel_sort"):
                 # Deduplication logic unchanged...
                 unique = []
                 seen = set()
@@ -1003,6 +1101,7 @@ class PredictiveEngine:
             from whitemagic.core.intelligence.synthesis.unified_patterns import (
                 get_pattern_api,
             )
+
             api = get_pattern_api()
             stats = api.get_stats()
             return int(stats["total_patterns"])
@@ -1026,16 +1125,20 @@ class PredictiveEngine:
         ]
 
         for name, condition, params in gap_queries:
-            cur.execute("SELECT COUNT(*) FROM holographic_coords WHERE " + condition, params)
+            cur.execute(
+                "SELECT COUNT(*) FROM holographic_coords WHERE " + condition, params
+            )
             count = cur.fetchone()[0]
             if count < 3:
                 # Sparse region
-                gaps.append({
-                    "name": name,
-                    "condition": condition,
-                    "current_count": count,
-                    "severity": "critical" if count == 0 else "moderate",
-                })
+                gaps.append(
+                    {
+                        "name": name,
+                        "condition": condition,
+                        "current_count": count,
+                        "severity": "critical" if count == 0 else "moderate",
+                    }
+                )
 
         return gaps
 
@@ -1062,10 +1165,6 @@ class PredictiveEngine:
             "daily_avg_30d": row["last_30d"] / 30,
         }
 
-    # ------------------------------------------------------------------
-    # Foresight facade (fused from ForesightEngine)
-    # ------------------------------------------------------------------
-
     _foresight_engine_instance: Any = None
     _predictive_maintenance_instance: Any = None
 
@@ -1075,6 +1174,7 @@ class PredictiveEngine:
             from whitemagic.core.intelligence.foresight_engine import (
                 get_foresight_engine,
             )
+
             self._foresight_engine_instance = get_foresight_engine()
         return self._foresight_engine_instance
 
@@ -1082,16 +1182,13 @@ class PredictiveEngine:
         """Run full foresight analysis (constellation drift, decay, convergence)."""
         return self._get_foresight_engine().analyze()
 
-    # ------------------------------------------------------------------
-    # Predictive Maintenance facade (fused from PredictiveMaintenanceEngine)
-    # ------------------------------------------------------------------
-
     def _get_predictive_maintenance(self):
         """Lazy accessor for the PredictiveMaintenanceEngine."""
         if self._predictive_maintenance_instance is None:
             from whitemagic.core.consciousness.apotheosis_engine import (
                 PredictiveMaintenanceEngine,
             )
+
             self._predictive_maintenance_instance = PredictiveMaintenanceEngine()
         return self._predictive_maintenance_instance
 
@@ -1100,11 +1197,16 @@ class PredictiveEngine:
         return self._get_predictive_maintenance().analyze_trends(health_history)
 
     def maintenance_forecast_memory_growth(
-        self, current_count: int, growth_rate_per_day: float, days_ahead: int = 30,
+        self,
+        current_count: int,
+        growth_rate_per_day: float,
+        days_ahead: int = 30,
     ) -> dict[str, Any]:
         """Forecast memory growth and predict when maintenance is needed."""
         return self._get_predictive_maintenance().forecast_memory_growth(
-            current_count, growth_rate_per_day, days_ahead,
+            current_count,
+            growth_rate_per_day,
+            days_ahead,
         )
 
     def maintenance_get_active_alerts(self, max_age_hours: float = 24.0) -> list[Any]:
@@ -1114,6 +1216,7 @@ class PredictiveEngine:
 
 # Global instance
 _predictive_engine: PredictiveEngine | None = None
+
 
 def get_predictive_engine() -> PredictiveEngine:
     """

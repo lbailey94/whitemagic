@@ -15,13 +15,17 @@ class CareMetrics:
     def __init__(self) -> None:
         self._care_events: list[dict[str, Any]] = []
 
-    def record_care(self, recipient: str, quality: float, duration: float = 0.0) -> None:
+    def record_care(
+        self, recipient: str, quality: float, duration: float = 0.0
+    ) -> None:
         """Record a care event."""
-        self._care_events.append({
-            "recipient": recipient,
-            "quality": max(0.0, min(1.0, quality)),
-            "duration": duration,
-        })
+        self._care_events.append(
+            {
+                "recipient": recipient,
+                "quality": max(0.0, min(1.0, quality)),
+                "duration": duration,
+            }
+        )
 
     def avg_quality(self) -> float:
         if not self._care_events:

@@ -58,18 +58,21 @@ class EnhancedPatternEngine:
         content_lower = content.lower()
         for keyword, description in keywords.items():
             if keyword in content_lower:
-                patterns.append({
-                    "type": "heuristic",
-                    "pattern": description,
-                    "confidence": 0.7,
-                    "timestamp": time.time(),
-                })
+                patterns.append(
+                    {
+                        "type": "heuristic",
+                        "pattern": description,
+                        "confidence": 0.7,
+                        "timestamp": time.time(),
+                    }
+                )
         return patterns
 
     def emit_to_gan_ying(self, pattern: dict[str, Any]) -> None:
         """Send discovered pattern to GanYingBus."""
         try:
             from whitemagic.core.resonance.gan_ying_bus import GanYingBus
+
             bus = GanYingBus()
             bus.emit(
                 source="pattern_engine",

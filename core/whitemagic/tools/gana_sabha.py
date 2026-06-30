@@ -24,25 +24,41 @@ logger = logging.getLogger(__name__)
 # Quadrant → representative Gana (the "elder" of each quadrant)
 QUADRANT_ELDERS: dict[str, str] = {
     "East": "gana_winnowing_basket",  # Wisdom — separation of signal/noise
-    "South": "gana_ghost",            # Introspection — deep analysis
-    "West": "gana_three_stars",       # Judgment — dharmic deliberation
-    "North": "gana_dipper",           # Governance — strategic oversight
+    "South": "gana_ghost",  # Introspection — deep analysis
+    "West": "gana_three_stars",  # Judgment — dharmic deliberation
+    "North": "gana_dipper",  # Governance — strategic oversight
 }
 
 # Gana → quadrant mapping (from prat_resonance._GANA_META)
 _GANA_QUADRANT: dict[str, str] = {
-    "gana_horn": "East", "gana_neck": "East", "gana_root": "East",
-    "gana_room": "East", "gana_heart": "East", "gana_tail": "East",
+    "gana_horn": "East",
+    "gana_neck": "East",
+    "gana_root": "East",
+    "gana_room": "East",
+    "gana_heart": "East",
+    "gana_tail": "East",
     "gana_winnowing_basket": "East",
-    "gana_ghost": "South", "gana_willow": "South", "gana_star": "South",
-    "gana_extended_net": "South", "gana_wings": "South",
-    "gana_chariot": "South", "gana_abundance": "South",
-    "gana_straddling_legs": "West", "gana_mound": "West",
-    "gana_stomach": "West", "gana_hairy_head": "West", "gana_net": "West",
-    "gana_turtle_beak": "West", "gana_three_stars": "West",
-    "gana_dipper": "North", "gana_ox": "North", "gana_girl": "North",
-    "gana_void": "North", "gana_roof": "North",
-    "gana_encampment": "North", "gana_wall": "North",
+    "gana_ghost": "South",
+    "gana_willow": "South",
+    "gana_star": "South",
+    "gana_extended_net": "South",
+    "gana_wings": "South",
+    "gana_chariot": "South",
+    "gana_abundance": "South",
+    "gana_straddling_legs": "West",
+    "gana_mound": "West",
+    "gana_stomach": "West",
+    "gana_hairy_head": "West",
+    "gana_net": "West",
+    "gana_turtle_beak": "West",
+    "gana_three_stars": "West",
+    "gana_dipper": "North",
+    "gana_ox": "North",
+    "gana_girl": "North",
+    "gana_void": "North",
+    "gana_roof": "North",
+    "gana_encampment": "North",
+    "gana_wall": "North",
 }
 
 
@@ -55,6 +71,7 @@ def _get_garden_perspective(gana_name: str, task: str) -> dict[str, Any]:
     """Get a Garden's perspective on a task (lightweight, no heavy imports)."""
     try:
         from whitemagic.tools.prat_resonance import _get_meta
+
         meta = _get_meta(gana_name)
         return {
             "gana": gana_name,
@@ -138,14 +155,20 @@ def convene_sabha(
     gratitude_boost = _calculate_gratitude_boost(involved_quadrants)
     if gratitude_boost > 1.0:
         arbiter_recommendation["gratitude_weight"] = gratitude_boost
-        arbiter_recommendation["confidence"] = min(0.99, arbiter_recommendation["confidence"] * gratitude_boost)
-        arbiter_recommendation["rationale"] += f" (Confidence boosted by {int((gratitude_boost-1)*100)}% due to node gratitude resonance)"
+        arbiter_recommendation["confidence"] = min(
+            0.99, arbiter_recommendation["confidence"] * gratitude_boost
+        )
+        arbiter_recommendation["rationale"] += (
+            f" (Confidence boosted by {int((gratitude_boost - 1) * 100)}% due to node gratitude resonance)"
+        )
 
     elapsed_ms = (time.time() - start_ts) * 1000
 
     result: dict[str, Any] = {
         "status": "success",
-        "sabha_type": "full_council" if len(involved_quadrants) == 4 else "partial_council",
+        "sabha_type": "full_council"
+        if len(involved_quadrants) == 4
+        else "partial_council",
         "quadrants_represented": sorted(involved_quadrants),
         "perspectives": perspectives,
         "conflicts_detected": len(conflicts),
@@ -173,40 +196,49 @@ def _detect_conflicts(
     """
     conflicts: list[dict[str, Any]] = []
 
-    quadrants_present = {p.get("quadrant_represented") or p.get("quadrant", "") for p in perspectives}
+    quadrants_present = {
+        p.get("quadrant_represented") or p.get("quadrant", "") for p in perspectives
+    }
 
     # Known tension patterns
     if "East" in quadrants_present and "West" in quadrants_present:
         # East (action/initiation) vs West (refinement/judgment)
-        conflicts.append({
-            "type": "pace_tension",
-            "between": ["East (action)", "West (judgment)"],
-            "description": "East quadrant favors speed and initiation; West favors deliberation and refinement.",
-            "resolution": "Let East propose, West validate — sequential, not parallel.",
-        })
+        conflicts.append(
+            {
+                "type": "pace_tension",
+                "between": ["East (action)", "West (judgment)"],
+                "description": "East quadrant favors speed and initiation; West favors deliberation and refinement.",
+                "resolution": "Let East propose, West validate — sequential, not parallel.",
+            }
+        )
 
     if "South" in quadrants_present and "North" in quadrants_present:
         # South (expansion/fire) vs North (conservation/water)
-        conflicts.append({
-            "type": "scope_tension",
-            "between": ["South (expansion)", "North (conservation)"],
-            "description": "South quadrant favors expansion and creation; North favors conservation and depth.",
-            "resolution": "Scope to what is sustainable — expand only what can be maintained.",
-        })
+        conflicts.append(
+            {
+                "type": "scope_tension",
+                "between": ["South (expansion)", "North (conservation)"],
+                "description": "South quadrant favors expansion and creation; North favors conservation and depth.",
+                "resolution": "Scope to what is sustainable — expand only what can be maintained.",
+            }
+        )
 
     # Check vitality-based conflicts
     try:
         from whitemagic.tools.gana_vitality import get_vitality_monitor
+
         monitor = get_vitality_monitor()
         degraded = monitor.get_degraded_ganas()
         for p in perspectives:
             if p.get("gana") in degraded:
-                conflicts.append({
-                    "type": "vitality_concern",
-                    "gana": p["gana"],
-                    "description": f"{p['gana']} is degraded — its perspective may be unreliable.",
-                    "resolution": "Weight this Gana's input lower; prefer healthy peers.",
-                })
+                conflicts.append(
+                    {
+                        "type": "vitality_concern",
+                        "gana": p["gana"],
+                        "description": f"{p['gana']} is degraded — its perspective may be unreliable.",
+                        "resolution": "Weight this Gana's input lower; prefer healthy peers.",
+                    }
+                )
     except (ImportError, AttributeError):
         pass
 
@@ -260,6 +292,7 @@ def _calculate_gratitude_boost(quadrants: set[str]) -> float:
     """Calculate a confidence boost based on the node's gratitude history."""
     try:
         from whitemagic.gratitude.ledger import get_gratitude_ledger
+
         ledger = get_gratitude_ledger()
         stats = ledger.get_stats()
 
@@ -277,6 +310,7 @@ def _record_sabha_karma(result: dict[str, Any]) -> None:
     """Record the Sabhā outcome in the Karma Ledger."""
     try:
         from whitemagic.dharma.karma_ledger import get_karma_ledger
+
         ledger = get_karma_ledger()
         ledger.record(
             tool="sabha.convene",
@@ -295,7 +329,10 @@ def handle_sabha_convene(**kwargs: Any) -> dict[str, Any]:
     quadrants = kwargs.get("quadrants")
 
     if not task:
-        return {"status": "error", "error": "task is required — describe what needs council."}
+        return {
+            "status": "error",
+            "error": "task is required — describe what needs council.",
+        }
 
     # Parse ganas/quadrants from string if needed
     if isinstance(ganas, str):
@@ -310,6 +347,7 @@ def handle_sabha_status(**kwargs: Any) -> dict[str, Any]:
     """MCP handler for Sabhā collective vitality status."""
     try:
         from whitemagic.tools.gana_vitality import get_vitality_monitor
+
         monitor = get_vitality_monitor()
         summary = monitor.get_vitality_summary()
         return {"status": "success", **summary}

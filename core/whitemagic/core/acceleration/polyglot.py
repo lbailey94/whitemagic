@@ -29,17 +29,19 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# --- BRIDGE IMPLEMENTATIONS ---
 
 class LanguageBridge:
     """Base class for language-specific acceleration bridges."""
+
     def __init__(self, name: str):
         self.name = name
         self.available = False
         self._lib = None
 
+
 class ElixirBridge(LanguageBridge):
     """Bridge to Elixir/Erlang BEAM via Port or NIF."""
+
     def call(self, function: str, *args):
         """
         Perform the call operation.
@@ -49,8 +51,10 @@ class ElixirBridge(LanguageBridge):
         """
         return {"status": "fallback", "reason": "Elixir node not connected"}
 
+
 class JuliaBridge(LanguageBridge):
     """Bridge to Julia via PyJulia or ZMQ."""
+
     def call(self, function: str, *args):
         """
         Perform the call operation.
@@ -60,8 +64,10 @@ class JuliaBridge(LanguageBridge):
         """
         return {"status": "fallback", "reason": "Julia environment not initialized"}
 
+
 class KokaBridge(LanguageBridge):
     """Bridge to Koka (effect-typed functional language)."""
+
     def call(self, function: str, *args):
         """
         Perform the call operation.
@@ -71,7 +77,6 @@ class KokaBridge(LanguageBridge):
         """
         return {"status": "fallback", "reason": "Koka runtime not available"}
 
-# --- POLYGLOT ACCELERATOR ---
 
 class PolyglotAccelerator:
     """Unified acceleration engine with multi-language fallback."""
@@ -84,21 +89,23 @@ class PolyglotAccelerator:
         }
         self.stats = {"rust_calls": 0, "python_calls": 0, "total_time": 0.0}
 
-    def batch_cosine(self, query: list[float], vectors: list[list[float]]) -> list[float]:
+    def batch_cosine(
+        self, query: list[float], vectors: list[list[float]]
+    ) -> list[float]:
         """High-performance batch cosine similarity."""
         t0 = time.time()
         # Rust/SIMD priority (from whitemagic_rs if available)
         res = [self._py_cosine(query, v) for v in vectors]
         self.stats["python_calls"] += 1
-        self.stats["total_time"] += (time.time() - t0)
+        self.stats["total_time"] += time.time() - t0
         return res
 
     @staticmethod
     def _py_cosine(a, b):
-        dot = sum(x*y for x,y in zip(a,b))
-        na = math.sqrt(sum(x*x for x in a))
-        nb = math.sqrt(sum(x*x for x in b))
-        return dot / (na*nb) if na*nb > 1e-10 else 0.0
+        dot = sum(x * y for x, y in zip(a, b))
+        na = math.sqrt(sum(x * x for x in a))
+        nb = math.sqrt(sum(x * x for x in b))
+        return dot / (na * nb) if na * nb > 1e-10 else 0.0
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -107,10 +114,14 @@ class PolyglotAccelerator:
         Returns:
             dict[str, Any]
         """
-        return {**self.stats, "bridges": {k: b.available for k, b in self._bridges.items()}}
+        return {
+            **self.stats,
+            "bridges": {k: b.available for k, b in self._bridges.items()},
+        }
 
-# --- SINGLETONS ---
+
 _accelerator: PolyglotAccelerator | None = None
+
 
 def get_accelerator() -> PolyglotAccelerator:
     """
@@ -124,6 +135,7 @@ def get_accelerator() -> PolyglotAccelerator:
         _accelerator = PolyglotAccelerator()
     return _accelerator
 
+
 # Compatibility stubs
 """
 Get the elixir bridge.
@@ -131,18 +143,31 @@ Get the elixir bridge.
 """
 Get the elixir bridge.
 """
-def get_elixir_bridge(): return get_accelerator()._bridges["elixir"]
+
+
+def get_elixir_bridge():
+    return get_accelerator()._bridges["elixir"]
+
+
 """
 Get the julia bridge.
 """
 """
 Get the julia bridge.
 """
-def get_julia_bridge(): return get_accelerator()._bridges["julia"]
+
+
+def get_julia_bridge():
+    return get_accelerator()._bridges["julia"]
+
+
 """
 Get the koka bridge.
 """
 """
 Get the koka bridge.
 """
-def get_koka_bridge(): return get_accelerator()._bridges["koka"]
+
+
+def get_koka_bridge():
+    return get_accelerator()._bridges["koka"]

@@ -42,10 +42,15 @@ class StateClient:
                 pass
 
     def _save(self) -> None:
-        self.state_file.write_text(json.dumps({
-            "state": self._state,
-            "interfaces": self._interfaces,
-        }, indent=2))
+        self.state_file.write_text(
+            json.dumps(
+                {
+                    "state": self._state,
+                    "interfaces": self._interfaces,
+                },
+                indent=2,
+            )
+        )
 
     def register_interface(self, name: str) -> None:
         if name not in self._interfaces:

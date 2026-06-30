@@ -25,10 +25,6 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-// ---------------------------------------------------------------------------
-// Channel registry (works regardless of iceoryx2 feature)
-// ---------------------------------------------------------------------------
-
 /// Known IPC channel names
 pub const CHANNEL_EVENTS: &str = "wm/events";
 pub const CHANNEL_MEMORIES: &str = "wm/memories";
@@ -57,10 +53,6 @@ impl IpcStats {
 lazy_static::lazy_static! {
     static ref IPC_STATS: IpcStats = IpcStats::new();
 }
-
-// ---------------------------------------------------------------------------
-// Iceoryx2 integration (conditional)
-// ---------------------------------------------------------------------------
 
 #[cfg(feature = "iceoryx2")]
 mod iox2 {
@@ -194,10 +186,6 @@ mod iox2 {
         Err("iceoryx2 not compiled — using in-process EventRing instead".to_string())
     }
 }
-
-// ---------------------------------------------------------------------------
-// Public API (always available)
-// ---------------------------------------------------------------------------
 
 /// Initialize IPC bridge
 #[pyfunction]

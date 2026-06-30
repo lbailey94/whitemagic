@@ -24,14 +24,26 @@ class AutoimmuneDefense:
     """Transform anti-patterns into active defenses."""
 
     ANTIPATTERNS: list[dict[str, str]] = [
-        {"pattern": r"Path\.home\(\)", "name": "path_home_violation",
-         "fix": "Use get_state_root() from whitemagic.config.paths"},
-        {"pattern": r"\.expanduser\(\)", "name": "expanduser_violation",
-         "fix": "Use get_state_root() from whitemagic.config.paths"},
-        {"pattern": r"except\s+Exception\s*:\s*pass\s*$", "name": "silent_exception",
-         "fix": "Add logging or specific exception handling"},
-        {"pattern": r"TODO", "name": "todo_marker",
-         "fix": "Use NotImplementedError with reason and date"},
+        {
+            "pattern": r"Path\.home\(\)",
+            "name": "path_home_violation",
+            "fix": "Use get_state_root() from whitemagic.config.paths",
+        },
+        {
+            "pattern": r"\.expanduser\(\)",
+            "name": "expanduser_violation",
+            "fix": "Use get_state_root() from whitemagic.config.paths",
+        },
+        {
+            "pattern": r"except\s+Exception\s*:\s*pass\s*$",
+            "name": "silent_exception",
+            "fix": "Add logging or specific exception handling",
+        },
+        {
+            "pattern": r"TODO",
+            "name": "todo_marker",
+            "fix": "Use NotImplementedError with reason and date",
+        },
     ]
 
     def __init__(self, data_dir: Path | None = None) -> None:
@@ -52,14 +64,16 @@ class AutoimmuneDefense:
             content = file_path.read_text()
             for ap in self.ANTIPATTERNS:
                 for match in re.finditer(ap["pattern"], content, re.MULTILINE):
-                    line_num = content[:match.start()].count("\n") + 1
-                    results.append({
-                        "file": str(file_path),
-                        "line": line_num,
-                        "antipattern": ap["name"],
-                        "fix": ap["fix"],
-                        "timestamp": time.time(),
-                    })
+                    line_num = content[: match.start()].count("\n") + 1
+                    results.append(
+                        {
+                            "file": str(file_path),
+                            "line": line_num,
+                            "antipattern": ap["name"],
+                            "fix": ap["fix"],
+                            "timestamp": time.time(),
+                        }
+                    )
         except Exception:
             pass
 

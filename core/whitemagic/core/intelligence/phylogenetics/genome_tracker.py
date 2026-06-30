@@ -75,11 +75,11 @@ class LineageEdge:
 class TaxonomicRank:
     """Taxonomic classification of a memory."""
 
-    species: str       # Tag cluster (e.g., "session_checkpoint")
-    genus: str         # Galaxy name
-    family: str        # Theme/dominant tag
-    order: str         # Era (e.g., "aria_era", "v15", "pre_v14")
-    kingdom: str       # Memory type (short_term, long_term, etc.)
+    species: str  # Tag cluster (e.g., "session_checkpoint")
+    genus: str  # Galaxy name
+    family: str  # Theme/dominant tag
+    order: str  # Era (e.g., "aria_era", "v15", "pre_v14")
+    kingdom: str  # Memory type (short_term, long_term, etc.)
     lineage_depth: int  # How many transfers/splits from original
 
     def to_dict(self) -> dict[str, Any]:
@@ -140,6 +140,7 @@ class PhylogeneticTracker:
             return
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             with um.backend.pool.connection() as conn:
                 conn.execute("""
@@ -290,6 +291,7 @@ class PhylogeneticTracker:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
             um = get_unified_memory()
             with um.backend.pool.connection() as conn:
                 conn.execute(
@@ -297,9 +299,17 @@ class PhylogeneticTracker:
                        (id, source_id, source_galaxy, target_id, target_galaxy,
                         edge_type, mechanism, created_at, metadata)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (edge_id, source_id, source_galaxy, target_id, target_galaxy,
-                     edge_type, mechanism, edge.created_at,
-                     _json_dumps(metadata, default=str)),
+                    (
+                        edge_id,
+                        source_id,
+                        source_galaxy,
+                        target_id,
+                        target_galaxy,
+                        edge_type,
+                        mechanism,
+                        edge.created_at,
+                        _json_dumps(metadata, default=str),
+                    ),
                 )
                 conn.commit()
         except (sqlite3.Error, sqlite3.OperationalError) as e:
@@ -332,6 +342,7 @@ class PhylogeneticTracker:
         """Walk upstream to find all ancestor memories."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             ancestors = []
             visited = {memory_id}
@@ -355,14 +366,16 @@ class PhylogeneticTracker:
                             if src not in visited:
                                 visited.add(src)
                                 next_frontier.append(src)
-                                ancestors.append({
-                                    "id": src,
-                                    "galaxy": row["source_galaxy"],
-                                    "edge_type": row["edge_type"],
-                                    "mechanism": row["mechanism"],
-                                    "created_at": row["created_at"],
-                                    "depth": _depth + 1,
-                                })
+                                ancestors.append(
+                                    {
+                                        "id": src,
+                                        "galaxy": row["source_galaxy"],
+                                        "edge_type": row["edge_type"],
+                                        "mechanism": row["mechanism"],
+                                        "created_at": row["created_at"],
+                                        "depth": _depth + 1,
+                                    }
+                                )
                 frontier = next_frontier
             return ancestors
         except Exception as e:
@@ -373,6 +386,7 @@ class PhylogeneticTracker:
         """Walk downstream to find all descendant memories."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             descendants = []
             visited = {memory_id}
@@ -396,14 +410,16 @@ class PhylogeneticTracker:
                             if tgt not in visited:
                                 visited.add(tgt)
                                 next_frontier.append(tgt)
-                                descendants.append({
-                                    "id": tgt,
-                                    "galaxy": row["target_galaxy"],
-                                    "edge_type": row["edge_type"],
-                                    "mechanism": row["mechanism"],
-                                    "created_at": row["created_at"],
-                                    "depth": _depth + 1,
-                                })
+                                descendants.append(
+                                    {
+                                        "id": tgt,
+                                        "galaxy": row["target_galaxy"],
+                                        "edge_type": row["edge_type"],
+                                        "mechanism": row["mechanism"],
+                                        "created_at": row["created_at"],
+                                        "depth": _depth + 1,
+                                    }
+                                )
                 frontier = next_frontier
             return descendants
         except Exception as e:
@@ -412,7 +428,9 @@ class PhylogeneticTracker:
 
     # ── Taxonomic classification ─────────────────────────────────────
 
-    def classify_memory(self, memory_id: str, galaxy_name: str = "default") -> TaxonomicRank:
+    def classify_memory(
+        self, memory_id: str, galaxy_name: str = "default"
+    ) -> TaxonomicRank:
         """Assign a taxonomic classification to a memory.
 
         Species:  Tag cluster (sorted top-3 tags joined by '_')
@@ -423,10 +441,13 @@ class PhylogeneticTracker:
         """
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             mem = um.backend.recall(memory_id)
             if not mem:
-                return TaxonomicRank("unknown", galaxy_name, "unknown", "unknown", "unknown", 0)
+                return TaxonomicRank(
+                    "unknown", galaxy_name, "unknown", "unknown", "unknown", 0
+                )
 
             tags = sorted(mem.tags)[:3] if mem.tags else ["untagged"]
             species = "_".join(tags)
@@ -455,12 +476,16 @@ class PhylogeneticTracker:
                 genus=galaxy_name,
                 family=family,
                 order=order,
-                kingdom=str(mem.memory_type.value) if hasattr(mem.memory_type, "value") else str(mem.memory_type),
+                kingdom=str(mem.memory_type.value)
+                if hasattr(mem.memory_type, "value")
+                else str(mem.memory_type),
                 lineage_depth=depth,
             )
         except Exception as e:
             logger.debug("Classify memory: %s", e, exc_info=True)
-            return TaxonomicRank("unknown", galaxy_name, "unknown", "unknown", "unknown", 0)
+            return TaxonomicRank(
+                "unknown", galaxy_name, "unknown", "unknown", "unknown", 0
+            )
 
     # ── Statistics ───────────────────────────────────────────────────
 
@@ -469,6 +494,7 @@ class PhylogeneticTracker:
         self._ensure_table()
         try:
             from whitemagic.core.memory.unified import get_unified_memory
+
             um = get_unified_memory()
             with um.backend.pool.connection() as conn:
                 total = conn.execute("SELECT COUNT(*) FROM lineage_edges").fetchone()[0]

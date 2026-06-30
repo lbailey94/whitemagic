@@ -21,6 +21,7 @@ class DGAHistory:
     timestamp: float
     version: str
 
+
 class DGAEngine:
     """Digital Genetic Ancestry (DGA) Engine.
     Calculates 512-bit vectors representing an agent's 'System DNA'.
@@ -79,7 +80,9 @@ class DGAEngine:
         try:
             # Look for Gana files/registry
             ganas_dir = self.workspace_root / "whitemagic" / "core" / "ganas"
-            ganas = [f.stem for f in ganas_dir.glob("*.py") if not f.name.startswith("__")]
+            ganas = [
+                f.stem for f in ganas_dir.glob("*.py") if not f.name.startswith("__")
+            ]
             return {
                 "ganas_count": len(ganas),
                 "ganas_list": sorted(ganas),
@@ -92,7 +95,7 @@ class DGAEngine:
     def _capture_phenotype(self) -> dict[str, Any]:
         """Aggregate runtime-level features."""
         return {
-            "uptime": 0, # Should integrate with heartbeat
+            "uptime": 0,  # Should integrate with heartbeat
             "resonance_profile": "StandardV5",
         }
 
@@ -100,9 +103,11 @@ class DGAEngine:
         """Gather pseudo-random system markers."""
         try:
             import os
+
             return str(os.getloadavg()) + str(os.cpu_count())
         except (ImportError, ModuleNotFoundError):
             return "static_entropy"
+
 
 def get_dga_engine() -> DGAEngine:
     """
@@ -112,6 +117,7 @@ def get_dga_engine() -> DGAEngine:
         DGAEngine
     """
     return DGAEngine()
+
 
 if __name__ == "__main__":
     engine = get_dga_engine()

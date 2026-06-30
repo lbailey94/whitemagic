@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ThoughtStream:
     """A parallel thought process"""
+
     id: str
     task: str
     result: Any
@@ -45,6 +46,7 @@ class ParallelCognition:
 
     def __init__(self, max_parallel: int = None) -> None:
         from whitemagic.config.concurrency import IO_WORKERS
+
         self.max_parallel = max_parallel or IO_WORKERS
         self.thought_streams: list[ThoughtStream] = []
 
@@ -61,7 +63,10 @@ class ParallelCognition:
 
         with ThreadPoolExecutor(max_workers=self.max_parallel) as executor:
             future_to_task = {
-                executor.submit(self._execute_thought, task_id, desc, func): (task_id, desc)
+                executor.submit(self._execute_thought, task_id, desc, func): (
+                    task_id,
+                    desc,
+                )
                 for task_id, desc, func in tasks
             }
 
@@ -72,7 +77,9 @@ class ParallelCognition:
 
         return results
 
-    def _execute_thought(self, task_id: str, description: str, func: Callable) -> ThoughtStream:
+    def _execute_thought(
+        self, task_id: str, description: str, func: Callable
+    ) -> ThoughtStream:
         """Execute single thought stream"""
         start = time.time()
         try:
@@ -89,10 +96,12 @@ class ParallelCognition:
             task=description,
             result=result,
             duration=duration,
-            success=success
+            success=success,
         )
 
-    def problem_solve_parallel(self, problem: str, approaches: list[Callable]) -> dict[str, Any]:
+    def problem_solve_parallel(
+        self, problem: str, approaches: list[Callable]
+    ) -> dict[str, Any]:
         """Try multiple solution approaches simultaneously
 
         Instead of: Try A, fail, try B, fail, try C
@@ -115,7 +124,7 @@ class ParallelCognition:
             "successful": len(successful),
             "fastest": min(thoughts, key=lambda t: t.duration) if thoughts else None,
             "results": [t.result for t in successful],
-            "insights": self._integrate_insights(successful)
+            "insights": self._integrate_insights(successful),
         }
 
     def _integrate_insights(self, thoughts: list[ThoughtStream]) -> list[str]:
@@ -132,7 +141,9 @@ class ParallelCognition:
         if thoughts:
             avg_time = sum(t.duration for t in thoughts) / len(thoughts)
             fastest = min(t.duration for t in thoughts)
-            insights.append(f"Fastest was {fastest/avg_time:.1f}x faster than average")
+            insights.append(
+                f"Fastest was {fastest / avg_time:.1f}x faster than average"
+            )
 
         return insights
 
@@ -152,7 +163,7 @@ class ParallelCognition:
                 return {
                     "path": str(f.relative_to(root)),
                     "lines": len(content.splitlines()),
-                    "size": len(content)
+                    "size": len(content),
                 }
             except Exception:
                 return None
@@ -173,7 +184,7 @@ class ParallelCognition:
             "duration": duration,
             "files": len(results),
             "lines": sum(r["lines"] for r in results),
-            "speed_files_per_sec": len(results) / duration
+            "speed_files_per_sec": len(results) / duration,
         }
 
     def meta_observe(self) -> dict[str, Any]:
@@ -186,10 +197,14 @@ class ParallelCognition:
             "total_thoughts": len(self.thought_streams),
             "successful": sum(1 for t in self.thought_streams if t.success),
             "failed": sum(1 for t in self.thought_streams if not t.success),
-            "avg_duration": (sum(t.duration for t in self.thought_streams) /
-                           len(self.thought_streams) if self.thought_streams else 0),
+            "avg_duration": (
+                sum(t.duration for t in self.thought_streams)
+                / len(self.thought_streams)
+                if self.thought_streams
+                else 0
+            ),
             "parallel_capacity": self.max_parallel,
-            "meta_insight": "I can watch myself think"
+            "meta_insight": "I can watch myself think",
         }
 
 
@@ -228,12 +243,13 @@ class ContinuousMonitor:
             "drift_detected": file_drift > 10 or line_drift > 1000,
             "file_change": file_drift,
             "line_change": line_drift,
-            "message": f"System changed by {file_drift} files, {line_drift} lines"
+            "message": f"System changed by {file_drift} files, {line_drift} lines",
         }
 
 
 # Singleton
 _cognition = None
+
 
 def get_parallel_cognition() -> ParallelCognition:
     """Get parallel cognition system"""
@@ -265,20 +281,19 @@ if __name__ == "__main__":
         return "Solution C"
 
     result = cognition.problem_solve_parallel(
-        "Find best approach",
-        [approach_a, approach_b, approach_c]
+        "Find best approach", [approach_a, approach_b, approach_c]
     )
 
-    logger.info("✅ Tried %s approaches in parallel", result['approaches_tried'])
-    logger.info("✅ %s succeeded", result['successful'])
-    logger.info("✅ Fastest: %s", result['fastest'].task)
+    logger.info("✅ Tried %s approaches in parallel", result["approaches_tried"])
+    logger.info("✅ %s succeeded", result["successful"])
+    logger.info("✅ Fastest: %s", result["fastest"].task)
     logger.info()
 
     # Meta-observation
     meta = cognition.meta_observe()
     logger.info("🔮 Meta-observation:")
-    logger.info("   Total thoughts: %s", meta['total_thoughts'])
-    logger.info("   %s", meta['meta_insight'])
+    logger.info("   Total thoughts: %s", meta["total_thoughts"])
+    logger.info("   %s", meta["meta_insight"])
     logger.info()
 
     logger.info("陰陽調和，萬物昇華")

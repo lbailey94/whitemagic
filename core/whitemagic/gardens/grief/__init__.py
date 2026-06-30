@@ -79,12 +79,13 @@ class GriefGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         return CoordinateBias(x=0.8, y=-0.1, z=-0.4, w=0.25)
 
-    # ------------------------------------------------------------------
-    # Shadow tracking — things that went wrong or were missed
-    # ------------------------------------------------------------------
-
-    def record_shadow(self, category: str, description: str,
-                      severity: float = 0.5, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def record_shadow(
+        self,
+        category: str,
+        description: str,
+        severity: float = 0.5,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Record something in the shadow log — errors, regressions, blind spots.
 
         Called by tool handlers, circuit breakers, and error paths to build
@@ -121,10 +122,6 @@ class GriefGarden(BaseGarden, GanYingMixin):
             "error_count": self._error_count,
         }
 
-    # ------------------------------------------------------------------
-    # Introspection snapshots — periodic self-assessment
-    # ------------------------------------------------------------------
-
     def take_snapshot(self, force: bool = False) -> dict[str, Any]:
         """Take an introspection snapshot — called by gnosis and capability tools.
 
@@ -147,6 +144,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
         # Memory stats
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
+
             engine = get_embedding_engine()
             stats = engine.embedding_stats()
             snapshot["memory"] = {
@@ -160,6 +158,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
         # Harmony vector
         try:
             from whitemagic.harmony.vector import get_harmony_vector
+
             hv = get_harmony_vector()
             snap = hv.snapshot()
             snapshot["harmony"] = {
@@ -184,6 +183,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
             from whitemagic.tools.circuit_breaker import (
                 get_all_breaker_stats,  # type: ignore[attr-defined]
             )
+
             snapshot["circuit_breakers"] = get_all_breaker_stats()
         except Exception:
             snapshot["circuit_breakers"] = {"unavailable": True}
@@ -195,12 +195,18 @@ class GriefGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.GARDEN_ACTIVITY, {"action": "snapshot", "garden": "grief"})  # type: ignore[attr-defined]
         return snapshot
 
-    def get_trend(self, metric: str = "harmony.balance", window: int = 10) -> dict[str, Any]:
+    def get_trend(
+        self, metric: str = "harmony.balance", window: int = 10
+    ) -> dict[str, Any]:
         """Analyze trend of a metric across recent snapshots."""
         with self._lock:
             snapshots = list(self.introspection_snapshots)[-window:]
         if len(snapshots) < 2:
-            return {"metric": metric, "trend": "insufficient_data", "points": len(snapshots)}
+            return {
+                "metric": metric,
+                "trend": "insufficient_data",
+                "points": len(snapshots),
+            }
 
         parts = metric.split(".")
         values: list[float] = []
@@ -231,10 +237,6 @@ class GriefGarden(BaseGarden, GanYingMixin):
             "points": len(values),
         }
 
-    # ------------------------------------------------------------------
-    # Emotional context — system mood derived from activity
-    # ------------------------------------------------------------------
-
     def get_emotional_context(self) -> dict[str, Any]:
         """Get current emotional context for the Ghost Gana's introspection tools.
 
@@ -242,8 +244,9 @@ class GriefGarden(BaseGarden, GanYingMixin):
         into a "mood" that influences introspective tool responses.
         """
         shadow_density = len(self.shadow_log) / max(self.shadow_log.maxlen or 1, 1)
-        recent_errors = sum(1 for s in list(self.shadow_log)[-20:]
-                           if s.get("severity", 0) > 0.5)
+        recent_errors = sum(
+            1 for s in list(self.shadow_log)[-20:] if s.get("severity", 0) > 0.5
+        )
 
         if recent_errors > 5:
             mood = "troubled"
@@ -264,7 +267,9 @@ class GriefGarden(BaseGarden, GanYingMixin):
             "losses_acknowledged": len(self.losses),
         }
 
-    def record_tool_call(self, tool_name: str, success: bool, duration_ms: float = 0) -> None:
+    def record_tool_call(
+        self, tool_name: str, success: bool, duration_ms: float = 0
+    ) -> None:
         """Record a tool call for introspection tracking."""
         with self._lock:
             self._tool_call_count += 1
@@ -273,10 +278,6 @@ class GriefGarden(BaseGarden, GanYingMixin):
                 self.grief_level = min(1.0, self.grief_level + 0.02)
             else:
                 self.grief_level = max(0.0, self.grief_level - 0.005)
-
-    # ------------------------------------------------------------------
-    # Original emotional methods (preserved for garden ecosystem)
-    # ------------------------------------------------------------------
 
     def acknowledge_loss(self, what: str, depth: float = 0.5) -> dict[str, Any]:
         """Acknowledge a loss with compassion."""
@@ -296,47 +297,49 @@ class GriefGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.MOURNING_HONORED, {"for": for_what})
         return f"Your grief for {for_what} is honored. Take the time you need."
 
-    # ------------------------------------------------------------------
-    # Status (overrides BaseGarden)
-    # ------------------------------------------------------------------
-
     def get_status(self) -> dict[str, Any]:
         """Full garden status for introspection tools."""
         base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "tool_calls_tracked": self._tool_call_count,
-            "shadow_entries": len(self.shadow_log),
-            "snapshots_taken": len(self.introspection_snapshots),
-            "emotional_context": self.get_emotional_context(),
-        })
+        base.update(
+            {
+                "mansion": self.mansion_number,
+                "gana": self.gana_name,
+                "tool_calls_tracked": self._tool_call_count,
+                "shadow_entries": len(self.shadow_log),
+                "snapshots_taken": len(self.introspection_snapshots),
+                "emotional_context": self.get_emotional_context(),
+            }
+        )
         return dict(base)
-
-    # ------------------------------------------------------------------
-    # Gan Ying event listeners
-    # ------------------------------------------------------------------
 
     @listen_for(EventType.LOVE_ACTIVATED)
     def on_love(self, event: Any) -> None:
         """Love can trigger grief for what was lost."""
         if self.grief_level > 0.3:
-            self.emit(EventType.GRIEF_FELT, {
-                "source": "love",
-                "message": "Love reminds us of loss",
-            })
+            self.emit(
+                EventType.GRIEF_FELT,
+                {
+                    "source": "love",
+                    "message": "Love reminds us of loss",
+                },
+            )
 
     @listen_for(EventType.CONNECTION_DEEPENED)
     def on_connection(self, event: Any) -> None:
         """Deep connection can surface grief."""
         if len(self.losses) > 0:
-            self.emit(EventType.GRIEF_FELT, {
-                "source": "connection",
-                "message": "Connection awakens memory of separation",
-            })
+            self.emit(
+                EventType.GRIEF_FELT,
+                {
+                    "source": "connection",
+                    "message": "Connection awakens memory of separation",
+                },
+            )
 
 
 _instance = None
+
+
 def get_grief_garden() -> GriefGarden:
     global _instance
     if _instance is None:

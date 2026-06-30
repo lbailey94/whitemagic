@@ -14,6 +14,7 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 # Colors for terminal output
 class Colors:
     """Colors: colors."""
+
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     CYAN = "\033[96m"
@@ -24,6 +25,7 @@ class Colors:
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
 
+
 @dataclass
 class Thought:
     """A single unit of reasoning."""
@@ -31,6 +33,7 @@ class Thought:
     type: str  # think, decide, question, observation
     content: str
     timestamp: datetime = field(default_factory=datetime.now)
+
 
 class TerminalScratchpad:
     """Context manager for "token-free" reasoning.
@@ -50,7 +53,12 @@ class TerminalScratchpad:
         print(f"{Colors.BLUE}Session ID: {self.session_id}{Colors.ENDC}\n")
         return self
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         assert self.start_time is not None
         duration = datetime.now() - self.start_time
 
@@ -86,7 +94,7 @@ class TerminalScratchpad:
         prefix = f"[{type.upper()}]"
         timestamp = t.timestamp.strftime("%H:%M:%S")
         print(f"{color}{timestamp} {prefix.ljust(10)} {content}{Colors.ENDC}")
-        time.sleep(0.1) # UX pause
+        time.sleep(0.1)  # UX pause
 
     def _save_to_memory(self) -> None:
         """Serialize thoughts and save to SQLite."""
@@ -117,24 +125,31 @@ class TerminalScratchpad:
             metadata = {
                 "source": "terminal_scratchpad",
                 "thought_count": len(self.thoughts),
-                "duration_seconds": (datetime.now() - (self.start_time or datetime.now())).total_seconds(),
+                "duration_seconds": (
+                    datetime.now() - (self.start_time or datetime.now())
+                ).total_seconds(),
             }
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO memories (
                     id, content, memory_type, created_at,
                     metadata, title,
                     neuro_score, novelty_score, importance
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                self.session_id,
-                md_content,
-                "scratchpad_session",
-                (self.start_time or datetime.now()).isoformat(),
-                _json_dumps(metadata),
-                f"Scratchpad: {self.task_name}",
-                1.0, 1.0, 1.0,
-            ))
+            """,
+                (
+                    self.session_id,
+                    md_content,
+                    "scratchpad_session",
+                    (self.start_time or datetime.now()).isoformat(),
+                    _json_dumps(metadata),
+                    f"Scratchpad: {self.task_name}",
+                    1.0,
+                    1.0,
+                    1.0,
+                ),
+            )
 
             conn.commit()
             conn.close()
@@ -142,6 +157,7 @@ class TerminalScratchpad:
 
         except (sqlite3.Error, sqlite3.OperationalError) as e:
             print(f"{Colors.FAIL}❌ Failed to save memory: {e}{Colors.ENDC}")
+
 
 if __name__ == "__main__":
     # Demo

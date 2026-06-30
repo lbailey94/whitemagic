@@ -1,14 +1,13 @@
 # ruff: noqa: BLE001
 """CyberBrain module handlers — salience, bicameral reasoning, retention, drives, self-model, worker."""
+
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Salience Arbiter
-# ---------------------------------------------------------------------------
 
 def handle_salience_spotlight(**kwargs: Any) -> dict[str, Any]:
     """Return the current attention spotlight — top-N most salient events."""
     from whitemagic.core.resonance.salience_arbiter import get_salience_arbiter
+
     arbiter = get_salience_arbiter()
     n = kwargs.get("limit", 5)
     entries = arbiter.get_spotlight(n=n)
@@ -25,17 +24,15 @@ def handle_salience_spotlight(**kwargs: Any) -> dict[str, Any]:
                     "confidence": e.salience.confidence,
                     "composite": e.salience.composite,
                 },
-                "data_keys": list(e.event.data.keys()) if isinstance(e.event.data, dict) else [],
+                "data_keys": list(e.event.data.keys())
+                if isinstance(e.event.data, dict)
+                else [],
             }
             for e in entries
         ],
         "stats": stats,
     }
 
-
-# ---------------------------------------------------------------------------
-# Bicameral Reasoner
-# ---------------------------------------------------------------------------
 
 def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
     """Run dual-hemisphere reasoning (left=precise, right=creative) on a query.
@@ -51,10 +48,10 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
             "reasoning": {
                 "left_hemisphere": "Analytical reasoning module ready",
                 "right_hemisphere": "Creative reasoning module ready",
-                "synthesis": "Provide a query to activate bicameral reasoning"
+                "synthesis": "Provide a query to activate bicameral reasoning",
             },
             "note": "Bicameral reasoner ready - provide 'query' parameter to reason",
-            "example": {"query": "Analyze the tradeoffs of approach A vs approach B"}
+            "example": {"query": "Analyze the tradeoffs of approach A vs approach B"},
         }
 
     context = kwargs.get("context", {})
@@ -63,6 +60,7 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
     rust_facts = []
     try:
         import whitemagic_rs
+
         engine = whitemagic_rs.PyReasoningEngine()
         # Query Rust reasoning engine for facts related to the query
         related = engine.query(query)
@@ -76,6 +74,7 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
         import asyncio
 
         from whitemagic.core.intelligence.bicameral import get_bicameral_reasoner
+
         reasoner = get_bicameral_reasoner()
 
         try:
@@ -85,8 +84,11 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
 
         if loop and loop.is_running():
             from concurrent.futures import ThreadPoolExecutor
+
             with ThreadPoolExecutor(max_workers=1) as pool:
-                result = pool.submit(asyncio.run, reasoner.reason(query, context=context)).result()
+                result = pool.submit(
+                    asyncio.run, reasoner.reason(query, context=context)
+                ).result()
         else:
             result = asyncio.run(reasoner.reason(query, context=context))
 
@@ -104,21 +106,18 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
             "reasoning": {
                 "left_hemisphere": f"Analytical view: {query}",
                 "right_hemisphere": f"Creative view: {query}",
-                "synthesis": "Bicameral module archived - using fallback"
+                "synthesis": "Bicameral module archived - using fallback",
             },
-            "note": "Bicameral reasoner archived - using simple fallback"
+            "note": "Bicameral reasoner archived - using simple fallback",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
 
-# ---------------------------------------------------------------------------
-# Mindful Forgetting / Retention Sweep
-# ---------------------------------------------------------------------------
-
 def handle_retention_sweep(**kwargs: Any) -> dict[str, Any]:
     """Run a mindful forgetting retention sweep — evaluate what to keep/forget."""
     import whitemagic.core.memory.mindful_forgetting as mindful_forgetting
+
     engine_factory = getattr(mindful_forgetting, "get_forgetting_engine", None)
     if engine_factory is None:
         engine_factory = getattr(mindful_forgetting, "get_retention_engine")
@@ -138,13 +137,10 @@ def handle_retention_sweep(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Emotion & Drive Core
-# ---------------------------------------------------------------------------
-
 def handle_drive_snapshot(**kwargs: Any) -> dict[str, Any]:
     """Get current drive state — curiosity, satisfaction, caution, energy, social."""
     from whitemagic.core.intelligence.emotion_drive import get_drive_core
+
     core = get_drive_core()
     include_bias = kwargs.get("include_bias", False)
     snap = core.snapshot()
@@ -157,6 +153,7 @@ def handle_drive_snapshot(**kwargs: Any) -> dict[str, Any]:
 def handle_drive_event(**kwargs: Any) -> dict[str, Any]:
     """Feed an event into the Emotion & Drive Core to update drive levels."""
     from whitemagic.core.intelligence.emotion_drive import get_drive_core
+
     event_type = kwargs.get("event_type")
     if not event_type:
         return {"status": "error", "error": "event_type is required"}
@@ -166,13 +163,10 @@ def handle_drive_event(**kwargs: Any) -> dict[str, Any]:
     return {"status": "success", "drives": snap.to_dict()}
 
 
-# ---------------------------------------------------------------------------
-# Self-Model / Predictive Introspection
-# ---------------------------------------------------------------------------
-
 def handle_selfmodel_forecast(**kwargs: Any) -> dict[str, Any]:
     """Forecast system metric trends and predict threshold crossings."""
     from whitemagic.core.intelligence.self_model import get_self_model
+
     model = get_self_model()
     metric = kwargs.get("metric")
     steps = kwargs.get("steps_ahead")
@@ -194,6 +188,7 @@ def handle_selfmodel_forecast(**kwargs: Any) -> dict[str, Any]:
 def handle_selfmodel_alerts(**kwargs: Any) -> dict[str, Any]:
     """Get only forecasts that have active threshold alerts."""
     from whitemagic.core.intelligence.self_model import get_self_model
+
     model = get_self_model()
     alerts = model.get_alerts()
     return {
@@ -203,14 +198,11 @@ def handle_selfmodel_alerts(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Worker Daemon Status
-# ---------------------------------------------------------------------------
-
 def handle_worker_status(**kwargs: Any) -> dict[str, Any]:
     """Check if a worker daemon is running and get its stats."""
     from whitemagic.config.paths import WM_ROOT
     from whitemagic.utils.fast_json import loads as _json_loads
+
     agents_dir = WM_ROOT / "agents"
 
     workers = []
@@ -219,14 +211,16 @@ def handle_worker_status(**kwargs: Any) -> dict[str, Any]:
             try:
                 agent = _json_loads(f.read_text(encoding="utf-8"))
                 if agent.get("metadata", {}).get("type") == "worker_daemon":
-                    workers.append({
-                        "id": agent.get("id"),
-                        "name": agent.get("name"),
-                        "host": agent.get("host"),
-                        "last_heartbeat": agent.get("last_heartbeat"),
-                        "heartbeat_count": agent.get("heartbeat_count", 0),
-                        "status": agent.get("status"),
-                    })
+                    workers.append(
+                        {
+                            "id": agent.get("id"),
+                            "name": agent.get("name"),
+                            "host": agent.get("host"),
+                            "last_heartbeat": agent.get("last_heartbeat"),
+                            "heartbeat_count": agent.get("heartbeat_count", 0),
+                            "status": agent.get("status"),
+                        }
+                    )
             except (ValueError, OSError):
                 continue
 

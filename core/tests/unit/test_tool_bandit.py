@@ -1,4 +1,5 @@
 """Tests for Thompson sampling tool bandit."""
+
 from whitemagic.tools.handlers.tool_bandit import (
     ToolBandit,
     ToolStats,
@@ -112,10 +113,14 @@ class TestToolBandit:
         self.bandit.register_tools(["memory.search", "graph.query"])
         # Make memory.search good for memory_search tasks
         for _ in range(10):
-            self.bandit.record_outcome("memory.search", success=True, task_type="memory_search")
+            self.bandit.record_outcome(
+                "memory.search", success=True, task_type="memory_search"
+            )
         # Make graph.query bad for memory_search tasks
         for _ in range(10):
-            self.bandit.record_outcome("graph.query", success=False, task_type="memory_search")
+            self.bandit.record_outcome(
+                "graph.query", success=False, task_type="memory_search"
+            )
         recs = self.bandit.recommend_tools(k=2, task_type="memory_search")
         assert recs[0]["tool"] == "memory.search"
 
@@ -125,7 +130,10 @@ class TestToolBandit:
         assert self.bandit.classify_task_type("write a poem") == "creation"
         assert self.bandit.classify_task_type("check dharma compliance") == "governance"
         assert self.bandit.classify_task_type("run dream cycle") == "dreaming"
-        assert self.bandit.classify_task_type("find associations in graph") == "knowledge_graph"
+        assert (
+            self.bandit.classify_task_type("find associations in graph")
+            == "knowledge_graph"
+        )
         assert self.bandit.classify_task_type("create a plan") == "planning"
         assert self.bandit.classify_task_type("hello world") == "general"
 

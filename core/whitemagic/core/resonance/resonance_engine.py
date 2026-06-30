@@ -105,7 +105,9 @@ class ResonanceEngine:
                     frequency=freq,
                     sources=content_sources[content],
                     resonance_score=resonance_score,
-                    amplification_factor=min(resonance_score * 2, self.max_amplification),
+                    amplification_factor=min(
+                        resonance_score * 2, self.max_amplification
+                    ),
                 )
 
                 # Store and emit
@@ -123,7 +125,9 @@ class ResonanceEngine:
 
                 resonant.append(pattern)
 
-        logger.info("Detected %s resonant patterns from %s inputs", len(resonant), len(patterns))
+        logger.info(
+            "Detected %s resonant patterns from %s inputs", len(resonant), len(patterns)
+        )
         return resonant
 
     def amplify_signal(
@@ -146,7 +150,9 @@ class ResonanceEngine:
         else:
             # Use average amplification across all patterns
             if self.patterns:
-                factor = sum(p.amplification_factor for p in self.patterns.values()) / len(self.patterns)
+                factor = sum(
+                    p.amplification_factor for p in self.patterns.values()
+                ) / len(self.patterns)
             else:
                 factor = 1.0
 
@@ -169,11 +175,13 @@ class ResonanceEngine:
             },
         )
 
-        self.history.append({
-            "event": "gratitude",
-            "pattern_id": pattern.pattern_id,
-            "resonance_score": pattern.resonance_score,
-        })
+        self.history.append(
+            {
+                "event": "gratitude",
+                "pattern_id": pattern.pattern_id,
+                "resonance_score": pattern.resonance_score,
+            }
+        )
 
     def decay_patterns(self) -> int:
         """Apply temporal decay to all patterns.
@@ -203,10 +211,6 @@ class ResonanceEngine:
             reverse=True,
         )[:n]
 
-    # ------------------------------------------------------------------
-    # Julia Resonance facade (fused from JuliaResonanceEngine)
-    # ------------------------------------------------------------------
-
     _julia_engine_instance: Any = None
     _transfer_engine_instance: Any = None
 
@@ -216,6 +220,7 @@ class ResonanceEngine:
             from whitemagic.core.resonance.julia_resonance import (
                 ResonanceEngine as JuliaRE,
             )
+
             self._julia_engine_instance = JuliaRE()
         return self._julia_engine_instance
 
@@ -227,7 +232,9 @@ class ResonanceEngine:
         """Calculate resonance for multiple memories in batch."""
         return self._get_julia_engine().calculate_batch_resonance(memory_ids, **kwargs)
 
-    def verify_causal_resonance(self, nodes: list[str], edges: list[tuple[str, str]], **kwargs: Any):
+    def verify_causal_resonance(
+        self, nodes: list[str], edges: list[tuple[str, str]], **kwargs: Any
+    ):
         """Verify causal links via coupled oscillator energy transfer."""
         return self._get_julia_engine().verify_causal_resonance(nodes, edges, **kwargs)
 
@@ -243,16 +250,13 @@ class ResonanceEngine:
         """Get Julia resonance engine statistics."""
         return self._get_julia_engine().get_stats()
 
-    # ------------------------------------------------------------------
-    # Resonance Transfer facade (fused from ResonanceTransferEngine)
-    # ------------------------------------------------------------------
-
     def _get_transfer_engine(self):
         """Lazy accessor for the ResonanceTransferEngine."""
         if self._transfer_engine_instance is None:
             from whitemagic.core.evolution.resonance_transfer import (
                 ResonanceTransferEngine,
             )
+
             self._transfer_engine_instance = ResonanceTransferEngine()
         return self._transfer_engine_instance
 
@@ -270,7 +274,9 @@ class ResonanceEngine:
 
     def propose_transfer(self, source_id: str, improvement_id: str, **kwargs: Any):
         """Propose transferring an improvement to resonant subsystems."""
-        return self._get_transfer_engine().propose_transfer(source_id, improvement_id, **kwargs)
+        return self._get_transfer_engine().propose_transfer(
+            source_id, improvement_id, **kwargs
+        )
 
     def get_transfers(self, subsystem_id: str | None = None) -> list:
         """Get transfer proposals, optionally filtered by subsystem."""
@@ -280,8 +286,6 @@ class ResonanceEngine:
         """Get resonance transfer engine statistics."""
         return self._get_transfer_engine().get_stats()
 
-
-# === Convenience Functions ===
 
 def get_resonance_engine() -> ResonanceEngine:
     """Get a ResonanceEngine instance."""

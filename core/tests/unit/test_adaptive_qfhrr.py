@@ -22,9 +22,9 @@ class TestAdaptiveQFHRR(unittest.TestCase):
 
     def test_tier_bits_mapping(self) -> None:
         """Verify tier-to-bits mapping is correct."""
-        self.assertEqual(get_tier_bits(0), 4)   # edge
-        self.assertEqual(get_tier_bits(1), 8)   # local small
-        self.assertEqual(get_tier_bits(2), 8)   # local large
+        self.assertEqual(get_tier_bits(0), 4)  # edge
+        self.assertEqual(get_tier_bits(1), 8)  # local small
+        self.assertEqual(get_tier_bits(2), 8)  # local large
         self.assertEqual(get_tier_bits(3), 16)  # cloud
         self.assertEqual(get_tier_bits(99), 4)  # unknown → default 4-bit
 
@@ -89,7 +89,11 @@ class TestAdaptiveQFHRR(unittest.TestCase):
             n = np.linalg.norm(vec)
             return vec / n if n > 0 else vec
 
-        related_texts = ["race condition bug", "threading deadlock", "concurrent access issue"]
+        related_texts = [
+            "race condition bug",
+            "threading deadlock",
+            "concurrent access issue",
+        ]
         unrelated_texts = ["weather forecast", "cookie recipe"]
         related_embs = [synth_emb(t) for t in related_texts]
         unrelated_embs = [synth_emb(t) for t in unrelated_texts]
@@ -114,18 +118,26 @@ class TestAdaptiveQFHRR(unittest.TestCase):
 
         print(f"\n  Discrimination by bit-width:")
         for label, (rel, unrel, gap) in results.items():
-            print(f"    {label:8s}: related={rel:.3f}, unrelated={unrel:.3f}, gap={gap:.3f}")
+            print(
+                f"    {label:8s}: related={rel:.3f}, unrelated={unrel:.3f}, gap={gap:.3f}"
+            )
 
         # All bit-widths should show positive discrimination (related > unrelated)
         for label, (rel, unrel, gap) in results.items():
-            self.assertGreater(gap, 0.0,
-                               f"{label} should discriminate related from unrelated (gap={gap:.3f})")
+            self.assertGreater(
+                gap,
+                0.0,
+                f"{label} should discriminate related from unrelated (gap={gap:.3f})",
+            )
 
         # Variance-weighted scaling should produce meaningful discrimination
         # (gap > 0.05 for all bit-widths — previously was ~0.02 with fixed scaling)
         for label, (rel, unrel, gap) in results.items():
-            self.assertGreater(gap, 0.05,
-                               f"{label} should have meaningful discrimination gap (gap={gap:.3f})")
+            self.assertGreater(
+                gap,
+                0.05,
+                f"{label} should have meaningful discrimination gap (gap={gap:.3f})",
+            )
 
 
 class TestGalacticZoneQuantization(unittest.TestCase):

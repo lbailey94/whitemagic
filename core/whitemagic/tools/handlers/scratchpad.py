@@ -1,4 +1,5 @@
 """Scratchpad tool handlers."""
+
 # ruff: noqa: BLE001
 import logging
 from collections import defaultdict
@@ -14,11 +15,13 @@ ScratchpadHandler = Callable[..., dict[str, Any]]
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
     from whitemagic.tools.unified_api import _emit_gan_ying
+
     _emit_gan_ying(event_type, data)
 
 
 def _resolve_base_path(kwargs: dict[str, Any]) -> Path:
     from whitemagic.tools.unified_api import _resolve_base_path as _rbp
+
     return cast("Path", _rbp(kwargs))
 
 
@@ -32,7 +35,10 @@ def handle_scratchpad(**kwargs: Any) -> dict[str, Any]:
     }
     handler = dispatch.get(action)
     if not handler:
-        return {"status": "error", "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}"}
+        return {
+            "status": "error",
+            "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
+        }
     return handler(**kwargs)
 
 
@@ -47,16 +53,25 @@ def handle_scratchpad_create(**kwargs: Any) -> dict[str, Any]:
 
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
     from whitemagic.utils import slugify
+
     base_path = _resolve_base_path(kwargs)
     name = kwargs.get("name", "scratchpad")
     scratchpad_id = slugify(name) or f"scratch-{uuid4().hex[:6]}"
     focus = kwargs.get("session_id")
     manager = ScratchpadManager(scratch_dir=base_path / "scratchpads")
     pad = manager.create(scratchpad_id, focus=focus)
-    _emit("WORKING_MEMORY_UPDATED", {"action": "create", "scratchpad_id": scratchpad_id, "focus": focus})
+    _emit(
+        "WORKING_MEMORY_UPDATED",
+        {"action": "create", "scratchpad_id": scratchpad_id, "focus": focus},
+    )
     return {
         "status": "success",
-        "scratchpad": {"id": scratchpad_id, "name": pad.name, "focus": pad.focus, "created": pad.created.isoformat()},
+        "scratchpad": {
+            "id": scratchpad_id,
+            "name": pad.name,
+            "focus": pad.focus,
+            "created": pad.created.isoformat(),
+        },
     }
 
 
@@ -68,6 +83,7 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
+
     base_path = _resolve_base_path(kwargs)
     manager = ScratchpadManager(scratch_dir=base_path / "scratchpads")
 
@@ -77,9 +93,7 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
         if manager.scratchpads:
             # Get the most recently modified one
             sorted_pads = sorted(
-                manager.scratchpads.values(),
-                key=lambda p: p.created,
-                reverse=True
+                manager.scratchpads.values(), key=lambda p: p.created, reverse=True
             )
             scratchpad_id = sorted_pads[0].name
         else:
@@ -101,7 +115,9 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
     revises_entry = kwargs.get("revises_entry")
 
     entry = manager.write_to(
-        scratchpad_id, content, tag=section,
+        scratchpad_id,
+        content,
+        tag=section,
         thought_number=thought_number,
         total_thoughts=total_thoughts,
         branch_id=branch_id,
@@ -113,6 +129,7 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
     # v23.1: Bridge scratchpad writes into WorkingMemory
     try:
         from whitemagic.core.intelligence.working_memory import get_working_memory
+
         wm = get_working_memory()
         wm.attend(
             memory_id=f"scratchpad:{scratchpad_id}:{section}",
@@ -125,7 +142,10 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
         pass
 
     chain_status = manager.get_chain_status(scratchpad_id)
-    _emit("WORKING_MEMORY_UPDATED", {"action": "update", "scratchpad_id": scratchpad_id, "section": section})
+    _emit(
+        "WORKING_MEMORY_UPDATED",
+        {"action": "update", "scratchpad_id": scratchpad_id, "section": section},
+    )
     return {
         "status": "success",
         "scratchpad_id": scratchpad_id,
@@ -150,6 +170,7 @@ def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:
         analyze_scratchpad,
     )
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
+
     base_path = _resolve_base_path(kwargs)
     scratchpad_id = kwargs.get("scratchpad_id")
     if not scratchpad_id:
@@ -186,6 +207,7 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     """
     from whitemagic.core.memory.manager import MemoryManager
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
+
     base_path = _resolve_base_path(kwargs)
     manager = ScratchpadManager(scratch_dir=base_path / "scratchpads")
 
@@ -193,9 +215,7 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     if not scratchpad_id:
         if manager.scratchpads:
             sorted_pads = sorted(
-                manager.scratchpads.values(),
-                key=lambda p: p.created,
-                reverse=True
+                manager.scratchpads.values(), key=lambda p: p.created, reverse=True
             )
             scratchpad_id = sorted_pads[0].name
         else:
@@ -217,8 +237,11 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
                 analyze_scratchpad,
                 serialize_scratchpad_with_analysis,
             )
+
             analysis = analyze_scratchpad(content_dict)
-            content = serialize_scratchpad_with_analysis(content_dict, analysis, title=f"Scratchpad: {pad.name}")
+            content = serialize_scratchpad_with_analysis(
+                content_dict, analysis, title=f"Scratchpad: {pad.name}"
+            )
             analysis_result = {
                 "confidence": analysis.confidence,
                 "patterns_matched": analysis.patterns_matched,
@@ -248,23 +271,39 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     if analysis_result:
         tags.append("multi-spectral")
         tags.append(f"confidence-{int(analysis_result['confidence'] * 100)}")
-    memory_path = memory_manager.create_memory(title=f"Scratchpad: {pad.name}", content=content, memory_type=memory_type, tags=tags)
+    memory_path = memory_manager.create_memory(
+        title=f"Scratchpad: {pad.name}",
+        content=content,
+        memory_type=memory_type,
+        tags=tags,
+    )
     scratchpad_file = manager.scratch_dir / f"{pad.name}.json"
     if scratchpad_file.exists():
         scratchpad_file.unlink()
     if pad.name in manager.scratchpads:
         del manager.scratchpads[pad.name]
-    event_data = {"action": "finalize", "scratchpad_id": scratchpad_id, "memory_path": str(memory_path), "analyzed": auto_analyze}
+    event_data = {
+        "action": "finalize",
+        "scratchpad_id": scratchpad_id,
+        "memory_path": str(memory_path),
+        "analyzed": auto_analyze,
+    }
     if analysis_result:
         event_data.update(analysis_result)
     _emit("SCRATCHPAD_FINALIZED", event_data)
-    result = {"status": "success", "scratchpad_id": scratchpad_id, "memory_path": str(memory_path), "analyzed": auto_analyze}
+    result = {
+        "status": "success",
+        "scratchpad_id": scratchpad_id,
+        "memory_path": str(memory_path),
+        "analyzed": auto_analyze,
+    }
     if analysis_result:
         result["analysis"] = analysis_result
 
     # Wire finalized scratchpad insights into working memory (v23.2)
     try:
         from whitemagic.core.intelligence.working_memory import get_working_memory
+
         wm = get_working_memory()
         # Attend to the finalized memory with importance based on analysis confidence
         importance = 0.5
@@ -284,10 +323,16 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     # v23.3: VSA context compression — pack scratchpad entries into HRR vector
     try:
         from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+
         compressor = get_vsa_context_compressor()
         vsa_items = [
-            {"content": e.get("content", ""), "source": "scratchpad", "id": e.get("tag", "")}
-            for e in pad.entries if e.get("content")
+            {
+                "content": e.get("content", ""),
+                "source": "scratchpad",
+                "id": e.get("tag", ""),
+            }
+            for e in pad.entries
+            if e.get("content")
         ]
         if vsa_items:
             vsa_result = compressor.compress(vsa_items, max_text_items=3)

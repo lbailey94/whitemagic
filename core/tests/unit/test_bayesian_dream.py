@@ -1,4 +1,5 @@
 """Tests for Objective J — Dream Cycle as Bayesian Update Pass."""
+
 from __future__ import annotations
 
 from whitemagic.core.evolution.bayesian_dream import (

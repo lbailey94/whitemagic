@@ -3,6 +3,7 @@
 Wraps the gardens.browser package to provide sync MCP tool handlers.
 All async operations use _run_async from web_research handler pattern.
 """
+
 import asyncio
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
@@ -24,7 +25,11 @@ def handle_browser_navigate(**kwargs: Any) -> dict[str, Any]:
     """Navigate browser to a URL."""
     url = kwargs.get("url", "")
     if not url:
-        return {"status": "error", "error_code": "invalid_params", "message": "url is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "url is required",
+        }
 
     from whitemagic.gardens.browser import BrowserSession
 
@@ -45,7 +50,11 @@ def handle_browser_click(**kwargs: Any) -> dict[str, Any]:
     """Click an element by CSS selector."""
     selector = kwargs.get("selector", "")
     if not selector:
-        return {"status": "error", "error_code": "invalid_params", "message": "selector is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "selector is required",
+        }
 
     from whitemagic.gardens.browser import BrowserSession
 
@@ -67,7 +76,11 @@ def handle_browser_type(**kwargs: Any) -> dict[str, Any]:
     selector = kwargs.get("selector", "")
     text = kwargs.get("text", "")
     if not selector:
-        return {"status": "error", "error_code": "invalid_params", "message": "selector is required"}
+        return {
+            "status": "error",
+            "error_code": "invalid_params",
+            "message": "selector is required",
+        }
 
     from whitemagic.gardens.browser import BrowserSession
 
@@ -111,7 +124,11 @@ def handle_browser_extract_dom(**kwargs: Any) -> dict[str, Any]:
 
     result = _run_async(_extract())
     if "error" in result:
-        return {"status": "error", "error_code": "internal_error", "message": result["error"]}
+        return {
+            "status": "error",
+            "error_code": "internal_error",
+            "message": result["error"],
+        }
     return {"status": "success", **result}
 
 
@@ -133,7 +150,11 @@ def handle_browser_screenshot(**kwargs: Any) -> dict[str, Any]:
 
     result = _run_async(_screenshot())
     if "error" in result:
-        return {"status": "error", "error_code": "internal_error", "message": result["error"]}
+        return {
+            "status": "error",
+            "error_code": "internal_error",
+            "message": result["error"],
+        }
     return {"status": "success", **result}
 
 
@@ -162,8 +183,7 @@ def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
                         "selector": e.selector,
                         "type": e.element_type,
                     }
-                    for e in interactables[:
-                        100]
+                    for e in interactables[:100]
                 ],
             }
         finally:
@@ -171,5 +191,9 @@ def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
 
     result = _run_async(_get())
     if "error" in result:
-        return {"status": "error", "error_code": "internal_error", "message": result["error"]}
+        return {
+            "status": "error",
+            "error_code": "internal_error",
+            "message": result["error"],
+        }
     return {"status": "success", **result}

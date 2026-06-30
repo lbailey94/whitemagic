@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # Try to load Rust Sutra Kernel
 try:
     import whitemagic_rust
+
     _sutra_kernel = getattr(whitemagic_rust, "sutra_kernel", None)
     if _sutra_kernel is not None and hasattr(_sutra_kernel, "DharmaEngine"):
         _RustDharmaEngine: Any | None = getattr(_sutra_kernel, "DharmaEngine")

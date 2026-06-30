@@ -13,14 +13,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class CouncilRole(Enum):
     """Roles in the wisdom council."""
 
     PRAGMATIST = "pragmatist"  # Focus on practical outcomes
-    ETHICIST = "ethicist"      # Focus on ethics and values
-    VISIONARY = "visionary"    # Focus on long-term vision
-    SKEPTIC = "skeptic"        # Challenge assumptions
-    ANALYST = "analyst"        # Focus on data and logic
+    ETHICIST = "ethicist"  # Focus on ethics and values
+    VISIONARY = "visionary"  # Focus on long-term vision
+    SKEPTIC = "skeptic"  # Challenge assumptions
+    ANALYST = "analyst"  # Focus on data and logic
+
 
 @dataclass
 class CouncilPerspective:
@@ -30,6 +32,7 @@ class CouncilPerspective:
     opinion: str
     confidence: float
     recommendation: str
+
 
 @dataclass
 class CouncilDecision:
@@ -42,6 +45,7 @@ class CouncilDecision:
     urgency: str
     timestamp: datetime
 
+
 class WisdomCouncil:
     """Synthesizes findings from across the Data Sea into cohesive wisdom.
     Simulates a board of specialized perspectives.
@@ -50,7 +54,9 @@ class WisdomCouncil:
     def __init__(self):
         self.roles = list(CouncilRole)
 
-    async def deliberate(self, topic: str, findings: list[Any], urgency: str = "medium") -> CouncilDecision:
+    async def deliberate(
+        self, topic: str, findings: list[Any], urgency: str = "medium"
+    ) -> CouncilDecision:
         """Main deliberation loop.
         In a production environment, this would call specialized LLM prompts for each role.
         """
@@ -73,7 +79,9 @@ class WisdomCouncil:
             timestamp=datetime.now(),
         )
 
-    async def _get_perspective(self, role: CouncilRole, topic: str, findings: list[Any]) -> CouncilPerspective:
+    async def _get_perspective(
+        self, role: CouncilRole, topic: str, findings: list[Any]
+    ) -> CouncilPerspective:
         """Simulates role-specific analysis."""
         await asyncio.sleep(random.uniform(0.05, 0.1))
 
@@ -104,8 +112,10 @@ class WisdomCouncil:
     def _synthesize_consensus(self, perspectives: list[CouncilPerspective]) -> str:
         """Combines perspectives into a single signal."""
         # Simple majority/weighted average simulation
-        return "The system is ready for the next phase of evolution. " \
-               "A balance of technical optimization and strategic patience is recommended."
+        return (
+            "The system is ready for the next phase of evolution. "
+            "A balance of technical optimization and strategic patience is recommended."
+        )
 
     def _build_rationale(self, perspectives: list[CouncilPerspective]) -> str:
         """Builds a human-readable summary of the council's reasoning."""
@@ -113,6 +123,7 @@ class WisdomCouncil:
         for p in perspectives:
             rationale_lines.append(f"[{p.role.value.upper()}]: {p.opinion}")
         return "\n".join(rationale_lines)
+
 
 def get_wisdom_council() -> WisdomCouncil:
     """
@@ -123,12 +134,16 @@ def get_wisdom_council() -> WisdomCouncil:
     """
     return WisdomCouncil()
 
+
 if __name__ == "__main__":
+
     async def main():
         """
         Perform the main operation.
         """
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+        logging.basicConfig(
+            level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+        )
         council = WisdomCouncil()
 
         # Simulate data input from latest emergence discoveries

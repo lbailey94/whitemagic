@@ -22,9 +22,9 @@ from whitemagic.session.manager import SessionManager
 
 logger = logging.getLogger(__name__)
 
+
 class FeedbackController:
-    """Control loop that listens for system insights and adapts behavior.
-    """
+    """Control loop that listens for system insights and adapts behavior."""
 
     def __init__(self) -> None:
         self._bus = get_bus()
@@ -89,10 +89,15 @@ class FeedbackController:
             from whitemagic.autonomous.continuous_awareness import (
                 get_awareness,  # type: ignore[import-not-found]
             )
+
             awareness = get_awareness()
-            awareness.inject_insight(f"BREAKTHROUGH: {pattern} (Confidence: {event.confidence})")
+            awareness.inject_insight(
+                f"BREAKTHROUGH: {pattern} (Confidence: {event.confidence})"
+            )
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning("Could not inject insight into awareness: %s", e, exc_info=True)
+            logger.warning(
+                "Could not inject insight into awareness: %s", e, exc_info=True
+            )
 
         # 3. Consult Wisdom Council on how to integrate this
         # (Async dispatch to avoid blocking the event bus thread if not async)
@@ -114,8 +119,12 @@ class FeedbackController:
         # If pattern is recurring frequently, increase feedback gain
         if frequency > self._pattern_threshold:
             self._gain = min(1.0, self._gain * 1.1)
-            logger.debug("Pattern '%s' recurring (freq=%d) — gain increased to %.2f",
-                        pattern, frequency, self._gain)
+            logger.debug(
+                "Pattern '%s' recurring (freq=%d) — gain increased to %.2f",
+                pattern,
+                frequency,
+                self._gain,
+            )
 
     def _on_insight(self, event: ResonanceEvent) -> None:
         """Handle sudden insights (Flash).
@@ -150,21 +159,28 @@ class FeedbackController:
         # If stability drops below threshold, reduce feedback gain
         if stability < 0.3:
             self._gain = max(0.1, self._gain * 0.9)
-            logger.warning("System instability detected (stability=%.2f) — gain reduced to %.2f",
-                          stability, self._gain)
+            logger.warning(
+                "System instability detected (stability=%.2f) — gain reduced to %.2f",
+                stability,
+                self._gain,
+            )
 
         # Update session with state change
         session = self._session_manager.get_active_session()
         if session:
             if "state_history" not in session.context:
                 session.context["state_history"] = []
-            session.context["state_history"].append({
-                "state": state,
-                "stability": stability,
-                "timestamp": datetime.now().isoformat(),
-            })
+            session.context["state_history"].append(
+                {
+                    "state": state,
+                    "stability": stability,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+
 
 _controller = None
+
 
 def get_feedback_controller() -> FeedbackController:
     """

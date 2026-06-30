@@ -40,6 +40,7 @@ class ThreatLevel(Enum):
 @dataclass
 class Threat:
     """A detected threat to system health."""
+
     threat_type: ThreatType
     level: ThreatLevel
     description: str
@@ -79,26 +80,30 @@ class ThreatDetector:
             try:
                 importlib.import_module(mod_name)
             except Exception as e:
-                self.detected_threats.append(Threat(
-                    threat_type=ThreatType.IMPORT_ERROR,
-                    level=ThreatLevel.HIGH,
-                    description=f"Failed to import {mod_name}: {e}",
-                    location=mod_name,
-                    antigen="import_failure",
-                    suggested_antibody="fix_import",
-                ))
+                self.detected_threats.append(
+                    Threat(
+                        threat_type=ThreatType.IMPORT_ERROR,
+                        level=ThreatLevel.HIGH,
+                        description=f"Failed to import {mod_name}: {e}",
+                        location=mod_name,
+                        antigen="import_failure",
+                        suggested_antibody="fix_import",
+                    )
+                )
 
     def _check_state(self) -> None:
         """Check state directory consistency."""
         if not self.state_root.exists():
-            self.detected_threats.append(Threat(
-                threat_type=ThreatType.STATE_INCONSISTENCY,
-                level=ThreatLevel.MEDIUM,
-                description="State root directory does not exist",
-                location=str(self.state_root),
-                antigen="missing_state_root",
-                suggested_antibody="init_state",
-            ))
+            self.detected_threats.append(
+                Threat(
+                    threat_type=ThreatType.STATE_INCONSISTENCY,
+                    level=ThreatLevel.MEDIUM,
+                    description="State root directory does not exist",
+                    location=str(self.state_root),
+                    antigen="missing_state_root",
+                    suggested_antibody="init_state",
+                )
+            )
 
     def _check_version(self) -> None:
         """Check for version drift."""
@@ -107,36 +112,44 @@ class ThreatDetector:
             version = version_file.read_text().strip()
             try:
                 from whitemagic.config import VERSION as config_version
+
                 if version != config_version:
-                    self.detected_threats.append(Threat(
-                        threat_type=ThreatType.VERSION_DRIFT,
-                        level=ThreatLevel.LOW,
-                        description=f"Version drift: file={version}, config={config_version}",
-                        antigen="version_drift",
-                        suggested_antibody="sync_version",
-                    ))
+                    self.detected_threats.append(
+                        Threat(
+                            threat_type=ThreatType.VERSION_DRIFT,
+                            level=ThreatLevel.LOW,
+                            description=f"Version drift: file={version}, config={config_version}",
+                            antigen="version_drift",
+                            suggested_antibody="sync_version",
+                        )
+                    )
             except Exception:
                 pass
 
     def _record_scan(self) -> None:
-        self.scan_history.append({
-            "timestamp": time.time(),
-            "threats_found": len(self.detected_threats),
-            "threat_levels": {
-                lv.value: sum(1 for t in self.detected_threats if t.level == lv)
-                for lv in ThreatLevel
-            },
-        })
+        self.scan_history.append(
+            {
+                "timestamp": time.time(),
+                "threats_found": len(self.detected_threats),
+                "threat_levels": {
+                    lv.value: sum(1 for t in self.detected_threats if t.level == lv)
+                    for lv in ThreatLevel
+                },
+            }
+        )
 
     def get_critical_threats(self) -> list[Threat]:
         return [
-            t for t in self.detected_threats
+            t
+            for t in self.detected_threats
             if t.level in (ThreatLevel.CRITICAL, ThreatLevel.HIGH)
         ]
 
     def generate_health_report(self) -> dict[str, Any]:
         total = len(self.detected_threats)
-        critical = sum(1 for t in self.detected_threats if t.level == ThreatLevel.CRITICAL)
+        critical = sum(
+            1 for t in self.detected_threats if t.level == ThreatLevel.CRITICAL
+        )
         if total == 0:
             status, score = "HEALTHY", 100
         elif critical > 0:

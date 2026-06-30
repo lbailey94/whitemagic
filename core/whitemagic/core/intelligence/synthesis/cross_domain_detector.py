@@ -106,6 +106,7 @@ class CrossDomainCollisionDetector:
 
     def __init__(self, db_path: str | None = None) -> None:
         from whitemagic.config.paths import DB_PATH
+
         self.db_path = db_path or str(DB_PATH)
         self._lock = threading.Lock()
         self._total_collisions = 0
@@ -164,14 +165,20 @@ class CrossDomainCollisionDetector:
             memories = []
             for r in rows:
                 tags_str = r["tags"] or ""
-                tags = set(t.strip() for t in tags_str.split(",") if t.strip()) if tags_str else set()
-                memories.append({
-                    "id": r["id"],
-                    "title": r["title"] or "Untitled",
-                    "content": r["content"] or "",
-                    "memory_type": r["memory_type"] or "UNKNOWN",
-                    "tags": tags,
-                })
+                tags = (
+                    set(t.strip() for t in tags_str.split(",") if t.strip())
+                    if tags_str
+                    else set()
+                )
+                memories.append(
+                    {
+                        "id": r["id"],
+                        "title": r["title"] or "Untitled",
+                        "content": r["content"] or "",
+                        "memory_type": r["memory_type"] or "UNKNOWN",
+                        "tags": tags,
+                    }
+                )
 
             # Get embeddings for semantic similarity
             embeddings = self._load_embeddings([m["id"] for m in memories])
@@ -205,21 +212,26 @@ class CrossDomainCollisionDetector:
                     # Generate schema hint from shared tags
                     shared_tags = sorted(a["tags"] & b["tags"])
                     schema_hint = self._generate_schema_hint(
-                        shared_tags, a["memory_type"], b["title"], a["title"],
+                        shared_tags,
+                        a["memory_type"],
+                        b["title"],
+                        a["title"],
                     )
 
-                    collisions.append(CollisionPair(
-                        memory_a_id=a["id"],
-                        memory_b_id=b["id"],
-                        memory_a_title=a["title"],
-                        memory_b_title=b["title"],
-                        shared_tags=shared_tags,
-                        same_type=a["memory_type"] == b["memory_type"],
-                        behavioral_score=behavioral,
-                        semantic_similarity=sem_sim,
-                        collision_score=collision_score,
-                        schema_hint=schema_hint,
-                    ))
+                    collisions.append(
+                        CollisionPair(
+                            memory_a_id=a["id"],
+                            memory_b_id=b["id"],
+                            memory_a_title=a["title"],
+                            memory_b_title=b["title"],
+                            shared_tags=shared_tags,
+                            same_type=a["memory_type"] == b["memory_type"],
+                            behavioral_score=behavioral,
+                            semantic_similarity=sem_sim,
+                            collision_score=collision_score,
+                            schema_hint=schema_hint,
+                        )
+                    )
 
             # Sort by collision score (highest = most interesting)
             collisions.sort(key=lambda c: c.collision_score, reverse=True)
@@ -238,11 +250,15 @@ class CrossDomainCollisionDetector:
             if collisions:
                 logger.info(
                     "Cross-domain collisions: %d found, %d schemas abstracted (%.0fms)",
-                    len(collisions), len(schemas) if collisions else 0, elapsed,
+                    len(collisions),
+                    len(schemas) if collisions else 0,
+                    elapsed,
                 )
 
         except Exception as e:
-            logger.warning("Cross-domain collision detection failed: %s", e, exc_info=True)
+            logger.warning(
+                "Cross-domain collision detection failed: %s", e, exc_info=True
+            )
 
         return collisions
 
@@ -260,12 +276,15 @@ class CrossDomainCollisionDetector:
             conn.close()
 
             import json
+
             for r in rows:
                 emb = r["embedding"]
                 if emb:
                     vec = json.loads(emb) if isinstance(emb, str) else list(emb)
                     if len(vec) >= 64:
-                        embeddings[r["memory_id"]] = vec[:384] if len(vec) > 384 else vec
+                        embeddings[r["memory_id"]] = (
+                            vec[:384] if len(vec) > 384 else vec
+                        )
         except Exception as e:
             logger.debug("Embedding load failed: %s", e)
 
@@ -288,6 +307,7 @@ class CrossDomainCollisionDetector:
             return None
         try:
             import numpy as np
+
             va, vb = np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32)
             na, nb = np.linalg.norm(va), np.linalg.norm(vb)
             if na < 1e-8 or nb < 1e-8:
@@ -332,7 +352,9 @@ class CrossDomainCollisionDetector:
             mem_type = members[0].same_type and "mixed" or "cross-type"
 
             avg_beh = sum(m.behavioral_score for m in members) / len(members)
-            avg_sem_dist = sum(1.0 - m.semantic_similarity for m in members) / len(members)
+            avg_sem_dist = sum(1.0 - m.semantic_similarity for m in members) / len(
+                members
+            )
 
             # Collect unique memory IDs
             member_ids = set()
@@ -342,7 +364,9 @@ class CrossDomainCollisionDetector:
 
             schema = CoreSchema(
                 schema_id=f"schema_{hash(key) & 0xFFFFFFFF:08x}",
-                name=f"Cross-domain: {', '.join(tags[:3])}" if tags else "Cross-domain pattern",
+                name=f"Cross-domain: {', '.join(tags[:3])}"
+                if tags
+                else "Cross-domain pattern",
                 tags=tags,
                 memory_type=mem_type,
                 member_count=len(member_ids),
@@ -361,11 +385,14 @@ class CrossDomainCollisionDetector:
 
         return schemas
 
-    def _persist_schemas(self, schemas: list[CoreSchema], conn: sqlite3.Connection | None) -> None:
+    def _persist_schemas(
+        self, schemas: list[CoreSchema], conn: sqlite3.Connection | None
+    ) -> None:
         """Persist abstracted schemas as LONG_TERM memories."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             from whitemagic.core.memory.unified_types import MemoryType
+
             um = get_unified_memory()
 
             for schema in schemas:
@@ -398,15 +425,13 @@ class CrossDomainCollisionDetector:
             }
 
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _detector: CrossDomainCollisionDetector | None = None
 _detector_lock = threading.Lock()
 
 
-def get_cross_domain_detector(db_path: str | None = None) -> CrossDomainCollisionDetector:
+def get_cross_domain_detector(
+    db_path: str | None = None,
+) -> CrossDomainCollisionDetector:
     """Get the global CrossDomainCollisionDetector singleton."""
     global _detector
     if _detector is None:

@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ProgressEvent:
     """Single progress event with timestamp."""
+
     timestamp: datetime
     elapsed_s: float
     event_type: str  # "advance", "skip", "warn", "error", "milestone", "finish"
@@ -43,6 +44,7 @@ class ProgressEvent:
 @dataclass
 class ProgressStats:
     """Accumulated statistics for a progress tracker."""
+
     total: int = 0
     completed: int = 0
     skipped: int = 0
@@ -113,14 +115,16 @@ class ProgressTracker:
         self._display_interval = 0.1  # seconds
 
         # Write header
-        self._log_event(ProgressEvent(
-            timestamp=self.start_datetime,
-            elapsed_s=0.0,
-            event_type="start",
-            message=f"Started: {name}",
-            count=total,
-            detail=f"total={total}",
-        ))
+        self._log_event(
+            ProgressEvent(
+                timestamp=self.start_datetime,
+                elapsed_s=0.0,
+                event_type="start",
+                message=f"Started: {name}",
+                count=total,
+                detail=f"total={total}",
+            )
+        )
 
     @property
     def percent(self) -> float:
@@ -328,14 +332,14 @@ class ProgressTracker:
             if eta < 60:
                 eta_str = f" ETA {eta:.0f}s"
             elif eta < 3600:
-                eta_str = f" ETA {eta/60:.1f}m"
+                eta_str = f" ETA {eta / 60:.1f}m"
             else:
-                eta_str = f" ETA {eta/3600:.1f}h"
+                eta_str = f" ETA {eta / 3600:.1f}h"
 
         rate_str = ""
         if rate > 0:
             if rate >= 1000:
-                rate_str = f" {rate/1000:.1f}K/s"
+                rate_str = f" {rate / 1000:.1f}K/s"
             else:
                 rate_str = f" {rate:.0f}/s"
 
@@ -470,6 +474,4 @@ class YinYangCycleTracker:
 
     def finish(self) -> ProgressStats:
         """Finish and return stats."""
-        return self.tracker.finish(
-            summary=f"{self.cycle_num} cycles complete"
-        )
+        return self.tracker.finish(summary=f"{self.cycle_num} cycles complete")

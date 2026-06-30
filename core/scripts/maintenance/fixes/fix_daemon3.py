@@ -1,4 +1,3 @@
-
 with open("whitemagic-rust/src/continuous_daemon.rs") as f:
     content = f.read()
 
@@ -17,13 +16,13 @@ content = content.replace(
                     loops_clone.fetch_add(1, Ordering::SeqCst);
 
                     // Simple simulation of task execution
-                    tasks_clone.fetch_add(1, Ordering::SeqCst);"""
+                    tasks_clone.fetch_add(1, Ordering::SeqCst);""",
 )
 
 # Need to clone tasks too
 content = content.replace(
     "let loops_clone = Arc::clone(&self.loops);",
-    "let loops_clone = Arc::clone(&self.loops);\n        let tasks_clone = Arc::clone(&self.tasks);"
+    "let loops_clone = Arc::clone(&self.loops);\n        let tasks_clone = Arc::clone(&self.tasks);",
 )
 
 with open("whitemagic-rust/src/continuous_daemon.rs", "w") as f:

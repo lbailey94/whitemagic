@@ -25,11 +25,17 @@ class TestVectorizedDispatcher:
     def test_encode_with_args(self):
         vd = VectorizedDispatcher()
         assert vd.encode("search_memories", {"limit": 10}) == "M?[n:10]"
-        assert vd.encode("search_memories", {"limit": 10, "query": "test"}) == "M?[n:10,q:test]"
+        assert (
+            vd.encode("search_memories", {"limit": 10, "query": "test"})
+            == "M?[n:10,q:test]"
+        )
 
     def test_encode_bool_and_list(self):
         vd = VectorizedDispatcher()
-        assert vd.encode("test", {"compact": True, "tags": ["a", "b"]}) == "test[C:!t,g:a|b]"
+        assert (
+            vd.encode("test", {"compact": True, "tags": ["a", "b"]})
+            == "test[C:!t,g:a|b]"
+        )
 
     def test_decode_known_tool(self):
         vd = VectorizedDispatcher()
@@ -68,7 +74,15 @@ class TestVectorizedDispatcher:
 
     def test_measure_compression(self):
         vd = VectorizedDispatcher()
-        m = vd.measure("search_memories", {"query": "consciousness", "limit": 10, "sort_by": "importance", "order": "desc"})
+        m = vd.measure(
+            "search_memories",
+            {
+                "query": "consciousness",
+                "limit": 10,
+                "sort_by": "importance",
+                "order": "desc",
+            },
+        )
         assert m["raw_bytes"] > m["encoded_bytes"]
         assert m["ratio"] > 0.3  # expect at least 30% compression
 

@@ -40,10 +40,6 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Optional XRPL import
-# ---------------------------------------------------------------------------
-
 try:
     import xrpl
     from xrpl.clients import JsonRpcClient
@@ -57,18 +53,10 @@ try:
 except ImportError:
     _XRPL_AVAILABLE = False
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 XRPL_TESTNET_URL = "https://s.altnet.rippletest.net:51234"
 XRPL_MAINNET_URL = "https://s1.ripple.com:51234"
 MEMO_TYPE_HEX = b"whitemagic/karma-anchor".hex()
 ANCHOR_VERSION = "1"
-
-# ---------------------------------------------------------------------------
-# Data classes
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -104,10 +92,6 @@ class AnchorResult:
     fee_drops: str
     message: str
 
-
-# ---------------------------------------------------------------------------
-# Anchor history persistence
-# ---------------------------------------------------------------------------
 
 _ANCHOR_DIR: Path | None = None
 
@@ -146,8 +130,7 @@ def get_anchor_history(limit: int = 20) -> list[dict[str, Any]]:
             return []
         lines = history_file.read_text(encoding="utf-8").strip().split("\n")
         records = []
-        for line in lines[-limit:
-            ]:
+        for line in lines[-limit:]:
             if line.strip():
                 try:
                     records.append(_json_loads(line))
@@ -157,11 +140,6 @@ def get_anchor_history(limit: int = 20) -> list[dict[str, Any]]:
     except Exception as e:
         logger.debug("Anchor history read failed: %s", e, exc_info=True)
         return []
-
-
-# ---------------------------------------------------------------------------
-# Core Functions
-# ---------------------------------------------------------------------------
 
 
 def compute_anchor() -> dict[str, Any]:
@@ -234,10 +212,9 @@ def submit_anchor(
         if snapshot_data.get("status") != "ok":
             return snapshot_data
         merkle_root = snapshot_data["merkle_root"]
-        snapshot = AnchorSnapshot(**{
-            k: snapshot_data[k]
-            for k in AnchorSnapshot.__dataclass_fields__
-        })
+        snapshot = AnchorSnapshot(
+            **{k: snapshot_data[k] for k in AnchorSnapshot.__dataclass_fields__}
+        )
     else:
         snapshot = AnchorSnapshot(
             merkle_root=merkle_root,
@@ -268,12 +245,18 @@ def submit_anchor(
         client = JsonRpcClient(url)
         wallet = Wallet.from_seed(wallet_seed)
 
-        memo_data = _json_dumps({
-            "v": ANCHOR_VERSION,
-            "root": merkle_root,
-            "ts": snapshot.timestamp,
-            "hash": snapshot.canonical_hash(),
-        }).encode().hex()
+        memo_data = (
+            _json_dumps(
+                {
+                    "v": ANCHOR_VERSION,
+                    "root": merkle_root,
+                    "ts": snapshot.timestamp,
+                    "hash": snapshot.canonical_hash(),
+                }
+            )
+            .encode()
+            .hex()
+        )
 
         tx = Payment(
             account=wallet.address,
@@ -349,7 +332,11 @@ def verify_anchor(
     if expected_merkle_root is None:
         snapshot = compute_anchor()
         if snapshot.get("status") != "ok":
-            return {"status": "error", "verified": False, "reason": "Cannot compute local Merkle root"}
+            return {
+                "status": "error",
+                "verified": False,
+                "reason": "Cannot compute local Merkle root",
+            }
         expected_merkle_root = snapshot["merkle_root"]
 
     url = XRPL_TESTNET_URL if network == "testnet" else XRPL_MAINNET_URL
@@ -431,11 +418,6 @@ def verify_anchor(
         }
 
 
-# ---------------------------------------------------------------------------
-# Wallet seed management
-# ---------------------------------------------------------------------------
-
-
 def _load_wallet_seed() -> str | None:
     """Load XRPL wallet seed from disk."""
     seed_file = DHARMA_DIR / "xrpl_seed.txt"
@@ -483,7 +465,9 @@ def anchor_status() -> dict[str, Any]:
 
     return {
         "xrpl_available": _XRPL_AVAILABLE,
-        "xrpl_version": getattr(xrpl, "__version__", "unknown") if _XRPL_AVAILABLE else None,
+        "xrpl_version": getattr(xrpl, "__version__", "unknown")
+        if _XRPL_AVAILABLE
+        else None,
         "wallet_configured": seed is not None,
         "total_anchors": len(get_anchor_history(limit=10000)),
         "latest_anchor": {

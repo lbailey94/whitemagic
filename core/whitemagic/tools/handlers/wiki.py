@@ -39,7 +39,12 @@ CREATE INDEX IF NOT EXISTS idx_wiki_tags ON internal_wiki(tags);
 """
 
 _VALID_CATEGORIES = {
-    "architecture", "module", "pattern", "antipattern", "api", "guide",
+    "architecture",
+    "module",
+    "pattern",
+    "antipattern",
+    "api",
+    "guide",
 }
 
 
@@ -58,9 +63,18 @@ def _now() -> str:
     return datetime.now().isoformat()
 
 
-def _upsert_entry(conn, entry_id, title, content, category,
-                  source_files="", tags=None, metadata=None,
-                  confidence=0.5, force=False):
+def _upsert_entry(
+    conn,
+    entry_id,
+    title,
+    content,
+    category,
+    source_files="",
+    tags=None,
+    metadata=None,
+    confidence=0.5,
+    force=False,
+):
     existing = conn.execute(
         "SELECT id FROM internal_wiki WHERE id = ?", (entry_id,)
     ).fetchone()
@@ -73,16 +87,35 @@ def _upsert_entry(conn, entry_id, title, content, category,
             "UPDATE internal_wiki SET title=?, content=?, category=?, "
             "source_files=?, tags=?, metadata=?, confidence=?, updated_at=? "
             "WHERE id=?",
-            (title, content, category, source_files, tag_str,
-             meta_str, confidence, _now(), entry_id),
+            (
+                title,
+                content,
+                category,
+                source_files,
+                tag_str,
+                meta_str,
+                confidence,
+                _now(),
+                entry_id,
+            ),
         )
         return "updated"
     conn.execute(
         "INSERT INTO internal_wiki (id, title, content, category, "
         "source_files, tags, metadata, confidence, created_at, updated_at) "
         "VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (entry_id, title, content, category, source_files, tag_str,
-         meta_str, confidence, _now(), _now()),
+        (
+            entry_id,
+            title,
+            content,
+            category,
+            source_files,
+            tag_str,
+            meta_str,
+            confidence,
+            _now(),
+            _now(),
+        ),
     )
     return "created"
 
@@ -96,8 +129,17 @@ def _scan_python_modules(root: Path, max_depth: int = 4) -> list[dict[str, Any]]
     if not root.exists():
         logger.warning("Wiki module scanner root does not exist: %s", root)
         return results
-    exclude = {".git", ".venv", "__pycache__", "node_modules",
-               ".hypothesis", "tests", "target", "build", "dist"}
+    exclude = {
+        ".git",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        ".hypothesis",
+        "tests",
+        "target",
+        "build",
+        "dist",
+    }
     for py_file in root.rglob("*.py"):
         if set(py_file.parts) & exclude:
             continue
@@ -112,15 +154,17 @@ def _scan_python_modules(root: Path, max_depth: int = 4) -> list[dict[str, Any]]
             m = re.match(r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')', content)
             if m:
                 docstring = m.group(0).strip("\"'").strip()[:500]
-            classes = re.findall(r'^class\s+(\w+)', content, re.MULTILINE)
-            functions = re.findall(r'^(?:async\s+)?def\s+(\w+)', content, re.MULTILINE)
-            results.append({
-                "path": str(rel),
-                "docstring": docstring,
-                "classes": classes[:20],
-                "functions": functions[:30],
-                "line_count": content.count("\n") + 1,
-            })
+            classes = re.findall(r"^class\s+(\w+)", content, re.MULTILINE)
+            functions = re.findall(r"^(?:async\s+)?def\s+(\w+)", content, re.MULTILINE)
+            results.append(
+                {
+                    "path": str(rel),
+                    "docstring": docstring,
+                    "classes": classes[:20],
+                    "functions": functions[:30],
+                    "line_count": content.count("\n") + 1,
+                }
+            )
         except Exception as e:
             logger.debug("Scan failed %s: %s", py_file, e)
     return results
@@ -130,6 +174,7 @@ def _scan_tool_registry() -> dict[str, Any]:
     """Extract tool registry summary."""
     try:
         from whitemagic.tools.registry import get_tool_registry
+
         reg = get_tool_registry()
         tools = reg.get_callable_tools()
         return {
@@ -145,15 +190,18 @@ def _scan_prat_ganas() -> list[dict[str, Any]]:
     """Extract PRAT Gana structure."""
     try:
         from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+
         ganas = sorted(set(TOOL_TO_GANA.values()))
         result = []
         for g in ganas:
             tools = [k for k, v in TOOL_TO_GANA.items() if v == g]
-            result.append({
-                "gana": g,
-                "tool_count": len(tools),
-                "tools": sorted(tools)[:10],
-            })
+            result.append(
+                {
+                    "gana": g,
+                    "tool_count": len(tools),
+                    "tools": sorted(tools)[:10],
+                }
+            )
         return result
     except Exception as e:
         logger.debug("PRAT scan failed: %s", e)
@@ -166,6 +214,7 @@ def _scan_patterns() -> dict[str, Any]:
         from whitemagic.core.intelligence.synthesis.unified_patterns import (
             get_pattern_api,
         )
+
         api = get_pattern_api()
         all_patterns = api.search(min_confidence=0.0)
         solutions = [p for p in all_patterns if p.pattern_type.value == "solution"]
@@ -175,18 +224,31 @@ def _scan_patterns() -> dict[str, Any]:
             "solutions": len(solutions),
             "anti_patterns": len(anti),
             "top_solutions": [
-                {"title": p.title, "confidence": p.confidence, "engine": p.source_engine}
+                {
+                    "title": p.title,
+                    "confidence": p.confidence,
+                    "engine": p.source_engine,
+                }
                 for p in solutions[:10]
             ],
             "top_antipatterns": [
-                {"title": p.title, "confidence": p.confidence, "engine": p.source_engine}
+                {
+                    "title": p.title,
+                    "confidence": p.confidence,
+                    "engine": p.source_engine,
+                }
                 for p in anti[:10]
             ],
         }
     except Exception as e:
         logger.debug("Pattern scan failed: %s", e)
-        return {"total": 0, "solutions": 0, "anti_patterns": 0,
-                "top_solutions": [], "top_antipatterns": []}
+        return {
+            "total": 0,
+            "solutions": 0,
+            "anti_patterns": 0,
+            "top_solutions": [],
+            "top_antipatterns": [],
+        }
 
 
 # ── Formatters ───────────────────────────────────────────────────────────────
@@ -262,10 +324,15 @@ def handle_wiki_generate(**kwargs: Any) -> dict[str, Any]:
                 content = _format_module_entry(mod)
                 entry_id = _wiki_id(title, "module")
                 result = _upsert_entry(
-                    conn, entry_id, title, content, "module",
+                    conn,
+                    entry_id,
+                    title,
+                    content,
+                    "module",
                     source_files=json.dumps([mod["path"]]),
                     tags=["module", "code"],
-                    confidence=0.7, force=force,
+                    confidence=0.7,
+                    force=force,
                 )
                 if result == "created":
                     generated += 1
@@ -279,10 +346,15 @@ def handle_wiki_generate(**kwargs: Any) -> dict[str, Any]:
             content = _format_tools_entry(tool_info)
             entry_id = _wiki_id("tool_registry", "api")
             result = _upsert_entry(
-                conn, entry_id, "Tool Registry", content, "api",
+                conn,
+                entry_id,
+                "Tool Registry",
+                content,
+                "api",
                 source_files=json.dumps(["core/whitemagic/tools/registry.py"]),
                 tags=["tools", "registry", "api"],
-                confidence=0.9, force=force,
+                confidence=0.9,
+                force=force,
             )
             if result == "created":
                 generated += 1
@@ -297,10 +369,15 @@ def handle_wiki_generate(**kwargs: Any) -> dict[str, Any]:
                 content = _format_gana_entry(g)
                 entry_id = _wiki_id(g["gana"], "architecture")
                 result = _upsert_entry(
-                    conn, entry_id, g["gana"], content, "architecture",
+                    conn,
+                    entry_id,
+                    g["gana"],
+                    content,
+                    "architecture",
                     source_files=json.dumps(["core/whitemagic/tools/prat_mappings.py"]),
                     tags=["gana", "prat", "architecture"],
-                    confidence=0.9, force=force,
+                    confidence=0.9,
+                    force=force,
                 )
                 if result == "created":
                     generated += 1
@@ -316,9 +393,14 @@ def handle_wiki_generate(**kwargs: Any) -> dict[str, Any]:
                 content = _format_pattern_entry(p, "solution")
                 entry_id = _wiki_id(title, "pattern")
                 result = _upsert_entry(
-                    conn, entry_id, title, content, "pattern",
+                    conn,
+                    entry_id,
+                    title,
+                    content,
+                    "pattern",
                     tags=["pattern", "solution", p["engine"]],
-                    confidence=p["confidence"], force=force,
+                    confidence=p["confidence"],
+                    force=force,
                 )
                 if result == "created":
                     generated += 1
@@ -331,9 +413,14 @@ def handle_wiki_generate(**kwargs: Any) -> dict[str, Any]:
                 content = _format_pattern_entry(p, "antipattern")
                 entry_id = _wiki_id(title, "antipattern")
                 result = _upsert_entry(
-                    conn, entry_id, title, content, "antipattern",
+                    conn,
+                    entry_id,
+                    title,
+                    content,
+                    "antipattern",
                     tags=["antipattern", p["engine"]],
-                    confidence=p["confidence"], force=force,
+                    confidence=p["confidence"],
+                    force=force,
                 )
                 if result == "created":
                     generated += 1
@@ -406,15 +493,17 @@ def handle_wiki_query(**kwargs: Any) -> dict[str, Any]:
         rows = conn.execute(sql, params).fetchall()
         results = []
         for row in rows:
-            results.append({
-                "id": row["id"],
-                "title": row["title"],
-                "category": row["category"],
-                "content": row["content"][:500],
-                "tags": json.loads(row["tags"] or "[]"),
-                "confidence": row["confidence"],
-                "updated_at": row["updated_at"],
-            })
+            results.append(
+                {
+                    "id": row["id"],
+                    "title": row["title"],
+                    "category": row["category"],
+                    "content": row["content"][:500],
+                    "tags": json.loads(row["tags"] or "[]"),
+                    "confidence": row["confidence"],
+                    "updated_at": row["updated_at"],
+                }
+            )
         return {
             "status": "success",
             "results": results,
@@ -445,18 +534,27 @@ def handle_wiki_update(**kwargs: Any) -> dict[str, Any]:
         entry_id = _wiki_id(title, category)
 
     if not entry_id:
-        return {"status": "error", "error_code": "missing_params",
-                "message": "id or title required"}
+        return {
+            "status": "error",
+            "error_code": "missing_params",
+            "message": "id or title required",
+        }
 
     content = kwargs.get("content")
     if not content:
-        return {"status": "error", "error_code": "missing_content",
-                "message": "content required"}
+        return {
+            "status": "error",
+            "error_code": "missing_content",
+            "message": "content required",
+        }
 
     category = kwargs.get("category", "guide")
     if category not in _VALID_CATEGORIES:
-        return {"status": "error", "error_code": "invalid_category",
-                "message": f"Valid: {sorted(_VALID_CATEGORIES)}"}
+        return {
+            "status": "error",
+            "error_code": "invalid_category",
+            "message": f"Valid: {sorted(_VALID_CATEGORIES)}",
+        }
 
     tags = kwargs.get("tags", "")
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
@@ -464,8 +562,14 @@ def handle_wiki_update(**kwargs: Any) -> dict[str, Any]:
     conn = _get_db()
     try:
         result = _upsert_entry(
-            conn, entry_id, title or entry_id, content, category,
-            tags=tag_list, confidence=0.8, force=True,
+            conn,
+            entry_id,
+            title or entry_id,
+            content,
+            category,
+            tags=tag_list,
+            confidence=0.8,
+            force=True,
         )
         conn.commit()
         return {"status": "success", "id": entry_id, "action": result}
@@ -490,9 +594,7 @@ def handle_wiki_scan(**kwargs: Any) -> dict[str, Any]:
     root = Path(kwargs.get("root", str(PROJECT_ROOT)))
     conn = _get_db()
     try:
-        total_entries = conn.execute(
-            "SELECT COUNT(*) FROM internal_wiki"
-        ).fetchone()[0]
+        total_entries = conn.execute("SELECT COUNT(*) FROM internal_wiki").fetchone()[0]
         rows = conn.execute(
             "SELECT id, title, source_files, updated_at FROM internal_wiki "
             "WHERE source_files IS NOT NULL AND source_files != '[]'"
@@ -526,12 +628,14 @@ def handle_wiki_scan(**kwargs: Any) -> dict[str, Any]:
                 except Exception:
                     pass
             if is_stale:
-                stale.append({
-                    "id": row["id"],
-                    "title": row["title"],
-                    "modified_files": modified_files,
-                    "last_updated": entry_updated,
-                })
+                stale.append(
+                    {
+                        "id": row["id"],
+                        "title": row["title"],
+                        "modified_files": modified_files,
+                        "last_updated": entry_updated,
+                    }
+                )
             else:
                 fresh += 1
 
@@ -553,17 +657,15 @@ def handle_wiki_stats(**kwargs: Any) -> dict[str, Any]:
     """Get wiki statistics."""
     conn = _get_db()
     try:
-        total = conn.execute(
-            "SELECT COUNT(*) FROM internal_wiki"
-        ).fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM internal_wiki").fetchone()[0]
         by_category: dict[str, int] = {}
         for row in conn.execute(
             "SELECT category, COUNT(*) as cnt FROM internal_wiki GROUP BY category"
         ).fetchall():
             by_category[row["category"]] = row["cnt"]
-        avg_conf = conn.execute(
-            "SELECT AVG(confidence) FROM internal_wiki"
-        ).fetchone()[0]
+        avg_conf = conn.execute("SELECT AVG(confidence) FROM internal_wiki").fetchone()[
+            0
+        ]
         return {
             "status": "success",
             "total_entries": total,

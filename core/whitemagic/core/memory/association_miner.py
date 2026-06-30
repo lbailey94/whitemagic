@@ -32,9 +32,6 @@ from typing import Any, cast
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Stop words to ignore during keyword extraction
-# ---------------------------------------------------------------------------
 _STOP_WORDS = frozenset({
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
     "have", "has", "had", "do", "does", "did", "will", "would", "shall",
@@ -54,10 +51,6 @@ _STOP_WORDS = frozenset({
 
 _WORD_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
 
-
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
 
 @dataclass
 class ProposedLink:
@@ -103,10 +96,6 @@ class MiningReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Core miner
-# ---------------------------------------------------------------------------
-
 class AssociationMiner:
     """Discovers hidden semantic connections between memories.
 
@@ -130,10 +119,6 @@ class AssociationMiner:
         self._lock = threading.Lock()
         self._total_runs = 0
         self._total_links_created = 0
-
-    # ------------------------------------------------------------------
-    # Keyword extraction
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _extract_keywords(text: str, max_keywords: int = 50) -> set[str]:
@@ -171,10 +156,6 @@ class AssociationMiner:
 
         return keywords
 
-    # ------------------------------------------------------------------
-    # Overlap scoring
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _compute_overlap(kw_a: set[str], kw_b: set[str]) -> tuple[float, set[str]]:
         """Compute Jaccard-like overlap between two keyword sets."""
@@ -192,10 +173,6 @@ class AssociationMiner:
         count_bonus = min(1.0, len(shared) / 5.0) * 0.3
         score = min(1.0, raw_jaccard + count_bonus)
         return score, shared
-
-    # ------------------------------------------------------------------
-    # Mining
-    # ------------------------------------------------------------------
 
     def mine(self, sample_size: int = 200) -> MiningReport:
         """Run a single association mining pass.
@@ -408,10 +385,6 @@ class AssociationMiner:
          report.links_created, elapsed)
         return report
 
-    # ------------------------------------------------------------------
-    # Gap A3 synthesis: Association Miner → Knowledge Graph
-    # ------------------------------------------------------------------
-
     def _feed_knowledge_graph(self, proposals: list[ProposedLink]) -> None:
         """Create Knowledge Graph edges from strong association discoveries.
 
@@ -447,10 +420,6 @@ class AssociationMiner:
                 logger.info("KG enrichment: %s association edges created", edges_created)
         except Exception as e:
             logger.debug("KG enrichment skipped: %s", e)
-
-    # ------------------------------------------------------------------
-    # Semantic mining (Leap 1a — replaces keyword Jaccard)
-    # ------------------------------------------------------------------
 
     def mine_semantic(
         self,
@@ -625,10 +594,6 @@ class AssociationMiner:
             "persist": self._persist,
         }
 
-    # ------------------------------------------------------------------
-    # Graph facade methods (fused from GraphEngine + GraphEngineNeural)
-    # ------------------------------------------------------------------
-
     _graph_engine_instance: Any = None
     _neural_graph_engine_instance: Any = None
 
@@ -703,10 +668,6 @@ class AssociationMiner:
             return set()
         return eng.get_cluster(start_id, memories, max_depth=max_depth)
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _miner_instance: AssociationMiner | None = None
 _miner_lock = threading.Lock()

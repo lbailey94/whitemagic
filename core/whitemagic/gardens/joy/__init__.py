@@ -19,10 +19,16 @@ try:
     from .laughter import LaughterSystem
     from .overflow_routing import OverflowRouter
     from .play_protocols import PlayProtocol
+
     __all__ = [
-        "CelebrationPractice", "PlayProtocol", "LaughterSystem",
-        "BeautyRecognition", "FreedomDance", "OverflowRouter",
-        "JoyGarden", "get_joy_garden",
+        "CelebrationPractice",
+        "PlayProtocol",
+        "LaughterSystem",
+        "BeautyRecognition",
+        "FreedomDance",
+        "OverflowRouter",
+        "JoyGarden",
+        "get_joy_garden",
     ]
 except ImportError:
     __all__ = []

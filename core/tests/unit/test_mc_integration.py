@@ -1,4 +1,5 @@
 """Tests for MC-HLL/CMS integration."""
+
 from whitemagic.forecasting.mc_integration import MCForecastEnhancer
 
 
@@ -6,16 +7,18 @@ def _make_claims(n: int = 10, duplicates: int = 0) -> list[dict]:
     """Generate test claims with optional duplicates."""
     claims = []
     for i in range(n):
-        claims.append({
-            "id": f"claim_{i}",
-            "claim": f"Prediction number {i} about AI governance",
-            "confidence": 0.7 + (i % 3) * 0.1,
-            "outcome": 1.0 if i % 3 != 2 else 0.0,
-            "lead_weeks": float(10 + i),
-            "category": "ai_governance" if i % 2 == 0 else "ai_hardware",
-            "status": "validated" if i % 3 != 2 else "falsified",
-            "source_ref": f"ref_{i}",
-        })
+        claims.append(
+            {
+                "id": f"claim_{i}",
+                "claim": f"Prediction number {i} about AI governance",
+                "confidence": 0.7 + (i % 3) * 0.1,
+                "outcome": 1.0 if i % 3 != 2 else 0.0,
+                "lead_weeks": float(10 + i),
+                "category": "ai_governance" if i % 2 == 0 else "ai_hardware",
+                "status": "validated" if i % 3 != 2 else "falsified",
+                "source_ref": f"ref_{i}",
+            }
+        )
     # Add exact duplicates
     for i in range(duplicates):
         claims.append(claims[i % n].copy())
@@ -189,7 +192,9 @@ class TestVarianceReduction:
     def test_run_calibrated_vr_control_variate(self):
         enhancer = MCForecastEnhancer()
         claims = _make_claims(n=10)
-        result = enhancer.run_calibrated_vr(claims, n_trials=100, method="control_variate")
+        result = enhancer.run_calibrated_vr(
+            claims, n_trials=100, method="control_variate"
+        )
         assert "mc_result" in result
         assert "variance_reduction" in result["mc_result"]
 
@@ -202,6 +207,7 @@ class TestVarianceReduction:
     def test_antithetic_lower_variance_than_plain(self):
         """Antithetic variates should produce lower or equal variance vs plain MC."""
         import random
+
         random.seed(42)
         enhancer1 = MCForecastEnhancer()
         claims = _make_claims(n=20)
@@ -225,7 +231,9 @@ class TestCorrelatedMC:
         """Without correlation matrix, should fall back to independent MC."""
         enhancer = MCForecastEnhancer()
         claims = _make_claims(n=10)
-        result = enhancer.run_correlated_mc(claims, correlation_matrix=None, n_trials=100)
+        result = enhancer.run_correlated_mc(
+            claims, correlation_matrix=None, n_trials=100
+        )
         assert result["n_trials"] == 100
         assert "brier_score" in result
 
@@ -240,7 +248,9 @@ class TestCorrelatedMC:
             matrix[a] = {}
             for b in claim_ids:
                 matrix[a][b] = 0.5 if a != b else 1.0
-        result = enhancer.run_correlated_mc(claims, correlation_matrix=matrix, n_trials=100)
+        result = enhancer.run_correlated_mc(
+            claims, correlation_matrix=matrix, n_trials=100
+        )
         assert result["correlation_aware"] is True
         assert "brier_score" in result
 

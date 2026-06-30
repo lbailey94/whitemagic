@@ -26,6 +26,7 @@ Hierarchy:
   Level 3: Improve the improvement strategy (Z, meta-bandit)
   Level 4: Improve the meta-strategy (R, predictive coding Layer 4)
 """
+
 from __future__ import annotations
 
 import math
@@ -36,12 +37,13 @@ from typing import Any
 @dataclass
 class MetaFeatures:
     """State of the improvement system — context for the meta-bandit."""
-    discovery_rate: float = 0.5       # Novel improvements per cycle
-    calibration_error: float = 0.2    # Brier score gap
-    portfolio_balance: float = 0.5    # Guna balance (0=imbalanced, 1=balanced)
-    yield_curve_shape: float = 0.5    # 0=decaying, 1=compounding
-    info_gain_rate: float = 0.3       # Information gain per cycle
-    convergence_rate: float = 0.5     # Dream cycle convergence
+
+    discovery_rate: float = 0.5  # Novel improvements per cycle
+    calibration_error: float = 0.2  # Brier score gap
+    portfolio_balance: float = 0.5  # Guna balance (0=imbalanced, 1=balanced)
+    yield_curve_shape: float = 0.5  # 0=decaying, 1=compounding
+    info_gain_rate: float = 0.3  # Information gain per cycle
+    convergence_rate: float = 0.5  # Dream cycle convergence
     external_validation: float = 0.5  # Correlation with external assessment
 
     def to_vector(self) -> list[float]:
@@ -84,6 +86,7 @@ STRATEGY_ARMS = [
 @dataclass
 class ArmStats:
     """Statistics for a single meta-bandit arm."""
+
     arm: str
     pulls: int = 0
     total_reward: float = 0.0
@@ -111,10 +114,14 @@ class MetaBandit:
     Each arm represents an improvement strategy objective.
     """
 
-    def __init__(self, arms: list[str] | None = None, exploration_weight: float = 1.0) -> None:
+    def __init__(
+        self, arms: list[str] | None = None, exploration_weight: float = 1.0
+    ) -> None:
         self._arms = arms or list(STRATEGY_ARMS)
         self._exploration_weight = exploration_weight
-        self._stats: dict[str, ArmStats] = {arm: ArmStats(arm=arm) for arm in self._arms}
+        self._stats: dict[str, ArmStats] = {
+            arm: ArmStats(arm=arm) for arm in self._arms
+        }
         self._total_pulls = 0
         self._history: list[tuple[str, MetaFeatures, float]] = []
 
@@ -188,19 +195,31 @@ class MetaBandit:
         reasoning = []
 
         if context.discovery_rate < 0.3:
-            reasoning.append("Low discovery rate → emphasize exploration strategies (D, P)")
+            reasoning.append(
+                "Low discovery rate → emphasize exploration strategies (D, P)"
+            )
         if context.calibration_error > 0.3:
-            reasoning.append("High calibration error → emphasize MC variance reduction (E, B)")
+            reasoning.append(
+                "High calibration error → emphasize MC variance reduction (E, B)"
+            )
         if context.portfolio_balance < 0.4:
-            reasoning.append("Portfolio imbalanced → emphasize guna/garden routing (V, L)")
+            reasoning.append(
+                "Portfolio imbalanced → emphasize guna/garden routing (V, L)"
+            )
         if context.yield_curve_shape < 0.3:
-            reasoning.append("Yield curve decaying → shift to compounding improvements (Y)")
+            reasoning.append(
+                "Yield curve decaying → shift to compounding improvements (Y)"
+            )
         if context.info_gain_rate < 0.2:
-            reasoning.append("Low information gain → emphasize info-theoretic exploration (P)")
+            reasoning.append(
+                "Low information gain → emphasize info-theoretic exploration (P)"
+            )
         if context.convergence_rate < 0.3:
             reasoning.append("Dream cycle not converging → check predictive coding (R)")
         if context.external_validation < 0.4:
-            reasoning.append("External validation weak → check invariant metrics (W, X)")
+            reasoning.append(
+                "External validation weak → check invariant metrics (W, X)"
+            )
 
         return {
             "recommended_strategy": selected,
@@ -221,6 +240,7 @@ class MetaBandit:
             "arms_explored": sum(1 for s in self._stats.values() if s.pulls > 0),
             "best_strategies": self.get_best_strategies(3),
             "avg_reward": (
-                sum(s.total_reward for s in self._stats.values()) / max(self._total_pulls, 1)
+                sum(s.total_reward for s in self._stats.values())
+                / max(self._total_pulls, 1)
             ),
         }

@@ -24,6 +24,7 @@ Usage:
     # Stats
     stats = cache.stats()
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,26 +38,18 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Rust availability check
-# ---------------------------------------------------------------------------
-
 _RUST_CACHE_AVAILABLE = False
 _RUST_CACHE_CLASS = None
 
 try:
     import whitemagic_rs
+
     if hasattr(whitemagic_rs, "PyUnifiedCache"):
         _RUST_CACHE_CLASS = whitemagic_rs.PyUnifiedCache
         _RUST_CACHE_AVAILABLE = True
         logger.info("Rust UnifiedCache available — sub-microsecond cache reads")
 except ImportError:
     pass
-
-
-# ---------------------------------------------------------------------------
-# Python fallback cache
-# ---------------------------------------------------------------------------
 
 
 class _PyCacheEntry:
@@ -200,7 +193,9 @@ class PyUnifiedCache:
             with self._lock:
                 for key, data in snapshot:
                     if now <= data["expires_at"]:
-                        self._cache[key] = _PyCacheEntry(data["value"], data["expires_at"])
+                        self._cache[key] = _PyCacheEntry(
+                            data["value"], data["expires_at"]
+                        )
                         loaded += 1
             return loaded
         except (OSError, json.JSONDecodeError):
@@ -212,11 +207,6 @@ class PyUnifiedCache:
             f"UnifiedCache(size={s['size']}, hits={s['hits']}, misses={s['misses']}, "
             f"hit_rate={s['hit_rate']}%, backend={s['backend']})"
         )
-
-
-# ---------------------------------------------------------------------------
-# Unified bridge — wraps Rust or Python cache with a common API
-# ---------------------------------------------------------------------------
 
 
 class UnifiedCacheBridge:
@@ -238,19 +228,23 @@ class UnifiedCacheBridge:
         if persist:
             try:
                 from whitemagic.config.paths import CACHE_DIR
+
                 CACHE_DIR.mkdir(parents=True, exist_ok=True)
                 persist_path = str(CACHE_DIR / "unified_cache.json")
             except (OSError, PermissionError, RuntimeError):
                 persist = False
 
         if _RUST_CACHE_AVAILABLE:
-            self._cache = _RUST_CACHE_CLASS(max_size=max_size, persist_path=persist_path)
+            self._cache = _RUST_CACHE_CLASS(
+                max_size=max_size, persist_path=persist_path
+            )
         else:
             self._cache = PyUnifiedCache(max_size=max_size, persist_path=persist_path)
 
         self._state_board_fn = None
         try:
             import whitemagic_rs as _wrs
+
             if hasattr(_wrs, "board_write_cache_stats"):
                 self._state_board_fn = _wrs.board_write_cache_stats
         except ImportError:
@@ -279,11 +273,15 @@ class UnifiedCacheBridge:
         except (json.JSONDecodeError, TypeError):
             return None
 
-    def set(self, namespace: str, key: str, value: str, ttl_seconds: float = 3600.0) -> None:
+    def set(
+        self, namespace: str, key: str, value: str, ttl_seconds: float = 3600.0
+    ) -> None:
         self._cache.set(namespace, key, value, ttl_seconds)
         self._publish_stats()
 
-    def set_json(self, namespace: str, key: str, value: Any, ttl_seconds: float = 3600.0) -> None:
+    def set_json(
+        self, namespace: str, key: str, value: Any, ttl_seconds: float = 3600.0
+    ) -> None:
         """Serialize and set a JSON value."""
         try:
             raw = json.dumps(value, default=str)
@@ -306,7 +304,9 @@ class UnifiedCacheBridge:
 
     def stats(self) -> dict[str, Any]:
         if self.is_rust:
-            hits, misses, hit_rate, size, evictions, expirations, sets = self._cache.stats()
+            hits, misses, hit_rate, size, evictions, expirations, sets = (
+                self._cache.stats()
+            )
             return {
                 "size": size,
                 "max_size": None,
@@ -357,6 +357,7 @@ class UnifiedCacheBridge:
         """
         try:
             import whitemagic_rs as _wrs
+
             if hasattr(_wrs, "board_read_cache_stats"):
                 return _wrs.board_read_cache_stats()
         except ImportError:
@@ -373,6 +374,7 @@ class UnifiedCacheBridge:
         s = self.stats()
         try:
             from whitemagic.core.acceleration.julia_bridge import julia_cache_efficiency
+
             eff = julia_cache_efficiency(
                 hits=int(s.get("hits", 0)),
                 misses=int(s.get("misses", 0)),
@@ -408,10 +410,6 @@ class UnifiedCacheBridge:
     def __repr__(self) -> str:
         return f"UnifiedCacheBridge(backend={self._backend})"
 
-
-# ---------------------------------------------------------------------------
-# Global singleton
-# ---------------------------------------------------------------------------
 
 _unified_cache: UnifiedCacheBridge | None = None
 _cache_lock = threading.Lock()

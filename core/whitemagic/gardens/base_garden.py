@@ -137,14 +137,18 @@ class BaseGarden(ABC):
         if should_cascade and self.resonance_partners:
             self._cascading = True
             try:
-                self._cascade_to_partners(amount * 0.5, self.resonance_partners, boost=True)
+                self._cascade_to_partners(
+                    amount * 0.5, self.resonance_partners, boost=True
+                )
             finally:
                 self._cascading = False
 
         if should_cascade and self.dampening_partners:
             self._cascading = True
             try:
-                self._cascade_to_partners(amount * 0.3, self.dampening_partners, boost=False)
+                self._cascade_to_partners(
+                    amount * 0.3, self.dampening_partners, boost=False
+                )
             finally:
                 self._cascading = False
 
@@ -190,20 +194,25 @@ class BaseGarden(ABC):
         """Emit a GARDEN_RESONANCE event to the Gan Ying bus."""
         try:
             from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
+
             bus = get_bus()
-            bus.emit(ResonanceEvent(
-                source=f"garden_{self.get_name()}",
-                event_type=EventType.GARDEN_RESONANCE,
-                data={
-                    "garden": self.get_name(),
-                    "activation_level": self._activation_level,
-                },
-                confidence=self._activation_level,
-            ))
+            bus.emit(
+                ResonanceEvent(
+                    source=f"garden_{self.get_name()}",
+                    event_type=EventType.GARDEN_RESONANCE,
+                    data={
+                        "garden": self.get_name(),
+                        "activation_level": self._activation_level,
+                    },
+                    confidence=self._activation_level,
+                )
+            )
         except Exception:
             pass
 
-    def _cascade_to_partners(self, amount: float, partners: list[str], boost: bool) -> None:
+    def _cascade_to_partners(
+        self, amount: float, partners: list[str], boost: bool
+    ) -> None:
         """Cascade activation changes to partner gardens.
 
         Args:
@@ -213,6 +222,7 @@ class BaseGarden(ABC):
         """
         try:
             from whitemagic.gardens import get_garden
+
             for partner_name in partners:
                 partner = get_garden(partner_name)
                 if partner is not None:
@@ -284,6 +294,7 @@ class GanYingMixin:
         """Connect this garden to the Gan Ying event bus."""
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
+
             self._bus = get_bus()
             self._setup_event_listeners()
         except ImportError:
@@ -304,13 +315,15 @@ class GanYingMixin:
                 # Fallback to generic event
                 event_enum = EventType.GARDEN_ACTIVITY  # type: ignore[attr-defined]
 
-            self._bus.emit(ResonanceEvent(
-                source=f"garden_{getattr(self, 'name', 'unknown')}",
-                event_type=event_enum,
-                data=data,
-                timestamp=datetime.now(),
-                confidence=0.8,
-            ))
+            self._bus.emit(
+                ResonanceEvent(
+                    source=f"garden_{getattr(self, 'name', 'unknown')}",
+                    event_type=event_enum,
+                    data=data,
+                    timestamp=datetime.now(),
+                    confidence=0.8,
+                )
+            )
 
     def _setup_event_listeners(self) -> None:
         """Setup event listeners for this garden.
@@ -318,7 +331,9 @@ class GanYingMixin:
         Override in subclasses to listen for specific events.
         Base implementation is a no-op — subclasses should override.
         """
-        logger.debug("BaseGarden._setup_event_listeners called (no-op — override in subclass)")
+        logger.debug(
+            "BaseGarden._setup_event_listeners called (no-op — override in subclass)"
+        )
 
 
 # Convenience function for getting garden bias

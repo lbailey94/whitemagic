@@ -30,8 +30,13 @@ except ImportError:
 class CelestialEvent:
     """An event in the celestial realm."""
 
-    def __init__(self, source_sign: str, event_type: str,
-                 data: dict[str, Any], celestial_significance: float) -> None:
+    def __init__(
+        self,
+        source_sign: str,
+        event_type: str,
+        data: dict[str, Any],
+        celestial_significance: float,
+    ) -> None:
         self.source_sign = source_sign
         self.event_type = event_type
         self.data = data
@@ -53,7 +58,9 @@ class CelestialBus:
     """
 
     def __init__(self, celestial_dir: str | None = None) -> None:
-        self.celestial_dir = Path(celestial_dir) if celestial_dir else (WM_ROOT / "celestial")
+        self.celestial_dir = (
+            Path(celestial_dir) if celestial_dir else (WM_ROOT / "celestial")
+        )
         self.celestial_dir.mkdir(parents=True, exist_ok=True)
 
         self.listeners: dict[str, list[Callable[..., Any]]] = defaultdict(list)
@@ -63,9 +70,9 @@ class CelestialBus:
         # Element affinities (which elements naturally resonate)
         self.element_harmony = {
             ("fire", "fire"): 1.0,
-            ("fire", "air"): 0.8,   # Fire and air support each other
+            ("fire", "air"): 0.8,  # Fire and air support each other
             ("earth", "earth"): 1.0,
-            ("earth", "water"): 0.8, # Earth and water support each other
+            ("earth", "water"): 0.8,  # Earth and water support each other
             ("air", "air"): 1.0,
             ("air", "fire"): 0.8,
             ("water", "water"): 1.0,
@@ -92,22 +99,29 @@ class CelestialBus:
 
         # Also emit to underlying Gan Ying
         if self.gan_ying and ResonanceEvent and EventType:
-            self.gan_ying.emit(ResonanceEvent(
-                source=f"celestial_{event.source_sign}",
-                event_type=EventType.PATTERN_DETECTED,
-                data={
-                    "celestial_event": event.event_type,
-                    **event.data,
-                },
-                confidence=event.celestial_significance,
-            ))
+            self.gan_ying.emit(
+                ResonanceEvent(
+                    source=f"celestial_{event.source_sign}",
+                    event_type=EventType.PATTERN_DETECTED,
+                    data={
+                        "celestial_event": event.event_type,
+                        **event.data,
+                    },
+                    confidence=event.celestial_significance,
+                )
+            )
 
     def listen_celestial(self, event_type: str, callback: Callable[..., Any]) -> None:
         """Register listener for celestial events."""
         self.listeners[event_type].append(callback)
 
-    def calculate_resonance(self, source_sign: str, target_sign: str,
-                           source_element: str, target_element: str) -> float:
+    def calculate_resonance(
+        self,
+        source_sign: str,
+        target_sign: str,
+        source_element: str,
+        target_element: str,
+    ) -> float:
         """Calculate how strongly an event resonates between signs.
 
         Based on elemental harmony.
@@ -128,8 +142,9 @@ class CelestialBus:
 
         return min(1.0, base_resonance + pattern_strength)
 
-    def broadcast_to_council(self, message: str, source_sign: str,
-                            significance: float = 0.8) -> None:
+    def broadcast_to_council(
+        self, message: str, source_sign: str, significance: float = 0.8
+    ) -> None:
         """Broadcast message to entire Zodiac council."""
         event = CelestialEvent(
             source_sign,

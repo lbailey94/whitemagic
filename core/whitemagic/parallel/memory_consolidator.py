@@ -82,14 +82,20 @@ class ParallelMemoryConsolidator:
                         try:
                             key, value = line.split(":", 1)
                             # Handle simple list formats and quoted strings
-                            raw_value = value.strip().strip('"\'')
+                            raw_value = value.strip().strip("\"'")
                             clean_value: str | list[str] = raw_value
                             if raw_value.startswith("[") and raw_value.endswith("]"):
-                                clean_value = [v.strip().strip('"\'') for v in raw_value[1:-1].split(",")]
+                                clean_value = [
+                                    v.strip().strip("\"'")
+                                    for v in raw_value[1:-1].split(",")
+                                ]
                             frontmatter[key.strip()] = clean_value
                         except Exception as e:
                             import logging
-                            logging.getLogger(__name__).warning("Failed to parse frontmatter line: %s - %s", line, e)
+
+                            logging.getLogger(__name__).warning(
+                                "Failed to parse frontmatter line: %s - %s", line, e
+                            )
         return frontmatter
 
     def _process_single_file(self, filepath: Path) -> MemoryFile | None:
@@ -125,6 +131,7 @@ class ParallelMemoryConsolidator:
 
         """
         import time
+
         start_time = time.time()
 
         scan_dir = memory_dir or self.base_dir
@@ -136,8 +143,7 @@ class ParallelMemoryConsolidator:
         # Process all files in parallel
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_file = {
-                executor.submit(self._process_single_file, f): f
-                for f in md_files
+                executor.submit(self._process_single_file, f): f for f in md_files
             }
 
             for future in as_completed(future_to_file):
@@ -171,19 +177,21 @@ class ParallelMemoryConsolidator:
                 patterns.append(f"Tag '{tag}' appears in {len(files)} memories")
                 # Create connections between files sharing this tag
                 for i, f1 in enumerate(files[:5]):  # Limit to prevent explosion
-                    for f2 in files[i+1:6]:
-                        connections.append({
-                            "from": f1,
-                            "to": f2,
-                            "relation": f"shared_tag:{tag}",
-                        })
+                    for f2 in files[i + 1 : 6]:
+                        connections.append(
+                            {
+                                "from": f1,
+                                "to": f2,
+                                "relation": f"shared_tag:{tag}",
+                            }
+                        )
 
         duration = time.time() - start_time
 
         return ConsolidationResult(
             files_processed=len(self.memories),
             patterns_found=patterns[:20],  # Top 20 patterns
-            connections=connections[:50],   # Top 50 connections
+            connections=connections[:50],  # Top 50 connections
             tags_discovered=all_tags,
             duration_seconds=duration,
             errors=errors,
@@ -203,12 +211,16 @@ class ParallelMemoryConsolidator:
             "total_files": len(self.memories),
             "total_words": total_words,
             "unique_tags": len(all_tags),
-            "avg_words_per_file": total_words // len(self.memories) if self.memories else 0,
+            "avg_words_per_file": total_words // len(self.memories)
+            if self.memories
+            else 0,
             "top_tags": list(all_tags)[:10],
         }
 
 
-def consolidate_all_memories(memory_dir: str = "memory", workers: int = 64) -> ConsolidationResult:
+def consolidate_all_memories(
+    memory_dir: str = "memory", workers: int = 64
+) -> ConsolidationResult:
     """Convenience function to consolidate all memories.
 
     Args:
@@ -219,7 +231,9 @@ def consolidate_all_memories(memory_dir: str = "memory", workers: int = 64) -> C
         ConsolidationResult with full analysis
 
     """
-    consolidator = ParallelMemoryConsolidator(max_workers=workers, base_dir=Path(memory_dir))
+    consolidator = ParallelMemoryConsolidator(
+        max_workers=workers, base_dir=Path(memory_dir)
+    )
     return consolidator.consolidate()
 
 
@@ -232,17 +246,19 @@ def emit_consolidation_event(result: ConsolidationResult):
         from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
 
         bus = get_bus()
-        bus.emit(ResonanceEvent(
-            source="parallel.memory_consolidator",
-            event_type=EventType.MEMORY_CONSOLIDATED,
-            data={
-                "files_processed": result.files_processed,
-                "patterns_count": len(result.patterns_found),
-                "connections_count": len(result.connections),
-                "duration": result.duration_seconds,
-            },
-            timestamp=datetime.now(),
-            confidence=0.95,
-        ))
+        bus.emit(
+            ResonanceEvent(
+                source="parallel.memory_consolidator",
+                event_type=EventType.MEMORY_CONSOLIDATED,
+                data={
+                    "files_processed": result.files_processed,
+                    "patterns_count": len(result.patterns_found),
+                    "connections_count": len(result.connections),
+                    "duration": result.duration_seconds,
+                },
+                timestamp=datetime.now(),
+                confidence=0.95,
+            )
+        )
     except ImportError:
         pass  # Gan Ying not available

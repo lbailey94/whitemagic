@@ -3,11 +3,9 @@
 Some files have:
     import logging
     logger = logging.getLogger(__name__)
-    from typing import Any
 
     \"\"\"Real second docstring describing the module.\"\"\"
 
-    import json
     ...
 
 The middle Expr(string) breaks up the imports (E402). Move the
@@ -15,6 +13,7 @@ inner docstring to right after the file-level docstring (so it
 still serves as a "section header" in the source) and the imports
 become contiguous.
 """
+
 import ast
 from pathlib import Path
 
@@ -56,7 +55,8 @@ def fix_file(path: Path) -> bool:
     body = tree.body
     # Find the stray docstring(s) and the line where they live
     stray_indices = [
-        i for i, stmt in enumerate(body)
+        i
+        for i, stmt in enumerate(body)
         if isinstance(stmt, ast.Expr)
         and isinstance(stmt.value, ast.Constant)
         and isinstance(stmt.value.value, str)

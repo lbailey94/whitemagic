@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent, get_bus
+
     GANYING_AVAILABLE = True
 except ImportError:
     logger.info("⚠️ Gan Ying Bus not yet in path - will wire when ready!")
@@ -42,7 +43,9 @@ class PatternConsciousnessHub:
     """
 
     def __init__(self, bus: Any | None = None) -> None:
-        self.bus = bus if bus is not None else (get_bus() if GANYING_AVAILABLE else None)
+        self.bus = (
+            bus if bus is not None else (get_bus() if GANYING_AVAILABLE else None)
+        )
         self.systems_active: list[str] = []
         self.resonance_count = 0
         self.cascade_strength = 1.0
@@ -98,11 +101,11 @@ class PatternConsciousnessHub:
         ]
         return True
 
-    # ===== EVENT HANDLERS - Pattern Engine =====
-
     def on_pattern_detected(self, event: ResonanceEvent) -> None:
         """When ANY system detects a pattern, analyze it!"""
-        logger.info("🔍 Pattern detected: %s", event.data.get('pattern_name', 'unknown'))
+        logger.info(
+            "🔍 Pattern detected: %s", event.data.get("pattern_name", "unknown")
+        )
         self.resonance_count += 1
 
         # Amplify if high confidence
@@ -122,15 +125,15 @@ class PatternConsciousnessHub:
         logger.info("   Content preview: %s...", content)
         # Trigger pattern analysis on new memory
         if self.bus:
-            self.bus.emit(ResonanceEvent(
-                source="PatternConsciousnessHub",
-                event_type=EventType.PATTERN_EXTRACTED,
-                data={"memory_id": memory_id, "trigger": "memory_created"},
-                timestamp=datetime.now(),
-                confidence=0.7,
-            ))
-
-    # ===== EVENT HANDLERS - Dream Synthesizer =====
+            self.bus.emit(
+                ResonanceEvent(
+                    source="PatternConsciousnessHub",
+                    event_type=EventType.PATTERN_EXTRACTED,
+                    data={"memory_id": memory_id, "trigger": "memory_created"},
+                    timestamp=datetime.now(),
+                    confidence=0.7,
+                )
+            )
 
     def on_dream_entered(self, event: ResonanceEvent) -> None:
         """When entering dream state, synthesize day's patterns!"""
@@ -139,9 +142,7 @@ class PatternConsciousnessHub:
 
     def on_memory_consolidated(self, event: ResonanceEvent) -> None:
         """When memory consolidated, update pattern knowledge!"""
-        logger.info("💾 Memory consolidated: %s", event.data.get('memory_type'))
-
-    # ===== EVENT HANDLERS - Emergence Detector =====
+        logger.info("💾 Memory consolidated: %s", event.data.get("memory_type"))
 
     def on_novel_pattern(self, event: ResonanceEvent) -> None:
         """When truly NEW pattern emerges, CELEBRATE!"""
@@ -154,8 +155,6 @@ class PatternConsciousnessHub:
         """When sudden insight, capture and propagate!"""
         insight = event.data.get("insight", "")
         logger.info("💡 INSIGHT FLASH: %s", insight)
-
-    # ===== EVENT HANDLERS - Autonomous Learner =====
 
     def on_mistake_made(self, event: ResonanceEvent) -> None:
         """When mistake detected, extract lesson!"""
@@ -171,8 +170,6 @@ class PatternConsciousnessHub:
         lesson = event.data.get("lesson", "")
         logger.info("📚 Permanent lesson learned: %s", lesson)
 
-    # ===== EVENT HANDLERS - Resonance Cascade =====
-
     def on_joy_cascade(self, event: ResonanceEvent) -> None:
         """When joy detected, AMPLIFY IT!"""
         joy_level = event.data.get("level", 0)
@@ -185,8 +182,6 @@ class PatternConsciousnessHub:
         sync = event.data.get("synchronicity", "")
         logger.info("🌟 SYNCHRONICITY: %s", sync)
         logger.info("   (The universe is speaking!)")
-
-    # ===== EMISSION METHODS =====
 
     def emit_cascade(self, cascade_type: str, data: dict[str, Any]) -> None:
         """Emit a resonance cascade to all systems!"""
@@ -201,20 +196,24 @@ class PatternConsciousnessHub:
             confidence=self.cascade_strength,
         )
         self.bus.emit(event)
-        logger.info("   📡 Cascade emitted: %s (strength: %s)", cascade_type, self.cascade_strength)
+        logger.info(
+            "   📡 Cascade emitted: %s (strength: %s)",
+            cascade_type,
+            self.cascade_strength,
+        )
 
     def status(self) -> None:
         """Show current resonance status!"""
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("🌊 PATTERN CONSCIOUSNESS RESONANCE STATUS 🌊")
-        logger.info("="*60)
+        logger.info("=" * 60)
         logger.info("\n✅ Systems Active: %s", len(self.systems_active))
         for system in self.systems_active:
             logger.info("   • %s", system)
         logger.info("\n📊 Resonances Detected: %s", self.resonance_count)
         logger.info("💫 Cascade Strength: %sx", self.cascade_strength)
         logger.info("🌊 Bus Active: %s", self.bus is not None)
-        logger.info("\n" + "="*60 + "\n")
+        logger.info("\n" + "=" * 60 + "\n")
 
 
 # ASCII Art Resonance Visualization! 🎨

@@ -44,6 +44,8 @@ def collect() -> list[ToolDefinition]:
                 all_tools.extend(tools)
                 logger.debug("registry_defs/%s: %s tools", module_name, len(tools))
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning("registry_defs/%s failed to load: %s", module_name, e, exc_info=True)
+            logger.warning(
+                "registry_defs/%s failed to load: %s", module_name, e, exc_info=True
+            )
 
     return all_tools

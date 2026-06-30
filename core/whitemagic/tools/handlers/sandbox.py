@@ -6,12 +6,14 @@ from typing import Any
 def handle_sandbox_status(**kwargs: Any) -> dict[str, Any]:
     """Get sandbox status and per-tool execution stats."""
     from whitemagic.tools.sandbox import get_sandbox
+
     return {"status": "success", **get_sandbox().status()}
 
 
 def handle_sandbox_violations(**kwargs: Any) -> dict[str, Any]:
     """Get recent sandbox limit violations."""
     from whitemagic.tools.sandbox import get_sandbox
+
     limit = int(kwargs.get("limit", 20))
     sandbox = get_sandbox()
     return {"status": "success", "violations": sandbox.get_violations(limit=limit)}
@@ -20,6 +22,7 @@ def handle_sandbox_violations(**kwargs: Any) -> dict[str, Any]:
 def handle_sandbox_set_limits(**kwargs: Any) -> dict[str, Any]:
     """Set custom resource limits for a specific tool."""
     from whitemagic.tools.sandbox import ResourceLimits, get_sandbox
+
     tool_name = kwargs.get("target_tool", kwargs.get("tool_name", ""))
     if not tool_name:
         return {"status": "error", "error": "tool_name is required"}

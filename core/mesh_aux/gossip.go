@@ -27,10 +27,6 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 // MessageType identifies the gossip message variant.
 type MessageType string
 
@@ -85,10 +81,6 @@ type SyncStatus struct {
 	MessagesOut     uint64    `json:"messages_out"`
 	Divergences     uint64    `json:"divergences_detected"`
 }
-
-// ---------------------------------------------------------------------------
-// GossipNode
-// ---------------------------------------------------------------------------
 
 // GossipNode manages gossip protocol state for a single WhiteMagic instance.
 type GossipNode struct {
@@ -365,10 +357,6 @@ func (n *GossipNode) ToJSON() (string, error) {
 	return string(bytes), nil
 }
 
-// ---------------------------------------------------------------------------
-// Internal message handlers
-// ---------------------------------------------------------------------------
-
 func (n *GossipNode) handleAnnounce(msg *GossipMessage) *GossipMessage {
 	memoryID, _ := msg.Payload["memory_id"].(string)
 	version, _ := msg.Payload["version"].(float64)
@@ -489,10 +477,6 @@ func (n *GossipNode) handleSync(msg *GossipMessage) *GossipMessage {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Vector clock operations
-// ---------------------------------------------------------------------------
-
 func (n *GossipNode) mergeVectorClock(remote map[string]uint64) {
 	for nodeID, remoteVersion := range remote {
 		if localVersion, exists := n.vectorClock[nodeID]; !exists || remoteVersion > localVersion {
@@ -508,10 +492,6 @@ func copyVectorClock(vc map[string]uint64) map[string]uint64 {
 	}
 	return result
 }
-
-// ---------------------------------------------------------------------------
-// Distributed lock manager (simple leader-election style)
-// ---------------------------------------------------------------------------
 
 // DistributedLock provides a simple distributed lock using gossip consensus.
 type DistributedLock struct {

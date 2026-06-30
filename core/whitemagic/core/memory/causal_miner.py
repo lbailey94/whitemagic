@@ -35,10 +35,6 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
 @dataclass
 class CausalEdge:
     """A proposed directed causal edge between two memories."""
@@ -105,10 +101,6 @@ class CausalMiningReport:
         }
 
 
-# ---------------------------------------------------------------------------
-# Core miner
-# ---------------------------------------------------------------------------
-
 # Temporal decay: memories more than this many hours apart get rapidly
 # diminishing temporal proximity scores.
 _MAX_CAUSAL_WINDOW_HOURS = 168.0  # 7 days
@@ -141,10 +133,6 @@ class CausalMiner:
         self._lock = threading.Lock()
         self._total_runs: int = 0
         self._total_edges_created: int = 0
-
-    # ------------------------------------------------------------------
-    # Signal computation
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _temporal_proximity(dt_hours: float) -> float:
@@ -192,10 +180,6 @@ class CausalMiner:
             + 0.35 * temporal_prox
             + 0.15 * tag_overlap
         )
-
-    # ------------------------------------------------------------------
-    # Mining
-    # ------------------------------------------------------------------
 
     def mine(self, sample_size: int = 200) -> CausalMiningReport:
         """Run a causal edge mining pass.
@@ -393,10 +377,6 @@ class CausalMiner:
          report.memories_sampled, report.pairs_evaluated, report.edges_proposed)
         return report
 
-    # ------------------------------------------------------------------
-    # Temporal fallback (no embeddings required)
-    # ------------------------------------------------------------------
-
     def _temporal_fallback_pairs(
         self, um: Any, sample_size: int,
     ) -> list[dict[str, Any]]:
@@ -463,10 +443,6 @@ class CausalMiner:
 
         return pairs[:self._max_edges * 5]
 
-    # ------------------------------------------------------------------
-    # Stats
-    # ------------------------------------------------------------------
-
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -482,10 +458,6 @@ class CausalMiner:
             "max_edges_per_run": self._max_edges,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
 
 _miner_instance: CausalMiner | None = None
 _miner_lock = threading.Lock()

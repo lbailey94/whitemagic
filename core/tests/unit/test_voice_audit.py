@@ -1,6 +1,5 @@
 """Tests for Jaynes Voice Audit and Quarantine."""
 
-
 import pytest
 
 from whitemagic.core.governance.quarantine import QuarantineManager
@@ -53,8 +52,14 @@ class TestVoiceAuditScanner:
         # Simulate a karma ledger entry for health_report
         try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger
+
             ledger = get_karma_ledger()
-            ledger.record(tool="health_report", declared_safety="READ", actual_writes=0, success=True)
+            ledger.record(
+                tool="health_report",
+                declared_safety="READ",
+                actual_writes=0,
+                success=True,
+            )
         except Exception:
             pytest.skip("Karma ledger unavailable")
         report = scanner.scan()

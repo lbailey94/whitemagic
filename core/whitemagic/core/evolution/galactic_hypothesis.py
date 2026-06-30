@@ -7,6 +7,7 @@ outward. Validated improvements get pulled back to Core as "confirmed knowledge.
 Drift rate: drift_rate = 1 / (1 + outcome_count * confidence)
 Well-validated improvements resist drift.
 """
+
 from __future__ import annotations
 
 import time
@@ -17,11 +18,12 @@ from typing import Any
 
 class HypothesisZone(Enum):
     """Galactic zones for hypothesis lifecycle."""
-    CORE = "core"              # New, untested — high attention
-    INNER_RIM = "inner_rim"    # Tested once, inconclusive
-    MID_BAND = "mid_band"      # Tested and rejected
-    OUTER_RIM = "outer_rim"    # Superseded by better approach
-    FAR_EDGE = "far_edge"      # Deprecated / no longer relevant
+
+    CORE = "core"  # New, untested — high attention
+    INNER_RIM = "inner_rim"  # Tested once, inconclusive
+    MID_BAND = "mid_band"  # Tested and rejected
+    OUTER_RIM = "outer_rim"  # Superseded by better approach
+    FAR_EDGE = "far_edge"  # Deprecated / no longer relevant
 
 
 # Zone ordering for drift direction (0 = core, 4 = far edge)
@@ -37,6 +39,7 @@ ZONE_ORDER = [
 @dataclass
 class HypothesisState:
     """Lifecycle state of a hypothesis in the galactic map."""
+
     hypothesis_id: str
     zone: HypothesisZone = HypothesisZone.CORE
     outcome_count: int = 0
@@ -90,7 +93,9 @@ class HypothesisGalacticMap:
     def get_state(self, hypothesis_id: str) -> HypothesisState | None:
         return self._states.get(hypothesis_id)
 
-    def record_outcome(self, hypothesis_id: str, success: bool, confidence: float | None = None) -> HypothesisZone:
+    def record_outcome(
+        self, hypothesis_id: str, success: bool, confidence: float | None = None
+    ) -> HypothesisZone:
         """Record an outcome and update the hypothesis's zone.
 
         Args:
@@ -170,14 +175,16 @@ class HypothesisGalacticMap:
     def get_active_hypotheses(self) -> list[str]:
         """Get IDs of hypotheses in Core and Inner Rim (active evaluation)."""
         return [
-            hid for hid, state in self._states.items()
+            hid
+            for hid, state in self._states.items()
             if state.zone in (HypothesisZone.CORE, HypothesisZone.INNER_RIM)
         ]
 
     def get_archived_hypotheses(self) -> list[str]:
         """Get IDs of hypotheses in Outer Rim and Far Edge (archived)."""
         return [
-            hid for hid, state in self._states.items()
+            hid
+            for hid, state in self._states.items()
             if state.zone in (HypothesisZone.OUTER_RIM, HypothesisZone.FAR_EDGE)
         ]
 
@@ -196,6 +203,7 @@ class HypothesisGalacticMap:
             if now - state.last_evaluated > 3600:
                 if state.zone != HypothesisZone.FAR_EDGE:
                     import random
+
                     if random.random() < state.drift_rate * 0.1:  # Slow time drift
                         current_idx = ZONE_ORDER.index(state.zone)
                         state.zone = ZONE_ORDER[current_idx + 1]

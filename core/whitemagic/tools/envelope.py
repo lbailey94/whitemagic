@@ -68,7 +68,11 @@ def coerce_jsonable(value: Any) -> Any:
     if isinstance(value, Enum):
         # Prefer the human-stable string, then fallback.
         v = getattr(value, "value", None)
-        return v if isinstance(v, (str, int, float, bool)) else getattr(value, "name", str(value))
+        return (
+            v
+            if isinstance(v, (str, int, float, bool))
+            else getattr(value, "name", str(value))
+        )
     if isinstance(value, bytes):
         return {"_type": "bytes", "b64": base64.b64encode(value).decode("ascii")}
     if is_dataclass(value) and not isinstance(value, type):
@@ -190,7 +194,12 @@ def is_enveloped(result: Any) -> bool:
     Returns:
         bool
     """
-    return isinstance(result, dict) and "status" in result and "tool" in result and "details" in result
+    return (
+        isinstance(result, dict)
+        and "status" in result
+        and "tool" in result
+        and "details" in result
+    )
 
 
 def normalize_raw(
@@ -216,7 +225,9 @@ def normalize_raw(
         out.setdefault("tool", tool)
         out.setdefault("idempotency_key", idempotency_key)
         out.setdefault("message", "ok" if out.get("status") == "success" else "error")
-        out.setdefault("error_code", None if out.get("status") == "success" else "internal_error")
+        out.setdefault(
+            "error_code", None if out.get("status") == "success" else "internal_error"
+        )
         out.setdefault("retryable", False)
         out.setdefault("writes", [])
         out.setdefault("artifacts", [])
@@ -240,10 +251,14 @@ def normalize_raw(
     status_val = payload.get("status")
     success_val = payload.get("success")
 
-    has_error_signal = bool(payload.get("error_code") or payload.get("code") or payload.get("error"))
+    has_error_signal = bool(
+        payload.get("error_code") or payload.get("code") or payload.get("error")
+    )
 
     if isinstance(status_val, str):
-        normalized_status = "success" if status_val.lower() in {"success", "ok"} else "error"
+        normalized_status = (
+            "success" if status_val.lower() in {"success", "ok"} else "error"
+        )
     elif isinstance(success_val, bool):
         normalized_status = "success" if success_val else "error"
     elif has_error_signal:
@@ -260,10 +275,16 @@ def normalize_raw(
             msg = "ok"
 
     # Remove envelope-ish keys from details to avoid duplication.
-    details = {k: v for k, v in payload.items() if k not in _RESERVED_KEYS and k not in {"success"}}
+    details = {
+        k: v
+        for k, v in payload.items()
+        if k not in _RESERVED_KEYS and k not in {"success"}
+    }
 
     if normalized_status == "error":
-        error_code = payload.get("error_code") or payload.get("code") or "internal_error"
+        error_code = (
+            payload.get("error_code") or payload.get("code") or "internal_error"
+        )
         return err(
             tool=tool,
             request_id=request_id,
@@ -273,11 +294,21 @@ def normalize_raw(
             message=str(msg),
             details=details,
             retryable=bool(payload.get("retryable", False)),
-            writes=payload.get("writes") if isinstance(payload.get("writes"), list) else None,
-            artifacts=payload.get("artifacts") if isinstance(payload.get("artifacts"), list) else None,
-            metrics=payload.get("metrics") if isinstance(payload.get("metrics"), dict) else None,
-            side_effects=payload.get("side_effects") if isinstance(payload.get("side_effects"), dict) else None,
-            warnings=payload.get("warnings") if isinstance(payload.get("warnings"), list) else None,
+            writes=payload.get("writes")
+            if isinstance(payload.get("writes"), list)
+            else None,
+            artifacts=payload.get("artifacts")
+            if isinstance(payload.get("artifacts"), list)
+            else None,
+            metrics=payload.get("metrics")
+            if isinstance(payload.get("metrics"), dict)
+            else None,
+            side_effects=payload.get("side_effects")
+            if isinstance(payload.get("side_effects"), dict)
+            else None,
+            warnings=payload.get("warnings")
+            if isinstance(payload.get("warnings"), list)
+            else None,
         )
 
     return ok(
@@ -288,11 +319,21 @@ def normalize_raw(
         message=str(msg),
         details=details,
         retryable=bool(payload.get("retryable", False)),
-        writes=payload.get("writes") if isinstance(payload.get("writes"), list) else None,
-        artifacts=payload.get("artifacts") if isinstance(payload.get("artifacts"), list) else None,
-        metrics=payload.get("metrics") if isinstance(payload.get("metrics"), dict) else None,
-        side_effects=payload.get("side_effects") if isinstance(payload.get("side_effects"), dict) else None,
-        warnings=payload.get("warnings") if isinstance(payload.get("warnings"), list) else None,
+        writes=payload.get("writes")
+        if isinstance(payload.get("writes"), list)
+        else None,
+        artifacts=payload.get("artifacts")
+        if isinstance(payload.get("artifacts"), list)
+        else None,
+        metrics=payload.get("metrics")
+        if isinstance(payload.get("metrics"), dict)
+        else None,
+        side_effects=payload.get("side_effects")
+        if isinstance(payload.get("side_effects"), dict)
+        else None,
+        warnings=payload.get("warnings")
+        if isinstance(payload.get("warnings"), list)
+        else None,
     )
 
 
