@@ -649,3 +649,78 @@ class TestCoherenceDispatch:
             assert "_coherence_caution" not in result
 
         cycle.reset()
+
+
+class TestCoherenceAutoMeasure:
+    """Test coherence auto-measure — drift tracking and governor integration."""
+
+    def test_sensorium_has_coherence_trend(self):
+        """Sensorium includes cross-session coherence trend when available."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        from whitemagic.core.consciousness.coherence import get_coherence_metric
+
+        get_citta_cycle().reset()
+        metric = get_coherence_metric()
+        metric.history = [
+            {"timestamp": "2026-01-01T00:00:00", "overall": 0.5, "scores": {}},
+            {"timestamp": "2026-01-02T00:00:00", "overall": 0.7, "scores": {}},
+            {"timestamp": "2026-01-03T00:00:00", "overall": 0.8, "scores": {}},
+        ]
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(thought="remember coherence trend tracking")
+
+            s = result["_sensorium"]
+            if "coherence_trend" in s:
+                assert s["coherence_trend"] in ("improving", "degrading", "stable")
+
+    def test_governor_coherence_strictness_low_coherence(self):
+        """Governor returns high strictness when coherence is low."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        from whitemagic.core.governor import Governor
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        for _ in range(5):
+            cycle.advance(gana="gana_ox", tool="test", coherence=0.2)
+
+        gov = Governor()
+        strictness = gov._get_coherence_strictness()
+        assert strictness >= 0.8
+
+        cycle.reset()
+
+    def test_governor_coherence_strictness_high_coherence(self):
+        """Governor returns low strictness when coherence is high."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        from whitemagic.core.governor import Governor
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        for _ in range(5):
+            cycle.advance(gana="gana_ox", tool="test", coherence=0.95)
+
+        gov = Governor()
+        strictness = gov._get_coherence_strictness()
+        assert strictness == 0.0
+
+        cycle.reset()
+
+    def test_governor_coherence_strictness_short_stream(self):
+        """Governor returns 0 strictness with insufficient stream history."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        from whitemagic.core.governor import Governor
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        cycle.advance(gana="gana_ox", tool="test", coherence=0.1)
+
+        gov = Governor()
+        strictness = gov._get_coherence_strictness()
+        assert strictness == 0.0
+
+        cycle.reset()

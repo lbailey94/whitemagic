@@ -280,7 +280,7 @@ class Governor:
                 return 0.4  # Slightly cautious
             else:
                 return 0.0  # Normal
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0.0
 
     def validate_tool_call(
