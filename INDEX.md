@@ -81,81 +81,30 @@ Private filenames are intentionally not enumerated in this public index.
 
 ## Active Workspace: `docs/message_board/`
 
-> **Rule**: Any doc created or significantly edited in the current development cycle goes here. When a cycle ends and the doc becomes archival, move it to `docs/archive/message_board/`.
+> **Rule**: Any doc created or significantly edited in the current development cycle goes here. When a cycle ends and the doc becomes archival, move it to `docs/archive/`.
 >
-> **Triage (2026-06-21)**: Reduced from 91 to 46 files. 36 old session/state reports moved to `docs/archive/message_board/`. 9 grant docs moved to `docs/archive/grant_applications/`.
-
-### Session Tracking
+> **Triage (2026-06-30)**: Reduced from 64 to 4 active files. 60 docs reorganized into `docs/archive/` subfolders: `session_handoffs/`, `old_roadmaps/`, `dated_reports/`, `strategy/`, `research/`, `prescience/`, `site_deployment/`, `standards_security/`, `papers_specs/`.
 
 | File | What It Is | Date |
 |------|-----------|------|
-| `SESSION_SUMMARY.md` | Master historical handoff — all session state | Jun 8 |
-| `SESSION_REPORT_2026-06-18.md` | Session report — documentation sweep, polyglot survey | Jun 18 |
-| `WHATS_NEXT_2026-06-18.md` | Next steps: ship v22.3.0, then v23.0.0 | Jun 18 |
-| `MISSING_MODULES_REPORT_2026-06-18.md` | 87 missing modules classified — resurface/reimplement/remove | Jun 18 |
-| `SESSION_UPDATE_VERCEL_BLOCKER_2026-06-19.md` | Vercel deploy blocker status | Jun 19 |
-| `SHIP_SURFACE.md` | Core shipping surface audit | Jun 20 |
-| `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 patch scope proposal | Jun 18 |
-| `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI audience | Jun 18 |
-| `INTERNAL_RESEARCH_2026-06-09.md` | Codebase reality check: 935 files, 2,422 tests | Jun 9 |
-| `DEEP_SURVEY_SYNTHESIS_2026-06-22.md` | Comprehensive deep survey synthesis — timeline, identity, codebase, archives, prescience, narrative threads | Jun 22 |
-| `STRATA_CLEANUP_HANDOFF.md` | STRATA findings cleanup progress + deferred work guide | Jun 24 |
-| `VPS_DEPLOYMENT_HANDOFF.md` | VPS deployment scripts reference + execution guide | Jun 24 |
-| `COGNITIVE_GAPS_HANDOFF.md` | 5 cognitive system gaps with fix instructions | Jun 24 |
-| `STRATA_SESSION_HANDOFF_2026-06-25.md` | STRATA checker refinements — 3,787→1,555 findings (58.9% reduction) + polyglot fix | Jun 25 |
-
-### Research & Strategy
-
-| File | What It Is | Date |
-|------|-----------|------|
-| `STRATEGIC_ROADMAP_V23.md` | v23 roadmap — multi-user + WASM runtime | Jun 3 |
-| `V23_2_ROADMAP.md` | v23.2 roadmap — local-first multi-user, real-time sync, WASM, Rust SIMD, Mojo removal | Jun 26 |
-| `30_OBJECTIVES_PLAN.md` | 30-objective plan — 6 phased objectives | May 15 |
-| `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | External Fragment + STRATA audit findings | May 15 |
-| `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all systems (superseded) | May 29 |
-| `CAPABILITIES_SUMMARY_2026-06-28.md` | Updated capabilities summary — 48 subsystems, 32 fusions, live probe data | Jun 28 |
-| `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape | Apr 27 |
-| `KARMA_LEDGER_PAPER_OUTLINE.md` | arxiv preprint outline | Apr 27 |
-| `WHITEMAGIC_PAPER_2026-06-18.md` | Technical paper for AI/AGI/ASI audience | Jun 18 |
-| `RESEARCH_SYNTHESIS_2026-06-04.md` | Internal audit + 8-domain external research | Jun 4 |
-| `SELF_IMPROVING_WORKFLOW.md` | WhiteMagic managing itself — operational spec | May 29 |
-| `RECURSIVE_IMPROVEMENT_STRATEGY.md` | 30 objectives (A–Z) for recursive self-improvement — all implemented, tested, and wired | Jun 24 |
-
-### Prescience & Methodology
-
-| File | What It Is | Date |
-|------|-----------|------|
-| `PRESCIENCE_EXPANSION_PLAN_2026-05-29.md` | Claim discovery plan | May 29 |
-| `PRESCIENCE_IN_AN_ACCELERATING_WORLD_2026-05-29.md` | Formal preprint — 21 claims, Brier 0.0958 | May 29 |
-| `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal methodology — evidence, Brier, calibration | Jun 8 |
-| `PRESCIENCE_UPDATE_2026-06-08.md` | Updated ledger — 21 claims, 523+ points | Jun 8 |
-| `PREDICTION_MARKET_TACTICAL_PLAN_2026-05-29.md` | Prediction market strategy | May 29 |
-
-### Governance & Security
-
-| File | What It Is | Date |
-|------|-----------|------|
-| `DHARMA_SPEC_2026-06-08.md` | Dharma governance spec v0.1.0 | Jun 8 |
-| `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` | Security audit against NSA MCP publication | Jun 8 |
-| `SECURITY_UPDATE.md` | Security posture — vulnerability triage | May 2026 |
-| `STANDARDS_ALIGNMENT_AUDIT_2026-06-04.md` | Standards alignment audit | Jun 4 |
-
-### Site & Integration
-
-| File | What It Is | Date |
-|------|-----------|------|
-| `AI_PRIMARY_SITE_ARCHITECTURE.md` | Agent-first site architecture spec | May 29 |
-| `MCP_20_READINESS_CHECK_2026-06-04.md` | MCP 2.0 readiness check | Jun 4 |
-| `TWITTER_ARCHIVE_PRESCIENCE_AUDIT_2026-06-04.md` | Twitter archive prescience audit | Jun 4 |
-
-### Other Active Docs
-
-`CLAIM_DISCOVERY_SPRINT_2026-05-29.md`, `DAILY_DIGEST_2026-06-05.md`, `DISCOVERY_2_INTEGRATION.md`, `EXA_CROSS_REFERENCE_2026-05-29.md`, `MVP_INVENTORY_7DAY_SHIPPABLE_2026-05-29.md`, `PATHS_B_C_E_DEEP_DIVE.md`, `PRESCIENCE_ACCELERATION_SINGULARITY_2026-05-29.md`, `ROADMAP_CONSOLIDATION_2026-06-03.md`, `SESSION_15_SUMMARY.md`, `SESSION_16_SUMMARY.md`, `SESSION_17_SUMMARY_2026-06-04.md`, `SESSION_HANDOFF_2026-06-03.md`, `SESSION_SUMMARY_2026-06-04.md`, `SITE_POSITIONING_PATCH_2026-06-05.md`, `STRATA_FRAGMENT_CLEANUP_2026-06-04.md`, `STRATEGIC_POSITIONING_2026-06-08.md`, `TACTICAL_PLAN_2026-06-08.md`
+| `SESSION_SUMMARY.md` | Master historical handoff — all session state | Jun 29 |
+| `V23_3_2_ROADMAP.md` | v23.3.2 roadmap — module consolidation, codebase cleanup | Jun 29 |
+| `UNIFIED_DIVINATORY_SYSTEM.md` | Unified I Ching + Tarot + Zodiac divination system spec | Jun 29 |
+| `NEXT_SESSION_ONBOARDING.md` | Onboarding guide for next AI session | Jun 28 |
 
 ### Archived
 
 Old session reports and state docs (36 files) → `docs/archive/message_board/`
 Grant strategy and application docs (9 files) → `docs/archive/grant_applications/`
+Session handoffs (9 files) → `docs/archive/session_handoffs/`
+Old roadmaps (3 files) → `docs/archive/old_roadmaps/`
+Dated reports (7 files) → `docs/archive/dated_reports/`
+Strategy docs (12 files) → `docs/archive/strategy/`
+Research docs (7 files) → `docs/archive/research/`
+Prescience docs (7 files) → `docs/archive/prescience/`
+Site/deployment docs (5 files) → `docs/archive/site_deployment/`
+Standards/security docs (5 files) → `docs/archive/standards_security/`
+Papers/specs (5 files) → `docs/archive/papers_specs/`
 
 ---
 
@@ -323,6 +272,8 @@ Audit reports, evaluations, and post-mortems.
 | `ARCHIVE_AUDIT_REPORT.md` | Archive audit findings |
 | `ARCHIVE_REPORT.md` | Archive status report |
 | `WHITEMAGIC_REORGANIZATION_SUMMARY.md` | Reorganization summary |
+| `AUDIT_REPORT_2026-06-28.md` | Date-specific audit report (moved from root) |
+| `ARCHITECTURE_MANIFEST_2026-06-04.md` | Date-specific architecture manifest (moved from root) |
 
 ### Audit History: `docs/reports/audit_history/`
 
