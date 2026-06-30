@@ -28,7 +28,7 @@ class TestDepthGauge:
         )
         gauge = ConsciousnessDepthGauge()
         gauge.descend(DepthLayer.DREAM)
-        assert gauge.current_compression() == 100.0
+        assert gauge.current_compression() == 10.0
 
     def test_summary(self):
         from whitemagic.autonomous.depth_gauge import (

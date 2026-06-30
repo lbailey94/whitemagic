@@ -1,6 +1,7 @@
 """Tests for cardinality velocity-enhanced surprise gate."""
 import time
 from collections import deque
+from unittest.mock import patch
 
 from whitemagic.core.memory.surprise_gate import (
     CardinalityVelocity,
@@ -118,9 +119,13 @@ class TestSurpriseGateCardinality:
 
     def test_evaluate_tracks_cardinality(self):
         gate = SurpriseGate(enable_cardinality_velocity=True)
-        # Evaluate will track content hash in HLL
-        # Since embeddings are likely unavailable in test, it returns CREATE
-        verdict = gate.evaluate("test content for cardinality tracking")
+        # Mock embedding engine as unavailable to ensure consistent CREATE verdict
+        # (without this, a prior test may load embeddings causing REINFORCE)
+        with patch(
+            "whitemagic.core.memory.embeddings.get_embedding_engine",
+            side_effect=ImportError("test mock"),
+        ):
+            verdict = gate.evaluate("test content for cardinality tracking")
         assert verdict.action in (SurpriseAction.CREATE, SurpriseAction.CREATE_BOOSTED)
         stats = gate.get_stats()
         assert stats["distinct_seen"] > 0

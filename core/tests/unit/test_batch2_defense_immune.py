@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
-
-import pytest
 import tempfile
 import time
 from pathlib import Path
+
+import pytest
 
 os.environ.setdefault("WM_STATE_ROOT", str(Path(tempfile.mkdtemp())))
 
@@ -175,11 +175,22 @@ class TestHomeostaticMonitor:
 class TestGranularAwareness:
     """Test granular awareness."""
 
-    @pytest.mark.timeout(60)
-    def test_scan(self):
+    @pytest.mark.timeout(30)
+    def test_scan(self, tmp_path):
         from whitemagic.defense.granular_awareness import GranularAwareness
+        from whitemagic.defense.homeostatic_monitor import HomeostaticMonitor
+        # Use a small temp dir to avoid scanning the entire project (22s+)
+        monitor = HomeostaticMonitor(project_root=tmp_path)
+        monitor.save_snapshot()
         awareness = GranularAwareness()
-        result = awareness.scan()
+        # Patch get_monitor to use our temp-based monitor instead of singleton
+        import whitemagic.defense.homeostatic_monitor as hm_mod
+        original_hm_get = hm_mod.get_monitor
+        hm_mod.get_monitor = lambda: monitor
+        try:
+            result = awareness.scan()
+        finally:
+            hm_mod.get_monitor = original_hm_get
         assert "total_changes" in result
         assert "immune_assessment" in result
 

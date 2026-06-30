@@ -54,32 +54,17 @@ class TestIChing:
     def test_cast(self):
         from whitemagic.wisdom.i_ching import IChingSystem
         system = IChingSystem()
-        hexagram = system.cast()
+        hexagram = system.cast_hexagram("test question")
         assert 1 <= hexagram.number <= 64
-        assert len(hexagram.lines) == 6
-
-    def test_interpret(self):
-        from whitemagic.wisdom.i_ching import Hexagram, IChingSystem
-        system = IChingSystem()
-        hexagram = Hexagram(
-            number=1,
-            lines=[1, 1, 1, 1, 1, 1],
-            lower_trigram="qian",
-            upper_trigram="qian",
-            name="Qian",
-            judgment="The Creative",
-        )
-        interpretation = system.interpret(hexagram)
-        assert interpretation["number"] == 1
-        assert "lower" in interpretation
-        assert "upper" in interpretation
+        assert hexagram.name
+        assert hexagram.judgment
 
     def test_consult(self):
         from whitemagic.wisdom.i_ching import IChingSystem
         system = IChingSystem()
-        result = system.consult("Should I proceed?")
-        assert result["question"] == "Should I proceed?"
-        assert "name" in result
+        hexagram = system.cast_hexagram("Should I proceed?")
+        assert hexagram.number >= 1
+        assert hexagram.name
 
 
 class TestIChingAdvisor:

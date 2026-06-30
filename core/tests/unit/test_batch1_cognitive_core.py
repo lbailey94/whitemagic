@@ -157,8 +157,11 @@ class TestTokenOptimizer:
     """Test token optimizer."""
 
     def test_query_cache(self):
+        import tempfile
+        from pathlib import Path
         from whitemagic.agentic.token_optimizer import QueryCache
-        cache = QueryCache()
+        # Use a fresh temp file to avoid cross-test cache pollution
+        cache = QueryCache(cache_file=Path(tempfile.mktemp(suffix=".json")))
         assert cache.get("test") is None
         cache.set("test", "result", 100)
         cached = cache.get("test")
