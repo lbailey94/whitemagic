@@ -175,10 +175,25 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
 
     # --- Web Research ---
     "web_fetch": LazyHandler("web_research", "handle_web_fetch"),
+    "web_fetch_enhanced": LazyHandler("web_research", "handle_web_fetch_enhanced"),
     "web_search": LazyHandler("web_research", "handle_web_search"),
     "web_search_and_read": LazyHandler("web_research", "handle_web_search_and_read"),
     "research_topic": LazyHandler("web_research", "handle_research_topic"),
+    "web_search_category": LazyHandler("web_research", "handle_web_search_category"),
+    "web_search_batch": LazyHandler("web_research", "handle_web_search_batch"),
+    "deep_fetch": LazyHandler("web_research", "handle_deep_fetch"),
+    "research_repo": LazyHandler("web_research", "handle_research_repo"),
+    "research_url": LazyHandler("web_research", "handle_research_url"),
+    "rabbit_hole_research": LazyHandler("web_research", "handle_rabbit_hole_research"),
+    "web_cache_list": LazyHandler("web_research", "handle_web_cache_list"),
+    "web_cache_clear": LazyHandler("web_research", "handle_web_cache_clear"),
+    "parallel_reason": LazyHandler("web_research", "handle_parallel_reason"),
+    "codegenome_validate": LazyHandler("web_research", "handle_codegenome_validate"),
+    "alchemical_cycle": LazyHandler("web_research", "handle_alchemical_cycle"),
     "browser_session_status": LazyHandler("web_research", "handle_browser_session_status"),
+
+    # --- Image Analysis ---
+    "image_analyze": LazyHandler("image_tools", "handle_image_analyze"),
 
     # --- Scratchpad ---
     "scratchpad": LazyHandler("scratchpad", "handle_scratchpad"),

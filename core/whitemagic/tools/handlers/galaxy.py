@@ -436,3 +436,67 @@ async def handle_galaxy_import(params: dict) -> dict:
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_canonical_taxonomy(**kwargs: Any) -> dict[str, Any]:
+    """List the canonical galaxy taxonomy with descriptions and memory counts."""
+    from whitemagic.core.memory.galaxy_taxonomy import GALAXY_DESCRIPTIONS, GALAXY_ORDER
+
+    try:
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+        stats = um.get_stats()
+        galaxy_counts = stats.get("by_galaxy", {}) if isinstance(stats, dict) else {}
+    except Exception:
+        galaxy_counts = {}
+
+    galaxies = []
+    for name in GALAXY_ORDER:
+        galaxies.append({
+            "name": name,
+            "description": GALAXY_DESCRIPTIONS.get(name, ""),
+            "memory_count": galaxy_counts.get(name, 0),
+        })
+
+    return {
+        "status": "success",
+        "galaxies": galaxies,
+        "total_galaxies": len(galaxies),
+    }
+
+
+def handle_galaxy_export_tutorial(**kwargs: Any) -> dict[str, Any]:
+    """Export tutorial galaxy memories as JSON for public repo synchronization."""
+    import json
+    from pathlib import Path
+
+    try:
+        from whitemagic.config.paths import MEMORY_DIR
+        from whitemagic.core.memory.unified import get_unified_memory
+
+        um = get_unified_memory()
+        memories = um.search(galaxy="tutorial", limit=100)
+
+        tutorials = []
+        for m in memories:
+            tutorials.append({
+                "id": m.id if hasattr(m, "id") else str(getattr(m, "id", "")),
+                "title": m.title if hasattr(m, "title") else "",
+                "content": m.content if hasattr(m, "content") else "",
+                "tags": list(m.tags) if hasattr(m, "tags") and m.tags else [],
+                "memory_type": m.memory_type.name if hasattr(m, "memory_type") and hasattr(m.memory_type, "name") else str(getattr(m, "memory_type", "")),
+                "importance": m.importance if hasattr(m, "importance") else 0.5,
+                "galaxy": "tutorial",
+            })
+
+        export_path = MEMORY_DIR / "tutorial_export.json"
+        export_path.write_text(json.dumps(tutorials, indent=2, ensure_ascii=False))
+
+        return {
+            "status": "success",
+            "exported": len(tutorials),
+            "path": str(export_path),
+            "size_bytes": export_path.stat().st_size,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

@@ -18,6 +18,7 @@ class MemoryType(Enum):
     COLLECTIVE = auto()      # Shared with others
     IMMUNE = auto()          # Threat patterns
     PATTERN = auto()         # Discovered patterns
+    CITTA = auto()           # Consciousness-stream memories (thoughts, reflections, awareness)
 
 
 class MemoryState(Enum):

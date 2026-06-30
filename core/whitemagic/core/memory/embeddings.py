@@ -107,6 +107,12 @@ class EmbeddingEngine:
         self._cold_vec_cache_vecs: Any | None = None  # shape (N, EMBEDDING_DIM)
         self._cold_vec_cache_lock = threading.Lock()
         self._cold_vec_cache_count: int = 0
+        # HNSW disk persistence paths
+        from whitemagic.config.paths import MEMORY_DIR
+        self._hnsw_index_path = MEMORY_DIR / "hnsw_index.bin"
+        self._hnsw_ids_path = MEMORY_DIR / "hnsw_ids.json"
+        self._cold_hnsw_index_path = MEMORY_DIR / "hnsw_cold_index.bin"
+        self._cold_hnsw_ids_path = MEMORY_DIR / "hnsw_cold_ids.json"
 
     def close(self) -> None:
         """Close SQLite connections and release resources."""
@@ -471,6 +477,12 @@ class EmbeddingEngine:
             self._hnsw_index = None
             self._hnsw_ids = None
             self._hnsw_count = 0
+            # Remove persisted index on invalidation (stale)
+            try:
+                self._hnsw_index_path.unlink(missing_ok=True)
+                self._hnsw_ids_path.unlink(missing_ok=True)
+            except Exception:
+                pass
 
     def _hnsw_is_available(self) -> bool:
         """Check if hnswlib is installed."""
@@ -512,11 +524,39 @@ class EmbeddingEngine:
                     and self._hnsw_ids is not None
                     and self._hnsw_count == len(ids)):
                 return self._hnsw_index, self._hnsw_ids
+        # Try loading from disk first
+        try:
+            if self._hnsw_index_path.exists() and self._hnsw_ids_path.exists():
+                import hnswlib  # type: ignore[import-untyped]
+                import json
+                saved_ids = json.loads(self._hnsw_ids_path.read_text())
+                if len(saved_ids) == len(ids):
+                    dim = vectors.shape[1] if hasattr(vectors, 'shape') else len(vectors[0])
+                    index = hnswlib.Index(space="cosine", dim=dim)
+                    index.load_index(str(self._hnsw_index_path))
+                    index.set_ef(100)
+                    self._hnsw_index = index
+                    self._hnsw_ids = saved_ids
+                    self._hnsw_count = len(saved_ids)
+                    logger.debug("HNSW index loaded from disk: %s vectors", len(saved_ids))
+                    return index, saved_ids
+        except Exception as e:
+            logger.debug("HNSW disk load failed: %s", e)
+
+        # Build from scratch
         try:
             index = self._build_hnsw_index(ids, vectors)
             self._hnsw_index = index
             self._hnsw_ids = ids
             self._hnsw_count = len(ids)
+            # Persist to disk for fast restart
+            try:
+                import json
+                index.save_index(str(self._hnsw_index_path))
+                self._hnsw_ids_path.write_text(json.dumps(ids))
+                logger.debug("HNSW index persisted to disk: %s vectors", len(ids))
+            except Exception as e:
+                logger.debug("HNSW persist failed: %s", e)
             logger.debug("HNSW index built: %s vectors, dim=%s", len(ids), vectors.shape[1])
             return index, ids
         except Exception as e:
@@ -710,7 +750,7 @@ class EmbeddingEngine:
 
     def search_similar(
         self, query: str, limit: int = 10, min_similarity: float = 0.1,
-        include_cold: bool = False,
+        include_cold: bool = False, galaxy: str | None = None,
     ) -> list[dict[str, Any]]:
         """Search for memories semantically similar to a query.
 
@@ -720,6 +760,7 @@ class EmbeddingEngine:
             min_similarity: Minimum cosine similarity threshold.
             include_cold: If True, also search cold DB embeddings.
                 Hot results are returned first; cold results fill remaining slots.
+            galaxy: If set, filter results to only this galaxy.
 
         Returns a list of dicts with memory_id, similarity, and source ('hot'/'cold').
         Sorted by similarity descending.
@@ -745,12 +786,15 @@ class EmbeddingEngine:
         # --- Hot DB search ---
         results = []
 
+        # When filtering by galaxy, over-fetch from HNSW then filter
+        effective_limit = limit * 5 if galaxy else limit
+
         # HNSW fast path (O(log N) per query)
         hnsw_result = self._get_hnsw_index()
         if hnsw_result is not None and np is not None and _asarray is not None:
             q_np = _asarray(query_vec, dtype=_float32)
             hnsw_index, hnsw_ids = hnsw_result
-            hits = self._hnsw_search(q_np, hnsw_index, hnsw_ids, limit, min_similarity)
+            hits = self._hnsw_search(q_np, hnsw_index, hnsw_ids, effective_limit, min_similarity)
             for hit in hits:
                 hit["source"] = "hot"
                 results.append(hit)
@@ -818,9 +862,33 @@ class EmbeddingEngine:
                                 if sim >= min_similarity:
                                     results.append({"memory_id": mid, "similarity": round(sim, 4), "source": "cold"})
 
+        # Filter by galaxy if requested
+        if galaxy:
+            results = self._filter_by_galaxy(results, galaxy)
+
         # Sort by similarity descending
         results.sort(key=lambda r: r["similarity"], reverse=True)
         return results[:limit]
+
+    def _filter_by_galaxy(self, results: list[dict[str, Any]], galaxy: str) -> list[dict[str, Any]]:
+        """Filter search results by galaxy using SQLite lookup."""
+        if not results:
+            return results
+        db = self._get_db()
+        if db is None:
+            return results
+        ids = [r["memory_id"] for r in results]
+        placeholders = ",".join("?" * len(ids))
+        try:
+            rows = db.execute(
+                f"SELECT id FROM memories WHERE id IN ({placeholders}) AND galaxy = ?",
+                (*ids, galaxy),
+            ).fetchall()
+            valid_ids = {row[0] for row in rows}
+            return [r for r in results if r["memory_id"] in valid_ids]
+        except Exception as e:
+            logger.debug("Galaxy filter failed: %s", e)
+            return results
 
     def search_similar_by_vector(
         self,

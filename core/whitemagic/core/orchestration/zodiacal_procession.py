@@ -227,32 +227,162 @@ class ZodiacalProcession:
         return self.state.current_sign
 
     def consult_oracle(self) -> dict[str, Any]:
-        """Consult oracles at phase boundaries.
+        """Consult the full oracle stack at phase boundaries.
 
-        Returns guidance from:
-        - I Ching hexagram
-        - Wu Xing element
-        - Seven Classics wisdom
+        Returns guidance from four layers of increasing resolution:
+        1. Zodiacal Position (12 states) -- current sign, element, modality
+        2. Wu Xing Balance (5 elements) -- energy dynamics from sign element
+        3. I Ching Hexagram (64 states) -- state configuration via coin toss
+        4. Ifa Odu (256 states) -- situation-specific wisdom via cowrie shells
         """
-        # Get a hexagram (simplified - would use proper I Ching)
-        hexagram = random.randint(1, 64)
+        # Layer 1: Zodiacal Position
+        sign = self.state.current_sign
+        element = sign.element
+        modality = sign.modality
+        phase = self.state.current_phase
 
-        # Current element from sign
-        element = self.state.current_sign.element
+        # Layer 2: Wu Xing Balance
+        # Map zodiac element to Wu Xing element
+        _ELEMENT_MAP = {
+            "fire": "fire", "earth": "earth",
+            "air": "metal", "water": "water",
+        }
+        wu_xing_element = _ELEMENT_MAP.get(element, "earth")
 
-        # Get guidance based on phase
-        if self.state.current_phase == Phase.YIN:
+        # Layer 3: I Ching Hexagram (real consultation)
+        iching_result = None
+        iching_num = 0
+        iching_name = ""
+        iching_judgment = ""
+        iching_guidance = ""
+        try:
+            from whitemagic.oracle.quantum_iching import QuantumIChing
+            qic = QuantumIChing()
+            question = f"Guidance for {phase.value} phase, {sign.name_str} ({element}/{modality})"
+            iching_result = qic.consult(question, context={
+                "sign": sign.name_str,
+                "element": element,
+                "phase": phase.value,
+            })
+            iching_num = iching_result.primary_hexagram
+            iching_name = iching_result.primary_name
+            iching_judgment = iching_result.primary_judgment[:200] if iching_result.primary_judgment else ""
+            iching_guidance = iching_result.guidance[:200] if iching_result.guidance else ""
+        except Exception as e:
+            logger.debug("I Ching consultation skipped: %s", e)
+            iching_num = random.randint(1, 64)
+
+        # Layer 4: Ifa Odu (cowrie shell casting)
+        ifa_result = None
+        ifa_odu_name = ""
+        ifa_odu_number = 0
+        ifa_binary = ""
+        ifa_wisdom = ""
+        ifa_ire = ""
+        ifa_osogbo = ""
+        try:
+            from whitemagic.oracle.ifa_cast import cast_ifa
+            ifa_result = cast_ifa(
+                question=f"Guidance for {phase.value} phase transition at {sign.name_str}",
+                context={
+                    "sign": sign.name_str,
+                    "element": element,
+                    "phase": phase.value,
+                    "iching": iching_num,
+                },
+                method="cowrie",
+            )
+            ifa_odu_name = ifa_result.odu_name
+            ifa_odu_number = ifa_result.odu_number
+            ifa_binary = ifa_result.full_binary
+            ifa_wisdom = ifa_result.wisdom[:200]
+            d = ifa_result.to_dict()
+            ifa_ire = d.get("ire", "")[:100]
+            ifa_osogbo = d.get("osogbo", "")[:100]
+        except Exception as e:
+            logger.debug("Ifa casting skipped: %s", e)
+
+        # Layer 5: Tarot (three-card reading)
+        tarot_cards = []
+        tarot_summary = ""
+        try:
+            from whitemagic.oracle.tarot_cast import cast_tarot
+            tarot_reading = cast_tarot(
+                question=f"Guidance for {phase.value} phase at {sign.name_str}",
+                context={"sign": sign.name_str, "element": element, "iching": iching_num, "ifa": ifa_odu_number},
+                spread="three_card",
+            )
+            tarot_summary = tarot_reading.summary[:200]
+            for dc in tarot_reading.cards:
+                d = {
+                    "name": dc.card.name,
+                    "reversed": dc.is_reversed,
+                    "position": dc.position,
+                    "position_meaning": dc.position_meaning,
+                    "meaning": dc.card.reversed_meaning if dc.is_reversed else dc.card.upright_meaning,
+                    "keywords": dc.card.keywords,
+                    "suit": "major" if hasattr(dc.card, "hebrew_name") else dc.card.suit,
+                }
+                if hasattr(dc.card, "hebrew_name"):
+                    d["number"] = dc.card.number
+                    d["alchemical_stage"] = dc.card.alchemical_stage
+                tarot_cards.append(d)
+        except Exception as e:
+            logger.debug("Tarot reading skipped: %s", e)
+
+        # Great Year temporal context (non-binding awareness layer)
+        great_year_ctx = {}
+        try:
+            from whitemagic.oracle.great_year import get_temporal_context
+            gy = get_temporal_context()
+            great_year_ctx = {
+                "current_age": gy.precessional.current_age,
+                "age_progress": round(gy.precessional.age_progress, 4),
+                "years_remaining": round(gy.precessional.years_remaining, 1),
+                "next_age": gy.precessional.next_age,
+                "is_transition": gy.precessional.is_transition_period,
+                "age_theme": gy.precessional.age_theme,
+                "zodiac_season": gy.current_zodiac_season,
+                "binding_warning": gy.binding_warning[:100],
+            }
+        except Exception as e:
+            logger.debug("Great Year context skipped: %s", e)
+
+        # Phase-based guidance
+        if phase == Phase.YIN:
             guidance = "Receive, reflect, integrate. Let patterns emerge naturally."
         else:
             guidance = "Create, express, manifest. Transform insight into action."
 
+        # Combine all layers
         return {
-            "hexagram": hexagram,
+            # Layer 1: Zodiacal
+            "hexagram": iching_num,  # Backward compat
             "element": element,
-            "phase": self.state.current_phase.value,
+            "phase": phase.value,
             "guidance": guidance,
-            "sign": self.state.current_sign.name_str,
-            "symbol": self.state.current_sign.symbol,
+            "sign": sign.name_str,
+            "symbol": sign.symbol,
+            "modality": modality,
+            # Layer 2: Wu Xing
+            "wu_xing": wu_xing_element,
+            # Layer 3: I Ching
+            "iching_number": iching_num,
+            "iching_name": iching_name,
+            "iching_judgment": iching_judgment,
+            "iching_guidance": iching_guidance,
+            # Layer 4: Ifa
+            "ifa_odu": ifa_odu_name,
+            "ifa_odu_number": ifa_odu_number,
+            "ifa_binary": ifa_binary,
+            "ifa_wisdom": ifa_wisdom,
+            "ifa_ire": ifa_ire,
+            "ifa_osogbo": ifa_osogbo,
+            # Layer 5: Tarot
+            "tarot_cards": tarot_cards,
+            "tarot_summary": tarot_summary,
+            # Great Year context (non-binding)
+            "great_year": great_year_ctx,
         }
 
     def run_full_cycle(self, callback: Callable | None = None) -> dict[str, Any]:

@@ -431,7 +431,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
     - Normalize all outputs into the stable envelope format
     """
     from whitemagic.tools.envelope import err, normalize_raw
-    from whitemagic.tools.registry import ToolSafety, get_tool
+    from whitemagic.tools.registry import ToolSafety, ToolCategory, get_tool
     from whitemagic.tools.schema import validate_params
 
     ensure_paths()
@@ -710,8 +710,20 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             if alerts:
                 for alert in alerts:
                     # Block write tools when error rate or energy is critical
+                    # BUT: never block memory/thought writes — the system must always
+                    # be able to record its observations, especially when energy is low.
+                    # This includes the wm meta-tool when routing to memory operations.
                     if alert.threshold_eta is not None and alert.threshold_eta <= 2:
-                        if alert.metric in ("error_rate", "energy") and tool_def is not None and tool_def.safety != ToolSafety.READ:
+                        _is_memory_op = (
+                            tool_def is not None
+                            and (tool_def.category == ToolCategory.MEMORY
+                                 or (canonical == "wm"
+                                     and isinstance(kwargs.get("route"), str)
+                                     and "gana_neck" in kwargs["route"])))
+                        if (alert.metric in ("error_rate", "energy")
+                                and tool_def is not None
+                                and tool_def.safety != ToolSafety.READ
+                                and not _is_memory_op):
                             return _finish(err(
                                 tool=canonical,
                                 request_id=request_id,

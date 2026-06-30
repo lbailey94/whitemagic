@@ -67,12 +67,46 @@ _SHELL_INJECTION_PATTERNS: list[re.Pattern] = [
 
 # Tools exempt from content scanning (their args are expected to contain code/text)
 _CONTENT_SCAN_EXEMPT: set = {
+    # Meta-tool (passes arbitrary content through to target tools, which are
+    # individually sanitized when call_tool dispatches to them)
+    "wm",
     # Memory & narrative (arbitrary user/system content)
     "create_memory",
     "update_memory",
+    "memory_update",
+    "memory_delete",
+    "delete_memory",
+    "import_memories",
     "scratchpad_create",
     "scratchpad_update",
+    "scratchpad_finalize",
+    "scratchpad",
+    "analyze_scratchpad",
     "thought_clone",
+    # Galaxy operations (ingest arbitrary content)
+    "galaxy.ingest",
+    "galaxy.create",
+    "galaxy.merge",
+    "galaxy.transfer",
+    "galaxy.restore",
+    "galaxy_backup",
+    "galaxy_restore",
+    # Export & broadcast (arbitrary content)
+    "export_memories",
+    "audit.export",
+    "mesh.broadcast",
+    "oms.export",
+    "oms.import",
+    "windsurf_export_conversation",
+    # Dream & narrative (arbitrary content)
+    "dream",
+    "dream.read",
+    "dream.promote",
+    "narrative.compress",
+    "memory.consolidate",
+    "memory.lifecycle",
+    "memory.retention_sweep",
+    "memory.lifecycle_sweep",
     # Governance & ethics (action descriptions may contain paths/commands)
     "evaluate_ethics",
     "check_boundaries",
@@ -81,14 +115,26 @@ _CONTENT_SCAN_EXEMPT: set = {
     "karma_report",
     # Introspection & reasoning (free-form queries)
     "gnosis",
+    "consciousness.narrative",
+    "consciousness.reflect",
     "reasoning.bicameral",
     "corpus_callosum.debate",
+    "think",
+    "parallel_reason",
     # Web & research (search queries may contain shell-like syntax)
     "web_search",
     "web_fetch",
     "research_topic",
+    "web_search_batch",
+    "deep_fetch",
+    "rabbit_hole_research",
     # Prompt & template (renders arbitrary content)
     "prompt.render",
+    # Working memory (arbitrary context)
+    "working_memory.attend",
+    "working_memory.context",
+    # Agent registration (arbitrary capability descriptions)
+    "agent.register",
 }
 
 
@@ -118,8 +164,13 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
         logger.warning("Sanitizer blocked %s: %s", tool_name, err, exc_info=True)
         return {"status": "error", "error": f"Input validation: {err}", "error_code": "input_invalid"}
 
-    # 2. Content checks (skip for exempt tools)
-    if tool_name not in _CONTENT_SCAN_EXEMPT:
+    # 2. Strip internal keys BEFORE content scanning so that internally-injected
+    #    fields (e.g. _working_memory_context from call_tool) don't trigger
+    #    false positive shell injection matches on their content previews.
+    _strip_internal_keys(kwargs)
+
+    # 3. Content checks (skip for exempt tools and Gana routing layers)
+    if tool_name not in _CONTENT_SCAN_EXEMPT and not tool_name.startswith("gana_"):
         # Try Haskell boundary detection first (stricter, exhaustive pattern matching)
         try:
             from whitemagic.core.acceleration.haskell_bridge import (
@@ -142,9 +193,6 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
         if err:
             logger.warning("Sanitizer blocked %s: %s", tool_name, err, exc_info=True)
             return {"status": "error", "error": f"Input rejected: {err}", "error_code": "input_rejected"}
-
-    # 3. Strip internal keys that shouldn't come from external callers
-    _strip_internal_keys(kwargs)
 
     return None  # Clean
 
@@ -224,7 +272,7 @@ def _scan_content(obj: Any, path: str = "root") -> str | None:
 
 def _strip_internal_keys(kwargs: dict[str, Any]) -> None:
     """Remove internal-only keys that external callers shouldn't be able to set."""
-    internal_prefixes = ("_agent_id", "_internal_", "_bypass_", "_sudo_")
+    internal_prefixes = ("_agent_id", "_internal_", "_bypass_", "_sudo_", "_working_memory_context", "_zig_prevalidated")
     to_remove = [k for k in kwargs if k.startswith(internal_prefixes)]
     for k in to_remove:
         del kwargs[k]

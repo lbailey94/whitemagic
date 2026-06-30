@@ -58,6 +58,8 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "galaxy.list_types": LazyHandler("galaxy", "handle_galaxy_list_types"),
     "galaxy.export": LazyHandler("galaxy", "handle_galaxy_export"),
     "galaxy.import": LazyHandler("galaxy", "handle_galaxy_import"),
+    "galaxy.canonical_taxonomy": LazyHandler("galaxy", "handle_galaxy_canonical_taxonomy"),
+    "galaxy.export_tutorial": LazyHandler("galaxy", "handle_galaxy_export_tutorial"),
 
     # --- v14.0 Living Graph ---
     "hybrid_recall": LazyHandler("living_graph", "handle_hybrid_recall"),

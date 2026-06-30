@@ -72,7 +72,7 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
                 if "quickstart" in str(getattr(m, "tags", []))
             ]
         # Load recent memories for continuity
-        recent = um.search("session handoff OR recent work", limit=3)
+        recent = um.search("session handoff recent work", limit=3)
         if recent:
             context["recent_memories"] = [
                 {"title": getattr(m, "title", ""), "id": getattr(m, "id", "")}
