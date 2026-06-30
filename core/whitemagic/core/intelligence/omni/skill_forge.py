@@ -74,13 +74,15 @@ class SkillForge:
                     data = json.load(f)
 
                 from whitemagic.core.intelligence.omni.universal_router import GanaStep
+
                 steps = [
                     GanaStep(
                         mansion=s["mansion"],
                         operation=s["operation"],
                         context_key=s["context"],
                         parameters={},
-                    ) for s in data.get("steps", [])
+                    )
+                    for s in data.get("steps", [])
                 ]
 
                 chain = ExecutionChain(
@@ -176,7 +178,9 @@ class SkillForge:
             self._save_skill(existing)
             logger.info(
                 "Skill '%s' re-forged (count=%d) — duplicate detected for '%s'",
-                existing.name, existing.forge_count, chain.intent,
+                existing.name,
+                existing.forge_count,
+                chain.intent,
             )
             return existing
 
@@ -223,9 +227,7 @@ class SkillForge:
 
             from whitemagic.tools.handlers.ollama import _generate
 
-            steps_desc = ", ".join(
-                f"{s.mansion}/{s.operation}" for s in chain.steps
-            )
+            steps_desc = ", ".join(f"{s.mansion}/{s.operation}" for s in chain.steps)
             prompt = (
                 f"Generate a short, descriptive skill name (snake_case, max 30 chars) "
                 f"for an AI tool chain that does: '{chain.intent}'. "
@@ -278,6 +280,13 @@ class SkillForge:
         logger.info("Skill saved to %s", skill_file)
         self._update_skills_md()
 
+        # Auto-export as portable SKILL.md so forged skills are immediately usable
+        # in Claude Code, Codex CLI, Gemini CLI, etc.
+        try:
+            self.export_skill_md(skill)
+        except Exception as e:
+            logger.debug("Auto-export SKILL.md failed for '%s': %s", skill.name, e)
+
     def _update_skills_md(self) -> None:
         """Regenerate the SKILLS.md catalog for AI consumption."""
         catalog_path = self.skill_library_path.parent / "SKILLS.md"
@@ -296,14 +305,18 @@ class SkillForge:
             row = f"| **{skill.name}** | {skill.description} | {triggers} | {complexity} | {skill.forge_count} |"
             content.append(row)
 
-        content.append("\n\n---\n*To use a skill, reference it by name in your intent.*")
+        content.append(
+            "\n\n---\n*To use a skill, reference it by name in your intent.*"
+        )
 
         with open(catalog_path, "w") as f:
             f.write("\n".join(content))
 
         logger.info("Updated SKILLS.md registry at %s", catalog_path)
 
-    def export_skill_md(self, skill: ForgedSkill, output_dir: Path | None = None) -> Path:
+    def export_skill_md(
+        self, skill: ForgedSkill, output_dir: Path | None = None
+    ) -> Path:
         """Export a forged skill as a portable SKILL.md file.
 
         The SKILL.md format is compatible with Claude Code, Codex CLI,
@@ -322,7 +335,7 @@ class SkillForge:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         steps_desc = "\n".join(
-            f"  {i+1}. `wm(route='{s.mansion.lower()}.{s.operation}')` — {s.context_key}"
+            f"  {i + 1}. `wm(route='{s.mansion.lower()}.{s.operation}')` — {s.context_key}"
             for i, s in enumerate(skill.optimized_chain.steps)
         )
         triggers = ", ".join(f"`{t}`" for t in skill.trigger_phrases[:3])
@@ -344,7 +357,7 @@ metadata:
     auto_forged: true
 ---
 
-# {skill.name.replace('_', ' ').title()}
+# {skill.name.replace("_", " ").title()}
 
 ## When to Use
 
@@ -405,6 +418,132 @@ wm(thought="{chain_intent}")
         for skill in self.known_skills.values():
             paths.append(self.export_skill_md(skill, output_dir))
         return paths
+
+    def import_skill_md(self, skill_md_path: Path) -> ForgedSkill | None:
+        """Import a portable SKILL.md file as a ForgedSkill.
+
+        This is the reverse bridge — parse SKILL.md files from other runtimes
+        (Claude Code, Codex CLI, Gemini CLI, etc.) back into ForgedSkill objects
+        that WhiteMagic can execute via invoke_skill().
+
+        Args:
+            skill_md_path: Path to the SKILL.md file to import.
+
+        Returns:
+            The imported ForgedSkill, or None if parsing fails.
+        """
+        try:
+            content = skill_md_path.read_text()
+
+            # Parse frontmatter
+            if not content.startswith("---"):
+                logger.warning("SKILL.md missing frontmatter: %s", skill_md_path)
+                return None
+
+            fm_end = content.index("---", 3)
+            frontmatter = content[3:fm_end].strip()
+            body = content[fm_end + 3 :].strip()
+
+            # Simple YAML parse (avoid pyyaml dependency for basic key-value)
+            meta: dict[str, str] = {}
+            for line in frontmatter.splitlines():
+                if ":" in line and not line.startswith(" "):
+                    key, _, val = line.partition(":")
+                    val = val.strip().strip('"').strip("'")
+                    if val:
+                        meta[key.strip()] = val
+
+            name = meta.get("name", skill_md_path.stem)
+            description = meta.get("description", "")
+
+            # Extract wm(route=...) calls only from fenced code blocks
+            import re as _re
+
+            code_block_pattern = _re.compile(r"```[a-zA-Z]*\n(.*?)```", _re.DOTALL)
+            route_pattern = _re.compile(
+                r"wm\(route=['\"]([^'\"]+)['\"]\)",
+                _re.IGNORECASE,
+            )
+            routes: list[str] = []
+            for block_match in code_block_pattern.finditer(body):
+                routes.extend(route_pattern.findall(block_match.group(1)))
+
+            if not routes:
+                logger.warning("No wm(route=...) calls found in %s", skill_md_path)
+                return None
+
+            # Build steps from routes
+            steps: list[GanaStep] = []
+            for route in routes:
+                parts = route.split(".", 1)
+                if len(parts) == 2:
+                    mansion = parts[0].replace("gana_", "").upper()
+                    operation = parts[1]
+                else:
+                    mansion = route.replace("gana_", "").upper()
+                    operation = "search"
+                steps.append(
+                    GanaStep(
+                        mansion=mansion,
+                        operation=operation,
+                        context_key="imported",
+                        parameters={},
+                    )
+                )
+
+            chain = ExecutionChain(
+                intent=description,
+                steps=steps,
+                estimated_complexity=float(len(steps)),
+                required_capabilities=[],
+            )
+
+            skill = ForgedSkill(
+                name=name,
+                description=description,
+                trigger_phrases=[description] if description else [],
+                optimized_chain=chain,
+            )
+
+            self.known_skills[skill.name] = skill
+            self._step_signatures[skill.name] = _normalize_steps(steps)
+            self._save_skill(skill)
+
+            logger.info("Imported SKILL.md '%s' from %s", skill.name, skill_md_path)
+            return skill
+
+        except Exception as e:
+            logger.warning("Failed to import SKILL.md %s: %s", skill_md_path, e)
+            return None
+
+    def invoke_skill(self, name: str) -> ExecutionChain | None:
+        """Get the execution chain for a forged skill by name.
+
+        This enables skill replay — re-executing a forged skill's chain
+        via UniversalRouter.execute().
+
+        Args:
+            name: The skill name (case-insensitive).
+
+        Returns:
+            The ExecutionChain for the skill, or None if not found.
+        """
+        skill = self.known_skills.get(name)
+        if skill is None:
+            # Try case-insensitive lookup
+            for key, s in self.known_skills.items():
+                if key.lower() == name.lower():
+                    skill = s
+                    break
+
+        if skill is None:
+            logger.warning("Skill '%s' not found in library", name)
+            return None
+
+        logger.info(
+            "Invoking skill '%s' (%d steps)", name, len(skill.optimized_chain.steps)
+        )
+        return skill.optimized_chain
 
 
 # Singleton accessor

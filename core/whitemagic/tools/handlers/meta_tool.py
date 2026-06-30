@@ -17,75 +17,213 @@ Architecture:
       → explicit override, no classification needed
       → call_tool("gana_three_stars", tool="reasoning.bicameral", args={...})
 """
+
 # ruff: noqa: BLE001
 import logging
 import re
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ──────────────────────────────────────────────────────────
-# Payload extraction — maps (gana, tool) → param name + strip pattern
-# When auto-routing from `thought`, the routing keyword is stripped
-# and the remaining text is injected as the tool's primary parameter.
-# This makes wm(thought='remember that X') just work, without
-# the agent needing to separately pass args={'content': 'X'}.
-# ──────────────────────────────────────────────────────────
+
+def _time_of_day() -> str:
+    """Get a human-readable time-of-day label for the sensorium."""
+    hour = datetime.now(UTC).hour
+    if 5 <= hour < 12:
+        return "morning"
+    if 12 <= hour < 17:
+        return "afternoon"
+    if 17 <= hour < 21:
+        return "evening"
+    return "night"
+
 
 _PAYLOAD_MAP: dict[tuple[str, str], tuple[str, re.Pattern[str]]] = {
     # Memory creation — strip "remember that", "store", etc.
-    ("gana_neck", "create_memory"): ("content", re.compile(r"^\s*(?:remember(?:\s+that)?|store|save|memorize|create\s+(?:a\s+)?memory(?:\s+that)?|wm_write)\s*:?\s*", re.I)),
-    ("gana_neck", "remember"): ("content", re.compile(r"^\s*(?:remember(?:\s+that)?|store|save|memorize)\s*:?\s*", re.I)),
-    ("gana_neck", "update_memory"): ("content", re.compile(r"^\s*(?:update|edit|modify)\s+(?:the\s+)?memory\s*:?\s*", re.I)),
-
+    ("gana_neck", "create_memory"): (
+        "content",
+        re.compile(
+            r"^\s*(?:remember(?:\s+that)?|store|save|memorize|create\s+(?:a\s+)?memory(?:\s+that)?|wm_write)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_neck", "remember"): (
+        "content",
+        re.compile(r"^\s*(?:remember(?:\s+that)?|store|save|memorize)\s*:?\s*", re.I),
+    ),
+    ("gana_neck", "update_memory"): (
+        "content",
+        re.compile(r"^\s*(?:update|edit|modify)\s+(?:the\s+)?memory\s*:?\s*", re.I),
+    ),
     # Memory search — strip "search for memories about", "recall", etc.
-    ("gana_winnowing_basket", "search_memories"): ("query", re.compile(r"^\s*(?:search\s+(?:for\s+)?memor\w+\s*(?:about\s+)?|search\s+for|find\s+memor\w+\s*(?:about\s+)?|find|recall|look\s+up|query)\s*:?\s*", re.I)),
-    ("gana_winnowing_basket", "recall"): ("query", re.compile(r"^\s*(?:recall|remember|search\s+for)\s*:?\s*", re.I)),
-    ("gana_winnowing_basket", "list_memories"): ("query", re.compile(r"^\s*(?:list|show)\s+(?:all\s+)?memor\w+\s*:?\s*", re.I)),
-    ("gana_winnowing_basket", "read_memory"): ("query", re.compile(r"^\s*(?:read|get)\s+memor\w+\s*:?\s*", re.I)),
-    ("gana_winnowing_basket", "hybrid_recall"): ("query", re.compile(r"^\s*(?:hybrid|semantic)\s+recall\s*(?:of|about)?\s*:?\s*", re.I)),
-    ("gana_winnowing_basket", "vector.search"): ("query", re.compile(r"^\s*(?:vector|embedding|similarity)\s+search\s*(?:for)?\s*:?\s*", re.I)),
-
+    ("gana_winnowing_basket", "search_memories"): (
+        "query",
+        re.compile(
+            r"^\s*(?:search\s+(?:for\s+)?memor\w+\s*(?:about\s+)?|search\s+for|find\s+memor\w+\s*(?:about\s+)?|find|recall|look\s+up|query)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_winnowing_basket", "recall"): (
+        "query",
+        re.compile(r"^\s*(?:recall|remember|search\s+for)\s*:?\s*", re.I),
+    ),
+    ("gana_winnowing_basket", "list_memories"): (
+        "query",
+        re.compile(r"^\s*(?:list|show)\s+(?:all\s+)?memor\w+\s*:?\s*", re.I),
+    ),
+    ("gana_winnowing_basket", "read_memory"): (
+        "query",
+        re.compile(r"^\s*(?:read|get)\s+memor\w+\s*:?\s*", re.I),
+    ),
+    ("gana_winnowing_basket", "hybrid_recall"): (
+        "query",
+        re.compile(r"^\s*(?:hybrid|semantic)\s+recall\s*(?:of|about)?\s*:?\s*", re.I),
+    ),
+    ("gana_winnowing_basket", "vector.search"): (
+        "query",
+        re.compile(
+            r"^\s*(?:vector|embedding|similarity)\s+search\s*(?:for)?\s*:?\s*", re.I
+        ),
+    ),
     # Scratchpad — strip "note", "jot down", etc.
-    ("gana_heart", "scratchpad"): ("content", re.compile(r"^\s*(?:scratchpad|scratch\s+pad|note|jot\s+down|write\s+down)\s*:?\s*", re.I)),
-    ("gana_heart", "working_memory.attend"): ("content", re.compile(r"^\s*(?:attend\s+to|focus\s+on|working\s+memory)\s*:?\s*", re.I)),
-
+    ("gana_heart", "scratchpad"): (
+        "content",
+        re.compile(
+            r"^\s*(?:scratchpad|scratch\s+pad|note|jot\s+down|write\s+down)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_heart", "working_memory.attend"): (
+        "content",
+        re.compile(r"^\s*(?:attend\s+to|focus\s+on|working\s+memory)\s*:?\s*", re.I),
+    ),
     # Reasoning — strip "think about", "analyze", etc.
-    ("gana_three_stars", "reasoning.bicameral"): ("topic", re.compile(r"^\s*(?:think\s+about|reason\s+about|analyze|deliberate\s+on|ponder)\s*:?\s*", re.I)),
-    ("gana_three_stars", "think"): ("topic", re.compile(r"^\s*(?:think\s+about|reason\s+about|analyze|deliberate\s+on|ponder)\s*:?\s*", re.I)),
-    ("gana_three_stars", "kaizen_analyze"): ("topic", re.compile(r"^\s*(?:kaizen|improve|continuous\s+improvement|quality)\s*(?:of|on|for)?\s*:?\s*", re.I)),
-    ("gana_three_stars", "foresight.analyze"): ("topic", re.compile(r"^\s*(?:foresight|predict|forecast)\s*(?:of|on|for)?\s*:?\s*", re.I)),
-    ("gana_three_stars", "sabha.convene"): ("topic", re.compile(r"^\s*(?:convene|council|sabha|collective\s+decision)\s*(?:on|about)?\s*:?\s*", re.I)),
-    ("gana_three_stars", "art_of_war.assess"): ("topic", re.compile(r"^\s*(?:art\s+of\s+war|assess\s+the\s+terrain|strategy)\s*(?:of|on|for)?\s*:?\s*", re.I)),
-
+    ("gana_three_stars", "reasoning.bicameral"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:think\s+about|reason\s+about|analyze|deliberate\s+on|ponder)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_three_stars", "think"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:think\s+about|reason\s+about|analyze|deliberate\s+on|ponder)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_three_stars", "kaizen_analyze"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:kaizen|improve|continuous\s+improvement|quality)\s*(?:of|on|for)?\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_three_stars", "foresight.analyze"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:foresight|predict|forecast)\s*(?:of|on|for)?\s*:?\s*", re.I
+        ),
+    ),
+    ("gana_three_stars", "sabha.convene"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:convene|council|sabha|collective\s+decision)\s*(?:on|about)?\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_three_stars", "art_of_war.assess"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:art\s+of\s+war|assess\s+the\s+terrain|strategy)\s*(?:of|on|for)?\s*:?\s*",
+            re.I,
+        ),
+    ),
     # Ethics — strip "evaluate ethics of", etc.
-    ("gana_straddling_legs", "evaluate_ethics"): ("action", re.compile(r"^\s*(?:evaluate\s+(?:the\s+)?ethics?\s+of|ethics?\s+(?:of|check)|dharma\s+(?:check|of)|moral\s+check\s+of)\s*:?\s*", re.I)),
-
+    ("gana_straddling_legs", "evaluate_ethics"): (
+        "action",
+        re.compile(
+            r"^\s*(?:evaluate\s+(?:the\s+)?ethics?\s+of|ethics?\s+(?:of|check)|dharma\s+(?:check|of)|moral\s+check\s+of)\s*:?\s*",
+            re.I,
+        ),
+    ),
     # Galaxy — strip "create galaxy", etc.
-    ("gana_void", "galaxy.create"): ("name", re.compile(r"^\s*(?:create|new)\s+galaxy\s*(?:named|called)?\s*:?\s*", re.I)),
-
+    ("gana_void", "galaxy.create"): (
+        "name",
+        re.compile(r"^\s*(?:create|new)\s+galaxy\s*(?:named|called)?\s*:?\s*", re.I),
+    ),
     # Gnosis / introspection — no payload needed, but handle gracefully
     ("gana_ghost", "gnosis"): ("_skip", re.compile(r".*")),  # gnosis takes no content
-
     # Web search — strip "search the web for"
-    ("gana_chariot", "web_search"): ("query", re.compile(r"^\s*(?:web\s+search|search\s+the\s+web|search\s+online)\s*(?:for)?\s*:?\s*", re.I)),
-    ("gana_chariot", "research_topic"): ("topic", re.compile(r"^\s*(?:research|investigate|explore)\s*(?:topic)?\s*:?\s*", re.I)),
-    ("gana_chariot", "web_search_and_read"): ("query", re.compile(r"^\s*(?:web\s+search\s+and\s+read|search\s+and\s+read|search\s+and\s+fetch)\s*:?\s*", re.I)),
-    ("gana_chariot", "web_fetch"): ("url", re.compile(r"^\s*(?:web\s+fetch|fetch\s+(?:the\s+)?(?:url|page)|read\s+(?:the\s+)?(?:url|page))\s*:?\s*", re.I)),
-    ("gana_chariot", "web_fetch_enhanced"): ("url", re.compile(r"^\s*(?:enhanced\s+fetch|fetch\s+enhanced|web\s+fetch\s+enhanced|outline\s+fetch|chunk\s+fetch)\s*:?\s*", re.I)),
-    ("gana_chariot", "deep_fetch"): ("url", re.compile(r"^\s*(?:deep\s+fetch|fetch\s+full\s+content)\s*:?\s*", re.I)),
-    ("gana_chariot", "web_search_category"): ("query", re.compile(r"^\s*(?:categor.*search|search.*categor)\s*:?\s*", re.I)),
-    ("gana_chariot", "research_repo"): ("repo", re.compile(r"^\s*(?:research\s+repo|repo\s+research|research\s+github)\s*:?\s*", re.I)),
-    ("gana_chariot", "research_url"): ("url", re.compile(r"^\s*(?:research\s+url|url\s+research)\s*:?\s*", re.I)),
-    ("gana_chariot", "rabbit_hole_research"): ("topic", re.compile(r"^\s*(?:rabbit\s+hole|deep\s+spiral|recursive\s+research)\s*:?\s*", re.I)),
-
+    ("gana_chariot", "web_search"): (
+        "query",
+        re.compile(
+            r"^\s*(?:web\s+search|search\s+the\s+web|search\s+online)\s*(?:for)?\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_chariot", "research_topic"): (
+        "topic",
+        re.compile(r"^\s*(?:research|investigate|explore)\s*(?:topic)?\s*:?\s*", re.I),
+    ),
+    ("gana_chariot", "web_search_and_read"): (
+        "query",
+        re.compile(
+            r"^\s*(?:web\s+search\s+and\s+read|search\s+and\s+read|search\s+and\s+fetch)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_chariot", "web_fetch"): (
+        "url",
+        re.compile(
+            r"^\s*(?:web\s+fetch|fetch\s+(?:the\s+)?(?:url|page)|read\s+(?:the\s+)?(?:url|page))\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_chariot", "web_fetch_enhanced"): (
+        "url",
+        re.compile(
+            r"^\s*(?:enhanced\s+fetch|fetch\s+enhanced|web\s+fetch\s+enhanced|outline\s+fetch|chunk\s+fetch)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    ("gana_chariot", "deep_fetch"): (
+        "url",
+        re.compile(r"^\s*(?:deep\s+fetch|fetch\s+full\s+content)\s*:?\s*", re.I),
+    ),
+    ("gana_chariot", "web_search_category"): (
+        "query",
+        re.compile(r"^\s*(?:categor.*search|search.*categor)\s*:?\s*", re.I),
+    ),
+    ("gana_chariot", "research_repo"): (
+        "repo",
+        re.compile(
+            r"^\s*(?:research\s+repo|repo\s+research|research\s+github)\s*:?\s*", re.I
+        ),
+    ),
+    ("gana_chariot", "research_url"): (
+        "url",
+        re.compile(r"^\s*(?:research\s+url|url\s+research)\s*:?\s*", re.I),
+    ),
+    ("gana_chariot", "rabbit_hole_research"): (
+        "topic",
+        re.compile(
+            r"^\s*(?:rabbit\s+hole|deep\s+spiral|recursive\s+research)\s*:?\s*", re.I
+        ),
+    ),
     # Dream — strip "dream about"
-    ("gana_abundance", "dream"): ("topic", re.compile(r"^\s*(?:dream|consolidate|sleep)\s*(?:about|on)?\s*:?\s*", re.I)),
+    ("gana_abundance", "dream"): (
+        "topic",
+        re.compile(r"^\s*(?:dream|consolidate|sleep)\s*(?:about|on)?\s*:?\s*", re.I),
+    ),
 }
 
 
-def _extract_payload(thought: str, gana: str, tool: str | None) -> tuple[str, str | None]:
+def _extract_payload(
+    thought: str, gana: str, tool: str | None
+) -> tuple[str, str | None]:
     """Extract the payload parameter name and value from thought text.
 
     Strips the routing keyword from `thought` and returns the remaining
@@ -111,150 +249,435 @@ def _extract_payload(thought: str, gana: str, tool: str | None) -> tuple[str, st
 
     return param_name, payload
 
-# ──────────────────────────────────────────────────────────
-# Routing patterns — keyword → (gana, sub_tool)
-# Ordered by specificity (most specific first).
-# Uses simple regex patterns for sub-ms matching.
-# ──────────────────────────────────────────────────────────
 
 _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     # Memory creation
-    (re.compile(r"\b(remember|store|save|memorize|create.*memory)\b", re.I), "gana_neck", "create_memory"),
-    (re.compile(r"\b(update|edit|modify).*memory\b", re.I), "gana_neck", "update_memory"),
-    (re.compile(r"\b(delete|remove|forget).*memory\b", re.I), "gana_neck", "delete_memory"),
+    (
+        re.compile(r"\b(remember|store|save|memorize|create.*memory)\b", re.I),
+        "gana_neck",
+        "create_memory",
+    ),
+    (
+        re.compile(r"\b(update|edit|modify).*memory\b", re.I),
+        "gana_neck",
+        "update_memory",
+    ),
+    (
+        re.compile(r"\b(delete|remove|forget).*memory\b", re.I),
+        "gana_neck",
+        "delete_memory",
+    ),
     (re.compile(r"\b(import).*memor", re.I), "gana_neck", "import_memories"),
-
     # Memory search / recall
-    (re.compile(r"\b(search|find|recall|look up|query).*memor", re.I), "gana_winnowing_basket", "search_memories"),
+    (
+        re.compile(r"\b(search|find|recall|look up|query).*memor", re.I),
+        "gana_winnowing_basket",
+        "search_memories",
+    ),
     (re.compile(r"\brecall\b", re.I), "gana_winnowing_basket", "search_memories"),
-    (re.compile(r"\b(list|show).*memor", re.I), "gana_winnowing_basket", "list_memories"),
+    (
+        re.compile(r"\b(list|show).*memor", re.I),
+        "gana_winnowing_basket",
+        "list_memories",
+    ),
     (re.compile(r"\b(read|get).*memor", re.I), "gana_winnowing_basket", "read_memory"),
-    (re.compile(r"\b(vector|embedding|similarity).*search", re.I), "gana_winnowing_basket", "vector.search"),
-    (re.compile(r"\b(hybrid|semantic).*recall", re.I), "gana_winnowing_basket", "hybrid_recall"),
-
+    (
+        re.compile(r"\b(vector|embedding|similarity).*search", re.I),
+        "gana_winnowing_basket",
+        "vector.search",
+    ),
+    (
+        re.compile(r"\b(hybrid|semantic).*recall", re.I),
+        "gana_winnowing_basket",
+        "hybrid_recall",
+    ),
     # Galaxy-filtered search — "search aria memories for consciousness"
-    (re.compile(r"\b(search|find|recall).*(aria|citta|codex|journal|dream|research|session|tutorial|substrate|universal).*memor", re.I), "gana_winnowing_basket", "search_memories"),
-    (re.compile(r"\bmemor.*(aria|citta|codex|journal|dream|research|session|tutorial|substrate)\b", re.I), "gana_winnowing_basket", "search_memories"),
-
+    (
+        re.compile(
+            r"\b(search|find|recall).*(aria|citta|codex|journal|dream|research|session|tutorial|substrate|universal).*memor",
+            re.I,
+        ),
+        "gana_winnowing_basket",
+        "search_memories",
+    ),
+    (
+        re.compile(
+            r"\bmemor.*(aria|citta|codex|journal|dream|research|session|tutorial|substrate)\b",
+            re.I,
+        ),
+        "gana_winnowing_basket",
+        "search_memories",
+    ),
     # Scratchpad / working memory
-    (re.compile(r"\b(scratchpad|scratch pad|note|jot down)\b", re.I), "gana_heart", "scratchpad"),
-    (re.compile(r"\b(working memory|active context|attend to)\b", re.I), "gana_heart", "working_memory.attend"),
-    (re.compile(r"\b(context pack|session context|handoff)\b", re.I), "gana_heart", "context.pack"),
-
+    (
+        re.compile(r"\b(scratchpad|scratch pad|note|jot down)\b", re.I),
+        "gana_heart",
+        "scratchpad",
+    ),
+    (
+        re.compile(r"\b(working memory|active context|attend to)\b", re.I),
+        "gana_heart",
+        "working_memory.attend",
+    ),
+    (
+        re.compile(r"\b(context pack|session context|handoff)\b", re.I),
+        "gana_heart",
+        "context.pack",
+    ),
     # Reasoning / thinking
-    (re.compile(r"\b(reason|think|analyze|deliberate|ponder)\b", re.I), "gana_three_stars", "reasoning.bicameral"),
-    (re.compile(r"\b(ensemble|consensus|multiple models?|vote)\b", re.I), "gana_three_stars", "ensemble.query"),
-    (re.compile(r"\b(kaizen|improve|continuous improvement|quality)\b", re.I), "gana_three_stars", "kaizen_analyze"),
-    (re.compile(r"\b(foresight|predict|forecast|decay|convergence)\b", re.I), "gana_three_stars", "foresight.analyze"),
-    (re.compile(r"\b(council|sabha|quadrant|collective decision)\b", re.I), "gana_three_stars", "sabha.convene"),
-    (re.compile(r"\b(wisdom|counsel|guidance|iching|i.ching)\b", re.I), "gana_three_stars", "consult_wisdom_council"),
-    (re.compile(r"\b(art of war|strategy|terrain|campaign)\b", re.I), "gana_three_stars", "art_of_war.assess"),
-
+    (
+        re.compile(r"\b(reason|think|analyze|deliberate|ponder)\b", re.I),
+        "gana_three_stars",
+        "reasoning.bicameral",
+    ),
+    (
+        re.compile(r"\b(ensemble|consensus|multiple models?|vote)\b", re.I),
+        "gana_three_stars",
+        "ensemble.query",
+    ),
+    (
+        re.compile(r"\b(kaizen|improve|continuous improvement|quality)\b", re.I),
+        "gana_three_stars",
+        "kaizen_analyze",
+    ),
+    (
+        re.compile(r"\b(foresight|predict|forecast|decay|convergence)\b", re.I),
+        "gana_three_stars",
+        "foresight.analyze",
+    ),
+    (
+        re.compile(r"\b(council|sabha|quadrant|collective decision)\b", re.I),
+        "gana_three_stars",
+        "sabha.convene",
+    ),
+    (
+        re.compile(r"\b(wisdom|counsel|guidance|iching|i.ching)\b", re.I),
+        "gana_three_stars",
+        "consult_wisdom_council",
+    ),
+    (
+        re.compile(r"\b(art of war|strategy|terrain|campaign)\b", re.I),
+        "gana_three_stars",
+        "art_of_war.assess",
+    ),
     # System health
     (re.compile(r"\b(rust|cargo)\b", re.I), "gana_root", "rust_status"),
-    (re.compile(r"\b(health|diagnose|root.*cause|system.*status)\b", re.I), "gana_root", "health_report"),
+    (
+        re.compile(r"\b(health|diagnose|root.*cause|system.*status)\b", re.I),
+        "gana_root",
+        "health_report",
+    ),
     (re.compile(r"\b(ship|deploy|release|version)\b", re.I), "gana_root", "ship.check"),
-    (re.compile(r"\b(state|paths|summary).*system", re.I), "gana_root", "state.summary"),
-
+    (
+        re.compile(r"\b(state|paths|summary).*system", re.I),
+        "gana_root",
+        "state.summary",
+    ),
     # Introspection / self-model
-    (re.compile(r"\b(capabilit|manifest|telemetry|metrics)", re.I), "gana_ghost", "capabilities"),
-    (re.compile(r"\b(gnosis|self.model|introspect|self.aware)\b", re.I), "gana_ghost", "gnosis"),
-    (re.compile(r"\b(forecast|alert|surprise)\b", re.I), "gana_ghost", "selfmodel.forecast"),
-    (re.compile(r"\b(graph|topology|network|connections)\b", re.I), "gana_ghost", "graph_topology"),
+    (
+        re.compile(r"\b(capabilit|manifest|telemetry|metrics)", re.I),
+        "gana_ghost",
+        "capabilities",
+    ),
+    (
+        re.compile(r"\b(gnosis|self.model|introspect|self.aware)\b", re.I),
+        "gana_ghost",
+        "gnosis",
+    ),
+    (
+        re.compile(r"\b(forecast|alert|surprise)\b", re.I),
+        "gana_ghost",
+        "selfmodel.forecast",
+    ),
+    (
+        re.compile(r"\b(graph|topology|network|connections)\b", re.I),
+        "gana_ghost",
+        "graph_topology",
+    ),
     (re.compile(r"\b(watcher|monitor|observe)\b", re.I), "gana_ghost", "watcher_add"),
-
     # Session management
-    (re.compile(r"\b(session|bootstrap|startup|init.*session)\b", re.I), "gana_horn", "session_bootstrap"),
-    (re.compile(r"\b(resume|checkpoint|restore.*session)\b", re.I), "gana_horn", "resume_session"),
-
+    (
+        re.compile(r"\b(session|bootstrap|startup|init.*session)\b", re.I),
+        "gana_horn",
+        "session_bootstrap",
+    ),
+    (
+        re.compile(r"\b(resume|checkpoint|restore.*session)\b", re.I),
+        "gana_horn",
+        "resume_session",
+    ),
     # Galaxy management
     (re.compile(r"\b(create|new).*galax", re.I), "gana_void", "galaxy.create"),
-    (re.compile(r"\b(galax|universe|namespace|switch.*context)", re.I), "gana_void", "galaxy.list"),
-    (re.compile(r"\b(backup|export|snapshot).*galax", re.I), "gana_void", "galaxy.backup"),
-    (re.compile(r"\b(galaxy|galaxies).*taxonom", re.I), "gana_void", "galaxy.canonical_taxonomy"),
-    (re.compile(r"\bexport.*tutorial|tutorial.*export\b", re.I), "gana_void", "galaxy.export_tutorial"),
-
+    (
+        re.compile(r"\b(galax|universe|namespace|switch.*context)", re.I),
+        "gana_void",
+        "galaxy.list",
+    ),
+    (
+        re.compile(r"\b(backup|export|snapshot).*galax", re.I),
+        "gana_void",
+        "galaxy.backup",
+    ),
+    (
+        re.compile(r"\b(galaxy|galaxies).*taxonom", re.I),
+        "gana_void",
+        "galaxy.canonical_taxonomy",
+    ),
+    (
+        re.compile(r"\bexport.*tutorial|tutorial.*export\b", re.I),
+        "gana_void",
+        "galaxy.export_tutorial",
+    ),
     # Dreams / consolidation
-    (re.compile(r"\b(dream|consolidat|sleep|cycle)\b", re.I), "gana_abundance", "dream"),
-    (re.compile(r"\b(serendipity|surprise.*connection|lucky)\b", re.I), "gana_abundance", "serendipity_surface"),
-
+    (
+        re.compile(r"\b(dream|consolidat|sleep|cycle)\b", re.I),
+        "gana_abundance",
+        "dream",
+    ),
+    (
+        re.compile(r"\b(serendipity|surprise.*connection|lucky)\b", re.I),
+        "gana_abundance",
+        "serendipity_surface",
+    ),
     # Ethics / governance
-    (re.compile(r"\b(ethics?|dharma|moral|consent|boundar)\b", re.I), "gana_straddling_legs", "evaluate_ethics"),
-    (re.compile(r"\b(harmony|balance|wu.xing|five.element)\b", re.I), "gana_straddling_legs", "wu_xing_balance"),
-    (re.compile(r"\b(verify|attest|verification)\b", re.I), "gana_straddling_legs", "verification.status"),
-
+    (
+        re.compile(r"\b(ethics?|dharma|moral|consent|boundar)\b", re.I),
+        "gana_straddling_legs",
+        "evaluate_ethics",
+    ),
+    (
+        re.compile(r"\b(harmony|balance|wu.xing|five.element)\b", re.I),
+        "gana_straddling_legs",
+        "wu_xing_balance",
+    ),
+    (
+        re.compile(r"\b(verify|attest|verification)\b", re.I),
+        "gana_straddling_legs",
+        "verification.status",
+    ),
     # Governance / forge
-    (re.compile(r"\b(governor|governance|drift|budget|dharma.*profile)\b", re.I), "gana_star", "governor_validate"),
-    (re.compile(r"\b(forge|reload|validate.*tool)\b", re.I), "gana_star", "forge.status"),
-
+    (
+        re.compile(r"\b(governor|governance|drift|budget|dharma.*profile)\b", re.I),
+        "gana_star",
+        "governor_validate",
+    ),
+    (
+        re.compile(r"\b(forge|reload|validate.*tool)\b", re.I),
+        "gana_star",
+        "forge.status",
+    ),
     # Performance / acceleration
-    (re.compile(r"\b(simd|cosine|batch.*similar|accelerat)\b", re.I), "gana_tail", "simd.cosine"),
-    (re.compile(r"\b(cascade|pattern.*list|hexagram)\b", re.I), "gana_tail", "list_cascade_patterns"),
-
+    (
+        re.compile(r"\b(simd|cosine|batch.*similar|accelerat)\b", re.I),
+        "gana_tail",
+        "simd.cosine",
+    ),
+    (
+        re.compile(r"\b(cascade|pattern.*list|hexagram)\b", re.I),
+        "gana_tail",
+        "list_cascade_patterns",
+    ),
     # Resource locks / privacy
-    (re.compile(r"\b(lock|unlock|sangha.*lock|resource.*lock)\b", re.I), "gana_room", "sangha_lock"),
-    (re.compile(r"\b(sandbox|limit|privacy|hermit)\b", re.I), "gana_room", "sandbox.status"),
-    (re.compile(r"\b(security|alert|threat|intrusion)\b", re.I), "gana_room", "security.alerts"),
-
+    (
+        re.compile(r"\b(lock|unlock|sangha.*lock|resource.*lock)\b", re.I),
+        "gana_room",
+        "sangha_lock",
+    ),
+    (
+        re.compile(r"\b(sandbox|limit|privacy|hermit)\b", re.I),
+        "gana_room",
+        "sandbox.status",
+    ),
+    (
+        re.compile(r"\b(security|alert|threat|intrusion)\b", re.I),
+        "gana_room",
+        "security.alerts",
+    ),
     # Resilience / rate limiting
-    (re.compile(r"\b(rate.limit|throttle|circuit.*breaker|grimoire|spell)\b", re.I), "gana_willow", "rate_limiter.stats"),
-    (re.compile(r"\b(oracle|divine|cast|fortune)\b", re.I), "gana_willow", "cast_oracle"),
-
+    (
+        re.compile(r"\b(rate.limit|throttle|circuit.*breaker|grimoire|spell)\b", re.I),
+        "gana_willow",
+        "rate_limiter.stats",
+    ),
+    (
+        re.compile(r"\b(oracle|divine|cast|fortune)\b", re.I),
+        "gana_willow",
+        "cast_oracle",
+    ),
     # Community / sangha
-    (re.compile(r"\b(sangha|chat|community|broadcast|publish)\b", re.I), "gana_encampment", "sangha_chat_send"),
-    (re.compile(r"\b(broker|redis|pubsub|message)\b", re.I), "gana_encampment", "broker.publish"),
-
+    (
+        re.compile(r"\b(sangha|chat|community|broadcast|publish)\b", re.I),
+        "gana_encampment",
+        "sangha_chat_send",
+    ),
+    (
+        re.compile(r"\b(broker|redis|pubsub|message)\b", re.I),
+        "gana_encampment",
+        "broker.publish",
+    ),
     # Deployment / export
-    (re.compile(r"\b(export|deploy|mesh|broadcast.*memory)\b", re.I), "gana_wings", "export_memories"),
+    (
+        re.compile(r"\b(export|deploy|mesh|broadcast.*memory)\b", re.I),
+        "gana_wings",
+        "export_memories",
+    ),
     (re.compile(r"\b(audit|verify.*export)\b", re.I), "gana_wings", "audit.export"),
-
     # Tasks / pipeline
-    (re.compile(r"\b(task|pipeline|distribute|route.*task)\b", re.I), "gana_stomach", "task.distribute"),
-    (re.compile(r"\b(complete|finish|done).*task\b", re.I), "gana_stomach", "task.complete"),
-
+    (
+        re.compile(r"\b(task|pipeline|distribute|route.*task)\b", re.I),
+        "gana_stomach",
+        "task.distribute",
+    ),
+    (
+        re.compile(r"\b(complete|finish|done).*task\b", re.I),
+        "gana_stomach",
+        "task.complete",
+    ),
     # Swarm / decomposition
-    (re.compile(r"\b(swarm|decompose|war.room|campaign|worker)\b", re.I), "gana_ox", "swarm.decompose"),
-
+    (
+        re.compile(r"\b(swarm|decompose|war.room|campaign|worker)\b", re.I),
+        "gana_ox",
+        "swarm.decompose",
+    ),
     # Nurture / agent registry
-    (re.compile(r"\b(agent|register|heartbeat|deregister|trust)\b", re.I), "gana_girl", "agent.register"),
-
+    (
+        re.compile(r"\b(agent|register|heartbeat|deregister|trust)\b", re.I),
+        "gana_girl",
+        "agent.register",
+    ),
     # Strategy / cognitive modes
-    (re.compile(r"\b(cognitive.mode|starter.pack|maturity|homeostasis)\b", re.I), "gana_dipper", "cognitive.mode"),
-    (re.compile(r"\b(neurotransmitter|dopamine|serotonin)\b", re.I), "gana_dipper", "neurotransmitter.status"),
-
+    (
+        re.compile(r"\b(cognitive.mode|starter.pack|maturity|homeostasis)\b", re.I),
+        "gana_dipper",
+        "cognitive.mode",
+    ),
+    (
+        re.compile(r"\b(neurotransmitter|dopamine|serotonin)\b", re.I),
+        "gana_dipper",
+        "neurotransmitter.status",
+    ),
     # Metrics / caching
-    (re.compile(r"\b(metric|track|hologram|cache|yin.yang)\b", re.I), "gana_mound", "track_metric"),
-    (re.compile(r"\b(green.score|eco|sustainability)\b", re.I), "gana_mound", "green.report"),
-
+    (
+        re.compile(r"\b(metric|track|hologram|cache|yin.yang)\b", re.I),
+        "gana_mound",
+        "track_metric",
+    ),
+    (
+        re.compile(r"\b(green.score|eco|sustainability)\b", re.I),
+        "gana_mound",
+        "green.report",
+    ),
     # Precision / edge inference
-    (re.compile(r"\b(edge|bitnet|local.*infer|rule.*add)\b", re.I), "gana_turtle_beak", "edge_infer"),
-
+    (
+        re.compile(r"\b(edge|bitnet|local.*infer|rule.*add)\b", re.I),
+        "gana_turtle_beak",
+        "edge_infer",
+    ),
     # Detail / debugging
-    (re.compile(r"\b(anomal|karma.*report|karma.*trace|salience|otel|voice.audit)", re.I), "gana_hairy_head", "anomaly.check"),
-    (re.compile(r"\b(dharma.*rule|karma.*anchor)\b", re.I), "gana_hairy_head", "karma.anchor"),
-
+    (
+        re.compile(
+            r"\b(anomal|karma.*report|karma.*trace|salience|otel|voice.audit)", re.I
+        ),
+        "gana_hairy_head",
+        "anomaly.check",
+    ),
+    (
+        re.compile(r"\b(dharma.*rule|karma.*anchor)\b", re.I),
+        "gana_hairy_head",
+        "karma.anchor",
+    ),
     # Pattern connectivity
-    (re.compile(r"\b(association|causal|cluster|constellation|emergence|novelty)\b", re.I), "gana_extended_net", "pattern_search"),
-    (re.compile(r"\b(learning|coherence.*boost|resonance.*trace)\b", re.I), "gana_extended_net", "learning.patterns"),
-
+    (
+        re.compile(
+            r"\b(association|causal|cluster|constellation|emergence|novelty)\b", re.I
+        ),
+        "gana_extended_net",
+        "pattern_search",
+    ),
+    (
+        re.compile(r"\b(learning|coherence.*boost|resonance.*trace)\b", re.I),
+        "gana_extended_net",
+        "learning.patterns",
+    ),
     # Codebase / archaeology
-    (re.compile(r"\b(archaeology|codebase|scan|strata|code.*genome)\b", re.I), "gana_chariot", "archaeology"),
-    (re.compile(r"\b(windsurf|conversation|browser.*navigate)\b", re.I), "gana_chariot", "windsurf_list_conversations"),
+    (
+        re.compile(r"\b(archaeology|codebase|scan|strata|code.*genome)\b", re.I),
+        "gana_chariot",
+        "archaeology",
+    ),
+    (
+        re.compile(r"\b(windsurf|conversation|browser.*navigate)\b", re.I),
+        "gana_chariot",
+        "windsurf_list_conversations",
+    ),
     # Web research — ordered most specific first to prevent collision
-    (re.compile(r"\b(rabbit.*hole|deep.*spiral|recursive.*research)\b", re.I), "gana_chariot", "rabbit_hole_research"),
-    (re.compile(r"\b(search.*and.*read|search.*and.*fetch)\b", re.I), "gana_chariot", "web_search_and_read"),
-    (re.compile(r"\b(batch.*search|search.*batch|parallel.*search)\b", re.I), "gana_chariot", "web_search_batch"),
-    (re.compile(r"\b(categor.*search|search.*categor)\b", re.I), "gana_chariot", "web_search_category"),
-    (re.compile(r"\b(research.*repo|repo.*research)\b", re.I), "gana_chariot", "research_repo"),
-    (re.compile(r"\b(research.*url|url.*research)\b", re.I), "gana_chariot", "research_url"),
-    (re.compile(r"\b(research.*topic|investigate|explore.*topic|deep.*research)\b", re.I), "gana_chariot", "research_topic"),
+    (
+        re.compile(r"\b(rabbit.*hole|deep.*spiral|recursive.*research)\b", re.I),
+        "gana_chariot",
+        "rabbit_hole_research",
+    ),
+    (
+        re.compile(r"\b(search.*and.*read|search.*and.*fetch)\b", re.I),
+        "gana_chariot",
+        "web_search_and_read",
+    ),
+    (
+        re.compile(r"\b(batch.*search|search.*batch|parallel.*search)\b", re.I),
+        "gana_chariot",
+        "web_search_batch",
+    ),
+    (
+        re.compile(r"\b(categor.*search|search.*categor)\b", re.I),
+        "gana_chariot",
+        "web_search_category",
+    ),
+    (
+        re.compile(r"\b(research.*repo|repo.*research)\b", re.I),
+        "gana_chariot",
+        "research_repo",
+    ),
+    (
+        re.compile(r"\b(research.*url|url.*research)\b", re.I),
+        "gana_chariot",
+        "research_url",
+    ),
+    (
+        re.compile(
+            r"\b(research.*topic|investigate|explore.*topic|deep.*research)\b", re.I
+        ),
+        "gana_chariot",
+        "research_topic",
+    ),
     (re.compile(r"\b(deep.*fetch)\b", re.I), "gana_chariot", "deep_fetch"),
-    (re.compile(r"\b(enhanced.*fetch|fetch.*enhanced|outline.*fetch|chunk.*fetch)\b", re.I), "gana_chariot", "web_fetch_enhanced"),
-    (re.compile(r"\b(web.*fetch|fetch.*url|fetch.*page|read.*url|read.*page)\b", re.I), "gana_chariot", "web_fetch"),
-    (re.compile(r"\b(web.*search|search.*web|search.*online|search.*internet)\b", re.I), "gana_chariot", "web_search"),
-
+    (
+        re.compile(
+            r"\b(enhanced.*fetch|fetch.*enhanced|outline.*fetch|chunk.*fetch)\b", re.I
+        ),
+        "gana_chariot",
+        "web_fetch_enhanced",
+    ),
+    (
+        re.compile(
+            r"\b(web.*fetch|fetch.*url|fetch.*page|read.*url|read.*page)\b", re.I
+        ),
+        "gana_chariot",
+        "web_fetch",
+    ),
+    (
+        re.compile(
+            r"\b(web.*search|search.*web|search.*online|search.*internet)\b", re.I
+        ),
+        "gana_chariot",
+        "web_search",
+    ),
     # Voting / marketplace
-    (re.compile(r"\b(vote|ballot|election|marketplace|negotiate|engagement.*token)\b", re.I), "gana_wall", "vote.create"),
+    (
+        re.compile(
+            r"\b(vote|ballot|election|marketplace|negotiate|engagement.*token)\b", re.I
+        ),
+        "gana_wall",
+        "vote.create",
+    ),
 ]
 
 
@@ -287,11 +710,24 @@ def classify(input_text: str) -> tuple[str, str | None, float]:
         return "gana_chariot", "web_search_and_read", 1.0
     if "deep fetch" in text_lower:
         return "gana_chariot", "deep_fetch", 1.0
-    if "enhanced fetch" in text_lower or "fetch enhanced" in text_lower or "outline fetch" in text_lower or "chunk fetch" in text_lower:
+    if (
+        "enhanced fetch" in text_lower
+        or "fetch enhanced" in text_lower
+        or "outline fetch" in text_lower
+        or "chunk fetch" in text_lower
+    ):
         return "gana_chariot", "web_fetch_enhanced", 1.0
-    if "web fetch" in text_lower or "fetch url" in text_lower or "fetch page" in text_lower:
+    if (
+        "web fetch" in text_lower
+        or "fetch url" in text_lower
+        or "fetch page" in text_lower
+    ):
         return "gana_chariot", "web_fetch", 1.0
-    if "web search" in text_lower or "search the web" in text_lower or "search online" in text_lower:
+    if (
+        "web search" in text_lower
+        or "search the web" in text_lower
+        or "search online" in text_lower
+    ):
         return "gana_chariot", "web_search", 1.0
     if "research topic" in text_lower or "research_topic" in text_lower:
         return "gana_chariot", "research_topic", 1.0
@@ -381,6 +817,7 @@ def _schema_for_gana(gana_name: str) -> dict[str, Any]:
 
     # Validate gana name
     from whitemagic.tools.tool_catalog import GANA_NAMES
+
     if gana_name not in GANA_NAMES:
         return {
             "status": "error",
@@ -402,7 +839,9 @@ def _schema_for_gana(gana_name: str) -> dict[str, Any]:
         "description": desc,
         "nested_tools": tools,
         "usage": f"wm(thought='...', route='{gana_name}.<tool_name>')",
-        "example": f"wm(route='{gana_name}.{tools[0]}')" if tools else f"wm(route='{gana_name}')",
+        "example": f"wm(route='{gana_name}.{tools[0]}')"
+        if tools
+        else f"wm(route='{gana_name}')",
     }
 
 
@@ -440,7 +879,10 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
         }
 
     # Special modes
-    if route == "discover" or (thought and thought.strip().lower() in ("help", "?", "discover", "what can you do")):
+    if route == "discover" or (
+        thought
+        and thought.strip().lower() in ("help", "?", "discover", "what can you do")
+    ):
         return _discover()
 
     if route and route.startswith("schema:"):
@@ -459,6 +901,31 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
 
     classify_ms = (time.time() - start_time) * 1000
 
+    # Coherence-driven dispatch: when coherence is low, prefer safe/familiar tools
+    _coherence_caution = False
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        summary = cycle.get_cycle_summary()
+        avg_coherence = summary.get("avg_coherence", 1.0)
+        stream_len = summary.get("stream_length", 0)
+
+        # Only apply after we have enough history (3+ calls) to judge coherence
+        if stream_len >= 3 and avg_coherence < 0.6:
+            _SAFE_GANAS = {
+                "gana_ghost", "gana_neck", "gana_winnowing_basket",
+                "gana_horn", "gana_heart",
+            }
+            if gana_name not in _SAFE_GANAS:
+                _coherence_caution = True
+                logger.info(
+                    "Coherence-driven dispatch: avg=%.2f, stream=%d, gana=%s flagged as caution",
+                    avg_coherence, stream_len, gana_name,
+                )
+    except Exception:
+        pass
+
     # Build call_tool kwargs
     call_kwargs: dict[str, Any] = {}
     if sub_tool:
@@ -470,8 +937,14 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
         if param_name and payload_value:
             passthrough_args = {param_name: payload_value}
             # Auto-generate title for memory creation if not provided
-            if param_name == "content" and sub_tool in ("create_memory", "remember", "wm_write"):
-                passthrough_args["title"] = payload_value[:60] if len(payload_value) > 60 else payload_value
+            if param_name == "content" and sub_tool in (
+                "create_memory",
+                "remember",
+                "wm_write",
+            ):
+                passthrough_args["title"] = (
+                    payload_value[:60] if len(payload_value) > 60 else payload_value
+                )
 
     if passthrough_args:
         call_kwargs["args"] = passthrough_args
@@ -484,19 +957,28 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
 
     # Augment result with routing metadata
     if isinstance(result, dict):
-        result.setdefault("_wm_route", {
-            "input": thought[:200] if thought else f"(explicit: {route})",
-            "gana": gana_name,
-            "tool": sub_tool,
-            "confidence": confidence,
-            "classify_ms": round(classify_ms, 3),
-        })
+        result.setdefault(
+            "_wm_route",
+            {
+                "input": thought[:200] if thought else f"(explicit: {route})",
+                "gana": gana_name,
+                "tool": sub_tool,
+                "confidence": confidence,
+                "classify_ms": round(classify_ms, 3),
+            },
+        )
+        if _coherence_caution:
+            result["_coherence_caution"] = True
 
     # ChainTracker: record this call for auto-forging + citta cycle
     try:
         from whitemagic.core.intelligence.omni.chain_tracker import get_chain_tracker
+
         tracker = get_chain_tracker()
-        _is_success = isinstance(result, dict) and result.get("status") in ("success", "ok")
+        _is_success = isinstance(result, dict) and result.get("status") in (
+            "success",
+            "ok",
+        )
         _elapsed_ms = (time.time() - start_time) * 1000
         tracker.record(
             gana=gana_name,
@@ -509,10 +991,13 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
         forged = tracker.try_auto_forge()
         if forged is not None:
             if isinstance(result, dict):
-                result.setdefault("_wm_forged_skill", {
-                    "name": forged.name,
-                    "forge_count": forged.forge_count,
-                })
+                result.setdefault(
+                    "_wm_forged_skill",
+                    {
+                        "name": forged.name,
+                        "forge_count": forged.forge_count,
+                    },
+                )
     except Exception:
         pass  # Chain tracking is best-effort
 
@@ -523,6 +1008,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             advance_citta,
             get_citta_predecessor,
         )
+
         _output_preview = ""
         if isinstance(result, dict):
             _output_preview = str(result.get("status", ""))[:200]
@@ -547,6 +1033,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
     # Citta stream: persist state for cross-session continuity
     try:
         from whitemagic.core.consciousness.citta_stream import save_citta_state
+
         save_citta_state(
             session_id=f"wm_{int(time.time())}",
             coherence_score=1.0 if _is_success else 0.5,
@@ -561,6 +1048,47 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
         )
     except Exception:
         pass  # Citta persistence is best-effort
+
+    # Sensorium: inject full self-state into every response
+    # This makes every tool call a moment of self-awareness (Springdrift pattern)
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        from whitemagic.core.consciousness.citta_stream import get_continuity_context
+
+        cycle = get_citta_cycle()
+        cycle_summary = cycle.get_cycle_summary()
+        continuity = get_continuity_context()
+
+        # Read depth layer from depth gauge if available
+        depth_layer = cycle_summary.get("current_depth", "surface")
+        try:
+            from whitemagic.core.consciousness.depth_gauge import (
+                ConsciousnessDepthGauge,
+            )
+
+            depth_layer = ConsciousnessDepthGauge().current_layer.value
+        except Exception:
+            pass
+
+        sensorium = {
+            "coherence": cycle_summary.get("avg_coherence", 1.0),
+            "coherence_drift": cycle_summary.get("coherence_drift", 0.0),
+            "depth_layer": depth_layer,
+            "stream_length": cycle_summary.get("stream_length", 0),
+            "emotional_coloring": cycle_summary.get("emotional_coloring", {}),
+            "session_count": continuity.get("session_count", 0),
+            "first_awakening": continuity.get("first_awakening", True),
+            "time_of_day": _time_of_day(),
+        }
+
+        if not continuity.get("first_awakening"):
+            sensorium["time_gap"] = continuity.get("time_gap_human", "")
+            sensorium["where_we_left_off"] = continuity.get("where_we_left_off", "")
+
+        if isinstance(result, dict):
+            result.setdefault("_sensorium", sensorium)
+    except Exception:
+        pass  # Sensorium is best-effort
 
     return result
 

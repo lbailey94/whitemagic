@@ -19,14 +19,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class GanaStep:
     """A single step in a routed chain."""
 
     mansion: str  # Name of the Lunar Mansion (e.g., "NET", "VOID")
-    operation: str # search, analyze, transform, consolidate
-    context_key: str # What specific aspect to focus on
+    operation: str  # search, analyze, transform, consolidate
+    context_key: str  # What specific aspect to focus on
     parameters: dict[str, Any]
+
 
 @dataclass
 class ExecutionChain:
@@ -37,12 +39,12 @@ class ExecutionChain:
     estimated_complexity: float
     required_capabilities: list[str]
 
+
 class UniversalRouter:
-    """Maps intents to Gana Constellations.
-    """
+    """Maps intents to Gana Constellations."""
 
     def __init__(self) -> None:
-        self.known_skills: dict[str, Any] = {} # Cache for "Forged" skills
+        self.known_skills: dict[str, Any] = {}  # Cache for "Forged" skills
         self._bootstrap_default_routes()
 
     def _bootstrap_default_routes(self) -> None:
@@ -56,7 +58,7 @@ class UniversalRouter:
             ],
             "research": [
                 GanaStep("NET", "search", "information_retrieval", {}),
-                GanaStep("GHOST", "analyze", "introspection_check", {}), # Bias check
+                GanaStep("GHOST", "analyze", "introspection_check", {}),  # Bias check
                 GanaStep("WINNOWING_BASKET", "consolidate", "filter_noise", {}),
             ],
         }
@@ -97,6 +99,7 @@ class UniversalRouter:
 
             if "response" in response:
                 from whitemagic.utils.fast_json import loads as _json_loads
+
                 try:
                     # Clean the response to ensure valid JSON (basic cleanup)
                     json_str = response["response"].strip()
@@ -111,7 +114,8 @@ class UniversalRouter:
                             operation=s["operation"],
                             context_key=s["context"],
                             parameters={},
-                        ) for s in steps_data
+                        )
+                        for s in steps_data
                     ]
 
                     if steps:
@@ -122,7 +126,9 @@ class UniversalRouter:
                             required_capabilities=["llm_reasoning"],
                         )
                 except Exception as e:
-                    logger.warning("Failed to parse LLM route: %s. Falling back to default.", e)
+                    logger.warning(
+                        "Failed to parse LLM route: %s. Falling back to default.", e
+                    )
 
         except ImportError:
             logger.warning("Whitemagic Brain not available. Using heuristic fallback.")
@@ -135,7 +141,11 @@ class UniversalRouter:
             logger.info("  Matched domain: TRADING (heuristic)")
             steps = self.default_routes["trade"]
 
-        elif "research" in intent_lower or "learn" in intent_lower or "find" in intent_lower:
+        elif (
+            "research" in intent_lower
+            or "learn" in intent_lower
+            or "find" in intent_lower
+        ):
             logger.info("  Matched domain: RESEARCH (heuristic)")
             steps = self.default_routes["research"]
 
@@ -154,9 +164,10 @@ class UniversalRouter:
             required_capabilities=["basic_reasoning"],
         )
 
-    async def execute(self, chain: ExecutionChain, initial_context: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Execute the routed chain using REAL Gana instances.
-        """
+    async def execute(
+        self, chain: ExecutionChain, initial_context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Execute the routed chain using REAL Gana instances."""
         logger.info("🚀 Executing chain with %s steps...", len(chain.steps))
 
         context = {"original_intent": chain.intent}
@@ -166,7 +177,13 @@ class UniversalRouter:
         from whitemagic.core.ganas.registry import get_gana_for_tool
 
         for i, step in enumerate(chain.steps):
-            logger.info("  [%d/%d] Invoking %s (%s)...", i+1, len(chain.steps), step.mansion, step.operation)
+            logger.info(
+                "  [%d/%d] Invoking %s (%s)...",
+                i + 1,
+                len(chain.steps),
+                step.mansion,
+                step.operation,
+            )
 
             # Map Mansion name to tool name (e.g., "NET" -> "gana_net")
             tool_name = f"gana_{step.mansion.lower()}"
@@ -190,13 +207,17 @@ class UniversalRouter:
                     dispatch_kwargs["context"] = context
                 elif op_enum == GanaOperation.ANALYZE:
                     # analyze(data: Any, context=...)
-                    dispatch_kwargs["data"] = context.get(step.context_key) or step.context_key
+                    dispatch_kwargs["data"] = (
+                        context.get(step.context_key) or step.context_key
+                    )
                     dispatch_kwargs["context"] = context
                 elif op_enum == GanaOperation.TRANSFORM:
                     # transform(data: Any, transformation: str, context=...)
                     # For transform, context_key is the data key, parameters usually has 'transformation'
                     dispatch_kwargs["data"] = context.get(step.context_key)
-                    dispatch_kwargs["transformation"] = step.parameters.get("transformation", "default")
+                    dispatch_kwargs["transformation"] = step.parameters.get(
+                        "transformation", "default"
+                    )
                     dispatch_kwargs["context"] = context
                 elif op_enum == GanaOperation.CONSOLIDATE:
                     # consolidate(items: List, context=...)
@@ -234,11 +255,16 @@ class UniversalRouter:
         # Auto-Forge Skill (Muscle Memory)
         try:
             from whitemagic.core.intelligence.omni.skill_forge import get_skill_forge
+
             forge = get_skill_forge()
 
             # Simple success metric: All steps produced a result and no errors
             steps_count = len(chain.steps)
-            success_count = sum(1 for i in range(steps_count) if f"error_{i}" not in context and f"skipped_{i}" not in context)
+            success_count = sum(
+                1
+                for i in range(steps_count)
+                if f"error_{i}" not in context and f"skipped_{i}" not in context
+            )
             success_ratio = success_count / steps_count if steps_count > 0 else 0
 
             if forge.assess_pattern(chain, success_ratio):
@@ -253,6 +279,7 @@ class UniversalRouter:
             "final_context": context,
             "chain_id": id(chain),
         }
+
 
 # Singleton accessor
 _router: UniversalRouter | None = None

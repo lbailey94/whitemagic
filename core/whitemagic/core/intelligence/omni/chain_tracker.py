@@ -68,7 +68,10 @@ class ChainTracker:
         self._calls.append(call)
         logger.debug(
             "ChainTracker: recorded call #%d (%s/%s, success=%s)",
-            len(self._calls), gana, sub_tool, success,
+            len(self._calls),
+            gana,
+            sub_tool,
+            success,
         )
 
     def should_flush(self) -> bool:
@@ -104,12 +107,14 @@ class ChainTracker:
             mansion = call.gana.replace("gana_", "").upper()
             operation = self._infer_operation(call.sub_tool)
             context_key = call.sub_tool or call.thought[:50]
-            steps.append(GanaStep(
-                mansion=mansion,
-                operation=operation,
-                context_key=context_key,
-                parameters={},
-            ))
+            steps.append(
+                GanaStep(
+                    mansion=mansion,
+                    operation=operation,
+                    context_key=context_key,
+                    parameters={},
+                )
+            )
 
         return ExecutionChain(
             intent=intent,
@@ -124,11 +129,19 @@ class ChainTracker:
         if not sub_tool:
             return "search"
         lower = sub_tool.lower()
-        if any(w in lower for w in ("create", "write", "save", "store", "forge", "register")):
+        if any(
+            w in lower
+            for w in ("create", "write", "save", "store", "forge", "register")
+        ):
             return "transform"
-        if any(w in lower for w in ("analyze", "inspect", "check", "health", "report", "gnosis")):
+        if any(
+            w in lower
+            for w in ("analyze", "inspect", "check", "health", "report", "gnosis")
+        ):
             return "analyze"
-        if any(w in lower for w in ("consolidate", "merge", "sync", "export", "backup")):
+        if any(
+            w in lower for w in ("consolidate", "merge", "sync", "export", "backup")
+        ):
             return "consolidate"
         return "search"
 
@@ -151,6 +164,7 @@ class ChainTracker:
 
         try:
             from whitemagic.core.intelligence.omni.skill_forge import get_skill_forge
+
             forge = get_skill_forge()
 
             if forge.assess_pattern(chain, success_ratio):

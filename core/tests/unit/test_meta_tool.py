@@ -3,6 +3,7 @@
 Validates routing accuracy, latency, explicit override, fallback behavior,
 and registry/dispatch integration.
 """
+
 from __future__ import annotations
 
 import time
@@ -11,54 +12,89 @@ from unittest.mock import patch
 import pytest
 
 from whitemagic.tools.handlers.meta_tool import (
+    _PAYLOAD_MAP,
+    _ROUTING_PATTERNS,
+    _extract_payload,
     classify,
     handle_wm,
     handle_wm_help,
-    _ROUTING_PATTERNS,
-    _extract_payload,
-    _PAYLOAD_MAP,
 )
 
 
 class TestClassify:
     """Test the classify() routing function."""
 
-    @pytest.mark.parametrize("text,expected_gana,expected_tool", [
-        ("remember that the API uses X-User-Id headers", "gana_neck", "create_memory"),
-        ("store this fact for later", "gana_neck", "create_memory"),
-        ("save a memory about the deployment", "gana_neck", "create_memory"),
-        ("search for memories about architecture", "gana_winnowing_basket", "search_memories"),
-        ("find memories about security", "gana_winnowing_basket", "search_memories"),
-        ("recall what we decided about caching", "gana_winnowing_basket", "search_memories"),
-        ("think about the architecture tradeoffs", "gana_three_stars", "reasoning.bicameral"),
-        ("analyze the system design", "gana_three_stars", "reasoning.bicameral"),
-        ("reason through the options", "gana_three_stars", "reasoning.bicameral"),
-        ("check system health", "gana_root", "health_report"),
-        ("show me the system status", "gana_root", "health_report"),
-        ("what is our gnosis", "gana_ghost", "gnosis"),
-        ("show me system capabilities", "gana_ghost", "capabilities"),
-        ("start a new session", "gana_horn", "session_bootstrap"),
-        ("bootstrap the session", "gana_horn", "session_bootstrap"),
-        ("create a new galaxy", "gana_void", "galaxy.create"),
-        ("list all galaxies", "gana_void", "galaxy.list"),
-        ("evaluate the ethics of this action", "gana_straddling_legs", "evaluate_ethics"),
-        ("check the dharma rules", "gana_straddling_legs", "evaluate_ethics"),
-        ("run a kaizen analysis", "gana_three_stars", "kaizen_analyze"),
-        ("predict memory decay", "gana_three_stars", "foresight.analyze"),
-        ("convene the sabha council", "gana_three_stars", "sabha.convene"),
-        ("assess the terrain like art of war", "gana_three_stars", "art_of_war.assess"),
-        ("write to scratchpad", "gana_heart", "scratchpad"),
-        ("check rust status", "gana_root", "rust_status"),
-        ("ship check for release", "gana_root", "ship.check"),
-        ("add an edge inference rule", "gana_turtle_beak", "edge_infer"),
-        ("check for anomalies", "gana_hairy_head", "anomaly.check"),
-        ("decompose this into swarm tasks", "gana_ox", "swarm.decompose"),
-        ("register a new agent", "gana_girl", "agent.register"),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_gana,expected_tool",
+        [
+            (
+                "remember that the API uses X-User-Id headers",
+                "gana_neck",
+                "create_memory",
+            ),
+            ("store this fact for later", "gana_neck", "create_memory"),
+            ("save a memory about the deployment", "gana_neck", "create_memory"),
+            (
+                "search for memories about architecture",
+                "gana_winnowing_basket",
+                "search_memories",
+            ),
+            (
+                "find memories about security",
+                "gana_winnowing_basket",
+                "search_memories",
+            ),
+            (
+                "recall what we decided about caching",
+                "gana_winnowing_basket",
+                "search_memories",
+            ),
+            (
+                "think about the architecture tradeoffs",
+                "gana_three_stars",
+                "reasoning.bicameral",
+            ),
+            ("analyze the system design", "gana_three_stars", "reasoning.bicameral"),
+            ("reason through the options", "gana_three_stars", "reasoning.bicameral"),
+            ("check system health", "gana_root", "health_report"),
+            ("show me the system status", "gana_root", "health_report"),
+            ("what is our gnosis", "gana_ghost", "gnosis"),
+            ("show me system capabilities", "gana_ghost", "capabilities"),
+            ("start a new session", "gana_horn", "session_bootstrap"),
+            ("bootstrap the session", "gana_horn", "session_bootstrap"),
+            ("create a new galaxy", "gana_void", "galaxy.create"),
+            ("list all galaxies", "gana_void", "galaxy.list"),
+            (
+                "evaluate the ethics of this action",
+                "gana_straddling_legs",
+                "evaluate_ethics",
+            ),
+            ("check the dharma rules", "gana_straddling_legs", "evaluate_ethics"),
+            ("run a kaizen analysis", "gana_three_stars", "kaizen_analyze"),
+            ("predict memory decay", "gana_three_stars", "foresight.analyze"),
+            ("convene the sabha council", "gana_three_stars", "sabha.convene"),
+            (
+                "assess the terrain like art of war",
+                "gana_three_stars",
+                "art_of_war.assess",
+            ),
+            ("write to scratchpad", "gana_heart", "scratchpad"),
+            ("check rust status", "gana_root", "rust_status"),
+            ("ship check for release", "gana_root", "ship.check"),
+            ("add an edge inference rule", "gana_turtle_beak", "edge_infer"),
+            ("check for anomalies", "gana_hairy_head", "anomaly.check"),
+            ("decompose this into swarm tasks", "gana_ox", "swarm.decompose"),
+            ("register a new agent", "gana_girl", "agent.register"),
+        ],
+    )
     def test_routing_accuracy(self, text: str, expected_gana: str, expected_tool: str):
         gana, tool, confidence = classify(text)
-        assert gana == expected_gana, f"Expected {expected_gana} for '{text}', got {gana}"
-        assert tool == expected_tool, f"Expected {expected_tool} for '{text}', got {tool}"
+        assert gana == expected_gana, (
+            f"Expected {expected_gana} for '{text}', got {gana}"
+        )
+        assert tool == expected_tool, (
+            f"Expected {expected_tool} for '{text}', got {tool}"
+        )
         assert confidence == 1.0
 
     def test_no_match_falls_back_to_gnosis(self):
@@ -248,14 +284,17 @@ class TestRegistryIntegration:
 
     def test_dispatch_table_has_wm(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         assert "wm" in DISPATCH_TABLE
 
     def test_dispatch_table_has_wm_help(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
         assert "wm_help" in DISPATCH_TABLE
 
     def test_registry_has_wm(self):
         from whitemagic.tools.registry import get_tool
+
         tool = get_tool("wm")
         assert tool is not None
         assert tool.name == "wm"
@@ -263,6 +302,7 @@ class TestRegistryIntegration:
     def test_wm_stability_is_stable(self):
         from whitemagic.tools.registry import get_tool
         from whitemagic.tools.tool_types import ToolStability
+
         tool = get_tool("wm")
         assert tool.stability == ToolStability.STABLE
 
@@ -273,7 +313,8 @@ class TestPayloadExtraction:
     def test_remember_strips_to_content(self):
         param, value = _extract_payload(
             "remember that the API uses X-User-Id headers",
-            "gana_neck", "create_memory",
+            "gana_neck",
+            "create_memory",
         )
         assert param == "content"
         assert value == "the API uses X-User-Id headers"
@@ -281,7 +322,8 @@ class TestPayloadExtraction:
     def test_store_strips_to_content(self):
         param, value = _extract_payload(
             "store this fact for later",
-            "gana_neck", "create_memory",
+            "gana_neck",
+            "create_memory",
         )
         assert param == "content"
         assert value == "this fact for later"
@@ -289,7 +331,8 @@ class TestPayloadExtraction:
     def test_save_strips_to_content(self):
         param, value = _extract_payload(
             "save a memory about the deployment",
-            "gana_neck", "create_memory",
+            "gana_neck",
+            "create_memory",
         )
         assert param == "content"
         assert value == "a memory about the deployment"
@@ -297,7 +340,8 @@ class TestPayloadExtraction:
     def test_search_strips_to_query(self):
         param, value = _extract_payload(
             "search for memories about architecture",
-            "gana_winnowing_basket", "search_memories",
+            "gana_winnowing_basket",
+            "search_memories",
         )
         assert param == "query"
         assert value == "architecture"
@@ -305,7 +349,8 @@ class TestPayloadExtraction:
     def test_recall_strips_to_query(self):
         param, value = _extract_payload(
             "recall what we decided about caching",
-            "gana_winnowing_basket", "search_memories",
+            "gana_winnowing_basket",
+            "search_memories",
         )
         assert param == "query"
         assert value == "what we decided about caching"
@@ -313,7 +358,8 @@ class TestPayloadExtraction:
     def test_think_strips_to_topic(self):
         param, value = _extract_payload(
             "think about the architecture tradeoffs",
-            "gana_three_stars", "reasoning.bicameral",
+            "gana_three_stars",
+            "reasoning.bicameral",
         )
         assert param == "topic"
         assert value == "the architecture tradeoffs"
@@ -321,7 +367,8 @@ class TestPayloadExtraction:
     def test_analyze_strips_to_topic(self):
         param, value = _extract_payload(
             "analyze the system design",
-            "gana_three_stars", "reasoning.bicameral",
+            "gana_three_stars",
+            "reasoning.bicameral",
         )
         assert param == "topic"
         assert value == "the system design"
@@ -329,7 +376,8 @@ class TestPayloadExtraction:
     def test_ethics_strips_to_action(self):
         param, value = _extract_payload(
             "evaluate the ethics of this action",
-            "gana_straddling_legs", "evaluate_ethics",
+            "gana_straddling_legs",
+            "evaluate_ethics",
         )
         assert param == "action"
         assert value == "this action"
@@ -337,7 +385,8 @@ class TestPayloadExtraction:
     def test_gnosis_is_skip(self):
         param, value = _extract_payload(
             "show me the system gnosis snapshot",
-            "gana_ghost", "gnosis",
+            "gana_ghost",
+            "gnosis",
         )
         assert param is None
         assert value is None
@@ -345,7 +394,8 @@ class TestPayloadExtraction:
     def test_no_mapping_returns_none(self):
         param, value = _extract_payload(
             "some random text",
-            "gana_horn", "session_bootstrap",
+            "gana_horn",
+            "session_bootstrap",
         )
         assert param is None
         assert value is None
@@ -353,7 +403,8 @@ class TestPayloadExtraction:
     def test_empty_after_strip_returns_none(self):
         param, value = _extract_payload(
             "remember",
-            "gana_neck", "create_memory",
+            "gana_neck",
+            "create_memory",
         )
         assert param is None
         assert value is None
@@ -361,7 +412,8 @@ class TestPayloadExtraction:
     def test_scratchpad_strips_to_content(self):
         param, value = _extract_payload(
             "note: the deploy script needs updating",
-            "gana_heart", "scratchpad",
+            "gana_heart",
+            "scratchpad",
         )
         assert param == "content"
         assert value == "the deploy script needs updating"
@@ -425,3 +477,156 @@ class TestHandleWmPayloadAutoInjection:
             _, kwargs = mock_call.call_args
             # No auto-injection when route is explicit
             assert "content" not in kwargs.get("args", {})
+
+
+class TestSensorium:
+    """Test sensorium injection — full self-state in every wm() response."""
+
+    def test_sensorium_injected_on_success(self):
+        """Successful wm() calls include _sensorium with self-state."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        get_citta_cycle().reset()
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success", "result": "ok"}
+            result = handle_wm(thought="remember that sensorium works")
+
+            assert "_sensorium" in result
+            s = result["_sensorium"]
+            assert "coherence" in s
+            assert "depth_layer" in s
+            assert "stream_length" in s
+            assert "time_of_day" in s
+            assert s["stream_length"] >= 1
+
+    def test_sensorium_injected_on_error(self):
+        """Even error responses get sensorium (awareness persists)."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        get_citta_cycle().reset()
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "error", "message": "failed"}
+            result = handle_wm(thought="remember that errors have awareness too")
+
+            assert "_sensorium" in result
+            assert result["_sensorium"]["coherence"] <= 1.0
+
+    def test_sensorium_stream_grows_across_calls(self):
+        """Multiple calls increase stream_length in sensorium."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.side_effect = [{"status": "success"}, {"status": "success"}]
+
+            handle_wm(thought="remember first")
+            s1 = handle_wm(thought="remember second")
+
+            assert s1["_sensorium"]["stream_length"] >= 2
+
+    def test_sensorium_has_emotional_coloring(self):
+        """Sensorium includes emotional coloring from citta cycle."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        get_citta_cycle().reset()
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(thought="remember something important")
+
+            assert "emotional_coloring" in result["_sensorium"]
+            assert "dominant" in result["_sensorium"]["emotional_coloring"]
+
+    def test_sensorium_has_session_count(self):
+        """Sensorium includes session_count from continuity context."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        get_citta_cycle().reset()
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(thought="remember session tracking")
+
+            assert "session_count" in result["_sensorium"]
+            assert isinstance(result["_sensorium"]["session_count"], int)
+
+
+class TestCoherenceDispatch:
+    """Test coherence-driven dispatch — low coherence flags risky routes."""
+
+    def test_low_coherence_flags_unsafe_gana(self):
+        """When avg coherence < 0.6 and stream >= 3, unsafe ganas get caution flag."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        # Fill stream with 3 low-coherence entries
+        for _ in range(3):
+            cycle.advance(gana="gana_ox", tool="test", coherence=0.3)
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            # Route to an "unsafe" gana (not in _SAFE_GANAS)
+            result = handle_wm(route="gana_ox.swarm_decompose")
+
+            assert result.get("_coherence_caution") is True
+
+        cycle.reset()
+
+    def test_high_coherence_no_caution(self):
+        """When coherence is high, no caution flag is set."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        for _ in range(3):
+            cycle.advance(gana="gana_ox", tool="test", coherence=0.95)
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(route="gana_ox.swarm_decompose")
+
+            assert "_coherence_caution" not in result
+
+        cycle.reset()
+
+    def test_safe_gana_no_caution_even_low_coherence(self):
+        """Safe ganas (ghost, neck, etc.) never get cautioned even at low coherence."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        for _ in range(3):
+            cycle.advance(gana="gana_ox", tool="test", coherence=0.3)
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(route="gana_ghost.gnosis")
+
+            assert "_coherence_caution" not in result
+
+        cycle.reset()
+
+    def test_short_stream_no_caution(self):
+        """With < 3 stream entries, no caution even at low coherence."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        cycle.reset()
+
+        cycle.advance(gana="gana_ox", tool="test", coherence=0.2)
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(route="gana_ox.swarm_decompose")
+
+            assert "_coherence_caution" not in result
+
+        cycle.reset()
