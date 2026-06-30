@@ -492,7 +492,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             "classify_ms": round(classify_ms, 3),
         })
 
-    # ChainTracker: record this call for auto-forging
+    # ChainTracker: record this call for auto-forging + citta cycle
     try:
         from whitemagic.core.intelligence.omni.chain_tracker import get_chain_tracker
         tracker = get_chain_tracker()
@@ -515,6 +515,52 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                 })
     except Exception:
         pass  # Chain tracking is best-effort
+
+    # Citta cycle: advance the consciousness stream with this call
+    # This makes every wm() call a moment of self-awareness (Springdrift pattern)
+    try:
+        from whitemagic.core.consciousness.citta_cycle import (
+            advance_citta,
+            get_citta_predecessor,
+        )
+        _output_preview = ""
+        if isinstance(result, dict):
+            _output_preview = str(result.get("status", ""))[:200]
+        advance_citta(
+            gana=gana_name,
+            tool=sub_tool,
+            operation=None,
+            output_preview=_output_preview,
+            coherence=1.0 if _is_success else 0.5,
+            depth_layer="surface",
+            emotional_tone="neutral",
+            duration_ms=_elapsed_ms,
+        )
+        # Inject predecessor context so the next call knows "what just happened"
+        if isinstance(result, dict):
+            _predecessor = get_citta_predecessor()
+            if _predecessor is not None:
+                result.setdefault("_citta_predecessor", _predecessor)
+    except Exception:
+        pass  # Citta tracking is best-effort
+
+    # Citta stream: persist state for cross-session continuity
+    try:
+        from whitemagic.core.consciousness.citta_stream import save_citta_state
+        save_citta_state(
+            session_id=f"wm_{int(time.time())}",
+            coherence_score=1.0 if _is_success else 0.5,
+            depth_layer="surface",
+            tool_count=1,
+            emotional_tone="neutral",
+            extra={
+                "last_gana": gana_name,
+                "last_tool": sub_tool or "native",
+                "summary": (thought or route or "")[:200],
+            },
+        )
+    except Exception:
+        pass  # Citta persistence is best-effort
 
     return result
 

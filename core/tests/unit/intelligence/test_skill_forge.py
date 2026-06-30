@@ -620,3 +620,94 @@ class TestChainTracker:
         reset_chain_tracker()
         t2 = get_chain_tracker()
         assert t1 is not t2
+
+
+class TestExportSkillMd:
+    """Test SKILL.md export bridge — auto-forged skills → portable format."""
+
+    def test_exports_single_skill(self, forge: SkillForge, simple_chain: ExecutionChain, tmp_path: Path):
+        """export_skill_md writes a valid SKILL.md file."""
+        skill = forge.forge(simple_chain, name="test_export_skill")
+        export_dir = tmp_path / "exported"
+        path = forge.export_skill_md(skill, output_dir=export_dir)
+
+        assert path.exists()
+        assert path.suffix == ".md"
+        content = path.read_text()
+
+        # Check frontmatter
+        assert content.startswith("---")
+        assert "name: test_export_skill" in content
+        assert "license: MIT" in content
+        assert "auto_forged: true" in content
+        assert "forge_count: 1" in content
+
+        # Check body
+        assert "## When to Use" in content
+        assert "## How to Invoke" in content
+        assert "## Chain Steps" in content
+        assert "wm(route=" in content
+
+    def test_exports_all_skills(self, forge: SkillForge, simple_chain: ExecutionChain, tmp_path: Path):
+        """export_all_skills_md writes SKILL.md for every known skill."""
+        # Use a genuinely different chain to avoid duplicate detection
+        different_chain = ExecutionChain(
+            intent="monitor system health",
+            steps=[
+                GanaStep(mansion="ROOT", operation="analyze", context_key="health", parameters={}),
+                GanaStep(mansion="MOUND", operation="transform", context_key="metrics", parameters={}),
+                GanaStep(mansion="HAIRY_HEAD", operation="consolidate", context_key="karma", parameters={}),
+            ],
+            estimated_complexity=2.0,
+            required_capabilities=[],
+        )
+        forge.forge(simple_chain, name="skill_alpha")
+        forge.forge(different_chain, name="skill_beta")
+        assert len(forge.known_skills) == 2
+
+        export_dir = tmp_path / "exported"
+        paths = forge.export_all_skills_md(output_dir=export_dir)
+
+        assert len(paths) == 2
+        for p in paths:
+            assert p.exists()
+            assert p.suffix == ".md"
+
+    def test_exported_filename_is_lowercase(self, forge: SkillForge, simple_chain: ExecutionChain, tmp_path: Path):
+        """SKILL.md filename should be lowercase skill name."""
+        skill = forge.forge(simple_chain, name="MyComplexSkill")
+        export_dir = tmp_path / "exported"
+        path = forge.export_skill_md(skill, output_dir=export_dir)
+
+        assert path.name == "mycomplexskill.md"
+
+    def test_exported_skill_has_correct_metadata(self, forge: SkillForge, simple_chain: ExecutionChain, tmp_path: Path):
+        """SKILL.md metadata should reflect the forged skill's properties."""
+        skill = forge.forge(simple_chain, name="metadata_test")
+        export_dir = tmp_path / "exported"
+        path = forge.export_skill_md(skill, output_dir=export_dir)
+        content = path.read_text()
+
+        assert "step_count: 3" in content
+        assert f"complexity: {simple_chain.estimated_complexity:.1f}" in content
+        assert simple_chain.intent in content
+
+    def test_exported_skill_lists_all_steps(self, forge: SkillForge, simple_chain: ExecutionChain, tmp_path: Path):
+        """SKILL.md should list all chain steps."""
+        skill = forge.forge(simple_chain, name="steps_test")
+        export_dir = tmp_path / "exported"
+        path = forge.export_skill_md(skill, output_dir=export_dir)
+        content = path.read_text()
+
+        for step in simple_chain.steps:
+            assert step.mansion.lower() in content.lower()
+            assert step.operation in content
+            assert step.context_key in content
+
+    def test_export_default_dir(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """export_skill_md uses default export dir when output_dir is None."""
+        skill = forge.forge(simple_chain, name="default_dir_test")
+        path = forge.export_skill_md(skill)
+
+        assert path.exists()
+        assert path.parent == forge.skill_library_path / "exported"

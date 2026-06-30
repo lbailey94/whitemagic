@@ -94,9 +94,15 @@ These skills are designed for Hermes Agent's hook system and SKILL.md format.
 
 ## SkillForge (Internal)
 
-WhiteMagic includes an internal `SkillForge` (`core/whitemagic/core/intelligence/omni/skill_forge.py`) that automatically crystallizes successful tool chains into reusable skills. When the Universal Router executes a chain with >80% success rate and >2 steps, the Forge saves it as a JSON skill file for future reuse.
+WhiteMagic includes an internal `SkillForge` (`core/whitemagic/core/intelligence/omni/skill_forge.py`) that automatically crystallizes successful tool chains into reusable skills. When the ChainTracker detects a sequence of 3+ `wm()` calls with >80% success rate, the Forge:
 
-**Status**: Wired but untested. The Forge writes to `memory/skills/` (should be under `WM_STATE_ROOT`). No tests exist for the Forge itself.
+1. **Assesses** the chain (slop detection, duplicate detection via Jaccard similarity)
+2. **Forges** a new skill (or increments `forge_count` if duplicate found)
+3. **Generates** a descriptive name via LLM (Ollama gemma3:4b) with heuristic fallback
+4. **Persists** to `WM_STATE_ROOT/skills/` as JSON + updates `SKILLS.md` catalog
+5. **Exports** to portable `SKILL.md` format via `export_skill_md()` / `export_all_skills_md()`
+
+**Status**: Fully wired into `handle_wm()` via ChainTracker. 53 unit tests passing. Live-fire tested.
 
 ---
 

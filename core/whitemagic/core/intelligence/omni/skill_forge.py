@@ -303,6 +303,109 @@ class SkillForge:
 
         logger.info("Updated SKILLS.md registry at %s", catalog_path)
 
+    def export_skill_md(self, skill: ForgedSkill, output_dir: Path | None = None) -> Path:
+        """Export a forged skill as a portable SKILL.md file.
+
+        The SKILL.md format is compatible with Claude Code, Codex CLI,
+        Gemini CLI, Copilot, Cursor, Cline, Windsurf, and OpenCode.
+
+        Args:
+            skill: The forged skill to export.
+            output_dir: Directory to write the SKILL.md file. Defaults to
+                        skill_library_path / "exported".
+
+        Returns:
+            Path to the written SKILL.md file.
+        """
+        if output_dir is None:
+            output_dir = self.skill_library_path / "exported"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        steps_desc = "\n".join(
+            f"  {i+1}. `wm(route='{s.mansion.lower()}.{s.operation}')` — {s.context_key}"
+            for i, s in enumerate(skill.optimized_chain.steps)
+        )
+        triggers = ", ".join(f"`{t}`" for t in skill.trigger_phrases[:3])
+        chain_intent = skill.optimized_chain.intent
+
+        content = f"""---
+name: {skill.name}
+description: "{skill.description}"
+version: {skill.version}.0.0
+author: WhiteMagic SkillForge (auto-forged)
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  whitemagic:
+    forge_count: {skill.forge_count}
+    chain_intent: "{chain_intent}"
+    step_count: {len(skill.optimized_chain.steps)}
+    complexity: {skill.optimized_chain.estimated_complexity:.1f}
+    auto_forged: true
+---
+
+# {skill.name.replace('_', ' ').title()}
+
+## When to Use
+
+Use this skill when you need to: {chain_intent}
+
+**Triggers**: {triggers}
+
+**Forge count**: {skill.forge_count} (times this pattern has been observed)
+
+## How to Invoke
+
+Execute the following tool chain in sequence:
+
+```python
+{chr(10).join(f"wm(route='{s.mansion.lower()}.{s.operation}')  # {s.context_key}" for s in skill.optimized_chain.steps)}
+```
+
+Or use natural language:
+
+```
+wm(thought="{chain_intent}")
+```
+
+## Chain Steps
+
+{steps_desc}
+
+## Notes
+
+- This skill was auto-forged by WhiteMagic SkillForge from observed execution patterns
+- Forge count: {skill.forge_count} (higher = more validated)
+- Complexity: {skill.optimized_chain.estimated_complexity:.1f}
+- Compatible with Claude Code, Codex CLI, Gemini CLI, Copilot, Cursor, Cline, Windsurf, OpenCode
+"""
+
+        skill_md_path = output_dir / f"{skill.name.lower()}.md"
+        with open(skill_md_path, "w") as f:
+            f.write(content)
+
+        logger.info("Exported SKILL.md for '%s' to %s", skill.name, skill_md_path)
+        return skill_md_path
+
+    def export_all_skills_md(self, output_dir: Path | None = None) -> list[Path]:
+        """Export all known skills as portable SKILL.md files.
+
+        Args:
+            output_dir: Directory to write SKILL.md files. Defaults to
+                        skill_library_path / "exported".
+
+        Returns:
+            List of paths to written SKILL.md files.
+        """
+        if output_dir is None:
+            output_dir = self.skill_library_path / "exported"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        paths = []
+        for skill in self.known_skills.values():
+            paths.append(self.export_skill_md(skill, output_dir))
+        return paths
+
 
 # Singleton accessor
 _forge: SkillForge | None = None
