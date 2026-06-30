@@ -251,6 +251,12 @@ TOOL_TO_GANA: dict[str, str] = {
     "swarm.plan": "gana_ox",
     "swarm.status": "gana_ox",
     "worker.status": "gana_ox",
+    # ── SkillForge — crystallized execution patterns (Ox — Endurance) ──
+    "skill.list": "gana_ox",
+    "skill.invoke": "gana_ox",
+    "skill.seed": "gana_ox",
+    "skill.export_all": "gana_ox",
+    "skill.import": "gana_ox",
     # ═══ GIRL — Nurture & User Profile ═══
     "agent.register": "gana_girl",
     "agent.heartbeat": "gana_girl",

@@ -411,6 +411,22 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_ghost",
         "consciousness.flow",
     ),
+    # SkillForge — skill listing, invocation, seeding
+    (
+        re.compile(r"\b(list.*skills|what.*skills|show.*skills|skill.*list)\b", re.I),
+        "gana_ox",
+        "skill.list",
+    ),
+    (
+        re.compile(r"\b(invoke.*skill|run.*skill|replay.*skill|use.*skill)\b", re.I),
+        "gana_ox",
+        "skill.invoke",
+    ),
+    (
+        re.compile(r"\b(seed.*skills|plant.*skills|initialize.*skills)\b", re.I),
+        "gana_ox",
+        "skill.seed",
+    ),
     # Session management
     (
         re.compile(r"\b(session|bootstrap|startup|init.*session)\b", re.I),

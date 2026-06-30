@@ -1240,3 +1240,162 @@ wm(route='gana_mound.get_metrics')
         assert chain is not None
         assert len(chain.steps) == 2
         assert chain.steps[0].mansion == "ROOT"
+
+
+class TestSeedCommonSkills:
+    """Test seed_common_skills() — pre-forging high-value tool chains."""
+
+    def test_seeds_create_skills(self, forge: SkillForge):
+        """seed_common_skills creates skills in the library."""
+        seeded = forge.seed_common_skills()
+        assert len(seeded) > 0
+        assert len(forge.known_skills) == len(seeded)
+
+    def test_seeded_skills_are_invokable(self, forge: SkillForge):
+        """All seeded skills can be invoked by name."""
+        seeded = forge.seed_common_skills()
+        for skill in seeded:
+            chain = forge.invoke_skill(skill.name)
+            assert chain is not None
+            assert len(chain.steps) >= 3
+
+    def test_seeded_skills_have_zero_forge_count(self, forge: SkillForge):
+        """Seeded skills start with forge_count=0 (not yet observed)."""
+        seeded = forge.seed_common_skills()
+        for skill in seeded:
+            assert skill.forge_count == 0
+
+    def test_seed_is_idempotent(self, forge: SkillForge):
+        """Running seed_common_skills twice doesn't create duplicates."""
+        forge.seed_common_skills()
+        second = forge.seed_common_skills()
+        assert len(second) == 0  # All already exist
+
+    def test_specific_seed_exists(self, forge: SkillForge):
+        """Key seed skills are present after seeding."""
+        forge.seed_common_skills()
+        expected = [
+            "research_and_remember",
+            "health_check_and_repair",
+            "memory_search_and_synthesize",
+            "session_bootstrap_with_context",
+            "smarana_and_presence",
+            "dream_and_reflect",
+            "swarm_decompose_and_execute",
+        ]
+        for name in expected:
+            assert name in forge.known_skills, f"Missing seed skill: {name}"
+            chain = forge.invoke_skill(name)
+            assert chain is not None
+
+    def test_seeded_skills_export_md(self, forge: SkillForge, tmp_path: Path):
+        """Seeded skills auto-export as SKILL.md files."""
+        forge.seed_common_skills()
+        export_dir = forge.skill_library_path / "exported"
+        md_files = list(export_dir.glob("*.md"))
+        assert len(md_files) >= 7  # At least 7 exported SKILL.md files
+
+    def test_seeded_skill_has_trigger_phrases(self, forge: SkillForge):
+        """Seeded skills have meaningful trigger phrases."""
+        forge.seed_common_skills()
+        skill = forge.known_skills.get("research_and_remember")
+        assert skill is not None
+        assert len(skill.trigger_phrases) >= 2
+        assert any("research" in t for t in skill.trigger_phrases)
+
+
+class TestSkillForgeMcpHandlers:
+    """Test MCP handler wrappers for SkillForge operations."""
+
+    def test_skill_list_returns_skills(self, forge: SkillForge):
+        """handle_skill_list returns all known skills."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_list
+
+        forge.seed_common_skills()
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_list()
+        assert result["status"] == "success"
+        assert result["total"] >= 7
+        names = [s["name"] for s in result["skills"]]
+        assert "research_and_remember" in names
+
+    def test_skill_invoke_returns_chain(self, forge: SkillForge):
+        """handle_skill_invoke returns the execution chain."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_invoke
+
+        forge.seed_common_skills()
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_invoke(name="research_and_remember")
+        assert result["status"] == "success"
+        assert result["skill_name"] == "research_and_remember"
+        assert result["step_count"] >= 3
+        assert len(result["steps"]) == result["step_count"]
+
+    def test_skill_invoke_missing_name(self):
+        """handle_skill_invoke requires a name parameter."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_invoke
+
+        result = handle_skill_invoke()
+        assert result["status"] == "error"
+        assert result["error_code"] == "missing_name"
+
+    def test_skill_invoke_unknown_skill(self, forge: SkillForge):
+        """handle_skill_invoke returns error for unknown skill."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_invoke
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_invoke(name="nonexistent")
+        assert result["status"] == "error"
+        assert result["error_code"] == "skill_not_found"
+
+    def test_skill_seed_creates_skills(self, forge: SkillForge):
+        """handle_skill_seed seeds common skills."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_seed
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_seed()
+        assert result["status"] == "success"
+        assert result["seeded_count"] >= 7
+        assert result["total_skills"] >= 7
+
+    def test_skill_export_all(self, forge: SkillForge):
+        """handle_skill_export_all exports SKILL.md files."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_export_all
+
+        forge.seed_common_skills()
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_export_all()
+        assert result["status"] == "success"
+        assert result["exported_count"] >= 7
+
+    def test_dispatch_table_has_skill_handlers(self):
+        """Dispatch table contains all skill forge handlers."""
+        from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
+        expected = ["skill.list", "skill.invoke", "skill.seed", "skill.export_all", "skill.import"]
+        for name in expected:
+            assert name in DISPATCH_TABLE, f"Missing dispatch entry: {name}"
+
+    def test_prat_mappings_has_skill_tools(self):
+        """PRAT mappings route skill tools to gana_ox."""
+        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+
+        expected = ["skill.list", "skill.invoke", "skill.seed", "skill.export_all", "skill.import"]
+        for name in expected:
+            assert name in TOOL_TO_GANA, f"Missing PRAT mapping: {name}"
+            assert TOOL_TO_GANA[name] == "gana_ox"

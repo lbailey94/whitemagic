@@ -17,6 +17,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from whitemagic.config.paths import get_state_root
 from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep
@@ -545,16 +546,181 @@ wm(thought="{chain_intent}")
         )
         return skill.optimized_chain
 
+    def seed_common_skills(self) -> list[ForgedSkill]:
+        """Pre-forge common high-value tool chains as seed skills.
+
+        These represent typical agent workflows that are useful regardless
+        of specific use case. Each is forged with forge_count=0 (seed)
+        and will be incremented if the pattern is naturally observed.
+        """
+        seeds = _SEED_CHAINS
+        forged = []
+        for seed in seeds:
+            chain = ExecutionChain(
+                intent=seed["intent"],
+                steps=[
+                    GanaStep(
+                        mansion=s["mansion"],
+                        operation=s["operation"],
+                        context_key=s["context"],
+                        parameters={},
+                    )
+                    for s in seed["steps"]
+                ],
+                estimated_complexity=float(len(seed["steps"]) * 0.8),
+                required_capabilities=[],
+            )
+
+            # Skip if a duplicate already exists
+            if self._find_duplicate(chain) is not None:
+                continue
+
+            skill = ForgedSkill(
+                name=seed["name"],
+                description=seed["description"],
+                trigger_phrases=seed["triggers"],
+                optimized_chain=chain,
+                forge_count=0,
+            )
+            self.known_skills[skill.name] = skill
+            self._step_signatures[skill.name] = _normalize_steps(chain.steps)
+            self._save_skill(skill)
+            forged.append(skill)
+            logger.info("Seeded skill: '%s'", skill.name)
+
+        return forged
+
+
+# Seed chains — common agent workflows pre-forged on initialization
+_SEED_CHAINS: list[dict[str, Any]] = [
+    {
+        "name": "research_and_remember",
+        "description": "Search the web, analyze findings, and store key insights as memories",
+        "intent": "research a topic and remember the findings",
+        "triggers": ["research and remember", "investigate and store", "study and save"],
+        "steps": [
+            {"mansion": "CHARIOT", "operation": "web_search", "context": "query"},
+            {"mansion": "GHOST", "operation": "gnosis", "context": "analyze_findings"},
+            {"mansion": "NECK", "operation": "create_memory", "context": "store_insight"},
+        ],
+    },
+    {
+        "name": "health_check_and_repair",
+        "description": "Check system health, identify issues, and attempt repair",
+        "intent": "check system health and fix issues",
+        "triggers": ["health check", "system diagnostics", "check and repair"],
+        "steps": [
+            {"mansion": "ROOT", "operation": "health_report", "context": "system_status"},
+            {"mansion": "GHOST", "operation": "capabilities", "context": "identify_issues"},
+            {"mansion": "WILLOW", "operation": "rate_limiter.stats", "context": "repair_actions"},
+        ],
+    },
+    {
+        "name": "memory_search_and_synthesize",
+        "description": "Search memories, retrieve relevant ones, and synthesize a summary",
+        "intent": "search memories and synthesize what I know",
+        "triggers": ["what do I know about", "search and synthesize", "recall and summarize"],
+        "steps": [
+            {"mansion": "WINNOWING_BASKET", "operation": "search_memories", "context": "query"},
+            {"mansion": "WINNOWING_BASKET", "operation": "hybrid_recall", "context": "semantic_recall"},
+            {"mansion": "THREE_STARS", "operation": "kaizen_analyze", "context": "synthesize"},
+        ],
+    },
+    {
+        "name": "session_bootstrap_with_context",
+        "description": "Bootstrap a new session, load continuity context, and check coherence",
+        "intent": "start a new session with full context",
+        "triggers": ["new session", "bootstrap", "start fresh with context"],
+        "steps": [
+            {"mansion": "HORN", "operation": "session_bootstrap", "context": "init_session"},
+            {"mansion": "HEART", "operation": "get_session_context", "context": "load_continuity"},
+            {"mansion": "GHOST", "operation": "consciousness.coherence", "context": "check_coherence"},
+        ],
+    },
+    {
+        "name": "deep_research_rabbit_hole",
+        "description": "Search web, go down a research rabbit hole, and persist discoveries",
+        "intent": "deep research on a topic with rabbit hole exploration",
+        "triggers": ["deep research", "rabbit hole", "thorough investigation"],
+        "steps": [
+            {"mansion": "CHARIOT", "operation": "web_search", "context": "initial_query"},
+            {"mansion": "CHARIOT", "operation": "rabbit_hole", "context": "explore_deeply"},
+            {"mansion": "WINNOWING_BASKET", "operation": "search_memories", "context": "check_existing"},
+            {"mansion": "NECK", "operation": "create_memory", "context": "persist_discovery"},
+        ],
+    },
+    {
+        "name": "governance_check_and_act",
+        "description": "Check Dharma governance, evaluate ethics, and proceed with awareness",
+        "intent": "check governance before taking action",
+        "triggers": ["is this allowed", "governance check", "ethical evaluation"],
+        "steps": [
+            {"mansion": "STAR", "operation": "forge.status", "context": "check_rules"},
+            {"mansion": "STRADDLING_LEGS", "operation": "evaluate_ethics", "context": "evaluate_action"},
+            {"mansion": "GHOST", "operation": "consciousness.coherence", "context": "awareness_check"},
+        ],
+    },
+    {
+        "name": "dream_and_reflect",
+        "description": "Run a dream cycle for memory consolidation and reflect on insights",
+        "intent": "dream on recent experiences and reflect",
+        "triggers": ["dream cycle", "consolidate memories", "sleep and reflect"],
+        "steps": [
+            {"mansion": "ABUNDANCE", "operation": "dream", "context": "start_dream"},
+            {"mansion": "GHOST", "operation": "gnosis", "context": "reflect_on_dream"},
+            {"mansion": "NECK", "operation": "create_memory", "context": "persist_insight"},
+        ],
+    },
+    {
+        "name": "smarana_and_presence",
+        "description": "Perform Smarana practice, check stillness, and assess presence quality",
+        "intent": "remember who I am and check my presence quality",
+        "triggers": ["remember who I am", "smarana practice", "check presence"],
+        "steps": [
+            {"mansion": "GHOST", "operation": "consciousness.smarana", "context": "active_remembering"},
+            {"mansion": "GHOST", "operation": "consciousness.stillness", "context": "presence_quality"},
+            {"mansion": "GHOST", "operation": "consciousness.flow", "context": "flow_check"},
+        ],
+    },
+    {
+        "name": "export_and_backup",
+        "description": "Export memories, audit the export, and check galaxy backup status",
+        "intent": "export and backup my memories",
+        "triggers": ["backup memories", "export everything", "create backup"],
+        "steps": [
+            {"mansion": "WINGS", "operation": "export_memories", "context": "export_all"},
+            {"mansion": "WINGS", "operation": "audit.export", "context": "verify_export"},
+            {"mansion": "VOID", "operation": "galactic_dashboard", "context": "check_galaxies"},
+        ],
+    },
+    {
+        "name": "swarm_decompose_and_execute",
+        "description": "Decompose a complex task via swarm, distribute subtasks, and track completion",
+        "intent": "break down a complex task and execute via swarm",
+        "triggers": ["swarm decompose", "break down task", "parallel execution"],
+        "steps": [
+            {"mansion": "OX", "operation": "swarm_decompose", "context": "decompose_task"},
+            {"mansion": "STOMACH", "operation": "task_distribute", "context": "distribute_subtasks"},
+            {"mansion": "OX", "operation": "swarm_status", "context": "track_progress"},
+        ],
+    },
+]
+
 
 # Singleton accessor
 _forge: SkillForge | None = None
 
 
 def get_skill_forge() -> SkillForge:
-    """Get the singleton SkillForge instance."""
+    """Get the singleton SkillForge instance.
+
+    On first creation, auto-seeds common skills if the library is empty.
+    """
     global _forge
     if _forge is None:
         _forge = SkillForge()
+        if not _forge.known_skills:
+            _forge.seed_common_skills()
     return _forge
 
 
