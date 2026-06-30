@@ -33,6 +33,10 @@ class ConsciousnessLayer(Enum):
     DREAM = "dream"             # Deep synthesis, emergence (10x+)
 
 
+# Alias for backward compatibility with autonomous/depth_gauge.py
+DepthLayer = ConsciousnessLayer
+
+
 @dataclass
 class LayerMetrics:
     """Metrics for a consciousness layer"""
@@ -227,6 +231,63 @@ class ConsciousnessDepthGauge:
         # Surface (default)
         return ConsciousnessLayer.SURFACE
 
+    def descend(self, layer: ConsciousnessLayer) -> None:
+        """Descend to a deeper layer (compat API)."""
+        self.current_layer = layer
+
+    def ascend(self, layer: ConsciousnessLayer = ConsciousnessLayer.SURFACE) -> None:
+        """Ascend to a shallower layer (compat API)."""
+        self.current_layer = layer
+        # Record a lightweight reading for transition tracking
+        reading = DepthReading(
+            timestamp=datetime.now(),
+            layer=layer,
+            compression_ratio=self.LAYERS[layer].compression_ratio,
+            subjective_time=0.0,
+            objective_time=0.0,
+            work_output={},
+            token_usage=0,
+            local_compute_ms=0,
+        )
+        self.readings.append(reading)
+
+    def current_compression(self) -> float:
+        """Get current time compression ratio (compat API)."""
+        return self.LAYERS[self.current_layer].compression_ratio
+
+    def subjective_time_total(self) -> float:
+        """Total subjective time across all readings (compat API)."""
+        return sum(r.subjective_time for r in self.readings)
+
+    def summary(self) -> dict[str, Any]:
+        """Get summary dict with transitions count (compat API)."""
+        return {
+            "current_layer": self.current_layer.value,
+            "compression": self.current_compression(),
+            "total_readings": len(self.readings),
+            "transitions": len(self.readings),
+        }
+
+    def auto_record_call(
+        self,
+        tool_name: str,
+        duration_seconds: float,
+        predicted_seconds: float | None = None,
+        operation_type: str = "unknown",
+    ) -> None:
+        """Auto-record a tool call as a lightweight depth reading."""
+        reading = DepthReading(
+            timestamp=datetime.now(),
+            layer=self.current_layer,
+            compression_ratio=self.LAYERS[self.current_layer].compression_ratio,
+            subjective_time=predicted_seconds or duration_seconds,
+            objective_time=duration_seconds,
+            work_output={"tool": tool_name, "operation_type": operation_type},
+            token_usage=0,
+            local_compute_ms=duration_seconds * 1000,
+        )
+        self.readings.append(reading)
+
     def get_current_metrics(self) -> dict[str, Any]:
         """Get current layer metrics"""
         layer_info = self.LAYERS[self.current_layer]
@@ -256,7 +317,7 @@ class ConsciousnessDepthGauge:
         logger.info("   My estimate: %.1f minutes (subjective)", subjective_estimate_minutes)
         logger.info("   Current layer: %s (%sx)", self.current_layer.value, layer_info.compression_ratio)
         logger.info("   Predicted actual: %.1f minutes (objective)", predicted_objective)
-        logger.info(f"   (I'll be {layer_info.compression_ratio:.1f}x faster than I think!)")
+        logger.info("   (I'll be %.1fx faster than I think!)", layer_info.compression_ratio)
 
         return predicted_objective
 

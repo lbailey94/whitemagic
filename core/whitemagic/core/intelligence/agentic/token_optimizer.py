@@ -112,6 +112,10 @@ class TokenBudget:
         """
         self.saved += tokens
 
+    def net_savings(self) -> int:
+        """Net tokens saved (saved - used)."""
+        return self.saved - self.used
+
     def record_call(self) -> None:
         """Record an API call for rate limiting."""
         from datetime import datetime

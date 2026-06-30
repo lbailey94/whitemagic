@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .i_ching import IChingSystem
+from whitemagic.core.intelligence.wisdom.i_ching import IChingAdvisor as _CanonicalIChing
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +20,21 @@ class IChingAdvisor:
     """Advises decisions using I Ching oracle."""
 
     def __init__(self) -> None:
-        self.i_ching = IChingSystem()
+        self.i_ching = _CanonicalIChing()
         self.consultations: list[dict[str, Any]] = []
 
     def advise(self, question: str) -> dict[str, Any]:
         """Get I Ching advice for a question."""
-        consultation = self.i_ching.consult(question)
+        hexagram = self.i_ching.cast_hexagram(question)
+        consultation = {
+            "question": question,
+            "number": hexagram.number,
+            "name": hexagram.name,
+            "chinese": hexagram.chinese,
+            "judgment": hexagram.judgment,
+            "image": hexagram.image,
+            "guidance": hexagram.guidance,
+        }
         advice = self._generate_advice(consultation)
         consultation["advice"] = advice
         self.consultations.append(consultation)
