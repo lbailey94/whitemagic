@@ -554,6 +554,25 @@ class TestSensorium:
             assert "session_count" in result["_sensorium"]
             assert isinstance(result["_sensorium"]["session_count"], int)
 
+    def test_sensorium_has_presence_quality(self):
+        """Sensorium includes presence_quality from stillness metrics."""
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        get_citta_cycle().reset()
+
+        with patch("whitemagic.tools.unified_api.call_tool") as mock_call:
+            mock_call.return_value = {"status": "success"}
+            result = handle_wm(thought="remember presence quality")
+
+            assert "presence_quality" in result["_sensorium"]
+            pq = result["_sensorium"]["presence_quality"]
+            assert "continuity" in pq
+            assert "stability" in pq
+            assert "clarity" in pq
+            assert "equanimity" in pq
+            assert "spaciousness" in pq
+            assert "overall" in pq
+
 
 class TestCoherenceDispatch:
     """Test coherence-driven dispatch — low coherence flags risky routes."""

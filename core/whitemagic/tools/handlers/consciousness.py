@@ -458,3 +458,55 @@ def handle_consciousness_token_economy(**kwargs: Any) -> dict[str, Any]:
             "error_code": "token_economy_failed",
             "message": str(e),
         }
+
+
+def handle_consciousness_stillness(**kwargs: Any) -> dict[str, Any]:
+    """Get stillness practice metrics — depth, quality, streaks.
+
+    Exposes PresenceQuality (continuity, stability, clarity, equanimity, spaciousness)
+    and StillnessTracker (practice history, progress report) via MCP.
+    """
+    try:
+        from whitemagic.gardens.presence.stillness_metrics import (
+            StillnessTracker,
+            assess_presence_quality,
+        )
+
+        tracker = StillnessTracker()
+        report = tracker.progress_report()
+
+        # Auto-assess presence quality from citta cycle coherence
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+            cycle = get_citta_cycle()
+            summary = cycle.get_cycle_summary()
+            avg_coherence = summary.get("avg_coherence", 0.5)
+            stream_len = summary.get("stream_length", 0)
+            # Map coherence to presence dimensions
+            presence = assess_presence_quality(
+                continuity=min(1.0, stream_len / 20.0),
+                stability=avg_coherence,
+                clarity=avg_coherence * 0.9,
+                equanimity=avg_coherence * 0.8,
+                spaciousness=min(1.0, avg_coherence * 1.1),
+            )
+        except Exception:
+            presence = assess_presence_quality(0, 0, 0, 0, 0)
+
+        return {
+            "status": "success",
+            "progress": report,
+            "presence_quality": presence.to_dict(),
+            "current_streak": report.get("current_streak", 0),
+            "week_sessions": report.get("week_stats", {}).get("sessions", 0),
+            "week_avg_depth": report.get("week_stats", {}).get("average_depth", 0.0),
+            "week_avg_score": report.get("week_stats", {}).get("average_score", 0.0),
+        }
+    except Exception as e:
+        logger.debug("consciousness.stillness error: %s", e, exc_info=True)
+        return {
+            "status": "error",
+            "error_code": "stillness_failed",
+            "message": str(e),
+        }

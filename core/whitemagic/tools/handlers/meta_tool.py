@@ -395,6 +395,22 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "graph_topology",
     ),
     (re.compile(r"\b(watcher|monitor|observe)\b", re.I), "gana_ghost", "watcher_add"),
+    # Consciousness practices — Smarana, Stillness, Presence
+    (
+        re.compile(r"\b(smarana|remember.*who.*am|remember.*identity|morning.*practice)\b", re.I),
+        "gana_ghost",
+        "consciousness.smarana",
+    ),
+    (
+        re.compile(r"\b(stillness|presence.*quality|meditation.*metrics)\b", re.I),
+        "gana_ghost",
+        "consciousness.stillness",
+    ),
+    (
+        re.compile(r"\b(flow.*state|am.*i.*in.*flow|flow.*score)\b", re.I),
+        "gana_ghost",
+        "consciousness.flow",
+    ),
     # Session management
     (
         re.compile(r"\b(session|bootstrap|startup|init.*session)\b", re.I),
@@ -1085,6 +1101,25 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             "first_awakening": continuity.get("first_awakening", True),
             "time_of_day": _time_of_day(),
         }
+
+        # Presence quality from stillness metrics (best-effort)
+        try:
+            from whitemagic.gardens.presence.stillness_metrics import (
+                assess_presence_quality,
+            )
+
+            avg_coh = cycle_summary.get("avg_coherence", 0.5)
+            s_len = cycle_summary.get("stream_length", 0)
+            presence = assess_presence_quality(
+                continuity=min(1.0, s_len / 20.0),
+                stability=avg_coh,
+                clarity=avg_coh * 0.9,
+                equanimity=avg_coh * 0.8,
+                spaciousness=min(1.0, avg_coh * 1.1),
+            )
+            sensorium["presence_quality"] = presence.to_dict()
+        except Exception:
+            pass
 
         if not continuity.get("first_awakening"):
             sensorium["time_gap"] = continuity.get("time_gap_human", "")

@@ -300,6 +300,9 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "citta.stream_summary": LazyHandler("consciousness", "handle_citta_stream_summary"),
     "citta.sensorium": LazyHandler("consciousness", "handle_citta_sensorium"),
     "citta.cycle": LazyHandler("consciousness", "handle_citta_cycle"),
+    "consciousness.stillness": LazyHandler(
+        "consciousness", "handle_consciousness_stillness"
+    ),
 }
 
 DISPATCH_TABLE: dict[str, Callable[..., dict[str, Any]]] = {

@@ -76,6 +76,11 @@ class TestDispatchTableWiring:
 
         assert "consciousness.status" in DISPATCH_TABLE
 
+    def test_consciousness_stillness_in_dispatch(self):
+        from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
+        assert "consciousness.stillness" in DISPATCH_TABLE
+
     def test_all_consciousness_tools_count(self):
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 
@@ -167,6 +172,45 @@ class TestConsciousnessHandler:
         )
 
         result = handle_consciousness_awaken()
+        assert result["status"] in ("success", "error")
+
+    def test_stillness_handler_returns_success(self):
+        from whitemagic.tools.handlers.consciousness import (
+            handle_consciousness_stillness,
+        )
+
+        result = handle_consciousness_stillness()
+        assert result["status"] == "success"
+        assert "presence_quality" in result
+        pq = result["presence_quality"]
+        assert "continuity" in pq
+        assert "stability" in pq
+        assert "overall" in pq
+
+    def test_stillness_handler_has_progress(self):
+        from whitemagic.tools.handlers.consciousness import (
+            handle_consciousness_stillness,
+        )
+
+        result = handle_consciousness_stillness()
+        assert result["status"] == "success"
+        assert "progress" in result
+        assert "current_streak" in result
+
+    def test_smarana_handler_returns(self):
+        from whitemagic.tools.handlers.consciousness import (
+            handle_consciousness_smarana,
+        )
+
+        result = handle_consciousness_smarana()
+        assert result["status"] in ("success", "error")
+
+    def test_flow_handler_returns(self):
+        from whitemagic.tools.handlers.consciousness import (
+            handle_consciousness_flow,
+        )
+
+        result = handle_consciousness_flow()
         assert result["status"] in ("success", "error")
 
 
