@@ -2,13 +2,15 @@
 
 Tests cover:
 - Path hygiene (writes to WM_STATE_ROOT/skills, not memory/skills)
-- assess_pattern heuristic
-- forge (creates + persists skill)
+- assess_pattern heuristic (including slop detection)
+- forge (creates + persists skill, auto-name generation)
+- Duplicate detection (exact + similarity-based)
 - _save_skill (JSON format, disk write)
 - _load_skills (round-trip from disk)
 - _update_skills_md (catalog generation)
 - Singleton get_skill_forge / reset_skill_forge
 - Auto-forge integration via UniversalRouter.execute
+- ChainTracker (call sequence tracking + auto-forge trigger)
 """
 
 import json
@@ -17,6 +19,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from whitemagic.core.intelligence.omni.chain_tracker import (
+    ChainTracker,
+    get_chain_tracker,
+    reset_chain_tracker,
+)
 from whitemagic.core.intelligence.omni.skill_forge import (
     ForgedSkill,
     SkillForge,
@@ -66,6 +73,36 @@ def short_chain() -> ExecutionChain:
     )
 
 
+@pytest.fixture
+def slop_chain() -> ExecutionChain:
+    """Create a chain with excessive repetition (slop)."""
+    return ExecutionChain(
+        intent="repetitive task",
+        steps=[
+            GanaStep(mansion="NET", operation="search", context_key="a", parameters={}),
+            GanaStep(mansion="NET", operation="search", context_key="b", parameters={}),
+            GanaStep(mansion="NET", operation="search", context_key="c", parameters={}),
+        ],
+        estimated_complexity=2.4,
+        required_capabilities=[],
+    )
+
+
+@pytest.fixture
+def similar_chain() -> ExecutionChain:
+    """Create a chain similar to simple_chain but with different context keys."""
+    return ExecutionChain(
+        intent="research memory architectures",
+        steps=[
+            GanaStep(mansion="NET", operation="search", context_key="query", parameters={}),
+            GanaStep(mansion="GHOST", operation="analyze", context_key="validation", parameters={}),
+            GanaStep(mansion="WINNOWING_BASKET", operation="consolidate", context_key="dedup", parameters={}),
+        ],
+        estimated_complexity=2.4,
+        required_capabilities=[],
+    )
+
+
 class TestSkillForgeInit:
     """Tests for SkillForge initialization and path hygiene."""
 
@@ -88,11 +125,12 @@ class TestSkillForgeInit:
         """Verify the old default path (memory/skills) is NOT used."""
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         from whitemagic.config import paths as paths_module
+
         importlib.reload(paths_module)
 
         forge = SkillForge()
-        # The old default was Path("memory/skills") — verify we're not using that
         assert forge.skill_library_path != Path("memory/skills")
         assert forge.skill_library_path.is_absolute()
 
@@ -149,17 +187,84 @@ class TestAssessPattern:
         empty = ExecutionChain(intent="empty", steps=[], estimated_complexity=0, required_capabilities=[])
         assert forge.assess_pattern(empty, 1.0) is False
 
+    def test_rejects_slop_chain(self, forge: SkillForge, slop_chain: ExecutionChain):
+        """Chains with excessive repetition are rejected."""
+        assert forge.assess_pattern(slop_chain, 1.0) is False
+
+
+class TestSlopDetection:
+    """Tests for the _detect_slop method."""
+
+    def test_detects_repeated_ops(self, forge: SkillForge):
+        """Same (mansion, operation) repeated > SLOP_MAX_REPEAT times is slop."""
+        chain = ExecutionChain(
+            intent="repetitive",
+            steps=[
+                GanaStep("NET", "search", "a", {}),
+                GanaStep("NET", "search", "b", {}),
+                GanaStep("NET", "search", "c", {}),
+            ],
+            estimated_complexity=2.4,
+            required_capabilities=[],
+        )
+        assert forge._detect_slop(chain) is True
+
+    def test_all_identical_steps_is_slop(self, forge: SkillForge):
+        """All steps identical with >2 steps is slop."""
+        chain = ExecutionChain(
+            intent="trivial",
+            steps=[
+                GanaStep("HORN", "search", "x", {}),
+                GanaStep("HORN", "search", "x", {}),
+                GanaStep("HORN", "search", "x", {}),
+            ],
+            estimated_complexity=2.4,
+            required_capabilities=[],
+        )
+        assert forge._detect_slop(chain) is True
+
+    def test_diverse_chain_not_slop(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """A diverse chain is not slop."""
+        assert forge._detect_slop(simple_chain) is False
+
+    def test_empty_chain_is_slop(self, forge: SkillForge):
+        """Empty chains are slop."""
+        chain = ExecutionChain(intent="empty", steps=[], estimated_complexity=0, required_capabilities=[])
+        assert forge._detect_slop(chain) is True
+
+    def test_two_repeats_ok(self, forge: SkillForge):
+        """Repeating an op twice is OK (SLOP_MAX_REPEAT=2)."""
+        chain = ExecutionChain(
+            intent="moderate",
+            steps=[
+                GanaStep("NET", "search", "a", {}),
+                GanaStep("NET", "search", "b", {}),
+                GanaStep("GHOST", "analyze", "c", {}),
+            ],
+            estimated_complexity=2.4,
+            required_capabilities=[],
+        )
+        assert forge._detect_slop(chain) is False
+
 
 class TestForge:
     """Tests for the forge method."""
 
-    def test_creates_forged_skill(self, forge: SkillForge, simple_chain: ExecutionChain):
+    def test_creates_forged_skill_with_explicit_name(self, forge: SkillForge, simple_chain: ExecutionChain):
         skill = forge.forge(simple_chain, "ResearchFlow")
         assert isinstance(skill, ForgedSkill)
         assert skill.name == "ResearchFlow"
         assert "research memory systems" in skill.description
         assert skill.trigger_phrases == ["research memory systems"]
         assert skill.optimized_chain == simple_chain
+
+    def test_auto_generates_name(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """When name is None, a heuristic name is generated (LLM unavailable in tests)."""
+        skill = forge.forge(simple_chain)
+        assert isinstance(skill, ForgedSkill)
+        assert skill.name  # non-empty
+        # Heuristic format: keyword_mansion_Nstep
+        assert "net" in skill.name or "research" in skill.name
 
     def test_persists_to_disk(self, forge: SkillForge, simple_chain: ExecutionChain):
         forge.forge(simple_chain, "ResearchFlow")
@@ -170,6 +275,12 @@ class TestForge:
         assert data["name"] == "ResearchFlow"
         assert len(data["steps"]) == 3
         assert data["steps"][0]["mansion"] == "NET"
+
+    def test_persists_forge_count(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """forge_count is persisted to disk."""
+        forge.forge(simple_chain, "ResearchFlow")
+        data = json.loads((forge.skill_library_path / "researchflow.json").read_text())
+        assert data["forge_count"] == 1
 
     def test_registers_in_known_skills(self, forge: SkillForge, simple_chain: ExecutionChain):
         forge.forge(simple_chain, "ResearchFlow")
@@ -182,6 +293,49 @@ class TestForge:
         content = catalog.read_text()
         assert "ResearchFlow" in content
         assert "Skill Name" in content
+        assert "Forge Count" in content
+
+
+class TestDuplicateDetection:
+    """Tests for duplicate and similarity detection."""
+
+    def test_exact_duplicate_increments_count(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """Forging the same chain twice increments forge_count instead of creating a new skill."""
+        skill1 = forge.forge(simple_chain, "ResearchFlow")
+        assert skill1.forge_count == 1
+        assert len(forge.known_skills) == 1
+
+        skill2 = forge.forge(simple_chain, "ResearchFlow")
+        assert skill2.forge_count == 2
+        assert len(forge.known_skills) == 1
+        assert skill1 is skill2
+
+    def test_similar_chain_detected_as_duplicate(self, forge: SkillForge, simple_chain: ExecutionChain, similar_chain: ExecutionChain):
+        """A chain with same (mansion, operation) pairs is detected as duplicate."""
+        forge.forge(simple_chain, "ResearchFlow")
+        assert len(forge.known_skills) == 1
+
+        # similar_chain has same mansion/operation pairs, different context_keys
+        result = forge.forge(similar_chain, "SimilarFlow")
+        assert len(forge.known_skills) == 1  # no new skill
+        assert result.forge_count == 2
+
+    def test_different_chain_creates_new_skill(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """A genuinely different chain creates a new skill."""
+        forge.forge(simple_chain, "ResearchFlow")
+
+        different = ExecutionChain(
+            intent="deploy application",
+            steps=[
+                GanaStep("WINGS", "transform", "export", {}),
+                GanaStep("STAR", "analyze", "validate", {}),
+                GanaStep("CHARIOT", "search", "navigate", {}),
+            ],
+            estimated_complexity=2.4,
+            required_capabilities=[],
+        )
+        forge.forge(different, "DeployFlow")
+        assert len(forge.known_skills) == 2
 
 
 class TestSaveSkill:
@@ -200,6 +354,7 @@ class TestSaveSkill:
         assert data["name"] == "TestSkill"
         assert data["description"] == "Test description"
         assert data["triggers"] == ["trigger1", "trigger2"]
+        assert data["forge_count"] == 1
         assert len(data["steps"]) == 3
         for step in data["steps"]:
             assert "mansion" in step
@@ -215,18 +370,36 @@ class TestLoadSkills:
         forge2 = SkillForge(skill_library_path=forge.skill_library_path)
         assert "RoundTrip" in forge2.known_skills
         loaded = forge2.known_skills["RoundTrip"]
-        # On reload, intent is set from the description field
         assert "research memory systems" in loaded.optimized_chain.intent
         assert len(loaded.optimized_chain.steps) == 3
         assert loaded.optimized_chain.steps[0].mansion == "NET"
 
     def test_multiple_skills_loaded(self, forge: SkillForge, simple_chain: ExecutionChain):
         forge.forge(simple_chain, "SkillA")
-        forge.forge(simple_chain, "SkillB")
+        different = ExecutionChain(
+            intent="deploy app",
+            steps=[
+                GanaStep("WINGS", "transform", "export", {}),
+                GanaStep("STAR", "analyze", "validate", {}),
+                GanaStep("CHARIOT", "search", "navigate", {}),
+            ],
+            estimated_complexity=2.4,
+            required_capabilities=[],
+        )
+        forge.forge(different, "SkillB")
         forge2 = SkillForge(skill_library_path=forge.skill_library_path)
         assert len(forge2.known_skills) == 2
         assert "SkillA" in forge2.known_skills
         assert "SkillB" in forge2.known_skills
+
+    def test_forge_count_persisted(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """forge_count survives round-trip."""
+        skill = forge.forge(simple_chain, "Counted")
+        skill.forge_count = 5
+        forge._save_skill(skill)
+
+        forge2 = SkillForge(skill_library_path=forge.skill_library_path)
+        assert forge2.known_skills["Counted"].forge_count == 5
 
 
 class TestSingleton:
@@ -263,7 +436,6 @@ class TestAutoForgeIntegration:
         forge = SkillForge(skill_library_path=skills_dir)
         assert len(forge.known_skills) == 0
 
-        # Mock the gana dispatch to succeed
         mock_gana = MagicMock()
         mock_gana.dispatch_operation = AsyncMock(return_value={"result": "ok"})
 
@@ -289,7 +461,6 @@ class TestAutoForgeIntegration:
         reset_skill_forge()
         forge = SkillForge(skill_library_path=skills_dir)
 
-        # Mock gana to raise errors
         mock_gana = MagicMock()
         mock_gana.dispatch_operation = AsyncMock(side_effect=RuntimeError("fail"))
 
@@ -303,8 +474,8 @@ class TestAutoForgeIntegration:
             router = UniversalRouter()
             result = await router.execute(simple_chain)
 
-        assert result["status"] == "success"  # execute always returns success
-        assert len(forge.known_skills) == 0  # but no skill forged
+        assert result["status"] == "success"
+        assert len(forge.known_skills) == 0
 
     @pytest.mark.asyncio
     async def test_does_not_forge_short_chain(self, tmp_path: Path, short_chain: ExecutionChain):
@@ -329,3 +500,123 @@ class TestAutoForgeIntegration:
             await router.execute(short_chain)
 
         assert len(forge.known_skills) == 0
+
+    @pytest.mark.asyncio
+    async def test_does_not_forge_slop(self, tmp_path: Path, slop_chain: ExecutionChain):
+        """Slop chains are not forged even if successful."""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir()
+
+        reset_skill_forge()
+        forge = SkillForge(skill_library_path=skills_dir)
+
+        mock_gana = MagicMock()
+        mock_gana.dispatch_operation = AsyncMock(return_value={"result": "ok"})
+
+        with patch(
+            "whitemagic.core.ganas.registry.get_gana_for_tool",
+            return_value=mock_gana,
+        ), patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            router = UniversalRouter()
+            await router.execute(slop_chain)
+
+        assert len(forge.known_skills) == 0
+
+
+class TestChainTracker:
+    """Tests for the ChainTracker that bridges wm() calls to SkillForge."""
+
+    def test_records_calls(self):
+        tracker = ChainTracker()
+        tracker.record("gana_neck", "create_memory", "remember X", True)
+        tracker.record("gana_ghost", "gnosis", "check state", True)
+        assert tracker.call_count == 2
+
+    def test_flush_too_short_returns_none(self):
+        tracker = ChainTracker()
+        tracker.record("gana_neck", "create_memory", "remember X", True)
+        result = tracker.flush()
+        assert result is None
+        assert tracker.call_count == 0  # cleared regardless
+
+    def test_flush_builds_chain(self):
+        tracker = ChainTracker()
+        tracker.record("gana_neck", "create_memory", "remember X", True)
+        tracker.record("gana_ghost", "gnosis", "check state", True)
+        tracker.record("gana_root", "health_report", "system check", True)
+        chain = tracker.flush()
+        assert chain is not None
+        assert len(chain.steps) == 3
+        assert chain.steps[0].mansion == "NECK"
+        assert chain.steps[1].mansion == "GHOST"
+        assert chain.steps[2].mansion == "ROOT"
+
+    def test_infer_operation(self):
+        assert ChainTracker._infer_operation("create_memory") == "transform"
+        assert ChainTracker._infer_operation("gnosis") == "analyze"
+        assert ChainTracker._infer_operation("export_memories") == "consolidate"
+        assert ChainTracker._infer_operation("search_memories") == "search"
+        assert ChainTracker._infer_operation(None) == "search"
+
+    def test_should_flush_false_below_threshold(self):
+        tracker = ChainTracker()
+        tracker.record("gana_neck", "create_memory", "x", True)
+        tracker.record("gana_ghost", "gnosis", "y", True)
+        assert tracker.should_flush() is False
+
+    def test_reset_clears(self):
+        tracker = ChainTracker()
+        tracker.record("gana_neck", "create_memory", "x", True)
+        tracker.reset()
+        assert tracker.call_count == 0
+
+    def test_try_auto_forge_success(self, tmp_path: Path):
+        """With enough calls, try_auto_forge creates a skill."""
+        reset_skill_forge()
+        reset_chain_tracker()
+
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir()
+        forge = SkillForge(skill_library_path=skills_dir)
+        tracker = ChainTracker()
+
+        tracker.record("gana_neck", "create_memory", "remember the API", True)
+        tracker.record("gana_ghost", "gnosis", "check current state", True)
+        tracker.record("gana_root", "health_report", "verify health", True)
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            # Force flush by setting last_flush in the past
+            import time as _time
+            tracker._last_flush = _time.time() - 100
+            result = tracker.try_auto_forge()
+
+        assert result is not None
+        assert isinstance(result, ForgedSkill)
+        assert len(forge.known_skills) == 1
+
+    def test_try_auto_forge_too_few_calls(self):
+        """With fewer than MIN_CHAIN_LENGTH calls, no forge happens."""
+        reset_chain_tracker()
+        tracker = ChainTracker()
+        tracker.record("gana_neck", "create_memory", "x", True)
+        tracker.record("gana_ghost", "gnosis", "y", True)
+        result = tracker.try_auto_forge()
+        assert result is None
+
+    def test_singleton(self):
+        reset_chain_tracker()
+        t1 = get_chain_tracker()
+        t2 = get_chain_tracker()
+        assert t1 is t2
+
+    def test_reset_singleton(self):
+        t1 = get_chain_tracker()
+        reset_chain_tracker()
+        t2 = get_chain_tracker()
+        assert t1 is not t2

@@ -122,7 +122,7 @@ class UniversalRouter:
                             required_capabilities=["llm_reasoning"],
                         )
                 except Exception as e:
-                    logger.warning("Failed to parse LLM route: %s. Falling back to default.", e, exc_info=True)
+                    logger.warning("Failed to parse LLM route: %s. Falling back to default.", e)
 
         except ImportError:
             logger.warning("Whitemagic Brain not available. Using heuristic fallback.")
@@ -166,7 +166,7 @@ class UniversalRouter:
         from whitemagic.core.ganas.registry import get_gana_for_tool
 
         for i, step in enumerate(chain.steps):
-            logger.info("  [{i+1}/{len(chain.steps)}] Invoking %s (%s)...", step.mansion, step.operation, exc_info=True)
+            logger.info("  [%d/%d] Invoking %s (%s)...", i+1, len(chain.steps), step.mansion, step.operation)
 
             # Map Mansion name to tool name (e.g., "NET" -> "gana_net")
             tool_name = f"gana_{step.mansion.lower()}"
@@ -225,10 +225,10 @@ class UniversalRouter:
                     logger.info("    ✅ Result type: %s", type(result))
 
                 except Exception as e:
-                    logger.error("    ❌ Execution Failed: %s", e, exc_info=True)
+                    logger.error("    Execution failed: %s", e)
                     context[f"error_{i}"] = str(e)
             else:
-                logger.warning("    ⚠️ Gana not found for %s. Skipping.", tool_name, exc_info=True)
+                logger.warning("    Gana not found for %s. Skipping.", tool_name)
                 context[f"skipped_{i}"] = f"Gana {step.mansion} not found"
 
         # Auto-Forge Skill (Muscle Memory)
@@ -242,11 +242,10 @@ class UniversalRouter:
             success_ratio = success_count / steps_count if steps_count > 0 else 0
 
             if forge.assess_pattern(chain, success_ratio):
-                skill_name = f"Skill_{hash(chain.intent) % 10000}_{chain.steps[0].mansion}"
-                forge.forge(chain, skill_name)
+                forge.forge(chain)
 
         except Exception as e:
-            logger.warning("Failed to auto-forge skill: %s", e, exc_info=True)
+            logger.warning("Failed to auto-forge skill: %s", e)
 
         logger.info("✅ Chain execution complete.")
         return {
@@ -256,15 +255,18 @@ class UniversalRouter:
         }
 
 # Singleton accessor
-_router = None
-def get_universal_router() -> UniversalRouter:
-    """
-    Get the universal router.
+_router: UniversalRouter | None = None
 
-    Returns:
-        UniversalRouter
-    """
+
+def get_universal_router() -> UniversalRouter:
+    """Get the singleton UniversalRouter instance."""
     global _router
     if _router is None:
         _router = UniversalRouter()
     return _router
+
+
+def reset_universal_router() -> None:
+    """Reset the singleton — for testing."""
+    global _router
+    _router = None

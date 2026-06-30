@@ -492,6 +492,30 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             "classify_ms": round(classify_ms, 3),
         })
 
+    # ChainTracker: record this call for auto-forging
+    try:
+        from whitemagic.core.intelligence.omni.chain_tracker import get_chain_tracker
+        tracker = get_chain_tracker()
+        _is_success = isinstance(result, dict) and result.get("status") in ("success", "ok")
+        _elapsed_ms = (time.time() - start_time) * 1000
+        tracker.record(
+            gana=gana_name,
+            sub_tool=sub_tool,
+            thought=thought or f"(explicit: {route})",
+            success=_is_success,
+            duration_ms=_elapsed_ms,
+        )
+        # Try auto-forge if we have enough calls
+        forged = tracker.try_auto_forge()
+        if forged is not None:
+            if isinstance(result, dict):
+                result.setdefault("_wm_forged_skill", {
+                    "name": forged.name,
+                    "forge_count": forged.forge_count,
+                })
+    except Exception:
+        pass  # Chain tracking is best-effort
+
     return result
 
 
