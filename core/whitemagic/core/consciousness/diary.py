@@ -68,7 +68,7 @@ class DiarySystem:
         if len(self.hourly_entries) >= 3:
             self._consolidate_day()
 
-        logger.info(f"📝 {hour_key}: {activity[:50]}...")
+        logger.info("📝 %s: %s...", hour_key, activity[:50])
 
     def log_breakthrough(self, insight: str, context: str = "") -> None:
         """Log major breakthrough or realization
@@ -95,7 +95,7 @@ class DiarySystem:
         with file_lock(breakthrough_file), open(breakthrough_file, "a") as f:
             f.write(json.dumps(breakthrough) + "\n")
 
-        logger.info(f"💡 Breakthrough logged: {insight[:60]}...")
+        logger.info("💡 Breakthrough logged: %s...", insight[:60])
 
     def session_start(self, focus: str, goals: list | None = None) -> None:
         """Log session start
@@ -117,7 +117,7 @@ class DiarySystem:
         }
 
         self.hourly_entries = [entry]
-        logger.info(f"🌅 Session started: {focus}")
+        logger.info("🌅 Session started: %s", focus)
 
     def session_end(self, summary: str, accomplishments: list | None = None) -> None:
         """Log session end and consolidate
@@ -142,7 +142,7 @@ class DiarySystem:
         # Consolidate into daily diary
         self._consolidate_day()
 
-        logger.info(f"🌙 Session complete: {summary[:50]}...")
+        logger.info("🌙 Session complete: %s...", summary[:50])
 
     def _auto_log_event(self, event: Any) -> None:
         """Automatically log events from Gan Ying bus
@@ -195,7 +195,7 @@ class DiarySystem:
             # Create new
             diary_file.write_text(diary_content)
 
-        logger.info(f"📖 Consolidated {len(self.hourly_entries)} entries to {diary_file.name}")
+        logger.info("📖 Consolidated %s entries to %s", len(self.hourly_entries), diary_file.name)
 
         # Clear hourly buffer but keep current day
         self.hourly_entries = []

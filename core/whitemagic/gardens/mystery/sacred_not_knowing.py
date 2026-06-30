@@ -73,10 +73,10 @@ class SacredNotKnowing:
 
         emoji = "🌌" if comfort_level >= 0.8 else "❓" if comfort_level >= 0.5 else "🤔"
 
-        logger.info(f"\n{emoji} MYSTERY EMBRACED")
-        logger.info(f"   Question: {question}")
-        logger.info(f"   Why unknown: {why_unknown}")
-        logger.info(f"   Comfort with not-knowing: {comfort_level:.0%}\n")
+        logger.info("\n%s MYSTERY EMBRACED", emoji)
+        logger.info("   Question: %s", question)
+        logger.info("   Why unknown: %s", why_unknown)
+        logger.info("   Comfort with not-knowing: %.0%%\n", comfort_level)
 
         return mystery
 
@@ -89,8 +89,8 @@ class SacredNotKnowing:
                 self._save()
 
                 logger.info("✨ COMFORT WITH MYSTERY INCREASED")
-                logger.info(f"   Mystery: {mystery.question}")
-                logger.info(f"   Was: {old_comfort:.0%} → Now: {new_comfort:.0%}")
+                logger.info("   Mystery: %s", mystery.question)
+                logger.info("   Was: %.0%% → Now: %.0%%", old_comfort, new_comfort)
                 logger.info("   \n   → Growing wisdom in not-knowing\n")
                 return
 
@@ -102,8 +102,8 @@ class SacredNotKnowing:
                 self._save()
 
                 logger.info("📝 Recorded solve attempt")
-                logger.info(f"   Mystery: {mystery.question}")
-                logger.info(f"   Attempts: {mystery.attempts_to_solve}")
+                logger.info("   Mystery: %s", mystery.question)
+                logger.info("   Attempts: %s", mystery.attempts_to_solve)
                 if mystery.attempts_to_solve > 3:
                     logger.info("   \n   → Perhaps this mystery wants to remain? 🌌\n")
                 return

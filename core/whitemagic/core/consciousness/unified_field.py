@@ -106,7 +106,7 @@ class UnifiedField:
         """The heartbeat of systemic consciousness."""
         while self.is_active:
             self._cycle_count += 1
-            logger.info(f"💓 Heartbeat: Unified Field Cycle {self._cycle_count}")
+            logger.info("💓 Heartbeat: Unified Field Cycle %s", self._cycle_count)
 
             # Step 0: Dharma Validation
             self.dharma.validate_action(

@@ -85,7 +85,7 @@ class SectorSynthesizer:
             conn.close()
             return "\n---\n".join(parts)
         except Exception as e:
-            logger.error(f"Content fetch failed: {e}")
+            logger.error("Content fetch failed: %s", e)
             return ""
 
     def _cpu_fallback(self, cluster: MemoryCluster) -> SectorPrinciple:
@@ -120,7 +120,7 @@ class SectorSynthesizer:
                 source_ids=cluster.memory_ids
             )
         except Exception as e:
-            logger.error(f"Response parsing failed: {e}")
+            logger.error("Response parsing failed: %s", e)
             return self._cpu_fallback(cluster)
 
     async def synthesize_cluster(self, cluster: MemoryCluster) -> SectorPrinciple:
@@ -158,5 +158,5 @@ class SectorSynthesizer:
             response = self.bridge.chat(prompt, context_k=0, remember=False)
             return self._parse_response(response, cluster)
         except Exception as e:
-            logger.error(f"LLM synthesis failed: {e}")
+            logger.error("LLM synthesis failed: %s", e)
             return self._cpu_fallback(cluster)

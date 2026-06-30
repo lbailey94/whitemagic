@@ -251,12 +251,13 @@ class DreamCycle:
             self._history.append(report)
 
         self._emit_event(f"DREAM_PHASE_{phase.value.upper()}", report.to_dict())
+        status = "ok" if report.success else f"error: {report.error}"
         logger.info(
             "💤 Dream phase %s: %s (%.0fms)",
             phase.value,
-            "ok" if report.success else "error: %s",
+            status,
             report.duration_ms,
-         report.error)
+        )
 
     # ------------------------------------------------------------------
     # Dream phases

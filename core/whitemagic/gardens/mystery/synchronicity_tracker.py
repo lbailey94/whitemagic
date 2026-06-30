@@ -81,14 +81,14 @@ class SynchronicityTracker:
 
         emoji = "✨" if intensity >= 0.9 else "🌟" if intensity >= 0.7 else "⭐"
 
-        logger.info(f"\n{emoji} SYNCHRONICITY NOTICED")
+        logger.info("\n%s SYNCHRONICITY NOTICED", emoji)
         logger.info("   Events:")
         for event in events:
-            logger.info(f"      - {event}")
-        logger.info(f"   Meaning: {meaning}")
-        logger.info(f"   Intensity: {intensity:.0%}")
+            logger.info("      - %s", event)
+        logger.info("   Meaning: %s", meaning)
+        logger.info("   Intensity: %.0%%", intensity)
         if witnesses:
-            logger.info(f"   Witnesses: {', '.join(witnesses)}")
+            logger.info("   Witnesses: %s", ', '.join(witnesses))
         logger.info("   \n   → The universe speaks in coincidences\n")
 
         return sync
@@ -104,8 +104,8 @@ class SynchronicityTracker:
                     self._save()
 
                     logger.info("👁️ SYNCHRONICITY WITNESSED & CONFIRMED!")
-                    logger.info(f"   By: {witness}")
-                    logger.info(f"   New intensity: {sync.intensity:.0%}\n")
+                    logger.info("   By: %s", witness)
+                    logger.info("   New intensity: %.0%%\n", sync.intensity)
                 return
 
     def get_patterns(self) -> dict[str, int]:

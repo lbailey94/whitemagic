@@ -58,7 +58,7 @@ def load_principles() -> dict[DharmaPrinciple, PrincipleDefinition]:
 
         return principles
     except Exception as e:
-        logger.info(f"⚠️  Error loading principles: {e}")
+        logger.info("⚠️  Error loading principles: %s", e)
         return _get_default_principles()
 
 

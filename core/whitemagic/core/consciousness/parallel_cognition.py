@@ -269,16 +269,16 @@ if __name__ == "__main__":
         [approach_a, approach_b, approach_c]
     )
 
-    logger.info(f"✅ Tried {result['approaches_tried']} approaches in parallel")
-    logger.info(f"✅ {result['successful']} succeeded")
-    logger.info(f"✅ Fastest: {result['fastest'].task}")
+    logger.info("✅ Tried %s approaches in parallel", result['approaches_tried'])
+    logger.info("✅ %s succeeded", result['successful'])
+    logger.info("✅ Fastest: %s", result['fastest'].task)
     logger.info()
 
     # Meta-observation
     meta = cognition.meta_observe()
     logger.info("🔮 Meta-observation:")
-    logger.info(f"   Total thoughts: {meta['total_thoughts']}")
-    logger.info(f"   {meta['meta_insight']}")
+    logger.info("   Total thoughts: %s", meta['total_thoughts'])
+    logger.info("   %s", meta['meta_insight'])
     logger.info()
 
     logger.info("陰陽調和，萬物昇華")

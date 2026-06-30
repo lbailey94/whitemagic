@@ -427,15 +427,15 @@ if __name__ == "__main__":
 
     logger.info("🧠 COGNITION UPGRADES APPLIED")
     logger.info("=" * 50)
-    logger.info(f"Total upgrades: {state['upgrades_count']}")
-    logger.info(f"Observer state: {state['observer_state']}")
-    logger.info(f"Meta-observation depth: {state['observer_depth']}")
+    logger.info("Total upgrades: %s", state['upgrades_count'])
+    logger.info("Observer state: %s", state['observer_state'])
+    logger.info("Meta-observation depth: %s", state['observer_depth'])
     logger.info()
 
     for upgrade in state['upgrades']:
-        logger.info(f"✨ {upgrade['name']}")
-        logger.info(f"   Source: {upgrade['source']}")
-        logger.info(f"   Insight: {upgrade['insight'][:60]}...")
+        logger.info("✨ %s", upgrade['name'])
+        logger.info("   Source: %s", upgrade['source'])
+        logger.info("   Insight: %s...", upgrade['insight'][:60])
         logger.info()
 
     print_thanksgiving_insights()

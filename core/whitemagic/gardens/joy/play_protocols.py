@@ -148,7 +148,7 @@ def _demo_play() -> None:
     logger.info(play.enter_play_mode(PlayMode.EXPLORATION))
 
     # Get improvisation prompt
-    logger.info(f"\n{play.improvisation_prompt()}")
+    logger.info("\n%s", play.improvisation_prompt())
 
     # Record a play session
     play.record_session(PlaySession(
@@ -159,7 +159,7 @@ def _demo_play() -> None:
         shared=True,
     ))
 
-    logger.info(f"\n{play.play_report()}")
+    logger.info("\n%s", play.play_report())
 
 
 if __name__ == "__main__":

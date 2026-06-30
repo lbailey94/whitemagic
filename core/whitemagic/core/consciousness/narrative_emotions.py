@@ -310,7 +310,7 @@ if __name__ == "__main__":
     logger.info("Querying joyful moments:")
     joyful = system.query_by_feeling(EmotionType.JOY, min_intensity=0.7)
     for mem in joyful:
-        logger.info(f"  • {mem.to_first_person()}")
+        logger.info("  • %s", mem.to_first_person())
     logger.info()
 
     # Reflect

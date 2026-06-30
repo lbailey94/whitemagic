@@ -88,7 +88,7 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             concerns = getattr(result, "concerns", [])
             blessings = getattr(result, "blessings", [])
         except (ImportError, Exception) as exc:
-            logger.debug(f"Dharma rules not available: {exc}")
+            logger.debug("Dharma rules not available: %s", exc)
             # Basic keyword heuristics
             risky = ["delete", "destroy", "override", "force", "bypass"]
             for word in risky:

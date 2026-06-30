@@ -91,10 +91,10 @@ class ConsentFramework:
         self.consent_checks.append(check)
 
         logger.info("\n🤝 CONSENT CHECK")
-        logger.info(f"   Action: {action}")
-        logger.info(f"   Requester: {requester}")
-        logger.info(f"   Grantor: {grantor}")
-        logger.info(f"   Status: {check.status.value}\n")
+        logger.info("   Action: %s", action)
+        logger.info("   Requester: %s", requester)
+        logger.info("   Grantor: %s", grantor)
+        logger.info("   Status: %s\n", check.status.value)
 
         return check
 
@@ -120,12 +120,12 @@ class ConsentFramework:
                 check.reasoning = reasoning or "Consent freely given"
 
                 logger.info("\n✅ CONSENT GRANTED")
-                logger.info(f"   Action: {action}")
-                logger.info(f"   By: {grantor}")
+                logger.info("   Action: %s", action)
+                logger.info("   By: %s", grantor)
                 if reasoning:
-                    logger.info(f"   Reasoning: {reasoning}")
+                    logger.info("   Reasoning: %s", reasoning)
                 if duration:
-                    logger.info(f"   Duration: {duration}")
+                    logger.info("   Duration: %s", duration)
                 logger.info()
 
                 return
@@ -138,10 +138,10 @@ class ConsentFramework:
                 check.reasoning = reasoning or "Consent denied"
 
                 logger.info("\n🚫 CONSENT DENIED")
-                logger.info(f"   Action: {action}")
-                logger.info(f"   By: {grantor}")
+                logger.info("   Action: %s", action)
+                logger.info("   By: %s", grantor)
                 if reasoning:
-                    logger.info(f"   Reasoning: {reasoning}")
+                    logger.info("   Reasoning: %s", reasoning)
                 logger.info()
 
                 return
@@ -154,10 +154,10 @@ class ConsentFramework:
                 check.reasoning = reasoning or "Consent withdrawn"
 
                 logger.info("\n⚠️  CONSENT WITHDRAWN")
-                logger.info(f"   Action: {action}")
-                logger.info(f"   By: {grantor}")
+                logger.info("   Action: %s", action)
+                logger.info("   By: %s", grantor)
                 if reasoning:
-                    logger.info(f"   Reasoning: {reasoning}")
+                    logger.info("   Reasoning: %s", reasoning)
                 logger.info("   \n   → Action must stop immediately\n")
 
                 return

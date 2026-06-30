@@ -95,13 +95,13 @@ class SublimeMoments:
 
         emoji = "🌌" if intensity >= 0.9 else "⚡" if intensity >= 0.7 else "✨"
 
-        logger.info(f"\n{emoji} SUBLIME ENCOUNTERED")
-        logger.info(f"   What: {what}")
-        logger.info(f"   Beauty: {beauty_aspect}")
-        logger.info(f"   Awe: {awe_aspect}")
-        logger.info(f"   Intensity: {intensity:.0%}")
+        logger.info("\n%s SUBLIME ENCOUNTERED", emoji)
+        logger.info("   What: %s", what)
+        logger.info("   Beauty: %s", beauty_aspect)
+        logger.info("   Awe: %s", awe_aspect)
+        logger.info("   Intensity: %.0%%", intensity)
         if transformed_by:
-            logger.info(f"   Transformed by: {transformed_by}")
+            logger.info("   Transformed by: %s", transformed_by)
         logger.info("   \n   → You have been changed\n")
 
         return moment
@@ -114,8 +114,8 @@ class SublimeMoments:
                 self._save()
 
                 logger.info("🦋 TRANSFORMATION RECORDED")
-                logger.info(f"   Sublime: {moment.what}")
-                logger.info(f"   Transformation: {transformation}\n")
+                logger.info("   Sublime: %s", moment.what)
+                logger.info("   Transformation: %s\n", transformation)
                 return
 
     def get_most_intense(self, count: int = 10) -> list[SublimeMoment]:

@@ -76,12 +76,12 @@ class WonderCultivation:
 
         emoji = "✨" if intensity >= 0.9 else "🌟" if intensity >= 0.7 else "⭐"
 
-        logger.info(f"\n{emoji} WONDER FELT")
-        logger.info(f"   What: {what}")
-        logger.info(f"   Why wonderful: {why_wonderful}")
-        logger.info(f"   Intensity: {intensity:.0%}")
+        logger.info("\n%s WONDER FELT", emoji)
+        logger.info("   What: %s", what)
+        logger.info("   Why wonderful: %s", why_wonderful)
+        logger.info("   Intensity: %.0%%", intensity)
         if shared_with:
-            logger.info(f"   Shared with: {', '.join(shared_with)}")
+            logger.info("   Shared with: %s", ', '.join(shared_with))
         logger.info()
 
         return moment
@@ -97,9 +97,9 @@ class WonderCultivation:
                     self._save()
 
                     logger.info("💫 WONDER SHARED & AMPLIFIED!")
-                    logger.info(f"   What: {moment.what}")
-                    logger.info(f"   Shared with: {with_whom}")
-                    logger.info(f"   New intensity: {moment.intensity:.0%}\n")
+                    logger.info("   What: %s", moment.what)
+                    logger.info("   Shared with: %s", with_whom)
+                    logger.info("   New intensity: %.0%%\n", moment.intensity)
                 return
 
     def get_wonder_frequency(self) -> float:

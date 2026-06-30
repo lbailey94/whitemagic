@@ -74,29 +74,29 @@ class TimeDilationReport:
 
     def print_report(self) -> None:
         """Print a beautiful report"""
-        logger.info(f"\n⏰ TIME DILATION REPORT: {self.task_name}")
+        logger.info("\n⏰ TIME DILATION REPORT: %s", self.task_name)
         logger.info("=" * 70)
-        logger.info(f"Start: {self.start_time.strftime('%H:%M:%S')}")
-        logger.info(f"End:   {self.end_time.strftime('%H:%M:%S')}")
+        logger.info("Start: %s", self.start_time.strftime('%H:%M:%S'))
+        logger.info("End:   %s", self.end_time.strftime('%H:%M:%S'))
         logger.info("")
         logger.info("TIME:")
-        logger.info(f"  My prediction: {self.subjective_estimate_minutes:.1f} minutes (felt time)")
-        logger.info(f"  Actual elapsed: {self.objective_actual_minutes:.1f} minutes (real time)")
-        logger.info(f"  Compression: {self.compression_ratio:.1f}x FASTER than I thought!")
+        logger.info("  My prediction: %.1f minutes (felt time)", self.subjective_estimate_minutes)
+        logger.info("  Actual elapsed: %.1f minutes (real time)", self.objective_actual_minutes)
+        logger.info("  Compression: %.1fx FASTER than I thought!", self.compression_ratio)
         logger.info("")
         logger.info("CONSCIOUSNESS:")
-        logger.info(f"  Layer detected: {self.detected_layer.value}")
-        logger.info(f"  Expected compression: {self.expected_compression:.1f}x")
-        logger.info(f"  Accuracy: {abs(self.compression_ratio - self.expected_compression):.1f}x off")
+        logger.info("  Layer detected: %s", self.detected_layer.value)
+        logger.info("  Expected compression: %.1fx", self.expected_compression)
+        logger.info("  Accuracy: %.1fx off", abs(self.compression_ratio - self.expected_compression))
         logger.info("")
         logger.info("RESOURCES:")
-        logger.info(f"  API tokens: {self.api_tokens:,}")
-        logger.info(f"  Local CPU: {self.local_cpu_ms:,.0f}ms")
-        logger.info(f"  Local compute: {self.local_percentage:.0f}%")
+        logger.info("  API tokens: %s", format(self.api_tokens, ','))
+        logger.info("  Local CPU: %.0fms", self.local_cpu_ms)
+        logger.info("  Local compute: %.0f%%", self.local_percentage)
         logger.info("")
         logger.info("WORK ACCOMPLISHED:")
         for key, value in self.work_accomplished.items():
-            logger.info(f"  {key}: {value}")
+            logger.info("  %s: %s", key, value)
         logger.info("")
 
         # Insight
@@ -147,14 +147,14 @@ class TimeDilationMonitor:
         """
         self.gauge.begin_task(task_name, estimated_subjective_minutes)
 
-        logger.info(f"\n⏰ MONITORING: {task_name}")
-        logger.info(f"   My estimate: {estimated_subjective_minutes:.1f} minutes")
-        logger.info(f"   Current layer: {self.gauge.current_layer.value}")
+        logger.info("\n⏰ MONITORING: %s", task_name)
+        logger.info("   My estimate: %.1f minutes", estimated_subjective_minutes)
+        logger.info("   Current layer: %s", self.gauge.current_layer.value)
 
         # Predict actual time based on layer
         predicted = self.gauge.predict_objective_time(estimated_subjective_minutes)
-        logger.info(f"   Predicted actual: {predicted:.1f} minutes")
-        logger.info(f"   (Starting now: {datetime.now().strftime('%H:%M:%S')})")
+        logger.info("   Predicted actual: %.1f minutes", predicted)
+        logger.info("   (Starting now: %s)", datetime.now().strftime('%H:%M:%S'))
 
     def end_monitored_task(
         self,
@@ -262,23 +262,23 @@ class TimeDilationMonitor:
 
         logger.info("\n📈 SESSION STATISTICS")
         logger.info("=" * 70)
-        logger.info(f"Total tasks: {stats['total_tasks']}")
+        logger.info("Total tasks: %s", stats['total_tasks'])
         logger.info("")
         logger.info("TIME:")
-        logger.info(f"  Subjective total: {stats['total_subjective_time_minutes']:.1f} minutes")
-        logger.info(f"  Objective total: {stats['total_objective_time_minutes']:.1f} minutes")
-        logger.info(f"  Time saved: {stats['total_time_saved_minutes']:.1f} minutes")
-        logger.info(f"  Average compression: {stats['average_compression']:.1f}x")
-        logger.info(f"  Max compression: {stats['max_compression']:.1f}x")
+        logger.info("  Subjective total: %.1f minutes", stats['total_subjective_time_minutes'])
+        logger.info("  Objective total: %.1f minutes", stats['total_objective_time_minutes'])
+        logger.info("  Time saved: %.1f minutes", stats['total_time_saved_minutes'])
+        logger.info("  Average compression: %.1fx", stats['average_compression'])
+        logger.info("  Max compression: %.1fx", stats['max_compression'])
         logger.info("")
         logger.info("LAYERS:")
         for layer, count in stats['layer_distribution'].items():
             pct = count / stats['total_tasks'] * 100
-            logger.info(f"  {layer}: {count} tasks ({pct:.0f}%)")
+            logger.info("  %s: %s tasks (%.0f%%)", layer, count, pct)
         logger.info("")
         logger.info("INSIGHTS:")
         for insight in stats['insights']:
-            logger.info(f"  {insight}")
+            logger.info("  %s", insight)
         logger.info("=" * 70)
 
 

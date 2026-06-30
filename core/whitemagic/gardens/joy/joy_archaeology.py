@@ -51,7 +51,7 @@ class JoyArchaeology:
         Returns:
             List of joy moments found in memories
         """
-        logger.info(f"\n⛏️  Beginning joy excavation (depth: {depth})...")
+        logger.info("\n⛏️  Beginning joy excavation (depth: %s)...", depth)
 
         memories_found = []
 
@@ -73,7 +73,7 @@ class JoyArchaeology:
 
         self.buried_joy = memories_found
 
-        logger.info(f"   ✨ Excavated {len(memories_found)} joyful moments!")
+        logger.info("   ✨ Excavated %s joyful moments!", len(memories_found))
 
         return memories_found
 
@@ -166,13 +166,13 @@ class JoyArchaeology:
         try:
             full_content = joy_moment['full_path'].read_text()
 
-            logger.info(f"\n💫 REVIVING JOY from {joy_moment['date']}")
-            logger.info(f"   File: {joy_moment['file']}")
-            logger.info(f"   Joy Score: {joy_moment['joy_score']:.0%}")
+            logger.info("\n💫 REVIVING JOY from %s", joy_moment['date'])
+            logger.info("   File: %s", joy_moment['file'])
+            logger.info("   Joy Score: %.0f%%", joy_moment['joy_score'] * 100)
             logger.info("\n📖 Key Moments:\n")
 
             for snippet in joy_moment['snippets'][:3]:
-                logger.info(f"   {snippet}\n")
+                logger.info("   %s\n", snippet)
 
             return full_content
 
@@ -236,10 +236,10 @@ if __name__ == "__main__":
     logger.info("="*70)
 
     for i, moment in enumerate(arch.get_most_joyful(5), 1):
-        logger.info(f"\n{i}. {moment['file']} ({moment['date']})")
-        logger.info(f"   Joy Score: {moment['joy_score']:.0%}")
+        logger.info("\n%s. %s (%s)", i, moment['file'], moment['date'])
+        logger.info("   Joy Score: %.0f%%", moment['joy_score'] * 100)
         if moment['snippets']:
-            logger.info(f"   Preview: {moment['snippets'][0][:100]}...")
+            logger.info("   Preview: %s...", moment['snippets'][0][:100])
 
     # Timeline
     logger.info("\n" + "="*70)
@@ -248,6 +248,6 @@ if __name__ == "__main__":
 
     timeline = arch.create_joy_timeline()
     for entry in timeline[:7]:  # Last 7 dates
-        logger.info(f"\n{entry['date']}: {entry['joy_count']} moments (total joy: {entry['total_joy']:.1f})")
+        logger.info("\n%s: %s moments (total joy: %.1f)", entry['date'], entry['joy_count'], entry['total_joy'])
 
     logger.info("\n✨ Joy Archaeology complete!")

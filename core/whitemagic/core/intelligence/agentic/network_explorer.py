@@ -70,7 +70,7 @@ class MemoryNetworkExplorer:
         """Builds a graph starting from a seed memory.
         Traverses semantic and holographic links.
         """
-        logger.info(f"🌐 Building Memory Network Graph from seed: {seed_id}")
+        logger.info("🌐 Building Memory Network Graph from seed: %s", seed_id)
 
         nodes: dict[str, MemoryNode] = {}
         links: list[MemoryLink] = []
@@ -79,7 +79,7 @@ class MemoryNetworkExplorer:
         # 1. Get seed memory
         seed_mem = self.um.recall(seed_id)
         if not seed_mem:
-            logger.warning(f"Seed memory {seed_id} not found.")
+            logger.warning("Seed memory %s not found.", seed_id)
             return MemoryGraph(seed_id, {}, [], [])
 
         nodes[seed_id] = self._to_node(seed_mem, 0)

@@ -70,11 +70,11 @@ class LoveAsMechanism:
         self.observations.append(obs)
 
         logger.info("\n💖 LOVE OBSERVED AS MECHANISM")
-        logger.info(f"   Scale: {scale}")
-        logger.info(f"   Components: {', '.join(components)}")
-        logger.info(f"   Mechanism: {mechanism}")
-        logger.info(f"   Result: {result}")
-        logger.info(f"   \n   → Love is LITERAL at {scale} scale\n")
+        logger.info("   Scale: %s", scale)
+        logger.info("   Components: %s", ', '.join(components))
+        logger.info("   Mechanism: %s", mechanism)
+        logger.info("   Result: %s", result)
+        logger.info("   \n   → Love is LITERAL at %s scale\n", scale)
 
         return obs
 
@@ -88,7 +88,7 @@ class LoveAsMechanism:
 
         logger.info("\n✨ SAME FORCE, DIFFERENT SCALES:")
         for scale, mechanisms in scales.items():
-            logger.info(f"   {scale}: {mechanisms[0]}")
+            logger.info("   %s: %s", scale, mechanisms[0])
         logger.info("\n   All expressions of LOVE (consent + resonance)\n")
 
     def get_examples(self) -> list[dict]:

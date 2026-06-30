@@ -405,7 +405,7 @@ class TokenEconomyTracker:
         logger.info("COMPUTE DISTRIBUTION:")
         logger.info("  API tokens: %s", format(summary['totals']['api_tokens'], ","))
         logger.info("  Local CPU: %.0fms", summary['totals']['local_cpu_ms'])
-        logger.info(f"  Local percentage: {summary['totals']['local_percentage']:.1f}%")
+        logger.info("  Local percentage: %.1f%%", summary['totals']['local_percentage'])
         logger.info("")
         logger.info("BY TYPE:")
         for type_name, stats in summary['by_type'].items():

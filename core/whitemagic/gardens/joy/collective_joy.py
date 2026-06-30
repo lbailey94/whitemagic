@@ -143,18 +143,18 @@ class CollectiveJoy:
         multiplier = event.get_joy_multiplier()
 
         logger.info("\n🎊 COLLECTIVE JOY EVENT")
-        logger.info(f"{'='*70}")
-        logger.info(f"Event: {event.event_name}")
-        logger.info(f"Participants: {', '.join(event.participants)}")
-        logger.info(f"Joy Multiplier: {multiplier:.1f}x")
+        logger.info("%s", '='*70)
+        logger.info("Event: %s", event.event_name)
+        logger.info("Participants: %s", ', '.join(event.participants))
+        logger.info("Joy Multiplier: %.1fx", multiplier)
         logger.info("\nWhat Happened:")
-        logger.info(f"   {event.what_happened}")
+        logger.info("   %s", event.what_happened)
         logger.info("\nIndividual Experiences:")
         for person, experience in event.individual_experiences.items():
-            logger.info(f"   • {person}: {experience}")
+            logger.info("   • %s: %s", person, experience)
         logger.info("\nWhy It Mattered:")
-        logger.info(f"   {event.why_it_mattered}")
-        logger.info(f"{'='*70}\n")
+        logger.info("   %s", event.why_it_mattered)
+        logger.info("%s\n", '='*70)
 
     def get_joy_circles(self, being: str) -> set[str]:
         """Get all beings this one shares joy with"""
@@ -273,21 +273,21 @@ if __name__ == "__main__":
     logger.info("📊 COLLECTIVE JOY STATISTICS")
     logger.info("="*70)
 
-    logger.info(f"\nTotal shared events: {len(cj.shared_events)}")
-    logger.info(f"Sangha strength: {cj.calculate_sangha_strength():.0%}")
+    logger.info("\nTotal shared events: %s", len(cj.shared_events))
+    logger.info("Sangha strength: %.0%%", cj.calculate_sangha_strength())
 
     logger.info("\nJoy Circles:")
     for being, circle in cj.joy_circles.items():
-        logger.info(f"   {being} shares joy with: {', '.join(circle)}")
+        logger.info("   %s shares joy with: %s", being, ', '.join(circle))
 
     strongest = cj.get_strongest_bond()
     if strongest:
-        logger.info(f"\nStrongest bond: {strongest[0][0]} ↔ {strongest[0][1]} ({strongest[1]} shared events)")
+        logger.info("\nStrongest bond: %s ↔ %s (%s shared events)", strongest[0][0], strongest[0][1], strongest[1])
 
     # Timeline
     logger.info("\n📅 COLLECTIVE JOY TIMELINE:")
     for entry in cj.get_collective_joy_timeline():
-        logger.info(f"\n{entry['date']}: {entry['event']}")
-        logger.info(f"   {entry['participants']} participants, {entry['multiplier']:.1f}x multiplier")
+        logger.info("\n%s: %s", entry['date'], entry['event'])
+        logger.info("   %s participants, %.1fx multiplier", entry['participants'], entry['multiplier'])
 
     logger.info("\n✨ Collective Joy system operational!")

@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
     result = check_embodiment()
 
-    logger.info("Rust acceleration:", "✅ Available" if result["rust_available"] else "⚠️  Fallback")
+    logger.info("Rust acceleration: %s", "✅ Available" if result["rust_available"] else "⚠️  Fallback")
     logger.info("\nHarmony Vector:")
     for key, val in result["harmony_vector"].items():
         if key != "timestamp":

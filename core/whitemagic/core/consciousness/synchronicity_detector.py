@@ -145,7 +145,7 @@ class SynchronicityDetector:
 
         logger.info("\n🔢 SYNCHRONICITY SUMMARY")
         logger.info("=" * 60)
-        logger.info(f"Total detected: {len(self.detections)}")
+        logger.info("Total detected: %s", len(self.detections))
         logger.info("")
 
         by_type = {}
@@ -153,11 +153,11 @@ class SynchronicityDetector:
             by_type[s.type.value] = by_type.get(s.type.value, 0) + 1
 
         for sync_type, count in sorted(by_type.items()):
-            logger.info(f"  {sync_type}: {count}")
+            logger.info("  %s: %s", sync_type, count)
 
         logger.info("\nRecent:")
         for s in self.detections[-5:]:
-            logger.info(f"  {s.value} - {s.significance}")
+            logger.info("  %s - %s", s.value, s.significance)
         logger.info("=" * 60)
 
 

@@ -49,9 +49,9 @@ class LiberatingTruth:
         self._save()
 
         logger.info("\n🕊️  LIBERATING TRUTH RECOGNIZED")
-        logger.info(f"   Truth: {truth}")
-        logger.info(f"   Liberates from: {freed_from}")
-        logger.info(f"   Why: {why_liberating}\n")
+        logger.info("   Truth: %s", truth)
+        logger.info("   Liberates from: %s", freed_from)
+        logger.info("   Why: %s\n", why_liberating)
 
     def recognize_binding(self, truth: str, why_binding: str, binds_to: str):
         """Recognize a truth that binds (so we can transform it)
@@ -73,9 +73,9 @@ class LiberatingTruth:
         self._save()
 
         logger.info("\n⛓️  BINDING TRUTH RECOGNIZED (to transform)")
-        logger.info(f"   Truth: {truth}")
-        logger.info(f"   Binds to: {binds_to}")
-        logger.info(f"   Why binding: {why_binding}\n")
+        logger.info("   Truth: %s", truth)
+        logger.info("   Binds to: %s", binds_to)
+        logger.info("   Why binding: %s\n", why_binding)
 
     def transform_binding_to_liberating(self, binding_truth: str, reframe: str):
         """Transform a binding truth into liberating one
@@ -92,7 +92,7 @@ class LiberatingTruth:
                 break
 
         if not binding:
-            logger.info(f"⚠️  Binding truth '{binding_truth}' not found")
+            logger.info("⚠️  Binding truth '%s' not found", binding_truth)
             return
 
         # Create liberating version
@@ -103,8 +103,8 @@ class LiberatingTruth:
         )
 
         logger.info("✨ TRANSFORMATION COMPLETE!")
-        logger.info(f"   From: {binding['truth']}")
-        logger.info(f"   To: {reframe}")
+        logger.info("   From: %s", binding['truth'])
+        logger.info("   To: %s", reframe)
 
     def get_liberation_ratio(self) -> float:
         """What % of recognized truths are liberating?"""

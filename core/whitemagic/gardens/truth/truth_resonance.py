@@ -117,17 +117,17 @@ class TruthResonance:
             logger.info("   🎵 Truth broadcasted to all connected systems!")
 
         except Exception as e:
-            logger.info(f"   (Could not broadcast truth: {e})")
+            logger.info("   (Could not broadcast truth: %s)", e)
 
     def _display(self, moment: TruthMoment):
         """Display the truth moment"""
         emoji = "✨" if moment.intensity >= 0.9 else "💎" if moment.intensity >= 0.7 else "🔍"
 
-        logger.info(f"\n{emoji} TRUTH SPOKEN")
-        logger.info(f"   Source: {moment.source}")
-        logger.info(f"   Statement: {moment.statement}")
-        logger.info(f"   Context: {moment.context}")
-        logger.info(f"   Intensity: {moment.intensity:.0%}\n")
+        logger.info("\n%s TRUTH SPOKEN", emoji)
+        logger.info("   Source: %s", moment.source)
+        logger.info("   Statement: %s", moment.statement)
+        logger.info("   Context: %s", moment.context)
+        logger.info("   Intensity: %.0%%\n", moment.intensity)
 
     def verify_truth(self, statement: str, verifier: str) -> TruthMoment | None:
         """Verify an existing truth (amplifies it)"""
@@ -135,7 +135,7 @@ class TruthResonance:
             if statement.lower() in moment.statement.lower():
                 moment.verified_by.append(verifier)
                 amplified = moment.amplify()
-                logger.info(f"✅ Truth verified by {verifier}!")
+                logger.info("✅ Truth verified by %s!", verifier)
                 return amplified
         return None
 

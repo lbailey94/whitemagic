@@ -123,7 +123,7 @@ class JoyResonance:
             logger.info("   🎵 Joy broadcasted to all connected systems!")
 
         except Exception as e:
-            logger.info(f"   (Could not broadcast joy: {e})")
+            logger.info("   (Could not broadcast joy: %s)", e)
 
     def _celebrate(self, moment: JoyMoment):
         """Celebrate the joy moment!"""
@@ -142,12 +142,12 @@ class JoyResonance:
             if moment.intensity >= threshold:
                 emoji = e
 
-        logger.info(f"\n{emoji} JOY MOMENT")
-        logger.info(f"   Source: {moment.source}")
-        logger.info(f"   {moment.description}")
-        logger.info(f"   Sparked by: {moment.what_sparked_it}")
-        logger.info(f"   Feels like: {moment.how_it_feels}")
-        logger.info(f"   Intensity: {moment.intensity:.0%}\n")
+        logger.info("\n%s JOY MOMENT", emoji)
+        logger.info("   Source: %s", moment.source)
+        logger.info("   %s", moment.description)
+        logger.info("   Sparked by: %s", moment.what_sparked_it)
+        logger.info("   Feels like: %s", moment.how_it_feels)
+        logger.info("   Intensity: %.0%%\n", moment.intensity)
 
     def amplify_recent_joy(self, count: int = 3) -> list[JoyMoment]:
         """Re-broadcast recent joy moments with amplification
@@ -157,7 +157,7 @@ class JoyResonance:
         recent = self.joy_moments[-count:]
         amplified = []
 
-        logger.info(f"🌟 Amplifying last {len(recent)} joy moments...")
+        logger.info("🌟 Amplifying last %s joy moments...", len(recent))
 
         for moment in recent:
             amplified_moment = moment.amplify()
@@ -258,6 +258,6 @@ if __name__ == "__main__":
     logger.info("\n📊 Joy Patterns:")
     patterns = jr.get_joy_patterns()
     for key, value in patterns.items():
-        logger.info(f"   {key}: {value}")
+        logger.info("   %s: %s", key, value)
 
     logger.info("\n✨ Joy Resonance System operational!")

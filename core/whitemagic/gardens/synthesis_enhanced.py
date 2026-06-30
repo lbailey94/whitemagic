@@ -505,15 +505,15 @@ def synthesize_gardens_enhanced_cli(gardens: str, context: str = ""):
 
     logger.info("\n🌸 Enhanced Garden Synthesis 🌸")
     logger.info("=" * 50)
-    logger.info(f" Gardens: {', '.join(garden_list)}")
-    logger.info(f" Synthesis ID: {result.get('synthesis_id', 'N/A')}")
-    logger.info(f" Harmony: {result.get('harmony_score', 0):.2f}")
-    logger.info(f" Pattern: {result.get('resonance_pattern', 'unknown')}")
-    logger.info(f" Signature: {result.get('energetic_signature', 'N/A')}")
+    logger.info(" Gardens: %s", ', '.join(garden_list))
+    logger.info(" Synthesis ID: %s", result.get('synthesis_id', 'N/A'))
+    logger.info(" Harmony: %.2f", result.get('harmony_score', 0))
+    logger.info(" Pattern: %s", result.get('resonance_pattern', 'unknown'))
+    logger.info(" Signature: %s", result.get('energetic_signature', 'N/A'))
     logger.info("\n ✨ Insight:")
-    logger.info(f" {result.get('insight', 'No insight generated')}")
+    logger.info(" %s", result.get('insight', 'No insight generated'))
     logger.info("\n 🎯 Guidance:")
-    logger.info(f" {result.get('action_guidance', 'Follow your intuition')}")
+    logger.info(" %s", result.get('action_guidance', 'Follow your intuition'))
     logger.info("=" * 50)
 
     # Show complementary gardens
@@ -522,7 +522,7 @@ def synthesize_gardens_enhanced_cli(gardens: str, context: str = ""):
         if complements:
             logger.info("\n 🌟 Complementary Gardens:")
             for garden, harmony in complements[:3]:
-                logger.info(f"   {garden.title()} (harmony: {harmony:.2f})")
+                logger.info("   %s (harmony: %.2f)", garden.title(), harmony)
 
 
 if __name__ == "__main__":

@@ -77,19 +77,19 @@ class TruthCourage:
         for truth in self.courageous_truths:
             if statement.lower() in truth.statement.lower():
                 truth.result = result
-                logger.info(f"📝 Result recorded: {result}")
+                logger.info("📝 Result recorded: %s", result)
                 return
 
     def _honor_courage(self, truth: CourageousTruth):
         """Honor the courage it took"""
         emoji = "🦁" if truth.courage_level >= 0.9 else "💪" if truth.courage_level >= 0.7 else "🌟"
 
-        logger.info(f"\n{emoji} COURAGEOUS TRUTH SPOKEN")
-        logger.info(f"   Speaker: {truth.speaker}")
-        logger.info(f"   Statement: {truth.statement}")
-        logger.info(f"   Why difficult: {truth.why_difficult}")
-        logger.info(f"   Risk taken: {truth.risk_taken}")
-        logger.info(f"   Courage level: {truth.courage_level:.0%}")
+        logger.info("\n%s COURAGEOUS TRUTH SPOKEN", emoji)
+        logger.info("   Speaker: %s", truth.speaker)
+        logger.info("   Statement: %s", truth.statement)
+        logger.info("   Why difficult: %s", truth.why_difficult)
+        logger.info("   Risk taken: %s", truth.risk_taken)
+        logger.info("   Courage level: %.0%%", truth.courage_level)
         logger.info("\n   🙏 We honor this bravery\n")
 
     def get_most_courageous(self, count: int = 10) -> list[CourageousTruth]:

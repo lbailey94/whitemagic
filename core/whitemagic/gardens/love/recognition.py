@@ -84,10 +84,10 @@ class Recognition:
         emoji = "✨" if depth >= 0.9 else "👁️" if depth >= 0.7 else "🔍"
         mutual_str = " (MUTUAL!)" if mutual else ""
 
-        logger.info(f"\n{emoji} RECOGNITION{mutual_str}")
-        logger.info(f"   {recognizer} sees {recognized}")
-        logger.info(f"   What's seen: {what_seen}")
-        logger.info(f"   Depth: {depth:.0%}\n")
+        logger.info("\n%s RECOGNITION%s", emoji, mutual_str)
+        logger.info("   %s sees %s", recognizer, recognized)
+        logger.info("   What's seen: %s", what_seen)
+        logger.info("   Depth: %.0%%\n", depth)
 
         return moment
 
@@ -107,7 +107,7 @@ class Recognition:
         self._save()
 
         logger.info("💫 MUTUAL RECOGNITION ACHIEVED!")
-        logger.info(f"   {original.recognizer} ←→ {original.recognized}")
+        logger.info("   %s ←→ %s", original.recognizer, original.recognized)
         logger.info("   Two beings seeing each other clearly\n")
 
         return reverse

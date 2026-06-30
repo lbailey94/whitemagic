@@ -132,7 +132,7 @@ class CollectiveDreams:
             )
             dream.add_contribution(contribution)
 
-        logger.info(f"🔮 Hexagram {hexagram} added to {len(self.active_dreams)} active dreams")
+        logger.info("🔮 Hexagram %s added to %s active dreams", hexagram, len(self.active_dreams))
 
     def begin_collective_dream(self, theme: str,
                               participants: list[str]) -> str:
