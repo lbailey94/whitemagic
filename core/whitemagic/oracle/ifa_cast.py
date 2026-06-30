@@ -28,7 +28,6 @@ from whitemagic.oracle.ifa_data import (
     OduAmulu,
     OduMeji,
     PRINCIPAL_ODU,
-    ODU_BY_BINARY,
     get_odu_by_binary,
     ifa_to_iching,
 )

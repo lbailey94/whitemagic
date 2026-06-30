@@ -29,8 +29,6 @@ from typing import Any
 from .tarot_data import (
     MajorArcanaCard, MinorArcanaCard,
     MAJOR_ARCANA, MINOR_ARCANA,
-    get_major_arcana, get_minor_arcana, get_all_cards,
-    FIXED_SIGN_TETRAMORPH, TRIPLE_ARC,
 )
 
 logger = logging.getLogger(__name__)
@@ -271,7 +269,7 @@ class TarotCaster:
         stages in an initiatory arc, inspired by the Suarès/Revelation
         22-chapter correspondence.
         """
-        entropy = self._gather_entropy(question, context)
+        self._gather_entropy(question, context)
         # Use Major Arcana only
         deck = list(MAJOR_ARCANA)
         n = len(deck)

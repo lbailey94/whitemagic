@@ -126,7 +126,6 @@ class OracleSynthesizer:
         modality = oracle_output.get("modality", "unknown")
         phase = oracle_output.get("phase", "yang")
         wu_xing = oracle_output.get("wu_xing", "earth")
-        iching_num = oracle_output.get("iching_number", 0)
         iching_name = oracle_output.get("iching_name", "")
         iching_judgment = oracle_output.get("iching_judgment", "")
         iching_guidance = oracle_output.get("iching_guidance", "")
@@ -137,7 +136,6 @@ class OracleSynthesizer:
 
         # Layer 5: Tarot (optional)
         tarot_cards = oracle_output.get("tarot_cards", [])
-        tarot_summary = oracle_output.get("tarot_summary", "")
 
         # Great Year temporal context (optional, non-binding)
         great_year_context = oracle_output.get("great_year", {})

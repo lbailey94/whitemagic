@@ -63,6 +63,15 @@ __all__ = [
     "SearchResult",
     "SearchResponse",
     "BrowserSessionManager",
+    # Additional re-exports
+    "BatchSearchResult",
+    "DeepFetchResult",
+    "RepoResearchResult",
+    "URLResearchResult",
+    "deep_fetch",
+    "research_repo",
+    "research_url",
+    "web_search_batch",
 ]
 
 __version__ = "0.2.0"

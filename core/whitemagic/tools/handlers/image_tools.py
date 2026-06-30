@@ -7,7 +7,6 @@ Provides the `image_analyze` tool for gana_chariot. Uses a tiered approach:
 
 Returns a stable JSON envelope with metadata, structural analysis, and OCR text.
 """
-import base64
 import json
 import logging
 import os

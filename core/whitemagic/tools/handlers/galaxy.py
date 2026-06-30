@@ -468,7 +468,6 @@ def handle_galaxy_canonical_taxonomy(**kwargs: Any) -> dict[str, Any]:
 def handle_galaxy_export_tutorial(**kwargs: Any) -> dict[str, Any]:
     """Export tutorial galaxy memories as JSON for public repo synchronization."""
     import json
-    from pathlib import Path
 
     try:
         from whitemagic.config.paths import MEMORY_DIR
