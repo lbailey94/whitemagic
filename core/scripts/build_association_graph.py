@@ -237,7 +237,7 @@ def engine_jaccard(
     new_assoc = 0
     total_compared = 0
 
-    for i in range(len(mem_ids)):
+    for i, mem_id in enumerate(mem_ids):
         for j in range(i + 1, len(mem_ids)):
             id_a, id_b = mem_ids[i], mem_ids[j]
             sim = jaccard_similarity(keyword_map[id_a], keyword_map[id_b])
@@ -577,7 +577,7 @@ def engine_holographic(
     new_assoc = 0
     threshold = 0.3  # 5D distance threshold
 
-    for i in range(len(mem_ids)):
+    for i, mem_id in enumerate(mem_ids):
         id_a = mem_ids[i]
         coords_a = coord_map[id_a]
 
@@ -665,7 +665,7 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
     mem_ids = list(term_map.keys())
     new_assoc = 0
 
-    for i in range(len(mem_ids)):
+    for i, mem_id in enumerate(mem_ids):
         for j in range(i + 1, len(mem_ids)):
             id_a, id_b = mem_ids[i], mem_ids[j]
             overlap = len(term_map[id_a] & term_map[id_b])

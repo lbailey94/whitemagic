@@ -391,7 +391,7 @@ class AssociationMiner:
 
             mem_ids = [m.id for m in all_mems if len(fingerprints.get(m.id, set())) >= 3]
 
-            for i in range(len(mem_ids)):
+            for i, mem_id in enumerate(mem_ids):
                 if len(proposals) >= self._max_proposals * 2:
                     break
                 for j in range(i + 1, len(mem_ids)):
@@ -1115,7 +1115,7 @@ class CausalMiner:
 
             # Pair each memory with the next N temporally-adjacent ones
             window = min(5, len(parsed))
-            for i in range(len(parsed)):
+            for i, parsed_item in enumerate(parsed):
                 for j in range(i + 1, min(i + window, len(parsed))):
                     dt_hours = abs((parsed[j]["ts"] - parsed[i]["ts"]).total_seconds()) / 3600.0
                     if dt_hours > _MAX_CAUSAL_WINDOW_HOURS:

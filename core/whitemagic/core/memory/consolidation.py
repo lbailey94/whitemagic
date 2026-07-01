@@ -692,7 +692,7 @@ class MemoryConsolidator:
 
                 # Intra-cluster 'shares_theme' edges (top pairs only to avoid N²)
                 ids = cluster.memory_ids[:10]
-                for i in range(len(ids)):
+                for i, id in enumerate(ids):
                     for j in range(i + 1, min(i + 3, len(ids))):
                         kg.add_relation(
                             source=ids[i],

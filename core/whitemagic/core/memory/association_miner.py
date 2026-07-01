@@ -301,7 +301,7 @@ class AssociationMiner:
 
             mem_ids = [m.id for m in all_mems if len(fingerprints.get(m.id, set())) >= 3]
 
-            for i in range(len(mem_ids)):
+            for i, mem_id in enumerate(mem_ids):
                 if len(proposals) >= self._max_proposals * 2:
                     break
                 for j in range(i + 1, len(mem_ids)):

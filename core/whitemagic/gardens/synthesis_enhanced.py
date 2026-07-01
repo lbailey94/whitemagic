@@ -349,7 +349,7 @@ class EnhancedGardenSynthesis:
         if len(gardens) != 2:
             if len(gardens) > 2:
                 pair_harmonies = []
-                for i in range(len(gardens)):
+                for i, garden in enumerate(gardens):
                     for j in range(i + 1, len(gardens)):
                         pair = tuple(sorted([gardens[i], gardens[j]]))
                         pair_harmonies.append(self.compatibility.get(pair, 0.5))
@@ -493,7 +493,7 @@ class EnhancedGardenSynthesis:
     def _calculate_connections(self, gardens: list[str]) -> list[dict[str, Any]]:
         """Calculate connections between gardens"""
         connections = []
-        for i in range(len(gardens)):
+        for i, garden in enumerate(gardens):
             for j in range(i + 1, len(gardens)):
                 pair = tuple(sorted([gardens[i], gardens[j]]))
                 strength = self.compatibility.get(pair, 0.5)

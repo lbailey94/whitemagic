@@ -439,7 +439,7 @@ class PolyglotAccelerator:
     ) -> list[tuple[int, int, float]]:
         """Simple Python duplicate detection."""
         duplicates = []
-        for i in range(len(texts)):
+        for i, text in enumerate(texts):
             for j in range(i + 1, len(texts)):
                 if texts[i] == texts[j]:
                     duplicates.append((i, j, 1.0))

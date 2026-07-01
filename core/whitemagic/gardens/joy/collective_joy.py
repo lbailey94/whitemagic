@@ -172,7 +172,7 @@ class CollectiveJoy:
 
         for event in self.shared_events:
             participants = sorted(event.participants)
-            for i in range(len(participants)):
+            for i, participant in enumerate(participants):
                 for j in range(i + 1, len(participants)):
                     pair = (participants[i], participants[j])
                     pair_counts[pair] = pair_counts.get(pair, 0) + 1

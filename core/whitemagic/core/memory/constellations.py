@@ -626,7 +626,7 @@ class ConstellationDetector:
 
         # Find merge candidates
         merge_pairs: list[tuple[int, int, float, list[str]]] = []
-        for i in range(len(constellations)):
+        for i, constellation in enumerate(constellations):
             for j in range(i + 1, len(constellations)):
                 a, b = constellations[i], constellations[j]
                 dist = self._distance_5d(a.centroid, b.centroid)

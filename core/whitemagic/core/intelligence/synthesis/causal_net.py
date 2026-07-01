@@ -177,8 +177,8 @@ class CausalNet:
         # Build edges
         edges_list: list[tuple[str, str]] = []
         keys = list(cluster_data_py.keys())
-        for i in range(len(keys)):
-            for j in range(len(keys)):
+        for i, key in enumerate(keys):
+            for j, key in enumerate(keys):
                 if i == j:
                     continue
                 c1 = cluster_data_py[keys[i]]

@@ -28,7 +28,7 @@ def fix_file(filepath: Path, apply: bool = False) -> dict:
 
     lines = content.split("\n")
 
-    for i in range(len(lines)):
+    for i, line in enumerate(lines):
         line = lines[i]
         if "except Exception" not in line:
             continue

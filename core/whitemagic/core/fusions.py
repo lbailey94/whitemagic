@@ -392,7 +392,7 @@ def bicameral_consolidation_enhance(clusters: list) -> dict[str, Any]:
 
         # Right hemisphere: look for creative cross-connections
         suggestions = []
-        for i in range(len(cluster_summaries)):
+        for i, cluster_summarie in enumerate(cluster_summaries):
             for j in range(i + 1, len(cluster_summaries)):
                 a, b = cluster_summaries[i], cluster_summaries[j]
                 a_tags = set(a["tags"])
@@ -540,7 +540,7 @@ def dream_bicameral_serendipity(memories: list) -> dict[str, Any]:
         # Right-hemisphere creative connections: find pairs with
         # unexpected keyword overlaps (different domains but shared concepts)
         connections = []
-        for i in range(len(items)):
+        for i, item in enumerate(items):
             for j in range(i + 1, len(items)):
                 a, b = items[i], items[j]
                 shared = a["keywords"] & b["keywords"] - {

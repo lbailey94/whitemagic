@@ -995,7 +995,7 @@ def galaxy_nodes(limit: int = 500, zone: str = "", include_content: bool = False
             for i in range(min(len(nodes), 100)):
                 ni = nodes[i]
                 neighbors = []
-                for j in range(len(nodes)):
+                for j, node in enumerate(nodes):
                     if i == j:
                         continue
                     nj = nodes[j]

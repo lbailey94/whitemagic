@@ -1055,7 +1055,7 @@ class CoreAccessLayer:
             # Collect all sampled source IDs across all pairs in one batch query
             all_sample_ids: list[str] = []
             pair_meta: list[tuple[str, str, set[str], set[str]]] = []
-            for i in range(len(names)):
+            for i, name in enumerate(names):
                 for j in range(i + 1, len(names)):
                     c1_ids = constellation_members[names[i]]
                     c2_ids = constellation_members[names[j]]

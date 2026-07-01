@@ -415,7 +415,7 @@ class CausalMiner:
 
             # Pair each memory with the next N temporally-adjacent ones
             window = min(5, len(parsed))
-            for i in range(len(parsed)):
+            for i, parsed_item in enumerate(parsed):
                 for j in range(i + 1, min(i + window, len(parsed))):
                     dt_hours = abs((parsed[j]["ts"] - parsed[i]["ts"]).total_seconds()) / 3600.0
                     if dt_hours > _MAX_CAUSAL_WINDOW_HOURS:

@@ -182,7 +182,7 @@ class CrossDomainCollisionDetector:
             embeddings = self._load_embeddings([m["id"] for m in memories])
 
             # Find collision pairs
-            for i in range(len(memories)):
+            for i, memorie in enumerate(memories):
                 for j in range(i + 1, len(memories)):
                     a, b = memories[i], memories[j]
 

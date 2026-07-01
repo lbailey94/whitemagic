@@ -656,7 +656,7 @@ class KaizenEngine:
 
         proposals = []
         unbridged = []
-        for i in range(len(constellations)):
+        for i, constellation in enumerate(constellations):
             for j in range(i + 1, len(constellations)):
                 c1, c2 = constellations[i], constellations[j]
                 pair = tuple(sorted([c1.name, c2.name]))
