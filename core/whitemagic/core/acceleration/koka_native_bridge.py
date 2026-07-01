@@ -750,6 +750,9 @@ class KokaCircuitDispatch:
         if self._proc is not None and self._proc.poll() is None:
             return True
 
+        if os.environ.get("WM_SKIP_POLYGLOT", ""):
+            return False
+
         if not self._binary.exists() or not os.access(self._binary, os.X_OK):
             return False
 
@@ -769,6 +772,29 @@ class KokaCircuitDispatch:
             logger.error("Failed to start circuit_dispatch: %s", e)
             return False
 
+    def _readline_timeout(self, timeout: float = 5.0) -> str | None:
+        """Read a line from stdout with a timeout to avoid hangs."""
+        if self._proc is None or self._proc.stdout is None:
+            return None
+        result_q: queue.Queue[str | None] = queue.Queue(maxsize=1)
+
+        def _reader() -> None:
+            try:
+                proc = self._proc
+                if proc and proc.stdout:
+                    result_q.put(proc.stdout.readline())
+                else:
+                    result_q.put(None)
+            except Exception:
+                result_q.put(None)
+
+        t = threading.Thread(target=_reader, name="koka-circuit-read", daemon=True)
+        t.start()
+        try:
+            return result_q.get(timeout=timeout)
+        except Exception:
+            return None
+
     def _send(self, line: str) -> str | None:
         """Send a line and read the response."""
         with self._lock:
@@ -781,7 +807,7 @@ class KokaCircuitDispatch:
             try:
                 self._proc.stdin.write(line + "\n")
                 self._proc.stdin.flush()
-                response = self._proc.stdout.readline()
+                response = self._readline_timeout(5.0)
                 if not response:
                     return None
                 return response.strip()
