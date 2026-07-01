@@ -64,7 +64,6 @@ class ConfigValidator:
 
         """
         if self.secrets_file.exists():
-            # Load existing secrets
             try:
                 with open(self.secrets_file) as f:
                     raw = json.load(f)
@@ -75,7 +74,6 @@ class ConfigValidator:
                 if not _silent_init():
                     logger.info("Loaded existing secrets from config")
 
-                # Validate secrets are not defaults
                 if secrets_data.get("jwt_secret") in (
                     None,
                     "",
@@ -186,7 +184,6 @@ class ConfigValidator:
         if not _silent_init():
             logger.info("Validating cloud mode configuration...")
 
-        # Check JWT secret
         secrets_data = self.validate_or_create_secrets()
         if secrets_data.get("jwt_secret") in (None, "", "CHANGE_ME_IN_PRODUCTION"):
             raise RuntimeError(
@@ -194,7 +191,6 @@ class ConfigValidator:
                 "Set WHITEMAGIC_JWT_SECRET environment variable.",
             )
 
-        # Check CORS origins
         allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
         if not allowed_origins or allowed_origins == "*":
             raise RuntimeError(
@@ -202,7 +198,6 @@ class ConfigValidator:
                 "Wildcard (*) not allowed in production.",
             )
 
-        # Check database URL (if using database)
         db_url = os.getenv("DATABASE_URL")
         if db_url and "localhost" in db_url:
             logger.warning(
@@ -278,10 +273,8 @@ def validate_startup() -> None:
     # Ensure secrets exist
     validator.validate_or_create_secrets()
 
-    # Validate deployment mode
     mode = validator.validate_deployment_mode()
 
-    # Validate production config if in cloud mode
     if mode == "cloud":
         validator.validate_production_config()
 

@@ -115,7 +115,6 @@ class TokenEconomyTracker:
         self.history: list[dict[str, Any]] = []  # For test compatibility
         self.current_session_start = datetime.now()
 
-        # For test compatibility
         self.total_budget = total_budget
         self.used_tokens = 0
 
@@ -187,7 +186,6 @@ class TokenEconomyTracker:
 
         self.operations.append(op)
 
-        # Log to file
         if self.log_file:
             with file_lock(self.log_file):
                 with open(self.log_file, "a") as f:

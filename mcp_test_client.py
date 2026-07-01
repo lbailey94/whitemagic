@@ -83,7 +83,6 @@ if __name__ == "__main__":
     print("WhiteMagic MCP Interactive Test Client")
     print("=" * 60)
     
-    # Test 1: Health report
     print("\n[1] Testing health_report...")
     health = mcp_call("gana_root", tool="health_report")
     if health:
@@ -95,7 +94,6 @@ if __name__ == "__main__":
     else:
         print("  FAILED")
     
-    # Test 2: Create memory
     print("\n[2] Testing create_memory...")
     mem = mcp_call("gana_neck", tool="create_memory", args={
         "content": "Test memory created via MCP client",
@@ -108,7 +106,6 @@ if __name__ == "__main__":
     else:
         print(f"  Result: {mem}")
     
-    # Test 3: Search memories
     print("\n[3] Testing search_memories...")
     search = mcp_call("gana_winnowing_basket", tool="search_memories", args={
         "query": "MCP test",
@@ -122,7 +119,6 @@ if __name__ == "__main__":
     else:
         print("  FAILED")
     
-    # Test 4: Gnosis
     print("\n[4] Testing gnosis...")
     gnosis = mcp_call("gana_ghost", tool="gnosis")
     if gnosis:

@@ -350,7 +350,6 @@ def partial_validation_spectrum(
                 or "some layers" in notes
                 or "directionally" in notes
             ):
-                # Check if there are percentage-like hints
                 if "photonic" in notes and "superconducting" in notes:
                     pvs = 0.30  # e.g. neurophotonic DC
                 else:

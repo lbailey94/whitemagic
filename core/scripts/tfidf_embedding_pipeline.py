@@ -334,7 +334,6 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
         log.info("  ✅ All memories already have embeddings!")
         return {"embedded": 0, "total": 0}
 
-    # Process in batches
     embedded_count = 0
     failed_count = 0
     start_time = time.perf_counter()
@@ -363,7 +362,6 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
         # Reduce dimensions
         reduced = reduce_dimensions(vectors, target_dim=EMBEDDING_DIM)
 
-        # Store embeddings
         now = datetime.now().isoformat()
         for i, mem in enumerate(batch):
             if i < len(reduced):
@@ -405,7 +403,6 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
     )
     log.info(f"  ❌ Failed: {failed_count}")
 
-    # Print stats
     total_embedded = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[
         0
     ]

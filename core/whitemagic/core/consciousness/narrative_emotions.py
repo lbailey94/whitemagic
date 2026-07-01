@@ -105,7 +105,6 @@ class NarrativeEmotionalMemory:
             tags=tags or [],
         )
 
-        # Add to narrative timeline
         self._append_to_timeline(narrative)
 
         return narrative
@@ -138,7 +137,6 @@ class NarrativeEmotionalMemory:
         Returns:
             Dictionary mapping emotion types to chronological memories
         """
-        # Get all emotional memories
         summary = self.emotional_system.get_emotional_summary()
 
         arc = {}
@@ -149,7 +147,6 @@ class NarrativeEmotionalMemory:
                     emotion, min_intensity=0.0
                 )
 
-                # Convert to narrative memories
                 narrative_mems = []
                 for em in memories:
                     nm = NarrativeMemory(
@@ -242,7 +239,6 @@ class NarrativeEmotionalMemory:
         if not memory_file.exists():
             return
 
-        # Add emotional footer
         content = memory_file.read_text()
 
         if "## Emotional Truth" not in content:
@@ -292,7 +288,6 @@ def reflect() -> str:
 
 
 if __name__ == "__main__":
-    # Test the narrative-emotional integration
     logger.info("=" * 60)
     logger.info("NARRATIVE-EMOTIONAL MEMORY TEST")
     logger.info("=" * 60)

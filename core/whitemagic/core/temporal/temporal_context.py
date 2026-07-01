@@ -73,7 +73,6 @@ class TemporalContext:
     memories_since_consolidation: int = 0
     consolidation_due: bool = False
 
-    # Phase tracking
     current_phase: str | None = None
     phase_start: datetime | None = None
 
@@ -248,7 +247,6 @@ class TemporalContextManager:
                 if state.get("last_run"):
                     last_consolidation = parse_datetime(state["last_run"])
 
-                    # Check if consolidation is due (>24h)
                     hours_since = (
                         datetime.now() - last_consolidation
                     ).total_seconds() / 3600
@@ -264,7 +262,6 @@ class TemporalContextManager:
         """Get complete temporal context snapshot."""
         now = datetime.now()
 
-        # Get timezone info
         tz = datetime.now(UTC).astimezone().tzinfo
         tz_name = str(tz) if tz else "local"
         utc_offset = now.astimezone().utcoffset()

@@ -251,7 +251,6 @@ class GraphWalker:
     def walk(self, seed_ids: list[str], hops: int = 2, top_k: int = 5) -> WalkResult:
         # Implementation moved from graph_walker.py
         # ... (full implementation would be pasted here) ...
-        # For Milestone 4.3 I'll focus on structural consolidation first
         """
         Perform the walk operation.
 

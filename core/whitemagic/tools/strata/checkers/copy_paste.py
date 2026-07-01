@@ -68,7 +68,6 @@ def check_copy_paste(
                             suggestion="Extract shared logic into a reusable function or module.",
                         )
                     )
-                    # Remove hash to avoid duplicate findings for same block
                     del window_hashes[h]
             else:
                 window_hashes[h] = (py_file, i + 1)
@@ -88,7 +87,6 @@ def _normalize_block(lines: list[str]) -> str:
             continue
         if in_docstring:
             continue
-        # Remove Python comments
         if "#" in stripped:
             stripped = stripped.split("#", 1)[0].strip()
         # Collapse multiple whitespace

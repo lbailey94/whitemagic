@@ -14,7 +14,6 @@ from typing import Any
 
 from whitemagic.zodiac.zodiac_cores import CoreResponse, get_zodiac_cores
 
-# from whitemagic.core.resonance.gan_ying import get_bus, emit_event, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -137,12 +136,10 @@ class ZodiacalRound:
         if not self.running:
             raise RuntimeError("Cycle not running. Call start_cycle() first.")
 
-        # Get current phase handler
         handler = self.phase_handlers.get(self.state.current_phase)
         if not handler:
             raise ValueError(f"No handler for phase: {self.state.current_phase}")
 
-        # Execute phase
         response = handler()
         self.state.total_activations += 1
 
@@ -174,7 +171,6 @@ class ZodiacalRound:
         self.state.current_phase = phases[next_idx]
         self.state.phase_start = datetime.now()
 
-        # If we completed Aries, we've cycled
         if self.state.current_phase == CyclePhase.DISSOLUTION:
             self.state.cycle_count += 1
             logger.info("Cycle %s complete. Beginning anew...", self.state.cycle_count)
@@ -317,7 +313,6 @@ class ZodiacalRound:
         for cycle_num in range(num_cycles):
             logger.info("=== Cycle %s/%s ===", cycle_num + 1, num_cycles)
 
-            # Run through all 12 phases
             for phase_num in range(12):
                 response = self.advance_phase()
                 responses.append(response)
@@ -367,7 +362,6 @@ async def run_one_cycle(context: dict[str, Any] | None = None) -> list[CoreRespo
 
 
 if __name__ == "__main__":
-    # Test the cycle
     async def test() -> None:
         """
         Perform the test operation.

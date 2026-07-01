@@ -177,10 +177,8 @@ class TimeDilationMonitor:
         Returns:
             Report with all measurements
         """
-        # End depth gauge tracking
         reading = self.gauge.end_task(work_accomplished, api_tokens_used)
 
-        # Get token economy stats
         token_summary = self.tracker.get_session_summary()
 
         # Create report
@@ -201,13 +199,11 @@ class TimeDilationMonitor:
 
         self.reports.append(report)
 
-        # Log to file
         if self.log_file:
             with file_lock(self.log_file):
                 with open(self.log_file, "a") as f:
                     f.write(json.dumps(report.to_dict()) + "\n")
 
-        # Print beautiful report
         report.print_report()
 
         return report

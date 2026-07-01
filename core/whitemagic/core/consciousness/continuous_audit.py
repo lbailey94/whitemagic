@@ -64,7 +64,6 @@ class ContinuousAudit:
         self.auto_fix = auto_fix
         self.last_audit: datetime | None = None
 
-        # Initialize systems
         self.homeostasis = (
             ProjectHomeostasis(str(project_root)) if ProjectHomeostasis else None
         )

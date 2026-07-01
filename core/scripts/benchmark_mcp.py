@@ -108,7 +108,6 @@ def bench_schema():
         tools = asyncio.run(list_tools())
         with_icons = [t for t in tools if t.icons]
         assert len(with_icons) == 28, f"Only {len(with_icons)}/28 have icons"
-        # Check icon format
         sample = with_icons[0].icons[0]
         assert sample.src.startswith("data:image/svg+xml,")
         assert sample.mimeType == "image/svg+xml"

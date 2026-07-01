@@ -261,14 +261,12 @@ class BaseGarden(ABC):
         """
         bias = self.get_coordinate_bias()
 
-        # Add garden metadata
         if "metadata" not in memory_data:
             memory_data["metadata"] = {}
 
         memory_data["metadata"]["garden"] = self.get_name()
         memory_data["metadata"]["coordinate_bias"] = bias.to_dict()
 
-        # Add garden tag if not present
         if "tags" not in memory_data:
             memory_data["tags"] = []
         if self.get_name() not in memory_data["tags"]:
@@ -347,11 +345,9 @@ def get_garden_bias(garden_name: str) -> CoordinateBias | None:
         CoordinateBias if garden found, None otherwise
 
     """
-    # Import here to avoid circular dependencies
     try:
         from whitemagic.gardens import _garden_cache
 
-        # Check cache first
         if garden_name in _garden_cache:
             garden = _garden_cache[garden_name]
             if isinstance(garden, BaseGarden):
@@ -359,7 +355,6 @@ def get_garden_bias(garden_name: str) -> CoordinateBias | None:
     except ImportError:
         pass
 
-    # Try to import and instantiate garden
     try:
         module = __import__(f"whitemagic.gardens.{garden_name}", fromlist=[""])
         garden_class_name = f"{garden_name.capitalize()}Garden"

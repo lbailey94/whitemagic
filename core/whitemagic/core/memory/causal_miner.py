@@ -190,13 +190,11 @@ class CausalMiner:
         start = time.perf_counter()
         report = CausalMiningReport()
 
-        # Try embedding-based mining first, fall back to temporal-only
         use_embeddings = False
         pairs: list[dict] = []
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
-            # Try find_similar_pairs directly — works on pre-computed embeddings
             # even when the model isn't installed (available() may be False)
             pairs = engine.find_similar_pairs(
                 min_similarity=self._min_semantic_sim,
@@ -246,7 +244,6 @@ class CausalMiner:
 
         report.memories_sampled = len(mem_meta)
 
-        # Get existing directed associations to avoid duplicates
         existing_directed: set[tuple[str, str]] = set()
         try:
             with um.backend.pool.connection() as conn:
@@ -402,7 +399,6 @@ class CausalMiner:
             if len(rows) < 2:
                 return []
 
-            # Parse timestamps and pair adjacent memories
             parsed = []
             for row in rows:
                 mid = row[0] if isinstance(row, tuple) else row["id"]

@@ -62,7 +62,6 @@ def check_mutable_default(project_path: Path, file_index: FileIndex, findings: l
 
             args = node.args
 
-            # Check regular args with defaults
             # defaults are aligned to the right end of args
             n_args = len(args.args)
             n_defaults = len(args.defaults)
@@ -81,7 +80,6 @@ def check_mutable_default(project_path: Path, file_index: FileIndex, findings: l
                             suggestion=f"Use '{arg_name}=None' and initialize inside the function body.",
                         ))
 
-            # Check kwonly args with defaults
             for i, default in enumerate(args.kw_defaults):
                 if default is not None and _is_mutable_default(default):
                     arg_name = args.kwonlyargs[i].arg

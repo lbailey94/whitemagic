@@ -134,7 +134,6 @@ class CoherencePersistence:
         self.current["last_update"] = now.isoformat()
         self._save_state()
 
-        # Check rate limit
         at_limit = self.current["calls_this_hour"] >= self.DEFAULT_CALLS_PER_HOUR
 
         return {

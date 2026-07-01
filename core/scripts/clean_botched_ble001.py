@@ -38,7 +38,6 @@ def is_marker_in_docstring(content: str, line_no: int) -> bool:
                     in_doc = False
         else:
             if '"""' in line or "'''" in line:
-                # Check if this line both opens and closes (single-line docstring)
                 triple_count = line.count('"""') + line.count("'''")
                 if triple_count % 2 == 0:
                     if MARKER in line:
@@ -56,7 +55,6 @@ def fix_file(path: Path) -> bool:
     changed = False
     for i, line in enumerate(lines, 1):
         if MARKER in line and is_marker_in_docstring(content, i):
-            # Remove this line entirely
             changed = True
             continue
         if MARKER in line and i > 50:

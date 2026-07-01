@@ -13,7 +13,6 @@ from whitemagic.core.memory.neural.neural_memory import NeuralMemory
 logger = logging.getLogger(__name__)
 
 
-# Try to import Gan Ying bus
 try:
     from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent, get_bus
     GAN_YING_AVAILABLE = True
@@ -49,7 +48,6 @@ def emit_event(event_type: str | EventType, data: dict[str, Any], confidence: fl
             try:
                 et = EventType(event_type)
             except ValueError:
-                # If it's a legacy string event not in the enum,
                 # we might need to cast or handle it.
                 # For now, let's use MEMORY_CONSOLIDATED as a fallback
                 # or better, use a generic event if it exists.
@@ -160,7 +158,6 @@ def setup_gan_ying_listeners() -> None:
             memory_id_val = event.data.get("memory_id") or event.data.get("pattern_id")
             if memory_id_val and isinstance(memory_id_val, str):
                 try:
-                    # Get system via delayed import to avoid circular dependency
                     from whitemagic.core.memory.neural_system import get_neural_system
                     system = get_neural_system()
                     memory = system.recall_memory(memory_id_val) # Strengthens it
@@ -211,7 +208,6 @@ def setup_gan_ying_listeners() -> None:
                 from whitemagic.core.memory.neural_system import get_neural_system
                 sys = get_neural_system()
 
-                # Get joy intensity
                 intensity = event.data.get("intensity", 0.8)
                 reason = event.data.get("reason", "")
                 event.data.get("source", "")
@@ -227,7 +223,6 @@ def setup_gan_ying_listeners() -> None:
                     memory.neuro_score = min(1.0, memory.neuro_score + (intensity * 0.1))
                     boosted += 1
 
-                # If joy came from a specific source, boost that more
                 source_id_val = event.data.get("source_id")
                 if source_id_val and isinstance(source_id_val, str):
                     source_memory = sys.recall_memory(source_id_val)
@@ -257,7 +252,6 @@ def setup_gan_ying_listeners() -> None:
             result_count = int(event.data.get("result_count", 0))
             top_score = float(event.data.get("top_score", 0.0))
 
-            # If search was successful, boost query-related memories
             if result_count > 0 and top_score > 0.7:
                 try:
                     from whitemagic.core.memory.neural_system import get_neural_system

@@ -44,7 +44,6 @@ def run_timed_campaign_demo():
     workflow.end_workflow()
     workflow.print_report()
 
-    # Store timing report to WhiteMagic memory (optional)
     report = workflow.get_report()
     print("\n💾 Report ready for memory storage:")
     print(f"   Title: campaign_timing_{report['workflow_name']}")
@@ -65,7 +64,6 @@ if __name__ == "__main__":
     # Show time at workflow start
     quick_time_check()
 
-    # Run the timed campaign
     print("\n" + "=" * 60)
     report = run_timed_campaign_demo()
 

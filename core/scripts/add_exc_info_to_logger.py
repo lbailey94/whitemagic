@@ -44,7 +44,6 @@ def fix_file(path: Path) -> int:
         # Detect "except ... as e:" (or any except that captures e)
         if re.search(r"^\s*except\b.*\bas\s+\w+\s*:?\s*$", line):
             # The next non-blank, non-comment line is the body
-            # If it's a logger.error(f"...{e}"), replace it
             while i < len(lines):
                 if lines[i].strip() and not lines[i].strip().startswith("#"):
                     body = lines[i]
@@ -53,7 +52,6 @@ def fix_file(path: Path) -> int:
                         body,
                     )
                     if m and "{" in m.group(3) and "}" in m.group(3):
-                        # Convert f-string with {...} to %s format
                         # Strip simple {e} / {var} patterns
                         indent = m.group(1)
                         quote = m.group(2)

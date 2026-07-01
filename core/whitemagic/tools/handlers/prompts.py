@@ -15,7 +15,6 @@ def handle_prompt_render(**kwargs: Any) -> dict[str, Any]:
     wu_xing = kwargs.get("wu_xing")
     variables = kwargs.get("variables", {})
 
-    # Add default variables if missing
     if "agent_name" not in variables:
         variables["agent_name"] = "WhiteMagic"
     if "context" not in variables:

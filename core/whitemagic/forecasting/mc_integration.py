@@ -544,7 +544,6 @@ class MCForecastEnhancer:
                 }
             )
 
-        # Try Rust first, fall back to Python with variance reduction
         mc_result = self._run_rust_mc(mc_claims, n_trials)
         if "error" not in mc_result:
             # Rust succeeded — but we still want VR metadata

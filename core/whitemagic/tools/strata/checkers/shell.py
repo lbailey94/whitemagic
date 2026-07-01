@@ -37,7 +37,6 @@ def _check_shell_file(project_path: Path, sh_file: Path, findings: list[Finding]
 
     lines = content.splitlines()
 
-    # Check for set -euo pipefail (or equivalent)
     has_strict = any(
         re.search(r"\bset\s+-(\S*e\S*u\S*|\S*u\S*e\S*)", line) for line in lines
     )
@@ -53,7 +52,6 @@ def _check_shell_file(project_path: Path, sh_file: Path, findings: list[Finding]
             )
         )
 
-    # Check for hardcoded home paths
     for i, line in enumerate(lines, 1):
         if re.search(r'["\']?~/', line) and not line.strip().startswith("#"):
             findings.append(
@@ -67,7 +65,6 @@ def _check_shell_file(project_path: Path, sh_file: Path, findings: list[Finding]
                 )
             )
 
-    # Check for bare sudo without error handling
     for i, line in enumerate(lines, 1):
         stripped = line.strip()
         if stripped.startswith("sudo ") and not any(
@@ -97,7 +94,6 @@ def _check_shell_file(project_path: Path, sh_file: Path, findings: list[Finding]
                 continue
             if re.search(r"\$\{?\w+\}?\[", stripped):
                 continue
-            # Check if already inside double quotes (naive: count quotes before/after)
             prefix = stripped[: match.start()]
             suffix = stripped[match.end() :]
             if prefix.count('"') % 2 == 1 and suffix.count('"') % 2 == 1:

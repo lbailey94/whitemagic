@@ -417,7 +417,6 @@ class CognitiveModes:
             )
             return
 
-        # Phase change events
         to_phase = event.get("to_phase", "")
         if to_phase == "yang":
             self._mode = CognitiveMode.EXECUTOR

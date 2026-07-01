@@ -62,7 +62,6 @@ class WillowHealthChecker:
 
             registry = get_breaker_registry()
 
-            # Check Willow-specific breakers
             willow_breakers = [
                 "grimoire_list",
                 "grimoire_read",
@@ -146,7 +145,6 @@ class WillowHealthChecker:
     async def _test_grimoire_handler(self) -> bool:
         """Test grimoire handler with minimal load."""
         try:
-            # Import and test basic functionality
             from whitemagic.tools.handlers.grimoire import handle_grimoire_list
 
             # Quick list operation with timeout
@@ -219,7 +217,6 @@ class WillowHealthChecker:
         # 3. Clear health cache to force recheck
         self._health_cache = None
 
-        # Test recovery
         if recovery_success:
             await asyncio.sleep(1)  # Brief pause for stabilization
             health = await self.check_willow_health(force=True)

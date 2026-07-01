@@ -108,7 +108,6 @@ class TagNormalizer:
         cur.execute("SELECT DISTINCT tag FROM tags")
         tags = [r["tag"] for r in cur.fetchall()]
 
-        # Try Rust acceleration
         try:
             from whitemagic.utils.rust_helper import get_rust_module, is_rust_available
 
@@ -116,8 +115,6 @@ class TagNormalizer:
                 rs = get_rust_module()
                 synthesis = getattr(rs, "synthesis", None) if rs is not None else None
                 if synthesis is not None and hasattr(synthesis, "find_similar_strings"):
-                    # Convert threshold to max distance (approximate)
-                    # For short tags (avg 5-10 chars), 0.8 threshold means ~1-2 edits allowed
                     # Let's use a dynamic approach or fixed max distance of 2 for now
                     max_dist = 2
 
@@ -126,7 +123,6 @@ class TagNormalizer:
 
                     similar_pairs = []
                     for s1, s2, dist in similar_raw:
-                        # Convert distance back to similarity score
                         max_len = max(len(s1), len(s2))
                         sim = 1.0 - (dist / max_len)
                         if sim >= threshold:
@@ -187,7 +183,6 @@ class TagNormalizer:
         tags = set()
         content_lower = content.lower()
 
-        # Check for common keywords
         keywords = {
             "rust": ["rust", "cargo", "whitemagic_rs", "maturin"],
             "python": ["python", ".py", "pip", "pytest"],
@@ -210,11 +205,9 @@ class TagNormalizer:
                     tags.add(tag)
                     break
 
-        # Check for version patterns
         if re.search(r"v\d+\.\d+", content):
             tags.add("version")
 
-        # Check for phase markers
         if re.search(r"phase \d+", content_lower):
             tags.add("milestone")
 

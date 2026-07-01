@@ -258,7 +258,6 @@ def calculate_resonance_params(mem: sqlite3.Row) -> dict:
     frequency += gana_harmonic * complexity * 0.3
     frequency = max(0.1, min(5.0, frequency))
 
-    # Phase offset
     phase = garden_phase + gana_phase
     phase += emotional_valence * 0.2  # Emotion shifts phase
     phase = phase % (2 * math.pi)
@@ -326,8 +325,6 @@ def build_resonance_diversity(limit: int = 0, dry_run: bool = False) -> dict:
         gana_counts[gana] = gana_counts.get(gana, 0) + 1
 
         if not dry_run:
-            # Store in metadata_json column or resonance_params table
-            # For now, update metadata with resonance params
             try:
                 metadata = json.loads(mem["metadata"]) if mem["metadata"] else {}
             except Exception:

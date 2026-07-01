@@ -180,7 +180,6 @@ class SurpriseGate:
                 self._last_cardinality_sample = now
                 self._adjust_thresholds()
 
-        # Try to get embedding engine
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
@@ -239,7 +238,6 @@ class SurpriseGate:
                 evaluation_ms=elapsed,
             )
 
-        # Get max similarity
         max_sim = max(h.get("similarity", 0.0) for h in hits)
         nearest_id = hits[0].get("memory_id") if hits else None
 

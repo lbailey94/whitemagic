@@ -366,10 +366,8 @@ class GraphWalker:
         visited: set[str] = set()
         all_paths: list[WalkPath] = []
 
-        # Get max traversal count for staleness normalization
         max_traversals = self._get_max_traversals(pool)
 
-        # Initialize frontier with seed nodes
         frontier: list[WalkPath] = []
         for sid in seed_ids:
             frontier.append(WalkPath(
@@ -400,7 +398,6 @@ class GraphWalker:
                 if not neighbors:
                     continue
 
-                # Get the created_at of the last edge for causality enforcement
                 prev_created = None
                 if enforce_causality and len(path.nodes) >= 2:
                     # Use the current node's edge creation time from the path
@@ -412,7 +409,6 @@ class GraphWalker:
                 scored: list[tuple[Neighbor, float]] = []
                 for n in neighbors:
                     gdist = self._get_galactic_distance(n.memory_id, pool)
-                    # Load neighbor embedding for semantic projection
                     n_embed = None
                     if query_embedding:
                         n_embed = self._get_embedding(n.memory_id)
@@ -567,7 +563,6 @@ class GraphWalker:
                 quantum_nodes = []
 
         if quantum_nodes:
-            # Convert quantum results to walk-like result
             discovered_ids = {n.id for n in quantum_nodes if n.id not in set(anchor_ids)}
             # Build a synthetic WalkResult for downstream compatibility
             walk_result = WalkResult(seed_ids=anchor_ids, hops=hops)

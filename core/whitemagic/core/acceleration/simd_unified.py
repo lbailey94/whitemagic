@@ -117,7 +117,6 @@ def cosine_similarity_zig(vec_a: list[float], vec_b: list[float]) -> float:
 
     Falls back to Rust or Python implementation.
     """
-    # Try Zig first, then Rust, then Python
     try:
         from whitemagic.optimization import rust_accelerators
 

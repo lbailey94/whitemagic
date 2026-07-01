@@ -127,7 +127,6 @@ class Telemetry:
                     stats["total_latency"] / max(1, stats["calls"]) * 1000, 2
                 ),
             }
-            # Add percentiles from duration history
             durations = list(self._tool_durations.get(name, []))
             if durations:
                 s = sorted(durations)

@@ -189,7 +189,6 @@ class LibrarianAgent:
             if not sentence.strip():
                 continue
 
-            # Check for explicit memory indicators
             for pattern in self._compiled_patterns:
                 match = pattern.search(sentence)
                 if match:

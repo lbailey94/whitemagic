@@ -240,7 +240,6 @@ class OracleSynthesizer:
                 )
             )
         elif zodiac_wuxing and wu_xing:
-            # Check generative/destructive relationship
             _GENERATIVE = {
                 "wood": "fire",
                 "fire": "earth",
@@ -325,13 +324,11 @@ class OracleSynthesizer:
 
         # 6. Tarot resonance (if Tarot cards present)
         if tarot_cards:
-            # Check for Major Arcana alchemical stage correspondence
             for tc in tarot_cards:
                 card_name = tc.get("name", "")
                 card_alchemy = tc.get("alchemical_stage", "")
                 if card_alchemy and wu_xing in _WUXING_TO_ALCHEMY:
                     wu_xing_alchemy = _WUXING_TO_ALCHEMY[wu_xing]
-                    # Check if alchemical stages share a keyword
                     for stage_word in ["nigredo", "albedo", "rubedo", "cauda"]:
                         if (
                             stage_word in card_alchemy
@@ -347,7 +344,6 @@ class OracleSynthesizer:
                             )
                             break
 
-            # Check for Tarot-I Ching keyword overlap
             tarot_keywords: set[str] = set()
             for tc in tarot_cards:
                 for kw in tc.get("keywords", []):
@@ -366,7 +362,6 @@ class OracleSynthesizer:
                     )
                 )
 
-            # Check for triple arc (Magician/Wheel/World)
             major_numbers = {
                 tc.get("number") for tc in tarot_cards if tc.get("suit") == "major"
             }

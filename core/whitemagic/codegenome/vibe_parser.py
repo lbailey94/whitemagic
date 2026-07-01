@@ -163,13 +163,11 @@ class VibeParser:
 
     def _detect_template(self, text: str) -> str | None:
         """Find the best-matching template from vibe keywords."""
-        # Check custom overrides first
         with self._lock:
             for keyword, template in self._custom_map.items():
                 if keyword in text:
                     return template
 
-        # Check built-in map (longer phrases first to avoid partial matches)
         for keyword in sorted(_VIBE_MAP, key=len, reverse=True):
             if keyword in text:
                 return _VIBE_MAP[keyword]

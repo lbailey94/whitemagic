@@ -46,5 +46,4 @@ def ensure_wired() -> bool:
     return True
 
 
-# For backwards compatibility
 __all__ = ["wire_all_gardens", "wire_everything", "ensure_wired"]

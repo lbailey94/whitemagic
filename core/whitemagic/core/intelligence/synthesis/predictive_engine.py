@@ -172,7 +172,6 @@ class PredictiveEngine:
                 # Extract impact scores to a separate array
                 [p.impact_score for p in predictions]
                 # parallel_sort returns sorted elements (we can't easily parallel sort Python objects directly in Rust)
-                # For small lists < 1000, Python's Timsort is faster anyway due to FFI overhead
                 if len(predictions) > 1000:
                     # Not typical for predictions, but we handle it
                     pass
@@ -182,7 +181,6 @@ class PredictiveEngine:
         # Standard sort is extremely fast for small lists
         predictions.sort(key=lambda p: p.impact_score, reverse=True)
 
-        # Get supporting metrics
         conn = self._get_conn()
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM memories WHERE memory_type != 'quarantined'")
@@ -254,7 +252,6 @@ class PredictiveEngine:
         """
         report = self.predict()
 
-        # Convert Confidence enum to float
         conf_map = {
             Confidence.HIGH: 0.85,
             Confidence.MEDIUM: 0.6,
@@ -1034,7 +1031,6 @@ class PredictiveEngine:
                 )
             )
 
-        # Check temporal activity pattern
         buckets = cal.query_temporal_activity(time_window="14d", bucket="1d")
         if len(buckets) >= 7:
             recent_7 = sum(b.memories_created for b in buckets[-7:])
@@ -1116,7 +1112,6 @@ class PredictiveEngine:
 
         gaps = []
 
-        # Check each gap region
         gap_queries = [
             ("Detail + Future", "y < ? AND z > ?", (-0.3, 0.2)),
             ("Emotional + Historical", "x > ? AND z < ?", (0.3, -0.2)),

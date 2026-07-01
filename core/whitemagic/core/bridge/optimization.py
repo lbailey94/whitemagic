@@ -54,7 +54,6 @@ def optimize_models(
     if op == "elemental_strategy":
         optimizer = get_elemental_optimizer()
         strategy = optimizer.get_optimization_strategy(task_type)
-        # Convert Enum values to strings for JSON serialization
         if isinstance(strategy, dict):
             result = {}
             for k, v in strategy.items():
@@ -114,7 +113,6 @@ def optimize_models(
 
     if op == "quantize":
         # Placeholder for quantization logic
-        # Real implementation would leverage llama.cpp tools
         return {
             "status": "simulated",
             "message": f"Quantization to {quant_type} for {model_name or model_path or 'unknown model'} simulated.",
@@ -138,7 +136,6 @@ def solve_optimization(
     try:
         from whitemagic.core.intelligence.synthesis.solver_engine import DharmicSolver
 
-        # Convert edges list to tuple list
         edge_tuples = [(e[0], e[1]) for e in edges if len(e) >= 2]
 
         solver = DharmicSolver()

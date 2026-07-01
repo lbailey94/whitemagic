@@ -57,7 +57,6 @@ class AdaptiveIntegration:
         with open(results_file) as f:
             results = json.load(f)
 
-        # Load ultra-high confidence patterns
         for pattern_data in results.get("ultra_high_patterns", []):
             pattern = DiscoveredPattern(
                 pattern_id=pattern_data["pattern_id"],

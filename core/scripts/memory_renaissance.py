@@ -34,9 +34,7 @@ logging.basicConfig(
 log = logging.getLogger("renaissance")
 
 
-# ---------------------------------------------------------------------------
 # DB helpers
-# ---------------------------------------------------------------------------
 
 
 def get_db_path() -> Path:
@@ -54,7 +52,6 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PHASE 1: Triage & Coordinate Repair
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -260,7 +257,6 @@ def phase1_triage(db_path: Path, dry_run: bool = False) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PHASE 2: Content Organization — Galaxy Bands
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Classification rules: (pattern_type, pattern, band_name, galactic_distance)
@@ -342,7 +338,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
     conn = get_conn(db_path)
     results = {"bands": {}, "junk_deleted": 0}
 
-    # Step 1: Classify memories into bands
     log.info("── 2A: Classifying memories into bands ──")
     band_counts: dict[str, int] = {}
     classified_ids: set[str] = set()
@@ -353,7 +348,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
                 "SELECT id FROM memories WHERE title LIKE ? AND id NOT IN (SELECT id FROM memories WHERE is_protected = 1 AND galactic_distance = 0.0)",
                 (pattern,),
             ).fetchall()
-            # For core_identity, don't exclude protected
             if band == "core_identity":
                 matches = conn.execute(
                     "SELECT id FROM memories WHERE title LIKE ?", (pattern,)
@@ -412,7 +406,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
     log.info(f"  Found {junk_count} bench_t1 junk entries")
 
     if junk_count > 0 and not dry_run:
-        # Get IDs first for cascading cleanup
         junk_ids = [
             r["id"]
             for r in conn.execute(
@@ -480,7 +473,6 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
     # 3A: Run entity extractor retroactively on high-value memories
     log.info("── 3A: Retroactive entity extraction ──")
 
-    # Get high-value memories that likely have no typed associations
     high_value = conn.execute("""
         SELECT m.id, m.title, m.content
         FROM memories m
@@ -577,13 +569,11 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
     log.info(f"  Potential duplicates: {duplicate_assoc}")
 
     if not dry_run:
-        # Delete associations where source doesn't exist
         conn.execute("""
             DELETE FROM associations
             WHERE source_id NOT IN (SELECT id FROM memories)
         """)
 
-        # Delete very weak untyped associations (strength < 0.1, type = associated_with)
         weak_deleted = conn.execute("""
             DELETE FROM associations
             WHERE association_type = 'associated_with'
@@ -607,7 +597,6 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
     log.info(f"  Typed: {typed_assoc}")
     log.info(f"  Untyped: {untyped_assoc}")
 
-    # Get association type distribution
     type_dist = conn.execute("""
         SELECT association_type, COUNT(*) as cnt
         FROM associations

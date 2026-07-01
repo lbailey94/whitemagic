@@ -61,7 +61,7 @@ class RecursiveImprovementDriver:
 
     def _process_finding(self, finding: dict):
         name = finding.get("name") or finding.get("id") or "Unknown"
-        print(f"\nEvaluating: {name}")
+        logger.debug(f"\nEvaluating: {name}")
 
         # 1. Autodidactic Assessment (Simulated historical context)
         # In a real run, we'd look up historical outcomes.
@@ -78,9 +78,9 @@ class RecursiveImprovementDriver:
         }
         ethical_score, concerns = evaluate_ethics(action_dict)
 
-        print(f"  Ethical Score: {ethical_score:.2f}")
+        logger.debug(f"  Ethical Score: {ethical_score:.2f}")
         if ethical_score < self.karma_threshold:
-            print(f"  ⚠️ REJECTED by Dharma: {', '.join(concerns)}")
+            logger.debug(f"  ⚠️ REJECTED by Dharma: {', '.join(concerns)}")
             return
 
         # 3. Execution Chain Preparation
@@ -102,7 +102,7 @@ class RecursiveImprovementDriver:
         )
 
         # 4. Forging
-        print(f"  ✅ Approved. Forging skill: '{name}'")
+        logger.debug(f"  ✅ Approved. Forging skill: '{name}'")
         self.forge.forge(chain, name.replace(".py", "").replace(".", "_"))
 
 

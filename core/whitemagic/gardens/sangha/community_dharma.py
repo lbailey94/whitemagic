@@ -71,7 +71,6 @@ class CommunityDharma:
             Assessment with community consensus
 
         """
-        # Get individual Dharma assessment
         try:
             from whitemagic.gardens.dharma import HarmonyMetrics
 
@@ -85,7 +84,6 @@ class CommunityDharma:
                 return result.get("score")
             return getattr(result, "score", None)
 
-        # Check community consensus
         consensus = self._get_consensus_for_action(action)
 
         if consensus:
@@ -170,7 +168,6 @@ class CommunityDharma:
             )
             consensuses.append(consensus)
 
-        # Add vote
         vote = {
             "session_id": session_id,
             "assessment": assessment,
@@ -199,7 +196,6 @@ class CommunityDharma:
         dims = ["logic", "micro", "time", "importance"]
         spectrum_totals = {d: 0.0 for d in dims}
         for v in consensus.votes:
-            # If vote has spectrum info, use it, else use defaults
             v_spec = v.get(
                 "spectrum", {"logic": 0.5, "micro": 0.5, "time": 0.5, "importance": 0.5}
             )

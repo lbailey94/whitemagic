@@ -59,7 +59,6 @@ class HaskellDivination:
         # The foreign-library (.so) bundles the GHC RTS but doesn't
         # auto-initialize it.  We must call hs_init() before any Haskell code.
         self._lib = ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
-        # Initialize the GHC RTS (argc=0, argv=NULL is fine)
         self._lib.hs_init(ctypes.byref(ctypes.c_int(0)), None)
         self._setup_signatures()
         self._lib.initFFI()
@@ -68,7 +67,6 @@ class HaskellDivination:
     def _preload_ghc_rts() -> Any:
         """Pre-load the GHC RTS and base libraries with RTLD_GLOBAL."""
         ghc_lib_dir = None
-        # Try to find GHC library directory
         for candidate in [
             glob.glob(os.path.expanduser("~/.ghcup/ghc/*/lib/ghc-*/lib/x86_64-linux-ghc-*")),
             glob.glob("/usr/lib/ghc-*/lib/x86_64-linux-ghc-*"),
@@ -78,7 +76,6 @@ class HaskellDivination:
                 break
         if not ghc_lib_dir:
             return  # Best-effort; if not found, CDLL will fail with a clear error
-        # Load RTS and key base libs with RTLD_GLOBAL so symbols are visible
         rts_libs = sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSrts-*-ghc*.so")))
         base_libs = sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSghc-prim-*-ghc*.so")))
         base_libs += sorted(glob.glob(os.path.join(ghc_lib_dir, "libHSghc-bignum-*-ghc*.so")))

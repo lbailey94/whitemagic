@@ -643,7 +643,6 @@ class AsyncThoughtCloneArmy:
             # Cycle through base strategies
             base = base_strategies[i % len(base_strategies)]
 
-            # Add variation
             if random.random() < 0.3:
                 modifiers = ["deep_", "quick_", "balanced_", "critical_"]
                 base = random.choice(modifiers) + base
@@ -665,7 +664,6 @@ class AsyncThoughtCloneArmy:
             "theoretical": f"Clone {clone_id} theoretically analyzes {prompt}: Applying first principles, exploring abstract concepts, and developing frameworks.",
         }
 
-        # Get base template or default
         template = templates.get(
             strategy.split("_")[-1],
             f"Clone {clone_id} approaches {prompt} using {strategy} methodology.",
@@ -675,7 +673,6 @@ class AsyncThoughtCloneArmy:
                 f"Clone {clone_id}", f"Clone {clone_id} ({strategy})"
             )
 
-        # Add strategy-specific insights
         insights = [
             f"Key insight: {random.choice(['efficiency', 'clarity', 'depth', 'innovation', 'simplicity'])} is crucial.",
             f"Consideration: {random.choice(['scalability', 'maintainability', 'usability', 'robustness', 'elegance'])}.",
@@ -713,7 +710,6 @@ class AsyncThoughtCloneArmy:
         tier_bonus = {"xianfeng": -0.05, "wei_wuzu": 0.0, "huben": 0.08}
         base += tier_bonus.get(tier_hint, 0.0)
 
-        # Add random variation (huben have tighter variance = more reliable)
         variance = {"xianfeng": 0.15, "wei_wuzu": 0.10, "huben": 0.05}
         variation = random.gauss(0, variance.get(tier_hint, 0.1))
 
@@ -778,7 +774,6 @@ class AsyncThoughtCloneArmy:
         )
 
         if wei_wuzu_result.confidence < 0.5:
-            # Return what we have from vault with Xianfeng metadata
             return AsyncThoughtPath(
                 strategy=f"vibe_code_{template_name}_xianfeng_only",
                 content=base_code,
@@ -882,7 +877,6 @@ async def doctrine_deploy(
     Returns:
         Dict with deployment results including doctrine metadata
     """
-    # Try doctrine-aware deployment
     try:
         from whitemagic.agents.doctrine import get_doctrine
 

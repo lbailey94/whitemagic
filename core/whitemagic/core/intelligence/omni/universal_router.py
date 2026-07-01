@@ -196,7 +196,6 @@ class UniversalRouter:
                     state_vector=context,
                 )
 
-                # Convert string operation to Enum
                 op_enum = GanaOperation(step.operation.lower())
 
                 # Create dynamic kwargs for dispatch
@@ -213,7 +212,6 @@ class UniversalRouter:
                     dispatch_kwargs["context"] = context
                 elif op_enum == GanaOperation.TRANSFORM:
                     # transform(data: Any, transformation: str, context=...)
-                    # For transform, context_key is the data key, parameters usually has 'transformation'
                     dispatch_kwargs["data"] = context.get(step.context_key)
                     dispatch_kwargs["transformation"] = step.parameters.get(
                         "transformation", "default"
@@ -240,7 +238,6 @@ class UniversalRouter:
                         **dispatch_kwargs,
                     )
 
-                    # Store result in context
                     key = f"step_{i}_{step.mansion}"
                     context[key] = result
                     logger.info("    ✅ Result type: %s", type(result))

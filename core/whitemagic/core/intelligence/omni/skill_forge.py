@@ -436,7 +436,6 @@ wm(thought="{chain_intent}")
         try:
             content = skill_md_path.read_text()
 
-            # Parse frontmatter
             if not content.startswith("---"):
                 logger.warning("SKILL.md missing frontmatter: %s", skill_md_path)
                 return None
@@ -531,7 +530,6 @@ wm(thought="{chain_intent}")
         """
         skill = self.known_skills.get(name)
         if skill is None:
-            # Try case-insensitive lookup
             for key, s in self.known_skills.items():
                 if key.lower() == name.lower():
                     skill = s

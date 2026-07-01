@@ -143,7 +143,6 @@ class MemoryInjector:
         if not self.long_term_dir.exists():
             return []
 
-        # Try neural search if available
         try:
             from whitemagic.core.memory.neural.engine import (
                 get_neural_memory,  # type: ignore[import-not-found]
@@ -190,7 +189,6 @@ class MemoryInjector:
         """Get current session state from various sources."""
         state = {}
 
-        # From coherence persistence
         try:
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 get_coherence,
@@ -204,7 +202,6 @@ class MemoryInjector:
         except ImportError:
             pass
 
-        # From session handoff
         try:
             from whitemagic.gardens.sangha.session_handoff import get_handoff
 

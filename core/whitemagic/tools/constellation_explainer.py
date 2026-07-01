@@ -175,7 +175,6 @@ def list_constellations_in_region(
     for c in constellations:
         x, y, z, w, v = c.centroid
 
-        # Check if in range
         in_range = True
         if x_range and not (x_range[0] <= x <= x_range[1]):
             in_range = False
@@ -266,7 +265,6 @@ def compare_constellations(name1: str, name2: str) -> dict[str, Any]:
     if not relationship:
         relationship.append("closely related themes")
 
-    # Get interpretations
     interp1 = explain_coordinates(x1, y1, z1, w1, v1)
     interp2 = explain_coordinates(x2, y2, z2, w2, v2)
 

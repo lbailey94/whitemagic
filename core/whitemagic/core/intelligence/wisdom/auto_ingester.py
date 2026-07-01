@@ -13,7 +13,6 @@ from whitemagic.core.memory.manager import MemoryManager
 
 logger = logging.getLogger(__name__)
 
-# Try aiohttp, fall back to urllib
 try:
     import aiohttp
 

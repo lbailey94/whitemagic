@@ -161,7 +161,6 @@ def _extract_keywords(left: str, right: str, bridge: str) -> list[str]:
         "among",
     }
     filtered = [w for w in words if w not in stop]
-    # Return top 5 unique by frequency
     counts: dict[str, int] = {}
     for w in filtered:
         counts[w] = counts.get(w, 0) + 1

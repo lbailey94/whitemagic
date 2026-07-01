@@ -49,7 +49,6 @@ except ImportError:
     _rust_const = None  # type: ignore[assignment]
     _RUST_AVAILABLE = False
 
-# Import extracted clustering algorithms
 from whitemagic.core.memory.constellation_algorithms import (
     detect_grid,
     detect_hdbscan,
@@ -181,7 +180,6 @@ class ConstellationDetector:
             logger.error("Constellation detection: backend unavailable: %s", e, exc_info=True)
             return report
 
-        # Load coordinates + metadata
         with backend.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
@@ -324,7 +322,6 @@ class ConstellationDetector:
         if not memory_ids:
             return counts
 
-        # Process in chunks to avoid huge IN clauses
         chunk_size = 200
         for i in range(0, len(memory_ids), chunk_size):
             chunk = memory_ids[i:i + chunk_size]
@@ -693,7 +690,6 @@ class ConstellationDetector:
 
             merged_into[j] = i
 
-        # Remove absorbed constellations
         surviving = [
             c for idx, c in enumerate(constellations)
             if idx not in merged_into
@@ -778,7 +774,6 @@ class ConstellationDetector:
             if len(window_points) >= 2:
                 historical_centroids[name] = window_points[0][1]
 
-        # Try Hungarian matching for optimal correspondence
         if _SCIPY_AVAILABLE and historical_centroids and current_centroids:
             matched, novel, forgotten = self._hungarian_match(
                 historical_centroids, current_centroids,
@@ -861,7 +856,6 @@ class ConstellationDetector:
         if n_old == 0 or n_new == 0:
             return {}, list(new_names), list(old_names)
 
-        # Try Rust implementation first (S026 VC1)
         if _RUST_AVAILABLE:
             try:
                 old_centroids_5d = {

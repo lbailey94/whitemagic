@@ -190,7 +190,6 @@ class ChronologicalTimeline:
         if session_id:
             events = [e for e in self._events if e.data.get("session_id") == session_id]
         else:
-            # Get most recent session
             sessions = self.get_by_type("session_start")
             if not sessions:
                 return {"error": "No sessions found"}

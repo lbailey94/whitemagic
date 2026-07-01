@@ -10,7 +10,6 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-# Try to load Rust Sutra Kernel
 try:
     import whitemagic_rust
 

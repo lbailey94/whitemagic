@@ -84,7 +84,6 @@ class Vault:
         self.db_path = db_path or (WM_ROOT / "vault" / "secrets.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Try to chmod the vault directory to owner-only
         try:
             self.db_path.parent.chmod(0o700)
         except OSError as e:

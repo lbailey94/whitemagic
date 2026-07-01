@@ -54,7 +54,6 @@ def scan_directory(
         except (OSError, UnicodeDecodeError):
             continue
 
-        # Try to parse frontmatter
         try:
             post = _fm.loads(content)
         except Exception:

@@ -169,7 +169,6 @@ class DreamCycle:
         if os.environ.get("WHITEMAGIC_ELIXIR_MASTER") == "1":
             try:
                 # Use Redis or a shared state check to notify Elixir
-                # For now, we assume Elixir is monitoring activity via its own hooks
                 # or the bridge will handle the signal.
                 pass
             except Exception as e:
@@ -652,7 +651,6 @@ class DreamCycle:
                 except Exception as e:
                     result["inhibition_error"] = str(e)
 
-            # Log to Karma Ledger
             if echo_chambers:
                 try:
                     from whitemagic.dharma.karma_ledger import get_karma_ledger
@@ -706,7 +704,6 @@ class DreamCycle:
         a self-reinforcing intelligence loop where dream discoveries feed
         back into the Data Sea for future recall.
         """
-        # Run Emergence Engine proactive scan during Kaizen phase
         emergence_insights = []
         persisted_count = 0
         try:
@@ -757,7 +754,6 @@ class DreamCycle:
                     f"Yin-Yang imbalance ({snap.balance:.2f}) — alternate action/reflection"
                 )
 
-            # Check guna distribution
             guna = {
                 "sattvic": snap.guna_sattvic_pct,
                 "rajasic": snap.guna_rajasic_pct,
@@ -857,7 +853,6 @@ class DreamCycle:
         try:
             from whitemagic.grimoire.auto_cast import AutoCaster, CastContext, CastMode
 
-            # Fetch Bayesian calibration data
             calibration = {}
             try:
                 from whitemagic.forecasting.temporal_db import TemporalForecastDB
@@ -1077,10 +1072,8 @@ class DreamCycle:
                         matches = pattern.findall(text)
                         if matches:
                             entities_found += len(matches)
-                            # Add entity type as tag
                             auto_tags.add(f"entity:{entity_type}")
 
-                    # Add general auto_tagged label
                     if auto_tags:
                         auto_tags.add("dream_enriched")
                         try:
@@ -1136,7 +1129,6 @@ class DreamCycle:
                 source_dir = seeds_path.parent / seed.get("source_dir", "")
                 if not source_dir.exists():
                     continue
-                # Check artifact presence (simplified)
                 name = seed["name"]
                 if name == "rust":
                     has_artifact = (

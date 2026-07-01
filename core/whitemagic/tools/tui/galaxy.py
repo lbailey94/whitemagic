@@ -108,7 +108,6 @@ def wm_galaxy_main() -> None:
         )
 
         lake = get_vector_lake()
-        # Fetch a sample of memories for the map
         memories = lake.get_holographic_sample(limit=100)
     except (ImportError, ModuleNotFoundError):
         # Fallback test data

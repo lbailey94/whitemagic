@@ -330,7 +330,6 @@ class ResonanceEngine:
         Returns:
             ResonanceResult with total resonance, half-life, peak amplitude
         """
-        # Phase 3b: Override frequency/damping from galactic zone if provided
         if galactic_distance is not None:
             frequency = self.galactic_zone_frequency(galactic_distance)
             damping = self.galactic_zone_damping(galactic_distance)
@@ -548,7 +547,6 @@ class ResonanceEngine:
         """
         conn = self._get_conn()
         try:
-            # Get associations
             rows = conn.execute(
                 """SELECT source_id, target_id, strength
                    FROM associations
@@ -571,7 +569,6 @@ class ResonanceEngine:
 
             nodes = list(nodes_set)
 
-            # Verify resonance
             result = self.verify_causal_resonance(nodes, edges)
 
             # Count verified (score > threshold)
@@ -745,7 +742,6 @@ class ResonanceEngine:
                         continue
 
                     if not dry_run:
-                        # Check if association exists
                         existing = conn.execute(
                             "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
                             (mid, other_mid),

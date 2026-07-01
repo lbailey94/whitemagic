@@ -195,7 +195,6 @@ class QuantumIChing:
                 primary_hexagram, changing_lines
             )
 
-        # Get hexagram data
         primary_data = self._get_hexagram_or_default(primary_hexagram)
         transformed_data = (
             self.db.get_hexagram(transformed_hexagram) if transformed_hexagram else None
@@ -235,7 +234,6 @@ class QuantumIChing:
             quantum_state=quantum_state,
         )
 
-        # Store in history
         self.consultation_history.append(result)
 
         return result
@@ -264,7 +262,6 @@ class QuantumIChing:
         seed = int(question_hash[:8], 16)
         random.seed(seed)
 
-        # Initialize amplitudes
         amplitudes = {}
 
         # Base amplitude distribution
@@ -367,7 +364,6 @@ class QuantumIChing:
         self, primary: int, changing_lines: list[int]
     ) -> int:
         """Calculate the transformed hexagram from changing lines"""
-        # Convert primary hexagram to binary representation
         primary_binary = self._hexagram_to_binary(primary)
 
         # Flip changing lines
@@ -377,7 +373,6 @@ class QuantumIChing:
             index = 6 - line
             transformed_binary[index] = "1" if transformed_binary[index] == "0" else "0"
 
-        # Convert back to hexagram number
         return self._binary_to_hexagram("".join(transformed_binary))
 
     def _hexagram_to_binary(self, hexagram: int) -> str:
@@ -400,7 +395,6 @@ class QuantumIChing:
         """Generate wisdom based on hexagram and context using Local Brain"""
         hex_data = self._get_hexagram_or_default(hexagram)
 
-        # Try to use the Neural Brain (Llama 3)
         try:
             from .. import brain
 
@@ -439,7 +433,6 @@ class QuantumIChing:
 
         base_wisdom = random.choice(wisdom_templates)
 
-        # Add context-specific insight
         if changing_lines:
             base_wisdom += f"\n\nThe changing lines ({', '.join(map(str, changing_lines))}) indicate transformation is possible."
 
@@ -468,7 +461,6 @@ class QuantumIChing:
             else:
                 guidance += f"• Potential outcome: Hexagram {transformed}\n"
 
-        # Add specific guidance based on question type
         if "should" in question.lower():
             guidance += "• Trust your inner knowing while considering this wisdom\n"
         elif "why" in question.lower():
@@ -486,7 +478,6 @@ class QuantumIChing:
         # Apply coherence factor
         coherence_resonance = base_resonance * state.coherence
 
-        # Add entanglement effects
         entanglement_bonus = 0.0
         for pair in state.entanglement:
             if hexagram in pair:

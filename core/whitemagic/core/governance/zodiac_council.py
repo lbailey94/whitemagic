@@ -106,7 +106,6 @@ class ZodiacCouncil:
         context = coll.get_shared_context("system")
         resonance_index = context.resonance_index
 
-        # Get local node identity for DGA distance
         try:
             from whitemagic.core.intelligence.hologram.dga_engine import get_dga_engine
 

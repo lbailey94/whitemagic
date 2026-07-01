@@ -52,7 +52,6 @@ def _ensure_running() -> subprocess.Popen | None:
             text=True,
             bufsize=1,
         )
-        # Verify with a simple ping
         _proc.stdin.write(
             json.dumps({"command": "value_at", "yield_type": "decaying", "t": 0.0})
             + "\n"

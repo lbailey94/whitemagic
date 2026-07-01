@@ -97,7 +97,6 @@ def main(
 
 from whitemagic.cli.commands.diagnostics_commands import status_command
 
-# --- Global Memory Helper ---
 _memory = None
 
 

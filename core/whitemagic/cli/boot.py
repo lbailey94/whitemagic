@@ -4,7 +4,6 @@ import os
 
 logger = logging.getLogger(__name__)
 
-# Import Rich for beautiful CLI output
 try:
     from rich.console import Console
 

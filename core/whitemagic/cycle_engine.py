@@ -436,7 +436,6 @@ class CycleEngine:
         """Get the currently recommended campaign phase based on all systems."""
         state = self.gather_state()
 
-        # If burnout risk is high, force rest
         if state.burnout_risk > 0.7:
             return "rest"
 

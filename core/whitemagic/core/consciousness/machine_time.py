@@ -154,7 +154,6 @@ def classify_tool(tool_name: str) -> str:
     for prefix, op_type in _TOOL_TYPE_MAP.items():
         if canonical.startswith(prefix) or f".{prefix}" in canonical:
             return op_type
-    # Try matching by dot-separated first component
     if "." in canonical:
         first = canonical.split(".")[0]
         if first in _TOOL_TYPE_MAP:
@@ -437,8 +436,6 @@ class MachineTimeEstimator:
                         tool_ratios.setdefault(tool, []).append(log_ratio)
 
             # Compute correction factor per tool
-            # If mean log_ratio > 0: we overestimate (predicted > actual) → reduce
-            # If mean log_ratio < 0: we underestimate (predicted < actual) → increase
             # correction = exp(-mean_log_ratio) moves predictions toward actual
             for tool, ratios in tool_ratios.items():
                 if len(ratios) >= 5:  # Need at least 5 samples for reliable correction

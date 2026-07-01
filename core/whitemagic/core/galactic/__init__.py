@@ -332,12 +332,10 @@ def memory_search(
             if not fts_query:
                 fts_query = query.strip()
 
-            # For multi-word queries, try phrase match first
             if " " in fts_query and not (
                 fts_query.startswith('"') and fts_query.endswith('"')
             ):
                 phrase_q = f'"{fts_query}"'
-                # Test if phrase match returns results
                 test_rows = conn.execute(
                     "SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?",
                     (phrase_q,),

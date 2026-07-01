@@ -219,7 +219,6 @@ class SQLiteSchemaManager:
             )
         """)
 
-        # Add performance indexes
         self._create_indexes(conn)
 
     def _migrate_associations(self, conn: sqlite3.Connection, _valid_ident: re.Pattern) -> None:

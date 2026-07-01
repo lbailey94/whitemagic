@@ -23,11 +23,9 @@ _TRANSIENT_ERRORS = {
 def _is_transient_error(error: Exception) -> bool:
     """Check if error is transient and worth retrying."""
     if isinstance(error, sqlite3.OperationalError):
-        # Check error codes
         for code in _TRANSIENT_ERRORS:
             if str(code) in str(error) or f"({code})" in str(error):
                 return True
-        # Check error messages
         err_str = str(error).lower()
         return any(msg in err_str for msg in ["locked", "busy", "protocol"])
     return False

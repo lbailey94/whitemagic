@@ -178,7 +178,6 @@ class JITResearcher:
             result.steps.append(step)
             result.rounds_completed = round_num + 1
 
-            # Check saturation
             if not round_evidence or not gaps:
                 result.saturated = True
                 break
@@ -346,7 +345,6 @@ class JITResearcher:
         keywords = [w.strip(".,!?;:\"'()[]{}") for w in words if len(w) > 2]
         keywords = [w for w in keywords if w and w not in stop_words]
 
-        # Return unique keywords preserving order
         seen: set[str] = set()
         result: list[str] = []
         for w in keywords:
@@ -432,7 +430,6 @@ class JITResearcher:
         if not round_evidence:
             return []  # No new evidence = saturated
 
-        # Check if we're finding the same things over and over
         new_ratio = len(round_evidence) / max(1, len(all_evidence))
         if new_ratio < (1.0 - self._saturation_threshold):
             return []  # Diminishing returns
@@ -463,11 +460,9 @@ class JITResearcher:
             gap_terms = " ".join(sorted(uncovered)[:5])
             gaps.append(f"{gap_terms} {original_query}")
 
-        # Add a broadening search if we have limited evidence
         if len(all_evidence) < 3:
             gaps.append(f"examples applications {original_query}")
 
-        # Add a deepening search based on most relevant evidence
         if round_evidence:
             best = max(round_evidence, key=lambda e: e.get("importance", 0) or 0)
             best_title = best.get("title", "")
@@ -488,7 +483,6 @@ class JITResearcher:
         if not evidence:
             return f"No relevant memories found for: {query}"
 
-        # Try Ollama-based synthesis
         synthesis = self._ollama_synthesize(query, evidence)
         if synthesis:
             return synthesis

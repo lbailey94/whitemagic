@@ -37,7 +37,6 @@ class SimpleEmbedding:
         # Lowercase and split on non-alphanumeric
         import re
         tokens = re.findall(r"\b\w+\b", text.lower())
-        # Remove very short tokens and stopwords
         stopwords = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
                      "being", "have", "has", "had", "do", "does", "did", "will",
                      "would", "could", "should", "may", "might", "must", "shall",
@@ -77,7 +76,6 @@ class SimpleEmbedding:
 
     def similarity(self, emb1: dict[str, float], emb2: dict[str, float]) -> float:
         """Compute cosine similarity between embeddings."""
-        # Get all keys
         all_keys = set(emb1.keys()) | set(emb2.keys())
         if not all_keys:
             return 0.0

@@ -215,7 +215,6 @@ def check_tool_permission(
     if tool_name in _ALWAYS_ALLOWED:
         return None
 
-    # Get roles
     if roles is None:
         roles = get_agent_role_registry().get_roles(agent_id)
 
@@ -223,7 +222,6 @@ def check_tool_permission(
     if "admin" in roles:
         return None
 
-    # Check specific tool role requirements
     if tool_name in _TOOL_ROLE_REQUIREMENTS:
         required_role = _TOOL_ROLE_REQUIREMENTS[tool_name]
         if required_role == "admin" and "admin" not in roles:
@@ -231,7 +229,6 @@ def check_tool_permission(
         if required_role == "coordinator" and "coordinator" not in roles:
             return _blocked(tool_name, roles, "Requires coordinator role")
 
-    # Check category-based permissions
     tool_category = _get_tool_category(tool_name)
     if tool_category:
         for role in roles:

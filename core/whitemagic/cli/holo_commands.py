@@ -113,7 +113,6 @@ def radius(content, radius):
             click.echo(f"  {i}. [{res.distance:.4f}] {preview}")
 
 
-# ==================== Phase 5: Visualization Commands ====================
 
 
 @holo_cli.command(name="map")
@@ -138,7 +137,6 @@ def map_view(axis, width, height):
     ensure_initialized()
     unified = get_unified_memory()
 
-    # Get all coordinates from backend
     coords = unified.backend.get_all_coords()
 
     if not coords:
@@ -189,7 +187,6 @@ def map_view(axis, width, height):
         grid[row][col] = marker
         point_data[(row, col)] = mem_id[:8]
 
-    # Print grid with borders
     click.echo(f"  +{'-' * width}+")
     for row in grid:
         click.echo(f"  |{''.join(row)}|")
@@ -438,7 +435,6 @@ def dharma_dashboard(limit: int):
 
     unified = get_unified_memory()
 
-    # Get stats
     try:
         stats = unified.backend.get_dharma_stats()
         click.echo("📊 STATISTICS:")
@@ -450,7 +446,6 @@ def dharma_dashboard(limit: int):
         click.echo(f"   (No stats available: {e})")
         click.echo()
 
-    # Get recent entries
     try:
         log = unified.backend.get_dharma_audit_log(limit=limit)
         if log:

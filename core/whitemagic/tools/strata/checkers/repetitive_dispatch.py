@@ -63,7 +63,6 @@ def check_repetitive_dispatch(project_path: Path, file_index: FileIndex, finding
             current = node
             while isinstance(current, ast.If):
                 count += 1
-                # Check if there's an elif (orelse with single If)
                 if current.orelse and len(current.orelse) == 1 and isinstance(current.orelse[0], ast.If):
                     current = current.orelse[0]
                 else:

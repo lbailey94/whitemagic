@@ -105,7 +105,6 @@ class AntiLoopDetector:
     def check_sequential(self, tasks: list[str]) -> LoopWarning | None:
         """Check if we should be running in parallel."""
         if len(tasks) > 1 and self.parallel_mode:
-            # Check for dependencies
             has_deps = self._has_dependencies(tasks)
             if not has_deps:
                 warning = LoopWarning(
@@ -120,7 +119,6 @@ class AntiLoopDetector:
 
     def _has_dependencies(self, tasks: list[str]) -> bool:
         """Simple dependency check."""
-        # For now, assume no dependencies unless obvious
         return False
 
     def record_iteration(
@@ -140,7 +138,6 @@ class AntiLoopDetector:
         self.iteration_count += 1
         current_files = set(files_modified)
 
-        # Check for no progress
         if not current_files or current_files == self.last_files_modified:
             self.no_progress_count += 1
             if self.no_progress_count >= self.NO_PROGRESS_THRESHOLD:
@@ -152,10 +149,8 @@ class AntiLoopDetector:
             self.no_progress_count = 0
             self.last_files_modified = current_files
 
-        # Check for repeated errors
         if error:
             self.error_history.append(error)
-            # Check if same error repeated
             if len(self.error_history) >= self.SAME_ERROR_THRESHOLD:
                 recent = self.error_history[-self.SAME_ERROR_THRESHOLD :]
                 if len(set(recent)) == 1:
@@ -165,7 +160,6 @@ class AntiLoopDetector:
                         f"Same error repeated {self.SAME_ERROR_THRESHOLD} times: {error[:100]}",
                     )
 
-        # If half-open, check for recovery
         if self.circuit_state == CircuitState.HALF_OPEN:
             if current_files and not error:
                 self.recovery_successes += 1
@@ -209,7 +203,6 @@ class AntiLoopDetector:
         if self.circuit_state != CircuitState.OPEN:
             return True
 
-        # Check if enough time has passed (5 minutes cooldown)
         if self.circuit_opened_at:
             elapsed = datetime.now() - self.circuit_opened_at
             if elapsed < timedelta(minutes=5):

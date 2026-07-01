@@ -148,7 +148,7 @@ class SolutionLibrary:
             logger.error("Cannot apply non-existent solution: %s", solution_id)
             return False
 
-        print(f"  [SolutionLibrary] Applying: {sol.title} ({sol.id})...")
+        logger.debug(f"  [SolutionLibrary] Applying: {sol.title} ({sol.id})...")
 
         # 1. Check AI Contract (Alignment)
         try:
@@ -159,7 +159,6 @@ class SolutionLibrary:
             contract = AIContract(capabilities=[sol.pattern_type, f"solution_{sol.id}"])
             if not contract.validate_action(f"apply_{sol.id}"):
                 logger.warning("Solution apply blocked by AI Contract: %s", sol.id)
-                # For Phase 27, we might log and proceed if in 'bypass' mode,
                 # but standard is to return False.
                 return False
         except ImportError:
@@ -169,7 +168,6 @@ class SolutionLibrary:
         if sol.code_snippet:
             try:
                 # Potential security risk — in a real system, use a sandbox
-                # For now, we use a restricted exec or dispatch to AcceleratorBridge
                 from whitemagic.core.intelligence.synthesis.accelerator_bridge import (
                     get_accelerator_bridge,
                 )

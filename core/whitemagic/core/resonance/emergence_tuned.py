@@ -94,7 +94,6 @@ def measure_final_coherence() -> dict[str, Any]:
     """Measure coherence with tuned emergence."""
     bus = get_bus()
 
-    # Test cascade
     from .gan_ying_enhanced import EventType, emit_event
 
     initial = bus.total_emissions

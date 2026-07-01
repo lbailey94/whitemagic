@@ -308,7 +308,6 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
                 "message": f"Image file not found: {image_path}",
             }
 
-        # Open image
         try:
             img = Image.open(image_path)
         except Exception as e:
@@ -318,7 +317,6 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
                 "message": f"Cannot open image: {e}",
             }
 
-        # Convert to RGBA for consistent processing
         if img.mode != "RGBA":
             img = img.convert("RGBA")
 
@@ -344,7 +342,6 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
         }
 
         if extract_text:
-            # Convert to grayscale PNG for OCR engines
             gray_path = None
             try:
                 bg = Image.new("RGBA", img.size, (255, 255, 255, 255))

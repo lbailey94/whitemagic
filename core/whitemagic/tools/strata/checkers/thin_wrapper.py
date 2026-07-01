@@ -39,12 +39,10 @@ def _is_thin_wrapper(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     if not isinstance(call, ast.Call):
         return False
 
-    # Check that it calls a different function (not recursive)
     func = call.func
     if isinstance(func, ast.Name) and func.id == node.name:
         return False  # Recursive
 
-    # Check that args are just the function's own params (passthrough)
     # Allow simple passthrough: def foo(x): return bar(x)
     # Flag: def foo(x): return bar(x)  (no transformation)
     # Skip: def foo(x): return bar(transform(x))  (has transformation)
@@ -56,7 +54,6 @@ def _is_thin_wrapper(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
             if isinstance(sub, ast.Name) and isinstance(sub.ctx, ast.Load):
                 arg_names.add(sub.id)
 
-    # Get the function's parameter names
     param_names = set()
     for arg in node.args.args + node.args.posonlyargs + node.args.kwonlyargs:
         param_names.add(arg.arg)
@@ -65,9 +62,7 @@ def _is_thin_wrapper(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     if node.args.kwarg:
         param_names.add(node.args.kwarg.arg)
 
-    # If args reference only the function's own params, it's a passthrough
     if arg_names and arg_names.issubset(param_names):
-        # Check if there are keyword args that are just passthrough
         for kw in call.keywords:
             for sub in ast.walk(kw.value):
                 if isinstance(sub, ast.Name) and isinstance(sub.ctx, ast.Load):

@@ -223,20 +223,17 @@ class Grimoire:
             score = 0.0
             reason_parts = []
 
-            # Check task keywords
             task_lower = self.context.task.lower()
             for domain in domains:
                 if domain in task_lower:
                     score += 0.3
                     reason_parts.append(f"task matches '{domain}'")
 
-            # Check context keywords
             for keyword in self.context.keywords:
                 if keyword.lower() in domains:
                     score += 0.2
                     reason_parts.append(f"keyword '{keyword}'")
 
-            # Check emotional state boosts
             emotion = self.context.emotional_state.lower()
             if emotion in self.KEYWORD_BOOSTS:
                 for boost_domain in self.KEYWORD_BOOSTS[emotion]:

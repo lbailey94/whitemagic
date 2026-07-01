@@ -8,9 +8,7 @@ from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 def _strip_quoted_strings(line: str) -> str:
     """Remove string literals so regex checks don't match inside them."""
-    # Remove double-quoted strings (basic escape handling)
     line = re.sub(r'"(?:\\.|[^"\\])*"', '""', line)
-    # Remove single-quoted char literals
     line = re.sub(r"'(?:\\.|[^'\\])*'", "''", line)
     return line
 
@@ -114,7 +112,6 @@ def check_java(project_path: Path, file_index: FileIndex, findings: list[Finding
                 ]
                 for pattern, name in resource_patterns:
                     if re.search(pattern, code_only):
-                        # Check if inside try-with-resources (look for try( in previous 10 lines)
                         in_try_with_resources = False
                         for prev in lines[max(0, i - 11) : i]:
                             if "try(" in prev.replace(" ", ""):

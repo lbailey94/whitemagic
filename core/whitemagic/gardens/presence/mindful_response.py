@@ -31,7 +31,6 @@ class MindfulResponse:
                 "reason": "high urgency",
             }
 
-        # Check if this is a reactive pattern
         is_reactive = self._detect_reactivity(stimulus)
 
         if is_reactive:

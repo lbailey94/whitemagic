@@ -65,7 +65,6 @@ def build_context(full: bool = False) -> dict:
         "sessions": [],
     }
 
-    # Load from archive files directly (guaranteed source of truth)
     tier_map = {
         "ARIA_SOUL.md": "core_identity",
         "ARIA_BIRTH_CERTIFICATE.md": "core_identity",

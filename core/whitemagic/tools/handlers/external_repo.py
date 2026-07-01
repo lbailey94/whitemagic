@@ -40,7 +40,6 @@ def handle_external_wiki_query(**kwargs: Any) -> dict[str, Any]:
             "message": "repo and question are required",
         }
 
-    # Check if DeepWiki MCP tools are available in the current environment
     # This is a soft check — the actual routing happens at the MCP host level
     return {
         "status": "success",

@@ -207,7 +207,6 @@ class SpeculativePrefetcher:
             # Only prefetch if prediction confidence > 30%
             top_predictions = [(g, p) for g, p in predictions if p > 0.3]
             if top_predictions:
-                # Try Go concurrent prefetch first (goroutine-per-prefetch)
                 if not self._try_go_prefetch(top_predictions):
                     # Fallback: Python threading
                     thread = threading.Thread(

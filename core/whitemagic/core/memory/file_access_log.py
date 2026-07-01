@@ -55,7 +55,6 @@ class FileAccessLog:
 
     def __init__(self, log_path: Path | None = None):
         if log_path is None:
-            # Store in .whitemagic/attention/
             log_path = Path(__file__).parent.parent.parent / ".whitemagic" / "attention" / "file_access_log.json"
 
         self.log_path = Path(log_path)
@@ -68,7 +67,6 @@ class FileAccessLog:
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.session_files: set[str] = set()
 
-        # Load existing log
         self._load()
 
     def _load(self) -> None:
@@ -100,7 +98,6 @@ class FileAccessLog:
             if not file_path.exists():
                 return None
 
-            # For large files, just hash first 100KB
             with open(file_path, 'rb') as f:
                 content = f.read(100 * 1024)
             return hashlib.sha256(content).hexdigest()[:16]  # Short hash
@@ -116,7 +113,6 @@ class FileAccessLog:
         file_hash = self._compute_hash(path_obj)
         file_size = path_obj.stat().st_size if path_obj.exists() else 0
 
-        # Check if already in log
         if file_path in self.access_log:
             access = self.access_log[file_path]
             access.access_count += 1
@@ -124,7 +120,6 @@ class FileAccessLog:
             access.session_id = self.session_id
             if notes:
                 access.notes = notes
-            # Check if file changed
             if file_hash and access.file_hash != file_hash:
                 access.file_hash = file_hash
                 access.notes = f"[CHANGED] {notes}" if notes else "[CHANGED]"
@@ -143,7 +138,6 @@ class FileAccessLog:
         # Track this session
         self.session_files.add(file_path)
 
-        # Save to disk
         self._save()
 
     def has_accessed(self, file_path: str) -> bool:
@@ -278,6 +272,5 @@ def print_reading_history() -> None:
 
 
 if __name__ == "__main__":
-    # Test the system
     log = get_file_access_log()
     logger.info(log.summary_report())

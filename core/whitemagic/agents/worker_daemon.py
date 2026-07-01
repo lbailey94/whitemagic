@@ -131,7 +131,6 @@ class WorkerDaemon:
             try:
                 task = _json_loads(f.read_text(encoding="utf-8"))
                 if task.get("status") == "pending":
-                    # Check if assigned to us or unassigned
                     target = task.get("target_worker")
                     if target is None or target == self.worker_name or target == "any":
                         tasks.append(task)
@@ -173,7 +172,6 @@ class WorkerDaemon:
         task["completed_at"] = datetime.now().isoformat()
         self._save_task(task)
 
-        # Save result separately
         result_path = _results_dir() / f"{task_id}.json"
         try:
             result_path.write_text(

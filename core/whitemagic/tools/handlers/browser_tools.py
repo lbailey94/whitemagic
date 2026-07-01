@@ -108,7 +108,6 @@ def handle_browser_extract_dom(**kwargs: Any) -> dict[str, Any]:
             cdp = browser._cdp
             if not cdp:
                 return {"error": "CDP not connected"}
-            # Get document root
             doc = await cdp.send("DOM.getDocument", {"depth": -1, "pierce": True})
             root_node = doc.get("root", {})
             distiller = DOMDistiller()

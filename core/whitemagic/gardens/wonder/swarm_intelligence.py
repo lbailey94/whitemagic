@@ -72,7 +72,6 @@ class SwarmIntelligence:
         self.cognitive = 1.5  # Attraction to personal best
         self.social = 1.5  # Attraction to swarm best
 
-        # Connect to Gan Ying Bus
         self.bus = get_bus() if get_bus else None
 
     def initialize_swarm(self, size: int, initial_positions: list[dict]):
@@ -82,10 +81,8 @@ class SwarmIntelligence:
             particle = SwarmParticle(particle_id, initial_positions[i])
             self.particles[particle_id] = particle
 
-        # Connect particles to neighbors (local topology)
         particle_list = list(self.particles.values())
         for i, particle in enumerate(particle_list):
-            # Connect to adjacent particles
             if i > 0:
                 particle.neighbors.append(particle_list[i - 1].particle_id)
             if i < len(particle_list) - 1:
@@ -166,7 +163,6 @@ class SwarmIntelligence:
         for i in range(max_iterations):
             result = self.iterate_swarm(fitness_fn)
 
-            # Check convergence
             if result["improvement"] < convergence_threshold:
                 break
 
@@ -304,5 +300,4 @@ class SwarmIntelligence:
     def _simple_clustering(self, positions: list[dict]) -> list[list[dict]]:
         """Simple position clustering"""
         # Placeholder - real version would use proper clustering algorithm
-        # For now, just return all positions as one cluster
         return [positions] if positions else []

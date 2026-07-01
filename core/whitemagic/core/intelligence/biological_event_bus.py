@@ -73,7 +73,6 @@ class BiologicalEventBus:
         """Start the event bus with Rust dispatcher if available."""
         self.is_active = True
 
-        # Try to initialize Rust dispatcher for performance
         try:
             import whitemagic_rs
 
@@ -87,7 +86,6 @@ class BiologicalEventBus:
         except ImportError:
             logger.info("🐍 Using Python event dispatcher (Rust unavailable)")
 
-        # Start event processing loop
         self._event_task = asyncio.create_task(self._process_events())
         logger.info("🧠 Biological Event Bus started")
 
@@ -116,7 +114,6 @@ class BiologicalEventBus:
                 if asyncio.iscoroutinefunction(handler):
                     await handler(event)
                 else:
-                    # Run sync handlers in thread pool
                     await asyncio.get_event_loop().run_in_executor(
                         self._executor, handler, event
                     )
@@ -150,10 +147,8 @@ class BiologicalEventBus:
             priority=priority,
         )
 
-        # Check circuit breaker
         if self._circuit_breaker_state["state"] == "open":
             if time.time() - self._circuit_breaker_state["last_failure"] > 30:
-                # Try to close circuit breaker after 30s
                 self._circuit_breaker_state["state"] = "half_open"
             else:
                 logger.warning("🔌 Circuit breaker open, event dropped")
@@ -186,7 +181,6 @@ class BiologicalEventBus:
     def _rust_dispatch(self, event: BiologicalEvent) -> None:
         """Dispatch event using Rust tokio dispatcher."""
         if self._rust_dispatcher:
-            # Convert to dict for Rust serialization
             event_dict = {
                 "type": event.event_type.value,
                 "data": event.data,
@@ -200,7 +194,6 @@ class BiologicalEventBus:
         """Main event processing loop."""
         while self.is_active:
             try:
-                # Get event with timeout
                 event = await asyncio.wait_for(self._event_queue.get(), timeout=1.0)
 
                 # Find subscribers

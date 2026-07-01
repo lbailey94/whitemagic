@@ -54,7 +54,6 @@ class DistributedCache:
         self._cache: dict[str, CacheEntry] = {}
         self._redis_client = None
 
-        # Try to connect to Redis if URL provided
         if redis_url:
             self._init_redis()
 
@@ -64,7 +63,6 @@ class DistributedCache:
             import redis
 
             self._redis_client = redis.from_url(self.redis_url, decode_responses=True)  # type: ignore[assignment, arg-type]
-            # Test connection
             if self._redis_client is not None:
                 self._redis_client.ping()
         except Exception as e:
@@ -184,7 +182,6 @@ class DistributedCache:
                 del self._cache[k]
             return len(to_delete)
 
-        # Clear all
         if self._redis_client:
             try:
                 self._redis_client.flushdb()

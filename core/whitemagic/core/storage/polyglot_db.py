@@ -36,7 +36,6 @@ class PolyglotDB:
         self.sqlite_pool = None
         self.blackboard = None
 
-        # Try to initialize backends
         self._init_rust()
         self._init_elixir()
         self._init_sqlite()
@@ -67,10 +66,8 @@ class PolyglotDB:
             from erlport.erlang import call
             from erlport.erlterms import Atom
 
-            # Start Elixir node
             self.elixir_port = erlport.erlang.Atom(b"whitemagic@localhost")
 
-            # Test connection
             result = call(
                 Atom(b"Elixir.WhiteMagicCore.GalacticStore"), Atom(b"stats"), []
             )

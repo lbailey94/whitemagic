@@ -240,7 +240,6 @@ class GalaxyManager:
         if self._active_galaxy == registry_key:
             self._active_galaxy = "local/default"
 
-        # Remove from memory cache
         self._memory_instances.pop(registry_key, None)
         del self._galaxies[registry_key]
         self._save_registry()
@@ -267,7 +266,6 @@ class GalaxyManager:
                 continue
             d = info.to_dict()
             d["is_active"] = registry_key == self._active_galaxy
-            # Try to get live memory count
             try:
                 um = self._get_memory(registry_key)
                 stats = um.backend.get_stats()
@@ -466,7 +464,6 @@ class GalaxyManager:
                 except (ImportError, AttributeError):
                     pass  # Lineage tracking is best-effort
 
-                # If move (not copy), archive the original
                 if not copy:
                     src_um.backend.archive_to_edge(mem.id, galactic_distance=0.95)
 
@@ -655,7 +652,6 @@ class GalaxyManager:
         if not source.is_absolute():
             source = WM_ROOT / "data" / "imports" / source
         else:
-            # Validate against allowed paths
             from whitemagic.security.tool_gating import get_tool_gate
             gate = get_tool_gate()
             allowed, reason = gate.path_validator.is_path_allowed(str(source))

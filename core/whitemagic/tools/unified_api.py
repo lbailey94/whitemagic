@@ -770,7 +770,6 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                     _cognitive_mode,
                     canonical,
                 )
-            # Log preferred tool usage for non-balanced modes
             if _cognitive_mode != "balanced" and canonical in _preferred:
                 logger.debug(
                     "🧠 Cognitive mode %s prefers tool %s — alignment confirmed",

@@ -176,7 +176,6 @@ class ConstellationSearch:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
-        # Get the target memory's coords
         row = conn.execute(
             """
             SELECT x, y, z, w FROM holographic_coords WHERE memory_id = ?
@@ -190,7 +189,6 @@ class ConstellationSearch:
 
         # Search near this point
         results = self.near(row["x"], row["y"], row["z"], row["w"], radius, limit + 1)
-        # Remove self
         return [r for r in results if r.id != memory_id][:limit]
 
     def by_axis(

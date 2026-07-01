@@ -54,12 +54,10 @@ def dharma_verify_consent(
     action: dict[str, Any], consent_type: str = "explicit", **kwargs: Any
 ) -> dict[str, Any]:
     """Verify if proper consent has been obtained for an action."""
-    # Check if action involves consent-requiring operations
     consent_keywords = ["personal", "private", "user", "data", "modify", "delete"]
     action_str = str(action).lower()
     requires_consent = any(keyword in action_str for keyword in consent_keywords)
 
-    # For now, assume consent is granted if user_requested is in context
     consent_granted = action.get("user_requested", False) or action.get(
         "consent_granted", False
     )
@@ -101,7 +99,6 @@ def dharma_get_ethical_score(
 
     dharma = get_dharma_system()
 
-    # Clear old violations first
     dharma.clear_violations(older_than_hours=time_window_hours)
 
     score = dharma.get_ethical_score()

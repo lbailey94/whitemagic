@@ -89,7 +89,6 @@ async def capture_screenshot(
     response_result = _as_dict(response.result)
     data = str(response_result.get("data", ""))
 
-    # Get viewport dimensions
     layout = await cdp.send("Page.getLayoutMetrics")
     width = height = 0
     if layout.success:
@@ -126,7 +125,6 @@ async def capture_element(
         Screenshot of the element
 
     """
-    # Get document root
     doc = await cdp.get_document()
     if not doc.success:
         raise RuntimeError("Failed to get document")
@@ -147,7 +145,6 @@ async def capture_element(
     if not node_id:
         raise RuntimeError(f"No nodeId for selector: {selector}")
 
-    # Get element bounding box
     box_result = await cdp.send("DOM.getBoxModel", {"nodeId": node_id})
     if not box_result.success:
         raise RuntimeError(f"Failed to get box model: {box_result.error}")

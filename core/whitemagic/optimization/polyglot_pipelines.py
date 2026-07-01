@@ -18,13 +18,11 @@ class PolyglotPipeline:
         start = time.time()
         results = {"pipeline": "memory_analysis", "stages": []}
 
-        # Stage 1: Rust extracts patterns
         r1 = self.specialists.extract_patterns(content, limit=100)
         results["stages"].append(
             {"stage": 1, "language": r1.language, "time_ms": r1.execution_time_ms}
         )
 
-        # Stage 2: Zig computes similarity matrix
         if r1.success and len(r1.result) > 1:
             vectors = [
                 [float(ord(c)) for c in p[:10].ljust(10)] for p in r1.result[:20]
@@ -34,7 +32,6 @@ class PolyglotPipeline:
                 {"stage": 2, "language": r2.language, "time_ms": r2.execution_time_ms}
             )
 
-        # Stage 3: Julia statistical analysis
         if r1.success:
             pattern_lengths = [len(p) for p in r1.result]
             r3 = self.specialists.statistical_analysis(pattern_lengths)
@@ -51,13 +48,11 @@ class PolyglotPipeline:
         start = time.time()
         results = {"pipeline": "batch_processing", "stages": []}
 
-        # Stage 1: Python batch encoding
         r1 = self.specialists.batch_encode(memories, int(time.time()))
         results["stages"].append(
             {"stage": 1, "language": r1.language, "time_ms": r1.execution_time_ms}
         )
 
-        # Stage 2: Haskell rule evaluation
         r2 = self.specialists.evaluate_rules("batch_process", {"count": len(memories)})
         results["stages"].append(
             {"stage": 2, "language": r2.language, "time_ms": r2.execution_time_ms}
@@ -72,13 +67,11 @@ class PolyglotPipeline:
         start = time.time()
         results = {"pipeline": "concurrent_search", "stages": []}
 
-        # Stage 1: Rust similarity search
         r1 = self.specialists.similarity_search(query, corpus, threshold=0.5, limit=50)
         results["stages"].append(
             {"stage": 1, "language": r1.language, "time_ms": r1.execution_time_ms}
         )
 
-        # Stage 2: Julia analyze results
         if r1.success and r1.result:
             scores = [score for _, score in r1.result]
             r2 = self.specialists.statistical_analysis(scores)

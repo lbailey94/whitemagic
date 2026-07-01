@@ -51,7 +51,6 @@ def check_rust(project_path: Path, file_index: FileIndex, findings: list[Finding
             # Track unsafe depth
             if re.search(r"\bunsafe\b", stripped):
                 unsafe_depth += 1
-                # Check for SAFETY comment
                 has_safety_comment = False
                 for offset in (-3, -2, -1, 0, 1, 2, 3):
                     idx = i - 1 + offset
@@ -229,7 +228,6 @@ def check_go(project_path: Path, file_index: FileIndex, findings: list[Finding])
                     )
                 )
 
-            # defer inside loop
             if loop_depth > 0 and re.search(r"\bdefer\s+", stripped):
                 findings.append(
                     Finding(
@@ -289,12 +287,10 @@ def check_go(project_path: Path, file_index: FileIndex, findings: list[Finding])
             stripped = line.strip()
             if stripped.startswith("//"):
                 continue
-            # Function definition
             func_match = re.match(r"^func\s+\w+\s*\((.*)\)", stripped)
             if func_match:
                 params = func_match.group(1)
                 if "go func" in stripped or "goroutine" in stripped:
-                    # If starting a goroutine without context
                     if "context.Context" not in params:
                         findings.append(
                             Finding(

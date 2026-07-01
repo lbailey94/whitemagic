@@ -218,8 +218,6 @@ async def stream_tool_call(
             metadata={"tool": tool_name, "args": kwargs},
         )
 
-        # Execute tool (would call actual tool here)
-        # For now, simulate
         await asyncio.sleep(0.1)
         result = {"status": "simulated", "tool": tool_name}
 
@@ -263,7 +261,6 @@ class StreamingToolAdapter:
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream search_memories results."""
         # In production, this would call the actual search_memories tool
-        # For now, simulate
         results = [{"id": f"mem_{i}", "title": f"Memory {i}"} for i in range(limit)]
 
         async for chunk in stream_search_results(query, results, chunk_size=10):

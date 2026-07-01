@@ -39,7 +39,6 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
 
         loop = get_homeostatic_loop()
         stats = loop.get_stats()
-        # Check if codebase health sensor has recent findings
         recent = stats.get("recent_actions", [])
         for action in recent:
             if action.get("dimension") == "codebase_health":

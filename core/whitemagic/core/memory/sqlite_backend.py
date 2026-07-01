@@ -279,7 +279,6 @@ class SQLiteBackend:
                     decision TEXT
                 )
             """)
-            # Add performance indexes
             conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_importance ON memories(importance)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_created_at ON memories(created_at)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_updated_at ON memories(updated_at)")
@@ -403,11 +402,9 @@ class SQLiteBackend:
             if not row:
                 return None
 
-            # Fetch Tags
             tags_rows = conn.execute("SELECT tag FROM tags WHERE memory_id = ?", (memory_id,)).fetchall()
             tags = {r["tag"] for r in tags_rows}
 
-            # Fetch Associations
             assoc_rows = conn.execute("SELECT target_id, strength FROM associations WHERE source_id = ?", (memory_id,)).fetchall()
             associations = {r["target_id"]: r["strength"] for r in assoc_rows}
 
@@ -478,7 +475,6 @@ class SQLiteBackend:
                 if not fts_query:
                     fts_query = query.strip().replace('[', '').replace(']', '')
 
-                # For multi-word queries, try phrase match first
                 # Only fall back to individual keywords if phrase returns nothing
                 phrase_query = None
                 keyword_query = None
@@ -489,9 +485,7 @@ class SQLiteBackend:
                         phrase_query = f'"{fts_query}"'
                         keyword_query = " OR ".join(keywords)
 
-                # Try phrase first, fall back to keywords
                 if phrase_query:
-                    # Test phrase query
                     test_sql = "SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?"
                     phrase_count = conn.execute(test_sql, [phrase_query]).fetchone()[0]
                     if phrase_count > 0:
@@ -652,7 +646,6 @@ class SQLiteBackend:
         """
         with self.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
-            # Try cache first (3,000× faster)
             try:
                 rows = conn.execute("SELECT * FROM cache_garden_stats").fetchall()
                 if rows:
@@ -1010,7 +1003,6 @@ class SQLiteBackend:
         with self.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
 
-            # Process in batches for large association tables
             rows = conn.execute(
                 """SELECT source_id, target_id, strength,
                           COALESCE(edge_type, 'semantic') as edge_type,
@@ -1147,7 +1139,6 @@ class SQLiteBackend:
         with self.pool.connection() as conn:
             total = conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
 
-            # Get DB size before
             db_path = self.pool._db_path if hasattr(self.pool, "_db_path") else None
             size_before = 0
             if db_path:
@@ -1163,7 +1154,6 @@ class SQLiteBackend:
             """).fetchone()[0]
 
             with conn:
-                # Delete orphaned associations
                 if orphaned > 0:
                     conn.execute("""
                         DELETE FROM associations
@@ -1171,7 +1161,6 @@ class SQLiteBackend:
                            OR target_id NOT IN (SELECT id FROM memories)
                     """)
 
-                # Delete weak associations
                 cursor = conn.execute(
                     "DELETE FROM associations WHERE strength < ?",
                     (min_strength,),
@@ -1220,7 +1209,6 @@ class SQLiteBackend:
         """Rename a tag across all memories. Returns count of updated rows."""
         with self.pool.connection() as conn:
             with conn:
-                # Delete conflicts where memory already has new_tag
                 conn.execute("""
                     DELETE FROM tags WHERE tag = ? AND memory_id IN (
                         SELECT memory_id FROM tags WHERE tag = ?

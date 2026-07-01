@@ -79,7 +79,6 @@ class LocalReasoningEngine:
             except Exception:
                 logger.debug("Rule failed for query: %s", query)
 
-        # If we have high-relevance insights, no need for AI
         ready_for_ai = not any(i.relevance >= 0.9 for i in insights)
 
         return ReasoningResult(

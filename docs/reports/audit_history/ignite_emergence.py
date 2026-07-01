@@ -34,7 +34,7 @@ except ImportError as e:
         def emit(self, e):
             if e.event_type in self.listeners: self.listeners[e.event_type](e)
             if e.event_type == EventType.BREAKTHROUGH_ACHIEVED:
-                 print(f"   >>> BREAKTHROUGH: {e.data['core_pattern']} (Gain: {e.data['resonance_gain']})")
+                 logger.debug(f"   >>> BREAKTHROUGH: {e.data['core_pattern']} (Gain: {e.data['resonance_gain']})")
 
     class MockEngine:
         def start(self):
@@ -80,7 +80,6 @@ class EmergenceIgniter:
         samples = {k: [] for k in ZODIAC_KEYWORDS}
         
         cur = self.conn.cursor()
-        # Get a random sample to keep it fast but representative
         cur.execute("SELECT title, content FROM memories ORDER BY RANDOM() LIMIT 5000") 
         rows = cur.fetchall()
         
@@ -106,7 +105,6 @@ class EmergenceIgniter:
         def on_breakthrough(event):
             self.breakthroughs.append(event.data)
         
-        # Check if listen method exists (mock vs real)
         if hasattr(self.bus, 'listen'):
             self.bus.listen(EventType.BREAKTHROUGH_ACHIEVED, on_breakthrough)
             

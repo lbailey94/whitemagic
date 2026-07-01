@@ -186,7 +186,6 @@ class AgentSwarm:
             if kw in goal_lower:
                 detected_caps.update(caps)
 
-        # If hints provided, use those as subtask descriptions
         if hints:
             for i, hint in enumerate(hints):
                 caps = []
@@ -249,7 +248,6 @@ class AgentSwarm:
             if not plan:
                 return {"status": "error", "error": f"Plan {plan_id} not found"}
 
-        # Validate engagement token if provided
         token_valid = True
         if engagement_token_id:
             try:
@@ -272,7 +270,6 @@ class AgentSwarm:
                     "plan_id": plan_id,
                 }
 
-        # Get available agents
         agents: list[dict[str, Any]] = []
         try:
             from whitemagic.tools.handlers.agent_registry import handle_agent_list
@@ -377,7 +374,6 @@ class AgentSwarm:
             else:
                 return {"status": "error", "error": "Task not found"}
 
-            # Check if plan is complete
             all_done = all(
                 t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED)
                 for t in plan.subtasks

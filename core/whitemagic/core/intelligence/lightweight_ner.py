@@ -325,10 +325,8 @@ class LightNER:
 
         resolved: list[EntityMatch] = []
         for entity in entities:
-            # Check for overlap with existing
             overlaps = False
             for i, existing in enumerate(resolved):
-                # Check if ranges overlap
                 if not (entity.end <= existing.start or entity.start >= existing.end):
                     overlaps = True
                     # Keep the better one (higher confidence or longer)

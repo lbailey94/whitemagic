@@ -1,0 +1,615 @@
+{
+  "version": 8,
+  "created": "2026-06-30T23:29:01+00:00",
+  "updated": "2026-06-30T23:29:02+00:00",
+  "queue_order": [
+    "subjective::abstraction_fitness",
+    "subjective::ai_generated_debt",
+    "subjective::api_surface_coherence",
+    "subjective::authorization_consistency",
+    "subjective::contract_coherence",
+    "subjective::convention_outlier",
+    "subjective::cross_module_architecture",
+    "subjective::dependency_health",
+    "subjective::design_coherence",
+    "subjective::error_consistency",
+    "subjective::high_level_elegance",
+    "subjective::incomplete_migration",
+    "subjective::initialization_coupling",
+    "subjective::logic_clarity",
+    "subjective::low_level_elegance",
+    "subjective::mid_level_elegance",
+    "subjective::naming_quality",
+    "subjective::package_organization",
+    "subjective::test_strategy",
+    "subjective::type_safety"
+  ],
+  "deferred": [],
+  "skipped": {},
+  "active_cluster": null,
+  "overrides": {
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_ddouble.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_ddouble.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_time.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_time.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_text_parse.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_text_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_text_parse.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_text_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_text_parse.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_text_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/backpressure.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/backpressure.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_backpressure.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_backpressure.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/src_effects_prat.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/src_effects_prat.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_utc.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_utc.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/circuit__breaker.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/circuit__breaker.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_circuit__breaker.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_circuit__breaker.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/circuit__breaker.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/circuit__breaker.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_num_ddouble.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_num_ddouble.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_time_instant.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_time_instant.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_transactions.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_transactions.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/transactions.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/transactions.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_parse.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_format.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_format.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_list.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_list.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_list.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_decimal.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_decimal.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_tuple.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_tuple.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_tuple.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_tuple.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-19f97a/std_core_tuple.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-19f97a/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_core_tuple.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_tuple.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_tuple.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_calendar.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_calendar.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-19f97a/std_core_list.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-19f97a/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_core_list.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_list.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_list.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_list.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_num_float64.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_num_float64.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_num_float64.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_num_float64.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_float64.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_float64.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/retry__logic.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/retry__logic.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_retry__logic.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_retry__logic.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_text_parse.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_text_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_text_parse.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_text_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_text_parse.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_text_parse.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_num_float64.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_num_float64.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_num_float64.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_num_float64.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_num_float64.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_num_float64.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_hnd.c": {
+      "issue_id": "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_hnd.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_hnd.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_hnd.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_hnd.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_hnd.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_hnd.c": {
+      "issue_id": "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_hnd.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_hnd.c": {
+      "issue_id": "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_hnd.c",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::abstraction_fitness": {
+      "issue_id": "subjective::abstraction_fitness",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::ai_generated_debt": {
+      "issue_id": "subjective::ai_generated_debt",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::api_surface_coherence": {
+      "issue_id": "subjective::api_surface_coherence",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::authorization_consistency": {
+      "issue_id": "subjective::authorization_consistency",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::contract_coherence": {
+      "issue_id": "subjective::contract_coherence",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::convention_outlier": {
+      "issue_id": "subjective::convention_outlier",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::cross_module_architecture": {
+      "issue_id": "subjective::cross_module_architecture",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::dependency_health": {
+      "issue_id": "subjective::dependency_health",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::design_coherence": {
+      "issue_id": "subjective::design_coherence",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::error_consistency": {
+      "issue_id": "subjective::error_consistency",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::high_level_elegance": {
+      "issue_id": "subjective::high_level_elegance",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::incomplete_migration": {
+      "issue_id": "subjective::incomplete_migration",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::initialization_coupling": {
+      "issue_id": "subjective::initialization_coupling",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::logic_clarity": {
+      "issue_id": "subjective::logic_clarity",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::low_level_elegance": {
+      "issue_id": "subjective::low_level_elegance",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::mid_level_elegance": {
+      "issue_id": "subjective::mid_level_elegance",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::naming_quality": {
+      "issue_id": "subjective::naming_quality",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::package_organization": {
+      "issue_id": "subjective::package_organization",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::test_strategy": {
+      "issue_id": "subjective::test_strategy",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    },
+    "subjective::type_safety": {
+      "issue_id": "subjective::type_safety",
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-06-30T23:29:01+00:00"
+    }
+  },
+  "clusters": {
+    "auto/test_coverage-untested_critical": {
+      "name": "auto/test_coverage-untested_critical",
+      "description": "Fix 50 test coverage issues",
+      "issue_ids": [
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_ddouble.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_time.c",
+        "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_text_parse.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_text_parse.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_text_parse.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/backpressure.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_backpressure.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/src_effects_prat.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_utc.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/circuit__breaker.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_circuit__breaker.c",
+        "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/circuit__breaker.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_num_ddouble.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_time_instant.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_transactions.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/transactions.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_parse.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_format.c",
+        "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_list.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_list.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_list.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_decimal.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_tuple.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_tuple.c",
+        "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_tuple.c",
+        "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_tuple.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-19f97a/std_core_tuple.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_core_tuple.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_tuple.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_time_calendar.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-19f97a/std_core_list.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_core_list.c",
+        "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_list.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_list.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_num_float64.c",
+        "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_num_float64.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_num_float64.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/retry__logic.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/src_effects_retry__logic.c",
+        "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_text_parse.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_text_parse.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_text_parse.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-debug-5bd121/std_num_float64.c",
+        "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_num_float64.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_num_float64.c",
+        "test_coverage::polyglot/bridges/koka/.koka/v3.2.2/gcc-drelease-691b08/std_core_hnd.c",
+        "test_coverage::.koka/v3.2.2/gcc-drelease-719c95/std_core_hnd.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-drelease-12149c/std_core_hnd.c",
+        "test_coverage::.koka/v3.2.2/gcc-debug-3dfeeb/std_core_hnd.c",
+        "test_coverage::polyglot/whitemagic-koka/.koka/v3.2.2/gcc-debug-2888da/std_core_hnd.c"
+      ],
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "updated_at": "2026-06-30T23:29:01+00:00",
+      "auto": true,
+      "cluster_key": "detector::test_coverage::untested_critical",
+      "action": "review test coverage gaps",
+      "execution_status": "review",
+      "user_modified": false,
+      "action_type": "refactor",
+      "execution_policy": "planned_only"
+    },
+    "auto/initial-review": {
+      "name": "auto/initial-review",
+      "description": "Initial review of 20 unscored subjective dimensions",
+      "issue_ids": [
+        "subjective::abstraction_fitness",
+        "subjective::ai_generated_debt",
+        "subjective::api_surface_coherence",
+        "subjective::authorization_consistency",
+        "subjective::contract_coherence",
+        "subjective::convention_outlier",
+        "subjective::cross_module_architecture",
+        "subjective::dependency_health",
+        "subjective::design_coherence",
+        "subjective::error_consistency",
+        "subjective::high_level_elegance",
+        "subjective::incomplete_migration",
+        "subjective::initialization_coupling",
+        "subjective::logic_clarity",
+        "subjective::low_level_elegance",
+        "subjective::mid_level_elegance",
+        "subjective::naming_quality",
+        "subjective::package_organization",
+        "subjective::test_strategy",
+        "subjective::type_safety"
+      ],
+      "created_at": "2026-06-30T23:29:01+00:00",
+      "updated_at": "2026-06-30T23:29:01+00:00",
+      "auto": true,
+      "cluster_key": "subjective::unscored",
+      "action": "desloppify review --prepare --dimensions abstraction_fitness,ai_generated_debt,api_surface_coherence,authorization_consistency,contract_coherence,convention_outlier,cross_module_architecture,dependency_health,design_coherence,error_consistency,high_level_elegance,incomplete_migration,initialization_coupling,logic_clarity,low_level_elegance,mid_level_elegance,naming_quality,package_organization,test_strategy,type_safety",
+      "execution_status": "review",
+      "user_modified": false,
+      "action_type": "manual_fix",
+      "execution_policy": "planned_only"
+    }
+  },
+  "superseded": {},
+  "promoted_ids": [],
+  "plan_start_scores": {
+    "strict": 20.3,
+    "overall": 20.3,
+    "objective": 81.2,
+    "verified": 81.2
+  },
+  "refresh_state": {
+    "_subjective_migration_pruned": true,
+    "lifecycle_phase": "plan"
+  },
+  "execution_log": [
+    {
+      "timestamp": "2026-06-30T23:29:01+00:00",
+      "action": "sync_subjective",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {
+        "changes": true
+      }
+    },
+    {
+      "timestamp": "2026-06-30T23:29:01+00:00",
+      "action": "auto_cluster",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {
+        "changes": true
+      }
+    },
+    {
+      "timestamp": "2026-06-30T23:29:01+00:00",
+      "action": "sync_lifecycle_phase",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {
+        "phase": "review_initial"
+      }
+    },
+    {
+      "timestamp": "2026-06-30T23:29:02+00:00",
+      "action": "seed_start_scores",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {}
+    }
+  ],
+  "epic_triage_meta": {},
+  "commit_log": [],
+  "uncommitted_issues": [],
+  "commit_tracking_branch": null,
+  "scan_count_at_plan_start": 1
+}

@@ -51,7 +51,6 @@ class UserManager:
             Any
         """
         with open(self.profile_path, "w") as f:
-            # Convert dataclass to dict
             data = {
                 "name": self.profile.name,
                 "preferences": self.profile.preferences,

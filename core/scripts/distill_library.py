@@ -263,7 +263,6 @@ def main():
     concepts = scan_library()
     print(f"  ✅ Found {len(concepts)} concept candidates\n")
 
-    # Save index
     INDEX_OUTPUT.write_text(json.dumps(concepts, indent=2, ensure_ascii=False))
     print(f"  📋 Index saved to {INDEX_OUTPUT}\n")
 

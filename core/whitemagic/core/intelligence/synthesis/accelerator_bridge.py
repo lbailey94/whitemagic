@@ -168,7 +168,6 @@ class AcceleratorBridge:
             return
 
         try:
-            # For demonstration, we simulate success
             # cmd = ["python3", str(script_path), "--type", task_type, "--mids", ",".join(metadata.get('mids', []))]
             # logger.info(f"  Executing: {' '.join(cmd)}")
             # result = subprocess.run(cmd, check=True)

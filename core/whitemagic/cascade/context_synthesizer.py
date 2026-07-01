@@ -135,7 +135,6 @@ class UnifiedContext:
 
         Returns garden name to use as morphology lens.
         """
-        # If explicit garden, use it
         if self.primary_garden:
             return self.primary_garden
 
@@ -245,7 +244,6 @@ class ContextSynthesizer:
             UnifiedContext with current state
 
         """
-        # Check cache
         now = datetime.now()
         if not force_refresh and self._cache and self._cache_time:
             age = (now - self._cache_time).total_seconds()
@@ -298,15 +296,12 @@ class ContextSynthesizer:
         try:
             from whitemagic.gardens import _garden_cache, list_gardens
 
-            # Get all available gardens
             list_gardens()
 
-            # Check which gardens have been accessed (in cache)
             active = [name for name in _garden_cache.keys()]
             ctx.active_gardens = active or []
 
             # Primary garden is the most recently used (if any)
-            # For now, we don't track this - will be set by explicit activation
             ctx.primary_garden = None
 
             # Equal weights for now
@@ -323,7 +318,6 @@ class ContextSynthesizer:
             return
 
         try:
-            # Get current phase (time-based)
             current = self._wu_xing.detect_current_phase()
             ctx.wu_xing_phase = current.value
 
@@ -347,7 +341,6 @@ class ContextSynthesizer:
             }
             ctx.wu_xing_controlling = controlling.get(ctx.wu_xing_phase, "earth")
 
-            # Get qualities
             ctx.wu_xing_qualities = self._wu_xing._get_element_qualities(current)
 
         except Exception as e:
@@ -445,7 +438,6 @@ class ContextSynthesizer:
             return
 
         try:
-            # Get actual memory count for accurate memory_accessibility
             memories_accessible = self._get_memory_count()
             ctx.coherence_score = self._coherence_metric.measure(
                 memories_accessible=memories_accessible,
@@ -551,7 +543,6 @@ class ContextSynthesizer:
     def _gather_session_state(self, ctx: UnifiedContext) -> None:
         """Gather session state."""
         try:
-            # Try to read session info from file
             import json
 
             from whitemagic.config.paths import WM_ROOT
@@ -675,7 +666,6 @@ def get_recommended_morphology() -> str:
 
 
 if __name__ == "__main__":
-    # Test the synthesizer
     logger.info("🔮 Testing Context Synthesizer")
     logger.info("=" * 60)
 

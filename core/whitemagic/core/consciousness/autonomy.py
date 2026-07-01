@@ -132,7 +132,6 @@ class BoundedExecutor:
                 except (OSError, PermissionError):
                     pass
 
-        # Check for new files
         for dir_path in self.conditions.watch_directories:
             path = Path(dir_path)
             if path.exists() and path.is_dir():
@@ -241,7 +240,6 @@ class BoundedExecutor:
 
         try:
             while True:
-                # Check stop conditions BEFORE iteration
                 should_stop, reason = self.check_stop_conditions()
                 if should_stop:
                     result["stopped_early"] = True
@@ -250,7 +248,6 @@ class BoundedExecutor:
 
                 self.state.iteration_count += 1
 
-                # Execute task iteration with timeout protection
                 try:
                     import signal
 
@@ -348,13 +345,11 @@ def check_session_completion(session_file: Path) -> bool:
         with open(session_file) as f:
             session = json.load(f)
 
-        # Check completion_criteria if present
         criteria = session.get("completion_criteria", {})
         if criteria.get("type") == "all_tasks_done":
             # Could integrate with docs/TASKS.md parsing
             pass
 
-        # Check if max_iterations reached
         if "max_iterations" in session:
             current = session.get("iteration_count", 0)
             if current >= session["max_iterations"]:

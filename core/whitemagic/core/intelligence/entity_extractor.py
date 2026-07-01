@@ -175,7 +175,6 @@ class EntityExtractor:
         # Truncate to avoid overwhelming the LLM
         truncated = text[:max_chars]
 
-        # Try Ollama LLM extraction
         if self._check_ollama():
             result = self._extract_ollama(truncated)
             if result and (result.entities or result.relations):
@@ -220,7 +219,6 @@ class EntityExtractor:
                 raw = _json_loads(resp.read().decode("utf-8"))
                 response_text = raw.get("response", "")
 
-            # Parse the JSON response
             data = _json_loads(response_text)
             entities = [
                 Entity(

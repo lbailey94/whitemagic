@@ -200,7 +200,6 @@ def interpret_memory(memory: dict[str, Any]) -> dict[str, Any]:
     w = memory.get("holographic_w", memory.get("w", 0.5))
     v = memory.get("holographic_v", memory.get("v", 0.5))
 
-    # Get galactic distance if available
     galactic_distance = memory.get("galactic_distance")
 
     result = explain_coordinates(x, y, z, w, v)

@@ -43,7 +43,6 @@ class DeltaTracker:
             old = self._baseline.get(key)
             if old != value:
                 self.record_delta(key, old, value)
-        # Check for removed keys
         for key in self._baseline:
             if key not in current:
                 self.record_delta(key, self._baseline[key], None)

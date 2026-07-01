@@ -1,4 +1,3 @@
-# Import from new lowercase filename
 try:
     from .genome_tracker import PhylogeneticTracker as GenomeTracker
 except ImportError:

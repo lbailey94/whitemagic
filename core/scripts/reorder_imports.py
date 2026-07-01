@@ -25,7 +25,6 @@ def fix_file(path: Path) -> bool:
     for i, stmt in enumerate(body):
         if isinstance(stmt, (ast.Import, ast.Expr)):
             continue
-        # If it's a string Expr that's a docstring, skip
         if (
             isinstance(stmt, ast.Expr)
             and isinstance(stmt.value, ast.Constant)
@@ -46,7 +45,6 @@ def fix_file(path: Path) -> bool:
     non_imports_block = []
     for stmt in body[:first_code_idx]:
         if isinstance(stmt, (ast.Import, ast.Expr)):
-            # Check if it's a string Expr (the docstring)
             if (
                 isinstance(stmt, ast.Expr)
                 and isinstance(stmt.value, ast.Constant)
@@ -59,7 +57,6 @@ def fix_file(path: Path) -> bool:
             non_imports_block.append(stmt)
     # Reorder: imports first, then non-imports
     reordered = imports_block + non_imports_block
-    # If the order didn't change, no-op
     if [id(s) for s in reordered] == [id(s) for s in body[:first_code_idx]]:
         return False
     # Reconstruct source: replace the lines for statements 0..first_code_idx-1
@@ -69,7 +66,6 @@ def fix_file(path: Path) -> bool:
     start_line = first_stmt.lineno - 1  # 0-indexed
     end_line = last_stmt.end_lineno  # 1-indexed, exclusive
 
-    # Get the original source for each statement
     def stmt_source(stmt):
         if hasattr(stmt, "col_offset") and hasattr(stmt, "end_col_offset"):
             s = stmt.lineno - 1

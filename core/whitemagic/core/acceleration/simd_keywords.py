@@ -192,7 +192,6 @@ def extract_keywords(text: str, max_keywords: int = 50) -> set[str]:
             text_bytes = text.encode("utf-8", errors="replace")
             text_arr = (ctypes.c_ubyte * len(text_bytes))(*text_bytes)
 
-            # Output buffer: generous allocation (keywords are null-separated)
             out_capacity = min(max_keywords * 64, 16384)
             out_arr = (ctypes.c_ubyte * out_capacity)()
 
@@ -205,7 +204,6 @@ def extract_keywords(text: str, max_keywords: int = 50) -> set[str]:
             )
 
             if count > 0:
-                # Parse null-separated keywords from output buffer
                 raw = bytes(out_arr[:out_capacity])
                 keywords = set()
                 for kw_bytes in raw.split(b"\x00"):

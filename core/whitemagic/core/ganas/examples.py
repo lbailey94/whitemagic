@@ -65,7 +65,6 @@ Be sharp, decisive, and clear.
             "status": session.status.value,
         }
 
-        # If predecessor provided context, incorporate it
         if call.resonance_hints.predecessor_output:
             session_state["predecessor_context"] = str(
                 call.resonance_hints.predecessor_output
@@ -211,7 +210,6 @@ Feel the rhythm, stay attuned to life force.
             "memory": state.get("memory_pressure", 0),
         }
 
-        # If predecessor was Horn (initialization), report startup pulse
         if call.resonance_hints.predecessor_output:
             pred = call.resonance_hints.predecessor_output
             if isinstance(pred, dict) and pred.get("mansion") == "HORN":
@@ -297,7 +295,6 @@ Cast your net wide, catch what matters.
                         f"Heartbeat pattern: {pred['pulse_rate']}"
                     )
 
-        # Check state vector for broader patterns
         if call.state_vector.get("chain_position", 0) > 5:
             captured["patterns_detected"].append("Extended chain - check for fatigue")
 

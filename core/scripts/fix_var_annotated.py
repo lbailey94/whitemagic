@@ -51,7 +51,6 @@ def add_var_annotation(path: Path, line_no: int) -> bool:
         new_line = f"{indent}{name}: list = []\n"
     lines[line_no - 1] = new_line
     new_content = "".join(lines)
-    # Verify it parses
     try:
         import ast
 
@@ -65,7 +64,6 @@ def add_var_annotation(path: Path, line_no: int) -> bool:
 def main() -> None:
     import subprocess
 
-    # Get list of (file, line) for var-annotated errors
     result = subprocess.run(
         [".venv/bin/mypy", "whitemagic/"],
         capture_output=True,
@@ -78,7 +76,6 @@ def main() -> None:
     for line in output.splitlines():
         if "var-annotated" not in line:
             continue
-        # Parse "whitemagic/path/to/file.py:LINE: error: ..."
         m = re.match(r"^(whitemagic/[^:]+):(\d+):", line)
         if m:
             file_path = m.group(1)

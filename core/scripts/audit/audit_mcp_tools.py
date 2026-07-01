@@ -23,7 +23,6 @@ def test_tool(name, **kwargs):
             if "traceback" in result.get("details", {}):
                 print(result["details"]["traceback"])
         else:
-            # Print a snippet of the result
             output = {
                 k: v for k, v in result.items() if k not in ["traceback", "details"]
             }

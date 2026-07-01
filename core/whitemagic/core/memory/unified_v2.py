@@ -15,7 +15,6 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-# Try to import Rust core
 try:
     import whitemagic_rs
     RUST_AVAILABLE = True
@@ -23,7 +22,6 @@ except ImportError:
     RUST_AVAILABLE = False
     logger.warning("Rust MemoryEngine not available, falling back to Python")
 
-# Try to import Zig router (via Rust bridge)
 ZIG_AVAILABLE = False  # Will be enabled once Zig FFI is wired
 
 
@@ -57,7 +55,6 @@ class UnifiedMemoryV2:
 
         self.db_path = db_path
 
-        # Initialize Rust core if available
         if RUST_AVAILABLE:
             self.engine = whitemagic_rs.MemoryEngine(db_path)
             logger.info("✅ Rust MemoryEngine initialized")
@@ -106,7 +103,6 @@ class UnifiedMemoryV2:
         elif strategy is None:
             strategy = "hybrid_balanced"
 
-        # Execute search in Rust (with automatic caching)
         try:
             # Rust MemoryEngine uses its own strategy selection (Zig router)
             # Don't pass strategy string, let Rust handle it
@@ -138,7 +134,6 @@ class UnifiedMemoryV2:
         Returns:
             Memory ID (UUID)
         """
-        # For now, use Python backend for writes
         # Future: Implement in Rust for consistency
         from whitemagic.core.memory.unified import UnifiedMemory
         um = UnifiedMemory()

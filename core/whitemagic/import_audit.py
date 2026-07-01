@@ -5,7 +5,6 @@ import importlib
 import sys
 from pathlib import Path
 
-# Add the package to path
 package_root = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic")
 sys.path.insert(0, str(package_root.parent))
 
@@ -28,13 +27,11 @@ subpackages = [
     "whitemagic.core.immune",
 ]
 
-# Try to import each subpackage and its modules
 for pkg_name in subpackages:
     try:
         pkg = importlib.import_module(pkg_name)
         successes.append(pkg_name)
 
-        # Try to import all submodules
         pkg_path = getattr(pkg, "__path__", None)
         if pkg_path:
             for path in pkg_path:

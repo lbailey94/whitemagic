@@ -172,7 +172,6 @@ class KokaRuntime:
 
     def start_batch_ipc(self) -> KokaProcess | None:
         """Start batch IPC runtime for transactions."""
-        # Check if binary exists
         binary_path = f"{self.koka_dir}/batch_ipc"
         if not os.path.exists(binary_path):
             logger.warning("Koka batch_ipc binary not found at %s", binary_path)
@@ -245,7 +244,6 @@ async def koka_health_check() -> dict:
     """Async health check for V21 validation suite."""
     runtime = get_koka_runtime()
     try:
-        # Check if basic binaries exist
         import os
 
         koka_dir = runtime.koka_dir

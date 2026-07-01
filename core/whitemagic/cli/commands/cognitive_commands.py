@@ -26,9 +26,7 @@ def _get_json_output(ctx, json_flag: bool) -> bool:
     )
 
 
-# ---------------------------------------------------------------------------
 # wm think — Multi-spectral reasoning
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -76,9 +74,7 @@ def think(ctx, query: str, json_flag: bool) -> None:
             click.echo(_json_dumps(result, indent=2, default=str)[:2000])
 
 
-# ---------------------------------------------------------------------------
 # wm reflect — Self-reflection / cognitive state snapshot
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -168,9 +164,7 @@ def reflect(ctx, json_flag: bool) -> None:
         click.echo(f"\n  Sections captured: {list(snapshot['sections'].keys())}")
 
 
-# ---------------------------------------------------------------------------
 # wm dream --auto — Start dream cycle with auto-promotion
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -196,7 +190,6 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
     json_output = _get_json_output(ctx, json_flag)
 
     if not auto:
-        # Start background dream cycle
         result = call_tool("dream_start")
         data = result.get("details", result) if isinstance(result, dict) else result
 
@@ -248,7 +241,6 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# wm evolve — Self-improvement cycles
 # ---------------------------------------------------------------------------
 
 
@@ -306,7 +298,6 @@ def evolve(ctx, cycles: int, record: bool, json_flag: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# wm ground — Dharma go/no-go evaluation
 # ---------------------------------------------------------------------------
 
 

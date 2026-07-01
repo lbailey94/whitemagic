@@ -26,7 +26,6 @@ class Skeletonizer:
             tree = ast.parse(code)
         except SyntaxError:
             # Fallback for invalid syntax or non-Python files
-            # For now, just truncate lines
             return (
                 "\n".join(code.splitlines()[:50])
                 + "\n# ... (syntax error or non-python, truncated)"
@@ -63,9 +62,7 @@ class SkeletonTransformer(ast.NodeTransformer):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
         """Keep signature, strip body."""
-        # Process arguments (defaults, annotations) - ast.unparse handles this if we keep the node
 
-        # Check for docstring
         docstring = ast.get_docstring(node)
         new_body: list[ast.stmt] = []
         if docstring:
@@ -73,7 +70,6 @@ class SkeletonTransformer(ast.NodeTransformer):
             summary = docstring.split("\n")[0].strip()
             new_body.append(ast.Expr(value=ast.Constant(value=summary + " ...")))
 
-        # Add ellipsis
         new_body.append(ast.Expr(value=ast.Constant(value=...)))
 
         node.body = new_body
@@ -101,7 +97,6 @@ class SkeletonTransformer(ast.NodeTransformer):
         # Recurse into body to process methods
         self.generic_visit(node)
 
-        # If body is empty after stripping (shouldn't happen with generic_visit on methods), add pass
         if not node.body:
             node.body = [ast.Pass()]
 

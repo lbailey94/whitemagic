@@ -263,7 +263,6 @@ class ImageProcessor:
     def _check_available(self) -> bool:
         if self._available is not None:
             return self._available
-        # Check for Pillow (minimum requirement)
         try:
             from PIL import Image  # noqa: F401
 
@@ -293,7 +292,6 @@ class ImageProcessor:
             mode = img.mode
             img_format = img.format or path.suffix.lstrip(".")
 
-            # Try Ollama vision for captioning (local, no API key needed)
             caption = self._caption_ollama(path)
 
             # Fallback: basic metadata description
@@ -411,7 +409,6 @@ class AudioProcessor:
 
             self._available = True
         except ImportError:
-            # Try faster-whisper as alternative
             try:
                 from faster_whisper import WhisperModel  # noqa: F401
 
@@ -465,7 +462,6 @@ class AudioProcessor:
 
     def _transcribe(self, path: Path) -> tuple[str, float]:
         """Transcribe audio. Returns (text, duration_seconds)."""
-        # Try faster-whisper first (more efficient)
         try:
             from faster_whisper import WhisperModel
 

@@ -62,7 +62,6 @@ pub fn register_daemon(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }""",
 )
 
-# Remove unused sync::mpsc
 content = content.replace("use tokio::sync::mpsc;\n", "")
 
 with open("whitemagic-rust/src/continuous_daemon.rs", "w") as f:

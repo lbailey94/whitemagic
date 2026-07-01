@@ -101,7 +101,6 @@ class HaskellBridge:
 
     def _init(self) -> None:
         try:
-            # Add haskell/ to path so we can import haskell_bridge
             haskell_dir = str(_HASKELL_DIR)
             if haskell_dir not in sys.path:
                 sys.path.insert(0, haskell_dir)

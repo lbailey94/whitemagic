@@ -131,7 +131,6 @@ class PipelineIntegration:
         # Look for Targets section
         if "Targets" in self.campaign_data["sections"]:
             targets_text = self.campaign_data["sections"]["Targets"]
-            # Parse table or list format
             for line in targets_text.split("\n"):
                 if "|" in line and not line.startswith("|---"):
                     parts = [p.strip() for p in line.split("|") if p.strip()]
@@ -229,7 +228,6 @@ class PipelineIntegration:
 
         for vc in vcs:
             # This would run actual verification
-            # For now, assume not met
             vc["met"] = False
 
         return {
@@ -338,7 +336,6 @@ class PipelineIntegration:
         for vc in vcs:
             text_lower = vc["text"].lower()
             if any(keyword in text_lower for keyword in vague_keywords):
-                # Check if it has specific metrics
                 has_number = bool(re.search(r"\d+", vc["text"]))
                 has_comparison = bool(re.search(r"[>≥<≤=]", vc["text"]))
 

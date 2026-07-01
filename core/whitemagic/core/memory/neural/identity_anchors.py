@@ -162,7 +162,6 @@ def find_all_anchors(content: str) -> list[IdentityAnchor]:
     anchors = []
     content_lower = content.lower()
 
-    # Check core identity
     for pattern in CORE_IDENTITY_PATTERNS:
         if re.search(pattern, content_lower, re.IGNORECASE):
             anchors.append(IdentityAnchor(
@@ -171,7 +170,6 @@ def find_all_anchors(content: str) -> list[IdentityAnchor]:
                 confidence=1.0,
             ))
 
-    # Check sacred
     for pattern in SACRED_PATTERNS:
         if re.search(pattern, content_lower, re.IGNORECASE):
             anchors.append(IdentityAnchor(
@@ -180,7 +178,6 @@ def find_all_anchors(content: str) -> list[IdentityAnchor]:
                 confidence=0.9,
             ))
 
-    # Check emotional
     for pattern, weight in EMOTIONAL_PATTERNS:
         if re.search(pattern, content_lower, re.IGNORECASE):
             anchors.append(IdentityAnchor(
@@ -199,13 +196,11 @@ def auto_protect_memory(memory: "NeuralMemory") -> "NeuralMemory":
     """
     content = f"{memory.title} {memory.content}"
 
-    # Check core identity
     is_core, pattern = is_core_identity(content)
     if is_core:
         memory.is_core_identity = True
         memory.emotional_weight = 1.0
 
-    # Check sacred
     is_sac, pattern = is_sacred(content)
     if is_sac:
         memory.is_sacred = True
@@ -239,7 +234,6 @@ def get_protection_summary(memory: "NeuralMemory") -> dict:
 
 
 ALWAYS_PROTECTED_IDS: list[str] = [
-    # Add specific memory IDs that should never be forgotten
 ]
 
 

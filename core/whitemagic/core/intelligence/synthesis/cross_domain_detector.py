@@ -161,7 +161,6 @@ class CrossDomainCollisionDetector:
             if len(rows) < 2:
                 return collisions
 
-            # Parse rows into structured form
             memories = []
             for r in rows:
                 tags_str = r["tags"] or ""
@@ -180,7 +179,6 @@ class CrossDomainCollisionDetector:
                     }
                 )
 
-            # Get embeddings for semantic similarity
             embeddings = self._load_embeddings([m["id"] for m in memories])
 
             # Find collision pairs

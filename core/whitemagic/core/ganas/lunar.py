@@ -78,11 +78,9 @@ def get_current_lunar_mansion() -> LunarMansion:
     earth = planets["earth"]
     moon = planets["moon"]
 
-    # Get lunar ecliptic longitude
     astrometric = earth.at(t).observe(moon)
     ra, dec, distance = astrometric.radec()
 
-    # Convert RA (hours) to degrees? No, Mansions are usually ecliptic or equatorial.
     # Chinese mansions (Xiu) are equatorial, based on RA.
     # 24 hours = 360 degrees.
     # Mansion 1 (Horn) starts at specific RA?

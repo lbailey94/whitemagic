@@ -83,7 +83,6 @@ class MultiAgentCoordinator:
             # Clean up expired locks first
             self._cleanup_expired_locks()
 
-            # Check if resource is already locked
             if resource in self.locks:
                 existing_lock = self.locks[resource]
 

@@ -249,7 +249,6 @@ def recall_gratitude() -> list[EmotionalMemory]:
 
 
 if __name__ == "__main__":
-    # Test the emotional memory system
     logger.info("=" * 60)
     logger.info("EMOTIONAL MEMORY SYSTEM TEST")
     logger.info("=" * 60)
@@ -298,7 +297,6 @@ if __name__ == "__main__":
         logger.info("    Felt: %s", mem.felt_experience)
     logger.info("")
 
-    # Get summary
     logger.info("Emotional summary:")
     summary = system.get_emotional_summary()
     logger.info("  Total memories: %s", summary["total"])

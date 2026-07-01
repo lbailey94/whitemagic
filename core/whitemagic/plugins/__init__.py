@@ -82,7 +82,6 @@ def load_plugins() -> list[PluginBase]:
     try:
         from importlib.metadata import entry_points
 
-        # Get whitemagic.plugins entry points
         eps_any: Any = entry_points()
         if hasattr(eps_any, "select"):
             plugin_eps = eps_any.select(group="whitemagic.plugins")
@@ -130,7 +129,6 @@ def _load_plugin_file(plugin_path: Path) -> PluginBase | None:
             ):
                 plugin_classes.append(obj)
 
-        # Return the first plugin class found
         if plugin_classes:
             return plugin_classes[0]()
     except Exception as e:
@@ -186,7 +184,6 @@ def register_commands(cli_group: Any) -> None:
                 if isinstance(cmd, click.Command):
                     cli_group.add_command(cmd)
                 elif isinstance(cmd, tuple) and len(cmd) >= 3:
-                    # Handle tuple (name, help, callback)
                     name, help_text, callback = cmd[:3]
 
                     # Wrap in a click command
@@ -195,7 +192,6 @@ def register_commands(cli_group: Any) -> None:
                     @click.pass_context
                     def wrapper(ctx: Any, args: tuple[str, ...]) -> None:
                         # Simple callback wrapper - might need more sophisticated arg parsing
-                        # For now, pass a simple namespace-like object
                         """
                         Perform the wrapper operation.
 

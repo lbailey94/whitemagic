@@ -228,19 +228,16 @@ class ToolRecommender:
         with open(filepath) as f:
             model_data = json.load(f)
 
-        # Parse bigrams
         for key, count in model_data.get("bigrams", {}).items():
             tools = key.split("→")
             if len(tools) == 2:
                 self.bigram_counts[(tools[0], tools[1])] = count
 
-        # Parse trigrams
         for key, count in model_data.get("trigrams", {}).items():
             tools = key.split("→")
             if len(tools) == 3:
                 self.trigram_counts[(tools[0], tools[1], tools[2])] = count
 
-        # Load tool frequency
         self.tool_frequency = defaultdict(int, model_data.get("tool_frequency", {}))
 
         self.sequences_seen = model_data.get("sequences_seen", 0)
@@ -273,7 +270,6 @@ class AutocastEnhancer:
         Returns:
             List of tool suggestions with confidence and reasoning
         """
-        # Get ML predictions
         predictions = self.recommender.predict_next_tools(top_k=top_k)
 
         # Format for autocast
@@ -301,7 +297,6 @@ class AutocastEnhancer:
         """
         self.recommender.record_tool_call(tool_name)
 
-        # Clear cache after new data
         self.prediction_cache.clear()
 
 

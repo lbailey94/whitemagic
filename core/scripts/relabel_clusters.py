@@ -175,7 +175,6 @@ def label_cluster(cluster: dict) -> str:
                 scores[label] = scores.get(label, 0) + 2
 
     if scores:
-        # Return top 2-3 labels joined
         top = sorted(scores, key=scores.get, reverse=True)[:2]
         if len(top) == 1:
             return f"On {top[0]}"
@@ -184,7 +183,6 @@ def label_cluster(cluster: dict) -> str:
 
     # Fallback: extract first meaningful sentence fragment
     title = cluster.get("title", "")
-    # Try to get the first sentence
     sentences = title.replace("\n", " ").split(". ")
     first = sentences[0].strip()[:80]
     if first and len(first) > 10:

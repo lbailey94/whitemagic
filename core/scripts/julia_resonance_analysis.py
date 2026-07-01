@@ -62,7 +62,6 @@ def run_resonance_analysis(limit: int = 0) -> dict:
     db_path = get_db_path()
     conn = get_conn(db_path)
 
-    # Get high-importance memories
     query = """
         SELECT id, importance, access_count, emotional_valence
         FROM memories
@@ -150,7 +149,6 @@ def run_neighbor_analysis(limit: int = 0) -> dict:
     db_path = get_db_path()
     conn = get_conn(db_path)
 
-    # Get memories
     query = """
         SELECT id FROM memories
         WHERE is_protected = 0

@@ -224,7 +224,6 @@ class OMSManager:
         all_content = "\n".join(memory_lines)
         content_hash = hashlib.sha256(all_content.encode()).hexdigest()
 
-        # Get version
         wm_version = ""
         try:
             from whitemagic import __version__
@@ -307,7 +306,6 @@ class OMSManager:
         if not mem_path.is_absolute():
             mem_path = WM_ROOT / "memory" / mem_path
         else:
-            # Validate absolute path is allowed
             from whitemagic.security.tool_gating import get_tool_gate
 
             gate = get_tool_gate()
@@ -351,7 +349,6 @@ class OMSManager:
         if not mem_path.is_absolute():
             mem_path = WM_ROOT / "memory" / mem_path
         else:
-            # Validate absolute path is allowed
             from whitemagic.security.tool_gating import get_tool_gate
 
             gate = get_tool_gate()
@@ -424,7 +421,6 @@ class OMSManager:
         if not mem_path.is_absolute():
             mem_path = WM_ROOT / "memory" / mem_path
         else:
-            # Validate absolute path is allowed
             from whitemagic.security.tool_gating import get_tool_gate
 
             gate = get_tool_gate()
@@ -435,7 +431,6 @@ class OMSManager:
         if not mem_path.exists():
             return {"status": "error", "reason": f"File not found: {path}"}
 
-        # Verify integrity
         if verify_first:
             v_result = self.verify(path)
             if not v_result.get("verified", False):
@@ -461,7 +456,6 @@ class OMSManager:
                 .lower()
             )
 
-        # Import into the active memory system
         imported_memories = 0
         imported_associations = 0
 
@@ -470,7 +464,6 @@ class OMSManager:
 
             um = get_unified_memory()
 
-            # Import memories
             for line in memories_data.strip().split("\n"):
                 if not line.strip():
                     continue
@@ -499,7 +492,6 @@ class OMSManager:
                 except (ImportError, ModuleNotFoundError):
                     continue
 
-            # Import associations (best-effort — IDs may not match)
             pool = um.backend.pool
             now = datetime.now().isoformat()
             with pool.connection() as conn:

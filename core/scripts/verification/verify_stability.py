@@ -10,15 +10,12 @@ try:
 
     print("--- Archaeology Verification ---")
 
-    # Test singleton
     arch = get_archaeologist()
     print(f"Archaeologist instance: {arch}")
 
-    # Test mark_read
     res = mark_read("/tmp/test_file.txt", context="Verification", note="Testing bridge")
     print(f"Mark Read result: {res}")
 
-    # Test handler
     handler_res = handle_archaeology(action="stats")
     print(f"Handler stats result: {handler_res}")
 

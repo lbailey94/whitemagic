@@ -98,12 +98,10 @@ class WuXingScheduler:
 
         target_duration = self.PHASE_DURATION_DEFAULTS[self.state.current]
 
-        # Check for emergency transitions based on metrics
         if self._check_emergency_earth(metrics):
             self.transition_to(Phase.EARTH, reason="High error rate emergency")
             return Phase.EARTH
 
-        # Check for natural time-based transition
         if elapsed >= target_duration:
             next_phase = self.TRANSITIONS[self.state.current]
             self.transition_to(next_phase, reason="Time complete")

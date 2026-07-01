@@ -75,7 +75,6 @@ class V17EmbeddingOptimizer:
             await self._init_db_pool()
 
         try:
-            # Try to get from pool (non-blocking)
             return self._db_pool.get_nowait()
         except asyncio.QueueEmpty:
             # Create new connection if pool exhausted
@@ -134,7 +133,6 @@ class V17EmbeddingOptimizer:
             if self._model is not None:
                 return self._model
 
-            # Load model in thread pool (may block on I/O)
             load_model: Callable[[], Any] = cast(Callable[[], Any], self.engine._get_model)
             self._model = await asyncio.to_thread(load_model)
             return self._model
@@ -148,7 +146,6 @@ class V17EmbeddingOptimizer:
                 return task
 
             try:
-                # Run model.encode() in thread pool (releases GIL!)
                 def encode():
                     """
                     Perform the encode operation.
@@ -172,10 +169,8 @@ class V17EmbeddingOptimizer:
         # Create tasks with semaphore-controlled concurrency
         coros = [self._encode_single(task) for task in tasks]
 
-        # Execute all with bounded concurrency (semaphore controls actual parallelism)
         results = await asyncio.gather(*coros, return_exceptions=True)
 
-        # Handle exceptions
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 tasks[i].error = result
@@ -360,14 +355,12 @@ def patch_embedding_engine_v17() -> None:
     """Patch EmbeddingEngine with V17 optimizations"""
     from whitemagic.core.memory import embeddings
 
-    # Store original method
     original_index_memories = embeddings.EmbeddingEngine.index_memories
 
     def v17_index_memories(self, *args, **kwargs):
         """V17: Optimized async batch indexing"""
         optimizer = V17EmbeddingOptimizer(self)
 
-        # Run V17 optimized version
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -376,7 +369,6 @@ def patch_embedding_engine_v17() -> None:
                     optimizer.index_memories_v17(*args, **kwargs)
                 )
             else:
-                # Run new event loop
                 return loop.run_until_complete(
                     optimizer.index_memories_v17(*args, **kwargs)
                 )

@@ -70,7 +70,6 @@ class BoundaryDetector:
             1 for ind in self.interfering_indicators if ind in action_lower
         )
 
-        # Check context
         if context.get("user_requested", False):
             helping_count += 2
         if context.get("permission_granted", False):

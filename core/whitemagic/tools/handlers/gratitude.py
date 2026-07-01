@@ -45,7 +45,6 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
     tx_hash = kwargs.get("tx_hash", "")
     message = kwargs.get("message", "")
 
-    # If tx_hash provided, attempt on-chain verification
     verified = False
     if tx_hash:
         try:

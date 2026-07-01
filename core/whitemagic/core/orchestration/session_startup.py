@@ -165,7 +165,6 @@ class SessionStartupOrchestrator:
                         "⚠️ Rust bridge build failed: %s", result.stderr[:500]
                     )
                     return
-                # Try import again to verify success
                 import whitemagic_rs  # noqa: F401
 
                 logger.info("✅ Rust bridge built successfully")
@@ -183,7 +182,6 @@ class SessionStartupOrchestrator:
             from whitemagic.core.resonance.gan_ying import get_bus
 
             bus = get_bus()
-            # Verify it works
             assert bus is not None
 
         results.append(self._safe_activate("Gan Ying Bus", start_gan_ying))
@@ -954,7 +952,6 @@ class SessionStartupOrchestrator:
 
                 chain = GanaChain(ganas=gana_instances)
                 swarm = GanaSwarm(chain=chain)
-                # Run breath in background thread
                 import asyncio
                 import threading
 
@@ -1015,7 +1012,6 @@ class SessionStartupOrchestrator:
             pipeline = get_insight_pipeline()
             briefing = pipeline.generate_briefing(serendipity_count=3)
 
-            # Store on orchestrator for later access
             self._last_briefing = briefing
 
             critical = len(briefing.critical_items)

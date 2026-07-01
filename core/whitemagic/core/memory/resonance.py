@@ -24,7 +24,6 @@ class ResonanceBridge:
             lib.wm_memory_dump_stats_json.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
             lib.wm_memory_dump_stats_json.restype = ctypes.c_bool
 
-            # Initialize Global Manager
             lib.wm_memory_init()
             self.lib = lib
 
@@ -59,6 +58,5 @@ class ResonanceBridge:
             return False
 
 if __name__ == "__main__":
-    # Test run
     bridge = ResonanceBridge()
     bridge.dump_memory_state("resonance_state.json")

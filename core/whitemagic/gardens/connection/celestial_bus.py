@@ -83,7 +83,6 @@ class CelestialBus:
             ("air", "water"): 0.5,
         }
 
-        # Connect to underlying Gan Ying if available
         self.gan_ying = get_bus() if get_bus else None
 
     def emit_celestial(self, event: CelestialEvent) -> None:

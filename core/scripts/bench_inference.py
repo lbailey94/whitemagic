@@ -20,7 +20,6 @@ import random
 import sys
 import time
 
-# Add parent to path for imports
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
 
 from whitemagic.core.memory.probabilistic import (
@@ -132,7 +131,6 @@ def benchmark_cms(n: int, width: int = 4096, depth: int = 5) -> dict:
         cms.add(key)
     elapsed = time.perf_counter() - start
 
-    # Verify accuracy on hot keys
     hot_estimates = {k: cms.estimate(k) for k in hot_keys}
     total_estimated = sum(hot_estimates.values())
     total_actual = int(n * 0.8)  # Approximate

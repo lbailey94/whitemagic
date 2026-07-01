@@ -132,8 +132,6 @@ def _validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
     # Signature verification (P0 security fix)
     signature = manifest.get("signature")
     if signature:
-        # If signature is provided, verify it using HMAC with a secret key.
-        # If no secret is configured (vault locked, env unset), we reject
         # signed manifests outright rather than verifying with a public sentinel.
         key = _get_forge_signing_key()
         if key == b"\x00" * 32:
@@ -363,7 +361,6 @@ def _inject_tool(
         DISPATCH_TABLE[name] = handler
 
         # 2. Inject into PRAT TOOL_TO_GANA mapping
-        # Import here to avoid circular dependencies at module load time
         from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
         from whitemagic.tools.prat_router import TOOL_TO_GANA
 
@@ -386,7 +383,6 @@ def handle_forge_status(**kwargs: Any) -> dict[str, Any]:
     ext_dir = _DEFAULT_EXT_DIR
     manifests = discover_extensions(ext_dir)
 
-    # Check what's already loaded
     loaded_names: list[str] = []
     try:
         from whitemagic.tools.prat_router import TOOL_TO_GANA

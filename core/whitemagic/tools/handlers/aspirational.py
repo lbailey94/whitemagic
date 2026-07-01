@@ -133,7 +133,6 @@ def handle_consult_wisdom_council(**kwargs: Any) -> dict[str, Any]:
                 )
                 break
 
-    # Add mandatory perspectives
     perspectives.insert(
         0,
         {

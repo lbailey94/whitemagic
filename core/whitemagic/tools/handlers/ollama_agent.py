@@ -66,7 +66,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     temperature = float(kwargs.get("temperature", 0.7))
     store_output = kwargs.get("store", True)
 
-    # Check Ollama availability
     try:
         from whitemagic.tools.handlers.ollama import (
             _ollama_preflight,
@@ -110,13 +109,11 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     if inject:
         context_block = _inject_task_context(task)
 
-    # Initialize conversation
     messages: list[dict[str, str]] = [
         {"role": "system", "content": system_prompt + context_block},
         {"role": "user", "content": task},
     ]
 
-    # Agent loop
     iterations: list[dict[str, Any]] = []
     tool_calls: list[dict[str, Any]] = []
     total_tokens = 0
@@ -127,7 +124,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         iter_start = time.time()
         logger.info("Agent iteration %d/%d", iteration, max_iterations)
 
-        # Call the model
         try:
             from whitemagic.tools.handlers.ollama import _chat
 
@@ -156,10 +152,8 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         except (ImportError, AttributeError):
             pass
 
-        # Parse tool calls from response
         calls = _parse_tool_calls(response)
 
-        # Check for completion
         is_complete = _check_completion(response, calls)
 
         iter_info: dict[str, Any] = {
@@ -172,7 +166,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         iterations.append(iter_info)
 
         if calls:
-            # Execute each tool call
             for call in calls:
                 tool_name = call.get("tool", "")
                 tool_args = call.get("args", {})
@@ -217,7 +210,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
             )
             break
 
-        # Add assistant response to conversation for next iteration
         if not calls:
             messages.append({"role": "assistant", "content": response})
 
@@ -225,7 +217,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         # Use last response as final answer
         final_answer = iterations[-1].get("response_preview", "")
 
-    # Store output as memory
     stored_id = None
     if store_output and final_answer:
         stored_id = _store_agent_output(task, final_answer, model, iterations)
@@ -259,7 +250,6 @@ def _build_system_prompt(
     else:
         tools_section = "\n\nYou have access to WhiteMagic's tool system. Available tools include memory search, knowledge graph queries, and analysis tools."
 
-    # Add bandit recommendations
     rec_section = ""
     if recommended:
         rec_lines = []
@@ -318,7 +308,6 @@ def _parse_tool_calls(response: str) -> list[dict[str, Any]]:
     """
     calls: list[dict[str, Any]] = []
 
-    # Try code block format
     for match in _TOOL_CALL_PATTERN.finditer(response):
         try:
             data = json.loads(match.group(1))
@@ -332,7 +321,6 @@ def _parse_tool_calls(response: str) -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             continue
 
-    # Try inline format
     for match in _TOOL_CALL_INLINE.finditer(response):
         try:
             data = json.loads(match.group(1))
@@ -351,13 +339,11 @@ def _parse_tool_calls(response: str) -> list[dict[str, Any]]:
 
 def _check_completion(response: str, tool_calls: list[dict[str, Any]]) -> bool:
     """Check if the agent has completed the task."""
-    # Check for explicit completion markers
     response_upper = response.strip().upper()
     for marker in _COMPLETION_MARKERS:
         if response_upper.startswith(marker):
             return True
 
-    # If there are no tool calls and the response is substantive, consider it done
     if not tool_calls and len(response) > 50:
         return True
 

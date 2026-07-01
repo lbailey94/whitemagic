@@ -21,9 +21,7 @@ from pathlib import Path
 
 import click
 
-# ---------------------------------------------------------------------------
 # Template content — module-level strings, no indentation issues
-# ---------------------------------------------------------------------------
 
 _README = """\
 # WhiteMagic Project
@@ -533,9 +531,7 @@ _MCP_JSON = """\
 """
 
 
-# ---------------------------------------------------------------------------
 # CLI command
-# ---------------------------------------------------------------------------
 
 
 @click.command(name="init")
@@ -598,7 +594,6 @@ def init_command(directory: str, force: bool, minimal: bool) -> None:
     for dirname in ("data", "logs", "tmp"):
         (target / dirname).mkdir(exist_ok=True)
 
-    # Print results
     click.echo(f"\n  WhiteMagic v{__version__} — Project initialized at {target}\n")
 
     if created:

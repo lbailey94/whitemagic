@@ -91,7 +91,6 @@ class ThreatPattern:
         """Check if event matches this pattern."""
         score = 0.0
 
-        # Check tool name
         if event.tool_name and event.tool_name in self.indicators:
             score += 0.3
 
@@ -100,7 +99,6 @@ class ThreatPattern:
             if indicator.lower() in event.reason.lower():
                 score += 0.2
 
-        # Check parameter patterns
         for key, value in event.params.items():
             if str(value) in self.indicators:
                 score += 0.2
@@ -201,7 +199,6 @@ class SecurityImmuneSystem:
         self.event_window = timedelta(hours=1)
         self.pattern_threshold = 3  # Min events to form pattern
 
-        # Connect to Gan Ying
         self._connect_to_bus()
 
     def _connect_to_bus(self) -> None:
@@ -285,7 +282,6 @@ class SecurityImmuneSystem:
 
     def _analyze_event(self, event: SecurityEvent) -> None:
         """Analyze event for patterns and generate antibodies."""
-        # Get recent events in window
         cutoff = datetime.now() - self.event_window
         recent_events = [e for e in self.events if e.timestamp > cutoff]
 
@@ -431,7 +427,6 @@ class SecurityImmuneSystem:
 
     def on_security_event(self, event: Any) -> None:
         """Handle incoming security event from Gan Ying."""
-        # Convert to SecurityEvent if needed
         if hasattr(event, "data"):
             data = event.data
             sec_event = SecurityEvent(
@@ -562,7 +557,6 @@ class SecurityAutoimmune:
                 )
 
                 if fp_rate > 0.5:
-                    # Remove overly aggressive antibody
                     del self.immune.antibodies[antibody.antibody_id]
                     logger.info(
                         "Removed antibody %s (too aggressive)", antibody.antibody_id

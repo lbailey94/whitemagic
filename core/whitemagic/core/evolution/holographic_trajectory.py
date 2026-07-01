@@ -244,7 +244,6 @@ class TrajectoryTracker:
                 pos_b = traj_b.latest.position  # type: ignore[union-attr]
                 dist = pos_a.distance_to(pos_b)
                 if dist < threshold:
-                    # Check velocity alignment
                     vel_a = traj_a.velocity()
                     vel_b = traj_b.velocity()
                     if vel_a is not None and vel_b is not None:

@@ -601,7 +601,6 @@ class GanYingBus:
         Returns True if the check was performed (cache updated), False if
         Haskell is unavailable.
         """
-        # Check class-level availability cache
         if GanYingBus._haskell_available is False:
             return False
 
@@ -662,7 +661,6 @@ class GanYingBus:
         if not self._cascade_triggers:
             return []
 
-        # Try PyO3 first
         try:
             import wm_cascade as _wc
 
@@ -771,7 +769,6 @@ class GanYingBus:
 
         Handles dampening, listener dispatch, and cascade processing.
         """
-        # Check dampening — suppress low-confidence high-frequency events
         dampen_factor = self._dampening.get(event.event_type)
         if dampen_factor is not None and event.confidence < dampen_factor:
             return
@@ -814,7 +811,6 @@ class GanYingBus:
             )
             return
 
-        # Try polyglot acceleration (Rust PyO3)
         if self._try_polyglot_cascade(event):
             return
 
@@ -823,7 +819,6 @@ class GanYingBus:
             if trigger.trigger_event != event.event_type:
                 continue
 
-            # Check optional condition
             if trigger.condition is not None:
                 try:
                     if not trigger.condition(event):
@@ -891,7 +886,6 @@ class GanYingBus:
         if self._koka_backend is False:
             return None
 
-        # Check class-level availability cache
         if GanYingBus._koka_available is False:
             return None
 
@@ -973,7 +967,6 @@ class GanYingBus:
             try:
                 import wm_cascade as _wc
 
-                # Verify the module is functional
                 _wc.is_safe([])
                 self._cascade_backend = _wc
             except Exception:

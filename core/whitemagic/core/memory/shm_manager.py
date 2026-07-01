@@ -38,7 +38,6 @@ class SharedMemoryManager:
                 return
 
             try:
-                # Try to open existing
                 self._shm = posix_ipc.SharedMemory(self.name)
             except posix_ipc.ExistentialError:
                 # Create new
@@ -52,7 +51,6 @@ class SharedMemoryManager:
             shm.close_fd() # Safe to close FD after mmap
             map_file = self._get_map_file()
 
-            # Initialize header if it's a new segment or corrupted
             magic = struct.unpack_from("=i", map_file, 0)[0]
             if magic != MAGIC:
                 struct.pack_into("=iiiiii", map_file, 0, MAGIC, 1, CAPACITY, 0, 0, 0)

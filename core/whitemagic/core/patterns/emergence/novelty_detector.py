@@ -38,11 +38,9 @@ class NoveltyDetector:
         """Detect if content is novel."""
         content_hash = hashlib.md5(content.encode()).hexdigest()[:8]
 
-        # Check if we've seen this exact content
         is_exact_duplicate = content_hash in self.seen_hashes
         self.seen_hashes.add(content_hash)
 
-        # Check pattern similarity (simple word-based)
         words = set(content.lower().split())
         similar_count = 0
         for pattern in self.pattern_counts:
@@ -63,7 +61,6 @@ class NoveltyDetector:
         else:
             novelty_score = 1.0  # Completely new!
 
-        # Store pattern
         self.pattern_counts[content[:100]] = (
             self.pattern_counts.get(content[:100], 0) + 1
         )

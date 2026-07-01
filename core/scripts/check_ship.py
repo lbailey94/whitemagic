@@ -40,7 +40,6 @@ for issue in details.get("issues", []):
     if filtered_hits:
         filtered_issues.append({"kind": issue["kind"], "hits": filtered_hits})
 
-# Print filtered results
 output = {
     "checks": details.get("checks", 0),
     "issues": filtered_issues,

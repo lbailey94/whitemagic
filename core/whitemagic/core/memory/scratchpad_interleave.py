@@ -171,7 +171,6 @@ class ScratchpadManager:
     def create(self, name: str, focus: str | None = None) -> Scratchpad:
         """Create a new scratchpad."""
         if len(self.scratchpads) >= self.MAX_SCRATCHPADS:
-            # Remove oldest inactive
             oldest = min(self.scratchpads.values(), key=lambda p: p.last_active)
             del self.scratchpads[oldest.name]
 

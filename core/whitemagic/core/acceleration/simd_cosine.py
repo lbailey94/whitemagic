@@ -61,7 +61,6 @@ def _get_buffer(size: int) -> Any:
 
 def _find_zig_lib() -> str | None:
     """Locate the compiled Zig shared library."""
-    # From core/whitemagic/core/acceleration/ go up to core/, then to polyglot/
     base = (
         Path(__file__).resolve().parent.parent.parent.parent.parent
         / "polyglot"

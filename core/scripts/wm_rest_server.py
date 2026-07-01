@@ -76,7 +76,6 @@ from api_cache import get_api_cache
 
 _api_cache = get_api_cache()
 
-# Try Rust backend for hot paths
 try:
     import whitemagic_rs
 
@@ -85,7 +84,6 @@ except ImportError:
     HAS_RUST = False
     whitemagic_rs = None
 
-# Try Zig SIMD backend for hot paths
 try:
     from whitemagic.core.acceleration.simd_cosine import (
         cosine_similarity as zig_cosine,
@@ -100,7 +98,6 @@ except ImportError:
     zig_batch_cosine = None
     zig_status = None
 
-# Try Haskell spatial core
 try:
     from whitemagic.core.acceleration.haskell_bridge import (
         hs_spatial_status as hs_status,
@@ -815,7 +812,6 @@ def list_memories(
 
             memories.append(mem)
 
-        # Get total count
         if q:
             total = conn.execute(
                 "SELECT COUNT(*) FROM memories WHERE title LIKE ? OR content LIKE ?",
@@ -879,7 +875,6 @@ def list_gardens():
                     }
                 )
 
-        # Add gardens with no memories
         existing_names = {g["name"] for g in gardens}
         for name, defaults in all_gardens.items():
             if name not in existing_names:
@@ -1167,7 +1162,6 @@ async def sync_websocket(ws: WebSocket):
         # ── Phase 1: X25519 Handshake ─────────────────────────────────
         handshake = await ws.receive_json()
 
-        # Validate handshake fields
         user_id = handshake.get("userId")
         client_public_b64 = handshake.get("x25519_public_key")
         client_nonce = handshake.get("nonce")
@@ -1181,7 +1175,6 @@ async def sync_websocket(ws: WebSocket):
             await ws.close(code=4001, reason="Incomplete handshake")
             return
 
-        # Verify timestamp (5-minute window)
         try:
             ts = float(timestamp)
         except (ValueError, TypeError):
@@ -1200,7 +1193,6 @@ async def sync_websocket(ws: WebSocket):
             await ws.close(code=4002, reason="Timestamp expired")
             return
 
-        # Verify nonce not replayed
         if not sync_manager.nonce_cache.check_and_add(client_nonce):
             audit_logger.log("nonce_replay", user_id=user_id, severity="critical")
             await ws.send_json({"type": "error", "error": "Nonce replayed"})
@@ -1262,14 +1254,12 @@ async def sync_websocket(ws: WebSocket):
         while True:
             data = await ws.receive_json()
 
-            # Validate message schema
             try:
                 msg = SyncMessage.model_validate(data)
             except ValidationError as e:
                 await ws.send_json({"type": "error", "error": str(e)})
                 continue
 
-            # Check nonce replay
             if not sync_manager.nonce_cache.check_and_add(msg.nonce):
                 audit_logger.log(
                     "nonce_replay", user_id=msg.userId, severity="critical"
@@ -1287,7 +1277,6 @@ async def sync_websocket(ws: WebSocket):
 
             user_id = msg.userId
 
-            # Handle heartbeat
             if msg.type == "heartbeat":
                 sync_manager.merge_vector_clock(user_id, msg.vectorClock)
                 # Refresh presence status on heartbeat
@@ -1304,7 +1293,6 @@ async def sync_websocket(ws: WebSocket):
                 )
                 continue
 
-            # Handle presence update
             if msg.type == "presence_update":
                 if user_id in sync_manager.sessions and sync_manager.sessions[user_id]:
                     session = sync_manager.sessions[user_id][0]
@@ -1338,7 +1326,6 @@ async def sync_websocket(ws: WebSocket):
                 )
                 continue
 
-            # Handle sync operations
             if msg.type in (
                 "memory_created",
                 "memory_updated",
@@ -1551,7 +1538,6 @@ def resonance_analysis(limit: int = 500):
 
         conn.close()
 
-        # Run analysis
         detector = PatternResonanceDetector()
         patterns = detector.find_resonant_patterns(memories)
 
@@ -1775,7 +1761,6 @@ def resonance_constellations(
                     flat_coords, dim, len(coords), radius=overlap_threshold
                 )
 
-                # Parse cluster result
                 if isinstance(cluster_result, dict) and "clusters" in cluster_result:
                     constellations = []
                     for cluster_id, members in cluster_result["clusters"].items():
@@ -1953,7 +1938,6 @@ def resonance_similarity(query: str, top_k: int = 20):
     try:
         conn = get_db_conn()
 
-        # Get all memories with embeddings
         rows = conn.execute("""
             SELECT m.id, m.title, m.content, m.importance, me.embedding
             FROM memories m
@@ -1967,7 +1951,6 @@ def resonance_similarity(query: str, top_k: int = 20):
         if not rows:
             return {"results": [], "total": 0}
 
-        # Parse query embedding (simplified: use keyword matching)
         # In production, this would use the embedding model
         results = []
         for row in rows:
@@ -2006,7 +1989,6 @@ def resonance_benchmarks():
 
     results = {}
 
-    # Test Rust availability
     results["rust_available"] = HAS_RUST
 
     if HAS_RUST and whitemagic_rs:

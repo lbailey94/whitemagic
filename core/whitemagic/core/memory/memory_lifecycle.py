@@ -95,7 +95,6 @@ class MemoryLifecycleManager:
         with self.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
 
-            # Process in batches for large association tables
             rows = conn.execute(
                 """SELECT source_id, target_id, strength,
                           COALESCE(edge_type, 'semantic') as edge_type,

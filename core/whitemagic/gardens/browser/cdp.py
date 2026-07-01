@@ -152,7 +152,6 @@ class CDPConnection:
         if not HAS_WEBSOCKETS:
             raise ImportError("websockets required: pip install websockets")
 
-        # Validate WebSocket URL
         parsed = urllib.parse.urlparse(ws_url)
         if parsed.scheme not in {"ws", "wss"}:
             raise ValueError(

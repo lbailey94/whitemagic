@@ -71,7 +71,6 @@ class DGAEngine:
 
     def _sig_to_vector(self, sig: str) -> np.ndarray:
         """Turn a hex signature into a numeric vector."""
-        # Convert hex to bits, then bits to floats
         raw_bits = bin(int(sig, 16))[2:].zfill(512)
         return np.array([float(b) for b in raw_bits])  # type: ignore[no-any-return]
 

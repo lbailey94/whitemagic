@@ -210,7 +210,6 @@ class ThreadingManager:
         # Create coroutines for all tasks
         coros = [runner(func, *args, **kwargs) for func, args, kwargs in tasks]
 
-        # Execute all in parallel
         return await asyncio.gather(*coros, return_exceptions=True)
 
     def __enter__(self) -> ThreadingManager:

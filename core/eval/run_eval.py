@@ -82,7 +82,6 @@ def main(argv: list[str]) -> int:
     if args.silent_init:
         os.environ["WM_SILENT_INIT"] = "1"
 
-    # Import after env bootstrap.
     from whitemagic.config.paths import ARTIFACTS_DIR, WM_ROOT
     from whitemagic.tools.unified_api import call_tool
 
@@ -183,7 +182,6 @@ def main(argv: list[str]) -> int:
         if out.get("status") != "success":
             raise RuntimeError(f"ship.check failed: {out.get('message')}")
         # ship.check findings are advisory — absolute paths in changelogs and
-        # test fixtures are expected.  Only fail on secrets.
         if not (out.get("details") or {}).get("ok"):
             issues = (out.get("details") or {}).get("issues") or []
             secret_issues = [i for i in issues if i.get("kind") == "potential_secrets"]

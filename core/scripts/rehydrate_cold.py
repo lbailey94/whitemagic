@@ -59,7 +59,6 @@ def main():
     conn.execute("PRAGMA cache_size=-128000")  # 128MB cache
     conn.execute(f"ATTACH DATABASE '{COLD_DB}' AS cold")
 
-    # --- Pre-counts ---
     print("\n📊 Before:")
     for t in [
         "memories",
@@ -83,7 +82,6 @@ def main():
 
     total_start = time.perf_counter()
 
-    # --- 1. Memories ---
     # The cold DB has a slightly different schema (missing some columns).
     # We select only columns that exist in both.
     cold_mem_cols = [
@@ -105,7 +103,6 @@ def main():
     dt = time.perf_counter() - t0
     print(f"  ✅ Memories done in {dt:.1f}s")
 
-    # --- 2. Associations ---
     cold_assoc_cols = [
         r[1] for r in conn.execute("PRAGMA cold.table_info(associations)").fetchall()
     ]
@@ -153,7 +150,6 @@ def main():
     dt = time.perf_counter() - t0
     print(f"  ✅ Associations done in {dt:.1f}s")
 
-    # --- 3. Holographic coords ---
     print("\n📦 Ingesting holographic coords...")
     t0 = time.perf_counter()
     cold_holo_cols = [
@@ -173,7 +169,6 @@ def main():
     conn.commit()
     print(f"  ✅ Holo coords done in {time.perf_counter() - t0:.1f}s")
 
-    # --- 4. Embeddings ---
     print("\n📦 Ingesting embeddings...")
     t0 = time.perf_counter()
     try:
@@ -203,7 +198,6 @@ def main():
     except Exception as e:
         print(f"  ⚠ Embeddings: {e}")
 
-    # --- 5. Tags ---
     print("\n📦 Ingesting tags...")
     t0 = time.perf_counter()
     try:
@@ -216,7 +210,6 @@ def main():
     except Exception as e:
         print(f"  ⚠ Tags: {e}")
 
-    # --- Rebuild FTS ---
     print("\n🔄 Rebuilding FTS index...")
     try:
         conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
@@ -225,7 +218,6 @@ def main():
     except Exception as e:
         print(f"  ⚠ FTS: {e}")
 
-    # --- Final counts ---
     print("\n📊 After:")
     for t in [
         "memories",

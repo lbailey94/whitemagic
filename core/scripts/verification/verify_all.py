@@ -28,7 +28,6 @@ def verify_symbolic():
     print("\n☯️ Testing SymbolicReasoning...")
     engine = SymbolicReasoning(use_chinese=True)
 
-    # Add a concept
     engine.add_concept("dao", "The Way", "道", ConceptType.PRINCIPLE)
 
     # Query it (should trigger stats)
@@ -56,7 +55,6 @@ def verify_synthesis():
     print("\n🌸 Testing EnhancedGardenSynthesis...")
     synth = EnhancedGardenSynthesis()
 
-    # Run a synthesis
     result = synth.synthesize_gardens(["joy", "love"], {"intention": True})
     print(f"   Harmony: {result['harmony_score']:.2f}")
 

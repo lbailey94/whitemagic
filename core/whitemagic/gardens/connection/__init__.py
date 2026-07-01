@@ -31,7 +31,6 @@ try:
 except ImportError:
     SynastryGovernor = None  # type: ignore[assignment,misc]
 
-# Import Zodiac components
 from .zodiac_cores import (
     AquariusCore,
     AriesCore,

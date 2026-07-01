@@ -247,12 +247,10 @@ class ConductorOrchestrator:
             },
         )
 
-        # Initialize neural memory for context (optional)
         # Note: NeuralMemory API may vary, so we gracefully skip if unavailable
         # try:
         #     self.neural_memory = NeuralMemory()
         #     self.neural_memory.remember(f"Task: {prompt}", source="conductor")
-        # except Exception as e:
         #     print(f"⚠️ Neural memory unavailable: {e}")
 
         # Build completion checker
@@ -273,7 +271,6 @@ class ConductorOrchestrator:
                     exc_info=True,
                 )
 
-                # Check timeout
                 if self._check_timeout():
                     logger.info(
                         "⏰ Timeout reached after %s minutes",
@@ -305,11 +302,8 @@ class ConductorOrchestrator:
                     },
                 )
 
-                # Check completion
                 result.is_complete = completion_condition(thought_path)
 
-                # Store in memory (optional)
-                # if self.neural_memory:
                 #     self.neural_memory.remember(
                 #         f"Iteration {iteration}: {thought_path.content[:200]}",
                 #         source="conductor"
@@ -348,7 +342,6 @@ class ConductorOrchestrator:
                     self._completed = True
                     break
 
-                # Check budget
                 if self.token_budget.used > self.token_budget.allocated * 0.9:
                     logger.info(
                         "💰 Token budget approaching limit: %s/%s",
@@ -408,7 +401,6 @@ class ConductorOrchestrator:
         """Build prompt with iteration context."""
         context_parts = [base_prompt]
 
-        # Add previous iteration context
         if self.iterations:
             last_result = self.iterations[-1]
             context_parts.append(
@@ -416,7 +408,6 @@ class ConductorOrchestrator:
                 f"{last_result.thought_path.content[:150]}...",
             )
 
-        # Add progress summary
         if iteration > 1:
             avg_confidence = sum(
                 r.thought_path.confidence for r in self.iterations

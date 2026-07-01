@@ -81,7 +81,6 @@ def clean_content(text: str) -> str:
 
 def extract_title(text: str) -> str:
     """Extract the most representative title from cluster content."""
-    # Try to find the first substantive sentence (at least 8 words)
     sentences = SENTENCE_RE.findall(text)
     for s in sentences:
         words = s.split()
@@ -147,7 +146,6 @@ def synthesize(input_path: Path, output_path: Path) -> None:
 
     print(f"Synthesized {total} clusters → {output_path}")
 
-    # Print a few examples
     print("\nSample titles:")
     for entry in synthesized[:10]:
         print(f"  [{entry['cluster_id']}] {entry['title'][:100]}")

@@ -434,7 +434,6 @@ class HomeostaticLoop:
             # The lifecycle manager already handles its own backgrounding in _on_slow_flush,
             # but for manual correction we should ensure it's not blocking.
             # We'll call the async-safe version or wrap it in the global bus worker if appropriate.
-            # For now, we'll keep the thread but ensure it's named and tracked.
             t = threading.Thread(
                 target=mgr.run_sweep, daemon=True, name="homeostatic-correction-sweep"
             )
@@ -703,7 +702,6 @@ class HomeostaticLoop:
                 CoherenceMetric,
             )
 
-            # Check module availability
             health_score = 1.0
             module_count = 0
             available_count = 0
@@ -743,7 +741,6 @@ class HomeostaticLoop:
                     )
                 ]
 
-            # Check coherence metric if available
             try:
                 metric = CoherenceMetric()
                 scores = metric.measure()
@@ -796,7 +793,6 @@ class HomeostaticLoop:
             if not engine._running:
                 engine.start()
 
-            # Run a tick with available tools
             try:
                 from whitemagic.tools.registry import get_registry
 
@@ -811,7 +807,6 @@ class HomeostaticLoop:
 
             results = engine.tick(available[:20])  # Limit for performance
 
-            # Check for health issues
             actions: list[HomeostaticAction] = []
             health = results.get("health", {})
             for metric, info in health.items():
@@ -829,7 +824,6 @@ class HomeostaticLoop:
                         )
                     )
 
-            # Check for predictive alerts
             alerts = results.get("predictive_alerts", [])
             for alert in alerts:
                 actions.append(
@@ -841,7 +835,6 @@ class HomeostaticLoop:
                     )
                 )
 
-            # Check for auto-heal actions
             heal_actions = results.get("auto_heal_actions", [])
             for action in heal_actions:
                 actions.append(

@@ -79,7 +79,6 @@ class Scratchpad:
             for t in entry["tags"]:
                 all_tags.add(t)
 
-        # Store in Unified Memory
         remember(
             content=combined_text,
             title=f"Scratchpad Finalization: {self.session_id}",
@@ -87,7 +86,6 @@ class Scratchpad:
             importance=0.7,
         )
 
-        # Clear local storage
         self.entries = []
         if self.file_path.exists():
             self.file_path.unlink()

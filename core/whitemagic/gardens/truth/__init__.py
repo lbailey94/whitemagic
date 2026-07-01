@@ -231,17 +231,14 @@ class TruthGarden(BaseGarden, GanYingMixin):
         issues: list[str] = []
         warnings: list[str] = []
 
-        # Check critical paths
         paths = self.get_state_paths()
         if not paths["paths"].get("hot_db", {}).get("exists"):
             issues.append("Hot database not found")
 
-        # Check accelerators
         accel = self.check_accelerators()
         if not accel.get("rust"):
             warnings.append("Rust accelerators not available (performance impact)")
 
-        # Check version file
         version_path = Path(__file__).parents[3] / "VERSION"
         if version_path.exists():
             version = version_path.read_text().strip()

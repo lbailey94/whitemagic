@@ -28,7 +28,6 @@ def main() -> None:
     except json.JSONDecodeError:
         event = {}
 
-    # Try to use WhiteMemory if available; otherwise generate a mock ID
     memory_id = _store_event(event)
     result = {
         "status": "stored",

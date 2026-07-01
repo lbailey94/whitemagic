@@ -26,7 +26,6 @@ def handle_codegenome_generate(**kwargs: Any) -> dict[str, Any]:
             "message": "prompt is required",
         }
 
-    # If tier is specified, use direct vault render; otherwise use full God-Kit pipeline
     forced_tier = kwargs.get("tier")
     if forced_tier:
         vault = get_geneseed_vault()

@@ -258,7 +258,6 @@ class WarRoom:
         """
         campaign_id = f"campaign_{uuid.uuid4().hex[:8]}"
 
-        # Get doctrine recommendations
         try:
             from whitemagic.agents.doctrine import get_doctrine
 
@@ -275,7 +274,6 @@ class WarRoom:
             forces = [{"type": "light_infantry", "count": 1000}]
             total_clones = 1000
 
-        # Get Art of War terrain assessment
         try:
             from whitemagic.core.intelligence.wisdom.art_of_war import get_war_engine
 
@@ -575,7 +573,6 @@ class WarRoom:
             }
         )
 
-        # Verify (Ralph clones — fresh eyes)
         try:
             from whitemagic.core.intelligence.agentic.fool_guard import get_fool_guard
 

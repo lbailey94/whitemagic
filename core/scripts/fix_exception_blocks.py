@@ -32,13 +32,11 @@ class ExceptionBlockFixer(ast.NodeTransformer):
             return node
 
         if isinstance(node.type, ast.Name) and node.type.id == "Exception":
-            # Check context to determine appropriate exception
             context = self._get_exception_context(node)
             if context:
                 new_type = context
                 self.changes.append(f"Line {node.lineno}: Exception → {new_type}")
 
-                # Add import if needed
                 if "sqlite" in new_type.lower():
                     self.imports.add("sqlite3")
                 elif "json" in new_type.lower():
@@ -46,7 +44,6 @@ class ExceptionBlockFixer(ast.NodeTransformer):
 
                 # Create new exception handler with specific type
                 if isinstance(new_type, str):
-                    # Parse the exception type
                     parts = new_type.split(", ")
                     if len(parts) == 1:
                         new_node = ast.Name(id=parts[0], ctx=ast.Load())
@@ -101,7 +98,6 @@ class ExceptionBlockFixer(ast.NodeTransformer):
         ):
             return "ConnectionError, TimeoutError, OSError"
 
-        # Import operations
         if "import" in try_source_lower:
             return "ImportError, ModuleNotFoundError"
 

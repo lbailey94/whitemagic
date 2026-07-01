@@ -77,7 +77,6 @@ class SessionHandoff:
             SessionState (new or resumed)
 
         """
-        # Check for previous session
         if self.current_session_file.exists():
             prev_state = self._load_session_state(self.current_session_file)
             if prev_state and not prev_state.ended_at:
@@ -123,7 +122,6 @@ class SessionHandoff:
         if not state or state.session_id != session_id:
             return
 
-        # Update fields
         for key, value in updates.items():
             if hasattr(state, key):
                 setattr(state, key, value)
@@ -381,11 +379,9 @@ class SessionHandoff:
         state.iteration_count += 1
         state.files_modified.extend(files_modified)
 
-        # Check completion criteria
         if state.completion_criteria and state.completion_criteria in output:
             return self._complete_continuous(state, "completion_criteria_met")
 
-        # Check max iterations
         if state.iteration_count >= state.max_iterations:
             return self._complete_continuous(state, "max_iterations_reached")
 

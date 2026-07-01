@@ -31,7 +31,6 @@ class KarmaTraceLogger:
             # Assuming we are in whitemagic/core/ganas
             # We want to find the project root.
             # Using a relative path strategy or environment variable would be better.
-            # For now, let's look for a 'logs' directory relative to this file
             base_dir = Path(__file__).resolve().parent.parent.parent.parent
             self.trace_file = base_dir / "logs" / "karma_trace.jsonl"
         else:
@@ -53,7 +52,6 @@ class KarmaTraceLogger:
         # Safe attribute access
         mansion_name = getattr(getattr(gana_result, "mansion", None), "name", "UNKNOWN")
         garden = getattr(gana_result, "garden", None)
-        # If garden is not on result (it wasn't in previous definition), we might need to get it from somewhere else
         # But we added it to BaseGana, not GanaResult. Wait, GanaResult holds output.
         # The Gana instance holds the garden. GanaResult should probably carry it or we log it from the Gana.
         # But GanaResult is what we have here.
@@ -85,7 +83,6 @@ class KarmaTraceLogger:
     async def log_async(self, gana_result: Any) -> None:
         """Async wrapper for logging."""
         # File I/O is blocking, but for simple appends it's usually negligible.
-        # For strict async, we'd use a thread executor.
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.log, gana_result)
 
@@ -97,8 +94,6 @@ class KarmaTraceLogger:
         traces = []
         try:
             with open(self.trace_file, encoding="utf-8") as f:
-                # For large files, we should read from the end.
-                # For now, a simple read of all lines is fine for v5.0.0-alpha.
                 lines = f.readlines()
                 for line in lines[-limit:]:
                     try:

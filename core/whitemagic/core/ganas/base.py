@@ -164,7 +164,6 @@ class BaseGana(ABC):
         self.mansion = mansion
         self.garden = garden
         # In a real implementation, we would look up the essence from a registry
-        # For now, we'll just store the name
         self.garden_essence = f"Essence of {garden}" if garden else ""
         self.base_template = self._get_base_template()
         self.invocation_count = 0
@@ -277,7 +276,6 @@ class BaseGana(ABC):
         """
         start_time = time.time()
 
-        # Start with base
         template = self.base_template
 
         # Predecessor resonance
@@ -347,7 +345,6 @@ class BaseGana(ABC):
         """Boost behavior when Moon is in this mansion.
         Also injects Garden essence if present.
         """
-        # Get current lunar mansion (simplified - just use phase)
         current_mansion_num = int(lunar_phase * 28) + 1
 
         amplified = template

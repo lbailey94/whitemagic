@@ -628,7 +628,6 @@ class MultiSpectralReasoner:
             f"Primary guidance ({lens_name}, score={top_score:.2f}): {top_p.guidance}"
         )
 
-        # Add secondary perspective if it adds new information
         if len(scored) > 1:
             second_p, second_score = scored[1]
             if second_score > top_score * 0.5:  # Meaningful contribution

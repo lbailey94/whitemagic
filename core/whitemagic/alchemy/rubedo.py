@@ -15,7 +15,6 @@ import logging
 from collections import Counter
 from typing import Any
 
-# Import Local LLM for synthesis
 try:
     from whitemagic.inference.local_llm import LocalLLM
 except ImportError:
@@ -66,7 +65,6 @@ class RubedoSynthesizer:
         rule_title = f"Pattern: {' '.join(top_words).title()}"
         rule_body = "Captured pattern from multiple memories."
 
-        # Try LLM Synthesis
         if self.llm:
             try:
                 # Sample content

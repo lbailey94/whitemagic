@@ -389,13 +389,10 @@ async def main():
         print(f"And model is pulled: ollama pull {model_name}")
         return
     
-    # Run benchmark
     results = await benchmark.run_benchmark()
     
-    # Print summary
     benchmark.print_summary(results)
     
-    # Save results
     output_dir = Path("reports")
     output_dir.mkdir(exist_ok=True)
     

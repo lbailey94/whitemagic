@@ -69,7 +69,6 @@ class SyntheticControl:
         if not pre_trajectory:
             return [0.0] * n_steps if n_steps > 0 else []
 
-        # Try Rust bridge
         pre_values = [p.value for p in pre_trajectory]
         result = _rust_call(
             "cf_project_forward",
@@ -122,7 +121,6 @@ class SyntheticControl:
         if not pre_trajectory or n_bootstrap < 10:
             return (0.0, 0.0)
 
-        # Try Rust bridge
         pre_values = [p.value for p in pre_trajectory]
         result = _rust_call(
             "cf_bootstrap_ci",
@@ -193,7 +191,6 @@ class CounterfactualEstimator:
         n_post = len(post_trajectory)
         n_pre = len(pre_trajectory)
 
-        # Try Rust bridge for the full estimation
         pre_values = [p.value for p in pre_trajectory]
         post_values = [p.value for p in post_trajectory]
         rust_result = _rust_call(

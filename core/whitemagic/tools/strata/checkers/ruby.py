@@ -78,7 +78,6 @@ def check_ruby(project_path: Path, file_index: FileIndex, findings: list[Finding
                     )
                 )
 
-            # Class variables (thread safety / inheritance gotchas)
             if re.search(r"@@\w+", stripped):
                 findings.append(
                     Finding(

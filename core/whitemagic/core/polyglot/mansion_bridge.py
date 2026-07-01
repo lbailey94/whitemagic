@@ -100,12 +100,10 @@ class MansionBridge:
 
     def _detect_mojo(self) -> BackendStatus:
         """Detect Mojo backend."""
-        # Check for compiled binaries in root directory first
         mojo_dir = self.project_root / "whitemagic-mojo"
         bin_dir = self.project_root / "whitemagic-mojo" / "bin"
         mojo_binaries = []
 
-        # Check root directory first (where binaries actually are)
         if mojo_dir.exists():
             try:
                 mojo_binaries = [
@@ -130,7 +128,6 @@ class MansionBridge:
             except (OSError, FileNotFoundError, PermissionError):
                 pass
 
-        # Check for mojo executable
         mojo_path = self.project_root / ".venv" / "bin" / "mojo"
         mojo_available = mojo_path.exists() or len(mojo_binaries) > 0
 
@@ -195,7 +192,6 @@ class MansionBridge:
         if backend == "python":
             return self._similarity_python(text1, text2)
 
-        # Try Rust first
         if self._rust_status.available:
             try:
                 import whitemagic_rs

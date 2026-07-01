@@ -38,7 +38,6 @@ def handle_grimoire_suggest(**kwargs: Any) -> dict[str, Any]:
             }
         )
 
-    # Return with context info
     ctx = grimoire.context
 
     return {
@@ -67,7 +66,6 @@ def handle_grimoire_cast(**kwargs: Any) -> dict[str, Any]:
 def handle_grimoire_recommend(**kwargs: Any) -> dict[str, Any]:
     """Alias for grimoire_suggest."""
     result = handle_grimoire_suggest(**kwargs)
-    # Add recommendations alias for backward compatibility
     if "suggestions" in result and "recommendations" not in result:
         result["recommendations"] = result["suggestions"]
     return result

@@ -68,7 +68,6 @@ class HarnessReport:
             caps = ", ".join(r.capabilities)
             lines.append(f"| {r.name} | {caps} | {status} | {r.duration_ms:.1f}ms |")
 
-        # Add errors section
         errors = [r for r in self.results if r.error]
         if errors:
             lines.extend(["", "## Errors", ""])
@@ -108,10 +107,8 @@ class CapabilityHarness:
         """Test Rust Bridge + Parallel Cognition"""
         import whitemagic_rs
 
-        # Test fast_similarity (most reliable basic function)
         sim = whitemagic_rs.fast_similarity("hello world", "hello there")
 
-        # Test audit_directory with string pattern
         audit_result = whitemagic_rs.audit_directory(
             str(self.base_path / "whitemagic"),
             "*.py",
@@ -183,7 +180,6 @@ class CapabilityHarness:
 
         bus.listen(EventType.COUNCIL_CONVENED, capture_council)
 
-        # Try to import zodiac
         try:
             from whitemagic.gardens.connection.zodiac_cores import (
                 ZodiacCores,  # type: ignore[attr-defined]
@@ -207,7 +203,6 @@ class CapabilityHarness:
 
         get_bus()
 
-        # Check for emergence detector
         try:
             from whitemagic.emergence.detector import (
                 EmergenceDetector,  # type: ignore[import-not-found]
@@ -230,7 +225,6 @@ class CapabilityHarness:
 
         bus = get_bus()
 
-        # Check history for ORACLE_CAST events
         history = bus.get_history(EventType.ORACLE_CAST, limit=10)
 
         return {
@@ -261,7 +255,6 @@ class CapabilityHarness:
         """Test Neural Memory + Gan Ying"""
         from whitemagic.core.resonance.gan_ying import EventType, get_bus
 
-        # Check if listeners are active
         # This assumes setup_gan_ying_listeners has been called or will be called by Neural System
         try:
             from whitemagic.core.memory.neural.gan_ying_integration import (
@@ -270,7 +263,6 @@ class CapabilityHarness:
 
             setup_gan_ying_listeners()
 
-            # Verify listeners are registered
             bus = get_bus()
             has_listeners = len(bus._listeners.get(EventType.PATTERN_CONFIRMED, [])) > 0
 
@@ -296,7 +288,6 @@ class CapabilityHarness:
         allocation = {CloneType.PATTERN_HUNTER: 1.0}
         results = army.search("white_magic", allocation=allocation)
 
-        # Check if Rust was used (if possible to verify from results, otherwise rely on success)
         # The CloneArmy logs usage, but for harness we just check result validity
 
         return {

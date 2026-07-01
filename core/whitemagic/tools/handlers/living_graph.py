@@ -160,7 +160,6 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.memory.unified import get_unified_memory
 
         mem = get_unified_memory()
-        # Get candidates from Python backend (FTS + filters)
         candidates = mem.backend.search(query=None, limit=max(limit * 5, 50))
         if candidates and len(candidates) > 0:
             # Build Rust search index from candidates

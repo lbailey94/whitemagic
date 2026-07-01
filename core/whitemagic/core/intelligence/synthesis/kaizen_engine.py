@@ -111,7 +111,6 @@ class KaizenEngine:
         proposals = []
         metrics = {}
 
-        # Phase B: Rust accelerated metrics gathering for v20
         rust_metrics = self._gather_rust_metrics()
         if rust_metrics:
             metrics.update(rust_metrics)
@@ -184,10 +183,8 @@ class KaizenEngine:
             cur.execute("SELECT x, y, z, w FROM holographic_coords")
             coords = [[row[0], row[1], row[2], row[3]] for row in cur.fetchall()]
 
-            # Call Rust fast-path
             rust_result = rs.synthesis_engine.fast_kaizen_metrics(titles, coords)
 
-            # Convert to Python dict
             metrics = {
                 "untitled_count": rust_result.get("untitled_count", 0),
                 "total_memories": len(titles),

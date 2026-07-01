@@ -211,7 +211,6 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
             )
         elapsed = time.monotonic() - start
 
-        # Log to diary if available
         try:
             from whitemagic.autonomous.diary import get_diary
 

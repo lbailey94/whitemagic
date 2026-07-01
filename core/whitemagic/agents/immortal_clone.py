@@ -473,7 +473,6 @@ class ImmortalClone:
     def check_victory_conditions(self) -> bool:
         """Check if task victory conditions are met."""
         # In full implementation, would check actual VCs
-        # For now, simple heuristic: success if we've compiled and tested
         has_compile = any(
             c.get("action", {}).type == ActionType.COMPILE and c.get("success")
             for c in self.context
@@ -540,7 +539,6 @@ class GasTownOrchestrator:
                 )
             )
 
-            # Test phase (depends on implementation)
             meows.append(
                 MEOW(
                     type="test",
@@ -551,7 +549,6 @@ class GasTownOrchestrator:
                 )
             )
 
-            # Verify phase (depends on test)
             meows.append(
                 MEOW(
                     type="verify",
@@ -591,7 +588,6 @@ class GasTownOrchestrator:
                 while len(futures) < self.max_workers and self.work_queue:
                     meow = self.work_queue.pop(0)
 
-                    # Check dependencies
                     if not self._dependencies_met(meow):
                         self.work_queue.append(meow)  # Re-queue for later
                         continue

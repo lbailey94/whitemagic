@@ -113,7 +113,6 @@ def stats(ctx, json_flag: bool):
             click.echo(f"Avg latency: {stats.get('average_latency_ms', 0):.2f}ms")
             click.echo(f"Total tokens saved: {stats.get('tokens_saved', 0)}")
 
-            # Phase 3-5 stats
             if "turbo" in stats:
                 click.echo(
                     f"\n⚡ Turbo: {stats['turbo']['model']} ({stats['turbo']['threads']} threads)"

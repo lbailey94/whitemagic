@@ -74,7 +74,6 @@ class DharmaProtocol:
                 f"Action '{action_name}' violates the Dharma Protocol."
             )
 
-        # Log valid alignment
         logger.debug("✨ Action '%s' validated for %s.", action_name, intent.value)
 
     def sign_artifact(self, artifact_name: str) -> Any:

@@ -40,7 +40,6 @@ def load_principles() -> dict[DharmaPrinciple, PrincipleDefinition]:
     principles_file = Path(__file__).parent / "principles.yaml"
 
     if not principles_file.exists():
-        # Return defaults if file not found
         return _get_default_principles()
 
     try:
@@ -123,9 +122,7 @@ def check_alignment(action: str, principle: DharmaPrinciple) -> bool:
         DharmaPrinciple.ECOLOGY: ["waste", "excessive", "unnecessary"],
     }
 
-    # Check for violations first
     if any(word in action_lower for word in violations.get(principle, [])):
         return False
 
-    # Check for alignment
     return any(word in action_lower for word in alignments.get(principle, []))

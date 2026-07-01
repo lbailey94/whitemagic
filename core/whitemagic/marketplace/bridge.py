@@ -247,7 +247,6 @@ class MarketplaceBridge:
         """
         listing_id = str(uuid.uuid4())[:12]
 
-        # Get agent identity
         agent_id = ""
         agent_name = ""
         try:

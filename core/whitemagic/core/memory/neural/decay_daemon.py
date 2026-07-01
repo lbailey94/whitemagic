@@ -88,13 +88,11 @@ class DecayDaemon:
             else:
                 memory.neuro_score = score.final_score
 
-            # Check archive threshold
             if memory.neuro_score < self.archive_threshold and not memory.is_protected:
                 archived.append(memory)
                 if self.on_archive:
                     self.on_archive(memory)
 
-            # Save updated memory
             store.save(memory)
 
         self._last_run = datetime.now()

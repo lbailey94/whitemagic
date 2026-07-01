@@ -203,11 +203,9 @@ class PromptEngine:
         self._templates: dict[str, PromptTemplate] = {}
         self._lock = threading.Lock()
 
-        # Load built-ins
         for t in _BUILTIN_TEMPLATES:
             self._templates[t.name] = t
 
-        # Load from disk
         from whitemagic.config.paths import WM_ROOT
 
         self._prompts_dir = prompts_dir or str(WM_ROOT / "prompts")

@@ -233,7 +233,6 @@ class OptimalHybridSearcher:
         # Adapt weights to query type
         self.fusion.adapt_weights(query_type)
 
-        # Get results from each source
         self.embedder.encode(query)
 
         vector_results = self.embedder.search_similar(
@@ -315,7 +314,6 @@ def demo_hybrid_fusion():
     print(f"  BM25: {len(bm25_results)} results")
     print(f"  Graph: {len(graph_results)} results")
 
-    # Test RRF fusion
     fused = fusion.fuse_rrf(vector_results, bm25_results, graph_results, top_k=5)
 
     print("\nFused results (RRF):")
@@ -323,7 +321,6 @@ def demo_hybrid_fusion():
         print(f"  {i}. {c.memory_id}: {c.final_score:.3f} "
               f"(v={c.vector_score:.3f}, b={c.bm25_score:.3f}, g={c.graph_score:.3f})")
 
-    # Test adaptive weights
     print("\nAdaptive weights by query type:")
     for qtype in ['single_hop', 'multi_hop', 'temporal', 'open_domain']:
         fusion.adapt_weights(qtype)

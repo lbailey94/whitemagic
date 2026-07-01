@@ -68,13 +68,11 @@ class DharmicSolver:
             # Linear Minimization Oracle (LMO)
             s_best = self._linear_oracle(nodes, edges, node_to_idx, grad, budget)
 
-            # Step size (Standard FW: 2 / (t + 2))
             gamma = 2.0 / (t + 2.0)
 
             # Update
             new_x = x + gamma * (s_best - x)
 
-            # Check for convergence (Dual Gap approximation)
             if np.linalg.norm(new_x - x) < 1e-6:
                 x = new_x
                 break
@@ -124,7 +122,6 @@ class DharmicSolver:
                 node = nodes[idx]
                 can_select = True
 
-                # Check if any parent is not selected
                 for parent, child in edges:
                     if child == node and parent not in selected_set:
                         can_select = False

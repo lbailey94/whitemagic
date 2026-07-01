@@ -239,7 +239,6 @@ def submit_anchor(
             ),
         }
 
-    # Connect and submit
     url = XRPL_TESTNET_URL if network == "testnet" else XRPL_MAINNET_URL
     try:
         client = JsonRpcClient(url)
@@ -328,7 +327,6 @@ def verify_anchor(
             "reason": "xrpl-py not installed. Run: pip install xrpl-py",
         }
 
-    # Get the expected root
     if expected_merkle_root is None:
         snapshot = compute_anchor()
         if snapshot.get("status") != "ok":
@@ -460,7 +458,6 @@ def anchor_status() -> dict[str, Any]:
     history = get_anchor_history(limit=5)
     latest = history[-1] if history else None
 
-    # Check for wallet
     seed = _load_wallet_seed()
 
     return {

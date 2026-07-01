@@ -429,7 +429,6 @@ class ConstellationMerger:
 
         for c in constellations:
             if c.constellation_id in primary_ids:
-                # Check if this constellation merged with others
                 merged_with = [
                     m["constellation_b"]
                     for m in merges

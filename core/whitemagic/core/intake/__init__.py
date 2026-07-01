@@ -222,7 +222,6 @@ class HolographicIntake:
                 metadata={"source": str(path), "hash": h},
             )
 
-            # Store in SQLite
             from whitemagic.config.paths import DB_PATH
 
             db = SQLiteBackend(DB_PATH)
@@ -292,7 +291,6 @@ class HolographicIntake:
                     for f in new_files:
                         self.queue_file(f["path"])
 
-                    # Process queue
                     if self._queue:
                         self.process_queue()
 
@@ -345,7 +343,6 @@ def start_intake_daemon(interval: int = 60) -> HolographicIntake:
     """Start the holographic intake daemon with defaults."""
     intake = get_intake()
 
-    # Add default watch directories if empty
     if not intake._watch_dirs:
         from whitemagic.config.paths import DATA_DIR
 

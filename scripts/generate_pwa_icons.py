@@ -169,7 +169,6 @@ def main():
         (output_dir / svg_filename).write_text(svg)
         all_files.append(svg_filename)
 
-        # Convert to PNG if CairoSVG available
         if HAS_CAIROSVG:
             png_filename = f"icon-{width}x{height}.png"
             cairosvg.svg2svg(bytestring=svg.encode(), write_to=str(output_dir / svg_filename))

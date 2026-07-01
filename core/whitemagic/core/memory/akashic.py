@@ -76,7 +76,6 @@ class AkashicField:
 
     def _load_field(self) -> None:
         """Load the field from Unified Memory."""
-        # Load seeds from SQLite
         seeds_data = self.unified.backend.get_all_akashic_seeds()
         for seed_id, seed_data in seeds_data.items():
             seed = MemorySeed(
@@ -149,7 +148,6 @@ class AkashicField:
             if word in self.resonance_map:
                 resonating_ids.update(self.resonance_map[word])
 
-        # Check bloom conditions
         for seed_id in resonating_ids:
             seed = self.seeds.get(seed_id)
             if seed and seed.check_bloom(context):

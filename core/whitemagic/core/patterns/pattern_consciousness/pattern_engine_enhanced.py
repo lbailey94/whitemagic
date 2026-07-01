@@ -78,7 +78,6 @@ class EnhancedPatternEngine:
         """Extract patterns from any content using Rust or ML when available."""
         patterns: list[dict[str, Any]] = []
 
-        # Try Rust backend first (Fastest)
         if self._rust_available:
             patterns.extend(self._rust_extract_patterns(content))
         # Fallback to Python ML if available and Rust didn't produce specific deep logic (or as complement)

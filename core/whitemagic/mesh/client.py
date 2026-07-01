@@ -34,7 +34,6 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-# Try to import grpcio
 HAS_GRPC = False
 try:
     import grpc  # type: ignore[import-untyped]
@@ -138,7 +137,6 @@ class MeshClient:
             return
         try:
             self._channel = grpc.insecure_channel(self._address)
-            # Try to import generated stubs
             try:
                 mesh_pb2_grpc = cast(
                     Any, importlib.import_module("whitemagic.mesh.mesh_pb2_grpc")

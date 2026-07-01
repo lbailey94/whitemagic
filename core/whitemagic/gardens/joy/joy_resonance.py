@@ -98,7 +98,6 @@ class JoyResonance:
         if self.bus:
             self._broadcast_joy(moment)
 
-        # Print celebration
         self._celebrate(moment)
 
         return moment
@@ -140,7 +139,6 @@ class JoyResonance:
             1.0: "✨💫🎊",
         }
 
-        # Get appropriate emoji
         emoji = emoji_intensity[0.0]
         for threshold, e in sorted(emoji_intensity.items()):
             if moment.intensity >= threshold:
@@ -229,7 +227,6 @@ def share_joy(
 
 
 if __name__ == "__main__":
-    # Test joy resonance
     logger.info("Testing Joy Resonance System...")
     logger.info()
 

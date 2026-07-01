@@ -494,7 +494,6 @@ def _build_semantic_constellations_from_galaxy(
 
     try:
         with um.backend.pool.connection() as conn:
-            # Check if memory_embeddings table exists
             tables = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_embeddings'",
             ).fetchall()
@@ -527,7 +526,6 @@ def _build_semantic_constellations_from_galaxy(
     if len(embeddings) < min_members:
         return []
 
-    # Fetch memory metadata for the IDs we have embeddings for
     try:
         with um.backend.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
@@ -777,7 +775,6 @@ if router is not None:
         cache_key = f"{x_galaxy_name or 'active'}:{limit}"
         now = time.time()
 
-        # Check TTL cache
         cached = _CONSTELLATION_CACHE.get(cache_key)
         if cached and (now - cached[0]) < _CONSTELLATION_CACHE_TTL:
             return {

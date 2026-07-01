@@ -419,7 +419,6 @@ def main():
     all_answers.extend(generate_adversarial_answers())
     all_answers.extend(generate_calibration_answers())
     
-    # Save to file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f"external_ai_answers_{timestamp}.json"
     

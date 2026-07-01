@@ -42,7 +42,6 @@ def call_tool(
     start_time = time.perf_counter()
     context_tags = kwargs.pop("_context_tags", [])
 
-    # Get integrations
     discovery = get_tool_discovery() if _record_metrics else None
     blackboard = None
     gan_ying = None
@@ -83,7 +82,6 @@ def call_tool(
         except Exception as e:
             logger.debug("Blackboard post failed: %s", e, exc_info=True)
 
-    # Call the actual tool
     try:
         result = _call_tool_base(tool_name, **kwargs)
         success = isinstance(result, dict) and result.get("status") == "success"
@@ -123,7 +121,6 @@ def call_tool(
             except Exception as e:
                 logger.debug("Blackboard post failed: %s", e, exc_info=True)
 
-        # Return compact or full response
         if _compact and isinstance(result, dict):
             # Compact mode: strip envelope overhead
             return {
@@ -202,7 +199,6 @@ def discover_tools(
     elif search:
         tools = discovery.discover_by_search(search, limit)
     else:
-        # Return most used tools
         stats = discovery.get_global_stats()
         tools = stats.get("most_used", [])
 

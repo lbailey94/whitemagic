@@ -14,7 +14,6 @@ import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.a
 
 try:
     from whitemagic.core.ganas.base import GanaCall, BaseGana
-    # Import all 28 Ganas
     from whitemagic.core.ganas.eastern_quadrant import (
         HornGana, NeckGana, RootGana, RoomGana, HeartGana, TailGana, WinnowingBasketGana
     )
@@ -40,7 +39,6 @@ class SystemAuditor:
         self._init_ganas()
         
     def _init_ganas(self):
-        # Initialize all 28 Ganas
         self.ganas = [
             # East
             HornGana(), NeckGana(), RootGana(), RoomGana(), HeartGana(), TailGana(), WinnowingBasketGana(),
@@ -108,7 +106,6 @@ class SystemAuditor:
         print(f"Failed: {len(self.ganas) - success_count}")
         print(f"Total Duration: {duration:.2f}s")
         
-        # Save detailed report
         with open("audit_results.json", "w") as f:
             json.dump(self.results, f, indent=2)
 

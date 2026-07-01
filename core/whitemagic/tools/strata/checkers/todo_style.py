@@ -16,7 +16,6 @@ def check_todo_vs_fixme(
         str(f) for f in file_index.python_files() if not FileIndex.is_test_file(f)
     ]
 
-    # Try Rust parallel batch regex scan
     try:
         import whitemagic_rs
 

@@ -306,7 +306,6 @@ def crps() -> None:
 
     est = get_machine_time_estimator()
 
-    # Load prediction records from log
     import json
 
     predictions: list[float] = []

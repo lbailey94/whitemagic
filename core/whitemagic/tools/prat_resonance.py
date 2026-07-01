@@ -388,10 +388,8 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
     except (ImportError, ModuleNotFoundError):
         zodiac_sign = "Aries"
 
-    # Check lunar alignment (Moon is in this Gana's mansion)
     lunar_aligned = lunar_mansion == meta["mansion_num"]
 
-    # Check zodiac alignment (Milestone 3.1)
     zodiac_amplified = False
     zodiac_resonance = 1.0
     try:

@@ -30,7 +30,6 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 # Build paths
-# From core/whitemagic/core/acceleration/ → up 5 parents to repo root → polyglot/whitemagic-koka/
 _BASE_DIR = (
     Path(__file__).resolve().parent.parent.parent.parent.parent
     / "polyglot"
@@ -142,7 +141,6 @@ class KokaNativeBridge:
             else:
                 logger.debug("Koka binary not found: %s", path)
 
-        # Check dispatcher
         if _DISPATCHER_BIN.exists() and os.access(_DISPATCHER_BIN, os.X_OK):
             self._binaries["dispatcher"] = _DISPATCHER_BIN
             self._available["dispatcher"] = []
@@ -156,7 +154,6 @@ class KokaNativeBridge:
             return False
 
         with self._lock:
-            # Check for dead processes and prune them
             if module in self._processes:
                 dead_procs = [
                     p for p in self._processes[module] if p.poll() is not None
@@ -166,7 +163,6 @@ class KokaNativeBridge:
                     if module in self._available and p in self._available[module]:
                         self._available[module].remove(p)
 
-            # If we have living processes or room to grow, we are available
             current_alive = len(self._processes.get(module, []))
             return current_alive > 0 or current_alive < self._max_connections
 
@@ -180,7 +176,6 @@ class KokaNativeBridge:
                 if valid_procs:
                     return self._available[module].pop()
 
-            # Check if we can create more
             # Clean dead processes from total tracked
             if module in self._processes:
                 self._processes[module] = [
@@ -269,7 +264,6 @@ class KokaNativeBridge:
 
         thread = threading.Thread(target=_reader, name="wm-koka-readline", daemon=True)
         thread.start()
-        # Add thread join with a slightly longer timeout just to avoid leaking threads
         try:
             res = result_queue.get(timeout=timeout)
             # Give thread a chance to finish cleanly
@@ -343,7 +337,6 @@ class KokaNativeBridge:
                 self._discard_process(module, proc)
                 return None
 
-            # Parse response
             try:
                 response = _json_loads(response_line)
                 if isinstance(response, dict):

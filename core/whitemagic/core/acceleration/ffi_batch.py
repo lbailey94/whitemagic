@@ -68,10 +68,7 @@ class BatchCosine:
         if not b.flags["C_CONTIGUOUS"]:
             b = np.ascontiguousarray(b)
 
-        # Call Zig SIMD batch cosine for each pair
         # Note: Zig's batch_cosine compares one query against N vectors
-        # For pairwise, we need to call it N times or use a different function
-        # For now, use the single cosine function in a loop (still faster than Python)
         result = np.empty(n, dtype=np.float32)
         for i in range(n):
             a_i = a[i].ctypes.data_as(ctypes.POINTER(ctypes.c_float))
@@ -114,7 +111,6 @@ class BatchGalacticScore:
         if coords.shape[1] != 5:
             raise ValueError(f"Expected 5D coords, got {coords.shape[1]}D")
 
-        # Convert to JSON for Rust FFI
         import json
 
         coords_json = json.dumps(coords.tolist())

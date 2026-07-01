@@ -12,8 +12,6 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Add your model's MetaData object here for 'autogenerate' support.
-# from whitemagic.db.schema import Base
 # target_metadata = Base.metadata
 target_metadata = None
 

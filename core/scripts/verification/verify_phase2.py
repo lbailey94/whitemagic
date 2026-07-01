@@ -2,7 +2,6 @@ import sys
 import os
 from pathlib import Path
 
-# Add the staging path to sys.path
 import sys
 import os
 
@@ -51,17 +50,14 @@ def test_json_serialization():
 def test_ssrf_protection():
     print("Testing SSRF protection...")
 
-    # Test helper
     assert is_url_safe("http://localhost:11434") == True
     assert is_url_safe("http://127.0.0.1:11434") == True
     assert is_url_safe("http://google.com") == False
     assert is_url_safe("http://169.254.169.254/latest/meta-data/") == False
 
-    # Test and verify Ollama safety
     assert is_ollama_url_safe("http://localhost:11434") == True
     assert is_ollama_url_safe("http://internal-api.prod") == False
 
-    # Test Exception handling in LocalLLM
     try:
         LocalLLM(url="http://evil.com")
         print("✗ LocalLLM failed to block unsafe URL")
@@ -91,21 +87,18 @@ def test_soft_delete_filtering():
     m1_id = m1_path.stem
     m2_id = m2_path.stem
 
-    # Verify both exist
     recent = manager.read_recent_memories(limit=10)
     assert len(recent) == 2, f"Should have 2 memories, got {len(recent)}"
 
     # Soft delete one
     manager.delete_memory(m1_id, permanent=False)
 
-    # Verify filtered
     recent_filtered = manager.read_recent_memories(limit=10, include_archived=False)
     assert len(recent_filtered) == 1, (
         f"Should have 1 memory after soft-delete, got {len(recent_filtered)}"
     )
     assert recent_filtered[0]["entry"]["id"] == m2_id, "Wrong memory remaining"
 
-    # Verify inclusive
     recent_all = manager.read_recent_memories(limit=10, include_archived=True)
     assert len(recent_all) == 2, (
         f"Should have 2 memories when include_archived=True, got {len(recent_all)}"

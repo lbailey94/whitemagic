@@ -120,17 +120,14 @@ class UnifiedEmbedder:
 
         rs = cast(Any, whitemagic_rs)
 
-        # Convert texts to Arrow IPC (zero-copy)
         texts_arrow = rs.arrow_encode_memories(
             json.dumps(
                 [{"id": str(i), "title": "", "content": t} for i, t in enumerate(texts)]
             )
         )
 
-        # Call Rust ONNX embedder
         result_arrow = rs.arrow_onnx_embed(texts_arrow, self.model_path)
 
-        # Convert back to numpy
         return self._arrow_to_numpy(cast(bytes, result_arrow))
 
     def _encode_python_fastembed(self, texts: list[str]) -> np.ndarray:
@@ -219,7 +216,6 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
             batch_ids.clear()
             batch_texts.clear()
 
-    # Process remaining
     if batch_texts:
         embeddings = embedder.encode_batch(batch_texts, batch_size)
         for mid, emb in zip(batch_ids, embeddings):
@@ -238,12 +234,10 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
 
 
 if __name__ == "__main__":
-    # Test the embedder
     logging.basicConfig(level=logging.INFO)
 
     embedder = UnifiedEmbedder()
 
-    # Test encoding
     texts = [
         "Rust programming language performance",
         "Python async await concurrency",

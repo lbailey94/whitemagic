@@ -109,7 +109,6 @@ class OperationProfile:
     @property
     def complexity_score(self) -> float:
         """Dynamic complexity based on runtime performance."""
-        # If Koka is slow (>100µs), reduce complexity score to prefer Python
         avg = self.latency_stats.avg_us()
         if avg > 100:
             return self.base_complexity * 0.5
@@ -617,7 +616,6 @@ class HybridDispatcherV2:
         if self._warm_started:
             return
 
-        # Start pools for commonly used binaries
         for binary in [
             "circuit",
             "resonance",
@@ -648,13 +646,11 @@ class HybridDispatcherV2:
         # Record operation for pattern analysis
         self._operation_history.append(operation)
 
-        # Get predicted binaries
         predicted = prediction_map.get(operation, [])
 
         # Also analyze recent history for patterns
         if len(self._operation_history) >= 3:
             recent = list(self._operation_history)[-3:]
-            # If we see circuit ops followed by dream ops, pre-warm unified_runtime
             if any("circuit" in op for op in recent) and any(
                 "dream" in op for op in recent
             ):
@@ -678,14 +674,12 @@ class HybridDispatcherV2:
     def _check_koka_health(self) -> bool:
         """Check if Koka processes are healthy, update fallback mode."""
         if self._fallback_mode:
-            # Check if we can recover
             if self._koka_failure_count == 0:
                 self._fallback_mode = False
                 self._koka_healthy = True
                 return True
             return False
 
-        # Check pool health
         healthy_pools = 0
         total_pools = len(self._koka_pools)
 
@@ -728,7 +722,6 @@ class HybridDispatcherV2:
         # Adaptive: consider complexity and runtime latency
         profile = OPERATION_PROFILES.get(operation)
         if profile:
-            # Check if Koka is performing well
             koka_avg = self._koka_stats.avg_us()
             if koka_avg > self.latency_threshold:
                 # Koka is slow, prefer Python for non-critical ops

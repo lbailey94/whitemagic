@@ -79,7 +79,6 @@ content = content.replace(
         stats.insert("errors".to_string(), self.errors.load(Ordering::SeqCst));""",
 )
 
-# Remove unused DaemonStats
 content = content.replace(
     """#[derive(Default)]
 pub struct DaemonStats {

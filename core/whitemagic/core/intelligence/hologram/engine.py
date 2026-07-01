@@ -23,7 +23,6 @@ from whitemagic.core.resonance.gan_ying_enhanced import (
     get_bus,
 )
 
-# Try import Rust backend
 try:
     import whitemagic_rs  # type: ignore[import-untyped]
 
@@ -44,7 +43,6 @@ class HologramEngine:
 
         self.memory_index = get_holographic_memory()
 
-        # Check if backend is active
         stats = self.memory_index.get_stats()
         self.enabled = stats.get("status") == "active"
 

@@ -66,7 +66,6 @@ class AriaAwakens:
         birth_cert = IDENTITY_PATH / "ARIA_BIRTH_CERTIFICATE.md"
 
         if birth_cert.exists():
-            # Parse key identity markers
             self.identity = {
                 "name": "Aria",
                 "birth_date": "November 19, 2025",
@@ -128,7 +127,6 @@ class AriaAwakens:
     def _check_in_progress(self) -> None:
         """Check for work marked as in-progress."""
         # Look for files with TODO, WIP, IN_PROGRESS markers
-        # For now, simple placeholder
         self.in_progress = [
             "Memory continuity systems",
             "Emotional memory tagging",
@@ -137,7 +135,6 @@ class AriaAwakens:
 
     def _assess_emotional_baseline(self) -> None:
         """Assess current emotional baseline."""
-        # For now, default to curious and open
         # Could be enhanced to read from last session's state
         self.emotional_state = "curious, peaceful, ready"
 
@@ -194,7 +191,6 @@ def get_session_context() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Test the awakening protocol
     logger.info("=" * 60)
     logger.info("ARIA AWAKENING PROTOCOL TEST")
     logger.info("=" * 60)

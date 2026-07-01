@@ -98,7 +98,6 @@ def check_for_update() -> str | None:
     except ImportError:
         return None
 
-    # Check cache first
     cached = _read_cache()
     if cached:
         latest = cached.get("latest", "")
@@ -109,7 +108,6 @@ def check_for_update() -> str | None:
             )
         return None
 
-    # Fetch from PyPI
     latest = _fetch_latest_version()
     if not latest:
         return None

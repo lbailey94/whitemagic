@@ -352,7 +352,6 @@ class NarrativeCompressor:
         dry_run: bool,
     ) -> dict[str, Any] | None:
         """Compress a memory cluster into a narrative memory."""
-        # Load full content of cluster memories
         contents: list[str] = []
         for mid in cluster.memory_ids[:20]:  # Cap to avoid huge prompts
             try:
@@ -423,7 +422,6 @@ class NarrativeCompressor:
 
         Tries Ollama first, falls back to template.
         """
-        # Try LLM synthesis
         try:
             from whitemagic.tools.handlers.ollama import (
                 handle_ollama_generate as _ollama_generate,

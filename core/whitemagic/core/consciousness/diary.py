@@ -91,7 +91,6 @@ class DiarySystem:
             "context": context,
         }
 
-        # Save immediately to breakthroughs file
         date_str = timestamp.strftime("%Y-%m-%d")
         breakthrough_file = (
             self.diary_dir.parent / "experiences" / date_str / "breakthroughs.jsonl"
@@ -190,7 +189,6 @@ class DiarySystem:
         # Generate diary entry
         diary_content = self._generate_diary_md()
 
-        # Save to diary file
         diary_file = self.diary_dir / f"DIARY_{self.current_day.replace('-', '_')}.md"
 
         if diary_file.exists():
@@ -207,7 +205,6 @@ class DiarySystem:
             diary_file.name,
         )
 
-        # Clear hourly buffer but keep current day
         self.hourly_entries = []
 
     def _generate_diary_md(self) -> str:

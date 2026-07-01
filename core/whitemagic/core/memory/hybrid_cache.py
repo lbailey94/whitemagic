@@ -40,7 +40,6 @@ class LRUCache:
 
             value, timestamp = self.cache[key]
 
-            # Check TTL
             if time.time() - timestamp > self.ttl_seconds:
                 del self.cache[key]
                 self.misses += 1
@@ -60,7 +59,6 @@ class LRUCache:
                 self.cache.move_to_end(key)
                 return
 
-            # Add new
             self.cache[key] = (value, time.time())
 
             # Evict LRU if over capacity

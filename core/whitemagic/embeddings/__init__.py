@@ -47,7 +47,6 @@ def get_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
         >>> config = EmbeddingConfig.from_env()
         >>> provider = get_embedding_provider(config)
     """
-    # Validate configuration
     config.validate_for_provider()
 
     if config.provider == "openai":

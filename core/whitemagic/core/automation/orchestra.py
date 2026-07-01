@@ -57,7 +57,6 @@ class AutomationOrchestra:
     def __init__(self, project_root: Path | None = None):
         self.project_root = project_root or Path.cwd()
 
-        # Initialize all systems
         self.memory_manager = MemoryManager(base_dir=str(self.project_root))
         self.consolidation = ConsolidationEngine(self.memory_manager)
         self.trigger_manager = TriggerManager(self.memory_manager)
@@ -326,10 +325,8 @@ class AutomationOrchestra:
         logger.info("🚨 EMERGENCY RESPONSE ACTIVATED")
         logger.info("=" * 60)
 
-        # Run health check with auto-heal
         health_report = self.perform_health_check(auto_heal=True)
 
-        # If still critical, try maintenance cycle
         if health_report.get("overall_score", 100) < 40:
             logger.info("\n⚡ Running emergency maintenance...")
             maintenance_results = self.trigger_maintenance_cycle(dry_run=False)

@@ -155,7 +155,6 @@ class UMAPProjector:
 
         start = time.perf_counter()
 
-        # Load embeddings from the engine's vector cache
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
@@ -170,14 +169,12 @@ class UMAPProjector:
                 umap_params={"error": "Too few embeddings for UMAP (need >= 5)"},
             )
 
-        # Check cache
         if (not force_recompute
                 and self._cached_projection is not None
                 and self._cached_vec_count == len(ids)
                 and self._cached_projection.n_components == n_components):
             return self._cached_projection
 
-        # Run UMAP
         import umap as umap_lib
 
         n_neighbors_clamped = min(n_neighbors, len(ids) - 1)

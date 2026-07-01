@@ -11,7 +11,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Try to import the Rust backend — prefer whitemagic_rs.sqlite_backend (PyO3),
 # fall back to legacy whitemagic_rust_backend if available
 try:
     import whitemagic_rs

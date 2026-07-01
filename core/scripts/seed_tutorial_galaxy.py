@@ -164,7 +164,6 @@ def seed_tutorial_galaxy(db_path: str | None = None) -> dict:
     for mem in TUTORIAL_MEMORIES:
         memory_id = f"tutorial-{mem['step']:03d}-{uuid.uuid4().hex[:8]}"
 
-        # Check if already exists
         existing = conn.execute(
             "SELECT id FROM memories WHERE title = ? AND memory_type = 'tutorial'",
             (mem["title"],),

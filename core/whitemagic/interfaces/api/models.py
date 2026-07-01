@@ -171,7 +171,6 @@ if HAS_SQLALCHEMY:
             "Memory", foreign_keys=[target_id], back_populates="links_incoming"
         )
 
-    # Add back_populates to Memory after defining MemoryLink
     Memory.links_outgoing = relationship(
         "MemoryLink", foreign_keys=[MemoryLink.source_id], back_populates="source"
     )

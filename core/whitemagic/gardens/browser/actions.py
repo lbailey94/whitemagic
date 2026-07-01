@@ -236,7 +236,6 @@ class BrowserActions:
         start = asyncio.get_event_loop().time()
 
         try:
-            # Clear and type using JavaScript
             clear_js = "el.value = '';" if clear_first else ""
             escaped_text = text.replace("'", "\\'").replace("\n", "\\n")
 
@@ -689,7 +688,6 @@ class BrowserSession:
         if not self._cdp:
             raise RuntimeError("Not connected")
 
-        # Get full document
         response = await self._cdp.send("DOM.getDocument", {"depth": depth})
 
         if not response.success:

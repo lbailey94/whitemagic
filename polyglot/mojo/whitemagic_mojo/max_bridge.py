@@ -9,7 +9,6 @@ class MAXBridge:
         self._initialized = False
 
     def initialize(self) -> bool:
-        # Initialize MAX runtime
         self._initialized = True
         return True
 
@@ -17,5 +16,4 @@ class MAXBridge:
         self,
         tokens: np.ndarray
     ) -> np.ndarray:
-        # Call Mojo embedding kernel
         return np.zeros((len(tokens), 768), dtype=np.float32)

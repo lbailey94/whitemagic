@@ -360,7 +360,6 @@ class GrandUnifiedCycle:
             resonance_events=self.state.resonance_events[-10:],  # Keep last 10
         )
 
-        # Store in history
         self._phase_history.append(self.state)
 
         logger.info("\n  ✨ Dominant: %s", self.state.get_dominant_influence())

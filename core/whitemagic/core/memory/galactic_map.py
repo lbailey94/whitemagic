@@ -168,7 +168,6 @@ class GalacticMap:
         start = time.perf_counter()
         report = GalacticSweepReport()
 
-        # Get retention engine
         try:
             from whitemagic.core.memory.mindful_forgetting import get_retention_engine
             retention = get_retention_engine()
@@ -176,7 +175,6 @@ class GalacticMap:
             logger.error("GalacticMap sweep: RetentionEngine unavailable: %s", exc, exc_info=True)
             return report
 
-        # Get backend
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
@@ -192,7 +190,6 @@ class GalacticMap:
         updates: list[tuple[str, float, float]] = []
         total_memories = 0
 
-        # Check Rust availability once
         rust_scorer = None
         try:
             from whitemagic.optimization.rust_accelerators import (
@@ -322,7 +319,6 @@ class GalacticMap:
             logger.error("Decay drift: backend unavailable: %s", exc, exc_info=True)
             return {"status": "error", "message": str(exc)}
 
-        # Try Rust SQLite accelerator first (v13.1)
         try:
             from whitemagic.optimization.rust_accelerators import (
                 rust_v131_available,
@@ -399,7 +395,6 @@ class GalacticMap:
             from whitemagic.core.memory.unified import get_unified_memory
             backend = get_unified_memory().backend
 
-            # Try Rust SQLite accelerator (v13.1)
             try:
                 from whitemagic.optimization.rust_accelerators import (
                     rust_v131_available,
@@ -488,7 +483,6 @@ class GalacticMap:
         start = time.perf_counter()
         report = GalacticSweepReport()
 
-        # Get retention engine
         try:
             from whitemagic.core.memory.mindful_forgetting import get_retention_engine
             retention = get_retention_engine()
@@ -496,7 +490,6 @@ class GalacticMap:
             logger.error("GalacticMap sweep: RetentionEngine unavailable: %s", exc, exc_info=True)
             return report
 
-        # Get backend
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
@@ -512,12 +505,10 @@ class GalacticMap:
         updates: list[tuple[str, float, float]] = []
         total_memories = 0
 
-        # Process pages asynchronously
         loop = asyncio.get_event_loop()
         for page in backend.list_all_paginated(batch_size=batch_size):
             total_memories += len(page)
 
-            # Process page in executor to avoid blocking
             def process_page_sync(page_data: list[Memory]) -> tuple[list[tuple[str, float, float]], dict[str, Any]]:
                 """
                 Process page sync.

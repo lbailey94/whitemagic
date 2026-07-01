@@ -51,7 +51,6 @@ class GanaSwarm:
         self.total_breaths = 0
         self.total_processed = 0
 
-        # Get harmony monitor for Yin/Yang adaptation
         from whitemagic.core.embodiment import get_harmony_monitor
 
         self.harmony_monitor = get_harmony_monitor()
@@ -105,8 +104,6 @@ class GanaSwarm:
                 state["_dharma_warning"] = decision.concerns
 
         except ImportError:
-            # If Dharma system not available, proceed (fail open for now, or fail closed?)
-            # For now, fail open to avoid breaking dev
             pass
 
         await self.task_queue.put((sequence, task, state))
@@ -139,7 +136,6 @@ class GanaSwarm:
                 current_batch_size = self.base_batch_size
                 adaptation = "Balanced"
 
-            # Log adaptation if it changes (or periodically, but let's just log it if we inhale)
 
             batch: list[tuple[list[LunarMansion], str, dict[str, Any] | None]] = []
             try:
@@ -167,12 +163,10 @@ class GanaSwarm:
             elapsed = time.time() - start_time
             sleep_time = max(0, self.pulse_interval - elapsed)
 
-            # If we're processing, we might not sleep if we overran the pulse
             # But we aim for rhythm
             if sleep_time > 0:
                 await asyncio.sleep(sleep_time)
             else:
-                # If overran, yield control briefly to avoid starving other tasks
                 await asyncio.sleep(0)
 
     async def _process_batch(

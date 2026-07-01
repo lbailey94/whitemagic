@@ -7,7 +7,6 @@ print("=" * 60)
 print("COMPILED MOJO vs PYTHON BENCHMARK")
 print("=" * 60)
 
-# Run compiled Mojo binary
 print("\n1. Running COMPILED Mojo binary...")
 start = time.time()
 result = subprocess.run(
@@ -19,7 +18,6 @@ result = subprocess.run(
 mojo_time = (time.time() - start) * 1000
 print(f"   Time: {mojo_time:.2f} ms")
 
-# Run Python
 print("\n2. Running Python...")
 start = time.time()
 result = subprocess.run(

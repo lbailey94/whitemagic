@@ -241,7 +241,6 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         return {"status": "error", "error": f"Ensemble query failed: {e}"}
 
-    # Process results
     results: list[dict[str, Any]] = []
     for r in raw_results:
         if isinstance(r, Exception):
@@ -251,7 +250,6 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
 
     analysis = _analyze_results(results)
 
-    # Save to disk
     ensemble_id = f"ens-{uuid4().hex[:8]}"
     record = {
         "id": ensemble_id,
@@ -300,7 +298,6 @@ def handle_ensemble_status(**kwargs: Any) -> dict[str, Any]:
     """Get the full result of a past ensemble query."""
     ensemble_id = kwargs.get("ensemble_id")
     if not ensemble_id:
-        # Return list of recent ensembles instead of error
         return handle_ensemble_history(**kwargs)
 
     path = _ensemble_dir() / f"{ensemble_id}.json"

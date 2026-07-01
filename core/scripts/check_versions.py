@@ -9,7 +9,6 @@ import re
 import sys
 from pathlib import Path
 
-# Get canonical version
 ROOT = Path(__file__).parent.parent.parent
 CANONICAL_FILE = ROOT / "core" / "VERSION"
 
@@ -112,14 +111,12 @@ for ref in REFERENCES:
             if version != CANONICAL:
                 mismatches.append((ref, version, f"{match.group(1)} version field"))
     elif ref == "core/.well-known/agent.json":
-        # Check JSON version field
         version_match = re.search(r'"version"\s*:\s*"(\d+\.\d+\.\d+)"', content)
         if version_match:
             version = version_match.group(1)
             if version != CANONICAL:
                 mismatches.append((ref, version, "version field"))
     else:
-        # For markdown files, check for vXX.X.X or XX.X.X patterns
         # but exclude changelog history sections and URLs
         lines = content.split("\n")
         in_changelog_history = False
@@ -149,7 +146,6 @@ for ref in REFERENCES:
             if "release baseline" in line.lower() and "current" not in line.lower():
                 continue
 
-            # Check for version patterns
             for match in re.finditer(r"v?(\d+\.\d+\.\d+)", line):
                 version = match.group(1)
                 if version != CANONICAL:

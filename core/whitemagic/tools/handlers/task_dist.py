@@ -286,7 +286,6 @@ def handle_task_complete(**kwargs: Any) -> dict[str, Any]:
     _save_queue(queue)
     _save_task_file(task_entry)
 
-    # Save detailed result
     result = {
         "task_id": task_id,
         "success": success,

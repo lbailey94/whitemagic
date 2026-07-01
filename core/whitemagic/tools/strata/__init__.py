@@ -149,7 +149,6 @@ class Strata:
         if finding.line is None:
             return False
         lines = content.splitlines()
-        # Check previous, current, and next line
         for offset in (-1, 0, 1):
             check_line = finding.line + offset
             if check_line < 1 or check_line > len(lines):
@@ -160,7 +159,6 @@ class Strata:
                 # Check for category-specific suppression
                 if f"# strata: ignore[{finding.category}]" in line_text:
                     return True
-                # Check that it's not a different category-specific suppression
                 import re as _re
 
                 if _re.search(r"# strata: ignore\[", line_text):
@@ -189,7 +187,6 @@ class Strata:
 
         self.file_index.incremental = incremental
 
-        # Run all registered plugin checkers
         from whitemagic.tools.strata.checkers import get_checkers
 
         checkers = get_checkers()
@@ -241,6 +238,16 @@ class Strata:
         self.file_index.save_hash_cache()
         return self.findings
 
+
+    def fix(self, categories: set[str] | None = None) -> dict:
+        """Apply auto-fixes to the codebase."""
+        from whitemagic.tools.strata.fix_mode import apply_fixes
+        finding_dicts = [
+            {"category": f.category, "file": f.file, "line": f.line}
+            for f in self.findings
+        ]
+        return apply_fixes(self.project_path, finding_dicts, categories)
+
     def _apply_severity_overrides(self) -> None:
         """Adjust finding severities based on pyproject.toml config."""
         if not self.severity_overrides:
@@ -266,7 +273,6 @@ class Strata:
                 if key in self.baseline:
                     continue
 
-            # Check inline suppression for file-based findings
             if finding.line is not None and finding.file:
                 file_path = self.project_path / finding.file
                 if file_path.exists():

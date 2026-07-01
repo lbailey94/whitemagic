@@ -44,7 +44,6 @@ def check_fstring_no_placeholder(project_path: Path, file_index: FileIndex, find
             # Skip format_spec JoinedStr nodes (Python 3.12+)
             if id(node) in format_spec_ids:
                 continue
-            # Check if all values are constant strings (no FormattedValue)
             has_formatted = any(isinstance(v, ast.FormattedValue) for v in node.values)
             if not has_formatted:
                 findings.append(Finding(

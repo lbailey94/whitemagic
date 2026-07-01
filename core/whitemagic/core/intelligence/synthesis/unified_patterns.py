@@ -71,7 +71,6 @@ class UnifiedPatternAPI:
         if self._engines:
             return
 
-        # Try to load each engine with correct paths
         try:
             from whitemagic.core.memory.pattern_engine import PatternEngine
 
@@ -88,7 +87,6 @@ class UnifiedPatternAPI:
         except ImportError:
             pass
 
-        # Load Rust similarity for cross-correlation
         self._rust_available = find_spec("whitemagic_rs") is not None
 
     def search(
@@ -211,7 +209,6 @@ class UnifiedPatternAPI:
         patterns = []
 
         try:
-            # Get patterns from analyze() which returns all pattern types
             analysis = engine.analyze()
             holo_patterns = analysis.get("patterns", [])
 
@@ -309,7 +306,6 @@ class UnifiedPatternAPI:
         self._load_engines()
         overlaps = []
 
-        # Get holographic patterns with their evidence
         holo_evidence = {}
         if "holographic" in self._engines:
             try:
@@ -323,7 +319,6 @@ class UnifiedPatternAPI:
             except Exception as e:
                 logger.debug("Holographic evidence fetch failed: %s", e, exc_info=True)
 
-        # Get core patterns
         core_titles = {}
         if "core" in self._engines:
             try:
@@ -336,7 +331,6 @@ class UnifiedPatternAPI:
         # Find overlaps where holographic evidence contains core pattern titles
         for holo_desc, holo_data in holo_evidence.items():
             for core_title, core_pattern in core_titles.items():
-                # Check if any evidence title contains core pattern keywords
                 core_words = set(core_title.lower().split()[:5])
                 for evidence_title in holo_data["evidence_titles"]:
                     evidence_words = set(evidence_title.lower().split()[:10])

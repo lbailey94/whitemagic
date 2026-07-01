@@ -46,16 +46,16 @@ REPORT_PATH = (
 
 def step_db_stats():
     """Step 0: Current database statistics."""
-    print("\n" + "=" * 70)
-    print("📊 STEP 0: DATABASE STATISTICS")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("📊 STEP 0: DATABASE STATISTICS")
+    logger.debug("=" * 70)
 
     from whitemagic.core.memory.unified import get_unified_memory
 
     um = get_unified_memory()
     stats = um.get_stats()
-    print(f"  Memories: {stats.get('total_memories', '?'):,}")
-    print(f"  DB size: {stats.get('db_size_kb', 0) / 1024:.1f} MB")
+    logger.debug(f"  Memories: {stats.get('total_memories', '?'):,}")
+    logger.debug(f"  DB size: {stats.get('db_size_kb', 0) / 1024:.1f} MB")
 
     with um.backend.pool.connection() as conn:
         assoc_count = conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
@@ -73,11 +73,11 @@ def step_db_stats():
             "SELECT COUNT(*) FROM constellation_membership"
         ).fetchone()[0]
 
-    print(f"  Associations: {assoc_count:,} ({typed_count:,} typed)")
-    print(f"  Holographic coords: {holo_count:,}")
-    print(f"  Embeddings: {embed_count:,}")
-    print(f"  Tags: {tag_count:,}")
-    print(f"  Constellation memberships: {constellation_count:,}")
+    logger.debug(f"  Associations: {assoc_count:,} ({typed_count:,} typed)")
+    logger.debug(f"  Holographic coords: {holo_count:,}")
+    logger.debug(f"  Embeddings: {embed_count:,}")
+    logger.debug(f"  Tags: {tag_count:,}")
+    logger.debug(f"  Constellation memberships: {constellation_count:,}")
 
     return {
         "memories": stats.get("total_memories", 0),
@@ -93,9 +93,9 @@ def step_db_stats():
 
 def step_galactic_sweep():
     """Step 1: Galactic Sweep — retention scoring + zone assignment."""
-    print("\n" + "=" * 70)
-    print("🌌 STEP 1: GALACTIC SWEEP")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("🌌 STEP 1: GALACTIC SWEEP")
+    logger.debug("=" * 70)
 
     from whitemagic.core.memory.galactic_map import get_galactic_map
 
@@ -105,19 +105,19 @@ def step_galactic_sweep():
     report = gmap.full_sweep(batch_size=1000)
     elapsed = time.perf_counter() - start
 
-    print(f"  Memories mapped: {report.memories_updated}/{report.total_memories}")
-    print(f"  Duration: {elapsed:.1f}s")
-    print(f"  Zone distribution:")
+    logger.debug(f"  Memories mapped: {report.memories_updated}/{report.total_memories}")
+    logger.debug(f"  Duration: {elapsed:.1f}s")
+    logger.debug(f"  Zone distribution:")
     n = max(report.total_memories, 1)
     for zone_name, count in report.zone_counts.items():
         pct = count / n * 100
         bar = "█" * int(pct / 2)
-        print(f"    {zone_name:>12}: {count:5,d} ({pct:5.1f}%) {bar}")
+        logger.debug(f"    {zone_name:>12}: {count:5,d} ({pct:5.1f}%) {bar}")
 
-    print(
+    logger.debug(
         f"  Core: {report.core_count:,}  |  Far Edge: {report.edge_count:,}  |  Protected: {report.protected_count:,}"
     )
-    print(
+    logger.debug(
         f"  Avg retention: {report.avg_retention:.4f}  |  Avg distance: {report.avg_distance:.4f}"
     )
 
@@ -126,24 +126,24 @@ def step_galactic_sweep():
 
 def step_association_mining(quick=False):
     """Step 2: Association Mining — discover new semantic connections."""
-    print("\n" + "=" * 70)
-    print("🔗 STEP 2: ASSOCIATION MINING")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("🔗 STEP 2: ASSOCIATION MINING")
+    logger.debug("=" * 70)
 
     from whitemagic.core.memory.miners import get_association_miner
 
     miner = get_association_miner(max_proposals=100, persist=True)
 
     # Keyword-based mining
-    print("  [2a] Keyword Jaccard mining...")
+    logger.debug("  [2a] Keyword Jaccard mining...")
     start = time.perf_counter()
     report_kw = miner.mine(sample_size=300)
     elapsed_kw = time.perf_counter() - start
-    print(f"    Sampled: {report_kw.memories_sampled}")
-    print(f"    Pairs evaluated: {report_kw.pairs_evaluated:,}")
-    print(f"    Links proposed: {report_kw.links_proposed}")
-    print(f"    Links created: {report_kw.links_created}")
-    print(f"    Duration: {elapsed_kw:.1f}s")
+    logger.debug(f"    Sampled: {report_kw.memories_sampled}")
+    logger.debug(f"    Pairs evaluated: {report_kw.pairs_evaluated:,}")
+    logger.debug(f"    Links proposed: {report_kw.links_proposed}")
+    logger.debug(f"    Links created: {report_kw.links_created}")
+    logger.debug(f"    Duration: {elapsed_kw:.1f}s")
 
     result = {
         "keyword_mining": {
@@ -157,7 +157,7 @@ def step_association_mining(quick=False):
 
     # Semantic mining (slower, skip in quick mode)
     if not quick:
-        print("  [2b] Semantic embedding mining...")
+        logger.debug("  [2b] Semantic embedding mining...")
         start = time.perf_counter()
         report_sem = miner.mine_semantic(
             min_similarity=0.50,
@@ -166,10 +166,10 @@ def step_association_mining(quick=False):
             persist=True,
         )
         elapsed_sem = time.perf_counter() - start
-        print(f"    Pairs evaluated: {report_sem.pairs_evaluated:,}")
-        print(f"    Links proposed: {report_sem.links_proposed}")
-        print(f"    Links created: {report_sem.links_created}")
-        print(f"    Duration: {elapsed_sem:.1f}s")
+        logger.debug(f"    Pairs evaluated: {report_sem.pairs_evaluated:,}")
+        logger.debug(f"    Links proposed: {report_sem.links_proposed}")
+        logger.debug(f"    Links created: {report_sem.links_created}")
+        logger.debug(f"    Duration: {elapsed_sem:.1f}s")
         result["semantic_mining"] = {
             "pairs_evaluated": report_sem.pairs_evaluated,
             "links_proposed": report_sem.links_proposed,
@@ -182,9 +182,9 @@ def step_association_mining(quick=False):
 
 def step_constellation_detection():
     """Step 3: Constellation Detection — HDBSCAN clustering in 5D space."""
-    print("\n" + "=" * 70)
-    print("✨ STEP 3: CONSTELLATION DETECTION")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("✨ STEP 3: CONSTELLATION DETECTION")
+    logger.debug("=" * 70)
 
     from whitemagic.core.memory.constellations import get_constellation_detector
 
@@ -194,29 +194,29 @@ def step_constellation_detection():
     report = detector.detect(sample_limit=50000)
     elapsed = time.perf_counter() - start
 
-    print(f"  Algorithm: {report.algorithm}")
-    print(f"  Memories scanned: {report.memories_scanned:,}")
-    print(f"  Constellations found: {report.constellations_found}")
-    print(f"  Largest constellation: {report.largest_constellation} members")
-    print(f"  Duration: {elapsed:.1f}s")
+    logger.debug(f"  Algorithm: {report.algorithm}")
+    logger.debug(f"  Memories scanned: {report.memories_scanned:,}")
+    logger.debug(f"  Constellations found: {report.constellations_found}")
+    logger.debug(f"  Largest constellation: {report.largest_constellation} members")
+    logger.debug(f"  Duration: {elapsed:.1f}s")
 
     if report.constellations:
-        print(f"\n  Top constellations:")
+        logger.debug(f"\n  Top constellations:")
         for c in report.constellations[:10]:
-            print(
+            logger.debug(
                 f"    🌟 {c.name} ({len(c.member_ids)} members, zone={c.zone}, stability={c.stability:.2f})"
             )
             if c.dominant_tags:
-                print(f"       tags: {', '.join(c.dominant_tags[:5])}")
+                logger.debug(f"       tags: {', '.join(c.dominant_tags[:5])}")
 
     # Drift analysis
     try:
         drift = detector.analyze_drift()
         if drift and drift.get("tracked_constellations"):
-            print(
+            logger.debug(
                 f"\n  Drift analysis: {drift['tracked_constellations']} constellations tracked"
             )
-            print(f"    Avg drift: {drift.get('avg_drift_distance', 0):.4f}")
+            logger.debug(f"    Avg drift: {drift.get('avg_drift_distance', 0):.4f}")
     except Exception:
         pass
 
@@ -225,59 +225,59 @@ def step_constellation_detection():
 
 def step_graph_topology():
     """Step 4: Graph Topology — build graph, compute centrality, find bridges."""
-    print("\n" + "=" * 70)
-    print("🕸️ STEP 4: GRAPH TOPOLOGY ANALYSIS")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("🕸️ STEP 4: GRAPH TOPOLOGY ANALYSIS")
+    logger.debug("=" * 70)
 
     from whitemagic.core.memory.graph import get_graph_engine
 
     engine = get_graph_engine()
 
-    print("  Rebuilding graph...")
+    logger.debug("  Rebuilding graph...")
     start = time.perf_counter()
     engine.rebuild(sample_limit=20000)
     elapsed = time.perf_counter() - start
-    print(f"  Graph built in {elapsed:.1f}s")
+    logger.debug(f"  Graph built in {elapsed:.1f}s")
 
     # Stats
     stats = engine.get_stats()
-    print(f"  Nodes: {stats.get('nodes', 0):,}")
-    print(f"  Edges: {stats.get('edges', 0):,}")
-    print(f"  Components: {stats.get('connected_components', 0):,}")
-    print(f"  Density: {stats.get('density', 0):.6f}")
+    logger.debug(f"  Nodes: {stats.get('nodes', 0):,}")
+    logger.debug(f"  Edges: {stats.get('edges', 0):,}")
+    logger.debug(f"  Components: {stats.get('connected_components', 0):,}")
+    logger.debug(f"  Density: {stats.get('density', 0):.6f}")
 
     # Bridge nodes
-    print("\n  Finding bridge nodes...")
+    logger.debug("\n  Finding bridge nodes...")
     bridges = engine.find_bridge_nodes(top_n=10)
-    print(f"  Bridge nodes found: {len(bridges)}")
+    logger.debug(f"  Bridge nodes found: {len(bridges)}")
     for b in bridges[:5]:
-        print(
+        logger.debug(
             f"    🌉 {b.get('memory_id', '?')[:12]}... "
             f"(betweenness={b.get('betweenness', 0):.6f}, "
             f"communities={b.get('communities_connected', 0)})"
         )
 
     # Community detection
-    print("\n  Detecting communities...")
+    logger.debug("\n  Detecting communities...")
     try:
         communities = engine.detect_communities()
-        print(f"  Communities found: {len(communities)}")
+        logger.debug(f"  Communities found: {len(communities)}")
         for i, comm in enumerate(communities[:5]):
-            print(f"    Community {i}: {len(comm)} members")
+            logger.debug(f"    Community {i}: {len(comm)} members")
     except Exception as e:
-        print(f"  Community detection: {e}")
+        logger.debug(f"  Community detection: {e}")
         communities = []
 
     # PageRank top nodes
-    print("\n  Computing PageRank...")
+    logger.debug("\n  Computing PageRank...")
     try:
         pr = engine.pagerank()
         top_pr = sorted(pr.items(), key=lambda x: x[1], reverse=True)[:10]
-        print(f"  Top PageRank nodes:")
+        logger.debug(f"  Top PageRank nodes:")
         for node_id, score in top_pr[:5]:
-            print(f"    📊 {node_id[:12]}... (PR={score:.6f})")
+            logger.debug(f"    📊 {node_id[:12]}... (PR={score:.6f})")
     except Exception as e:
-        print(f"  PageRank: {e}")
+        logger.debug(f"  PageRank: {e}")
 
     return {
         "stats": stats,
@@ -289,21 +289,21 @@ def step_graph_topology():
 def step_dream_cycle(quick=False):
     """Step 5: Dream Cycle — single pass through all phases."""
     if quick:
-        print("\n" + "=" * 70)
-        print("💤 STEP 5: DREAM CYCLE (SKIPPED — quick mode)")
-        print("=" * 70)
+        logger.debug("\n" + "=" * 70)
+        logger.debug("💤 STEP 5: DREAM CYCLE (SKIPPED — quick mode)")
+        logger.debug("=" * 70)
         return {"skipped": True}
 
-    print("\n" + "=" * 70)
-    print("💤 STEP 5: DREAM CYCLE")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("💤 STEP 5: DREAM CYCLE")
+    logger.debug("=" * 70)
 
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
 
         cycle = get_dream_cycle()
 
-        print("  Running all dream phases manually...")
+        logger.debug("  Running all dream phases manually...")
         start = time.perf_counter()
         results_phases = {}
 
@@ -332,17 +332,17 @@ def step_dream_cycle(quick=False):
                     },
                     default=str,
                 )[:200]
-                print(f"    💤 {phase_name} ({dt:.1f}s): {summary_str}")
+                logger.debug(f"    💤 {phase_name} ({dt:.1f}s): {summary_str}")
             except Exception as e:
                 dt = time.perf_counter() - t0
                 results_phases[phase_name] = {"error": str(e)}
-                print(f"    ❌ {phase_name} ({dt:.1f}s): {e}")
+                logger.debug(f"    ❌ {phase_name} ({dt:.1f}s): {e}")
 
         elapsed = time.perf_counter() - start
-        print(f"\n  All dream phases complete in {elapsed:.1f}s")
+        logger.debug(f"\n  All dream phases complete in {elapsed:.1f}s")
         return results_phases
     except Exception as e:
-        print(f"  ❌ Dream cycle error: {e}")
+        logger.debug(f"  ❌ Dream cycle error: {e}")
         import traceback
 
         traceback.print_exc()
@@ -351,9 +351,9 @@ def step_dream_cycle(quick=False):
 
 def step_harmony_vector():
     """Step 6: Harmony Vector — 7D system health assessment."""
-    print("\n" + "=" * 70)
-    print("🎵 STEP 6: HARMONY VECTOR")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("🎵 STEP 6: HARMONY VECTOR")
+    logger.debug("=" * 70)
 
     try:
         from whitemagic.harmony.vector import get_harmony_vector
@@ -363,12 +363,12 @@ def step_harmony_vector():
         assessment = snap.to_dict()
 
         h = assessment.get("harmony", "?")
-        print(
+        logger.debug(
             f"  Overall harmony: {h:.4f}"
             if isinstance(h, (int, float))
             else f"  Overall harmony: {h}"
         )
-        print(f"  Dimensions:")
+        logger.debug(f"  Dimensions:")
         for key in [
             "sattva",
             "rajas",
@@ -381,41 +381,41 @@ def step_harmony_vector():
             val = assessment.get(key)
             if val is not None and isinstance(val, (int, float)):
                 bar = "█" * int(float(val) * 20)
-                print(f"    {key:>20}: {val:.4f} {bar}")
+                logger.debug(f"    {key:>20}: {val:.4f} {bar}")
 
         return assessment
     except Exception as e:
-        print(f"  ❌ Harmony Vector error: {e}")
+        logger.debug(f"  ❌ Harmony Vector error: {e}")
         return {"error": str(e)}
 
 
 def step_wu_xing_balance():
     """Step 7: Wu Xing Balance — Five Elements phase check."""
-    print("\n" + "=" * 70)
-    print("🔥 STEP 7: WU XING BALANCE")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("🔥 STEP 7: WU XING BALANCE")
+    logger.debug("=" * 70)
 
     try:
         from whitemagic.wu_xing import get_wuxing_engine, get_elemental_balance
 
         engine = get_wuxing_engine()
         balance = get_elemental_balance()
-        print(f"  Current phase: {balance.get('current_phase', '?')}")
-        print(f"  Elements:")
+        logger.debug(f"  Current phase: {balance.get('current_phase', '?')}")
+        logger.debug(f"  Elements:")
         for elem, val in balance.get("elements", {}).items():
             bar = "█" * int(float(val) * 20) if isinstance(val, (int, float)) else ""
-            print(f"    {elem:>8}: {val:.3f} {bar}")
+            logger.debug(f"    {elem:>8}: {val:.3f} {bar}")
         return balance
     except Exception as e:
-        print(f"  ❌ Wu Xing error: {e}")
+        logger.debug(f"  ❌ Wu Xing error: {e}")
         return {"error": str(e)}
 
 
 def step_graph_walker_test():
     """Step 8: Graph Walker — test a walk from a high-importance memory."""
-    print("\n" + "=" * 70)
-    print("🚶 STEP 8: GRAPH WALKER TEST")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("🚶 STEP 8: GRAPH WALKER TEST")
+    logger.debug("=" * 70)
 
     try:
         from whitemagic.core.memory.graph import get_graph_walker
@@ -437,13 +437,13 @@ def step_graph_walker_test():
             ).fetchone()
 
         if not row:
-            print("  No high-importance connected memory found")
+            logger.debug("  No high-importance connected memory found")
             return {"error": "no seed found"}
 
         seed_id = row[0]
         seed_title = row[1] or seed_id[:12]
-        print(f"  Seed: {seed_title} ({seed_id[:12]}...)")
-        print(f"  Walking 3 hops, top 5 paths...")
+        logger.debug(f"  Seed: {seed_title} ({seed_id[:12]}...)")
+        logger.debug(f"  Walking 3 hops, top 5 paths...")
 
         result = walker.walk(
             seed_ids=[seed_id],
@@ -452,19 +452,19 @@ def step_graph_walker_test():
             enforce_causality=False,
         )
 
-        print(f"  Unique nodes visited: {result.unique_nodes_visited}")
-        print(f"  Paths explored: {result.paths_explored}")
-        print(f"  Duration: {result.duration_ms:.0f}ms")
+        logger.debug(f"  Unique nodes visited: {result.unique_nodes_visited}")
+        logger.debug(f"  Paths explored: {result.paths_explored}")
+        logger.debug(f"  Duration: {result.duration_ms:.0f}ms")
 
         if result.paths:
-            print(f"\n  Top paths:")
+            logger.debug(f"\n  Top paths:")
             for i, path in enumerate(result.paths[:3]):
-                print(
+                logger.debug(
                     f"    Path {i + 1}: {' → '.join(n[:8] for n in path.nodes)} "
                     f"(score={path.total_score:.6f}, depth={path.depth})"
                 )
                 if path.relation_types:
-                    print(f"      Relations: {' → '.join(path.relation_types[:5])}")
+                    logger.debug(f"      Relations: {' → '.join(path.relation_types[:5])}")
 
         return {
             "seed": seed_id,
@@ -474,7 +474,7 @@ def step_graph_walker_test():
             "top_paths": len(result.paths),
         }
     except Exception as e:
-        print(f"  ❌ Graph Walker error: {e}")
+        logger.debug(f"  ❌ Graph Walker error: {e}")
         import traceback
 
         traceback.print_exc()
@@ -483,9 +483,9 @@ def step_graph_walker_test():
 
 def step_system_summary(results):
     """Final: Print comprehensive system summary."""
-    print("\n" + "=" * 70)
-    print("📋 ACTIVATION SEQUENCE COMPLETE")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("📋 ACTIVATION SEQUENCE COMPLETE")
+    logger.debug("=" * 70)
 
     db = results.get("db_stats", {})
     sweep = results.get("galactic_sweep", {})
@@ -493,7 +493,7 @@ def step_system_summary(results):
     constellations = results.get("constellation_detection", {})
     graph = results.get("graph_topology", {})
 
-    print(f"""
+    logger.debug(f"""
   Galaxy Size:     {db.get("memories", "?"):,} memories
   Associations:    {db.get("associations", "?"):,} ({db.get("typed_associations", "?"):,} typed)
   Embeddings:      {db.get("embeddings", "?"):,}
@@ -581,7 +581,6 @@ def main():
 
     print(f"\n⏱  Total time: {total_elapsed:.1f}s")
 
-    # Save report
     REPORT_PATH.parent.mkdir(exist_ok=True)
     try:
         with open(REPORT_PATH, "w") as f:

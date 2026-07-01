@@ -239,7 +239,6 @@ class ContinuousEvolutionEngine:
             "meta_patterns_discovered": meta_summary["meta_patterns_discovered"],
         }
 
-        # Save state
         self._save_state()
 
         cycle_time = time.time() - cycle_start
@@ -260,10 +259,8 @@ class ContinuousEvolutionEngine:
 
         try:
             while self.running:
-                # Run cycle
                 results = self.run_single_cycle()
 
-                # Log results
                 logger.info(
                     "Cycle %s: %.1f%% success, %.1fx avg gain",
                     results["cycle"],
@@ -273,7 +270,6 @@ class ContinuousEvolutionEngine:
 
                 cycles_run += 1
 
-                # Check if we should stop
                 if max_cycles and cycles_run >= max_cycles:
                     logger.info("Reached max cycles (%s)", max_cycles)
                     break
@@ -322,7 +318,6 @@ class SelfDirectedEvolution:
     def identify_needs(self) -> dict:
         """Analyze current state and identify what the system needs"""
 
-        # Get current state
         status = self.evolution.get_status()
         meta_summary = self.meta_learning.get_meta_learning_summary()
 

@@ -63,7 +63,6 @@ def cleanup_broker() -> None:
         if broker.redis is not None:
             try:
                 pool = broker.redis.connection_pool
-                # Disconnect all connections — redis.asyncio pool.disconnect() is a coroutine
                 import asyncio
 
                 try:
@@ -300,7 +299,6 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
             finally:
                 _sys.unraisablehook = _orig_hook
             asyncio.set_event_loop(None)
-    # If we're already in an event loop (e.g. MCP stdio), use a thread.
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor(max_workers=1) as pool:

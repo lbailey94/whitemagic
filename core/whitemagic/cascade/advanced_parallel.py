@@ -88,7 +88,6 @@ class AdaptiveParallelExecutor:
         if tier is None:
             tier = self._select_tier(len(tasks))
 
-        # Execute with selected tier
         if len(tasks) <= tier.value:
             # Direct asyncio.gather (fastest for I/O)
             results = await self._execute_async(tasks)
@@ -362,7 +361,6 @@ async def multi_agent_parallel(
                     ),
                 )
 
-    # Execute all in parallel using tier
     results = await executor.execute_parallel(tasks, tier=tier)
 
     # Organize by agent

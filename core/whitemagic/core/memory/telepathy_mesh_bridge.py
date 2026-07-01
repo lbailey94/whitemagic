@@ -65,7 +65,6 @@ class TelepathyMeshBridge:
 
         logger.info("📡 Syncing from %s mesh peers...", len(peers))
         # Implementation would use vector clocks/digests from mesh
-        # For now, we signal readiness for v22 telepathy features
 
 async def main():
     """

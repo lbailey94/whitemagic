@@ -302,7 +302,6 @@ def check_import_graph(
         # Skip files in standalone script directories
         if any(part in _SCRIPT_DIRS for part in rel.parts):
             continue
-        # Convert path to module name: src/strata/models.py -> strata.models
         parts = list(rel.with_suffix("").parts)
         if parts[0] == "src":
             parts = parts[1:]
@@ -391,7 +390,6 @@ def check_import_graph(
                     break
             if not dep_module or dep_module == mod or "__init__" in dep_module:
                 continue
-            # Check if dep_module directly imports mod (by full name or parent prefix)
             dep_imports = imports.get(dep_module, set())
             if mod in dep_imports or any(mod.startswith(d + ".") for d in dep_imports):
                 findings.append(
@@ -524,7 +522,6 @@ def check_async_hygiene(
             unawaited_found = False
             for child in ast.walk(node):
                 if isinstance(child, ast.Call):
-                    # Check if this call is already awaited by inspecting parent
                     parent = None
                     for potential_parent in ast.walk(node):
                         for field, value in ast.iter_fields(potential_parent):
@@ -659,7 +656,6 @@ def check_dataclass_mutable_defaults(
                         and isinstance(value.func, ast.Name)
                         and value.func.id == "field"
                     ):
-                        # Check for field(default=[...])
                         for kw in value.keywords:
                             if kw.arg == "default" and isinstance(
                                 kw.value, (ast.List, ast.Dict, ast.Set)
@@ -705,7 +701,6 @@ def check_logging_fstrings(
                 continue
             method_name = None
             if isinstance(node.func, ast.Attribute) and node.func.attr in _LOG_METHODS:
-                # Check that the object is a likely logger, not a custom class
                 obj = node.func.value
                 if isinstance(obj, ast.Name) and obj.id in _LOGGER_VARS:
                     method_name = node.func.attr
@@ -762,7 +757,6 @@ def check_type_hint_drift(
             body = [n for n in node.body if not isinstance(n, (ast.Expr, ast.Pass))]
             if len(body) <= 1:
                 continue
-            # Check for any annotation
             has_annotations = node.returns is not None
             for arg in node.args.args + node.args.posonlyargs + node.args.kwonlyargs:
                 if arg.annotation is not None:

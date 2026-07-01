@@ -127,7 +127,6 @@ def pairwise_distance_matrix(
             out = (ctypes.c_float * (n * n))()
             lib.wm_distance_matrix(flat, n, dim, out)
 
-            # Convert to Python nested list
             matrix = []
             for i in range(n):
                 row = [float(out[i * n + j]) for j in range(n)]

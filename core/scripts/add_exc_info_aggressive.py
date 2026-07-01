@@ -69,7 +69,6 @@ def add_exc_info_to_logger_calls(path: Path) -> int:
             # entering a function inside except (rare but possible)
             pass
 
-        # If we're in an except block and the line is a logger call
         # with f-string, convert it
         if in_except > 0 and not has_exc_info(line):
             result = convert_fstring_to_percent(line)

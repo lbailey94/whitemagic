@@ -391,12 +391,10 @@ class AutomationDaemon:
         """Main daemon loop."""
         while self.running:
             try:
-                # Process event queue first
                 while self._event_queue:
                     event_info = self._event_queue.pop(0)
                     self._execute_event_task(event_info)
 
-                # Check scheduled tasks
                 for task in sorted(
                     self.tasks.values(),
                     key=lambda t: t.priority.value,
@@ -674,7 +672,6 @@ class AutomationDaemon:
         conn = sqlite3.connect(self._db_path)
         cur = conn.cursor()
 
-        # Check recent high-gravity memories
         cur.execute("""
             SELECT COUNT(*) FROM holographic_coords
             WHERE w > 0.8

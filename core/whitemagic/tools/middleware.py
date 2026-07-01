@@ -1009,7 +1009,6 @@ def mw_semantic_cache(
         answer = result.get("result", result.get("answer", ""))
         if answer and isinstance(answer, str):
             output_tokens = max(1, len(answer) // 4)
-            # Store in unified cache
             try:
                 import json as _json
 
@@ -1169,7 +1168,6 @@ def mw_draft_review(
     ctx.meta["review_prompt_tokens"] = review_tokens
     ctx.meta["original_prompt_tokens"] = original_prompt_tokens
 
-    # Call next_fn with the review prompt
     result = next_fn(ctx)
 
     if (
@@ -1177,7 +1175,6 @@ def mw_draft_review(
         and isinstance(result, dict)
         and result.get("status") in ("success", "ok")
     ):
-        # If the review is very similar to the draft, the cloud model
         # accepted it — we saved the full generation cost
         result.setdefault("metadata", {})
         result["metadata"]["draft_review"] = {

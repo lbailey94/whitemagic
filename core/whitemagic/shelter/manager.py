@@ -392,7 +392,6 @@ class ShelterManager:
                     resolved_tier.value,
                 )
 
-        # Parse capabilities
         caps = ShelterCapabilities()
         if capabilities:
             for cap in capabilities:
@@ -407,7 +406,6 @@ class ShelterManager:
                 elif cap.startswith("tool:"):
                     caps.tools_allow.append(cap[5:])
 
-        # Parse limits
         lim = ShelterLimits(timeout_s=self._default_timeout)
         if limits:
             if "timeout_s" in limits:

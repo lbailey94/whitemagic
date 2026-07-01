@@ -129,7 +129,6 @@ class EntityExtractor:
             ExtractionResult
         """
         result = self.extract(text)
-        # Add persistence logic if needed (similar to old entity_extractor.py)
         return result
 
 

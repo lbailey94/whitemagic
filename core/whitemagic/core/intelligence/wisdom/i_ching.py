@@ -70,7 +70,6 @@ class IChingAdvisor:
                 COMPLETE_HEXAGRAMS,  # type: ignore[import-not-found]
             )
 
-        # Load all 64 complete hexagrams
         self.hexagrams = {}
         for num, name, chinese, judgment, image, lines, guidance in COMPLETE_HEXAGRAMS:
             self.hexagrams[num] = Hexagram(
@@ -92,7 +91,6 @@ class IChingAdvisor:
             Hexagram with guidance
 
         """
-        # Try Rust first
         hexagram_number = 0
         try:
             import whitemagic_rs
@@ -117,10 +115,8 @@ class IChingAdvisor:
             # Python fallback
             hexagram_number = random.randint(1, 64)
 
-        # Get hexagram (use available ones, default to 1 if not defined)
         hexagram = self.hexagrams.get(hexagram_number, self.hexagrams[1])
 
-        # Log reading
         self._log_reading(question, hexagram)
 
         logger.info("\n☯️  I CHING READING")

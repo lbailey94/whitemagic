@@ -91,12 +91,10 @@ class PredictiveCache:
 
     def get(self, key: str) -> Any | None:
         """Get value from cache."""
-        # Check if predicted correctly
         if key in self.prewarmed:
             self.stats.prediction_hits += 1
             self.prewarmed.discard(key)
 
-        # Try cache
         if key in self.cache:
             self.stats.hits += 1
             # Move to end (most recently used)
@@ -121,7 +119,6 @@ class PredictiveCache:
             self.cache.move_to_end(key)
             return
 
-        # Add new key
         self.cache[key] = value
         self.cache.move_to_end(key)
 
@@ -161,7 +158,6 @@ class PredictiveCache:
         if current_key not in self.access_patterns:
             return
 
-        # Get top N most likely next keys
         transitions = self.access_patterns[current_key]
         likely_next = sorted(
             transitions.items(),
@@ -273,12 +269,10 @@ class MemoryCache:
 
     def get_memory(self, memory_id: str) -> Any:
         """Get memory from cache or load from system."""
-        # Try cache first
         cached = self.cache.get(memory_id)
         if cached is not None:
             return cached
 
-        # Load from memory system
         memory_system = self._memory_system
         if memory_system is None:
             from whitemagic.core.memory.neural_system import get_neural_system
@@ -289,7 +283,6 @@ class MemoryCache:
         memory_map = getattr(memory_system, "_memories", {})
         memory = memory_map.get(memory_id) if isinstance(memory_map, dict) else None
 
-        # Store in cache
         if memory is not None:
             self.cache.set(memory_id, memory)
 

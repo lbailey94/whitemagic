@@ -68,7 +68,6 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.memory.unified import get_unified_memory
 
         um = get_unified_memory()
-        # Load quickstart guides
         guides = um.search("quickstart guide", limit=5)
         if guides:
             context["quickstart_guides"] = [
@@ -76,7 +75,6 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
                 for m in guides
                 if "quickstart" in str(getattr(m, "tags", []))
             ]
-        # Load recent memories for continuity
         recent = um.search("session handoff recent work", limit=3)
         if recent:
             context["recent_memories"] = [
@@ -181,7 +179,6 @@ def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
     """
     base_path = _resolve_base_path(kwargs)
 
-    # Try to find the most recent active session if none provided
     session_id = kwargs.get("session_id")
     if not session_id:
         session_dir = _session_dir(base_path)
@@ -328,7 +325,6 @@ def handle_session_handoff_transfer(**kwargs: Any) -> dict[str, Any]:
     session["updated_at"] = now
     _save_session(base_path, session)
 
-    # Save handoff package
     hdir = _handoff_dir(base_path)
     (hdir / f"{handoff_id}.json").write_text(
         _json_dumps(handoff, indent=2),

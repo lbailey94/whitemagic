@@ -12,7 +12,6 @@ def galaxy_command() -> None:
     try:
         from whitemagic.interfaces.tui import GalaxyTUI
 
-        # Run the TUI
         app = GalaxyTUI()
         app.run()
     except ImportError as e:

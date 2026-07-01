@@ -78,7 +78,6 @@ class ImmuneMemory:
         successful = [e for e in entries if e.successful]
         if not successful:
             return None
-        # Return the most frequently successful antibody
         counts: dict[str, int] = {}
         for e in successful:
             counts[e.antibody_used] = counts.get(e.antibody_used, 0) + 1

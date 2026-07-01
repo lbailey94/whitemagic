@@ -166,7 +166,6 @@ class BoundaryEngine:
         if not boundary.enabled:
             return True
 
-        # Check if would exceed with increment
         would_be = boundary.current + increment
 
         if would_be >= boundary.limit:
@@ -211,7 +210,6 @@ class BoundaryEngine:
 
         """
         if not self.check_boundary(boundary_name, increment):
-            # Handle violation
             boundary = self.boundaries[boundary_name]
 
             violation = BoundaryViolation(
@@ -230,7 +228,6 @@ class BoundaryEngine:
                 },
             )
 
-            # Call handler if registered
             if boundary_name in self.handlers:
                 self.handlers[boundary_name](boundary, increment)
 

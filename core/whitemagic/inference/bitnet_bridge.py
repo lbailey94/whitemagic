@@ -40,7 +40,6 @@ def is_available() -> bool:
     """Check if BitNet inference is enabled and reachable."""
     if not ENABLED:
         return False
-    # Check if we can reach Redis (for bus mode) or llama-cli (for direct mode)
     try:
         import redis
 

@@ -22,7 +22,6 @@ _POLYglot_BRIDGE = _REPO_ROOT / "polyglot" / "bridges" / "python"
 if str(_POLYglot_BRIDGE) not in sys.path:
     sys.path.insert(0, str(_POLYglot_BRIDGE))
 
-# Import and patch root path
 try:
     import whitemagic_polyglot as _wp
 

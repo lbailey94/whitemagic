@@ -79,7 +79,6 @@ class ThoughtGalaxy:
         for p in self._patterns:
             ptype = p.get("type", "unknown") if isinstance(p, dict) else "unknown"
             type_counts[ptype] = type_counts.get(ptype, 0) + 1
-        # Return patterns sorted by frequency
         results = [
             {"type": t, "frequency": c, "dominance": c / len(self._patterns)}
             for t, c in sorted(type_counts.items(), key=lambda x: -x[1])

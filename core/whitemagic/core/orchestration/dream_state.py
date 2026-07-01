@@ -30,7 +30,6 @@ class DreamStateOrchestration:
             "connections_found": 0,
         }
 
-        # Try to use emergence dream state
         try:
             from whitemagic.emergence.dream_state import get_dream_state
 
@@ -41,7 +40,6 @@ class DreamStateOrchestration:
         except Exception:
             logger.debug("Emergence dream state not available")
 
-        # Try to process pattern-dream bridge
         try:
             from whitemagic.synergies.pattern_dream_bridge import (
                 get_pattern_dream_bridge,

@@ -81,7 +81,6 @@ class MemoryConsolidator:
         """
         logger.info("Starting consolidation for session: %s", session_id or "recent")
 
-        # Get episodic memories to consolidate
         episodic = self._get_episodic_memories(session_id, minutes)
 
         if not episodic:
@@ -124,13 +123,11 @@ class MemoryConsolidator:
     ) -> list[Any]:
         """Get episodic memories to consolidate."""
         if session_id:
-            # Get by session ID
             memories = self.memory.search(
                 f"session:{session_id}",
                 top_k=1000,
             )
         else:
-            # Get recent memories
             memories = self.memory.get_recent_memories(
                 minutes=minutes,
                 limit=1000,
@@ -159,7 +156,6 @@ class MemoryConsolidator:
         for mem in memories:
             content = mem.content.lower()
 
-            # Try each pattern type
             for knowledge_type, patterns in self.patterns.items():
                 for pattern in patterns:
                     matches = re.finditer(pattern, content, re.IGNORECASE)
@@ -236,7 +232,6 @@ class MemoryConsolidator:
             normalized = knowledge.content.lower().strip()
             normalized = re.sub(r"\s+", " ", normalized)
 
-            # Check if we've seen similar content
             is_duplicate = False
             for seen in seen_content:
                 # Simple similarity check (more than 80% overlap)

@@ -274,7 +274,6 @@ def normalize_raw(
         else:
             msg = "ok"
 
-    # Remove envelope-ish keys from details to avoid duplication.
     details = {
         k: v
         for k, v in payload.items()

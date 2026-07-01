@@ -23,7 +23,6 @@ def _is_in_main_block(node: ast.AST, tree: ast.AST) -> bool:
     for sub in ast.walk(tree):
         if isinstance(sub, ast.If):
             test = sub.test
-            # if __name__ == "__main__"
             if isinstance(test, ast.Compare):
                 if isinstance(test.left, ast.Name) and test.left.id == "__name__":
                     for comp in test.comparators:

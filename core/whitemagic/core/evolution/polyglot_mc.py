@@ -202,7 +202,6 @@ class PolyglotMCOrchestrator:
         backend = self.select_backend(task)
         start = time.time()
 
-        # Try Rust bridge for the actual computation
         rust_result = None
         if backend == MCBackend.RUST or (
             MCBackend.RUST in self._available_backends and task.n_trials > 100

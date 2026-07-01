@@ -50,7 +50,6 @@ class ConstellationScanner:
     def run_kmeans(self, max_iter=10):
         print(f"2. Running 4D K-Means (k={self.k})...")
         
-        # Init centroids
         if not self.points:
             print("No data points.")
             return

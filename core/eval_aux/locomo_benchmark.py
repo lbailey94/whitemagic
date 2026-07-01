@@ -59,7 +59,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
 
-    # Get high-quality LONG_TERM memories with titles and content
     # Exclude recovered library noise, benchmark junk, and tiny entries
     rows = conn.execute("""
         SELECT id, title, content, created_at, importance, metadata
@@ -84,7 +83,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
     memories = [dict(r) for r in rows]
     rng.shuffle(memories)
 
-    # Get tag data for multi-hop questions
     tag_map: dict[str, list[str]] = {}  # memory_id -> tags
     tag_index: dict[str, list[str]] = {}  # tag -> memory_ids
     tag_rows = conn.execute("""
@@ -192,7 +190,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
         r'@\w|{\s*$|\[\s*$|\(\s*$)',
     )
     
-    # Get embedding engine for validation
     try:
         from whitemagic.core.memory.embeddings import get_embedding_engine
         embed_engine = get_embedding_engine()
@@ -244,7 +241,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
         
         scored_sentences.sort(reverse=True)
         
-        # Try top sentences, validate via embedding if possible
         for score, sentence in scored_sentences[:3]:
             query = re.sub(r'[^A-Za-z0-9\s]', ' ', sentence).strip()
             query = re.sub(r'\s+', ' ', query)
@@ -256,7 +252,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
                 try:
                     query_emb = embed_engine.encode(query)
                     if query_emb:
-                        # Get memory embedding (if cached)
                         mem_emb = embed_engine.get_cached_embedding(mem["id"])
                         if mem_emb:
                             # Compute cosine similarity
@@ -277,7 +272,6 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
         if len(open_domain_candidates) >= per_type:
             break
     
-    # Add validated open-domain questions
     for mem, query, score in open_domain_candidates[:per_type]:
         questions.append(TestQuestion(
             qid=hashlib.md5(f"open_{mem['id']}".encode()).hexdigest()[:12],
@@ -583,7 +577,6 @@ def retrieve_title_boosted(query: str, limit: int = 20) -> list[dict]:
         from whitemagic.core.memory.embeddings import get_embedding_engine
         from whitemagic.core.memory.unified import get_unified_memory
         
-        # Get embedding engine
         engine = get_embedding_engine()
         if not engine.available():
             return retrieve_vector(query, limit)
@@ -595,7 +588,6 @@ def retrieve_title_boosted(query: str, limit: int = 20) -> list[dict]:
         if not vector_results:
             return retrieve_vector(query, limit)
         
-        # Fetch full memory details and apply title boost
         unified = get_unified_memory()
         scored_results = []
         
@@ -606,7 +598,6 @@ def retrieve_title_boosted(query: str, limit: int = 20) -> list[dict]:
             if not mem_id:
                 continue
             
-            # Get memory details from backend
             try:
                 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
                 backend = SQLiteBackend(str(DB_PATH))
@@ -803,7 +794,6 @@ def retrieve_production(query: str, limit: int = 10) -> list[str]:
             # Look for memories or value (legacy/standalone fallback)
             memories = details.get("memories") or details.get("value")
             if isinstance(memories, list):
-                # Return list of IDs (unwrapped from dict or Memory object)
                 ids = []
                 for m in memories:
                     if isinstance(m, dict):
@@ -871,7 +861,6 @@ def evaluate_question(q: TestQuestion, strategy_fn, strategy_name: str, top_k: i
         results = []
     latency = (time.perf_counter() - start) * 1000
 
-    # Check if any ground truth ID appears in results
     retrieved_ids = []
     for r in results:
         if isinstance(r, dict):

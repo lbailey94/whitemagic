@@ -307,7 +307,6 @@ class InferenceRouter:
                 from whitemagic.core.memory.ghrr_attention import get_ghrr_attention
 
                 ghrr = get_ghrr_attention()
-                # Fetch relevant context from CoreAccessLayer if available
                 context_items: list[dict[str, Any]] = []
                 try:
                     from whitemagic.core.intelligence.core_access import get_core_access
@@ -369,7 +368,6 @@ class InferenceRouter:
                         },
                     )
 
-            # Execute handler
             try:
                 result = handler(
                     prompt=prompt,

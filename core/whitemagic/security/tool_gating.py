@@ -122,7 +122,6 @@ class PathValidator:
         # explicitly enabled.
         self.allowed_bases.add(Path.cwd().resolve())
 
-        # Add from environment if set
         extra_paths = os.getenv("WHITEMAGIC_ALLOWED_PATHS", "")
         if extra_paths:
             for p in extra_paths.split(":"):
@@ -141,7 +140,6 @@ class PathValidator:
         except (OSError, FileNotFoundError, PermissionError) as e:
             return False, f"Invalid path: {e}"
 
-        # Check blocked paths
         path_str = str(resolved)
         for blocked in self.blocked_paths:
             # Expand ~ once if present, then resolve
@@ -149,7 +147,6 @@ class PathValidator:
             if path_str.startswith(blocked_resolved):
                 return False, f"Access to {blocked} is blocked"
 
-        # Check if within allowed bases
         for base in self.allowed_bases:
             try:
                 resolved.relative_to(base)
@@ -191,7 +188,6 @@ class ToolGate:
         validator = get_validator()
         self.deployment_mode = validator.validate_deployment_mode()
 
-        # Check environment overrides
         self.allow_restricted_in_cloud = (
             os.getenv(
                 "WHITEMAGIC_ALLOW_RESTRICTED_TOOLS",
@@ -371,7 +367,6 @@ class ToolGate:
         if not hostname:
             return True
 
-        # Check for explicit cloud metadata endpoints
         cloud_metadata_hosts = [
             "metadata.google.internal",
             "169.254.169.254",
@@ -415,7 +410,6 @@ class ToolGate:
         # Cloud mode: sanitized error
         error_str = str(error)
 
-        # Remove file paths
         import re
 
         error_str = re.sub(r"/[^\s:]+\.py", "[file]", error_str)
@@ -463,12 +457,10 @@ def check_tool_execution(
 
     gate = get_tool_gate()
 
-    # Check tool allowed
     allowed, reason = gate.check_tool_allowed(tool_name)
     if not allowed:
         return False, reason, {}
 
-    # Validate parameters
     return gate.validate_tool_params(tool_name, params)
 
 

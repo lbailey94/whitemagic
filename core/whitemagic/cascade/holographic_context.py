@@ -28,7 +28,6 @@ class HolographicContextInjector:
 
         try:
             # Here we would normally query the UnifiedMemory or VectorIndex
-            # For now we simulate the injection of top 3 files mapped by 5D distance
             return """<holographic_context>
 [System Map Activated via I008 Arrow IPC]
 1. `whitemagic/core/autonomous/unified_nervous_system.py` (Resonance: 0.95) - Central event bus connecting 7 biological subsystems.

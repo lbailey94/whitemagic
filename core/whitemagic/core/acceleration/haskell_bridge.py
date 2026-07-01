@@ -121,7 +121,6 @@ def _load_lib() -> Any:
     # Set up LD_LIBRARY_PATH
     _setup_ghc_environment()
 
-    # Check if LD_PRELOAD is set
     if not _check_preload():
         logger.debug(
             "Haskell library requires LD_PRELOAD with GHC RTS. "
@@ -201,7 +200,6 @@ def hs_create_hexagrams_batch(lines_list: list[list[int]]) -> list[int] | None:
     if n == 0:
         return []
 
-    # Validate all inputs
     for i, lines in enumerate(lines_list):
         if len(lines) != 6:
             raise ValueError(f"Hexagram {i}: expected 6 lines, got {len(lines)}")

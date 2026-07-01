@@ -64,7 +64,6 @@ class PatternEngine:
         """Detect patterns in data — tries all engines."""
         results = []
 
-        # Try unified pattern API first
         unified = self._get_unified()
         if unified:
             try:
@@ -75,7 +74,6 @@ class PatternEngine:
             except Exception as e:
                 logger.debug("Unified pattern search failed: %s", e, exc_info=True)
 
-        # Try holographic patterns
         holographic = self._get_holographic()
         if holographic:
             try:
@@ -84,7 +82,6 @@ class PatternEngine:
             except Exception as e:
                 logger.debug("Holographic pattern search failed: %s", e, exc_info=True)
 
-        # Try memory patterns
         memory = self._get_memory()
         if memory:
             try:

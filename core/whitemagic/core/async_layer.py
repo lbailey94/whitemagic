@@ -59,7 +59,6 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
             """
             try:
                 asyncio.get_running_loop()
-                # If we're already in a loop, return the coroutine directly
                 return func(*args, **kwargs)
             except RuntimeError:
                 # No running loop, safe to use asyncio.run

@@ -200,7 +200,6 @@ God is in the details.
             from whitemagic.core.embodiment import get_harmony_monitor
 
             # Also potentially check other integration points
-            # For now, we perform a deep health check as proxy for validation
             monitor = get_harmony_monitor()
             state = monitor.get_current(force_update=True)
 
@@ -368,7 +367,6 @@ Cast your net wide, catch what matters.
                     )
                     captured["external_net"] = "broadcast_initiated"
 
-                # Check for recent signals
                 # Note: This is an example, in reality we'd pull from a buffer or cache
                 captured["external_net_status"] = "connected"
             except Exception as e:
@@ -398,7 +396,6 @@ Cast your net wide, catch what matters.
                             f"Heartbeat pattern: {pred['pulse_rate']}"
                         )
 
-            # Check state vector for broader patterns
             if call.state_vector.get("chain_position", 0) > 5:
                 captured["patterns_detected"].append(
                     "Extended chain - check for fatigue"

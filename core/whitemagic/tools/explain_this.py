@@ -333,14 +333,12 @@ def _synthesize_recommendation(preview: dict[str, Any]) -> dict[str, Any]:
     blockers: list[str] = []
     warnings: list[str] = []
 
-    # Dharma block
     dharma = preview.get("dharma", {})
     if not dharma.get("allowed", True):
         blockers.append(
             f"Dharma: {dharma.get('action', 'BLOCK')} — {dharma.get('reason', 'rule violation')}"
         )
 
-    # Governor block
     risk = preview.get("risk", {})
     if not risk.get("governor_safe", True):
         blockers.append(f"Governor: {risk.get('governor_reason', 'unsafe')}")

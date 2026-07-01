@@ -31,7 +31,6 @@ from whitemagic.config.paths import (
 
 logger = logging.getLogger(__name__)
 
-# Import version from canonical source (VERSION file)
 _version_file = PROJECT_ROOT / "VERSION"
 if _version_file.exists():
     VERSION = _version_file.read_text().strip()

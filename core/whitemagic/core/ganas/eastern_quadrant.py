@@ -163,7 +163,6 @@ Hold the head high, keep the neck stiff but flexible.
 
             manager = MemoryManager()
 
-            # Check if this call is for memory creation
             if "create_memory" in call.task or "memory_create" in call.task:
                 title = call.state_vector.get("title", "Untitled")
                 content = call.state_vector.get("content", "")
@@ -177,7 +176,6 @@ Hold the head high, keep the neck stiff but flexible.
                     tags=tags,
                 )
 
-                # Convert memory to dict for output
                 return {
                     "mansion": self.mansion.name,
                     "garden": self.garden,
@@ -396,7 +394,6 @@ The dragon's power is in its tail.
                 "enable_rust_acceleration" in call.task
                 or "check_acceleration" in call.task
             ):
-                # Check all native backends
                 stats = router.get_stats()
 
                 return {
@@ -499,7 +496,6 @@ Wind blows away the chaff.
 
                     consolidator = get_consolidator()
 
-                    # Check for dry_run flag in state, default to False for real action if explicitly requested
                     # But default to True if just general maintenance to be safe?
                     # Let's default to True (dry_run) unless 'apply' is True in state vector
                     dry_run = not call.state_vector.get("apply", False)
@@ -537,7 +533,6 @@ Wind blows away the chaff.
 
                         # Calculate pull
                         # We need candidates - simple approach: all recent or specific subset
-                        # For now, let's pull from recent memories
                         candidates_raw = manager.read_recent_memories(limit=100)
                         candidates = [
                             c["entry"] for c in candidates_raw if "entry" in c

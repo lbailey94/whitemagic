@@ -95,7 +95,6 @@ class DNAValidator:
         """
         violations = []
 
-        # Check 1: No self-destruction
         if self._would_destroy_core_system(fix_details):
             violations.append(
                 DNAViolation(
@@ -107,7 +106,6 @@ class DNAValidator:
                 )
             )
 
-        # Check 2: Memory integrity
         if self._would_corrupt_memory(threat, fix_details):
             violations.append(
                 DNAViolation(
@@ -119,7 +117,6 @@ class DNAValidator:
                 )
             )
 
-        # Check 3: Reversibility
         if not self._is_reversible(fix_details):
             violations.append(
                 DNAViolation(
@@ -131,7 +128,6 @@ class DNAValidator:
                 )
             )
 
-        # Return the most severe violation
         if violations:
             violations.sort(key=lambda v: v.risk_level, reverse=True)
             return violations[0]
@@ -142,16 +138,13 @@ class DNAValidator:
         """Check if fix would modify protected files."""
         file_path = fix_details.get("file", "")
 
-        # Check exact matches
         if file_path in self.protected_paths:
             return True
 
-        # Check patterns
         for pattern in self.protected_patterns:
             if pattern in file_path:
                 return True
 
-        # Check for destructive operations
         action = fix_details.get("action", "").lower()
         if any(
             keyword in action for keyword in ["delete core", "remove system", "destroy"]
@@ -162,7 +155,6 @@ class DNAValidator:
 
     def _would_corrupt_memory(self, threat: Any, fix_details: dict[str, Any]) -> bool:
         """Check if fix would corrupt memory structure."""
-        # If the threat is about memory but the fix isn't using proper memory API
         if "memory" in threat.threat_type.value.lower():
             file_path = fix_details.get("file", "")
             if file_path.startswith("memory/") and "consolidate" not in fix_details.get(
@@ -221,7 +213,6 @@ class ImmuneRegulator:
             (suppress: bool, reason: str)
 
         """
-        # Check 1: DNA validation
         violation = self.dna_validator.validate_proposed_fix(
             threat, antibody, fix_details
         )
@@ -234,11 +225,9 @@ class ImmuneRegulator:
             ):
                 return True, f"High risk DNA violation: {violation.description}"
 
-        # Check 2: Rate limiting (prevent runaway immune response)
         if recent_failures >= 3:
             return True, "Too many recent failures - suppressing to prevent damage"
 
-        # Check 3: Self-recognition (is this actually a threat?)
         if self._is_false_positive(threat):
             return True, "False positive detected - not actually a threat"
 

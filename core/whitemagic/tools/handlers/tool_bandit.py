@@ -287,7 +287,6 @@ class ToolBandit:
                 When provided, uses fractional Beta updates for richer signal.
         """
         tool_name = f"clone.{clone_type}.{strategy}"
-        # If quality not provided, try to extract from metadata
         if quality is None and metadata:
             quality = metadata.get("confidence")
         self.record_outcome(

@@ -84,7 +84,6 @@ class GardenWeaver:
 
         for garden in self.GARDENS:
             try:
-                # Import garden
                 try:
                     module = importlib.import_module(f"whitemagic.gardens.{garden}")
                 except (ImportError, ModuleNotFoundError):
@@ -93,7 +92,6 @@ class GardenWeaver:
                 # Count modules
                 module_count = len([x for x in dir(module) if not x.startswith("_")])
 
-                # Check Gan Ying connection
                 has_resonance = hasattr(module, "get_bus") or hasattr(
                     module, "emit_event"
                 )

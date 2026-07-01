@@ -45,7 +45,6 @@ class SynchronicityDetector:
                 if e1["stream"] != e2["stream"]:
                     time_diff = abs(e1["timestamp"] - e2["timestamp"])
                     if time_diff <= time_window:
-                        # Check for semantic similarity (simplified)
                         if self._is_related(e1["event"], e2["event"]):
                             sync = {
                                 "event_a": e1,

@@ -16,7 +16,6 @@ def parse_datetime(val: Any) -> datetime:
         return val
     if isinstance(val, str):
         try:
-            # Handle 'Z' suffix for ISO 8601
             return datetime.fromisoformat(val.replace("Z", "+00:00"))
         except (ValueError, TypeError):
             # Fallback for other formats

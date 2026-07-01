@@ -859,7 +859,6 @@ class ImperialDoctrine:
         # Detect Wu Xing phase from objective keywords
         phase = self._detect_phase(obj_lower)
 
-        # Get base force weights for this phase
         weights = dict(
             PHASE_FORCE_WEIGHTS.get(phase, PHASE_FORCE_WEIGHTS[WuXingPhase.EARTH])
         )

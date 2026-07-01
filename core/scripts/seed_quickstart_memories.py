@@ -372,7 +372,6 @@ def main():
     for mem_data in SEED_MEMORIES:
         title = mem_data["title"]
 
-        # Check if this memory already exists (by title search)
         # Strip FTS5-unsafe characters for the search query
         safe_query = title.replace("[", "").replace("]", "").replace("—", " ")
         try:

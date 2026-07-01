@@ -56,7 +56,6 @@ class SynastryGovernor:
 
         Returns Conflict object if conflict exists.
         """
-        # Check for opposite recommendations
         if "recommendation" in core1_input and "recommendation" in core2_input:
             if self._are_opposed(
                 core1_input["recommendation"], core2_input["recommendation"]
@@ -68,7 +67,6 @@ class SynastryGovernor:
                     f"Different approaches: {core1_input['recommendation']} vs {core2_input['recommendation']}",
                 )
 
-        # Check for timing conflicts
         if "timeline" in core1_input and "timeline" in core2_input:
             if core1_input["timeline"] != core2_input["timeline"]:
                 return Conflict(

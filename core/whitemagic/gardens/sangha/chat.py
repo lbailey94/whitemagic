@@ -261,7 +261,6 @@ class SanghaChat:
         self._ensure_channel("council")
         # Ensure tasks file exists
         self._ensure_tasks_file()
-        # Initialize Gan Ying Bus integration if available
         self.bus = GanYingBus() if GAN_YING_AVAILABLE and callable(GanYingBus) else None
         if GAN_YING_AVAILABLE:
             self._subscribe_to_events()

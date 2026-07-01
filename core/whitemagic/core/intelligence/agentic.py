@@ -71,7 +71,6 @@ class EmergenceEngine:
             from whitemagic.core.intelligence.core_access import get_core_access_layer
 
             cal = get_core_access_layer()
-            # Check for constellation convergence
             constellations = cal.query_constellations(active_only=True)
             for const in constellations:
                 member_count = const.get("member_count", 0)
@@ -87,7 +86,6 @@ class EmergenceEngine:
                             },
                         )
                     )
-            # Check for novel associations (edges created recently)
             recent_edges = cal.query_recent_associations(limit=20)
             if len(recent_edges) >= 3:
                 insights.append(

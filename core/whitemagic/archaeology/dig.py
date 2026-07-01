@@ -210,12 +210,10 @@ class ChariotArchaeologist:
         self.report_file = self.output_path / "recovered_memories.jsonl"
         self.state_file = self.output_path / "archaeology_state.json"
 
-        # Initialize state
         self._state = self._load_state()
         self._history = self._state.get("history", [])
         self._read_files = set(self._state.get("read_files", []))
 
-        # Initialize output file (clear old run)
         if not self.report_file.exists():
             with open(self.report_file, "w"):
                 pass
@@ -493,7 +491,6 @@ class ChariotArchaeologist:
             if file_path.suffix.lower() in self.exclude_extensions:
                 return
 
-            # Check file size (Skip > 10MB)
             if file_path.stat().st_size > 10 * 1024 * 1024:
                 return
 
@@ -510,14 +507,11 @@ class ChariotArchaeologist:
 
             matches = []
 
-            # Check patterns
-            # Check filename first
             if self.patterns["crystal"].search(file_path.name):
                 matches.append("filename_crystal")
             if self.patterns["secret"].search(file_path.name):
                 matches.append("filename_secret")
 
-            # Check content
             if self.patterns["wxyz"].search(content):
                 matches.append("WXYZ_coordinates")
             if "WXYZ" in content:

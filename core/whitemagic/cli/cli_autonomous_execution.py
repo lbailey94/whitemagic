@@ -145,7 +145,6 @@ def run(protocol_name, background):
 
     script_path = protocol_map.get(protocol_name)
     if not script_path:
-        # Try to find it in scripts/ directly
         potential_path = Path(f"scripts/{protocol_name}.py")
         if potential_path.exists():
             script_path = str(potential_path)

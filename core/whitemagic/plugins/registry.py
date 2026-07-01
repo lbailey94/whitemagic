@@ -47,7 +47,6 @@ class PluginRegistry:
             return False
 
         try:
-            # Call on_load
             plugin.on_load()
 
             # Register

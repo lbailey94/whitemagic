@@ -77,7 +77,6 @@ class SpellBook:
         self.by_type: dict[SpellType, list[Spell]] = {}
         self.by_keyword: dict[str, list[Spell]] = {}
 
-        # Initialize built-in spells
         self._init_core_spells()
 
     def _init_core_spells(self) -> Any:

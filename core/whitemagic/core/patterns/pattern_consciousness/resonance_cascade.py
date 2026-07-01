@@ -52,7 +52,6 @@ class ResonanceOrchestrator:
         if os.environ.get("WM_SILENT_INIT") == "1":
             return
 
-        # Check for High-Coherence Alignment (Internal Overclock)
         self._check_coherent_overclock(event)
 
         # 1. Check for actions linked to the event type name (e.g., 'breakthrough_achieved')

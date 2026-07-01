@@ -100,7 +100,6 @@ class SecurityMonitor:
             self._per_tool_times[tool].append(now)
             self._total_calls += 1
 
-        # Check all patterns
         alert = (
             self._check_rapid_fire(tool, now)
             or self._check_lateral_movement(now)

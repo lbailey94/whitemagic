@@ -154,7 +154,6 @@ class ExportImportManager:
                 memory_dict.pop("metadata", None)
             export_data["memories"].append(memory_dict)
 
-        # Save to file
         filename = f"whitemagic_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         filepath = self.storage_path / filename
 
@@ -306,7 +305,6 @@ class ExportImportManager:
             )
             zf.write(md_result["filepath"], "export.md")
 
-            # Add metadata file
             metadata = {
                 "export_info": {
                     "format": "zip",
@@ -336,7 +334,6 @@ class ExportImportManager:
     def import_memories(self, request: ImportRequest) -> dict[str, Any]:
         """Import memories from the specified format."""
 
-        # Parse based on format
         if request.format == "json":
             memories = self._import_json(request.data)
         elif request.format == "csv":
@@ -346,7 +343,6 @@ class ExportImportManager:
         else:
             raise ValueError(f"Unsupported import format: {request.format}")
 
-        # Validate memories
         validation_errors = self._validate_memories(memories)
 
         if validation_errors:
@@ -359,7 +355,6 @@ class ExportImportManager:
                 "imported_count": 0,
             }
 
-        # Import memories via MemoryManager
         try:
             from whitemagic.core.memory import MemoryManager
 
@@ -387,7 +382,6 @@ class ExportImportManager:
         try:
             parsed = _json_loads(self._to_text(data))
 
-            # Handle both direct list and wrapped format
             if "memories" in parsed:
                 memories_data = parsed["memories"]
             else:
@@ -443,11 +437,9 @@ class ExportImportManager:
 
         for line in lines:
             if line.startswith("## "):
-                # Save previous memory if exists
                 if current_memory:
                     memories.append(self._create_memory_from_markdown(current_memory))
 
-                # Start new memory
                 current_memory = {
                     "title": line[3:].strip(),
                     "content": "",
@@ -477,7 +469,6 @@ class ExportImportManager:
             elif current_memory.get("parsing_content"):
                 current_memory["content"] += line + "\\n"
 
-        # Save last memory
         if current_memory:
             memories.append(self._create_memory_from_markdown(current_memory))
 
@@ -510,7 +501,6 @@ class ExportImportManager:
             if memory.memory_type not in ["short_term", "long_term"]:
                 errors.append(f"Memory {i + 1}: Invalid memory type")
 
-            # Validate UUID format if provided
             if memory.id:
                 try:
                     uuid.UUID(memory.id)

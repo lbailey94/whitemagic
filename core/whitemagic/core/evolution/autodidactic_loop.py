@@ -211,7 +211,6 @@ class AutodidacticLoop:
         conn = sqlite3.connect(str(self.db_path))
         c = conn.cursor()
 
-        # Get all outcomes for this pattern
         c.execute(
             """
             SELECT success, performance_gain, quality_score
@@ -235,7 +234,6 @@ class AutodidacticLoop:
         gains = [o[1] for o in outcomes if o[0] and o[1] is not None]
         avg_gain = sum(gains) / len(gains) if gains else 0.0
 
-        # Get original confidence
         c.execute(
             """
             SELECT initial_confidence
@@ -304,7 +302,6 @@ class AutodidacticLoop:
         conn = sqlite3.connect(str(self.db_path))
         c = conn.cursor()
 
-        # Get latest update
         c.execute(
             """
             SELECT original_confidence, updated_confidence, application_count,
@@ -322,7 +319,6 @@ class AutodidacticLoop:
             conn.close()
             return None
 
-        # Get recent outcomes
         c.execute(
             """
             SELECT success, performance_gain, quality_score, measured_at
@@ -370,7 +366,6 @@ class AutodidacticLoop:
         pattern_ids = [row[0] for row in c.fetchall()]
         conn.close()
 
-        # Get stats for each
         stats = []
         for pid in pattern_ids:
             s = self.get_pattern_stats(pid)
@@ -446,7 +441,6 @@ class AutodidacticLoop:
         conn = sqlite3.connect(str(self.db_path))
         c = conn.cursor()
 
-        # Get this pattern's outcomes sorted by time
         c.execute(
             """
             SELECT success, measured_at FROM pattern_outcomes
@@ -533,7 +527,6 @@ class AutodidacticLoop:
         conn = sqlite3.connect(str(self.db_path))
         c = conn.cursor()
 
-        # Try both orderings
         c.execute(
             """
             SELECT correlation FROM pattern_correlations

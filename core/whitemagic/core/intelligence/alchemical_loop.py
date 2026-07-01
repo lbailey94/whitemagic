@@ -615,7 +615,6 @@ class AlchemicalLoop:
                 next_mode = self._context.get("next_cycle_mode", "generative")
                 components = self._decompose_task()
 
-                # If we have lessons from previous cycle, refine components
                 if prev_lessons and "consolidated" in prev_lessons:
                     components = [f"Refined: {c}" for c in components]
 
@@ -799,7 +798,6 @@ class AlchemicalLoop:
                 result.output = consolidated
                 self._context["consolidated"] = consolidated
 
-                # Check convergence
                 if len(self._lessons) >= self.max_cycles * 3:
                     self._context["converged"] = True
                 result.success = True
@@ -822,21 +820,18 @@ class AlchemicalLoop:
         try:
             if hub == "taurus":
                 result.tool_called = "strata.survey"
-                # Verify structural integrity
                 survey = await self._run_strata_survey()
                 result.output = survey
                 result.success = survey.get("passed", True)
 
             elif hub == "leo":
                 result.tool_called = "ensemble.query"
-                # Validate output quality
                 quality = await self._check_quality()
                 result.output = quality
                 result.success = quality.get("acceptable", True)
 
             elif hub == "scorpio":
                 result.tool_called = "association.mine"
-                # Check for novel insights
                 insights = await self._mine_associations()
                 result.output = {"novel_insights": insights.get("associations", [])}
                 result.success = True

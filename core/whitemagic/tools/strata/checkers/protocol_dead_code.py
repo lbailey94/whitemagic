@@ -28,7 +28,6 @@ def check_protocol_dead_code(
 
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
-                # Check if class inherits from Protocol
                 is_protocol = False
                 for base in node.bases:
                     if isinstance(base, ast.Name) and base.id == "Protocol":
@@ -68,17 +67,13 @@ def check_protocol_dead_code(
             elif isinstance(node, ast.FunctionDef) or isinstance(
                 node, ast.AsyncFunctionDef
             ):
-                # Check return type annotations
                 if node.returns and isinstance(node.returns, ast.Name):
                     protocol_references.add(node.returns.id)
-                # Check argument annotations
                 for arg in node.args.args + node.args.kwonlyargs:
                     if arg.annotation and isinstance(arg.annotation, ast.Name):
                         protocol_references.add(arg.annotation.id)
 
-    # For each Protocol class
     for class_name, (file_path, line_num, methods) in protocol_classes.items():
-        # If the Protocol itself is never referenced, flag the whole class
         if class_name not in protocol_references and class_name not in all_calls:
             findings.append(
                 Finding(
@@ -92,7 +87,6 @@ def check_protocol_dead_code(
             )
             continue
 
-        # Check individual Protocol methods
         for method_name in methods:
             if method_name.startswith("_"):
                 continue

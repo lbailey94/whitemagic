@@ -189,7 +189,6 @@ def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
 
     mem = remember(**store_kwargs)
 
-    # Verify holographic coords were populated (Phase 2 task p2-2)
     coords_populated = False
     try:
         from whitemagic.core.memory.unified import get_unified_memory
@@ -381,7 +380,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
         "backends": {},
     }
 
-    # Check UnifiedMemory
     try:
         from whitemagic.core.memory.unified import get_unified_memory
 
@@ -390,7 +388,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["unified_memory"] = "unavailable"
 
-    # Check Holographic Index
     try:
         from whitemagic.core.memory.unified import get_unified_memory
 
@@ -400,7 +397,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["holographic_index"] = "unavailable"
 
-    # Check Embedding Engine
     try:
         from whitemagic.core.memory.embeddings import get_embedding_engine
 
@@ -411,7 +407,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["embedding_engine"] = "unavailable"
 
-    # Check ScratchpadManager
     try:
         from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
 
@@ -420,7 +415,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["scratchpad"] = "unavailable"
 
-    # Check NeuralMemoryStore
     try:
         from whitemagic.core.memory.neural.persistence import NeuralMemoryStore
 
@@ -429,7 +423,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["neural_store"] = "unavailable"
 
-    # Check DreamArtifactWriter
     try:
         from whitemagic.core.dreaming.dream_artifacts import DreamArtifactWriter
 
@@ -438,7 +431,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["dream_artifact_writer"] = "unavailable"
 
-    # Check OMSManager
     try:
         from whitemagic.oms.manager import OMSManager
 
@@ -447,7 +439,6 @@ def handle_wm_write_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["oms_manager"] = "unavailable"
 
-    # Check atomic_write
     try:
         status["backends"]["atomic_write"] = "available"
     except Exception:

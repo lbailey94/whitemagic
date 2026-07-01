@@ -140,7 +140,6 @@ if __name__ == "__main__":
     report = generate_report(stats)
     print(report)
 
-    # Save to file
     output_path = root / "reports" / "loc_analysis.md"
     output_path.parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:

@@ -215,7 +215,6 @@ class DependencyGraph:
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
 
-        # Add any remaining nodes (cycles or disconnected)
         for n in self._nodes:
             if n not in order:
                 order.append(n)

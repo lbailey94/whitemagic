@@ -104,7 +104,6 @@ class WuXingSystem:
         # Normalize task type
         task_lower = task_type.lower().replace(" ", "_")
 
-        # Check direct mapping
         element = self.task_element_map.get(task_lower)
 
         # Fallback: guess based on keywords

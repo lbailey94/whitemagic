@@ -63,7 +63,6 @@ class QueryCache:
 
             value, expires_at = self._cache[key]
 
-            # Check expiration
             if time.time() > expires_at:
                 del self._cache[key]
                 self.expirations += 1
@@ -83,7 +82,6 @@ class QueryCache:
         expires_at = time.time() + ttl
 
         with self._lock:
-            # If key exists, update it
             if key in self._cache:
                 self._cache[key] = (value, expires_at)
                 self._cache.move_to_end(key)
@@ -189,7 +187,6 @@ def cache_memory_query(func: Any) -> Any:
         # Generate cache key
         cache_key = cache._make_key(func.__name__, *args, **kwargs)
 
-        # Try cache first
         result = cache.get(cache_key)
         if result is not None:
             logger.debug("Cache HIT: %s", func.__name__)

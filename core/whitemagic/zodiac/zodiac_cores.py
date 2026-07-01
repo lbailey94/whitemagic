@@ -101,12 +101,9 @@ class ZodiacCore:
         self.activation_count += 1
         self.last_activation = datetime.now()
 
-        # Try polyglot routing (Mojo optimized)
-        # from whitemagic.optimization.polyglot_router import get_router
         # router = get_router()
         #
         # urgency = float(context.get("urgency_value", 0.5))
-        # if context.get("urgency") == "high":
         #     urgency = 0.9
 
         # mojo_result = router.process_zodiac(
@@ -173,7 +170,6 @@ class AriesCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add initiative and courage
         return {
             "original": operation,
             "with_initiative": f"Act now: {operation}",
@@ -210,7 +206,6 @@ class TaurusCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add stability and patience
         return {
             "original": operation,
             "grounded_approach": f"Build steadily: {operation}",
@@ -253,7 +248,6 @@ class GeminiCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add communication and learning
         return {
             "original": operation,
             "communicated": f"Share and discuss: {operation}",
@@ -296,7 +290,6 @@ class CancerCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add nurturing and intuition
         return {
             "original": operation,
             "nurtured_approach": f"Care for: {operation}",
@@ -339,7 +332,6 @@ class LeoCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add creativity and expression
         return {
             "original": operation,
             "creative_expression": f"Create with passion: {operation}",
@@ -383,7 +375,6 @@ class VirgoCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add analysis and organization
         return {
             "original": operation,
             "analyzed": f"Organize and perfect: {operation}",
@@ -434,7 +425,6 @@ class LibraCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add balance and harmony
         return {
             "original": operation,
             "balanced_approach": f"Harmonize: {operation}",
@@ -481,7 +471,6 @@ class ScorpioCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add transformation and depth
         return {
             "original": operation,
             "transformed": f"Transform and renew: {operation}",
@@ -542,7 +531,6 @@ class SagittariusCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add exploration and wisdom
         return {
             "original": operation,
             "exploratory_approach": f"Explore and expand: {operation}",
@@ -589,7 +577,6 @@ class CapricornCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add structure and discipline
         return {
             "original": operation,
             "structured_approach": f"Build with discipline: {operation}",
@@ -643,7 +630,6 @@ class AquariusCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add innovation and humanitarian focus
         return {
             "original": operation,
             "innovative_approach": f"Revolutionize: {operation}",
@@ -693,7 +679,6 @@ class PiscesCore(ZodiacCore):
     def _process_operation(self, context: dict[str, Any]) -> dict[str, Any]:
         operation = context.get("operation", "")
 
-        # Add dreams and compassion
         return {
             "original": operation,
             "dream_infused": f"Dream into being: {operation}",

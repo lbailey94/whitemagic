@@ -151,7 +151,6 @@ class YinYangBalanceTracker:
         # Persist
         self._save_activity(timestamp, activity_type)
 
-        # Check balance
         metrics = self.calculate_balance()
 
         # Emit event if imbalanced

@@ -155,7 +155,6 @@ class BicameralDebate:
         # Round 3: Convergence attempt
         gap = abs(left_score - right_score)
         if gap < 0.2:
-            # Close enough → converge
             avg = (left_score + right_score) / 2
             left_score = left_score * 0.7 + avg * 0.3
             right_score = right_score * 0.7 + avg * 0.3

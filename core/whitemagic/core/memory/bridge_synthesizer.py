@@ -96,7 +96,6 @@ class BridgeSynthesizer:
         except (ImportError, AttributeError):
             return insights
 
-        # Get communities for context
         try:
             communities = engine.detect_communities()
         except Exception as e:
@@ -194,7 +193,6 @@ class BridgeSynthesizer:
 
         Returns: (hypothesis_text, source, confidence)
         """
-        # Try LLM first
         hypothesis = self._try_llm_hypothesis(node_id, tags_a, tags_b)
         if hypothesis:
             return hypothesis, "llm", 0.7

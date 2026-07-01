@@ -369,12 +369,10 @@ def get_local_reasoning() -> LocalReasoningEngine:
     global _engine
     if _engine is None:
         _engine = LocalReasoningEngine()
-        # Add default rules (order matters - most specific first)
         _engine.add_rule(version_rule)
         _engine.add_rule(garden_count_rule)
         _engine.add_rule(test_count_rule)
         _engine.add_rule(cpu_inference_rule)  # NEW: CPU inference for count/find
-        # Add common patterns
         _engine.add_pattern("file_search", r"find|search|locate|where is")
         _engine.add_pattern("definition", r"what is|define|explain")
         _engine.add_pattern("how_to", r"how to|how do|how can")
@@ -412,18 +410,15 @@ if __name__ == "__main__":
 
     engine = get_local_reasoning()
 
-    # Test 1: Version question (should resolve locally)
     result = engine.reason_locally("What version is WhiteMagic?")
     logger.info("\nQ: What version is WhiteMagic?")
     logger.info("A: %s", result.insights[0].content if result.insights else "Not found")
     logger.info("Tokens saved: %s", result.total_tokens_saved)
 
-    # Test 2: Garden count (should resolve locally)
     result = engine.reason_locally("How many gardens does WhiteMagic have?")
     logger.info("\nQ: How many gardens?")
     logger.info("A: %s", result.insights[0].content if result.insights else "Not found")
 
-    # Test 3: Search query (uses clone army)
     result = engine.reason_locally("parallel processing capabilities")
     logger.info("\nQ: parallel processing capabilities")
     logger.info("Found: %s insights", len(result.insights))

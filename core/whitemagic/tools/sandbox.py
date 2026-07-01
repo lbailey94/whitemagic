@@ -28,7 +28,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Try resource module (Linux/Mac only)
 HAS_RESOURCE = False
 try:
     import resource

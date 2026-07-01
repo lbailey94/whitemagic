@@ -182,7 +182,6 @@ class PatternFederation:
         else:
             pattern.failure_count += 1
 
-        # Add as contributor if not already
         if session_id not in pattern.contributors:
             pattern.contributors.append(session_id)
 
@@ -391,7 +390,6 @@ def federate_patterns() -> list[dict[str, Any]]:
     federation = get_federation()
     best_patterns = federation.get_best_patterns(count=20)
 
-    # Convert to simple dict format
     patterns = []
     for p in best_patterns:
         patterns.append(

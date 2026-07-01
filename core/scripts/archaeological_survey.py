@@ -45,7 +45,6 @@ def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
             conn.close()
             return
 
-        # Check for columns
         cursor.execute(f"PRAGMA table_info({target_table})")
         columns = [r["name"] for r in cursor.fetchall()]
 

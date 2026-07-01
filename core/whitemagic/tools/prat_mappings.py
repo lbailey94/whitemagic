@@ -669,10 +669,8 @@ def try_koka_handler(
 
     koka_module, supported_ops = handler_info
 
-    # Check if the operation is supported
     op = tool or "native"
     if op not in supported_ops and tool is not None:
-        # Check if tool name contains a supported operation
         op_match = any(s in op for s in supported_ops)
         if not op_match:
             return None  # Operation not supported in Koka
@@ -684,7 +682,6 @@ def try_koka_handler(
             koka_module, f"handle_{op.replace('.', '_')}", args or {}, timeout=2.0
         )
         if result:
-            # If Koka explicitly returned an error (either status='error' or 'error' key exists),
             # we should fall back to Python
             if result.get("status") == "error" or "error" in result:
                 return None

@@ -115,7 +115,6 @@ class ZodiacalClock:
                     "ZodiacalClock: failed to load state: %s", e, exc_info=True
                 )
 
-        # Initialize default state
         state = DEFAULT_STATE.copy()
         state["last_init"] = datetime.now().isoformat()
         return state

@@ -170,10 +170,8 @@ def detect_grid(
 
     Returns (groups, stabilities) — stabilities are always 0.0 for grid.
     """
-    # Try Rust implementation first
     if _RUST_AVAILABLE and len(coords) > 0:
         try:
-            # Convert to format expected by Rust
             coords_5d = [(c[0], c[1], c[2], c[3], c[4]) for c in coords]
             groups_rust = _rust_const.py_detect_grid(
                 coords_5d, bins, min_size, max_constellations
@@ -257,7 +255,6 @@ def merge_adjacent(
             visited.add(current)
             group.append(current)
 
-            # Check all 5D neighbors (±1 on each axis)
             for dim in range(5):
                 for delta in (-1, 1):
                     neighbor_list = list(current)

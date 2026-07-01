@@ -103,7 +103,6 @@ class EmergenceEngine:
         insights.extend(self._detect_cross_domain_bridges())
         insights.extend(self._detect_creative_tensions())
 
-        # Store for later retrieval
         for ins in insights:
             self._past_insights.append(
                 {
@@ -133,7 +132,6 @@ class EmergenceEngine:
         cur = conn.cursor()
 
         try:
-            # Get tag co-occurrence pairs from recent memories (last 7 days)
             cutoff = (datetime.now() - timedelta(days=7)).isoformat()
             cur.execute(
                 """

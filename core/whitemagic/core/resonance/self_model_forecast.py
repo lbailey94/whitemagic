@@ -142,7 +142,6 @@ class SelfModelForecaster:
         # Generate forecasts
         fc = holt_winters_forecast(state, steps)
 
-        # Add summary stats
         fc["series_length"] = n
         fc["last_value"] = values[-1]
         fc["series_mean"] = round(self._mean(values), 6)

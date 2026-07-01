@@ -30,7 +30,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Try to import prometheus_client
 HAS_PROMETHEUS = False
 try:
     from prometheus_client import Counter, Gauge, Histogram, start_http_server

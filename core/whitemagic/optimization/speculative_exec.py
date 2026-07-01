@@ -75,7 +75,6 @@ class SpeculativeExecutor:
 
         fixed = self.local_llm.complete(prompt, max_tokens=1024)
 
-        # Extract code block
         match = re.search(r"```python\n(.*?)\n```", fixed, re.DOTALL)
         if match:
             return match.group(1)

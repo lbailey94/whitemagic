@@ -128,7 +128,6 @@ class AssociationMiner:
         Python regex. Zig SIMD keyword path was disabled (v13.3.1) due to
         ctypes marshaling overhead making it 15× slower than Python.
         """
-        # Try Rust PyO3 keyword extraction (v13.3.2) — zero-copy strings
         if len(text) > 200:
             try:
                 from whitemagic.optimization.rust_accelerators import (
@@ -194,7 +193,6 @@ class AssociationMiner:
         # Sample diverse memories: mix of zones
         all_mems = []
         try:
-            # Get a mix: some from core/inner_rim, some from mid/outer
             core_mems = um.backend.list_recent(limit=sample_size // 4)
             # Also get some random from deeper zones via SQL
             import sqlite3
@@ -238,14 +236,12 @@ class AssociationMiner:
 
         report.memories_sampled = len(all_mems)
 
-        # Get existing associations to avoid duplicates
         existing_assoc: set[tuple[str, str]] = set()
         for mem in all_mems:
             for target_id in mem.associations:
                 existing_assoc.add((mem.id, target_id))
                 existing_assoc.add((target_id, mem.id))
 
-        # Try Rust accelerated path first (bulk keyword + pairwise in one shot)
         proposals: list[ProposedLink] = []
         used_rust = False
         try:
@@ -286,7 +282,6 @@ class AssociationMiner:
             fingerprints: dict[str, set[str]] = {}
             texts_for_batch = [(mem.id, f"{mem.title or ''} {str(mem.content)[:2000]}") for mem in all_mems]
 
-            # Try batch Rust keyword extraction (single FFI call for all texts)
             batch_done = False
             try:
                 from whitemagic.optimization.rust_accelerators import (
@@ -477,7 +472,6 @@ class AssociationMiner:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             with um.backend.pool.connection() as conn:
-                # Get existing associations for candidate IDs
                 candidate_ids = set()
                 for pair_item in pairs:
                     candidate_ids.add(pair_item["source_id"])

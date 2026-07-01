@@ -136,7 +136,6 @@ class PredictiveCodingModel:
         error = actual - state.predicted_value
         squared = error**2
 
-        # Check for anomaly using z-score
         anomaly = False
         if state.error_variance > 0:
             z_score = abs(error) / math.sqrt(state.error_variance)

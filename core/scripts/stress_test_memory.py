@@ -21,9 +21,7 @@ import tempfile
 import time
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
 # Configuration
-# ---------------------------------------------------------------------------
 CONFIG = {
     "memory_count": 500,  # Total memories to create
     "batch_size": 50,  # Memories per batch
@@ -93,9 +91,6 @@ def _random_tags() -> list[str]:
     return random.sample(pool, k=random.randint(1, 3))
 
 
-# ---------------------------------------------------------------------------
-# Phase 1: Store Stress
-# ---------------------------------------------------------------------------
 
 
 def _make_memory(i: int) -> Any:
@@ -144,9 +139,6 @@ def stress_store_parallel(backend, count: int, workers: int) -> list[str]:
     return ids
 
 
-# ---------------------------------------------------------------------------
-# Phase 2: Search Stress
-# ---------------------------------------------------------------------------
 
 
 def stress_search(backend, iterations: int) -> None:
@@ -175,9 +167,6 @@ def stress_search(backend, iterations: int) -> None:
             RESULTS["search_latency_ms"].append((time.perf_counter() - start) * 1000)
 
 
-# ---------------------------------------------------------------------------
-# Phase 3: Recall Stress
-# ---------------------------------------------------------------------------
 
 
 def stress_recall(backend, memory_ids: list[str]) -> None:
@@ -192,9 +181,6 @@ def stress_recall(backend, memory_ids: list[str]) -> None:
             RESULTS["recall_latency_ms"].append((time.perf_counter() - start) * 1000)
 
 
-# ---------------------------------------------------------------------------
-# Phase 4: Embedding Stress
-# ---------------------------------------------------------------------------
 
 
 def stress_embeddings(count: int) -> None:
@@ -215,9 +201,6 @@ def stress_embeddings(count: int) -> None:
         ERRORS.append(f"embed_import: {exc}")
 
 
-# ---------------------------------------------------------------------------
-# Phase 5: Graph Walker Stress
-# ---------------------------------------------------------------------------
 
 
 def stress_graph_walk(backend, start_id: str, depth: int) -> None:
@@ -235,9 +218,6 @@ def stress_graph_walk(backend, start_id: str, depth: int) -> None:
         ERRORS.append(f"graph_walk: {exc}")
 
 
-# ---------------------------------------------------------------------------
-# Phase 6: Consolidation Stress
-# ---------------------------------------------------------------------------
 
 
 def stress_consolidation(backend) -> None:
@@ -253,9 +233,7 @@ def stress_consolidation(backend) -> None:
         ERRORS.append(f"consolidation: {exc}")
 
 
-# ---------------------------------------------------------------------------
 # Reporting
-# ---------------------------------------------------------------------------
 
 
 def _summarize(name: str, values: list[float]) -> str:
@@ -294,9 +272,7 @@ def report() -> None:
     print("=" * 60)
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 
 def main() -> int:
@@ -308,7 +284,6 @@ def main() -> int:
         tmp_path = Path(tmp)
         print(f"Using temp state root: {tmp_path}")
 
-        # Initialize backend
         try:
             from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 

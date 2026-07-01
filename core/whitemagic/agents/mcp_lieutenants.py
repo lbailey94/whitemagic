@@ -268,7 +268,6 @@ class LieutenantWithMCP(Lieutenant):
                 else {"status": "error", "message": "Invalid response"}
             )
 
-            # Log the call
             self.mcp_calls_made += 1
             self.mcp_call_history.append(
                 {
@@ -323,29 +322,24 @@ class LieutenantWithMCP(Lieutenant):
 
         # Domain-specific reconnaissance
         if self.domain == LieutenantDomain.INTELLIGENCE:
-            # Check graph topology
             if self.can_use_tool("graph_topology"):
                 topology = self.call_mcp_tool("graph_topology", {})
                 intel["graph_topology"] = topology
 
-            # Check cluster stats
             if self.can_use_tool("cluster_stats"):
                 clusters = self.call_mcp_tool("cluster_stats", {})
                 intel["clusters"] = clusters
 
         elif self.domain == LieutenantDomain.PERFORMANCE:
-            # Check SIMD status
             if self.can_use_tool("simd.status"):
                 simd = self.call_mcp_tool("simd.status", {})
                 intel["simd_status"] = simd
 
-            # Check Rust status
             if self.can_use_tool("rust_status"):
                 rust = self.call_mcp_tool("rust_status", {})
                 intel["rust_status"] = rust
 
         elif self.domain == LieutenantDomain.DISCOVERY:
-            # Check capabilities
             if self.can_use_tool("capabilities"):
                 caps = self.call_mcp_tool("capabilities", {})
                 intel["capabilities"] = caps
@@ -365,7 +359,6 @@ class LieutenantWithMCP(Lieutenant):
 
         # Performance monitoring
         if self.domain == LieutenantDomain.PERFORMANCE:
-            # Check if throughput is acceptable
             throughput = metrics.get("throughput", 0)
             if throughput < 1000 and self.can_use_tool("simd.status"):
                 simd_status = self.call_mcp_tool("simd.status", {})
@@ -411,7 +404,6 @@ class LieutenantWithMCP(Lieutenant):
 
         # Domain-specific verification
         if self.domain == LieutenantDomain.INTELLIGENCE:
-            # Verify graph reconstruction
             if self.can_use_tool("graph_topology"):
                 topology = self.call_mcp_tool("graph_topology", {})
                 checks.append(
@@ -421,7 +413,6 @@ class LieutenantWithMCP(Lieutenant):
                     }
                 )
 
-            # Verify constellation detection
             if self.can_use_tool("constellation.detect"):
                 constellations = self.call_mcp_tool("constellation.detect", {})
                 checks.append(
@@ -432,7 +423,6 @@ class LieutenantWithMCP(Lieutenant):
                 )
 
         elif self.domain == LieutenantDomain.PERFORMANCE:
-            # Verify SIMD performance
             if self.can_use_tool("simd.status"):
                 simd = self.call_mcp_tool("simd.status", {})
                 checks.append(

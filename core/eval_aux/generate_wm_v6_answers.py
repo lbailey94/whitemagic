@@ -8,7 +8,6 @@ import json
 import re
 from datetime import datetime
 
-# Parse the memories from the file
 CORPUS_FILE = "./eval/locomo_v020_blind_wm_enabled_v6.txt"
 
 def parse_memories():
@@ -119,7 +118,6 @@ def answer_multi_hop(question: dict, memory_lookup: dict) -> dict:
             "tools_used": []
         }
     
-    # Get the two memories
     mem1 = memory_lookup.get(source_ids[0])
     mem2 = memory_lookup.get(source_ids[1])
     
@@ -133,7 +131,6 @@ def answer_multi_hop(question: dict, memory_lookup: dict) -> dict:
             "tools_used": []
         }
     
-    # Verify they are connected via associations
     mem1_assocs = set(mem1.get('associations', []))
     mem2_assocs = set(mem2.get('associations', []))
     
@@ -236,7 +233,6 @@ def answer_open_domain(question: dict, memory_lookup: dict) -> dict:
             "tools_used": []
         }
     
-    # Get the first 3 memory titles (or all if less than 3)
     titles = [mem['title'] for _, mem in matching_memories[:3]]
     memory_ids = [mid for mid, _ in matching_memories[:3]]
     
@@ -253,7 +249,6 @@ def answer_open_domain(question: dict, memory_lookup: dict) -> dict:
 
 def answer_adversarial(question: dict, memory_lookup: dict) -> dict:
     """Answer adversarial questions by detecting false premises."""
-    # Check for false premises
     false_premises = [
         ("february 30", "February 30 does not exist"),
         ("500 tools", "No memory states WhiteMagic has 500 tools"),
@@ -340,14 +335,12 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f"wm_v6_answers_{timestamp}.json"
     
-    # Save answers
     with open(output_file, 'w') as f:
         json.dump(answers, f, indent=2)
     
     print(f"\nGenerated {len(answers)} answers")
     print(f"Saved to: {output_file}")
     
-    # Print summary by question type
     type_counts = {}
     for q in questions:
         t = q.get('question_type', 'unknown')

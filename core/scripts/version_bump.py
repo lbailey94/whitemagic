@@ -90,7 +90,6 @@ def update_rust_version(filepath: Path, old: str, new: str, dry_run: bool) -> bo
     pattern = f'__version__ = "{old}"'
     replacement = f'__version__ = "{new}"'
     if pattern not in content:
-        # Try alternate pattern
         pattern = f'"{old}"'
         replacement = f'"{new}"'
     if pattern not in content:
@@ -139,7 +138,6 @@ def main() -> None:
     old_version = read_current_version()
     new_version = args.new_version
 
-    # Validate version format
     if not re.match(r"^\d+\.\d+\.\d+$", new_version):
         print(f"ERROR: Invalid version format: {new_version} (expected X.Y.Z)")
         sys.exit(1)

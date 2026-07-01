@@ -96,7 +96,6 @@ class MemoryWorkflowOptimizer:
         try:
             start_time = datetime.now()
 
-            # Check cache first
             if memory_id in self.link_cache:
                 self.metrics.cache_hits += 1
                 self.metrics.calls_optimized += 1
@@ -108,7 +107,6 @@ class MemoryWorkflowOptimizer:
             self.metrics.cache_misses += 1
 
             # Pre-compute similar memories (simplified - would use embeddings in production)
-            # For now, just return empty list to demonstrate the mechanism
             similar_ids: list[str] = []
 
             # In production, this would:

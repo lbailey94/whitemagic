@@ -16,10 +16,8 @@ class HealthMonitor:
 
     def check_system_health(self, deep_scan: bool = False) -> dict[str, Any]:
         """Check overall system health."""
-        # Check accelerators
         accelerators_health = self.check_accelerators()
 
-        # Check core components
         memory_health = self.check_memory_health()
         resonance_health = self.check_resonance_health(duration=1)
         integrations_health = self.check_integrations_health(quick_check=not deep_scan)

@@ -122,7 +122,6 @@ class ZodiacMapper:
                 if any(k in word for k in keywords):
                     scores[animal] += count * 2
                 
-                # Check for direct matches
                 if word in keywords:
                     scores[animal] += count * 5
 

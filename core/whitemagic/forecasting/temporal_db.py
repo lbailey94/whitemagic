@@ -140,7 +140,6 @@ class TemporalForecastDB:
         inserted = updated = removed = 0
         yaml_refs = {c["source_ref"] for c in claims}
         with self._conn() as conn:
-            # Remove stale claims no longer in YAML
             for row in conn.execute("SELECT source_ref FROM predictions").fetchall():
                 if row["source_ref"] not in yaml_refs:
                     conn.execute(
@@ -183,7 +182,6 @@ class TemporalForecastDB:
                     inserted += 1
                 else:
                     # Unconditional update — YAML is the source of truth; the cost
-                    # for ~24 rows is negligible and guarantees correctness.
                     conn.execute(
                         """
                         UPDATE predictions SET

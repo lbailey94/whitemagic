@@ -31,7 +31,6 @@ DEMO_MODE = os.environ.get("WM_DEMO_MODE", "false").lower() in {
     "on",
 }
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
@@ -51,7 +50,6 @@ CORS(
     },
 )
 
-# Initialize WhiteMagic
 manager: Any = MemoryManager()
 get_hub = None  # Define for patching support
 
@@ -79,13 +77,10 @@ def handle_memories() -> Any:
 def get_memories() -> Any:
     """Get all memories with relationships."""
     try:
-        # Get recent memories
         memories = []
 
-        # Try to get memories from the manager
         try:
             limit = int(request.args.get("limit", 100))
-            # Get all memories
             all_memories = manager.list(limit=limit)
 
             for memory in all_memories:
@@ -157,7 +152,6 @@ def create_memory() -> Any:
         content = data.get("content")
         tags = data.get("tags", [])
 
-        # Validate input (basic XSS check for test)
         if title and "<script>" in title:
             return jsonify({"error": "Invalid content"}), 400
 
@@ -217,7 +211,6 @@ def get_events() -> Any:
     try:
         events = []
 
-        # Try to get events from continuity system
         try:
             import whitemagic.core.continuity as continuity
 
@@ -275,7 +268,6 @@ def get_gardens() -> Any:
     try:
         gardens = []
 
-        # Get garden information
         garden_names = [
             "joy",
             "love",
@@ -528,7 +520,6 @@ def get_stats() -> Any:
             "uptime": "2h 34m",
         }
 
-        # Get actual memory count
         try:
             memories = manager.list(limit=1000)
             stats["total_memories"] = len(memories)
@@ -536,7 +527,6 @@ def get_stats() -> Any:
             logger.debug("Operation failed: %s", e)
             pass
 
-        # Get plugin count
         try:
             plugins = list_plugins()
             stats["active_plugins"] = len(plugins)
@@ -553,7 +543,6 @@ def _extract_relationships(memory: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract related memories based on tags and content similarity."""
     related = []
     try:
-        # Get tags from current memory
         tags = memory.get("tags", [])
 
         # Simple relationship extraction based on tag overlap

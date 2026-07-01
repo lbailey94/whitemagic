@@ -328,7 +328,6 @@ class CoordinateEncoder:
         v = self._calculate_v(memory)
 
         # 2. Try Rust v13.1 accelerated encoding (fastest path)
-        # If Rust provides coordinates, we BLEND the semantic bias into them
         # to ensure the high-variance signal is preserved even on stale binaries.
         try:
             from whitemagic.optimization.rust_accelerators import (
@@ -416,7 +415,6 @@ class CoordinateEncoder:
         Uses Rust Rayon parallelism when available, falls back to
         sequential Python encoding.
         """
-        # Try Rust batch encoding (Rayon parallel)
         if RUST_HOLOGRAPHIC_AVAILABLE and len(memories) > 1:
             try:
                 import json
@@ -580,15 +578,12 @@ class CoordinateEncoder:
         mem_id = memory.get("id", "")
         hash_input = f"{content}{mem_id}{axis}"
         hash_val = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
-        # Convert to [-0.2, 0.2] range for subtle variation
         return ((hash_val % 1000) / 1000.0 - 0.5) * 0.4
 
     def _calculate_x(self, memory: dict[str, Any]) -> float:
         """Calculate X-Axis: Logic vs Emotion.
         Range: [-1.0, 1.0].
         """
-        # Start with emotional_valence if available (v5.0 integration)
-        # Handle None values by coalescing to 0.0
         valence = memory.get("emotional_valence")
         if valence is None:
             valence = 0.0
@@ -710,7 +705,6 @@ class CoordinateEncoder:
         score += 0.03 * logic_word_count
         score -= 0.03 * emotion_word_count
 
-        # Add hash-based variation to prevent clustering
         score += self._content_hash_bias(memory, "x")
 
         semantic_bias = self._calculate_semantic_bias(memory, "x")
@@ -724,7 +718,6 @@ class CoordinateEncoder:
         """
         score = 0.0
 
-        # Check memory_type (fixed: was 'type')
         raw_type = memory.get("memory_type")
         if raw_type is None:
             raw_type = memory.get("type", "unknown")
@@ -811,13 +804,10 @@ class CoordinateEncoder:
         """
         score = 0.0
 
-        # Try to parse actual timestamp
         timestamp_str = memory.get("created_at") or memory.get("timestamp")
         if timestamp_str:
             try:
-                # Handle various formats
                 if isinstance(timestamp_str, str):
-                    # Try ISO format first
                     for fmt in [
                         "%Y-%m-%dT%H:%M:%S.%f",
                         "%Y-%m-%dT%H:%M:%S",
@@ -890,7 +880,6 @@ class CoordinateEncoder:
         base += usage_boost
 
         # Reference Density (v15.1 Enhancement)
-        # Check links dict or associations dict
         links = memory.get("links", {})
         link_count = len(links) if isinstance(links, dict) else 0
         assoc_count = len(memory.get("associations", {}))

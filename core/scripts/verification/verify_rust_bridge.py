@@ -1,6 +1,5 @@
 import sys
 
-# Add the editable install location if needed, though venv should handle it
 try:
     import whitemagic_rs
 
@@ -38,7 +37,6 @@ def test_patterns():
     print("\n--- Testing Pattern Extraction ---")
     content = ["def bad_code():\n    pass # TODO: Fix me"]
     try:
-        # returns (total, found, solutions, antis, heuristics, opts, duration)
         result = whitemagic_rs.extract_patterns_from_content(content, 0.0)
         print(f"Patterns found: {result[1]}")
         print(f"Duration: {result[6]:.6f}s")

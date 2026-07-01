@@ -104,10 +104,8 @@ class ParallelFileReader:
             (self._read_single_file, (path,), {}) for path in paths
         ]
 
-        # Execute in parallel
         results = await self.manager.run_batch(tasks, pool_type="io")
 
-        # Check for errors if fail_fast
         if fail_fast:
             for result in results:
                 if isinstance(result, Exception):
@@ -158,11 +156,9 @@ class ParallelFileReader:
         for path in paths:
             path = Path(path)
 
-            # Check extension
             if extensions and path.suffix not in extensions:
                 continue
 
-            # Check size
             if max_size and path.exists():
                 if path.stat().st_size > max_size:
                     continue

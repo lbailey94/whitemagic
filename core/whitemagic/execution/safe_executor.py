@@ -130,7 +130,6 @@ class SafeExecutor:
 
         self.strict_mode = strict_mode
 
-        # Log initialization
         logger.info(
             "SafeExecutor initialized with %s allowed commands",
             len(self.allowed_commands),
@@ -173,13 +172,11 @@ class SafeExecutor:
             # Command is a path - extract basename
             base_command = Path(base_command).name
 
-        # Check blocklist first (highest priority)
         if base_command in self.BLOCKED_COMMANDS:
             raise CommandNotAllowedError(
                 f"Command '{base_command}' is explicitly blocked for security",
             )
 
-        # Check allowlist
         if base_command not in self.allowed_commands:
             raise CommandNotAllowedError(
                 f"Command '{base_command}' is not in allowlist. "
@@ -218,10 +215,8 @@ class SafeExecutor:
             subprocess.CalledProcessError: If check=True and command fails
 
         """
-        # Parse command
         cmd_array = self._parse_command(command)
 
-        # Validate command
         self._validate_command(cmd_array)
 
         # Prepare environment
@@ -232,12 +227,10 @@ class SafeExecutor:
             exec_env = os.environ.copy()
             exec_env.update(env)
 
-        # Log execution
         logger.info("Executing: %s", " ".join(cmd_array))
         if cwd:
             logger.debug("  Working directory: %s", cwd)
 
-        # Execute with shell=False (SAFE)
         try:
             result = subprocess.run(
                 cmd_array,
@@ -288,7 +281,6 @@ class SafeExecutor:
             Popen object for async management
 
         """
-        # Parse and validate
         cmd_array = self._parse_command(command)
         self._validate_command(cmd_array)
 
@@ -302,7 +294,6 @@ class SafeExecutor:
 
         logger.info("Starting async: %s", " ".join(cmd_array))
 
-        # Start process
         return subprocess.Popen(
             cmd_array,
             shell=False,  # CRITICAL: Never use shell=True

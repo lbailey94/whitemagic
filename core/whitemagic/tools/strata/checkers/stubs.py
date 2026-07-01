@@ -59,7 +59,6 @@ def _is_backward_compat_shim(node: ast.FunctionDef, tree: ast.AST) -> bool:
                 and hasattr(parent, "end_lineno")
             ):
                 if parent.lineno <= node.lineno <= parent.end_lineno:
-                    # Check class docstring for shim keywords
                     if (
                         parent.body
                         and isinstance(parent.body[0], ast.Expr)
@@ -228,7 +227,6 @@ def _is_plugin_base_file(rel_path: str, tree: ast.AST) -> bool:
     """Return True if this file appears to be a plugin base class module."""
     if "plugin" in rel_path.lower() or "base" in rel_path.lower():
         return True
-    # Check module docstring
     if isinstance(tree, ast.Module) and tree.body:
         first = tree.body[0]
         if (

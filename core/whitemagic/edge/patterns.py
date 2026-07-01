@@ -230,7 +230,6 @@ class PatternLearner:
             if len(cloud_queries) < min_cluster_size:
                 continue
 
-            # Check if we already have a rule for this pattern
             existing_patterns = {r.pattern for r in self._learned_rules}
 
             # Extract common keywords across queries

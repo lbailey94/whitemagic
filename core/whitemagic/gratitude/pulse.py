@@ -30,7 +30,6 @@ class GratitudePulse:
         self.running = False
         self._last_checked_ledger_index: int | None = None
 
-        # Load state root for persistent watermarks
         from whitemagic.config.paths import GRATITUDE_DIR
 
         self.status_file = GRATITUDE_DIR / "pulse_status.json"
@@ -70,7 +69,6 @@ class GratitudePulse:
             return
 
         # Note: In a production environment with many transactions, we'd use account_tx
-        # for historical scanning. For a tip jar, checking recent is usually sufficient.
         try:
             import httpx
 
@@ -91,7 +89,6 @@ class GratitudePulse:
             }
 
             async with httpx.AsyncClient() as client:
-                # Try nodes until one works
                 success = False
                 for node in _XRPL_NODES:
                     try:
@@ -131,11 +128,9 @@ class GratitudePulse:
             ):
                 continue
 
-            # Verify it's actually for us (could be outgoing if user uses same wallet)
             if tx.get("Destination") != self.wallet.public_address:
                 continue
 
-            # Check if destination tag matches if configured
             expected_tag = os.environ.get("WM_XRP_DEST_TAG")
             if expected_tag and str(tx.get("DestinationTag")) != str(expected_tag):
                 continue

@@ -64,7 +64,6 @@ def _index_used_only_for_subscript(node: ast.For, iterable_name: str) -> bool:
         if stmt is loop_var:
             continue
         if isinstance(stmt, ast.Name) and stmt.id == var_name and isinstance(stmt.ctx, ast.Load):
-            # Check if this use is a subscript on the same iterable
             # Walk up: find the parent. Since ast.walk doesn't give parents,
             # we check if this Name appears as a subscript index on iterable_name.
             # Instead, check: is this Name used anywhere other than as Subscript index?
@@ -79,18 +78,15 @@ def _index_used_only_for_subscript(node: ast.For, iterable_name: str) -> bool:
 
     for stmt in ast.walk(node):
         if isinstance(stmt, ast.Subscript):
-            # Check if the slice is our loop var
             sl = stmt.slice
             if isinstance(sl, ast.Name) and sl.id == var_name:
                 uses_as_index = True
-                # Check if the value is the iterable
                 if isinstance(stmt.value, ast.Name) and stmt.value.id == iterable_name:
                     continue  # Good — indexing the same iterable
                 else:
                     # Indexing a different iterable — parallel access, index needed
                     return False
 
-    # Check if loop var is used in any non-subscript context
     for stmt in ast.walk(node):
         if isinstance(stmt, ast.Name) and stmt.id == var_name and isinstance(stmt.ctx, ast.Load):
             # Is this inside a subscript?

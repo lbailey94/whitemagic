@@ -34,7 +34,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Try to import rich for dashboard
 try:
     from rich.console import Console
     from rich.live import Live
@@ -326,7 +325,6 @@ class ImmortalClone:
         logger.info("🥷 Immortal Clone %s starting: %s", self.clone_id, self.task.id)
 
         for self.iteration in range(self.max_iterations):
-            # Check if campaign is already complete (early termination)
             if self.victory_tracker.all_vcs_met():
                 logger.info("🏁 Clone %s stopping: campaign complete", self.clone_id)
                 return ActionResult(
@@ -366,7 +364,6 @@ class ImmortalClone:
                     for vc_id in vcs_met:
                         self.victory_tracker.mark_vc_met(vc_id, self.clone_id)
 
-                    # If I've met all my VCs, I'm done
                     if len(vcs_met) == len(self.task.victory_conditions):
                         logger.info(
                             "✅ Clone %s achieved all VCs at iteration %s",
@@ -420,10 +417,8 @@ class ImmortalClone:
         Uses LLM to decide next action when Ollama is available.
         Falls back to heuristic cycling when LLM is not running.
         """
-        # Try LLM-driven action selection
         action_type = self._llm_choose_action()
         if action_type is not None:
-            # If the LLM chose EDIT, ask it to generate the actual edit
             if action_type == ActionType.EDIT:
                 changes = self._llm_generate_edit()
                 if changes:
@@ -832,7 +827,6 @@ class ImmortalClone:
         Returns:
             List of VC IDs that are now met
         """
-        # Try LLM-driven VC evaluation
         llm_met = self._llm_check_victory_conditions()
         if llm_met is not None:
             return llm_met
@@ -983,7 +977,6 @@ class GasTownOrchestrator:
                 )
             )
 
-            # Test phase (depends on implementation)
             meows.append(
                 MEOW(
                     type="test",
@@ -994,7 +987,6 @@ class GasTownOrchestrator:
                 )
             )
 
-            # Verify phase (depends on test)
             meows.append(
                 MEOW(
                     type="verify",
@@ -1035,7 +1027,6 @@ class GasTownOrchestrator:
 
         logger.info("🏁 Gas Town completed %s MEOW units", len(results))
 
-        # Log final status
         status = self.victory_tracker.get_status()
         logger.info(
             "Final status: %s/%s VCs met (%s%%)",
@@ -1058,7 +1049,6 @@ class GasTownOrchestrator:
                 clone_id = 0
 
                 while self.work_queue or futures:
-                    # Check for campaign completion (auto-stop)
                     if self.victory_tracker.all_vcs_met():
                         logger.info(
                             "🎉 ALL VICTORY CONDITIONS MET! Stopping deployment."
@@ -1077,7 +1067,6 @@ class GasTownOrchestrator:
                     ):
                         meow = self.work_queue.pop(0)
 
-                        # Check dependencies
                         if not self._dependencies_met(meow):
                             self.work_queue.append(meow)  # Re-queue for later
                             skipped += 1
@@ -1144,7 +1133,6 @@ class GasTownOrchestrator:
                                 )
                     elif not futures and self.work_queue:
                         # Deadlock: no futures running, all remaining MEOWs blocked
-                        # Try retrying failed MEOWs with more iterations
                         failed_meows = self._retry_failed_meows()
                         if failed_meows:
                             logger.info(

@@ -101,7 +101,6 @@ def add_marker(path: Path) -> None:
                 break
     except SyntaxError:
         pass
-    # If a working marker is already at insert_at, skip
     if insert_at < len(lines) and HEADER_MARKER in lines[insert_at]:
         return
     new_lines = lines[:insert_at] + [HEADER_MARKER + "\n"] + lines[insert_at:]

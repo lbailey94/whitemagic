@@ -206,7 +206,6 @@ def handle_consciousness_flow(**kwargs: Any) -> dict[str, Any]:
         session_min = (_time.time() - start) / 60 if start else 0.0
         tool_rate = session_calls / max(session_min, 1.0)
 
-        # Get coherence for flow detection
         try:
             from whitemagic.core.consciousness.coherence import CoherenceMetric
 

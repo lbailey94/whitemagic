@@ -100,7 +100,6 @@ class ProgressTracker:
         # Events log
         self.events: list[ProgressEvent] = []
 
-        # Log file
         self.log_dir = log_dir or PROGRESS_LOGS_DIR
         self.log_dir.mkdir(parents=True, exist_ok=True)
         ts = self.start_datetime.strftime("%Y%m%d_%H%M%S")

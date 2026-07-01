@@ -40,8 +40,6 @@ class PerformanceBenchmark:
     """
 
     # ------------------------------------------------------------------
-    # Import benchmarks
-    # ------------------------------------------------------------------
 
     def _time_imports(self, modules: Iterable[str]) -> list[BenchmarkResult]:
         results: list[BenchmarkResult] = []
@@ -71,7 +69,6 @@ class PerformanceBenchmark:
         return {r.label: round(r.duration_ms, 3) for r in results}
 
     # ------------------------------------------------------------------
-    # Tool dispatch benchmarks
     # ------------------------------------------------------------------
 
     def benchmark_tool_dispatch(
@@ -100,7 +97,6 @@ class PerformanceBenchmark:
         }
 
     # ------------------------------------------------------------------
-    # Custom benchmark runner
     # ------------------------------------------------------------------
 
     def time_callable(
@@ -125,7 +121,6 @@ class PerformanceBenchmark:
         )
 
     # ------------------------------------------------------------------
-    # State / footprint
     # ------------------------------------------------------------------
 
     def _memory_stats(self) -> dict[str, int]:
@@ -147,7 +142,6 @@ class PerformanceBenchmark:
         }
 
     # ------------------------------------------------------------------
-    # Full suite
     # ------------------------------------------------------------------
 
     def run_full_benchmark(self) -> dict[str, Any]:

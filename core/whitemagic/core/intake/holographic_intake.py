@@ -137,7 +137,6 @@ class HolographicIntake:
         self._running = False
         self._thread: threading.Thread | None = None
 
-        # Load existing config and queue
         self._load_config()
         self._load_queue()
         self._load_known_hashes()
@@ -192,7 +191,6 @@ class HolographicIntake:
     def _load_known_hashes(self) -> None:
         """Load content hashes from existing memories."""
         try:
-            # Load from metadata.json
             metadata_path = MEMORY_DIR / "metadata.json"
             if metadata_path.exists():
                 data = _json_loads(metadata_path.read_text())
@@ -206,7 +204,6 @@ class HolographicIntake:
 
                 if DB_PATH.exists():
                     conn = sqlite3.connect(str(DB_PATH))
-                    # Check if content column exists and extract hashes
                     rows = conn.execute("SELECT content FROM memories").fetchall()
                     for row in rows:
                         if row[0]:
@@ -267,7 +264,6 @@ class HolographicIntake:
             if not file_path.is_file():
                 continue
 
-            # Check if supported type (text OR multimodal)
             ext = file_path.suffix.lower()
             media_chain = self._get_media_chain()
             media_exts = media_chain.supported_extensions() if media_chain else set()
@@ -282,7 +278,6 @@ class HolographicIntake:
             # Compute hash
             content_hash = self._compute_hash(file_path)
 
-            # Check for duplicate
             if content_hash in self._known_hashes:
                 continue
 
@@ -334,7 +329,6 @@ class HolographicIntake:
                 self._save_queue()
                 return False
 
-            # Try multimodal processor first, then fall back to text
             media_chain = self._get_media_chain()
             media_result = None
             if media_chain and file_path.suffix.lower() not in self.SUPPORTED_TYPES:
@@ -392,7 +386,6 @@ class HolographicIntake:
                 metadata=mem_metadata,
             )
 
-            # Store in SQLite
             backend = SQLiteBackend(DB_PATH)
             backend.store(memory)
             backend.store_coords(memory_id, coords.x, coords.y, coords.z, coords.w)  # type: ignore[union-attr, call-arg]

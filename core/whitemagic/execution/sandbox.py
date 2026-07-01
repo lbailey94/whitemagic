@@ -97,7 +97,6 @@ class SafeSandbox:
         # CRITICAL: Create safe builtins dict (not the real __builtins__)
         safe_builtins = {}
 
-        # Add safe builtins to our safe dict
         builtins_source = (
             __builtins__ if isinstance(__builtins__, dict) else vars(__builtins__)
         )
@@ -108,7 +107,6 @@ class SafeSandbox:
         # CRITICAL: Override __builtins__ with our restricted version
         safe["__builtins__"] = safe_builtins
 
-        # Add allowed modules to namespace (but NOT to __builtins__)
         for module_name in self.ALLOWED_MODULES:
             try:
                 safe[module_name] = __import__(module_name)  # type: ignore[assignment]
@@ -132,13 +130,11 @@ class SafeSandbox:
         This is NOT a complete security check - just catches obvious problems.
         Uses regex with whitespace-insensitive matching to prevent bypass via spacing.
         """
-        # Check for __import__ in various forms (with whitespace variations)
         import re
 
         if re.search(r"__import__\s*\(", code, re.IGNORECASE):
             raise ValueError("Direct use of __import__ not allowed")
 
-        # Check for eval/exec with whitespace-insensitive matching
         # Matches: eval(, eval (, eval\t(, eval\n(, etc.
         if re.search(r"eval\s*\(", code, re.IGNORECASE):
             raise ValueError("Use of eval not allowed")
@@ -175,7 +171,6 @@ class SafeSandbox:
 
         start = time.time()
 
-        # Validate code
         self._validate_code(code)
 
         # Create execution namespace
@@ -224,7 +219,6 @@ class SafeSandbox:
                 contextlib.redirect_stdout(stdout_buffer),
                 contextlib.redirect_stderr(stderr_buffer),
             ):
-                # Execute with timeout (enforced by signal alarm)
                 exec(code, namespace)
 
             output = stdout_buffer.getvalue()
@@ -270,7 +264,6 @@ class SafeSandbox:
             )
 
         finally:
-            # Clear timeout alarm
             try:
                 signal.alarm(0)
                 if old_handler is not None:
@@ -316,12 +309,10 @@ class SafeSandbox:
         args = args or []
         kwargs = kwargs or {}
 
-        # Execute code to define function
         result = self.execute(code)
         if not result.success:
             return result
 
-        # Get the function from the namespace that was already populated by execute()
         # We need to re-execute to get the function in a clean namespace
         namespace: dict[str, Any] = self.safe_globals.copy()
         self._validate_code(code)
@@ -336,7 +327,6 @@ class SafeSandbox:
 
         func = namespace[function_name]
 
-        # Call the function with timeout enforcement
         import time
 
         start = time.time()
@@ -401,7 +391,6 @@ class SafeSandbox:
             )
 
         finally:
-            # Clear timeout alarm
             try:
                 signal.alarm(0)
                 if old_handler is not None:

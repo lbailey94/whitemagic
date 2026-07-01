@@ -670,10 +670,8 @@ def handle_list_memories(**kwargs: Any) -> dict[str, Any]:
 
     um = get_unified_memory()
 
-    # Get recent memories from backend
     memories = um.backend.list_recent(limit=limit, memory_type=memory_type)
 
-    # Convert to dict format
     results = []
     for mem in memories:
         results.append(

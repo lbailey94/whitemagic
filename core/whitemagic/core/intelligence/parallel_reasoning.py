@@ -229,7 +229,6 @@ class ParallelReasoningTree:
         self._lessons: list[str] = []
         self._auto_learn: bool = True
 
-        # Load context from memory and anti-pattern systems
         self._load_memory_context()
         self._load_anti_patterns()
         self._load_lessons()
@@ -623,7 +622,6 @@ class ParallelReasoningTree:
                 forked_at_thought=0,
             )
 
-        # Add initial observation to all branches
         for bid, branch in self.branches.items():
             self.add_thought(
                 branch_id=bid,
@@ -928,7 +926,6 @@ class ParallelReasoningTree:
             result = enhancer.run_calibrated(claims, n_trials=500)
             mc = result.get("mc_result", {})
             bss = mc.get("brier_skill_score", {}).get("mean", 0.0)
-            # Convert BSS to confidence: BSS > 0 means better than random
             mc_confidence = max(0.0, min(1.0, (bss + 1.0) / 2.0))
 
             # Blend MC confidence with branch score
@@ -1069,7 +1066,6 @@ class ParallelReasoningTree:
         but plateaus. Adds some variation to simulate real reasoning.
         """
         base = 0.4 + (step * 0.08)
-        # Add branch-specific variation based on hypothesis
         if "creative" in branch.hypothesis.lower():
             base += 0.05  # Creative branches start lower but grow
         if "risk" in branch.hypothesis.lower():

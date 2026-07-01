@@ -100,7 +100,6 @@ def _numpy_grid_neighbors(
     edges = []
 
     # 2. Query Grid
-    # For each cell, check itself and forward neighbors (to avoid duplicates)
     # We iterate over all populated cells
 
     # Precompute neighbor offsets (3^4 = 81 offsets, but we only need half for unique pairs?
@@ -115,7 +114,6 @@ def _numpy_grid_neighbors(
         if not indices_in_cell:
             continue
 
-        # Get all candidate indices from this cell and neighbors
         candidates = []
         for offset in offsets:
             neighbor_key = (
@@ -128,7 +126,6 @@ def _numpy_grid_neighbors(
                 candidates.extend(grid[neighbor_key])
 
         # Optimization: Cap candidates to prevent O(N^2) in dense clusters
-        # If we have 30,000 candidates, checking all of them for 30,000 points is 900M checks.
         # We limit to 500 random candidates to keep it O(N).
         MAX_CANDIDATES = 500
         if len(candidates) > MAX_CANDIDATES:
@@ -154,7 +151,6 @@ def _numpy_grid_neighbors(
         pos_b = points_arr[idx_b]  # (Nb, 4)
 
         # Compute distances pairwise?
-        # If Na and Nb are small, brute force is fine.
         # Let's simple python loop constraint for robustness if numpy broadcasting blows up memory
 
         for i_local, idx_i in enumerate(indices_in_cell):
@@ -201,11 +197,9 @@ def extract_relationships(
         logger.error("Database not found at %s", db_path)
         return {}
 
-    # Connect to DB with long timeout for WAL recovery
     conn = sqlite3.connect(str(db_path), timeout=300.0)
     conn.row_factory = sqlite3.Row
 
-    # Check if we need to recover WAL
     try:
         conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     except (sqlite3.Error, sqlite3.OperationalError) as e:
@@ -246,14 +240,11 @@ def extract_relationships(
     logger.info("Found %d edges within threshold. Persisting…", extracted)
 
     if not dry_run:
-        # Clear stale associations and rebuild
         conn.execute("DELETE FROM associations")
         # Build bidirectional edge list
-        # Process in chunks to avoid massive memory usage and transaction lock
         BATCH_SIZE = 100000
         total_persisted = 0
 
-        # Clear old associations first
         conn.execute("DELETE FROM associations")
         conn.commit()
 

@@ -103,7 +103,6 @@ class EmbeddingDaemon:
         self._python_engine = None
         self._initialized = True
 
-        # Check Rust availability
         self._check_rust_availability()
 
     def _check_rust_availability(self) -> None:
@@ -113,7 +112,6 @@ class EmbeddingDaemon:
             model_path = self._get_model_path()
             if model_path:
                 self._rust_engine = whitemagic_rust.EmbeddingEngine(model_path)
-                # Verify dimension matches Python model (BGE-small = 384)
                 test_emb = self._rust_engine.generate_embedding("test")
                 rust_dim = len(test_emb)
                 from whitemagic.core.memory.embeddings import EMBEDDING_DIM
@@ -136,7 +134,6 @@ class EmbeddingDaemon:
         try:
             import os
             from pathlib import Path
-            # Check common model locations (HF cache can be under WM_ROOT or home)
             hf_home = os.getenv("HF_HOME")
             cache_home = os.getenv("XDG_CACHE_HOME")
             model_dirs = []
@@ -224,7 +221,6 @@ class EmbeddingDaemon:
         """Main daemon loop."""
         while self._running and not self._stop_event.is_set():
             try:
-                # Process one batch cycle
                 result = self._process_cycle()
 
                 # Update stats
@@ -275,7 +271,6 @@ class EmbeddingDaemon:
             if not pending:
                 return result
 
-            # Process in batches
             total_embedded = 0
             total_failed = 0
 
@@ -352,7 +347,6 @@ class EmbeddingDaemon:
             if embeddings is None or len(embeddings) == 0:
                 return 0, len(batch)
 
-            # Handle different return types
             if hasattr(embeddings, 'shape'):
                 # numpy array
                 embeddings = [embeddings[i].tolist() for i in range(embeddings.shape[0])]
@@ -361,7 +355,6 @@ class EmbeddingDaemon:
                     # list of numpy arrays
                     embeddings = [e.tolist() for e in embeddings]
 
-            # Store embeddings
             import struct
 
             from whitemagic.core.memory.embeddings import MODEL_NAME
@@ -393,7 +386,6 @@ class EmbeddingDaemon:
         try:
             from prometheus_client import REGISTRY, Counter, Histogram
 
-            # Get or create metrics
             try:
                 embedded_counter = REGISTRY._names_to_collectors['embedding_daemon_embedded_total']
             except KeyError:

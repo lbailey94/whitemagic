@@ -46,7 +46,6 @@ def check_zig(project_path: Path, file_index: FileIndex, findings: list[Finding]
                     )
                 )
 
-            # catch unreachable (dangerous pattern)
             if re.search(r"catch\s+unreachable", stripped):
                 findings.append(
                     Finding(

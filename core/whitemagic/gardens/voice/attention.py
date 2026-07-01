@@ -128,7 +128,6 @@ class AttentionSystem:
 
         This is conscious choice - I'm choosing where to focus.
         """
-        # End previous focus if exists
         if self.current_focus and not self.current_focus.ended:
             self._end_current_focus()
 

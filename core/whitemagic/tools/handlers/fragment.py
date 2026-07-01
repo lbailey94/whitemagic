@@ -247,7 +247,6 @@ def _subprocess_status(path: str, index_dir: str | None) -> dict[str, Any]:
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
     if result.returncode != 0:
         return {"exists": False, "path": path}
-    # Parse text output into dict
     meta: dict[str, Any] = {"exists": True}
     for line in result.stdout.splitlines():
         if ":" in line:
@@ -409,7 +408,6 @@ def fragment_accelerated_search(
     if layer == "none":
         return None
 
-    # Check if index exists
     try:
         status = _dispatch_status(path)
         if not status.get("exists", False):

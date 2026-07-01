@@ -64,7 +64,6 @@ class GuidelineEvolution:
             created=datetime.now(),
         )
 
-        # Save proposal
         filepath = self.proposals_dir / f"{proposal.id}.json"
         with open(filepath, "w") as f:
             json.dump(

@@ -270,7 +270,6 @@ class GraphEngine:
                 if quality_filter:
                     noise_ids = self._build_noise_exclusion_set(conn)
 
-                # Load edges with v14 schema columns
                 rows = conn.execute(
                     """SELECT source_id, target_id, strength,
                               COALESCE(direction, 'undirected') as direction,
@@ -472,7 +471,6 @@ class GraphEngine:
             if not between:
                 return []
 
-            # Try Rust implementation first (S026 VC2)
             if _RUST_AVAILABLE:
                 try:
                     # Build adjacency list for Rust
@@ -542,7 +540,6 @@ class GraphEngine:
         try:
             UG = G.to_undirected()
 
-            # Try Louvain first (requires networkx >= 3.1)
             communities_list: list[set[str]] = []
             try:
                 communities_gen = nx.community.louvain_communities(
@@ -564,7 +561,6 @@ class GraphEngine:
                         if len(c) >= 2
                     ]
 
-            # Try Rust implementation first (S026 VC2)
             if _RUST_AVAILABLE:
                 try:
                     # Build internal edge counting via Rust
@@ -646,7 +642,6 @@ class GraphEngine:
         if not prev.eigenvector or not curr.eigenvector:
             return []
 
-        # Try Rust implementation first (S026 VC2)
         if _RUST_AVAILABLE:
             try:
                 prev_cent = {str(k): v for k, v in prev.eigenvector.items()}

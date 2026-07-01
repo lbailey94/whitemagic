@@ -15,9 +15,7 @@ import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-# ---------------------------------------------------------------------------
 # wm manifest — Tool format export
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -52,9 +50,7 @@ def manifest(ctx, fmt: str, include_schemas: bool, json_flag: bool) -> None:
         click.echo(_json_dumps(result, indent=2, default=str))
 
 
-# ---------------------------------------------------------------------------
 # wm tools search — Semantic tool discovery
-# ---------------------------------------------------------------------------
 
 
 @click.command(name="search")
@@ -158,9 +154,7 @@ def tools_search(ctx, query: str, limit: int, json_flag: bool) -> None:
                 click.echo(f"         {desc}")
 
 
-# ---------------------------------------------------------------------------
 # wm tools schema — JSON schema export for a tool
-# ---------------------------------------------------------------------------
 
 
 @click.command(name="schema")
@@ -201,9 +195,7 @@ def tools_schema(ctx, tool_name: str, fmt: str, json_flag: bool) -> None:
     click.echo(_json_dumps(schema, indent=2, default=str))
 
 
-# ---------------------------------------------------------------------------
 # wm capabilities --deep — Full capability snapshot
-# ---------------------------------------------------------------------------
 
 
 @click.command()

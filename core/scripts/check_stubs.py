@@ -108,7 +108,6 @@ def has_framework_decorator(node: ast.FunctionDef | ast.AsyncFunctionDef) -> boo
             return True
         if name == "abstractmethod":
             return True
-        # Check for framework prefixes like click.group, app.command
         if isinstance(dec, ast.Attribute) and isinstance(dec.value, ast.Name):
             if dec.value.id in {"click", "app", "typer", "router"}:
                 return True

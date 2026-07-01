@@ -102,7 +102,6 @@ class CircuitBreaker:
             if self._state == BreakerState.CLOSED:
                 return False
             if self._state == BreakerState.OPEN:
-                # Check if cooldown has elapsed → transition to HALF_OPEN
                 elapsed = time.time() - self._opened_at
                 if elapsed >= self.config.cooldown_seconds:
                     self._state = BreakerState.HALF_OPEN
@@ -504,7 +503,6 @@ class BreakerRegistry:
                     alert.metric in ("error_rate", "breaker_trips")
                     and alert.threshold_eta is not None
                 ):
-                    # If critical threshold is predicted within 5 steps,
                     # tighten all active breakers' failure threshold by 1
                     if alert.threshold_eta <= 5:
                         with self._lock:

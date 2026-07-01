@@ -768,7 +768,6 @@ class RabbitHoleExplorer:
 
         for i, entry1 in enumerate(entries):
             for entry2 in entries[i + 1 :]:
-                # Check for shared related terms
                 shared = set(entry1.related_terms) & set(entry2.related_terms)
                 if shared:
                     connections.append(
@@ -779,7 +778,6 @@ class RabbitHoleExplorer:
                         }
                     )
 
-                # Check if one mentions the other
                 if entry1.term.lower() in entry2.definition.lower():
                     connections.append(
                         {
@@ -1002,7 +1000,6 @@ class RabbitHoleExplorer:
         )
         batch_sizer.record_response(batch.duration_ms, bool(batch.errors))
 
-        # Fetch top results for all depth-0 queries
         level_content: list[str] = []
         for query in depth0_queries:
             results = batch.results_by_query.get(query, [])
@@ -1041,7 +1038,6 @@ class RabbitHoleExplorer:
 
         # Recursive spiral: extract terms -> batch search -> fetch -> repeat
         for level in range(1, max_depth + 1):
-            # Raise temperature for this level
             temperature = min(1.0, initial_temperature + (temperature_rise * level))
             temperature_curve.append(temperature)
 
@@ -1091,7 +1087,6 @@ class RabbitHoleExplorer:
             )
             batch_sizer.record_response(batch.duration_ms, bool(batch.errors))
 
-            # Fetch top results for each term in parallel (with caching + dedup)
             level_content = []
             fetch_tasks = []
             term_url_map: list[tuple[str, str]] = []
@@ -1203,7 +1198,6 @@ class RabbitHoleExplorer:
             novelty_by_level=novelty_by_level,
         )
 
-        # Store as memories if requested
         if store_memories and all_content:
             try:
                 from whitemagic.core.memory.unified import get_unified_memory

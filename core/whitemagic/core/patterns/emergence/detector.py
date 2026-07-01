@@ -34,9 +34,7 @@ class EmergenceDetector:
     def observe(self, action: str, outcome: str, context: dict) -> None:
         """Observe an action and its outcome."""
 
-        # Check if this is a novel approach
         if self._is_novel(action, context):
-            # Check if it was successful
             if self._was_successful(outcome):
                 behavior = NovelBehavior(
                     name=self._extract_name(action),

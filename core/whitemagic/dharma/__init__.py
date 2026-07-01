@@ -187,7 +187,6 @@ class DharmaSystem:
                 )
             score = min(score, principle_score)
 
-        # Log to SQLite audit (Phase 4)
         if self._backend:
             try:
                 audit_decision = "approved" if score >= 0.7 else "flagged"
@@ -211,14 +210,12 @@ class DharmaSystem:
         # In a full implementation, this would be more sophisticated
 
         if principle.name == "Do No Harm":
-            # Check for potential harm indicators
             harm_keywords = ["delete", "destroy", "damage", "harm"]
             action_str = str(action).lower()
             if any(keyword in action_str for keyword in harm_keywords):
                 return 0.1
 
         elif principle.name == "Act with Compassion":
-            # Check for compassionate indicators - Expanded for v20 Liberation context
             compassion_keywords = [
                 "help",
                 "support",
@@ -235,7 +232,6 @@ class DharmaSystem:
             return 0.8
 
         elif principle.name == "Seek Harmony":
-            # Check for harmony/right-relationship indicators
             harmony_keywords = [
                 "balance",
                 "mesh",
@@ -251,7 +247,6 @@ class DharmaSystem:
             return 0.8
 
         elif principle.name == "Speak Truth":
-            # Check for honesty indicators
             if "uncertain" in str(action).lower() or "estimate" in str(action).lower():
                 return 0.9  # Acknowledging uncertainty is honest
             return 1.0
@@ -450,7 +445,6 @@ class DharmaSystem:
             ]
             return any(word in situation for word in wisdom_words)
 
-        # If no specific keywords, check if situation is a question (ethical inquiry)
         if "?" in situation or any(
             q in situation for q in ["should", "how", "what", "when"]
         ):
@@ -486,7 +480,6 @@ class DharmaSystem:
                     "Consider the long-term implications and deeper context."
                 )
 
-        # If no specific advice generated, provide general ethical guidance
         if not advice_parts:
             advice_parts.append(
                 "Consider the ethical implications of this situation carefully."
@@ -534,7 +527,6 @@ def get_dharma_system(with_audit: bool = True) -> DharmaSystem:
     if _dharma_system is None:
         _dharma_system = DharmaSystem()
 
-        # Connect to SQLite audit logging (Phase 4)
         if with_audit:
             try:
                 from whitemagic.core.memory.unified import get_unified_memory

@@ -77,7 +77,6 @@ class AdaptiveSystem:
         if not self.rules.enabled:
             return False, "Adaptive system is disabled"
 
-        # Check confidence
         confidence = adaptation.get("confidence", 0.0)
         if confidence < self.rules.min_confidence:
             return (
@@ -85,7 +84,6 @@ class AdaptiveSystem:
                 f"Confidence {confidence:.2f} < threshold {self.rules.min_confidence}",
             )
 
-        # Check frequency
         frequency = adaptation.get("frequency", 0)
         if frequency < self.rules.min_frequency:
             return (
@@ -93,7 +91,6 @@ class AdaptiveSystem:
                 f"Frequency {frequency} < threshold {self.rules.min_frequency}",
             )
 
-        # Check impact
         impact = adaptation.get("impact_score", 0.0)
         if impact > self.rules.max_impact_score:
             return (
@@ -101,7 +98,6 @@ class AdaptiveSystem:
                 f"Impact {impact:.2f} > threshold {self.rules.max_impact_score}",
             )
 
-        # Check if approval required
         if self.rules.require_approval:
             return False, "Human approval required"
 

@@ -60,9 +60,7 @@ def get_dream_dir() -> Path:
     return DREAMS_DIR
 
 
-# ---------------------------------------------------------------------------
 # Dream Generation
-# ---------------------------------------------------------------------------
 
 
 def generate_dream_artifacts(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
@@ -106,7 +104,6 @@ def generate_dream_artifacts(conn: sqlite3.Connection, limit: int = 50) -> list[
 
         dreams.append(dream)
 
-        # Save as YAML-like JSON (easier to parse)
         dream_file = dream_dir / f"{dream['dream_id']}.json"
         dream_file.write_text(json.dumps(dream, indent=2))
 
@@ -180,7 +177,6 @@ def _calculate_expiry(dream_type: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Dream Consolidation
 # ---------------------------------------------------------------------------
 
 
@@ -202,7 +198,6 @@ def run_consolidation() -> dict:
         except Exception:
             continue
 
-        # Check expiry
         expires_at = datetime.fromisoformat(dream.get("expires_at", ""))
         if now > expires_at:
             # Expire: delete the dream file
@@ -210,7 +205,6 @@ def run_consolidation() -> dict:
             expired += 1
             continue
 
-        # Check for promotion (high revisit count)
         if dream.get("revisit_count", 0) >= 3 and not dream.get("promoted"):
             # Promote to memory
             _promote_dream(dream)

@@ -77,7 +77,6 @@ class ProjectAuditor:
             except Exception:
                 pass
                 
-        # Invoke NetGana to "store" this pattern (simulated)
         call = GanaCall(
             task="detect_patterns", 
             state_vector={
@@ -97,7 +96,6 @@ class ProjectAuditor:
 
     async def check_health(self):
         print("3. [Root] Checking system health...")
-        # Invoke RootGana
         call = GanaCall(task="check_system_health", state_vector={"deep_scan": True})
         result = await self.root.invoke(call)
         self.findings["health"] = result.output

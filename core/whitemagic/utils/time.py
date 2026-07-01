@@ -22,7 +22,6 @@ _NOW_OVERRIDE: ContextVar[datetime | None] = ContextVar(
 
 
 def _normalize(dt: datetime) -> datetime:
-    # Convert aware -> UTC naive for compatibility with legacy code.
     if dt.tzinfo is not None:
         dt = dt.astimezone(UTC).replace(tzinfo=None)
     return dt

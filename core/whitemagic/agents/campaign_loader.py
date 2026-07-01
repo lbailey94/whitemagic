@@ -181,14 +181,11 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         key = kv[0].strip()
         val = kv[1].strip()
 
-        # Parse lists [a, b, c]
         if val.startswith("[") and val.endswith("]"):
             items = [s.strip().strip('"').strip("'") for s in val[1:-1].split(",")]
             meta[key] = [s for s in items if s]
-        # Parse integers
         elif val.isdigit():
             meta[key] = int(val)
-        # Parse quoted strings
         elif (val.startswith('"') and val.endswith('"')) or (
             val.startswith("'") and val.endswith("'")
         ):
@@ -219,7 +216,6 @@ def _parse_victory_conditions(body: str) -> list[VictoryCondition]:
         if m:
             met = m.group(1).lower() == "x"
             desc = m.group(2).strip()
-            # Check for inline verification: desc (check: command)
             check_cmd = None
             cm = re.search(r"\(check:\s*(.+?)\)\s*$", desc)
             if cm:
@@ -244,7 +240,6 @@ def _parse_targets(body: str) -> list[Target]:
 
     targets = []
 
-    # Try table format: | File | Line | Type |
     table_rows = re.findall(
         r"^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|",
         section,

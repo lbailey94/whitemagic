@@ -262,7 +262,6 @@ def regenerate_coordinates(
     db_path = get_db_path()
     conn = get_conn(db_path)
 
-    # Get all memories
     query = """
         SELECT id, title, content, memory_type, importance, neuro_score,
                emotional_valence, access_count, recall_count, is_protected,
@@ -315,9 +314,7 @@ def regenerate_coordinates(
             )
 
             # --- X-Axis: Logic vs Emotion ---
-            # Use emotional_valence as primary signal
             x = -0.5 * emotional_valence
-            # Add content-based signal
             logic_words = sum(
                 1
                 for kw in ["code", "function", "class", "api", "database", "algorithm"]
@@ -329,7 +326,6 @@ def regenerate_coordinates(
                 if kw in content.lower()
             )
             x += 0.05 * (logic_words - emotion_words)
-            # Add hash-based variation
             import hashlib
 
             hash_val = int(hashlib.md5(f"{mem['id']}x".encode()).hexdigest()[:8], 16)
@@ -454,7 +450,6 @@ def regenerate_coordinates(
 
     conn.close()
 
-    # Print stats
     def stats(values, name):
         avg = sum(values) / len(values) if values else 0
         min_v = min(values) if values else 0

@@ -847,7 +847,6 @@ def _schema_for_gana(gana_name: str) -> dict[str, Any]:
 
     gana_name = gana_name.strip()
 
-    # Validate gana name
     from whitemagic.tools.tool_catalog import GANA_NAMES
 
     if gana_name not in GANA_NAMES:
@@ -922,7 +921,6 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
 
     start_time = time.time()
 
-    # Parse explicit route override
     if route:
         parts = route.split(".", 1)
         gana_name = parts[0]
@@ -1024,7 +1022,6 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             success=_is_success,
             duration_ms=_elapsed_ms,
         )
-        # Try auto-forge if we have enough calls
         forged = tracker.try_auto_forge()
         if forged is not None:
             if isinstance(result, dict):

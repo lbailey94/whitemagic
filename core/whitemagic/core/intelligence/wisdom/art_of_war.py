@@ -421,7 +421,6 @@ class ArtOfWarEngine:
         else:
             file_count = 10
 
-        # Test coverage estimation
         if "untested" in obj_lower:
             coverage = "none"
         elif "test" in obj_lower:
@@ -429,7 +428,6 @@ class ArtOfWarEngine:
         else:
             coverage = "sparse"
 
-        # Get relevant principles
         principles = [
             p for p in self.principles if any(kw in obj_lower for kw in p.keywords)
         ][:3]

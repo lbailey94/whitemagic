@@ -33,7 +33,6 @@ class CausalNet:
         """
         try:
             conn = sqlite3.connect(str(self.db_path))
-            # Get all memories matching the query via FTS
             rows = conn.execute(
                 "SELECT memory_id FROM memories_fts WHERE memories_fts MATCH ? LIMIT 50",
                 (query or "*",),
@@ -44,7 +43,6 @@ class CausalNet:
 
             memory_ids = [r[0] for r in rows]
 
-            # Get holographic coords for matched memories
             placeholders = ",".join("?" for _ in memory_ids)
             coord_rows = conn.execute(
                 f"SELECT memory_id, x, y, z, w FROM holographic_coords WHERE memory_id IN ({placeholders})",
@@ -136,7 +134,6 @@ class CausalNet:
                         }
                 conn.close()
 
-                # Call Rust fast-path
                 edges = synthesis_engine.infer_dag_from_coords(
                     cluster_data, dist_threshold=0.5, w_threshold=0.001
                 )
@@ -202,7 +199,6 @@ class CausalNet:
                 nodes=[str(k) for k in cluster_data_py.keys()], edges=edges_list
             )
 
-        # Convert list of tuples to dict for return type compatibility
         result_dict: dict[str, list[str]] = {}
         for src, dst in edges_list:
             if src not in result_dict:

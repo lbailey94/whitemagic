@@ -105,11 +105,9 @@ class ResourceManager:
                 lock_data = registry[resource_id]
                 expires_at = parse_datetime(lock_data["expires_at"])
 
-                # If locked by someone else and not expired
                 if lock_data["locked_by"] != agent_id and now < expires_at:
                     return False
 
-                # If owned by us or expired, we continue to create/renew
 
             # Create or Renew lock
             expires_at = now + timedelta(seconds=ttl_seconds)

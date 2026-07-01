@@ -42,7 +42,6 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
     """
     query = kwargs.get("query", "")
     if not query:
-        # Return usage info instead of error
         return {
             "status": "success",
             "reasoning": {

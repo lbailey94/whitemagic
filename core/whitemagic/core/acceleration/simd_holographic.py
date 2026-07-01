@@ -69,7 +69,6 @@ def _load_lib() -> Any:
         try:
             lib = ctypes.CDLL(path)
 
-            # Check for holographic 5D exports
             if not hasattr(lib, "wm_holographic_5d_distance"):
                 logger.debug(
                     "Zig library missing holographic 5D symbols — using Python fallback"

@@ -97,7 +97,6 @@ class NervousSystem:
         status = {}
         for name, organ in self.organs.items():
             try:
-                # Try standard status methods if they exist
                 if hasattr(organ, "status"):
                     s = organ.status()
                     status[name] = "OK" if s else "UNKNOWN"

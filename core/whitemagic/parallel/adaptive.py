@@ -85,15 +85,12 @@ class AdaptiveThreadingController:
             Recommended ThreadingTier
 
         """
-        # Get current metrics
         metrics = SystemMetrics.current()
 
-        # Store in history
         self._metrics_history.append(metrics)
         if len(self._metrics_history) > self._max_history:
             self._metrics_history.pop(0)
 
-        # Check if we should scale down
         if (
             metrics.cpu_percent > self.cpu_threshold
             or metrics.memory_percent > self.memory_threshold

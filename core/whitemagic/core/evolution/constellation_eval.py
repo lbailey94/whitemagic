@@ -69,7 +69,6 @@ class ConstellationEvaluator:
                 current_cluster = [h]
         clusters.append(current_cluster)
 
-        # Convert to Constellation objects
         result = []
         for i, cluster in enumerate(clusters):
             member_ids = [h["id"] for h in cluster]

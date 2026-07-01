@@ -136,12 +136,10 @@ class ContinuousExecutor:
         self.failed: list[Objective] = []
         self.strategy: dict[str, Any] | None = None
 
-        # Initialize subsystems
         from .assessor import ProgressAssessor
         from .limits import ResourceLimits
         from .objective_generator import ObjectiveGenerator
 
-        # Load Unified Nervous System
         try:
             import inspect
 
@@ -177,7 +175,6 @@ class ContinuousExecutor:
         self.checkpoint_path = self.config.base_dir / "checkpoint.json"
         self.log_path = self.config.base_dir / "execution.log"
 
-        # Initialize Governor
         try:
             from whitemagic.core.governor import get_governor
 
@@ -222,7 +219,6 @@ class ContinuousExecutor:
 
         try:
             while True:
-                # Check limits
                 should_stop, reason = self.should_stop()
                 if should_stop:
                     self.log(f"Stopping: {reason}", "WARN")
@@ -244,7 +240,6 @@ class ContinuousExecutor:
                         except Exception as e:
                             self.log(f"Nervous system pulse failed: {e}", "WARN")
 
-                # Execute or self-direct
                 if self.has_objectives():
                     # NEW: Batch execution for efficiency
                     if len(self.objectives) > 10:
@@ -319,7 +314,6 @@ class ContinuousExecutor:
         # Pre-execution validation with Governor
         if self.governor:
             try:
-                # Check if governor has validate_objective method
                 if hasattr(self.governor, "validate_objective"):
                     validation = self.governor.validate_objective(obj.description)
                     if not validation.get("safe", True):
@@ -335,7 +329,6 @@ class ContinuousExecutor:
             except Exception as e:
                 self.log(f"⚠️  Governor validation failed: {e}, proceeding anyway")
 
-        # Execute the objective
         start_time = datetime.now()
         result = await self.execute_objective(obj)
         duration = (datetime.now() - start_time).total_seconds()
@@ -400,7 +393,6 @@ class ContinuousExecutor:
 
                 elif isinstance(action, ShellCommandAction):
                     self.log(f"Running command: {action.command}")
-                    # Validate with Governor first
                     if self.governor:
                         validation = self.governor.validate_command(action.command)
                         if not validation.get("safe", True):
@@ -412,7 +404,6 @@ class ContinuousExecutor:
 
                 elif isinstance(action, ComplexTaskAction):
                     self.log(f"Executing complex task: {action.description}")
-                    # For complex tasks, might need to break down further or use LLM
                     output = await self.execute_complex_task(action)
                     result.output += output
 
@@ -455,7 +446,6 @@ class ContinuousExecutor:
         if not path_obj.exists():
             raise FileNotFoundError(f"edit_file: {path} does not exist")
 
-        # Parse structured patch spec
         patch: dict | None = None
         try:
             candidate = _json.loads(changes)
@@ -529,7 +519,6 @@ class ContinuousExecutor:
         """Execute a complex task using local model decomposition."""
         self.log(f"Executing complex task: {action.description}")
 
-        # Try local model decomposition
         try:
             from whitemagic.autonomous.executor.local_model_integration import (  # type: ignore[attr-defined]
                 decompose_complex_task,
@@ -544,7 +533,6 @@ class ContinuousExecutor:
                 f"Decomposed into {len(decomposed.subtasks)} subtasks (confidence: {decomposed.confidence})"
             )
 
-            # For now, just report the decomposition
             subtask_summary = "\n".join(
                 [
                     f"  {i}. [{st['type']}] {st['description']}"
@@ -761,10 +749,8 @@ class ContinuousExecutor:
         new_objectives = await self.generator.generate_objectives(self.strategy)
         self.log(f"Generated {len(new_objectives)} new objectives")
 
-        # Add to queue
         self.objectives.extend(new_objectives)
 
-        # Log strategy
         await self.log_strategy(self.strategy, new_objectives)
 
     async def log_strategy(
@@ -806,7 +792,6 @@ class ContinuousExecutor:
         import subprocess
 
         try:
-            # Get git diff stat for recent changes
             diff_stat = subprocess.run(
                 ["git", "diff", "--stat"],
                 capture_output=True,
@@ -814,7 +799,6 @@ class ContinuousExecutor:
                 timeout=5,
             ).stdout
 
-            # Get last commit message for context
             last_commit = subprocess.run(
                 ["git", "log", "-1", "--pretty=%B"],
                 capture_output=True,
@@ -856,7 +840,6 @@ class ContinuousExecutor:
 
         all_results: list[ExecutionResult] = []
 
-        # Process in batches to avoid overwhelming event loop
         for i in range(0, len(objectives), batch_size):
             batch = objectives[i : i + batch_size]
 
@@ -883,18 +866,15 @@ class ContinuousExecutor:
                         setattr(obj, "context", {})
                     ctx = getattr(obj, "context", {})
                     ctx["isolation_id"] = uuid4().hex
-                    # Store git state in context for reference without per-objective capture
                     ctx["batch_git_state"] = git_state
 
                     return await self.execute_objective(obj)
 
-            # Execute batch concurrently
             self.log(f"Executing batch {i // batch_size + 1}: {len(batch)} objectives")
 
             tasks = [execute_with_limit(obj) for obj in batch]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Process results
             for obj, result in zip(batch, batch_results):
                 if isinstance(result, Exception):
                     self.log(f"Objective failed: {obj.description} - {result}", "ERROR")
@@ -910,7 +890,6 @@ class ContinuousExecutor:
                     self.limits.track_operation("tokens", result.tokens_used)
                     self.limits.track_operation("file", len(result.files_changed))
 
-            # Check limits between batches
             should_stop, reason = self.should_stop()
             if should_stop:
                 self.log(f"Stopping batch execution: {reason}", "WARN")

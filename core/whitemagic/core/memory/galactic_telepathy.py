@@ -221,7 +221,6 @@ class GalacticTelepathyEngine:
                 )
                 memory_ids = [row[0] for row in cursor.fetchall()]
 
-                # Fetch full memory objects
                 memories = []
                 for mid in memory_ids:
                     try:
@@ -250,7 +249,6 @@ class GalacticTelepathyEngine:
         This is "telepathy" — transferring not just the memory but its
         full context (associations = "neural connections", embeddings = "encoded meaning").
         """
-        # Check for conflicts
         conflict = self._detect_conflict(mem, src_um, tgt_um)
         if conflict and conflict_resolution == "manual":
             return {"status": "conflict", "conflict": conflict}
@@ -259,17 +257,14 @@ class GalacticTelepathyEngine:
         if conflict and conflict.auto_resolvable:
             self._resolve_conflict(conflict, conflict_resolution, tgt_um)
 
-        # Get embeddings before transfer
         embeddings: list[EmbeddingBundle] = []
         if include_embeddings:
             embeddings = self._extract_embeddings(mem.id, src_um)
 
-        # Get bidirectional associations
         associations: list[AssociationBundle] = []
         if include_associations:
             associations = self._extract_associations(mem.id, src_um)
 
-        # Store memory in target
         try:
             new_mem = tgt_um.store(
                 content=mem.content,
@@ -324,7 +319,6 @@ class GalacticTelepathyEngine:
                     (memory_id,)
                 )
                 for row in cursor.fetchall():
-                    # Parse vector from JSON or blob
                     vector_data = row[1]
                     if isinstance(vector_data, bytes):
                         import json
@@ -427,7 +421,6 @@ class GalacticTelepathyEngine:
         """
         try:
             # Determine target ID in new galaxy
-            # If the association was to another transferred memory,
             # we need to find its new ID
             new_target_id = self._remap_memory_id(
                 assoc.target_id if assoc.source_id == old_source_id else assoc.source_id,
@@ -511,7 +504,6 @@ class GalacticTelepathyEngine:
     ) -> SyncConflict | None:
         """Detect if memory transfer would create a conflict."""
         try:
-            # Check if memory with same content hash exists
             content_hash = hashlib.sha256(str(mem.content).encode()).hexdigest()
 
             with tgt_um.backend.pool.connection() as conn:
@@ -525,7 +517,6 @@ class GalacticTelepathyEngine:
                 if row:
                     existing_id, existing_content, existing_metadata_raw = row
 
-                    # Check if it's from same source (re-sync)
                     if existing_metadata_raw:
                         import json
                         try:
@@ -655,7 +646,6 @@ class GalacticTelepathyEngine:
 
         try:
             with um.backend.pool.connection() as conn:
-                # Get pending associations
                 cursor = conn.execute(
                     "SELECT * FROM pending_associations"
                 )
@@ -665,7 +655,6 @@ class GalacticTelepathyEngine:
                     source_id = p["source_id"]
                     original_target_id = p["original_target_id"]
 
-                    # Try to find target by telepathy_source_id
                     target_cursor = conn.execute(
                         """SELECT id FROM memories
                            WHERE json_extract(metadata, '$.telepathy_source_id') = ?""",
@@ -684,7 +673,6 @@ class GalacticTelepathyEngine:
                              p["strength"], p["direction"], p["edge_type"],
                              datetime.now().isoformat())
                         )
-                        # Remove from pending
                         conn.execute(
                             "DELETE FROM pending_associations WHERE id = ?",
                             (p["id"],)

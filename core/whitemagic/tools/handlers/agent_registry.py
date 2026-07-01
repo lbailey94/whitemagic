@@ -106,7 +106,6 @@ def handle_agent_register(**kwargs: Any) -> dict[str, Any]:
     capabilities = kwargs.get("capabilities", [])
     metadata = kwargs.get("metadata", {})
 
-    # Check for existing agent with same id
     existing = _load_agent(agent_id)
     now = datetime.now().isoformat()
 

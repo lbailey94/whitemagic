@@ -18,7 +18,6 @@ from typing import Any
 import numpy as np
 from sklearn.cluster import KMeans
 
-# Import our unified embedding engine (supports Local/SentenceTransformers)
 from whitemagic.core.memory.embeddings import EmbeddingEngine
 
 logger = logging.getLogger(__name__)

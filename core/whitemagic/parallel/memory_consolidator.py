@@ -81,7 +81,6 @@ class ParallelMemoryConsolidator:
                     if ":" in line:
                         try:
                             key, value = line.split(":", 1)
-                            # Handle simple list formats and quoted strings
                             raw_value = value.strip().strip("\"'")
                             clean_value: str | list[str] = raw_value
                             if raw_value.startswith("[") and raw_value.endswith("]"):
@@ -140,7 +139,6 @@ class ParallelMemoryConsolidator:
         errors = []
         self.memories = []
 
-        # Process all files in parallel
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_file = {
                 executor.submit(self._process_single_file, f): f for f in md_files

@@ -33,7 +33,6 @@ def find_library(
     Returns:
         Path to the library if found, None otherwise
     """
-    # Check environment variable first
     if env_var:
         env_path = os.environ.get(env_var, "")
         if env_path and os.path.isfile(env_path):

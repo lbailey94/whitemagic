@@ -50,7 +50,6 @@ class ImmuneSystem:
         }
 
         # Would perform actual scanning here
-        # For now, return clean scan
         results["status"] = "clean"
         results["protection_active"] = self.protection_active
 

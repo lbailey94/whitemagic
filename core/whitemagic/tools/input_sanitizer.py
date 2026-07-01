@@ -177,7 +177,6 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
 
     # 3. Content checks (skip for exempt tools and Gana routing layers)
     if tool_name not in _CONTENT_SCAN_EXEMPT and not tool_name.startswith("gana_"):
-        # Try Haskell boundary detection first (stricter, exhaustive pattern matching)
         try:
             from whitemagic.core.acceleration.haskell_bridge import (
                 haskell_check_boundaries,
@@ -263,17 +262,14 @@ def _check_structure(obj: Any, depth: int = 0, path: str = "root") -> str | None
 def _scan_content(obj: Any, path: str = "root") -> str | None:
     """Scan string values for injection patterns."""
     if isinstance(obj, str):
-        # Check prompt injection
         for pattern in _INJECTION_PATTERNS:
             if pattern.search(obj):
                 return f"Potential prompt injection detected at {path}"
 
-        # Check path traversal
         for pattern in _PATH_TRAVERSAL_PATTERNS:
             if pattern.search(obj):
                 return f"Potential path traversal at {path}"
 
-        # Check shell injection
         for pattern in _SHELL_INJECTION_PATTERNS:
             if pattern.search(obj):
                 return f"Potential shell injection at {path}"

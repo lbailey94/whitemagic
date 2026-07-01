@@ -78,7 +78,6 @@ def ask(
         question=question, task_type=task_type, urgency=urgency, complexity=complexity
     )
 
-    # Parse lenses
     lens_mapping = {
         "i_ching": ReasoningLens.I_CHING,
         "wu_xing": ReasoningLens.WU_XING,
@@ -142,7 +141,6 @@ def status() -> None:
     click.echo("\n🌈 Multi-Spectral Reasoning System Status")
     click.echo("=" * 60)
 
-    # Check which systems are available
     systems = {
         "I Ching": reasoner.i_ching is not None,
         "Wu Xing": reasoner.wu_xing is not None,

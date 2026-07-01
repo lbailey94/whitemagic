@@ -52,7 +52,6 @@ class LazyGroup(click.Group):
                 result = self._loader()
                 # Loader can return None or the group itself
                 if result is not None and result is not self:
-                    # If loader returns a different object, copy its commands
                     if hasattr(result, "commands"):
                         for name, cmd in result.commands.items():
                             self.add_command(cmd, name=name)

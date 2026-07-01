@@ -323,13 +323,11 @@ class WuXingEngine:
 
     def _get_element_interaction(self, elem1: Element, elem2: Element) -> str | None:
         """Get guidance on elemental interaction."""
-        # Check generating cycle
         if self._get_generating_target(elem1) == elem2:
             return f"The {elem1.value} element nourishes {elem2.value}. Allow this natural flow to support your actions."
         elif self._get_generating_target(elem2) == elem1:
             return f"The {elem2.value} element nourishes {elem1.value}. Draw on this supportive energy."
 
-        # Check overcoming cycle
         if self._get_overcoming_target(elem1) == elem2:
             return f"The {elem1.value} element controls {elem2.value}. Use this influence wisely and avoid excess."
         elif self._get_overcoming_target(elem2) == elem1:
@@ -351,14 +349,12 @@ class WuXingEngine:
         """Calculate harmony based on proper elemental relationships."""
         score = 1.0
 
-        # Check that generating cycle is flowing
         for element in Element:
             target = self._get_generating_target(element)
             if target:
                 source_energy = self.elements[element].energy
                 target_energy = self.elements[target].energy
 
-                # If source is high but target is low, disharmony
                 if source_energy > 0.7 and target_energy < 0.3:
                     score -= 0.2
 

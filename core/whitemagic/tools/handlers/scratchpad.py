@@ -87,11 +87,9 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
     base_path = _resolve_base_path(kwargs)
     manager = ScratchpadManager(scratch_dir=base_path / "scratchpads")
 
-    # Try to find the most recent scratchpad if none provided
     scratchpad_id = kwargs.get("scratchpad_id")
     if not scratchpad_id:
         if manager.scratchpads:
-            # Get the most recently modified one
             sorted_pads = sorted(
                 manager.scratchpads.values(), key=lambda p: p.created, reverse=True
             )

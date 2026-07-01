@@ -139,7 +139,6 @@ def run(args: argparse.Namespace) -> None:
     if args.galaxy:
         galaxy_ok = _ensure_dream_galaxy(args.galaxy)
 
-    # Open log file
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_f = open(log_path, "a")
@@ -161,7 +160,6 @@ def run(args: argparse.Namespace) -> None:
             if not args.forever and total_cycles >= args.cycles * len(phases):
                 break
 
-            # Run next phase
             phase = phases[total_cycles % len(phases)]
             cycle_num = total_cycles // len(phases) + 1
             phase_idx = total_cycles % len(phases)
@@ -197,7 +195,6 @@ def run(args: argparse.Namespace) -> None:
                 summary = ", ".join(highlights[:6]) if highlights else "ok"
                 print(f"✓ {elapsed:.1f}s  [{summary}]")
 
-                # Log to JSONL
                 log_entry = {
                     "timestamp": _now(),
                     "cycle": cycle_num,

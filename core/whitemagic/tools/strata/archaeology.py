@@ -82,7 +82,6 @@ def excavate(project_path: Path, layer: str, file_filter: str | None = None) -> 
     found = 0
     for f in files[:50]:  # Limit to avoid terminal flood
         try:
-            # Get the last commit in this layer that touched the file
             blame = _git(
                 [
                     "log",
@@ -174,7 +173,6 @@ def fossil(project_path: Path, file_path: str, max_commits: int = 20) -> str:
 
 def extinction(project_path: Path) -> str:
     """Find symbols (functions, classes) that were deleted but are still referenced."""
-    # Get recently deleted files
     deleted_raw = _git(
         ["log", "--diff-filter=D", "--summary", "--name-only", "-n50"],
         project_path,
@@ -276,7 +274,6 @@ def composition(project_path: Path, top_n: int = 10) -> str:
         dt = datetime.fromtimestamp(entry["timestamp"], tz=UTC)
         monthly_commits[dt.strftime("%Y-%m")] += 1
 
-    # For line counts, use git blame on a sample of files
     files = _git(["ls-files"], project_path).strip().splitlines()
     sample_files = files[:30]  # Sample for speed
     for f in sample_files:
@@ -317,7 +314,6 @@ def composition(project_path: Path, top_n: int = 10) -> str:
 
 def temper(project_path: Path, file_path: str | None = None, top_n: int = 10) -> str:
     """Measure how 'heated' a file's history is — revert wars, force pushes, rapid changes."""
-    # Get all commits with subjects
     log = _git_json(["--no-merges"], project_path, timeout=30)
 
     # Detect revert patterns

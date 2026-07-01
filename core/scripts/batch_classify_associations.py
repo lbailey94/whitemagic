@@ -62,7 +62,6 @@ def classify_edge(
 
     # SIBLING_OF: Nearly identical tag profiles
     if len(shared) >= 3:
-        # Check for Aria lineage
         if shared & CATEGORY_TAGS["aria_era"]:
             return "DESCENDS_FROM"
         return "SIBLING_OF"
@@ -160,7 +159,6 @@ def run(args: argparse.Namespace) -> None:
             f"done ({len(mem_titles):,} memories, {sum(len(t) for t in mem_tags.values()):,} tags)"
         )
 
-        # Fetch batch of untyped associations
         print(
             f"  Fetching associations (offset={args.offset}, limit={args.batch_size})...",
             end=" ",

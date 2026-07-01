@@ -75,7 +75,6 @@ class HRRCompositionEngine:
         Returns:
             HRR vector, or None if HRR unavailable.
         """
-        # Try Rust bridge first (fast hash-based encoding)
         result = _rust_call(
             "hrr_encode", description=description, dim=self._dim, impact=impact
         )
@@ -116,7 +115,6 @@ class HRRCompositionEngine:
 
         composite_id = f"bind_{id_a}_{id_b}"
 
-        # Try Rust bridge for the FFT-based circular convolution
         result = _rust_call("hrr_bind", a=vec_a.tolist(), b=vec_b.tolist())
         if result is not None and "vector" in result:
             bound = np.array(result["vector"], dtype=np.float32)
@@ -164,7 +162,6 @@ class HRRCompositionEngine:
         if component_vec is None:
             return None
 
-        # Try Rust bridge
         result = _rust_call(
             "hrr_unbind",
             composite=composite.vector.tolist(),
@@ -201,7 +198,6 @@ class HRRCompositionEngine:
 
         composite_id = f"super_{'_'.join(ids)}"
 
-        # Try Rust bridge
         result = _rust_call("hrr_superposition", vectors=[v.tolist() for v in vecs])
         if result is not None and "vector" in result:
             result_vec = np.array(result["vector"], dtype=np.float32)
@@ -253,7 +249,6 @@ class HRRCompositionEngine:
             return 0.0
 
         if composite.vector is not None:
-            # Try Rust bridge for magnitude computation
             result = _rust_call(
                 "hrr_synergy",
                 composite=composite.vector.tolist(),

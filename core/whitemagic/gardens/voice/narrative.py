@@ -348,7 +348,6 @@ class NarrativeEngine:
         with open(entry_file, "w") as f:
             json.dump(entry_data, f, indent=2)
 
-        # Add to chapter
         self._chapters[chapter].entries.append(entry_id)
         self._save()
 
@@ -393,7 +392,6 @@ class NarrativeEngine:
         self, story: str | None = None, limit: int = 10
     ) -> list[dict[str, Any]]:
         """Get recent narrative entries."""
-        # Get all entry files
         entry_files = sorted(self.entries_dir.glob("entry_*.json"), reverse=True)
 
         entries = []

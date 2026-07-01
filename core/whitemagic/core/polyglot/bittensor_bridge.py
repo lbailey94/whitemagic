@@ -78,7 +78,6 @@ def get_bittensor_bridge() -> BittensorBridge:
 
 
 if __name__ == "__main__":
-    # Test discovery
     bridge = get_bittensor_bridge()
     asyncio.run(bridge.discover_resources())
     print(f"Bittensor Status: {bridge.discovery_cache['status']}")

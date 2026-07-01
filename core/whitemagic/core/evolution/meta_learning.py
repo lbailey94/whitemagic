@@ -142,7 +142,6 @@ class MetaLearningEngine:
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 
-        # Get existing metrics
         c.execute("SELECT * FROM pattern_metrics WHERE pattern_id = ?", (pattern_id,))
         row = c.fetchone()
 
@@ -297,7 +296,6 @@ class MetaLearningEngine:
 
         conn.close()
 
-        # Save discovered meta-patterns
         self._save_meta_patterns(meta_patterns)
 
         return meta_patterns
@@ -332,7 +330,6 @@ class MetaLearningEngine:
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 
-        # Get top patterns by effectiveness score
         c.execute(
             """
             SELECT

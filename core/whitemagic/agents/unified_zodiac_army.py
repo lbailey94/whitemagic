@@ -282,7 +282,6 @@ class UnifiedZodiacCommander:
                 ArmyType.TOKIO,  # Aquarius - Innovation
             ]
 
-        # Remove duplicates while preserving order
         seen = set()
         unique_selected = []
         for army in selected:
@@ -325,7 +324,6 @@ class UnifiedZodiacCommander:
         logger.info("🎯 Unified Zodiac Deployment: %s", objective, exc_info=True)
         logger.info("   Selected armies: %s", [a.value for a in selected_armies])
 
-        # Try Rust implementation first
         if self.rust_available:
             try:
                 deployment = await self._deploy_rust(
@@ -425,7 +423,6 @@ class UnifiedZodiacCommander:
                 )
             )
 
-        # Execute in parallel
         results_lists = await asyncio.gather(*tasks)
 
         # Aggregate results
@@ -474,7 +471,6 @@ class UnifiedZodiacCommander:
 
         # Simulate clone execution with zodiac-enhanced intelligence
         if use_zodiac:
-            # Get zodiac wisdom for this sign
             zodiac_wisdom = self._get_zodiac_wisdom(zodiac_sign, objective)
             output = zodiac_wisdom
             resonance = self._get_zodiac_resonance(zodiac_sign)

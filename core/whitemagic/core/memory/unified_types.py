@@ -277,7 +277,6 @@ class Memory:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Memory":
         """Deserialize from dictionary."""
-        # Parse basic fields
         m = cls(
             id=data["id"],
             content=data["content"],
@@ -309,7 +308,6 @@ class Memory:
             metadata=data.get("metadata", {}),
         )
 
-        # Parse links
         links_data = data.get("links", {})
         for tid, l_data in links_data.items():
             link = MemoryLink(

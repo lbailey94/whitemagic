@@ -193,7 +193,6 @@ class DOMDistiller:
         if node_name in self.IGNORE_TAGS:
             return None
 
-        # Handle text nodes
         if node_type == 3:
             # TEXT_NODE
             text = dom_node.get("nodeValue", "").strip()
@@ -220,7 +219,6 @@ class DOMDistiller:
         # Generate CSS selector
         selector = self._generate_selector(node_name, attributes, dom_node)
 
-        # Process children
         children = []
         for child in dom_node.get("children", []):
             child_elem = self.distill(child, depth + 1)
@@ -236,7 +234,6 @@ class DOMDistiller:
             and not text
             and not any(c.element_type == ElementType.INTERACTIVE for c in children)
         ):
-            # Return children directly, collapsing this container
             if len(children) == 1:
                 return children[0]
             elif len(children) == 0:
@@ -264,7 +261,6 @@ class DOMDistiller:
         if tag in self.MEDIA_TAGS:
             return ElementType.MEDIA
 
-        # Check for interactive attributes
         attrs = node.get("attributes", [])
         attr_dict = dict(zip(attrs[::2], attrs[1::2])) if attrs else {}
 
@@ -279,7 +275,6 @@ class DOMDistiller:
         if not attrs:
             return {}
 
-        # Convert list to dict
         attr_dict = dict(zip(attrs[::2], attrs[1::2]))
 
         # Filter to preserved attributes
@@ -299,15 +294,12 @@ class DOMDistiller:
         3. Unique class combination
         4. Tag with nth-of-type
         """
-        # Try ID
         if "id" in attributes:
             return f"#{attributes['id']}"
 
-        # Try data-testid
         if "data-testid" in attributes:
             return f'[data-testid="{attributes["data-testid"]}"]'
 
-        # Try unique class combination
         if "class" in attributes:
             classes = attributes["class"].split()
             if classes:
@@ -343,10 +335,8 @@ class DOMDistiller:
         lines = []
         prefix = "  " * indent
 
-        # Add element line
         lines.append(f"{prefix}{element.to_compact()}")
 
-        # Add children
         for child in element.children:
             lines.append(self.to_text(child, indent + 1))
 

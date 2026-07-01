@@ -110,7 +110,6 @@ from whitemagic.core.bridge.system import (
     system_initialize_all,
 )
 
-# Import the Main Dispatcher
 from whitemagic.core.bridge.tools import execute_mcp_tool
 
 if __name__ == "__main__":

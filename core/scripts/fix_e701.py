@@ -68,7 +68,6 @@ def fix_file(path: Path) -> int:
             new_lines.append(line)
     if fixed > 0:
         path.write_text("".join(new_lines))
-        # Verify the file still parses
         try:
             ast.parse(path.read_text())
         except SyntaxError as e:

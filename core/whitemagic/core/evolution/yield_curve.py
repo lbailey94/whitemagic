@@ -124,7 +124,6 @@ class YieldCurve:
         if len(self.observations) < 3:
             return {"v0": self.v0, "lambda": self.lambda_, "r": self.r, "tau": self.tau}
 
-        # Try Julia bridge first
         result = _julia_call(
             "fit_parameters",
             yield_type=self.yield_type.value,
@@ -193,7 +192,6 @@ class YieldPortfolio:
         """
         if not self._curves:
             return 0.0
-        # Try Julia bridge
         curves_data = [
             {
                 "yield_type": c.yield_type.value,
@@ -229,7 +227,6 @@ class YieldPortfolio:
             List of (improvement_id, value_at_horizon) sorted by value.
         """
         ids = candidates or list(self._curves.keys())
-        # Try Julia bridge
         curves_data = []
         for imp_id in ids:
             curve = self._curves.get(imp_id)
@@ -277,7 +274,6 @@ class YieldPortfolio:
         if curve is None or len(curve.observations) < window * 2:
             return False
 
-        # Try Julia bridge
         result = _julia_call(
             "detect_regime_change",
             yield_type=curve.yield_type.value,

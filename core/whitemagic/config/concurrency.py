@@ -31,7 +31,6 @@ try:
 except ValueError:
     MAX_WORKERS = 2
 
-# Process Pool Limits (Heavy - High Memory Overhead)
 # Used for: CloneArmy search, Local Analysis, Test Runner
 CPU_WORKERS = MAX_WORKERS
 CLONE_ARMY_WORKERS = MAX_WORKERS
@@ -59,7 +58,6 @@ def get_max_workers() -> Any:
     """
     import os
 
-    # Check environment override
     env_workers = os.getenv("WHITEMAGIC_MAX_WORKERS")
     if env_workers:
         try:

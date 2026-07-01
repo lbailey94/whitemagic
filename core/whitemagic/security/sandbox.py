@@ -94,7 +94,6 @@ class AdaptiveSandbox:
 
             start_time = asyncio.get_event_loop().time()
             try:
-                # Execute asynchronously
                 process = await asyncio.create_subprocess_exec(
                     *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
                 )
@@ -145,7 +144,6 @@ class AdaptiveSandbox:
                     error=f"Docker error: {type(e).__name__}",
                 )
             except OSError as e:
-                # Process creation or execution errors
                 end_time = asyncio.get_event_loop().time()
                 logger.error("Process error in sandbox: %s", e)
                 return SandboxResult(

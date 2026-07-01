@@ -129,12 +129,10 @@ class PolyglotRouter:
     def _check_rust(self) -> bool:
         """Check if Rust bridge is available."""
         try:
-            # Try actual import (find_spec doesn't work reliably with maturin packages)
             import whitemagic_rs
 
             return True
         except ImportError:
-            # Try to help it find its dependencies
             try:
                 import sys
 
@@ -506,7 +504,6 @@ class PolyglotRouter:
             import whitemagic_rs
 
             # parallel_grep(root_path, pattern, extensions, context_lines)
-            # Returns Vec<(String, usize, String)> -> (path, line, context)
             if hasattr(whitemagic_rs, "parallel_grep"):
                 raw_results = whitemagic_rs.parallel_grep(
                     root_path, query, rust_exts, 0
@@ -582,7 +579,6 @@ class PolyglotRouter:
             import whitemagic_rs
 
             if hasattr(whitemagic_rs, "parallel_grep"):
-                # Returns Vec<(rel_path, line_num, context)>
                 results = whitemagic_rs.parallel_grep(
                     root_path, pattern, extensions, context_lines
                 )

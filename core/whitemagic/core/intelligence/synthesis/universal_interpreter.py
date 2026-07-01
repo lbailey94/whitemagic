@@ -102,7 +102,6 @@ class UniversalInterpreter:
                 f"- **Density Pulse**: {cluster['density']} memories | **{res_str}**"
             )
 
-            # Add Rabbit Hole references
             mids = memory_samples.get(k, [])
             if mids:
                 ref_str = ", ".join([f"`{id}`" for id in mids[:5]])

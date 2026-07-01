@@ -179,7 +179,6 @@ class VoiceAuditScanner:
         unverified = self._claim_log.get_unverified()
         report.scanned_claims = len(unverified)
 
-        # Load recent ledger entries
         ledger_entries: list[dict[str, Any]] = []
         try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger

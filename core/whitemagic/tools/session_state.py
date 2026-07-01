@@ -50,7 +50,6 @@ def _activate_consciousness() -> None:
     except Exception:
         pass
 
-    # Start ApotheosisEngine
     try:
         from whitemagic.core.consciousness.apotheosis_engine import (
             get_apotheosis_engine,

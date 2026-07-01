@@ -28,7 +28,6 @@ class JuliaZMQClient:
 
     def connect(self) -> bool:
         """Connect to Julia server, starting it if needed."""
-        # Try to connect to existing server
         try:
             zmq_any: Any = zmq
             self._context = zmq_any.Context()
@@ -36,7 +35,6 @@ class JuliaZMQClient:
             self._socket.setsockopt(zmq_any.RCVTIMEO, 5000)  # 5s timeout
             self._socket.connect(f"tcp://{self.host}:{self.port}")
 
-            # Test with health check
             response = self._send_request({"method": "health"})
             if response.get("status") == "success":
                 logger.info(
@@ -50,7 +48,6 @@ class JuliaZMQClient:
                 "Could not connect to existing Julia server: %s", e, exc_info=True
             )
 
-        # Start new server
         return self._start_server()
 
     def _start_server(self) -> bool:
@@ -83,7 +80,6 @@ class JuliaZMQClient:
             elif os.path.exists("/snap/bin/julia"):
                 julia_cmd = "/snap/bin/julia"
 
-            # Start server process
             logger.info(
                 "Starting Julia server with command: %s %s",
                 julia_cmd,
@@ -101,7 +97,6 @@ class JuliaZMQClient:
             # Wait for server to start (increased to 8s)
             time.sleep(8.0)
 
-            # Try to connect
             zmq_any: Any = zmq
             self._context = zmq_any.Context()
             self._socket = self._context.socket(zmq_any.REQ)

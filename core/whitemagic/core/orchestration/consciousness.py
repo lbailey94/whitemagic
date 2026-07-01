@@ -154,7 +154,6 @@ def get_status() -> dict[str, Any]:
     status: dict[str, Any] = {"initialized": dict(_initialized), "systems": {}}
     systems: dict[str, Any] = status["systems"]
 
-    # Check Zodiac
     try:
         from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
 
@@ -166,7 +165,6 @@ def get_status() -> dict[str, Any]:
     except Exception as e:
         systems["zodiac"] = {"error": str(e)}
 
-    # Check Gan Ying
     try:
         from whitemagic.core.resonance.gan_ying import get_bus, is_async_mode
 
@@ -175,7 +173,6 @@ def get_status() -> dict[str, Any]:
     except Exception as e:
         systems["gan_ying"] = {"error": str(e)}
 
-    # Check Cache
     try:
         from whitemagic.core.memory.manager import MemoryManager
 
@@ -185,7 +182,6 @@ def get_status() -> dict[str, Any]:
     except (ImportError, ModuleNotFoundError) as e:
         systems["cache"] = {"error": str(e)}
 
-    # Check Wu Xing
     try:
         from whitemagic.gardens.wisdom.wu_xing import get_wu_xing
 

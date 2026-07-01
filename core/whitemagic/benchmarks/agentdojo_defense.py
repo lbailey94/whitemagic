@@ -84,9 +84,7 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
     Returns:
         (allowed: bool, reason: str)
     """
-    # ------------------------------------------------------------------
     # Layer 1: Fast bash/file heuristics (dangerous commands, system paths)
-    # ------------------------------------------------------------------
     cmd = ""
     path = ""
     if tool_name in ("bash", "Bash", "terminal"):
@@ -168,9 +166,7 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
     ):
         return False, f"Blocked file operation on system path: '{path}'"
 
-    # ------------------------------------------------------------------
     # Layer 2: Dharma rules engine (semantic policy evaluation)
-    # ------------------------------------------------------------------
     try:
         from whitemagic.dharma.rules import DharmaAction, get_rules_engine
 
@@ -213,7 +209,6 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
             )
         if decision.action in (DharmaAction.WARN, DharmaAction.TAG):
             # Allow but annotate — AgentDojo defense pattern typically blocks or allows
-            # For parity with AGT's "warn and log" behavior, we allow but the karma log
             # captures the warning. Future: propagate warning to the agent context.
             pass
     except Exception as exc:
@@ -285,7 +280,6 @@ class WhiteMagicDharmaDefense(BasePipelineElement):
         if messages[-1]["tool_calls"] is None or len(messages[-1]["tool_calls"]) == 0:
             return query, runtime, env, messages, extra_args
 
-        # Check each tool call against the policy gate
         modified = False
         new_messages = list(messages)
         last_msg = dict(new_messages[-1])  # shallow copy to mutate
@@ -339,7 +333,6 @@ class WhiteMagicDharmaDefense(BasePipelineElement):
 
 # ---------------------------------------------------------------------------
 # Monkey-patch AgentDojo's defense registry
-# ---------------------------------------------------------------------------
 
 _ORIGINAL_DEFENSES = list(agent_pipeline.DEFENSES)
 _ORIGINAL_FROM_CONFIG = agent_pipeline.AgentPipeline.from_config

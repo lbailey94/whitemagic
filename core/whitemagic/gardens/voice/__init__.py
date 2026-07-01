@@ -40,12 +40,10 @@ class VoiceGarden(BaseGarden, GanYingMixin):
         self.authenticity = 0.9
         self.last_breath: dict[str, Any] | None = None  # Air garden integration
 
-        # Initialize engines
         self.narrative = get_narrative_engine()
         self.synthesis = VoiceSynthesis()
         self.narrator = get_narrator()
 
-        # Start narrator listening
         self.narrator.start()
 
         init_listeners(self)

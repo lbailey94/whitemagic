@@ -54,7 +54,6 @@ def _get_redis() -> Any:
             client = redis.from_url(url, decode_responses=True)
             client.ping()
 
-            # Check if Elixir node is responding
             test_channel = f"{_ELIXIR_CHANNEL}:ping"
             client.publish(test_channel, _json_dumps({"type": "ping"}))
 

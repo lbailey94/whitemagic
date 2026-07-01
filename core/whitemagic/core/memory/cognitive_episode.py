@@ -52,7 +52,6 @@ class CognitiveEpisode:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> 'CognitiveEpisode':
         """Deserialize from dictionary."""
-        # Handle timestamp conversion
         if isinstance(data.get("timestamp"), str):
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)

@@ -144,7 +144,6 @@ class ParallelScheduler:
         self.stats.total_tasks += 1
         self.stats.pending_tasks += 1
 
-        # Add to queue if ready
         if task.is_ready:
             self._ready_queue.put_nowait((priority.value, task.id))
 
@@ -160,7 +159,6 @@ class ParallelScheduler:
         self.stats.pending_tasks -= 1
 
         try:
-            # Execute function
             if asyncio.iscoroutinefunction(task.func):
                 task.result = await task.func(*task.args, **task.kwargs)
             else:
@@ -182,7 +180,6 @@ class ParallelScheduler:
             self.stats.total_execution_time += execution_time
             self.stats.running_tasks -= 1
 
-            # Check dependent tasks
             await self._check_dependencies(task.id)
 
     async def _check_dependencies(self, completed_task_id: str) -> None:

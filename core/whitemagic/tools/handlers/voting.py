@@ -250,7 +250,6 @@ def handle_vote_analyze(**kwargs: Any) -> dict[str, Any]:
             },
         )
 
-    # Save analysis results
     results_file = _vote_session_dir(session_id) / "results.json"
     results_file.write_text(
         _json_dumps(

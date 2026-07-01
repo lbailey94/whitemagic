@@ -174,10 +174,8 @@ class SemanticFileWatcher:
         self._observer: Any | None = None
         self._thread: threading.Thread | None = None
 
-        # Load saved config
         self._load_config()
 
-        # Check for watchdog availability
         self._watchdog_available = self._check_watchdog()
 
     def _check_watchdog(self) -> bool:
@@ -247,7 +245,6 @@ class SemanticFileWatcher:
         self._watches[abs_path] = config
         self._save_config()
 
-        # If running, restart to pick up new watch
         if self._running:
             self.stop()
             self.start()
@@ -291,7 +288,6 @@ class SemanticFileWatcher:
                 "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
             }
 
-            # Add content hash for text files
             if metadata["file_type"] != "unknown":
                 try:
                     content = p.read_bytes()
@@ -331,12 +327,10 @@ class SemanticFileWatcher:
 
     def _handle_event(self, event: FileEvent) -> None:
         """Handle a file system event."""
-        # Add to history
         self._event_history.append(event)
         if len(self._event_history) > 1000:
             self._event_history = self._event_history[-500:]
 
-        # Get watch config for this path
         config = None
         for watch_path, watch_config in self._watches.items():
             if event.path.startswith(watch_path):
@@ -404,7 +398,6 @@ class SemanticFileWatcher:
                 logger.debug("Operation failed: %s", e)
                 pass
 
-        # Call registered callbacks
         for callback in self._callbacks:
             try:
                 callback(event)
@@ -456,14 +449,12 @@ class SemanticFileWatcher:
 
                     for watch_path, config in self.watcher._watches.items():
                         if path.startswith(watch_path):
-                            # Check ignore patterns first
                             for pattern in config.ignore_patterns:
                                 if (
                                     fnmatch.fnmatch(Path(path).name, pattern)
                                     or pattern in path
                                 ):
                                     return False
-                            # Check include patterns
                             for pattern in config.patterns:
                                 if fnmatch.fnmatch(Path(path).name, pattern):
                                     return True

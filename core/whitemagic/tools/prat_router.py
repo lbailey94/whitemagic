@@ -26,7 +26,6 @@ from whitemagic.tools.gana_native_contract import (
     normalize_native_gana_result,
 )
 
-# Import extracted tool mappings
 from whitemagic.tools.prat_mappings import (
     TOOL_TO_GANA,
     get_tools_for_gana,
@@ -292,7 +291,6 @@ def route_prat_call(
         logger.debug("Garden lookup for %s: %s", gana_name, exc)
 
     if tool:
-        # Validate that this tool belongs to this Gana
         expected_gana = TOOL_TO_GANA.get(tool)
         if expected_gana and expected_gana != gana_name:
             return {
@@ -515,7 +513,6 @@ def route_prat_call(
         "available_tools": get_tools_for_gana(gana_name),
     }
 
-    # Add garden context to native operations
     if _garden_instance:
         native_result["garden"] = resonance_ctx.get("garden", "unknown")
         if hasattr(_garden_instance, "get_status"):
@@ -525,7 +522,6 @@ def route_prat_call(
                 logger.debug("Operation failed: %s", e)
                 pass
 
-    # Add predecessor context to native operations
     if resonance_ctx.get("predecessor"):
         native_result["predecessor_context"] = resonance_ctx["predecessor"]
 

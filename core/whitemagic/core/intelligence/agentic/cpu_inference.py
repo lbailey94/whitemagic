@@ -285,12 +285,10 @@ class CPUInferenceEngine:
 
     def _setup_default_rules(self) -> None:
         """Setup inference rules."""
-        # If we have gardens, we have a garden architecture
         self.rules.add_rule(
             lambda facts: "has gardens" in facts,
             lambda facts: "has garden architecture",
         )
-        # If we have tests passing, the code is stable
         self.rules.add_rule(
             lambda facts: "tests passing" in facts,
             lambda facts: "code is stable",

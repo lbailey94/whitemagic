@@ -71,7 +71,6 @@ class ObjectiveGenerator:
             if path.exists()
         ]
 
-        # Run all scans in parallel
         results = await asyncio.gather(
             self._scan_todos(key_dirs),
             self._scan_test_gaps(),
@@ -388,11 +387,9 @@ class ObjectiveGenerator:
                 "priority": "high" if len(opportunities) > 10 else "medium",
             }
 
-        # Add pattern if there are significant issues
         if len(opportunities) > 20:
             patterns.append("Significant technical debt accumulation")
 
-        # Store the research for later use in generate_objectives
         self.last_research = Research(
             insights=insights,
             patterns=patterns,

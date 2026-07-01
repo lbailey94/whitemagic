@@ -8,7 +8,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Try to import Rust bindings
 try:
     import whitemagic_rs
 

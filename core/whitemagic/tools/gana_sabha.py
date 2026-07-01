@@ -223,7 +223,6 @@ def _detect_conflicts(
             }
         )
 
-    # Check vitality-based conflicts
     try:
         from whitemagic.tools.gana_vitality import get_vitality_monitor
 
@@ -334,7 +333,6 @@ def handle_sabha_convene(**kwargs: Any) -> dict[str, Any]:
             "error": "task is required — describe what needs council.",
         }
 
-    # Parse ganas/quadrants from string if needed
     if isinstance(ganas, str):
         ganas = [g.strip() for g in ganas.split(",")]
     if isinstance(quadrants, str):

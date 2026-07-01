@@ -100,7 +100,6 @@ class RedisCache:
             # Create async client
             self._async_client = AsyncRedis(connection_pool=self._connection_pool)  # type: ignore[arg-type]
 
-            # Test connection
             self._client.ping()
             self._connected = True
             logger.info(
@@ -356,12 +355,10 @@ class RedisCache:
                 key_parts.extend(f"{k}={v}" for k, v in sorted(kwargs.items()))
                 cache_key = hashlib.md5(":".join(key_parts).encode()).hexdigest()
 
-                # Try to get from cache
                 cached = self.get(cache_key)
                 if cached is not None:
                     return cast(T, cached)
 
-                # Call function and cache result
                 result = func(*args, **kwargs)
                 self.set(cache_key, result, ttl)
                 return result

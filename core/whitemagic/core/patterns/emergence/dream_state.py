@@ -223,7 +223,6 @@ class DreamState:
 
         # 3. Neural Brain Synthesis
         try:
-            # from whitemagic.brain import generate
             response = {
                 "response": f"💡 Combining {' + '.join(pattern_names[:2])} reveals a strategic resonance in {patterns[0].get('domain', 'tech')} through pattern emergence."
             }
@@ -251,7 +250,6 @@ class DreamState:
         um = get_unified_memory()
 
         for insight in insights:
-            # Store in Data Sea (SQLite)
             try:
                 um.store(
                     content=insight.insight,

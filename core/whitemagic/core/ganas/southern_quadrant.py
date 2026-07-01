@@ -38,7 +38,6 @@ In the shadows, truth is found.
         """Execute introspection/metrics logic."""
         from whitemagic.metrics import get_tracker, track_metric
 
-        # If specific tool call
         if call.task == "track_metric":
             category = call.state_vector.get("category", "general")
             metric = call.state_vector.get("metric", "unknown")
@@ -223,7 +222,6 @@ Light reveals what is hidden.
 
             synth = get_context_synthesizer()
             ctx = synth.gather()
-            # Convert dataclass to dict for JSON serialization if needed, or return object
             # UnifiedContext is a dataclass
             from dataclasses import asdict
 
@@ -376,7 +374,6 @@ Everything is connected to everything else.
                     import asyncio
 
                     loop = asyncio.get_running_loop()
-                    # Run search in executor to prevent blocking
                     patterns = await loop.run_in_executor(
                         None,
                         lambda: api.search(
@@ -630,7 +627,6 @@ The journey changes the traveler.
             if op == "scan":
                 directory = call.state_vector.get("directory", ".")
                 # In a real implementation this would use the archaeologist instance
-                # For now using functional interface if available or instance
 
                 # The functional find_unread seems relevant
                 unread = find_unread(directory, call.state_vector.get("patterns"))

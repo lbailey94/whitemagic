@@ -144,7 +144,6 @@ class RateLimiter:
 
         # Fast pre-check: Rust atomic rate limiter (lock-free, sub-μs)
         # Rust enforces its own global defaults; if it blocks, we block immediately.
-        # If Rust allows, we still check Python's configurable per-tool/global limits.
         if _RUST_RATE_AVAILABLE and callable(_rust_rate_check):
             try:
                 result = _rust_rate_check(f"{agent_id}:{tool_name}")

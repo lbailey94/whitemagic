@@ -80,7 +80,6 @@ def check_dead_code(project_path: Path, file_index: FileIndex, findings: list[Fi
                         if isinstance(elt, ast.Name):
                             dynamic_names.add(elt.id)
             elif isinstance(node, ast.AnnAssign):
-                # Handle annotated assignments (e.g., TOOLS: Dict[str, Tool] = {...})
                 if isinstance(node.value, ast.Dict):
                     for v in node.value.values:
                         if isinstance(v, ast.Name):
@@ -240,7 +239,6 @@ def check_dead_code(project_path: Path, file_index: FileIndex, findings: list[Fi
         "edge/",
     )
 
-    # Check standalone functions
     for func_name, (file_path, line_num) in all_functions.items():
         if func_name in dynamic_names or func_name in exports:
             continue
@@ -289,7 +287,6 @@ def check_dead_code(project_path: Path, file_index: FileIndex, findings: list[Fi
                 )
             )
 
-    # Check methods — but be much more conservative (methods are often called on instances)
     for class_name, methods in all_methods.items():
         for method_name, file_path, line_num in methods:
             # Skip if method is called anywhere or used dynamically (e.g., GTK signals)

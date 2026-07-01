@@ -8,7 +8,6 @@ from unittest.mock import patch
 # Configure logging
 logging.basicConfig(level=logging.ERROR)
 
-# Import Gana base and Eastern implementations
 try:
     from whitemagic.core.ganas.base import GanaCall, BaseGana
     from whitemagic.core.ganas.eastern_quadrant import (
@@ -34,7 +33,6 @@ async def test_gana(name: str, gana_class: Type[BaseGana], task: str, **kwargs: 
         # Invoke
         result = await gana.invoke(call)
 
-        # Check result
         print(f"✓ {name} Success")
         print(
             json.dumps(

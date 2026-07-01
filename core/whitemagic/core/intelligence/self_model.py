@@ -178,7 +178,6 @@ class SelfModel:
             if thresholds and slope != 0:
                 warn_low, warn_high, crit_low, crit_high = thresholds
 
-                # Check critical thresholds first
                 if crit_low is not None and slope < 0:
                     steps_to_crit = (crit_low - current) / slope
                     if 0 < steps_to_crit <= steps * 2:
@@ -233,7 +232,6 @@ class SelfModel:
         """Forecast all tracked metrics. Uses Julia Holt-Winters when available."""
         steps = steps_ahead or self._forecast_steps
 
-        # Try Julia batch forecasting first (Holt-Winters with confidence intervals)
         try:
             from whitemagic.core.acceleration.julia_bridge import julia_batch_forecast
 

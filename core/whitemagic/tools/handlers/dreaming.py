@@ -71,7 +71,6 @@ def handle_dream_now(**kwargs: Any) -> dict[str, Any]:
     dc = get_dream_cycle()
     dc._dreaming = True
 
-    # Run phase asynchronously
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
@@ -81,7 +80,6 @@ def handle_dream_now(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.debug("Silenced dreaming fallback error: %s", e, exc_info=True)
 
-    # Return the most recent dream report
     if dc._history:
         return {"status": "success", **dc._history[-1].to_dict()}
     return {"status": "success", "message": "Dream phase executed"}

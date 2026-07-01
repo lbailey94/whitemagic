@@ -61,13 +61,11 @@ def _is_path_safe(file_path: str) -> tuple[bool, str]:
     """
     p = Path(file_path).resolve()
 
-    # Check protected patterns
     path_str = str(p)
     for pattern in _PROTECTED_PATTERNS:
         if pattern in path_str:
             return False, f"Path matches protected pattern: {pattern}"
 
-    # Check allowed roots
     for root in _ALLOWED_ROOTS:
         try:
             root_resolved = Path(root).resolve()

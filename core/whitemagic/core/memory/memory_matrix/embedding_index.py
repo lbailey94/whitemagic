@@ -33,7 +33,6 @@ except ImportError:
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fileio import atomic_write, file_lock
 
-# Try to import Rust acceleration
 RUST_AVAILABLE = find_spec("whitemagic_rs") is not None
 
 # Singleton
@@ -172,7 +171,6 @@ class EmbeddingIndex:
         """
         content_hash = self._hash_content(content)
 
-        # Check for duplicate content
         for entry in self._entries.values():
             if entry.content_hash == content_hash:
                 return False
@@ -217,7 +215,6 @@ class EmbeddingIndex:
         # Cosine similarity
         similarities = np.dot(self._embeddings_matrix, query_embedding)
 
-        # Get top results
         indices = np.argsort(similarities)[::-1][:limit]
 
         results = []

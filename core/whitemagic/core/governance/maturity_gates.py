@@ -252,7 +252,6 @@ def _check_radiant() -> list[GateResult]:
             GateResult("usage_history", False, f"Could not check usage: {exc}")
         )
 
-    # Check homeostasis (system must be self-regulating)
     try:
         from whitemagic.core.homeostasis import HomeostasisSystem
 
@@ -279,7 +278,6 @@ def _check_collective() -> list[GateResult]:
     """Stage 5: Mesh connectivity + guild contracts."""
     results = []
 
-    # Check mesh availability (Go mesh binary or gRPC proto)
     try:
         from pathlib import Path
 

@@ -250,7 +250,6 @@ class ToolDependencyGraph:
         self._incoming: dict[str, list[ToolEdge]] = defaultdict(list)
         self._all_tools: set[str] = set()
 
-        # Load static edges
         for edge in _STATIC_EDGES:
             self._add_edge(edge)
 
@@ -307,7 +306,6 @@ class ToolDependencyGraph:
     def add_learned_edge(self, source: str, target: str, weight: float = 0.5) -> None:
         """Add a learned edge from pipeline execution history."""
         with self._lock:
-            # Check for existing edge
             for edge in self._outgoing.get(source, []):
                 if edge.target == target and edge.edge_type == EdgeType.SUGGESTS:
                     # Reinforce existing edge

@@ -88,7 +88,6 @@ class BatchedGanYingBus(GanYingBus):
                 self._schedule_flush()
 
         if should_flush:
-            # Run flush in background to keep emit non-blocking
             threading.Thread(target=self._flush_batch, daemon=True).start()
 
     def _schedule_flush(self) -> None:
@@ -122,7 +121,6 @@ class BatchedGanYingBus(GanYingBus):
             for event in batch:
                 by_type[event.event_type].append(event)
 
-            # Process each type's batch
             for event_type, events in by_type.items():
                 self._process_batch_by_type(event_type, events)
 
@@ -155,10 +153,8 @@ class BatchedGanYingBus(GanYingBus):
         if event_type not in self._listeners:
             return
 
-        # Call each listener with the batch
         for listener in self._listeners[event_type]:
             try:
-                # Check if listener supports batch processing
                 if hasattr(listener, "__batch__") and listener.__batch__:
                     # Batch-aware listener
                     listener(events)

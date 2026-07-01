@@ -157,7 +157,6 @@ def check_embodiment() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Test embodiment layer
     logger.info("=== Embodiment Layer Test ===\n")
 
     result = check_embodiment()

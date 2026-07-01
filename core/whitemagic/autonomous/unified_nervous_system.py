@@ -130,7 +130,6 @@ class UnifiedNervousSystem:
             priority=priority,
         )
 
-        # Store in history
         self._event_history.append(event)
         if len(self._event_history) > 10000:
             self._event_history.pop(0)
@@ -357,7 +356,6 @@ class CrossSubsystemPatterns:
             priority=EventPriority.NORMAL,
         )
 
-        # Check for apotheosis improvements
         nervous_system.emit(
             event_type="apotheosis.check_improvements",
             source=BiologicalSubsystem.DREAM,

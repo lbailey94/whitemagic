@@ -146,7 +146,6 @@ class ParallelPipeline:
                     stage.errors.append(str(e))
                     return None
 
-        # Process all items in parallel (up to workers limit)
         if stage.timeout:
             results = await asyncio.wait_for(
                 asyncio.gather(
@@ -184,7 +183,6 @@ class ParallelPipeline:
         current_data = initial_data
 
         try:
-            # Execute stages sequentially
             for stage in self.stages:
                 current_data = await self._execute_stage(stage, current_data)
 

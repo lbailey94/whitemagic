@@ -122,7 +122,6 @@ class AntibodyLibrary:
 
         """
         for antibody in self.antibodies.values():
-            # Check if antigen matches pattern (supports wildcards)
             pattern = antibody.antigen_pattern.replace("*", ".*")
             if re.match(pattern, antigen):
                 return antibody
@@ -240,7 +239,6 @@ class AntibodyLibrary:
             example_config = actual_config.parent / f"{actual_config.name}.example.json"
 
             if not example_config.exists():
-                # Try with different extension
                 example_config = (
                     actual_config.parent
                     / f"{actual_config.stem}.example{actual_config.suffix}"
@@ -266,7 +264,6 @@ class AntibodyLibrary:
     def _fix_memory_leak(self, threat: Any) -> dict[str, Any]:
         """Trigger automatic consolidation."""
         try:
-            # Run consolidation
             result = subprocess.run(
                 ["whitemagic", "consolidate", "--no-dry-run"],
                 capture_output=True,

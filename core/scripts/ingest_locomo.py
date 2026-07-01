@@ -104,7 +104,6 @@ def ingest_longmemeval(data_file, conn):
                     "origin": "Xiaowu0162/LongMemEval",
                 }
 
-                # --- PHASE 11: 5D Holographic Encoding ---
                 # Generate coordinates for geometric/galactic search
                 from whitemagic.core.intelligence.hologram.encoder import (
                     CoordinateEncoder,
@@ -150,7 +149,6 @@ def ingest_longmemeval(data_file, conn):
                     ),
                 )
 
-                # Store coordinates in the separate coords table
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO holographic_coords (

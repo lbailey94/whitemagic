@@ -47,7 +47,6 @@ class Narrator:
         # Register for ALL events (wildcard)
         # Note: GanYingBus doesn't support wildcard yet, so we listen to specific ones
         # or we modify GanYingBus to support it.
-        # For now, let's listen to key events.
 
         key_events = [
             EventType.MEMORY_CREATED,
@@ -78,7 +77,6 @@ class Narrator:
             Generated narrative text
 
         """
-        # Add the prompt as a narrative entry
         narrative_text = f"Reflecting on: {prompt}"
 
         self.engine.add_entry(
@@ -88,7 +86,6 @@ class Narrator:
             context={"prompt": prompt, "type": "user_requested"},
         )
 
-        # Log the narration request
         log_event(
             source="narrator",
             event_type="voice_narrate_requested",

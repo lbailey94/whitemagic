@@ -80,7 +80,6 @@ def _try_body_only_assignments(try_node: ast.Try) -> bool:
     for stmt in try_node.body:
         if isinstance(stmt, ast.Assign):
             # Only flag if assigning a constant (FLAG = True/False/None)
-            # Function calls or complex expressions are real logic, not removed imports
             if isinstance(stmt.value, ast.Constant):
                 has_assignment = True
             else:

@@ -228,7 +228,6 @@ class TacticalPipeline:
         current_idx = phase_order.index(self.state.current_phase)
         next_idx = (current_idx + 1) % len(phase_order)
 
-        # If we've completed REFLECT, start new cycle
         if self.state.current_phase == PipelinePhase.REFLECT:
             self.end_cycle()
             self.state.current_cycle += 1
@@ -363,7 +362,6 @@ class TacticalPipeline:
         """
         start = time.time()
 
-        # Get top-ranked strategy
         if not self.state.strategy_simulations:
             raise ValueError("No strategies available for execution. Run plan() first.")
 
@@ -405,7 +403,6 @@ class TacticalPipeline:
                 "vcs_total", 0
             )
 
-        # Check for victory
         if (
             verification.get("vcs_met", 0) == verification.get("vcs_total", 0)
             and verification.get("vcs_total", 0) > 0
@@ -449,7 +446,6 @@ class TacticalPipeline:
 
         insights = reflect_fn(cycle_data)
 
-        # Check for stagnation
         if self.state.verification_results:
             last_vcs = self.state.verification_results[-1].get("vcs_met", 0)
             if len(self.state.verification_results) > 1:

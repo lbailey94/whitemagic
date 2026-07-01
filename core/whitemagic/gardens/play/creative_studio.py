@@ -211,7 +211,6 @@ def meditate(depth: int = 0) -> "awareness":
 
         self.creations: list[Creation] = []
 
-        # Connect to Gan Ying bus (optional)
         self.bus = get_bus() if get_bus else None  # type: ignore[truthy-function]
 
         self._load_gallery()

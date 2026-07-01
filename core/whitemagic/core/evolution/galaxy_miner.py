@@ -140,7 +140,6 @@ class GalaxyPatternMiner:
 
         for db_path, conn in self.connections.items():
             try:
-                # Get access frequency per memory
                 cursor = conn.execute(
                     """
                     SELECT id, access_count, accessed_at
@@ -213,7 +212,6 @@ class GalaxyPatternMiner:
 
         for db_path, conn in self.connections.items():
             try:
-                # Get memories with similar access times (within 1 hour)
                 cursor = conn.execute(
                     """
                     SELECT m1.id as id1, m2.id as id2,
@@ -432,7 +430,6 @@ class GalaxyPatternMiner:
 
         for db_path, conn in self.connections.items():
             try:
-                # Get tags from tags table (many-to-many relationship)
                 cursor = conn.execute("""
                     SELECT m.id, GROUP_CONCAT(t.tag, ',') as tags, m.importance
                     FROM memories m
@@ -448,7 +445,6 @@ class GalaxyPatternMiner:
                     tags_str = row["tags"] or ""
                     importance = row["importance"] or 0.5
 
-                    # Parse tags (comma-separated)
                     tags = set(t.strip() for t in tags_str.split(",") if t.strip())
 
                     for tag in tags:

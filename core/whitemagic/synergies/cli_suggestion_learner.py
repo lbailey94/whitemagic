@@ -77,7 +77,6 @@ class CLISuggestionLearner:
             for i, cmd in enumerate(seq):
                 if cmd == last_command and i + 1 < len(seq):
                     suggestions.append(seq[i + 1])
-        # Return most common next commands
         from collections import Counter
 
         counts = Counter(suggestions)

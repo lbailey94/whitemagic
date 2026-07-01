@@ -322,7 +322,6 @@ class ContextCompressor:
         for i, line in enumerate(lines):
             line_lower = line.lower()
             if any(kw.lower() in line_lower for kw in keywords):
-                # Add this line + context
                 for j in range(
                     max(0, i - context_lines), min(len(lines), i + context_lines + 1)
                 ):
@@ -514,7 +513,6 @@ if __name__ == "__main__":
 
     optimizer = get_token_optimizer()
 
-    # Test queries
     queries = [
         ("What version is WhiteMagic?", ""),
         ("How many gardens?", ""),

@@ -81,7 +81,6 @@ class PracticeRitualConductor:
             checkpoint_interval=5,
         )
 
-        # Initialize conductor
         self.conductor = ConductorOrchestrator(conductor_config)  # type: ignore[assignment]
 
         # Custom completion check: deepening threshold
@@ -115,7 +114,6 @@ class PracticeRitualConductor:
             completion_condition=ritual_completion_check,
         )
 
-        # Check mastery
         self._mastery_achieved = result.is_complete
 
         # Update practice consistency

@@ -111,7 +111,6 @@ class BountyBoard:
                         data = resp.json()
                         result = data.get("result", {})
                         if result.get("TransactionType") == "EscrowCreate":
-                            # Verify amount and destination
                             from whitemagic.core.economy.wallet_manager import (
                                 get_wallet,
                             )

@@ -428,7 +428,6 @@ def dagstuhl_score(
     # Bias: mean prediction - mean actual
     bias = statistics.mean(predictions) - statistics.mean(actuals)
 
-    # Log ratio errors (for time predictions)
     log_ratios = [
         math.log(p / a) if p > 0 and a > 0 else 0.0
         for p, a in zip(predictions, actuals)

@@ -15,7 +15,6 @@ try:
 except ImportError:
     _has_rust_bridge = False
 
-# Import optimization module (provides RustAccelerator)
 try:
     from .optimization import RustAccelerator
 

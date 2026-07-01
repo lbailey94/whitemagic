@@ -159,7 +159,6 @@ def _inject_context(
     if not memories:
         return prompt, []
 
-    # Build context block
     ctx_lines = []
     for m in memories:
         title = m.get("title") or "untitled"
@@ -511,7 +510,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     context = kwargs.get("context", True)
     store = kwargs.get("store", False)
 
-    # Start with a single-shot generate to get initial plan
     try:
         plan_result = handle_ollama_generate(
             model=model,

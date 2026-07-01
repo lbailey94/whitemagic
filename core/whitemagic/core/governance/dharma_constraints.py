@@ -32,7 +32,6 @@ class DharmaConstraints:
             try:
                 # Real Haskell queries for Dharmic balance
                 if node_count >= 6:
-                    # Check if a 6-node hexagram (e.g. all 1s/0s) is balanced
                     # This is symbolic: we use Haskell to define what 'balance' means
                     res = self.div.create_and_query([1, 0, 1, 0, 1, 0])
                     if res.get("is_balanced"):

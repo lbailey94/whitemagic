@@ -107,7 +107,6 @@ class CollectiveJoy:
 
     def _update_joy_circles(self, participants: list[str]):
         """Track who shares joy with whom"""
-        # Add all pairs to joy circles
         for i, person1 in enumerate(participants):
             if person1 not in self.joy_circles:
                 self.joy_circles[person1] = set()

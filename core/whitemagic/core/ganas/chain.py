@@ -72,7 +72,6 @@ class GanaChain:
         current_task = initial_task
         state_vector = initial_state or {}
 
-        # Get current system harmony
         monitor = self.harmony_monitor
         if monitor is None:
             from ..embodiment import HarmonyMonitor
@@ -84,7 +83,6 @@ class GanaChain:
         lunar_phase = get_current_lunar_phase()
 
         for i, mansion in enumerate(mansion_sequence):
-            # Get Gana for this mansion
             gana = self.ganas.get(mansion)
             if not gana:
                 raise ValueError(f"No Gana registered for {mansion.name}")
@@ -117,11 +115,9 @@ class GanaChain:
                 resonance_hints=hints,
             )
 
-            # Invoke with resonance
             result = await gana.invoke(call)
             results.append(result)
 
-            # Log Karma Trace
             # We log synchronously for now to ensure trace is written before proceeding,
             # though async logging is available in logger.
             self.logger.log(result)

@@ -79,7 +79,6 @@ class SessionHealthCheck:
         # Duration
         results["duration_seconds"] = (datetime.now() - start_time).total_seconds()
 
-        # Log and store
         self._log_check(results)
         self.last_check = results
 
@@ -119,11 +118,9 @@ class SessionHealthCheck:
                 timeout=30,
             )
 
-            # Parse collection output
             output = result.stdout + result.stderr
 
             if "error" in output.lower() or result.returncode != 0:
-                # Try to count collected tests
                 import re
 
                 collected = re.search(r"(\d+) items?", output)
@@ -154,7 +151,6 @@ class SessionHealthCheck:
         """Check that __all__ exports are valid."""
         try:
             # whitemagic availability checked via try-except
-            # Check a few key modules have proper exports
             modules_ok = 0
             modules_checked = 0
 
@@ -348,6 +344,5 @@ def run_session_health_check() -> dict:
     return results
 
 
-# For CLI usage
 if __name__ == "__main__":
     run_session_health_check()

@@ -13,7 +13,6 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-# Try to import Rust module
 try:
     import whitemagic_rs as rs
     RUST_AVAILABLE = True

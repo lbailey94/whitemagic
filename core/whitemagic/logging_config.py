@@ -110,7 +110,6 @@ class WhiteMagicLogger:
             },
         }
 
-        # Add file handlers if enabled
         if log_to_file:
             # Main application log
             config["handlers"]["file"] = {
@@ -134,7 +133,6 @@ class WhiteMagicLogger:
                 "encoding": "utf8",
             }
 
-            # Add file handlers to loggers
             config["loggers"][""]["handlers"].extend(["file", "error_file"])
             config["loggers"]["whitemagic"]["handlers"].extend(["file", "error_file"])
 
@@ -142,7 +140,6 @@ class WhiteMagicLogger:
         logging.config.dictConfig(config)
         self.configured = True
 
-        # Log initialization
         if not os.getenv("WM_SILENT_INIT"):
             logger = logging.getLogger(__name__)
             logger.info(
@@ -285,10 +282,8 @@ if __name__ == "__main__":
     # Setup logging
     setup_logging(level="DEBUG", environment="development")
 
-    # Get logger
     logger = get_logger(__name__)
 
-    # Log messages
     logger.info("WhiteMagic starting up")
     logger.warning("This is a warning")
     logger.error("This is an error", extra={"context": "startup"})
@@ -307,7 +302,6 @@ if __name__ == "__main__":
         time.sleep(0.1)
         return "done"
 
-    # Test functions
     result = test_function(5)
     slow_function()
 

@@ -36,13 +36,11 @@ try:
     import whitemagic_rs as _rs_mod
 
     _rs = _rs_mod
-    # Check for v12.3 accelerator functions
     if hasattr(_rs, "galactic_batch_score"):
         _RUST_AVAILABLE = True
         logger.debug("Rust v12.3 accelerators loaded")
     else:
         logger.debug("Rust extension found but missing v12.3 accelerators")
-    # Check for v13.1 accelerator functions
     if hasattr(_rs, "holographic_encode_batch"):
         _RUST_V131 = True
         logger.debug("Rust v13.1 accelerators loaded")

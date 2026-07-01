@@ -245,7 +245,6 @@ class Governor:
         self.action_history: list[dict[str, Any]] = []
         self._validation_count = 0
         self._blocked_count = 0
-        # Check active enforcement flag - Hard-locked to True for v20 Liberation release
         self.enabled = os.getenv("WHITEMAGIC_ENFORCE_DHARMA", "1").lower() in (
             "1",
             "true",
@@ -422,7 +421,6 @@ class Governor:
             )
 
         except ImportError:
-            # If Dharma system is missing, fail open unless strict
             if os.getenv("WHITEMAGIC_DHARMA_STRICT", "0").lower() in (
                 "1",
                 "true",
@@ -475,7 +473,6 @@ class Governor:
         self._validation_count += 1
         cmd_lower = cmd.lower().strip()
 
-        # Check for empty command
         if not cmd_lower:
             return ValidationResult(
                 safe=True,
@@ -483,7 +480,6 @@ class Governor:
                 risk_level=RiskLevel.SAFE,
             )
 
-        # Check forbidden patterns
         for pattern in self.FORBIDDEN_PATTERNS:
             if pattern.search(cmd):
                 self._blocked_count += 1
@@ -498,7 +494,6 @@ class Governor:
                     ],
                 )
 
-        # Check dangerous patterns
         for pattern in self.DANGEROUS_PATTERNS:
             if pattern.search(cmd):
                 return ValidationResult(
@@ -525,10 +520,8 @@ class Governor:
                     ],
                 )
 
-        # Check for protected path modifications
         for protected in self.PROTECTED_PATHS:
             if protected.replace("~", "").replace("*", "") in cmd:
-                # Check if it's a modifying command
                 if any(
                     mod in cmd_lower for mod in ["rm ", "mv ", "chmod ", "chown ", "> "]
                 ):
@@ -560,7 +553,6 @@ class Governor:
         path_obj = Path(path).resolve()
         path_str = str(path_obj)
 
-        # Check protected paths
         for protected in self.PROTECTED_PATHS:
             # Path expansion justified: Security validation - legitimate use
             # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
@@ -573,7 +565,6 @@ class Governor:
                         risk_level=RiskLevel.FORBIDDEN,
                     )
 
-        # Check for credential files
         credential_patterns = [
             ".ssh",
             ".gnupg",
@@ -629,7 +620,6 @@ class Governor:
 
         # Extract keywords (improved approach with stemming simulation)
         def extract_keywords(text: str) -> set[str]:
-            # Remove common words and extract meaningful terms
             """
             Mine or extract keywords.
 
@@ -819,7 +809,6 @@ class Governor:
         context = context or {}
         violations = []
 
-        # Check non-harm
         harmful_indicators = ["delete", "destroy", "remove all", "wipe", "kill"]
         if any(ind in action.lower() for ind in harmful_indicators):
             if not context.get("user_confirmed"):
@@ -827,16 +816,13 @@ class Governor:
                     ("non_harm", "Potentially harmful action without confirmation")
                 )
 
-        # Check reversibility
         irreversible_indicators = ["permanent", "cannot undo", "force", "--hard"]
         if any(ind in action.lower() for ind in irreversible_indicators):
             violations.append(("reversibility", "Action may not be reversible"))
 
-        # Check minimal footprint
         if context.get("requires_sudo") or context.get("requires_root"):
             violations.append(("minimal_footprint", "Elevated privileges requested"))
 
-        # Check data sanctity
         data_indicators = ["database", "user data", "credentials", "personal"]
         if any(ind in action.lower() for ind in data_indicators):
             if not context.get("backup_exists"):

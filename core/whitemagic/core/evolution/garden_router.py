@@ -111,7 +111,6 @@ class GardenRouter:
         """
         desc_lower = description.lower()
 
-        # Check description keywords first (more specific)
         if any(
             kw in desc_lower
             for kw in ["refactor", "architecture", "rewrite", "restructure"]

@@ -46,7 +46,6 @@ def _handle_pattern_consultation(event: Any) -> None:
     council = get_zodiac_council()
     bus = get_bus()
 
-    # Get pattern details
     pattern_data = event.data
     query = pattern_data.get("description", "Analyze detected pattern")
 
@@ -80,7 +79,6 @@ def _handle_anomaly_consultation(event: Any) -> None:
     council = get_zodiac_council()
     bus = get_bus()
 
-    # Get anomaly details
     anomaly_data = event.data
     query = f"Analyze anomaly: {anomaly_data.get('description', 'unknown')}"
 

@@ -149,11 +149,9 @@ class JoyArchaeology:
         lines = content.split("\n")
 
         for i, line in enumerate(lines):
-            # Check if line contains joy indicators
             if any(
                 re.search(pattern, line.lower()) for pattern in self.joy_indicators[:10]
             ):
-                # Get context (line before, line, line after)
                 start = max(0, i - context_lines)
                 end = min(len(lines), i + context_lines + 1)
                 context = "\n".join(lines[start:end]).strip()
@@ -165,12 +163,10 @@ class JoyArchaeology:
 
     def _extract_date(self, file_path: Path, content: str) -> str:
         """Extract date from filename or content"""
-        # Try filename first
         date_match = re.search(r"(\d{4}-\d{2}-\d{2})", str(file_path))
         if date_match:
             return date_match.group(1)
 
-        # Try content
         date_match = re.search(r"(\d{4}-\d{2}-\d{2})", content)
         if date_match:
             return date_match.group(1)

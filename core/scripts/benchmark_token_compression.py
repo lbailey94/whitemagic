@@ -15,7 +15,6 @@ import sys
 import time
 from typing import Any
 
-# Add core to path for direct imports
 sys.path.insert(
     0, str(__import__("pathlib").Path(__file__).resolve().parent.parent.parent)
 )
@@ -167,7 +166,6 @@ def _benchmark_working_memory_dense(items: list[dict[str, Any]]) -> dict[str, An
             importance=0.7,
         )
 
-    # Get context with dense encoding
     ctx = wm.get_context(dense=True)
     total_tokens = sum(
         _estimate_tokens(c.get("content_dense", c.get("content_preview", "")))
@@ -256,8 +254,6 @@ def _benchmark_all_tactics(items: list[dict[str, Any]]) -> dict[str, Any]:
     except Exception:
         vsa_tokens = dense_tokens
 
-    # If cached (semantic cache), tokens = 0
-    # If not cached, draft-review reduces cloud tokens further
     draft_review_tokens = max(1, vsa_tokens // 3)  # Review is ~1/3 of generation
 
     elapsed = (time.time() - start) * 1000
@@ -277,7 +273,6 @@ def run_benchmark() -> None:
     print("  Token Compression Benchmark: All Tactics (T1-T4 + VSA + Dense)")
     print("=" * 90)
 
-    # Print encoding stats
     stats = get_encoding_stats()
     print(
         f"\n  Phrase mapping table: {stats['total_phrases']} entries "

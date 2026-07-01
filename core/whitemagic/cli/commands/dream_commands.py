@@ -146,7 +146,6 @@ def dream_run() -> None:
 
     try:
         asyncio.run(dc._run_phase())
-        # Get the last dream report from history
         if dc._history:
             report = dc._history[-1]
             if HAS_RICH and console:

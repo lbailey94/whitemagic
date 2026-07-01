@@ -70,7 +70,6 @@ def fix_file(path: Path) -> int:
 
     new_content = "\n".join(new_lines)
 
-    # Add logging import if needed
     if fixes > 0 and "logger = logging.getLogger" not in new_content:
         # Find a good place to insert
         last_import = -1

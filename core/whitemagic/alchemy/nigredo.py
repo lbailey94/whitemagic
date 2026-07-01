@@ -67,7 +67,6 @@ class NigredoClassifier:
         if len(content) < 50:
             return "Noise", 0.90
 
-        # Check for raw traceback dumps
         if "traceback (most recent call last)" in content_lower:
             # Unless it has analysis
             if "analysis:" not in content_lower and "cause:" not in content_lower:

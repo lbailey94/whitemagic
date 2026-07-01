@@ -163,7 +163,6 @@ class IfaCaster:
         right_shells = shells[:8]
         left_shells = shells[8:]
 
-        # Convert 8 shells to 4 bits: pair them up
         right_binary = self._shells_to_binary(right_shells)
         left_binary = self._shells_to_binary(left_shells)
 

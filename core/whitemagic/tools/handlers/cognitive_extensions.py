@@ -97,7 +97,6 @@ def handle_reconsolidation_status(**kwargs: Any) -> dict[str, Any]:
 
         mem = get_unified_memory()
 
-        # Try different method names that might exist
         pending = []
         if hasattr(mem, "get_pending_reconsolidation"):
             pending = mem.get_pending_reconsolidation()

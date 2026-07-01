@@ -105,7 +105,6 @@ class GroundingSystem:
             },
         }
 
-        # Save anchor to disk for other processes
         self._save_anchor(anchor)
         return anchor
 

@@ -140,7 +140,6 @@ class HNSWIndex:
                         curr_node = neighbor_id
                         changed = True
 
-            # Connect to M nearest neighbors at this level
             if layer <= level:
                 neighbors = self._search_layer(vector, curr_node, layer, self.m)
                 self.nodes[memory_id]['neighbors'][layer] = neighbors
@@ -325,8 +324,8 @@ def benchmark_hnsw():
     import time
 
     print("=" * 60)
-    print("HNSW Benchmark: Approximate vs Exact Search")
-    print("=" * 60)
+    logger.debug("HNSW Benchmark: Approximate vs Exact Search")
+    logger.debug("=" * 60)
 
     index = get_hnsw_index()
     if not index.nodes:
@@ -351,8 +350,8 @@ def benchmark_hnsw():
     linear_time = (time.perf_counter() - start) / 100 * 1000
 
     print(f"\nDataset: {len(index.nodes)} vectors of dim {index.dim}")
-    print(f"HNSW search: {hnsw_time:.2f}ms per query")
-    print(f"Linear scan (1K): {linear_time:.2f}ms per query")
+    logger.debug(f"HNSW search: {hnsw_time:.2f}ms per query")
+    logger.debug(f"Linear scan (1K): {linear_time:.2f}ms per query")
     if hnsw_time > 0:
         print(f"Speedup: {linear_time/hnsw_time:.1f}x")
 

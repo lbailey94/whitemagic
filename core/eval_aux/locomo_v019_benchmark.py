@@ -8,7 +8,6 @@ import sys
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
-# Add path for imports
 sys.path.insert(0, '.')
 
 from whitemagic.core.memory.embeddings import EmbeddingEngine
@@ -39,7 +38,6 @@ class LoCoMoV019Optimizer:
         db_path = os.path.join(state_root, "memory", "whitemagic.db")
         self.backend = SQLiteBackend(db_path)
         
-        # Try to load polyglot acceleration
         self._init_polyglot()
     
     def _init_polyglot(self):
@@ -53,13 +51,11 @@ class LoCoMoV019Optimizer:
             'rust_intent': False,
         }
         
-        # Check Zig SIMD
         try:
             self.acceleration['zig_simd'] = True
         except Exception:
             pass
         
-        # Check Rust RRF
         try:
             self.acceleration['rust_rrf'] = True
         except Exception:
@@ -286,7 +282,6 @@ def run_v019_benchmark():
     
     optimizer = LoCoMoV019Optimizer()
     
-    # Test queries by type
     test_queries = [
         ("What is the max_tokens parameter in OpenAI API?", "single_hop"),
         ("How does tokenization affect API pricing and what models use different encodings?", "multi_hop"),

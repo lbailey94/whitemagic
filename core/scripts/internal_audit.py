@@ -59,7 +59,6 @@ def audit_file(file_path: Path, args):
         if args.license == "Apache2.0":
             if "MIT License" in content or "MIT" in content[:200]:
                 print(f"    [LICENSE] Switching to Apache 2.0")
-                # Remove common MIT headers if they exist
                 content = re.sub(
                     r"#.*?MIT License.*?\n", "", content, flags=re.IGNORECASE
                 )

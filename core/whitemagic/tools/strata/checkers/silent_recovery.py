@@ -82,7 +82,6 @@ def _log_call_uses_exception_var(call: ast.Call, exc_name: str) -> bool:
         for sub in ast.walk(arg):
             if isinstance(sub, ast.Name) and sub.id == exc_name:
                 return True
-    # Check exc_info=True
     for kw in call.keywords:
         if kw.arg == "exc_info" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
             return True

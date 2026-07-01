@@ -312,7 +312,6 @@ class SelfImprovementPipeline:
             result = enhancer.run_calibrated(claims, n_trials=1000)
             mc_result = result.get("mc_result", {})
             bss = mc_result.get("brier_skill_score", {}).get("mean", 0.0)
-            # Convert BSS to confidence (BSS > 0 means better than random)
             confidence = max(0.0, min(1.0, (bss + 1.0) / 2.0))
             return confidence
         except Exception as e:

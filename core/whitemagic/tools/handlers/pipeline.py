@@ -154,7 +154,6 @@ def _validate_pipeline_deps(steps: list[dict[str, Any]]) -> dict[str, Any]:
         if not tool_name:
             continue
 
-        # Check hard prerequisites ("requires" edges)
         prereqs = graph.prerequisites(tool_name)
         if prereqs:
             for edge in prereqs:
@@ -171,7 +170,6 @@ def _validate_pipeline_deps(steps: list[dict[str, Any]]) -> dict[str, Any]:
                             f"but it appears at step {tool_positions[prereq_tool]} (after)",
                         )
 
-    # Check if the last tool has strong suggested follow-ups not in pipeline
     if tool_names:
         last_tool = tool_names[-1]
         next_steps = graph.next_steps(last_tool)
@@ -230,7 +228,6 @@ def handle_pipeline_create(**kwargs: Any) -> dict[str, Any]:
             "validation": validation,
         }
 
-    # Execute the pipeline
     result = _execute_pipeline(pipeline)
     result["validation"] = validation
     return result
@@ -268,7 +265,6 @@ def _execute_pipeline(pipeline: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(resolved_args, dict):
             resolved_args = {}
 
-        # Execute the tool
         try:
             result = call_tool(tool_name, **resolved_args)
         except Exception as exc:
@@ -279,7 +275,6 @@ def _execute_pipeline(pipeline: dict[str, Any]) -> dict[str, Any]:
         pipeline["current_step"] = i + 1
         _save_pipeline(pipeline)
 
-        # Check for failure — stop pipeline on error unless step says continue_on_error
         if result.get("status") == "error" and not step.get("continue_on_error", False):
             pipeline["status"] = "failed"
             pipeline["failed_at_step"] = i

@@ -106,11 +106,9 @@ class AutoLinker:
                         continue
 
                     for target_id, similarity in targets:
-                        # Check if link exists
                         if target_id not in source_mem.links:
                             source_mem.add_link(target_id, LinkType.RELATED, similarity)
 
-                            # Add reverse link
                             target_mem = self._memory_store.get(target_id)
                             if target_mem:
                                 target_mem.add_link(source_id, LinkType.RELATED, similarity)

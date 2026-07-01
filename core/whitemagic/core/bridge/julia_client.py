@@ -32,12 +32,10 @@ class JuliaPersistentClient:
 
     def start_server(self) -> bool:
         """Start the Julia persistent server if not running."""
-        # Check if server is already running
         if self._ping():
             logger.info("Julia server already running")
             return True
 
-        # Start the server
         julia_path = "/snap/bin/julia"
         # Use project-relative path for Julia server
         project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
@@ -240,9 +238,8 @@ def benchmark_julia():
 
     print("=" * 60)
     print("Julia Persistent Server Benchmark")
-    print("=" * 60)
+    logger.debug("=" * 60)
 
-    # Test with persistent server
     client = JuliaPersistentClient()
 
     print("\n1. Starting Julia server (one-time JIT penalty)...")
@@ -272,7 +269,7 @@ def benchmark_julia():
     print(f"   RRF fusion: {avg_time:.2f}ms per call")
     print(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
-    print("\n3. PageRank performance...")
+    logger.debug("\n3. PageRank performance...")
     nodes = [f"node_{i}" for i in range(100)]
     edges = [(f"node_{i}", f"node_{(i + 1) % 100}") for i in range(100)]
 
@@ -290,10 +287,10 @@ def benchmark_julia():
     print(f"   PageRank (100 nodes): {avg_time:.2f}ms per call")
     print(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
-    print("\n" + "=" * 60)
-    print("✅ Julia persistent server eliminates 2-3s JIT latency")
+    logger.debug("\n" + "=" * 60)
+    logger.debug("✅ Julia persistent server eliminates 2-3s JIT latency")
     print("   Subsequent calls: <10ms latency")
-    print("=" * 60)
+    logger.debug("=" * 60)
 
     client.stop()
 

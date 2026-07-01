@@ -14,7 +14,6 @@ from whitemagic.config.paths import DB_PATH
 def migrate_db():
     conn = sqlite3.connect(DB_PATH)
     try:
-        # Check if relation_type exists
         cursor = conn.execute("PRAGMA table_info(associations)")
         columns = [col[1] for col in cursor.fetchall()]
 

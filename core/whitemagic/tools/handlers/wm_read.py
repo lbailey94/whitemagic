@@ -281,7 +281,6 @@ def _read_hybrid(
     hydrated = []
     for r in results:
         entry = r.to_dict()
-        # Try to fetch full memory for richer data
         try:
             from whitemagic.core.memory.unified import get_unified_memory
 
@@ -515,7 +514,6 @@ def _read_codebase(query: str, kwargs: dict[str, Any], limit: int) -> dict[str, 
             "error": "codebase mode requires a 'path' parameter pointing to the codebase root",
         }
 
-    # Try Fragment acceleration
     try:
         from whitemagic.tools.handlers.fragment import fragment_accelerated_search
 
@@ -614,7 +612,6 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
         "backends": {},
     }
 
-    # Check CoreAccessLayer
     try:
         from whitemagic.core.intelligence.core_access import get_core_access
 
@@ -625,7 +622,6 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["core_access"] = "unavailable"
 
-    # Check EmbeddingEngine
     try:
         from whitemagic.core.memory.embeddings import get_embedding_engine
 
@@ -636,7 +632,6 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["embedding_engine"] = "unavailable"
 
-    # Check GraphWalker
     try:
         from whitemagic.core.memory.graph_walker import get_graph_walker
 
@@ -645,7 +640,6 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["graph_walker"] = "unavailable"
 
-    # Check Fragment
     try:
         from whitemagic.tools.handlers.fragment import _get_pyo3
 
@@ -654,7 +648,6 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         status["backends"]["fragment"] = "unavailable"
 
-    # Check UnifiedMemory
     try:
         from whitemagic.core.memory.unified import get_unified_memory
 

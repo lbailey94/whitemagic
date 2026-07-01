@@ -59,7 +59,6 @@ def fix_file(path: Path) -> int:
             if converted is not None:
                 new_lines.append(converted)
                 fixed += 1
-                # Check if we left the except block
                 stripped = line.lstrip()
                 if stripped and not line.startswith(" ") and not line.startswith("\t"):
                     in_except = 0

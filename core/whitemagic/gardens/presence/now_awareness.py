@@ -64,7 +64,6 @@ class NowAwareness:
             self.current_moment.complete()
             self.moments_today.append(self.current_moment)
 
-        # Begin new moment
         self.current_moment = Moment(what, quality)
 
         # Emit to Gan Ying
@@ -109,7 +108,6 @@ class NowAwareness:
         self.notice("Taking mindful pause - breathing", quality=0.9)
 
         # In real implementation, would actually pause
-        # For now, just mark the intention
 
         return "Breath. Present. Here."
 
@@ -141,7 +139,6 @@ class NowAwareness:
         if elapsed > 300:  # 5 minutes
             return "Haven't noticed present moment in 5+ minutes - possibly lost in thought"
 
-        # Check if scattered
         if len(self.moments_today) > 50:  # Too many moment changes
             recent_duration = sum(m.duration for m in self.moments_today[-10:]) / 10
             if recent_duration < 5:  # Average moment < 5 seconds

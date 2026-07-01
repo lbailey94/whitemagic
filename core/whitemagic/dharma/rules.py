@@ -441,7 +441,6 @@ class DharmaRulesEngine:
         self._karmic_trace: list[dict[str, Any]] = []
         self._file_mtimes: dict[str, float] = {}  # path -> mtime for hot-reload
 
-        # Load rules
         self._load_rules()
 
     # Profiles that are only defined in the Python rules engine (not Haskell)
@@ -651,7 +650,6 @@ class DharmaRulesEngine:
         """
         decision = self.evaluate(action)
 
-        # If action is network-bound and egress is deny, enforce block
         is_network = bool(action.get("network", False))
         if is_network and decision.egress == "deny":
             return DharmaDecision(
@@ -715,7 +713,6 @@ class DharmaRulesEngine:
         with self._lock:
             rules = list(self._rules)
 
-        # Check 1: Contradictory rules (same pattern, different actions)
         for i, r1 in enumerate(rules):
             for r2 in rules[i + 1 :]:
                 if r1.profile != r2.profile:
@@ -740,7 +737,6 @@ class DharmaRulesEngine:
                             }
                         )
 
-        # Check 2: Unreachable rules (BLOCK rule shadowed by earlier BLOCK)
         # Simplified: if two rules have identical patterns and both BLOCK,
         # the second is redundant.
         seen_block_patterns: set[str] = set()
@@ -762,7 +758,6 @@ class DharmaRulesEngine:
                     )
                 seen_block_patterns.add(sig)
 
-        # Check 3: Missing taint coverage for egress-deny rules
         for rule in rules:
             if rule.egress_policy == "deny" and not rule.taint_sources:
                 findings.append(
@@ -1096,12 +1091,10 @@ def get_rules_engine(rules_path: Path | None = None) -> DharmaRulesEngine:
             if _engine is None:
                 from whitemagic.config.paths import WM_ROOT
 
-                # Check for user-provided single rules file
                 if rules_path is None:
                     candidate = WM_ROOT / "dharma_rules.yaml"
                     if candidate.exists():
                         rules_path = candidate
-                # Check for rules directory (drop-in folder)
                 rules_dir: Path | None = WM_ROOT / "dharma" / "rules.d"
                 if rules_dir is not None and not rules_dir.is_dir():
                     rules_dir = None

@@ -62,7 +62,6 @@ class AutonomousLearner:
         """Continuous self-evolution."""
         logger.info("🌱 Evolving...")
         # In a real scenario, this would trigger model fine-tuning or prompt optimization.
-        # For Phase 21/22, it records a state of evolutionary progress.
         self._memory.store(
             title=f"Evolutionary Pulse {datetime.now().strftime('%Y%m%d')}",
             content=f"System has integrated {len(self.lessons_learned)} lessons and {len(self.wisdom_gained)} wisdom nodes.",

@@ -189,7 +189,6 @@ class PatternEngine:
         filename = f"{timestamp}_patterns.json"
         filepath = self.meta_dir / filename
 
-        # Save as JSON
         with open(filepath, "w") as f:
             json.dump(report.to_dict(), f, indent=2)
 

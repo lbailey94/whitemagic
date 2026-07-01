@@ -107,7 +107,6 @@ class EdgeInference:
             if not hasattr(self, "_pattern_engine"):
                 if hasattr(whitemagic_rs, "PatternEngine"):
                     self._pattern_engine = whitemagic_rs.PatternEngine()
-                    # Load rules into PatternEngine
                     for rule in self._rules:
                         # PatternEngine expects (id, pattern, response, confidence)
                         self._pattern_engine.add_pattern(
@@ -650,7 +649,6 @@ class EdgeInference:
         start_time = time.time()
         self._total_queries += 1
 
-        # Check cache first
         cache_key = hashlib.md5(query.lower().encode()).hexdigest()[:16]
         if cache_key in self._cache:
             self._cache_hits += 1
@@ -658,7 +656,6 @@ class EdgeInference:
             cached.from_cache = True
             return cached
 
-        # Try Rust acceleration first
         if self._rust_available:
             rust_result = self._infer_rust(query)
             if rust_result:
@@ -666,7 +663,6 @@ class EdgeInference:
                 self._cache[cache_key] = rust_result
                 return rust_result
 
-        # Try each rule, collect all matches with scores
         matches = []
         for rule in self._rules:
             matched, score = rule.matches(query)

@@ -27,9 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 
-# ---------------------------------------------------------------------------
 # Utilities
-# ---------------------------------------------------------------------------
 def _fmt_ms(v: float) -> str:
     return f"{v:.3f}ms"
 
@@ -57,9 +55,7 @@ def _summary(name: str, values: list[float]) -> dict[str, float]:
     }
 
 
-# ---------------------------------------------------------------------------
 # 1. Cosine Similarity Benchmarks (Python vs Zig SIMD vs Rust)
-# ---------------------------------------------------------------------------
 def _generate_vector(dim: int) -> list[float]:
     return [random.random() for _ in range(dim)]
 
@@ -128,9 +124,7 @@ def benchmark_cosine(dim: int = 768, iterations: int = 500) -> dict[str, Any]:
     return result
 
 
-# ---------------------------------------------------------------------------
 # 2. Batch Cosine Benchmark
-# ---------------------------------------------------------------------------
 def benchmark_batch_cosine(
     dim: int = 768, corpus_size: int = 1000, iterations: int = 50
 ) -> dict[str, Any]:
@@ -183,9 +177,7 @@ def benchmark_batch_cosine(
     return result
 
 
-# ---------------------------------------------------------------------------
 # 3. Property-Based 5D Math Tests
-# ---------------------------------------------------------------------------
 def benchmark_5d_properties(iterations: int = 10_000) -> dict[str, Any]:
     """Property-based tests on holographic coordinate math."""
     errors: list[str] = []
@@ -273,9 +265,7 @@ def benchmark_5d_properties(iterations: int = 10_000) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
 # 4. Dispatch Pipeline Benchmark
-# ---------------------------------------------------------------------------
 def benchmark_dispatch(iterations: int = 1000) -> dict[str, Any]:
     """Benchmark tool dispatch latency for read-only tools.
 
@@ -337,9 +327,7 @@ def benchmark_dispatch(iterations: int = 1000) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
 # 5. PRAT Compression Benchmark Scaffolding
-# ---------------------------------------------------------------------------
 def benchmark_prat_compression() -> dict[str, Any]:
     """Measure PRAT layer overhead: tools described vs tokens saved.
 
@@ -383,9 +371,7 @@ def benchmark_prat_compression() -> dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 def main() -> int:
     print("=" * 65)
     print(" WhiteMagic Comprehensive Benchmark Suite — v22.2.0")

@@ -401,7 +401,6 @@ class CoreAccessLayer:
         frontier = list(seed_ids)
         current_depth = 0
 
-        # Add seeds
         for sid in seed_ids:
             try:
                 row = conn.execute(
@@ -488,7 +487,6 @@ class CoreAccessLayer:
         # Update traversal tracking for edges we actually walked
         self._record_traversals(visited, conn)
 
-        # Return sorted by depth then strength
         nodes = list(visited.values())
         nodes.sort(key=lambda n: (n.depth, -n.strength))
         return nodes
@@ -582,7 +580,6 @@ class CoreAccessLayer:
         """
         conn = self._get_conn()
 
-        # Parse window
         days = int(time_window.rstrip("d"))
         bucket_days = int(bucket.rstrip("d"))
 
@@ -856,7 +853,6 @@ class CoreAccessLayer:
 
             sims /= query_q.shape[0]
 
-            # Get top-N
             top_indices = np.argsort(sims)[::-1][:top_n]
             return [
                 (self._hrr_cache_ids[idx], float(sims[idx]))
@@ -930,7 +926,6 @@ class CoreAccessLayer:
                 vector_results.append((mid, sim))
         except Exception as e:
             logger.debug("Vector channel failed: %s", e, exc_info=True)
-            # If embedding search fails but HRR pre-filter succeeded,
             # use HRR scores as fallback vector channel
             if hrr_candidates:
                 vector_results = hrr_candidates[: k * 2]
@@ -998,7 +993,6 @@ class CoreAccessLayer:
 
             scored.sort(key=lambda x: -x[1])
 
-        # Fetch titles and previews for top results
         conn = self._get_conn()
         results: list[HybridResult] = []
         for mid, score, sources in scored[:k]:

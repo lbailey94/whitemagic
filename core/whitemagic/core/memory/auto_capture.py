@@ -115,14 +115,12 @@ class MemoryCapture:
         # Ensure directories exist
         self.short_term_dir.mkdir(parents=True, exist_ok=True)
 
-        # Load existing count
         self._load_action_count()
 
     def _load_action_count(self) -> None:
         """Load action count from existing memories."""
         existing = list(self.short_term_dir.glob("*.md"))
         if existing:
-            # Parse action counts from filenames
             counts = []
             for path in existing:
                 try:
@@ -205,10 +203,8 @@ class MemoryCapture:
             tags=sorted(all_tags)
         )
 
-        # Save to file
         self._save_memory(memory)
 
-        # Clear action buffer
         self.actions = []
 
         # Cleanup if too many short-term memories
@@ -287,7 +283,6 @@ class MemoryCapture:
         memories = sorted(self.short_term_dir.glob("*.md"))
 
         if len(memories) > self.max_short_term:
-            # Remove oldest
             to_remove = memories[:-self.max_short_term]
             for path in to_remove:
                 # Archive before deleting (move to archive subfolder)

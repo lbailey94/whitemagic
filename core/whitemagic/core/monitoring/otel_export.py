@@ -32,7 +32,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Try to import OpenTelemetry
 HAS_OTEL = False
 try:
     from opentelemetry import trace
@@ -44,7 +43,6 @@ try:
 except ImportError:
     pass
 
-# Try OTLP exporter
 HAS_OTLP = False
 try:
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (

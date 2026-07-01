@@ -168,7 +168,6 @@ class FastBatchEncoder:
 
     def _calc_x(self, tags: set, content: str, mem: dict) -> float:
         """X-axis: Logic (-1) to Emotion (+1)."""
-        # Start with emotional valence if available
         valence = self.safe_float(mem.get("emotional_valence"), 0.0)
         score = -0.5 * valence
 
@@ -223,7 +222,6 @@ class FastBatchEncoder:
 
     def _calc_w(self, tags: set, mem: dict) -> float:
         """W-axis: Importance/Gravity (0.1 to 2.0+)."""
-        # Get base values with null safety
         importance = self.safe_float(mem.get("importance"), 0.5)
         neuro_score = self.safe_float(mem.get("neuro_score"), 1.0)
         joy_score = self.safe_float(mem.get("joy_score"), 0.0)

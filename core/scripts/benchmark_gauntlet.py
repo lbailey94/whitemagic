@@ -54,9 +54,7 @@ def get_conn() -> sqlite3.Connection:
     return conn
 
 
-# ---------------------------------------------------------------------------
 # Benchmark Runner
-# ---------------------------------------------------------------------------
 
 
 class BenchmarkSuite:
@@ -147,16 +145,13 @@ class BenchmarkSuite:
         }
 
 
-# ---------------------------------------------------------------------------
 # Benchmarks
-# ---------------------------------------------------------------------------
 
 
 def bench_memory_pipeline(suite: BenchmarkSuite):
     log.info("\n═══ 1. Memory Pipeline ═══")
     conn = get_conn()
 
-    # Store benchmark
     def store_memory():
         with conn:  # Single transaction — reduces WAL checkpoint variance
             conn.execute(
@@ -288,7 +283,6 @@ def bench_julia_ports(suite: BenchmarkSuite):
 
     engine = get_resonance_engine()
 
-    # Get stats
     def get_stats():
         engine.get_stats()
 
@@ -615,7 +609,6 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
         hnsw = HnswIndex(
             dim=384, m=16, ef_construction=200, ef_search=50, max_elements=1000
         )
-        # Add 500 vectors
         for _ in range(500):
             hnsw.add(np.random.rand(384).astype(np.float32))
         query = np.random.rand(384).astype(np.float32)
@@ -964,7 +957,6 @@ def main():
 
     summary = suite.summary()
 
-    # Print summary
     log.info(f"\n{'=' * 60}")
     log.info(f"BENCHMARK SUMMARY")
     log.info(f"{'=' * 60}")
@@ -1054,7 +1046,6 @@ def main():
                     stats["p95_ms"],
                 )
 
-    # Save results
     if args.output:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)

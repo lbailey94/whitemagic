@@ -122,7 +122,6 @@ def _resolve_spsp(pointer: str, timeout_s: int = 10) -> dict[str, Any]:
     """
     import urllib.request
 
-    # Convert payment pointer to URL
     if pointer.startswith("$"):
         pointer = pointer[1:]
     parts = pointer.split("/", 1)
@@ -299,7 +298,6 @@ class ILPManager:
             }
 
         # Real STREAM payment would happen here via connector
-        # For now, record as pending — a real connector would update this
         record.state = PaymentState.STREAMING
 
         with self._lock:

@@ -233,7 +233,6 @@ class MemoryMatrix:
         if not self._session:
             return {"error": "No active session"}
 
-        # Get events for this session
         events = self.timeline.get_by_tag("interaction")
         session_events = [
             e for e in events
@@ -282,7 +281,6 @@ class MemoryMatrix:
         - Connections (relationships, references)
         - Timeline positions
         """
-        # Get recent items
         recent_seen = self.seen.get_recent(100)
         recent_events = self.timeline.get_recent(168)  # Last week
 

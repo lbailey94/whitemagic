@@ -269,12 +269,10 @@ class ZodiacCore:
         query_lower = query.lower()
         relevance = 0.3  # Base relevance
 
-        # Check for specialization keywords
         for spec in self.specializations:
             if spec.replace("_", " ") in query_lower:
                 relevance += 0.15
 
-        # Check for approach keywords
         approach_words = self.approach.lower().split()
         matches = sum(1 for word in approach_words if word in query_lower)
         relevance += min(0.3, matches * 0.05)
@@ -379,7 +377,6 @@ class ZodiacCouncil:
     """
 
     def __init__(self) -> None:
-        # Initialize all 12 cores
         self.cores: dict[ZodiacSign, ZodiacCore] = {
             sign: ZodiacCore(sign) for sign in ZodiacSign
         }
@@ -440,7 +437,6 @@ class ZodiacCouncil:
 
         Returns a synthesized decision with consensus metrics.
         """
-        # Get all perspectives
         responses = self.consult_all(query, context)
 
         # Calculate consensus

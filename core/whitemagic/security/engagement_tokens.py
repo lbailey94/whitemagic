@@ -297,7 +297,6 @@ class EngagementTokenManager:
                 "reason": f"Token '{token_id}' has reached its max uses ({token.max_uses}).",
             }
 
-        # Check tool authorization
         if tool and token.tools:
             tool_match = any(fnmatch.fnmatch(tool, pat) for pat in token.tools)
             if not tool_match:
@@ -311,7 +310,6 @@ class EngagementTokenManager:
                     f"Authorized patterns: {token.tools}",
                 }
 
-        # Check target scope
         if target and token.scope:
             scope_match = any(fnmatch.fnmatch(target, pat) for pat in token.scope)
             if not scope_match:

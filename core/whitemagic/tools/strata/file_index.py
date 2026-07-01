@@ -136,7 +136,6 @@ class FileIndex:
 
         index: dict[str, list[Path]] = {}
 
-        # Try Rust parallel walker first
         try:
             import whitemagic_rs
 

@@ -12,7 +12,6 @@ import sqlite3
 import sys
 from pathlib import Path
 
-# Add core to path
 SCRIPT_DIR = Path(__file__).resolve().parent
 CORE_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(CORE_DIR))
@@ -74,7 +73,6 @@ def batch_backfill(
     if total == 0:
         return 0
 
-    # Try to import embedding engine
     try:
         from whitemagic.core.memory.embeddings import EmbeddingEngine
 
@@ -96,7 +94,6 @@ def batch_backfill(
             try:
                 embedding = engine.embed(content)
                 if embedding is not None:
-                    # Store embedding
                     conn = sqlite3.connect(db_path)
                     cursor = conn.cursor()
                     cursor.execute(

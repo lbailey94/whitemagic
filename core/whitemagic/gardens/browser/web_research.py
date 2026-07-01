@@ -244,7 +244,6 @@ def _html_to_text(html: str, max_chars: int = 50_000) -> str:
         text = h.handle(html)
     elif HAS_BS4:
         soup = BeautifulSoup(html, "html.parser")
-        # Remove script/style
         for tag in soup(["script", "style", "nav", "footer", "header"]):
             tag.decompose()
         text = soup.get_text(separator="\n", strip=True)
@@ -524,7 +523,6 @@ async def web_search(
     Returns:
         SearchResponse with list of results
     """
-    # Check search cache first — avoids redundant Brave API calls
     if not force_refresh:
         cached = _get_cached_search(query, num_results, category)
         if cached is not None:
@@ -532,7 +530,6 @@ async def web_search(
 
     modified_query = _apply_category(query, category)
 
-    # Try Brave API first (more reliable, structured JSON)
     brave_result = await _brave_search(modified_query, num_results, timeout)
     if brave_result is not None:
         _store_cached_search(query, num_results, category, brave_result)
@@ -1510,7 +1507,6 @@ def _cache_key(url: str) -> str:
     import hashlib
 
     url_hash = hashlib.sha256(url.encode()).hexdigest()[:16]
-    # Try to preserve domain for readability
     parsed = urlparse(url)
     domain = parsed.netloc.replace(".", "_")[:30]
     return f"{domain}_{url_hash}"
@@ -1737,7 +1733,6 @@ async def cached_deep_fetch(
     if not force_refresh:
         cached = read_cached_content(url)
         if cached:
-            # Parse frontmatter and content
             content = cached
             title = ""
             if cached.startswith("---"):

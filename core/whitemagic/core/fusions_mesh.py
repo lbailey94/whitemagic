@@ -80,7 +80,6 @@ def mesh_memory_sync(
                 },
             }
 
-            # If peers are connected, queue for Redis broadcast
             broadcast_queued = False
             if peer_count > 0:
                 try:

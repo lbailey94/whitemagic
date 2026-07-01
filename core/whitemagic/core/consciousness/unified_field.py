@@ -117,7 +117,6 @@ class UnifiedField:
                 {"cycle": self._cycle_count},
             )
 
-            # Step A: Enter Stillness for Sensitivity
             # In a continuous loop, we might not want to stay still indefinitely
             # but we pulse into stillness for specific operations.
             self.stillness.enter_stillness(
@@ -126,21 +125,15 @@ class UnifiedField:
 
             await asyncio.sleep(2)  # Period of deep observation
 
-            # Step B: Trigger Spontaneous Resonance
-            # (In Phase 21, the system picks a random high-importance memory to resonate)
             await self._trigger_spontaneous_resonance()
 
-            # Step C: Evolution & Consolidation
             # Give the Emergence Engine time to work
             await asyncio.sleep(2)
 
-            # Step D: Exit Stillness and Reflect
             self.stillness.exit_stillness()
 
-            # Step E: Recursive Reflection (Phase 22)
             await self._recursive_reflection()
 
-            # Step F: Kaizen / Self-Optimization
             self.daemon.run_task("kaizen_light")  # type: ignore[attr-defined]
 
             # Wait for next pulse
@@ -180,7 +173,6 @@ class UnifiedField:
             get_unified_memory()
 
             # In a real system, we'd query for a 'curious' or 'resonant' node
-            # For Phase 21, we'll pick a node that hasn't resonated recently
             # or just a random important one for the demonstration.
             # (Note: UnifiedMemory already supports holographic search)
 

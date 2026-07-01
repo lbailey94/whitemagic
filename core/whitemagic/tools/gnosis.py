@@ -260,7 +260,6 @@ def _auto_suggest(
     del harmony, maturity
     actions: list[dict[str, Any]] = []
 
-    # If no alerts and system is healthy, suggest productive work
     if not alerts:
         # First-call discovery flow: a healthy system is the right time to
         # surface what agents can do, not just check health.
@@ -541,7 +540,6 @@ def _holographic_portal() -> dict[str, Any]:
     holo = get_holographic_memory()
     health = holo.check_health()
 
-    # Get sample of recent memory coordinates
     sample_coords: list[dict[str, Any]] = []
     try:
         um = get_unified_memory()

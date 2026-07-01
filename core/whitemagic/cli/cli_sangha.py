@@ -11,7 +11,6 @@ def sangha_cli() -> None:
     """Sangha - Multi-agent coordination and communication"""
 
 
-# --- Chat Commands ---
 
 
 @sangha_cli.group()
@@ -81,7 +80,6 @@ def channels() -> None:
         click.echo(f"- {c}")
 
 
-# --- Lock Commands ---
 
 
 @sangha_cli.group()
@@ -169,7 +167,6 @@ def release(resource: str, sender: str) -> None:
         click.echo(f"Failed to release {resource} (locked by someone else?)")
 
 
-# --- Task Commands ---
 
 
 @sangha_cli.group()
@@ -302,7 +299,6 @@ def list_tasks(
             )
 
 
-# --- Summary Commands ---
 
 
 @sangha_cli.group()

@@ -106,7 +106,6 @@ class UnifiedMemory:
             self.base_path.mkdir(parents=True, exist_ok=True)
             self.db_path = self.base_path / "whitemagic.db"
 
-        # Initialize SQLite Backend
         self.backend = SQLiteBackend(self.db_path)
 
         # Holographic Memory (lazy-loaded via property)
@@ -177,7 +176,6 @@ class UnifiedMemory:
         v23.4: If galaxy is "universal" and subsystem is provided, auto-routes
                via GalaxyRouter.route(subsystem, metadata).
         """
-        # Convert string memory_type to enum for backward compatibility
         if isinstance(memory_type, str):
             try:
                 memory_type = MemoryType[memory_type.upper()]
@@ -273,7 +271,6 @@ class UnifiedMemory:
             **kwargs,
         )
 
-        # Store in SQLite (with content hash for dedup)
         self.backend.store(memory, content_hash=content_hash)
 
         # Index in Holographic Memory (5D Spatial: x, y, z, w, v)
@@ -299,7 +296,6 @@ class UnifiedMemory:
                         bound_vec = hrr_engine.bind(content_vec, type_rel)
                     else:
                         bound_vec = content_vec
-                    # Store in HRR vector cache (if backend supports it)
                     try:
                         self.backend.cache_hrr_vector(memory.id, bound_vec)
                     except (AttributeError, sqlite3.Error, TypeError):
@@ -336,12 +332,10 @@ class UnifiedMemory:
                 if title:
                     content_for_extraction = f"{title}\n{content_for_extraction}"
 
-                # Try LightNER first (fast, no LLM dependency)
                 from whitemagic.core.intelligence.knowledge_graph_v2 import get_kg_v2
                 kg = get_kg_v2()
                 result = kg.extract_and_store(memory.id, content_for_extraction)
 
-                # If no relations found, emit hook for LLM-based extraction
                 if result.get("relations_extracted", 0) == 0:
                     _emit_store_hooks(memory)
             except (ImportError, ModuleNotFoundError, AttributeError):
@@ -406,7 +400,6 @@ class UnifiedMemory:
         """
         if is_rust_available():
             rs = get_rust_module()
-            # Try to use the batch search function if available
             if rs and hasattr(rs, "rust_search_memories"):
                 try:
                     # 1. Get candidate memories from backend
@@ -416,7 +409,6 @@ class UnifiedMemory:
                         mem_tuples = [(c.id, str(c.content)) for c in candidates]
 
                         # 3. Use Rust SIMD for high-speed parallel search
-                        # Returns list of (id, score)
                         rust_results = rs.rust_search_memories(query, mem_tuples, threshold, limit)
 
                         # 4. Map back to Memory objects
@@ -475,7 +467,6 @@ class UnifiedMemory:
         # Fallback to standard FTS search with optional Rust pipeline re-ranking
         results = self.search(query=query, memory_type=memory_type, limit=limit * 3)
 
-        # Try Rust multi-pass retrieval pipeline for re-ranking (v13.3.2)
         if results and len(results) > 1:
             try:
                 from whitemagic.optimization.rust_accelerators import retrieval_pipeline

@@ -180,7 +180,6 @@ class ConsciousnessDepthGauge:
         self.readings.append(reading)
         self.current_layer = detected_layer
 
-        # Log to file
         if self.log_file:
             with file_lock(self.log_file), open(self.log_file, "a") as f:
                 f.write(json.dumps(reading.to_dict()) + "\n")
@@ -229,7 +228,6 @@ class ConsciousnessDepthGauge:
         self, compression: float, work: dict[str, Any]
     ) -> ConsciousnessLayer:
         """Detect layer based on compression ratio and work type"""
-        # Check work markers
         work_str = str(work).lower()
 
         # Dream layer (highest compression)

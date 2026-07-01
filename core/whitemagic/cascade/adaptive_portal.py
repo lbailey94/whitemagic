@@ -143,7 +143,6 @@ class AdaptiveToolPortal:
         if not handler:
             raise ValueError(f"No handler for {tool_name}:{morphology}")
 
-        # 4. Execute handler
         try:
             if asyncio.iscoroutinefunction(handler):
                 result = await handler(params, context)
@@ -179,14 +178,12 @@ class AdaptiveToolPortal:
 
     def _determine_morphology(self, tool_name: str, ctx: UnifiedContext) -> str:
         """Determine which morphology to use based on context."""
-        # Get available morphologies for this tool
         available = set(self.morphologies.get(tool_name, {}).keys())
         available.discard("default")
 
         if not available:
             return "default"
 
-        # Get recommended morphology from context
         recommended = str(ctx.get_recommended_morphology())
 
         # Use recommended if available, otherwise find closest match
@@ -587,7 +584,6 @@ class AdaptiveToolPortal:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         """Perform semantic search on memories with Rust acceleration."""
-        # Try Rust-accelerated search first
         try:
             import whitemagic_rs
             from whitemagic.config.paths import MEMORY_DIR
@@ -608,7 +604,6 @@ class AdaptiveToolPortal:
                 )
 
                 if results:
-                    # Convert grep results to memory format
                     formatted = []
                     for item in results[:limit]:
                         if isinstance(item, dict):
@@ -649,11 +644,9 @@ class AdaptiveToolPortal:
 
             memory = UnifiedMemory()
             results = memory.search(query, limit=limit)
-            # Handle both sync and async results
             if asyncio.iscoroutine(results):
                 results = await results
 
-            # Convert Memory objects to dictionaries if necessary
             cleaned_results = []
             if results:
                 for item in results:
@@ -845,14 +838,12 @@ if __name__ == "__main__":
 
         portal = AdaptiveToolPortal()
 
-        # Test recall with auto-morphology
         logger.info("\n📝 Testing recall (auto-morphology):")
         result = await portal.invoke("recall", {"query": "authentication"})
         logger.info("   Mode: %s", result["mode"])
         logger.info("   Morphology: %s", result["_meta"]["morphology"])
         logger.info("   Duration: %sms", result["_meta"]["duration_ms"])
 
-        # Test recall with forced morphology
         logger.info("\n📝 Testing recall (forced: mystery):")
         result = await portal.invoke(
             "recall", {"query": "patterns"}, force_morphology="mystery"

@@ -33,7 +33,6 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
         # Find KG entities related to this tool
         relations = kg.query_entity(current_tool)
         if not relations:
-            # Try with dots replaced (e.g. "memory.consolidate" → "memory consolidate")
             relations = kg.query_entity(current_tool.replace(".", " "))
 
         if not relations or not isinstance(relations, dict):
@@ -55,7 +54,6 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
             if not isinstance(entity, str):
                 continue
             entity_lower = entity.lower().replace(" ", "_").replace(".", "_")
-            # Check if the entity is a known tool
             if entity_lower in TOOL_TO_GANA:
                 gana = TOOL_TO_GANA[entity_lower]
                 if gana not in suggested_ganas:

@@ -32,7 +32,6 @@ class GraphEngine:
 
         logger.info("Building memory graph for %s memories...", len(memories))
 
-        # Convert to tuples for Rust
         # Memory content might be Any, cast to str
         memory_tuples = [
             (m.id, str(m.content), list(m.tags))

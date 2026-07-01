@@ -167,7 +167,6 @@ class HolographicPatternEngine:
                 )
             )
 
-        # Check for importance clusters by topic
         type_importance: dict[str, list[float]] = {}
         for m in memories:
             t = m["memory_type"] or "unknown"
@@ -194,7 +193,6 @@ class HolographicPatternEngine:
         memories = self._get_memories()
         patterns = []
 
-        # Check X-W correlation (logic/emotion vs importance)
         logical = [m for m in memories if m["x"] < -0.2]
         emotional = [m for m in memories if m["x"] > 0.2]
 

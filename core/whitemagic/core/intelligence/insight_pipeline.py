@@ -258,7 +258,6 @@ class InsightPipeline:
 
         duration = (time.perf_counter() - start) * 1000
 
-        # Add drift alerts as briefing items
         for drift in drift_7d[:3]:
             if drift["drift_magnitude"] > 0.1:
                 items.append(
@@ -462,7 +461,6 @@ class InsightPipeline:
 
             engine = get_emergence_engine()
 
-            # Run proactive scan
             insights = engine.scan_for_emergence()
 
             # Also include any past insights from resonance cascades

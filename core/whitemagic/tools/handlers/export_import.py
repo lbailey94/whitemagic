@@ -28,7 +28,6 @@ def handle_export_memories(**kwargs: Any) -> dict[str, Any]:
     if search:
         filters["search"] = search
 
-    # Load memories
     um = get_unified_memory()
     raw = um.list_recent(limit=limit)
     memories = [

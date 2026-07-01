@@ -253,7 +253,6 @@ class VectorSearch:
                                         snippet=m.get("snippet", "")
                                     )
                                 )
-                        # If we got results, return them immediately
                         if results:
                             return results
             except Exception as e:
@@ -261,7 +260,6 @@ class VectorSearch:
                 logging.getLogger(__name__).warning("Koka SHM Search failed, falling back to Python: %s", e)
 
             with self._lock:
-                # Try Zig SIMD batch top-K for large corpora
                 if len(self._cache) > 50:
                     try:
                         from whitemagic.core.acceleration.simd_vector_batch import (
@@ -274,7 +272,6 @@ class VectorSearch:
                     except (ImportError, AttributeError):
                         scored = []
 
-                # Try Rust PyO3 batch cosine (GIL-released native SIMD)
                 if not scored and len(self._cache) > 10:
                     try:
                         import numpy as np

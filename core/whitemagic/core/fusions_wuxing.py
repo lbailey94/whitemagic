@@ -60,10 +60,8 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
         meta = _get_meta(gana_name)
         quadrant = meta.get("quadrant", "Unknown")
 
-        # Get current Wu Xing state
         dominant_element, element_energy = _get_dominant_element()
 
-        # Check if this quadrant matches the dominant element
         matching_quadrant = _ELEMENT_TO_QUADRANT.get(dominant_element)
 
         boosted = matching_quadrant == quadrant
@@ -74,7 +72,6 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
         else:
             boost_factor = 1.0
 
-        # Check for overcoming cycle penalty (element that controls this quadrant)
         penalized = False
         penalty_element = None
         if quadrant in _QUADRANT_TO_ELEMENT:

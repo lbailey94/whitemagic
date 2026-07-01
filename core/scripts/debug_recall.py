@@ -14,7 +14,6 @@ def debug_search():
     db_path = str(DB_PATH)
     manager = get_memory_manager()
 
-    # Test query that failed in v23
     query = "Foundation Comprehensive Project"
     print(f"Searching for: {query}")
 

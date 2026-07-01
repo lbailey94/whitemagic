@@ -99,7 +99,6 @@ class OpenDomainRecall:
         """
         conn = sqlite3.connect(str(self.db_path))
 
-        # Get candidate memories with embeddings
         cursor = conn.execute("""
             SELECT m.id, m.title, m.content, e.embedding
             FROM memories m
@@ -165,7 +164,6 @@ class OpenDomainRecall:
 
         Combines multiple retrieval strategies with RRF for robust ranking.
         """
-        # Get results from different strategies
         vector_results = self._vector_search(query_embedding, k=k*2)
         title_results = self._title_search(query, k=k*2)
         keyword_results = self._keyword_search(query, k=k*2)
@@ -277,7 +275,7 @@ def benchmark_open_domain_recall():
 
     print("=" * 60)
     print("Open-Domain Recall Benchmark")
-    print("=" * 60)
+    logger.debug("=" * 60)
 
     # Sample open-domain queries
     test_queries = [
@@ -296,7 +294,6 @@ def benchmark_open_domain_recall():
     for query in test_queries:
         print(f"\nQuery: '{query}'")
 
-        # Get query embedding
         query_emb = embedder.encode(query)
 
         # Search
@@ -307,12 +304,12 @@ def benchmark_open_domain_recall():
         print(f"  Results ({elapsed:.1f}ms):")
         for i, r in enumerate(results[:
             3], 1):
-            print(f"    {i}. {r.title[:50]}... (score: {r.score:.3f})")
+            logger.debug(f"    {i}. {r.title[:50]}... (score: {r.score:.3f})")
 
     print("\n" + "=" * 60)
-    print("✅ Title-boosted search ready")
+    logger.debug("✅ Title-boosted search ready")
     print("   Target: 48% → 70% open-domain recall")
-    print("=" * 60)
+    logger.debug("=" * 60)
 
 
 if __name__ == "__main__":

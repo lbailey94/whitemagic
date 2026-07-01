@@ -31,12 +31,10 @@ def _is_in_type_checking(node: ast.AST, tree: ast.AST) -> bool:
     for sub in ast.walk(tree):
         if isinstance(sub, ast.If):
             test = sub.test
-            # if TYPE_CHECKING:
             if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
                 for child in ast.walk(sub):
                     if child is node:
                         return True
-            # if typing.TYPE_CHECKING:
             elif isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING":
                 for child in ast.walk(sub):
                     if child is node:
@@ -151,7 +149,6 @@ def check_unused_imports(
             elif isinstance(node, ast.Name):
                 used_names.add(node.id)
             elif isinstance(node, ast.Attribute):
-                # For 'os.path', the root 'os' is the used name
                 root = node
                 while isinstance(root, ast.Attribute):
                     root = root.value

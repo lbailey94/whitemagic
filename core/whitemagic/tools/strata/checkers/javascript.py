@@ -111,7 +111,6 @@ def check_javascript(
                     )
                 )
 
-            # == instead of ===
             if re.search(r"\s==\s", stripped) and not re.search(r"\s===\s", stripped):
                 findings.append(
                     Finding(

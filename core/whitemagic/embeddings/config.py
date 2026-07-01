@@ -60,14 +60,12 @@ class EmbeddingConfig(BaseModel):
         Returns:
             EmbeddingConfig instance with values from config file + env overrides
         """
-        # Try to load from config file first
         try:
             from whitemagic.config import get_config_manager
 
             config_mgr = get_config_manager()
             config = config_mgr.load()
 
-            # Start with config file values
             provider = config.embeddings.provider
             model = config.embeddings.model
             _ = config.embeddings.cache_enabled  # cache setting read but not yet used

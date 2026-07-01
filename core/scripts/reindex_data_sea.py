@@ -30,7 +30,6 @@ def reindex(db_path: Path) -> None:
     conn.execute("PRAGMA mmap_size=268435456")  # 256MB
     conn.execute("PRAGMA busy_timeout=60000")
 
-    # Step 1: Rebuild FTS
     print("\n[1/2] Rebuilding FTS index...")
     total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
     print(f"  Total memories: {total}")
@@ -51,7 +50,6 @@ def reindex(db_path: Path) -> None:
     fts_count = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
     print(f"  FTS rebuilt: {fts_count} entries in {elapsed:.1f}s")
 
-    # Step 2: Recalculate holographic coordinates
     print("\n[2/2] Recalculating holographic coordinates...")
     hc_count = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[0]
     print(f"  Existing coords: {hc_count}")

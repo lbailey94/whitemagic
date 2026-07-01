@@ -54,7 +54,6 @@ def _ensure_running() -> subprocess.Popen | None:
             text=True,
             bufsize=1,
         )
-        # Verify with ping
         _proc.stdin.write(json.dumps({"method": "ping", "params": {}}) + "\n")
         _proc.stdin.flush()
         line = _proc.stdout.readline()

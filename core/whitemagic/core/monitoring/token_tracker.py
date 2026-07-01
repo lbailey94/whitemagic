@@ -52,18 +52,15 @@ def _determine_locality(ctx: DispatchContext, result: dict[str, Any] | None) -> 
     if result is None:
         return InferenceLocality.EDGE
 
-    # Check if result was resolved locally
     if result.get("resolved_locally"):
         return InferenceLocality.EDGE
 
-    # Check tool name for locality hints
     tool_lower = ctx.tool_name.lower()
     if any(p in tool_lower for p in ("ollama", "bitnet", "local")):
         return InferenceLocality.LOCAL_LLM
     if any(p in tool_lower for p in ("cloud", "openai", "anthropic", "api")):
         return InferenceLocality.CLOUD
 
-    # Check meta for inference tier
     tier = ctx.meta.get("inference_tier", "")
     if tier == "edge":
         return InferenceLocality.EDGE
@@ -96,7 +93,6 @@ def mw_token_tracker(
     # Estimate input tokens from kwargs
     input_tokens = _estimate_tokens(ctx.kwargs)
 
-    # Execute the tool
     result = next_fn(ctx)
 
     if result is None:

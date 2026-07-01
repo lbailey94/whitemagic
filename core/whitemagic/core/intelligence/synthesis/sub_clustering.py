@@ -87,7 +87,6 @@ class SubClusteringEngine:
         conn = self._get_conn()
         cur = conn.cursor()
 
-        # Parse cluster coordinates
         parts = cluster_id.split("_")
         cx, cy = float(parts[0]) / 5, float(parts[1]) / 5
 

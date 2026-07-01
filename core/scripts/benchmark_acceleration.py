@@ -169,7 +169,6 @@ def main() -> dict[str, Any]:
                 "zig_simd": benchmark_zig_batch(dim, corpus, iterations=20),
             }
 
-    # Print summary
     print("╔══════════════════════════════════════════════════════════════╗")
     print("║  WhiteMagic Acceleration Benchmark  —  v22.2.0               ║")
     print("╚══════════════════════════════════════════════════════════════╝")

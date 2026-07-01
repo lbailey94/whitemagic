@@ -601,7 +601,6 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
     )
     from whitemagic.gardens.browser.web_research import web_fetch
 
-    # Fetch the URL
     async def _fetch():
         return await web_fetch(url, max_chars=max_chars)
 
@@ -614,8 +613,6 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
             "url": url,
         }
 
-    # If chunk_index is specified, we need to re-process and return just that chunk
-    # For progressive loading: first call returns metadata, subsequent calls get chunks
     if chunk_index is not None:
         # Re-fetch and re-process to get the specific chunk
         # (In production, we'd cache the EnhancedContent, but this keeps it stateless)
@@ -648,7 +645,6 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
         }
 
     # Full processing: outline + summary + chunks
-    # For HTML pages, we need the raw HTML for outline extraction
     # web_fetch already converted to text, so we re-fetch raw HTML
     raw_html = fetch_result.content  # Fallback: use text as-is
     try:

@@ -35,7 +35,6 @@ def check_typescript(
                     )
                 )
 
-            # Function declarations without return type annotation
             # Match: function foo(...) {  or  const foo = (...) => {
             func_match = re.match(
                 r"^\s*(?:export\s+)?(?:async\s+)?function\s+\w+\s*\([^)]*\)\s*(?!:)",

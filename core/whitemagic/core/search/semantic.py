@@ -84,7 +84,6 @@ class SemanticSearcher:
         elif embedding_config:
             self.embedder = get_embedding_provider(embedding_config)
         else:
-            # Load from environment
             config = EmbeddingConfig.from_env()
             self.embedder = get_embedding_provider(config)
 
@@ -130,12 +129,10 @@ class SemanticSearcher:
         """
         import json
 
-        # Handle both .md and .json formats
         if memory_path.suffix == ".md":
             # Markdown format with frontmatter
             content = memory_path.read_text()
 
-            # Parse frontmatter if present
             if content.startswith("---\n"):
                 parts = content.split("---\n", 2)
                 if len(parts) >= 3:
@@ -208,7 +205,6 @@ class SemanticSearcher:
         # Generate query embedding
         query_embedding = await self.embedder.embed(query)
 
-        # Get all memories (with filters)
         memories = []
         for memory_type_dir in ["short_term", "long_term"]:
             if memory_type and memory_type_dir != memory_type:
@@ -216,7 +212,6 @@ class SemanticSearcher:
             if memory_type and memory_type != memory_type_dir:
                 continue
 
-            # Check both direct path and memory/ subdirectory
             possible_dirs = [
                 self.manager.base_dir / memory_type_dir,
                 self.manager.base_dir / "memory" / memory_type_dir,
@@ -252,25 +247,20 @@ class SemanticSearcher:
         if not memories:
             return []
 
-        # Get model name for cache key
         model_name = getattr(self.embedder, "model_name", "default")
 
-        # Try to get cached embeddings first
         memory_embeddings = []
         texts_to_embed = []
         indices_to_embed = []
 
         for i, memory in enumerate(memories):
-            # Try cache first if available
             if self.cache and hasattr(self.cache, "get"):
-                # Get memory file path for cache lookup
                 memory_path = (
                     self.manager.base_dir
                     / memory.get("type", "short_term")
                     / memory["id"]
                 )
                 if not memory_path.exists():
-                    # Try alternate paths
                     alt_paths = [
                         self.manager.base_dir
                         / "memory"
@@ -366,13 +356,11 @@ class SemanticSearcher:
             query=query, memory_type=memory_type, tags=tags
         )
 
-        # Convert to SearchResult objects
         results = []
         for i, memory in enumerate(raw_results[:k]):
             # Simple relevance score based on rank
             score = 1.0 - (i * 0.05)  # Decreases by 0.05 per rank
 
-            # Get memory ID - handle different formats
             entry = memory.get("entry") or {}
             memory_id = (
                 memory.get("filename")
@@ -431,7 +419,6 @@ class SemanticSearcher:
             List of search results with combined relevance scores
 
         """
-        # Get both result sets
         keyword_results = await self.keyword_search(
             query=query,
             k=k * 2,  # Get more to ensure good fusion
@@ -451,12 +438,10 @@ class SemanticSearcher:
         # Score = keyword_weight * (1 / (rank + 60)) + semantic_weight * (1 / (rank + 60))
         rrf_scores: dict[str, tuple[float, SearchResult]] = {}
 
-        # Process keyword results
         for rank, result in enumerate(keyword_results):
             rrf_score = keyword_weight / (rank + 60)
             rrf_scores[result.memory_id] = (rrf_score, result)
 
-        # Process semantic results
         for rank, result in enumerate(semantic_results):
             rrf_score = semantic_weight / (rank + 60)
 

@@ -290,7 +290,6 @@ def get_zodiac_spell_boost(task: str = "") -> dict[str, Any]:
             if core.active:
                 active_cores.append(core)
 
-        # If no cores are explicitly active, derive from current Wu Xing phase
         if not active_cores:
             dominant_element, _ = _get_dominant_element()
             # Map Wu Xing back to zodiac element
@@ -813,10 +812,8 @@ def prat_auto_chain_detect(
             else:
                 break
 
-        # If ≥3 consecutive calls to same Gana, recommend chain mode
         chain_detected = consecutive >= 3
 
-        # Get Gana metadata for chain recommendation
         meta = _GANA_META.get(gana_name, (0, "Unknown", "unknown", None, "?", "?"))
         quadrant = meta[1] if isinstance(meta, tuple) else "Unknown"
 
@@ -918,13 +915,11 @@ def elixir_event_bridge(
     # Classify into temporal lane (mirrors Elixir's classification)
     lane = _classify_event_lane(event_type)
 
-    # Try Elixir bridge
     elixir_available = False
     try:
         import os
         import shutil
 
-        # Check if Elixir node is compiled and available
         elixir_beam = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "../../../elixir/_build/dev/lib/whitemagic_core/ebin",
@@ -1251,7 +1246,6 @@ def grimoire_resonance_suggest(current_gana: str = "") -> dict[str, Any]:
             if g:
                 gana_counts[g] = gana_counts.get(g, 0) + 1
 
-        # If current_gana provided, suggest complementary quadrant
         suggestions = []
         if current_gana:
             _COMPLEMENTARY = {

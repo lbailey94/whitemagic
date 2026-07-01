@@ -205,7 +205,6 @@ class WindsurfConversationReader:
                     content = data[pos : pos + length]
                     pos += length
 
-                    # Try to decode as UTF-8 string
                     try:
                         text = content.decode("utf-8")
                         if len(text) > 10 and text.isprintable():
@@ -259,7 +258,6 @@ class WindsurfConversationReader:
         data = pb_path.read_bytes()
         stat = pb_path.stat()
 
-        # Parse protobuf content
         parsed = self.parse_protobuf_simple(data)
 
         # Extract messages (heuristic: longer strings are likely message content)
@@ -271,7 +269,6 @@ class WindsurfConversationReader:
 
             # Skip very short or metadata-like content
             if len(content) < 20:
-                # Check for role indicators
                 if "user" in content.lower():
                     current_role = "user"
                 elif "assistant" in content.lower() or "claude" in content.lower():

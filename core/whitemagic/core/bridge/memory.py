@@ -17,7 +17,6 @@ def memory_create(
 
     from whitemagic.core.memory.manager import MemoryManager
 
-    # Handle parameter aliases from MCP schema
     if "type" in kwargs:
         memory_type = kwargs.pop("type")
 
@@ -74,18 +73,15 @@ def memory_search(
 
     manager = MemoryManager()
 
-    # Handle parameter aliases
     if "type" in kwargs:
         memory_type = kwargs.pop("type")
 
     kwargs.pop("operation", None)
 
-    # Try Rust acceleration for high-frequency search if query is provided
     if use_rust and query and not tags and not memory_type:
         try:
             import whitemagic_rs
 
-            # Get all memories for Rust search (this is the current limitation of this bridge)
             # Future enhancement: maintain a Rust-side index
             all_mems = manager.unified.list_recent(limit=1000)
             mem_tuples = [(m.id, m.content) for m in all_mems if m.content]
@@ -98,7 +94,6 @@ def memory_search(
                     limit=limit,
                 )
 
-                # Convert back to legacy format
                 results = []
                 for mem_id, score in rust_results:
                     mem = manager.unified.recall(mem_id)
@@ -276,7 +271,6 @@ def memory_list(
     """List recent memories."""
     from whitemagic.core.memory.manager import MemoryManager
 
-    # Handle parameter aliases
     if not memory_type and "type" in kwargs:
         memory_type = kwargs["type"]
 
@@ -321,7 +315,6 @@ def parallel_search(
     try:
         from whitemagic.core.bridge.rust import rust_parallel_grep
 
-        # If parameters align with rust_parallel_grep (path, patterns/query)
         if query:
             result = rust_parallel_grep(
                 patterns=[query],

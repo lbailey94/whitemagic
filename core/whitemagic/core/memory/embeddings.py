@@ -38,7 +38,6 @@ import threading
 import time
 from typing import Any, cast
 
-# Import extracted similarity functions
 from whitemagic.core.memory.embedding_similarity import (
     batch_cosine_similarity,
     batch_cosine_similarity_numpy,
@@ -165,7 +164,6 @@ class EmbeddingEngine:
             db = self._get_db()
             if db is not None:
                 try:
-                    # Check if there are actually any embeddings
                     res = db.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()
                     if res is None:
                         return False
@@ -178,7 +176,6 @@ class EmbeddingEngine:
         if self._available is not None:
             return self._available
 
-        # Try LocalEmbedder (FastEmbed) first
         try:
             from whitemagic.inference.local_embedder import LocalEmbedder
             if LocalEmbedder().is_available:
@@ -246,7 +243,6 @@ class EmbeddingEngine:
             conn.execute("PRAGMA mmap_size=268435456")
             conn.execute("PRAGMA cache_size=-65536")
             conn.execute("PRAGMA temp_store=MEMORY")
-            # Check if memory_embeddings table exists
             tables = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_embeddings'",
             ).fetchall()
@@ -304,7 +300,6 @@ class EmbeddingEngine:
             conn.execute("PRAGMA mmap_size=268435456")
             conn.execute("PRAGMA cache_size=-65536")
             conn.execute("PRAGMA temp_store=MEMORY")
-            # Check if memory_embeddings table exists
             tables = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_embeddings'",
             ).fetchall()
@@ -478,7 +473,6 @@ class EmbeddingEngine:
             self._hnsw_index = None
             self._hnsw_ids = None
             self._hnsw_count = 0
-            # Remove persisted index on invalidation (stale)
             try:
                 self._hnsw_index_path.unlink(missing_ok=True)
                 self._hnsw_ids_path.unlink(missing_ok=True)
@@ -525,7 +519,6 @@ class EmbeddingEngine:
                     and self._hnsw_ids is not None
                     and self._hnsw_count == len(ids)):
                 return self._hnsw_index, self._hnsw_ids
-        # Try loading from disk first
         try:
             if self._hnsw_index_path.exists() and self._hnsw_ids_path.exists():
                 import hnswlib  # type: ignore[import-untyped]
@@ -612,7 +605,6 @@ class EmbeddingEngine:
             return [], []
 
         with self._vec_cache_lock:
-            # Check if cache is still valid
             try:
                 current_count = db.execute(
                     "SELECT COUNT(*) FROM memory_embeddings",
@@ -768,7 +760,6 @@ class EmbeddingEngine:
 
         """
         query_vec = None
-        # Try to use existing embedding if query is a memory_id
         is_id = False
         if len(query) == 32 and all(c in "0123456789abcdef" for c in query.lower()):
             is_id = True
@@ -976,7 +967,6 @@ class EmbeddingEngine:
             if len(remaining) == 0:
                 break
 
-            # Check if we are in numpy mode or list mode
             if np is not None and isinstance(vectors, _ndarray):
                 scores = batch_cosine_similarity(vectors[i], remaining)
                 mask = scores >= min_similarity  # type: ignore[operator]
@@ -1025,13 +1015,11 @@ class EmbeddingEngine:
 
         Returns list of {source_id, target_id, similarity} sorted descending.
         """
-        # Try Rust SimHash LSH first (50× faster for large N, proper cosine similarity)
         try:
             import json
 
             import whitemagic_rust
 
-            # Load cached embeddings directly (no DB queries needed!)
             ids, vectors = self._load_vec_cache()
             if len(ids) < 2:
                 return []
@@ -1041,7 +1029,6 @@ class EmbeddingEngine:
             embeddings_flat = vectors.flatten().tolist()
             embedding_dim = vectors.shape[1]
 
-            # Call Rust SimHash LSH duplicate finder (H001 optimization)
             # Uses random hyperplane LSH to preserve cosine similarity
             # Pure Rust hot path - no DB queries, no keyword extraction
             simhash_lsh = getattr(whitemagic_rust, "simhash_lsh", None)
@@ -1056,7 +1043,6 @@ class EmbeddingEngine:
             )
             rust_results = json.loads(result_json)
 
-            # Convert Rust results to our format
             pairs = []
             for dup in rust_results:
                 pairs.append({

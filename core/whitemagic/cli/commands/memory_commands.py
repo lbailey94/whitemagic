@@ -7,7 +7,6 @@ import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-# Import Rich for beautiful CLI output
 try:
     from rich.console import Console
     from rich.table import Table
@@ -18,7 +17,6 @@ except ImportError:
     HAS_RICH = False
     console = None  # type: ignore[assignment]
 
-# Import WhiteMagic modules
 try:
     from whitemagic.core.memory.unified import get_unified_memory
 

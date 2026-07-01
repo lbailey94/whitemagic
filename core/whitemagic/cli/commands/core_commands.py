@@ -122,13 +122,11 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
 
     _echo(f"\n🧙 WhiteMagic Init Wizard (v{__version__})\n")
 
-    # Step 1: Ensure state directory
     _echo("Step 1/5: State directory")
     state_root = cfg_paths.get_state_root()  # type: ignore[attr-defined]
     state_root.mkdir(parents=True, exist_ok=True)
     _ok(f"WM_STATE_ROOT = {state_root}")
 
-    # Step 2: Create default galaxy
     _echo("Step 2/5: Default galaxy")
     try:
         from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
@@ -143,7 +141,6 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
     except Exception as e:
         _fail(f"Galaxy setup: {e}")
 
-    # Step 3: Seed quickstart memories
     _echo("Step 3/5: Quickstart memories")
     if skip_seed:
         _skip("Skipped (--skip-seed)")
@@ -176,7 +173,6 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
         except Exception as e:
             _fail(f"Seed: {e}")
 
-    # Step 4: Detect Ollama
     _echo("Step 4/5: Ollama detection")
     if skip_ollama:
         _skip("Skipped (--skip-ollama)")
@@ -204,7 +200,6 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
         else:
             _skip("Ollama not found (optional — install from ollama.com)")
 
-    # Step 5: Health check
     _echo("Step 5/5: Health check")
     try:
         from whitemagic.tools.dispatch_table import dispatch
@@ -295,7 +290,6 @@ def setup() -> None:
     click.echo("\n🚀 WhiteMagic Setup Wizard")
     click.echo("=" * 40)
 
-    # Check if already configured
     from whitemagic.config.paths import WM_ROOT, ensure_paths
 
     config_dir = WM_ROOT
@@ -314,7 +308,6 @@ def setup() -> None:
         (config_dir / d).mkdir(parents=True, exist_ok=True)
     click.echo(f"   ✅ {config_dir}")
 
-    # Initialize memory system
     if HAS_CORE:
         click.echo("\n🧠 Initializing memory system...")
         memory = get_memory()

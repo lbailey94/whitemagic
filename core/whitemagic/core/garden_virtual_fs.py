@@ -60,7 +60,6 @@ class GardenVirtualFS:
 
             gardens_seen.add(garden)
 
-            # Get or create garden node
             if garden not in self._garden_nodes:
                 garden_node = VirtualNode(
                     virtual_path=f"/gardens/{garden}",
@@ -77,7 +76,6 @@ class GardenVirtualFS:
             else:
                 garden_node = self._garden_nodes[garden]
 
-            # Get or create file type node
             if file_type not in garden_node.children:
                 type_node = VirtualNode(
                     virtual_path=f"/gardens/{garden}/{file_type}",
@@ -107,7 +105,6 @@ class GardenVirtualFS:
         systems_node = VirtualNode(virtual_path="/systems", node_type="directory")
         root_node.children["systems"] = systems_node
 
-        # Load system mappings if available
         system_registry = self.root / "data" / "garden_system_registry.json"
         if system_registry.exists():
             system_data = json.loads(system_registry.read_text())

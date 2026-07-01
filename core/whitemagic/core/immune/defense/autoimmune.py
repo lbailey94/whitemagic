@@ -21,7 +21,6 @@ Also includes multi-agent coordination to prevent conflicts when
 multiple AI instances work with WhiteMagic simultaneously.
 """
 
-# Import multi-agent coordinator (optional)
 get_coordinator: Any
 try:
     from whitemagic.core.immune.defense.multi_agent import get_coordinator
@@ -85,7 +84,6 @@ class AutoimmuneSystem:
         with open(latest) as f:
             data = json.load(f)
 
-        # Convert anti-patterns
         for idx, ap in enumerate(data.get("anti_patterns", [])):
             pattern_id = f"AP-{idx:03d}"
             title = ap.get("title", "")
@@ -103,7 +101,6 @@ class AutoimmuneSystem:
 
     def _extract_keywords(self, title: str) -> list[str]:
         """Extract meaningful keywords from pattern title."""
-        # Remove "Avoid:" prefix
         clean = title.replace("Avoid:", "").strip()
 
         # Split and filter short words
@@ -191,7 +188,6 @@ def detect_autoimmune() -> list[dict]:
     # Scan current directory for violations
     violations = system.scan_directory(Path("."), min_confidence=0.8)
 
-    # Convert to pattern format
     patterns = []
     for v in violations[:20]:  # Top 20
         patterns.append(

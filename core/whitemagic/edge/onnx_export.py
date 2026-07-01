@@ -141,14 +141,12 @@ def try_export_real_onnx(rules: list[dict], path: Path) -> bool:
         # This is a placeholder - real implementation would use
         # proper ML model architecture
 
-        # For now, export as custom ONNX with metadata
         model = onnx.ModelProto()
         model.ir_version = 8
         model.producer_name = "WhiteMagic Edge AI"
         model.producer_version = "3.0.0"
         model.domain = "whitemagic.edge"
 
-        # Add rules as metadata
         for i, rule in enumerate(rules):
             meta = model.metadata_props.add()
             meta.key = f"rule_{i}_pattern"
@@ -283,15 +281,12 @@ class ONNXLoader:
 
         data = path.read_bytes()
 
-        # Check magic bytes
         if data[:6] != b"WMONNX":
             raise ValueError("Invalid WMONNX file")
 
-        # Parse header
         struct.unpack("H", data[6:8])[0]
         rule_count = struct.unpack("I", data[8:12])[0]
 
-        # Parse rules
         rules = []
         offset = 12
 

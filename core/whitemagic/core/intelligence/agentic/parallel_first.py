@@ -48,7 +48,6 @@ class ParallelFirst:
         if not tasks:
             return []
 
-        # Check for dependencies
         has_deps = any(t.get("depends_on") for t in tasks)
 
         if has_deps:

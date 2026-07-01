@@ -140,7 +140,6 @@ class InsightGenerator:
             else:
                 return random.choice(templates)  # Any insight
 
-        # For multiple gardens, synthesize
         return self._synthesize_multiple(gardens, context, harmony)
 
     def _generic_insights(self, gardens: list[str]) -> list[str]:
@@ -185,7 +184,6 @@ class InsightGenerator:
             )
             return random.choice(templates)
 
-        # For multiple gardens
         return "Integrate these energies consciously, allowing each to inform the others in a dance of co-creation."
 
     def calculate_energetic_signature(self, gardens: list[str], harmony: float) -> str:
@@ -195,10 +193,8 @@ class InsightGenerator:
         harmony_factor = int(harmony * 100)
         signature_num = (garden_sum * harmony_factor) % 10000
 
-        # Convert to hex-like signature
         signature = f"{signature_num:04X}"
 
-        # Add resonance descriptors
         descriptors = []
         if harmony > 0.9:
             descriptors.append("PRISMATIC")
@@ -210,7 +206,6 @@ class InsightGenerator:
         return f"{descriptors[0]}-{signature}"
 
 
-# from newmagic.core.lib.monitoring.stats import BaseMonitor  # Archived import
 
 
 class EnhancedGardenSynthesis:
@@ -250,7 +245,6 @@ class EnhancedGardenSynthesis:
             "insight_depth": {"profound": 0, "moderate": 0, "gentle": 0},
         }
 
-        # Initialize resonance if available
         if RESONANCE_AVAILABLE:
             # listen_to(EventType.GARDEN_ACTIVATED, self._on_garden_activated)
             # listen_to(EventType.HARMONY_SHIFT, self._on_harmony_shift)
@@ -270,10 +264,8 @@ class EnhancedGardenSynthesis:
             # Generate insight using local inference
             insight = self.insight_generator.generate_insight(gardens, context, harmony)
 
-            # Get resonance pattern
             resonance_pattern = self.insight_generator.get_resonance_pattern(gardens)
 
-            # Get action guidance
             action_guidance = self.insight_generator.get_action_guidance(
                 gardens, context
             )
@@ -295,7 +287,6 @@ class EnhancedGardenSynthesis:
                 energetic_signature=energetic_signature,
             )
 
-            # Store and update stats
             self.synthesis_history.append(event)
             self._update_stats(event)
 
@@ -356,7 +347,6 @@ class EnhancedGardenSynthesis:
     def _calculate_base_harmony(self, gardens: list[str]) -> float:
         """Calculate base harmony between gardens"""
         if len(gardens) != 2:
-            # For multiple gardens, average all pair harmonies
             if len(gardens) > 2:
                 pair_harmonies = []
                 for i in range(len(gardens)):

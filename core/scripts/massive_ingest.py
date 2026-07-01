@@ -399,7 +399,6 @@ def ingest_grok(conn, dry_run: bool = False, limit: int = 0) -> dict:
             skipped += 1
             continue
 
-        # Parse title from first line
         title_line = content.split("\n")[0].lstrip("# ").strip()
         title = f"Grok: {title_line}"
 

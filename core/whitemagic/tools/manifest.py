@@ -477,7 +477,6 @@ def generate_signing_keypair(force: bool = False) -> dict[str, Any]:
     signing_key = SigningKey.generate()
     verify_key = signing_key.verify_key
 
-    # Store raw 32-byte keys
     priv_path.write_bytes(signing_key.encode())
     pub_path.write_bytes(verify_key.encode())
     # Restrict permissions on private key
@@ -592,7 +591,6 @@ def verify_signature(
     if not _NACL_AVAILABLE:
         return {"valid": False, "reason": "PyNaCl not installed"}
 
-    # Load or parse verify key
     if public_key_b64:
         try:
             pub_bytes = base64.urlsafe_b64decode(public_key_b64)

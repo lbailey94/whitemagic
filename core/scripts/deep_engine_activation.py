@@ -24,36 +24,36 @@ logger = logging.getLogger("DeepEngineActivation")
 
 
 def run_activation():
-    print("\n" + "=" * 60)
-    print("DEEP ENGINE ACTIVATION: RECURSIVE ANALYSIS")
-    print("=" * 60)
+    logger.debug("\n" + "=" * 60)
+    logger.debug("DEEP ENGINE ACTIVATION: RECURSIVE ANALYSIS")
+    logger.debug("=" * 60)
 
     # Ensure Dharma is in creative mode
     get_rules_engine().set_profile("creative")
-    print("Dharma Profile: CREATIVE (Relaxed Restrictions)")
+    logger.debug("Dharma Profile: CREATIVE (Relaxed Restrictions)")
 
     # 1. Kaizen Engine
-    print("\n[1/2] Activating Kaizen Engine (Quality & Gaps)...")
+    logger.debug("\n[1/2] Activating Kaizen Engine (Quality & Gaps)...")
     kaizen = get_kaizen_engine()
     report = kaizen.analyze()
 
-    print(f"  Found {len(report.proposals)} improvement proposals.")
+    logger.debug(f"  Found {len(report.proposals)} improvement proposals.")
     for cat, props in report.by_category.items():
-        print(f"    - {cat.upper()}: {len(props)} proposals")
+        logger.debug(f"    - {cat.upper()}: {len(props)} proposals")
         for p in props[:2]:
-            print(f"      * {p.title} (Impact: {p.impact})")
+            logger.debug(f"      * {p.title} (Impact: {p.impact})")
 
     # 2. Emergence Engine
-    print("\n[2/2] Activating Emergence Engine (Insight Synthesis)...")
+    logger.debug("\n[2/2] Activating Emergence Engine (Insight Synthesis)...")
     emergence = get_emergence_engine()
     # Emergence engine usually needs to listen to the bus,
     # but we can trigger a proactive scan (v14 feature).
     insights = emergence.scan_for_emergence()
 
-    print(f"  Found {len(insights)} emergent insights.")
+    logger.debug(f"  Found {len(insights)} emergent insights.")
     for insight in insights:
-        print(f"    * ✨ {insight.title} (Confidence: {insight.confidence:.2f})")
-        print(f"      {insight.description[:100]}...")
+        logger.debug(f"    * ✨ {insight.title} (Confidence: {insight.confidence:.2f})")
+        logger.debug(f"      {insight.description[:100]}...")
 
     # 3. Generate Synthesis Report
     output_md = REPO_ROOT / "scripts/archaeology_results/EVOLUTION_REPORT_v2.md"
@@ -74,7 +74,7 @@ def run_activation():
             f.write(f"- Confidence: {insight.confidence:.2f}\n")
             f.write(f"- {insight.description}\n\n")
 
-    print(f"\n✅ Evolution report saved to: {output_md}")
+    logger.debug(f"\n✅ Evolution report saved to: {output_md}")
 
 
 if __name__ == "__main__":

@@ -37,12 +37,10 @@ def run_rigor_test(limit=50):
         golden_answer = q_entry["answer"]
         target_sessions = q_entry.get("answer_session_ids", [])
 
-        # --- PHASE 8.1: Recursive Recall ---
         # Simulate WhiteMagic's multi-pass retrieval
         expanded_query = f"{original_query} {golden_answer}"
         found_memories = backend.search(expanded_query, limit=10)
 
-        # If not found in top 10, try a keyword-only broad sweep
         clean_targets = [tid.replace("answer_", "") for tid in target_sessions]
         found = any(any(tid in m.id for tid in clean_targets) for m in found_memories)
 
@@ -58,7 +56,6 @@ def run_rigor_test(limit=50):
             print(f"  [DB_DEBUG] Found IDs: {[m.id for m in found_memories]}")
 
         for j, mem in enumerate(found_memories):
-            # Check if the memory ID belongs to the target question's history
             # LoCoMo sessions are ingested as locomo_{session_id}
             if any(tid in mem.id for tid in clean_targets):
                 hits.append(j + 1)

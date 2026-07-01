@@ -197,7 +197,6 @@ class PredictionCalibration:
         """
         import math as _math
 
-        # Convert to minutes for backward-compatible fields
         est_min = estimated_seconds_machine / 60.0
         act_min = actual_seconds_machine / 60.0
         compression = (
@@ -423,7 +422,6 @@ class PredictionCalibration:
         if not self.estimates:
             return subjective_estimate_minutes
 
-        # Get layer-specific compression if available
         layer_estimates = [e for e in self.estimates if e.depth_layer == depth_layer]
         if layer_estimates:
             observed_compression = sum(

@@ -73,7 +73,6 @@ class HRRMojoBridge:
             out_path = f_out.name
 
         try:
-            # Call Mojo bind function
             result = subprocess.run(
                 ["mojo", "run", "-f", "bind", self.hrr_mojo_path, a_path, b_path, out_path],
                 capture_output=True,
@@ -225,7 +224,6 @@ def patch_hrr_engine():
         return False
 
 if __name__ == "__main__":
-    # Test the bridge
     bridge = HRRMojoBridge()
     print(f"Mojo available: {bridge.mojo_available}")
 

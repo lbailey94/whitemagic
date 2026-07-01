@@ -386,7 +386,6 @@ class BicameralReasoner:
         Uses LLM-driven critique when Ollama is available.
         Falls back to heuristic analysis of content characteristics.
         """
-        # Try LLM-driven cross-critique
         llm_critiques = self._llm_cross_critique(left, right)
         if llm_critiques is not None:
             return llm_critiques
@@ -708,7 +707,6 @@ class BicameralReasoner:
 
         final_confidence = left_weight * adj_left_conf + right_weight * adj_right_conf
 
-        # Try LLM-enhanced synthesis
         llm_synthesis = self._llm_synthesize(left, right, critiques, dominant, tension)
         if llm_synthesis is not None:
             return llm_synthesis, final_confidence, dominant, tension

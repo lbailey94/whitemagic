@@ -30,7 +30,6 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, cast
 
-# Add project root to path
 ROOT_DIR = Path(__file__).resolve().parent
 CORE_SYSTEM_DIR = ROOT_DIR.parent
 REPO_ROOT = CORE_SYSTEM_DIR.parent
@@ -51,7 +50,6 @@ except ImportError:
 
 # Server setup
 
-# Initialize Server
 mcp = FastMCP("WhiteMagic Core") if _HAS_FASTMCP else None
 
 # Setup Logging

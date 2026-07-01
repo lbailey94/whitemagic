@@ -131,7 +131,6 @@ class PhaseAwareReasoner:
             "phase_guidance": strategy["guidance"],
         }
 
-        # Add fixed sign wisdom if applicable
         if phase_context.is_fixed:
             wisdom = self.consult_fixed_sign_wisdom(phase_context.sign)
             if wisdom:

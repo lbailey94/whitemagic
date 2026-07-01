@@ -83,20 +83,17 @@ class ConsolidationEngine:
 
         reasons = []
 
-        # Check count threshold
         if short_term_count > self.thresholds["count"]:
             reasons.append(
                 f"Too many short-term memories ({short_term_count}/{self.thresholds['count']})"
             )
 
-        # Check age threshold
         old_memories = self.find_old_memories()
         if len(old_memories) > 5:
             reasons.append(
                 f"{len(old_memories)} memories older than {self.thresholds['age_days']} days"
             )
 
-        # Check for duplicates/similar
         duplicates = self.find_duplicates()
         if len(duplicates) > 3:
             reasons.append(f"{len(duplicates)} duplicate/similar memory pairs found")
@@ -140,7 +137,6 @@ class ConsolidationEngine:
         """Find memories older than age threshold."""
         cutoff_date = datetime.now() - timedelta(days=self.thresholds["age_days"])
 
-        # Get short-term memories
         short_term_files = self.manager.read_recent_memories(
             memory_type="short_term", limit=500
         )
@@ -148,7 +144,6 @@ class ConsolidationEngine:
         old = []
         for mem_data in short_term_files:
             try:
-                # Parse created date from filename or metadata
                 mem_data.get("filename", "")
                 created_str = mem_data.get("created", "")
 
@@ -432,7 +427,6 @@ class ConsolidationEngine:
         except Exception as e:
             results["errors"].append(f"Consolidation failed: {str(e)}")
 
-        # Add completion metrics
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
         results["metrics"].update(
@@ -469,7 +463,6 @@ class ConsolidationEngine:
     ) -> Memory | None:
         """Create session consolidation memory."""
         try:
-            # Get all memories from session
             memories = self.manager.search_memories(tags=[f"session_{session_id}"])
 
             if not memories:
@@ -529,7 +522,6 @@ def consolidate_cli(args: Any) -> None:
     manager = MemoryManager()
     engine = ConsolidationEngine(manager)
 
-    # Check if needed
     check = engine.should_consolidate()
 
     if not check["should_consolidate"]:
@@ -542,7 +534,6 @@ def consolidate_cli(args: Any) -> None:
     for reason in check["reasons"]:
         logger.info("  • %s", reason)
 
-    # Run consolidation
     dry_run = not args.no_dry_run
 
     if dry_run:

@@ -49,7 +49,6 @@ class SingletonRegistry:
         if name in cls._instances:
             return cls._instances[name]
 
-        # Store factory for potential re-creation
         cls._factories[name] = factory
 
         # Create and cache instance

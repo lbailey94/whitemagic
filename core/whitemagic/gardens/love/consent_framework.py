@@ -75,7 +75,6 @@ class ConsentFramework:
         Returns:
             ConsentCheck with status
         """
-        # For now, requires explicit consent
         # In full implementation, would check stored consents
 
         check = ConsentCheck(

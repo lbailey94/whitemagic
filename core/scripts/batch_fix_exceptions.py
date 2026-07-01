@@ -26,7 +26,6 @@ def fix_file(filepath: Path, apply: bool = False) -> dict:
     original = content
     changes = []
 
-    # Get line-by-line for context
     lines = content.split("\n")
 
     for i in range(len(lines)):
@@ -81,7 +80,6 @@ def fix_file(filepath: Path, apply: bool = False) -> dict:
             lines[i] = new_line
             changes.append(f"Line {i + 1}: Exception → {replacement}")
 
-            # Add import if needed
             if import_add and import_add not in content:
                 # Find the last import block
                 import_line = -1

@@ -20,11 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Tools/prefixes that require higher maturity stages
 _MATURITY_REQUIREMENTS: dict[str, int] = {
-    # Stage 3 (REFLECTIVE) — tools that affect memory retention or patterns
     "retention_sweep": 3,
     "memory_consolidate": 3,
     "memory.lifecycle_sweep": 3,
-    # Stage 4 (RADIANT) — multi-agent coordination
     "agent.register": 4,
     "agent.heartbeat": 4,
     "agent.deregister": 4,
@@ -32,7 +30,6 @@ _MATURITY_REQUIREMENTS: dict[str, int] = {
     "pipeline.create": 4,
     "vote.create": 4,
     "vote.cast": 4,
-    # Stage 5 (COLLECTIVE) — mesh/guild
     "mesh.connect": 5,
     "mesh.guild_contract": 5,
 }
@@ -55,7 +52,6 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
     required = _MATURITY_REQUIREMENTS.get(tool_name)
 
     if required is None:
-        # Check category-level requirement
         try:
             from whitemagic.tools.registry import get_tool
 
@@ -69,7 +65,6 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
     if required is None:
         return None  # No maturity requirement — allow
 
-    # Try Haskell algebraic maturity gate first (exhaustive case coverage)
     try:
         from whitemagic.core.acceleration.haskell_bridge import haskell_maturity_assess
         from whitemagic.core.governance.maturity_gates import get_maturity_engine
@@ -88,7 +83,6 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
     except (ImportError, AttributeError):
         pass  # Haskell unavailable, fall through to Python
 
-    # Check current maturity
     try:
         from whitemagic.core.governance.maturity_gates import (
             MaturityStage,

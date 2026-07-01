@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
-# Try to load Rust module
 _rs: Any = None
 try:
     import whitemagic_rust as _rs  # type: ignore[no-redef]
@@ -30,7 +29,6 @@ def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:
         # Python Timsort is fastest for small-to-medium collections
         return sorted(data, key=key, reverse=reverse)
 
-    # Try Rust parallel sort for large collections
     if _rs is not None and hasattr(_rs, "parallel_sort"):
         try:
             if key is None:
@@ -52,7 +50,6 @@ def fast_sort_inplace(data: list[T], key: Any = None, reverse: bool = False) -> 
         data.sort(key=key, reverse=reverse)
         return
 
-    # For large lists, sorted() may be faster due to different algorithm
     sorted_data = fast_sort(data, key=key, reverse=reverse)
     data[:] = sorted_data
 
@@ -67,7 +64,6 @@ def parallel_sort_by_key(
     if not data:
         return []
 
-    # Try Rust fast path for dict sorting
     if _rs is not None and hasattr(_rs, "sort_dicts_by_field"):
         try:
             return list(_rs.sort_dicts_by_field(data, key_field, reverse))
@@ -104,7 +100,6 @@ class ParallelSorter:
         if not batches:
             return []
 
-        # Try Rust parallel batch sort
         if self._rust_available:
             try:
                 return list(_rs.parallel_sort_batch(batches, reverse))

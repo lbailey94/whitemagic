@@ -139,7 +139,6 @@ def handle_garden_list_files(**kwargs: Any) -> dict[str, Any]:
         directory = get_garden_directory()
         files = directory.get_garden_files(garden, file_type)
 
-        # Get garden metadata
         from whitemagic.core.intelligence.garden_gana_registry import get_by_garden
 
         entry = get_by_garden(garden)
@@ -384,7 +383,6 @@ def handle_garden_map_system(**kwargs: Any) -> dict[str, Any]:
 
         directory = get_garden_directory()
 
-        # Get files for primary garden
         primary_garden = str(mapping["primary"])
         primary_files = directory.get_garden_files(primary_garden)
         system_files = [f for f in primary_files if system_id in f.lower()][:20]

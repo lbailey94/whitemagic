@@ -180,7 +180,6 @@ class SystemUnifier:
         print(f"\n✅ Ingestion Complete. Total New Memories: {total_ingested}")
         self.close_db()
         
-        # Invoke Ganas for sign-off
         print("\n=== GANA VERIFICATION ===")
         
         # NeckGana check

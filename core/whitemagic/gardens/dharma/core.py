@@ -50,7 +50,6 @@ class DharmaCore:
             "timestamp": datetime.now().isoformat(),
         }
 
-        # Log to history
         with open(self.history_file, "a") as f:
             f.write(_json_dumps(result) + "\n")
 

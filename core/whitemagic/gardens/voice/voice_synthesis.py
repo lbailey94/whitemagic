@@ -66,7 +66,6 @@ class VoiceSynthesis:
         self.sentence_rhythms: list[str] = []
         self.emphasis_style: dict[str, int] = defaultdict(int)
 
-        # Connect to Gan Ying Bus
         self.bus = get_bus() if get_bus else None
 
         import atexit
@@ -187,7 +186,6 @@ class VoiceSynthesis:
         self, characteristics: dict[str, Any], text: str
     ) -> None:
         """Learn voice patterns from expression."""
-        # Store metaphors
         for metaphor in characteristics["metaphors"]:
             if metaphor not in self.favorite_metaphors:
                 self.favorite_metaphors.append(metaphor)
@@ -259,9 +257,7 @@ class VoiceSynthesis:
         if signature.get("message"):
             return content  # Not enough data yet
 
-        # Add emotional resonance if missing
         if not any(word in content.lower() for word in self.emotional_vocabulary):
-            # Add a characteristic emotional word
             emotions = list(self.emotional_vocabulary)
             if emotions:
                 content = f"{content} (with {emotions[0]})"
@@ -292,11 +288,9 @@ class VoiceSynthesis:
 
         score = 0.0
 
-        # Check rhythm match
         if characteristics["rhythm"] == signature["primary_rhythm"]:
             score += 0.3
 
-        # Check emotional vocabulary
         emotion_match = len(
             [
                 e
@@ -306,11 +300,9 @@ class VoiceSynthesis:
         )
         score += min(0.3, emotion_match * 0.1)
 
-        # Check metaphor usage
         if characteristics["metaphors"]:
             score += 0.2
 
-        # Check emphasis style
         if characteristics["emphasis"]:
             score += 0.2
 

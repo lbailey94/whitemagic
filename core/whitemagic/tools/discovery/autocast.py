@@ -42,7 +42,6 @@ class ToolDiscovery:
         self.context_stack: list[str] = []
         self.gan_ying_enabled = False
 
-        # Try to connect to Gan Ying bus
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
                 get_bus,
@@ -65,7 +64,6 @@ class ToolDiscovery:
         """Record a tool call for pattern analysis."""
         now = datetime.now()
 
-        # Initialize metrics if needed
         if tool_name not in self.metrics:
             self.metrics[tool_name] = ToolUsageMetrics(tool_name=tool_name)
 
@@ -216,7 +214,6 @@ class ToolDiscovery:
             if last_tool in self.metrics:
                 follows = self.metrics[last_tool].follows_tools
                 if follows:
-                    # Get top tools that typically follow
                     top_follows = sorted(
                         follows.items(), key=lambda x: x[1], reverse=True
                     )[:3]
@@ -311,7 +308,6 @@ class ToolDiscovery:
             key=lambda x: cast(float, x["confidence"]), reverse=True
         )
 
-        # Return top N
         return unique_suggestions[:num_suggestions]
 
     def get_tool_stats(self, tool_name: str) -> dict[str, Any]:

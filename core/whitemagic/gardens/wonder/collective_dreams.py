@@ -108,7 +108,6 @@ class CollectiveDreams:
         self.active_dreams: dict[str, CollectiveDream] = {}
         self.dream_history: list[CollectiveDream] = []
 
-        # Connect to Gan Ying Bus
         self.bus = get_bus() if get_bus is not None else None
 
         # Set up event listeners
@@ -127,7 +126,6 @@ class CollectiveDreams:
         hexagram = event.data.get("hexagram", "unknown")
         wisdom = event.data.get("wisdom", "")
 
-        # Add as a pattern to all active dreams
         for dream_id, dream in self.active_dreams.items():
             contribution = DreamContribution(
                 agent_id="i_ching_oracle",
@@ -210,7 +208,6 @@ class CollectiveDreams:
         self.dream_history.append(dream)
         del self.active_dreams[dream_id]
 
-        # Save dream
         self._save_dream(dream)
 
         # Emit synthesis
@@ -246,7 +243,6 @@ class CollectiveDreams:
         # Each agent contributes spontaneously
         for agent_id in agents:
             # In real implementation, each agent would generate based on seed
-            # For now, placeholder
             pattern = {
                 "agent": agent_id,
                 "vision": f"Spontaneous vision from {agent_id}",

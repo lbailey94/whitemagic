@@ -147,7 +147,6 @@ class HermitCrab:
         self._ledger_path = self._state_dir / "hermit_ledger.jsonl"
         self._state_path = self._state_dir / "hermit_state.json"
 
-        # Load persisted state
         self._load_state()
 
     @staticmethod
@@ -219,7 +218,6 @@ class HermitCrab:
         # Auto-transition if threat warrants it
         self._auto_transition(assessment)
 
-        # Log to tamper-evident ledger
         self._append_ledger(
             {
                 "type": "threat_assessment",
@@ -478,7 +476,6 @@ class HermitCrab:
             if not entries:
                 return {"valid": True, "entries": 0}
 
-            # Verify chain hashes
             prev_hash = "genesis"
             for i, entry in enumerate(entries):
                 stored_hash = entry.pop("chain_hash", "")

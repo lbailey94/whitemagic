@@ -179,7 +179,6 @@ def batch_compute_probabilities(
     # Hot path: vectorized NumPy baseline (with Zig SIMD for semantic channel if vectors present)
     semantic = np.array([e.get("semantic_sim", 0.0) for e in edges], dtype=np.float32)  # type: ignore[assignment]
 
-    # If raw embedding vectors are attached, use Zig SIMD batch cosine
     # (edges can carry {"query_vec": [...], "target_vec": [...]} for live scoring)
     if _ZIG_BATCH_COSINE is not None:
         query_vecs = [e.get("query_vec") for e in edges]
@@ -273,7 +272,6 @@ def _walk_from_seed(
         next_level = []
 
         for node_id, path in current_level:
-            # Get neighbors
             neighbors = neighbors_fn(node_id)
             if not neighbors:
                 continue

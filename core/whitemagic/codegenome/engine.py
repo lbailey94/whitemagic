@@ -459,11 +459,9 @@ class CodeGenomeEngine:
         self._templates: dict[str, CodeTemplate] = {}
         self._lock = threading.Lock()
 
-        # Load built-ins
         for t in _BUILTIN_TEMPLATES:
             self._templates[t.name] = t
 
-        # Load from disk
         from whitemagic.config.paths import WM_ROOT
 
         self._codegenome_dir = codegenome_dir or str(WM_ROOT / "codegenome")

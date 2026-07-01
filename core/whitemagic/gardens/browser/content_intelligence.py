@@ -88,7 +88,6 @@ class OutlineBuilder:
         """Build outline using BeautifulSoup."""
         soup = BeautifulSoup(html, "html.parser")
 
-        # Remove script/style/nav/footer
         for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
             tag.decompose()
 
@@ -108,7 +107,6 @@ class OutlineBuilder:
 
     def _build_with_regex(self, html: str) -> list[OutlineNode]:
         """Fallback: build outline using regex on HTML tags."""
-        # Remove script/style content first
         clean = re.sub(
             r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE
         )
@@ -233,19 +231,16 @@ class ContentChunker:
                 pos += len(para) + 2  # +2 for the \n\n separator
 
         for para in paragraphs:
-            # Check if this paragraph is or contains a heading
             for h in headings or []:
                 if h.lower() in para.lower():
                     current_heading = h
                     break
 
-            # If adding this paragraph would exceed chunk size, flush current chunk
             if current_text and len(current_text) + len(para) + 2 > self.chunk_size:
                 chunks.append(
                     self._make_chunk(len(chunks), current_text, current_heading)
                 )
 
-                # Start new chunk with overlap from end of previous
                 overlap_text = (
                     current_text[-self.overlap :]
                     if len(current_text) > self.overlap
@@ -306,7 +301,6 @@ class ContentSummarizer:
         if not text or len(text) < 200:
             return text[: self.max_summary_chars], "none"
 
-        # Try Ollama first
         try:
             summary = self._summarize_with_ollama(text, focus)
             if summary:

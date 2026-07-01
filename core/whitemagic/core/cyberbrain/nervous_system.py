@@ -47,7 +47,6 @@ class UnifiedNervousSystem:
         total_load = sum(s["load"] for s in self.subsystems.values())
         avg_load = total_load / len(self.subsystems)
 
-        # Check for overloaded subsystems
         for name, data in self.subsystems.items():
             if data["load"] > self._congestion_threshold:
                 data["status"] = "congested"

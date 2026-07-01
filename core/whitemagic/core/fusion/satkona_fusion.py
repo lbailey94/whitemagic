@@ -358,7 +358,6 @@ def get_haskell_balance() -> float:
             timeout=5,
             env=env,
         )
-        # Parse output for Hexagram info (simplified for now)
         if "Hexagram" in result.stdout:
             return 0.8  # Auspicious
         return 0.5
@@ -426,7 +425,6 @@ def fuse_signals_with_fusion(
         {cluster_key: final_relevance}
 
     """
-    # Get elemental weights
     base_weights = get_element_blend(elemental_intensity)
 
     # Normalize each signal independently
@@ -461,28 +459,23 @@ def fuse_signals_with_fusion(
             score += w * normed.get(name, {}).get(k, 0.0)
         relevance[k] = score
 
-    # Add constellation novelty prior
     if constellation_weight > 0:
         constellation_prior = get_constellation_novelty_prior(clusters, memories, conn)
         constellation_norm = normalise(constellation_prior)
         for k in all_keys:
             relevance[k] += constellation_weight * constellation_norm.get(k, 0.0)
 
-    # Add dream feedback
     if dream_weight > 0:
         dream_feedback = get_dream_feedback_signal(clusters, agg)
         dream_norm = normalise(dream_feedback)
         for k in all_keys:
             relevance[k] += dream_weight * dream_norm.get(k, 0.0)
 
-    # Add Polyglot Signals (Haskell Balance + Julia Resonance)
     # These act as global multipliers or bias terms
     balance = get_haskell_balance()  # 0.5-1.0
     resonance = get_julia_resonance(0.8)  # 0.0-1.0
 
     # Apply global modulation
-    # If balance is high, we favor existing structure (PageRank/Frequency)
-    # If balance is low, we favor Novelty
     if balance > 0.6:
         # Boost stability signals
         for k in all_keys:
@@ -498,14 +491,12 @@ if __name__ == "__main__":
     print("  SATKONA FUSION MODULE — Phase 2 Integration")
     print("=" * 60)
 
-    # Test Wu Xing integration
     element = get_current_element()
     weights = get_elemental_weights()
     print("\n[1] Wu Xing Integration")
     print(f"    Current element: {element}")
     print(f"    Signal weights: {weights}")
 
-    # Test Constellation integration
     print("\n[2] Constellation Integration")
     density = get_constellation_density()
     print(f"    Quadrant density: {density}")
@@ -514,7 +505,6 @@ if __name__ == "__main__":
         sparsity = {q: 1.0 - (density[q] / total) for q in density}
         print(f"    Sparsity (novelty): {sparsity}")
 
-    # Test Dream integration
     print("\n[3] Dream Daemon Integration")
     insights = get_dream_insights(limit=3)
     print(f"    Recent dream insights: {len(insights)}")

@@ -43,7 +43,6 @@ class ConsentFramework:
             ConsentStatus indicating consent level
 
         """
-        # Check for explicit consent
         if context.get("user_requested", False) or context.get(
             "explicit_permission", False
         ):
@@ -53,7 +52,6 @@ class ConsentFramework:
                 reasoning="User explicitly requested this action",
             )
 
-        # Check for implicit consent
         if context.get("user_initiated_session", False) and "read" in action.lower():
             return ConsentStatus(
                 level=ConsentLevel.IMPLICIT,
@@ -61,7 +59,6 @@ class ConsentFramework:
                 reasoning="User initiated session implies consent for reads",
             )
 
-        # Check if consent was revoked
         if context.get("consent_revoked", False):
             return ConsentStatus(
                 level=ConsentLevel.REVOKED,

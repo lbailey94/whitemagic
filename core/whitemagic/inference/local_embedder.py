@@ -107,5 +107,4 @@ class LocalEmbedder:
         vecs = self.embed(sentences, batch_size=batch_size)
         if vecs is None:
             return []
-        # Return as list of arrays to match what EmbeddingEngine expects from encode_batch (list of vectors)
         return list(vecs)

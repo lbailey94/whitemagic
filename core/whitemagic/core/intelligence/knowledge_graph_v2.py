@@ -167,7 +167,6 @@ class KnowledgeGraphV2:
         # Use LightNER for extraction
         ner_entities, ner_relations = self._ner.extract(text)
 
-        # Convert to storage format
         entities = []
         for e in ner_entities:
             normalized = self._normalize_entity(e.text)

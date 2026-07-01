@@ -384,7 +384,6 @@ class MemoryConsolidator:
             if src_id in resolved_ids or tgt_id in resolved_ids:
                 continue
 
-            # Load both memories
             try:
                 mem_a = um.backend.recall(src_id)
                 mem_b = um.backend.recall(tgt_id)
@@ -535,7 +534,6 @@ class MemoryConsolidator:
                 ),
             }
 
-            # Store via UnifiedMemory
             try:
                 from whitemagic.core.memory.unified import get_unified_memory
                 from whitemagic.core.memory.unified_types import MemoryType

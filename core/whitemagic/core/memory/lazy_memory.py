@@ -110,7 +110,6 @@ class LazyMemoryStore:
         created_at = datetime.now().isoformat()
         tags = tags or set()
 
-        # Save content to file
         file_path = self.base_path / f"{memory_id}.json"
         content_data = {
             'id': memory_id,
@@ -143,7 +142,6 @@ class LazyMemoryStore:
 
     def recall(self, memory_id: str) -> dict[str, Any] | None:
         """Recall a memory by ID (lazy load from file)"""
-        # Check cache first
         if memory_id in self._content_cache:
             self.stats['cache_hits'] += 1
             # Move to front of LRU
@@ -154,7 +152,6 @@ class LazyMemoryStore:
 
         self.stats['cache_misses'] += 1
 
-        # Load from file
         file_path = self.base_path / f"{memory_id}.json"
         if not file_path.exists():
             return None
@@ -163,7 +160,6 @@ class LazyMemoryStore:
             with open(file_path) as f:
                 content = json.load(f)
 
-            # Add to cache
             self._add_to_cache(memory_id, content)
             self.stats['total_loads'] += 1
 
@@ -196,7 +192,6 @@ class LazyMemoryStore:
 
             results = []
             for row in cursor:
-                # Get tags for this memory
                 tag_cursor = conn.execute(
                     "SELECT tag FROM tags WHERE memory_id = ?", (row[0],))
                 tags = [t[0] for t in tag_cursor]
@@ -267,16 +262,13 @@ class LazyMemoryStore:
         file_path = self.base_path / f"{memory_id}.json"
 
         try:
-            # Remove from cache
             if memory_id in self._content_cache:
                 del self._content_cache[memory_id]
                 self._cache_order.remove(memory_id)
 
-            # Remove from file
             if file_path.exists():
                 file_path.unlink()
 
-            # Remove from SQLite
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("DELETE FROM tags WHERE memory_id = ?", (memory_id,))
                 conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))

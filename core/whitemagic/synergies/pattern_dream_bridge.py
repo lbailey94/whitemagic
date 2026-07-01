@@ -67,7 +67,6 @@ class PatternDreamBridge:
                 syntheses.append(synthesis)
                 self._save_synthesis(synthesis)
 
-        # Clear processed queue
         self._pending = []
         self.queue_file.unlink(missing_ok=True)
 

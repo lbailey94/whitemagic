@@ -292,7 +292,6 @@ def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
 
         raw_constellations = detector.detect_constellations()
 
-        # Convert Constellation objects to dicts
         constellations = []
         for c in raw_constellations:
             constellations.append(

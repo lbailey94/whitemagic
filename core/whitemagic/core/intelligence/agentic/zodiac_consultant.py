@@ -9,7 +9,6 @@ class ZodiacConsultant:
     """ZodiacConsultant: zodiac consultant."""
 
     def __init__(self):
-        # Try to load from canonical source, fall back to static if unavailable
         self.cores = self._load_cores()
 
     def _load_cores(self) -> dict:

@@ -16,9 +16,7 @@ import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-# ---------------------------------------------------------------------------
 # wm repl — Interactive REPL
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -168,7 +166,6 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
         for token in tokens[1:]:
             if "=" in token:
                 key, val = token.split("=", 1)
-                # Try to parse value as JSON, fall back to string
                 try:
                     kwargs[key] = json_lib.loads(val)
                 except json_lib.JSONDecodeError:
@@ -199,7 +196,6 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
             except Exception as e:
                 click.echo(f"(Dharma check skipped: {e})")
 
-        # Execute tool call
         try:
             result = call_tool(tool_name, **kwargs)
             if json_output:
@@ -221,7 +217,6 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
 
 # ---------------------------------------------------------------------------
 # wm stream — NDJSON Event Streaming
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -439,7 +434,6 @@ def stream(
 
 # ---------------------------------------------------------------------------
 # wm pipeline — Tool Call Chaining
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -467,7 +461,6 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
         else False
     )
 
-    # Parse stages
     parsed_stages: list[dict[str, Any]] = []
     for i, stage in enumerate(stages):
         if ":" not in stage:
@@ -502,7 +495,6 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
         )
         return
 
-    # Execute chain
     results: list[dict[str, Any]] = []
     prev_details: Any = None
 
@@ -526,7 +518,6 @@ def pipeline(ctx, stages: tuple[str, ...], dry_run: bool, json_flag: bool) -> No
                     if not isinstance(prev_details, str)
                     else prev_details,
                 )
-                # Try to parse as JSON if the whole value is $_
                 if val == "$_" and isinstance(prev_details, (dict, list)):
                     kwargs[key] = prev_details
 

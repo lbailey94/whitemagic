@@ -10,7 +10,6 @@ import click
 from whitemagic.core.wuxing_scheduler import WuXingScheduler
 
 # In a real app, the scheduler would be a singleton or attached to the session service.
-# For CLI demo purposes, we instantiate a fresh one or try to connect to a daemon.
 # Here we'll just demo the logic.
 
 

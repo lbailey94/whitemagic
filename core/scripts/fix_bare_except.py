@@ -153,7 +153,6 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
             )
 
         # Default: generic Exception with debug logging
-        # Try to extract a meaningful message from the try body
         msg = "Operation failed"
         if "emit(" in try_text:
             msg = "Event emit failed"
@@ -181,7 +180,6 @@ def classify_and_fix(content: str, filepath: str) -> tuple[str, int]:
 
     new_content = pattern.sub(replacer, content)
 
-    # If we made fixes and the file didn't have logging, add it
     if fixes > 0 and not has_logger(new_content):
         new_content = add_logging_import(new_content)
 

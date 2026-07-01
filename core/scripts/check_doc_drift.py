@@ -44,9 +44,7 @@ def ok(msg: str) -> None:
     print(f"  ✅ {msg}")
 
 
-# ---------------------------------------------------------------------------
 # 1. Garden count
-# ---------------------------------------------------------------------------
 def check_gardens() -> None:
     print("\n[1/10] Garden count...")
     try:
@@ -62,9 +60,7 @@ def check_gardens() -> None:
         error(f"Could not list gardens: {e}")
 
 
-# ---------------------------------------------------------------------------
 # 2. Gana tool count
-# ---------------------------------------------------------------------------
 def check_gana_tools() -> None:
     print("\n[2/10] Gana tool count...")
     try:
@@ -80,9 +76,7 @@ def check_gana_tools() -> None:
         error(f"Could not count Gana tools: {e}")
 
 
-# ---------------------------------------------------------------------------
 # 3. Dispatch table count
-# ---------------------------------------------------------------------------
 def check_dispatch_table() -> None:
     print("\n[3/10] Dispatch table count...")
     try:
@@ -97,9 +91,7 @@ def check_dispatch_table() -> None:
         error(f"Could not count dispatch table: {e}")
 
 
-# ---------------------------------------------------------------------------
 # 4. Registry callable tool count
-# ---------------------------------------------------------------------------
 def check_registry_tools() -> None:
     print("\n[4/10] Registry callable tool count...")
     try:
@@ -115,9 +107,7 @@ def check_registry_tools() -> None:
         error(f"Could not count registry tools: {e}")
 
 
-# ---------------------------------------------------------------------------
 # 5. No stale references to archived directories
-# ---------------------------------------------------------------------------
 def check_no_stale_refs() -> None:
     print("\n[5/10] Stale directory references...")
     stale_patterns = [
@@ -145,9 +135,7 @@ def check_no_stale_refs() -> None:
         ok("No stale directory references in key docs")
 
 
-# ---------------------------------------------------------------------------
 # 6. Version consistency
-# ---------------------------------------------------------------------------
 def check_versions() -> None:
     print("\n[6/10] Version consistency...")
     script = CORE / "scripts" / "check_versions.py"
@@ -168,9 +156,7 @@ def check_versions() -> None:
         ok("All version references consistent")
 
 
-# ---------------------------------------------------------------------------
 # 7. Tool-count drift across canonical docs
-# ---------------------------------------------------------------------------
 def check_tool_count_drift() -> None:
     """Scan canonical docs for ANY claimed tool counts and flag drift.
 
@@ -237,9 +223,7 @@ def check_tool_count_drift() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
 # 8. Test-count drift across canonical docs
-# ---------------------------------------------------------------------------
 def check_test_count_consistency() -> None:
     """Scan canonical docs for claimed test-pass counts and flag drift.
 
@@ -346,9 +330,7 @@ def check_test_count_consistency() -> None:
         return
 
 
-# ---------------------------------------------------------------------------
 # 9. POLYGLOT_STATUS buildable languages
-# ---------------------------------------------------------------------------
 def check_polyglot_status() -> None:
     print("\n[9/10] POLYGLOT_STATUS build claims...")
     status_file = CORE / "docs" / "POLYGLOT_STATUS.md"
@@ -358,7 +340,6 @@ def check_polyglot_status() -> None:
 
     text = status_file.read_text()
 
-    # Check for claim that Go builds clean in whitemagic-go
     if "whitemagic-go && go build" in text and "polyglot/whitemagic-go" in text:
         # This is OK if we already updated the doc
         if "archived" in text.lower():
@@ -366,7 +347,6 @@ def check_polyglot_status() -> None:
         else:
             warn("POLYGLOT_STATUS may still reference archived polyglot/whitemagic-go/")
 
-    # Check that mesh_aux is documented
     if "mesh_aux" not in text:
         warn("POLYGLOT_STATUS does not mention core/mesh_aux/")
     else:
@@ -375,7 +355,6 @@ def check_polyglot_status() -> None:
 
 # ---------------------------------------------------------------------------
 # 10. Documentation gitignore hygiene
-# ---------------------------------------------------------------------------
 def check_doc_gitignore_hygiene() -> None:
     """Verify that internal/dev docs are NOT tracked by git.
 
@@ -468,7 +447,6 @@ def check_doc_gitignore_hygiene() -> None:
 
 # ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 def main() -> int:
     print("=" * 60)
     print("WhiteMagic Doc Drift Detector")

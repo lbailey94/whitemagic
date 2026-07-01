@@ -72,7 +72,6 @@ class ZigStringProcessor:
         text_ptr = ctypes.cast(text_buffer, ctypes.POINTER(ctypes.c_ubyte))
         out_ptr = ctypes.cast(out_buffer, ctypes.POINTER(ctypes.c_ubyte))
 
-        # Call Zig function
         keyword_count = zig_lib.wm_extract_keywords(  # type: ignore[union-attr]
             text_ptr,
             text_len,
@@ -81,7 +80,6 @@ class ZigStringProcessor:
             max_keywords,
         )
 
-        # Parse null-separated output
         keywords = []
         offset = 0
         for _ in range(keyword_count):

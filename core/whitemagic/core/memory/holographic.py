@@ -94,13 +94,11 @@ class HolographicMemory:
             # Encode memory to 5D coordinates
             coord = self._encoder.encode(memory_data)
 
-            # Add to Rust index — prefer 5D, fall back to 4D
             if self._index_5d:
                 self._index_5d.add(memory_id, [coord.x, coord.y, coord.z, coord.w, coord.v])
             elif self._index:
                 self._index.add(memory_id, coord.x, coord.y, coord.z, coord.w)
 
-            # Return 5D coords regardless of Rust index availability
             return (coord.x, coord.y, coord.z, coord.w, coord.v)
         except Exception as e:
             logger.error("Failed to index memory %s: %s", memory_id, e, exc_info=True)
@@ -259,7 +257,6 @@ class HolographicMemory:
             return []
 
         try:
-            # Call Rust implementation
             # Rust returns Vec<(Vec<f64>, Vec<String>)>
             # We convert Vec<f64> to Tuple[float, float, float, float]
             raw_clusters = self._index.find_clusters(radius, min_size)

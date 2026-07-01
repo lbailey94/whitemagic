@@ -55,7 +55,6 @@ def run(ctx, cycles: int, max_hypotheses: int, json_flag: bool, verbose: bool):
         click.echo(f"\n  Cycle ID: {cycle.cycle_id}")
         click.echo(f"  Duration: {cycle.duration_ms:.0f}ms")
 
-        # Phase summaries
         observe = cycle.phase_results.get("observe", {})
         click.echo("\n  Phase 1 — OBSERVE:")
         click.echo(f"    Proposals gathered: {observe.get('total_proposals', 0)}")

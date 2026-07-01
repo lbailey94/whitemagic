@@ -117,7 +117,6 @@ class BenchmarkHistoryTracker:
         if not recent_values:
             return None
 
-        # Return median to avoid outliers
         recent_values.sort()
         mid = len(recent_values) // 2
         return float(recent_values[mid])

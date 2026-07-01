@@ -246,7 +246,6 @@ class ExternalValidator:
             ((1.0 - r["initial_confidence"]) - float(r["success"])) ** 2 for r in rows
         ) / len(rows)
 
-        # Test passes if original is better than flipped
         passed = original_brier < flipped_brier
 
         return AdversarialTestResult(

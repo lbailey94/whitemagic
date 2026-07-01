@@ -235,7 +235,6 @@ class ConfigManager:
         if self._config:
             return self._config
 
-        # Load configuration sources in priority order
         self._load_default_config()
         self._load_file_configs()
         self._load_env_vars()
@@ -243,7 +242,6 @@ class ConfigManager:
         # Merge configurations
         merged = self._merge_configs()
 
-        # Validate and create config object
         self._config = WhiteMagicConfig(**merged)
 
         # Create directories
@@ -290,18 +288,15 @@ class ConfigManager:
 
     def _load_file_configs(self) -> None:
         """Load configuration from files."""
-        # Load base config
         base_config = self._load_config_file("base.yaml")
         if base_config:
             self._sources.append(ConfigSource("base.yaml", 10, base_config))
 
-        # Load environment-specific config
         env_file = f"{self.environment.value}.yaml"
         env_config = self._load_config_file(env_file)
         if env_config:
             self._sources.append(ConfigSource(env_file, 20, env_config))
 
-        # Load local overrides
         local_config = self._load_config_file("local.yaml")
         if local_config:
             self._sources.append(ConfigSource("local.yaml", 30, local_config))
@@ -366,7 +361,6 @@ class ConfigManager:
                         current[key] = {}
                     current = current[key]
 
-                # Convert value type if needed
                 final_key = config_path[-1]
                 parsed_value: Any
                 if final_key == "port":
@@ -474,16 +468,13 @@ def setup_config_environment(config: WhiteMagicConfig) -> None:
     if config.debug:
         os.environ["DEBUG"] = "true"
 
-    # Store in environment for other modules
     os.environ["WHITEMAGIC_CONFIG"] = config.model_dump_json()
 
 
 # Example usage and initialization
 if __name__ == "__main__":
-    # Load configuration
     config = get_config()
 
-    # Print configuration
     logger.info("Environment: %s", config.environment)
     logger.info("Database URL: %s", config.database.url)
     logger.info("API Host:Port: %s:%s", config.api.host, config.api.port)

@@ -22,7 +22,6 @@ def _handler_logs_and_reraises(handler: ast.ExceptHandler) -> bool:
         if isinstance(stmt, ast.Raise):
             has_raise = True
         elif isinstance(stmt, ast.Call):
-            # Check for logging calls
             func = stmt.func
             if isinstance(func, ast.Attribute) and func.attr in (
                 "debug",
@@ -56,7 +55,6 @@ def _handler_returns_error_envelope(handler: ast.ExceptHandler) -> bool:
     """Check if an except handler returns a dict with 'status' key (error envelope pattern)."""
     for stmt in ast.walk(handler):
         if isinstance(stmt, ast.Return) and stmt.value is not None:
-            # Check for dict return with "status" key
             if isinstance(stmt.value, ast.Dict):
                 for key in stmt.value.keys:
                     if (
@@ -65,7 +63,6 @@ def _handler_returns_error_envelope(handler: ast.ExceptHandler) -> bool:
                         and key.value == "status"
                     ):
                         return True
-            # Check for dict() call with status key
             if (
                 isinstance(stmt.value, ast.Call)
                 and isinstance(stmt.value.func, ast.Name)

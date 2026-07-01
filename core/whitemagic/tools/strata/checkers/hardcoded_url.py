@@ -77,7 +77,6 @@ def check_hardcoded_url(project_path: Path, file_index: FileIndex, findings: lis
 
                 # Skip if inside a docstring (first statement of module/function/class)
                 if node.lineno in string_lines and hasattr(node, "lineno"):
-                    # Check if this is a docstring
                     pass  # Conservative: we check by position below
 
                 for url in urls:
@@ -90,7 +89,6 @@ def check_hardcoded_url(project_path: Path, file_index: FileIndex, findings: lis
                     if domain.endswith(".local") or domain.endswith(".internal"):
                         continue
 
-                    # Check if assigned to a constant
                     # We need to find the parent — use a different approach
                     # Walk all Assign nodes and check if this constant is a value
                     is_constant = False

@@ -82,7 +82,6 @@ class ThoughtGalaxy:
             rules = holocron.get_relevant_rules(task_type, limit=3)
 
             for rule in rules:
-                # Convert Rule -> Pseudo-Episode
                 episodes.append(CognitiveEpisode(
                     id=rule["id"],
                     timestamp=datetime.now(), # Timeless/Now

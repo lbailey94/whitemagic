@@ -53,8 +53,6 @@ class AttractorManager:
         """Identify existing memories that have become massive enough to be attractors.
         Mass is primarily determined by the W-axis (Importance/Gravity).
         """
-        # Get all memories with coordinates
-        # For now, we iterate recent/active. In full prod, this would query the SpatialIndex.
         attractors = []
 
         # We need access to the holographic index to get coordinates efficiently
@@ -73,21 +71,16 @@ class AttractorManager:
             mem_id = mem.get("id")
             meta = mem.get("metadata", {})
 
-            # Try to get coordinates from metadata or calculate them
-            # For this MVP, we assume they might be in metadata or we recalculate
-            # If we can't find coords, we skip
             # In v5.1, we should be able to query the Rust index for coords
 
             # Simple heuristic for mass without full physics engine yet:
             # Mass = Importance * (1 + 0.1 * link_count)
-            # Check metadata for explicit gravity (e.g. from tests or manual set)
             if "gravity" in meta:
                 importance = float(meta["gravity"])
             else:
                 # Fallback to importance field (0.0 - 1.0 range usually, but can be higher)
                 importance = float(mem.get("importance", 0.5))
 
-            # Check if this qualifies as a black hole candidate
             if importance >= threshold_mass:
                 # We need coordinates. If not in metadata, we can't simulate physics.
                 # Placeholder: get from holographic index if available
@@ -145,14 +138,12 @@ class AttractorManager:
                     continue
 
                 # Skip high importance memories (they resist pull)
-                # Check metadata for gravity, else top-level importance, else default
                 meta = mem.get("metadata", {})
                 gravity = float(meta.get("gravity", mem.get("importance", 0.5)))
 
                 if gravity > 0.8:
                     continue
 
-                # Get candidate coords
                 c_coords = self._get_coords(str(mem_id)) if mem_id else None
                 if not c_coords:
                     continue
@@ -197,7 +188,6 @@ class AttractorManager:
 
         for event in plan:
             attractor_id = event["attractor_id"]
-            # Load attractor
             attractor_mem = self.manager.get_memory(attractor_id)
             if not attractor_mem or "error" in attractor_mem:
                 continue
@@ -213,7 +203,6 @@ class AttractorManager:
                 # Link victim to attractor
                 self.manager.associate(attractor_id, victim_id, strength=0.9)
 
-                # Add victim content to summary buffer
                 summary_buffer.append(
                     f"- {victim.get('title')}: {str(victim.get('content'))[:100]}..."
                 )

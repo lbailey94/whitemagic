@@ -356,28 +356,24 @@ def init_dampening() -> None:
 
 
 if __name__ == "__main__":
-    # Initialize all protocols
     CascadeProtocols.init_all_cascades()
     init_dampening()
 
     # Show map
     logger.info("\n" + CascadeProtocols.get_cascade_map())
 
-    # Test a cascade
     from .gan_ying_enhanced import emit_event
 
     logger.info("\n🧪 TESTING CASCADE...")
     logger.info("   Emitting BEAUTY_DETECTED...")
     emit_event("TEST", EventType.BEAUTY_DETECTED, {"what": "sunset over mountains"})
 
-    # Check what happened
     bus = get_bus()
     logger.info("\n📊 CASCADE RESULTS:")
     logger.info("   Total Emissions: %s", bus.total_emissions)
     logger.info("   Total Cascades: %s", bus.total_cascades)
     logger.info("   Emergence Count: %s", bus.emergence_count)
 
-    # Check history
     recent = bus.get_history(limit=10)
     logger.info("\n📜 RECENT EVENTS:")
     for event in recent:

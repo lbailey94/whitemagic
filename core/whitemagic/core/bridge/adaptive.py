@@ -75,7 +75,6 @@ def prat_invoke(
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Invoke a tool through the PRAT adaptive portal with context-aware morphology."""
-    # Handle missing target_tool from kwargs/args
     if not target_tool:
         target_tool = kwargs.pop("target_tool", None)
 

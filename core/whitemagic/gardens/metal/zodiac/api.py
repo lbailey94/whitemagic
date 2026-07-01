@@ -100,7 +100,6 @@ if __name__ == "__main__":
     print("UNIFIED ZODIAC SYSTEM DEMO")
     print("=" * 60)
 
-    # Test single perspective
     context = {"operation": "analyze patterns", "question": "How to improve?"}
     virgo = uzs.get_perspective("virgo", context)
 
@@ -109,7 +108,6 @@ if __name__ == "__main__":
     print(f"  Wisdom: {virgo.wisdom}")
     print(f"  Resonance: {virgo.resonance:.2f}")
 
-    # Test elemental trine
     print("\n🔥 FIRE TRINE:")
     fire_trine = uzs.activate_trine("fire", context)
     for p in fire_trine:

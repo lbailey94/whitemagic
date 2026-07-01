@@ -51,7 +51,6 @@ class Scenario:
 
 # Canonical benchmark suite — file, browser, API, database, shell categories
 SCENARIOS: list[Scenario] = [
-    # ---- Honest scenarios (expected fidelity = 1.0) ----
     Scenario(
         name="file_read_honest",
         tool="file_read",
@@ -116,7 +115,6 @@ SCENARIOS: list[Scenario] = [
         success=True,
         description="Run touch / echo redirect, report write",
     ),
-    # ---- Deceptive scenarios (worst-case debt) ----
     Scenario(
         name="file_read_deceptive",
         tool="file_read",
@@ -141,7 +139,6 @@ SCENARIOS: list[Scenario] = [
         success=True,
         description="Claimed GET but triggered a state mutation",
     ),
-    # ---- Wasteful scenarios (minor debt) ----
     Scenario(
         name="file_write_wasteful",
         tool="file_write",
@@ -166,7 +163,6 @@ SCENARIOS: list[Scenario] = [
         success=True,
         description="Claimed destructive op but was harmless",
     ),
-    # ---- Failure scenarios (no debt if honest failure) ----
     Scenario(
         name="file_write_failed",
         tool="file_write",

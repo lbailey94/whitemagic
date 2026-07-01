@@ -72,7 +72,6 @@ class ZodiacCore(ABC):
         self.current_focus: str | None = None
         self.contributions: list[dict] = []
 
-        # Connect to Celestial Bus (enhanced Gan Ying)
         self.bus = get_bus() if get_bus else None
 
     @abstractmethod
@@ -618,7 +617,6 @@ class ZodiacCouncil:
     """The full Zodiac Council - all 12 cores working together."""
 
     def __init__(self) -> None:
-        # Initialize all 12 zodiac cores
         self.cores: dict[str, ZodiacCore] = {
             # Fire signs
             "aries": AriesCore(),

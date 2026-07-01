@@ -77,7 +77,6 @@ class PatienceGarden(BaseGarden, GanYingMixin):
         concerns: list[str] = []
         blessings: list[str] = []
 
-        # Try Dharma rules engine
         try:
             from whitemagic.dharma.rules import get_rules_engine
 
@@ -145,7 +144,6 @@ class PatienceGarden(BaseGarden, GanYingMixin):
     ) -> dict[str, Any]:
         """Check if an action crosses any boundaries."""
         violations: list[str] = []
-        # Check sandbox limits
         try:
             from whitemagic.gardens.sanctuary import get_sanctuary_garden
 

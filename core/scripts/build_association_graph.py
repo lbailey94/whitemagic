@@ -67,7 +67,6 @@ def extract_keywords(text: str, max_words: int = 50) -> list[str]:
     """Extract meaningful keywords from text."""
     import re
 
-    # Remove markdown, code, URLs
     text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
     text = re.sub(r"http\S+", "", text)
     text = re.sub(r"[#*`_\[\]()]", " ", text)
@@ -75,7 +74,6 @@ def extract_keywords(text: str, max_words: int = 50) -> list[str]:
     # Tokenize
     words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
 
-    # Remove stopwords
     stopwords = {
         "the",
         "and",
@@ -212,7 +210,6 @@ def engine_jaccard(
     """Association mining via keyword Jaccard overlap."""
     log.info("═══ Engine: Jaccard Keyword Overlap ═══")
 
-    # Get memories with content
     query = """
         SELECT id, title, content FROM memories
         WHERE LENGTH(content) > 100 AND LENGTH(content) < 10000
@@ -247,7 +244,6 @@ def engine_jaccard(
 
             if sim >= 0.15:  # Threshold
                 total_compared += 1
-                # Check if association exists
                 existing = conn.execute(
                     "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
                     (id_a, id_b),
@@ -292,7 +288,6 @@ def engine_causal(
         log.warning(f"  CausalMiner unavailable: {e}")
         return {"new_associations": 0, "error": str(e)}
 
-    # Get memories for causal analysis
     query = """
         SELECT id, title, content, created_at FROM memories
         WHERE LENGTH(content) > 200 AND LENGTH(content) < 5000
@@ -311,7 +306,6 @@ def engine_causal(
         try:
             causal_links = miner.extract_causal_links(text)
             for link in causal_links:
-                # Try to find target memory by content overlap
                 target_keywords = set(extract_keywords(link.get("effect", ""), 10))
                 for other in memories:
                     if other["id"] == mem["id"]:
@@ -370,7 +364,6 @@ def engine_knowledge_graph(
         log.warning(f"  KnowledgeGraphV2 unavailable: {e}")
         return {"new_associations": 0, "error": str(e)}
 
-    # Get high-importance memories
     query = """
         SELECT id, title, content FROM memories
         WHERE importance >= 0.5 AND LENGTH(content) > 100
@@ -396,7 +389,6 @@ def engine_knowledge_graph(
             for entity in entities:
                 entity_id = f"entity:{entity.get('name', '').lower().replace(' ', '_')}"
                 if not dry_run:
-                    # Check if entity exists as memory
                     exists = conn.execute(
                         "SELECT COUNT(*) FROM memories WHERE id = ?", (entity_id,)
                     ).fetchone()[0]
@@ -495,7 +487,6 @@ def engine_entity(
         log.warning(f"  EntityExtractor unavailable: {e}")
         return {"new_associations": 0, "error": str(e)}
 
-    # Get memories
     query = """
         SELECT id, title, content FROM memories
         WHERE LENGTH(content) > 200 AND LENGTH(content) < 4000
@@ -558,7 +549,6 @@ def engine_holographic(
     """Association via 5D holographic proximity."""
     log.info("═══ Engine: Holographic Proximity ═══")
 
-    # Get memories with coordinates
     query = """
         SELECT m.id, h.x, h.y, h.z, h.w, h.v
         FROM memories m
@@ -637,7 +627,6 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
     """Association via FTS term co-occurrence."""
     log.info("═══ Engine: FTS Overlap ═══")
 
-    # Get FTS terms for memories
     query = """
         SELECT id, title, content FROM memories
         WHERE LENGTH(content) > 100
@@ -656,7 +645,6 @@ def engine_fts(conn: sqlite3.Connection, limit: int = 0, dry_run: bool = False) 
     for mem in memories:
         text = f"{mem['title'] or ''} {mem['content'] or ''}".lower()
         terms = set(re.findall(r"\b[a-z]{4,}\b", text))
-        # Remove common words
         terms -= {
             "this",
             "that",

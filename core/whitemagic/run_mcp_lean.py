@@ -495,7 +495,6 @@ async def list_tools() -> list[types.Tool]:  # type: ignore[name-defined]
             kwargs["execution"] = types.ToolExecution(taskSupport=types.TASK_OPTIONAL)
         tools.append(types.Tool(**kwargs))
 
-    # Add 'wm' meta-tool as 29th tool (world in a seed)
     tools.append(_wm_tool_def())
     return tools
 
@@ -1094,7 +1093,6 @@ async def main_stdio() -> None:
         """Monitor shutdown event and cancel tasks when triggered."""
         await shutdown_event.wait()
         logger.info("Shutdown event triggered, closing streams...")
-        # Close streams to unblock any pending reads/writes
         try:
             await read_stream_writer.aclose()
         except Exception as e:
@@ -1120,7 +1118,6 @@ async def main_stdio() -> None:
     shutdown_task = asyncio.create_task(shutdown_watcher())
 
     try:
-        # Run server - it will exit when stdin closes or on error
         await server.run(
             read_stream, write_stream, server.create_initialization_options()
         )

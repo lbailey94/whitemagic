@@ -668,7 +668,6 @@ class RecursiveImprovementLoop:
         results: dict[str, Any] = {"hypotheses_created": 0, "mc_simulations": 0}
         hypotheses: list[ImprovementHypothesis] = []
 
-        # Convert proposals to MC claims for simulation
         mc_claims = []
         for prop in proposals[:max_hypotheses]:
             # Estimate confidence from impact/effort
@@ -689,7 +688,6 @@ class RecursiveImprovementLoop:
                 }
             )
 
-        # Run MC simulation to get predicted impact distributions
         if mc_claims:
             try:
                 mc_result = self._mc_enhancer.run_calibrated(
@@ -779,7 +777,6 @@ class RecursiveImprovementLoop:
 
         # Phase 4c: HRR-based analogical hypothesis generation
         # Use Holographic Reduced Representations to find novel analogies
-        # between current proposals and historical improvement patterns
         try:
             from whitemagic.core.memory.hrr import get_hrr_engine
 
@@ -789,7 +786,6 @@ class RecursiveImprovementLoop:
             # to find analogical matches in the hypothesis space
             for prop in proposals[:3]:
                 try:
-                    # Get embedding for the proposal
                     from whitemagic.core.memory.embeddings import get_embedding_engine
 
                     emb_engine = get_embedding_engine()
@@ -817,7 +813,6 @@ class RecursiveImprovementLoop:
 
                     hrr_hyp_id = f"hrr_{prop['source']}_{hash(prop['title']) % 100000}"
 
-                    # Check if we already have this hypothesis
                     existing_ids = {h.id for h in hypotheses}
                     if hrr_hyp_id not in existing_ids:
                         hypotheses.append(
@@ -938,7 +933,6 @@ class RecursiveImprovementLoop:
 
             for hyp in cycle.hypotheses:
                 try:
-                    # Store as a pending prediction
                     db.add_prediction(
                         claim=hyp.title,
                         source_date=datetime.now().date().isoformat(),
@@ -1105,7 +1099,6 @@ class RecursiveImprovementLoop:
             except Exception as e:
                 logger.debug("Failed to record application: %s", e, exc_info=True)
 
-        # Get learning summary
         try:
             results["learning_summary"] = self._autodidactic.get_learning_summary()
         except Exception:
@@ -1303,9 +1296,7 @@ class RecursiveImprovementLoop:
                     after_count = prop.metadata.get("count", before_count)
                     break
 
-            # If no matching proposal found, the issue is fully resolved
             if after_count == before_count:
-                # Check if the proposal disappeared entirely (issue resolved)
                 matching = [
                     p
                     for p in report.proposals
@@ -1498,7 +1489,6 @@ class RecursiveImprovementLoop:
             "bandit_summary": self._bandit.to_dict(),
         }
 
-        # Add evolution module stats
         evolution_status: dict[str, Any] = {}
         for name, getter in [
             ("garden", self._get_garden_router),

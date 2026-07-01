@@ -58,7 +58,6 @@ class ResourceLimits:
         if self.api_calls >= self.max_api_calls:
             return True, f"Max API calls ({self.max_api_calls})"
 
-        # Check circuit breaker for consecutive failures
         if self.consecutive_failures >= self.max_consecutive_failures:
             return True, f"Max consecutive failures ({self.max_consecutive_failures})"
 

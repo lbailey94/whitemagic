@@ -64,7 +64,6 @@ class FeedbackController:
         # 1. Enrich Active Session
         session = self._session_manager.get_active_session()
         if session:
-            # Add to breakthroughs list
             if "breakthroughs" not in session.metrics:
                 session.metrics["breakthroughs"] = []
 
@@ -101,7 +100,6 @@ class FeedbackController:
 
         # 3. Consult Wisdom Council on how to integrate this
         # (Async dispatch to avoid blocking the event bus thread if not async)
-        # For now, we log the intent.
         # self._consult_integration(pattern, data)
 
     def _on_pattern(self, event: ResonanceEvent) -> None:
@@ -116,7 +114,6 @@ class FeedbackController:
             self._pattern_counts[pattern] = 0
         self._pattern_counts[pattern] += 1
 
-        # If pattern is recurring frequently, increase feedback gain
         if frequency > self._pattern_threshold:
             self._gain = min(1.0, self._gain * 1.1)
             logger.debug(
@@ -153,10 +150,8 @@ class FeedbackController:
         state = event.data.get("state", "unknown")
         stability = event.data.get("stability", 1.0)
 
-        # Log state transition
         logger.debug("System state changed: %s (stability=%.2f)", state, stability)
 
-        # If stability drops below threshold, reduce feedback gain
         if stability < 0.3:
             self._gain = max(0.1, self._gain * 0.9)
             logger.warning(

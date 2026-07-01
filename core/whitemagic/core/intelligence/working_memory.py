@@ -193,7 +193,6 @@ class WorkingMemory:
         all_tags = list({t for c in valid_chunks for t in c.tags})
         all_ids = [c.memory_id for c in valid_chunks]
 
-        # Remove individual chunks
         for cid in chunk_ids:
             self._chunks.pop(cid, None)
 

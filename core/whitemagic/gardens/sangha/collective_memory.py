@@ -81,7 +81,6 @@ class CollectiveMemory:
                     lineage_tree=data.get("lineage_tree", {}),
                 )
 
-                # Add this session if new
                 if session_id not in context.participants:
                     context.participants.append(session_id)
                     self._save_context(context)
@@ -211,7 +210,6 @@ class CollectiveMemory:
         if goal in context.active_goals:
             context.active_goals.remove(goal)
 
-            # Add to completed goals
             if "completed_goals" not in context.collective_state:
                 context.collective_state["completed_goals"] = []
 

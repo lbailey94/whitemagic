@@ -43,7 +43,6 @@ def _evaluate_event_ethically(event: Any) -> Any:
     dharma = get_dharma_system()
     bus = get_bus()
 
-    # Convert event to action dict for evaluation
     action = {
         "source": event.source,
         "type": event.event_type.value,
@@ -54,7 +53,6 @@ def _evaluate_event_ethically(event: Any) -> Any:
     # Evaluate ethically
     score, concerns = dharma.evaluate_action(action)
 
-    # If ethical concerns, emit guidance event
     if score < 0.7:
         guidance = dharma.get_guidance(f"Ethical concerns in {event.event_type.value}")
 
@@ -80,7 +78,6 @@ def _handle_boundary_violation(event: Any) -> Any:
     dharma = get_dharma_system()
     bus = get_bus()
 
-    # Log the violation
     violation = BoundaryViolation(
         boundary_type=event.data.get("boundary", "unknown"),
         severity=event.data.get("severity", 0.5),

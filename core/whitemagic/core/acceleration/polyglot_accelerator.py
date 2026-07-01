@@ -53,12 +53,10 @@ class PolyglotAccelerator:
         self.python_calls = 0
         self.total_time_ms = 0.0
 
-        # Check backend availability
         self._check_backends()
 
     def _check_backends(self):
         """Check which acceleration backends are available."""
-        # Check Rust
         try:
             from importlib.util import find_spec
 
@@ -68,7 +66,6 @@ class PolyglotAccelerator:
         except ImportError:
             pass
 
-        # Check Zig SIMD
         try:
             from whitemagic.core.acceleration.simd_cosine import simd_status
 
@@ -81,7 +78,6 @@ class PolyglotAccelerator:
         except (ImportError, AttributeError):
             pass
 
-        # Check Mojo
         try:
             from whitemagic.optimization.polyglot_router import get_router
 
@@ -107,7 +103,6 @@ class PolyglotAccelerator:
 
         start = time.time()
 
-        # Try Rust first (fastest)
         if self._rust_available:
             try:
                 import whitemagic_rs
@@ -122,7 +117,6 @@ class PolyglotAccelerator:
             except Exception as e:
                 logger.debug("Rust cosine failed: %s", e, exc_info=True)
 
-        # Try Zig SIMD (second fastest)
         if self._zig_available:
             try:
                 from whitemagic.core.acceleration import cosine_similarity_zig
@@ -152,13 +146,11 @@ class PolyglotAccelerator:
 
         start = time.time()
 
-        # Try Rust batch operation
         if self._rust_available:
             try:
                 import whitemagic_rs
 
                 if hasattr(whitemagic_rs, "simd_cosine_batch"):
-                    # Convert to list of lists for Rust
                     vecs_list = [list(v) for v in vectors]
                     result = whitemagic_rs.simd_cosine_batch(list(query), vecs_list)
                     self.rust_calls += 1
@@ -167,7 +159,6 @@ class PolyglotAccelerator:
             except Exception as e:
                 logger.debug("Rust batch cosine failed: %s", e, exc_info=True)
 
-        # Try Zig batch operation
         if self._zig_available:
             try:
                 from whitemagic.core.acceleration.simd_cosine import (
@@ -196,7 +187,6 @@ class PolyglotAccelerator:
         """
         start = time.time()
 
-        # Try Rust pattern extraction
         if self._rust_available:
             try:
                 import whitemagic_rs
@@ -238,7 +228,6 @@ class PolyglotAccelerator:
         """
         start = time.time()
 
-        # Try Rust MinHash
         if self._rust_available:
             try:
                 import whitemagic_rs
@@ -270,7 +259,6 @@ class PolyglotAccelerator:
         """
         start = time.time()
 
-        # Try Rust search
         if self._rust_available:
             try:
                 import json as _json

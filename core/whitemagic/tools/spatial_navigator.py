@@ -223,7 +223,6 @@ def find_neighbors(
     """
     from whitemagic.core.memory.unified import get_unified_memory
 
-    # Get reference memory coordinates
     um = get_unified_memory()
     ref_mem = um.recall(memory_id)
 
@@ -299,7 +298,6 @@ def discover_related(
 
     um = get_unified_memory()
 
-    # Get reference coordinates
     with um.backend.pool.connection() as conn:
         row = conn.execute(
             "SELECT x, y, z, w, v FROM holographic_coords WHERE memory_id = ?",
@@ -388,7 +386,6 @@ def analyze_position(memory_id: str) -> dict[str, Any]:
     if not mem:
         return {"error": f"Memory {memory_id} not found"}
 
-    # Get coordinates
     with um.backend.pool.connection() as conn:
         row = conn.execute(
             "SELECT x, y, z, w, v FROM holographic_coords WHERE memory_id = ?",

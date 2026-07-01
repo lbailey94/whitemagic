@@ -110,7 +110,6 @@ class ResonanceEngine:
                     ),
                 )
 
-                # Store and emit
                 self.patterns[pattern.pattern_id] = pattern
                 emit_event(
                     "resonance_engine",
@@ -196,7 +195,6 @@ class ResonanceEngine:
             pattern.resonance_score *= self.temporal_decay
             pattern.amplification_factor *= self.temporal_decay
 
-            # Remove if below threshold
             if pattern.resonance_score < 0.1:
                 del self.patterns[pid]
                 removed += 1

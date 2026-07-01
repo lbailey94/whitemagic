@@ -21,28 +21,26 @@ os.environ.setdefault("WM_LLM_MODEL", "qwen2.5:7b")
 
 
 def print_header(title: str) -> None:
-    print(f"\n{'=' * 70}")
-    print(f"  {title}")
-    print(f"{'=' * 70}\n")
+    logger.debug(f"\n{'=' * 70}")
+    logger.debug(f"  {title}")
+    logger.debug(f"{'=' * 70}\n")
 
 
 def print_result(label: str, value: any, indent: int = 2) -> None:
     prefix = " " * indent
     if isinstance(value, dict):
-        print(f"{prefix}{label}:")
+        logger.debug(f"{prefix}{label}:")
         for k, v in value.items():
-            print(f"{prefix}  {k}: {v}")
+            logger.debug(f"{prefix}  {k}: {v}")
     elif isinstance(value, list):
-        print(f"{prefix}{label}: [{len(value)} items]")
+        logger.debug(f"{prefix}{label}: [{len(value)} items]")
         for item in value[:3]:
-            print(f"{prefix}  - {item}")
+            logger.debug(f"{prefix}  - {item}")
     else:
-        print(f"{prefix}{label}: {value}")
+        logger.debug(f"{prefix}{label}: {value}")
 
 
-# ---------------------------------------------------------------------------
 # Scenario 1: AsyncThoughtCloneArmy — Tactical Reconnaissance
-# ---------------------------------------------------------------------------
 
 
 async def scenario_1_thought_clones():
@@ -78,7 +76,7 @@ async def scenario_1_thought_clones():
     print_result("Model", result.metadata.get("model", "N/A"))
     print(f"\nContent preview:\n  {result.content[:300]}...")
 
-    print(f"\nTotal elapsed: {elapsed:.1f}s")
+    logger.debug(f"\nTotal elapsed: {elapsed:.1f}s")
     print_result("Army Stats", army.get_stats())
 
     return {
@@ -89,9 +87,7 @@ async def scenario_1_thought_clones():
     }
 
 
-# ---------------------------------------------------------------------------
 # Scenario 2: ImmortalClone — Strategic Persistent Loop
-# ---------------------------------------------------------------------------
 
 
 async def scenario_2_immortal_clone():
@@ -182,9 +178,7 @@ def save_data(db_path, data):
     }
 
 
-# ---------------------------------------------------------------------------
 # Scenario 3: BicameralReasoner — Strategic Dual-Hemisphere Analysis
-# ---------------------------------------------------------------------------
 
 
 async def scenario_3_bicameral():
@@ -242,9 +236,7 @@ async def scenario_3_bicameral():
     }
 
 
-# ---------------------------------------------------------------------------
 # Scenario 4: CodeWritingClone — Tactical File Operations
-# ---------------------------------------------------------------------------
 
 
 async def scenario_4_code_writing():
@@ -259,7 +251,7 @@ async def scenario_4_code_writing():
     )
 
     if not code_writing_available():
-        print("Rust CodeWritingClone not available — skipping")
+        logger.debug("Rust CodeWritingClone not available — skipping")
         return {"scenario": "code_writing", "skipped": True}
 
     tmpdir = tempfile.mkdtemp()
@@ -306,7 +298,6 @@ async def scenario_4_code_writing():
     print_result("Elapsed", f"{elapsed * 1000:.1f}ms")
     print_result("Throughput", f"{len(operations) / elapsed:.0f} ops/sec")
 
-    # Verify files exist
     import pathlib
 
     files_created = list(pathlib.Path(tmpdir).rglob("*.py"))
@@ -322,7 +313,6 @@ async def scenario_4_code_writing():
 
 
 # ---------------------------------------------------------------------------
-# Scenario 5: ToolBandit — Strategy Learning Feedback
 # ---------------------------------------------------------------------------
 
 
@@ -359,10 +349,9 @@ async def scenario_5_bandit_learning():
     elapsed2 = time.perf_counter() - start
     print(f"  Round 2 done in {elapsed2:.1f}s")
 
-    # Check bandit state
     all_stats = bandit.get_all_stats()
     clone_stats = {k: v for k, v in all_stats.items() if k.startswith("clone.")}
-    print(f"\nBandit learned {len(clone_stats)} clone strategy outcomes:")
+    logger.debug(f"\nBandit learned {len(clone_stats)} clone strategy outcomes:")
     for name, stats in sorted(
         clone_stats.items(), key=lambda x: x[1]["expected_success_rate"], reverse=True
     )[:5]:
@@ -371,7 +360,6 @@ async def scenario_5_bandit_learning():
             f"success_rate={stats['expected_success_rate']:.3f} calls={stats['total_calls']}"
         )
 
-    # Get recommendations
     recommendations = bandit.recommend_clone_strategies(
         "analyze and deploy code", clone_type="thought", k=5
     )
@@ -469,7 +457,6 @@ async def main():
     print(f"Python: {sys.version.split()[0]}")
     print()
 
-    # Verify LLM
     from whitemagic.inference.local_llm import LocalLLM
 
     llm = LocalLLM()
@@ -480,7 +467,6 @@ async def main():
 
     results = []
 
-    # Run scenarios
     scenarios = [
         ("Thought Clones", scenario_1_thought_clones),
         ("ImmortalClone", scenario_2_immortal_clone),
@@ -531,7 +517,6 @@ async def main():
     print(f"\nTotal training time: {sum(r.get('elapsed_s', 0) for r in results):.1f}s")
     print("\nArmy training complete. Ready for iterative optimization.")
 
-    # Save results
     results_file = "/tmp/clone_army_training_results.json"
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2, default=str)

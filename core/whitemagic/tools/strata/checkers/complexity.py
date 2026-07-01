@@ -95,7 +95,6 @@ def check_complexity(project_path: Path, file_index: FileIndex, findings: list[F
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 func_lines = _count_lines(node)
 
-                # Function too long
                 if func_lines > _FUNC_TOO_LONG:
                     findings.append(Finding(
                         severity=FindingSeverity.INFO,

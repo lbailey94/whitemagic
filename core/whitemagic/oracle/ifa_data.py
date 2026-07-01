@@ -357,7 +357,6 @@ def ifa_to_iching(right_binary: str, left_binary: str) -> int:
     hex_binary = f"{lower_tri:03b}{upper_tri:03b}"
     hex_decimal = int(hex_binary, 2)
 
-    # Convert from Fu Xi sequence to King Wen sequence
     # Fu Xi 0-63 -> King Wen 1-64
     _FUXI_TO_KINGWEN = [
         2,
@@ -604,11 +603,9 @@ def get_all_odu() -> dict[str, OduMeji | OduAmulu]:
     global _ALL_ODU
     if _ALL_ODU is None:
         _ALL_ODU = {}
-        # Add 16 Meji (doubled)
         for odu in PRINCIPAL_ODU:
             key = odu.binary + odu.binary  # right + left = same
             _ALL_ODU[key] = odu
-        # Add 240 Amulu
         for amulu in generate_all_amulu():
             _ALL_ODU[amulu.binary] = amulu
     return _ALL_ODU

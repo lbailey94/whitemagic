@@ -35,7 +35,6 @@ class UnifiedNervousSystemV21:
             "last_pulse": 0,
         }
 
-        # Initialize all 7 subsystems
         self.subsystems = self._initialize_subsystems()
 
     def _initialize_subsystems(self) -> dict[str, Any]:
@@ -129,7 +128,6 @@ class UnifiedNervousSystemV21:
         if self.is_active:
             return
 
-        # Start event bus
         self.event_bus = await get_event_bus()
 
         # Wire the 3 key integrations (Victory Conditions 2-4)
@@ -137,7 +135,6 @@ class UnifiedNervousSystemV21:
         await connect_metabolism_to_evolution()
         await connect_resonance_to_emergence()
 
-        # Start subsystems that need activation
         for name, subsystem in self.subsystems.items():
             if subsystem and hasattr(subsystem, "start"):
                 try:
@@ -193,7 +190,6 @@ class UnifiedNervousSystemV21:
         # 1. Dream System Pulse - publishes events
         if self.subsystems.get("dreams") is not None:
             try:
-                # Run dream cycle and publish completion events
                 logger.debug("DEBUG: Triggering dream pulse")
                 dream_result = await self._dream_pulse()
                 subsystem_results["dreams"] = dream_result
@@ -215,7 +211,6 @@ class UnifiedNervousSystemV21:
         # 3. Resonance Pulse - publishes harmony events
         if self.subsystems.get("resonance") is not None:
             try:
-                # Check resonance and publish harmony events
                 logger.debug("DEBUG: Triggering resonance pulse")
                 resonance_result = await self._resonance_pulse()
                 subsystem_results["resonance"] = resonance_result
@@ -223,7 +218,6 @@ class UnifiedNervousSystemV21:
                 self._stats["subsystem_errors"]["resonance"] = str(e)
                 logger.error("Resonance pulse failed: %s", e, exc_info=True)
 
-        # Get event bus stats
         event_stats = {}
         if self.event_bus:
             event_stats = self.event_bus.get_stats()
@@ -247,7 +241,6 @@ class UnifiedNervousSystemV21:
         """Run dream cycle and publish events."""
         dreams = self.subsystems["dreams"]
 
-        # Run a dream phase
         if dreams and hasattr(dreams, "run_phase"):
             # In V21, dreams is a DreamCycle instance from whitemagic.core.intelligence.dream_cycle
             # Need to ensure we're calling the correct async method
@@ -294,7 +287,6 @@ class UnifiedNervousSystemV21:
         """Check resonance and publish harmony events."""
         resonance = self.subsystems["resonance"]
 
-        # Get current harmony level
         if hasattr(resonance, "get_harmony_level"):
             harmony_level = resonance.get_harmony_level()
 

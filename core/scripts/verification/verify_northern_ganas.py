@@ -3,7 +3,6 @@ import os
 import asyncio
 import json
 
-# Add module to path
 sys.path.insert(0, os.path.abspath("."))
 
 from whitemagic.mcp_api_bridge import (

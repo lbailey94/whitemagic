@@ -102,13 +102,11 @@ class CloneArmy:
             for i, line in enumerate(lines):
                 line_lower = line.lower()
 
-                # Check if any query term appears
                 matches = sum(1 for term in query_terms if term in line_lower)
 
                 if matches > 0:
                     relevance = matches / len(query_terms)
 
-                    # Get context (surrounding lines)
                     start = max(0, i - 2)
                     end = min(len(lines), i + 3)
                     context = "\n".join(lines[start:end])
@@ -152,11 +150,9 @@ class CloneArmy:
 
         Returns aggregated results from all clones.
         """
-        # Try Rust implementation first (CA_RB)
         try:
             import whitemagic_rs
             if hasattr(whitemagic_rs, "parallel_search"):
-                # Get all extensions from all relevant clone types
                 if allocation is None:
                     allocation = DEFAULT_ARMY_ALLOCATION
 
@@ -176,7 +172,6 @@ class CloneArmy:
 
                 logger.info("🦀 Rust Clone Army deployed: %s matches found", len(rust_results))
 
-                # Convert back to SearchResult objects
                 results = []
                 for file_path, line, content, relevance, context in rust_results:
                     # Infer clone type from extension
@@ -186,7 +181,6 @@ class CloneArmy:
                     # Default to PATTERN_HUNTER if no match found
                     matched_clone_type = CloneType.PATTERN_HUNTER
 
-                    # Try to find a specific clone type for this extension
                     for ct in CloneType:
                         spec = CloneSpec.get_spec(ct)
                         if ext in spec.file_extensions:
@@ -279,7 +273,6 @@ class CloneArmy:
             # Confidence based on agreement
             confidence = min(1.0, vote_count / 5) * avg_relevance
 
-            # Get best content preview
             best_result = max(result_list, key=lambda r: r.relevance)
 
             consensus_results.append(ConsensusResult(
@@ -315,7 +308,6 @@ class CloneArmy:
         Uses asyncio for non-blocking parallel search across all clone types.
         Target: 10,000+ ops/sec throughput.
         """
-        # Try Rust implementation first (fastest path)
         try:
             import whitemagic_rs
             if hasattr(whitemagic_rs, "parallel_search"):
@@ -328,7 +320,6 @@ class CloneArmy:
                     for ext in spec.file_extensions:
                         extensions.add(ext.lstrip("."))
 
-                # Run Rust search in executor to not block
                 loop = asyncio.get_event_loop()
                 rust_results = await loop.run_in_executor(
                     None,
@@ -339,7 +330,6 @@ class CloneArmy:
 
                 logger.info("🦀⚡ Async Rust Clone Army: %s matches", len(rust_results))
 
-                # Convert to SearchResult objects
                 results = []
                 for file_path, line, content, relevance, context in rust_results:
                     path_obj = Path(file_path)
@@ -387,7 +377,6 @@ class CloneArmy:
                 for file_path in batch:
                     tasks.append(self.async_search_file(file_path, query, clone_type))
 
-        # Execute all tasks concurrently
         results_nested = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Flatten results, ignoring exceptions

@@ -191,7 +191,6 @@ class InvariantTracker:
                 f"shannon_entropy decreased by {abs(deltas['shannon_entropy_delta'])}"
             )
 
-        # Test count should not decrease (tests define correct behavior)
         if deltas["test_count_delta"] < 0:
             results["violations"].append(
                 f"test_count decreased by {abs(deltas['test_count_delta'])}"

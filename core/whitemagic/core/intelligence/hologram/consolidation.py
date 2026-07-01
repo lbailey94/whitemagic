@@ -114,9 +114,9 @@ class HolographicConsolidator:
                     buckets[bk] = []
                 buckets[bk].append(mem_id)
                 record_count += 1
-            print(f"   - Bucketed {record_count} points...")
+            logger.debug(f"   - Bucketed {record_count} points...")
 
-        print(f"   - Building neighbors for {len(buckets)} spatial cells...")
+        logger.debug(f"   - Building neighbors for {len(buckets)} spatial cells...")
 
         clusters = []
         used = set()
@@ -128,7 +128,7 @@ class HolographicConsolidator:
         for bk, bucket_ids in buckets.items():
             bucket_count += 1
             if bucket_count % 2000 == 0:
-                print(f"   - Processing bucket {bucket_count}/{len(buckets)}...")
+                logger.debug(f"   - Processing bucket {bucket_count}/{len(buckets)}...")
 
             for mem_id in bucket_ids:
                 if mem_id in used:
@@ -137,7 +137,6 @@ class HolographicConsolidator:
                 current_coords = coords_map[mem_id]
                 neighbors = [mem_id]
 
-                # Check neighbors
                 bx, by, bz, bw = bk
                 for dx, dy, dz, dw in neighbor_offsets:
                     nb_key = (bx + dx, by + dy, bz + dz, bw + dw)

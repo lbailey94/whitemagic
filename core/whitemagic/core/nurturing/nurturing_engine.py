@@ -219,7 +219,6 @@ class NurturingEngine:
         # Apply style preferences
         response = base_response
 
-        # Get communication style
         style = profile.communication_style
 
         # Length preference

@@ -38,13 +38,11 @@ class ProgressAssessor:
         self, obj: Objective, result: ExecutionResult
     ) -> Assessment:
         """Assess if objective is complete."""
-        # Check for errors first
         if result.errors:
             self.consecutive_failures += 1
             self.iterations_since_success += 1
             self.success_streak = 0
 
-            # Check for circuit breaker trip
             if self.consecutive_failures >= self.max_consecutive_failures:
                 return Assessment(
                     complete=False,
@@ -54,7 +52,6 @@ class ProgressAssessor:
                     summary=f"Stopped due to repeated failures: {obj.description}",
                 )
 
-            # Check for plateau (no progress for too long)
             if (
                 self.iterations_since_success >= self.plateau_threshold
                 and not self.plateau_detected
@@ -75,7 +72,6 @@ class ProgressAssessor:
                 reason=f"Errors: {result.errors[:3]}",
             )
 
-        # Check success criteria
         criteria_met = await self.check_criteria(obj.success_criteria, result)
 
         if not criteria_met:
@@ -83,7 +79,6 @@ class ProgressAssessor:
             self.iterations_since_success += 1
             self.success_streak = 0
 
-            # Check for circuit breaker trip
             if self.consecutive_failures >= self.max_consecutive_failures:
                 return Assessment(
                     complete=False,
@@ -93,7 +88,6 @@ class ProgressAssessor:
                     summary=f"Stopped due to repeated failures: {obj.description}",
                 )
 
-            # Check for plateau
             if (
                 self.iterations_since_success >= self.plateau_threshold
                 and not self.plateau_detected
@@ -136,7 +130,6 @@ class ProgressAssessor:
         if not criteria:
             return bool(result.success)  # No criteria = rely on execution result
 
-        # Check each criterion
         for criterion in criteria:
             # String matching in output
             if criterion.lower() in result.output.lower():
@@ -148,13 +141,11 @@ class ProgressAssessor:
                 if not Path(path).exists():
                     return False
 
-            # Test passing check
             elif criterion == "tests_pass":
                 if not ("PASSED" in result.output or "OK" in result.output):
                     return False
 
             else:
-                # If any criterion isn't met by default string matching
                 return False
 
         return True

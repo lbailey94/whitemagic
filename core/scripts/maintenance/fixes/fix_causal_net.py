@@ -1,7 +1,6 @@
 with open("whitemagic/core/intelligence/synthesis/causal_net.py") as f:
     content = f.read()
 
-# Add a rust fast-path option to infer_dependencies
 content = content.replace(
     """    def infer_dependencies(self, active_clusters: dict[tuple[int, int], list[str]]) -> dict[str, list[str]]:
         \"\"\"Infer a Directed Acyclic Graph (DAG) between clusters.

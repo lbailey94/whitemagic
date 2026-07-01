@@ -637,12 +637,10 @@ def analyze_file_for_garden(
     """
     path_lower = file_path.lower()
 
-    # Start with path-based hint
     primary_garden = "mystery"  # default
     confidence = 0.0
     reason = "default"
 
-    # Check path hints first (highest confidence for structural organization)
     for hint_path, garden in PATH_GARDEN_HINTS.items():
         if hint_path.lower() in path_lower:
             primary_garden = garden
@@ -701,10 +699,8 @@ def analyze_file_for_garden(
             for kw in data.get("keywords", []):
                 if kw in func_text:
                     if garden != primary_garden:
-                        # Add as resonant garden
                         pass
 
-    # Get garden metadata from registry
     garden_entry = get_by_garden(primary_garden)
     quadrant = garden_entry.quadrant.value if garden_entry else ""
     element = garden_entry.element.value if garden_entry else ""

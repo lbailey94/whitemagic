@@ -101,7 +101,6 @@ def _get_garden_getter(garden_name: str) -> Callable[..., Any] | None:
 # Lazy attribute access for backward compatibility
 def __getattr__(name: str) -> Any:
     """Lazy load garden classes and getters on access."""
-    # Handle deprecated air/metal redirects (S023 consolidation)
     if name == "AirGarden" or name == "get_air_garden":
         warnings.warn(
             "air garden folded into voice (S023). Use VoiceGarden/get_voice_garden instead.",
@@ -132,7 +131,6 @@ def __getattr__(name: str) -> Any:
             globals()[name] = get_practice_garden
             return get_practice_garden
 
-    # Handle garden class access (e.g., JoyGarden)
     if name.endswith("Garden"):
         garden_name = name[:-6].lower()
         if garden_name in _GARDEN_MODULES:
@@ -144,7 +142,6 @@ def __getattr__(name: str) -> Any:
             globals()[name] = None
             return None
 
-    # Handle getter access (e.g., get_joy_garden)
     if name.startswith("get_") and name.endswith("_garden"):
         garden_name = name[4:-7]
         if garden_name in _GARDEN_MODULES:
@@ -266,7 +263,6 @@ def _get_garden_getters() -> dict[str, Callable[..., Any] | None]:
     return _garden_getters_cache
 
 
-# For backward compatibility - expose as module-level dict (built on first access)
 # Note: This is a function call, not a property, for module-level use
 def get_garden_getters() -> dict[str, Callable[..., Any] | None]:
     """Get the GARDEN_GETTERS dict (lazy loaded)."""

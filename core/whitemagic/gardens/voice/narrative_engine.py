@@ -176,7 +176,6 @@ class NarrativeEngine:
             return NarrativeArc.RISING_ACTION
 
         if thread.arc == NarrativeArc.RISING_ACTION and moments_count > 8:
-            # Check for breakthrough/peak moment
             recent_events = [m["event"] for m in thread.key_moments[-3:]]
             if any(
                 "complete" in e.lower() or "success" in e.lower() for e in recent_events

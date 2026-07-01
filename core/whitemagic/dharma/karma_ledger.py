@@ -264,7 +264,6 @@ class KarmaLedger:
             checked = 0
             sig_checked = 0
             for entry in self._entries:
-                # Verify Merkle hash chain
                 if entry.prev_hash and entry.entry_hash:
                     if entry.prev_hash != prev:
                         broken_at = checked
@@ -278,7 +277,6 @@ class KarmaLedger:
                         broken_at = checked
                         break
                     prev = entry.entry_hash
-                # Verify Ed25519 signature if present
                 if entry.signature and entry.key_id:
                     sig_checked += 1
                     try:
@@ -389,7 +387,6 @@ class KarmaLedger:
         for i in range(keep_rotated, 0, -1):
             src = ledger_file.parent / f"karma_ledger.{i}.jsonl"
             if i == keep_rotated:
-                # Delete the oldest
                 if src.exists():
                     src.unlink()
             else:

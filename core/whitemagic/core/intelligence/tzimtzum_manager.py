@@ -39,10 +39,8 @@ class TzimtzumManager:
         if not self.is_vacant_space_active:
             return 1.0
 
-        # Check current system pressure
         cpu_usage = psutil.cpu_percent() / 100.0
 
-        # If we are in vacant space mode, we want to keep our footprint below the cap
         if cpu_usage > self.intensity_cap:
             return 0.5 * self.intensity_cap  # Heavier throttle if exceeding cap
 

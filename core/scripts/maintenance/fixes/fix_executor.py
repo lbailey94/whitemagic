@@ -1,7 +1,6 @@
 with open("whitemagic/autonomous/executor/continuous_executor.py") as f:
     content = f.read()
 
-# Add rust imports
 content = content.replace(
     "from .objective_generator import ObjectiveGenerator",
     "from .objective_generator import ObjectiveGenerator\n        try:\n            import whitemagic_rust as rs\n            self._rust_daemon = rs.ContinuousDaemon()\n        except ImportError:\n            self._rust_daemon = None",

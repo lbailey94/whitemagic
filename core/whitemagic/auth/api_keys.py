@@ -50,7 +50,6 @@ class APIKeySystem:
         ] = {}  # hashed_key -> metadata_json (legacy/unused in new persistence)
         self._metadata: dict[str, APIKeyMetadata] = {}
 
-        # Load keys from storage
         self._load()
 
     def generate_key(
@@ -73,7 +72,6 @@ class APIKeySystem:
             expires_at=expires_at,
         )
 
-        # Store metadata
         self._metadata[key_id] = metadata
 
         # We need to store the hash -> key_id mapping persistently too
@@ -128,7 +126,6 @@ class APIKeySystem:
                 "metadata": {k: v.dict() for k, v in self._metadata.items()},
             }
 
-            # Handle datetime serialization
             def json_serial(obj: object) -> str:
                 """
                 Perform the json serial operation.
@@ -168,7 +165,6 @@ class APIKeySystem:
             self._metadata = {}
             for k, v in metadata_raw.items():
                 try:
-                    # Parse datetime strings back to datetime objects
                     # Pydantic usually handles this if passed to constructor/parse_obj
                     self._metadata[k] = APIKeyMetadata.parse_obj(v)
                 except Exception as e:

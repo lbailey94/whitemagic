@@ -16,7 +16,6 @@ import sys
 import time
 from pathlib import Path
 
-# Add bridge to path
 POLYGLOT_BRIDGE = Path(__file__).parent / "bridges" / "python"
 if str(POLYGLOT_BRIDGE) not in sys.path:
     sys.path.insert(0, str(POLYGLOT_BRIDGE))

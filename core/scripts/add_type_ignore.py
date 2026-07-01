@@ -54,7 +54,6 @@ def add_ignore_comment(path: Path, line_no: int, code: str = "assignment") -> bo
 
 
 def main() -> None:
-    # Run mypy and collect (file, line, code) tuples
     result = subprocess.run(
         [".venv/bin/mypy", "whitemagic/"],
         capture_output=True,

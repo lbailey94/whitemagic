@@ -165,7 +165,6 @@ def _demo_play() -> None:
     # Enter exploration mode
     logger.info(play.enter_play_mode(PlayMode.EXPLORATION))
 
-    # Get improvisation prompt
     logger.info("\n%s", play.improvisation_prompt())
 
     # Record a play session

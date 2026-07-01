@@ -418,7 +418,6 @@ def tier4_iceoryx():
             ipc_bridge_status,
         )
 
-        # Verify the bridge is actually available
         if ipc_bridge_status() is None:
             raise ImportError("IPC bridge compiled but not initialized")
 
@@ -582,7 +581,6 @@ def print_summary():
         speedup = py_enc["median_ns"] / rust_enc["median_ns"]
         print(f"\n  Rust vs Python 5D encode: {speedup:.1f}× speedup")
 
-    # Save results
     out_path = Path(__file__).parent / "benchmark_v3_results.json"
     with open(out_path, "w") as f:
         json.dump(

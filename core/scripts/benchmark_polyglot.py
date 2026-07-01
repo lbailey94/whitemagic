@@ -294,7 +294,6 @@ def bench_rust_minhash():
     for i in range(50):
         base = random.sample(all_words, 20)
         keyword_sets.append(base)
-    # Add some near-duplicates
     for i in range(10):
         dup = list(keyword_sets[i])
         dup[0] = f"different_{i}"
@@ -409,7 +408,6 @@ def bench_haskell_dharma():
         from whitemagic.dharma.rules import DharmaRulesEngine
 
         engine = DharmaRulesEngine()
-        # Check if Haskell is available by looking at the engine
         has_haskell = (
             hasattr(engine, "_haskell_bridge") and engine._haskell_bridge is not None
         )
@@ -418,7 +416,6 @@ def bench_haskell_dharma():
 
     print(f"  Haskell available: {has_haskell}")
 
-    # Test the Python evaluation path directly
     try:
         from whitemagic.dharma.rules import DharmaRulesEngine
 

@@ -59,7 +59,6 @@ def handle_galaxy_switch(**kwargs: Any) -> dict[str, Any]:
 
 def handle_galaxy_list(**kwargs: Any) -> dict[str, Any]:
     """List all known galaxies with caching."""
-    # Try cache first
     try:
         from whitemagic.core.memory.query_cache import get_query_cache
 
@@ -92,7 +91,6 @@ def handle_galaxy_list(**kwargs: Any) -> dict[str, Any]:
 
 def handle_galaxy_status(**kwargs: Any) -> dict[str, Any]:
     """Get galaxy manager status with caching."""
-    # Try cache first
     try:
         from whitemagic.core.memory.query_cache import get_query_cache
 

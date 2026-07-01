@@ -72,7 +72,6 @@ def fix_file(path: Path) -> bool:
         start = stmt.lineno - 1  # 0-indexed
         end = stmt.end_lineno  # 1-indexed, exclusive
         stray_texts.append("".join(lines[start:end]))
-    # Remove the stray lines from the file
     for idx in sorted(stray_indices, reverse=True):
         stmt = body[idx]
         start = stmt.lineno - 1

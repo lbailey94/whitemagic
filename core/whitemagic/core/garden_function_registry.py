@@ -117,7 +117,6 @@ class GardenFunctionRegistry:
                 self._garden_functions[mapping.primary_garden] = []
             self._garden_functions[mapping.primary_garden].append(key)
 
-            # Function name index
             if mapping.function_name not in self._function_index:
                 self._function_index[mapping.function_name] = []
             self._function_index[mapping.function_name].append(key)
@@ -150,7 +149,6 @@ class GardenFunctionRegistry:
                 if key.startswith(f"{file_path}:"):
                     return self._function_mappings.get(key)
 
-        # Return first match
         return self._function_mappings.get(keys[0])
 
     def get_garden_functions(self, garden: str) -> list[FunctionGardenMapping]:
@@ -200,7 +198,6 @@ class GardenFunctionRegistry:
                             cross_calls[source_garden].get(target_garden, 0) + 1
                         )
 
-        # Convert to sorted lists
         result = {}
         for source, targets in cross_calls.items():
             result[source] = [
@@ -242,7 +239,6 @@ def analyze_function_for_garden(
 ) -> FunctionGardenMapping:
     """Analyze a function and determine its garden affinity."""
 
-    # Start with file's garden
     primary_garden = file_garden
     garden_from_file = file_garden
     garden_from_content = file_garden
@@ -253,7 +249,6 @@ def analyze_function_for_garden(
     resonance = calculate_resonance(content[:500])
 
     if resonance:
-        # Get top resonating garden
         top_garden = list(resonance.keys())[0]
         top_score = resonance[top_garden].get("score", 0)
 
@@ -264,7 +259,6 @@ def analyze_function_for_garden(
                 primary_garden = top_garden
                 confidence = min(0.95, 0.5 + top_score / 20.0)
 
-    # Get garden metadata
     garden_entry = get_by_garden(primary_garden)
     quadrant = garden_entry.quadrant.value if garden_entry else ""
     element = garden_entry.element.value if garden_entry else ""

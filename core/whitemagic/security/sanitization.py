@@ -41,7 +41,6 @@ def sanitize_command_arg(arg: str) -> str:
     if not isinstance(arg, str):
         raise ValueError(f"Argument must be string, got {type(arg)}")
 
-    # Check for dangerous patterns
     for pattern in _DANGEROUS_PATTERNS:
         if re.search(pattern, arg, re.IGNORECASE):
             raise ValueError(f"Argument contains dangerous pattern: {pattern}")
@@ -136,7 +135,6 @@ def safe_run(
     # Sanitize command
     sanitized_cmd = sanitize_command_args(cmd)
 
-    # Validate working directory
     if cwd:
         cwd = validate_path(cwd, allowed_bases)
 
@@ -158,7 +156,6 @@ def safe_run(
             if any(k.startswith(prefix) for prefix in safe_prefixes):
                 safe_env[k] = str(v)
 
-    # Execute with shell=False (prevents injection)
     return subprocess.run(  # noqa: S603 - inputs are sanitized, shell=False enforced
         sanitized_cmd,
         cwd=cwd,
@@ -240,7 +237,6 @@ def validate_sql_value(
         return value
 
     if isinstance(value, str):
-        # Check for SQL injection patterns (actual attack patterns, not English words)
         # Note: Parameterized queries are the real defense. This is a secondary check.
         sql_patterns = [
             r";\s*(DROP|DELETE|UPDATE|INSERT|ALTER|CREATE|EXEC)",  # SQL command injection

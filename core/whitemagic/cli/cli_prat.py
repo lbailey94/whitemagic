@@ -86,7 +86,6 @@ def invoke(tool_name: str, query: str, morphology: str | None, limit: int) -> No
 
     result = asyncio.run(run())
 
-    # Display result
     meta = result.pop("_meta", {})
 
     click.echo("\n🔮 PRAT Invocation Result")

@@ -560,7 +560,6 @@ Structure allows for rest and recovery.
                 script_path = SCRIPTS_DIR / "update_windsurf_archive.py"
                 output_dir = WM_ROOT / "archives" / "windsurf_sync"
 
-                # Check if script exists
                 if not script_path.exists():
                     # Script not found - return gracefully
                     pass

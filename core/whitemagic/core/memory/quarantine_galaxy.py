@@ -140,7 +140,6 @@ class QuarantineGalaxy(MemoryGalaxy):
 class NoisyMemoryDetector:
     """Detects memories that should be moved to quarantine."""
 
-    # Patterns indicating auto-generated/noisy content
     NOISY_PATTERNS = [
         'configuration_',
         'modeling_',
@@ -172,24 +171,19 @@ class NoisyMemoryDetector:
         title = memory.get('title') or ''
         tags = memory.get('tags', [])
 
-        # Check for HF/external library noise
         if any(p in title.lower() or p in content.lower()
                for p in self.HF_PATTERNS):
             return True, 'external_library'
 
-        # Check for noisy patterns
         if any(p in title.lower() for p in self.NOISY_PATTERNS):
             return True, 'noisy_pattern'
 
-        # Check for scavenged content
         if 'scavenged' in tags or memory.get('source') == 'scavenged':
             return True, 'scavenged'
 
-        # Check for temp/benchmark content
         if title.startswith('bench_') or title.startswith('temp_'):
             return True, 'temporary'
 
-        # Check for very short content (< 100 chars, not meaningful)
         if len(content) < 100 and len(title) < 20:
             return True, 'insufficient_content'
 
@@ -243,7 +237,6 @@ class NoisyMemoryDetector:
                         reason=reason,
                         original_metadata=memory
                     )
-                    # If successfully quarantined, delete from active DB
                     if success:
                         conn.execute("DELETE FROM memories WHERE id = ?", (memory['id'],))
                         conn.execute("DELETE FROM tags WHERE memory_id = ?", (memory['id'],))

@@ -144,7 +144,6 @@ class LocalEmbeddingProvider:
         # Sort by similarity
         similarities.sort(key=lambda x: x[1], reverse=True)
 
-        # Return top-k results
         results = []
         for idx, sim in similarities[:top_k]:
             results.append({"text": candidates[idx], "index": idx, "similarity": sim})

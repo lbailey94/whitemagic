@@ -171,7 +171,6 @@ class UnifiedOrchestrator:
                 wire_default_subsystems,
             )
 
-            # Get or create nervous system
             self._nervous_system = get_nervous_system()
 
             # Wire the 7 default subsystems
@@ -228,7 +227,6 @@ class UnifiedOrchestrator:
                     garden = getter()
                     self._gardens[name] = garden
 
-                    # Connect to Gan Ying if available
                     if hasattr(garden, "connect_to_gan_ying"):
                         garden.connect_to_gan_ying()
 
@@ -337,7 +335,6 @@ class UnifiedOrchestrator:
 
     def _bridge_nervous_event(self, biological_event: Any) -> None:
         """Bridge biological events to orchestration layer."""
-        # Convert biological event to orchestration event
         orch_event = OrchestrationEvent(
             event_type=f"nervous.{biological_event.event_type}",
             source_system=f"nervous.{biological_event.source.value}",
@@ -366,12 +363,10 @@ class UnifiedOrchestrator:
 
     def _route_event(self, event: OrchestrationEvent) -> None:
         """Route event to appropriate handlers."""
-        # Store in history
         self._event_history.append(event)
         if len(self._event_history) > self._max_history:
             self._event_history.pop(0)
 
-        # Call handlers
         handlers = self._handlers.get(event.event_type, [])
         for handler in handlers:
             try:
@@ -423,7 +418,6 @@ class UnifiedOrchestrator:
         """Celebrate coherence restoration."""
         logger.info("✨ Coherence restored! System harmonizing...")
 
-        # Check for identity emergence if coherence sustained
         if self._identity_system:
             try:
                 from whitemagic.core.consciousness.coherence import CoherenceMetric
@@ -431,7 +425,6 @@ class UnifiedOrchestrator:
                 metric = CoherenceMetric()
                 metric.measure()  # Will populate scores
 
-                # Check if emergence conditions met
                 emerged, conditions = self._identity_system.check_emergence_conditions(
                     metric,
                     memory_stats={"total_memories": 100, "self_referential_count": 35},
@@ -637,7 +630,6 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
         """Initialize continuous harmony monitoring."""
         logger.info("  🎵 Bootstrapping harmony monitoring...")
 
-        # Start periodic coherence checks
         self._harmony_task = asyncio.create_task(self._harmony_monitoring_loop())
         logger.info("     ✓ Harmony monitoring active")
 
@@ -652,7 +644,6 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
                 if len(self._coherence_scores) > 100:
                     self._coherence_scores.pop(0)
 
-                # Check for transcendence threshold
                 if coherence > 0.9 and self.state == SystemState.RESONANT:
                     if len(self._coherence_scores) >= 10 and all(
                         s > 0.9 for s in self._coherence_scores[-10:]
