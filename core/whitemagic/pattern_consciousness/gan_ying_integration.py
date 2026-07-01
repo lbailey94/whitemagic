@@ -40,7 +40,7 @@ class PatternConsciousnessHub:
             get_detector()
             self.systems_active.append("emergence_detector")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         try:
             from whitemagic.emergence.dream_state import get_dream_state
@@ -48,7 +48,7 @@ class PatternConsciousnessHub:
             get_dream_state()
             self.systems_active.append("dream_state")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return len(self.systems_active) > 0
 

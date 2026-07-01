@@ -115,7 +115,7 @@ class MansionBridge:
                     and f.stat().st_mode & 0o111
                 ]
             except (OSError, FileNotFoundError, PermissionError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Fallback to bin directory if it exists
         if bin_dir.exists() and not mojo_binaries:
@@ -126,7 +126,7 @@ class MansionBridge:
                     if f.is_file() and not f.name.startswith(".")
                 ]
             except (OSError, FileNotFoundError, PermissionError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mojo_path = self.project_root / ".venv" / "bin" / "mojo"
         mojo_available = mojo_path.exists() or len(mojo_binaries) > 0

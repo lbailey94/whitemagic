@@ -195,7 +195,7 @@ class EventRingBridge:
                 if isinstance(sequence, (int, float)):
                     return int(sequence)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
             self._fallback = _FallbackRing()
@@ -211,7 +211,7 @@ class EventRingBridge:
                 if isinstance(consumer_id, (int, float)):
                     return int(consumer_id)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
             self._fallback = _FallbackRing()
@@ -236,7 +236,7 @@ class EventRingBridge:
                     for seq, et, sid, ts, conf, d in raw
                 ]
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
             return []
@@ -263,7 +263,7 @@ class EventRingBridge:
                 if isinstance(stats, dict):
                     return stats
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
             return {}

@@ -737,7 +737,7 @@ class WarRoom:
                 async_dispatch=True,
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return {
             "campaign": campaign.to_dict(),

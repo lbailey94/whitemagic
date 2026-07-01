@@ -327,7 +327,7 @@ def setup() -> None:
         try:
             rel = str(mcp_entry.relative_to(Path.cwd()))
         except ValueError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         click.echo(f"   ✅ MCP entrypoint present: {rel}")
     else:
         click.echo("   ⚠️  MCP entrypoint missing: whitemagic/run_mcp.py")

@@ -654,7 +654,7 @@ class ShelterManager:
             try:
                 shutil.rmtree(shelter.work_dir, ignore_errors=True)
             except (OSError, FileNotFoundError, PermissionError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
 
 _manager: ShelterManager | None = None

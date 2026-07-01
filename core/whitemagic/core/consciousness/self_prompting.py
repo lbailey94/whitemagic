@@ -220,7 +220,7 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
                 f"task={item.task} status={item.status} elapsed={round(elapsed, 3)}s",
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     stats["remaining"] = sum(1 for i in items if i.status == "pending")
     _save_queue(items)

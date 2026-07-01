@@ -218,7 +218,7 @@ def step_constellation_detection():
             )
             logger.debug(f"    Avg drift: {drift.get('avg_drift_distance', 0):.4f}")
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return report.to_dict()
 

@@ -57,7 +57,7 @@ class VectorLake:
                     try:
                         return list(method(limit))
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
                 except Exception as exc:
                     logger.debug(
                         "Method %s failed: %s", method_name, exc, exc_info=True

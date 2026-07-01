@@ -1216,7 +1216,7 @@ class RabbitHoleExplorer:
                     tags=["rabbit_hole", "web_research", topic, "spiral"],
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Emit to Gan Ying
         emit_research_event(

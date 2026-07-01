@@ -208,7 +208,7 @@ def handle_task_status(**kwargs: Any) -> dict[str, Any]:
             try:
                 result = _json_loads(result_file.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return {
             "status": "success",
             "task": task,

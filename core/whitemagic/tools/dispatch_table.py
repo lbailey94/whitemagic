@@ -368,7 +368,7 @@ def _mw_core_router(
             if garden is not None:
                 garden.boost(0.1)
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     if ctx.tool_name.startswith("gana_") and _gana_invoke is not None:
         try:

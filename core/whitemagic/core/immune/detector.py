@@ -124,7 +124,7 @@ class ThreatDetector:
                         )
                     )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _record_scan(self) -> None:
         self.scan_history.append(

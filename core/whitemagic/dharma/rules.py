@@ -621,7 +621,7 @@ class DharmaRulesEngine:
                     try:
                         target[parts[-1]] = min(float(val), max_val)  # type: ignore[arg-type]
                     except (TypeError, ValueError):
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
         return transformed
 
     def set_profile(self, profile: str) -> None:
@@ -937,7 +937,7 @@ class DharmaRulesEngine:
                     changed = True
                     break
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if changed:
             self._load_rules()
@@ -962,7 +962,7 @@ class DharmaRulesEngine:
             data = yaml.safe_load(_DEFAULT_RULES_YAML)
             all_entries.extend(data.get("rules", []))
         except yaml.YAMLError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # 2. Single rules file
         if self._rules_path and self._rules_path.exists():

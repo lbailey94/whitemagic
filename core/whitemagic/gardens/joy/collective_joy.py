@@ -139,7 +139,7 @@ class CollectiveJoy:
                 )
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     def _celebrate(self, event: SharedJoyEvent):
         """Celebrate the collective joy!"""

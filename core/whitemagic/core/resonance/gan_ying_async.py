@@ -79,7 +79,7 @@ class AsyncGanYingBus:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         logger.info("Async Gan Ying Bus stopped")
 
     async def emit(
@@ -176,7 +176,7 @@ class AsyncGanYingBus:
                 self._handlers[event_type].remove(handler)
                 logger.debug("Removed handler for %s", event_type, exc_info=True)
             except ValueError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def add_filter(self, filter_func: Callable[[AsyncEvent], bool]) -> None:
         """Add event filter."""

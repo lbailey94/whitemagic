@@ -248,7 +248,7 @@ class KokaProcess:
                 try:
                     self._proc.kill()
                 except (ProcessLookupError, OSError):
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
         self._proc = None
 
     def call(self, request: dict) -> dict[Any, Any]:

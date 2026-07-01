@@ -79,7 +79,7 @@ class PatternDreamBridge:
                     try:
                         self._pending.append(json.loads(line))
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
     def _save_synthesis(self, synthesis: dict[str, Any]) -> None:
         with open(self.synthesis_file, "a") as f:

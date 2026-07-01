@@ -84,7 +84,7 @@ def handle_homeostasis_status(**kwargs: Any) -> dict[str, Any]:
                     "confidence": forecast.confidence,
                 }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return result
 
@@ -113,7 +113,7 @@ def handle_homeostasis_check(**kwargs: Any) -> dict[str, Any]:
         if recs:
             result["physical_recommendations"] = recs
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return result
 

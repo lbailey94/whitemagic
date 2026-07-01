@@ -77,7 +77,7 @@ class TriggerManager:
             with file_lock(self.trigger_file):
                 atomic_write(self.trigger_file, content)
         except OSError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
 
 # Hook functions for integration

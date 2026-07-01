@@ -120,7 +120,7 @@ class CrossDomainCollisionDetector:
             conn.execute("PRAGMA synchronous = NORMAL")
             conn.execute("PRAGMA busy_timeout = 30000")
         except sqlite3.OperationalError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return conn
 
     def detect(

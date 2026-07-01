@@ -1118,7 +1118,7 @@ class AlchemicalLoop:
                     else:
                         learner.learn_from_mistake(lesson, lesson)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return lessons
 

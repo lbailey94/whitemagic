@@ -182,7 +182,7 @@ class StateBoardBridge:
                         energy=hv.get("energy", 0.0),
                     )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Python mmap fallback
         mm = self._ensure_mmap()
@@ -210,7 +210,7 @@ class StateBoardBridge:
                         guna=Guna(state.get("guna", 0)),
                     )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
         if mm is None:
@@ -240,7 +240,7 @@ class StateBoardBridge:
                         if isinstance(tick, (int, float)):
                             return int(tick)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
         if mm is None:
@@ -258,7 +258,7 @@ class StateBoardBridge:
                     state, failures = board_read_breaker(tool_slot)
                     return BreakerState(state), failures
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
         if mm is None:
@@ -306,7 +306,7 @@ class StateBoardBridge:
                     if isinstance(tick, (int, float)):
                         return int(tick)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
         if mm is None:
@@ -357,7 +357,7 @@ class StateBoardBridge:
                     if isinstance(tick, (int, float)):
                         return int(tick)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
         if mm is None:
@@ -392,7 +392,7 @@ class StateBoardBridge:
                     board_write_breaker(tool_slot, int(state), failures)
                     return
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
         if mm is None:
@@ -413,7 +413,7 @@ class StateBoardBridge:
                 )
                 return 64  # All slots reset
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Fallback: per-slot reset via mmap
         count = 0
@@ -424,7 +424,7 @@ class StateBoardBridge:
                     self.write_breaker(slot, BreakerState.CLOSED, 0)
                     count += 1
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         if count:
             logger.info("StateBoard: reset %d breaker slot(s) to CLOSED", count)
         return count

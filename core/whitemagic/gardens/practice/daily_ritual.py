@@ -268,7 +268,7 @@ class DailyRitual:
                 )
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
 
 # Global instance

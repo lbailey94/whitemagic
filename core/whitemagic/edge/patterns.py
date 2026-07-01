@@ -81,14 +81,14 @@ class PatternLearner:
                 data = _json_loads(queries_file.read_text())
                 self._queries = [QueryRecord(**q) for q in data]
             except (json.JSONDecodeError, ValueError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if rules_file.exists():
             try:
                 data = _json_loads(rules_file.read_text())
                 self._learned_rules = [LearnedRule(**r) for r in data]
             except (json.JSONDecodeError, ValueError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _save(self) -> None:
         """Save data."""

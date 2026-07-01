@@ -596,7 +596,7 @@ def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
                         },
                     }
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             return {
                 "answer": "",
                 "confidence": 0.0,

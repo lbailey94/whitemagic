@@ -74,7 +74,7 @@ class SharedMemoryBridge:
                 existing.close()
                 existing.unlink()
             except FileNotFoundError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             self._shm = shared_memory.SharedMemory(
                 name=self.name, create=True, size=SEGMENT_SIZE

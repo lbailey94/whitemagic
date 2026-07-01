@@ -208,7 +208,7 @@ class DreamState:
                             f"--- FILE: {os.path.basename(file_path)} (Line {line_no}) ---\n{snippet}"
                         )
                 except (OSError, UnicodeDecodeError):
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         "\n".join(context_snippets)
 

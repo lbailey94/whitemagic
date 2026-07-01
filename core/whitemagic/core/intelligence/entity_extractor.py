@@ -159,7 +159,7 @@ class EntityExtractor:
                     self._ollama_available = True
                     return True
         except (urllib.error.URLError, TimeoutError, ConnectionError):
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         self._ollama_available = False
         logger.debug("Ollama not available — falling back to regex extraction")
         return False

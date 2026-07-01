@@ -133,7 +133,7 @@ def get_continuity_context() -> dict[str, Any]:
                 last_active = last_active.replace(tzinfo=UTC)
             time_gap = (datetime.now(UTC) - last_active).total_seconds()
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     history = state.get("stream_history", [])
     last_entry = history[-1] if history else {}

@@ -42,7 +42,7 @@ class SQLiteSchemaManager:
                 try:
                     shutil.move(str(old), str(new))
                 except OSError:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         dst = src.with_suffix(f"{src.suffix}.bak.1")
         try:
@@ -250,7 +250,7 @@ class SQLiteSchemaManager:
                     conn.execute(stmt)
                     logger.info("Added %s column to associations table", col_name, exc_info=True)
                 except sqlite3.OperationalError:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
     def _migrate_holographic_coords(self, conn: sqlite3.Connection) -> None:
         """Migrate holographic_coords table to add v column."""
@@ -264,7 +264,7 @@ class SQLiteSchemaManager:
                 conn.execute("ALTER TABLE holographic_coords ADD COLUMN v REAL DEFAULT 0.5")
                 logger.info("Added v column to holographic_coords table")
             except sqlite3.OperationalError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _init_constellation_membership(self, conn: sqlite3.Connection) -> None:
         """Initialize constellation_membership table with composite PK migration."""

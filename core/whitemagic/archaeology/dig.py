@@ -298,7 +298,7 @@ class ChariotArchaeologist:
                     else {"history": [], "read_files": []}
                 )
             except (json.JSONDecodeError, TypeError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return {"history": [], "read_files": []}
 
     def _save_state(self) -> None:

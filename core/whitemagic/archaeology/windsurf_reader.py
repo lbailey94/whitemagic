@@ -216,7 +216,7 @@ class WindsurfConversationReader:
                                 }
                             )
                     except UnicodeDecodeError:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
                 elif wire_type == 5:
                     # 32-bit
                     pos += 4

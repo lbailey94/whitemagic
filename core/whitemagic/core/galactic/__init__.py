@@ -370,7 +370,7 @@ def memory_search(
             if rows:
                 return [Memory.from_row(r) for r in rows]
         except sqlite3.OperationalError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         # Fallback: LIKE-based substring search.
         like = f"%{query}%"
         sql = "SELECT * FROM memories WHERE (title LIKE ? OR content LIKE ?)"

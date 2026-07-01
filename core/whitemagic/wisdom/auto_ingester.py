@@ -38,7 +38,7 @@ class WisdomAutoIngester:
                     try:
                         self.ingested.append(json.loads(line))
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
     def ingest(
         self, content: str, source: str = "", tags: list[str] | None = None
@@ -73,7 +73,7 @@ class WisdomAutoIngester:
                     )
                     ingested.append(entry)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return ingested
 
     @staticmethod

@@ -65,7 +65,7 @@ def _init_libs():
                 _rust_lib = ctypes.CDLL(rust_path)
                 _rust_available = True
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         # Zig init
         zig_path = _find_lib("zig")
         if zig_path:
@@ -73,7 +73,7 @@ def _init_libs():
                 _zig_lib = ctypes.CDLL(zig_path)
                 _zig_available = True
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
 
 def cosine_similarity(v1: list[float], v2: list[float]) -> float:

@@ -393,7 +393,7 @@ def meditate(depth: int = 0) -> "awareness":
                     try:
                         creation.created_at = datetime.fromisoformat(data["created_at"])
                     except (ValueError, TypeError):
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
                 creation.joy_score = data.get("joy_score", 0.0)
                 creation.tags = data.get("tags", [])
                 self.creations.append(creation)

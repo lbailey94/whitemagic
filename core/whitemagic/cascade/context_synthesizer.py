@@ -461,7 +461,7 @@ class ContextSynthesizer:
                 conn.close()
                 return count
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return 0
 
     def _gather_depth_state(self, ctx: UnifiedContext) -> None:

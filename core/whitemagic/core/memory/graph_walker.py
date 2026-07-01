@@ -183,7 +183,7 @@ class GraphWalker:
                 if row:
                     return row[0] or 0.5
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return 0.5
 
     def _get_embedding(self, memory_id: str) -> list[float] | None:
@@ -202,7 +202,7 @@ class GraphWalker:
                 from whitemagic.core.memory.embedding_similarity import unpack_embedding
                 return cast(list[float] | None, unpack_embedding(row[0]))
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return None
 
     def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
@@ -232,7 +232,7 @@ class GraphWalker:
                 self._pagerank_cache = engine.pagerank()
                 self._pagerank_cache_time = now
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return self._pagerank_cache.get(memory_id, 0.01)
 
     def _fused_gravity(
@@ -271,7 +271,7 @@ class GraphWalker:
                 if curr_t < prev_t:
                     return 0.0  # Violates temporal ordering
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Semantic similarity: steer walk toward query-relevant neighbors
         # v15.2: HRR look-ahead projection — if relation type is known, project
@@ -309,7 +309,7 @@ class GraphWalker:
                 days_old = max(0.0, (datetime.now() - created).total_seconds() / 86400.0)
                 recency = 1.0 / (1.0 + days_old * 0.01)  # gentle decay
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Staleness: penalize over-traversed paths (encourage exploration)
         staleness = 0.0
@@ -594,7 +594,7 @@ class GraphWalker:
                 if mem:
                     discovered_map[mid] = mem
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         results: list[dict[str, Any]] = []
         seen: set[str] = set()
@@ -782,7 +782,7 @@ class GraphWalker:
                 if row:
                     return str(row[0])
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return None
 
     def _get_max_traversals(self, pool: Any) -> int:
@@ -795,7 +795,7 @@ class GraphWalker:
                 if row and row[0]:
                     return int(row[0])
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return 10  # default
 
     def _record_traversal(self, source_id: str, target_id: str, pool: Any) -> None:

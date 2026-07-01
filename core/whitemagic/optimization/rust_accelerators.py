@@ -322,7 +322,7 @@ def get_spatial_index_5d() -> Any:
                 logger.debug("Using Rust 5D spatial index")
                 return _index_5d
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         # Python fallback — thin wrapper over the 4D index
         _index_5d = PythonSpatialIndex5D()
         logger.debug("Using Python 5D spatial index fallback")
@@ -681,7 +681,7 @@ try:
         _RUST_SEARCH = True
         logger.debug("Rust BM25 search engine available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def rust_search_available() -> bool:
@@ -804,7 +804,7 @@ try:
         _RUST_RATE_LIMITER = True
         logger.debug("Rust atomic rate limiter available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def rust_rate_limiter_available() -> bool:
@@ -914,7 +914,7 @@ try:
         _RUST_PIPELINE = True
         logger.debug("Rust retrieval pipeline available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def retrieval_pipeline(
@@ -972,7 +972,7 @@ try:
         _RUST_KEYWORDS = True
         logger.debug("Rust keyword extraction available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def rust_keywords_available() -> bool:
@@ -1020,7 +1020,7 @@ try:
         _RUST_ARROW = True
         logger.debug("Rust Arrow IPC bridge available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def arrow_available() -> bool:
@@ -1089,7 +1089,7 @@ try:
         _RUST_TOKIO_CLONES = True
         logger.debug("Rust Tokio Clone Army available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def tokio_clones_available() -> bool:
@@ -1152,7 +1152,7 @@ try:
         _RUST_IPC = True
         logger.debug("Rust IPC bridge available")
 except Exception:
-    pass
+    logger.debug("Swallowed exception", exc_info=True)
 
 
 def ipc_available() -> bool:

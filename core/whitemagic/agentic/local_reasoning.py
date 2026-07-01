@@ -103,7 +103,7 @@ def version_rule(query: str) -> LocalInsight | None:
                 tokens_saved=500,
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
     return None
 
 
@@ -122,7 +122,7 @@ def garden_count_rule(query: str) -> LocalInsight | None:
                 tokens_saved=1000,
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
     return None
 
 

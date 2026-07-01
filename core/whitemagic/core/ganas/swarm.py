@@ -143,7 +143,7 @@ class GanaSwarm:
                 while len(batch) < current_batch_size and not self.task_queue.empty():
                     batch.append(self.task_queue.get_nowait())
             except asyncio.QueueEmpty:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             if batch:
                 logger.info(

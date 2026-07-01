@@ -939,7 +939,7 @@ def mw_semantic_cache(
             # Prefetch warms the retrieval pipeline, not the actual result.
             # The unified cache check below will find the pre-warmed result.
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Try unified cache first (Rust if available, Python fallback)
     try:
@@ -1026,7 +1026,7 @@ def mw_semantic_cache(
                     "semantic", key, cache_payload, ttl_seconds=86400.0
                 )  # 24h TTL
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             # Also store in legacy cache for backward compat
             try:
                 from whitemagic.config.paths import CACHE_DIR
@@ -1039,7 +1039,7 @@ def mw_semantic_cache(
                 )
                 legacy_cache.set(key, answer, output_tokens)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     # Record transition for speculative prefetcher (Markov prediction)
     try:
@@ -1050,7 +1050,7 @@ def mw_semantic_cache(
         if gana:
             get_prefetcher().on_call_complete(gana)
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return result
 
@@ -1198,6 +1198,6 @@ def mw_draft_review(
                 duration_ms=0.0,
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     return result

@@ -370,7 +370,7 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
             result.setdefault("metrics", {})["physical"] = physical
             result["total_metrics"] = result.get("total_metrics", 0) + len(physical)
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Enrich with Prometheus export capability
     try:
@@ -381,7 +381,7 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
         if kwargs.get("format") == "prometheus":
             result["prometheus_text"] = exporter.export()
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return result
 

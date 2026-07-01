@@ -398,9 +398,9 @@ def _state_portal() -> dict[str, Any]:
                     try:
                         total += os.path.getsize(fp)
                     except OSError:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
         except OSError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return total
 
     return {

@@ -198,7 +198,7 @@ def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
         if coords and any(c is not None for c in coords):
             coords_populated = True
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return {
         "status": "success",

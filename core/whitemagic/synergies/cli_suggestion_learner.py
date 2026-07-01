@@ -43,7 +43,7 @@ class CLISuggestionLearner:
                         if "sequence" in d:
                             self._sequences.append(d["sequence"])
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
     def record(
         self, command: str, context: str = "", sequence: list[str] | None = None

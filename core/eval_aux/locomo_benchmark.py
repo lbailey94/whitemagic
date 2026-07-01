@@ -478,7 +478,7 @@ def retrieve_expanded(query: str, limit: int = 20) -> list[dict]:
                                        if r[0] and len(r[0]) > 3
                                        and r[0].isalpha()]
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if expansion_terms:
             expanded_query = query + " " + " ".join(expansion_terms[:3])

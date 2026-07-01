@@ -840,7 +840,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 if garden is not None:
                     garden.boost(0.1)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Dispatch to handler.
         try:
@@ -863,7 +863,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                     if _wm_context and "_working_memory_context" not in dispatch_kwargs:
                         dispatch_kwargs["_working_memory_context"] = _wm_context
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
             if canonical in LIGHTWEIGHT_STATUS_TOOLS:
                 raw = _dispatch_lightweight_tool(canonical, **dispatch_kwargs)
             else:
@@ -980,9 +980,9 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                     _loop = HomeostaticLoop()
                     _loop.check()
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # v23.3: Bidirectional WM↔Scratchpad sync — attend important tool
         # results to working memory and persist to active scratchpad.

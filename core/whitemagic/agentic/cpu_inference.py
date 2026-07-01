@@ -92,7 +92,7 @@ class CPUInferenceEngine:
                     tokens_equivalent=500,
                 )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return InferenceResult(
             query=query,
             answer="Version information not found.",
@@ -138,7 +138,7 @@ class CPUInferenceEngine:
                     tokens_equivalent=500,
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if "python" in ql or "file" in ql:
             count = len(
@@ -201,7 +201,7 @@ class CPUInferenceEngine:
                     tokens_equivalent=500,
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return InferenceResult(
             query=query,
             answer="List type not recognized.",

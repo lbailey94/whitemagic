@@ -244,7 +244,7 @@ class BridgeSynthesizer:
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()[:500]
         except OSError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return None
 
     def _persist_insights(self, insights: list[BridgeInsight]) -> int:

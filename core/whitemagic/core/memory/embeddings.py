@@ -477,7 +477,7 @@ class EmbeddingEngine:
                 self._hnsw_index_path.unlink(missing_ok=True)
                 self._hnsw_ids_path.unlink(missing_ok=True)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _hnsw_is_available(self) -> bool:
         """Check if hnswlib is installed."""

@@ -116,7 +116,7 @@ class BoundedExecutor:
                             file_path.stat().st_mtime
                         )
                     except (OSError, PermissionError):
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
     def check_file_changes(self) -> int:
         """Check for file modifications, returns count of changed files."""
@@ -130,7 +130,7 @@ class BoundedExecutor:
                         changes += 1
                         self.state.file_mtimes[file_str] = new_mtime
                 except (OSError, PermissionError):
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         for dir_path in self.conditions.watch_directories:
             path = Path(dir_path)
@@ -142,7 +142,7 @@ class BoundedExecutor:
                         try:
                             self.state.file_mtimes[file_str] = file_path.stat().st_mtime
                         except (OSError, PermissionError):
-                            pass
+                            logger.debug("Swallowed exception", exc_info=True)
 
         return changes
 

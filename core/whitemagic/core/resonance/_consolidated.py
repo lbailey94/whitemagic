@@ -499,7 +499,7 @@ class GanYingBus:
             self._cycle_check_cache = safe
             return safe
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Tier 2: Rust cascade bridge (JSON stdio, faster than Haskell)
         if self._try_rust_cascade_cycle_check():
@@ -676,7 +676,7 @@ class GanYingBus:
             ]
             return _wc.detect_cycles(py_triggers)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Python fallback
         graph: dict[str, list[str]] = {}

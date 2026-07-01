@@ -97,6 +97,6 @@ class ElixirActorBridge:
                 self._proc.stdin.close()
                 self._proc.wait(timeout=5)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             self._proc = None
         self._available = None

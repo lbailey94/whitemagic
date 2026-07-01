@@ -239,7 +239,7 @@ class KokaNativeBridge:
             try:
                 proc.kill()
             except (ProcessLookupError, OSError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _readline_with_timeout(
         self, proc: subprocess.Popen, timeout: float
@@ -830,5 +830,5 @@ class KokaCircuitDispatch:
                     try:
                         self._proc.kill()
                     except (ProcessLookupError, OSError):
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
                 self._proc = None

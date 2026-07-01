@@ -406,7 +406,7 @@ async def handle_galaxy_export(params: dict) -> dict:
             try:
                 memory_type = MemoryType[memory_type_str.upper()]
             except (KeyError, ValueError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         ipc_bytes = um.arrow_export(memory_type=memory_type, limit=limit, galaxy=galaxy)
         if ipc_bytes is None:

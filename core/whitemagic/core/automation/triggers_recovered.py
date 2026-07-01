@@ -56,7 +56,7 @@ class ConsolidationTriggers:
                     if hasattr(mem, "count") and mem.count() >= config["value"]:
                         active.append(name)
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         return active
 

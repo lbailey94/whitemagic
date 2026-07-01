@@ -74,7 +74,7 @@ def cleanup_broker() -> None:
                 except RuntimeError:
                     asyncio.new_event_loop().run_until_complete(pool.disconnect())
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             broker.redis = None
 
 
@@ -155,7 +155,7 @@ class _AsyncBroker:
             try:
                 await self._pubsub.close()
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             self._pubsub = None
         if self.redis:
             await self.redis.close()

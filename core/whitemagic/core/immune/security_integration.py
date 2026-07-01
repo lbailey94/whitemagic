@@ -216,7 +216,7 @@ class SecurityImmuneSystem:
                     if gan_ying_type:
                         bus.listen(gan_ying_type, self.on_security_event)
                 except AttributeError:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
             logger.info("SecurityImmuneSystem connected to Gan Ying bus")
         except ImportError:
@@ -480,7 +480,7 @@ class SecurityImmuneSystem:
                     )
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             return response
 
@@ -599,7 +599,7 @@ class SecurityAutoimmune:
                 )
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
 
 # Singleton instances

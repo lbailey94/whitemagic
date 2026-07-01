@@ -56,7 +56,7 @@ class MetricsExporter:
             lines.append("# TYPE whitemagic_active_tools gauge")
             lines.append(f"whitemagic_active_tools {stats.get('active_tools', 0)}")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Harmony vector metrics
         try:
@@ -87,7 +87,7 @@ class MetricsExporter:
             lines.append("# TYPE whitemagic_latency gauge")
             lines.append(f"whitemagic_latency {snap.latency:.4f}")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Homeostatic loop metrics
         try:
@@ -111,7 +111,7 @@ class MetricsExporter:
                 f"whitemagic_homeostatic_actions_total {stats.get('total_actions', 0)}"
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Memory metrics
         try:
@@ -135,7 +135,7 @@ class MetricsExporter:
             lines.append("# TYPE whitemagic_tags_total gauge")
             lines.append(f"whitemagic_tags_total {tag_count}")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return lines
 
@@ -241,7 +241,7 @@ class MetricsExporter:
                 )
 
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return lines
 
@@ -290,7 +290,7 @@ class MetricsExporter:
                 )
 
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return lines
 

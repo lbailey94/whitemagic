@@ -152,7 +152,7 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             if status.get("violations_total", 0) > 10:
                 violations.append("High violation count — proceed with extra care")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         result = {
             "action": action,

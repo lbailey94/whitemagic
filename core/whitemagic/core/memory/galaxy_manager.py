@@ -225,7 +225,7 @@ class GalaxyManager:
             from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
             publish_galaxy_event("galaxy.created", uid, name, {"db_path": db_path})
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return info
 
@@ -249,7 +249,7 @@ class GalaxyManager:
             from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
             publish_galaxy_event("galaxy.deleted", uid, name)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return True
 
@@ -303,7 +303,7 @@ class GalaxyManager:
             from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
             publish_galaxy_event("galaxy.switched", uid, name)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return self._galaxies[registry_key]
 
@@ -746,7 +746,7 @@ class GalaxyManager:
                 "files_found": len(files),
             })
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return result
 

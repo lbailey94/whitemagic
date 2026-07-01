@@ -632,7 +632,7 @@ def record_resonance(
             },
         )
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Citta Architecture: Recursive cycle — advance the stream
     citta_moment = None
@@ -652,7 +652,7 @@ def record_resonance(
             emotional_tone=harmony["guna_dominant"],
         )
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Citta Architecture: Bridge — persist significant moments as memories
     if citta_moment is not None:
@@ -663,7 +663,7 @@ def record_resonance(
             cycle = get_citta_cycle()
             bridge.check_and_store(citta_moment, cycle.get_cycle_summary())
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     return {
         "gana": gana_name,
@@ -726,7 +726,7 @@ def _get_memory_count_for_sensorium() -> int:
             conn.close()
             return count
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
     return 0
 
 
@@ -771,9 +771,9 @@ def _build_sensorium() -> dict[str, Any]:
             if drift["trend"] != "insufficient_data":
                 sensorium["coherence"]["drift"] = drift
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Flow state — auto-detect from session activity
     try:
@@ -799,7 +799,7 @@ def _build_sensorium() -> dict[str, Any]:
             "indicators": [i.value for i in flow.current_indicators],
         }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Depth gauge + time master sync
     try:
@@ -819,7 +819,7 @@ def _build_sensorium() -> dict[str, Any]:
             sensorium["depth"]["in_sync"] = sync["in_sync"]
             sensorium["depth"]["time_advantage"] = sync["time_advantage"]
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Citta stream continuity
     try:
@@ -828,7 +828,7 @@ def _build_sensorium() -> dict[str, Any]:
         ctx = get_continuity_context()
         sensorium["continuity"] = ctx
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Session duration
     try:
@@ -839,7 +839,7 @@ def _build_sensorium() -> dict[str, Any]:
         start = ensure_session_started()
         sensorium["session_duration_s"] = round(time.time() - start, 1)
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Token economy — API vs local compute distribution
     try:
@@ -856,7 +856,7 @@ def _build_sensorium() -> dict[str, Any]:
                 "insight": summary.get("insight", ""),
             }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Prediction calibration — estimate accuracy tracking
     try:
@@ -873,7 +873,7 @@ def _build_sensorium() -> dict[str, Any]:
                 "recommendation": score["recommendation"],
             }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Stillness — system stillness state + practice metrics
     try:
@@ -884,7 +884,7 @@ def _build_sensorium() -> dict[str, Any]:
             "is_still": sm.is_still,
         }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
     try:
         from whitemagic.gardens.presence.stillness_metrics import StillnessTracker
 
@@ -899,7 +899,7 @@ def _build_sensorium() -> dict[str, Any]:
                 "trend": report["improvement"]["trend"],
             }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return sensorium
 

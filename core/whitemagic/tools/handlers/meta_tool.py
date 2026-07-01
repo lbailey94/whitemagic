@@ -959,7 +959,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                     gana_name,
                 )
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     # Build call_tool kwargs
     call_kwargs: dict[str, Any] = {}
@@ -1102,7 +1102,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
 
             depth_layer = ConsciousnessDepthGauge().current_layer.value
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         sensorium = {
             "coherence": cycle_summary.get("avg_coherence", 1.0),
@@ -1125,7 +1125,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                 sensorium["coherence_trend"] = drift.get("direction", "stable")
                 sensorium["coherence_drift_magnitude"] = drift.get("magnitude", 0.0)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # Presence quality from stillness metrics (best-effort)
         try:
@@ -1144,7 +1144,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             )
             sensorium["presence_quality"] = presence.to_dict()
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         if not continuity.get("first_awakening"):
             sensorium["time_gap"] = continuity.get("time_gap_human", "")

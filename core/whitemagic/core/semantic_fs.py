@@ -355,7 +355,7 @@ class SemanticFileWatcher:
                     note="Auto-tracked via file watcher",
                 )
             except (OSError, FileNotFoundError, PermissionError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Detect themes
         if config.extract_themes and event.event_type in (

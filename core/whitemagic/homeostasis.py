@@ -33,7 +33,7 @@ class HomeostaticMonitor:
 
                 self._hv = get_harmony_vector()  # type: ignore[assignment]
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return self._hv
 
     def _get_loop(self) -> Any:
@@ -43,7 +43,7 @@ class HomeostaticMonitor:
 
                 self._loop = get_homeostatic_loop()  # type: ignore[assignment]
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return self._loop
 
     def monitor_initialization(self) -> bool:
@@ -106,7 +106,7 @@ class HomeostaticMonitor:
             try:
                 result["homeostatic_loop"] = loop.get_stats()
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         return result
 
@@ -117,7 +117,7 @@ class HomeostaticMonitor:
             try:
                 hv.record_call(tool_name=f"metric.{metric}", success=(value <= 1.0))
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def set_threshold(self, metric: str, threshold: float) -> None:
         """Set alert threshold (no-op — thresholds live in HomeostaticConfig)."""

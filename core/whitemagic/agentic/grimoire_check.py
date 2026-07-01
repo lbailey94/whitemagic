@@ -47,7 +47,7 @@ class GrimoireChecker:
                         }
                     )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return tools
 
     def check_available(self) -> dict[str, Any]:

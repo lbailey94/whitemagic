@@ -53,7 +53,7 @@ class SerendipityEngine:
 
             Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
         except OSError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         self._conn: sqlite3.Connection | None = None
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -67,7 +67,7 @@ class SerendipityEngine:
                 conn.execute("PRAGMA foreign_keys = ON")
                 conn.execute("PRAGMA busy_timeout = 30000")
             except sqlite3.OperationalError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             self._conn = conn
         return self._conn
 
@@ -490,7 +490,7 @@ class SerendipityEngine:
                 ).fetchall()
                 row_map = {r["id"]: r for r in rows}
             except sqlite3.Error:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         for orphan in orphans:
             mid = orphan.get("id", "")

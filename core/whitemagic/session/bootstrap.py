@@ -62,7 +62,7 @@ class SessionBootstrap:
             if hasattr(mem, "recent"):
                 return mem.recent(limit=10)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return []
 
     def _discover_tools(self) -> list[str]:
@@ -87,7 +87,7 @@ class SessionBootstrap:
             try:
                 return json.loads(progress_file.read_text())
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return []
 
     def _load_grimoire(self) -> list[str]:

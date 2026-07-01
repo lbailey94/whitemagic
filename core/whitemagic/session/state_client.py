@@ -39,7 +39,7 @@ class StateClient:
                 self._state = data.get("state", {})
                 self._interfaces = data.get("interfaces", [])
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _save(self) -> None:
         self.state_file.write_text(

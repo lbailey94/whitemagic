@@ -347,7 +347,7 @@ class AgentSwarm:
                 async_dispatch=True,
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return {
             "status": "success",
@@ -405,7 +405,7 @@ class AgentSwarm:
                 async_dispatch=True,
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         return {"status": "success", "plan": plan.to_dict()}
 

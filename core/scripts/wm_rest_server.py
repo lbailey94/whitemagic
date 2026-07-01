@@ -1687,7 +1687,7 @@ def resonance_harmony():
                 avg_freq = resonance.get("frequency", 1.0)
                 avg_damp = resonance.get("damping", 0.1)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             gardens[garden_name] = {
                 "memory_count": row["count"],

@@ -41,7 +41,7 @@ class IncrementalBackup:
             try:
                 self._manifest = json.loads(self.manifest_file.read_text())
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _save_manifest(self) -> None:
         self.manifest_file.write_text(json.dumps(self._manifest, indent=2))

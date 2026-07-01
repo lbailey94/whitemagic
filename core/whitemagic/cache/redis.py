@@ -394,7 +394,7 @@ def clear_redis_cache() -> None:
             try:
                 _redis_cache._connection_pool.disconnect()
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         _redis_cache._client = None
         _redis_cache._async_client = None
         _redis_cache._connection_pool = None

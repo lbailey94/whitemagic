@@ -373,7 +373,7 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
                 "memory_max": targets.memory_max,
             }
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     return report
 

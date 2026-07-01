@@ -137,7 +137,7 @@ class AssociationMiner:
                 if result is not None:
                     return cast(set[str], result)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Python extraction (fastest path for keywords)
         text_lower = text.lower()
@@ -293,7 +293,7 @@ class AssociationMiner:
                         fingerprints[mid] = kw_set
                     batch_done = True
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             if not batch_done:
                 for mid, text in texts_for_batch:
@@ -358,7 +358,7 @@ class AssociationMiner:
                                 )
                                 report.links_created += 1
                             except Exception:
-                                pass
+                                logger.debug("Swallowed exception", exc_info=True)
             except Exception as e:
                 logger.error("Association mining: persistence failed: %s", e)
 
@@ -555,7 +555,7 @@ class AssociationMiner:
                                 )
                                 report.links_created += 1
                             except Exception:
-                                pass
+                                logger.debug("Swallowed exception", exc_info=True)
             except Exception as e:
                 logger.error("Semantic mining: persistence failed: %s", e)
 

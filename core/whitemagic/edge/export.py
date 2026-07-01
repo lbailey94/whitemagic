@@ -48,7 +48,7 @@ class EdgeExporter:
 
             config["tools"] = list(DISPATCH_TABLE.keys())[:50]
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return config
 
     def export_javascript_module(self, data: dict[str, Any], module_name: str) -> Path:

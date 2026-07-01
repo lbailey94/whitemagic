@@ -328,7 +328,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return float(raw["result"]["entropy"])
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         # Python fallback
         if p <= 0 or p >= 1:
             return 0.0
@@ -357,7 +357,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return cast(list[int], raw["result"]["selected_indices"])
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         # Python fallback: proportional sampling
         import random
 
@@ -388,7 +388,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return cast(list[float], raw["result"]["vector"])
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         # Python fallback: deterministic hash-based vector
         import hashlib
 

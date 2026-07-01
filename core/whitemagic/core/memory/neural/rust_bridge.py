@@ -64,7 +64,7 @@ def parallel_grep(
                 if re.search(pattern, content, re.IGNORECASE):
                     results.append(str(file))
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     return results
 
@@ -96,7 +96,7 @@ def build_word_index(
                     if len(word) >= min_word_length:
                         index[word].append(str(file))
             except (OSError, UnicodeDecodeError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     return dict(index)
 
@@ -148,7 +148,7 @@ def extract_todos(directory: str) -> list[str]:
             for match in re.finditer(r"#\s*TODO[:\s]*(.*)", content, re.IGNORECASE):
                 todos.append(f"{file}: {match.group(1)}")
         except OSError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     return todos
 
@@ -173,7 +173,7 @@ def extract_definitions(directory: str) -> list[dict[str, Any]]:
                     "file": str(file),
                 })
         except (OSError, UnicodeDecodeError):
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     return defs
 
@@ -198,7 +198,7 @@ def audit_directory(directory: str) -> list[dict[str, Any]]:
                     "lines": content.count("\n"),
                 })
             except (OSError, UnicodeDecodeError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     return results
 

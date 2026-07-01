@@ -115,6 +115,6 @@ def close() -> None:
             _proc.stdin.close()
             _proc.wait(timeout=5)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         _proc = None
     _available = None

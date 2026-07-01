@@ -222,5 +222,5 @@ class AutoimmuneSystemExtended(AutoimmuneSystem):
                     v.file_path.write_text("\n".join(lines))
                     fixed += 1
                 except (OSError, UnicodeDecodeError):
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
         return fixed

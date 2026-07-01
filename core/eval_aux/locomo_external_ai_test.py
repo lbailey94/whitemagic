@@ -290,7 +290,7 @@ def retrieve_with_whitemagic(db, engine, question: str, source_ids: list) -> str
             if row:
                 answer_parts.append(f"Source: {row[1][:300]}")
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
     
     return " | ".join(answer_parts) if answer_parts else "No relevant information found"
 

@@ -626,7 +626,7 @@ def handle_wiki_scan(**kwargs: Any) -> dict[str, Any]:
                         is_stale = True
                         modified_files.append(sf)
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
             if is_stale:
                 stale.append(
                     {

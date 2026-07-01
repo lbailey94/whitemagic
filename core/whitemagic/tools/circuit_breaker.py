@@ -125,7 +125,7 @@ class CircuitBreaker:
             try:
                 koka.record_failure(self.tool_name)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         with self._lock:
             # Prune old failures outside the window
             cutoff = now - self.config.window_seconds
@@ -166,7 +166,7 @@ class CircuitBreaker:
             try:
                 koka.record_success(self.tool_name)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         with self._lock:
             if self._state == BreakerState.HALF_OPEN:
                 self._state = BreakerState.CLOSED
@@ -432,7 +432,7 @@ class BreakerRegistry:
                             1,
                         )
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
             return self._breakers[tool_name]
 
     def all_status(self) -> list[dict[str, Any]]:
@@ -478,7 +478,7 @@ class BreakerRegistry:
                     try:
                         koka.reset(breaker.tool_name)
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
             if count:
                 logger.info("Reset %d circuit breaker(s) to CLOSED", count)

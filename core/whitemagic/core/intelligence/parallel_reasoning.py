@@ -648,7 +648,7 @@ class ParallelReasoningTree:
                     f"Convergence on: {', '.join(cp['shared_keywords'][:5])}",
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Auto-learn from all branch outcomes
         for branch in self.branches.values():

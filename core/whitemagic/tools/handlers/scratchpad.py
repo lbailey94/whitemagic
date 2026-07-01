@@ -137,7 +137,7 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
             tags=["scratchpad", section or "notes"],
         )
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     chain_status = manager.get_chain_status(scratchpad_id)
     _emit(

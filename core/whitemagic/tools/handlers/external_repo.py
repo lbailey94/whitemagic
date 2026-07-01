@@ -104,7 +104,7 @@ def _scan_modules_at_path(root: Path) -> list[dict[str, Any]]:
                 }
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
     return modules
 
 

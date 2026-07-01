@@ -587,7 +587,7 @@ Structure allows for rest and recovery.
                         "status": "structured",
                     }
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         if "session_handoff" in call.task or "handoff" in call.task:
             try:

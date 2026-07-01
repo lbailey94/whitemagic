@@ -149,7 +149,7 @@ def detect_kdtree(
             try:
                 indices.append(id_list.index(member_id))
             except ValueError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         if indices:
             groups.append(indices)
             # Stability: tighter radius = higher stability

@@ -125,7 +125,7 @@ class GravityCalculator:
                 elif age_days > 90 and access_count <= 1:
                     age_decay = -0.05
             except (ValueError, TypeError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # 4. Content richness (0-0.15)
         content = str(memory.get("content", ""))

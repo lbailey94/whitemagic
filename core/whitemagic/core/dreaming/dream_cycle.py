@@ -1083,7 +1083,7 @@ class DreamCycle:
                             )
                             enriched += 1
                         except sqlite3.Error:
-                            pass
+                            logger.debug("Swallowed exception", exc_info=True)
 
                 if enriched > 0:
                     conn.commit()
@@ -1212,7 +1212,7 @@ class DreamCycle:
                                 )
                             native_time = _time.time() - start
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
                 if native_time is not None and native_time > 0:
                     speedup = round(py_time / native_time, 2)

@@ -208,7 +208,7 @@ class BaseGarden(ABC):
                 )
             )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     def _cascade_to_partners(
         self, amount: float, partners: list[str], boost: bool
@@ -231,7 +231,7 @@ class BaseGarden(ABC):
                     else:
                         partner.dampen(amount)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     def get_status(self) -> dict[str, Any]:
         """Get current garden status.

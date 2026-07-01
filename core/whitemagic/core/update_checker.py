@@ -45,7 +45,7 @@ def _read_cache() -> dict | None:
         if time.time() - data.get("ts", 0) < _CACHE_TTL_SECONDS:
             return data
     except (OSError, UnicodeDecodeError):
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
     return None
 
 
@@ -59,7 +59,7 @@ def _write_cache(latest: str, current: str) -> None:
             encoding="utf-8",
         )
     except (OSError, UnicodeDecodeError):
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
 
 def _fetch_latest_version() -> str | None:

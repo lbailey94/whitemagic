@@ -49,7 +49,7 @@ class DreamStateOrchestration:
             syntheses = bridge.process_queue()
             result["bridge_syntheses"] = len(syntheses)
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         self.synthesis_results.append(result)
         return result

@@ -414,7 +414,7 @@ class AsyncThoughtCloneArmy:
                         if isinstance(r, AsyncThoughtPath):
                             paths.append(r)
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
         # Filter successful results
         valid_paths = [p for p in paths if isinstance(p, AsyncThoughtPath)]

@@ -716,7 +716,7 @@ class HomeostaticLoop:
                 module_count = status.get("total_modules", 0)
                 available_count = status.get("available_count", 0)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             if health_score < self._config.consciousness_correct:
                 return [
@@ -766,7 +766,7 @@ class HomeostaticLoop:
                         )
                     ]
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         except ImportError:
             logger.debug("Consciousness modules not available for homeostatic check")

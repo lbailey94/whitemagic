@@ -85,7 +85,7 @@ if __name__ == "__main__":
     try:
         multiprocessing.set_start_method("spawn")
     except RuntimeError:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
     test_rust_bridge()
     test_mojo_bridge()  # no-op since v23.2

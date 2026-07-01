@@ -347,7 +347,7 @@ class UnifiedCacheBridge:
                 total_requests=int(s.get("total_requests", 0)),
             )
         except (OSError, ValueError, RuntimeError):
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
     def read_state_board_cache_stats(self) -> dict[str, float] | None:
         """Read cache stats from the StateBoard (cross-process visibility).

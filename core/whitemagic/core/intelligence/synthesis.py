@@ -79,7 +79,7 @@ class SerendipityEngine:
                     }
                 )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return results
 
 

@@ -253,7 +253,7 @@ class KokaBatchClient:
             try:
                 proc.kill()
             except (ProcessLookupError, OSError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _readline_with_timeout(
         self, proc: subprocess.Popen, timeout: float = _DEFAULT_BATCH_READ_TIMEOUT_S

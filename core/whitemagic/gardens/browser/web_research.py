@@ -901,7 +901,7 @@ class BrowserSessionManager:
             try:
                 await self._session.disconnect()
             except (ConnectionError, TimeoutError, OSError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             self._session = None
             self._last_url = ""
 
@@ -1637,7 +1637,7 @@ def extract_image_urls(html: str, base_url: str = "") -> list[dict[str, str]]:
                 src = urljoin(base_url, src)
             images.append({"url": src, "alt": alt})
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
     return images
 
 
@@ -1790,7 +1790,7 @@ async def cached_deep_fetch(
                             "images_downloaded": sum(1 for i in imgs if i["success"])
                         }
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     return result
 

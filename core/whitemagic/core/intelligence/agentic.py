@@ -97,7 +97,7 @@ class EmergenceEngine:
                     )
                 )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         self._insights = insights
         return insights
 

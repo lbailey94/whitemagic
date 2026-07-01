@@ -207,7 +207,7 @@ class QueryCache:
                         hits=item.get("hits", 0),
                     )
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _save(self) -> None:
         self.cache_file.parent.mkdir(parents=True, exist_ok=True)

@@ -118,7 +118,7 @@ class EnhancedGanYingBus:
                     data=data or {},
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Trigger cascades
         self._check_cascades(event_type, data or {})
@@ -138,7 +138,7 @@ class EnhancedGanYingBus:
                                 confidence=cascade.strength * self._cascade_strength,
                             )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def add_cascade(self, trigger: CascadeTrigger) -> None:
         """Register a cascade trigger."""

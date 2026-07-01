@@ -525,7 +525,7 @@ class GalacticTelepathyEngine:
                                 # Same memory, already synced
                                 return None
                         except (json.JSONDecodeError, TypeError):
-                            pass
+                            logger.debug("Swallowed exception", exc_info=True)
 
                     # Divergent content with same hash (rare but possible)
                     if existing_content != mem.content:

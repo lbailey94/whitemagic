@@ -287,7 +287,7 @@ class PredictiveEngine:
                         cat = pred.prediction_type.value
                         categories[cat] = categories.get(cat, 0) + 1
                     except Exception:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
         except Exception as e:
             logger.debug("TemporastDB unavailable for auto claims: %s", e)
 

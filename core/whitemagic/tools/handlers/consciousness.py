@@ -32,7 +32,7 @@ def handle_consciousness_depth(**kwargs: Any) -> dict[str, Any]:
             result["in_sync"] = sync["in_sync"]
             result["time_advantage"] = sync["time_advantage"]
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return result
     except Exception as e:
         logger.debug("consciousness.depth error: %s", e, exc_info=True)
@@ -162,7 +162,7 @@ def _get_memory_count() -> int:
             conn.close()
             return count
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
     return 0
 
 

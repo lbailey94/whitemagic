@@ -61,7 +61,7 @@ class ConsolidationEngine:
                         f"count={count} > threshold={self.short_term_threshold}",
                     )
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         return False, "not needed"
 
     def consolidate(self, force: bool = False) -> ConsolidationResult:

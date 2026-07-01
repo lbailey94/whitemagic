@@ -37,7 +37,7 @@ class SQLiteBackend:
                 self._cold_pool = get_db_pool(str(COLD_DB_PATH))
                 return self._cold_pool
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         self._cold_pool = False  # Sentinel: checked but unavailable
         return None
 
@@ -63,7 +63,7 @@ class SQLiteBackend:
                 try:
                     shutil.move(str(old), str(new))
                 except OSError:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         dst = src.with_suffix(f"{src.suffix}.bak.1")
         try:
@@ -226,7 +226,7 @@ class SQLiteBackend:
                         conn.execute(f"ALTER TABLE associations ADD COLUMN {col_name} {col_def}")
                         logger.info("Added %s column to associations table", col_name)
                     except sqlite3.OperationalError:
-                        pass
+                        logger.debug("Swallowed exception", exc_info=True)
 
             # Migration: add v column to holographic_coords if missing
             hc_cursor = conn.execute("PRAGMA table_info(holographic_coords)")
@@ -236,7 +236,7 @@ class SQLiteBackend:
                     conn.execute("ALTER TABLE holographic_coords ADD COLUMN v REAL DEFAULT 0.5")
                     logger.info("Added v column to holographic_coords table")
                 except sqlite3.OperationalError:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
             # 6. Constellation Membership table (v14.3 — Recall Boost)
             conn.execute("""
@@ -628,7 +628,7 @@ class SQLiteBackend:
             try:
                 akashic_count = conn.execute("SELECT COUNT(*) FROM akashic_seeds").fetchone()[0]
             except sqlite3.OperationalError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             return {
                 "total_memories": total_memories,
@@ -651,7 +651,7 @@ class SQLiteBackend:
                 if rows:
                     return [dict(r) for r in rows]
             except sqlite3.OperationalError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             # Live query — use garden column if available (generated column),
             # otherwise fall back to json_extract
@@ -843,7 +843,7 @@ class SQLiteBackend:
             for r in assoc_rows:
                 assoc_map[r["source_id"]][r["target_id"]] = r["strength"]
         except sqlite3.OperationalError:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
 
         # 3. Assemble Memory Objects
         for row in rows:
@@ -854,7 +854,7 @@ class SQLiteBackend:
                 try:
                     content = json.loads(content)
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
             try:
                 mem = Memory(
@@ -1173,7 +1173,7 @@ class SQLiteBackend:
             try:
                 conn.execute("VACUUM")
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             size_after = 0
             if db_path:
@@ -1401,7 +1401,7 @@ class SQLiteBackend:
             try:
                 metadata = json.loads(row["metadata"])
             except (ValueError, TypeError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return Memory(
             id=row["id"],
             content=row["content"] or "",

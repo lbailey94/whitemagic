@@ -41,7 +41,7 @@ class TestWatcher:
             try:
                 hashes[str(f)] = hashlib.md5(f.read_bytes()).hexdigest()
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return hashes
 
     def check_changes(self) -> list[str]:

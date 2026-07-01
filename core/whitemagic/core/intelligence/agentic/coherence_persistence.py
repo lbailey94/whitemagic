@@ -41,7 +41,7 @@ class CoherencePersistence:
                 with file_lock(self.state_file, timeout=2.0):
                     return _json_loads(self.state_file.read_text()) or {}
             except (json.JSONDecodeError, ValueError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
             except TimeoutError:
                 logger.warning(
                     "Coherence state file %s is locked, using stale/default state",

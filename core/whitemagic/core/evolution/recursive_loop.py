@@ -446,7 +446,7 @@ class RecursiveImprovementLoop:
                 zone = galactic.assign_zone(hyp.id, hyp.confidence, hyp.novelty_score)
                 hyp.galactic_zone = zone.value if hasattr(zone, "value") else str(zone)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     def _debate_hypothesis(self, hyp: ImprovementHypothesis) -> float:
         """Objective O: Run bicameral debate on a hypothesis.
@@ -876,7 +876,7 @@ class RecursiveImprovementLoop:
                 try:
                     supervisor.start_actor(hyp.id, prior=hyp.confidence)
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         # Objective F: Record holographic trajectory points
         traj = self._get_holographic_traj()
@@ -891,7 +891,7 @@ class RecursiveImprovementLoop:
                         impact=hyp.predicted_impact,
                     )
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         logger.info("Imagine phase: %d hypotheses created", len(hypotheses))
         return results
@@ -997,7 +997,7 @@ class RecursiveImprovementLoop:
                 )
                 results["meta_strategy"] = meta_bandit.get_strategy_recommendations(mf)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Score: predicted_impact * confidence * novelty + exploration_boost + IG
         temperature = self._get_thermodynamic_temperature()
@@ -1164,7 +1164,7 @@ class RecursiveImprovementLoop:
                 category = hyp.category if hyp else "default"
                 valence.record_outcome(hypothesis_id, prediction, actual, category)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Objective T: Record causal effect
         ledger = self._get_causal_ledger()
@@ -1181,7 +1181,7 @@ class RecursiveImprovementLoop:
                     effect_confidence=quality_score or 0.5,
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Objective M: Send outcome to actor
         supervisor = self._get_actor_supervisor()
@@ -1191,7 +1191,7 @@ class RecursiveImprovementLoop:
                     hypothesis_id, success=success, gain=performance_gain or 0.0
                 )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Objective L: Update garden calibration
         router = self._get_garden_router()
@@ -1206,7 +1206,7 @@ class RecursiveImprovementLoop:
                         hyp.garden, hyp.confidence, 1.0 if success else 0.0
                     )
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Objective V: Record guna outcome
         clf = self._get_guna_classifier()
@@ -1222,7 +1222,7 @@ class RecursiveImprovementLoop:
                     guna = Guna(hyp.guna)
                     clf.record_outcome(guna, success)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Objective R: Update predictive coding layer 1 (operational)
         pc = self._get_predictive_coding()
@@ -1230,7 +1230,7 @@ class RecursiveImprovementLoop:
             try:
                 pc.compute_error(1, 1.0 if success else 0.0)
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
         # Emit Gan Ying event
         self._emit_outcome_event(hypothesis_id, success, performance_gain)
@@ -1394,7 +1394,7 @@ class RecursiveImprovementLoop:
                 try:
                     evolution_stats[name] = mod.get_stats()
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
         return {
             "cycle_number": self._cycle_count,
@@ -1505,7 +1505,7 @@ class RecursiveImprovementLoop:
                 try:
                     evolution_status[name] = mod.get_stats()
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
         if evolution_status:
             status["evolution_modules"] = evolution_status
 

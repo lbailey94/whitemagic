@@ -190,7 +190,7 @@ class CDPConnection:
             try:
                 await self._receiver_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         if self._ws:
             await self._ws.close()
 
@@ -315,7 +315,7 @@ class CDPConnection:
             try:
                 self._event_handlers[event_name].remove(handler)
             except ValueError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
     # Convenience methods for common operations
 

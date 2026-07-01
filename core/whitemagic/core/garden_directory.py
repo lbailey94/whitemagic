@@ -532,7 +532,7 @@ class GardenDirectory:
                 self._loaded = True
                 return True
             except (json.JSONDecodeError, TypeError):
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return False
 
     def save(self) -> None:

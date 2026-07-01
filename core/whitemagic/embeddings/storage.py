@@ -207,7 +207,7 @@ class FileBasedEmbeddingCache:
                 cache_file.unlink()
                 count += 1
             except OSError:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
         return count
 
     def stats(self) -> dict:
