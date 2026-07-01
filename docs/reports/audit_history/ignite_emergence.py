@@ -1,14 +1,11 @@
-
 import asyncio
 import sqlite3
 import sys
 import logging
 import os
-import random
 from datetime import datetime
-from collections import Counter
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict
 
 # Ensure path
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Auto-fixed path
@@ -27,7 +24,7 @@ except ImportError:
 try:
     from whitemagic.core.resonance.gan_ying_enhanced import get_bus, EventType, ResonanceEvent
     from whitemagic.intelligence.agentic.emergence_engine import get_emergence_engine
-    from whitemagic.autonomous_execution.objective_generator import ObjectiveGenerator, Guidance, Research
+    from whitemagic.autonomous_execution.objective_generator import ObjectiveGenerator
 except ImportError as e:
     logger.error(f"Import Error: {e}")
     # Fallback/Mock for standalone execution if system is partial

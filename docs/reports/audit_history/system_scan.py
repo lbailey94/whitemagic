@@ -1,10 +1,9 @@
-
 import asyncio
 import json
 import logging
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict
 from datetime import datetime
 
 # Configure logging
@@ -14,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Auto-fixed path
 
 try:
-    from whitemagic.core.ganas.base import GanaCall, BaseGana, LunarMansion
+    from whitemagic.core.ganas.base import GanaCall, BaseGana
     # Import all 28 Ganas
     from whitemagic.core.ganas.eastern_quadrant import (
         HornGana, NeckGana, RootGana, RoomGana, HeartGana, TailGana, WinnowingBasketGana

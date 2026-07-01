@@ -6,11 +6,10 @@ import os
 import random
 import sqlite3
 import sys
-import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
 # Allow running from repo root without requiring installation.
 REPO_ROOT = Path(os.environ.get("WM_REPO_ROOT", Path(__file__).resolve().parent.parent)).resolve()
@@ -21,8 +20,6 @@ try:
     from whitemagic.core.ganas.base import GanaCall
     from whitemagic.core.ganas.eastern_quadrant import NeckGana
     from whitemagic.core.ganas.southern_quadrant import ExtendedNetGana
-    from whitemagic.core.memory.manager import MemoryManager
-    from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 except ImportError as e:
     print(f"CRITICAL IMPORT ERROR: {e}")
     sys.exit(1)

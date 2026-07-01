@@ -6,9 +6,9 @@ Detects structural stubs, archive drift, config inconsistencies, and dead code.
 
 import json
 from pathlib import Path
-from typing import Optional
 
 # Import checkers package to trigger auto-registration
+import whitemagic.tools.strata.checkers  # noqa: F401  triggers auto-registration
 from whitemagic.tools.strata.config import load_config
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity

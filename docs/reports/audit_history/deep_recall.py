@@ -1,4 +1,3 @@
-
 import asyncio
 import hashlib
 import json
@@ -18,7 +17,6 @@ import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.a
 
 try:
     from whitemagic.config.paths import DB_PATH as DEFAULT_DB_PATH
-    from whitemagic.core.ganas.base import GanaCall
     from whitemagic.core.ganas.eastern_quadrant import NeckGana
     from whitemagic.core.ganas.southern_quadrant import ExtendedNetGana
 except ImportError as e:

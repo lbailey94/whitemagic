@@ -1,15 +1,11 @@
-
 import sqlite3
 import random
 import math
-import sys
 import os
 from pathlib import Path
 from collections import Counter
-from typing import List, Dict, Tuple
 
 # Ensure path
-import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Auto-fixed path
 
 try:
     from whitemagic.config.paths import DB_PATH as DEFAULT_DB_PATH

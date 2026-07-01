@@ -88,7 +88,7 @@ class SessionHealthCheck:
     def _check_imports(self) -> dict:
         """Check core imports work."""
         try:
-            # Test critical imports
+            # Test critical imports  # noqa: F401
             from whitemagic.core.resonance.gan_ying import get_bus  # noqa: F401
             from whitemagic.gardens.dharma.core import get_dharma_core  # noqa: F401
             from whitemagic.homeostasis import Homeostasis  # noqa: F401
