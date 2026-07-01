@@ -170,9 +170,9 @@ class MansionBridge:
 
         for name, status in self.get_status().items():
             symbol = "✅" if status.available else "❌"
-            logger.debug(f"{symbol} {name.upper()}: ", end="")
+            logger.debug("%s %s: ", symbol, name.upper(), end="")
             if status.available:
-                logger.debug(f"{len(status.functions)} functions")
+                logger.debug("%s functions", len(status.functions))
                 if status.path:
                     logger.debug("   └─ Path: %s", status.path)
             else:

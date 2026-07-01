@@ -251,6 +251,12 @@ def _extract_payload(
 
 
 _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
+    # Consciousness practices — Smarana (must be before 'remember' → create_memory)
+    (
+        re.compile(r"\b(smarana|remember.*who.*am|remember.*identity|remember.*our.*mission|morning.*practice|do.*morning.*practice)\b", re.I),
+        "gana_ghost",
+        "consciousness.smarana",
+    ),
     # Memory creation
     (
         re.compile(r"\b(remember|store|save|memorize|create.*memory)\b", re.I),
@@ -395,12 +401,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "graph_topology",
     ),
     (re.compile(r"\b(watcher|monitor|observe)\b", re.I), "gana_ghost", "watcher_add"),
-    # Consciousness practices — Smarana, Stillness, Presence
-    (
-        re.compile(r"\b(smarana|remember.*who.*am|remember.*identity|morning.*practice)\b", re.I),
-        "gana_ghost",
-        "consciousness.smarana",
-    ),
+    # Consciousness practices — Stillness, Presence (Smarana moved to top)
     (
         re.compile(r"\b(stillness|presence.*quality|meditation.*metrics)\b", re.I),
         "gana_ghost",

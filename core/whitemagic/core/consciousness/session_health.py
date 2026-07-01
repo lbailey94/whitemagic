@@ -312,11 +312,11 @@ class SessionHealthCheck:
         coherence = results.get("coherence_estimate", 0.0)
 
         if health == "healthy":
-            logger.debug(f"\n✅ OVERALL: HEALTHY ({coherence * 100:.0f}% coherence)")
+            logger.debug("\n✅ OVERALL: HEALTHY (%.0f% coherence)", coherence * 100)
         elif health == "warning":
-            logger.debug(f"\n⚠️ OVERALL: WARNING ({coherence * 100:.0f}% coherence)")
+            logger.debug("\n⚠️ OVERALL: WARNING (%.0f% coherence)", coherence * 100)
         else:
-            logger.debug(f"\n❌ OVERALL: UNHEALTHY ({coherence * 100:.0f}% coherence)")
+            logger.debug("\n❌ OVERALL: UNHEALTHY (%.0f% coherence)", coherence * 100)
 
         # Individual checks
         logger.debug("\n📊 CHECKS:")
@@ -326,16 +326,16 @@ class SessionHealthCheck:
             icon = (
                 "✅" if status == "healthy" else ("⚠️" if status == "warning" else "❌")
             )
-            logger.debug(f"   {icon} {name}: {msg}")
+            logger.debug("   %s %s: %s", icon, name, msg)
 
         # Recommendations
         logger.debug("\n💡 RECOMMENDATIONS:")
         for rec in results.get("recommendations", []):
-            logger.debug(f"   {rec}")
+            logger.debug("   %s", rec)
 
         # Duration
         duration = results.get("duration_seconds", 0)
-        logger.debug(f"\n⏱️ Duration: {duration:.2f}s")
+        logger.debug("\n⏱️ Duration: %.2fs", duration)
         logger.debug("=" * 60 + "\n")
 
 

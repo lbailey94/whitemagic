@@ -56,7 +56,9 @@ class Scratchpad:
             return
 
         logger.debug(
-            f"  [Scratchpad] Finalizing {len(self.entries)} entries for {self.session_id}..."
+            "  [Scratchpad] Finalizing %d entries for %s...",
+            len(self.entries),
+            self.session_id,
         )
 
         # Coherence boost for session closure (Phase 26)
@@ -102,7 +104,7 @@ class Scratchpad:
             return
 
         for i, entry in enumerate(self.entries):
-            logger.debug(f"  {i + 1}. [{entry['timestamp']}] {entry['text'][:100]}...")
+            logger.debug("  %s. [%s] %s...", i + 1, entry['timestamp'], entry['text'][:50])
 
 
 def get_active_scratchpad() -> Scratchpad:

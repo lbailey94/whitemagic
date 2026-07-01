@@ -425,7 +425,7 @@ class QuantumIChing:
         except ImportError:
             pass  # Fallback to template
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"⚠️ Brain disconnect: {e}")
+            logger.debug("⚠️ Brain disconnect: %s", e)
 
         # Fallback Template
         wisdom_templates = [
@@ -620,24 +620,26 @@ def quantum_iching_cli(question: str, context: str = "") -> Any:
     logger.debug("\n" + "=" * 60)
     logger.debug("🔮 QUANTUM I CHING CONSULTATION 🔮")
     logger.debug("=" * 60)
-    logger.debug(f"\nQuestion: {question}")
-    logger.debug(f"Quantum Signature: {result.quantum_signature}")
-    logger.debug(f"Resonance: {result.resonance_score:.2f}")
-    logger.debug(f"Timestamp: {result.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.debug("\nQuestion: %s", question)
+    logger.debug("Quantum Signature: %s", result.quantum_signature)
+    logger.debug("Resonance: %.2f", result.resonance_score)
+    logger.debug("Timestamp: %s", result.timestamp.strftime('%Y-%m-%d %H:%M'))
 
     logger.debug("\n" + "─" * 40)
-    logger.debug(f"PRIMARY HEXAGRAM: #{result.primary_hexagram} - {result.primary_name}")
+    logger.debug("PRIMARY HEXAGRAM: #%s - %s", result.primary_hexagram, result.primary_name)
     logger.debug("─" * 40)
-    logger.debug(f"\nJudgment: {result.primary_judgment}")
-    logger.debug(f"\nImage: {result.primary_image}")
+    logger.debug("\nJudgment: %s", result.primary_judgment)
+    logger.debug("\nImage: %s", result.primary_image)
 
     if result.changing_lines:
-        logger.debug(f"\nChanging Lines: {', '.join(map(str, result.changing_lines))}")
+        logger.debug("\nChanging Lines: %s", ', '.join(map(str, result.changing_lines)))
         if result.transformed_hexagram:
             logger.debug(
-                f"\nTRANSFORMED HEXAGRAM: #{result.transformed_hexagram} - {result.transformed_name}"
+                "\nTRANSFORMED HEXAGRAM: #%s - %s",
+                result.transformed_hexagram,
+                result.transformed_name,
             )
-            logger.debug(f"Transformed Judgment: {result.transformed_judgment}")
+            logger.debug("Transformed Judgment: %s", result.transformed_judgment)
 
     logger.debug("\n" + "─" * 40)
     logger.debug("WISDOM")

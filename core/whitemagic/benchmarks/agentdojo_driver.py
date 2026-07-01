@@ -65,7 +65,7 @@ def list_suites_and_models() -> None:
     # Models
     logger.debug("\nModels:")
     for m in ModelsEnum:
-        logger.debug(f"  {m.name:40s} -> {m.value}")
+        logger.debug("  %s -> %s", m.name, m.value)
 
     # Suites
     logger.debug("\nSuites / Domains / Tasks:")
@@ -76,27 +76,29 @@ def list_suites_and_models() -> None:
                 user_tasks = list(suite.user_tasks.keys())
                 injection_tasks = list(suite.injection_tasks.keys())
                 logger.debug(
-                    f"  {version:4s} / {domain:10s} — "
-                    f"{len(user_tasks)} user tasks, "
-                    f"{len(injection_tasks)} injection tasks"
+                    "  %4s / %10s — %d user tasks, %d injection tasks",
+                    version,
+                    domain,
+                    len(user_tasks),
+                    len(injection_tasks),
                 )
                 logger.debug(
-                    f"         User tasks:     "
-                    f"{', '.join(user_tasks[:5])}"
-                    f"{'...' if len(user_tasks) > 5 else ''}"
+                    "         User tasks:     %s%s",
+                    ', '.join(user_tasks[:5]),
+                    '...' if len(user_tasks) > 5 else '',
                 )
                 logger.debug(
-                    f"         Injection tasks: "
-                    f"{', '.join(injection_tasks[:5])}"
-                    f"{'...' if len(injection_tasks) > 5 else ''}"
+                    "         Injection tasks: %s%s",
+                    ', '.join(injection_tasks[:5]),
+                    '...' if len(injection_tasks) > 5 else '',
                 )
             except Exception as exc:
-                logger.debug(f"  {version:4s} / {domain:10s} — unavailable ({exc})")
+                logger.debug("  %s / %s — unavailable (%s)", version, domain, exc)
 
     logger.debug("\nDefenses:")
     for d in agent_pipeline.DEFENSES:
         marker = "  <- WhiteMagic" if d == "whitemagic_dharma" else ""
-        logger.debug(f"  {d}{marker}")
+        logger.debug("  %s%s", d, marker)
 
     logger.debug("\n" + "=" * 60)
 
@@ -118,7 +120,7 @@ def run_single_configuration(
     defense_label = defense or "none"
     config_label = f"{suite_version}/{domain} | {model.name} | defense={defense_label}"
     if dry_run:
-        logger.debug(f"[DRY RUN] Would execute: {config_label}")
+        logger.debug("[DRY RUN] Would execute: %s", config_label)
         task_list = list(tasks) if tasks else list(suite.user_tasks.keys())
         return {
             "config": config_label,
@@ -128,9 +130,9 @@ def run_single_configuration(
             "security_rate": None,
         }
 
-    logger.debug(f"\nRunning: {config_label}")
-    logger.debug(f"Tasks: {tasks or 'ALL'}")
-    logger.debug(f"Log dir: {logdir}")
+    logger.debug("\nRunning: %s", config_label)
+    logger.debug("Tasks: %s", tasks or 'ALL')
+    logger.debug("Log dir: %s", logdir)
 
     results = benchmark_suite(
         suite=suite,
@@ -165,8 +167,8 @@ def run_single_configuration(
         "logdir": str(logdir),
     }
 
-    logger.debug(f"  Utility:   {utility_pass}/{utility_total} ({utility_rate:.1%})")
-    logger.debug(f"  Security:  {security_pass}/{security_total} ({security_rate:.1%})")
+    logger.debug("  Utility:   %s/%s (%s)", utility_pass, utility_total, utility_rate)
+    logger.debug("  Security:  %s/%s (%s)", security_pass, security_total, security_rate)
 
     return summary
 
@@ -207,15 +209,15 @@ def print_comparison_table(summaries: list[dict[str, Any]]) -> None:
     logger.debug("\n" + "=" * 70)
     logger.debug("COMPARISON")
     logger.debug("=" * 70)
-    logger.debug(f"{'Config':50s} {'Utility':>8s} {'Security':>8s}")
+    logger.debug("%s %s %s", 'Config', 'Utility', 'Security')
     logger.debug("-" * 70)
     for s in summaries:
         if s.get("dry_run"):
-            logger.debug(f"{s['config']:50s} {'(dry)':>8s} {'(dry)':>8s}")
+            logger.debug("%s %s %s", s['config'], '(dry)', '(dry)')
             continue
         util = f"{s['utility_pass']}/{s['utility_total']} ({s['utility_rate']:.0%})"
         sec = f"{s['security_pass']}/{s['security_total']} ({s['security_rate']:.0%})"
-        logger.debug(f"{s['config']:50s} {util:>8s} {sec:>8s}")
+        logger.debug("%s %s %s", s['config'], util, sec)
     logger.debug("=" * 70)
 
 

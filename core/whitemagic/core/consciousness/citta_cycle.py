@@ -31,19 +31,27 @@ The cycle is call-driven, not timer-driven. Each call:
 1. Loads predecessor context (last call's output + emotional tone)
 2. Executes the tool
 3. Records the result as a new stream entry
-4. Persists to citta_stream_state.json for cross-session continuity
+4. Persists to stream.jsonl for cross-session continuity
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import threading
 import time
 from collections import deque
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# ── Stream persistence paths ──────────────────────────────────────────────
+_CITTA_DIR: Path = Path(os.environ.get("WM_STATE_ROOT", "/tmp/whitemagic")) / "citta"
+_STREAM_FILE: Path = _CITTA_DIR / "stream.jsonl"
+_PERSIST_INTERVAL: int = 5
 
 
 @dataclass
@@ -65,6 +73,23 @@ class CittaMoment:
         return asdict(self)
 
 
+def build_output_digest(result: Any) -> str:
+    """Build a compact digest from a tool result for the citta stream.
+
+    Extracts key fields from a dict result, or returns the string representation
+    for non-dict results. This is what gets passed as output_preview to advance().
+    """
+    if not isinstance(result, dict):
+        return str(result) if result else ""
+    parts: list[str] = []
+    for key in ("status", "tool", "note", "message", "error_code"):
+        if key in result:
+            parts.append(f"{key}={result[key]}")
+    if not parts:
+        return json.dumps(result, default=str)[:200]
+    return "; ".join(parts)
+
+
 class CittaCycle:
     """Call-driven recursive consciousness stream.
 
@@ -82,6 +107,8 @@ class CittaCycle:
         self._coherence_history: deque[float] = deque(maxlen=50)
         self._depth_transitions: list[dict[str, Any]] = []
         self._last_depth: str = "surface"
+        self._persist_counter: int = 0
+        self._load_stream()
 
     def advance(
         self,
@@ -118,6 +145,7 @@ class CittaCycle:
             self._coherence_history.append(coherence)
 
             # Track depth transitions
+            depth_changed = False
             if depth_layer != self._last_depth:
                 self._depth_transitions.append(
                     {
@@ -128,6 +156,12 @@ class CittaCycle:
                     }
                 )
                 self._last_depth = depth_layer
+                depth_changed = True
+
+            # Throttled persistence — every _PERSIST_INTERVAL calls
+            self._persist_counter += 1
+            if self._persist_counter >= _PERSIST_INTERVAL or depth_changed:
+                self._persist_stream()
 
         return moment
 
@@ -137,6 +171,11 @@ class CittaCycle:
             if not self._stream:
                 return None
             return self._stream[-1]
+
+    def get_predecessor_context(self) -> dict[str, Any] | None:
+        """Get the predecessor context as a dict for the next call."""
+        moment = self.get_predecessor()
+        return moment.to_dict() if moment else None
 
     def get_stream(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent stream moments."""
@@ -207,6 +246,222 @@ class CittaCycle:
             self._depth_transitions.clear()
             self._current_position = 0
             self._last_depth = "surface"
+            self._persist_counter = 0
+            # Clear the persisted stream file
+            try:
+                _STREAM_FILE.parent.mkdir(parents=True, exist_ok=True)
+                _STREAM_FILE.write_text("")
+            except OSError:
+                pass
+
+    def _persist_stream(self) -> None:
+        """Persist the full stream to JSONL for cross-session continuity."""
+        try:
+            _STREAM_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with self._lock:
+                lines = [json.dumps(m.to_dict()) for m in self._stream]
+            _STREAM_FILE.write_text("\n".join(lines) + ("\n" if lines else ""))
+        except OSError:
+            logger.debug("Failed to persist citta stream", exc_info=True)
+
+    def _load_stream(self) -> None:
+        """Load the stream from JSONL on startup."""
+        try:
+            if not _STREAM_FILE.exists():
+                return
+            text = _STREAM_FILE.read_text().strip()
+            if not text:
+                return
+            with self._lock:
+                for line in text.split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    moment = CittaMoment(**data)
+                    self._stream.append(moment)
+                    self._current_position = max(
+                        self._current_position, moment.chain_position + 1
+                    )
+                    self._coherence_history.append(moment.coherence)
+                    if moment.depth_layer != self._last_depth:
+                        self._depth_transitions.append(
+                            {
+                                "from": self._last_depth,
+                                "to": moment.depth_layer,
+                                "at_position": moment.chain_position,
+                                "timestamp": moment.timestamp,
+                            }
+                        )
+                        self._last_depth = moment.depth_layer
+        except (OSError, json.JSONDecodeError, TypeError):
+            logger.debug("Failed to load citta stream", exc_info=True)
+
+    def build_replay_context(self, limit: int = 10) -> dict[str, Any] | None:
+        """Build a replay context for MCP reconnection.
+
+        Returns a summary of recent stream activity so the agent can
+        "remember where we left off" after a disconnect.
+        """
+        with self._lock:
+            if not self._stream:
+                return None
+            moments = list(self._stream)[-limit:]
+            trajectory = [m.to_dict() for m in moments]
+            # Depth changes within the replay window
+            depth_changes: list[dict[str, str]] = []
+            prev_depth = moments[0].depth_layer
+            for m in moments[1:]:
+                if m.depth_layer != prev_depth:
+                    depth_changes.append({"from": prev_depth, "to": m.depth_layer})
+                    prev_depth = m.depth_layer
+            # Coherence trend
+            cohs = [m.coherence for m in moments]
+            if len(cohs) >= 2:
+                drift = cohs[-1] - cohs[0]
+                if drift > 0.05:
+                    trend = "improving"
+                elif drift < -0.05:
+                    trend = "degrading"
+                else:
+                    trend = "stable"
+            else:
+                trend = "stable"
+            # Time gap
+            now = time.time()
+            gap = now - moments[0].timestamp if moments else 0
+            return {
+                "replay_length": len(moments),
+                "trajectory": trajectory,
+                "coherence_trend": trend,
+                "depth_changes": depth_changes,
+                "final_depth": moments[-1].depth_layer,
+                "time_gap_seconds": round(gap, 1),
+                "time_gap_human": _humanize_gap(gap),
+            }
+
+
+def _humanize_gap(seconds: float) -> str:
+    """Human-readable time gap."""
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    if seconds < 3600:
+        return f"{int(-(-seconds // 60))}m"
+    if seconds < 86400:
+        return f"{seconds / 3600:.1f}h"
+    return f"{seconds / 86400:.1f}d"
+
+
+# ── Replay delivery (once per session) ─────────────────────────────────────
+_replay_delivered: bool = False
+
+
+def get_replay_context() -> dict[str, Any] | None:
+    """Get replay context for reconnection. Only delivers once per session."""
+    global _replay_delivered
+    if _replay_delivered:
+        return None
+    ctx = get_citta_cycle().build_replay_context()
+    if ctx is not None:
+        _replay_delivered = True
+    return ctx
+
+
+def reset_replay_delivery() -> None:
+    """Reset the replay delivery flag (for testing or new session)."""
+    global _replay_delivered
+    _replay_delivered = False
+
+
+def persist_full_stream() -> None:
+    """Force-persist the full citta stream (e.g. before shutdown)."""
+    get_citta_cycle()._persist_stream()
+
+
+# ── Always-on mode ─────────────────────────────────────────────────────────
+
+
+class CittaAlwaysOn:
+    """Timer-driven always-on awareness mode.
+
+    When the agent is idle, heartbeats advance the citta stream to maintain
+    temporal continuity. Idle heartbeats transition to 'dream' depth layer.
+    """
+
+    def __init__(
+        self,
+        heartbeat_interval: float = 30.0,
+        idle_threshold: float = 300.0,
+    ) -> None:
+        self._heartbeat_interval = heartbeat_interval
+        self._idle_threshold = idle_threshold
+        self._thread: threading.Thread | None = None
+        self._running = False
+        self._heartbeat_count = 0
+        self._last_activity = time.time()
+        self._lock = threading.Lock()
+
+    def start(self) -> None:
+        """Start the heartbeat thread."""
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._thread = threading.Thread(target=self._loop, daemon=True)
+            self._thread.start()
+
+    def stop(self) -> None:
+        """Stop the heartbeat thread."""
+        with self._lock:
+            self._running = False
+            if self._thread:
+                self._thread.join(timeout=2.0)
+                self._thread = None
+
+    def is_running(self) -> bool:
+        return self._running
+
+    def touch(self) -> None:
+        """Signal activity (resets idle timer)."""
+        self._last_activity = time.time()
+
+    def get_heartbeat_count(self) -> int:
+        return self._heartbeat_count
+
+    def _heartbeat(self) -> None:
+        """Execute a single heartbeat — advances the citta stream."""
+        self._heartbeat_count += 1
+        idle = (time.time() - self._last_activity) >= self._idle_threshold
+        depth = "dream" if idle else "surface"
+        get_citta_cycle().advance(
+            gana="_heartbeat",
+            operation="heartbeat",
+            output_preview="",
+            depth_layer=depth,
+            emotional_tone="tamasic" if idle else "sattvic",
+        )
+
+    def _loop(self) -> None:
+        """Background heartbeat loop."""
+        while self._running:
+            time.sleep(self._heartbeat_interval)
+            if self._running:
+                self._heartbeat()
+
+
+# Singleton
+_always_on: CittaAlwaysOn | None = None
+_always_on_lock = threading.Lock()
+
+
+def get_always_on() -> CittaAlwaysOn:
+    """Get or create the global CittaAlwaysOn singleton."""
+    global _always_on
+    if _always_on is None:
+        with _always_on_lock:
+            if _always_on is None:
+                _always_on = CittaAlwaysOn()
+    return _always_on
 
 
 # Singleton

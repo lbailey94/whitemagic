@@ -72,8 +72,8 @@ for pkg_name in subpackages:
         )
 
 logger.debug("=== Import Audit Results ===")
-logger.debug(f"Successes: {len(successes)}")
-logger.debug(f"Failures: {len(failures)}")
+logger.debug("Successes: %s", len(successes))
+logger.debug("Failures: %s", len(failures))
 logger.debug()
 
 if failures:
@@ -86,8 +86,8 @@ if failures:
         by_category[cat].append(f)
 
     for cat, items in sorted(by_category.items()):
-        logger.debug(f"\n{cat.upper()}: {len(items)}")
+        logger.debug("\n%s: %s", cat.upper(), len(items))
         for item in items:
-            logger.debug(f"  - {item['module']}: {item['error'][:100]}")
+            logger.debug("  - %s: %s", item['module'], item['error'][:80])
 else:
     logger.debug("No failures detected!")

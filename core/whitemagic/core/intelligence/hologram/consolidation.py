@@ -116,7 +116,7 @@ class HolographicConsolidator:
                 record_count += 1
             logger.debug("   - Bucketed %s points...", record_count)
 
-        logger.debug(f"   - Building neighbors for {len(buckets)} spatial cells...")
+        logger.debug("   - Building neighbors for %s spatial cells...", len(buckets))
 
         clusters = []
         used = set()
@@ -128,7 +128,7 @@ class HolographicConsolidator:
         for bk, bucket_ids in buckets.items():
             bucket_count += 1
             if bucket_count % 2000 == 0:
-                logger.debug(f"   - Processing bucket {bucket_count}/{len(buckets)}...")
+                logger.debug("   - Processing bucket %s/%s...", bucket_count, len(buckets))
 
             for mem_id in bucket_ids:
                 if mem_id in used:
@@ -169,7 +169,7 @@ class HolographicConsolidator:
                     )
                     used.update(neighbors)
 
-        logger.debug(f"   ✓ Clustering complete: {len(clusters)} clusters found.")
+        logger.debug("   ✓ Clustering complete: %s clusters found.", len(clusters))
         return clusters
 
     async def hydrate_clusters(

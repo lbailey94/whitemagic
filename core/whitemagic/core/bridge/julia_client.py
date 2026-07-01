@@ -267,7 +267,7 @@ def benchmark_julia():
 
     avg_time = np.mean(times) * 1000
     logger.debug("   RRF fusion: %sms per call", avg_time)
-    logger.debug(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
+    logger.debug("   Throughput: %.0f calls/sec", 1000 / avg_time)
 
     logger.debug("\n3. PageRank performance...")
     nodes = [f"node_{i}" for i in range(100)]
@@ -285,7 +285,7 @@ def benchmark_julia():
 
     avg_time = np.mean(times) * 1000
     logger.debug("   PageRank (100 nodes): %sms per call", avg_time)
-    logger.debug(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
+    logger.debug("   Throughput: %.0f calls/sec", 1000 / avg_time)
 
     logger.debug("\n" + "=" * 60)
     logger.debug("✅ Julia persistent server eliminates 2-3s JIT latency")

@@ -52,8 +52,8 @@ class TerminalScratchpad:
 
     def __enter__(self) -> TerminalScratchpad:
         self.start_time = datetime.now()
-        logger.debug(f"\n{Colors.HEADER}🧠 OPENING SCRATCHPAD: {self.task_name}{Colors.ENDC}")
-        logger.debug(f"{Colors.BLUE}Session ID: {self.session_id}{Colors.ENDC}\n")
+        logger.debug("\n%s🧠 OPENING SCRATCHPAD: %s%s", Colors.HEADER, self.task_name, Colors.ENDC)
+        logger.debug("%sSession ID: %s%s\n", Colors.BLUE, self.session_id, Colors.ENDC)
         return self
 
     def __exit__(
@@ -65,11 +65,11 @@ class TerminalScratchpad:
         assert self.start_time is not None
         duration = datetime.now() - self.start_time
 
-        logger.debug(f"\n{Colors.HEADER}🔒 CLOSING SCRATCHPAD{Colors.ENDC}")
-        logger.debug(f"{Colors.BLUE}Duration: {duration}{Colors.ENDC}")
+        logger.debug("\n%s🔒 CLOSING SCRATCHPAD%s", Colors.HEADER, Colors.ENDC)
+        logger.debug("%sDuration: %s%s", Colors.BLUE, duration, Colors.ENDC)
 
         if exc_type:
-            logger.debug(f"{Colors.FAIL}Exited with error: {exc_val}{Colors.ENDC}")
+            logger.debug("%sExited with error: %s%s", Colors.FAIL, exc_val, Colors.ENDC)
             self.think(f"CRITICAL ERROR: {exc_val}")
 
         self._save_to_memory()
@@ -96,7 +96,7 @@ class TerminalScratchpad:
 
         prefix = f"[{type.upper()}]"
         timestamp = t.timestamp.strftime("%H:%M:%S")
-        logger.debug(f"{color}{timestamp} {prefix.ljust(10)} {content}{Colors.ENDC}")
+        logger.debug("%s%s %s %s%s", color, timestamp, prefix.ljust(10), content, Colors.ENDC)
         time.sleep(0.1)  # UX pause
 
     def _save_to_memory(self) -> None:
@@ -156,10 +156,10 @@ class TerminalScratchpad:
 
             conn.commit()
             conn.close()
-            logger.debug(f"{Colors.GREEN}💾 Saved to permanent memory.{Colors.ENDC}")
+            logger.debug("%s💾 Saved to permanent memory.%s", Colors.GREEN, Colors.ENDC)
 
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.debug(f"{Colors.FAIL}❌ Failed to save memory: {e}{Colors.ENDC}")
+            logger.debug("%s❌ Failed to save memory: %s%s", Colors.FAIL, e, Colors.ENDC)
 
 
 if __name__ == "__main__":

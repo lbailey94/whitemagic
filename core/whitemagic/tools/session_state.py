@@ -66,3 +66,10 @@ def reset_session() -> None:
     """Reset the session start time (for testing)."""
     global _session_start
     _session_start = None
+    # Also reset citta replay delivery so reconnection context is delivered again
+    try:
+        from whitemagic.core.consciousness.citta_cycle import reset_replay_delivery
+
+        reset_replay_delivery()
+    except ImportError:
+        pass

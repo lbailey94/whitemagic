@@ -178,6 +178,19 @@ class DreamCycle:
         if self._dreaming:
             self._dreaming = False
             logger.debug("Dream interrupted by activity")
+            # Advance citta stream with a wake moment
+            try:
+                from whitemagic.core.consciousness.citta_cycle import advance_citta
+
+                advance_citta(
+                    gana="_dream",
+                    operation="wake",
+                    output_preview="dream interrupted by activity",
+                    depth_layer="surface",
+                    emotional_tone="sattvic",
+                )
+            except Exception:
+                pass
 
     def _run_loop(self) -> None:
         """Background thread: watch for idle → dream."""
@@ -261,6 +274,20 @@ class DreamCycle:
             status,
             report.duration_ms,
         )
+        # Advance citta stream with dream phase moment
+        try:
+            from whitemagic.core.consciousness.citta_cycle import advance_citta
+
+            advance_citta(
+                gana="_dream",
+                operation=f"dream_phase:{phase.value}",
+                output_preview=status[:200],
+                depth_layer="dream",
+                emotional_tone="tamasic",
+                duration_ms=report.duration_ms,
+            )
+        except Exception:
+            pass
 
     def _get_core_access(self) -> Any:
         """Lazy-load the CoreAccessLayer."""

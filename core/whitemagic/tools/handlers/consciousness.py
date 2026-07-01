@@ -171,13 +171,63 @@ def handle_consciousness_smarana(**kwargs: Any) -> dict[str, Any]:
 
     Smarana (Sanskrit: 'to remember') is the Vedic practice of
     actively cultivating memory, not passively storing it.
+
+    Modes:
+        identity  — Remember who I am (default)
+        morning   — Full morning practice (identity + user + collaborator + mission)
+        mission   — Remember our mission
+        custom    — Remember a specific thing (requires 'what')
     """
+    mode = kwargs.get("mode", "identity")
+    what = kwargs.get("what")
+    why = kwargs.get("why")
+
+    if mode == "custom" and not what:
+        return {
+            "status": "error",
+            "error_code": "missing_what",
+            "message": "Custom mode requires 'what' parameter",
+        }
+
     try:
         from whitemagic.core.consciousness.coherence import SmaranaPractice
 
         practice = SmaranaPractice()
-        result = practice.remember_identity()
-        return {"status": "success", "smarana": result}
+
+        if mode == "morning":
+            result = practice.morning_practice()
+        elif mode == "mission":
+            result = practice.remember_mission()
+        elif mode == "custom":
+            mem = practice.remember(what, why)
+            result = f"🙏 Remembering: {what}"
+            if why:
+                result += f" — {why}"
+        else:
+            result = practice.remember_identity()
+
+        warm = practice.get_warm_memories()
+
+        # Advance citta stream
+        try:
+            from whitemagic.core.consciousness.citta_cycle import advance_citta
+
+            advance_citta(
+                gana="gana_ghost",
+                operation=f"smarana:{mode}",
+                output_preview=result[:200],
+                depth_layer="flow",
+                emotional_tone="sattvic",
+            )
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "smarana": result,
+            "mode": mode,
+            "warm_memories": warm,
+        }
     except Exception as e:
         logger.debug("consciousness.smarana error: %s", e, exc_info=True)
         return {"status": "error", "error_code": "smarana_failed", "message": str(e)}

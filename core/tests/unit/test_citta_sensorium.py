@@ -226,6 +226,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         moment = cycle.advance(
             gana="gana_ghost",
             tool="gnosis",
@@ -244,6 +245,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         assert cycle.get_predecessor() is None
         cycle.advance(gana="gana_horn", tool="checkpoint", output_preview="first")
         cycle.advance(gana="gana_ghost", tool="gnosis", output_preview="second")
@@ -256,6 +258,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         for i in range(5):
             cycle.advance(gana=f"gana_{i}", tool=f"tool_{i}", output_preview=f"out_{i}")
         stream = cycle.get_stream(limit=3)
@@ -266,6 +269,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         for c in [0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9]:
             cycle.advance(gana="gana_test", output_preview="", coherence=c)
         drift = cycle.get_coherence_drift()
@@ -275,6 +279,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         cycle.advance(gana="g", output_preview="", depth_layer="surface")
         cycle.advance(gana="g", output_preview="", depth_layer="flow")
         cycle.advance(gana="g", output_preview="", depth_layer="flow")
@@ -288,6 +293,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         for tone in ["sattvic", "sattvic", "rajasic"]:
             cycle.advance(gana="g", output_preview="", emotional_tone=tone)
         coloring = cycle.get_emotional_coloring()
@@ -298,6 +304,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         cycle.advance(gana="g", output_preview="", coherence=0.8)
         cycle.advance(gana="g", output_preview="", coherence=0.9)
         summary = cycle.get_cycle_summary()
@@ -309,6 +316,7 @@ class TestCittaCycle:
         from whitemagic.core.consciousness.citta_cycle import CittaCycle
 
         cycle = CittaCycle()
+        cycle.reset()
         cycle.advance(gana="g", output_preview="test")
         assert len(cycle.get_stream()) == 1
         cycle.reset()
