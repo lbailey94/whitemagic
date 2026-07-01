@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Python dispatcher for the Julia yield curve bridge.
 
 Tries the Julia JSON stdio bridge first for compute-heavy yield curve operations.

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Python dispatcher for the Elixir actor bridge.
 
 Routes hypothesis actor operations to the BEAM GenServer-based actor system

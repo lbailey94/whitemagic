@@ -18,7 +18,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
 - v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup
 - v23.2.0: Mojo removed (8→7 polyglot languages); multi-user galaxy isolation (per-user SQLite namespaces, local profiles, X-User-Id header); real-time sync via Redis (galaxy lifecycle events on user-scoped channels, REDIS_URL env var support); Rust SIMD expansion (batch Euclidean distance, batch dot product, batch top-k) + RustCascadeBackend wired into GanYingBus; browser-first PWA substrate (MemoryStore, DharmaEngine, KarmaLedger, GnosisSnapshot in WASM, LocalTransport in TypeScript SDK, PWA shell with service worker); full suite 2,589 passed, 0 failed, ~110s
-- v23.3.0: `wm` meta-tool ('world in a seed') — single facade tool with sub-millisecond regex NLU routing to all 490 tools; `WM_MCP_PRAT=2` Seed mode (1 tool exposed to MCP); PRAT mode now exposes 29 tools (28 Ganas + `wm`); CLI `wm` command; full suite passing
+- v23.3.2: Token economy wiring + budget enforcement; prediction calibration feedback loop; module consolidation (DepthGauge, TokenOptimizer shims); subprocess bridge timeout fixes (WM_SKIP_POLYGLOT); STRATA 10 new checkers + 5-phase auto-fix (3,008+ findings); SkillForge (43 skills); Citta P0 (Smarana, Presence, coherence auto-measure); de-slop pass; 3,337 unit tests passing
 - v23.3.1: Memory system overhaul — 10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal); CITTA memory type for consciousness-stream memories; citta bridge auto-persists significant moments; HNSW index with disk persistence (16,219 embeddings, 0.26ms search); galaxy-aware search (semantic + FTS5); `galaxy.canonical_taxonomy` + `galaxy.export_tutorial` tools; oracle readings auto-persist to dreams galaxy; content_hash backfilled for all 12,737 memories; holographic coords for all memories; 2,853 cross-galaxy associations; FTS5 phrase-first search + join bug fix; 3,206 unit + 259 integration tests passing
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
@@ -32,7 +32,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (current: 3206 passed, 1 skipped, 12 pre-existing failures)
+# 2. Verify test baseline (current: 3337 passed, 15 skipped, 1 pre-existing failure, 38 citta P1 pending)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift
@@ -518,7 +518,7 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 
 ## 15. Contact & Context
 
-- **Project**: WhiteMagic v23.3.0
+- **Project**: WhiteMagic v23.3.2
 - **Repository**: `<path-to-whitemagic>/`
 - **Virtual Environment**: `.venv/` (source before any Python work)
 - **Test Command (Tier 1)**: `cd core && python -m pytest tests/unit/ -q --timeout=5 -x`

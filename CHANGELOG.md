@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [23.3.2] - 2026-06-30
+
+### Added
+- Token estimation in dispatch pipeline (`_record_telemetry` records input/output tokens to `TokenEconomyTracker` and `TokenBudget`)
+- Real-time token budget enforcement (warnings at 60-70%, checkpoints at >70%)
+- Prediction calibration feedback loop (`get_rolling_feedback()`, `apply_rolling_calibration()`)
+- Sensorium integration for rolling calibration and machine-time auto-adjustments
+- SkillForge — portable SKILL.md library (43 skills), slop/duplicate detection, MCP handlers, NLU routing
+- Citta architecture P0 — Smarana + Presence exposure, coherence auto-measure
+- STRATA static analysis — 10 new checkers, 5 phases of auto-fixes (3,008+ findings)
+- CPU inference strategy document
+
+### Changed
+- Module consolidation — `autonomous/depth_gauge.py` and `agentic/token_optimizer.py` converted to shims
+- Compat methods added to canonical `ConsciousnessDepthGauge` and `TokenBudget`
+- Subprocess bridge fixes — all polyglot bridges now use timeout-wrapped `readline()` and `WM_SKIP_POLYGLOT` env var
+- STRATA auto-fixes across 5 phases (swallowed exceptions, print_debug, logging_fstring, etc.)
+- De-slop pass — trivial comment removal, ruff F401 fixes
+
+### Test Results
+- Unit: 3,337 passed, 1 pre-existing failure, 15 skipped
+- Integration: 231 passed
+
 ## [23.3.1] - 2026-06-29
 
 ### Added

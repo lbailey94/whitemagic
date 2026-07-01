@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Python dispatcher for the Rust evolution bridge.
 
 Tries the Rust JSON stdio bridge first for compute-heavy operations.
