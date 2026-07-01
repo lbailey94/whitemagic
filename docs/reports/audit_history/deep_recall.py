@@ -123,7 +123,7 @@ class DeepRecall:
             self.conn.commit()
             return cur.rowcount # usage of rowcount with INSERT OR IGNORE is tricky in sqlite, but good approx
         except Exception as e:
-            logging.error(f"Batch insert error: {e}")
+            logging.error("Batch insert error: %s", e)
             return 0
 
     async def run(self):

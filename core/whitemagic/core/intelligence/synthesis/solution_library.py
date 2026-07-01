@@ -148,7 +148,7 @@ class SolutionLibrary:
             logger.error("Cannot apply non-existent solution: %s", solution_id)
             return False
 
-        logger.debug(f"  [SolutionLibrary] Applying: {sol.title} ({sol.id})...")
+        logger.debug("  [SolutionLibrary] Applying: %s (%s)...", sol.title, sol.id)
 
         # 1. Check AI Contract (Alignment)
         try:

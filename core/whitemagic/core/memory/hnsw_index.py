@@ -350,8 +350,8 @@ def benchmark_hnsw():
     linear_time = (time.perf_counter() - start) / 100 * 1000
 
     print(f"\nDataset: {len(index.nodes)} vectors of dim {index.dim}")
-    logger.debug(f"HNSW search: {hnsw_time:.2f}ms per query")
-    logger.debug(f"Linear scan (1K): {linear_time:.2f}ms per query")
+    logger.debug("HNSW search: %sms per query", hnsw_time)
+    logger.debug("Linear scan (1K): %sms per query", linear_time)
     if hnsw_time > 0:
         print(f"Speedup: {linear_time/hnsw_time:.1f}x")
 

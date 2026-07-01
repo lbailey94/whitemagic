@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from whitemagic.tools.strata import Strata
+    pass
 
 
 def _fix_trivial_comments(source: str, findings: list[dict]) -> str:

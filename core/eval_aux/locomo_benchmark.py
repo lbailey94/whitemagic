@@ -344,7 +344,7 @@ def retrieve_fts(query: str, limit: int = 20) -> list[dict]:
         memories = backend.search(query=query, limit=limit)
         return [{"id": m.id, "title": m.title, "score": getattr(m, 'importance', 0)} for m in memories]
     except Exception as e:
-        logger.warning(f"FTS error: {e}")
+        logger.warning("FTS error: %s", e)
         return []
 
 
@@ -379,7 +379,7 @@ def retrieve_fts_title(query: str, limit: int = 20) -> list[dict]:
         conn.__exit__(None, None, None)
         return [{"id": r["id"], "title": r["title"], "score": r["score"]} for r in rows]
     except Exception as e:
-        logger.warning(f"FTS title error: {e}")
+        logger.warning("FTS title error: %s", e)
         return []
 
 
@@ -423,7 +423,7 @@ def retrieve_vector(query: str, limit: int = 20) -> list[dict]:
         results = engine.search_similar(query, limit=limit, min_similarity=0.01)
         return [{"id": r["memory_id"], "title": "", "score": r["similarity"]} for r in results]
     except Exception as e:
-        logger.warning(f"Vector search error: {e}")
+        logger.warning("Vector search error: %s", e)
         return retrieve_fts(query, limit)
 
 
@@ -441,7 +441,7 @@ def retrieve_vector_graph(query: str, limit: int = 20) -> list[dict]:
                                      graph_depth=3)
         return [{"id": r.memory_id, "title": r.title or "", "score": r.score} for r in results]
     except Exception as e:
-        logger.warning(f"vector_graph error: {e}, falling back to hybrid+vector")
+        logger.warning("vector_graph error: %s, falling back to hybrid+vector", e)
         # Fallback: merge FTS hybrid + vector results
         fts = retrieve_hybrid(query, limit)
         vec = retrieve_vector(query, limit)
@@ -505,7 +505,7 @@ def retrieve_expanded(query: str, limit: int = 20) -> list[dict]:
                 merged.append(r)
         return merged[:limit]
     except Exception as e:
-        logger.warning(f"Expanded search error: {e}")
+        logger.warning("Expanded search error: %s", e)
         return retrieve_vector_graph(query, limit)
 
 
@@ -630,7 +630,7 @@ def retrieve_title_boosted(query: str, limit: int = 20) -> list[dict]:
         
         return [{"id": r["id"], "title": r["title"], "score": r["combined_score"]} for r in scored_results[:limit]]
     except Exception as e:
-        logger.warning(f"Title-boosted search error: {e}")
+        logger.warning("Title-boosted search error: %s", e)
         import traceback
         traceback.print_exc()
         return retrieve_vector(query, limit)
@@ -661,7 +661,7 @@ def retrieve_title_first(query: str, limit: int = 20) -> list[dict]:
                         results.append({"id": r["id"], "title": r["title"], "score": r["score"] + 2.0})
                         seen.add(r["id"])
     except Exception as e:
-        logger.debug(f"Title-first SQL failed: {e}")
+        logger.debug("Title-first SQL failed: %s", e)
 
     # 2. Fallback to title-boosted vector
     if len(results) < limit:
@@ -729,7 +729,7 @@ def retrieve_content_expanded(query: str, limit: int = 20) -> list[dict]:
                 """, (phrase_query, broad_query, limit * 30)).fetchall()
                 keyword_results = [{"id": r["id"], "title": r["title"], "content": r["content"], "score": r["score"]} for r in rows]
         except Exception as e:
-            logger.debug(f"FTS expansion failed: {e}")
+            logger.debug("FTS expansion failed: %s", e)
 
         # 3. RRF Fusion with precise boosting
         scores = {}
@@ -780,7 +780,7 @@ def retrieve_content_expanded(query: str, limit: int = 20) -> list[dict]:
         return [id_map[sid] for sid in sorted_ids[:limit]]
         
     except Exception as e:
-        logger.warning(f"Content-expanded search error: {e}")
+        logger.warning("Content-expanded search error: %s", e)
         return retrieve_vector(query, limit)
 
 
@@ -803,7 +803,7 @@ def retrieve_production(query: str, limit: int = 10) -> list[str]:
                 return ids
         return []
     except Exception as e:
-        logger.warning(f"Production search error: {e}")
+        logger.warning("Production search error: %s", e)
         return []
 
 
@@ -814,7 +814,7 @@ def retrieve_adaptive_local(query: str, limit: int = 20) -> list[str]:
         results = backend.search(query=query, limit=limit)
         return [m.id for m in results]
     except Exception as e:
-        logger.warning(f"Adaptive local search error: {e}")
+        logger.warning("Adaptive local search error: %s", e)
         return []
 
 
@@ -857,7 +857,7 @@ def evaluate_question(q: TestQuestion, strategy_fn, strategy_name: str, top_k: i
     try:
         results = strategy_fn(q.query, limit=top_k)
     except Exception as e:
-        logger.warning(f"Retrieval error for {q.qid}: {e}")
+        logger.warning("Retrieval error for %s: %s", q.qid, e)
         results = []
     latency = (time.perf_counter() - start) * 1000
 

@@ -114,7 +114,7 @@ class HolographicConsolidator:
                     buckets[bk] = []
                 buckets[bk].append(mem_id)
                 record_count += 1
-            logger.debug(f"   - Bucketed {record_count} points...")
+            logger.debug("   - Bucketed %s points...", record_count)
 
         logger.debug(f"   - Building neighbors for {len(buckets)} spatial cells...")
 

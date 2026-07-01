@@ -80,7 +80,7 @@ class FileAccessLog:
             for file_path, access_data in data.items():
                 self.access_log[file_path] = FileAccess.from_dict(access_data)
         except Exception as e:
-            logger.info(f"⚠️ Could not load file access log: {e}")
+            logger.info("⚠️ Could not load file access log: %s", e)
 
     def _save(self) -> None:
         """Save log to disk"""
@@ -90,7 +90,7 @@ class FileAccessLog:
             with file_lock(self.log_path):
                 atomic_write(self.log_path, json.dumps(data, indent=2))
         except Exception as e:
-            logger.info(f"⚠️ Could not save file access log: {e}")
+            logger.info("⚠️ Could not save file access log: %s", e)
 
     def _compute_hash(self, file_path: Path) -> str | None:
         """Compute SHA-256 hash of file content"""

@@ -129,7 +129,7 @@ class SystemUnifier:
             self.conn.commit()
             return len(params)
         except Exception as e:
-            logging.error(f"Batch insert error: {e}")
+            logging.error("Batch insert error: %s", e)
             return 0
 
     async def scan_and_ingest(self):

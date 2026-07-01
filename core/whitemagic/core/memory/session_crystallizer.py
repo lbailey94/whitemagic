@@ -94,7 +94,7 @@ def crystallize_session(
         return mem_id
 
     except Exception as e:
-        logger.error(f"Session crystallization failed: {e}")
+        logger.error("Session crystallization failed: %s", e)
         return None
 
 

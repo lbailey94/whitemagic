@@ -35,7 +35,7 @@ def check_ambiguous_variable_names(project_path: Path, file_index: FileIndex, fi
                             file=str(py_file.relative_to(project_path)),
                             line=node.lineno,
                             message=f"Ambiguous variable name '{target.id}' — easily confused with numbers.",
-                            suggestion=f"Rename to a more descriptive name (e.g. 'lower', 'upper', 'index').",
+                            suggestion="Rename to a more descriptive name (e.g. 'lower', 'upper', 'index').",
                         ))
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 for arg in node.args.args:
@@ -46,5 +46,5 @@ def check_ambiguous_variable_names(project_path: Path, file_index: FileIndex, fi
                             file=str(py_file.relative_to(project_path)),
                             line=node.lineno,
                             message=f"Ambiguous parameter name '{arg.arg}' — easily confused with numbers.",
-                            suggestion=f"Rename to a more descriptive name.",
+                            suggestion="Rename to a more descriptive name.",
                         ))

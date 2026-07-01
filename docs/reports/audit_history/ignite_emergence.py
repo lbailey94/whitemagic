@@ -26,7 +26,7 @@ try:
     from whitemagic.intelligence.agentic.emergence_engine import get_emergence_engine
     from whitemagic.autonomous_execution.objective_generator import ObjectiveGenerator
 except ImportError as e:
-    logger.error(f"Import Error: {e}")
+    logger.error("Import Error: %s", e)
     # Fallback/Mock for standalone execution if system is partial
     class MockBus:
         def __init__(self): self.listeners = {}
@@ -120,7 +120,7 @@ class EmergenceIgniter:
             # We emit enough events to cross the threshold (default 4)
             
             # Feed header
-            logger.info(f"   >>> Pulsing {sign} Cluster...")
+            logger.info("   >>> Pulsing %s Cluster...", sign)
             
             for i, item in enumerate(items[:10]): # Feed top 10 items
                 event = ResonanceEvent(
@@ -187,7 +187,7 @@ class EmergenceIgniter:
         with open(OUTPUT_FILE, "w") as f:
             f.write("\n".join(final_report))
             
-        logger.info(f"✅ Report generated: {OUTPUT_FILE}")
+        logger.info("✅ Report generated: %s", OUTPUT_FILE)
         self.conn.close()
 
 if __name__ == "__main__":

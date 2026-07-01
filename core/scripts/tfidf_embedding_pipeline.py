@@ -325,10 +325,10 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
     total = len(memories)
 
     log.info(f"═══ TF-IDF Embedding Pipeline ═══")
-    log.info(f"  Memories to embed: {total}")
-    log.info(f"  Batch size: {batch_size}")
-    log.info(f"  Target dimension: {EMBEDDING_DIM}")
-    log.info(f"  Dry run: {dry_run}")
+    log.info("  Memories to embed: %s", total)
+    log.info("  Batch size: %s", batch_size)
+    log.info("  Target dimension: %s", EMBEDDING_DIM)
+    log.info("  Dry run: %s", dry_run)
 
     if total == 0:
         log.info("  ✅ All memories already have embeddings!")
@@ -352,7 +352,7 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
         vocab = build_vocabulary(documents, max_vocab=2000)
 
         if not vocab:
-            log.warning(f"  Empty vocabulary for batch {batch_start}-{batch_end}")
+            log.warning("  Empty vocabulary for batch %s-%s", batch_start, batch_end)
             failed_count += len(batch)
             continue
 
@@ -401,7 +401,7 @@ def run_pipeline(limit: int = 0, batch_size: int = 200, dry_run: bool = False) -
     log.info(
         f"\n  ✅ Embedded {embedded_count} memories in {elapsed:.1f}s ({rate:.0f}/sec)"
     )
-    log.info(f"  ❌ Failed: {failed_count}")
+    log.info("  ❌ Failed: %s", failed_count)
 
     total_embedded = conn.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[
         0
