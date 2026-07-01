@@ -384,7 +384,6 @@ class ContextSynthesizer:
             else:
                 ctx.zodiac_modality = "mutable"
 
-            # Phase intention from handlers
             intentions = {
                 "pisces": "renewal",
                 "aquarius": "innovation",

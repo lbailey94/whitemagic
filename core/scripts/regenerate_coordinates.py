@@ -313,7 +313,6 @@ def regenerate_coordinates(
                 memory_type, importance, diversity, complexity
             )
 
-            # --- X-Axis: Logic vs Emotion ---
             x = -0.5 * emotional_valence
             logic_words = sum(
                 1
@@ -332,7 +331,6 @@ def regenerate_coordinates(
             x += ((hash_val % 1000) / 1000.0 - 0.5) * 0.3
             x = max(-1.0, min(1.0, x))
 
-            # --- Y-Axis: Micro vs Macro ---
             if memory_type in ["log", "debug", "short_term"]:
                 y = -0.5
             elif memory_type in ["pattern", "wisdom", "principle"]:
@@ -353,7 +351,6 @@ def regenerate_coordinates(
             y += ((hash_val % 1000) / 1000.0 - 0.5) * 0.3
             y = max(-1.0, min(1.0, y))
 
-            # --- Z-Axis: Time ---
             # Use created_at for temporal positioning
             z = 0.0
             if mem["created_at"]:
@@ -388,7 +385,6 @@ def regenerate_coordinates(
                 z += 0.3
             z = max(-1.0, min(1.0, z))
 
-            # --- W-Axis: Importance / Gravity (FIXED: proper range [0.1, 2.0+]) ---
             # Combination of importance, neuro_score, usage, and content richness
             w = (
                 (importance * 0.3)
@@ -410,7 +406,6 @@ def regenerate_coordinates(
             w += (1.0 - damping) * 0.2
             w = max(0.1, min(2.5, w))
 
-            # --- V-Axis: Vitality / Galactic Distance (FIXED: proper range [0.0, 1.0]) ---
             if is_protected:
                 v = 1.0
             else:

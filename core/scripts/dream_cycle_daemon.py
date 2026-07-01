@@ -176,8 +176,6 @@ def _calculate_expiry(dream_type: str) -> str:
     return expiry.isoformat()
 
 
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
 
 
 def run_consolidation() -> dict:
@@ -243,9 +241,7 @@ def _promote_dream(dream: dict):
     log.info("Promoted dream %s to memory", dream["dream_id"])
 
 
-# ---------------------------------------------------------------------------
 # Dream Status
-# ---------------------------------------------------------------------------
 
 
 def get_dream_status() -> dict:
@@ -280,9 +276,7 @@ def get_dream_status() -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 
 def run_cycle() -> dict:
@@ -291,12 +285,10 @@ def run_cycle() -> dict:
 
     conn = get_conn(get_db_path())
 
-    # Phase 1: Generate dream artifacts
     log.info("Phase 1: Generating dream artifacts...")
     dreams = generate_dream_artifacts(conn, limit=50)
     log.info(f"  Generated {len(dreams)} dream artifacts")
 
-    # Phase 2: Run consolidation
     log.info("Phase 2: Running consolidation...")
     consolidation = run_consolidation()
     log.info(
@@ -307,7 +299,6 @@ def run_cycle() -> dict:
 
     conn.close()
 
-    # Phase 3: Get status
     status = get_dream_status()
 
     log.info("═══ Dream Cycle Complete: %s active dreams ═══", status["active_dreams"])

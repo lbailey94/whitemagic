@@ -175,7 +175,6 @@ class ZodiacalRound:
             self.state.cycle_count += 1
             logger.info("Cycle %s complete. Beginning anew...", self.state.cycle_count)
 
-    # Phase Handlers (each implements a stage of the Zodiacal Round)
 
     def _phase_dissolution(self) -> CoreResponse:
         """Pisces: Dissolve old forms, begin anew"""

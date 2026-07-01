@@ -86,9 +86,7 @@ class HaskellDivination:
             except OSError:
                 pass  # Non-fatal; the main load will fail with a clear error
 
-    # ------------------------------------------------------------------
     # Signature declarations (mirrors FFI.hs exports)
-    # ------------------------------------------------------------------
     def _setup_signatures(self) -> Any:
         lib = self._lib
 
@@ -117,7 +115,6 @@ class HaskellDivination:
         lib.c_free_hexagram.restype = None
         lib.c_free_hexagram.argtypes = [ctypes.c_void_p]
 
-        # --- DharmaRules FFI (v0.2) ---
         lib.c_dharma_evaluate.restype = ctypes.c_char_p
         lib.c_dharma_evaluate.argtypes = [
             ctypes.c_char_p, ctypes.c_char_p,
@@ -130,7 +127,6 @@ class HaskellDivination:
             ctypes.c_char_p, ctypes.c_char_p,
         ]
 
-        # --- DepGraph FFI (v0.2) ---
         lib.c_depgraph_plan.restype = ctypes.c_char_p
         lib.c_depgraph_plan.argtypes = [ctypes.c_char_p]
 
@@ -143,9 +139,7 @@ class HaskellDivination:
         lib.c_free_string.restype = None
         lib.c_free_string.argtypes = [ctypes.c_char_p]
 
-    # ------------------------------------------------------------------
     # High-level helpers
-    # ------------------------------------------------------------------
     def create_hexagram(self, lines: List[int]) -> ctypes.c_void_p:
         """Create a hexagram from 6 line values (0=Yin, 1=Yang, bottom to top).
 
@@ -172,9 +166,7 @@ class HaskellDivination:
         """Release memory allocated by create_hexagram / transition."""
         self._lib.c_free_hexagram(ptr)
 
-    # ------------------------------------------------------------------
     # Convenience: create + number + free in one call
-    # ------------------------------------------------------------------
     def create_and_number(self, lines: List[int]) -> int:
         """Create a hexagram, get its King Wen number, and free immediately."""
         ptr = self.create_hexagram(lines)
@@ -182,9 +174,7 @@ class HaskellDivination:
         self.free_hexagram(ptr)
         return num
 
-    # ------------------------------------------------------------------
     # Dharma Rules (v0.2)
-    # ------------------------------------------------------------------
     def dharma_evaluate(
         self, tool: str, description: str = "",
         safety: str = "", profile: str = "default",
@@ -210,9 +200,7 @@ class HaskellDivination:
         )
         return json.loads(result.decode()) if result else []
 
-    # ------------------------------------------------------------------
     # Dependency Graph (v0.2)
-    # ------------------------------------------------------------------
     def depgraph_plan(self, goal_tool: str) -> Dict[str, Any]:
         """Plan execution chain for a goal tool.
 
@@ -248,9 +236,7 @@ class HaskellDivination:
         return result
 
 
-# ---------------------------------------------------------------------------
 # Quick smoke-test when run directly
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         div = HaskellDivination()

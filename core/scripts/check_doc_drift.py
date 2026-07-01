@@ -356,7 +356,6 @@ def check_polyglot_status() -> None:
         ok("POLYGLOT_STATUS references core/mesh_aux")
 
 
-# ---------------------------------------------------------------------------
 # 10. Documentation gitignore hygiene
 def check_doc_gitignore_hygiene() -> None:
     """Verify that internal/dev docs are NOT tracked by git.
@@ -448,7 +447,6 @@ def check_doc_gitignore_hygiene() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
 # Main
 def main() -> int:
     logger.debug("=" * 60)

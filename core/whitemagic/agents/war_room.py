@@ -416,7 +416,6 @@ class WarRoom:
             subtasks = [objective]
             phases.append({"name": "The Council", "type": "officers", "error": str(e)})
 
-        # Phase 2+3: Route and execute each lane
         lane_results = []
         for i, task in enumerate(subtasks[:5]):  # Cap at 5 lanes
             result = await self._deploy_tokio_scouts(task, num_clones=1000)

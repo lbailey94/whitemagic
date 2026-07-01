@@ -296,31 +296,25 @@ def main() -> int:
             logger.debug(f"FATAL: Cannot import SQLiteBackend: {exc}")
             return 1
 
-        # Phase 1: Store
         logger.debug(f"\n[Phase 1] Storing {CONFIG['memory_count']} memories...")
         ids = stress_store_parallel(
             backend, CONFIG["memory_count"], CONFIG["concurrent_workers"]
         )
         logger.debug(f"  Created {len(ids)} memories")
 
-        # Phase 2: Search
         logger.debug(f"\n[Phase 2] Running {CONFIG['search_iterations']} searches...")
         stress_search(backend, CONFIG["search_iterations"])
 
-        # Phase 3: Recall
         logger.debug(f"\n[Phase 3] Recalling {len(ids)} memories...")
         stress_recall(backend, ids)
 
-        # Phase 4: Embeddings
         logger.debug(f"\n[Phase 4] Generating {CONFIG['memory_count'] // 5} embeddings...")
         stress_embeddings(CONFIG["memory_count"] // 5)
 
-        # Phase 5: Graph walk
         if ids:
             logger.debug(f"\n[Phase 5] Graph walk (depth={CONFIG['graph_walk_depth']})...")
             stress_graph_walk(backend, ids[0], CONFIG["graph_walk_depth"])
 
-        # Phase 6: Consolidation
         logger.debug(f"\n[Phase 6] Memory consolidation...")
         stress_consolidation(backend)
 

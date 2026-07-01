@@ -619,9 +619,7 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
         log.info("  HNSW not available, skipping")
 
 
-# ---------------------------------------------------------------------------
 # Fragment (Rust) Benchmarks
-# ---------------------------------------------------------------------------
 
 
 def bench_fragment(suite: BenchmarkSuite):
@@ -700,9 +698,7 @@ def bench_fragment(suite: BenchmarkSuite):
         log.info("  Python vector search not available, skipping")
 
 
-# ---------------------------------------------------------------------------
 # STRATA Benchmarks
-# ---------------------------------------------------------------------------
 
 
 def bench_strata(suite: BenchmarkSuite):
@@ -750,9 +746,7 @@ def bench_strata(suite: BenchmarkSuite):
         log.info("  STRATA survey not available, skipping")
 
 
-# ---------------------------------------------------------------------------
 # Physical Metrics Benchmarks
-# ---------------------------------------------------------------------------
 
 
 def bench_physical_metrics(suite: BenchmarkSuite):
@@ -816,9 +810,7 @@ def bench_physical_metrics(suite: BenchmarkSuite):
         log.info("  Homeostatic loop not available, skipping")
 
 
-# ---------------------------------------------------------------------------
 # DNA & Zodiac Benchmarks
-# ---------------------------------------------------------------------------
 
 
 def bench_dna_zodiac(suite: BenchmarkSuite):
@@ -916,9 +908,7 @@ def bench_dna_zodiac(suite: BenchmarkSuite):
         log.info("  Garden health not available, skipping")
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 
 def main():

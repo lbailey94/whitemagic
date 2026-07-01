@@ -775,7 +775,6 @@ class RecursiveImprovementLoop:
                         )
                     )
 
-        # Phase 4c: HRR-based analogical hypothesis generation
         # Use Holographic Reduced Representations to find novel analogies
         try:
             from whitemagic.core.memory.hrr import get_hrr_engine
@@ -952,7 +951,6 @@ class RecursiveImprovementLoop:
             "Predict phase: %d predictions stored", results["predictions_stored"]
         )
 
-        # Phase 3b: Auto-generate prescience claims from PredictiveEngine
         try:
             from whitemagic.core.intelligence.synthesis.predictive_engine import (
                 get_predictive_engine,

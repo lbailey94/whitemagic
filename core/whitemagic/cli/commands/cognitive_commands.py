@@ -240,8 +240,6 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
                     click.echo(f"    → Auto-promoted {len(artifacts)} artifact(s)")
 
 
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
 
 
 @click.command()
@@ -297,8 +295,6 @@ def evolve(ctx, cycles: int, record: bool, json_flag: bool) -> None:
                     click.echo("    → Outcome recorded to Karma Ledger")
 
 
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
 
 
 @click.command()

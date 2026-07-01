@@ -215,7 +215,6 @@ def repl(ctx, json_mode: bool, dharma: bool) -> None:
             click.echo(f"Error: {e}", err=True)
 
 
-# ---------------------------------------------------------------------------
 # wm stream — NDJSON Event Streaming
 
 
@@ -432,7 +431,6 @@ def stream(
     click.echo(_json_dumps({"type": "stream_end", "events_emitted": count}))
 
 
-# ---------------------------------------------------------------------------
 # wm pipeline — Tool Call Chaining
 
 

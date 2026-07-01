@@ -378,7 +378,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
     results["bands"] = band_counts
     results["classified"] = len(classified_ids)
 
-    # Step 2: Push unclassified memories to a sensible default
     total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
     unclassified = total - len(classified_ids)
     log.info(f"  Unclassified: {unclassified}/{total} → setting to 0.5 (mid-range)")
@@ -398,7 +397,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
         conn.commit()
     results["unclassified_defaulted"] = unclassified
 
-    # Step 3: Delete true junk (bench_t1 entries)
     log.info("── 2B: Deleting bench_t1 junk ──")
     junk_count = conn.execute(
         "SELECT COUNT(*) FROM memories WHERE title LIKE 'bench_t1%'"
@@ -428,7 +426,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
         log.info(f"  ✅ Deleted {junk_count} bench_t1 junk entries")
     results["junk_deleted"] = junk_count
 
-    # Step 4: Create philosophical_corpus galaxy
     log.info("── 2C: Creating philosophical_corpus galaxy ──")
     if not dry_run:
         try:
@@ -460,7 +457,6 @@ def phase2_organize(db_path: Path, dry_run: bool = False) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PHASE 3: Association Graph Renaissance
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -616,7 +612,6 @@ def phase3_associations(db_path: Path, dry_run: bool = False) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PHASE 4: Quick Activation Sweep (lightweight — no Ollama dependency)
 # ═══════════════════════════════════════════════════════════════════════════
 
 

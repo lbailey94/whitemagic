@@ -112,7 +112,6 @@ def optimize_models(
             return {"error": f"ONNX export failed: {str(e)}"}
 
     if op == "quantize":
-        # Placeholder for quantization logic
         return {
             "status": "simulated",
             "message": f"Quantization to {quant_type} for {model_name or model_path or 'unknown model'} simulated.",

@@ -183,7 +183,6 @@ class ZodiacalProcession:
         current_idx = order.index(self.state.current_sign)
 
         if current_idx >= len(order) - 1:
-            # Phase transition!
             return self._transition_phase()
 
         # Move to next sign

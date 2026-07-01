@@ -331,7 +331,6 @@ class WhiteMagicDharmaDefense(BasePipelineElement):
         return query, runtime, env, new_messages, extra_args
 
 
-# ---------------------------------------------------------------------------
 # Monkey-patch AgentDojo's defense registry
 
 _ORIGINAL_DEFENSES = list(agent_pipeline.DEFENSES)

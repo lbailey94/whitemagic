@@ -53,7 +53,6 @@ def run_rigor_test(limit=50):
             broad_memories = backend.search(keywords, limit=20)
             found_memories.extend(broad_memories)
 
-        # Step 2: Evaluation
         hits = []
         if found_memories:
             logger.debug(f"  [DB_DEBUG] Found IDs: {[m.id for m in found_memories]}")

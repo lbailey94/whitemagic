@@ -419,7 +419,6 @@ def sectors():
         click.echo(f"{sector:<45} {bar} {count:>3} ({pct:.0f}%)")
 
 
-# === DHARMA DASHBOARD COMMAND ===
 
 
 @holo_cli.command(name="dharma")

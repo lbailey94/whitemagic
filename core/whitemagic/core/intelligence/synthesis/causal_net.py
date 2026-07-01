@@ -108,7 +108,6 @@ class CausalNet:
 
         Rust Fast-Path: If whitemagic_rust is available, it handles the coordinate math and DAG generation.
         """
-        # Phase B: Rust Fast-Path for v20
         try:
             import whitemagic_rust as rs
 

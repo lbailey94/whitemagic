@@ -39,7 +39,6 @@ class PerformanceBenchmark:
     All benchmarks are read-only and deterministic (no mutations).
     """
 
-    # ------------------------------------------------------------------
 
     def _time_imports(self, modules: Iterable[str]) -> list[BenchmarkResult]:
         results: list[BenchmarkResult] = []
@@ -68,8 +67,6 @@ class PerformanceBenchmark:
         results = self._time_imports(modules)
         return {r.label: round(r.duration_ms, 3) for r in results}
 
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
 
     def benchmark_tool_dispatch(
         self,
@@ -96,8 +93,6 @@ class PerformanceBenchmark:
             "max_ms": round(max(times), 3) if times else 0,
         }
 
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
 
     def time_callable(
         self,
@@ -120,8 +115,6 @@ class PerformanceBenchmark:
             metadata={"iterations": iterations},
         )
 
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
 
     def _memory_stats(self) -> dict[str, int]:
         """Return basic state-directory stats without mutating state."""
@@ -141,8 +134,6 @@ class PerformanceBenchmark:
             else 0,
         }
 
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
 
     def run_full_benchmark(self) -> dict[str, Any]:
         """Run the complete benchmark suite and return results."""

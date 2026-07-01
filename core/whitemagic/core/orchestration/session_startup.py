@@ -611,7 +611,6 @@ class SessionStartupOrchestrator:
 
         results.append(self._safe_activate("Temporal Grounding", init_temporal))
 
-        # 1. User Profile Sync (New in Phase 5)
         def sync_user_profile() -> None:
             """
             Perform the sync user profile operation.
