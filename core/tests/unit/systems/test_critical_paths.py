@@ -8,6 +8,7 @@ Tests the most critical hot paths in the WhiteMagic system:
 """
 
 import unittest
+from unittest.mock import patch
 
 import pytest
 
@@ -40,7 +41,18 @@ def fresh_memory(tmp_path):
         sg._gate = None
     except (ImportError, AttributeError):
         pass
-    return UnifiedMemory(base_path=tmp_path)
+    um = UnifiedMemory(base_path=tmp_path)
+    # Mock embedding engine to prevent cross-test ML model loading timeouts.
+    # When a prior test loads the embedding model, the surprise gate's evaluate()
+    # call can take >30s, causing test timeouts. Mocking as unavailable makes the
+    # gate fall through to the "no embeddings" path (CREATE verdict).
+    _mock_engine = unittest.mock.MagicMock()
+    _mock_engine.available.return_value = False
+    with patch(
+        "whitemagic.core.memory.embeddings.get_embedding_engine",
+        return_value=_mock_engine,
+    ):
+        yield um
 
 
 @pytest.mark.skipif(not HAS_WHITEMAGIC, reason="WhiteMagic not available")
