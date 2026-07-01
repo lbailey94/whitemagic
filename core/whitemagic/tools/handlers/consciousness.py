@@ -199,7 +199,7 @@ def handle_consciousness_smarana(**kwargs: Any) -> dict[str, Any]:
         elif mode == "mission":
             result = practice.remember_mission()
         elif mode == "custom":
-            mem = practice.remember(what, why)
+            practice.remember(what, why)
             result = f"🙏 Remembering: {what}"
             if why:
                 result += f" — {why}"

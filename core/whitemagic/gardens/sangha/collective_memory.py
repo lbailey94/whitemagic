@@ -47,14 +47,9 @@ class CollectiveMemory:
         self._connect_to_gan_ying()
 
     def _connect_to_gan_ying(self) -> None:
-        """Connect to Gan Ying Bus."""
-        try:
-            from whitemagic.core.resonance.gan_ying import get_bus
-
-            self.bus = get_bus()
-            logger.info("🎵 Collective Memory connected to Gan Ying Bus")
-        except ImportError:
-            pass
+        """Connect to Gan Ying Bus (delegates to shared utility)."""
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
+        self.bus = connect_to_bus("Collective Memory")
 
     def get_shared_context(self, session_id: str) -> SharedContext:
         """Get shared context for session.

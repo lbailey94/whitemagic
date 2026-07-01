@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar
+from whitemagic.utils.async_bridge import run_async as _run_async
 
 T = TypeVar("T")
 
@@ -14,13 +15,6 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
     _emit_gan_ying(event_type, data)
 
 
-def _run_async(coro: Coroutine[Any, Any, T]) -> T:
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        return executor.submit(asyncio.run, coro).result()
 
 
 def handle_web_fetch(**kwargs: Any) -> dict[str, Any]:

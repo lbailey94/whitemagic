@@ -20,14 +20,9 @@ logger = logging.getLogger(__name__)
 from whitemagic.utils.fast_json import loads as _json_loads
 
 
-def _emit(event_type_name: str, data: dict) -> None:
-    """Best-effort Gan Ying event emission."""
-    try:
-        from whitemagic.core.resonance import emit_event
+from whitemagic.utils.event_emit import make_emitter
 
-        emit_event(event_type_name, data, source="agent_registry")
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Gan Ying emit failed in agent_registry (non-critical): %s", e)
+_emit = make_emitter("agent_registry")
 
 
 def _agents_dir() -> Path:

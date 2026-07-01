@@ -52,13 +52,9 @@ def _results_dir() -> Path:
     return d
 
 
-def _emit(event_type: str, data: dict) -> None:
-    try:
-        from whitemagic.core.resonance import emit_event
+from whitemagic.utils.event_emit import make_emitter
 
-        emit_event(event_type, data, source="worker_daemon")
-    except (ImportError, ModuleNotFoundError):
-        pass
+_emit = make_emitter("worker_daemon")
 
 
 class WorkerDaemon:

@@ -47,14 +47,9 @@ class CollectiveJoy:
         self._connect_to_gan_ying()
 
     def _connect_to_gan_ying(self):
-        """Connect to Gan Ying for collective resonance"""
-        try:
-            from whitemagic.core.resonance.gan_ying import get_bus
-
-            self.bus = get_bus()
-            logger.info("🎵 Collective Joy connected to Gan Ying Bus")
-        except ImportError:
-            pass
+        """Connect to Gan Ying Bus (delegates to shared utility)."""
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
+        self.bus = connect_to_bus("Collective Joy")
 
     def celebrate_together(
         self,

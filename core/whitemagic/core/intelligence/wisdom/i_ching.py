@@ -44,16 +44,10 @@ class IChingAdvisor:
         self._init_hexagrams()
 
     def _connect_to_gan_ying(self) -> None:
-        """Connect to Gan Ying Bus."""
-        try:
-            from whitemagic.core.resonance.gan_ying import get_bus
+        """Connect to Gan Ying Bus (delegates to shared utility)."""
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
 
-            self.bus = get_bus()
-            logger.info("🎵 I Ching Advisor connected to Gan Ying Bus")
-        except ImportError:
-            logger.debug(
-                "Gan Ying bus not available; I Ching will run in standalone mode"
-            )
+        self.bus = connect_to_bus("I Ching")
 
     def _init_hexagrams(self) -> None:
         """Initialize hexagram database - ALL 64 HEXAGRAMS!

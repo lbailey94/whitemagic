@@ -50,15 +50,9 @@ class JoyResonance:
         self._connect_to_gan_ying()
 
     def _connect_to_gan_ying(self):
-        """Connect to Gan Ying Bus for joy propagation"""
-        try:
-            from whitemagic.core.resonance.gan_ying import get_bus
-
-            self.bus = get_bus()
-            logger.info("🎵 Joy Resonance connected to Gan Ying Bus")
-            logger.info("   (Joy will now resonate throughout the system!)")
-        except ImportError:
-            logger.info("⚠️  Gan Ying not available - joy remains localized")
+        """Connect to Gan Ying Bus (delegates to shared utility)."""
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
+        self.bus = connect_to_bus("Joy Resonance")
 
     def experience_joy(
         self,

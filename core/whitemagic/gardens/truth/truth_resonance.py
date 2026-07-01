@@ -49,14 +49,9 @@ class TruthResonance:
         self._connect_to_gan_ying()
 
     def _connect_to_gan_ying(self):
-        """Connect to Gan Ying Bus for truth propagation"""
-        try:
-            from whitemagic.core.resonance.gan_ying import get_bus
-
-            self.bus = get_bus()
-            logger.info("🎵 Truth Resonance connected to Gan Ying Bus")
-        except ImportError:
-            pass
+        """Connect to Gan Ying Bus (delegates to shared utility)."""
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
+        self.bus = connect_to_bus("Truth Resonance")
 
     def speak_truth(
         self,

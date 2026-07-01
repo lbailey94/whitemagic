@@ -25,14 +25,9 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 
-def _emit(event_type_name: str, data: dict) -> None:
-    """Best-effort Gan Ying event emission."""
-    try:
-        from whitemagic.core.resonance import emit_event
+from whitemagic.utils.event_emit import make_emitter
 
-        emit_event(event_type_name, data, source="task_dist")
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Silenced task dist emit err: %s", e, exc_info=True)
+_emit = make_emitter("task_dist")
 
 
 def _tasks_dir() -> Path:

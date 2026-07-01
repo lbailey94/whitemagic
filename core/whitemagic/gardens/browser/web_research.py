@@ -930,13 +930,10 @@ class BrowserSessionManager:
 
 
 def _run_async(coro: Any) -> Any:
-    """Run async coroutine from sync context."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        return executor.submit(asyncio.run, coro).result()
+    """Run async coroutine from sync context (delegates to shared bridge)."""
+    from whitemagic.utils.async_bridge import run_async
+
+    return run_async(coro)
 
 
 def sync_web_fetch(

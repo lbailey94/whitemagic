@@ -74,7 +74,6 @@ def _index_used_only_for_subscript(node: ast.For, iterable_name: str) -> bool:
     # Simpler approach: collect all Subscript nodes in the body
     # where the index is our loop var. Check if they all use the same iterable.
     uses_as_index = False
-    uses_otherwise = False
 
     for stmt in ast.walk(node):
         if isinstance(stmt, ast.Subscript):

@@ -51,17 +51,17 @@ class PatternFederation:
 
     def _connect_to_gan_ying(self) -> None:
         """Connect to Gan Ying Bus and register auto-federation listener."""
-        try:
-            from whitemagic.core.resonance._consolidated import EventType, get_bus
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
 
-            self.bus = get_bus()
-            # Auto-federate: listen for PATTERN_DETECTED events and contribute them
-            self.bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
-            logger.info(
-                "Pattern Federation connected to Gan Ying Bus with auto-federation"
-            )
-        except ImportError:
-            pass
+        self.bus = connect_to_bus("Pattern Federation")
+        if self.bus:
+            try:
+                from whitemagic.core.resonance._consolidated import EventType
+
+                # Auto-federate: listen for PATTERN_DETECTED events and contribute them
+                self.bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
+            except ImportError:
+                pass  # EventType unavailable — graceful degradation
 
     def _on_pattern_detected(self, event: Any) -> None:
         """Auto-federate patterns detected by the Gan Ying Bus.

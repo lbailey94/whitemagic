@@ -21,14 +21,9 @@ logger = logging.getLogger(__name__)
 from whitemagic.utils.fast_json import loads as _json_loads
 
 
-def _emit(event_type_name: str, data: dict[str, Any]) -> None:
-    """Best-effort Gan Ying event emission."""
-    try:
-        from whitemagic.core.resonance import emit_event
+from whitemagic.utils.event_emit import make_emitter
 
-        emit_event(event_type_name, data, source="broker")
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Silenced broker emit error: %s", e, exc_info=True)
+_emit = make_emitter("broker")
 
 
 def _require_redis() -> Any:

@@ -49,13 +49,9 @@ def handle_ensemble(**kwargs: Any) -> dict[str, Any]:
     return handler(**kwargs)
 
 
-def _emit(event_type_name: str, data: dict[str, Any]) -> None:
-    try:
-        from whitemagic.core.resonance import emit_event
+from whitemagic.utils.event_emit import make_emitter
 
-        emit_event(event_type_name, data, source="ensemble")
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Silenced ensemble emit error: %s", e, exc_info=True)
+_emit = make_emitter("ensemble")
 
 
 def _ensemble_dir() -> Path:

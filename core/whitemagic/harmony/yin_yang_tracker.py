@@ -92,12 +92,9 @@ class YinYangBalanceTracker:
 
     def _connect_to_gan_ying(self) -> None:
         """Connect to Gan Ying event bus"""
-        try:
-            from whitemagic.core.resonance.gan_ying_enhanced import get_bus
+        from whitemagic.utils.gan_ying_connect import connect_to_bus
 
-            self.bus = get_bus()
-        except ImportError:
-            pass
+        self.bus = connect_to_bus("Yin-Yang Tracker")
 
     def _load_history(self) -> None:
         """Load recent activity history"""

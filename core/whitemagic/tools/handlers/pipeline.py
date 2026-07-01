@@ -41,13 +41,9 @@ def handle_pipeline(**kwargs: Any) -> dict[str, Any]:
     return handler(**kwargs)
 
 
-def _emit(event_type_name: str, data: dict[str, Any]) -> None:
-    try:
-        from whitemagic.core.resonance import emit_event
+from whitemagic.utils.event_emit import make_emitter
 
-        emit_event(event_type_name, data, source="pipeline")
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Silenced pipeline emit error: %s", e, exc_info=True)
+_emit = make_emitter("pipeline")
 
 
 def _pipelines_dir() -> Path:
