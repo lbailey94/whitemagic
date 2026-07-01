@@ -9,6 +9,9 @@ from enum import Enum
 from functools import lru_cache
 from typing import Any
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     import numpy as np
 
@@ -422,7 +425,7 @@ class QuantumIChing:
         except ImportError:
             pass  # Fallback to template
         except (ImportError, ModuleNotFoundError) as e:
-            print(f"⚠️ Brain disconnect: {e}")
+            logger.debug(f"⚠️ Brain disconnect: {e}")
 
         # Fallback Template
         wisdom_templates = [
@@ -614,42 +617,42 @@ def quantum_iching_cli(question: str, context: str = "") -> Any:
 
     result = oracle.consult(question, context_dict)
 
-    print("\n" + "=" * 60)
-    print("🔮 QUANTUM I CHING CONSULTATION 🔮")
-    print("=" * 60)
-    print(f"\nQuestion: {question}")
-    print(f"Quantum Signature: {result.quantum_signature}")
-    print(f"Resonance: {result.resonance_score:.2f}")
-    print(f"Timestamp: {result.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.debug("\n" + "=" * 60)
+    logger.debug("🔮 QUANTUM I CHING CONSULTATION 🔮")
+    logger.debug("=" * 60)
+    logger.debug(f"\nQuestion: {question}")
+    logger.debug(f"Quantum Signature: {result.quantum_signature}")
+    logger.debug(f"Resonance: {result.resonance_score:.2f}")
+    logger.debug(f"Timestamp: {result.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    print("\n" + "─" * 40)
-    print(f"PRIMARY HEXAGRAM: #{result.primary_hexagram} - {result.primary_name}")
-    print("─" * 40)
-    print(f"\nJudgment: {result.primary_judgment}")
-    print(f"\nImage: {result.primary_image}")
+    logger.debug("\n" + "─" * 40)
+    logger.debug(f"PRIMARY HEXAGRAM: #{result.primary_hexagram} - {result.primary_name}")
+    logger.debug("─" * 40)
+    logger.debug(f"\nJudgment: {result.primary_judgment}")
+    logger.debug(f"\nImage: {result.primary_image}")
 
     if result.changing_lines:
-        print(f"\nChanging Lines: {', '.join(map(str, result.changing_lines))}")
+        logger.debug(f"\nChanging Lines: {', '.join(map(str, result.changing_lines))}")
         if result.transformed_hexagram:
-            print(
+            logger.debug(
                 f"\nTRANSFORMED HEXAGRAM: #{result.transformed_hexagram} - {result.transformed_name}"
             )
-            print(f"Transformed Judgment: {result.transformed_judgment}")
+            logger.debug(f"Transformed Judgment: {result.transformed_judgment}")
 
-    print("\n" + "─" * 40)
-    print("WISDOM")
-    print("─" * 40)
-    print(result.wisdom)
+    logger.debug("\n" + "─" * 40)
+    logger.debug("WISDOM")
+    logger.debug("─" * 40)
+    logger.debug(result.wisdom)
 
-    print(result.guidance)
+    logger.debug(result.guidance)
 
-    print("\n" + "=" * 60)
+    logger.debug("\n" + "=" * 60)
 
 
 if __name__ == "__main__":
     # Example consultations
     quantum_iching_cli("Should I pursue this new opportunity?", "urgency=high")
-    print("\n" + "\n" * 3)
+    logger.debug("\n" + "\n" * 3)
     quantum_iching_cli("Why am I facing these challenges?", "depth=required")
-    print("\n" + "\n" * 3)
+    logger.debug("\n" + "\n" * 3)
     quantum_iching_cli("How can I find balance in my life?", "meditation=true")

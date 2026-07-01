@@ -3,6 +3,9 @@ import subprocess
 import time
 import sys
 
+import logging
+logger = logging.getLogger(__name__)
+
 def run_mojo():
     """Run Mojo benchmark and parse output."""
     start = time.time()
@@ -29,28 +32,28 @@ def run_python():
     py_time = (end - start) * 1000
     return py_time, result.stdout, result.returncode
 
-print("=" * 50)
-print("MOJO vs PYTHON BENCHMARK")
-print("=" * 50)
-print("\n1. Running Mojo...")
+logger.debug("=" * 50)
+logger.debug("MOJO vs PYTHON BENCHMARK")
+logger.debug("=" * 50)
+logger.debug("\n1. Running Mojo...")
 mojo_time, mojo_out, mojo_rc = run_mojo()
 if mojo_rc == 0:
-    print(f"   Mojo time: {mojo_time:.2f} ms")
+    logger.debug(f"   Mojo time: {mojo_time:.2f} ms")
 else:
-    print(f"   Mojo FAILED: {mojo_out}")
+    logger.debug(f"   Mojo FAILED: {mojo_out}")
 
-print("\n2. Running Python...")
+logger.debug("\n2. Running Python...")
 py_time, py_out, py_rc = run_python()
 if py_rc == 0:
-    print(f"   Python time: {py_time:.2f} ms")
+    logger.debug(f"   Python time: {py_time:.2f} ms")
 else:
-    print(f"   Python FAILED: {py_out}")
+    logger.debug(f"   Python FAILED: {py_out}")
 
 if mojo_rc == 0 and py_rc == 0:
     speedup = py_time / mojo_time
-    print("\n" + "=" * 50)
-    print("RESULTS:")
-    print(f"  Python:  {py_time:.2f} ms")
-    print(f"  Mojo:    {mojo_time:.2f} ms")
-    print(f"  Speedup: {speedup:.2f}x")
-    print("=" * 50)
+    logger.debug("\n" + "=" * 50)
+    logger.debug("RESULTS:")
+    logger.debug(f"  Python:  {py_time:.2f} ms")
+    logger.debug(f"  Mojo:    {mojo_time:.2f} ms")
+    logger.debug(f"  Speedup: {speedup:.2f}x")
+    logger.debug("=" * 50)

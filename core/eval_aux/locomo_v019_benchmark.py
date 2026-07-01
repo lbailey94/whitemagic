@@ -13,6 +13,9 @@ sys.path.insert(0, '.')
 from whitemagic.core.memory.embeddings import EmbeddingEngine
 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 
+import logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class RetrievalResult:
     memory_id: str
@@ -61,7 +64,7 @@ class LoCoMoV019Optimizer:
         except Exception:
             pass
         
-        print(f"[V019] Polyglot acceleration: {self.acceleration}")
+        logger.debug(f"[V019] Polyglot acceleration: {self.acceleration}")
     
     def classify_intent(self, query: str) -> str:
         """Phase 3: Query intent classification."""
@@ -242,10 +245,10 @@ class LoCoMoV019Optimizer:
         """Main retrieval pipeline with intent-aware routing."""
         
         intent = self.classify_intent(query)
-        print(f"[V019] Query intent: {intent}")
+        logger.debug(f"[V019] Query intent: {intent}")
         
         entities = self.extract_entities(query)
-        print(f"[V019] Entities: {entities}")
+        logger.debug(f"[V019] Entities: {entities}")
         
         # Base retrieval
         candidates = self._base_retrieve(query, limit * 3)  # Over-fetch for reranking
@@ -255,10 +258,10 @@ class LoCoMoV019Optimizer:
         diverse = self.apply_diversity(reranked, limit)
         
         confident, conf_score, reason = self.check_confidence(diverse)
-        print(f"[V019] Confidence: {confident} ({reason}), score={conf_score:.3f}")
+        logger.debug(f"[V019] Confidence: {confident} ({reason}), score={conf_score:.3f}")
         
         if not confident and intent != 'open_domain':
-            print("[V019] Warning: Low confidence retrieval")
+            logger.debug("[V019] Warning: Low confidence retrieval")
         
         return diverse[:limit]
     
@@ -276,9 +279,9 @@ class LoCoMoV019Optimizer:
 
 def run_v019_benchmark():
     """Run the V019 optimized benchmark."""
-    print("=" * 60)
-    print("LoCoMo V019 - Polyglot Optimization Benchmark")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("LoCoMo V019 - Polyglot Optimization Benchmark")
+    logger.debug("=" * 60)
     
     optimizer = LoCoMoV019Optimizer()
     
@@ -292,19 +295,19 @@ def run_v019_benchmark():
     
     results = []
     for query, expected_type in test_queries:
-        print(f"\nQuery: {query}")
-        print(f"Expected type: {expected_type}")
+        logger.debug(f"\nQuery: {query}")
+        logger.debug(f"Expected type: {expected_type}")
         
         # Classify intent
         detected = optimizer.classify_intent(query)
-        print(f"Detected type: {detected}")
+        logger.debug(f"Detected type: {detected}")
         
         # Retrieve
         retrieved = optimizer.retrieve_with_intent(query, limit=10)
-        print(f"Retrieved {len(retrieved)} memories")
+        logger.debug(f"Retrieved {len(retrieved)} memories")
         
         for i, r in enumerate(retrieved[:3]):
-            print(f"  {i+1}. {r.get('title', 'N/A')[:50]}... (score: {r.get('score', 0):.3f})")
+            logger.debug(f"  {i+1}. {r.get('title', 'N/A')[:50]}... (score: {r.get('score', 0):.3f})")
         
         results.append({
             'query': query,
@@ -313,19 +316,19 @@ def run_v019_benchmark():
             'top_memory': retrieved[0].get('title', 'N/A') if retrieved else None
         })
     
-    print("\n" + "=" * 60)
-    print("V019 Optimization Summary")
-    print("=" * 60)
-    print("✓ Cross-encoder reranking: ACTIVE")
-    print("✓ Entity extraction: ACTIVE")
-    print("✓ Intent classification: ACTIVE")
-    print("✓ Diversity enforcement: ACTIVE")
-    print("✓ Confidence thresholding: ACTIVE")
-    print(f"\nPolyglot acceleration status: {optimizer.acceleration}")
+    logger.debug("\n" + "=" * 60)
+    logger.debug("V019 Optimization Summary")
+    logger.debug("=" * 60)
+    logger.debug("✓ Cross-encoder reranking: ACTIVE")
+    logger.debug("✓ Entity extraction: ACTIVE")
+    logger.debug("✓ Intent classification: ACTIVE")
+    logger.debug("✓ Diversity enforcement: ACTIVE")
+    logger.debug("✓ Confidence thresholding: ACTIVE")
+    logger.debug(f"\nPolyglot acceleration status: {optimizer.acceleration}")
     
     return results
 
 
 if __name__ == "__main__":
     results = run_v019_benchmark()
-    print("\n[V019] Benchmark complete!")
+    logger.debug("\n[V019] Benchmark complete!")

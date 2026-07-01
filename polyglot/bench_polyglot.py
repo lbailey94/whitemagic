@@ -22,6 +22,9 @@ if str(POLYGLOT_BRIDGE) not in sys.path:
 
 import whitemagic_polyglot as wp
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def bench_encode(backend, texts: list[str], warmup: int = 2) -> dict:
     """Benchmark encode latency."""
@@ -74,25 +77,25 @@ def bench_nearest_neighbors(backend, queries: list[str], texts: list[str], k: in
 
 
 def run_backend(name: str, cls, texts: list[str], queries: list[str], k: int) -> dict:
-    print(f"\n{'='*60}")
-    print(f"Backend: {name}")
-    print(f"{'='*60}")
+    logger.debug(f"\n{'='*60}")
+    logger.debug(f"Backend: {name}")
+    logger.debug(f"{'='*60}")
 
     try:
         with cls() as backend:
             # Ping check
             ping = backend.call("ping")
-            print(f"  Ping: {ping}")
+            logger.debug(f"  Ping: {ping}")
 
             # Encode benchmark
-            print(f"\n  Encoding {len(texts)} texts...")
+            logger.debug(f"\n  Encoding {len(texts)} texts...")
             encode_result = bench_encode(backend, texts)
-            print(f"    mean={encode_result['mean_ms']}ms  median={encode_result['median_ms']}ms  throughput={encode_result['throughput_hz']}Hz")
+            logger.debug(f"    mean={encode_result['mean_ms']}ms  median={encode_result['median_ms']}ms  throughput={encode_result['throughput_hz']}Hz")
 
             # NN benchmark
-            print(f"\n  Nearest neighbors ({len(queries)} queries, pool={len(texts)}, k={k})...")
+            logger.debug(f"\n  Nearest neighbors ({len(queries)} queries, pool={len(texts)}, k={k})...")
             nn_result = bench_nearest_neighbors(backend, queries, texts, k)
-            print(f"    mean={nn_result['mean_ms']}ms  median={nn_result['median_ms']}ms  throughput={nn_result['throughput_hz']}Hz")
+            logger.debug(f"    mean={nn_result['mean_ms']}ms  median={nn_result['median_ms']}ms  throughput={nn_result['throughput_hz']}Hz")
 
             return {
                 "backend": name,
@@ -101,7 +104,7 @@ def run_backend(name: str, cls, texts: list[str], queries: list[str], k: int) ->
                 "nearest_neighbors": nn_result,
             }
     except Exception as e:
-        print(f"  FAILED: {e}")
+        logger.debug(f"  FAILED: {e}")
         return {"backend": name, "status": "error", "error": str(e)}
 
 
@@ -113,8 +116,8 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     args = parser.parse_args()
 
-    print("WhiteMagic Polyglot Benchmark")
-    print(f"  Texts: {args.texts}  Queries: {args.queries}  k: {args.k}")
+    logger.debug("WhiteMagic Polyglot Benchmark")
+    logger.debug(f"  Texts: {args.texts}  Queries: {args.queries}  k: {args.k}")
 
     # Generate deterministic test data
     texts = [f"benchmark text number {i} with some words to encode" for i in range(args.texts)]
@@ -123,7 +126,7 @@ def main():
     # Auto-detect compiled Haskell binary for fair comparison
     hs_binary = Path(__file__).parent / "bridges" / "haskell" / "bridge"
     if hs_binary.exists():
-        print("  Note: Using compiled Haskell binary for fair comparison")
+        logger.debug("  Note: Using compiled Haskell binary for fair comparison")
 
     backends = [
         ("Julia", wp.JuliaBackend),
@@ -143,20 +146,20 @@ def main():
     }
 
     if args.json:
-        print(json.dumps(summary, indent=2))
+        logger.debug(json.dumps(summary, indent=2))
     else:
-        print("\n" + "=" * 60)
-        print("SUMMARY")
-        print("=" * 60)
+        logger.debug("\n" + "=" * 60)
+        logger.debug("SUMMARY")
+        logger.debug("=" * 60)
         for r in results:
             if r["status"] == "ok":
                 enc = r["encode"]
                 nn = r["nearest_neighbors"]
-                print(f"\n  {r['backend']}:")
-                print(f"    Encode:  {enc['mean_ms']}ms mean, {enc['throughput_hz']}Hz")
-                print(f"    NN:      {nn['mean_ms']}ms mean, {nn['throughput_hz']}Hz")
+                logger.debug(f"\n  {r['backend']}:")
+                logger.debug(f"    Encode:  {enc['mean_ms']}ms mean, {enc['throughput_hz']}Hz")
+                logger.debug(f"    NN:      {nn['mean_ms']}ms mean, {nn['throughput_hz']}Hz")
             else:
-                print(f"\n  {r['backend']}: FAILED ({r.get('error', 'unknown')})")
+                logger.debug(f"\n  {r['backend']}: FAILED ({r.get('error', 'unknown')})")
 
 
 if __name__ == "__main__":

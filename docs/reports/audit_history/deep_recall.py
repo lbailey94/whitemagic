@@ -14,13 +14,14 @@ from typing import List, Dict, Any
 
 # Ensure path
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Auto-fixed path
+logger = logging.getLogger(__name__)
 
 try:
     from whitemagic.config.paths import DB_PATH as DEFAULT_DB_PATH
     from whitemagic.core.ganas.eastern_quadrant import NeckGana
     from whitemagic.core.ganas.southern_quadrant import ExtendedNetGana
 except ImportError as e:
-    print(f"CRITICAL IMPORT ERROR: {e}")
+    logger.debug(f"CRITICAL IMPORT ERROR: {e}")
     sys.exit(1)
 
 # Configuration
@@ -127,26 +128,26 @@ class DeepRecall:
             return 0
 
     async def run(self):
-        print(f"=== DEEP RECALL PROTOCOL ===")
-        print(f"Target: {TARGET_DIR}")
-        print(f"Cap: {MAX_FILES} files")
+        logger.debug(f"=== DEEP RECALL PROTOCOL ===")
+        logger.debug(f"Target: {TARGET_DIR}")
+        logger.debug(f"Cap: {MAX_FILES} files")
         
         # 1. Collect Files
-        print("1. Scanning directory tree...")
+        logger.debug("1. Scanning directory tree...")
         files_to_scan = []
         for root, _, files in os.walk(TARGET_DIR):
             for f in files:
                 if Path(f).suffix in EXTENSIONS:
                     files_to_scan.append(os.path.join(root, f))
                     
-        print(f"   -> Found {len(files_to_scan)} potential artifacts.")
+        logger.debug(f"   -> Found {len(files_to_scan)} potential artifacts.")
         
         # Shuffle/Slice
         if len(files_to_scan) > MAX_FILES:
             random.shuffle(files_to_scan)
             files_to_scan = files_to_scan[:MAX_FILES]
             
-        print(f"   -> Processing {len(files_to_scan)} files.")
+        logger.debug(f"   -> Processing {len(files_to_scan)} files.")
         
         self.connect_db()
         
@@ -155,7 +156,7 @@ class DeepRecall:
         start_time = time.time()
         
         # 2. Parallel Ingestion
-        print("2. Ingesting...")
+        logger.debug("2. Ingesting...")
         workers = os.cpu_count() or 4
         with ProcessPoolExecutor(max_workers=workers) as executor:
             # Chunking the futures submission to avoid memory spikes if list is huge
@@ -175,20 +176,20 @@ class DeepRecall:
                         batch = []
                         elapsed = time.time() - start_time
                         rate = total_ingested / elapsed if elapsed > 0 else 0
-                        print(f"   Stored {total_ingested} memories... ({rate:.0f}/s)", end='\r')
+                        logger.debug(f"   Stored {total_ingested} memories... ({rate:.0f}/s)", end='\r')
                         
         # Final batch
         if batch:
             self.batch_insert_memories(batch)
             total_ingested += len(batch)
             
-        print(f"\n✅ Deep Recall Complete. Processed {total_ingested} files.")
+        logger.debug(f"\n✅ Deep Recall Complete. Processed {total_ingested} files.")
         
         # 3. Final Verification
         cur = self.conn.cursor()
         cur.execute("SELECT count(*) FROM memories")
         count = cur.fetchone()[0]
-        print(f"📊 Total System Memories: {count}")
+        logger.debug(f"📊 Total System Memories: {count}")
         
         self.close_db()
 

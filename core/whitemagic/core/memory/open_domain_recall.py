@@ -273,8 +273,8 @@ def benchmark_open_domain_recall():
     """Benchmark open-domain recall improvements."""
     from whitemagic.core.memory.embeddings import LocalEmbedder
 
-    print("=" * 60)
-    print("Open-Domain Recall Benchmark")
+    logger.debug("=" * 60)
+    logger.debug("Open-Domain Recall Benchmark")
     logger.debug("=" * 60)
 
     # Sample open-domain queries
@@ -289,10 +289,10 @@ def benchmark_open_domain_recall():
     recall_system = OpenDomainRecall()
     embedder = LocalEmbedder()
 
-    print("\nTesting title-boosted vector search...")
+    logger.debug("\nTesting title-boosted vector search...")
 
     for query in test_queries:
-        print(f"\nQuery: '{query}'")
+        logger.debug(f"\nQuery: '{query}'")
 
         query_emb = embedder.encode(query)
 
@@ -301,14 +301,14 @@ def benchmark_open_domain_recall():
         results = recall_system.search_with_title_boost(query, query_emb, k=5)
         elapsed = (time.time() - start) * 1000
 
-        print(f"  Results ({elapsed:.1f}ms):")
+        logger.debug(f"  Results ({elapsed:.1f}ms):")
         for i, r in enumerate(results[:
             3], 1):
             logger.debug(f"    {i}. {r.title[:50]}... (score: {r.score:.3f})")
 
-    print("\n" + "=" * 60)
+    logger.debug("\n" + "=" * 60)
     logger.debug("✅ Title-boosted search ready")
-    print("   Target: 48% → 70% open-domain recall")
+    logger.debug("   Target: 48% → 70% open-domain recall")
     logger.debug("=" * 60)
 
 

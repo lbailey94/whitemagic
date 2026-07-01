@@ -16,6 +16,9 @@ import os
 import sys
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Allow direct execution (`python scripts/verify_install.py`) from repo root.
 if __package__ in (None, ""):
     _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,17 +42,17 @@ def check(name: str, fn, required: bool = True):
         result = fn()
         elapsed = (time.perf_counter() - t0) * 1000
         if result is True or result is None:
-            print(f"  {PASS} {name} ({elapsed:.0f}ms)")
+            logger.debug(f"  {PASS} {name} ({elapsed:.0f}ms)")
             results.append({"name": name, "status": "pass", "ms": elapsed})
         else:
-            print(f"  {PASS} {name}: {result} ({elapsed:.0f}ms)")
+            logger.debug(f"  {PASS} {name}: {result} ({elapsed:.0f}ms)")
             results.append(
                 {"name": name, "status": "pass", "ms": elapsed, "detail": str(result)}
             )
     except Exception as e:
         elapsed = (time.perf_counter() - t0) * 1000
         marker = FAIL if required else SKIP
-        print(f"  {marker} {name}: {e}")
+        logger.debug(f"  {marker} {name}: {e}")
         status = "fail" if required else "skip"
         results.append({"name": name, "status": status, "ms": elapsed, "error": str(e)})
 
@@ -232,11 +235,11 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     args = parser.parse_args()
 
-    print("═" * 60)
-    print("  WhiteMagic Install Verification")
-    print("═" * 60)
+    logger.debug("═" * 60)
+    logger.debug("  WhiteMagic Install Verification")
+    logger.debug("═" * 60)
 
-    print("\n  Core Checks:")
+    logger.debug("\n  Core Checks:")
     check("Import whitemagic", check_import)
     check("Version", check_version)
     check("Dispatch table", check_dispatch_table)
@@ -245,17 +248,17 @@ def main():
     check("Dharma rules engine", check_dharma_rules)
     check("Harmony vector", check_harmony_vector)
 
-    print("\n  Memory Operations:")
+    logger.debug("\n  Memory Operations:")
     check("Memory store + delete", check_memory_store)
     check("Memory search", check_memory_search)
     check("Tool dispatch (capabilities)", check_call_tool)
 
-    print("\n  Optional Accelerators:")
+    logger.debug("\n  Optional Accelerators:")
     check("Rust accelerators", check_rust_accelerators, required=False)
     check("MCP server module", check_mcp_server_import, required=False)
 
     if args.full:
-        print("\n  Benchmarks:")
+        logger.debug("\n  Benchmarks:")
         check("Dispatch speed", bench_dispatch_speed)
         check("Memory store throughput", bench_memory_store)
         check("Memory search throughput", bench_memory_search)
@@ -267,18 +270,18 @@ def main():
     skipped = sum(1 for r in results if r["status"] == "skip")
     total_ms = sum(r["ms"] for r in results)
 
-    print(f"\n{'═' * 60}")
-    print(f"  {passed} passed, {failed} failed, {skipped} skipped ({total_ms:.0f}ms)")
+    logger.debug(f"\n{'═' * 60}")
+    logger.debug(f"  {passed} passed, {failed} failed, {skipped} skipped ({total_ms:.0f}ms)")
 
     if failed == 0:
-        print("  \033[92m🎉 WhiteMagic is working correctly!\033[0m")
+        logger.debug("  \033[92m🎉 WhiteMagic is working correctly!\033[0m")
     else:
-        print(f"  \033[91m⚠ {failed} check(s) failed — see above for details\033[0m")
+        logger.debug(f"  \033[91m⚠ {failed} check(s) failed — see above for details\033[0m")
 
-    print("═" * 60)
+    logger.debug("═" * 60)
 
     if args.json:
-        print(
+        logger.debug(
             json.dumps(
                 {"results": results, "passed": passed, "failed": failed}, indent=2
             )

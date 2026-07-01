@@ -15,6 +15,9 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def _git(args: list[str], cwd: Path, timeout: int = 30) -> str:
     """Run a git command and return stdout."""
@@ -420,18 +423,18 @@ def archaeology_main(args) -> None:
     """Entry point for archaeology subcommands."""
     project_path = Path(args.path).resolve()
     if not (project_path / ".git").exists():
-        print("❌ Not a git repository. Archaeology requires git history.")
+        logger.debug("❌ Not a git repository. Archaeology requires git history.")
         return
 
     if args.arch_command == "excavate":
-        print(excavate(project_path, args.layer, args.file))
+        logger.debug(excavate(project_path, args.layer, args.file))
     elif args.arch_command == "fossil":
-        print(fossil(project_path, args.file, args.commits))
+        logger.debug(fossil(project_path, args.file, args.commits))
     elif args.arch_command == "extinction":
-        print(extinction(project_path))
+        logger.debug(extinction(project_path))
     elif args.arch_command == "composition":
-        print(composition(project_path, args.top))
+        logger.debug(composition(project_path, args.top))
     elif args.arch_command == "temper":
-        print(temper(project_path, args.file, args.top))
+        logger.debug(temper(project_path, args.file, args.top))
     else:
-        print(f"Unknown archaeology command: {args.arch_command}")
+        logger.debug(f"Unknown archaeology command: {args.arch_command}")

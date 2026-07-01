@@ -15,6 +15,9 @@ import sys
 import time
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from whitemagic.config.paths import DB_PATH
 except ImportError:
@@ -22,7 +25,7 @@ except ImportError:
 
 
 def reindex(db_path: Path) -> None:
-    print(f"Connecting to {db_path}...")
+    logger.debug(f"Connecting to {db_path}...")
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -30,9 +33,9 @@ def reindex(db_path: Path) -> None:
     conn.execute("PRAGMA mmap_size=268435456")  # 256MB
     conn.execute("PRAGMA busy_timeout=60000")
 
-    print("\n[1/2] Rebuilding FTS index...")
+    logger.debug("\n[1/2] Rebuilding FTS index...")
     total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-    print(f"  Total memories: {total}")
+    logger.debug(f"  Total memories: {total}")
 
     conn.execute("DELETE FROM memories_fts")
     conn.commit()
@@ -48,11 +51,11 @@ def reindex(db_path: Path) -> None:
     conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('optimize')")
     elapsed = time.time() - t0
     fts_count = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
-    print(f"  FTS rebuilt: {fts_count} entries in {elapsed:.1f}s")
+    logger.debug(f"  FTS rebuilt: {fts_count} entries in {elapsed:.1f}s")
 
-    print("\n[2/2] Recalculating holographic coordinates...")
+    logger.debug("\n[2/2] Recalculating holographic coordinates...")
     hc_count = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[0]
-    print(f"  Existing coords: {hc_count}")
+    logger.debug(f"  Existing coords: {hc_count}")
 
     # Create coords for memories that lack them
     t0 = time.time()
@@ -72,15 +75,15 @@ def reindex(db_path: Path) -> None:
     new_coords = conn.total_changes
     conn.commit()
     elapsed = time.time() - t0
-    print(f"  New coords created: {new_coords} in {elapsed:.1f}s")
+    logger.debug(f"  New coords created: {new_coords} in {elapsed:.1f}s")
 
     # Integrity check
-    print("\nVerifying integrity...")
+    logger.debug("\nVerifying integrity...")
     result = conn.execute("PRAGMA integrity_check").fetchone()[0]
-    print(f"  {result}")
+    logger.debug(f"  {result}")
 
     conn.close()
-    print("\nRealignment complete.")
+    logger.debug("\nRealignment complete.")
 
 
 def main() -> None:
@@ -92,7 +95,7 @@ def main() -> None:
 
     path = Path(args.db) if args.db else Path(DB_PATH)
     if not path.exists():
-        print(f"Error: Database not found at {path}", file=sys.stderr)
+        logger.debug(f"Error: Database not found at {path}", file=sys.stderr)
         sys.exit(1)
 
     reindex(path)

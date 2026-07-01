@@ -21,6 +21,9 @@ import tempfile
 import time
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Configuration
 CONFIG = {
     "memory_count": 500,  # Total memories to create
@@ -250,75 +253,75 @@ def _summarize(name: str, values: list[float]) -> str:
 
 
 def report() -> None:
-    print("\n" + "=" * 60)
-    print("MEMORY SUBSYSTEM STRESS TEST REPORT")
-    print("=" * 60)
-    print(f"\nConfiguration: {CONFIG}")
-    print(f"\nErrors: {len(ERRORS)}")
+    logger.debug("\n" + "=" * 60)
+    logger.debug("MEMORY SUBSYSTEM STRESS TEST REPORT")
+    logger.debug("=" * 60)
+    logger.debug(f"\nConfiguration: {CONFIG}")
+    logger.debug(f"\nErrors: {len(ERRORS)}")
     for err in ERRORS[:10]:
-        print(f"  - {err}")
+        logger.debug(f"  - {err}")
     if len(ERRORS) > 10:
-        print(f"  ... and {len(ERRORS) - 10} more")
+        logger.debug(f"  ... and {len(ERRORS) - 10} more")
 
-    print("\nLatency Summary:")
+    logger.debug("\nLatency Summary:")
     for key in RESULTS:
-        print(_summarize(key, RESULTS[key]))
+        logger.debug(_summarize(key, RESULTS[key]))
 
-    print("\n" + "=" * 60)
+    logger.debug("\n" + "=" * 60)
     if not ERRORS:
-        print("STATUS: PASS — No errors under stress")
+        logger.debug("STATUS: PASS — No errors under stress")
     else:
-        print(f"STATUS: FAIL — {len(ERRORS)} errors encountered")
-    print("=" * 60)
+        logger.debug(f"STATUS: FAIL — {len(ERRORS)} errors encountered")
+    logger.debug("=" * 60)
 
 
 # Main
 
 
 def main() -> int:
-    print("WhiteMagic Memory Subsystem Stress Test")
-    print(f"Config: {CONFIG}\n")
+    logger.debug("WhiteMagic Memory Subsystem Stress Test")
+    logger.debug(f"Config: {CONFIG}\n")
 
     # Use a temp directory for isolation
     with tempfile.TemporaryDirectory(prefix="wm_stress_") as tmp:
         tmp_path = Path(tmp)
-        print(f"Using temp state root: {tmp_path}")
+        logger.debug(f"Using temp state root: {tmp_path}")
 
         try:
             from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 
             backend = SQLiteBackend(db_path=tmp_path / "stress.db")
-            print(f"Backend: {type(backend).__name__}")
+            logger.debug(f"Backend: {type(backend).__name__}")
         except ImportError as exc:
-            print(f"FATAL: Cannot import SQLiteBackend: {exc}")
+            logger.debug(f"FATAL: Cannot import SQLiteBackend: {exc}")
             return 1
 
         # Phase 1: Store
-        print(f"\n[Phase 1] Storing {CONFIG['memory_count']} memories...")
+        logger.debug(f"\n[Phase 1] Storing {CONFIG['memory_count']} memories...")
         ids = stress_store_parallel(
             backend, CONFIG["memory_count"], CONFIG["concurrent_workers"]
         )
-        print(f"  Created {len(ids)} memories")
+        logger.debug(f"  Created {len(ids)} memories")
 
         # Phase 2: Search
-        print(f"\n[Phase 2] Running {CONFIG['search_iterations']} searches...")
+        logger.debug(f"\n[Phase 2] Running {CONFIG['search_iterations']} searches...")
         stress_search(backend, CONFIG["search_iterations"])
 
         # Phase 3: Recall
-        print(f"\n[Phase 3] Recalling {len(ids)} memories...")
+        logger.debug(f"\n[Phase 3] Recalling {len(ids)} memories...")
         stress_recall(backend, ids)
 
         # Phase 4: Embeddings
-        print(f"\n[Phase 4] Generating {CONFIG['memory_count'] // 5} embeddings...")
+        logger.debug(f"\n[Phase 4] Generating {CONFIG['memory_count'] // 5} embeddings...")
         stress_embeddings(CONFIG["memory_count"] // 5)
 
         # Phase 5: Graph walk
         if ids:
-            print(f"\n[Phase 5] Graph walk (depth={CONFIG['graph_walk_depth']})...")
+            logger.debug(f"\n[Phase 5] Graph walk (depth={CONFIG['graph_walk_depth']})...")
             stress_graph_walk(backend, ids[0], CONFIG["graph_walk_depth"])
 
         # Phase 6: Consolidation
-        print(f"\n[Phase 6] Memory consolidation...")
+        logger.debug(f"\n[Phase 6] Memory consolidation...")
         stress_consolidation(backend)
 
     report()

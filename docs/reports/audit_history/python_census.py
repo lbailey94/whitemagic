@@ -17,6 +17,9 @@ from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Configuration
 PROJECT_ROOT = Path(".").resolve()
 IGNORE_DIRS = {
@@ -117,7 +120,7 @@ def analyze_file(path: Path):
             "functions": functions
         }
     except Exception as e:
-        print(f"Error analyzing {path}: {e}")
+        logger.debug(f"Error analyzing {path}: {e}")
         return None
 
 def generate_report(files_data):
@@ -183,15 +186,15 @@ def generate_report(files_data):
     # Write MD
     md_path = REPORT_DIR / "python_census_v1.md"
     md_path.write_text("\n".join(lines))
-    print(f"✅ Report generated: {md_path}")
+    logger.debug(f"✅ Report generated: {md_path}")
     
     # Write JSON
     json_path = REPORT_DIR / "python_census.json"
     json_path.write_text(json.dumps(files_data, indent=2))
-    print(f"✅ Data dumped: {json_path}")
+    logger.debug(f"✅ Data dumped: {json_path}")
 
 def main():
-    print("🔍 Scanning codebase...")
+    logger.debug("🔍 Scanning codebase...")
     files_data = []
     
     for root, dirs, files in os.walk(PROJECT_ROOT):
@@ -205,7 +208,7 @@ def main():
                 if data:
                     files_data.append(data)
     
-    print(f"✅ Scanned {len(files_data)} Python files.")
+    logger.debug(f"✅ Scanned {len(files_data)} Python files.")
     generate_report(files_data)
 
 if __name__ == "__main__":

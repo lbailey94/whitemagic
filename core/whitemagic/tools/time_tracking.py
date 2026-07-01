@@ -10,6 +10,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class PhaseTiming:
@@ -63,7 +66,7 @@ class PhaseTimer:
         self._timing = PhaseTiming(
             phase_name=self.phase_name, start_time=start, metadata=self.metadata
         )
-        print(f"⏱️  Phase '{self.phase_name}' started at {self._start_iso()}")
+        logger.debug(f"⏱️  Phase '{self.phase_name}' started at {self._start_iso()}")
         return self
 
     def __exit__(
@@ -73,9 +76,9 @@ class PhaseTimer:
             return False
         self._timing.end_time = time.time()
         duration = self._timing.duration_seconds
-        print(f"⏱️  Phase '{self.phase_name}' completed in {duration:.2f}s")
+        logger.debug(f"⏱️  Phase '{self.phase_name}' completed in {duration:.2f}s")
         if exc_type:
-            print(f"   ⚠️  Phase ended with exception: {exc_type.__name__}")
+            logger.debug(f"   ⚠️  Phase ended with exception: {exc_type.__name__}")
         return False  # Don't suppress exceptions
 
     def _start_iso(self) -> str:
@@ -107,8 +110,8 @@ class WorkflowTimer:
     def start_workflow(self) -> None:
         """Mark workflow start time."""
         self._workflow_start = time.time()
-        print(f"\n🚀 Workflow '{self.workflow_name}' started")
-        print(f"   {datetime.now(UTC).isoformat()}")
+        logger.debug(f"\n🚀 Workflow '{self.workflow_name}' started")
+        logger.debug(f"   {datetime.now(UTC).isoformat()}")
 
     def end_workflow(self) -> None:
         """Mark workflow end time."""
@@ -116,7 +119,7 @@ class WorkflowTimer:
         duration: float = (
             self._workflow_end - self._workflow_start if self._workflow_start else 0.0
         )
-        print(f"\n✅ Workflow '{self.workflow_name}' completed in {duration:.2f}s")
+        logger.debug(f"\n✅ Workflow '{self.workflow_name}' completed in {duration:.2f}s")
 
     def phase(self, phase_name: str, metadata: dict | None = None) -> PhaseTimer:
         """Get a context manager for a new phase."""
@@ -150,17 +153,17 @@ class WorkflowTimer:
     def print_report(self) -> None:
         """Print formatted timing report."""
         report = self.get_report()
-        print(f"\n{'=' * 60}")
-        print(f"📊 TIMING REPORT: {report['workflow_name']}")
-        print(f"{'=' * 60}")
-        print(f"Started:  {report['started']}")
-        print(f"Completed: {report['completed']}")
-        print(f"Total: {report['total_seconds']:.2f}s")
-        print(f"\nPhases ({report['phase_count']}):")
+        logger.debug(f"\n{'=' * 60}")
+        logger.debug(f"📊 TIMING REPORT: {report['workflow_name']}")
+        logger.debug(f"{'=' * 60}")
+        logger.debug(f"Started:  {report['started']}")
+        logger.debug(f"Completed: {report['completed']}")
+        logger.debug(f"Total: {report['total_seconds']:.2f}s")
+        logger.debug(f"\nPhases ({report['phase_count']}):")
         for phase in report["phases"]:
             duration = phase["duration_seconds"]
-            print(f"  • {phase['phase_name']}: {duration:.2f}s")
-        print(f"{'=' * 60}")
+            logger.debug(f"  • {phase['phase_name']}: {duration:.2f}s")
+        logger.debug(f"{'=' * 60}")
 
 
 # Convenience functions for quick usage

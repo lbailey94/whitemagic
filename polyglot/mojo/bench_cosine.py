@@ -2,6 +2,9 @@
 import math
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 def cosine_similarity(a, b):
     dot = sum(x * y for x, y in zip(a, b))
     mag_a = math.sqrt(sum(x * x for x in a))
@@ -30,12 +33,12 @@ def benchmark():
     end = time.time()
     
     ms = (end - start) * 1000
-    print("Python Results:")
-    print(f"{num_vecs} vectors, {dim} dimensions")
-    print(f"Time: {ms:.2f} ms")
-    print(f"Throughput: {num_vecs / (ms/1000):.0f} vectors/sec")
-    print(f"Average similarity: {total_sim / num_vecs:.6f}")
-    print(f"Last similarity: {cosine_similarity(vecs[-1], q):.6f}")
+    logger.debug("Python Results:")
+    logger.debug(f"{num_vecs} vectors, {dim} dimensions")
+    logger.debug(f"Time: {ms:.2f} ms")
+    logger.debug(f"Throughput: {num_vecs / (ms/1000):.0f} vectors/sec")
+    logger.debug(f"Average similarity: {total_sim / num_vecs:.6f}")
+    logger.debug(f"Last similarity: {cosine_similarity(vecs[-1], q):.6f}")
 
 if __name__ == "__main__":
     benchmark()

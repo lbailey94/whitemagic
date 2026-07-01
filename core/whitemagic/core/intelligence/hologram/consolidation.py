@@ -169,7 +169,7 @@ class HolographicConsolidator:
                     )
                     used.update(neighbors)
 
-        print(f"   ✓ Clustering complete: {len(clusters)} clusters found.")
+        logger.debug(f"   ✓ Clustering complete: {len(clusters)} clusters found.")
         return clusters
 
     async def hydrate_clusters(

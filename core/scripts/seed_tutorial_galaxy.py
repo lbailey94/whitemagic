@@ -24,6 +24,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from whitemagic.config.paths import DB_PATH, ensure_paths
 
+import logging
+logger = logging.getLogger(__name__)
+
 TUTORIAL_MEMORIES = [
     {
         "step": 1,
@@ -219,7 +222,7 @@ def seed_tutorial_galaxy(db_path: str | None = None) -> dict:
 
         except Exception as e:
             stats["errors"] += 1
-            print(f"  Error creating '{mem['title']}': {e}")
+            logger.debug(f"  Error creating '{mem['title']}': {e}")
 
     conn.commit()
     conn.close()
@@ -240,9 +243,9 @@ def _zone_to_distance(zone: str) -> float:
 
 
 if __name__ == "__main__":
-    print("Seeding tutorial galaxy...")
+    logger.debug("Seeding tutorial galaxy...")
     stats = seed_tutorial_galaxy()
-    print(f"  Created: {stats['created']}")
-    print(f"  Skipped: {stats['skipped']}")
-    print(f"  Errors:  {stats['errors']}")
-    print("Done.")
+    logger.debug(f"  Created: {stats['created']}")
+    logger.debug(f"  Skipped: {stats['skipped']}")
+    logger.debug(f"  Errors:  {stats['errors']}")
+    logger.debug("Done.")

@@ -20,6 +20,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Stopwords to filter from keyword extraction
 STOPWORDS: set[str] = {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
@@ -144,16 +147,16 @@ def synthesize(input_path: Path, output_path: Path) -> None:
         for entry in synthesized:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    print(f"Synthesized {total} clusters → {output_path}")
+    logger.debug(f"Synthesized {total} clusters → {output_path}")
 
-    print("\nSample titles:")
+    logger.debug("\nSample titles:")
     for entry in synthesized[:10]:
-        print(f"  [{entry['cluster_id']}] {entry['title'][:100]}")
+        logger.debug(f"  [{entry['cluster_id']}] {entry['title'][:100]}")
         if entry["keywords"]:
-            print(f"    Keywords: {', '.join(entry['keywords'][:5])}")
+            logger.debug(f"    Keywords: {', '.join(entry['keywords'][:5])}")
 
     if total > 10:
-        print(f"  ... and {total - 10} more")
+        logger.debug(f"  ... and {total - 10} more")
 
 
 def main() -> None:
@@ -175,7 +178,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.input.exists():
-        print(f"Error: input file not found: {args.input}", file=sys.stderr)
+        logger.debug(f"Error: input file not found: {args.input}", file=sys.stderr)
         sys.exit(1)
 
     synthesize(args.input, args.output)

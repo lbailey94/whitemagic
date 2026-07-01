@@ -32,6 +32,9 @@ import ast
 import re
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 ROOT = Path("whitemagic")
 
 
@@ -73,7 +76,7 @@ def fix_file(path: Path) -> int:
         except SyntaxError as e:
             # Revert
             path.write_text(content)
-            print(f"  REVERTED {path}: {e}")
+            logger.debug(f"  REVERTED {path}: {e}")
             return 0
     return fixed
 
@@ -88,7 +91,7 @@ def main() -> None:
         if n > 0:
             total += n
             files += 1
-    print(f"\nFixed {total} E701 hits across {files} files.")
+    logger.debug(f"\nFixed {total} E701 hits across {files} files.")
 
 
 if __name__ == "__main__":

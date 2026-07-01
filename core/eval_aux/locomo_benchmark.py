@@ -75,7 +75,7 @@ def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) 
     """).fetchall()
 
     if len(rows) < 50:
-        print(f"WARNING: Only {len(rows)} suitable memories found. Need at least 50.")
+        logger.debug(f"WARNING: Only {len(rows)} suitable memories found. Need at least 50.")
         if len(rows) < 10:
             conn.close()
             return []
@@ -879,9 +879,9 @@ def evaluate_question(q: TestQuestion, strategy_fn, strategy_name: str, top_k: i
             break
 
     if not hit:
-        print(f"FAILED {q.qtype} QID: {q.qid}")
-        print(f"  Query: {q.query}")
-        print(f"  Ground Truth: {list(gt_set)}")
+        logger.debug(f"FAILED {q.qtype} QID: {q.qid}")
+        logger.debug(f"  Query: {q.query}")
+        logger.debug(f"  Ground Truth: {list(gt_set)}")
         # Show what WAS retrieved to debug ranking
         sample = []
         for r in results[:5]:
@@ -889,7 +889,7 @@ def evaluate_question(q: TestQuestion, strategy_fn, strategy_name: str, top_k: i
                 sample.append(r.get('id'))
             else:
                 sample.append(str(r))
-        print(f"  Retrieved IDs (Sample): {sample}")
+        logger.debug(f"  Retrieved IDs (Sample): {sample}")
 
     return EvalResult(
         qid=q.qid,
@@ -916,10 +916,10 @@ def run_benchmark(
 
     for strat_name in strategies:
         if strat_name not in STRATEGIES:
-            print(f"  Skipping unknown strategy: {strat_name}")
+            logger.debug(f"  Skipping unknown strategy: {strat_name}")
             continue
         strat_fn = STRATEGIES[strat_name]
-        print(f"\n  Running {strat_name} ({len(questions)} questions)...")
+        logger.debug(f"\n  Running {strat_name} ({len(questions)} questions)...")
         results = []
         hits = 0
         for i, q in enumerate(questions):
@@ -934,7 +934,7 @@ def run_benchmark(
             if (i + 1) % 25 == 0:
                 pct = hits / (i + 1) * 100
                 avg_lat = sum(r2.latency_ms for r2 in results) / len(results)
-                print(f"    [{i+1}/{len(questions)}] accuracy: {pct:.1f}%, avg latency: {avg_lat:.0f}ms")
+                logger.debug(f"    [{i+1}/{len(questions)}] accuracy: {pct:.1f}%, avg latency: {avg_lat:.0f}ms")
 
         all_results[strat_name] = results
 
@@ -1071,26 +1071,26 @@ def main():
 
     # Ensure global DB_PATH is updated for all strategies
     DB_PATH = Path(args.db)
-    print("V004: LoCoMo Memory Retrieval Benchmark")
-    print("=" * 60)
+    logger.debug("V004: LoCoMo Memory Retrieval Benchmark")
+    logger.debug("=" * 60)
 
-    print(f"\n[Phase 1] Generating {args.questions} test questions from DB...")
+    logger.debug(f"\n[Phase 1] Generating {args.questions} test questions from DB...")
     questions = generate_test_corpus(Path(args.db), args.questions, args.seed)
     if not questions:
-        print("ERROR: Could not generate test questions. Check DB.")
+        logger.debug("ERROR: Could not generate test questions. Check DB.")
         return 1
 
     qtype_counts = {}
     for q in questions:
         qtype_counts[q.qtype] = qtype_counts.get(q.qtype, 0) + 1
-    print(f"  Generated: {len(questions)} questions")
+    logger.debug(f"  Generated: {len(questions)} questions")
     for qt, c in sorted(qtype_counts.items()):
-        print(f"    {qt}: {c}")
+        logger.debug(f"    {qt}: {c}")
 
-    print(f"\n[Phase 2] Running benchmark ({', '.join(args.strategies)})...")
+    logger.debug(f"\n[Phase 2] Running benchmark ({', '.join(args.strategies)})...")
     report = run_benchmark(questions, args.strategies, args.top_k)
 
-    print("\n[Phase 3] Generating reports...")
+    logger.debug("\n[Phase 3] Generating reports...")
     reports_dir = REPO_ROOT / "reports"
     reports_dir.mkdir(exist_ok=True)
 
@@ -1098,21 +1098,21 @@ def main():
     json_path = reports_dir / "locomo_results.json"
     with open(json_path, "w") as f:
         json.dump(report, f, indent=2)
-    print(f"  Written: {json_path}")
+    logger.debug(f"  Written: {json_path}")
 
     # Markdown report
     md = generate_markdown_report(report)
     md_path = reports_dir / "locomo_latest_run.md"
     with open(md_path, "w") as f:
         f.write(md)
-    print(f"  Written: {md_path}")
+    logger.debug(f"  Written: {md_path}")
 
     # Summary
-    print("\n" + "=" * 60)
+    logger.debug("\n" + "=" * 60)
     for strat_name, sr in report["strategies"].items():
-        print(f"{strat_name}: {sr['overall_accuracy']}% overall ({sr['total_hits']}/{sr['total_questions']})")
+        logger.debug(f"{strat_name}: {sr['overall_accuracy']}% overall ({sr['total_hits']}/{sr['total_questions']})")
         for qt, qr in sr.get("by_type", {}).items():
-            print(f"  {qt}: {qr['accuracy']}%")
+            logger.debug(f"  {qt}: {qr['accuracy']}%")
 
     return 0
 

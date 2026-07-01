@@ -28,6 +28,9 @@ import os
 import re
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def _resolve_library_root() -> Path:
     """Resolve the LIBRARY root from env or a sensible default."""
@@ -192,7 +195,7 @@ def scan_library() -> list[dict]:
     all_concepts = []
     files = sorted(LIBRARY_ROOT.glob("**/*.txt"))
 
-    print(f"  📚 Scanning {len(files)} files in LIBRARY...")
+    logger.debug(f"  📚 Scanning {len(files)} files in LIBRARY...")
 
     for fp in files:
         try:
@@ -261,37 +264,37 @@ def main():
         return
 
     concepts = scan_library()
-    print(f"  ✅ Found {len(concepts)} concept candidates\n")
+    logger.debug(f"  ✅ Found {len(concepts)} concept candidates\n")
 
     INDEX_OUTPUT.write_text(json.dumps(concepts, indent=2, ensure_ascii=False))
-    print(f"  📋 Index saved to {INDEX_OUTPUT}\n")
+    logger.debug(f"  📋 Index saved to {INDEX_OUTPUT}\n")
 
     # Show top concepts
     show_n = args.show
-    print(f"  {'─' * 60}")
-    print(f"  Top {show_n} Concept Candidates:")
-    print(f"  {'─' * 60}")
+    logger.debug(f"  {'─' * 60}")
+    logger.debug(f"  Top {show_n} Concept Candidates:")
+    logger.debug(f"  {'─' * 60}")
     for i, c in enumerate(concepts[:show_n]):
         score = c["indicator_score"]
         stars = "★" * min(score, 5) + "☆" * max(0, 5 - score)
-        print(f"  {i + 1:2d}. {stars} [{score}] {c['title'][:80]}")
-        print(
+        logger.debug(f"  {i + 1:2d}. {stars} [{score}] {c['title'][:80]}")
+        logger.debug(
             f"      {c['source_file']}  ({c['char_length']:,} chars, {c['claim_count']} claims)"
         )
         if c["sample_claims"]:
-            print(f"      Claim: {c['sample_claims'][0][:120]}...")
-        print()
+            logger.debug(f"      Claim: {c['sample_claims'][0][:120]}...")
+        logger.debug()
 
     if args.bootstrap:
         created = bootstrap_library2(concepts, args.top)
-        print(f"  🌱 LIBRARY2 bootstrapped: {created} templates in {LIBRARY2_ROOT}")
-        print(f"  Each .md file follows the standard template.")
-        print(f"  Fill in each Claim → Evidence → Implications section.")
+        logger.debug(f"  🌱 LIBRARY2 bootstrapped: {created} templates in {LIBRARY2_ROOT}")
+        logger.debug(f"  Each .md file follows the standard template.")
+        logger.debug(f"  Fill in each Claim → Evidence → Implications section.")
 
-    print(f"\n  Next: run with --bootstrap to create LIBRARY2 skeleton")
-    print(f"  Then: fill in each template manually (or with AI assistance)")
-    print(f"  Then: cross-reference claims with web research")
-    print(f"  Then: publish as short essays on whitemagic.dev\n")
+    logger.debug(f"\n  Next: run with --bootstrap to create LIBRARY2 skeleton")
+    logger.debug(f"  Then: fill in each template manually (or with AI assistance)")
+    logger.debug(f"  Then: cross-reference claims with web research")
+    logger.debug(f"  Then: publish as short essays on whitemagic.dev\n")
 
 
 if __name__ == "__main__":

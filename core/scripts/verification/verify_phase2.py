@@ -15,9 +15,12 @@ from whitemagic.edge.local_llm import LocalLLM, is_url_safe
 from whitemagic.inference.model_pool import is_ollama_url_safe
 from whitemagic.core.memory.manager import MemoryManager
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def test_json_serialization():
-    print("Testing JSON serialization in SQLiteBackend...")
+    logger.debug("Testing JSON serialization in SQLiteBackend...")
     db_path = Path("/tmp/test_wm_phase2.db")
     if db_path.exists():
         db_path.unlink()
@@ -43,12 +46,12 @@ def test_json_serialization():
     )
     assert isinstance(recalled.content, list), "Content should be a list"
 
-    print("✓ JSON serialization test passed")
+    logger.debug("✓ JSON serialization test passed")
     return True
 
 
 def test_ssrf_protection():
-    print("Testing SSRF protection...")
+    logger.debug("Testing SSRF protection...")
 
     assert is_url_safe("http://localhost:11434") == True
     assert is_url_safe("http://127.0.0.1:11434") == True
@@ -60,17 +63,17 @@ def test_ssrf_protection():
 
     try:
         LocalLLM(url="http://evil.com")
-        print("✗ LocalLLM failed to block unsafe URL")
+        logger.debug("✗ LocalLLM failed to block unsafe URL")
         return False
     except ValueError as e:
-        print(f"✓ LocalLLM correctly blocked unsafe URL: {e}")
+        logger.debug(f"✓ LocalLLM correctly blocked unsafe URL: {e}")
 
-    print("✓ SSRF protection tests passed")
+    logger.debug("✓ SSRF protection tests passed")
     return True
 
 
 def test_soft_delete_filtering():
-    print("Testing soft-delete filtering in MemoryManager...")
+    logger.debug("Testing soft-delete filtering in MemoryManager...")
     db_path = Path("/tmp/test_wm_manager_phase2.db")
     if db_path.exists():
         db_path.unlink()
@@ -104,7 +107,7 @@ def test_soft_delete_filtering():
         f"Should have 2 memories when include_archived=True, got {len(recent_all)}"
     )
 
-    print("✓ Soft-delete filtering test passed")
+    logger.debug("✓ Soft-delete filtering test passed")
     return True
 
 
@@ -118,15 +121,15 @@ if __name__ == "__main__":
         if not test_soft_delete_filtering():
             success = False
     except Exception as e:
-        print(f"Tests failed with error: {e}")
+        logger.debug(f"Tests failed with error: {e}")
         import traceback
 
         traceback.print_exc()
         success = False
 
     if success:
-        print("\n✨ ALL PHASE 2 TESTS PASSED ✨")
+        logger.debug("\n✨ ALL PHASE 2 TESTS PASSED ✨")
         sys.exit(0)
     else:
-        print("\n❌ PHASE 2 TESTS FAILED ❌")
+        logger.debug("\n❌ PHASE 2 TESTS FAILED ❌")
         sys.exit(1)

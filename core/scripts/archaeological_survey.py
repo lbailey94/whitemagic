@@ -18,13 +18,16 @@ sys.path.insert(0, str(REPO_ROOT))
 from whitemagic.archaeology.dig import ChariotArchaeologist, Grimoire, Ganas
 from whitemagic.config.paths import ARCHIVE_DIR
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def get_all_db_files(root_dir: Path) -> list[Path]:
     return list(root_dir.rglob("*.db"))
 
 
 def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
-    print(f"\n[Scanning DB] {db_path.name} ({db_path.parent.name})")
+    logger.debug(f"\n[Scanning DB] {db_path.name} ({db_path.parent.name})")
     try:
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
@@ -41,7 +44,7 @@ def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
             target_table = "cognitive_episodes"
 
         if not target_table:
-            print(f"  ⏭️ No standard memory table found in {tables}")
+            logger.debug(f"  ⏭️ No standard memory table found in {tables}")
             conn.close()
             return
 
@@ -61,7 +64,7 @@ def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
         cursor.execute(f"SELECT {', '.join(query_cols)} FROM {target_table}")
         rows = cursor.fetchall()
 
-        print(f"  🔍 Processing {len(rows)} records in '{target_table}'...")
+        logger.debug(f"  🔍 Processing {len(rows)} records in '{target_table}'...")
         found_count = 0
         for row in rows:
             mid = row["id"]
@@ -119,14 +122,14 @@ def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
                 archaeologist.write_finding(finding)
                 found_count += 1
 
-        print(f"  💎 Found {found_count} artifacts.")
+        logger.debug(f"  💎 Found {found_count} artifacts.")
         conn.close()
     except Exception as e:
-        print(f"  ❌ Error scanning {db_path.name}: {e}")
+        logger.debug(f"  ❌ Error scanning {db_path.name}: {e}")
 
 
 def generate_expanded_recovery_report(report_file: Path, output_md: Path):
-    print(f"\n[Finalizing] Generating Expanded Recovery Report: {output_md}")
+    logger.debug(f"\n[Finalizing] Generating Expanded Recovery Report: {output_md}")
     findings = []
     if not report_file.exists():
         return
@@ -178,7 +181,7 @@ if __name__ == "__main__":
     agent = ChariotArchaeologist(str(ARCHIVE_DIR), str(output_dir))
 
     db_files = get_all_db_files(aux_root)
-    print(f"Found {len(db_files)} databases in auxiliary archive.")
+    logger.debug(f"Found {len(db_files)} databases in auxiliary archive.")
 
     for db in db_files:
         survey_database(agent, db)

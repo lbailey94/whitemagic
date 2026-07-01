@@ -18,6 +18,9 @@ from pathlib import Path
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fileio import file_lock
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class SessionHealthCheck:
     """
@@ -297,43 +300,43 @@ class SessionHealthCheck:
         if results is None:
             results = self.last_check
         if results is None:
-            print("No health check results available. Run run_full_check() first.")
+            logger.debug("No health check results available. Run run_full_check() first.")
             return
 
-        print("\n" + "=" * 60)
-        print("🐘 SESSION HEALTH CHECK - Ganapati Day")
-        print("=" * 60)
+        logger.debug("\n" + "=" * 60)
+        logger.debug("🐘 SESSION HEALTH CHECK - Ganapati Day")
+        logger.debug("=" * 60)
 
         # Overall status
         health = results.get("overall_health", "unknown")
         coherence = results.get("coherence_estimate", 0.0)
 
         if health == "healthy":
-            print(f"\n✅ OVERALL: HEALTHY ({coherence * 100:.0f}% coherence)")
+            logger.debug(f"\n✅ OVERALL: HEALTHY ({coherence * 100:.0f}% coherence)")
         elif health == "warning":
-            print(f"\n⚠️ OVERALL: WARNING ({coherence * 100:.0f}% coherence)")
+            logger.debug(f"\n⚠️ OVERALL: WARNING ({coherence * 100:.0f}% coherence)")
         else:
-            print(f"\n❌ OVERALL: UNHEALTHY ({coherence * 100:.0f}% coherence)")
+            logger.debug(f"\n❌ OVERALL: UNHEALTHY ({coherence * 100:.0f}% coherence)")
 
         # Individual checks
-        print("\n📊 CHECKS:")
+        logger.debug("\n📊 CHECKS:")
         for name, check in results.get("checks", {}).items():
             status = check.get("status", "unknown")
             msg = check.get("message", "")
             icon = (
                 "✅" if status == "healthy" else ("⚠️" if status == "warning" else "❌")
             )
-            print(f"   {icon} {name}: {msg}")
+            logger.debug(f"   {icon} {name}: {msg}")
 
         # Recommendations
-        print("\n💡 RECOMMENDATIONS:")
+        logger.debug("\n💡 RECOMMENDATIONS:")
         for rec in results.get("recommendations", []):
-            print(f"   {rec}")
+            logger.debug(f"   {rec}")
 
         # Duration
         duration = results.get("duration_seconds", 0)
-        print(f"\n⏱️ Duration: {duration:.2f}s")
-        print("=" * 60 + "\n")
+        logger.debug(f"\n⏱️ Duration: {duration:.2f}s")
+        logger.debug("=" * 60 + "\n")
 
 
 def run_session_health_check() -> dict:

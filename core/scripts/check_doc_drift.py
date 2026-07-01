@@ -24,6 +24,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 ROOT = Path(__file__).parent.parent.parent
 CORE = ROOT / "core"
 ERRORS: list[str] = []
@@ -32,21 +35,21 @@ WARNINGS: list[str] = []
 
 def error(msg: str) -> None:
     ERRORS.append(msg)
-    print(f"  ❌ {msg}")
+    logger.debug(f"  ❌ {msg}")
 
 
 def warn(msg: str) -> None:
     WARNINGS.append(msg)
-    print(f"  ⚠️  {msg}")
+    logger.debug(f"  ⚠️  {msg}")
 
 
 def ok(msg: str) -> None:
-    print(f"  ✅ {msg}")
+    logger.debug(f"  ✅ {msg}")
 
 
 # 1. Garden count
 def check_gardens() -> None:
-    print("\n[1/10] Garden count...")
+    logger.debug("\n[1/10] Garden count...")
     try:
         from whitemagic.gardens import list_gardens
 
@@ -62,7 +65,7 @@ def check_gardens() -> None:
 
 # 2. Gana tool count
 def check_gana_tools() -> None:
-    print("\n[2/10] Gana tool count...")
+    logger.debug("\n[2/10] Gana tool count...")
     try:
         from whitemagic.tools.registry import TOOL_REGISTRY, ToolCategory
 
@@ -78,7 +81,7 @@ def check_gana_tools() -> None:
 
 # 3. Dispatch table count
 def check_dispatch_table() -> None:
-    print("\n[3/10] Dispatch table count...")
+    logger.debug("\n[3/10] Dispatch table count...")
     try:
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 
@@ -93,7 +96,7 @@ def check_dispatch_table() -> None:
 
 # 4. Registry callable tool count
 def check_registry_tools() -> None:
-    print("\n[4/10] Registry callable tool count...")
+    logger.debug("\n[4/10] Registry callable tool count...")
     try:
         from whitemagic.tools.tool_surface import get_surface_counts
 
@@ -109,7 +112,7 @@ def check_registry_tools() -> None:
 
 # 5. No stale references to archived directories
 def check_no_stale_refs() -> None:
-    print("\n[5/10] Stale directory references...")
+    logger.debug("\n[5/10] Stale directory references...")
     stale_patterns = [
         (r"\barchive/\b", "archive/"),
         (r"\blegacy/\b", "legacy/"),
@@ -137,7 +140,7 @@ def check_no_stale_refs() -> None:
 
 # 6. Version consistency
 def check_versions() -> None:
-    print("\n[6/10] Version consistency...")
+    logger.debug("\n[6/10] Version consistency...")
     script = CORE / "scripts" / "check_versions.py"
     if not script.exists():
         warn("check_versions.py not found — skipping")
@@ -151,7 +154,7 @@ def check_versions() -> None:
     if result.returncode != 0:
         error("Version mismatch detected (see check_versions.py output)")
         for line in result.stdout.splitlines()[-10:]:
-            print(f"    {line}")
+            logger.debug(f"    {line}")
     else:
         ok("All version references consistent")
 
@@ -167,7 +170,7 @@ def check_tool_count_drift() -> None:
       - "all 425 dispatch tools"  (mid-sentence)
     Reports every occurrence whose number disagrees with the live registry.
     """
-    print("\n[7/10] Tool-count drift across canonical docs...")
+    logger.debug("\n[7/10] Tool-count drift across canonical docs...")
     docs = [
         ROOT / "docs" / "public" / "SYSTEM_MAP_V2.md",
         ROOT / "docs" / "public" / "AI_PRIMARY.md",
@@ -238,7 +241,7 @@ def check_test_count_consistency() -> None:
     check does NOT shell out to pytest (too slow); it enforces the
     canonical Option C wording policy.
     """
-    print("\n[8/10] Test-count consistency across canonical docs...")
+    logger.debug("\n[8/10] Test-count consistency across canonical docs...")
     docs = [
         ROOT / "docs" / "public" / "AI_PRIMARY.md",
         ROOT / "docs" / "public" / "SYSTEM_MAP_V2.md",
@@ -332,7 +335,7 @@ def check_test_count_consistency() -> None:
 
 # 9. POLYGLOT_STATUS buildable languages
 def check_polyglot_status() -> None:
-    print("\n[9/10] POLYGLOT_STATUS build claims...")
+    logger.debug("\n[9/10] POLYGLOT_STATUS build claims...")
     status_file = CORE / "docs" / "POLYGLOT_STATUS.md"
     if not status_file.exists():
         warn("POLYGLOT_STATUS.md not found")
@@ -363,7 +366,7 @@ def check_doc_gitignore_hygiene() -> None:
     and internal doc directories (core/docs/, core/eval_aux/, etc.)
     should be gitignored.
     """
-    print("\n[10/10] Documentation gitignore hygiene...")
+    logger.debug("\n[10/10] Documentation gitignore hygiene...")
     result = subprocess.run(
         ["git", "ls-files", "*.md", "*.txt"],
         capture_output=True,
@@ -448,9 +451,9 @@ def check_doc_gitignore_hygiene() -> None:
 # ---------------------------------------------------------------------------
 # Main
 def main() -> int:
-    print("=" * 60)
-    print("WhiteMagic Doc Drift Detector")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("WhiteMagic Doc Drift Detector")
+    logger.debug("=" * 60)
 
     # Ensure we can import whitemagic
     os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -467,15 +470,15 @@ def main() -> int:
     check_polyglot_status()
     check_doc_gitignore_hygiene()
 
-    print("\n" + "=" * 60)
+    logger.debug("\n" + "=" * 60)
     if ERRORS:
-        print(f"RESULT: {len(ERRORS)} error(s), {len(WARNINGS)} warning(s)")
+        logger.debug(f"RESULT: {len(ERRORS)} error(s), {len(WARNINGS)} warning(s)")
         return 1
     elif WARNINGS:
-        print(f"RESULT: 0 errors, {len(WARNINGS)} warning(s)")
+        logger.debug(f"RESULT: 0 errors, {len(WARNINGS)} warning(s)")
         return 0
     else:
-        print("RESULT: All checks passed — documentation is in sync.")
+        logger.debug("RESULT: All checks passed — documentation is in sync.")
         return 0
 
 

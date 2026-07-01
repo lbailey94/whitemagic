@@ -15,21 +15,24 @@ from whitemagic.mcp_api_bridge import (
     gana_wall,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 async def run_test(name, func, **kwargs):
-    print(f"\nTesting {name}...")
+    logger.debug(f"\nTesting {name}...")
     try:
         result = await func(**kwargs)
-        print(f"✓ {name} Success")
-        print(json.dumps(result, indent=2, default=str))
+        logger.debug(f"✓ {name} Success")
+        logger.debug(json.dumps(result, indent=2, default=str))
         return True
     except Exception as e:
-        print(f"✗ {name} Failed: {e}")
+        logger.debug(f"✗ {name} Failed: {e}")
         return False
 
 
 async def main():
-    print("=== Verifying Northern Quadrant Ganas ===")
+    logger.debug("=== Verifying Northern Quadrant Ganas ===")
 
     # 1. Dipper (Governance / Deep Search)
     await run_test(
@@ -67,7 +70,7 @@ async def main():
         priority="low",
     )
 
-    print("\n=== Verification Complete ===")
+    logger.debug("\n=== Verification Complete ===")
 
 
 if __name__ == "__main__":

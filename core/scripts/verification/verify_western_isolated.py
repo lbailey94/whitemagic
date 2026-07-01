@@ -16,15 +16,18 @@ from whitemagic.core.ganas.western_quadrant import (
     ThreeStarsGana,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 async def test_gana(name, gana_class, task, **kwargs):
-    print(f"\nTesting {name}...")
+    logger.debug(f"\nTesting {name}...")
     try:
         gana = gana_class()
         call = GanaCall(task=task, state_vector=kwargs)
         result = await gana.invoke(call)
-        print(f"✓ {name} Success")
-        print(
+        logger.debug(f"✓ {name} Success")
+        logger.debug(
             json.dumps(
                 {
                     "mansion": result.mansion.name,
@@ -37,7 +40,7 @@ async def test_gana(name, gana_class, task, **kwargs):
         )
         return True
     except Exception as e:
-        print(f"✗ {name} Failed: {e}")
+        logger.debug(f"✗ {name} Failed: {e}")
         import traceback
 
         traceback.print_exc()
@@ -45,30 +48,30 @@ async def test_gana(name, gana_class, task, **kwargs):
 
 
 async def main():
-    print("=== Verifying Western Quadrant Ganas (Isolated) ===", flush=True)
+    logger.debug("=== Verifying Western Quadrant Ganas (Isolated) ===", flush=True)
 
     # 1. Legs
-    print(">> Testing Legs...", flush=True)
+    logger.debug(">> Testing Legs...", flush=True)
     await test_gana("Legs", StraddlingLegsGana, "check_balance")
-    print("<< Legs Done", flush=True)
+    logger.debug("<< Legs Done", flush=True)
 
     # 2. Mound
-    print(">> Testing Mound...", flush=True)
+    logger.debug(">> Testing Mound...", flush=True)
     await test_gana("Mound", MoundGana, "check_storage")
-    print("<< Mound Done", flush=True)
+    logger.debug("<< Mound Done", flush=True)
 
     # 3. Stomach
-    print(">> Testing Stomach...", flush=True)
+    logger.debug(">> Testing Stomach...", flush=True)
     await test_gana("Stomach", StomachGana, "check_energy")
-    print("<< Stomach Done", flush=True)
+    logger.debug("<< Stomach Done", flush=True)
 
     # 4. Hairy Head
-    print(">> Testing Hairy Head...", flush=True)
+    logger.debug(">> Testing Hairy Head...", flush=True)
     await test_gana("Hairy Head", HairyHeadGana, "validate_integrations")
-    print("<< Hairy Head Done", flush=True)
+    logger.debug("<< Hairy Head Done", flush=True)
 
     # 5. Net
-    print(">> Testing Net...", flush=True)
+    logger.debug(">> Testing Net...", flush=True)
     from unittest.mock import MagicMock, patch
 
     # Mock the pattern API to avoid heavy DB calls and Rust issues
@@ -82,30 +85,30 @@ async def main():
     ):
         await test_gana("Net", NetGana, "detect_patterns")
 
-    print("<< Net Done", flush=True)
+    logger.debug("<< Net Done", flush=True)
 
     # 6. Turtle Beak
-    print(">> Testing Turtle Beak...", flush=True)
+    logger.debug(">> Testing Turtle Beak...", flush=True)
     await test_gana("Turtle Beak", TurtleBeakGana, "validate_command", command="ls -la")
-    print("<< Turtle Beak Done", flush=True)
+    logger.debug("<< Turtle Beak Done", flush=True)
 
     # 7. Three Stars
-    print(">> Testing Three Stars...", flush=True)
+    logger.debug(">> Testing Three Stars...", flush=True)
     await test_gana(
         "Three Stars",
         ThreeStarsGana,
         "consult_wisdom_council",
         question="Test question",
     )
-    print("<< Three Stars Done", flush=True)
+    logger.debug("<< Three Stars Done", flush=True)
 
-    print("\n=== Verification Complete ===", flush=True)
+    logger.debug("\n=== Verification Complete ===", flush=True)
 
 
 if __name__ == "__main__":
-    print("Starting main execution...", flush=True)
+    logger.debug("Starting main execution...", flush=True)
     try:
         asyncio.run(main())
-        print("Main execution finished.", flush=True)
+        logger.debug("Main execution finished.", flush=True)
     except Exception as e:
-        print(f"CRASHED: {e}", flush=True)
+        logger.debug(f"CRASHED: {e}", flush=True)

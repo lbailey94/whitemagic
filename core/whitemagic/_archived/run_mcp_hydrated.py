@@ -45,7 +45,7 @@ except ImportError:
     _HAS_FASTMCP = False
     # Only exit if we are actually trying to run the server, not just importing for tests
     if __name__ == "__main__":
-        print("❌ Error: fastmcp not installed. Please install it: pip install fastmcp", file=sys.stderr)
+        logger.debug("❌ Error: fastmcp not installed. Please install it: pip install fastmcp", file=sys.stderr)
         sys.exit(1)
 
 # Server setup
@@ -282,7 +282,7 @@ def register_tools() -> None:
         count = _register_prat_tools(mcp_client)
         status_suffix = " [DEGRADED]" if runtime_status.get("degraded_mode") else ""
         msg = f"🔮 PRAT WhiteMagic MCP Server with {count} Gana tools{status_suffix}"
-        print(msg, file=sys.stderr)
+        logger.debug(msg, file=sys.stderr)
         logger.info(msg)
         return
 
@@ -349,7 +349,7 @@ def register_tools() -> None:
     msg = f"✨ Hydrated WhiteMagic MCP Server with {count} tools{status_suffix}"
     if skipped:
         msg += f" ({skipped} deferred in lite mode)"
-    print(msg + ".", file=sys.stderr)
+    logger.debug(msg + ".", file=sys.stderr)
     logger.info(msg)
 
 if __name__ == "__main__":

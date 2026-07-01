@@ -17,6 +17,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 PASSED = 0
@@ -31,23 +34,23 @@ def bench(label: str, fn, section_results=None):
         result = fn()
         elapsed = (time.perf_counter() - start) * 1000
         if result is False:
-            print(f"  \u23ed\ufe0f  {label} (skipped)")
+            logger.debug(f"  \u23ed\ufe0f  {label} (skipped)")
             return
         msg = str(result) if result else "OK"
-        print(f"  \u2705 {label} ({elapsed:.1f}ms) \u2014 {msg}")
+        logger.debug(f"  \u2705 {label} ({elapsed:.1f}ms) \u2014 {msg}")
         PASSED += 1
         RESULTS.append((label, True, elapsed, msg))
     except Exception as e:
         elapsed = (time.perf_counter() - start) * 1000
-        print(f"  \u274c {label} ({elapsed:.1f}ms) \u2014 {type(e).__name__}: {e}")
+        logger.debug(f"  \u274c {label} ({elapsed:.1f}ms) \u2014 {type(e).__name__}: {e}")
         FAILED += 1
         RESULTS.append((label, False, elapsed, str(e)))
 
 
 def section(title):
-    print(f"\u2500" * 60)
-    print(f"  {title}")
-    print(f"\u2500" * 60)
+    logger.debug(f"\u2500" * 60)
+    logger.debug(f"  {title}")
+    logger.debug(f"\u2500" * 60)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -405,9 +408,9 @@ def bench_http():
 
 
 def main():
-    print("=" * 60)
-    print("  WhiteMagic MCP Benchmark Suite")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("  WhiteMagic MCP Benchmark Suite")
+    logger.debug("=" * 60)
 
     bench_metadata()
     bench_schema()
@@ -416,13 +419,13 @@ def main():
     bench_parallel_calls()
     bench_http()
 
-    print("=" * 60)
-    print("  SUMMARY")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("  SUMMARY")
+    logger.debug("=" * 60)
     total = PASSED + FAILED
-    print(f"  Total:   {total}")
-    print(f"  Passed:  {PASSED} \u2705")
-    print(f"  Failed:  {FAILED} \u274c")
+    logger.debug(f"  Total:   {total}")
+    logger.debug(f"  Passed:  {PASSED} \u2705")
+    logger.debug(f"  Failed:  {FAILED} \u274c")
 
     # Latency summary for serial calls
     serial_results = [
@@ -430,13 +433,13 @@ def main():
     ]
     if serial_results:
         avg = sum(t for _, t in serial_results) / len(serial_results)
-        print(f"  Avg tool call: {avg:.0f}ms")
+        logger.debug(f"  Avg tool call: {avg:.0f}ms")
 
     if FAILED:
-        print(f"\n  Failed benchmarks:")
+        logger.debug(f"\n  Failed benchmarks:")
         for label, ok, _, msg in RESULTS:
             if not ok:
-                print(f"    \u274c {label}: {msg}")
+                logger.debug(f"    \u274c {label}: {msg}")
 
     return 0 if FAILED == 0 else 1
 

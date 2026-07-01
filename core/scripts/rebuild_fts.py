@@ -2,6 +2,9 @@ import sqlite3
 import time
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from whitemagic.config.paths import DB_PATH
 except ImportError:
@@ -10,7 +13,7 @@ except ImportError:
 
 def full_rebuild_fts(db_path: Path | str | None = None):
     path = Path(db_path) if db_path else Path(DB_PATH)
-    print(f"Connecting to {path} for FULL FTS REBUILD...")
+    logger.debug(f"Connecting to {path} for FULL FTS REBUILD...")
     conn = sqlite3.connect(str(path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -18,16 +21,16 @@ def full_rebuild_fts(db_path: Path | str | None = None):
     conn.execute("PRAGMA mmap_size=268435456")  # 256MB mmap
     conn.execute("PRAGMA busy_timeout=30000")
 
-    print("Fetching total memory count...")
+    logger.debug("Fetching total memory count...")
     total_mems = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-    print(f"Total memories to index: {total_mems}")
+    logger.debug(f"Total memories to index: {total_mems}")
 
     start_time = time.time()
     synced = 0
     batch_size = 5000
 
     # We use a cursor to stream memories to avoid OOM
-    print("Rebuilding index in batches...")
+    logger.debug("Rebuilding index in batches...")
 
     # We iterate over all memories. Since we already purged memories_fts,
     # we can just insert everything.
@@ -59,13 +62,13 @@ def full_rebuild_fts(db_path: Path | str | None = None):
 
         conn.commit()
         synced += len(rows)
-        print(f"  Indexed {synced}/{total_mems}...")
+        logger.debug(f"  Indexed {synced}/{total_mems}...")
         batch_data = []
 
     end_time = time.time()
-    print("FULL REBUILD Finished.")
-    print(f"  Total entries indexed: {synced}")
-    print(f"  Total time: {end_time - start_time:.2f}s")
+    logger.debug("FULL REBUILD Finished.")
+    logger.debug(f"  Total entries indexed: {synced}")
+    logger.debug(f"  Total time: {end_time - start_time:.2f}s")
 
     conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('optimize')")
     conn.close()

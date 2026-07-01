@@ -32,6 +32,9 @@ from whitemagic.inference.llm_meta_harness import (
     EnhancementMode,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class LLMMetaBenchmark:
     """Benchmark suite for LLM meta-harness."""
@@ -214,29 +217,29 @@ class LLMMetaBenchmark:
         
         test_cases = self.get_test_cases()
         
-        print(f"\n{'='*80}")
-        print("LLM Meta-Harness Benchmark")
-        print(f"Model: {self.model_name}")
-        print(f"Test Cases: {len(test_cases)}")
-        print(f"Enhancement Modes: {len(modes)}")
-        print(f"{'='*80}\n")
+        logger.debug(f"\n{'='*80}")
+        logger.debug("LLM Meta-Harness Benchmark")
+        logger.debug(f"Model: {self.model_name}")
+        logger.debug(f"Test Cases: {len(test_cases)}")
+        logger.debug(f"Enhancement Modes: {len(modes)}")
+        logger.debug(f"{'='*80}\n")
         
         all_results = []
         
         for i, test_case in enumerate(test_cases, 1):
-            print(f"[{i}/{len(test_cases)}] {test_case['category']}: {test_case['query'][:60]}...")
+            logger.debug(f"[{i}/{len(test_cases)}] {test_case['category']}: {test_case['query'][:60]}...")
             
             for mode in modes:
                 try:
                     result = await self.run_single_test(test_case, mode)
                     all_results.append(result)
                     
-                    print(f"  {mode.value:20s} | Accuracy: {result['accuracy']:.2f} | "
+                    logger.debug(f"  {mode.value:20s} | Accuracy: {result['accuracy']:.2f} | "
                           f"Latency: {result['latency_ms']:6.1f}ms | "
                           f"Tokens: {result['tokens_used']:3d}")
                     
                 except Exception as e:
-                    print(f"  {mode.value:20s} | ERROR: {e}")
+                    logger.debug(f"  {mode.value:20s} | ERROR: {e}")
                     all_results.append({
                         "category": test_case["category"],
                         "query": test_case["query"],
@@ -247,7 +250,7 @@ class LLMMetaBenchmark:
                         "tokens_used": 0,
                     })
             
-            print()
+            logger.debug()
         
         # Aggregate results
         aggregated = self._aggregate_results(all_results)
@@ -314,19 +317,19 @@ class LLMMetaBenchmark:
     
     def print_summary(self, results: Dict[str, Any]):
         """Print human-readable summary of results."""
-        print(f"\n{'='*80}")
-        print("BENCHMARK SUMMARY")
-        print(f"{'='*80}\n")
+        logger.debug(f"\n{'='*80}")
+        logger.debug("BENCHMARK SUMMARY")
+        logger.debug(f"{'='*80}\n")
         
-        print(f"Model: {results['model']}")
-        print(f"Timestamp: {results['timestamp']}")
-        print(f"Test Cases: {results['test_cases']}")
-        print()
+        logger.debug(f"Model: {results['model']}")
+        logger.debug(f"Timestamp: {results['timestamp']}")
+        logger.debug(f"Test Cases: {results['test_cases']}")
+        logger.debug()
         
         # By mode
-        print("Results by Enhancement Mode:")
-        print(f"{'Mode':<25} {'Accuracy':>10} {'Latency (ms)':>15} {'Tokens':>10}")
-        print("-" * 80)
+        logger.debug("Results by Enhancement Mode:")
+        logger.debug(f"{'Mode':<25} {'Accuracy':>10} {'Latency (ms)':>15} {'Tokens':>10}")
+        logger.debug("-" * 80)
         
         by_mode = results["aggregated"]["by_mode"]
         
@@ -338,17 +341,17 @@ class LLMMetaBenchmark:
         )
         
         for mode, stats in sorted_modes:
-            print(f"{mode:<25} "
+            logger.debug(f"{mode:<25} "
                   f"{stats.get('avg_accuracy', 0.0):>9.1%} "
                   f"{stats.get('avg_latency_ms', 0.0):>14.1f} "
                   f"{stats.get('avg_tokens', 0):>10.0f}")
         
-        print()
+        logger.debug()
         
         # By category
-        print("Results by Category:")
-        print(f"{'Category':<25} {'Accuracy':>10}")
-        print("-" * 40)
+        logger.debug("Results by Category:")
+        logger.debug(f"{'Category':<25} {'Accuracy':>10}")
+        logger.debug("-" * 40)
         
         by_category = results["aggregated"]["by_category"]
         sorted_categories = sorted(
@@ -358,9 +361,9 @@ class LLMMetaBenchmark:
         )
         
         for category, stats in sorted_categories:
-            print(f"{category:<25} {stats.get('avg_accuracy', 0.0):>9.1%}")
+            logger.debug(f"{category:<25} {stats.get('avg_accuracy', 0.0):>9.1%}")
         
-        print()
+        logger.debug()
         
         # Calculate improvement over baseline
         if "direct" in by_mode and "full_stack" in by_mode:
@@ -368,11 +371,11 @@ class LLMMetaBenchmark:
             fullstack_acc = by_mode["full_stack"].get("avg_accuracy", 0.0)
             improvement = ((fullstack_acc - baseline_acc) / baseline_acc * 100) if baseline_acc > 0 else 0
             
-            print("Enhancement Impact:")
-            print(f"  Baseline (direct):     {baseline_acc:.1%}")
-            print(f"  Full-stack enhanced:   {fullstack_acc:.1%}")
-            print(f"  Improvement:           {improvement:+.1f}%")
-            print()
+            logger.debug("Enhancement Impact:")
+            logger.debug(f"  Baseline (direct):     {baseline_acc:.1%}")
+            logger.debug(f"  Full-stack enhanced:   {fullstack_acc:.1%}")
+            logger.debug(f"  Improvement:           {improvement:+.1f}%")
+            logger.debug()
 
 
 async def main():
@@ -384,9 +387,9 @@ async def main():
     benchmark = LLMMetaBenchmark(model_name=model_name)
     
     if not benchmark.harness.is_available:
-        print(f"ERROR: Model {model_name} not available")
-        print("Make sure Ollama is running: ollama serve")
-        print(f"And model is pulled: ollama pull {model_name}")
+        logger.debug(f"ERROR: Model {model_name} not available")
+        logger.debug("Make sure Ollama is running: ollama serve")
+        logger.debug(f"And model is pulled: ollama pull {model_name}")
         return
     
     results = await benchmark.run_benchmark()
@@ -402,12 +405,12 @@ async def main():
     with open(json_path, "w") as f:
         json.dump(results, f, indent=2)
     
-    print(f"Results saved to: {json_path}")
+    logger.debug(f"Results saved to: {json_path}")
     
     # Generate markdown report
     md_path = output_dir / f"llm_meta_benchmark_{timestamp}.md"
     generate_markdown_report(results, md_path)
-    print(f"Markdown report: {md_path}")
+    logger.debug(f"Markdown report: {md_path}")
 
 
 def generate_markdown_report(results: Dict[str, Any], output_path: Path):

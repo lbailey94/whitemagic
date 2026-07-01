@@ -18,6 +18,9 @@ sys.path.insert(0, str(REPO_ROOT))
 import whitemagic_rust as rs
 from whitemagic_rust import rust_cosine_similarity
 
+import logging
+logger = logging.getLogger(__name__)
+
 # PySQLiteBackend is in the sqlite_backend submodule
 PySQLiteBackend = rs.sqlite_backend.PySQLiteBackend
 
@@ -32,7 +35,7 @@ def python_cosine_similarity(a, b):
 
 
 def run_math_benchmark():
-    print("\n[1/3] Benchmarking Math Kernels (SIMD vs Scalar)")
+    logger.debug("\n[1/3] Benchmarking Math Kernels (SIMD vs Scalar)")
     dim = 384
     count = 5000
     vec_a = [random.random() for _ in range(dim)]
@@ -51,14 +54,14 @@ def run_math_benchmark():
     t_rs = (time.perf_counter() - t0) * 1000
 
     speedup = t_py / t_rs
-    print(f"  Python (Scalar): {t_py:.2f} ms")
-    print(f"  Rust (SIMD):   {t_rs:.2f} ms")
-    print(f"  🔥 Speedup:      {speedup:.1f}x")
+    logger.debug(f"  Python (Scalar): {t_py:.2f} ms")
+    logger.debug(f"  Rust (SIMD):   {t_rs:.2f} ms")
+    logger.debug(f"  🔥 Speedup:      {speedup:.1f}x")
     return {"python_ms": t_py, "rust_ms": t_rs, "speedup": speedup}
 
 
 def run_sqlite_benchmark():
-    print("\n[2/3] Benchmarking SQLite Ingestion (Batch vs Loop)")
+    logger.debug("\n[2/3] Benchmarking SQLite Ingestion (Batch vs Loop)")
     db_path = "/tmp/audit_bench.db"
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -158,9 +161,9 @@ def run_sqlite_benchmark():
     t_batch = (time.perf_counter() - t0) * 1000
 
     speedup = t_loop / t_batch
-    print(f"  Loop Ingestion:  {t_loop:.2f} ms")
-    print(f"  Batch Ingestion: {t_batch:.2f} ms")
-    print(f"  🚀 Speedup:       {speedup:.1f}x")
+    logger.debug(f"  Loop Ingestion:  {t_loop:.2f} ms")
+    logger.debug(f"  Batch Ingestion: {t_batch:.2f} ms")
+    logger.debug(f"  🚀 Speedup:       {speedup:.1f}x")
 
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -169,38 +172,38 @@ def run_sqlite_benchmark():
 
 
 def check_wasm():
-    print("\n[3/3] Verifying WASM Integrity")
+    logger.debug("\n[3/3] Verifying WASM Integrity")
     wasm_path = (
         REPO_ROOT
         / "whitemagic-math/target/wasm32-unknown-unknown/release/whitemagic_math.wasm"
     )
     if wasm_path.exists():
         size_kb = wasm_path.stat().st_size / 1024
-        print(f"  File: {wasm_path.name}")
-        print(f"  Size: {size_kb:.2f} KB")
+        logger.debug(f"  File: {wasm_path.name}")
+        logger.debug(f"  Size: {size_kb:.2f} KB")
         status = "✅ PASS" if size_kb < 400 else "⚠️  OPTIMIZATION NEEDED"
-        print(f"  Status: {status}")
+        logger.debug(f"  Status: {status}")
         return {"size_kb": size_kb, "status": status}
     else:
-        print("  ❌ WASM artifact not found.")
+        logger.debug("  ❌ WASM artifact not found.")
         return {"size_kb": 0, "status": "FAIL"}
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("WHITE MAGIC PERFORMANCE AUDIT - PHASE 4 VALIDATION")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("WHITE MAGIC PERFORMANCE AUDIT - PHASE 4 VALIDATION")
+    logger.debug("=" * 60)
 
     math_results = run_math_benchmark()
     sqlite_results = run_sqlite_benchmark()
     wasm_results = check_wasm()
 
-    print("\n" + "=" * 60)
-    print("FINAL SUMMARY")
-    print("=" * 60)
-    print(f"Math Speedup:   {math_results['speedup']:.1f}x")
-    print(f"SQLite Speedup: {sqlite_results['speedup']:.1f}x")
-    print(
+    logger.debug("\n" + "=" * 60)
+    logger.debug("FINAL SUMMARY")
+    logger.debug("=" * 60)
+    logger.debug(f"Math Speedup:   {math_results['speedup']:.1f}x")
+    logger.debug(f"SQLite Speedup: {sqlite_results['speedup']:.1f}x")
+    logger.debug(
         f"WASM Footprint: {wasm_results['size_kb']:.1f} KB ({wasm_results['status']})"
     )
-    print("=" * 60)
+    logger.debug("=" * 60)

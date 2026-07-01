@@ -21,6 +21,9 @@ import sys
 import time
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 os.environ.setdefault("WM_STATE_ROOT", str(Path.home() / ".whitemagic"))
@@ -74,7 +77,7 @@ def bench(label: str, fn, iterations: int = 1000, warmup: int = 10, tier: int = 
         times_ns.append(elapsed)
 
     if not times_ns:
-        print(f"  ✗ {label}: ALL ERRORS ({errors}/{iterations})")
+        logger.debug(f"  ✗ {label}: ALL ERRORS ({errors}/{iterations})")
         RESULTS.append(
             {"label": label, "tier": tier, "status": "error", "errors": errors}
         )
@@ -85,7 +88,7 @@ def bench(label: str, fn, iterations: int = 1000, warmup: int = 10, tier: int = 
     ops = len(times_ns) / (sum(times_ns) / 1e9) if sum(times_ns) > 0 else 0
 
     status = "✓" if errors == 0 else f"⚠ {errors} errs"
-    print(
+    logger.debug(
         f"  {status} {label}: median={_fmt_time(median)}  p95={_fmt_time(p95)}  {_fmt_rate(ops)}  ({len(times_ns)} iters)"
     )
 
@@ -128,7 +131,7 @@ def bench_async(
             times_ns.append(elapsed)
 
         if not times_ns:
-            print(f"  ✗ {label}: ALL ERRORS ({errors}/{iterations})")
+            logger.debug(f"  ✗ {label}: ALL ERRORS ({errors}/{iterations})")
             RESULTS.append(
                 {"label": label, "tier": tier, "status": "error", "errors": errors}
             )
@@ -139,7 +142,7 @@ def bench_async(
         ops = len(times_ns) / (sum(times_ns) / 1e9) if sum(times_ns) > 0 else 0
 
         status = "✓" if errors == 0 else f"⚠ {errors} errs"
-        print(
+        logger.debug(
             f"  {status} {label}: median={_fmt_time(median)}  p95={_fmt_time(p95)}  {_fmt_rate(ops)}  ({len(times_ns)} iters)"
         )
 
@@ -165,7 +168,7 @@ def bench_async(
 
 
 def tier1_core():
-    print("\n═══ TIER 1: Core Baselines ═══")
+    logger.debug("\n═══ TIER 1: Core Baselines ═══")
 
     # Memory store
     from whitemagic.core.memory.unified import UnifiedMemory, MemoryType
@@ -210,7 +213,7 @@ def tier1_core():
         hv = get_harmony_vector()
         bench("Harmony vector snapshot", lambda: hv.snapshot(), iterations=5000, tier=1)
     except Exception as e:
-        print(f"  ⊘ Harmony vector: {e}")
+        logger.debug(f"  ⊘ Harmony vector: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -219,7 +222,7 @@ def tier1_core():
 
 
 def tier2_arrow():
-    print("\n═══ TIER 2: Arrow IPC ═══")
+    logger.debug("\n═══ TIER 2: Arrow IPC ═══")
 
     from whitemagic.core.memory.unified import UnifiedMemory
 
@@ -235,7 +238,7 @@ def tier2_arrow():
     bench("Arrow IPC export (100 memories)", _arrow_export, iterations=100, tier=2)
 
     if arrow_bytes:
-        print(f"    → Arrow payload: {len(arrow_bytes):,} bytes")
+        logger.debug(f"    → Arrow payload: {len(arrow_bytes):,} bytes")
 
         # Arrow import (into same DB, will deduplicate)
         bench(
@@ -296,7 +299,7 @@ def tier2_arrow():
 
             ipc = arrow_encode_memories(sample)
             if ipc:
-                print(f"    → Rust Arrow IPC: {len(ipc):,} bytes")
+                logger.debug(f"    → Rust Arrow IPC: {len(ipc):,} bytes")
                 bench(
                     "Rust arrow_decode (100 docs)",
                     lambda: arrow_decode_memories(ipc),
@@ -304,9 +307,9 @@ def tier2_arrow():
                     tier=2,
                 )
         else:
-            print("  ⊘ Rust Arrow bridge not available")
+            logger.debug("  ⊘ Rust Arrow bridge not available")
     except ImportError:
-        print("  ⊘ Rust accelerators not installed")
+        logger.debug("  ⊘ Rust accelerators not installed")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -315,7 +318,7 @@ def tier2_arrow():
 
 
 def tier3_tokio():
-    print("\n═══ TIER 3: Tokio Clone Army ═══")
+    logger.debug("\n═══ TIER 3: Tokio Clone Army ═══")
 
     try:
         from whitemagic.optimization.rust_accelerators import (
@@ -348,16 +351,16 @@ def tier3_tokio():
 
         # Tokio internal benchmark
         result = tokio_clone_bench(100)
-        print(f"    → Tokio self-bench (100 clones): {result}")
+        logger.debug(f"    → Tokio self-bench (100 clones): {result}")
 
         # Stats
         stats = tokio_clone_stats()
-        print(f"    → Clone army stats: {stats}")
+        logger.debug(f"    → Clone army stats: {stats}")
 
     except ImportError:
-        print("  ⊘ Tokio Clone Army not available (Rust accelerators not installed)")
+        logger.debug("  ⊘ Tokio Clone Army not available (Rust accelerators not installed)")
     except Exception as e:
-        print(f"  ⊘ Tokio Clone Army error: {e}")
+        logger.debug(f"  ⊘ Tokio Clone Army error: {e}")
 
     # Python fallback comparison
     try:
@@ -400,7 +403,7 @@ def tier3_tokio():
         )
 
     except Exception as e:
-        print(f"  ⊘ Thought clones benchmark: {e}")
+        logger.debug(f"  ⊘ Thought clones benchmark: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -409,7 +412,7 @@ def tier3_tokio():
 
 
 def tier4_iceoryx():
-    print("\n═══ TIER 4: Iceoryx2 IPC ═══")
+    logger.debug("\n═══ TIER 4: Iceoryx2 IPC ═══")
 
     try:
         from whitemagic.optimization.rust_accelerators import (
@@ -448,12 +451,12 @@ def tier4_iceoryx():
 
         # Status
         status = ipc_bridge_status()
-        print(f"    → IPC bridge status: {status}")
+        logger.debug(f"    → IPC bridge status: {status}")
 
     except ImportError:
-        print("  ⊘ Iceoryx2 IPC not available (Rust accelerators not installed)")
+        logger.debug("  ⊘ Iceoryx2 IPC not available (Rust accelerators not installed)")
     except Exception as e:
-        print(f"  ⊘ Iceoryx2 IPC error: {e}")
+        logger.debug(f"  ⊘ Iceoryx2 IPC error: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -462,7 +465,7 @@ def tier4_iceoryx():
 
 
 def tier5_holographic():
-    print("\n═══ TIER 5: Holographic 5D Encoding ═══")
+    logger.debug("\n═══ TIER 5: Holographic 5D Encoding ═══")
 
     try:
         import whitemagic_rs
@@ -496,9 +499,9 @@ def tier5_holographic():
                 tier=5,
             )
         else:
-            print("  ⊘ holographic_encode_5d not in Rust bridge")
+            logger.debug("  ⊘ holographic_encode_5d not in Rust bridge")
     except ImportError:
-        print("  ⊘ Rust bridge not available")
+        logger.debug("  ⊘ Rust bridge not available")
 
     # Python fallback
     try:
@@ -517,7 +520,7 @@ def tier5_holographic():
             tier=5,
         )
     except Exception as e:
-        print(f"  ⊘ Python holographic: {e}")
+        logger.debug(f"  ⊘ Python holographic: {e}")
 
     # BM25 search
     try:
@@ -540,13 +543,13 @@ def tier5_holographic():
 
 
 def print_summary():
-    print("\n" + "═" * 70)
-    print("  BENCHMARK GAUNTLET v3 — SUMMARY")
-    print("═" * 70)
+    logger.debug("\n" + "═" * 70)
+    logger.debug("  BENCHMARK GAUNTLET v3 — SUMMARY")
+    logger.debug("═" * 70)
 
     passed = sum(1 for r in RESULTS if r["status"] == "pass")
     failed = sum(1 for r in RESULTS if r["status"] == "error")
-    print(f"\n  Total: {len(RESULTS)} benchmarks | {passed} passed | {failed} failed")
+    logger.debug(f"\n  Total: {len(RESULTS)} benchmarks | {passed} passed | {failed} failed")
 
     # Find key comparisons
     arrow_export = next((r for r in RESULTS if "Arrow IPC export" in r["label"]), None)
@@ -558,18 +561,18 @@ def print_summary():
         and json_export.get("median_ns")
     ):
         speedup = json_export["median_ns"] / arrow_export["median_ns"]
-        print(f"\n  Arrow vs JSON export: {speedup:.1f}× speedup")
+        logger.debug(f"\n  Arrow vs JSON export: {speedup:.1f}× speedup")
 
     tokio_10 = next((r for r in RESULTS if "Tokio deploy 10" in r["label"]), None)
     tokio_100 = next((r for r in RESULTS if "Tokio deploy 100" in r["label"]), None)
     tokio_1000 = next((r for r in RESULTS if "Tokio deploy 1000" in r["label"]), None)
     if tokio_10 and tokio_10.get("median_ns"):
-        print("\n  Tokio Clone Army:")
-        print(f"    10 clones:   {_fmt_time(tokio_10['median_ns'])}")
+        logger.debug("\n  Tokio Clone Army:")
+        logger.debug(f"    10 clones:   {_fmt_time(tokio_10['median_ns'])}")
         if tokio_100 and tokio_100.get("median_ns"):
-            print(f"    100 clones:  {_fmt_time(tokio_100['median_ns'])}")
+            logger.debug(f"    100 clones:  {_fmt_time(tokio_100['median_ns'])}")
         if tokio_1000 and tokio_1000.get("median_ns"):
-            print(f"    1000 clones: {_fmt_time(tokio_1000['median_ns'])}")
+            logger.debug(f"    1000 clones: {_fmt_time(tokio_1000['median_ns'])}")
 
     rust_enc = next(
         (r for r in RESULTS if "Rust 5D encode (single)" in r["label"]), None
@@ -579,7 +582,7 @@ def print_summary():
     )
     if rust_enc and py_enc and rust_enc.get("median_ns") and py_enc.get("median_ns"):
         speedup = py_enc["median_ns"] / rust_enc["median_ns"]
-        print(f"\n  Rust vs Python 5D encode: {speedup:.1f}× speedup")
+        logger.debug(f"\n  Rust vs Python 5D encode: {speedup:.1f}× speedup")
 
     out_path = Path(__file__).parent / "benchmark_v3_results.json"
     with open(out_path, "w") as f:
@@ -591,8 +594,8 @@ def print_summary():
             f,
             indent=2,
         )
-    print(f"\n  Results saved to: {out_path}")
-    print("═" * 70)
+    logger.debug(f"\n  Results saved to: {out_path}")
+    logger.debug("═" * 70)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -608,10 +611,10 @@ def main():
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
-    print("═" * 70)
-    print("  WhiteMagic Benchmark Gauntlet v3")
-    print("  Arrow IPC • Tokio Clone Army • Iceoryx2 IPC")
-    print("═" * 70)
+    logger.debug("═" * 70)
+    logger.debug("  WhiteMagic Benchmark Gauntlet v3")
+    logger.debug("  Arrow IPC • Tokio Clone Army • Iceoryx2 IPC")
+    logger.debug("═" * 70)
 
     tier = args.tier.lower()
     start = time.time()
@@ -628,7 +631,7 @@ def main():
         tier5_holographic()
 
     elapsed = time.time() - start
-    print(f"\n  Total time: {elapsed:.1f}s")
+    logger.debug(f"\n  Total time: {elapsed:.1f}s")
     print_summary()
 
 

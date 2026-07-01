@@ -11,6 +11,9 @@ from typing import List, Tuple
 # Ensure path
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Auto-fixed path
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from whitemagic.config.paths import DB_PATH as DEFAULT_DB_PATH
 except ImportError:
@@ -56,7 +59,7 @@ class ZodiacMapper:
         self.clusters = {} 
 
     def load_data(self):
-        print("1. Loading Holographic Coordinates...")
+        logger.debug("1. Loading Holographic Coordinates...")
         cur = self.conn.cursor()
         cur.execute("""
             SELECT h.memory_id, h.x, h.y, h.z, h.w, m.title, m.content 
@@ -72,13 +75,13 @@ class ZodiacMapper:
                 "title": r["title"].lower(),
                 "content": r["content"][:500].lower()
             })
-        print(f"   -> Loaded {len(self.points)} stars.")
+        logger.debug(f"   -> Loaded {len(self.points)} stars.")
 
     def _dist(self, p1, p2):
         return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
 
     def run_kmeans(self, max_iter=15):
-        print(f"2. Running Refined K-Means (k={self.k})...")
+        logger.debug(f"2. Running Refined K-Means (k={self.k})...")
         if not self.points: return
 
         self.centroids = [random.choice(self.points)["curr"] for _ in range(self.k)]
@@ -105,7 +108,7 @@ class ZodiacMapper:
                 diff += self._dist(self.centroids[j], new_c)
             
             self.centroids = new_centroids
-            print(f"   Iteration {i+1}: Shift = {diff:.2f}")
+            logger.debug(f"   Iteration {i+1}: Shift = {diff:.2f}")
             if diff < 0.5: break
 
     def assign_zodiac(self, cluster_idx, pts) -> Tuple[str, List[str]]:
@@ -139,7 +142,7 @@ class ZodiacMapper:
         return best_animal, top_keywords
 
     def generate_report(self):
-        print("3. Generating Zodiac Report...")
+        logger.debug("3. Generating Zodiac Report...")
         report = []
         report.append("# Zodiac Alignment Report: The 12 Houses of WhiteMagic")
         report.append("**Status**: ALIGNED")
@@ -171,7 +174,7 @@ class ZodiacMapper:
 
         with open(OUTPUT_FILE, "w") as f:
             f.write("\n".join(report))
-        print(f"   -> Written to {OUTPUT_FILE}")
+        logger.debug(f"   -> Written to {OUTPUT_FILE}")
 
     def _get_archetype_desc(self, animal):
         descs = {

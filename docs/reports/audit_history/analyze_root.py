@@ -4,6 +4,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Allow running from repo root without requiring installation.
 REPO_ROOT = Path(os.environ.get("WM_REPO_ROOT", Path(__file__).resolve().parent.parent)).resolve()
 if str(REPO_ROOT) not in sys.path:
@@ -15,7 +18,7 @@ try:
     from whitemagic.core.ganas.western_quadrant import NetGana
     from whitemagic.core.ganas.eastern_quadrant import WinnowingBasketGana, RootGana
 except ImportError as e:
-    print(f"CRITICAL IMPORT ERROR: {e}")
+    logger.debug(f"CRITICAL IMPORT ERROR: {e}")
     sys.exit(1)
 
 PROJECT_ROOT = REPO_ROOT
@@ -32,7 +35,7 @@ class ProjectAuditor:
         self.findings = {}
 
     async def scan_structure(self):
-        print("1. [Chariot] Scanning project structure...")
+        logger.debug("1. [Chariot] Scanning project structure...")
         # Simulating Chariot scan - in real scenario it would traverse
         # Here we manually walk to feed data to Ganas
         
@@ -53,10 +56,10 @@ class ProjectAuditor:
                 
         self.findings["structure"] = tree_stats
         self.findings["file_list"] = file_list
-        print(f"   -> Found {tree_stats['files']} files in {tree_stats['dirs']} directories.")
+        logger.debug(f"   -> Found {tree_stats['files']} files in {tree_stats['dirs']} directories.")
 
     async def analyze_patterns(self):
-        print("2. [Net] Analyzing code patterns...")
+        logger.debug("2. [Net] Analyzing code patterns...")
         
         todos = 0
         fixmes = 0
@@ -92,16 +95,16 @@ class ProjectAuditor:
             "Classes defined": classes,
             "Functions defined": defs
         }
-        print(f"   -> Detected {todos} TODOs, {fixmes} FIXMEs.")
+        logger.debug(f"   -> Detected {todos} TODOs, {fixmes} FIXMEs.")
 
     async def check_health(self):
-        print("3. [Root] Checking system health...")
+        logger.debug("3. [Root] Checking system health...")
         call = GanaCall(task="check_system_health", state_vector={"deep_scan": True})
         result = await self.root.invoke(call)
         self.findings["health"] = result.output
 
     async def generate_report(self):
-        print("4. [Winnowing Basket] Generating report...")
+        logger.debug("4. [Winnowing Basket] Generating report...")
         
         report = f"""# Project Audit: WhiteMagic Global Analysis
 **Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -144,7 +147,7 @@ class ProjectAuditor:
         with open(OUTPUT_FILE, "w") as f:
             f.write(report)
             
-        print(f"   -> Report written to {OUTPUT_FILE}")
+        logger.debug(f"   -> Report written to {OUTPUT_FILE}")
 
     async def run(self):
         await self.scan_structure()

@@ -12,23 +12,26 @@ sys.path.append(os.getcwd())
 
 from newmagic.core.oracle.quantum_iching import QuantumIChing
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def verify():
-    print("🔍 Testing QuantumIChing Unification...")
+    logger.debug("🔍 Testing QuantumIChing Unification...")
 
     # 1. Instantiate
     oracle = QuantumIChing()
-    print("✅ Instantiation successful.")
+    logger.debug("✅ Instantiation successful.")
 
     # 2. Run Operation (Should trigger latencies)
-    print("🔮 Running consultation...")
+    logger.debug("🔮 Running consultation...")
     result = oracle.consult("Test unified stats?")
-    print(f"✅ Result: Hexagram #{result.primary_hexagram}")
+    logger.debug(f"✅ Result: Hexagram #{result.primary_hexagram}")
 
     # 3. Check Stats
     stats = oracle.get_statistics()
-    print("📊 Statistics:")
-    print(stats)
+    logger.debug("📊 Statistics:")
+    logger.debug(stats)
 
     # 4. Assertions
     assert "uptime_sec" in stats, "Missing 'uptime_sec' from BaseMonitor"
@@ -37,7 +40,7 @@ def verify():
     assert stats["metrics"]["consultation_time"]["count"] == 1, "Metric count mismatch"
     assert "specific" in stats, "Missing 'specific' component stats"
 
-    print("\n✅ VERIFICATION PASSED: Unification successful.")
+    logger.debug("\n✅ VERIFICATION PASSED: Unification successful.")
 
 
 if __name__ == "__main__":

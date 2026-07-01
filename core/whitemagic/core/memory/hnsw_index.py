@@ -323,13 +323,13 @@ def benchmark_hnsw():
     """Benchmark HNSW vs linear scan."""
     import time
 
-    print("=" * 60)
+    logger.debug("=" * 60)
     logger.debug("HNSW Benchmark: Approximate vs Exact Search")
     logger.debug("=" * 60)
 
     index = get_hnsw_index()
     if not index.nodes:
-        print("No vectors indexed yet. Run index build first.")
+        logger.debug("No vectors indexed yet. Run index build first.")
         return
 
     # Generate random query
@@ -349,13 +349,13 @@ def benchmark_hnsw():
             np.dot(query, v)
     linear_time = (time.perf_counter() - start) / 100 * 1000
 
-    print(f"\nDataset: {len(index.nodes)} vectors of dim {index.dim}")
+    logger.debug(f"\nDataset: {len(index.nodes)} vectors of dim {index.dim}")
     logger.debug("HNSW search: %sms per query", hnsw_time)
     logger.debug("Linear scan (1K): %sms per query", linear_time)
     if hnsw_time > 0:
-        print(f"Speedup: {linear_time/hnsw_time:.1f}x")
+        logger.debug(f"Speedup: {linear_time/hnsw_time:.1f}x")
 
-    print("\n✅ HNSW index ready for production use")
+    logger.debug("\n✅ HNSW index ready for production use")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,9 @@ import sys
 import os
 import statistics
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Ensure we can import whitemagic
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ["WM_SILENT_INIT"] = "1"
@@ -43,15 +46,15 @@ def timed(fn, iterations=ITERATIONS, warmup=WARMUP, label=""):
 
 def fmt_row(name, mean, median, mn, p99, total, speedup=None):
     sp = f"{speedup:.1f}×" if speedup else "baseline"
-    print(
+    logger.debug(
         f"  {name:<40} {mean:>8.3f}ms  med={median:.3f}  min={mn:.3f}  p99={p99:.3f}  {sp}"
     )
 
 
 def section(title):
-    print(f"\n{'=' * 70}")
-    print(f"  {title}")
-    print(f"{'=' * 70}")
+    logger.debug(f"\n{'=' * 70}")
+    logger.debug(f"  {title}")
+    logger.debug(f"{'=' * 70}")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -67,8 +70,8 @@ def bench_keyword_extraction():
     )
 
     status = simd_keywords_status()
-    print(f"  Zig available: {status['has_zig_simd']}")
-    print(f"  Backend: {status['backend']}")
+    logger.debug(f"  Zig available: {status['has_zig_simd']}")
+    logger.debug(f"  Backend: {status['backend']}")
 
     # Generate test texts of varying sizes
     sample_words = "whitemagic memory galactic holographic coordinate encoding system architecture agent tool dispatch pipeline harmony dharma karma vector resonance constellation association miner consolidation lifecycle retention score importance neuro novelty decay drift sweep temporal scheduler salience arbiter mindful forgetting maturity gate bicameral reasoner".split()
@@ -104,7 +107,7 @@ def bench_keyword_extraction():
             )
 
         fmt_row(f"Python    [{size_label}]", py_mean, py_med, py_min, py_p99, 0)
-        print()
+        logger.debug()
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -121,7 +124,7 @@ def bench_cosine_similarity():
     )
 
     status = simd_status()
-    print(
+    logger.debug(
         f"  Zig available: {status['has_zig_simd']}, lane_width: {status.get('lane_width', 'N/A')}"
     )
 
@@ -151,10 +154,10 @@ def bench_cosine_similarity():
             )
 
         fmt_row(f"Python    [dim={dim}]", py_mean, py_med, py_min, py_p99, 0)
-        print()
+        logger.debug()
 
     # Batch cosine (100 vectors × 384 dims)
-    print("  --- Batch Cosine (100 vectors × 384 dims) ---")
+    logger.debug("  --- Batch Cosine (100 vectors × 384 dims) ---")
     query = [random.gauss(0, 1) for _ in range(384)]
     vectors = [[random.gauss(0, 1) for _ in range(384)] for _ in range(100)]
 
@@ -187,7 +190,7 @@ def bench_distance_matrix():
     )
 
     status = simd_distance_status()
-    print(f"  Zig available: {status['has_zig_simd']}")
+    logger.debug(f"  Zig available: {status['has_zig_simd']}")
 
     for n_vecs in [20, 50, 100]:
         vectors = [[random.gauss(0, 1) for _ in range(128)] for _ in range(n_vecs)]
@@ -215,7 +218,7 @@ def bench_distance_matrix():
             )
 
         fmt_row(f"Python    [{n_vecs}×128]", py_mean, py_med, py_min, py_p99, 0)
-        print()
+        logger.debug()
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -236,10 +239,10 @@ def bench_rust_holographic():
     except ImportError:
         has_rust = False
 
-    print(f"  Rust v131 available: {has_rust}")
+    logger.debug(f"  Rust v131 available: {has_rust}")
 
     if not has_rust:
-        print("  SKIP — Rust accelerators not built")
+        logger.debug("  SKIP — Rust accelerators not built")
         return
 
     # Single encode
@@ -285,7 +288,7 @@ def bench_rust_minhash():
         has_rust = False
 
     if not has_rust:
-        print("  SKIP — Rust accelerators not built")
+        logger.debug("  SKIP — Rust accelerators not built")
         return
 
     # Generate keyword sets with some overlap
@@ -331,7 +334,7 @@ def bench_rust_bm25():
         has_rust = False
 
     if not has_rust:
-        print("  SKIP — Rust accelerators not built")
+        logger.debug("  SKIP — Rust accelerators not built")
         return
 
     # Build corpus
@@ -384,7 +387,7 @@ def bench_rust_rate_limiter():
         has_rust = False
 
     if not has_rust:
-        print("  SKIP — Rust accelerators not built")
+        logger.debug("  SKIP — Rust accelerators not built")
         return
 
     # Rust atomic rate limiter
@@ -395,7 +398,7 @@ def bench_rust_rate_limiter():
     )
     ops_per_sec = 1000.0 / rust_mean if rust_mean > 0 else 0
     fmt_row("Rust atomic rate check", rust_mean, rust_med, rust_min, rust_p99, 0)
-    print(f"  → {ops_per_sec:,.0f} ops/sec")
+    logger.debug(f"  → {ops_per_sec:,.0f} ops/sec")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -414,7 +417,7 @@ def bench_haskell_dharma():
     except Exception:
         has_haskell = False
 
-    print(f"  Haskell available: {has_haskell}")
+    logger.debug(f"  Haskell available: {has_haskell}")
 
     try:
         from whitemagic.dharma.rules import DharmaRulesEngine
@@ -438,7 +441,7 @@ def bench_haskell_dharma():
                 f"Python Dharma [{action_name}]", py_mean, py_med, py_min, py_p99, 0
             )
     except Exception as e:
-        print(f"  Dharma benchmark error: {e}")
+        logger.debug(f"  Dharma benchmark error: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -498,14 +501,14 @@ def print_summary():
 
     for name, available, detail in checks:
         icon = "✅" if available else "❌"
-        print(f"  {icon} {name:<30} {detail}")
+        logger.debug(f"  {icon} {name:<30} {detail}")
 
 
 def main():
-    print("=" * 70)
-    print("  WhiteMagic Polyglot Benchmark Suite")
-    print(f"  Iterations: {ITERATIONS} (warmup: {WARMUP})")
-    print("=" * 70)
+    logger.debug("=" * 70)
+    logger.debug("  WhiteMagic Polyglot Benchmark Suite")
+    logger.debug(f"  Iterations: {ITERATIONS} (warmup: {WARMUP})")
+    logger.debug("=" * 70)
 
     print_summary()
 
@@ -518,9 +521,9 @@ def main():
     bench_rust_rate_limiter()
     bench_haskell_dharma()
 
-    print(f"\n{'=' * 70}")
-    print("  BENCHMARK COMPLETE")
-    print(f"{'=' * 70}")
+    logger.debug(f"\n{'=' * 70}")
+    logger.debug("  BENCHMARK COMPLETE")
+    logger.debug(f"{'=' * 70}")
 
 
 if __name__ == "__main__":

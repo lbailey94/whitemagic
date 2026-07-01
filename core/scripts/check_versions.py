@@ -9,15 +9,18 @@ import re
 import sys
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 ROOT = Path(__file__).parent.parent.parent
 CANONICAL_FILE = ROOT / "core" / "VERSION"
 
 if not CANONICAL_FILE.exists():
-    print(f"ERROR: Canonical version file not found: {CANONICAL_FILE}")
+    logger.debug(f"ERROR: Canonical version file not found: {CANONICAL_FILE}")
     sys.exit(1)
 
 CANONICAL = CANONICAL_FILE.read_text().strip()
-print(f"Canonical version: {CANONICAL}")
+logger.debug(f"Canonical version: {CANONICAL}")
 
 # Files to check for version references
 REFERENCES = [
@@ -44,7 +47,7 @@ mismatches = []
 for ref in REFERENCES:
     ref_path = ROOT / ref
     if not ref_path.exists():
-        print(f"WARNING: Reference file not found: {ref}")
+        logger.debug(f"WARNING: Reference file not found: {ref}")
         continue
 
     content = ref_path.read_text()
@@ -161,10 +164,10 @@ for ref in REFERENCES:
                     mismatches.append((ref, version, line.strip()))
 
 if mismatches:
-    print("\nERROR: Version mismatches found:")
+    logger.debug("\nERROR: Version mismatches found:")
     for ref, version, line in mismatches:
-        print(f"  {ref}: found '{version}' in line: {line[:80]}...")
+        logger.debug(f"  {ref}: found '{version}' in line: {line[:80]}...")
     sys.exit(1)
 
-print("\n✓ All references agree on canonical version")
+logger.debug("\n✓ All references agree on canonical version")
 sys.exit(0)

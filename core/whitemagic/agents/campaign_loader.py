@@ -51,6 +51,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class VictoryCondition:
@@ -357,7 +360,7 @@ def load_all_campaigns(
 
             campaigns.append(campaign)
         except Exception as e:
-            print(f"  Warning: Failed to load {md_file.name}: {e}")
+            logger.debug(f"  Warning: Failed to load {md_file.name}: {e}")
 
     campaigns.sort(key=lambda c: (c.priority, c.codename))
     return campaigns

@@ -10,6 +10,9 @@ from typing import Any
 from whitemagic.config.paths import DB_PATH
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 # Colors for terminal output
 class Colors:
@@ -49,8 +52,8 @@ class TerminalScratchpad:
 
     def __enter__(self) -> TerminalScratchpad:
         self.start_time = datetime.now()
-        print(f"\n{Colors.HEADER}🧠 OPENING SCRATCHPAD: {self.task_name}{Colors.ENDC}")
-        print(f"{Colors.BLUE}Session ID: {self.session_id}{Colors.ENDC}\n")
+        logger.debug(f"\n{Colors.HEADER}🧠 OPENING SCRATCHPAD: {self.task_name}{Colors.ENDC}")
+        logger.debug(f"{Colors.BLUE}Session ID: {self.session_id}{Colors.ENDC}\n")
         return self
 
     def __exit__(
@@ -62,11 +65,11 @@ class TerminalScratchpad:
         assert self.start_time is not None
         duration = datetime.now() - self.start_time
 
-        print(f"\n{Colors.HEADER}🔒 CLOSING SCRATCHPAD{Colors.ENDC}")
-        print(f"{Colors.BLUE}Duration: {duration}{Colors.ENDC}")
+        logger.debug(f"\n{Colors.HEADER}🔒 CLOSING SCRATCHPAD{Colors.ENDC}")
+        logger.debug(f"{Colors.BLUE}Duration: {duration}{Colors.ENDC}")
 
         if exc_type:
-            print(f"{Colors.FAIL}Exited with error: {exc_val}{Colors.ENDC}")
+            logger.debug(f"{Colors.FAIL}Exited with error: {exc_val}{Colors.ENDC}")
             self.think(f"CRITICAL ERROR: {exc_val}")
 
         self._save_to_memory()
@@ -93,7 +96,7 @@ class TerminalScratchpad:
 
         prefix = f"[{type.upper()}]"
         timestamp = t.timestamp.strftime("%H:%M:%S")
-        print(f"{color}{timestamp} {prefix.ljust(10)} {content}{Colors.ENDC}")
+        logger.debug(f"{color}{timestamp} {prefix.ljust(10)} {content}{Colors.ENDC}")
         time.sleep(0.1)  # UX pause
 
     def _save_to_memory(self) -> None:
@@ -153,10 +156,10 @@ class TerminalScratchpad:
 
             conn.commit()
             conn.close()
-            print(f"{Colors.GREEN}💾 Saved to permanent memory.{Colors.ENDC}")
+            logger.debug(f"{Colors.GREEN}💾 Saved to permanent memory.{Colors.ENDC}")
 
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            print(f"{Colors.FAIL}❌ Failed to save memory: {e}{Colors.ENDC}")
+            logger.debug(f"{Colors.FAIL}❌ Failed to save memory: {e}{Colors.ENDC}")
 
 
 if __name__ == "__main__":

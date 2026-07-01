@@ -15,21 +15,24 @@ from whitemagic.mcp_api_bridge import (
     gana_abundance,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 async def run_test(name, func, **kwargs):
-    print(f"\nTesting {name}...")
+    logger.debug(f"\nTesting {name}...")
     try:
         result = await func(**kwargs)
-        print(f"✓ {name} Success")
-        print(json.dumps(result, indent=2, default=str))
+        logger.debug(f"✓ {name} Success")
+        logger.debug(json.dumps(result, indent=2, default=str))
         return True
     except Exception as e:
-        print(f"✗ {name} Failed: {e}")
+        logger.debug(f"✗ {name} Failed: {e}")
         return False
 
 
 async def main():
-    print("=== Verifying Southern Quadrant Ganas ===")
+    logger.debug("=== Verifying Southern Quadrant Ganas ===")
 
     # 1. Ghost (Introspection)
     await run_test(
@@ -69,7 +72,7 @@ async def main():
     # 7. Abundance (Surplus)
     await run_test("Abundance (Check)", gana_abundance, task="check_surplus")
 
-    print("\n=== Verification Complete ===")
+    logger.debug("\n=== Verification Complete ===")
 
 
 if __name__ == "__main__":

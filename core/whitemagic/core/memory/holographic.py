@@ -102,7 +102,7 @@ class HolographicMemory:
             return (coord.x, coord.y, coord.z, coord.w, coord.v)
         except Exception as e:
             logger.error("Failed to index memory %s: %s", memory_id, e, exc_info=True)
-            print(f"❌ HOLOGRAPHIC ERROR: {e}")
+            logger.debug(f"❌ HOLOGRAPHIC ERROR: {e}")
             import traceback
             traceback.print_exc()
             return None

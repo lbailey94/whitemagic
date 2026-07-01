@@ -22,6 +22,9 @@ sys.path.insert(
 from whitemagic.ai.dense_encoding import encode_dense, get_encoding_stats
 from whitemagic.core.intelligence.working_memory import WorkingMemory
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def _estimate_tokens(text: str) -> int:
     """Rough token estimate: ~4 chars/token for English, ~1.5 chars/token for Chinese."""
@@ -269,12 +272,12 @@ def _benchmark_all_tactics(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 def run_benchmark() -> None:
     """Run all benchmarks and print results."""
-    print("\n" + "=" * 90)
-    print("  Token Compression Benchmark: All Tactics (T1-T4 + VSA + Dense)")
-    print("=" * 90)
+    logger.debug("\n" + "=" * 90)
+    logger.debug("  Token Compression Benchmark: All Tactics (T1-T4 + VSA + Dense)")
+    logger.debug("=" * 90)
 
     stats = get_encoding_stats()
-    print(
+    logger.debug(
         f"\n  Phrase mapping table: {stats['total_phrases']} entries "
         f"({stats['chinese_mappings']} Chinese, {stats['symbol_mappings']} symbols)"
     )
@@ -282,7 +285,7 @@ def run_benchmark() -> None:
     contexts = _build_sample_contexts()
 
     for label, items in contexts.items():
-        print(f"\n  ── {label} ──────────────────────────────────────────────")
+        logger.debug(f"\n  ── {label} ──────────────────────────────────────────────")
 
         baseline = _benchmark_baseline(items)
         dense = _benchmark_dense(items)
@@ -292,10 +295,10 @@ def run_benchmark() -> None:
         draft_rev = _benchmark_draft_review(items)
         all_tactics = _benchmark_all_tactics(items)
 
-        print(
+        logger.debug(
             f"  {'Strategy':<20} {'Tokens':>8} {'Ratio':>8} {'Latency(ms)':>12}  Preview"
         )
-        print(f"  {'─' * 85}")
+        logger.debug(f"  {'─' * 85}")
 
         for result in [
             baseline,
@@ -311,22 +314,22 @@ def run_benchmark() -> None:
             latency = result["latency_ms"]
             preview = result.get("output_preview", "")[:40].replace("\n", " ")
             ratio_str = f"{ratio:.2f}" if ratio != float("inf") else "  inf"
-            print(
+            logger.debug(
                 f"  {result['strategy']:<20} {tokens:>8} {ratio_str:>8} {latency:>12.3f}  {preview}"
             )
 
     # Summary
-    print(f"\n  ── Summary ──────────────────────────────────────────────")
-    print(
+    logger.debug(f"\n  ── Summary ──────────────────────────────────────────────")
+    logger.debug(
         f"  T1 (local routing):     Already in mw_inference_router (0 tokens for simple queries)"
     )
-    print(f"  T2 (prompt compress):   VSA for large, dense for small (1.3x-2.1x)")
-    print(f"  T3 (semantic cache):    Zero tokens on cache hit (mw_semantic_cache)")
-    print(f"  T4 (draft-review):      Local drafts, cloud reviews (mw_draft_review)")
-    print(
+    logger.debug(f"  T2 (prompt compress):   VSA for large, dense for small (1.3x-2.1x)")
+    logger.debug(f"  T3 (semantic cache):    Zero tokens on cache hit (mw_semantic_cache)")
+    logger.debug(f"  T4 (draft-review):      Local drafts, cloud reviews (mw_draft_review)")
+    logger.debug(
         f"  Combined:               Dense → VSA → draft-review → cache = maximum savings"
     )
-    print("=" * 90 + "\n")
+    logger.debug("=" * 90 + "\n")
 
 
 if __name__ == "__main__":

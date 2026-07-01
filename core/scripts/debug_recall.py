@@ -8,6 +8,9 @@ sys.path.append(str(Path.cwd() / "core"))
 from whitemagic.core.memory.manager import get_memory_manager
 from whitemagic.config.paths import DB_PATH
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def debug_search():
     # Use the same DB path as the benchmark
@@ -15,28 +18,28 @@ def debug_search():
     manager = get_memory_manager()
 
     query = "Foundation Comprehensive Project"
-    print(f"Searching for: {query}")
+    logger.debug(f"Searching for: {query}")
 
     try:
         # Direct manager search (legacy wrapper)
         results = manager.search_memories(query, limit=10)
-        print(f"Results found (search_memories): {len(results)}")
+        logger.debug(f"Results found (search_memories): {len(results)}")
         for r in results:
             entry = r.get("entry", {})
-            print(
+            logger.debug(
                 f" - ID: {entry.get('id')} | Title: {entry.get('title')} | Score: {r.get('score')}"
             )
 
         # Direct unified search (modern API)
-        print("\nSearching via unified.search directly:")
+        logger.debug("\nSearching via unified.search directly:")
         unified_results = manager.unified.search(query, limit=10)
-        print(f"Results found (unified.search): {len(unified_results)}")
+        logger.debug(f"Results found (unified.search): {len(unified_results)}")
         for m in unified_results:
             score = m.metadata.get("score", "N/A")
-            print(f" - ID: {m.id} | Title: {m.title} | Score: {score}")
+            logger.debug(f" - ID: {m.id} | Title: {m.title} | Score: {score}")
 
     except Exception as e:
-        print(f"CRITICAL SEARCH FAILURE: {e}")
+        logger.debug(f"CRITICAL SEARCH FAILURE: {e}")
         import traceback
 
         traceback.print_exc()

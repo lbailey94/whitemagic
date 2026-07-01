@@ -10,6 +10,9 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Paths
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "whitemagic/memory/LOCOMO_GALAXY.db"
@@ -67,11 +70,11 @@ def init_locomo_db(conn):
 
 
 def ingest_longmemeval(data_file, conn):
-    print(f"Loading dataset: {data_file}")
+    logger.debug(f"Loading dataset: {data_file}")
     with open(data_file, "r") as f:
         data = json.load(f)
 
-    print(f"Total Questions: {len(data)}")
+    logger.debug(f"Total Questions: {len(data)}")
 
     count = 0
     for q_entry in data:
@@ -165,10 +168,10 @@ def ingest_longmemeval(data_file, conn):
 
                 count += 1
             if count % 1000 == 0:
-                print(f"  Ingested {count} sessions...")
+                logger.debug(f"  Ingested {count} sessions...")
 
     conn.commit()
-    print(f"✅ Finished! Total sessions ingested: {count}")
+    logger.debug(f"✅ Finished! Total sessions ingested: {count}")
 
 
 if __name__ == "__main__":

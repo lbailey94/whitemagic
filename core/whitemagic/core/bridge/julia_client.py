@@ -236,19 +236,19 @@ def benchmark_julia():
     """Benchmark Julia persistent server vs subprocess."""
     import time
 
-    print("=" * 60)
-    print("Julia Persistent Server Benchmark")
+    logger.debug("=" * 60)
+    logger.debug("Julia Persistent Server Benchmark")
     logger.debug("=" * 60)
 
     client = JuliaPersistentClient()
 
-    print("\n1. Starting Julia server (one-time JIT penalty)...")
+    logger.debug("\n1. Starting Julia server (one-time JIT penalty)...")
     start = time.perf_counter()
     client.start_server()
     startup_time = time.perf_counter() - start
-    print(f"   Server startup: {startup_time:.1f}s")
+    logger.debug(f"   Server startup: {startup_time:.1f}s")
 
-    print("\n2. RRF fusion performance...")
+    logger.debug("\n2. RRF fusion performance...")
     lists = [
         ["mem_1", "mem_2", "mem_3"],
         ["mem_2", "mem_4", "mem_1"],
@@ -266,8 +266,8 @@ def benchmark_julia():
         times.append(time.perf_counter() - start)
 
     avg_time = np.mean(times) * 1000
-    print(f"   RRF fusion: {avg_time:.2f}ms per call")
-    print(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
+    logger.debug(f"   RRF fusion: {avg_time:.2f}ms per call")
+    logger.debug(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
     logger.debug("\n3. PageRank performance...")
     nodes = [f"node_{i}" for i in range(100)]
@@ -284,12 +284,12 @@ def benchmark_julia():
         times.append(time.perf_counter() - start)
 
     avg_time = np.mean(times) * 1000
-    print(f"   PageRank (100 nodes): {avg_time:.2f}ms per call")
-    print(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
+    logger.debug(f"   PageRank (100 nodes): {avg_time:.2f}ms per call")
+    logger.debug(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
     logger.debug("\n" + "=" * 60)
     logger.debug("✅ Julia persistent server eliminates 2-3s JIT latency")
-    print("   Subsequent calls: <10ms latency")
+    logger.debug("   Subsequent calls: <10ms latency")
     logger.debug("=" * 60)
 
     client.stop()

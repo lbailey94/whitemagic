@@ -29,6 +29,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Ensure whitemagic is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -40,9 +43,9 @@ _shutdown = False
 def _handle_signal(sig: int, frame: object) -> None:
     global _shutdown
     _shutdown = True
-    print(f"\n{'─' * 60}")
-    print("☀️  Waking up... graceful shutdown requested.")
-    print(f"{'─' * 60}")
+    logger.debug(f"\n{'─' * 60}")
+    logger.debug("☀️  Waking up... graceful shutdown requested.")
+    logger.debug(f"{'─' * 60}")
 
 
 signal.signal(signal.SIGINT, _handle_signal)
@@ -54,7 +57,7 @@ def _now() -> str:
 
 
 def _banner(args: argparse.Namespace) -> None:
-    print(f"""
+    logger.debug(f"""
 {"━" * 60}
   🌙  WhiteMagic Overnight Dream Runner  v15.4
 {"━" * 60}
@@ -80,12 +83,12 @@ def _ensure_dream_galaxy(galaxy_name: str) -> bool:
                 description="Overnight dream insights — auto-generated during sleep cycles",
                 tags=["dream", "overnight", "auto"],
             )
-            print(f"  ✨ Created dream galaxy: {galaxy_name}")
+            logger.debug(f"  ✨ Created dream galaxy: {galaxy_name}")
         else:
-            print(f"  📡 Using existing galaxy: {galaxy_name}")
+            logger.debug(f"  📡 Using existing galaxy: {galaxy_name}")
         return True
     except Exception as e:
-        print(f"  ⚠️  Could not create dream galaxy: {e}")
+        logger.debug(f"  ⚠️  Could not create dream galaxy: {e}")
         return False
 
 
@@ -125,7 +128,7 @@ def _persist_to_galaxy(galaxy_name: str, report: dict, cycle_num: int) -> None:
             },
         )
     except Exception as e:
-        print(f"    ⚠️  Persist to galaxy failed: {e}")
+        logger.debug(f"    ⚠️  Persist to galaxy failed: {e}")
 
 
 def run(args: argparse.Namespace) -> None:
@@ -153,7 +156,7 @@ def run(args: argparse.Namespace) -> None:
     total_cycles = 0
     phase_stats: dict[str, int] = {p.value: 0 for p in phases}
 
-    print(f"  🌙 Entering dream state... ({len(phases)} phases per full cycle)\n")
+    logger.debug(f"  🌙 Entering dream state... ({len(phases)} phases per full cycle)\n")
 
     try:
         while not _shutdown:
@@ -165,12 +168,12 @@ def run(args: argparse.Namespace) -> None:
             phase_idx = total_cycles % len(phases)
 
             if phase_idx == 0:
-                print(f"{'─' * 60}")
-                print(f"  🔄 Full Cycle #{cycle_num}  [{_now()}]")
-                print(f"{'─' * 60}")
+                logger.debug(f"{'─' * 60}")
+                logger.debug(f"  🔄 Full Cycle #{cycle_num}  [{_now()}]")
+                logger.debug(f"{'─' * 60}")
 
             start = time.perf_counter()
-            print(
+            logger.debug(
                 f"  [{_now()}] Phase {phase_idx + 1}/{len(phases)}: {phase.value:15s} ",
                 end="",
                 flush=True,
@@ -193,7 +196,7 @@ def run(args: argparse.Namespace) -> None:
                             highlights.append(f"hints={len(v)}")
 
                 summary = ", ".join(highlights[:6]) if highlights else "ok"
-                print(f"✓ {elapsed:.1f}s  [{summary}]")
+                logger.debug(f"✓ {elapsed:.1f}s  [{summary}]")
 
                 log_entry = {
                     "timestamp": _now(),
@@ -213,7 +216,7 @@ def run(args: argparse.Namespace) -> None:
 
             except Exception as e:
                 elapsed = time.perf_counter() - start
-                print(f"✗ {elapsed:.1f}s  [error: {e}]")
+                logger.debug(f"✗ {elapsed:.1f}s  [error: {e}]")
 
             total_cycles += 1
 
@@ -226,19 +229,19 @@ def run(args: argparse.Namespace) -> None:
 
     # Final summary
     full_cycles = total_cycles // len(phases)
-    print(f"\n{'━' * 60}")
-    print(f"  ☀️  Dream session complete")
-    print(f"{'━' * 60}")
-    print(f"  Total phases run:  {total_cycles}")
-    print(f"  Full cycles:       {full_cycles}")
-    print(f"  Phase breakdown:")
+    logger.debug(f"\n{'━' * 60}")
+    logger.debug(f"  ☀️  Dream session complete")
+    logger.debug(f"{'━' * 60}")
+    logger.debug(f"  Total phases run:  {total_cycles}")
+    logger.debug(f"  Full cycles:       {full_cycles}")
+    logger.debug(f"  Phase breakdown:")
     for phase_name, count in phase_stats.items():
-        print(f"    {phase_name:15s}: {count}")
-    print(f"  Log file:          {log_path}")
+        logger.debug(f"    {phase_name:15s}: {count}")
+    logger.debug(f"  Log file:          {log_path}")
     if args.galaxy and galaxy_ok:
-        print(f"  Dream galaxy:      {args.galaxy}")
-    print(f"  Ended:             {_now()}")
-    print(f"{'━' * 60}\n")
+        logger.debug(f"  Dream galaxy:      {args.galaxy}")
+    logger.debug(f"  Ended:             {_now()}")
+    logger.debug(f"{'━' * 60}\n")
 
 
 def main() -> None:

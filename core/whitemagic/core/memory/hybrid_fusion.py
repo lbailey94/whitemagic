@@ -5,6 +5,9 @@ using Reciprocal Rank Fusion (RRF) and learned weights.
 
 from dataclasses import dataclass
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class RetrievalCandidate:
@@ -285,9 +288,9 @@ class OptimalHybridSearcher:
 
 def demo_hybrid_fusion():
     """Demonstrate hybrid fusion with mock data."""
-    print("=" * 60)
-    print("Hybrid Fusion Demo")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("Hybrid Fusion Demo")
+    logger.debug("=" * 60)
 
     fusion = HybridFusion()
 
@@ -309,27 +312,27 @@ def demo_hybrid_fusion():
         {'id': 'mem5', 'title': 'Related Concept', 'content': 'Connection', 'score': 0.60},
     ]
 
-    print("\nInput sources:")
-    print(f"  Vector: {len(vector_results)} results")
-    print(f"  BM25: {len(bm25_results)} results")
-    print(f"  Graph: {len(graph_results)} results")
+    logger.debug("\nInput sources:")
+    logger.debug(f"  Vector: {len(vector_results)} results")
+    logger.debug(f"  BM25: {len(bm25_results)} results")
+    logger.debug(f"  Graph: {len(graph_results)} results")
 
     fused = fusion.fuse_rrf(vector_results, bm25_results, graph_results, top_k=5)
 
-    print("\nFused results (RRF):")
+    logger.debug("\nFused results (RRF):")
     for i, c in enumerate(fused, 1):
-        print(f"  {i}. {c.memory_id}: {c.final_score:.3f} "
+        logger.debug(f"  {i}. {c.memory_id}: {c.final_score:.3f} "
               f"(v={c.vector_score:.3f}, b={c.bm25_score:.3f}, g={c.graph_score:.3f})")
 
-    print("\nAdaptive weights by query type:")
+    logger.debug("\nAdaptive weights by query type:")
     for qtype in ['single_hop', 'multi_hop', 'temporal', 'open_domain']:
         fusion.adapt_weights(qtype)
-        print(f"  {qtype}: v={fusion.weights['vector']:.1f}, "
+        logger.debug(f"  {qtype}: v={fusion.weights['vector']:.1f}, "
               f"b={fusion.weights['bm25']:.1f}, g={fusion.weights['graph']:.1f}")
 
-    print("\n" + "=" * 60)
-    print("Hybrid fusion ready for LoCoMo integration")
-    print("=" * 60)
+    logger.debug("\n" + "=" * 60)
+    logger.debug("Hybrid fusion ready for LoCoMo integration")
+    logger.debug("=" * 60)
 
 
 if __name__ == "__main__":

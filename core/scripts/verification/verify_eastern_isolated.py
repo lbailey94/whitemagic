@@ -4,6 +4,7 @@ import logging
 import sys
 from typing import Any, Type
 from unittest.mock import patch
+logger = logging.getLogger(__name__)
 
 # Configure logging
 logging.basicConfig(level=logging.ERROR)
@@ -20,12 +21,12 @@ try:
         WinnowingBasketGana,
     )
 except ImportError as e:
-    print(f"ImportError: {e}")
+    logger.debug(f"ImportError: {e}")
     sys.exit(1)
 
 
 async def test_gana(name: str, gana_class: Type[BaseGana], task: str, **kwargs: Any):
-    print(f"\nTesting {name}...")
+    logger.debug(f"\nTesting {name}...")
     try:
         gana = gana_class()
         call = GanaCall(task=task, state_vector=kwargs)
@@ -33,8 +34,8 @@ async def test_gana(name: str, gana_class: Type[BaseGana], task: str, **kwargs: 
         # Invoke
         result = await gana.invoke(call)
 
-        print(f"✓ {name} Success")
-        print(
+        logger.debug(f"✓ {name} Success")
+        logger.debug(
             json.dumps(
                 {
                     "mansion": result.mansion.name,
@@ -47,14 +48,14 @@ async def test_gana(name: str, gana_class: Type[BaseGana], task: str, **kwargs: 
         )
 
     except Exception as e:
-        print(f"✗ {name} Failed: {e}")
+        logger.debug(f"✗ {name} Failed: {e}")
         import traceback
 
         traceback.print_exc()
 
 
 async def main():
-    print("=== Verifying Eastern Quadrant Ganas (Isolated) ===")
+    logger.debug("=== Verifying Eastern Quadrant Ganas (Isolated) ===")
 
     # Mock global dependencies with CORRECT paths
     with (
@@ -93,7 +94,7 @@ async def main():
         MockMemMan.return_value.consolidate.return_value = 5
         await test_gana("WinnowingBasket", WinnowingBasketGana, "consolidate_memories")
 
-    print("\n=== Verification Complete ===")
+    logger.debug("\n=== Verification Complete ===")
 
 
 if __name__ == "__main__":

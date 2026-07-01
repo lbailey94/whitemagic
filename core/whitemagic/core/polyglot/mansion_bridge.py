@@ -164,19 +164,19 @@ class MansionBridge:
 
     def print_status(self) -> None:
         """Print status of all backends."""
-        print("=" * 50)
-        print("MansionBridge Polyglot Status")
-        print("=" * 50)
+        logger.debug("=" * 50)
+        logger.debug("MansionBridge Polyglot Status")
+        logger.debug("=" * 50)
 
         for name, status in self.get_status().items():
             symbol = "✅" if status.available else "❌"
-            print(f"{symbol} {name.upper()}: ", end="")
+            logger.debug(f"{symbol} {name.upper()}: ", end="")
             if status.available:
-                print(f"{len(status.functions)} functions")
+                logger.debug(f"{len(status.functions)} functions")
                 if status.path:
-                    print(f"   └─ Path: {status.path}")
+                    logger.debug(f"   └─ Path: {status.path}")
             else:
-                print("Not available")
+                logger.debug("Not available")
 
     def similarity(
         self,

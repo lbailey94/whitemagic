@@ -3,6 +3,9 @@
 import ctypes
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Path to the shared library
 LIB_PATH = Path("PROJECT_ROOT/staging/core_system/whitemagic-zig/zig-out/lib/libwhitemagic.so")
 
@@ -14,7 +17,7 @@ class ResonanceBridge:
 
     def _load_lib(self) -> None:
         if not LIB_PATH.exists():
-            print(f"❌ Shared library not found at {LIB_PATH}")
+            logger.debug(f"❌ Shared library not found at {LIB_PATH}")
             return
 
         try:
@@ -27,9 +30,9 @@ class ResonanceBridge:
             lib.wm_memory_init()
             self.lib = lib
 
-            print("✅ Resonance Bridge loaded Zig Hypercore.")
+            logger.debug("✅ Resonance Bridge loaded Zig Hypercore.")
         except Exception as e:
-            print(f"❌ Failed to load Zig library: {e}")
+            logger.debug(f"❌ Failed to load Zig library: {e}")
 
     def dump_memory_state(self, output_path: str) -> bool:
         """
@@ -48,13 +51,13 @@ class ResonanceBridge:
             path_bytes = output_path.encode("utf-8")
             success = self.lib.wm_memory_dump_stats_json(path_bytes, len(path_bytes))
             if success:
-                print(f"✨ Resonance State dumped to {output_path}")
+                logger.debug(f"✨ Resonance State dumped to {output_path}")
                 return True
             else:
-                print("⚠️ Failed to dump state (Zig return false)")
+                logger.debug("⚠️ Failed to dump state (Zig return false)")
                 return False
         except Exception as e:
-            print(f"❌ Error dumping memory state: {e}")
+            logger.debug(f"❌ Error dumping memory state: {e}")
             return False
 
 if __name__ == "__main__":

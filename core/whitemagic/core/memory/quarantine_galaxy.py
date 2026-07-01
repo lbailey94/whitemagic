@@ -12,6 +12,9 @@ from whitemagic.core.memory.unified_types import MemoryGalaxy
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class QuarantineGalaxy(MemoryGalaxy):
     """
@@ -90,7 +93,7 @@ class QuarantineGalaxy(MemoryGalaxy):
             conn.close()
             return True
         except Exception as e:
-            print(f"[Quarantine] Error transferring {memory_id}: {e}")
+            logger.debug(f"[Quarantine] Error transferring {memory_id}: {e}")
             return False
 
     def find_duplicates(self, content: str, threshold: float = 0.95) -> list[dict]:
@@ -251,9 +254,9 @@ class NoisyMemoryDetector:
 
 def run_quarantine_analysis(dry_run: bool = True):
     """Analyze active DB for quarantine candidates."""
-    print("=" * 60)
-    print("Quarantine Galaxy Analysis")
-    print("=" * 60)
+    logger.debug("=" * 60)
+    logger.debug("Quarantine Galaxy Analysis")
+    logger.debug("=" * 60)
 
     from whitemagic.config.paths import DB_PATH
     db_path = str(DB_PATH)
@@ -261,7 +264,7 @@ def run_quarantine_analysis(dry_run: bool = True):
     detector = NoisyMemoryDetector()
     candidates = detector.scan_and_quarantine(db_path, dry_run=dry_run)
 
-    print(f"\nFound {len(candidates)} candidates for quarantine:")
+    logger.debug(f"\nFound {len(candidates)} candidates for quarantine:")
 
     by_reason: dict[str, int] = {}
     for c in candidates:
@@ -270,18 +273,18 @@ def run_quarantine_analysis(dry_run: bool = True):
 
     for reason, count in sorted(by_reason.items(), key=lambda x:
         -x[1]):
-        print(f"  • {reason}: {count}")
+        logger.debug(f"  • {reason}: {count}")
 
     if not dry_run and candidates:
-        print(f"\n✓ Moved {len(candidates)} memories to quarantine")
+        logger.debug(f"\n✓ Moved {len(candidates)} memories to quarantine")
     elif dry_run:
-        print(f"\n[DRY RUN] Would move {len(candidates)} memories")
-        print("Run with dry_run=False to execute")
+        logger.debug(f"\n[DRY RUN] Would move {len(candidates)} memories")
+        logger.debug("Run with dry_run=False to execute")
 
     # Show quarantine stats
     stats = detector.quarantine.get_stats()
-    print(f"\nQuarantine DB: {stats['total_quarantined']} memories")
-    print(f"DB size: {stats['db_size_mb']} MB")
+    logger.debug(f"\nQuarantine DB: {stats['total_quarantined']} memories")
+    logger.debug(f"DB size: {stats['db_size_mb']} MB")
 
 
 if __name__ == "__main__":

@@ -28,6 +28,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import psutil
 from whitemagic.tools.unified_api import call_tool
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class BenchmarkResult:
@@ -58,7 +61,7 @@ def benchmark_tool(
     """Benchmark a single tool with multiple iterations."""
 
     # Warmup phase
-    print(f"  Warming up {tool_name}...")
+    logger.debug(f"  Warming up {tool_name}...")
     for _ in range(warmup):
         try:
             call_tool(tool_name, **args)
@@ -66,7 +69,7 @@ def benchmark_tool(
             pass  # Ignore warmup errors
 
     # Measurement phase
-    print(f"  Running {iterations} iterations...")
+    logger.debug(f"  Running {iterations} iterations...")
     times_ms = []
     errors = []
 
@@ -78,7 +81,7 @@ def benchmark_tool(
 
     for i in range(iterations):
         if i % 20 == 0:
-            print(f"    Iteration {i}/{iterations}")
+            logger.debug(f"    Iteration {i}/{iterations}")
 
         start = time.perf_counter()
         try:
@@ -158,7 +161,7 @@ def benchmark_concurrent(
     results = {}
 
     for concurrency in concurrency_levels:
-        print(f"  Testing concurrency level {concurrency}...")
+        logger.debug(f"  Testing concurrency level {concurrency}...")
 
         start_time = time.perf_counter()
 
@@ -312,9 +315,9 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
 
-    print("=" * 70)
-    print("WhiteMagic MCP Tools Performance Benchmark")
-    print("=" * 70)
+    logger.debug("=" * 70)
+    logger.debug("WhiteMagic MCP Tools Performance Benchmark")
+    logger.debug("=" * 70)
 
     # Define tools to benchmark
     tools_to_benchmark = [
@@ -334,30 +337,30 @@ def main():
 
     results = []
 
-    print(
+    logger.debug(
         f"\nBenchmarking {len(tools_to_benchmark)} tools with {args.iterations} iterations each...\n"
     )
 
     for tool_name, tool_args in tools_to_benchmark:
-        print(f"\n{'=' * 70}")
-        print(f"Benchmarking: {tool_name} {tool_args}")
-        print("=" * 70)
+        logger.debug(f"\n{'=' * 70}")
+        logger.debug(f"Benchmarking: {tool_name} {tool_args}")
+        logger.debug("=" * 70)
 
         result = benchmark_tool(tool_name, tool_args, iterations=args.iterations)
         results.append(result)
 
-        print(f"\n  Results:")
-        print(f"    Median: {result.median_time_ms:.2f}ms")
-        print(f"    P95: {result.p95_time_ms:.2f}ms")
-        print(f"    P99: {result.p99_time_ms:.2f}ms")
-        print(f"    Success rate: {result.success_rate * 100:.1f}%")
+        logger.debug(f"\n  Results:")
+        logger.debug(f"    Median: {result.median_time_ms:.2f}ms")
+        logger.debug(f"    P95: {result.p95_time_ms:.2f}ms")
+        logger.debug(f"    P99: {result.p99_time_ms:.2f}ms")
+        logger.debug(f"    Success rate: {result.success_rate * 100:.1f}%")
 
     # Concurrent testing
     concurrent_results = {}
     if args.concurrent:
-        print(f"\n{'=' * 70}")
-        print("Running concurrent load tests...")
-        print("=" * 70)
+        logger.debug(f"\n{'=' * 70}")
+        logger.debug("Running concurrent load tests...")
+        logger.debug("=" * 70)
 
         concurrent_results = benchmark_concurrent(
             "list_ganas",
@@ -376,18 +379,18 @@ def main():
     raw_path = output_dir / "benchmark_results.json"
     with open(raw_path, "w") as f:
         json.dump(raw_data, f, indent=2)
-    print(f"\n✓ Raw results saved to {raw_path}")
+    logger.debug(f"\n✓ Raw results saved to {raw_path}")
 
     # Generate report
     report = generate_report(results, concurrent_results)
     report_path = output_dir / "benchmark_report.md"
     with open(report_path, "w") as f:
         f.write(report)
-    print(f"✓ Report saved to {report_path}")
+    logger.debug(f"✓ Report saved to {report_path}")
 
-    print("\n" + "=" * 70)
-    print("Benchmark complete!")
-    print("=" * 70)
+    logger.debug("\n" + "=" * 70)
+    logger.debug("Benchmark complete!")
+    logger.debug("=" * 70)
 
 
 if __name__ == "__main__":

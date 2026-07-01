@@ -7,34 +7,35 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from whitemagic.tools.unified_api import call_tool
+logger = logging.getLogger(__name__)
 
 # Setup basic logging to see what's happening
 logging.basicConfig(level=logging.INFO)
 
 
 def test_tool(name, **kwargs):
-    print(f"\n--- Testing Tool: {name} ---")
+    logger.debug(f"\n--- Testing Tool: {name} ---")
     try:
         result = call_tool(name, **kwargs)
         status = result.get("status")
-        print(f"Status: {status}")
+        logger.debug(f"Status: {status}")
         if status != "success":
-            print(f"Error: {result.get('message')}")
+            logger.debug(f"Error: {result.get('message')}")
             if "traceback" in result.get("details", {}):
-                print(result["details"]["traceback"])
+                logger.debug(result["details"]["traceback"])
         else:
             output = {
                 k: v for k, v in result.items() if k not in ["traceback", "details"]
             }
-            print(json.dumps(output, indent=2)[:500] + "...")
+            logger.debug(json.dumps(output, indent=2)[:500] + "...")
         return result
     except Exception as e:
-        print(f"CRITICAL FAILURE: {e}")
+        logger.debug(f"CRITICAL FAILURE: {e}")
         return None
 
 
 def main():
-    print("🚀 Starting Deep MCP Tool Audit...")
+    logger.debug("🚀 Starting Deep MCP Tool Audit...")
 
     # 1. Gana Chariot (Archaeology)
     test_tool("archaeology", action="stats")

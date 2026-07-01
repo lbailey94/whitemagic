@@ -24,6 +24,9 @@ import sqlite3
 import time
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Paths
 HOME = Path.home()
 ACTIVE_DB = HOME / ".whitemagic" / "memory" / "whitemagic.db"
@@ -117,7 +120,7 @@ def ingest_memories(active_conn, source_path, dry_run=False):
     source_rows = source_conn.execute(f"SELECT {col_list} FROM memories").fetchall()
     new_rows = [r for r in source_rows if r[cols.index("id")] not in active_ids]
 
-    print(f"  Memories: {len(source_rows)} total, {len(new_rows)} new")
+    logger.debug(f"  Memories: {len(source_rows)} total, {len(new_rows)} new")
 
     if not dry_run and new_rows:
         active_conn.executemany(
@@ -125,7 +128,7 @@ def ingest_memories(active_conn, source_path, dry_run=False):
             new_rows,
         )
         active_conn.commit()
-        print(f"  ✅ Inserted {len(new_rows)} memories")
+        logger.debug(f"  ✅ Inserted {len(new_rows)} memories")
 
     source_conn.close()
     return len(new_rows)
@@ -142,7 +145,7 @@ def ingest_associations(active_conn, source_path, batch_size=50000, dry_run=Fals
 
     source_count = count_table(source_conn, "associations")
     active_count_before = count_table(active_conn, "associations")
-    print(f"  Associations: {source_count} in source, {active_count_before} in active")
+    logger.debug(f"  Associations: {source_count} in source, {active_count_before} in active")
 
     if dry_run:
         source_conn.close()
@@ -163,11 +166,11 @@ def ingest_associations(active_conn, source_path, batch_size=50000, dry_run=Fals
         active_conn.commit()
         total_inserted += len(batch)
         if total_inserted % 200000 == 0 or len(batch) < batch_size:
-            print(f"    ... processed {total_inserted:,} association rows")
+            logger.debug(f"    ... processed {total_inserted:,} association rows")
 
     active_count_after = count_table(active_conn, "associations")
     actual_new = active_count_after - active_count_before
-    print(f"  ✅ Net new associations: {actual_new:,}")
+    logger.debug(f"  ✅ Net new associations: {actual_new:,}")
 
     source_conn.close()
     return actual_new
@@ -179,7 +182,7 @@ def ingest_holographic_coords(active_conn, source_path, dry_run=False):
     try:
         source_cols = get_source_columns(source_conn, "holographic_coords")
     except Exception:
-        print("  Holographic coords: table not found in source")
+        logger.debug("  Holographic coords: table not found in source")
         source_conn.close()
         return 0
 
@@ -191,7 +194,7 @@ def ingest_holographic_coords(active_conn, source_path, dry_run=False):
         f"SELECT {col_list} FROM holographic_coords"
     ).fetchall()
     before = count_table(active_conn, "holographic_coords")
-    print(f"  Holographic coords: {len(source_rows)} in source, {before} in active")
+    logger.debug(f"  Holographic coords: {len(source_rows)} in source, {before} in active")
 
     if not dry_run and source_rows:
         active_conn.executemany(
@@ -203,7 +206,7 @@ def ingest_holographic_coords(active_conn, source_path, dry_run=False):
     after = count_table(active_conn, "holographic_coords")
     actual_new = after - before
     if not dry_run:
-        print(f"  ✅ Net new holo coords: {actual_new}")
+        logger.debug(f"  ✅ Net new holo coords: {actual_new}")
     source_conn.close()
     return actual_new
 
@@ -214,13 +217,13 @@ def ingest_embeddings(active_conn, source_path, batch_size=5000, dry_run=False):
     try:
         source_cols = get_source_columns(source_conn, "memory_embeddings")
     except Exception:
-        print("  Embeddings: table not found in source")
+        logger.debug("  Embeddings: table not found in source")
         source_conn.close()
         return 0
 
     cols = safe_columns(source_cols, EMBED_COLS)
     if not cols:
-        print("  Embeddings: no compatible columns in source")
+        logger.debug("  Embeddings: no compatible columns in source")
         source_conn.close()
         return 0
     col_list = ", ".join(cols)
@@ -228,7 +231,7 @@ def ingest_embeddings(active_conn, source_path, batch_size=5000, dry_run=False):
 
     source_count = count_table(source_conn, "memory_embeddings")
     before = count_table(active_conn, "memory_embeddings")
-    print(f"  Embeddings: {source_count} in source, {before} in active")
+    logger.debug(f"  Embeddings: {source_count} in source, {before} in active")
 
     if dry_run:
         source_conn.close()
@@ -247,11 +250,11 @@ def ingest_embeddings(active_conn, source_path, batch_size=5000, dry_run=False):
         active_conn.commit()
         total += len(batch)
         if total % 20000 == 0 or len(batch) < batch_size:
-            print(f"    ... processed {total:,} embedding rows")
+            logger.debug(f"    ... processed {total:,} embedding rows")
 
     after = count_table(active_conn, "memory_embeddings")
     actual_new = after - before
-    print(f"  ✅ Net new embeddings: {actual_new:,}")
+    logger.debug(f"  ✅ Net new embeddings: {actual_new:,}")
     source_conn.close()
     return actual_new
 
@@ -262,7 +265,7 @@ def ingest_tags(active_conn, source_path, dry_run=False):
     try:
         source_cols = get_source_columns(source_conn, "tags")
     except Exception:
-        print("  Tags: table not found in source")
+        logger.debug("  Tags: table not found in source")
         source_conn.close()
         return 0
 
@@ -272,7 +275,7 @@ def ingest_tags(active_conn, source_path, dry_run=False):
 
     source_rows = source_conn.execute(f"SELECT {col_list} FROM tags").fetchall()
     before = count_table(active_conn, "tags")
-    print(f"  Tags: {len(source_rows)} in source, {before} in active")
+    logger.debug(f"  Tags: {len(source_rows)} in source, {before} in active")
 
     if not dry_run and source_rows:
         active_conn.executemany(
@@ -284,20 +287,20 @@ def ingest_tags(active_conn, source_path, dry_run=False):
     after = count_table(active_conn, "tags")
     actual_new = after - before
     if not dry_run:
-        print(f"  ✅ Net new tags: {actual_new}")
+        logger.debug(f"  ✅ Net new tags: {actual_new}")
     source_conn.close()
     return actual_new
 
 
 def ingest_source(active_conn, source_path, label, dry_run=False):
     """Ingest all tables from a single source DB."""
-    print(f"\n{'=' * 60}")
-    print(f"📦 Ingesting: {label}")
-    print(f"   Source: {source_path}")
-    print(f"{'=' * 60}")
+    logger.debug(f"\n{'=' * 60}")
+    logger.debug(f"📦 Ingesting: {label}")
+    logger.debug(f"   Source: {source_path}")
+    logger.debug(f"{'=' * 60}")
 
     if not source_path.exists():
-        print(f"  ❌ Source not found: {source_path}")
+        logger.debug(f"  ❌ Source not found: {source_path}")
         return
 
     start = time.perf_counter()
@@ -309,8 +312,8 @@ def ingest_source(active_conn, source_path, label, dry_run=False):
     new_tags = ingest_tags(active_conn, source_path, dry_run)
 
     elapsed = time.perf_counter() - start
-    print(f"\n  ⏱  {label} done in {elapsed:.1f}s")
-    print(
+    logger.debug(f"\n  ⏱  {label} done in {elapsed:.1f}s")
+    logger.debug(
         f"  📊 +{new_mems} memories, +{new_assocs:,} assocs, +{new_holo} holo, +{new_embeds:,} embeds, +{new_tags} tags"
     )
 
@@ -326,7 +329,7 @@ def ingest_source(active_conn, source_path, label, dry_run=False):
 
 def print_db_stats(conn, label="Active DB"):
     """Print current DB statistics."""
-    print(f"\n📊 {label} Statistics:")
+    logger.debug(f"\n📊 {label} Statistics:")
     for table in [
         "memories",
         "associations",
@@ -335,7 +338,7 @@ def print_db_stats(conn, label="Active DB"):
         "tags",
     ]:
         count = count_table(conn, table)
-        print(f"  {table}: {count:,}")
+        logger.debug(f"  {table}: {count:,}")
 
 
 def main():
@@ -357,14 +360,14 @@ def main():
     )
     args = parser.parse_args()
 
-    print("🌌 WhiteMagic Galaxy Rehydration")
-    print("=" * 60)
+    logger.debug("🌌 WhiteMagic Galaxy Rehydration")
+    logger.debug("=" * 60)
 
     if args.dry_run:
-        print("🔍 DRY RUN — no changes will be written")
+        logger.debug("🔍 DRY RUN — no changes will be written")
 
     if not ACTIVE_DB.exists():
-        print(f"❌ Active DB not found: {ACTIVE_DB}")
+        logger.debug(f"❌ Active DB not found: {ACTIVE_DB}")
         return
 
     # Back up active DB first
@@ -373,9 +376,9 @@ def main():
         if not backup_path.exists():
             import shutil
 
-            print(f"\n💾 Backing up active DB to {backup_path.name}...")
+            logger.debug(f"\n💾 Backing up active DB to {backup_path.name}...")
             shutil.copy2(ACTIVE_DB, backup_path)
-            print(
+            logger.debug(
                 f"  ✅ Backup created ({backup_path.stat().st_size / 1024 / 1024:.1f} MB)"
             )
 
@@ -413,23 +416,23 @@ def main():
 
     # Rebuild FTS index
     if not args.dry_run:
-        print("\n🔄 Rebuilding FTS index...")
+        logger.debug("\n🔄 Rebuilding FTS index...")
         try:
             active_conn.execute(
                 "INSERT INTO memories_fts(memories_fts) VALUES('rebuild')"
             )
             active_conn.commit()
-            print("  ✅ FTS index rebuilt")
+            logger.debug("  ✅ FTS index rebuilt")
         except Exception as e:
-            print(f"  ⚠ FTS rebuild: {e}")
+            logger.debug(f"  ⚠ FTS rebuild: {e}")
 
     print_db_stats(active_conn, "Active DB (after)")
 
     total_elapsed = time.perf_counter() - total_start
-    print(f"\n🎉 Rehydration complete in {total_elapsed:.1f}s")
+    logger.debug(f"\n🎉 Rehydration complete in {total_elapsed:.1f}s")
 
     if args.dry_run:
-        print("\n💡 Run without --dry-run to apply changes")
+        logger.debug("\n💡 Run without --dry-run to apply changes")
 
     active_conn.close()
 

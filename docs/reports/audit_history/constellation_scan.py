@@ -5,6 +5,9 @@ import os
 from pathlib import Path
 from collections import Counter
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Ensure path
 
 try:
@@ -25,7 +28,7 @@ class ConstellationScanner:
         self.clusters = {} # centroid_idx -> list of points
 
     def load_data(self):
-        print("1. Loading Holographic Coordinates...")
+        logger.debug("1. Loading Holographic Coordinates...")
         cur = self.conn.cursor()
         # Join with memories to get titles for later
         cur.execute("""
@@ -42,16 +45,16 @@ class ConstellationScanner:
                 "title": r["title"],
                 "content": r["content"][:200]
             })
-        print(f"   -> Loaded {len(self.points)} stars.")
+        logger.debug(f"   -> Loaded {len(self.points)} stars.")
 
     def _dist(self, p1, p2):
         return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
 
     def run_kmeans(self, max_iter=10):
-        print(f"2. Running 4D K-Means (k={self.k})...")
+        logger.debug(f"2. Running 4D K-Means (k={self.k})...")
         
         if not self.points:
-            print("No data points.")
+            logger.debug("No data points.")
             return
 
         self.centroids = [random.choice(self.points)["curr"] for _ in range(self.k)]
@@ -85,12 +88,12 @@ class ConstellationScanner:
                 diff += self._dist(self.centroids[j], new_c)
             
             self.centroids = new_centroids
-            print(f"   Iteration {i+1}: Shift = {diff:.2f}")
+            logger.debug(f"   Iteration {i+1}: Shift = {diff:.2f}")
             if diff < 1.0:
                 break
 
     def analyze_constellations(self):
-        print("3. Naming Constellations (Theme Analysis)...")
+        logger.debug("3. Naming Constellations (Theme Analysis)...")
         report = []
         
         report.append("# Constellation Report: The Geometry of WhiteMagic")
@@ -123,10 +126,10 @@ class ConstellationScanner:
                 report.append(f"  - `{p['title']}`")
             report.append("")
             
-        print("4. Generating Report...")
+        logger.debug("4. Generating Report...")
         with open(OUTPUT_FILE, "w") as f:
             f.write("\n".join(report))
-        print(f"   -> Written to {OUTPUT_FILE}")
+        logger.debug(f"   -> Written to {OUTPUT_FILE}")
 
     def run(self):
         self.load_data()

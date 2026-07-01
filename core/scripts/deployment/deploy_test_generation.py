@@ -2,6 +2,9 @@ import time
 
 import whitemagic_rust as rs
 
+import logging
+logger = logging.getLogger(__name__)
+
 deployer = rs.MassiveDeployer(8)  # Max parallel
 
 tasks = [
@@ -17,11 +20,11 @@ tasks = [
     )
 ]
 
-print("Launching Massive Deployer Test Generation Campaign for Continuous Executor...")
+logger.debug("Launching Massive Deployer Test Generation Campaign for Continuous Executor...")
 start = time.perf_counter()
 result = deployer.deploy_campaign("test_generation_executor", tasks, 500)
 elapsed = time.perf_counter() - start
 
-print(f"Deployment Complete in {elapsed:.2f}s")
-print(f"Tasks Handled: {result.tasks_completed}/{len(tasks)}")
-print(f"Clones Engaged: {result.clones_deployed:,}")
+logger.debug(f"Deployment Complete in {elapsed:.2f}s")
+logger.debug(f"Tasks Handled: {result.tasks_completed}/{len(tasks)}")
+logger.debug(f"Clones Engaged: {result.clones_deployed:,}")

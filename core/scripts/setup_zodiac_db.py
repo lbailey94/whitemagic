@@ -2,11 +2,14 @@ import sqlite3
 
 from whitemagic.config.paths import DB_PATH
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def setup_zodiac_table():
     db_path = DB_PATH
     if not db_path.exists():
-        print(f"Database not found at {db_path}")
+        logger.debug(f"Database not found at {db_path}")
         return
 
     conn = sqlite3.connect(db_path)
@@ -34,9 +37,9 @@ def setup_zodiac_table():
             "CREATE INDEX IF NOT EXISTS idx_zodiac_actor ON zodiac_ledger(actor_id)"
         )
         conn.commit()
-        print("Zodiac ledger table created successfully.")
+        logger.debug("Zodiac ledger table created successfully.")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
     finally:
         conn.close()
 

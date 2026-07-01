@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 # Ensure path
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Auto-fixed path
+logger = logging.getLogger(__name__)
 
 try:
     from whitemagic.core.ganas.base import GanaCall, BaseGana
@@ -28,7 +29,7 @@ try:
         DipperGana, OxGana, GirlGana, VoidGana, RoofGana, EncampmentGana, WallGana
     )
 except ImportError as e:
-    print(f"CRITICAL IMPORT ERROR: {e}")
+    logger.debug(f"CRITICAL IMPORT ERROR: {e}")
     sys.exit(1)
 
 class SystemAuditor:
@@ -83,28 +84,28 @@ class SystemAuditor:
             }
 
     async def run_full_audit(self):
-        print(f"=== STAR SYSTEM AUDIT: 28 MANSIONS ===")
-        print(f"Timestamp: {datetime.now().isoformat()}")
+        logger.debug(f"=== STAR SYSTEM AUDIT: 28 MANSIONS ===")
+        logger.debug(f"Timestamp: {datetime.now().isoformat()}")
         
         success_count = 0
         
         for gana in self.ganas:
-            print(f"Probing {gana.mansion.name} ({gana.garden})...", end="", flush=True)
+            logger.debug(f"Probing {gana.mansion.name} ({gana.garden})...", end="", flush=True)
             res = await self.audit_gana(gana)
             self.results[gana.mansion.name] = res
             
             if res["status"] == "PASS":
-                print(f" [PASS] ({res['execution_time_ms']:.2f}ms)")
+                logger.debug(f" [PASS] ({res['execution_time_ms']:.2f}ms)")
                 success_count += 1
             else:
-                print(f" [FAIL] - {res.get('error')}")
+                logger.debug(f" [FAIL] - {res.get('error')}")
         
         duration = time.time() - self.start_time
-        print(f"\n=== AUDIT COMPLETE ===")
-        print(f"Total Ganas: {len(self.ganas)}")
-        print(f"Successful: {success_count}")
-        print(f"Failed: {len(self.ganas) - success_count}")
-        print(f"Total Duration: {duration:.2f}s")
+        logger.debug(f"\n=== AUDIT COMPLETE ===")
+        logger.debug(f"Total Ganas: {len(self.ganas)}")
+        logger.debug(f"Successful: {success_count}")
+        logger.debug(f"Failed: {len(self.ganas) - success_count}")
+        logger.debug(f"Total Duration: {duration:.2f}s")
         
         with open("audit_results.json", "w") as f:
             json.dump(self.results, f, indent=2)

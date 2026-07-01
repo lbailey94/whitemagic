@@ -1,6 +1,9 @@
 import sys
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Ensure whitemagic is in path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -8,21 +11,21 @@ try:
     from whitemagic.archaeology import get_archaeologist, mark_read
     from whitemagic.tools.handlers.archaeology import handle_archaeology
 
-    print("--- Archaeology Verification ---")
+    logger.debug("--- Archaeology Verification ---")
 
     arch = get_archaeologist()
-    print(f"Archaeologist instance: {arch}")
+    logger.debug(f"Archaeologist instance: {arch}")
 
     res = mark_read("/tmp/test_file.txt", context="Verification", note="Testing bridge")
-    print(f"Mark Read result: {res}")
+    logger.debug(f"Mark Read result: {res}")
 
     handler_res = handle_archaeology(action="stats")
-    print(f"Handler stats result: {handler_res}")
+    logger.debug(f"Handler stats result: {handler_res}")
 
-    print("\n✅ Archaeology bridge is functional.")
+    logger.debug("\n✅ Archaeology bridge is functional.")
 
 except Exception as e:
-    print(f"\n❌ Archaeology verification failed: {e}")
+    logger.debug(f"\n❌ Archaeology verification failed: {e}")
     import traceback
 
     traceback.print_exc()

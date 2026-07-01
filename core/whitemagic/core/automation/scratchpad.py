@@ -12,6 +12,9 @@ from datetime import datetime
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.core.memory.unified import remember
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class Scratchpad:
     """Ephemeral session storage that auto-commits to long-term memory."""
@@ -45,14 +48,14 @@ class Scratchpad:
         }
         self.entries.append(entry)
         self._save()
-        print(f"  [Scratchpad] Entry added to {self.session_id}.")
+        logger.debug(f"  [Scratchpad] Entry added to {self.session_id}.")
 
     def finalize(self) -> None:
         """Commit all entries to Unified Memory and clear the scratchpad."""
         if not self.entries:
             return
 
-        print(
+        logger.debug(
             f"  [Scratchpad] Finalizing {len(self.entries)} entries for {self.session_id}..."
         )
 
@@ -90,16 +93,16 @@ class Scratchpad:
         if self.file_path.exists():
             self.file_path.unlink()
 
-        print("  [Scratchpad] Memory persisted. Session cleared.")
+        logger.debug("  [Scratchpad] Memory persisted. Session cleared.")
 
     def list_entries(self) -> None:
         """List current entries."""
         if not self.entries:
-            print("  [Scratchpad] Empty.")
+            logger.debug("  [Scratchpad] Empty.")
             return
 
         for i, entry in enumerate(self.entries):
-            print(f"  {i + 1}. [{entry['timestamp']}] {entry['text'][:100]}...")
+            logger.debug(f"  {i + 1}. [{entry['timestamp']}] {entry['text'][:100]}...")
 
 
 def get_active_scratchpad() -> Scratchpad:

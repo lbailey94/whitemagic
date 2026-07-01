@@ -46,10 +46,10 @@ def print_result(label: str, value: any, indent: int = 2) -> None:
 async def scenario_1_thought_clones():
     """Deploy thought clone army for multi-strategy analysis of a tactical problem."""
     print_header("SCENARIO 1: Thought Clone Army — Tactical Reconnaissance")
-    print(
+    logger.debug(
         "Objective: Analyze 'How to optimize SQLite query performance for a memory system'"
     )
-    print("Deployment: 3 clones × 3 tiers (9 total), 14 strategies\n")
+    logger.debug("Deployment: 3 clones × 3 tiers (9 total), 14 strategies\n")
 
     from whitemagic.edge.thought_clones_async import (
         AsyncThoughtCloneArmy,
@@ -67,14 +67,14 @@ async def scenario_1_thought_clones():
     )
     elapsed = time.perf_counter() - start
 
-    print(f"Best path (tier={result.metadata.get('tier', '?')}):")
+    logger.debug(f"Best path (tier={result.metadata.get('tier', '?')}):")
     print_result("Strategy", result.strategy)
     print_result("Confidence", f"{result.confidence:.3f}")
     print_result("Tokens", result.tokens)
     print_result("Duration", f"{result.duration_ms:.0f}ms")
     print_result("LLM Used", result.metadata.get("llm_used", False))
     print_result("Model", result.metadata.get("model", "N/A"))
-    print(f"\nContent preview:\n  {result.content[:300]}...")
+    logger.debug(f"\nContent preview:\n  {result.content[:300]}...")
 
     logger.debug(f"\nTotal elapsed: {elapsed:.1f}s")
     print_result("Army Stats", army.get_stats())
@@ -93,8 +93,8 @@ async def scenario_1_thought_clones():
 async def scenario_2_immortal_clone():
     """Deploy an ImmortalClone with LLM-driven action selection on a real task."""
     print_header("SCENARIO 2: ImmortalClone — Strategic Persistent Loop")
-    print("Objective: Analyze and improve a Python file's error handling")
-    print("Deployment: 1 ImmortalClone, max 3 iterations, LLM-driven actions\n")
+    logger.debug("Objective: Analyze and improve a Python file's error handling")
+    logger.debug("Deployment: 1 ImmortalClone, max 3 iterations, LLM-driven actions\n")
 
     from whitemagic.agents.immortal_clone_v2 import (
         ImmortalClone,
@@ -156,7 +156,7 @@ def save_data(db_path, data):
 
     # execute_persistent_loop returns a single ActionResult
     actions_count = result.data.get("iterations", 0) if result.data else 0
-    print(f"Clone executed {actions_count} iterations in {elapsed:.1f}s")
+    logger.debug(f"Clone executed {actions_count} iterations in {elapsed:.1f}s")
     print_result(
         "Final result",
         {
@@ -167,8 +167,8 @@ def save_data(db_path, data):
     )
 
     met = clone.check_victory_conditions()
-    print(f"\nVictory conditions met: {met}")
-    print(f"VC count: {len(met)}/{len(task.victory_conditions)}")
+    logger.debug(f"\nVictory conditions met: {met}")
+    logger.debug(f"VC count: {len(met)}/{len(task.victory_conditions)}")
 
     return {
         "scenario": "immortal_clone",
@@ -184,10 +184,10 @@ def save_data(db_path, data):
 async def scenario_3_bicameral():
     """Deploy BicameralReasoner for dual-hemisphere strategic analysis."""
     print_header("SCENARIO 3: BicameralReasoner — Strategic Dual-Hemisphere Analysis")
-    print(
+    logger.debug(
         "Objective: Reason about 'Should WhiteMagic use vector DB or SQLite FTS5 for search?'"
     )
-    print(
+    logger.debug(
         "Deployment: 2 left (analytical) + 2 right (creative) clones, 2 debate rounds, LLM synthesis\n"
     )
 
@@ -223,9 +223,9 @@ async def scenario_3_bicameral():
     print_result("Tension", f"{result.tension_score:.3f}")
     print_result("Final confidence", f"{result.final_confidence:.3f}")
     print_result("Duration", f"{result.duration_ms:.0f}ms")
-    print(f"\nSynthesis preview:\n  {result.synthesis[:400]}...")
+    logger.debug(f"\nSynthesis preview:\n  {result.synthesis[:400]}...")
 
-    print(f"\nTotal elapsed: {elapsed:.1f}s")
+    logger.debug(f"\nTotal elapsed: {elapsed:.1f}s")
 
     return {
         "scenario": "bicameral",
@@ -242,8 +242,8 @@ async def scenario_3_bicameral():
 async def scenario_4_code_writing():
     """Deploy CodeWritingArmy for parallel file generation."""
     print_header("SCENARIO 4: CodeWritingClone Army — Tactical File Operations")
-    print("Objective: Generate 20 Python module stubs in parallel")
-    print("Deployment: 4 clones, 20 write operations via Rayon\n")
+    logger.debug("Objective: Generate 20 Python module stubs in parallel")
+    logger.debug("Deployment: 4 clones, 20 write operations via Rayon\n")
 
     from whitemagic.optimization.rust_code_writing import (
         deploy_writing_army,
@@ -292,7 +292,7 @@ async def scenario_4_code_writing():
     succeeded = sum(1 for r in results if r["success"])
     total_lines = sum(r.get("lines_written", 0) for r in results)
 
-    print(f"Deployed {len(operations)} write operations across 4 clones")
+    logger.debug(f"Deployed {len(operations)} write operations across 4 clones")
     print_result("Succeeded", f"{succeeded}/{len(operations)}")
     print_result("Total lines written", total_lines)
     print_result("Elapsed", f"{elapsed * 1000:.1f}ms")
@@ -319,8 +319,8 @@ async def scenario_4_code_writing():
 async def scenario_5_bandit_learning():
     """Deploy thought clones and check if ToolBandit learned from outcomes."""
     print_header("SCENARIO 5: ToolBandit — Strategy Learning Feedback Loop")
-    print("Objective: Deploy clones, then check bandit learned which strategies work")
-    print("Deployment: 2 rounds of 2 clones each, then inspect bandit stats\n")
+    logger.debug("Objective: Deploy clones, then check bandit learned which strategies work")
+    logger.debug("Deployment: 2 rounds of 2 clones each, then inspect bandit stats\n")
 
     from whitemagic.edge.thought_clones_async import AsyncThoughtCloneArmy, CloneConfig
     from whitemagic.tools.handlers.tool_bandit import get_tool_bandit, reset_tool_bandit
@@ -332,22 +332,22 @@ async def scenario_5_bandit_learning():
     army = AsyncThoughtCloneArmy(config=config)
 
     # Round 1
-    print("Round 1: Deploying 2 clones for 'How to improve code review processes?'...")
+    logger.debug("Round 1: Deploying 2 clones for 'How to improve code review processes?'...")
     start = time.perf_counter()
     await army.parallel_explore(
         "How to improve code review processes?", 2, use_tokio=False
     )
     elapsed1 = time.perf_counter() - start
-    print(f"  Round 1 done in {elapsed1:.1f}s")
+    logger.debug(f"  Round 1 done in {elapsed1:.1f}s")
 
     # Round 2
-    print("Round 2: Deploying 2 clones for 'How to optimize API response times?'...")
+    logger.debug("Round 2: Deploying 2 clones for 'How to optimize API response times?'...")
     start = time.perf_counter()
     await army.parallel_explore(
         "How to optimize API response times?", 2, use_tokio=False
     )
     elapsed2 = time.perf_counter() - start
-    print(f"  Round 2 done in {elapsed2:.1f}s")
+    logger.debug(f"  Round 2 done in {elapsed2:.1f}s")
 
     all_stats = bandit.get_all_stats()
     clone_stats = {k: v for k, v in all_stats.items() if k.startswith("clone.")}
@@ -355,7 +355,7 @@ async def scenario_5_bandit_learning():
     for name, stats in sorted(
         clone_stats.items(), key=lambda x: x[1]["expected_success_rate"], reverse=True
     )[:5]:
-        print(
+        logger.debug(
             f"  {name}: α={stats['alpha']:.1f} β={stats['beta']:.1f} "
             f"success_rate={stats['expected_success_rate']:.3f} calls={stats['total_calls']}"
         )
@@ -363,9 +363,9 @@ async def scenario_5_bandit_learning():
     recommendations = bandit.recommend_clone_strategies(
         "analyze and deploy code", clone_type="thought", k=5
     )
-    print(f"\nTop 5 recommended strategies for next deployment:")
+    logger.debug(f"\nTop 5 recommended strategies for next deployment:")
     for rec in recommendations:
-        print(
+        logger.debug(
             f"  {rec['strategy']}: sample={rec['sample']:.3f} ev={rec['expected_value']:.3f} calls={rec['total_calls']}"
         )
 
@@ -385,10 +385,10 @@ async def scenario_5_bandit_learning():
 async def scenario_6_war_room():
     """Execute a WarRoom campaign with real ImmortalClone deployment."""
     print_header("SCENARIO 6: WarRoom Execute — Full Campaign Deployment")
-    print(
+    logger.debug(
         "Objective: Execute a campaign to 'audit and fix error handling in a codebase'"
     )
-    print("Deployment: WarRoom → GasTownOrchestrator → ImmortalClones\n")
+    logger.debug("Deployment: WarRoom → GasTownOrchestrator → ImmortalClones\n")
 
     from whitemagic.tools.handlers.war_room import handle_war_room_execute
 
@@ -434,7 +434,7 @@ async def scenario_6_war_room():
     else:
         print_result("Error", result.get("message", "unknown"))
 
-    print(f"\nTotal elapsed: {elapsed:.1f}s")
+    logger.debug(f"\nTotal elapsed: {elapsed:.1f}s")
 
     return {
         "scenario": "war_room",
@@ -452,18 +452,18 @@ async def scenario_6_war_room():
 
 async def main():
     print_header("WHITE MAGIC CLONE ARMY TRAINING EXERCISES")
-    print(f"Timestamp: {datetime.now().isoformat()}")
-    print(f"LLM: Ollama qwen2.5:7b at http://localhost:11434")
-    print(f"Python: {sys.version.split()[0]}")
-    print()
+    logger.debug(f"Timestamp: {datetime.now().isoformat()}")
+    logger.debug(f"LLM: Ollama qwen2.5:7b at http://localhost:11434")
+    logger.debug(f"Python: {sys.version.split()[0]}")
+    logger.debug()
 
     from whitemagic.inference.local_llm import LocalLLM
 
     llm = LocalLLM()
     if not llm.is_available:
-        print("FATAL: Ollama not available. Run 'ollama serve' first.")
+        logger.debug("FATAL: Ollama not available. Run 'ollama serve' first.")
         sys.exit(1)
-    print(f"LLM verified: {llm.model}")
+    logger.debug(f"LLM verified: {llm.model}")
 
     results = []
 
@@ -478,18 +478,18 @@ async def main():
 
     for name, func in scenarios:
         try:
-            print(f"\n>>> Starting {name}...")
+            logger.debug(f"\n>>> Starting {name}...")
             result = await func()
             results.append(result)
-            print(f"<<< {name} complete")
+            logger.debug(f"<<< {name} complete")
         except Exception as e:
             logger.error("Scenario %s failed: %s", name, e, exc_info=True)
             results.append({"scenario": name, "error": str(e)})
 
     # Summary
     print_header("TRAINING EXERCISE SUMMARY")
-    print(f"{'Scenario':<25} {'Status':<10} {'Key Metric':<25} {'Time':>8}")
-    print("-" * 70)
+    logger.debug(f"{'Scenario':<25} {'Status':<10} {'Key Metric':<25} {'Time':>8}")
+    logger.debug("-" * 70)
     for r in results:
         name = r.get("scenario", "?")
         if "error" in r:
@@ -512,15 +512,15 @@ async def main():
             else:
                 metric = "-"
         elapsed = r.get("elapsed_s", 0)
-        print(f"{name:<25} {status:<10} {metric:<25} {elapsed:>7.1f}s")
+        logger.debug(f"{name:<25} {status:<10} {metric:<25} {elapsed:>7.1f}s")
 
-    print(f"\nTotal training time: {sum(r.get('elapsed_s', 0) for r in results):.1f}s")
-    print("\nArmy training complete. Ready for iterative optimization.")
+    logger.debug(f"\nTotal training time: {sum(r.get('elapsed_s', 0) for r in results):.1f}s")
+    logger.debug("\nArmy training complete. Ready for iterative optimization.")
 
     results_file = "/tmp/clone_army_training_results.json"
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
-    print(f"Results saved to {results_file}")
+    logger.debug(f"Results saved to {results_file}")
 
 
 if __name__ == "__main__":

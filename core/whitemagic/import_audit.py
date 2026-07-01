@@ -5,6 +5,9 @@ import importlib
 import sys
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 package_root = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic")
 sys.path.insert(0, str(package_root.parent))
 
@@ -68,13 +71,13 @@ for pkg_name in subpackages:
             }
         )
 
-print("=== Import Audit Results ===")
-print(f"Successes: {len(successes)}")
-print(f"Failures: {len(failures)}")
-print()
+logger.debug("=== Import Audit Results ===")
+logger.debug(f"Successes: {len(successes)}")
+logger.debug(f"Failures: {len(failures)}")
+logger.debug()
 
 if failures:
-    print("=== Failures by Category ===")
+    logger.debug("=== Failures by Category ===")
     by_category: dict = {}
     for f in failures:
         cat = f["category"]
@@ -83,8 +86,8 @@ if failures:
         by_category[cat].append(f)
 
     for cat, items in sorted(by_category.items()):
-        print(f"\n{cat.upper()}: {len(items)}")
+        logger.debug(f"\n{cat.upper()}: {len(items)}")
         for item in items:
-            print(f"  - {item['module']}: {item['error'][:100]}")
+            logger.debug(f"  - {item['module']}: {item['error'][:100]}")
 else:
-    print("No failures detected!")
+    logger.debug("No failures detected!")

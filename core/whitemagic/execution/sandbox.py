@@ -118,7 +118,7 @@ class SafeSandbox:
     def _safe_print(self, *args: Any, **kwargs: Any) -> None:
         """Replacement print function that captures output."""
         # This will be captured by contextlib.redirect_stdout in the execute method
-        print(*args, **kwargs)
+        logger.debug(*args, **kwargs)
 
     def _safe_log(self, *args: Any, **kwargs: Any) -> None:
         """Replacement logging function."""

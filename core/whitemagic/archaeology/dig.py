@@ -503,7 +503,7 @@ class ChariotArchaeologist:
             with self.lock:
                 self.stats_data["scanned"] += 1
                 if self.stats_data["scanned"] % 1000 == 0:
-                    print(f"Scanned {self.stats_data['scanned']} files...")
+                    logger.debug(f"Scanned {self.stats_data['scanned']} files...")
 
             matches = []
 
@@ -589,7 +589,7 @@ class ChariotArchaeologist:
         logger.info(
             "Excavation complete. Findings saved to %s", self.report_file, exc_info=True
         )
-        print(
+        logger.debug(
             f"\n--- CHARIOT RUN COMPLETE ---\nScanned: {self.stats_data['scanned']}\nFound: {self.stats_data['found']}\nErrors: {self.stats_data['errors']}"
         )
 

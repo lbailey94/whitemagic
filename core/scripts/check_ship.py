@@ -4,6 +4,9 @@ import json
 import sys
 from whitemagic.tools.unified_api import call_tool
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Directories excluded by MANIFEST.in (not part of shipping surface)
 EXCLUDED_PREFIXES = (
     "_aria/",
@@ -27,7 +30,7 @@ def is_excluded(path: str) -> bool:
 
 result = call_tool("ship.check")
 if result.get("status") != "success":
-    print("ship.check failed:", result.get("error", "unknown error"))
+    logger.debug("ship.check failed:", result.get("error", "unknown error"))
     sys.exit(1)
 
 details = result.get("details", {})
@@ -50,10 +53,10 @@ output = {
     ],
     "project_root": details.get("project_root", ""),
 }
-print(json.dumps(output, indent=2, sort_keys=True))
+logger.debug(json.dumps(output, indent=2, sort_keys=True))
 
 if not output["ok"]:
-    print("\n⚠ Ship check found issues in ship-reachable files (see above)")
+    logger.debug("\n⚠ Ship check found issues in ship-reachable files (see above)")
     sys.exit(1)
 else:
-    print("\n✓ Ship surface is clean")
+    logger.debug("\n✓ Ship surface is clean")

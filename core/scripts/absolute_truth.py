@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 from whitemagic.config.paths import DB_PATH
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Coords:
@@ -68,14 +71,14 @@ def absolute_truth_sql():
         fts_query,
     ]
 
-    print(f"Executing SQL with {len(params)} params...")
+    logger.debug(f"Executing SQL with {len(params)} params...")
     try:
         rows = conn.execute(sql, params).fetchall()
-        print(f"Rows found: {len(rows)}")
+        logger.debug(f"Rows found: {len(rows)}")
         for r in rows:
-            print(f" - ID: {r['id']} | Title: {r['title']} | Dist: {r['sql_dist']:.4f}")
+            logger.debug(f" - ID: {r['id']} | Title: {r['title']} | Dist: {r['sql_dist']:.4f}")
     except Exception as e:
-        print(f"SQL FAILED: {e}")
+        logger.debug(f"SQL FAILED: {e}")
 
     conn.close()
 

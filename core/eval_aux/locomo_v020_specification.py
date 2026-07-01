@@ -7,6 +7,9 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class QuestionType(Enum):
     SINGLE_HOP = "single_hop"  # Direct fact retrieval
@@ -271,7 +274,7 @@ class LoCoMoV020Benchmark:
 # Example: How WhiteMagic should use this
 def demonstrate_v020_improvements():
     """Show key improvements in V020."""
-    print("""
+    logger.debug("""
     LoCoMo V020 Improvements
     ========================
     

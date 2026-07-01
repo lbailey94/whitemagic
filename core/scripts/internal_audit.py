@@ -9,6 +9,9 @@ import argparse
 import re
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Config
 LICENSE_BOILERPLATE = """# Copyright 2026 WhiteMagic Contributors
 #
@@ -47,7 +50,7 @@ def audit_file(file_path: Path, args):
     if file_path.suffix not in [".py", ".rs", ".ex", ".sh", ".md", ".json"]:
         return
 
-    print(f"  Auditing: {file_path.relative_to(args.root)}")
+    logger.debug(f"  Auditing: {file_path.relative_to(args.root)}")
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -58,7 +61,7 @@ def audit_file(file_path: Path, args):
         # 1. License Check/Update
         if args.license == "Apache2.0":
             if "MIT License" in content or "MIT" in content[:200]:
-                print(f"    [LICENSE] Switching to Apache 2.0")
+                logger.debug(f"    [LICENSE] Switching to Apache 2.0")
                 content = re.sub(
                     r"#.*?MIT License.*?\n", "", content, flags=re.IGNORECASE
                 )
@@ -70,7 +73,7 @@ def audit_file(file_path: Path, args):
             keywords = args.scrub.split(",")
             new_content = scrub_content(content, keywords)
             if new_content != content:
-                print(f"    [VAULT] Scrubbed {len(keywords)} potential identifiers")
+                logger.debug(f"    [VAULT] Scrubbed {len(keywords)} potential identifiers")
                 content = new_content
                 changed = True
 
@@ -78,10 +81,10 @@ def audit_file(file_path: Path, args):
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
         elif changed:
-            print("    (Dry run: Use --apply to save changes)")
+            logger.debug("    (Dry run: Use --apply to save changes)")
 
     except Exception as e:
-        print(f"    ❌ Error: {e}")
+        logger.debug(f"    ❌ Error: {e}")
 
 
 def run_audit():
@@ -96,9 +99,9 @@ def run_audit():
     parser.add_argument("--apply", action="store_true", help="Actually modify files")
     args = parser.parse_args()
 
-    print("\n" + "=" * 60)
-    print("WHITE MAGIC INTERNAL AUDIT: STRATEGIC PREPARATION")
-    print("=" * 60)
+    logger.debug("\n" + "=" * 60)
+    logger.debug("WHITE MAGIC INTERNAL AUDIT: STRATEGIC PREPARATION")
+    logger.debug("=" * 60)
 
     # Folders to skip (The "Private Vault")
     SKIP_FOLDERS = [
@@ -118,7 +121,7 @@ def run_audit():
         for file in files:
             audit_file(Path(root) / file, args)
 
-    print("\n✅ Audit complete.")
+    logger.debug("\n✅ Audit complete.")
 
 
 if __name__ == "__main__":

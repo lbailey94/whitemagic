@@ -21,11 +21,12 @@ try:
     from whitemagic.core.ganas.eastern_quadrant import NeckGana
     from whitemagic.core.ganas.southern_quadrant import ExtendedNetGana
 except ImportError as e:
-    print(f"CRITICAL IMPORT ERROR: {e}")
+    logger.debug(f"CRITICAL IMPORT ERROR: {e}")
     sys.exit(1)
 
 # Configuration
 from whitemagic.config.paths import DB_PATH as DEFAULT_DB_PATH
+logger = logging.getLogger(__name__)
 
 _default_dirs = [REPO_ROOT / "Restoration_Seed", REPO_ROOT / "newmagic"]
 env_dirs = os.getenv("WM_DIRECTORIES_TO_SCAN")
@@ -133,9 +134,9 @@ class SystemUnifier:
             return 0
 
     async def scan_and_ingest(self):
-        print(f"=== SYSTEM UNIFICATION PROTOCOL ===")
-        print(f"Targeting: {DIRECTORIES_TO_SCAN}")
-        print(f"Cap: {MAX_FILES} files")
+        logger.debug(f"=== SYSTEM UNIFICATION PROTOCOL ===")
+        logger.debug(f"Targeting: {DIRECTORIES_TO_SCAN}")
+        logger.debug(f"Cap: {MAX_FILES} files")
         
         files_to_scan = []
         for d in DIRECTORIES_TO_SCAN:
@@ -150,7 +151,7 @@ class SystemUnifier:
         random.shuffle(files_to_scan)
         files_to_scan = files_to_scan[:MAX_FILES]
         
-        print(f"Selected {len(files_to_scan)} files for ingestion.")
+        logger.debug(f"Selected {len(files_to_scan)} files for ingestion.")
         
         self.connect_db()
         
@@ -170,27 +171,27 @@ class SystemUnifier:
                     c = self.batch_insert_memories(batch)
                     total_ingested += c
                     batch = []
-                    print(f"   Stored {total_ingested} memories...", end='\r')
+                    logger.debug(f"   Stored {total_ingested} memories...", end='\r')
                     
         # Final batch
         if batch:
             c = self.batch_insert_memories(batch)
             total_ingested += c
             
-        print(f"\n✅ Ingestion Complete. Total New Memories: {total_ingested}")
+        logger.debug(f"\n✅ Ingestion Complete. Total New Memories: {total_ingested}")
         self.close_db()
         
-        print("\n=== GANA VERIFICATION ===")
+        logger.debug("\n=== GANA VERIFICATION ===")
         
         # NeckGana check
         neck_call = GanaCall(task="create_memory", state_vector={"title": "System Unification Log", "content": f"Ingested {total_ingested} files from Restoration_Seed."})
         await self.neck.invoke(neck_call)
-        print("✓ NeckGana: Unification event recorded.")
+        logger.debug("✓ NeckGana: Unification event recorded.")
         
         # ExtendedNet check (Mesh)
         ext_call = GanaCall(task="manage_resonance", state_vector={"operation": "emit_event", "event_type": "SYSTEM_UNIFICATION", "data": {"count": total_ingested}})
         await self.extended_net.invoke(ext_call)
-        print("✓ ExtendedNetGana: Resonance signal emitted to Mesh.")
+        logger.debug("✓ ExtendedNetGana: Resonance signal emitted to Mesh.")
 
 if __name__ == "__main__":
     unifier = SystemUnifier()

@@ -11,6 +11,9 @@ from datetime import datetime
 # Whitemagic imports
 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Paths
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "whitemagic/memory/LOCOMO_GALAXY.db"
@@ -18,9 +21,9 @@ DATASET_FILE = REPO_ROOT / "scripts/archaeology_results/longmemeval_s.json"
 
 
 def run_rigor_test(limit=50):
-    print(f"\n" + "=" * 60)
-    print("WHITEMAGIC RECALL RIGOR TEST (LoCoMo Standards)")
-    print("=" * 60)
+    logger.debug(f"\n" + "=" * 60)
+    logger.debug("WHITEMAGIC RECALL RIGOR TEST (LoCoMo Standards)")
+    logger.debug("=" * 60)
 
     backend = SQLiteBackend(DB_PATH)
 
@@ -29,7 +32,7 @@ def run_rigor_test(limit=50):
 
     results = []
 
-    print(f"Testing first {limit} questions from LongMemEval_S...")
+    logger.debug(f"Testing first {limit} questions from LongMemEval_S...")
 
     for i, q_entry in enumerate(data[:limit]):
         q_id = q_entry["question_id"]
@@ -53,7 +56,7 @@ def run_rigor_test(limit=50):
         # Step 2: Evaluation
         hits = []
         if found_memories:
-            print(f"  [DB_DEBUG] Found IDs: {[m.id for m in found_memories]}")
+            logger.debug(f"  [DB_DEBUG] Found IDs: {[m.id for m in found_memories]}")
 
         for j, mem in enumerate(found_memories):
             # LoCoMo sessions are ingested as locomo_{session_id}
@@ -66,7 +69,7 @@ def run_rigor_test(limit=50):
         results.append({"id": q_id, "hits": hits, "r1": recall_at_1, "r5": recall_at_5})
 
         status = "✅" if recall_at_1 else "❌"
-        print(
+        logger.debug(
             f"  [{i + 1}/{limit}] Q:{q_id} | R@1: {status} | Rank: {hits[0] if hits else 'N/A'}"
         )
 
@@ -75,12 +78,12 @@ def run_rigor_test(limit=50):
     r1_total = sum(r["r1"] for r in results)
     r5_total = sum(r["r5"] for r in results)
 
-    print("\n" + "=" * 60)
-    print(f"FINAL RESULTS (N={total})")
-    print("-" * 60)
-    print(f"Recall @ 1: {r1_total / total * 100:>.2f}%")
-    print(f"Recall @ 5: {r5_total / total * 100:>.2f}%")
-    print("=" * 60 + "\n")
+    logger.debug("\n" + "=" * 60)
+    logger.debug(f"FINAL RESULTS (N={total})")
+    logger.debug("-" * 60)
+    logger.debug(f"Recall @ 1: {r1_total / total * 100:>.2f}%")
+    logger.debug(f"Recall @ 5: {r5_total / total * 100:>.2f}%")
+    logger.debug("=" * 60 + "\n")
 
     # Generate Report
     report_path = REPO_ROOT / "docs/RECALL_CERTIFICATION.md"
@@ -109,5 +112,5 @@ if __name__ == "__main__":
     limit = 50
     if "--full" in sys.argv:
         limit = 500
-        print(f"RUNNING FULL RIGOR CERTIFICATION: N={limit}")
+        logger.debug(f"RUNNING FULL RIGOR CERTIFICATION: N={limit}")
     run_rigor_test(limit)
