@@ -53,7 +53,7 @@ def fmt_row(name, mean, median, mn, p99, total, speedup=None):
 
 def section(title):
     logger.debug(f"\n{'=' * 70}")
-    logger.debug(f"  {title}")
+    logger.debug("  %s", title)
     logger.debug(f"{'=' * 70}")
 
 
@@ -239,7 +239,7 @@ def bench_rust_holographic():
     except ImportError:
         has_rust = False
 
-    logger.debug(f"  Rust v131 available: {has_rust}")
+    logger.debug("  Rust v131 available: %s", has_rust)
 
     if not has_rust:
         logger.debug("  SKIP — Rust accelerators not built")
@@ -398,7 +398,7 @@ def bench_rust_rate_limiter():
     )
     ops_per_sec = 1000.0 / rust_mean if rust_mean > 0 else 0
     fmt_row("Rust atomic rate check", rust_mean, rust_med, rust_min, rust_p99, 0)
-    logger.debug(f"  → {ops_per_sec:,.0f} ops/sec")
+    logger.debug("  → %s ops/sec", ops_per_sec)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -417,7 +417,7 @@ def bench_haskell_dharma():
     except Exception:
         has_haskell = False
 
-    logger.debug(f"  Haskell available: {has_haskell}")
+    logger.debug("  Haskell available: %s", has_haskell)
 
     try:
         from whitemagic.dharma.rules import DharmaRulesEngine
@@ -441,7 +441,7 @@ def bench_haskell_dharma():
                 f"Python Dharma [{action_name}]", py_mean, py_med, py_min, py_p99, 0
             )
     except Exception as e:
-        logger.debug(f"  Dharma benchmark error: {e}")
+        logger.debug("  Dharma benchmark error: %s", e)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -501,13 +501,13 @@ def print_summary():
 
     for name, available, detail in checks:
         icon = "✅" if available else "❌"
-        logger.debug(f"  {icon} {name:<30} {detail}")
+        logger.debug("  %s %s %s", icon, name, detail)
 
 
 def main():
     logger.debug("=" * 70)
     logger.debug("  WhiteMagic Polyglot Benchmark Suite")
-    logger.debug(f"  Iterations: {ITERATIONS} (warmup: {WARMUP})")
+    logger.debug("  Iterations: %s (warmup: %s)", ITERATIONS, WARMUP)
     logger.debug("=" * 70)
 
     print_summary()

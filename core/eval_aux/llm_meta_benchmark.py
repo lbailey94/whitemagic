@@ -219,7 +219,7 @@ class LLMMetaBenchmark:
         
         logger.debug(f"\n{'='*80}")
         logger.debug("LLM Meta-Harness Benchmark")
-        logger.debug(f"Model: {self.model_name}")
+        logger.debug("Model: %s", self.model_name)
         logger.debug(f"Test Cases: {len(test_cases)}")
         logger.debug(f"Enhancement Modes: {len(modes)}")
         logger.debug(f"{'='*80}\n")
@@ -239,7 +239,7 @@ class LLMMetaBenchmark:
                           f"Tokens: {result['tokens_used']:3d}")
                     
                 except Exception as e:
-                    logger.debug(f"  {mode.value:20s} | ERROR: {e}")
+                    logger.debug("  %s | ERROR: %s", mode.value, e)
                     all_results.append({
                         "category": test_case["category"],
                         "query": test_case["query"],
@@ -372,9 +372,9 @@ class LLMMetaBenchmark:
             improvement = ((fullstack_acc - baseline_acc) / baseline_acc * 100) if baseline_acc > 0 else 0
             
             logger.debug("Enhancement Impact:")
-            logger.debug(f"  Baseline (direct):     {baseline_acc:.1%}")
-            logger.debug(f"  Full-stack enhanced:   {fullstack_acc:.1%}")
-            logger.debug(f"  Improvement:           {improvement:+.1f}%")
+            logger.debug("  Baseline (direct):     %s", baseline_acc)
+            logger.debug("  Full-stack enhanced:   %s", fullstack_acc)
+            logger.debug("  Improvement:           %s%", improvement)
             logger.debug()
 
 
@@ -387,9 +387,9 @@ async def main():
     benchmark = LLMMetaBenchmark(model_name=model_name)
     
     if not benchmark.harness.is_available:
-        logger.debug(f"ERROR: Model {model_name} not available")
+        logger.debug("ERROR: Model %s not available", model_name)
         logger.debug("Make sure Ollama is running: ollama serve")
-        logger.debug(f"And model is pulled: ollama pull {model_name}")
+        logger.debug("And model is pulled: ollama pull %s", model_name)
         return
     
     results = await benchmark.run_benchmark()
@@ -405,12 +405,12 @@ async def main():
     with open(json_path, "w") as f:
         json.dump(results, f, indent=2)
     
-    logger.debug(f"Results saved to: {json_path}")
+    logger.debug("Results saved to: %s", json_path)
     
     # Generate markdown report
     md_path = output_dir / f"llm_meta_benchmark_{timestamp}.md"
     generate_markdown_report(results, md_path)
-    logger.debug(f"Markdown report: {md_path}")
+    logger.debug("Markdown report: %s", md_path)
 
 
 def generate_markdown_report(results: Dict[str, Any], output_path: Path):

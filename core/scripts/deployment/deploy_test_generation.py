@@ -25,6 +25,6 @@ start = time.perf_counter()
 result = deployer.deploy_campaign("test_generation_executor", tasks, 500)
 elapsed = time.perf_counter() - start
 
-logger.debug(f"Deployment Complete in {elapsed:.2f}s")
+logger.debug("Deployment Complete in %ss", elapsed)
 logger.debug(f"Tasks Handled: {result.tasks_completed}/{len(tasks)}")
-logger.debug(f"Clones Engaged: {result.clones_deployed:,}")
+logger.debug("Clones Engaged: %s", result.clones_deployed)

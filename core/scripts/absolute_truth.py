@@ -78,7 +78,7 @@ def absolute_truth_sql():
         for r in rows:
             logger.debug(f" - ID: {r['id']} | Title: {r['title']} | Dist: {r['sql_dist']:.4f}")
     except Exception as e:
-        logger.debug(f"SQL FAILED: {e}")
+        logger.debug("SQL FAILED: %s", e)
 
     conn.close()
 

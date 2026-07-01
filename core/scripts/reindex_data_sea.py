@@ -25,7 +25,7 @@ except ImportError:
 
 
 def reindex(db_path: Path) -> None:
-    logger.debug(f"Connecting to {db_path}...")
+    logger.debug("Connecting to %s...", db_path)
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -35,7 +35,7 @@ def reindex(db_path: Path) -> None:
 
     logger.debug("\n[1/2] Rebuilding FTS index...")
     total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-    logger.debug(f"  Total memories: {total}")
+    logger.debug("  Total memories: %s", total)
 
     conn.execute("DELETE FROM memories_fts")
     conn.commit()
@@ -51,11 +51,11 @@ def reindex(db_path: Path) -> None:
     conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('optimize')")
     elapsed = time.time() - t0
     fts_count = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
-    logger.debug(f"  FTS rebuilt: {fts_count} entries in {elapsed:.1f}s")
+    logger.debug("  FTS rebuilt: %s entries in %ss", fts_count, elapsed)
 
     logger.debug("\n[2/2] Recalculating holographic coordinates...")
     hc_count = conn.execute("SELECT COUNT(*) FROM holographic_coords").fetchone()[0]
-    logger.debug(f"  Existing coords: {hc_count}")
+    logger.debug("  Existing coords: %s", hc_count)
 
     # Create coords for memories that lack them
     t0 = time.time()
@@ -75,12 +75,12 @@ def reindex(db_path: Path) -> None:
     new_coords = conn.total_changes
     conn.commit()
     elapsed = time.time() - t0
-    logger.debug(f"  New coords created: {new_coords} in {elapsed:.1f}s")
+    logger.debug("  New coords created: %s in %ss", new_coords, elapsed)
 
     # Integrity check
     logger.debug("\nVerifying integrity...")
     result = conn.execute("PRAGMA integrity_check").fetchone()[0]
-    logger.debug(f"  {result}")
+    logger.debug("  %s", result)
 
     conn.close()
     logger.debug("\nRealignment complete.")
@@ -95,7 +95,7 @@ def main() -> None:
 
     path = Path(args.db) if args.db else Path(DB_PATH)
     if not path.exists():
-        logger.debug(f"Error: Database not found at {path}", file=sys.stderr)
+        logger.debug("Error: Database not found at %s", path)
         sys.exit(1)
 
     reindex(path)

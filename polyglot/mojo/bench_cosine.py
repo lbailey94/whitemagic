@@ -34,8 +34,8 @@ def benchmark():
     
     ms = (end - start) * 1000
     logger.debug("Python Results:")
-    logger.debug(f"{num_vecs} vectors, {dim} dimensions")
-    logger.debug(f"Time: {ms:.2f} ms")
+    logger.debug("%s vectors, %s dimensions", num_vecs, dim)
+    logger.debug("Time: %s ms", ms)
     logger.debug(f"Throughput: {num_vecs / (ms/1000):.0f} vectors/sec")
     logger.debug(f"Average similarity: {total_sim / num_vecs:.6f}")
     logger.debug(f"Last similarity: {cosine_similarity(vecs[-1], q):.6f}")

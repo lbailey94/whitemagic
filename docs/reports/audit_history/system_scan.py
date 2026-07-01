@@ -29,7 +29,7 @@ try:
         DipperGana, OxGana, GirlGana, VoidGana, RoofGana, EncampmentGana, WallGana
     )
 except ImportError as e:
-    logger.debug(f"CRITICAL IMPORT ERROR: {e}")
+    logger.debug("CRITICAL IMPORT ERROR: %s", e)
     sys.exit(1)
 
 class SystemAuditor:
@@ -103,9 +103,9 @@ class SystemAuditor:
         duration = time.time() - self.start_time
         logger.debug(f"\n=== AUDIT COMPLETE ===")
         logger.debug(f"Total Ganas: {len(self.ganas)}")
-        logger.debug(f"Successful: {success_count}")
+        logger.debug("Successful: %s", success_count)
         logger.debug(f"Failed: {len(self.ganas) - success_count}")
-        logger.debug(f"Total Duration: {duration:.2f}s")
+        logger.debug("Total Duration: %ss", duration)
         
         with open("audit_results.json", "w") as f:
             json.dump(self.results, f, indent=2)

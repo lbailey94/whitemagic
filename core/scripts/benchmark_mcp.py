@@ -34,10 +34,10 @@ def bench(label: str, fn, section_results=None):
         result = fn()
         elapsed = (time.perf_counter() - start) * 1000
         if result is False:
-            logger.debug(f"  \u23ed\ufe0f  {label} (skipped)")
+            logger.debug("  ⏭️  %s (skipped)", label)
             return
         msg = str(result) if result else "OK"
-        logger.debug(f"  \u2705 {label} ({elapsed:.1f}ms) \u2014 {msg}")
+        logger.debug("  ✅ %s (%sms) — %s", label, elapsed, msg)
         PASSED += 1
         RESULTS.append((label, True, elapsed, msg))
     except Exception as e:
@@ -49,7 +49,7 @@ def bench(label: str, fn, section_results=None):
 
 def section(title):
     logger.debug(f"\u2500" * 60)
-    logger.debug(f"  {title}")
+    logger.debug("  %s", title)
     logger.debug(f"\u2500" * 60)
 
 
@@ -423,9 +423,9 @@ def main():
     logger.debug("  SUMMARY")
     logger.debug("=" * 60)
     total = PASSED + FAILED
-    logger.debug(f"  Total:   {total}")
-    logger.debug(f"  Passed:  {PASSED} \u2705")
-    logger.debug(f"  Failed:  {FAILED} \u274c")
+    logger.debug("  Total:   %s", total)
+    logger.debug("  Passed:  %s ✅", PASSED)
+    logger.debug("  Failed:  %s ❌", FAILED)
 
     # Latency summary for serial calls
     serial_results = [
@@ -433,13 +433,13 @@ def main():
     ]
     if serial_results:
         avg = sum(t for _, t in serial_results) / len(serial_results)
-        logger.debug(f"  Avg tool call: {avg:.0f}ms")
+        logger.debug("  Avg tool call: %sms", avg)
 
     if FAILED:
         logger.debug(f"\n  Failed benchmarks:")
         for label, ok, _, msg in RESULTS:
             if not ok:
-                logger.debug(f"    \u274c {label}: {msg}")
+                logger.debug("    ❌ %s: %s", label, msg)
 
     return 0 if FAILED == 0 else 1
 

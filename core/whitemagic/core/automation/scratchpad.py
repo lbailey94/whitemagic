@@ -48,7 +48,7 @@ class Scratchpad:
         }
         self.entries.append(entry)
         self._save()
-        logger.debug(f"  [Scratchpad] Entry added to {self.session_id}.")
+        logger.debug("  [Scratchpad] Entry added to %s.", self.session_id)
 
     def finalize(self) -> None:
         """Commit all entries to Unified Memory and clear the scratchpad."""

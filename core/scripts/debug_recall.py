@@ -18,7 +18,7 @@ def debug_search():
     manager = get_memory_manager()
 
     query = "Foundation Comprehensive Project"
-    logger.debug(f"Searching for: {query}")
+    logger.debug("Searching for: %s", query)
 
     try:
         # Direct manager search (legacy wrapper)
@@ -36,10 +36,10 @@ def debug_search():
         logger.debug(f"Results found (unified.search): {len(unified_results)}")
         for m in unified_results:
             score = m.metadata.get("score", "N/A")
-            logger.debug(f" - ID: {m.id} | Title: {m.title} | Score: {score}")
+            logger.debug(" - ID: %s | Title: %s | Score: %s", m.id, m.title, score)
 
     except Exception as e:
-        logger.debug(f"CRITICAL SEARCH FAILURE: {e}")
+        logger.debug("CRITICAL SEARCH FAILURE: %s", e)
         import traceback
 
         traceback.print_exc()

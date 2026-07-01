@@ -360,7 +360,7 @@ def load_all_campaigns(
 
             campaigns.append(campaign)
         except Exception as e:
-            logger.debug(f"  Warning: Failed to load {md_file.name}: {e}")
+            logger.debug("  Warning: Failed to load %s: %s", md_file.name, e)
 
     campaigns.sort(key=lambda c: (c.priority, c.codename))
     return campaigns

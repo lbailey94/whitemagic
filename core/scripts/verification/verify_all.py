@@ -32,7 +32,7 @@ def verify_symbolic():
 
     # Query it (should trigger stats)
     result = engine.query_concept("dao")
-    logger.debug(f"   Query Result: {result}")
+    logger.debug("   Query Result: %s", result)
 
     stats = engine.get_statistics()
     logger.debug("   Stats:", stats)

@@ -6,7 +6,7 @@ try:
 
     engine = get_bitnet_engine()
     logger.debug(f"Engine Load Success: {True}")
-    logger.debug(f"Engine Available: {engine.available}")
+    logger.debug("Engine Available: %s", engine.available)
     logger.debug(f"Status: {engine.get_status()}")
 except Exception as e:
-    logger.debug(f"CRITICAL FAILURE: {e}")
+    logger.debug("CRITICAL FAILURE: %s", e)

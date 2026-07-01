@@ -81,7 +81,7 @@ class ZodiacMapper:
         return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
 
     def run_kmeans(self, max_iter=15):
-        logger.debug(f"2. Running Refined K-Means (k={self.k})...")
+        logger.debug("2. Running Refined K-Means (k=%s)...", self.k)
         if not self.points: return
 
         self.centroids = [random.choice(self.points)["curr"] for _ in range(self.k)]
@@ -174,7 +174,7 @@ class ZodiacMapper:
 
         with open(OUTPUT_FILE, "w") as f:
             f.write("\n".join(report))
-        logger.debug(f"   -> Written to {OUTPUT_FILE}")
+        logger.debug("   -> Written to %s", OUTPUT_FILE)
 
     def _get_archetype_desc(self, animal):
         descs = {

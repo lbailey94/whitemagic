@@ -83,12 +83,12 @@ def _ensure_dream_galaxy(galaxy_name: str) -> bool:
                 description="Overnight dream insights — auto-generated during sleep cycles",
                 tags=["dream", "overnight", "auto"],
             )
-            logger.debug(f"  ✨ Created dream galaxy: {galaxy_name}")
+            logger.debug("  ✨ Created dream galaxy: %s", galaxy_name)
         else:
-            logger.debug(f"  📡 Using existing galaxy: {galaxy_name}")
+            logger.debug("  📡 Using existing galaxy: %s", galaxy_name)
         return True
     except Exception as e:
-        logger.debug(f"  ⚠️  Could not create dream galaxy: {e}")
+        logger.debug("  ⚠️  Could not create dream galaxy: %s", e)
         return False
 
 
@@ -128,7 +128,7 @@ def _persist_to_galaxy(galaxy_name: str, report: dict, cycle_num: int) -> None:
             },
         )
     except Exception as e:
-        logger.debug(f"    ⚠️  Persist to galaxy failed: {e}")
+        logger.debug("    ⚠️  Persist to galaxy failed: %s", e)
 
 
 def run(args: argparse.Namespace) -> None:
@@ -196,7 +196,7 @@ def run(args: argparse.Namespace) -> None:
                             highlights.append(f"hints={len(v)}")
 
                 summary = ", ".join(highlights[:6]) if highlights else "ok"
-                logger.debug(f"✓ {elapsed:.1f}s  [{summary}]")
+                logger.debug("✓ %ss  [%s]", elapsed, summary)
 
                 log_entry = {
                     "timestamp": _now(),
@@ -216,7 +216,7 @@ def run(args: argparse.Namespace) -> None:
 
             except Exception as e:
                 elapsed = time.perf_counter() - start
-                logger.debug(f"✗ {elapsed:.1f}s  [error: {e}]")
+                logger.debug("✗ %ss  [error: %s]", elapsed, e)
 
             total_cycles += 1
 
@@ -232,14 +232,14 @@ def run(args: argparse.Namespace) -> None:
     logger.debug(f"\n{'━' * 60}")
     logger.debug(f"  ☀️  Dream session complete")
     logger.debug(f"{'━' * 60}")
-    logger.debug(f"  Total phases run:  {total_cycles}")
-    logger.debug(f"  Full cycles:       {full_cycles}")
+    logger.debug("  Total phases run:  %s", total_cycles)
+    logger.debug("  Full cycles:       %s", full_cycles)
     logger.debug(f"  Phase breakdown:")
     for phase_name, count in phase_stats.items():
-        logger.debug(f"    {phase_name:15s}: {count}")
-    logger.debug(f"  Log file:          {log_path}")
+        logger.debug("    %s: %s", phase_name, count)
+    logger.debug("  Log file:          %s", log_path)
     if args.galaxy and galaxy_ok:
-        logger.debug(f"  Dream galaxy:      {args.galaxy}")
+        logger.debug("  Dream galaxy:      %s", args.galaxy)
     logger.debug(f"  Ended:             {_now()}")
     logger.debug(f"{'━' * 60}\n")
 

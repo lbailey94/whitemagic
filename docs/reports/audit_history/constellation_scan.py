@@ -51,7 +51,7 @@ class ConstellationScanner:
         return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
 
     def run_kmeans(self, max_iter=10):
-        logger.debug(f"2. Running 4D K-Means (k={self.k})...")
+        logger.debug("2. Running 4D K-Means (k=%s)...", self.k)
         
         if not self.points:
             logger.debug("No data points.")
@@ -129,7 +129,7 @@ class ConstellationScanner:
         logger.debug("4. Generating Report...")
         with open(OUTPUT_FILE, "w") as f:
             f.write("\n".join(report))
-        logger.debug(f"   -> Written to {OUTPUT_FILE}")
+        logger.debug("   -> Written to %s", OUTPUT_FILE)
 
     def run(self):
         self.load_data()

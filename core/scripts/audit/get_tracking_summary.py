@@ -17,4 +17,4 @@ else:
             for p in data.get("phases", []):
                 logger.debug(f"  - {p.get('phase_name')}: {p.get('duration_seconds')}s")
         except Exception as e:
-            logger.debug(f"Error parsing {f}: {e}")
+            logger.debug("Error parsing %s: %s", f, e)

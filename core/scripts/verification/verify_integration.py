@@ -19,7 +19,7 @@ try:
     from whitemagic.core.ganas.western_quadrant import NetGana
     from whitemagic.core.ganas.southern_quadrant import ExtendedNetGana
 except ImportError as e:
-    logger.debug(f"ImportError: {e}")
+    logger.debug("ImportError: %s", e)
     sys.exit(1)
 
 
@@ -49,7 +49,7 @@ async def test_integration():
         logger.debug("✓ ExtendedNetGana returned successfully")
         logger.debug(f"Patterns found: {result_search.output.get('pattern_count', 0)}")
     except Exception as e:
-        logger.debug(f"ExtNet Error: {e}")
+        logger.debug("ExtNet Error: %s", e)
 
     logger.debug("\n=== Integration Test Complete ===")
 

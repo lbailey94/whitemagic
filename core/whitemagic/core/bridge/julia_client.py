@@ -246,7 +246,7 @@ def benchmark_julia():
     start = time.perf_counter()
     client.start_server()
     startup_time = time.perf_counter() - start
-    logger.debug(f"   Server startup: {startup_time:.1f}s")
+    logger.debug("   Server startup: %ss", startup_time)
 
     logger.debug("\n2. RRF fusion performance...")
     lists = [
@@ -266,7 +266,7 @@ def benchmark_julia():
         times.append(time.perf_counter() - start)
 
     avg_time = np.mean(times) * 1000
-    logger.debug(f"   RRF fusion: {avg_time:.2f}ms per call")
+    logger.debug("   RRF fusion: %sms per call", avg_time)
     logger.debug(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
     logger.debug("\n3. PageRank performance...")
@@ -284,7 +284,7 @@ def benchmark_julia():
         times.append(time.perf_counter() - start)
 
     avg_time = np.mean(times) * 1000
-    logger.debug(f"   PageRank (100 nodes): {avg_time:.2f}ms per call")
+    logger.debug("   PageRank (100 nodes): %sms per call", avg_time)
     logger.debug(f"   Throughput: {1000 / avg_time:.0f} calls/sec")
 
     logger.debug("\n" + "=" * 60)

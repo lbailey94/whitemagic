@@ -29,7 +29,7 @@ def migrate_db():
             logger.debug("Column already exists.")
 
     except Exception as e:
-        logger.debug(f"Error: {e}")
+        logger.debug("Error: %s", e)
     finally:
         conn.close()
 

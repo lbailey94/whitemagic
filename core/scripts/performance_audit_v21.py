@@ -54,9 +54,9 @@ def run_math_benchmark():
     t_rs = (time.perf_counter() - t0) * 1000
 
     speedup = t_py / t_rs
-    logger.debug(f"  Python (Scalar): {t_py:.2f} ms")
-    logger.debug(f"  Rust (SIMD):   {t_rs:.2f} ms")
-    logger.debug(f"  🔥 Speedup:      {speedup:.1f}x")
+    logger.debug("  Python (Scalar): %s ms", t_py)
+    logger.debug("  Rust (SIMD):   %s ms", t_rs)
+    logger.debug("  🔥 Speedup:      %sx", speedup)
     return {"python_ms": t_py, "rust_ms": t_rs, "speedup": speedup}
 
 
@@ -161,9 +161,9 @@ def run_sqlite_benchmark():
     t_batch = (time.perf_counter() - t0) * 1000
 
     speedup = t_loop / t_batch
-    logger.debug(f"  Loop Ingestion:  {t_loop:.2f} ms")
-    logger.debug(f"  Batch Ingestion: {t_batch:.2f} ms")
-    logger.debug(f"  🚀 Speedup:       {speedup:.1f}x")
+    logger.debug("  Loop Ingestion:  %s ms", t_loop)
+    logger.debug("  Batch Ingestion: %s ms", t_batch)
+    logger.debug("  🚀 Speedup:       %sx", speedup)
 
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -179,10 +179,10 @@ def check_wasm():
     )
     if wasm_path.exists():
         size_kb = wasm_path.stat().st_size / 1024
-        logger.debug(f"  File: {wasm_path.name}")
-        logger.debug(f"  Size: {size_kb:.2f} KB")
+        logger.debug("  File: %s", wasm_path.name)
+        logger.debug("  Size: %s KB", size_kb)
         status = "✅ PASS" if size_kb < 400 else "⚠️  OPTIMIZATION NEEDED"
-        logger.debug(f"  Status: {status}")
+        logger.debug("  Status: %s", status)
         return {"size_kb": size_kb, "status": status}
     else:
         logger.debug("  ❌ WASM artifact not found.")

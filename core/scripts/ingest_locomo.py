@@ -70,7 +70,7 @@ def init_locomo_db(conn):
 
 
 def ingest_longmemeval(data_file, conn):
-    logger.debug(f"Loading dataset: {data_file}")
+    logger.debug("Loading dataset: %s", data_file)
     with open(data_file, "r") as f:
         data = json.load(f)
 
@@ -168,10 +168,10 @@ def ingest_longmemeval(data_file, conn):
 
                 count += 1
             if count % 1000 == 0:
-                logger.debug(f"  Ingested {count} sessions...")
+                logger.debug("  Ingested %s sessions...", count)
 
     conn.commit()
-    logger.debug(f"✅ Finished! Total sessions ingested: {count}")
+    logger.debug("✅ Finished! Total sessions ingested: %s", count)
 
 
 if __name__ == "__main__":

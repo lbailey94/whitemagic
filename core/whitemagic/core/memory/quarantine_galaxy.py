@@ -93,7 +93,7 @@ class QuarantineGalaxy(MemoryGalaxy):
             conn.close()
             return True
         except Exception as e:
-            logger.debug(f"[Quarantine] Error transferring {memory_id}: {e}")
+            logger.debug("[Quarantine] Error transferring %s: %s", memory_id, e)
             return False
 
     def find_duplicates(self, content: str, threshold: float = 0.95) -> list[dict]:
@@ -273,7 +273,7 @@ def run_quarantine_analysis(dry_run: bool = True):
 
     for reason, count in sorted(by_reason.items(), key=lambda x:
         -x[1]):
-        logger.debug(f"  • {reason}: {count}")
+        logger.debug("  • %s: %s", reason, count)
 
     if not dry_run and candidates:
         logger.debug(f"\n✓ Moved {len(candidates)} memories to quarantine")

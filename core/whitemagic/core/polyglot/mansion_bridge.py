@@ -174,7 +174,7 @@ class MansionBridge:
             if status.available:
                 logger.debug(f"{len(status.functions)} functions")
                 if status.path:
-                    logger.debug(f"   └─ Path: {status.path}")
+                    logger.debug("   └─ Path: %s", status.path)
             else:
                 logger.debug("Not available")
 

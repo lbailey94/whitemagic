@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def setup_zodiac_table():
     db_path = DB_PATH
     if not db_path.exists():
-        logger.debug(f"Database not found at {db_path}")
+        logger.debug("Database not found at %s", db_path)
         return
 
     conn = sqlite3.connect(db_path)
@@ -39,7 +39,7 @@ def setup_zodiac_table():
         conn.commit()
         logger.debug("Zodiac ledger table created successfully.")
     except Exception as e:
-        logger.debug(f"Error: {e}")
+        logger.debug("Error: %s", e)
     finally:
         conn.close()
 

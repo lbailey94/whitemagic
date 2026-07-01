@@ -35,16 +35,16 @@ WARNINGS: list[str] = []
 
 def error(msg: str) -> None:
     ERRORS.append(msg)
-    logger.debug(f"  ❌ {msg}")
+    logger.debug("  ❌ %s", msg)
 
 
 def warn(msg: str) -> None:
     WARNINGS.append(msg)
-    logger.debug(f"  ⚠️  {msg}")
+    logger.debug("  ⚠️  %s", msg)
 
 
 def ok(msg: str) -> None:
-    logger.debug(f"  ✅ {msg}")
+    logger.debug("  ✅ %s", msg)
 
 
 # 1. Garden count
@@ -154,7 +154,7 @@ def check_versions() -> None:
     if result.returncode != 0:
         error("Version mismatch detected (see check_versions.py output)")
         for line in result.stdout.splitlines()[-10:]:
-            logger.debug(f"    {line}")
+            logger.debug("    %s", line)
     else:
         ok("All version references consistent")
 

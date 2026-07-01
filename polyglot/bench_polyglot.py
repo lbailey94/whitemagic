@@ -78,14 +78,14 @@ def bench_nearest_neighbors(backend, queries: list[str], texts: list[str], k: in
 
 def run_backend(name: str, cls, texts: list[str], queries: list[str], k: int) -> dict:
     logger.debug(f"\n{'='*60}")
-    logger.debug(f"Backend: {name}")
+    logger.debug("Backend: %s", name)
     logger.debug(f"{'='*60}")
 
     try:
         with cls() as backend:
             # Ping check
             ping = backend.call("ping")
-            logger.debug(f"  Ping: {ping}")
+            logger.debug("  Ping: %s", ping)
 
             # Encode benchmark
             logger.debug(f"\n  Encoding {len(texts)} texts...")
@@ -104,7 +104,7 @@ def run_backend(name: str, cls, texts: list[str], queries: list[str], k: int) ->
                 "nearest_neighbors": nn_result,
             }
     except Exception as e:
-        logger.debug(f"  FAILED: {e}")
+        logger.debug("  FAILED: %s", e)
         return {"backend": name, "status": "error", "error": str(e)}
 
 
@@ -117,7 +117,7 @@ def main():
     args = parser.parse_args()
 
     logger.debug("WhiteMagic Polyglot Benchmark")
-    logger.debug(f"  Texts: {args.texts}  Queries: {args.queries}  k: {args.k}")
+    logger.debug("  Texts: %s  Queries: %s  k: %s", args.texts, args.queries, args.k)
 
     # Generate deterministic test data
     texts = [f"benchmark text number {i} with some words to encode" for i in range(args.texts)]

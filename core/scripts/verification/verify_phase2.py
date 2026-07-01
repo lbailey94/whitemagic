@@ -66,7 +66,7 @@ def test_ssrf_protection():
         logger.debug("✗ LocalLLM failed to block unsafe URL")
         return False
     except ValueError as e:
-        logger.debug(f"✓ LocalLLM correctly blocked unsafe URL: {e}")
+        logger.debug("✓ LocalLLM correctly blocked unsafe URL: %s", e)
 
     logger.debug("✓ SSRF protection tests passed")
     return True
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         if not test_soft_delete_filtering():
             success = False
     except Exception as e:
-        logger.debug(f"Tests failed with error: {e}")
+        logger.debug("Tests failed with error: %s", e)
         import traceback
 
         traceback.print_exc()

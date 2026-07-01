@@ -437,4 +437,4 @@ def archaeology_main(args) -> None:
     elif args.arch_command == "temper":
         logger.debug(temper(project_path, args.file, args.top))
     else:
-        logger.debug(f"Unknown archaeology command: {args.arch_command}")
+        logger.debug("Unknown archaeology command: %s", args.arch_command)

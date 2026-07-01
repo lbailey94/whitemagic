@@ -19,7 +19,7 @@ result = subprocess.run(
     text=True
 )
 mojo_time = (time.time() - start) * 1000
-logger.debug(f"   Time: {mojo_time:.2f} ms")
+logger.debug("   Time: %s ms", mojo_time)
 
 logger.debug("\n2. Running Python...")
 start = time.time()
@@ -30,13 +30,13 @@ result = subprocess.run(
     text=True
 )
 py_time = (time.time() - start) * 1000
-logger.debug(f"   Time: {py_time:.2f} ms")
+logger.debug("   Time: %s ms", py_time)
 
 # Results
 logger.debug("\n" + "=" * 60)
 logger.debug("FINAL RESULTS (1000 vectors, 384 dimensions):")
-logger.debug(f"  Python:         {py_time:.2f} ms")
-logger.debug(f"  Mojo compiled:  {mojo_time:.2f} ms")
+logger.debug("  Python:         %s ms", py_time)
+logger.debug("  Mojo compiled:  %s ms", mojo_time)
 logger.debug(f"  Speedup:        {py_time/mojo_time:.2f}x")
 logger.debug("=" * 60)
 

@@ -147,7 +147,7 @@ def synthesize(input_path: Path, output_path: Path) -> None:
         for entry in synthesized:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    logger.debug(f"Synthesized {total} clusters → {output_path}")
+    logger.debug("Synthesized %s clusters → %s", total, output_path)
 
     logger.debug("\nSample titles:")
     for entry in synthesized[:10]:
@@ -178,7 +178,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.input.exists():
-        logger.debug(f"Error: input file not found: {args.input}", file=sys.stderr)
+        logger.debug("Error: input file not found: %s", args.input)
         sys.exit(1)
 
     synthesize(args.input, args.output)

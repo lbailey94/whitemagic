@@ -17,7 +17,7 @@ class ResonanceBridge:
 
     def _load_lib(self) -> None:
         if not LIB_PATH.exists():
-            logger.debug(f"❌ Shared library not found at {LIB_PATH}")
+            logger.debug("❌ Shared library not found at %s", LIB_PATH)
             return
 
         try:
@@ -32,7 +32,7 @@ class ResonanceBridge:
 
             logger.debug("✅ Resonance Bridge loaded Zig Hypercore.")
         except Exception as e:
-            logger.debug(f"❌ Failed to load Zig library: {e}")
+            logger.debug("❌ Failed to load Zig library: %s", e)
 
     def dump_memory_state(self, output_path: str) -> bool:
         """
@@ -51,13 +51,13 @@ class ResonanceBridge:
             path_bytes = output_path.encode("utf-8")
             success = self.lib.wm_memory_dump_stats_json(path_bytes, len(path_bytes))
             if success:
-                logger.debug(f"✨ Resonance State dumped to {output_path}")
+                logger.debug("✨ Resonance State dumped to %s", output_path)
                 return True
             else:
                 logger.debug("⚠️ Failed to dump state (Zig return false)")
                 return False
         except Exception as e:
-            logger.debug(f"❌ Error dumping memory state: {e}")
+            logger.debug("❌ Error dumping memory state: %s", e)
             return False
 
 if __name__ == "__main__":

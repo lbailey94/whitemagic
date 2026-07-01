@@ -18,7 +18,7 @@ try:
     from whitemagic.core.ganas.western_quadrant import NetGana
     from whitemagic.core.ganas.eastern_quadrant import WinnowingBasketGana, RootGana
 except ImportError as e:
-    logger.debug(f"CRITICAL IMPORT ERROR: {e}")
+    logger.debug("CRITICAL IMPORT ERROR: %s", e)
     sys.exit(1)
 
 PROJECT_ROOT = REPO_ROOT
@@ -95,7 +95,7 @@ class ProjectAuditor:
             "Classes defined": classes,
             "Functions defined": defs
         }
-        logger.debug(f"   -> Detected {todos} TODOs, {fixmes} FIXMEs.")
+        logger.debug("   -> Detected %s TODOs, %s FIXMEs.", todos, fixmes)
 
     async def check_health(self):
         logger.debug("3. [Root] Checking system health...")
@@ -147,7 +147,7 @@ class ProjectAuditor:
         with open(OUTPUT_FILE, "w") as f:
             f.write(report)
             
-        logger.debug(f"   -> Report written to {OUTPUT_FILE}")
+        logger.debug("   -> Report written to %s", OUTPUT_FILE)
 
     async def run(self):
         await self.scan_structure()

@@ -26,7 +26,7 @@ def verify():
     # 2. Run Operation (Should trigger latencies)
     logger.debug("🔮 Running consultation...")
     result = oracle.consult("Test unified stats?")
-    logger.debug(f"✅ Result: Hexagram #{result.primary_hexagram}")
+    logger.debug("✅ Result: Hexagram #%s", result.primary_hexagram)
 
     # 3. Check Stats
     stats = oracle.get_statistics()

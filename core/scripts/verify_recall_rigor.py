@@ -32,7 +32,7 @@ def run_rigor_test(limit=50):
 
     results = []
 
-    logger.debug(f"Testing first {limit} questions from LongMemEval_S...")
+    logger.debug("Testing first %s questions from LongMemEval_S...", limit)
 
     for i, q_entry in enumerate(data[:limit]):
         q_id = q_entry["question_id"]
@@ -78,7 +78,7 @@ def run_rigor_test(limit=50):
     r5_total = sum(r["r5"] for r in results)
 
     logger.debug("\n" + "=" * 60)
-    logger.debug(f"FINAL RESULTS (N={total})")
+    logger.debug("FINAL RESULTS (N=%s)", total)
     logger.debug("-" * 60)
     logger.debug(f"Recall @ 1: {r1_total / total * 100:>.2f}%")
     logger.debug(f"Recall @ 5: {r5_total / total * 100:>.2f}%")
@@ -111,5 +111,5 @@ if __name__ == "__main__":
     limit = 50
     if "--full" in sys.argv:
         limit = 500
-        logger.debug(f"RUNNING FULL RIGOR CERTIFICATION: N={limit}")
+        logger.debug("RUNNING FULL RIGOR CERTIFICATION: N=%s", limit)
     run_rigor_test(limit)

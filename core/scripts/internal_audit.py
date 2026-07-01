@@ -84,7 +84,7 @@ def audit_file(file_path: Path, args):
             logger.debug("    (Dry run: Use --apply to save changes)")
 
     except Exception as e:
-        logger.debug(f"    ❌ Error: {e}")
+        logger.debug("    ❌ Error: %s", e)
 
 
 def run_audit():

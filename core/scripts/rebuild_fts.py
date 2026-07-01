@@ -13,7 +13,7 @@ except ImportError:
 
 def full_rebuild_fts(db_path: Path | str | None = None):
     path = Path(db_path) if db_path else Path(DB_PATH)
-    logger.debug(f"Connecting to {path} for FULL FTS REBUILD...")
+    logger.debug("Connecting to %s for FULL FTS REBUILD...", path)
     conn = sqlite3.connect(str(path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
@@ -23,7 +23,7 @@ def full_rebuild_fts(db_path: Path | str | None = None):
 
     logger.debug("Fetching total memory count...")
     total_mems = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-    logger.debug(f"Total memories to index: {total_mems}")
+    logger.debug("Total memories to index: %s", total_mems)
 
     start_time = time.time()
     synced = 0
@@ -62,12 +62,12 @@ def full_rebuild_fts(db_path: Path | str | None = None):
 
         conn.commit()
         synced += len(rows)
-        logger.debug(f"  Indexed {synced}/{total_mems}...")
+        logger.debug("  Indexed %s/%s...", synced, total_mems)
         batch_data = []
 
     end_time = time.time()
     logger.debug("FULL REBUILD Finished.")
-    logger.debug(f"  Total entries indexed: {synced}")
+    logger.debug("  Total entries indexed: %s", synced)
     logger.debug(f"  Total time: {end_time - start_time:.2f}s")
 
     conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('optimize')")

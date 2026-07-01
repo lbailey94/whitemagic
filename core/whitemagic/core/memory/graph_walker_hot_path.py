@@ -242,7 +242,7 @@ def parallel_bfs_walk(
                     paths = future.result()
                     all_paths.extend(paths)
                 except Exception as e:
-                    logger.debug(f"Walk failed for seed {seed}: {e}")
+                    logger.debug("Walk failed for seed %s: %s", seed, e)
 
     # Sort by score and take top_k
     all_paths.sort(key=lambda p: p.total_score, reverse=True)

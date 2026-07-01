@@ -16,11 +16,11 @@ ROOT = Path(__file__).parent.parent.parent
 CANONICAL_FILE = ROOT / "core" / "VERSION"
 
 if not CANONICAL_FILE.exists():
-    logger.debug(f"ERROR: Canonical version file not found: {CANONICAL_FILE}")
+    logger.debug("ERROR: Canonical version file not found: %s", CANONICAL_FILE)
     sys.exit(1)
 
 CANONICAL = CANONICAL_FILE.read_text().strip()
-logger.debug(f"Canonical version: {CANONICAL}")
+logger.debug("Canonical version: %s", CANONICAL)
 
 # Files to check for version references
 REFERENCES = [
@@ -47,7 +47,7 @@ mismatches = []
 for ref in REFERENCES:
     ref_path = ROOT / ref
     if not ref_path.exists():
-        logger.debug(f"WARNING: Reference file not found: {ref}")
+        logger.debug("WARNING: Reference file not found: %s", ref)
         continue
 
     content = ref_path.read_text()

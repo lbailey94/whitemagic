@@ -120,7 +120,7 @@ def analyze_file(path: Path):
             "functions": functions
         }
     except Exception as e:
-        logger.debug(f"Error analyzing {path}: {e}")
+        logger.debug("Error analyzing %s: %s", path, e)
         return None
 
 def generate_report(files_data):
@@ -186,12 +186,12 @@ def generate_report(files_data):
     # Write MD
     md_path = REPORT_DIR / "python_census_v1.md"
     md_path.write_text("\n".join(lines))
-    logger.debug(f"✅ Report generated: {md_path}")
+    logger.debug("✅ Report generated: %s", md_path)
     
     # Write JSON
     json_path = REPORT_DIR / "python_census.json"
     json_path.write_text(json.dumps(files_data, indent=2))
-    logger.debug(f"✅ Data dumped: {json_path}")
+    logger.debug("✅ Data dumped: %s", json_path)
 
 def main():
     logger.debug("🔍 Scanning codebase...")

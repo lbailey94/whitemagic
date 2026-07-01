@@ -38,22 +38,22 @@ logger.debug("=" * 50)
 logger.debug("\n1. Running Mojo...")
 mojo_time, mojo_out, mojo_rc = run_mojo()
 if mojo_rc == 0:
-    logger.debug(f"   Mojo time: {mojo_time:.2f} ms")
+    logger.debug("   Mojo time: %s ms", mojo_time)
 else:
-    logger.debug(f"   Mojo FAILED: {mojo_out}")
+    logger.debug("   Mojo FAILED: %s", mojo_out)
 
 logger.debug("\n2. Running Python...")
 py_time, py_out, py_rc = run_python()
 if py_rc == 0:
-    logger.debug(f"   Python time: {py_time:.2f} ms")
+    logger.debug("   Python time: %s ms", py_time)
 else:
-    logger.debug(f"   Python FAILED: {py_out}")
+    logger.debug("   Python FAILED: %s", py_out)
 
 if mojo_rc == 0 and py_rc == 0:
     speedup = py_time / mojo_time
     logger.debug("\n" + "=" * 50)
     logger.debug("RESULTS:")
-    logger.debug(f"  Python:  {py_time:.2f} ms")
-    logger.debug(f"  Mojo:    {mojo_time:.2f} ms")
-    logger.debug(f"  Speedup: {speedup:.2f}x")
+    logger.debug("  Python:  %s ms", py_time)
+    logger.debug("  Mojo:    %s ms", mojo_time)
+    logger.debug("  Speedup: %sx", speedup)
     logger.debug("=" * 50)

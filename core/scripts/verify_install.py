@@ -42,17 +42,17 @@ def check(name: str, fn, required: bool = True):
         result = fn()
         elapsed = (time.perf_counter() - t0) * 1000
         if result is True or result is None:
-            logger.debug(f"  {PASS} {name} ({elapsed:.0f}ms)")
+            logger.debug("  %s %s (%sms)", PASS, name, elapsed)
             results.append({"name": name, "status": "pass", "ms": elapsed})
         else:
-            logger.debug(f"  {PASS} {name}: {result} ({elapsed:.0f}ms)")
+            logger.debug("  %s %s: %s (%sms)", PASS, name, result, elapsed)
             results.append(
                 {"name": name, "status": "pass", "ms": elapsed, "detail": str(result)}
             )
     except Exception as e:
         elapsed = (time.perf_counter() - t0) * 1000
         marker = FAIL if required else SKIP
-        logger.debug(f"  {marker} {name}: {e}")
+        logger.debug("  %s %s: %s", marker, name, e)
         status = "fail" if required else "skip"
         results.append({"name": name, "status": status, "ms": elapsed, "error": str(e)})
 
@@ -271,12 +271,12 @@ def main():
     total_ms = sum(r["ms"] for r in results)
 
     logger.debug(f"\n{'═' * 60}")
-    logger.debug(f"  {passed} passed, {failed} failed, {skipped} skipped ({total_ms:.0f}ms)")
+    logger.debug("  %s passed, %s failed, %s skipped (%sms)", passed, failed, skipped, total_ms)
 
     if failed == 0:
         logger.debug("  \033[92m🎉 WhiteMagic is working correctly!\033[0m")
     else:
-        logger.debug(f"  \033[91m⚠ {failed} check(s) failed — see above for details\033[0m")
+        logger.debug("  [91m⚠ %s check(s) failed — see above for details[0m", failed)
 
     logger.debug("═" * 60)
 
