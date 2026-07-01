@@ -78,7 +78,7 @@ class ProjectAuditor:
                     classes += content.count("class ")
                     defs += content.count("def ")
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
                 
         call = GanaCall(
             task="detect_patterns", 

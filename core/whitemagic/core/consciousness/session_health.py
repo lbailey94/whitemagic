@@ -166,7 +166,7 @@ class SessionHealthCheck:
                         modules_ok += 1
                     modules_checked += 1
                 except Exception:
-                    pass
+                    logger.debug("Swallowed exception", exc_info=True)
 
             if modules_ok == modules_checked and modules_checked > 0:
                 return {

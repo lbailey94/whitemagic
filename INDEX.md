@@ -173,6 +173,7 @@ High-level infrastructure decisions.
 | `MONOREPO_VS_MULTIREPO.md` | Why monorepo |
 | `IA_v1.md` | Information Architecture freeze — URL scheme, nav structure, redirect map, epistemic tagging, multilingual support (Obj 4) |
 | `GALAXY_6D_STRATEGY.md` | 6D holographic galaxy strategy — polyglot language assignments, galaxy sharing protocol, 8-phase implementation plan |
+| `CPU_INFERENCE_STRATEGY.md` | CPU inference strategy — ternary SSM, cache tiling, T-MAC LUT, citta autonomic layer, speculative decoding, 8-phase implementation plan |
 
 ---
 

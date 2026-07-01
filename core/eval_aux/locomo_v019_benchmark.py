@@ -57,12 +57,12 @@ class LoCoMoV019Optimizer:
         try:
             self.acceleration['zig_simd'] = True
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         
         try:
             self.acceleration['rust_rrf'] = True
         except Exception:
-            pass
+            logger.debug("Swallowed exception", exc_info=True)
         
         logger.debug(f"[V019] Polyglot acceleration: {self.acceleration}")
     

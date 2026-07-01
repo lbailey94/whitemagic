@@ -105,7 +105,7 @@ def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
                     score += 2
                     matches.append("Structured_Meta")
             except Exception:
-                pass
+                logger.debug("Swallowed exception", exc_info=True)
 
             if matches or score >= 2 or gana:
                 finding = {

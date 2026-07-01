@@ -534,7 +534,7 @@ def tier5_holographic():
                 tier=5,
             )
     except Exception:
-        pass
+        logger.debug("Swallowed exception", exc_info=True)
 
 
 # ═══════════════════════════════════════════════════════════════════
