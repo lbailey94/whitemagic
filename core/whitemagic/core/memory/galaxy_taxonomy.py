@@ -14,6 +14,7 @@ Galaxies:
     codex      — Codebase documentation chunks (codex ingestions)
     substrate  — Automated system snapshots, metrics, telemetry
     tutorial   — WhiteMagic tutorial memories (shipped with public repo)
+    archive    — Archived conversations, Twitter dumps, raw text files (not searched by default)
     universal  — Default galaxy for uncategorized memories
 """
 
@@ -30,6 +31,7 @@ GALAXY_SESSIONS = "sessions"
 GALAXY_CODEX = "codex"
 GALAXY_SUBSTRATE = "substrate"
 GALAXY_TUTORIAL = "tutorial"
+GALAXY_ARCHIVE = "archive"
 GALAXY_UNIVERSAL = "universal"
 
 GALAXY_DESCRIPTIONS: dict[str, str] = {
@@ -42,6 +44,7 @@ GALAXY_DESCRIPTIONS: dict[str, str] = {
     GALAXY_CODEX: "Codebase documentation chunks — codex ingestions, library scans",
     GALAXY_SUBSTRATE: "Automated system snapshots, metrics, telemetry, self-monitoring",
     GALAXY_TUTORIAL: "WhiteMagic tutorial memories — shipped with public repo for new users",
+    GALAXY_ARCHIVE: "Archived conversations, Twitter dumps, raw text files — not searched by default",
     GALAXY_UNIVERSAL: "Default galaxy for uncategorized memories",
 }
 
@@ -55,6 +58,7 @@ GALAXY_ORDER: list[str] = [
     GALAXY_CODEX,
     GALAXY_SUBSTRATE,
     GALAXY_TUTORIAL,
+    GALAXY_ARCHIVE,
     GALAXY_UNIVERSAL,
 ]
 

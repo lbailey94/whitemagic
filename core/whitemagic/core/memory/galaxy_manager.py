@@ -781,9 +781,10 @@ class GalaxyManager:
 
         # Determine which galaxies to search
         if galaxies is None:
+            # Search all galaxies EXCEPT archive (not searched by default)
             galaxy_keys = [
                 k for k, info in self._galaxies.items()
-                if info.user_id == uid
+                if info.user_id == uid and info.name != "archive"
             ]
         else:
             galaxy_keys = [f"{uid}/{g}" for g in galaxies]
