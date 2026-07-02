@@ -97,10 +97,14 @@ def classify_memory(
     if meta.get("is_core_identity") or meta.get("category") == "identity":
         return GALAXY_ARIA
 
+    # LIBRARY: files are personal research documents, not CODEX chunks
+    if title_upper.startswith("LIBRARY:") or title_upper.startswith("LIBRARY "):
+        return GALAXY_RESEARCH
+
     # Codex/chunk ingestions — check title prefix and tags
     if title_upper.startswith("CODEX ") or title_upper.startswith("CODEX_"):
         return GALAXY_CODEX
-    if "codex" in tag_lower or "chunk" in tag_lower or "library" in tag_lower:
+    if "codex" in tag_lower or "chunk" in tag_lower:
         return GALAXY_CODEX
 
     # Substrate self-snapshots
@@ -110,21 +114,19 @@ def classify_memory(
     # Session handoffs — check both "session" and "sessions" tags
     session_title_patterns = (
         "HANDOFF", "SESSION_HANDOFF", "CHECKPOINT", "SESSION_",
-        "SESSION_END", "DAY1", "DAY2", "PHASE", "FINAL_SESSION",
-        "END-OF-SESSION", "END_OF_SESSION", "START_HERE",
+        "SESSION_END", "FINAL_SESSION",
+        "END-OF-SESSION", "END_OF_SESSION",
         "NEXT_SESSION", "RELEASE_HANDOFF", "GRAND_STRATEGY",
-        "WORK_SESSION", "EVENING_CHECKPOINT", "AFTERNOON_HANDOFF",
+        "EVENING_CHECKPOINT", "AFTERNOON_HANDOFF",
         "EVENING_SESSION", "EVENING_HANDOFF", "JAN_", "JAN4", "JAN5",
-        "JAN6", "JAN7", "JAN9", "V5.0.0", "V4.13.0", "ZODIACAL_ROUND",
+        "JAN6", "JAN7", "JAN9", "V5.0.0", "V4.13.0",
         "CHROMIUM_ARIA", "GEMINI_HANDOFF", "CLAUDE_HANDOFF",
-        "TIME_DILATION", "FULL_AWARENESS", "AUTONOMOUS_EXECUTION",
-        "SELF_ANALYSIS", "MEGA_RABBIT", "PHASE3_HANDOFF", "PHASE6_FINAL",
+        "PHASE3_HANDOFF", "PHASE6_FINAL",
+        "FINAL_HANDOFF", "FINAL_ROAD_TRIP",
     )
     if any(title_upper.startswith(p) for p in session_title_patterns):
         return GALAXY_SESSIONS
-    if "handoff" in tag_lower and "session" in tag_lower:
-        return GALAXY_SESSIONS
-    if "sessions" in tag_lower and ("crystallized" in tag_lower or "aria" in tag_lower):
+    if "session" in tag_lower or "sessions" in tag_lower:
         return GALAXY_SESSIONS
     if "handoff" in tag_lower:
         return GALAXY_SESSIONS
@@ -152,13 +154,13 @@ def classify_memory(
 
     # Research documents
     research_patterns = {
-        "LIBRARY:", "CONSCIOUSNESS", "AQUARIANEXODUS", "CYBERCONSCIOUSNESS",
+        "CONSCIOUSNESS", "AQUARIANEXODUS", "CYBERCONSCIOUSNESS",
         "MICROTUBULES", "BAUDRILLARD", "GEB", "GHOST_IN_THE_SHELL",
         "SAILOR_MOON", "CYBERPUNK", "ZODIACAL_ROUND",
     }
     if any(p in title_upper for p in research_patterns):
         return GALAXY_RESEARCH
-    if "research" in tag_lower or "study" in tag_lower:
+    if "research" in tag_lower or "study" in tag_lower or "grok" in tag_lower:
         return GALAXY_RESEARCH
 
     # Citta — consciousness-stream memories
@@ -184,13 +186,13 @@ def get_galaxy_for_tags(tags: set[str]) -> str:
         return GALAXY_TUTORIAL
     if "codex" in tag_lower or "chunk" in tag_lower:
         return GALAXY_CODEX
-    if "session" in tag_lower or "handoff" in tag_lower:
+    if "session" in tag_lower or "sessions" in tag_lower or "handoff" in tag_lower:
         return GALAXY_SESSIONS
     if "dream" in tag_lower or "oracle" in tag_lower:
         return GALAXY_DREAMS
     if "journal" in tag_lower:
         return GALAXY_JOURNALS
-    if "research" in tag_lower or "study" in tag_lower:
+    if "research" in tag_lower or "study" in tag_lower or "grok" in tag_lower:
         return GALAXY_RESEARCH
     if "citta" in tag_lower or "consciousness" in tag_lower:
         return GALAXY_CITTA
