@@ -418,6 +418,16 @@ def register_all_commands(
     except (ImportError, ModuleNotFoundError):
         pass
 
+    # 23b. Sentience commands (serve, sleep, wake, sentience status)
+    try:
+        from whitemagic.cli.commands.sentience_commands import (
+            _register_sentience_commands,
+        )
+
+        _register_sentience_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass
+
     # 24. Mesh commands (status, enable, disable, peers, discover)
     try:
         from whitemagic.cli.commands.mesh_commands import (
