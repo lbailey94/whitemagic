@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -291,6 +292,61 @@ class PhysicalMetricsSource:
         except Exception:
             return None
 
+    def _fetch_psutil_fallback(self) -> dict[str, Any] | None:
+        """Direct sensor reading via psutil + /sys when laptop-optimizer is absent.
+
+        Returns a dict in the same format as laptop-optimizer's /api/stats,
+        or None if psutil is not installed.
+        """
+        try:
+            import psutil
+        except ImportError:
+            return None
+
+        try:
+            # CPU usage
+            cpu_usage = psutil.cpu_percent(interval=0.5)
+
+            # CPU temperature from /sys/class/thermal
+            temps: list[dict[str, Any]] = []
+            thermal_zones = list(Path("/sys/class/thermal").glob("thermal_zone*/temp"))
+            for tz in thermal_zones:
+                try:
+                    val = int(tz.read_text().strip()) / 1000.0
+                    if 20 < val < 120:
+                        zone_name = tz.parent.name
+                        temps.append({"type": zone_name, "temp": val})
+                except (ValueError, OSError):
+                    continue
+            pkg_temp = next((t["temp"] for t in temps), None)
+
+            # Memory
+            mem = psutil.virtual_memory()
+            swap = psutil.swap_memory()
+
+            # Battery
+            battery = psutil.sensors_battery()
+            power: dict[str, Any] = {}
+            if battery:
+                power["battery_cap"] = battery.percent
+                power["battery_status"] = (
+                    "Discharging" if not battery.power_plugged else "Charging"
+                )
+
+            # Disk
+            disk = psutil.disk_usage("/")
+
+            return {
+                "cpu": {"usage": cpu_usage, "temps": temps},
+                "power": power,
+                "memory": {"used": mem.used, "total": mem.total},
+                "swap": {"percent": swap.percent},
+                "disk": {"percent": disk.percent},
+            }
+        except Exception as e:
+            logger.debug("psutil fallback failed: %s", e)
+            return None
+
     def get_metrics(self) -> PhysicalMetrics:
         """Get current physical metrics, with caching."""
         now = time.time()
@@ -299,6 +355,9 @@ class PhysicalMetricsSource:
                 return self._cache
 
         raw = self._fetch_stats()
+        if raw is None:
+            # Fallback: direct sensor reading via psutil + /sys
+            raw = self._fetch_psutil_fallback()
         if raw is None:
             metrics = PhysicalMetrics()
         else:

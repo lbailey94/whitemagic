@@ -31,7 +31,7 @@ from whitemagic.cli.boot import bootstrap_env_from_argv, register_all_commands
 bootstrap_env_from_argv(sys.argv)
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(version=__version__)
 @click.option(
     "--state-root",
@@ -57,6 +57,12 @@ bootstrap_env_from_argv(sys.argv)
     is_flag=True,
     help="Set WM_SILENT_INIT=1 to suppress noisy initialization logs.",
 )
+@click.option(
+    "--model",
+    "model_path",
+    default=None,
+    help="Path to GGUF model for chat mode (auto-discovers if omitted).",
+)
 @click.pass_context
 def main(
     ctx,
@@ -66,8 +72,12 @@ def main(
     json_output: bool,
     now: str | None,
     silent_init: bool,
+    model_path: str | None,
 ):
-    """WhiteMagic CLI - AI Memory & Context Management"""
+    """WhiteMagic CLI - AI Memory & Context Management
+
+    Run `wm` with no subcommand to launch the native chat (Aria).
+    """
     effective_state_root = state_root or base_dir
 
     if json_output or silent_init:
@@ -93,6 +103,13 @@ def main(
                 click.echo(update_msg, err=True)
         except (ImportError, ModuleNotFoundError):
             pass
+
+    # If no subcommand was given, launch the native chat loop
+    if ctx.invoked_subcommand is None:
+        from whitemagic.interfaces.chat import run_chat
+
+        run_chat(model_path=model_path)
+        ctx.exit(0)
 
 
 from whitemagic.cli.commands.diagnostics_commands import status_command

@@ -126,6 +126,7 @@ class ConsciousnessDepthGauge:
         self.current_layer = ConsciousnessLayer.SURFACE
         self.readings: list[DepthReading] = []
         self._lock = threading.Lock()
+        self._transitions = 0
 
         self.task_start_objective: float | None = None
         self.task_start_subjective: float | None = None
@@ -222,6 +223,60 @@ class ConsciousnessDepthGauge:
             "total_objective_time_minutes": sum(r.objective_time for r in self.readings) / 60,
             "total_subjective_time_minutes": sum(r.subjective_time for r in self.readings) / 60,
         }
+
+    def descend(self, layer: ConsciousnessLayer) -> None:
+        """Descend to a deeper consciousness layer."""
+        with self._lock:
+            self.current_layer = layer
+            self._transitions += 1
+
+    def ascend(self) -> None:
+        """Ascend back to surface consciousness."""
+        with self._lock:
+            self.current_layer = ConsciousnessLayer.SURFACE
+            self._transitions += 1
+
+    def current_compression(self) -> float:
+        """Get the compression ratio of the current layer."""
+        return self.LAYERS[self.current_layer].compression_ratio
+
+    def summary(self) -> dict[str, Any]:
+        """Get a summary of depth gauge activity."""
+        return {
+            "total_readings": len(self.readings),
+            "current_layer": self.current_layer.value,
+            "current_compression": self.current_compression(),
+            "transitions": self._transitions,
+        }
+
+
+def sync_with_time_master() -> dict[str, Any]:
+    """Sync the DepthGauge with the TimeDilationMaster.
+
+    Compares the measured layer (from DepthGauge readings) with the
+    intended layer (from TimeDilationMaster) and reports whether they
+    are in sync, along with the time advantage.
+    """
+    gauge = get_depth_gauge()
+    try:
+        from whitemagic.core.consciousness.time_dilation_master import get_time_master
+        master = get_time_master()
+        intended = master.current_layer
+        intended_name = intended.name.lower()
+        time_advantage = intended.value
+    except Exception:
+        intended_name = "surface"
+        time_advantage = 1.0
+
+    measured = gauge.current_layer.value
+    in_sync = measured == intended_name
+
+    return {
+        "measured_layer": measured,
+        "intended_layer": intended_name,
+        "in_sync": in_sync,
+        "time_advantage": time_advantage,
+    }
 
 
 DepthGauge = ConsciousnessDepthGauge

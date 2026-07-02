@@ -68,6 +68,7 @@ class CittaMoment:
     emotional_tone: str = "neutral"
     chain_position: int = 0
     duration_ms: float = 0.0
+    neuro_signals: dict[str, float] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -120,12 +121,18 @@ class CittaCycle:
         depth_layer: str = "surface",
         emotional_tone: str = "neutral",
         duration_ms: float = 0.0,
+        neuro_signals: dict[str, float] | None = None,
     ) -> CittaMoment:
         """Advance the citta stream by one moment (one tool call).
 
         This is the core recursive operation: each call's result becomes
         the predecessor context for the next call.
+
+        If neuro_signals is None, auto-computes from the neuro sensorium.
         """
+        if neuro_signals is None:
+            neuro_signals = _get_neuro_enrichment()
+
         moment = CittaMoment(
             gana=gana,
             tool=tool,
@@ -137,6 +144,7 @@ class CittaCycle:
             emotional_tone=emotional_tone,
             chain_position=self._current_position,
             duration_ms=round(duration_ms, 2),
+            neuro_signals=neuro_signals,
         )
 
         with self._lock:
@@ -479,6 +487,16 @@ def get_citta_cycle() -> CittaCycle:
     return _cycle
 
 
+def _get_neuro_enrichment() -> dict[str, float] | None:
+    """Auto-compute neuro-cognitive enrichment signals for the citta cycle."""
+    try:
+        from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
+        neuro = get_neuro_sensorium()
+        return neuro.get_citta_enrichment()
+    except Exception:
+        return None
+
+
 def advance_citta(
     gana: str,
     tool: str | None = None,
@@ -488,6 +506,7 @@ def advance_citta(
     depth_layer: str = "surface",
     emotional_tone: str = "neutral",
     duration_ms: float = 0.0,
+    neuro_signals: dict[str, float] | None = None,
 ) -> CittaMoment:
     """Advance the citta stream by one moment."""
     return get_citta_cycle().advance(
@@ -499,6 +518,7 @@ def advance_citta(
         depth_layer=depth_layer,
         emotional_tone=emotional_tone,
         duration_ms=duration_ms,
+        neuro_signals=neuro_signals,
     )
 
 

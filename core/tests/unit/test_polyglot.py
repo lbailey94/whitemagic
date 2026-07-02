@@ -95,6 +95,10 @@ class TestPolyglotStatus:
     """Test polyglot.status health check."""
 
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
+    @pytest.mark.skipif(
+        os.environ.get("WM_SKIP_POLYGLOT") == "1",
+        reason="WM_SKIP_POLYGLOT=1 — subprocess backends disabled",
+    )
     def test_status_returns_success(self):
         result = handle_polyglot_status()
         assert result["status"] == "success"
@@ -103,6 +107,10 @@ class TestPolyglotStatus:
         assert 0.0 <= result["health_score"] <= 1.0
 
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
+    @pytest.mark.skipif(
+        os.environ.get("WM_SKIP_POLYGLOT") == "1",
+        reason="WM_SKIP_POLYGLOT=1 — subprocess backends disabled",
+    )
     def test_status_has_expected_backends(self):
         result = handle_polyglot_status()
         backends = result["backends"]
@@ -302,6 +310,10 @@ class TestPolyglotMemoryQueryRustHRR:
         assert result["status"] == "success"
 
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
+    @pytest.mark.skipif(
+        os.environ.get("WM_SKIP_POLYGLOT") == "1",
+        reason="WM_SKIP_POLYGLOT=1 — subprocess backends disabled",
+    )
     def test_rust_dual_encode(self):
         # dual_encode is exposed via the bridge but not via the Python handler directly;
         # verify the backend is available through status

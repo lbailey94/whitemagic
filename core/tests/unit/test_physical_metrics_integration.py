@@ -46,9 +46,11 @@ class TestPhysicalMetrics:
         metrics = source.get_metrics()
         assert isinstance(metrics, PhysicalMetrics)
 
-    def test_graceful_degradation(self):
-        """When laptop-optimizer is not running, metrics should be unavailable."""
+    def test_graceful_degradation(self, monkeypatch):
+        """When no metrics source is available, metrics should be unavailable."""
         source = PhysicalMetricsSource(api_url="http://127.0.0.1:99999")
+        # Disable psutil fallback to test true graceful degradation
+        monkeypatch.setattr(source, "_fetch_psutil_fallback", lambda: None)
         metrics = source.get_metrics()
         assert not metrics.is_available
 
@@ -57,12 +59,14 @@ class TestPhysicalMetrics:
         source = get_physical_metrics_source()
         assert isinstance(source.is_available(), bool)
 
-    def test_evaluate_homeostasis(self):
+    def test_evaluate_homeostasis(self, monkeypatch):
         """evaluate_homeostasis should return a list."""
         source = PhysicalMetricsSource(api_url="http://127.0.0.1:99999")
+        # Disable psutil fallback to test true no-metrics case
+        monkeypatch.setattr(source, "_fetch_psutil_fallback", lambda: None)
         recs = source.evaluate_homeostasis()
         assert isinstance(recs, list)
-        # Should be empty when laptop-optimizer not running
+        # Should be empty when no metrics available
         assert len(recs) == 0
 
 
