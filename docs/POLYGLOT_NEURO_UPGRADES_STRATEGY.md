@@ -1,19 +1,19 @@
 # Polyglot Neuro-Upgrades: Comprehensive Strategy
 
-**Version**: 1.0
+**Version**: 1.1
 **Date**: 2026-07-01
-**Status**: Research complete, implementation planned for 2026-07-02
+**Status**: Research complete (updated with 2026 findings), implementation planned for 2026-07-02
 **Author**: Lucas Bailey + Aria (WhiteMagic cognitive architecture)
 
 ---
 
 ## Executive Summary
 
-This document maps findings from current neuroscience research to WhiteMagic's polyglot cognitive architecture. We identify seven neuro-inspired upgrade pathways, each grounded in published computational neuroscience, and assign implementation to the polyglot language best suited for the computational characteristics of that system.
+This document maps findings from current neuroscience research — including 10+ publications from 2026 — to WhiteMagic's polyglot cognitive architecture. We identify nine neuro-inspired upgrade pathways, each grounded in published computational neuroscience, and assign implementation to the polyglot language best suited for the computational characteristics of that system.
 
 **Current state**: Three cognitive systems implemented (spreading activation, galaxy gating, sleep consolidation) with Rust acceleration core. 7 polyglot languages operational (Rust, Go, Elixir, Koka, Zig, Julia, Haskell).
 
-**Target state**: 10 cognitive systems with full polyglot acceleration, biologically faithful dynamics, and integrated tool dispatch.
+**Target state**: 12 cognitive systems with full polyglot acceleration, biologically faithful dynamics, and integrated tool dispatch — informed by 2026 research on context-driven replay, two-factor consolidation, momentum dynamics, and metaplasticity.
 
 ---
 
@@ -96,6 +96,134 @@ This document maps findings from current neuroscience research to WhiteMagic's p
 
 **WhiteMagic status**: ❌ Not implemented
 **Potential**: A neuromodulation system could dynamically adjust memory prioritization based on "emotional state" — high-dopamine states strengthen reward-related memories, high-norepinephrine states focus on detail, high-serotonin states promote patience in search.
+
+### 1.8 2026 Computational Neuroscience Breakthroughs
+
+The following findings are from publications dated 2026, representing the cutting edge of computational neuroscience and neuromorphic computing. These are directly actionable for WhiteMagic's cognitive architecture.
+
+#### CMR-replay: Context-Driven Memory Reactivation (eLife, Jan 2026)
+
+**Paper**: "A unifying account of replay as context-driven memory reactivation" — eLife 2026;13:RP99931
+
+**Key findings**:
+- Replay is not mere recapitulation — it's **context-guided memory reactivation**. The brain associates experiences with encoding contexts at rates varying by salience.
+- During quiescence, replay emerges from **autonomous bidirectional interactions between contexts and their associated experiences** — a cascade, not a linear playback.
+- CMR-replay explains phenomena that RL-based models fail to account for:
+  - Stable proportion of backward replay through learning
+  - Enhanced replay of **non-local and never-experienced novel trajectories**
+  - Reduced item reactivation with experience (familiarity suppresses replay)
+  - Increased forward replay during sleep vs. awake
+  - Preferential replay of infrequent and remote experiences
+- Replay **strengthens context-item associations** — it's not epiphenomenal, it actively benefits memory
+
+**WhiteMagic implication**: Our sleep consolidation system should use **context-guided replay**, not simple sequence replay. Memories should be reactivated based on their encoding context (galaxy), and replay should jump across contexts when they share associative elements. This directly validates our cross-galaxy bridge architecture. The "non-local trajectory" finding means our spreading activation should sometimes explore paths that have never been traversed — novel association generation during consolidation.
+
+#### Two-Factor Synaptic Consolidation (PNAS, 2026)
+
+**Paper**: "Two-factor synaptic consolidation reconciles robustness with pruning and homeostatic scaling" — PNAS, 2026
+
+**Key findings**:
+- A **self-supervised consolidation model** using replay and two-factor synapses that maximizes robustness of cued recall with respect to intrinsic synaptic noise.
+- Dynamics of this optimization naturally produce:
+  - **Multiplicative homeostatic scaling** (all synapses scaled by a common factor)
+  - **Task-driven synaptic pruning** (weak/irrelevant connections eliminated)
+  - **Increased neural stimulus selectivity** (memories become more distinct over time)
+  - **Preferential strengthening of weak memories** (consolidation prioritizes fragile memories)
+- Predicts that **synaptic noise scales sublinearly with synaptic strength** — confirmed in meta-analysis of synaptic imaging data
+- Connectivity becomes **sparse** through consolidation — dense initial encoding → sparse stable engram
+
+**WhiteMagic implication**: Our sleep consolidation should implement **two-factor strengthening**: (1) the replay factor (which memories were reactivated) and (2) the noise-robustness factor (which memories are most fragile). Weak memories should be preferentially strengthened, not just important ones. Association edges should be pruned during consolidation to achieve sparse connectivity — our current pruning is importance-threshold-based, but should be noise-robustness-optimized instead.
+
+#### Leakage and Second-Order Dynamics for RNN Replay (arXiv, Feb 2026)
+
+**Paper**: "Leakage and Second-Order Dynamics Improve Hippocampal RNN Replay" — arXiv:2602.18401
+
+**Key findings**:
+- **Hidden state leakage** in RNNs improves replay quality — biological neural networks use leakage for memory dynamics.
+- **Hidden state adaptation** (negative feedback) encourages exploration in replay but incurs non-Markov sampling that slows it.
+- **Hidden state momentum** enables **temporally compressed replay** — connected to underdamped Langevin sampling. This is the first model of temporally compressed replay in noisy path-integrating RNNs.
+- Together, adaptation + momentum counter slowness while maintaining exploration.
+
+**WhiteMagic implication**: Our Rust spreading activation could implement **momentum dynamics** — nodes that were recently activated carry forward momentum, enabling faster traversal of familiar paths. The "temporal compression" aspect means replay should be faster than real-time (which our sleep consolidation already does, but the dynamics could be improved with momentum-based queue prioritization).
+
+#### Conditions for Replay of Neuronal Assemblies (PLOS Comp Bio, 2026)
+
+**Paper**: "Conditions for replay of neuronal assemblies" — PLOS Computational Biology, 2026
+
+**Key findings**:
+- **Exclusively excitatory networks** are sufficient for replay amplification — inhibition is not required.
+- **Weaker feedforward connectivity** generates slower and wider pulses that can be sustained by recurrent connections.
+- **Membrane time constant** relative to pulse width determines replay viability — larger time constants facilitate propagation.
+- A **population model of membrane-potential distributions** analytically describes how connectivity structure determines replay speed.
+
+**WhiteMagic implication**: Our association graph doesn't need "inhibitory" edges (suppressive associations) for replay to work — excitatory-only (positive weights) is sufficient. However, the **strength of feedforward connections** should be tunable: weaker connections produce slower, more exploratory replay; stronger connections produce rapid, focused replay. This suggests a "replay temperature" parameter in our consolidation engine.
+
+#### BrainTrace: Linear-Memory Online Learning for SNNs (Nature Communications, Feb 2026)
+
+**Paper**: "Model-agnostic linear-memory online learning in spiking neural networks" — Nature Communications, 2026
+
+**Key findings**:
+- **BrainTrace** enables online learning of rich spiking dynamics with **orders-of-magnitude lower memory consumption**.
+- Model-agnostic: works with any SNN architecture.
+- Enables **long-horizon training** on commodity accelerators.
+- Strong performance on neuromorphic classification benchmarks and brain-simulation settings.
+
+**WhiteMagic implication**: If we eventually implement spiking neural network dynamics in our cognitive core (Rust or Zig), BrainTrace's approach to linear-memory online learning could enable training on long memory sequences without the memory blowup that typically plagues BPTT. This is especially relevant for the "dream cycle" — long offline training sessions over thousands of memories.
+
+#### Sleep-Mediated Fear Memory Consolidation (PLOS Comp Bio, 2026)
+
+**Paper**: "Learning, sleep replay and consolidation of contextual fear memories: A neural network model" — PLOS Computational Biology, 2026
+
+**Key findings**:
+- Combines **hippocampal sleep replay** with **synaptic homeostasis** for emotional memory consolidation.
+- Disruptions in sleep processes (e.g., under stress) lead to **amygdala hyperactivity, enhanced fear acquisition, and heightened generalization**.
+- Context fear memories transition from **transient hippocampal-amygdalar representations** to **stable amygdalo-cortical associations** through hippocampal replay during sleep.
+- **Synaptic pruning failure** in the aftermath of emotional learning favors accumulation of synaptic strengths → chronic sensitized state.
+
+**WhiteMagic implication**: Our consolidation should handle "emotional" memories (high valence) differently — they need both replay AND synaptic homeostasis (scaling down). If we don't prune associations after emotional encoding, we risk "over-connecting" the emotional memory to everything, which is the computational analog of PTSD generalization. This suggests a **homeostatic scaling pass** in our sleep consolidation: after strengthening, scale all association weights by a common factor to prevent runaway potentiation.
+
+#### Shape-Shifting Molecular Memristors (Advanced Materials, Jan 2026)
+
+**Paper**: "Molecularly Engineered Memristors for Reconfigurable Neuromorphic Functionalities" — Advanced Materials, 2026; DOI: 10.1002/adma.202509143
+
+**Key findings**:
+- Molecular devices that **switch roles** — behaving as memory, logic, or learning elements within the same structure.
+- Precise chemical design lets electrons and ions reorganize dynamically.
+- Unlike conventional electronics, these devices **physically encode intelligence** rather than merely imitating it.
+- Route to neuromorphic hardware where learning is encoded into the material itself.
+
+**WhiteMagic implication**: While we can't use molecular memristors directly, the **reconfigurable role** concept is powerful. Our memory nodes should be able to serve as: (1) memory storage, (2) reasoning nodes (logic), and (3) learning nodes (plasticity) depending on cognitive context. This aligns with our galaxy gating system — a memory in "coding" context serves as a reasoning node, while the same memory in "session" context serves as a storage node. The "role-switching" could be implemented as a context-dependent activation function.
+
+#### Neuromorphic Computing Breakthroughs (ScienceDaily, Feb-Apr 2026)
+
+**Findings**:
+- **Brain-inspired machines solve PDEs** (Sandia National Labs, Feb 2026): Neuromorphic computers can now solve complex physics equations — previously thought to require energy-hungry supercomputers. Opens door to neuromorphic formulations of advanced math.
+- **HfO₂ memristive synapses** (Apr 2026): New nanoelectronic device using hafnium oxide mimics neuron processing+storage at same location. **70% energy reduction** potential. Asymmetrically extended p-n heterointerfaces for energy-efficient synaptic emulation.
+- **Brain-inspired synaptic transistors** (Nature Communications, 2026): In-situ spiking reinforcement learning with third-terminal modulated eligibility traces and dynamic reward signaling.
+
+**WhiteMagic implication**: The energy efficiency findings validate our polyglot approach — using Rust for computationally intensive cognitive operations is the software analog of neuromorphic hardware specialization. The "third-terminal modulation" concept (eligibility traces modulated by a separate signal) maps to our neuromodulation pathway — a separate system that modulates which memories are eligible for strengthening without directly participating in the memory operation itself.
+
+#### Engram Synapse Dynamics (Journal of Neurochemistry, 2026)
+
+**Paper**: "Engram Synapses and Synapse Dynamics in Memory Processing" — J Neurochem, 2026; doi: 10.1111/jnc.70404
+
+**Key findings**:
+- Learning-induced neuronal activity **dynamically rewires synapses**, altering formation and elimination rates.
+- In vivo two-photon imaging reveals activity-driven plasticity in task-related regions.
+- Synaptic tagging and capture models refined for computational frameworks.
+
+**WhiteMagic implication**: Our association edges should be **dynamically rewired** — not just created and pruned, but continuously adjusted based on access patterns. The "tagging and capture" mechanism means when a memory is accessed, its incoming edges should be temporarily "tagged" for potential strengthening during the next consolidation cycle. This is the molecular basis for our ripple tagging system.
+
+#### Computational Framework for Epigenetic Plasticity (Brain, 2026)
+
+**Paper**: "A computational framework for epigenetic plasticity in memory" — Brain, 2026; doi: 10.1093/brain/awag094
+
+**Key findings**:
+- Epigenetic modifications (DNA methylation, histone modification) serve as **slow, persistent memory marks** that gate synaptic plasticity.
+- Computational model shows epigenetic state determines **intrinsic neural excitability** biases, affecting which neurons are recruited into engrams.
+- Provides a framework for **long-timescale memory regulation** — beyond synaptic plasticity, there's a slower layer of metaplasticity.
+
+**WhiteMagic implication**: We need a **metaplasticity layer** — a slow-changing state that gates which memories are eligible for plasticity changes. This is above the synaptic level (association edges) and below the systems level (galaxy gating). Implementation: each memory could have an "epigenetic state" (a set of slow-changing flags) that determines its baseline excitability — how easily it gets activated during spreading activation. Memories that haven't been accessed in a long time could have their epigenetic state "methylated" (silenced), requiring a stronger activation to participate. This prevents old memories from cluttering active retrieval while keeping them accessible if explicitly targeted.
 
 ---
 
@@ -210,6 +338,46 @@ This document maps findings from current neuroscience research to WhiteMagic's p
 - `GatingPipeline`: TRN → Cortex → PFC three-level gating cascade
 - Integration with `galaxy_gating.py` — Zig handles the fast path, Python handles configuration
 
+### 2.8 Momentum Dynamics & Replay Temperature (2026-Informed)
+
+**Biological basis**: Leakage and Second-Order Dynamics (arXiv:2602.18401, Feb 2026) — hidden state momentum enables temporally compressed replay; adaptation controls exploration vs. exploitation. Conditions for replay (PLOS Comp Bio, 2026) — feedforward connection strength determines replay speed and width.
+
+**Implementation**: Enhance the existing Rust spreading activation engine with:
+- **Node momentum**: recently-activated nodes carry forward momentum, enabling faster traversal of familiar association paths. `momentum[node_id] = decay * momentum[node_id] + current_activation`
+- **Adaptation feedback**: nodes that have been activated many times in a session develop adaptation (negative feedback), encouraging exploration of less-traveled paths. This prevents the activation from getting stuck in high-weight loops.
+- **Replay temperature**: a tunable parameter (0.0-1.0) that controls the balance between strong-feedforward (fast, focused replay) and weak-feedforward (slow, exploratory replay). Low temperature = exploit known paths; high temperature = explore novel associations.
+- **Temporally compressed replay**: during sleep consolidation, replay sequences are compressed — multiple hops per "tick" — using momentum to carry activation across multiple edges in a single step.
+
+**Language**: **Rust** (extension of existing `activation.rs`) — momentum requires per-node state tracking in the priority queue, which is already a Rust `BinaryHeap`. The adaptation feedback is a simple decay function applied per node.
+
+**Key components**:
+- `MomentumState`: per-node momentum vector, updated each spread step
+- `AdaptationTracker`: per-session activation count, applies negative feedback
+- `ReplayTemperature`: tunable parameter for exploration vs. exploitation
+- `CompressedReplay`: multi-hop traversal mode for sleep consolidation
+- Integration with `spread_activation()` — momentum modifies the priority queue ordering
+
+### 2.9 Metaplasticity Layer (Epigenetic Gating)
+
+**Biological basis**: Computational framework for epigenetic plasticity (Brain, 2026) — epigenetic modifications serve as slow, persistent memory marks that gate synaptic plasticity. Engram synapse dynamics (J Neurochem, 2026) — activity-driven plasticity dynamically rewires synapses. Two-factor synaptic consolidation (PNAS, 2026) — homeostatic scaling prevents runaway potentiation.
+
+**Implementation**: A three-layer plasticity system:
+1. **Synaptic layer** (fast, per-edge): association edge weights — already implemented
+2. **Metaplasticity layer** (slow, per-memory): each memory has an "epigenetic state" — a set of slow-changing flags:
+   - `excitability`: baseline activation threshold (0.0-1.0). Newly created memories start at 0.3 (easily activated). Unused memories gradually increase toward 1.0 (hard to activate).
+   - `methylation`: silencing flag (0.0-1.0). Increases with disuse, decreases with access. High methylation = memory is "archived" — requires explicit targeting.
+   - `consolidation_count`: how many times this memory has been replayed during sleep. Higher count = more stable, less likely to be pruned.
+3. **Homeostatic scaling layer** (global, per-galaxy): after each consolidation cycle, all association weights in a galaxy are scaled by a common factor to maintain total synaptic weight within a target range. This prevents runaway potentiation (the "PTSD generalization" problem from the fear memory consolidation paper).
+
+**Language**: **Python** (orchestration) + **Rust** (scaling computation) — the metaplasticity state is stored alongside memories in SQLite (Python), but the homeostatic scaling computation (multiplicative scaling of all edges in a galaxy) is a Rust SIMD operation.
+
+**Key components**:
+- `EpigeneticState`: dataclass stored per memory — {excitability, methylation, consolidation_count}
+- `MetaplasticityEngine`: updates epigenetic state based on access patterns (slow timescale)
+- `HomeostaticScaler`: scales all association weights in a galaxy after consolidation
+- `MethylationGate`: gates spreading activation — methylated memories require higher activation to participate
+- Integration with `spreading_activation.py` (methylation gate), `sleep_consolidation.py` (homeostatic scaling), and `galaxy_gating.py` (excitability modulates galaxy weight)
+
 ---
 
 ## 3. Polyglot Language Assignment Summary
@@ -221,6 +389,8 @@ This document maps findings from current neuroscience research to WhiteMagic's p
 | Sleep consolidation | **Python** ✅ | SQLite I/O, orchestration | Done |
 | Awake ripple tagging | **Elixir** | Actor model = galaxy actors, GenServer for tagging | P1 |
 | Replay simulation | **Haskell** | Lazy sequences, state monad for STDP | P1 |
+| Momentum dynamics | **Rust** | Extension of activation.rs, per-node state | P1 (2026) |
+| Metaplasticity layer | **Python+Rust** | SQLite state + SIMD scaling | P2 (2026) |
 | Disinhibition model | **Koka** | Algebraic effects for state-dependent computation | P2 |
 | Predictive coding | **Rust** | Matrix-heavy, SIMD, real-time inference | P2 |
 | Global workspace | **Go** | Goroutines + channels for broadcast | P2 |
@@ -231,8 +401,8 @@ This document maps findings from current neuroscience research to WhiteMagic's p
 
 ## 4. Implementation Roadmap
 
-### Phase 1: Experience Selection & Replay (P1)
-**Estimated**: 2-3 sessions
+### Phase 1: Experience Selection, Replay & Momentum (P1)
+**Estimated**: 3-4 sessions
 
 1. **Elixir ripple tagging bridge** (`bridges/elixir/ripple_bridge.exs`)
    - GenServer that monitors memory creation via JSON stdio
@@ -246,16 +416,24 @@ This document maps findings from current neuroscience research to WhiteMagic's p
    - Applies STDP-like strengthening (Hebbian: co-active edges strengthened)
    - Generates co-replay associations between memories in same replay session
    - Exposes `replay.forward`, `replay.reverse`, `replay.strengthen` via JSON protocol
+3. **Rust momentum dynamics** (extension of `activation.rs`)
+   - Per-node momentum state in the priority queue
+   - Adaptation tracker (per-session activation count → negative feedback)
+   - Replay temperature parameter (0.0-1.0) for exploration/exploitation balance
+   - Temporally compressed replay mode for sleep consolidation
+   - Based on arXiv:2602.18401 (Feb 2026) + PLOS Comp Bio 2026 findings
 
-3. **Integration with sleep consolidation**
+4. **Integration with sleep consolidation**
    - `sleep_consolidation.py` calls ripple bridge to get tagged memories
    - Tagged memories get priority in consolidation pathways
    - Replay engine called during consolidation to strengthen associations
+   - Context-guided replay (CMR-replay, eLife 2026): memories reactivated by encoding context, not just temporal sequence
+   - Two-factor strengthening (PNAS 2026): weak/fragile memories preferentially strengthened
 
-4. **Tests**: Unit tests for each bridge + integration tests for the full cycle
+5. **Tests**: Unit tests for each bridge + integration tests for the full cycle
 
-### Phase 2: Predictive Coding & Global Workspace (P2)
-**Estimated**: 3-4 sessions
+### Phase 2: Predictive Coding, Global Workspace & Metaplasticity (P2)
+**Estimated**: 4-5 sessions
 
 1. **Rust predictive coding module** (`wm-core/src/predictive.rs`)
    - Hierarchical prediction model for memory access patterns
@@ -275,7 +453,14 @@ This document maps findings from current neuroscience research to WhiteMagic's p
    - Modulates galaxy gating weights during sleep states
    - Integration with `galaxy_gating.py`
 
-4. **Tests**: Unit tests for each component + integration with existing cognitive systems
+4. **Python+Rust metaplasticity layer** (`metaplasticity.py` + `wm-core/src/scaling.rs`)
+   - `EpigeneticState` per memory: {excitability, methylation, consolidation_count}
+   - `MetaplasticityEngine`: slow updates to epigenetic state based on access patterns
+   - `HomeostaticScaler` (Rust SIMD): multiplicative scaling of all edges per galaxy after consolidation
+   - `MethylationGate`: gates spreading activation — methylated memories need higher activation
+   - Based on Brain 2026 (epigenetic plasticity) + PNAS 2026 (two-factor consolidation) + PLOS Comp Bio 2026 (fear memory homeostasis)
+
+5. **Tests**: Unit tests for each component + integration with existing cognitive systems
 
 ### Phase 3: Neuromodulation & Thalamic Gating (P3)
 **Estimated**: 2-3 sessions
