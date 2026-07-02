@@ -298,4 +298,93 @@ TOOLS: list[ToolDefinition] = [
         quadrant="northern",
         element="water",
     ),
+    ToolDefinition(
+        name="galaxy.search_multi",
+        description=(
+            "Search across multiple galaxies in parallel. Executes FTS5 queries "
+            "against each specified galaxy (or all galaxies if none specified) "
+            "and merges results by importance. Enables cross-galaxy recall "
+            "without switching the active galaxy."
+        ),
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "FTS5 search query (optional, browses all if omitted)",
+                },
+                "galaxies": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Galaxy names to search. If omitted, searches all galaxies.",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional tag filter (memories must have ALL listed tags)",
+                },
+                "min_importance": {
+                    "type": "number",
+                    "description": "Minimum importance threshold (0.0-1.0)",
+                    "default": 0.0,
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum results per galaxy",
+                    "default": 20,
+                },
+            },
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.share",
+        description=(
+            "Share a galaxy with another user by creating a registry entry "
+            "that points to the same database file. The target user gets "
+            "read/write access. This is a lightweight share — no data copy."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Galaxy name to share",
+                },
+                "target_user_id": {
+                    "type": "string",
+                    "description": "User ID to share the galaxy with",
+                },
+            },
+            "required": ["name", "target_user_id"],
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.list_shared",
+        description=(
+            "List all galaxies shared with a user. Shared galaxies have a "
+            "'shared' tag and point to a database owned by another user."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {},
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
 ]

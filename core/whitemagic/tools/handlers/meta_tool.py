@@ -461,6 +461,21 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_void",
         "galaxy.export_tutorial",
     ),
+    (
+        re.compile(r"\b(search|query).*(multi|across|all).*(galaxy|galaxies)|multi.?galaxy.*(search|query)\b", re.I),
+        "gana_void",
+        "galaxy.search_multi",
+    ),
+    (
+        re.compile(r"\bshare.*galaxy|galaxy.*share\b", re.I),
+        "gana_void",
+        "galaxy.share",
+    ),
+    (
+        re.compile(r"\blist.*shared.*galax|shared.*galax.*list\b", re.I),
+        "gana_void",
+        "galaxy.list_shared",
+    ),
     # Dreams / consolidation
     (
         re.compile(r"\b(dream|consolidat|sleep|cycle)\b", re.I),

@@ -296,6 +296,9 @@ TOOL_TO_GANA: dict[str, str] = {
     "galaxy.taxonomy": "gana_void",
     "galaxy.canonical_taxonomy": "gana_void",
     "galaxy.export_tutorial": "gana_void",
+    "galaxy.search_multi": "gana_void",
+    "galaxy.share": "gana_void",
+    "galaxy.list_shared": "gana_void",
     "galaxy.lineage_stats": "gana_void",
     # ═══ SIMPLIFIED ALIASES ═══
     "remember": "gana_neck",

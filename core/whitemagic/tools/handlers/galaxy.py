@@ -521,3 +521,71 @@ def handle_galaxy_export_tutorial(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_search_multi(**kwargs: Any) -> dict[str, Any]:
+    """Search across multiple galaxies in parallel."""
+    from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
+    try:
+        gm = get_galaxy_manager()
+        galaxies = kwargs.get("galaxies")
+        if isinstance(galaxies, str):
+            galaxies = [g.strip() for g in galaxies.split(",")]
+
+        tags = kwargs.get("tags")
+        if isinstance(tags, str):
+            tags = {t.strip() for t in tags.split(",")}
+
+        return gm.search_multi_galaxy(
+            query=kwargs.get("query"),
+            galaxies=galaxies,
+            tags=tags,
+            min_importance=kwargs.get("min_importance", 0.0),
+            limit=kwargs.get("limit", 20),
+            user_id=kwargs.get("user_id"),
+        )
+    except ValueError as e:
+        return {"status": "error", "error": str(e)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_share(**kwargs: Any) -> dict[str, Any]:
+    """Share a galaxy with another user."""
+    name = kwargs.get("name")
+    target_user = kwargs.get("target_user_id") or kwargs.get("share_with")
+    if not name:
+        return {"status": "error", "error": "name is required"}
+    if not target_user:
+        return {"status": "error", "error": "target_user_id is required"}
+
+    from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
+    try:
+        gm = get_galaxy_manager()
+        return gm.share_galaxy(
+            name=name,
+            target_user_id=target_user,
+            user_id=kwargs.get("user_id"),
+        )
+    except ValueError as e:
+        return {"status": "error", "error": str(e)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_list_shared(**kwargs: Any) -> dict[str, Any]:
+    """List galaxies shared with a user."""
+    from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
+    try:
+        gm = get_galaxy_manager()
+        shared = gm.list_shared_galaxies(user_id=kwargs.get("user_id"))
+        return {
+            "status": "success",
+            "count": len(shared),
+            "shared_galaxies": shared,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

@@ -750,6 +750,198 @@ class GalaxyManager:
 
         return result
 
+    # ── Multi-Galaxy Parallel Access (v23.4) ───────────────────────
+
+    def search_multi_galaxy(
+        self,
+        query: str | None = None,
+        galaxies: list[str] | None = None,
+        tags: set[str] | None = None,
+        min_importance: float = 0.0,
+        limit: int = 20,
+        user_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Search across multiple galaxies in parallel.
+
+        Executes searches against each specified galaxy (or all galaxies
+        if none specified) and merges results by importance.
+
+        Args:
+            query: FTS5 query string (optional).
+            galaxies: List of galaxy names to search. If None, searches all.
+            tags: Optional tag filter.
+            min_importance: Minimum importance threshold.
+            limit: Maximum results per galaxy (total results may be larger).
+            user_id: Owner user ID. Defaults to "local".
+
+        Returns:
+            Dict with merged results, per-galaxy stats, and total count.
+        """
+        uid = resolve_user_id(user_id)
+
+        # Determine which galaxies to search
+        if galaxies is None:
+            galaxy_keys = [
+                k for k, info in self._galaxies.items()
+                if info.user_id == uid
+            ]
+        else:
+            galaxy_keys = [f"{uid}/{g}" for g in galaxies]
+            # Validate
+            for gk in galaxy_keys:
+                if gk not in self._galaxies:
+                    raise ValueError(f"Galaxy '{gk}' not found")
+
+        # Search each galaxy in parallel
+        all_results: list[dict[str, Any]] = []
+        per_galaxy_stats: dict[str, dict[str, Any]] = {}
+        errors: dict[str, str] = {}
+
+        def _search_one(galaxy_key: str) -> tuple[str, list[Any], dict[str, Any], str | None]:
+            try:
+                um = self._get_memory(galaxy_key)
+                results = um.search(
+                    query=query,
+                    tags=tags,
+                    min_importance=min_importance,
+                    limit=limit,
+                )
+                info = self._galaxies[galaxy_key]
+                return galaxy_key, results, {
+                    "galaxy": info.name,
+                    "count": len(results),
+                }, None
+            except Exception as e:
+                return galaxy_key, [], {}, str(e)
+
+        with ThreadPoolExecutor(max_workers=min(len(galaxy_keys), 8)) as executor:
+            for gk, results, stats, error in executor.map(_search_one, galaxy_keys):
+                if error:
+                    errors[gk] = error
+                else:
+                    per_galaxy_stats[gk] = stats
+                    for r in results:
+                        all_results.append({
+                            "id": r.id,
+                            "title": r.title,
+                            "content": r.content[:200] if r.content else "",
+                            "galaxy": self._galaxies[gk].name,
+                            "importance": r.importance,
+                            "memory_type": r.memory_type.value if hasattr(r.memory_type, 'value') else str(r.memory_type),
+                            "tags": list(r.tags) if hasattr(r, 'tags') and r.tags else [],
+                            "created_at": r.created_at if hasattr(r, 'created_at') else None,
+                        })
+
+        # Sort by importance (descending)
+        all_results.sort(key=lambda x: x.get("importance", 0), reverse=True)
+
+        return {
+            "status": "success",
+            "query": query,
+            "galaxies_searched": len(per_galaxy_stats),
+            "total_results": len(all_results),
+            "results": all_results[:limit * 2],  # Cap total
+            "per_galaxy": per_galaxy_stats,
+            "errors": errors if errors else None,
+        }
+
+    def get_memory_for_galaxy(self, name: str, user_id: str | None = None) -> Any:
+        """Get the UnifiedMemory instance for a specific galaxy (without switching).
+
+        Allows reading/writing to a non-active galaxy without changing
+        the active galaxy context.
+
+        Args:
+            name: Galaxy name.
+            user_id: Owner user ID. Defaults to "local".
+
+        Returns:
+            UnifiedMemory instance for the specified galaxy.
+        """
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{name}"
+        if registry_key not in self._galaxies:
+            raise ValueError(f"Galaxy '{name}' not found for user '{uid}'")
+        return self._get_memory(registry_key)
+
+    def share_galaxy(
+        self,
+        name: str,
+        target_user_id: str,
+        user_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Share a galaxy with another user by creating a registry entry.
+
+        The target user gets read/write access to the same database file.
+        This is a lightweight share — no data copy, just a registry pointer.
+
+        Args:
+            name: Galaxy name to share.
+            target_user_id: User ID to share with.
+            user_id: Owner user ID. Defaults to "local".
+
+        Returns:
+            Dict with share status.
+        """
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{name}"
+        if registry_key not in self._galaxies:
+            raise ValueError(f"Galaxy '{name}' not found for user '{uid}'")
+
+        info = self._galaxies[registry_key]
+        target_key = f"{target_user_id}/{name}"
+
+        if target_key in self._galaxies:
+            return {
+                "status": "already_shared",
+                "galaxy": name,
+                "target_user": target_user_id,
+            }
+
+        # Create a shared entry pointing to the same DB
+        shared_info = GalaxyInfo(
+            name=name,
+            db_path=info.db_path,
+            description=f"[shared from {uid}] {info.description}",
+            project_path=info.project_path,
+            tags=info.tags + ["shared"],
+            is_core=False,
+            user_id=target_user_id,
+        )
+        self._galaxies[target_key] = shared_info
+        self._save_registry()
+
+        logger.info(
+            "Shared galaxy '%s' from user '%s' to user '%s'",
+            name, uid, target_user_id,
+        )
+
+        return {
+            "status": "shared",
+            "galaxy": name,
+            "owner": uid,
+            "shared_with": target_user_id,
+            "db_path": info.db_path,
+        }
+
+    def list_shared_galaxies(self, user_id: str | None = None) -> list[dict[str, Any]]:
+        """List galaxies shared with a user (entries tagged 'shared').
+
+        Args:
+            user_id: User ID to check. Defaults to "local".
+
+        Returns:
+            List of shared galaxy info dicts.
+        """
+        uid = resolve_user_id(user_id)
+        shared = []
+        for key, info in self._galaxies.items():
+            if info.user_id == uid and "shared" in info.tags:
+                d = info.to_dict()
+                d["registry_key"] = key
+                shared.append(d)
+        return shared
+
 
 def get_galaxy_manager() -> GalaxyManager:
     """Get the global GalaxyManager singleton."""
