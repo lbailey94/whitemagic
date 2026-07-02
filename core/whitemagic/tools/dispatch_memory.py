@@ -92,4 +92,61 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "wm_read.status": LazyHandler("wm_read", "handle_wm_read_status"),
     "wm_write": LazyHandler("wm_write", "handle_wm_write"),
     "wm_write.status": LazyHandler("wm_write", "handle_wm_write_status"),
+    # ── Neuro-Cognitive Systems ──
+    "activation.spread": LazyHandler(
+        "neuro_cognitive", "handle_activation_spread"
+    ),
+    "activation.stats": LazyHandler(
+        "neuro_cognitive", "handle_activation_stats"
+    ),
+    "gating.set_context": LazyHandler(
+        "neuro_cognitive", "handle_gating_set_context"
+    ),
+    "gating.detect": LazyHandler(
+        "neuro_cognitive", "handle_gating_detect"
+    ),
+    "gating.mask": LazyHandler(
+        "neuro_cognitive", "handle_gating_mask"
+    ),
+    "gating.list": LazyHandler(
+        "neuro_cognitive", "handle_gating_list"
+    ),
+    "gating.stats": LazyHandler(
+        "neuro_cognitive", "handle_gating_stats"
+    ),
+    "consolidation.run": LazyHandler(
+        "neuro_cognitive", "handle_consolidation_run"
+    ),
+    "consolidation.stats": LazyHandler(
+        "neuro_cognitive", "handle_consolidation_stats"
+    ),
+    # ── Ripple Tagging ──
+    "ripple.tag": LazyHandler("neuro_cognitive", "handle_ripple_tag"),
+    "ripple.tags": LazyHandler("neuro_cognitive", "handle_ripple_tags"),
+    "ripple.decay": LazyHandler("neuro_cognitive", "handle_ripple_decay"),
+    "ripple.stats": LazyHandler("neuro_cognitive", "handle_ripple_stats"),
+    # ── Replay Simulation ──
+    "replay.run": LazyHandler("neuro_cognitive", "handle_replay_run"),
+    "replay.batch": LazyHandler("neuro_cognitive", "handle_replay_batch"),
+    "replay.stats": LazyHandler("neuro_cognitive", "handle_replay_stats"),
+    # ── Neuromodulation ──
+    "neuro.compute": LazyHandler("neuro_cognitive", "handle_neuro_compute"),
+    "neuro.modulate": LazyHandler("neuro_cognitive", "handle_neuro_modulate"),
+    "neuro.reset": LazyHandler("neuro_cognitive", "handle_neuro_reset"),
+    "neuro.stats": LazyHandler("neuro_cognitive", "handle_neuro_stats"),
+    # ── Metaplasticity ──
+    "metaplasticity.apply": LazyHandler("neuro_cognitive", "handle_metaplasticity_apply"),
+    "metaplasticity.batch": LazyHandler("neuro_cognitive", "handle_metaplasticity_batch"),
+    "metaplasticity.plasticity": LazyHandler("neuro_cognitive", "handle_metaplasticity_plasticity"),
+    "metaplasticity.decay": LazyHandler("neuro_cognitive", "handle_metaplasticity_decay"),
+    "metaplasticity.stats": LazyHandler("neuro_cognitive", "handle_metaplasticity_stats"),
+    # ── Global Workspace ──
+    "workspace.propose": LazyHandler("neuro_cognitive", "handle_workspace_propose"),
+    "workspace.state": LazyHandler("neuro_cognitive", "handle_workspace_state"),
+    "workspace.history": LazyHandler("neuro_cognitive", "handle_workspace_history"),
+    "workspace.stats": LazyHandler("neuro_cognitive", "handle_workspace_stats"),
+    # ── Neuro Sensorium ──
+    "sensorium.state": LazyHandler("neuro_cognitive", "handle_sensorium_state"),
+    "sensorium.citta": LazyHandler("neuro_cognitive", "handle_sensorium_citta"),
+    "sensorium.stats": LazyHandler("neuro_cognitive", "handle_sensorium_stats"),
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wm-core", "crates/wm-evolution", "crates/wm-cascade-pyo3"]
+members = ["crates/wm-core", "crates/wm-evolution", "crates/wm-cascade-pyo3", "crates/wm-neuro"]
 resolver = "2"
 
 [workspace.package]

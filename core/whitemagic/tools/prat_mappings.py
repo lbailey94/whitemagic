@@ -46,6 +46,15 @@ TOOL_TO_GANA: dict[str, str] = {
     "working_memory.context": "gana_heart",
     "working_memory.status": "gana_heart",
     "get_session_context": "gana_heart",
+    # ── Session Memory — Chronological conversation recording & recall ──
+    "session.record": "gana_heart",
+    "session.recall": "gana_heart",
+    "session.replay": "gana_heart",
+    "session.search": "gana_heart",
+    "session.memory_stats": "gana_heart",
+    "session.backfill": "gana_heart",
+    "session.continuity": "gana_heart",
+    "session.consolidate": "gana_heart",
     # ═══ TAIL — Performance & Acceleration ═══
     "simd.cosine": "gana_tail",
     "simd.batch": "gana_tail",
@@ -631,6 +640,48 @@ TOOL_TO_GANA: dict[str, str] = {
     # ── v23.1: Unified Write API — Neck (core memory creation) + Stomach (file/neural) ──
     "wm_write": "gana_neck",
     "wm_write.status": "gana_neck",
+    # ── Neuro-Cognitive Systems ──
+    # Spreading activation → Winnowing Basket (search/recall/priming)
+    "activation.spread": "gana_winnowing_basket",
+    "activation.stats": "gana_winnowing_basket",
+    # Galaxy gating → Dipper (strategy/cognitive context)
+    "gating.set_context": "gana_dipper",
+    "gating.detect": "gana_dipper",
+    "gating.mask": "gana_dipper",
+    "gating.list": "gana_dipper",
+    "gating.stats": "gana_dipper",
+    # Sleep consolidation → Abundance (regeneration/lifecycle)
+    "consolidation.run": "gana_abundance",
+    "consolidation.stats": "gana_abundance",
+    # Ripple tagging → Abundance (memory selection for consolidation)
+    "ripple.tag": "gana_abundance",
+    "ripple.tags": "gana_abundance",
+    "ripple.decay": "gana_abundance",
+    "ripple.stats": "gana_abundance",
+    # Replay simulation → Abundance (memory reactivation during consolidation)
+    "replay.run": "gana_abundance",
+    "replay.batch": "gana_abundance",
+    "replay.stats": "gana_abundance",
+    # Neuromodulation → Dipper (cognitive strategy / state regulation)
+    "neuro.compute": "gana_dipper",
+    "neuro.modulate": "gana_dipper",
+    "neuro.reset": "gana_dipper",
+    "neuro.stats": "gana_dipper",
+    # Metaplasticity → Extended Net (pattern connectivity / plasticity)
+    "metaplasticity.apply": "gana_extended_net",
+    "metaplasticity.batch": "gana_extended_net",
+    "metaplasticity.plasticity": "gana_extended_net",
+    "metaplasticity.decay": "gana_extended_net",
+    "metaplasticity.stats": "gana_extended_net",
+    # Global workspace → Three Stars (judgment/synthesis/broadcast)
+    "workspace.propose": "gana_three_stars",
+    "workspace.state": "gana_three_stars",
+    "workspace.history": "gana_three_stars",
+    "workspace.stats": "gana_three_stars",
+    # Neuro sensorium → Ghost (introspection/self-model/citta)
+    "sensorium.state": "gana_ghost",
+    "sensorium.citta": "gana_ghost",
+    "sensorium.stats": "gana_ghost",
 }
 
 # Reverse: Gana → list of nested tools

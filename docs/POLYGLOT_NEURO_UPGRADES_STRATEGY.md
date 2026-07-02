@@ -564,10 +564,84 @@ The following findings are from publications dated 2026, representing the cuttin
 
 ## 7. Tomorrow's Session Priorities
 
-### Immediate (polyglot neuro-upgrades)
-1. **Phase 1, Step 1**: Elixir ripple tagging bridge — GenServer + JSON stdio protocol
-2. **Phase 1, Step 2**: Haskell replay engine — sequence traversal + STDP strengthening
-3. **Phase 1, Step 3**: Integration with existing `sleep_consolidation.py`
+### ✅ Implementation Complete (2026-07-02)
+
+All 9 neuro-upgrade systems have been implemented, tested, and wired into the MCP tool dispatch pipeline.
+
+**Phase 1: Polyglot Subprocess Bridges** ✅
+- Elixir ripple tagging bridge (`polyglot/bridges/elixir/ripple_tagging.exs` + Python fallback)
+- Haskell replay simulation bridge (`polyglot/bridges/haskell/replay_sim.hs` + Python fallback)
+- Julia neuromodulation bridge (`polyglot/bridges/julia/neuromodulation.jl` + Python fallback)
+- 23 unit tests (all passing)
+
+**Phase 2: Rust PyO3 Hot-Path Modules** ✅
+- New Rust crate `wm-neuro` (`polyglot/whitemagic-rs/crates/wm-neuro/`)
+- Thalamic gating (context-dependent galaxy access masks)
+- Predictive coding (JEPA-style prediction error + novelty scoring)
+- Momentum dynamics (per-node momentum accumulation + decay)
+- Python wrappers with pure-Python fallback (`neuro_hotpath.py`)
+- 24 Python unit tests + 18 Rust unit tests (all passing)
+
+**Phase 3: Cognitive Integration** ✅
+- Metaplasticity system (BCM-inspired threshold adaptation + persistence)
+- Global Workspace (salience-based competition + GanYingBus broadcast)
+- Neuro-Cognitive Sensorium (integrates all 9 systems → 8 citta coherence dimensions)
+- Cognitive integration test (full 9-system cognitive cycle)
+- 25 unit tests (all passing)
+
+**MCP Wiring** ✅ (2026-07-02, 14:46–15:04 UTC)
+- 23 new dispatch entries in `dispatch_memory.py`
+- 23 PRAT Gana mappings in `prat_mappings.py`
+- 11 NLU routing patterns in `meta_tool.py`
+- 39 MCP wiring unit tests (`test_neuro_mcp_wiring.py`)
+
+**Deep Integration** ✅
+- PRAT sensorium now includes `neuro_cognitive` field (7 neuro signals in every MCP response)
+- Citta cycle auto-injects `neuro_signals` from sensorium into each `CittaMoment`
+- Sleep consolidation now runs replay + metaplasticity decay + ripple tag decay post-transfer
+
+**Test Suite**: 3,622 unit tests passing, 15 skipped, 0 failures (102s)
+
+**Gana Assignments**:
+| System | Gana | Rationale |
+|--------|------|-----------|
+| Ripple tagging | gana_abundance | Memory selection for regeneration |
+| Replay simulation | gana_abundance | Memory reactivation during consolidation |
+| Neuromodulation | gana_dipper | Cognitive strategy / state regulation |
+| Metaplasticity | gana_extended_net | Pattern connectivity / plasticity gating |
+| Global workspace | gana_three_stars | Judgment / synthesis / broadcast |
+| Neuro sensorium | gana_ghost | Introspection / self-model / citta |
+
+### Remaining Work
+
+1. ~~**Build PyO3 bindings**~~ ✅ Compiled and installed via `maturin develop --release` (2026-07-02 17:25 UTC). All three neuro-hotpath modules (ThalamicGate, PredictiveCoder, MomentumDynamics) now run on Rust.
+2. ~~**Disinhibition model (Koka)**~~ ✅ Implemented `polyglot/bridges/koka/disinhibition.kk` + Python fallback `core/whitemagic/core/memory/disinhibition.py`. State machine: Wake → LightSleep → DeepSleep → REM with per-state galaxy gating weights.
+3. ~~**Thalamic gating (Zig)**~~ ✅ Implemented `polyglot/bridges/zig/trn_gate.zig` + Python fallback `core/whitemagic/core/memory/thalamic_hard_gate.py`. Three-level cascade: TRN → Cortex → PFC with compile-time gate masks.
+4. ~~**Homeostatic scaling**~~ ✅ Added `_homeostatic_scaling()` to `SleepConsolidation` — multiplicative edge renormalization toward target mean (0.5) after consolidation.
+5. **Performance benchmarking** — Measure Rust vs Python fallback latency for hot-path modules (future session)
+
+### ✅ Loose Ends Cleanup (2026-07-02, 17:20–17:27 UTC)
+
+| Item | Status | Details |
+|------|--------|---------|
+| Registry definitions | ✅ Fixed | 23 authored `ToolDefinition` entries in `cognitive_extensions.py` with proper descriptions + input schemas. 0 stubs remaining. |
+| E2E pipeline tests | ✅ Fixed | 19 end-to-end tests in `test_neuro_e2e_pipeline.py` — full classify → dispatch → handler → result round-trip |
+| Citta persistence | ✅ Verified | `neuro_signals` field serializes/deserializes correctly; old streams without it load fine (defaults to `None`) |
+| Tool catalog discovery | ✅ Verified | All 23 neuro tools appear in catalog with rich descriptions (249 authored definitions total, 606 tool definitions) |
+
+**Test Suite**: 3,640 unit tests passing, 15 skipped, 1 pre-existing flaky failure (`test_polyglot.py` subprocess timeout), 0 new regressions (100s)
+
+### ✅ Optional & Deferred Items Complete (2026-07-02, 17:31–17:43 UTC)
+
+| Item | Status | Details |
+|------|--------|---------|
+| Homeostatic scaling | ✅ Implemented | `_homeostatic_scaling()` in `SleepConsolidation` — 5% renormalization toward mean 0.5 per cycle |
+| Rust PyO3 compilation | ✅ Built & installed | `maturin develop --release` — `wm_neuro` extension with 3 classes, all Python wrappers now use Rust backend |
+| Koka disinhibition | ✅ Implemented | `disinhibition.kk` (Koka bridge) + `disinhibition.py` (Python fallback) — 4-state machine with per-state galaxy weights |
+| Zig thalamic hard gate | ✅ Implemented | `trn_gate.zig` (Zig bridge) + `thalamic_hard_gate.py` (Python fallback) — 3-level cascade with compile-time masks |
+| Extension tests | ✅ 19 new tests | `test_neuro_extensions.py` — homeostatic scaling (3), disinhibition (6), TRN gate (5), Rust PyO3 (5) |
+
+**Test Suite**: 3,656 unit tests passing, 15 skipped, 1 pre-existing flaky failure, 0 new regressions (137s)
 
 ### Beyond polyglot (user's question)
 
@@ -593,3 +667,161 @@ Based on the current state of the project, here are the highest-value non-polygl
 4. **Cognitive integration testing** — Once the cognitive systems are wired into dispatch, we need end-to-end tests that verify the full cognitive pipeline: query → context detection → galaxy gating → spreading activation → predictive coding → search → consolidation scheduling.
 
 My recommendation: Start with **wiring the cognitive systems into tool dispatch** (1), then move to **Phase 1 polyglot neuro-upgrades** (Elixir + Haskell bridges). The wiring is prerequisite for the polyglot bridges to be callable from the MCP interface.
+
+---
+
+## 8. Revised Plan — Post-Research Update (Jul 2026)
+
+### 8.1 New Research Findings (Jul 2026)
+
+The following papers were discovered after the original strategy document was written and inform the revised plan:
+
+1. **Sleep Ripples Drive Single-Neuron Reactivation** (bioRxiv, Mar 2026) — First direct human evidence that ripple-driven reactivation supports episodic consolidation. Sleep ripples elicit stronger activation than wake ripples. Ripple-tagged memories should get stronger consolidation priority.
+
+2. **Microcircuit Model for Replay Initiation/Termination** (bioRxiv, Jan 2026) — TORO cells release CCKBC inhibition → replay emerges. Short-term depression controls replay duration. Replay overrepresents reward-associated locations; replays terminating at reward are shorter.
+
+3. **Predictive Associative Memory (PAM)** (arXiv, Feb 2026) — JEPA-style predictor trained on temporal co-occurrence retrieves associations that cross representational boundaries. Temporal shuffle ablation collapses cross-boundary recall by 90%.
+
+4. **Hippocampo-Neocortical Interaction as Compressive RAG** (Nature Comms, Jun 2026) — Hippocampus = compressed episodic store → replayed to train neocortical generative network. Neocortex captures gist, extracts statistical patterns.
+
+5. **Predictive Forgetting for Optimal Generalisation** (arXiv, Mar 2026) — Consolidation = predictive forgetting: selectively retain info that predicts future outcomes. High-capacity systems require iterative offline replay.
+
+6. **Leakage & Second-Order Dynamics for RNN Replay** (arXiv, Feb 2026) — Hidden state leakage improves replay. Hidden state adaptation encourages exploration. Hidden state momentum enables temporally compressed replay.
+
+7. **GATE: Hippocampal Working Memory Gating** (PLOS Comp Bio, 2026) — EC3→CA1→EC5→EC3 self-gating loop for selective memory maintenance. Multi-lamellar architecture yields multi-scale representations.
+
+8. **Neuromimetic Metaplasticity for Continual Learning** (Neural Networks, 2025) — Distinct synapse types from stable to flexible, randomly intermixed. Robustness against data poisoning via selective filtering.
+
+9. **"Theater of Mind" GWT for LLMs** (arXiv, Apr 2026) — 4-phase Cognitive Tick: Perceive/Retrieve → Think → Arbitrate → Update/Articulate. Core Self (static) + STM (dynamic) bifurcation. Event-driven broadcast.
+
+10. **Homeostatic Synaptic Rewiring Forms Stable Engrams** (PLOS Comp Bio) — Homeostatic plasticity alone can form stable memories. Storage is fast, forgetting is slow. "Silent memories" stored in connectivity matrix.
+
+### 8.2 Revised Interaction Topology
+
+```
+                                    ┌─────────────┐
+                                    │   CITTA     │
+                                    │  Sensorium  │
+                                    │  Coherence  │
+                                    │  DepthGauge │
+                                    └──────┬──────┘
+                                           ▲
+                    ┌──────────────────────┼──────────────────────┐
+                    │                      │                      │
+              ┌─────┴─────┐         ┌──────┴──────┐        ┌──────┴──────┐
+              │ NEUROMOD  │         │  GLOBAL     │        │  THALAMIC   │
+              │ (Julia)   │────────►│  WORKSPACE  │◄───────│  GATING     │
+              │ DA/5HT/ACh│         │  (Python)   │        │  (Rust PyO3)│
+              └─────┬─────┘         └──────┬──────┘        └──────┬──────┘
+                    │                      │                      │
+                    ▼                      ▼                      │
+              ┌─────────────┐       ┌─────────────┐               │
+              │ PREDICTIVE  │       │  RIPPLE     │               │
+              │ CODING      │──────►│  TAGGING    │◄──────────────┘
+              │ (Rust PyO3) │       │  (Elixir)   │
+              └──────┬──────┘       └──────┬──────┘
+                     │                     │
+                     ▼                     ▼
+              ┌─────────────┐       ┌─────────────┐
+              │ METAPLAST   │       │  REPLAY     │
+              │ (Python+Rust)│◄─────│  SIM        │
+              └──────┬──────┘       │  (Haskell)  │
+                     │              └──────┬──────┘
+                     ▼                     │
+              ┌─────────────┐              │
+              │ MOMENTUM    │              │
+              │ DYNAMICS    │◄─────────────┘
+              │ (Rust PyO3) │
+              └──────┬──────┘
+                     │
+                     ▼
+              ┌─────────────┐
+              │ SPREADING   │
+              │ ACTIVATION  │
+              │ (existing)  │
+              └──────┬──────┘
+                     │
+                     ▼
+              ┌─────────────┐
+              │ SLEEP       │
+              │ CONSOLIDATION│
+              │ (existing)  │
+              └─────────────┘
+```
+
+**Data flow**: Thalamic gating runs on every tool call (sub-ms). Neuromodulation computes DA/5HT/ACh levels periodically. Predictive coding runs on every memory write. Ripple tagging listens async on GanYingBus. Replay runs during dream cycle. Metaplasticity runs during consolidation. Momentum runs on every spreading activation call. Global workspace broadcasts on every tool call.
+
+### 8.3 Revised Language Assignments
+
+**Key principle**: Polyglot bridges for batch/async systems, PyO3/Python for hot-path systems.
+
+| System | Language | Rationale |
+|--------|----------|-----------|
+| Thalamic Gating | Rust PyO3 | Hot-path: runs on every tool call, sub-ms latency required |
+| Predictive Coding | Rust PyO3 | Hot-path: runs on every memory write, needs SIMD |
+| Momentum Dynamics | Rust PyO3 | Hot-path: runs on every spreading activation call |
+| Metaplasticity | Python + Rust | Medium-path: runs during consolidation, Python orchestrates Rust compute |
+| Ripple Tagging | Elixir (polyglot) | Async: event listener on GanYingBus, actor model ideal |
+| Replay Simulation | Haskell (polyglot) | Batch: runs during dream cycle, pure functional for sequence traversal |
+| Neuromodulation | Julia (polyglot) | Batch: periodic computation, scientific computing strengths |
+| Global Workspace | Python (extend GanYingBus) | Hot-path: event broadcast, no subprocess overhead |
+| Spreading Activation | Existing (Python + Rust) | Already implemented |
+| Sleep Consolidation | Existing (Python) | Already implemented |
+
+**Changes from original**: Zig → Rust PyO3 for thalamic gating (eliminates subprocess overhead on hot path). Go dropped for global workspace (GanYingBus already provides the broadcast mechanism in Python).
+
+### 8.4 Persistence Strategy
+
+| System | State | Storage | Lifetime |
+|--------|-------|---------|----------|
+| Thalamic Gating | Current mask | In-memory | Session |
+| Neuromodulation | DA/5HT/ACh levels | `WM_STATE_ROOT/neuro/modulators.json` | Cross-session (snapshot every 5 min) |
+| Predictive Coding | Prediction models | In-memory + SQLite sidecar | Session |
+| Ripple Tagging | Tags + co-activations | SQLite sidecar table `ripple_tags` | Permanent |
+| Replay Simulation | Replay trajectories | In-memory during dream cycle | Ephemeral |
+| Metaplasticity | Per-memory plasticity | SQLite column `plasticity_score` | Permanent |
+| Momentum Dynamics | Per-node momentum | In-memory | Session |
+| Global Workspace | Current broadcast | In-memory + GanYingBus history | Session |
+| Spreading Activation | Activation scores | In-memory | Per-call |
+
+### 8.5 MCP Wiring — COMPLETED
+
+The three existing cognitive systems are now wired into MCP tool dispatch:
+
+**9 new tools registered:**
+- `activation.spread` → `gana_winnowing_basket` (search/recall/priming)
+- `activation.stats` → `gana_winnowing_basket`
+- `gating.set_context` → `gana_dipper` (strategy/cognitive context)
+- `gating.detect` → `gana_dipper`
+- `gating.mask` → `gana_dipper`
+- `gating.list` → `gana_dipper`
+- `gating.stats` → `gana_dipper`
+- `consolidation.run` → `gana_abundance` (regeneration/lifecycle)
+- `consolidation.stats` → `gana_abundance`
+
+**Files modified:**
+- `core/whitemagic/tools/handlers/neuro_cognitive.py` — NEW: 9 handler functions
+- `core/whitemagic/tools/registry_defs/cognitive_extensions.py` — 8 new ToolDefinition entries
+- `core/whitemagic/tools/dispatch_memory.py` — 9 new dispatch entries
+- `core/whitemagic/tools/prat_mappings.py` — 9 new PRAT mappings
+- `core/whitemagic/tools/handlers/meta_tool.py` — 4 new NLU routing patterns
+- `core/tests/unit/tools/test_neuro_cognitive.py` — NEW: 21 unit tests (all passing)
+
+### 8.6 Revised Implementation Roadmap
+
+**Phase 1: Polyglot Neuro-Upgrades (Batch/Async)**
+1. Elixir ripple tagging bridge — GenServer + JSON stdio, GanYingBus listener
+2. Haskell replay simulation — sequence traversal + STDP strengthening
+3. Julia neuromodulation — DA/5HT/ACh computation, periodic batch
+
+**Phase 2: Hot-Path Rust PyO3 Upgrades**
+4. Thalamic gating — Rust PyO3 module, sub-ms galaxy access mask
+5. Predictive coding — Rust PyO3, SIMD prediction error computation
+6. Momentum dynamics — Rust PyO3, add momentum term to spreading activation
+
+**Phase 3: Integration & Citta**
+7. Metaplasticity — Python orchestrator + Rust compute, per-memory plasticity scores
+8. Global workspace — extend GanYingBus with cognitive tick broadcast
+9. Citta integration — sensorium injection, coherence auto-measure, depth gauge recovery
+10. Cognitive integration testing — end-to-end pipeline tests
+

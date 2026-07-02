@@ -196,4 +196,430 @@ TOOLS: list[ToolDefinition] = [
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
     ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Spreading Activation (Cross-Galaxy Memory Priming)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="activation.spread",
+        description="Spread activation from seed memories through the association graph, priming related memories for recall.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "seed_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Memory IDs to start activation from",
+                },
+                "max_hops": {
+                    "type": "integer",
+                    "description": "Maximum hops from seeds (default 3)",
+                    "default": 3,
+                },
+                "decay": {
+                    "type": "number",
+                    "description": "Activation decay per hop (default 0.7)",
+                    "default": 0.7,
+                },
+                "cross_galaxy_factor": {
+                    "type": "number",
+                    "description": "Multiplier for cross-galaxy edges (default 0.5)",
+                    "default": 0.5,
+                },
+                "min_activation": {
+                    "type": "number",
+                    "description": "Minimum activation to continue spreading (default 0.05)",
+                    "default": 0.05,
+                },
+                "apply_priming": {
+                    "type": "boolean",
+                    "description": "If true, boost neuro_score and recall_count of primed memories",
+                    "default": False,
+                },
+            },
+            "required": ["seed_ids"],
+        },
+    ),
+    ToolDefinition(
+        name="activation.stats",
+        description="Get spreading activation engine statistics.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Galaxy Gating (Context-Dependent Access Control)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="gating.set_context",
+        description="Set the current cognitive context for galaxy gating (introspection, coding, research, creative, session, default).",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "context": {
+                    "type": "string",
+                    "enum": ["introspection", "coding", "research", "creative", "session", "default"],
+                    "description": "Cognitive context name",
+                },
+            },
+            "required": ["context"],
+        },
+    ),
+    ToolDefinition(
+        name="gating.detect",
+        description="Auto-detect cognitive context from a query string using keyword matching.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Query or prompt text to analyze",
+                },
+            },
+            "required": ["query"],
+        },
+    ),
+    ToolDefinition(
+        name="gating.mask",
+        description="Get the galaxy activation mask (weight multipliers per galaxy) for a given context.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "context": {
+                    "type": "string",
+                    "description": "Context name. If omitted, uses current context.",
+                },
+            },
+        },
+    ),
+    ToolDefinition(
+        name="gating.list",
+        description="List all available galaxy gating contexts with descriptions and current context.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="gating.stats",
+        description="Get galaxy gating system statistics.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Sleep Consolidation (Cross-Galaxy Memory Transfer)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="consolidation.run",
+        description="Run a sleep consolidation cycle — transfer, strengthen, and prune memories across galaxies.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "If true, only report what would be transferred without modifying databases",
+                    "default": False,
+                },
+            },
+        },
+    ),
+    ToolDefinition(
+        name="consolidation.stats",
+        description="Get sleep consolidation engine statistics.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Ripple Tagging (Experience Selection for Consolidation)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="ripple.tag",
+        description="Tag memories that co-activate within a ripple window for consolidation during sleep.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "memory_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Memory IDs to tag as co-activated",
+                },
+                "emotional_weight": {
+                    "type": "number",
+                    "description": "Emotional salience weight 0-1 (default 1.0)",
+                    "default": 1.0,
+                },
+            },
+            "required": ["memory_ids"],
+        },
+    ),
+    ToolDefinition(
+        name="ripple.tags",
+        description="Get ripple tags for specified memories.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "memory_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Memory IDs to look up tags for",
+                },
+            },
+            "required": ["memory_ids"],
+        },
+    ),
+    ToolDefinition(
+        name="ripple.decay",
+        description="Decay all ripple tags (e.g., after a consolidation cycle has consumed them).",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="ripple.stats",
+        description="Get ripple tagging system statistics.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Replay Simulation (Hippocampal Sequence Reactivation)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="replay.run",
+        description="Replay a memory sequence with STDP strengthening and trajectory detection.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "sequence": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": "List of memory dicts with memory_id, timestamp, importance",
+                },
+            },
+            "required": ["sequence"],
+        },
+    ),
+    ToolDefinition(
+        name="replay.batch",
+        description="Batch replay multiple memory sequences for parallel consolidation.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "batches": {
+                    "type": "array",
+                    "items": {"type": "array"},
+                    "description": "List of sequences to replay",
+                },
+            },
+            "required": ["batches"],
+        },
+    ),
+    ToolDefinition(
+        name="replay.stats",
+        description="Get replay simulation system statistics.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Neuromodulation (DA/5HT/ACh Signal Computation)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="neuro.compute",
+        description="Compute neuromodulator (dopamine, serotonin, acetylcholine) levels from activity signals.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "novelty": {"type": "number", "description": "Novelty signal 0-1", "default": 0.5},
+                "reward": {"type": "number", "description": "Reward signal 0-1", "default": 0.5},
+                "stability": {"type": "number", "description": "Stability signal 0-1", "default": 0.5},
+                "coherence": {"type": "number", "description": "Coherence signal 0-1", "default": 0.5},
+                "focus": {"type": "number", "description": "Focus signal 0-1", "default": 0.5},
+                "activity_level": {"type": "number", "description": "Activity level 0-1", "default": 0.5},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="neuro.modulate",
+        description="Apply neuromodulation to a list of memories, adjusting their neuro_score based on modulator levels.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "memories": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": "List of memory dicts to modulate",
+                },
+                "da": {"type": "number", "description": "Dopamine level override 0-1"},
+                "sht": {"type": "number", "description": "Serotonin level override 0-1"},
+                "ach": {"type": "number", "description": "Acetylcholine level override 0-1"},
+            },
+            "required": ["memories"],
+        },
+    ),
+    ToolDefinition(
+        name="neuro.reset",
+        description="Reset neuromodulator levels to baseline.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="neuro.stats",
+        description="Get neuromodulation system statistics.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Metaplasticity (BCM-Inspired Threshold Adaptation)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="metaplasticity.apply",
+        description="Apply a strength modification to a memory, gated by its metaplasticity threshold.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "memory_id": {"type": "string", "description": "Memory ID to modify"},
+                "delta": {"type": "number", "description": "Strength change to apply", "default": 0.0},
+            },
+            "required": ["memory_id"],
+        },
+    ),
+    ToolDefinition(
+        name="metaplasticity.batch",
+        description="Batch apply multiple metaplasticity-gated modifications.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "updates": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": "List of {memory_id, delta} updates",
+                },
+            },
+            "required": ["updates"],
+        },
+    ),
+    ToolDefinition(
+        name="metaplasticity.plasticity",
+        description="Get plasticity score for a memory (0=stable, 1=plastic) and its current threshold.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "memory_id": {"type": "string", "description": "Memory ID to query"},
+            },
+            "required": ["memory_id"],
+        },
+    ),
+    ToolDefinition(
+        name="metaplasticity.decay",
+        description="Decay all metaplasticity activity counters (e.g., during sleep homeostasis).",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="metaplasticity.stats",
+        description="Get metaplasticity system statistics.",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Global Workspace (Cognitive Broadcast Architecture)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="workspace.propose",
+        description="Submit a proposal to the global workspace for broadcast. High-salience proposals win the competition.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": "Source module name"},
+                "content": {"type": "object", "description": "Proposal content payload"},
+                "salience": {"type": "number", "description": "Salience score 0-1 (default 0.5)", "default": 0.5},
+            },
+            "required": ["source", "content"],
+        },
+    ),
+    ToolDefinition(
+        name="workspace.state",
+        description="Get the current global workspace state — active broadcast and competition status.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="workspace.history",
+        description="Get recent global workspace broadcast history.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Max entries to return (default 10)", "default": 10},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="workspace.stats",
+        description="Get global workspace statistics.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Neuro-Cognitive Sensorium (Citta Integration)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="sensorium.state",
+        description="Compute the full neuro-cognitive sensorium state from all 9 neuro-upgrade systems.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="sensorium.citta",
+        description="Get citta enrichment signals — 8 coherence dimensions plus composites from the neuro sensorium.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="sensorium.stats",
+        description="Get neuro sensorium statistics.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
 ]

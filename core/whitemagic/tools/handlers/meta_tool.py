@@ -330,6 +330,47 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_heart",
         "context.pack",
     ),
+    # Session memory — record, recall, replay
+    (
+        re.compile(r"\b(record (?:turn|message|conversation|interaction))\b", re.I),
+        "gana_heart",
+        "session.record",
+    ),
+    (
+        re.compile(r"\b(recall (?:turns?|messages?|conversation|session|recent))\b", re.I),
+        "gana_heart",
+        "session.recall",
+    ),
+    (
+        re.compile(r"\b(replay (?:session|conversation|turns?))\b", re.I),
+        "gana_heart",
+        "session.replay",
+    ),
+    (
+        re.compile(r"\b(search (?:session|conversation|past (?:messages?|turns?)))\b", re.I),
+        "gana_heart",
+        "session.search",
+    ),
+    (
+        re.compile(r"\b(session (?:memory )?stats)\b", re.I),
+        "gana_heart",
+        "session.memory_stats",
+    ),
+    (
+        re.compile(r"\b(backfill (?:session|sequence|memories))\b", re.I),
+        "gana_heart",
+        "session.backfill",
+    ),
+    (
+        re.compile(r"\b(where we left off|continuity|previous session|resume (?:context|conversation))\b", re.I),
+        "gana_heart",
+        "session.continuity",
+    ),
+    (
+        re.compile(r"\b(consolidate (?:session|memories)|sleep consolidation|promote session)\b", re.I),
+        "gana_heart",
+        "session.consolidate",
+    ),
     # Reasoning / thinking
     (
         re.compile(r"\b(reason|think|analyze|deliberate|ponder)\b", re.I),
@@ -725,6 +766,131 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         ),
         "gana_wall",
         "vote.create",
+    ),
+    # Neuro-cognitive: spreading activation
+    (
+        re.compile(
+            r"\b(spread.*activation|activation.*spread|prime.*memor|memor.*prim|spreading)\b",
+            re.I,
+        ),
+        "gana_winnowing_basket",
+        "activation.spread",
+    ),
+    # Neuro-cognitive: galaxy gating
+    (
+        re.compile(
+            r"\b(galaxy.*gat|gat.*galaxy|cognitive.*context|set.*context|context.*mask)\b",
+            re.I,
+        ),
+        "gana_dipper",
+        "gating.set_context",
+    ),
+    (
+        re.compile(
+            r"\b(detect.*context|context.*detect|auto.*context)\b", re.I
+        ),
+        "gana_dipper",
+        "gating.detect",
+    ),
+    # Neuro-cognitive: sleep consolidation
+    (
+        re.compile(
+            r"\b(consolidation.*run|run.*consolidation|sleep.*consolidat|consolidat.*sleep)\b",
+            re.I,
+        ),
+        "gana_abundance",
+        "consolidation.run",
+    ),
+    # Neuro-cognitive: ripple tagging
+    (
+        re.compile(
+            r"\b(ripple.*tag|tag.*ripple|tag.*memor.*coactiv|coactiv.*tag)",
+            re.I,
+        ),
+        "gana_abundance",
+        "ripple.tag",
+    ),
+    (
+        re.compile(
+            r"\b(ripple.*stats?|ripple.*count|tagged.*memor)", re.I
+        ),
+        "gana_abundance",
+        "ripple.stats",
+    ),
+    # Neuro-cognitive: replay simulation
+    (
+        re.compile(
+            r"\b(replay.*memor|memor.*replay|replay.*sequenc|sequenc.*replay|stdp.*replay)",
+            re.I,
+        ),
+        "gana_abundance",
+        "replay.run",
+    ),
+    # Neuro-cognitive: neuromodulation (modulate before compute — more specific)
+    (
+        re.compile(
+            r"\b(modulat\w*e\b|neuro.*\bmodulat|apply.*neuromod\b)", re.I
+        ),
+        "gana_dipper",
+        "neuro.modulate",
+    ),
+    (
+        re.compile(
+            r"\b(neuromod|dopamine|serotonin|acetylcholine|compute.*neuro|neuro.*comput)",
+            re.I,
+        ),
+        "gana_dipper",
+        "neuro.compute",
+    ),
+    # Neuro-cognitive: metaplasticity (apply before plasticity — more specific)
+    (
+        re.compile(
+            r"\b(metaplasticit.*appl|appl.*metaplasticit|gate.*modif|modif.*gate)",
+            re.I,
+        ),
+        "gana_extended_net",
+        "metaplasticity.apply",
+    ),
+    (
+        re.compile(
+            r"\b(metaplasticit|plasticity.*score|memory.*plasticit|epigenetic.*memor)",
+            re.I,
+        ),
+        "gana_extended_net",
+        "metaplasticity.plasticity",
+    ),
+    # Neuro-cognitive: global workspace
+    (
+        re.compile(
+            r"\b(global.*workspace|workspace.*propose|broadcast.*cognit|cognit.*broadcast)\b",
+            re.I,
+        ),
+        "gana_three_stars",
+        "workspace.propose",
+    ),
+    (
+        re.compile(
+            r"\b(workspace.*state|workspace.*stat|workspace.*histor)\b", re.I
+        ),
+        "gana_three_stars",
+        "workspace.state",
+    ),
+    # Neuro-cognitive: sensorium
+    (
+        re.compile(
+            r"\b(sensorium|neuro.*sensorium|citta.*enrich|enrich.*citta|cognitive.*state.*all)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "sensorium.state",
+    ),
+    (
+        re.compile(
+            r"\b(citta.*enrichment|enrichment.*citta|coherence.*neuro|neuro.*coherence)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "sensorium.citta",
     ),
 ]
 

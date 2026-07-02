@@ -901,6 +901,24 @@ def _build_sensorium() -> dict[str, Any]:
     except Exception:
         logger.debug("Swallowed exception", exc_info=True)
 
+    # Neuro-cognitive sensorium — signals from all 9 neuro-upgrade systems
+    try:
+        from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
+
+        neuro = get_neuro_sensorium()
+        enrichment = neuro.get_citta_enrichment()
+        sensorium["neuro_cognitive"] = {
+            "novelty": round(enrichment.get("novelty", 0.0), 4),
+            "stability": round(enrichment.get("identity_stability", 0.0), 4),
+            "attention": round(enrichment.get("goal_alignment", 0.0), 4),
+            "cognitive_load": round(enrichment.get("cognitive_load", 0.0), 4),
+            "emotional_attunement": round(enrichment.get("emotional_attunement", 0.0), 4),
+            "memory_accessibility": round(enrichment.get("memory_accessibility", 0.0), 4),
+            "temporal_orientation": round(enrichment.get("temporal_orientation", 0.0), 4),
+        }
+    except Exception:
+        logger.debug("Swallowed exception", exc_info=True)
+
     return sensorium
 
 

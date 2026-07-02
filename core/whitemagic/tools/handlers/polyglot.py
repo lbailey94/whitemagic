@@ -6,6 +6,7 @@ POLYGLOT_ROOT so the bridge resolves files correctly regardless of import contex
 # ruff: noqa: BLE001
 
 import logging
+import os
 import sys
 import time as _time
 from pathlib import Path
@@ -195,6 +196,21 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
             "error": "Polyglot bridge unavailable",
             "backends": {},
         }
+
+    # Skip subprocess pings when polyglot is disabled (test/CI environments)
+    if os.environ.get("WM_SKIP_POLYGLOT") == "1":
+        result = {
+            "status": "success",
+            "backends": {},
+            "available": 0,
+            "total": 0,
+            "health": 0.0,
+            "skipped": True,
+            "reason": "WM_SKIP_POLYGLOT=1",
+        }
+        _status_cache["result"] = result
+        _status_cache["time"] = now
+        return result
 
     results: dict[str, Any] = {}
     backends = {
