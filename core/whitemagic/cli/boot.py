@@ -437,3 +437,26 @@ def register_all_commands(
         _register_interop_commands(main_group)
     except (ImportError, ModuleNotFoundError):
         pass
+
+    # 26. TUI command (unified cognitive terminal interface)
+    try:
+        import click
+
+        @main_group.command()
+        @click.option("--cockpit", is_flag=True, help="Cockpit mode only")
+        @click.option("--chat", is_flag=True, help="Chat mode only")
+        @click.option("--galaxy", is_flag=True, help="Galaxy map only")
+        def tui(cockpit: bool, chat: bool, galaxy: bool) -> None:
+            """Launch the unified cognitive TUI."""
+            mode = "full"
+            if cockpit:
+                mode = "cockpit"
+            elif chat:
+                mode = "chat"
+            elif galaxy:
+                mode = "galaxy"
+
+            from whitemagic.interfaces.cognitive_tui import run_tui
+            run_tui(mode=mode)
+    except (ImportError, ModuleNotFoundError):
+        pass
