@@ -427,3 +427,13 @@ def register_all_commands(
         _register_mesh_commands(main_group)
     except (ImportError, ModuleNotFoundError):
         pass
+
+    # 25. Interop commands (scan, connect, agents, chat, status)
+    try:
+        from whitemagic.cli.commands.interop_commands import (
+            _register_interop_commands,
+        )
+
+        _register_interop_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass

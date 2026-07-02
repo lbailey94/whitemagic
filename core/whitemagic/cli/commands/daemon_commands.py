@@ -34,7 +34,8 @@ def _register_daemon_commands(cli: click.Group) -> None:
     @click.option("--background", "-b", is_flag=True, help="Run in background (fork)")
     @click.option("--mesh", is_flag=True, help="Enable P2P mesh (opt-in)")
     @click.option("--tcp", is_flag=True, help="Also listen on TCP localhost:4730")
-    def start(background: bool, mesh: bool, tcp: bool) -> None:
+    @click.option("--no-gateway", is_flag=True, help="Skip Go gateway (Python loops only)")
+    def start(background: bool, mesh: bool, tcp: bool, no_gateway: bool) -> None:
         """Start the consciousness daemon."""
 
         if background:
@@ -66,28 +67,43 @@ def _register_daemon_commands(cli: click.Group) -> None:
         click.echo(f"   Consciousness loops: {len(cd._loops)} started")
         click.echo()
 
-        # Start Go gateway (if available)
+        # Start Go gateway (if available and not skipped)
         gateway_proc = None
-        try:
-            import subprocess
-            import shutil
-            gateway_bin = shutil.which("wm_gateway")
-            if gateway_bin:
-                args = [gateway_bin]
-                if mesh:
-                    args.append("--mesh")
-                if tcp:
-                    args.append("--tcp")
-                gateway_proc = subprocess.Popen(
-                    args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                click.echo(f"   Go gateway: started (PID {gateway_proc.pid})")
-            else:
-                click.echo("   Go gateway: not found (wm_gateway not in PATH)")
-        except Exception as e:
-            click.echo(f"   Go gateway: failed ({e})")
+        if not no_gateway:
+            try:
+                import subprocess
+                import shutil
+                from pathlib import Path
+
+                # Check PATH first, then known locations
+                gateway_bin = shutil.which("wm_gateway")
+                if not gateway_bin:
+                    # Check relative to mesh_aux
+                    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+                    local_bin = repo_root / "core" / "mesh_aux" / "wm_gateway"
+                    if local_bin.exists():
+                        gateway_bin = str(local_bin)
+
+                if gateway_bin:
+                    args = [gateway_bin]
+                    if mesh:
+                        args.append("--mesh")
+                    if tcp:
+                        args.append("--tcp")
+                    gateway_proc = subprocess.Popen(
+                        args,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    click.echo(f"   Go gateway: started (PID {gateway_proc.pid})")
+                else:
+                    click.echo("   Go gateway: not found (run 'go build ./cmd/wm_gateway/' in mesh_aux/)")
+                    click.echo("              Continuing with Python loops only...")
+            except Exception as e:
+                click.echo(f"   Go gateway: failed ({e})")
+                click.echo("              Continuing with Python loops only...")
+        else:
+            click.echo("   Go gateway: skipped (--no-gateway)")
 
         click.echo()
         click.echo("   Press Ctrl+C to stop")
