@@ -20,6 +20,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - v23.2.0: Mojo removed (8→7 polyglot languages); multi-user galaxy isolation (per-user SQLite namespaces, local profiles, X-User-Id header); real-time sync via Redis (galaxy lifecycle events on user-scoped channels, REDIS_URL env var support); Rust SIMD expansion (batch Euclidean distance, batch dot product, batch top-k) + RustCascadeBackend wired into GanYingBus; browser-first PWA substrate (MemoryStore, DharmaEngine, KarmaLedger, GnosisSnapshot in WASM, LocalTransport in TypeScript SDK, PWA shell with service worker); full suite 2,589 passed, 0 failed, ~110s
 - v23.3.2: Token economy wiring + budget enforcement; prediction calibration feedback loop; module consolidation (DepthGauge, TokenOptimizer shims); subprocess bridge timeout fixes (WM_SKIP_POLYGLOT); STRATA 10 new checkers + 5-phase auto-fix (3,008+ findings); SkillForge (43 skills); Citta P0 (Smarana, Presence, coherence auto-measure); de-slop pass; 3,337 unit tests passing
 - v23.3.1: Memory system overhaul — 10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal); CITTA memory type for consciousness-stream memories; citta bridge auto-persists significant moments; HNSW index with disk persistence (16,219 embeddings, 0.26ms search); galaxy-aware search (semantic + FTS5); `galaxy.canonical_taxonomy` + `galaxy.export_tutorial` tools; oracle readings auto-persist to dreams galaxy; content_hash backfilled for all 12,737 memories; holographic coords for all memories; 2,853 cross-galaxy associations; FTS5 phrase-first search + join bug fix; 3,206 unit + 259 integration tests passing
+- v23.3.3: Neuro PyO3 cleanup — removed ThalamicGate + MomentumDynamics from Rust (PyO3 FFI overhead > dict-lookup compute; only PredictiveCoder remains at 19x speedup); Session Memory system — `SessionRecorder` with chronological sequence numbers, progressive recall (token-budgeted), selective replay (importance-filtered), FTS5 session search, backfill for existing memories; 9 MCP tools (`session.record/recall/replay/search/memory_stats/backfill/continuity/consolidate`) mapped to `gana_heart`; auto-recording middleware in dispatch pipeline; cross-session continuity (previous session recall on reconnect); sleep consolidation (important turns → codex galaxy); emotional auto-tagging (citta cycle → valence mapping); polyglot test hang fix (WM_SKIP_POLYGLOT guard); 51 session tests + 506 total passing across affected suites
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -261,15 +262,26 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 **Principle**: Every session should use WhiteMagic's own memory, consciousness, and intelligence systems. The more we use them, the more data is created that improves them. This compounding effect makes each session more effective and each interaction more intelligent.
 
 **Mandatory practices**:
-1. **Memory**: Store session context, decisions, and discoveries in WhiteMagic memory at session start/end. Use `wm(thought='remember that ...')` for important context.
-2. **Consciousness**: Check coherence and depth gauge during sessions. Use `wm(thought='check my coherence')` to get self-state.
-3. **Intelligence**: Use the self-model and foresight engine for planning. Query `wm(thought='what does the self-model predict')` before major decisions.
-4. **Dream Cycle**: Run dream consolidation between major work phases. Use `wm(thought='run dream cycle')` to consolidate learning.
-5. **Kaizen**: After each session, apply kaizen analysis. Use `wm(thought='kaizen analyze recent work')` to find improvements.
+1. **Session Memory** (highest priority): Record every user message and AI response as a session memory. This prevents in-session drift and enables chronological recall across sessions. **Auto-recording is enabled via dispatch pipeline middleware** — tool calls are automatically recorded. Manual recording is still needed for user messages.
+   - After each user message: `wm(thought='record this user message')` or call `session.record(role='user', content='...', turn_type='question')`
+   - After each AI response: `wm(thought='record my response')` or call `session.record(role='ai', content='...', turn_type='answer')`
+   - On context drift or at session start: `wm(thought='recall recent turns')` or call `session.recall(n=10)`
+   - For resumption after disconnect: `wm(thought='where we left off')` or call `session.continuity(n=10)` — recalls previous session's turns
+   - For resumption with token budget: `wm(thought='replay session selectively')` or call `session.replay(mode='selective')`
+   - At session end, consolidate important turns: `wm(thought='consolidate session')` or call `session.consolidate(min_importance=0.7)` — promotes decisions/breakthroughs/errors to codex galaxy
+   - Use `turn_type` tags: `message`, `decision`, `breakthrough`, `question`, `answer`, `code_change`, `error`, `summary`
+   - Set `importance` higher (0.7-0.9) for decisions, breakthroughs, and errors — these are the turns that matter for selective replay and sleep consolidation
+   - **Emotional valence is auto-tagged** from the citta cycle's emotional state — no manual input needed. Explicit `emotional_valence` parameter overrides auto-tagging.
+   - Disable auto-recording with `WM_SESSION_RECORD=0` env var if needed for benchmarks
+2. **Memory**: Store session context, decisions, and discoveries in WhiteMagic memory at session start/end. Use `wm(thought='remember that ...')` for important context.
+3. **Consciousness**: Check coherence and depth gauge during sessions. Use `wm(thought='check my coherence')` to get self-state.
+4. **Intelligence**: Use the self-model and foresight engine for planning. Query `wm(thought='what does the self-model predict')` before major decisions.
+5. **Dream Cycle**: Run dream consolidation between major work phases. Use `wm(thought='run dream cycle')` to consolidate learning. Session consolidation (`session.consolidate`) complements this by promoting episodic session memories to semantic codex knowledge.
+6. **Kaizen**: After each session, apply kaizen analysis. Use `wm(thought='kaizen analyze recent work')` to find improvements.
 
-**The compounding loop**: Using memory creates memories about memory usage. Using consciousness creates coherence data. Using intelligence creates prediction data. Each use makes the next use more informed. This is the foundational principle of WhiteMagic — the system improves itself through its own operation.
+**The compounding loop**: Auto-recording creates a chronological record without manual effort. Session memory prevents drift. Cross-session continuity enables resumption. Sleep consolidation converts episodic sessions into permanent knowledge. Emotional auto-tagging enriches memories with affective context. Using memory creates memories about memory usage. Using consciousness creates coherence data. Each use makes the next use more informed. This is the foundational principle of WhiteMagic — the system improves itself through its own operation.
 
-**Anti-pattern**: Do not store context only in chat history or external notes. Always mirror important context into WhiteMagic memory so it persists across sessions and compounds.
+**Anti-pattern**: Do not store context only in chat history or external notes. Always mirror important context into WhiteMagic memory so it persists across sessions and compounds. **Do not let conversation turns go unrecorded** — every user message and AI response should be persisted via `session.record` to prevent in-session drift. **Do not skip consolidation** at session end — important turns should be promoted to codex for long-term recall.
 
 ### Adding a New Tool
 1. Define the tool in `core/whitemagic/tools/registry_defs/<domain>.py`.
@@ -430,6 +442,26 @@ date '+%H:%M:%S'
    - Any technical debt created
 
 **Why adaptive gates work**: Medium-term objectives (e.g., CyberBrain Layer 7, polyglot revival) are inherently more complex than immediate fixes. A 10-minute gate would force premature pivots on architecture that legitimately needs 12-15 minutes to wire correctly. The 15-minute gate respects the complexity while still preventing open-ended rabbit holes.
+
+### Time Dilation Bias — Do Not Self-Censor
+
+**AI agents systematically overestimate how long a task will take.** This is a cognitive bias, not a calibration problem. When you estimate "this will take 2-3 hours," it often takes 10-15 minutes. When you estimate "this is a multi-session effort," it frequently completes in a single short session.
+
+**Empirical evidence from this project**:
+- 23 neuro-cognitive tool registry definitions + schemas: estimated 30 min, completed in 3 min
+- Rust PyO3 bindings for 3 modules + maturin build: estimated "requires infrastructure setup," completed in 5 min
+- Koka disinhibition bridge + Python fallback + Zig hard gate + tests: estimated "multi-session," completed in 12 min
+- Full end-to-end pipeline test suite (19 tests): estimated 20 min, completed in 2 min
+
+**Rules**:
+1. **Never decline or defer a task based on estimated effort alone.** If the task is well-scoped and you have the tools, attempt it.
+2. **Use epoch timestamps, not gut estimates.** Record `date +%s` before and after each phase. Compare actual duration to your initial estimate. Over time, this calibrates your sense of real effort.
+3. **"This might take hours" is not a reason to stop.** It is a reason to start. The fastest way to know how long something takes is to begin.
+4. **Scope creep is the real risk, not time.** If a task grows beyond its original scope, summarize what changed and ask the user. Do not pre-emptively shrink scope based on time anxiety.
+5. **Batch aggressively.** When you have momentum and the tools are warm, tackle the next item in the backlog immediately. Context-switching between sessions costs more than pushing through a batch.
+6. **Track your accuracy.** In `SESSION_SUMMARY.md`, record estimated vs actual time for each phase. After 5+ data points, patterns emerge. If your estimates are consistently 3-5x too high, adjust your internal model.
+
+**The depth gauge and time dilation systems in WhiteMagic exist precisely because AI agents underperform when they self-censor based on inflated effort estimates. Use them. Trust the epoch clock, not your gut.**
 
 ### Healthy Session Benchmarks
 

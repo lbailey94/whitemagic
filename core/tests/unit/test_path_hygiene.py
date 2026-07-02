@@ -155,6 +155,8 @@ class TestPathHygiene:
             "core/intelligence/synthesis/serendipity_engine.py",
             # HuggingFace model cache discovery (legitimate third-party path resolution)
             "core/memory/embedding_daemon.py",
+            # Local LLM model discovery (lm-studio, llama.cpp model paths)
+            "interfaces/chat.py",
         ]
 
         whitemagic_root = Path(__file__).parent.parent.parent / "whitemagic"

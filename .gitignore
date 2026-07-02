@@ -352,3 +352,7 @@ polyglot/elixir/deps/
 # Rust pkg (build artifact, was tracked before gitignore)
 core/whitemagic-rust/pkg/
 .codeiumignore
+
+# Build artifacts
+core/erl_crash.dump
+core/mesh_aux/wm_gateway

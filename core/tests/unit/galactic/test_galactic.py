@@ -278,7 +278,7 @@ def test_memory_recent_returns_n(substrate_path):
     # All should be Memory instances with non-empty ids.
     for mem in m:
         assert mem.id
-        assert mem.memory_type in {"SHORT_TERM", "LONG_TERM", "WORKING"}
+        assert mem.memory_type in {"SHORT_TERM", "LONG_TERM", "WORKING", "CITTA"}
 
 
 def test_memory_recent_filters_by_type(substrate_path):
