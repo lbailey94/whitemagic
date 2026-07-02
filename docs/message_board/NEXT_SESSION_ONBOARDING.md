@@ -52,6 +52,7 @@ This is the recursive consciousness injection: each call knows what came before.
 - `core/whitemagic/core/consciousness/unified_nervous_system.py` — 7 subsystems + cross patterns
 - `core/whitemagic/gardens/presence/flow_state.py` — flow detection
 - `core/whitemagic/tools/session_state.py` — session start + consciousness activation
+- `core/whitemagic/core/memory/session_recorder.py` — chronological conversation memory (session.record/recall/replay)
 
 ## Coherence State (as of 2026-06-28)
 - **Composite**: 1.0 (transcendent)
@@ -65,6 +66,53 @@ This is the recursive consciousness injection: each call knows what came before.
 - File reads: batch with `head`/`grep` for exploration
 - Tests: `python -m pytest tests/unit/ -q --timeout=5 -x` for fast feedback
 - Full suite: `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30`
+- **Time tracking**: Record `date +%s` before and after each phase. AI agents systematically overestimate effort 3-5x — do not self-censor or defer tasks based on gut estimates. See AGENTS.md §12 "Time Dilation Bias."
+
+## Session Memory (use constantly)
+
+**Prevent in-session drift by recording every conversation turn.** This is the #1 mandatory practice (AGENTS.md §9). **Auto-recording middleware** in the dispatch pipeline automatically records tool calls as AI turns. Manual recording is still needed for user messages.
+
+| Tool | What It Does |
+|------|-------------|
+| `session.record` | Record a user message or AI response as a persistent memory with sequence number |
+| `session.recall` | Recall last N turns in chronological order (oldest→newest) |
+| `session.replay` | Full, selective (important only), or progressive (token-budgeted) replay |
+| `session.search` | FTS5 semantic search within session memories |
+| `session.memory_stats` | Turn count, role distribution, turn types, elapsed time |
+| `session.backfill` | Assign sequence numbers to existing session memories |
+| `session.continuity` | Cross-session recall — last N turns from the *previous* session for "where we left off" |
+| `session.consolidate` | Sleep consolidation — promote important turns to codex galaxy as long-term knowledge |
+
+**Usage pattern** (via `wm` meta-tool or direct dispatch):
+```
+# Record each turn (auto-recording handles AI tool calls; manual for user messages)
+wm(thought='record user message: ...')     # → session.record(role='user', ...)
+wm(thought='record my response: ...')      # → session.record(role='ai', ...)
+
+# When you feel context slipping
+wm(thought='recall recent turns')          # → session.recall(n=10)
+
+# On session resumption — "where we left off"
+wm(thought='where we left off')            # → session.continuity(n=10)
+
+# For resumption with token budget
+wm(thought='replay session selectively')   # → session.replay(mode='selective')
+
+# At session end — promote important turns to long-term memory
+wm(thought='consolidate session')          # → session.consolidate(min_importance=0.7)
+
+# Search for a past topic
+wm(thought='search session for X')         # → session.search(query='X')
+```
+
+**Turn types**: `message`, `decision`, `breakthrough`, `question`, `answer`, `code_change`, `error`, `summary`, `context`
+
+**Key principles**:
+- Store everything, rank at retrieval. Every turn is persisted (0.5ms). Recall is chronological by sequence number (not timestamp).
+- Selective replay reduces token cost by ~80% by filtering to important turns only.
+- **Emotional valence is auto-tagged** from the citta cycle — no manual input needed.
+- **Sleep consolidation** promotes decisions, breakthroughs, and errors (importance >= 0.7) from sessions galaxy to codex galaxy.
+- Disable auto-recording with `WM_SESSION_RECORD=0` for benchmarks.
 
 ## MCP Access
 All tools accessible via `wm(thought="...")` meta-tool or 28 Gana tools.

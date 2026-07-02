@@ -465,3 +465,194 @@ def _notify_handoff(handoff: dict[str, Any]) -> None:
         )
     except Exception as e:
         logger.debug("Silenced session emission err: %s", e, exc_info=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Session Memory — Chronological conversation recording & recall
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def handle_session_record(**kwargs: Any) -> dict[str, Any]:
+    """Record a conversation turn as a persistent session memory."""
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    role = kwargs.get("role", "user")
+    content = kwargs.get("content", "")
+    turn_type = kwargs.get("turn_type", "message")
+    importance = float(kwargs.get("importance", 0.5))
+    emotional_valence = float(kwargs.get("emotional_valence", 0.0))
+    session_id = kwargs.get("session_id")
+    tags = set(kwargs.get("tags", [])) if kwargs.get("tags") else None
+
+    if role not in ("user", "ai"):
+        return {"status": "error", "error_code": "invalid_params", "details": {"message": "role must be 'user' or 'ai'"}}
+    if not content:
+        return {"status": "error", "error_code": "invalid_params", "details": {"message": "content is required"}}
+
+    recorder = get_session_recorder(session_id=session_id)
+
+    if role == "user":
+        mem_id = recorder.record_user(content, turn_type=turn_type, importance=importance, emotional_valence=emotional_valence, tags=tags)
+    else:
+        mem_id = recorder.record_ai(content, turn_type=turn_type, importance=importance, emotional_valence=emotional_valence, tags=tags)
+
+    return {
+        "status": "success",
+        "memory_id": mem_id,
+        "session_id": recorder.session_id,
+        "sequence": recorder.sequence,
+    }
+
+
+def handle_session_recall(**kwargs: Any) -> dict[str, Any]:
+    """Recall recent session turns in chronological order."""
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    n = int(kwargs.get("n", 10))
+    session_id = kwargs.get("session_id")
+    full = kwargs.get("full", False)
+
+    recorder = get_session_recorder(session_id=session_id)
+    turns = recorder.recall_recent(n=n)
+    formatted = recorder.format_context(turns, full=full)
+
+    return {
+        "status": "success",
+        "turns": turns,
+        "formatted": formatted,
+        "count": len(turns),
+        "session_id": recorder.session_id,
+    }
+
+
+def handle_session_replay(**kwargs: Any) -> dict[str, Any]:
+    """Replay session turns — full, selective, or progressive.
+
+    Modes:
+        - ``selective``: Only turns matching turn_types and min_importance
+        - ``progressive``: Compact previews within token_budget
+        - ``full`` (default): All turns in chronological order
+    """
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    mode = kwargs.get("mode", "full")
+    session_id = kwargs.get("session_id")
+
+    recorder = get_session_recorder(session_id=session_id)
+
+    if mode == "selective":
+        turn_types = kwargs.get("turn_types", ["decision", "breakthrough", "answer"])
+        min_importance = float(kwargs.get("min_importance", 0.7))
+        turns = recorder.recall_selective(turn_types=turn_types, min_importance=min_importance)
+    elif mode == "progressive":
+        token_budget = int(kwargs.get("token_budget", 2000))
+        turns = recorder.recall_progressive(token_budget=token_budget)
+    else:
+        n = int(kwargs.get("n", 50))
+        turns = recorder.recall_recent(n=n)
+
+    formatted = recorder.format_context(turns, full=(mode == "full"))
+
+    return {
+        "status": "success",
+        "mode": mode,
+        "turns": turns,
+        "formatted": formatted,
+        "count": len(turns),
+        "session_id": recorder.session_id,
+    }
+
+
+def handle_session_search(**kwargs: Any) -> dict[str, Any]:
+    """Semantic search within session memories."""
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    query = kwargs.get("query", "")
+    limit = int(kwargs.get("limit", 10))
+    session_id = kwargs.get("session_id")
+
+    if not query:
+        return {"status": "error", "error_code": "invalid_params", "details": {"message": "query is required"}}
+
+    recorder = get_session_recorder(session_id=session_id)
+    turns = recorder.recall_by_query(query, limit=limit)
+    formatted = recorder.format_context(turns, full=True)
+
+    return {
+        "status": "success",
+        "turns": turns,
+        "formatted": formatted,
+        "count": len(turns),
+        "query": query,
+    }
+
+
+def handle_session_memory_stats(**kwargs: Any) -> dict[str, Any]:
+    """Get session memory statistics."""
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    session_id = kwargs.get("session_id")
+    recorder = get_session_recorder(session_id=session_id)
+    stats = recorder.get_stats()
+
+    return {"status": "success", **stats}
+
+
+def handle_session_backfill(**kwargs: Any) -> dict[str, Any]:
+    """Backfill sequence numbers for existing session memories."""
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    session_id = kwargs.get("session_id")
+    recorder = get_session_recorder(session_id=session_id)
+    updated = recorder.backfill_sequences()
+
+    return {
+        "status": "success",
+        "updated": updated,
+        "session_id": recorder.session_id,
+    }
+
+
+def handle_session_continuity(**kwargs: Any) -> dict[str, Any]:
+    """Get cross-session continuity — recent turns from the previous session.
+
+    Returns the last N turns from the most recent prior session,
+    formatted for LLM context injection. This is the 'where we left off'
+    mechanism for cross-session continuity.
+    """
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    n = int(kwargs.get("n", 10))
+    session_id = kwargs.get("session_id")
+
+    recorder = get_session_recorder(session_id=session_id)
+    result = recorder.get_continuity_turns(n=n)
+
+    return {
+        "status": "success",
+        **result,
+    }
+
+
+def handle_session_consolidate(**kwargs: Any) -> dict[str, Any]:
+    """Consolidate important session turns into the codex galaxy (sleep consolidation).
+
+    Promotes high-importance session memories (decisions, breakthroughs, errors)
+    to the codex galaxy as long-term semantic knowledge.
+    """
+    from whitemagic.core.memory.session_recorder import get_session_recorder
+
+    session_id = kwargs.get("session_id")
+    min_importance = float(kwargs.get("min_importance", 0.7))
+    dry_run = bool(kwargs.get("dry_run", False))
+
+    recorder = get_session_recorder(session_id=session_id)
+    result = recorder.consolidate_session(
+        min_importance=min_importance,
+        dry_run=dry_run,
+    )
+
+    return {
+        "status": "success",
+        **result,
+    }

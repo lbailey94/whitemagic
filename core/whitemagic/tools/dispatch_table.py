@@ -427,6 +427,7 @@ def _build_pipeline() -> Any:
         mw_rate_limiter,
         mw_security_monitor,
         mw_semantic_cache,
+        mw_session_recorder,
         mw_tool_permissions,
         mw_zodiac_resonance,
     )
@@ -446,6 +447,7 @@ def _build_pipeline() -> Any:
     p.use("draft_review", mw_draft_review)
     p.use("token_tracker", mw_token_tracker)
     p.use("observability", mw_observability)
+    p.use("session_recorder", mw_session_recorder)
     p.use("core_router", _mw_core_router)
     return p
 

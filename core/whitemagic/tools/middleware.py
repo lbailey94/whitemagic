@@ -1201,3 +1201,84 @@ def mw_draft_review(
             logger.debug("Swallowed exception", exc_info=True)
 
     return result
+
+
+# ── Session Recorder Middleware ─────────────────────────────────────────
+
+
+# Tools that are too noisy to record as session turns
+_SESSION_RECORD_SKIP = frozenset({
+    "session.record", "session.recall", "session.replay",
+    "session.search", "session.memory_stats", "session.backfill",
+    "consciousness.coherence", "consciousness.depth", "consciousness.status",
+    "citta.sensorium", "citta.continuity", "citta.cycle", "citta.stream_summary",
+})
+
+
+def mw_session_recorder(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Auto-record tool calls as session memories for chronological recall.
+
+    Records each non-trivial tool call as an AI turn in the session memory.
+    For ``wm`` meta-tool calls, the ``thought`` parameter is recorded as a
+    user-like turn (closest thing to user input the MCP server sees).
+
+    Skips lightweight status tools and self-referential session.* tools
+    to avoid infinite recursion and noise.
+    """
+    tool = ctx.tool_name
+
+    if tool in _SESSION_RECORD_SKIP:
+        return next_fn(ctx)
+
+    if os.environ.get("WM_SESSION_RECORD") == "0":
+        return next_fn(ctx)
+
+    result = next_fn(ctx)
+
+    try:
+        from whitemagic.core.memory.session_recorder import get_session_recorder
+
+        recorder = get_session_recorder()
+
+        turn_type = "message"
+        importance = 0.4
+        content_preview = ""
+
+        if tool == "wm":
+            thought = ctx.kwargs.get("thought", "")
+            if thought:
+                recorder.record_user(
+                    content=thought,
+                    turn_type="message",
+                    importance=0.5,
+                )
+            if isinstance(result, dict):
+                status = result.get("status", "")
+                routed = result.get("routed_to", "")
+                content_preview = f"wm → {routed} ({status})"
+            turn_type = "answer"
+            importance = 0.5
+        else:
+            status = "success"
+            if isinstance(result, dict):
+                status = str(result.get("status", "success"))
+            content_preview = f"Tool: {tool} → {status}"
+            if status == "error":
+                turn_type = "error"
+                importance = 0.7
+            elif any(kw in tool for kw in ("create", "store", "save", "write", "update", "record")):
+                turn_type = "code_change"
+                importance = 0.6
+            elif any(kw in tool for kw in ("search", "recall", "read", "list", "status")):
+                turn_type = "context"
+                importance = 0.3
+
+        recorder.record_ai(
+            content=content_preview,
+            turn_type=turn_type,
+            importance=importance,
+        )
+    except Exception:
+        logger.debug("Session recorder middleware: best-effort recording failed", exc_info=True)
+
+    return result

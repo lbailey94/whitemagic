@@ -23,6 +23,16 @@ DISPATCH_AGENTS: dict[str, Callable[..., dict[str, Any]]] = {
     ),
     "session.accept_handoff": LazyHandler("session", "handle_session_accept_handoff"),
     "session.list_handoffs": LazyHandler("session", "handle_session_list_handoffs"),
+    # ── Session Memory — Chronological conversation recording & recall ──
+    "session.record": LazyHandler("session", "handle_session_record"),
+    "session.recall": LazyHandler("session", "handle_session_recall"),
+    "session.replay": LazyHandler("session", "handle_session_replay"),
+    "session.search": LazyHandler("session", "handle_session_search"),
+    "session.memory_stats": LazyHandler("session", "handle_session_memory_stats"),
+    "session.backfill": LazyHandler("session", "handle_session_backfill"),
+    "session.continuity": LazyHandler("session", "handle_session_continuity"),
+    "session.consolidate": LazyHandler("session", "handle_session_consolidate"),
+    # ── Swarm ──
     "swarm.decompose": LazyHandler("swarm", "handle_swarm_decompose"),
     "swarm.route": LazyHandler("swarm", "handle_swarm_route"),
     "swarm.complete": LazyHandler("swarm", "handle_swarm_complete"),
