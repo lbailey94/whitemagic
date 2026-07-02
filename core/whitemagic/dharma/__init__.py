@@ -67,6 +67,7 @@ class DharmaSystem:
         self.guidance_history: list[dict] = []
         self._backend = None  # SQLite backend for audit logging (Phase 4)
         self._rules_engine = None  # Declarative rules engine (lazy init)
+        self._escalation_pipeline = None  # 4-tier pipeline (lazy init)
 
     def _initialize_principles(self) -> dict[str, EthicalPrinciple]:
         """Initialize core ethical principles."""
@@ -152,6 +153,59 @@ class DharmaSystem:
                     exc_info=True,
                 )
         return self._rules_engine
+
+    def _get_escalation_pipeline(self) -> Any:
+        """Lazy-init the 4-tier escalation pipeline."""
+        if self._escalation_pipeline is None:
+            try:
+                from whitemagic.dharma.escalation import get_escalation_pipeline
+
+                self._escalation_pipeline = get_escalation_pipeline()
+            except (ImportError, ModuleNotFoundError) as e:
+                logger.debug(
+                    "Escalation pipeline unavailable: %s",
+                    e,
+                    exc_info=True,
+                )
+        return self._escalation_pipeline
+
+    def evaluate_with_escalation(
+        self, action: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Run the full 4-tier escalation pipeline.
+
+        Tiers: policy → heuristic → LLM → human.
+        Only escalates when the policy tier returns an ambiguous score.
+
+        Returns:
+            Dict with the escalation decision including all tier results.
+        """
+        pipeline = self._get_escalation_pipeline()
+        if pipeline is None:
+            # Fallback to standard evaluation
+            score, concerns = self.evaluate_action(action)
+            return {
+                "action": "allow" if score >= 0.7 else "warn" if score >= 0.3 else "block",
+                "score": score,
+                "final_tier": "policy",
+                "reasoning": "; ".join(concerns) if concerns else "No concerns",
+                "tiers": [],
+                "escalation_available": False,
+            }
+
+        # Get policy decision first for the pipeline
+        policy_decision = None
+        engine = self._get_rules_engine()
+        if engine is not None:
+            try:
+                policy_decision = engine.evaluate(action)
+            except Exception as e:
+                logger.debug("Policy pre-compute failed: %s", e)
+
+        decision = pipeline.evaluate(action, policy_decision)
+        result = decision.to_dict()
+        result["escalation_available"] = True
+        return result
 
     def evaluate_action(self, action: dict[str, Any]) -> tuple[float, list[str]]:
         """Evaluate an action against ethical principles.
