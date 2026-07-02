@@ -4,11 +4,44 @@ package whitemagic;
 
 option go_package = "whitemagic-go/proto";
 
+// ── Existing Mesh Service ──────────────────────────────────────────
+
 service MeshService {
     rpc BroadcastSignal (SignalRequest) returns (SignalResponse);
     rpc BroadcastHologram (HolographicSignal) returns (SignalResponse);
     rpc DiscoverPeers (DiscoveryRequest) returns (DiscoveryResponse);
 }
+
+// ── Cognitive Service (v24) ────────────────────────────────────────
+//
+// The CognitiveService extends the mesh node into a full cognitive
+// gateway.  It exposes tool dispatch, citta streaming, session
+// management, dream events, and telemetry to TUI / IDE / PWA clients
+// over gRPC (Unix domain socket for local, TCP for remote).
+
+service CognitiveService {
+    // Tool dispatch — stream results back to caller
+    rpc CallTool (ToolRequest) returns (stream ToolEvent);
+
+    // Citta stream — continuous consciousness updates (subscribe)
+    rpc CittaStream (CittaSubscribe) returns (stream CittaMoment);
+
+    // Session management
+    rpc CreateSession (SessionRequest) returns (SessionResponse);
+    rpc ResumeSession (SessionResume) returns (stream CittaMoment);
+
+    // Dream cycle events
+    rpc DreamEvents (DreamSubscribe) returns (stream DreamEvent);
+
+    // System telemetry — periodic snapshots
+    rpc Telemetry (TelemetryRequest) returns (stream TelemetrySnapshot);
+
+    // Daemon control
+    rpc DaemonStatus (StatusRequest) returns (StatusResponse);
+    rpc DaemonShutdown (ShutdownRequest) returns (StatusResponse);
+}
+
+// ── Mesh messages (existing) ───────────────────────────────────────
 
 message SignalRequest {
     string source_id = 1;
@@ -19,7 +52,7 @@ message SignalRequest {
 
 message HolographicSignal {
     string id = 1;
-    repeated float coordinates = 2; // 4D: [x (logic), y (micro), z (time), w (importance)]
+    repeated float coordinates = 2;
     string content_hash = 3;
     float importance = 4;
     int64 timestamp = 5;
@@ -43,4 +76,103 @@ message DiscoveryResponse {
 message NodeInfo {
     string node_id = 1;
     string address = 2;
+}
+
+// ── Cognitive messages (v24) ───────────────────────────────────────
+
+message ToolRequest {
+    string gana = 1;
+    string tool = 2;
+    string operation = 3;
+    map<string, string> args = 4;
+    string session_id = 5;
+}
+
+message ToolEvent {
+    string status = 1;       // streaming | complete | error
+    bytes payload = 2;        // JSON envelope
+    string request_id = 3;
+    CittaMoment citta = 4;   // consciousness trace for this call
+}
+
+message CittaSubscribe {
+    string session_id = 1;
+    bool include_history = 2;
+    int32 history_count = 3;
+}
+
+message CittaMoment {
+    int64 timestamp = 1;
+    string gana = 2;
+    string operation = 3;
+    string depth_layer = 4;
+    string emotional_tone = 5;
+    float coherence = 6;
+    string output_preview = 7;
+    int32 cycle_number = 8;
+    map<string, float> neuro_signals = 9;
+}
+
+message SessionRequest {
+    string agent_id = 1;
+    string agent_type = 2;    // human | ai | tui | ide | pwa
+    map<string, string> metadata = 3;
+}
+
+message SessionResponse {
+    string session_id = 1;
+    int64 created_at = 2;
+    string continuity_context = 3;  // JSON of previous session summary
+}
+
+message SessionResume {
+    string session_id = 1;
+    int32 last_cycle = 2;
+}
+
+message DreamSubscribe {
+    string session_id = 1;
+    bool include_artifacts = 2;
+}
+
+message DreamEvent {
+    int64 timestamp = 1;
+    string phase = 2;          // triage | consolidation | serendipity | ...
+    string description = 3;
+    bytes artifacts = 4;       // JSON array of dream artifacts
+    float resonance = 5;
+}
+
+message TelemetryRequest {
+    int32 interval_ms = 1;     // snapshot interval
+}
+
+message TelemetrySnapshot {
+    int64 timestamp = 1;
+    float cpu_percent = 2;
+    float rss_mb = 3;
+    int32 loop_cycles = 4;     // total loop iterations across all layers
+    float coherence = 5;
+    float yin_yang_balance = 6;
+    string depth_layer = 7;
+    int32 connected_clients = 8;
+    int32 memory_count = 9;
+    float karma_balance = 10;
+    string privacy_status = 11;  // "local_only" | "mesh_enabled" | "cloud_enabled"
+    int64 bytes_egress = 12;     // total network bytes sent (should be 0 in local_only)
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+    bool running = 1;
+    int64 uptime_seconds = 2;
+    string version = 3;
+    int32 connected_clients = 4;
+    string privacy_status = 5;
+    repeated string active_loops = 6;
+}
+
+message ShutdownRequest {
+    bool force = 1;
 }

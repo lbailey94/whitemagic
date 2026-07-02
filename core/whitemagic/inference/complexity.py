@@ -35,9 +35,10 @@ class InferenceTier(IntEnum):
     """Inference capability tiers, ordered by cost/latency."""
 
     EDGE_RULES = 0  # Pattern matching, cache — sub-millisecond
-    LOCAL_SMALL = 1  # Ollama 1.5B-7B quantized — 50-500ms
-    LOCAL_LARGE = 2  # BitNet/Ollama 8B+ — 1-10s
-    CLOUD = 3  # Frontier model via API — 2-30s
+    LOCAL_LLAMA_CPP = 1  # llama.cpp small model (continuous) — 10-100ms
+    LOCAL_SMALL = 2  # Ollama 1.5B-7B quantized — 50-500ms
+    LOCAL_LARGE = 3  # BitNet/Ollama 8B+ — 1-10s
+    CLOUD = 4  # Frontier model via API — 2-30s
 
 
 # Task type patterns — ordered from simplest to most complex

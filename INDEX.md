@@ -174,6 +174,7 @@ High-level infrastructure decisions.
 | `IA_v1.md` | Information Architecture freeze — URL scheme, nav structure, redirect map, epistemic tagging, multilingual support (Obj 4) |
 | `GALAXY_6D_STRATEGY.md` | 6D holographic galaxy strategy — polyglot language assignments, galaxy sharing protocol, 8-phase implementation plan |
 | `CPU_INFERENCE_STRATEGY.md` | CPU inference strategy — ternary SSM, cache tiling, T-MAC LUT, citta autonomic layer, speculative decoding, 8-phase implementation plan |
+| `CONTINUOUS_CONSCIOUSNESS_STRATEGY.md` | v24.0.0 strategy — frequency-layered loops, Go cognitive gateway, gRPC transport, local-first privacy, llama.cpp inference, TUI+PWA hybrid, one-command install |
 
 ---
 

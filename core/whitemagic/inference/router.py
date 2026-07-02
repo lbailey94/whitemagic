@@ -198,6 +198,7 @@ class InferenceRouter:
 
         # Tier handlers — lazily initialized
         self._edge_handler: Callable[..., dict[str, Any]] | None = None
+        self._llama_cpp_handler: Callable[..., dict[str, Any]] | None = None
         self._local_small_handler: Callable[..., dict[str, Any]] | None = None
         self._local_large_handler: Callable[..., dict[str, Any]] | None = None
         self._cloud_handler: Callable[..., dict[str, Any]] | None = None
@@ -216,6 +217,8 @@ class InferenceRouter:
         """
         if tier == InferenceTier.EDGE_RULES:
             self._edge_handler = handler
+        elif tier == InferenceTier.LOCAL_LLAMA_CPP:
+            self._llama_cpp_handler = handler
         elif tier == InferenceTier.LOCAL_SMALL:
             self._local_small_handler = handler
         elif tier == InferenceTier.LOCAL_LARGE:
@@ -474,6 +477,8 @@ class InferenceRouter:
         """Get the handler for a specific tier."""
         if tier == InferenceTier.EDGE_RULES:
             return self._edge_handler
+        elif tier == InferenceTier.LOCAL_LLAMA_CPP:
+            return self._llama_cpp_handler
         elif tier == InferenceTier.LOCAL_SMALL:
             return self._local_small_handler
         elif tier == InferenceTier.LOCAL_LARGE:
@@ -635,12 +640,41 @@ def _cloud_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 _router: InferenceRouter | None = None
 
 
+def _llama_cpp_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
+    """Default Tier 1 handler — uses llama.cpp backend (continuous background model)."""
+    try:
+        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+
+        backend = get_llama_cpp_backend()
+        if not backend.is_available:
+            return {
+                "answer": "",
+                "confidence": 0.0,
+                "metadata": {"error": "llama_cpp_unavailable"},
+            }
+
+        max_tokens = kwargs.get("max_tokens", 128)
+        answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.3)
+        if answer.startswith("Error"):
+            return {"answer": "", "confidence": 0.0, "metadata": {"error": answer}}
+
+        return {
+            "answer": answer,
+            "confidence": 0.7,
+            "metadata": {"backend": "llama_cpp", "model": backend._model_path},
+        }
+    except Exception as e:
+        logger.debug("llama.cpp handler failed: %s", e)
+        return {"answer": "", "confidence": 0.0, "metadata": {"error": str(e)}}
+
+
 def get_inference_router() -> InferenceRouter:
     """Get singleton inference router with default handlers."""
     global _router
     if _router is None:
         _router = InferenceRouter()
         _router.register_handler(InferenceTier.EDGE_RULES, _edge_rules_handler)
+        _router.register_handler(InferenceTier.LOCAL_LLAMA_CPP, _llama_cpp_handler)
         _router.register_handler(InferenceTier.LOCAL_SMALL, _local_small_handler)
         _router.register_handler(InferenceTier.LOCAL_LARGE, _local_large_handler)
         _router.register_handler(InferenceTier.CLOUD, _cloud_handler)

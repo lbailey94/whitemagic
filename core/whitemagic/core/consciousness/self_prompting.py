@@ -1,20 +1,14 @@
 # ruff: noqa: BLE001
-"""Self-Prompting System
+"""Self-Prompting System — AI can queue work for itself and process asynchronously.
 
-AI can queue work for itself and process asynchronously.  Integrates with
-the Temporal Scheduler (SLOW lane), Diary for audit, and TokenEconomy for
-budget tracking.
-
-Architecture
-------------
-WorkItems live in a priority queue persisted as JSON.  ``process_queue``
-pops items in priority order, executes registered handlers, and logs
-results to the Diary.  ``ask_human`` records a pending question that the
-CLI or MCP layer can surface.
+Ported from v17 archive with v23 adaptations:
+- Uses WM_ROOT instead of WM_STATE_ROOT directly
+- Thread-safe handler registry
+- Integrates with the Theta loop for background processing
 
 Usage::
 
-    from whitemagic.autonomous.self_prompting import queue_work, process_queue
+    from whitemagic.core.consciousness.self_prompting import queue_work, process_queue
 
     queue_work("consolidate stale memories", priority=3)
     results = process_queue(limit=5)
@@ -24,17 +18,21 @@ from __future__ import annotations
 
 import json
 import logging
-import os
+import threading
 import time
 import uuid
-from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+from whitemagic.config.paths import WM_ROOT
 
 logger = logging.getLogger(__name__)
+
+_AUTONOMOUS_DIR = WM_ROOT / "autonomous"
+_AUTONOMOUS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class Priority(IntEnum):
@@ -57,7 +55,7 @@ class WorkItem:
     handler: str = ""
     params: dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    status: str = "pending"  # pending | running | done | failed | deferred
+    status: str = "pending"
     result: str = ""
     attempts: int = 0
     max_attempts: int = 3
@@ -82,15 +80,8 @@ class HumanQuestion:
     answer: str = ""
 
 
-def _state_dir() -> Path:
-    root = Path(os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic")))
-    d = root / "autonomous"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
 def _load_queue() -> list[WorkItem]:
-    path = _state_dir() / "work_queue.json"
+    path = _AUTONOMOUS_DIR / "work_queue.json"
     if not path.exists():
         return []
     try:
@@ -102,45 +93,37 @@ def _load_queue() -> list[WorkItem]:
 
 
 def _save_queue(items: list[WorkItem]) -> None:
-    path = _state_dir() / "work_queue.json"
+    path = _AUTONOMOUS_DIR / "work_queue.json"
     path.write_text(json.dumps([i.to_dict() for i in items], indent=2))
 
 
 def _load_questions() -> list[HumanQuestion]:
-    path = _state_dir() / "human_questions.json"
+    path = _AUTONOMOUS_DIR / "human_questions.json"
     if not path.exists():
         return []
     try:
         data = json.loads(path.read_text())
-        return [
-            HumanQuestion(
-                **{
-                    k: v
-                    for k, v in d.items()
-                    if k in HumanQuestion.__dataclass_fields__
-                }
-            )
-            for d in data
-        ]
+        return [HumanQuestion(**{k: v for k, v in d.items() if k in HumanQuestion.__dataclass_fields__}) for d in data]
     except Exception:
         return []
 
 
 def _save_questions(qs: list[HumanQuestion]) -> None:
-    path = _state_dir() / "human_questions.json"
+    path = _AUTONOMOUS_DIR / "human_questions.json"
     path.write_text(json.dumps([asdict(q) for q in qs], indent=2))
 
 
 _handlers: dict[str, Callable[..., Any]] = {}
+_handlers_lock = threading.Lock()
 
 
 def register_handler(name: str, fn: Callable[..., Any]) -> None:
     """Register a named handler for work items."""
-    _handlers[name] = fn
+    with _handlers_lock:
+        _handlers[name] = fn
 
 
 def _default_handler(item: WorkItem) -> str:
-    """Fallback handler that just logs the task."""
     logger.info("Self-prompt executing (no handler): %s", item.task)
     return f"executed: {item.task}"
 
@@ -151,10 +134,7 @@ def queue_work(
     handler: str = "",
     params: dict[str, Any] | None = None,
 ) -> str:
-    """Queue work for later processing.
-
-    Returns the work-item ID.
-    """
+    """Queue work for later processing. Returns the work-item ID."""
     item = WorkItem(
         task=task,
         priority=int(priority),
@@ -169,58 +149,36 @@ def queue_work(
 
 
 def process_queue(limit: int = 10) -> dict[str, Any]:
-    """Process queued work items in priority order.
-
-    Returns a summary dict with counts of processed / failed / remaining.
-    """
+    """Process queued work items in priority order."""
     items = _load_queue()
     pending = [i for i in items if i.status == "pending"]
     pending.sort(key=lambda i: i.priority)
 
     stats: dict[str, Any] = {
-        "processed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "remaining": 0,
-        "results": [],
+        "processed": 0, "failed": 0, "skipped": 0, "remaining": 0, "results": [],
     }
 
     for item in pending[:limit]:
         item.attempts += 1
         item.status = "running"
-        handler_fn = _handlers.get(item.handler, _default_handler)
+        with _handlers_lock:
+            handler_fn = _handlers.get(item.handler, _default_handler)
         start = time.monotonic()
         try:
             result = handler_fn(item)
             item.status = "done"
             item.result = str(result) if result else "ok"
             stats["processed"] += 1
-            stats["results"].append(
-                {"id": item.id, "task": item.task, "result": item.result}
-            )
+            stats["results"].append({"id": item.id, "task": item.task, "result": item.result})
         except Exception as exc:
             if item.attempts >= item.max_attempts:
                 item.status = "failed"
                 stats["failed"] += 1
             else:
-                item.status = "pending"  # retry later
+                item.status = "pending"
                 stats["skipped"] += 1
             item.result = f"error: {exc}"
-            logger.warning(
-                "Work item %s failed (attempt %d): %s", item.id, item.attempts, exc
-            )
-        elapsed = time.monotonic() - start
-
-        try:
-            from whitemagic.autonomous.diary import get_diary
-
-            diary = get_diary()
-            diary.log_hourly(
-                f"self_prompt:{item.handler or 'default'}",
-                f"task={item.task} status={item.status} elapsed={round(elapsed, 3)}s",
-            )
-        except Exception:
-            logger.debug("Swallowed exception", exc_info=True)
+            logger.warning("Work item %s failed (attempt %d): %s", item.id, item.attempts, exc)
 
     stats["remaining"] = sum(1 for i in items if i.status == "pending")
     _save_queue(items)
@@ -228,11 +186,7 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
 
 
 def ask_human(question: str, context: str = "") -> str:
-    """Record a question for the human operator.
-
-    The question is persisted.  The CLI ``wm questions`` command (or MCP
-    ``ask_human`` tool) can list and answer them.  Returns the question ID.
-    """
+    """Record a question for the human operator."""
     q = HumanQuestion(question=question, context=context)
     qs = _load_questions()
     qs.append(q)
@@ -242,14 +196,13 @@ def ask_human(question: str, context: str = "") -> str:
 
 
 def answer_question(question_id: str, answer: str) -> bool:
-    """Provide an answer to a pending question. Returns True if found."""
+    """Provide an answer to a pending question."""
     qs = _load_questions()
     for q in qs:
         if q.id == question_id and not q.answered:
             q.answered = True
             q.answer = answer
             _save_questions(qs)
-            logger.info("Question %s answered: %s", question_id, answer[:80])
             return True
     return False
 

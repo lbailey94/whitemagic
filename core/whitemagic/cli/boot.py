@@ -407,3 +407,23 @@ def register_all_commands(
         register_cognitive_commands(main_group)
     except (ImportError, ModuleNotFoundError):
         pass
+
+    # 23. Daemon commands (start, stop, status, loops)
+    try:
+        from whitemagic.cli.commands.daemon_commands import (
+            _register_daemon_commands,
+        )
+
+        _register_daemon_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass
+
+    # 24. Mesh commands (status, enable, disable, peers, discover)
+    try:
+        from whitemagic.cli.commands.mesh_commands import (
+            _register_mesh_commands,
+        )
+
+        _register_mesh_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass

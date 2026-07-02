@@ -168,13 +168,16 @@ class TestInferenceRouter:
             InferenceTier.EDGE_RULES, self._make_mock_handler("low", 0.3)
         )
         router.register_handler(
+            InferenceTier.LOCAL_LLAMA_CPP, self._make_mock_handler("low2", 0.3)
+        )
+        router.register_handler(
             InferenceTier.LOCAL_SMALL, self._make_mock_handler("medium", 0.5)
         )
         router.register_handler(
             InferenceTier.LOCAL_LARGE, self._make_mock_handler("high", 0.95)
         )
         response = router.route("hello")
-        # Should only escalate once from EDGE to LOCAL_SMALL
+        # Should only escalate once from EDGE to next tier
         assert len(response.escalation_chain) <= 1
 
     def test_sensitive_data_no_cloud(self):
