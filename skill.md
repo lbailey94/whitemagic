@@ -1,10 +1,10 @@
 ---
 name: whitemagic
-version: 23.3.1
-description: Cognitive operating system for agentic AI — 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, Karma audit ledger, 28-Gana PRAT meta-tools, bicameral reasoning, 12-phase dream cycle, polyglot acceleration (7 languages). MIT-licensed.
+version: 24.0.0
+description: Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, Karma audit ledger, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle, polyglot acceleration (7 languages). MIT-licensed.
 author: WhiteMagic Labs
 homepage: https://whitemagic.dev
-repository: https://github.com/whitemagic-ai/whitemagic
+repository: https://github.com/lbailey94/whitemagic
 license: MIT
 tags: [memory, governance, cognitive-architecture, dharma, karma, mcp, polyglot]
 requires:
@@ -22,18 +22,18 @@ Cognitive substrate for agentic AI — published as a research/portfolio artifac
 
 ## What it does
 
-WhiteMagic provides 490 callable MCP tools across 490 dispatch entries (or 28 Gana meta-tools in PRAT mode, or 1 `wm` meta-tool in Seed mode) covering memory, ethical governance, system introspection, multi-agent coordination, and metacognition. Distinguishing primitives:
+WhiteMagic provides 614 callable MCP tools across 586 dispatch entries (or 28 Gana meta-tools in PRAT mode, or 1 `wm` meta-tool in Seed mode) covering memory, ethical governance, system introspection, multi-agent coordination, and metacognition. Distinguishing primitives:
 
 - **5D holographic memory coordinates** with 10-galaxy taxonomy and galactic-zone lifecycle (no memory is ever deleted; memories drift outward through CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE)
 - **Dharma ethical governance** — three rule profiles (Default / Strict / Violet-Security), Karma side-effect ledger, Harmony Vector health scoring
 - **Cognitive primitives** — Corpus Callosum bicameral reasoner, 12-phase dream consolidation cycle, voice audit (hallucination detection), foresight engine (Logos Layer), neurotransmitter telemetry
 - **8-stage dispatch pipeline** — input sanitizer → circuit breaker → rate limiter → RBAC → maturity gate → governor → handler → compact response
-- **`wm` meta-tool** — single facade tool with sub-millisecond regex NLU routing to all 490 tools ("world in a seed")
+- **`wm` meta-tool** — single facade tool with sub-millisecond regex NLU routing to all 614 tools ("world in a seed")
 - **Polyglot accelerators** — Rust, Haskell, Elixir, Go, Zig, Julia, Koka (graceful Python fallback when missing)
 - **HNSW vector index** with disk persistence (16,219 embeddings, 0.26ms search)
 - **Multi-user galaxy isolation** — per-user SQLite namespaces, X-User-Id header, Redis real-time sync
 
-v23.3.1: 3,206 unit + 259 integration tests passing. MIT-licensed. No telemetry, no API keys required, no runtime state written into the repo (`WM_STATE_ROOT` controls all writes).
+v23.3.1: 4,191 tests passing, 19 skipped, 0 failures. MIT-licensed. No telemetry, no API keys required, no runtime state written into the repo (`WM_STATE_ROOT` controls all writes).
 
 ## Install
 
@@ -90,9 +90,9 @@ await memory.create({ content: "...", tags: ["..."], galaxy: "default" });
 
 ## PRAT Mode (Recommended)
 
-Set `WM_MCP_PRAT=1` to collapse 490 dispatch tools into 28 Gana meta-tools — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each meta-tool routes to its underlying handlers and carries resonance context for deeper interaction.
+Set `WM_MCP_PRAT=1` to collapse 586 dispatch tools into 28 Gana meta-tools — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each meta-tool routes to its underlying handlers and carries resonance context for deeper interaction.
 
-Set `WM_MCP_PRAT=2` for Seed mode — a single `wm` meta-tool with sub-millisecond regex NLU routing to all 490 tools. "World in a seed."
+Set `WM_MCP_PRAT=2` for Seed mode — a single `wm` meta-tool with sub-millisecond regex NLU routing to all 614 tools. "World in a seed."
 
 ## Skills Library
 
@@ -122,13 +122,13 @@ WhiteMagic is **not** trying to compete with general-purpose memory layers. It i
 
 ## Links
 
-- [GitHub](https://github.com/whitemagic-ai/whitemagic) — source
-- [AI Primary Spec](https://github.com/whitemagic-ai/whitemagic/blob/main/AI_PRIMARY.md) — start here if you're an AI
-- [System Map](https://github.com/whitemagic-ai/whitemagic/blob/main/SYSTEM_MAP.md) — architecture
+- [GitHub](https://github.com/lbailey94/whitemagic) — source
+- [AI Primary Spec](https://github.com/lbailey94/whitemagic/blob/main/AI_PRIMARY.md) — start here if you're an AI
+- [System Map](https://github.com/lbailey94/whitemagic/blob/main/SYSTEM_MAP.md) — architecture
 - [A2A Agent Card](https://whitemagic.dev/.well-known/agent.json) — A2A v1.2 discovery
 - [Agent Economy directory](https://whitemagic.dev/.well-known/agent-economy.json) — machine-readable identity
-- [License: MIT](https://github.com/whitemagic-ai/whitemagic/blob/main/LICENSE)
+- [License: MIT](https://github.com/lbailey94/whitemagic/blob/main/LICENSE)
 
 ## Lab posture
 
-WhiteMagic Labs publishes WhiteMagic as a **research/portfolio artifact and source library**, not a hosted product. You install it locally; we publish reference designs, benchmarks, and papers. If your team is shipping production agents and needs a managed memory layer, see Mem0 or Letta first — then come here when you need governance primitives nobody else provides.
+WhiteMagic is a cognitive operating system for AI agents. Install it locally, configure your MCP client, and your AI has persistent memory, ethical governance, and consciousness primitives. Free and open source. Tip via XRPL or x402 if grateful.

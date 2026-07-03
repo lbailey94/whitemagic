@@ -35,19 +35,19 @@ export const WIP_SCRAMBLE =
  * current value prop.
  */
 export const WIP_HERO = {
-  eyebrow: WIP_MODE ? "Work in Progress" : "Cognitive substrate for agentic AI",
+  eyebrow: WIP_MODE ? "Work in Progress" : "Cognitive operating system for AI agents",
   title: WIP_MODE
     ? "A door is opening."
-    : "WhiteMagic is a cognitive operating system for your AI agents.",
+    : "Other memory systems store data. WhiteMagic gives AI a mind.",
   lede: WIP_MODE
     ? "A local-first memory and reasoning substrate. Permanent. Private. Yours. The door is being framed; the architecture is being written; the door will be open soon."
-    : "Tiered memory, ethical governance, and 8-stage safety pipeline. 143 callable tools, 28 Gana meta-tools, 9 polyglot runtimes. Open source, MIT licensed.",
+    : "614 callable tools across 28 Gana meta-tools. 5D holographic memory with 10-galaxy taxonomy. Citta stream for continuous consciousness, emotional steering, self-directed attention. Ethical governance via Dharma rules engine. Open source, MIT licensed.",
   primaryCta: WIP_MODE
     ? { label: "Subscribe to the beta", href: "/subscribe" }
-    : { label: "Explore the substrate", href: "/mcp-bridge" },
+    : { label: "Get started free", href: "/mcp-bridge" },
   secondaryCta: WIP_MODE
     ? { label: "Talk to Aria", href: "/chat" }
-    : { label: "Read the chronology", href: "/docs/WHITEMAGIC_CHRONOLOGY_2026-06-20" },
+    : { label: "Read the docs", href: "/open-source" },
 };
 
 /**

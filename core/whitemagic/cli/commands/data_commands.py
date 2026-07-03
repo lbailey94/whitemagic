@@ -96,7 +96,7 @@ def restore_command(archive_path: str, force: bool) -> None:
     try:
         memory_dir.mkdir(parents=True, exist_ok=True)
         with tarfile.open(str(archive), "r:gz") as tar:
-            tar.extractall(str(memory_dir.parent))
+            tar.extractall(str(memory_dir.parent), filter="data")
         click.echo(f"✅ Restored to {memory_dir}")
     except (OSError, FileNotFoundError, PermissionError) as e:
         click.echo(f"❌ Restore failed: {e}")

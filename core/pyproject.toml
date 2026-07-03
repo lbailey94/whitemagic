@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whitemagic"
-version = "23.3.1"
+version = "24.0.0"
 description = "Cognitive operating system for AI agents — 518 tools across 28 Gana meta-tools, 5D holographic memory, ethical governance, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"

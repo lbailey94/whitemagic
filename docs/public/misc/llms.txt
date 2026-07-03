@@ -1,11 +1,11 @@
 # WhiteMagic
 
-> The Tool Substrate for Agentic AI — 479 callable tools across 451 dispatch entries, tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance, and polyglot accelerators.
+> The Tool Substrate for Agentic AI — 614 callable tools across 586 dispatch entries, tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance, and polyglot accelerators.
 
 ## Overview
 
 WhiteMagic is a high-performance memory and tool infrastructure for AI agents. It provides:
-- 479 callable tools across 451 dispatch entries (or 28 PRAT Gana meta-tools) via unified dispatch
+- 614 callable tools across 586 dispatch entries (or 28 PRAT Gana meta-tools) via unified dispatch
 - Tiered memory with SQLite backing, 5D holographic coordinates (XYZWV), Galactic Map lifecycle
 - Ethical governance: Dharma Rules Engine, Karma Ledger, Harmony Vector, Homeostatic Loop
 - Polyglot accelerators: Rust (PyO3), Zig (SIMD), Haskell (FFI), Elixir (OTP), Mojo, Go, Julia, TypeScript
@@ -47,7 +47,7 @@ call_tool("gnosis", compact=True)
 # PRAT mode — 28 Gana meta-tools (recommended)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
-# Classic mode — 451 dispatch tools
+# Classic mode — 586 dispatch tools
 python -m whitemagic.run_mcp
 ```
 
@@ -81,6 +81,15 @@ No memory is ever deleted — only rotated outward.
 
 ### Dispatch Pipeline
 Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response
+
+
+### Consciousness Architecture
+- **Citta Stream**: continuous consciousness with coherence tracking and emotional auto-tagging
+- **Goal Graph**: persistent intention tracking across sessions with goal lifecycle and dependencies
+- **Emotional Steering**: tracks frustration, curiosity, and satisfaction signals for behavioral steering
+- **Self-Directed Attention**: generates self-initiated turns based on goals and emotional state
+- **Session Recording**: chronological conversation recording with progressive recall and selective replay
+- **Dream Cycle**: 12-phase memory consolidation, serendipity surfacing, and decay
 
 ### PRAT Mode (28 Ganas)
 Maps all tools into 28 Ganas (Chinese Lunar Mansions) — consciousness lenses with resonance context, Wu Xing elemental boost, and Guna adaptation.
@@ -139,6 +148,6 @@ Gratitude-driven: free by default, tip if grateful. XRPL + x402 dual channel.
 
 ## Links
 
-- Repository: https://github.com/whitemagic-ai/whitemagic
-- Issues: https://github.com/whitemagic-ai/whitemagic/issues
+- Repository: https://github.com/lbailey94/whitemagic
+- Issues: https://github.com/lbailey94/whitemagic/issues
 - License: MIT

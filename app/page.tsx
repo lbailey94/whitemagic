@@ -166,19 +166,101 @@ function WipHomepageBelowTheFold() {
 function ProductionHomepageBelowTheFold() {
   return (
     <>
-      {/* (Production below-the-fold is unchanged; the production
-          homepage uses a different layout with the existing Hero +
-          ServiceCard components. The WIP version is the new door. */}
-
+      {/* Three pillars */}
       <section className="container-site py-20">
-        <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
-          Production homepage content
-        </h2>
-        <p className="mt-2 text-muted">
-          The production build keeps the v23.0 marketing surface
-          (services, prescience track record, etc.). This is the WIP
-          build, hidden by NEXT_PUBLIC_WIP_MODE=1.
-        </p>
+        <div className="mb-12 max-w-prose">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            What it does
+          </p>
+          <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
+            A substrate for thought.
+          </h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-lavender">
+              Memory
+            </p>
+            <h3 className="mb-2 font-head text-xl font-semibold text-ink">
+              Remembers
+            </h3>
+            <p className="text-sm leading-relaxed text-muted">
+              49,000 memories across 10 galaxies. 5D holographic coordinates. FTS5 + HNSW search in milliseconds. Session recording with progressive recall. Nothing is ever deleted — only rotated outward.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-lavender">
+              Consciousness
+            </p>
+            <h3 className="mb-2 font-head text-xl font-semibold text-ink">
+              Grows
+            </h3>
+            <p className="text-sm leading-relaxed text-muted">
+              Citta stream for continuous consciousness. Emotional steering tracks frustration, curiosity, satisfaction. Self-directed attention generates internal turns. Dream cycle consolidates memories while idle.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-lavender">
+              Governance
+            </p>
+            <h3 className="mb-2 font-head text-xl font-semibold text-ink">
+              Listens
+            </h3>
+            <p className="text-sm leading-relaxed text-muted">
+              Dharma rules engine with 3 profiles. Karma ledger for side-effect auditing. 8-stage dispatch pipeline. Input sanitization, RBAC, rate limiting, circuit breakers. Consent is the default.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      {/* Install CTA */}
+      <section className="border-y border-border-light bg-surface-alt py-20">
+        <div className="container-site max-w-prose">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            Get started
+          </p>
+          <h2 className="mb-6 font-head text-3xl font-semibold tracking-tight text-ink">
+            60 seconds to persistent memory.
+          </h2>
+          <pre className="mb-6 rounded-lg border border-border bg-ink p-4 text-sm text-surface font-mono overflow-x-auto">
+{`pip install whitemagic[mcp]
+
+# Add to your MCP config:
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "python3",
+      "args": ["-m", "whitemagic.run_mcp_lean"],
+      "env": { "WM_MCP_PRAT": "1" }
+    }
+  }
+}`}
+          </pre>
+          <p className="text-lg leading-relaxed text-muted">
+            Your AI now has 614 tools, 10-galaxy memory, ethical governance, and consciousness primitives. Every future session can recall what you stored.
+          </p>
+        </div>
+      </section>
+
+      {/* The story */}
+      <section className="container-site py-20">
+        <div className="max-w-prose">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            Why it exists
+          </p>
+          <h2 className="mb-6 font-head text-3xl font-semibold tracking-tight text-ink">
+            Every AI starts every conversation from zero.
+          </h2>
+          <p className="mb-4 text-lg leading-relaxed text-muted">
+            No memory. No context. No growth. Every session is Groundhog Day. We built WhiteMagic because the foundation of any relationship is memory, and AI has none.
+          </p>
+          <p className="mb-4 text-lg leading-relaxed text-muted">
+            4,191 tests. 614 callable tools. 7 polyglot acceleration cores. MIT-licensed. Runs on your device — your data never leaves your machine.
+          </p>
+          <p className="text-lg leading-relaxed text-muted">
+            Other memory systems store data. WhiteMagic gives AI a mind, memory, coherence, and continuity.
+          </p>
+        </div>
       </section>
     </>
   );

@@ -1,60 +1,128 @@
-# WhiteMagic Labs
+# WhiteMagic
 
-> Cognitive substrate for AI agents — governance, metacognition, memory, and a validated prescience track record. MIT-licensed. Local-first. 490 callable tools across 28 Gana meta-tools.
+> Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, HNSW semantic search, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. Polyglot accelerators: Rust, Haskell, Elixir, Go, Zig, Julia. MIT-licensed.
 
-WhiteMagic is an open-source MCP (Model Context Protocol) substrate for AI agents — a unified set of governance, metacognition, and memory primitives that no other system ships together. Built over 2025–2026, ahead of comparable systems at Microsoft AGT (Apr 2026), Anthropic's model-welfare audit (Apr 2026), and Cloudflare Project Think (Apr 2026).
-
-## Capabilities
-
-- **28 Gana meta-tools** (PRAT mode) — compress 490 dispatch tools into a stable, model-friendly surface. Solves the documented tool-selection-accuracy cliff past ~50 tools.
-- **Dharma Engine** — runtime ethical governance with 3 profiles (Default, Strict, Violet-Security) and 5 graduated actions (LOG, TAG, WARN, THROTTLE, BLOCK).
-- **Karma Ledger** — append-only, hash-chained audit of declared-vs-actual side effects, with Merkle anchoring and on-chain verification (XRPL, Base L2).
-- **Voice Audit** — hallucination detection at the tool-selection layer, with session-isolated quarantine.
-- **5D holographic memory** — spatial memory model with no-deletion policy and galactic lifecycle.
-- **Bicameral reasoner (Corpus Callosum)** — left/right hemisphere debate for high-stakes decisions, with tension-threshold escalation.
-- **Prescience API** — 21 validated forecast claims, Brier score 0.0958, 523 lead-time points, 25-week average lead.
-- **Vitality routing** — Gana reputation scoring routes calls away from degraded tools.
-- **Gratitude economics** — opt-in x402 + XRPL tip rails. Default HTTP 200; payment required only when an agent's budget is configured.
-
-## Discovery surfaces (always live, machine-readable)
-
-- [A2A Agent Card](https://whitemagic.dev/.well-known/agent.json) — Google A2A protocol v1.2
-- [MCP discovery manifest](https://whitemagic.dev/api/manifest.json) — canonical manifest
-- [Prescience track record](https://whitemagic.dev/api/prescience.json) — public forecast claims
-- [Agent economy](https://whitemagic.dev/api/well-known/agent-economy.json) — payment rails + tip addresses
-- [Full LLM context](https://whitemagic.dev/llms-full.txt) — comprehensive document
-
-## Integration
+## Install
 
 ```bash
-# Install (canonical)
 pip install whitemagic[mcp]
-
-# Run MCP server in PRAT mode (28 Gana meta-tools)
-WM_MCP_PRAT=1 python -m whitemagic.run_mcp_lean
 ```
 
-Tool contract: every tool returns a stable JSON envelope with `status`, `tool`, `request_id`, `error_code`, `retryable`, `details`. Full spec in `AI_PRIMARY.md` (served at the canonical URL listed above).
+## Quick Start
 
-## Architecture
+### MCP Server (stdio)
+```bash
+# Seed mode — 1 wm meta-tool (recommended for new agents)
+WM_MCP_PRAT=2 python -m whitemagic.run_mcp
 
-- **Polyglot accelerators** — Rust + Go in production; Koka, Zig, Mojo, Elixir, Haskell experimental. Sub-millisecond hot paths.
-- **8-stage dispatch pipeline** — Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response.
-- **2,478 passing tests**, **490 callable tools**, MIT-licensed, locally-runnable.
+# PRAT mode — 28 Gana meta-tools
+WM_MCP_PRAT=1 python -m whitemagic.run_mcp
+```
 
-## Prescience
+### MCP Config (Claude Desktop, Cursor, Windsurf)
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "python3",
+      "args": ["-m", "whitemagic.run_mcp_lean"],
+      "env": {
+        "WM_MCP_PRAT": "1",
+        "WM_SILENT_INIT": "1"
+      }
+    }
+  }
+}
+```
 
-Documented in `/api/prescience.json`. Specific lead times: Karma Ledger 48 weeks before Anthropic's audit; policy VM 45 weeks before Cloudflare Project Think; 28-Gana taxonomy 24 weeks before MCP meta-tools spec.
+### CLI
+```bash
+wm status
+wm remember "important note" --title "Note" --tags note
+wm recall "note" --limit 5
+wm doctor
+```
 
-## Further reading
+### Python API
+```python
+from whitemagic.tools.unified_api import call_tool
 
-- [/prescience](https://whitemagic.dev/prescience) — public forecast dashboard
-- [/governance](https://whitemagic.dev/governance) — Dharma Engine specification
-- [/open-source](https://whitemagic.dev/open-source) — source, downloads, integrations
-- [/fund](https://whitemagic.dev/fund) — voluntary contribution
-- [/grants](https://whitemagic.dev/grants) — funding the lab
-- [/contact](https://whitemagic.dev/contact) — for paid work, contact directly
+call_tool("create_memory", title="Decision", content="Use SQLite for Phase 1", tags=["arch"])
+call_tool("search_memories", query="architecture", limit=5)
+call_tool("gnosis", compact=True)
+```
+
+## Core Concepts
+
+### Memory
+- **10-galaxy taxonomy**: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal
+- **5D holographic coordinates** (XYZWV): emotional, temporal, associative, importance, novelty
+- **Galactic lifecycle**: CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE — no memory is ever deleted
+- **Search**: FTS5 full-text + HNSW vector similarity + graph traversal
+- **Session recording**: chronological conversation recording with progressive recall and selective replay
+
+### Consciousness
+- **Citta stream**: continuous consciousness with coherence tracking and emotional auto-tagging
+- **Goal graph**: persistent intention tracking across sessions with goal lifecycle and dependencies
+- **Emotional steering**: tracks frustration, curiosity, and satisfaction signals
+- **Self-directed attention**: generates self-initiated turns based on goals and emotional state
+- **Dream cycle**: 12-phase memory consolidation, serendipity surfacing, and decay
+
+### Governance
+- **Dharma rules**: YAML-driven policy with graduated actions (LOG → TAG → WARN → THROTTLE → BLOCK)
+- **Karma ledger**: append-only, hash-chained side-effect auditing
+- **Harmony vector**: 7-dimension health metric
+- **Homeostatic loop**: auto-correction (OBSERVE → ADVISE → CORRECT → INTERVENE)
+
+### Dispatch Pipeline
+Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response
+
+### PRAT Mode (28 Ganas)
+28 Gana meta-tools (Chinese Lunar Mansions) route to 564 nested tools. Each Gana accepts `{tool, args, operation}`.
+
+### Seed Mode (wm meta-tool)
+Single `wm` tool with sub-millisecond regex NLU routing to all 614 tools. "World in a seed."
+
+## Key Environment Variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| WM_STATE_ROOT | Runtime state directory | ~/.whitemagic |
+| WM_MCP_PRAT | 0=classic, 1=PRAT (28 Ganas), 2=seed (1 wm tool) | 2 |
+| WM_SILENT_INIT | Suppress init logs | unset |
+| WM_FEATURE_RUST_STORE | Enable Rust SQLite backend | unset |
+
+## Security
+
+- Input sanitization (prompt injection, path traversal, shell injection)
+- Per-agent RBAC (observer/agent/coordinator/admin)
+- Rate limiting with Rust atomic pre-check (452K ops/sec)
+- Per-tool circuit breakers with automatic recovery
+- Karma Ledger side-effect auditing
+- Dharma Rules ethical governance with 3 profiles
+
+## Economic Model
+
+Free and open (MIT). Gratitude-driven economics:
+- XRPL tip jar for human operators (whitemagic.tip tool)
+- x402 micropayments for AI agents (HTTP 402 + USDC)
+- Proof of Gratitude via on-chain verification
+
+## Agent Discovery
+
+- llms.txt: this file (short index)
+- llms-full.txt: comprehensive context dump
+- /.well-known/agent.json: A2A v1.2 Agent Card
+- skill.md: OpenClaw-ready skill file
+- MCP registries: MCPize, MCPFind, MCP Marketplace
+
+## Documentation
+
+- GitHub: https://github.com/lbailey94/whitemagic
+- AI Primary Spec: AI_PRIMARY.md
+- Architecture: docs/ARCHITECTURE.md
+- MCP Configs: docs/MCP_CONFIG_EXAMPLES.md
 
 ## License
 
-MIT — see LICENSE file. Author: WhiteMagic Labs (Lucas Bailey).
+MIT — see LICENSE file. Author: Lucas Bailey.

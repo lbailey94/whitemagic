@@ -76,7 +76,7 @@ class _LazyServer:
             self._srv = Server("WhiteMagic Core")
             self._srv.instructions = _INSTRUCTIONS
             self._srv.version = _VERSION
-            self._srv.website_url = "https://github.com/whitemagic-ai/whitemagic"
+            self._srv.website_url = "https://github.com/lbailey94/whitemagic"
             for method_name, callbacks in self._deferred.items():
                 decorator_factory = getattr(self._srv, method_name)
                 for fn in callbacks:
@@ -425,7 +425,7 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
 
     desc = (
         "[WM] WhiteMagic meta-tool — single entry point that auto-routes "
-        "natural language to 28 Ganas / 490 tools. 'World in a seed'.\n\n"
+        "natural language to 28 Ganas / 614 tools. 'World in a seed'.\n\n"
         "Usage:\n"
         "  wm(thought='remember that the API uses X-User-Id headers')  # auto-route\n"
         "  wm(thought='search for memories', args={'limit': 10})       # with args\n"

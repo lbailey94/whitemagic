@@ -85,7 +85,7 @@ class LoggingConfig(BaseModel):
 class APIConfig(BaseModel):
     """API configuration."""
 
-    host: str = Field("0.0.0.0", description="API host")
+    host: str = Field("127.0.0.1", description="API host (use 0.0.0.0 for containers)")
     port: int = Field(8000, description="API port")
     workers: int = Field(1, description="Number of workers")
     reload: bool = Field(False, description="Auto-reload on changes")
@@ -152,7 +152,7 @@ class WhiteMagicConfig(BaseModel):
     )
     api: APIConfig = Field(
         default_factory=lambda: APIConfig(
-            host="0.0.0.0",
+            host="127.0.0.1",
             port=8000,
             workers=1,
             reload=False,

@@ -25,16 +25,18 @@ export async function GET() {
     // ---- A2A required identity fields ----
     name: "WhiteMagic Labs",
     description:
-      "Local-first cognitive substrate for AI agents. 151 callable " +
-      "tools across 22 categories, with Dharma ethical governance, " +
-      "Karma audit ledger, 5D holographic memory, 28 Gana meta-tools, " +
+      "Cognitive operating system for AI agents. 614 callable tools " +
+      "across 28 Gana meta-tools, with Dharma ethical governance, " +
+      "Karma audit ledger, 5D holographic memory with 10-galaxy taxonomy, " +
+      "citta stream for continuous consciousness, emotional steering, " +
+      "self-directed attention, goal graph, session recording, dream cycle. " +
       "A2A v1.2 discovery surface. Substrate runs on the user's device " +
-      "via the PWA — whitemagic.dev is a discovery surface + bridge " +
-      "catalog, not a host. MIT-licensed research lab.",
+      "via pip install — whitemagic.dev is a discovery surface, not a host. " +
+      "MIT-licensed. Install: pip install whitemagic[mcp].",
     url: BASE,
     // protocolVersion follows A2A spec; agent app version is independent.
     protocolVersion: "1.2",
-    version: "23.1.0",
+    version: "24.0.0",
 
     provider: {
       organization: "WhiteMagic Labs",
@@ -244,18 +246,19 @@ export async function GET() {
       planned_endpoint_count: 2, // a2a_jsonrpc, mcp_http
       live_discovery_surfaces: 9, // agent.json + agent-economy + ai-agent-policy + agent-skills + agents + 12 agents/<gana> + llms.txt + llms-full.txt
       documented_bridge_functions: 151,
-      bridge_categories: 22, // 21 prior + new "galactic" category
+      bridge_categories: 22,
       gana_meta_tools: 28,
-      // v23.0.0-alpha.1: the substrate runs on the user's device, not on
-      // our servers. This site is a discovery surface + bridge catalog.
-      // Per v23 sovereignty principle: whitemagic.dev is the door, not the host.
+      callable_tools: 614,
+      nested_tools: 564,
+      galaxies: 10,
+      consciousness_modules: ["citta_stream", "goal_graph", "emotional_steering", "self_directed_attention"],
       data_residency: "local-first",
       pwa_installable: true,
       substrate_default_location: "user-device",
       cloud_storage: false,
       sync_model: "opt-in-p2p",
       license: "MIT",
-      source: "https://whitemagic.dev",
+      source: "https://github.com/lbailey94/whitemagic",
     },
 
     // ---- Performance benchmarks (June 2026) ----

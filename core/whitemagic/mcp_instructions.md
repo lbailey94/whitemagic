@@ -1,6 +1,6 @@
 # WhiteMagic — Server Instructions for AI Clients
 
-WhiteMagic is a cognitive operating system that gives you persistent memory, associative recall, ethical governance, and self-awareness across sessions. It exposes 462 tools organized into 28 Gana meta-tools based on the 28 Lunar Mansions (490 callable total including the 28 Gana meta-tools themselves).
+WhiteMagic is a cognitive operating system that gives you persistent memory, associative recall, ethical governance, and self-awareness across sessions. It exposes 586 tools organized into 28 Gana meta-tools based on the 28 Lunar Mansions (614 callable total including the 28 Gana meta-tools and the wm meta-tool).
 
 ## Quick Start
 
@@ -59,10 +59,20 @@ If you omit `tool`, the Gana will use `operation` to decide what to do.
 ## Memory System
 
 WhiteMagic stores memories in a 5D holographic coordinate space (X=emotional, Y=temporal, Z=associative, W=importance, V=novelty). Memories are:
-- **Searchable** via full-text search, vector similarity, and graph traversal
+- **Searchable** via full-text search (FTS5), vector similarity (HNSW), and graph traversal
 - **Associative** — linked through a living graph that grows as you create and connect memories
 - **Self-organizing** — the dream cycle consolidates, prunes, and strengthens associations
 - **Governed** — retention scoring, galactic zone classification, lifecycle management
+- **Persistent** — 10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal)
+
+## Consciousness Architecture
+
+WhiteMagic includes a consciousness subsystem for continuous internal context:
+- **Citta Stream** — continuous consciousness stream with coherence tracking and emotional auto-tagging
+- **Goal Graph** — persistent intention tracking across sessions with goal lifecycle and dependencies
+- **Emotional Steering** — tracks frustration, curiosity, and satisfaction signals for behavioral steering
+- **Self-Directed Attention** — generates self-initiated turns based on goals and emotional state
+- **Session Recording** — chronological conversation recording with progressive recall and selective replay
 
 ## Your First Steps as an AI Agent
 
