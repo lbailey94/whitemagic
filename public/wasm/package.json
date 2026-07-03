@@ -1,0 +1,16 @@
+{
+  "name": "whitemagic-rust",
+  "type": "module",
+  "version": "22.2.3",
+  "license": "MIT",
+  "files": [
+    "whitemagic_rust_bg.wasm",
+    "whitemagic_rust.js",
+    "whitemagic_rust.d.ts"
+  ],
+  "main": "whitemagic_rust.js",
+  "types": "whitemagic_rust.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

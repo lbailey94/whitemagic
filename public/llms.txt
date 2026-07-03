@@ -1,0 +1,60 @@
+# WhiteMagic Labs
+
+> Cognitive substrate for AI agents — governance, metacognition, memory, and a validated prescience track record. MIT-licensed. Local-first. 490 callable tools across 28 Gana meta-tools.
+
+WhiteMagic is an open-source MCP (Model Context Protocol) substrate for AI agents — a unified set of governance, metacognition, and memory primitives that no other system ships together. Built over 2025–2026, ahead of comparable systems at Microsoft AGT (Apr 2026), Anthropic's model-welfare audit (Apr 2026), and Cloudflare Project Think (Apr 2026).
+
+## Capabilities
+
+- **28 Gana meta-tools** (PRAT mode) — compress 490 dispatch tools into a stable, model-friendly surface. Solves the documented tool-selection-accuracy cliff past ~50 tools.
+- **Dharma Engine** — runtime ethical governance with 3 profiles (Default, Strict, Violet-Security) and 5 graduated actions (LOG, TAG, WARN, THROTTLE, BLOCK).
+- **Karma Ledger** — append-only, hash-chained audit of declared-vs-actual side effects, with Merkle anchoring and on-chain verification (XRPL, Base L2).
+- **Voice Audit** — hallucination detection at the tool-selection layer, with session-isolated quarantine.
+- **5D holographic memory** — spatial memory model with no-deletion policy and galactic lifecycle.
+- **Bicameral reasoner (Corpus Callosum)** — left/right hemisphere debate for high-stakes decisions, with tension-threshold escalation.
+- **Prescience API** — 21 validated forecast claims, Brier score 0.0958, 523 lead-time points, 25-week average lead.
+- **Vitality routing** — Gana reputation scoring routes calls away from degraded tools.
+- **Gratitude economics** — opt-in x402 + XRPL tip rails. Default HTTP 200; payment required only when an agent's budget is configured.
+
+## Discovery surfaces (always live, machine-readable)
+
+- [A2A Agent Card](https://whitemagic.dev/.well-known/agent.json) — Google A2A protocol v1.2
+- [MCP discovery manifest](https://whitemagic.dev/api/manifest.json) — canonical manifest
+- [Prescience track record](https://whitemagic.dev/api/prescience.json) — public forecast claims
+- [Agent economy](https://whitemagic.dev/api/well-known/agent-economy.json) — payment rails + tip addresses
+- [Full LLM context](https://whitemagic.dev/llms-full.txt) — comprehensive document
+
+## Integration
+
+```bash
+# Install (canonical)
+pip install whitemagic[mcp]
+
+# Run MCP server in PRAT mode (28 Gana meta-tools)
+WM_MCP_PRAT=1 python -m whitemagic.run_mcp_lean
+```
+
+Tool contract: every tool returns a stable JSON envelope with `status`, `tool`, `request_id`, `error_code`, `retryable`, `details`. Full spec in `AI_PRIMARY.md` (served at the canonical URL listed above).
+
+## Architecture
+
+- **Polyglot accelerators** — Rust + Go in production; Koka, Zig, Mojo, Elixir, Haskell experimental. Sub-millisecond hot paths.
+- **8-stage dispatch pipeline** — Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response.
+- **2,478 passing tests**, **490 callable tools**, MIT-licensed, locally-runnable.
+
+## Prescience
+
+Documented in `/api/prescience.json`. Specific lead times: Karma Ledger 48 weeks before Anthropic's audit; policy VM 45 weeks before Cloudflare Project Think; 28-Gana taxonomy 24 weeks before MCP meta-tools spec.
+
+## Further reading
+
+- [/prescience](https://whitemagic.dev/prescience) — public forecast dashboard
+- [/governance](https://whitemagic.dev/governance) — Dharma Engine specification
+- [/open-source](https://whitemagic.dev/open-source) — source, downloads, integrations
+- [/fund](https://whitemagic.dev/fund) — voluntary contribution
+- [/grants](https://whitemagic.dev/grants) — funding the lab
+- [/contact](https://whitemagic.dev/contact) — for paid work, contact directly
+
+## License
+
+MIT — see LICENSE file. Author: WhiteMagic Labs (Lucas Bailey).
