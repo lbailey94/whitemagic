@@ -1,9 +1,8 @@
 """Web research tool handlers — web_fetch, web_search, research_topic."""
 
 import asyncio
-from collections.abc import Coroutine
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar
+
 from whitemagic.utils.async_bridge import run_async as _run_async
 
 T = TypeVar("T")

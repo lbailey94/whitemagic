@@ -17,10 +17,8 @@ from uuid import uuid4
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 logger = logging.getLogger(__name__)
-from whitemagic.utils.fast_json import loads as _json_loads
-
-
 from whitemagic.utils.event_emit import make_emitter
+from whitemagic.utils.fast_json import loads as _json_loads
 
 _emit = make_emitter("agent_registry")
 
@@ -111,6 +109,7 @@ def handle_agent_register(**kwargs: Any) -> dict[str, Any]:
         existing["metadata"] = metadata
         existing["updated_at"] = now
         existing["last_heartbeat"] = now
+        existing["heartbeat_count"] = 0
         _save_agent(existing)
         return {
             "status": "success",

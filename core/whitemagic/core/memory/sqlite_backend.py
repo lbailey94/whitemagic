@@ -471,6 +471,11 @@ class SQLiteBackend:
                 # FTS5 treats : as column filter, , as syntax, etc.
                 for ch in r'[]{}()^~*:,;\/':
                     fts_query = fts_query.replace(ch, ' ')
+                # Remove FTS5 column names that could be interpreted as column filters
+                fts5_columns = {"content", "title", "tags", "metadata", "galaxy", "id", "existing", "directed", "memory_type", "importance"}
+                # Wrap single-word queries in quotes too (prevents column-name interpretation)
+                if " " not in fts_query and fts_query.lower() in fts5_columns:
+                    fts_query = f'"{fts_query}"'
                 fts_query = fts_query.strip()
                 if not fts_query:
                     fts_query = query.strip().replace('[', '').replace(']', '')
@@ -480,7 +485,7 @@ class SQLiteBackend:
                 keyword_query = None
                 if " " in fts_query and not (fts_query.startswith('"') and fts_query.endswith('"')):
                     fts5_reserved = {"OR", "AND", "NOT", "NEAR"}
-                    keywords = [k for k in fts_query.split() if k and k.upper() not in fts5_reserved]
+                    keywords = [k for k in fts_query.split() if k and k.upper() not in fts5_reserved and k.lower() not in fts5_columns]
                     if keywords:
                         phrase_query = f'"{fts_query}"'
                         keyword_query = " OR ".join(keywords)

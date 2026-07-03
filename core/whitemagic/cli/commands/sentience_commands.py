@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-import signal
-import sys
 import time
 
 import click
@@ -128,8 +126,8 @@ def _register_sentience_commands(cli: click.Group) -> None:
         if not no_sleep:
             try:
                 from whitemagic.core.consciousness.sentience import (
-                    get_sleep_scheduler,
                     SleepConfig,
+                    get_sleep_scheduler,
                 )
 
                 config = SleepConfig(

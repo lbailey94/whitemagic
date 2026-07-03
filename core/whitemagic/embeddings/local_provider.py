@@ -4,11 +4,10 @@ Local Embeddings Provider - No API Calls Required!
 Uses sentence-transformers for local semantic embeddings.
 Updated Ganapati Day: Now fully implemented!
 """
+import logging
 from typing import Any
 
 import numpy as np
-
-import logging
 
 logger = logging.getLogger(__name__)
 

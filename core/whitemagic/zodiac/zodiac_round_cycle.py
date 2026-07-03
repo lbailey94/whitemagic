@@ -14,7 +14,6 @@ from typing import Any
 
 from whitemagic.zodiac.zodiac_cores import CoreResponse, get_zodiac_cores
 
-
 logger = logging.getLogger(__name__)
 
 

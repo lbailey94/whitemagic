@@ -249,23 +249,31 @@ class HolographicMemory:
             logger.debug("Operation failed: %s", e)
             return {"status": "error"}
 
-    def find_clusters(self, radius: float = 0.35, min_size: int = 2) -> list[tuple[tuple[float, float, float, float], list[str]]]:
-        """Find clusters of memories in 4D space using Rust backend.
+    def find_clusters(self, radius: float = 0.35, min_size: int = 2) -> list[tuple[tuple[float, ...], list[str]]]:
+        """Find clusters of memories in 4D/5D space using Rust backend.
         Returns list of (center_point, memory_ids).
         """
-        if not self._index:
+        if not self._has_index:
             return []
 
         try:
-            # Rust returns Vec<(Vec<f64>, Vec<String>)>
-            # We convert Vec<f64> to Tuple[float, float, float, float]
-            raw_clusters = self._index.find_clusters(radius, min_size)
+            if self._index_5d:
+                # 5D index — check if it supports find_clusters
+                if hasattr(self._index_5d, 'find_clusters'):
+                    raw_clusters = self._index_5d.find_clusters(radius, min_size)
+                elif hasattr(self._index_5d, 'query_within_radius'):
+                    # Fallback: no native clustering, return empty
+                    return []
+                else:
+                    return []
+            else:
+                assert self._index is not None
+                raw_clusters = self._index.find_clusters(radius, min_size)
 
             result = []
             for center, mem_ids in raw_clusters:
-                if len(center) == 4:
-                    center_tuple = (center[0], center[1], center[2], center[3])
-                    result.append((center_tuple, mem_ids))
+                center_tuple = tuple(center)
+                result.append((center_tuple, mem_ids))
             return result
         except Exception as e:
             logger.error("Rust clustering failed: %s", e, exc_info=True)

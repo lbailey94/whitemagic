@@ -4,9 +4,8 @@ Wraps the gardens.browser package to provide sync MCP tool handlers.
 All async operations use _run_async from web_research handler pattern.
 """
 
-from collections.abc import Coroutine
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar
+
 from whitemagic.utils.async_bridge import run_async as _run_async
 
 T = TypeVar("T")

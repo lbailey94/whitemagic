@@ -5,6 +5,7 @@ Automatically finalizes "thoughts" into long-term memories on close.
 """
 
 import json
+import logging
 import os
 import time
 from datetime import datetime
@@ -12,7 +13,6 @@ from datetime import datetime
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.core.memory.unified import remember
 
-import logging
 logger = logging.getLogger(__name__)
 
 

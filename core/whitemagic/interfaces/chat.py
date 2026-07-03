@@ -18,11 +18,8 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import subprocess
-import sys
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -351,7 +348,9 @@ class SensoriumBuilder:
 
     def _gather_continuity(self) -> dict[str, Any] | None:
         try:
-            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+            from whitemagic.core.consciousness.citta_stream import (
+                get_continuity_context,
+            )
 
             return get_continuity_context()
         except Exception as e:
@@ -668,7 +667,7 @@ class ChatLoop:
 
     def _init_llama_cpp(self, model: ModelInfo) -> bool:
         """Initialize llama.cpp backend."""
-        from whitemagic.inference.llama_cpp import LlamaCppBackend, BinaryManager
+        from whitemagic.inference.llama_cpp import BinaryManager, LlamaCppBackend
 
         binary = BinaryManager.find_binary()
         if not binary:
@@ -894,7 +893,9 @@ class ChatLoop:
 
         # Use continuity info if available
         try:
-            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+            from whitemagic.core.consciousness.citta_stream import (
+                get_continuity_context,
+            )
 
             ctx = get_continuity_context()
             if ctx.get("first_awakening"):

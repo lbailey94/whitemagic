@@ -5,12 +5,12 @@ Tracks phase timing, logs to memories, and provides timing reports.
 Can be used standalone or integrated into campaign deployments.
 """
 
+import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-import logging
 logger = logging.getLogger(__name__)
 
 

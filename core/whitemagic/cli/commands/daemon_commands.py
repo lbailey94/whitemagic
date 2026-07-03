@@ -14,7 +14,6 @@ import json
 import logging
 import os
 import signal
-import sys
 import time
 
 import click
@@ -71,8 +70,8 @@ def _register_daemon_commands(cli: click.Group) -> None:
         gateway_proc = None
         if not no_gateway:
             try:
-                import subprocess
                 import shutil
+                import subprocess
                 from pathlib import Path
 
                 # Check PATH first, then known locations

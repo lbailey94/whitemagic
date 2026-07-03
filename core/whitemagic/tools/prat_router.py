@@ -25,7 +25,6 @@ from whitemagic.tools.gana_native_contract import (
     build_native_gana_details,
     normalize_native_gana_result,
 )
-
 from whitemagic.tools.prat_mappings import (
     TOOL_TO_GANA,
     get_tools_for_gana,

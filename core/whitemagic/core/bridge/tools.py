@@ -124,7 +124,6 @@ from whitemagic.core.bridge.wisdom import (
     consult_iching,
     synthesize_wisdom,
 )
-
 from whitemagic.core.bridge.zodiac import (
     manage_zodiac_cores,
     zodiac_activate_core,

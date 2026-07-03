@@ -12,9 +12,9 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
 
 from whitemagic.utils.core import parse_datetime
-from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 

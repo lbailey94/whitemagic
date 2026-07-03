@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Coroutine
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar, cast
+
 from whitemagic.utils.async_bridge import run_async as _run_async
 
 T = TypeVar("T")

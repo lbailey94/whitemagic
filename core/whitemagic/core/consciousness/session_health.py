@@ -11,6 +11,7 @@ Ganapati Day - November 26, 2025
 """
 
 import json
+import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +19,6 @@ from pathlib import Path
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fileio import file_lock
 
-import logging
 logger = logging.getLogger(__name__)
 
 

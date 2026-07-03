@@ -158,7 +158,10 @@ class ConsciousnessDaemon:
     def _beta_cycle(self) -> None:
         """Beta loop (5s) — coherence + context synthesis + citta heartbeat."""
         try:
-            from whitemagic.core.consciousness.citta_cycle import get_always_on, get_citta_cycle
+            from whitemagic.core.consciousness.citta_cycle import (
+                get_always_on,
+                get_citta_cycle,
+            )
 
             # Touch the always-on to signal activity
             always_on = get_always_on()
@@ -302,7 +305,10 @@ class ConsciousnessDaemon:
 
             # Stop CittaAlwaysOn
             try:
-                from whitemagic.core.consciousness.citta_cycle import get_always_on, persist_full_stream
+                from whitemagic.core.consciousness.citta_cycle import (
+                    get_always_on,
+                    persist_full_stream,
+                )
                 get_always_on().stop()
                 persist_full_stream()
                 logger.info("CittaAlwaysOn stopped, stream persisted")

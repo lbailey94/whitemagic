@@ -109,7 +109,6 @@ from whitemagic.core.bridge.system import (
     system_get_status,
     system_initialize_all,
 )
-
 from whitemagic.core.bridge.tools import execute_mcp_tool
 
 if __name__ == "__main__":

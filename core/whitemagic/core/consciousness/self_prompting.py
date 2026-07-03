@@ -21,11 +21,11 @@ import logging
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import IntEnum
-from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
 

@@ -18,11 +18,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-import socket
 import threading
 import time
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT

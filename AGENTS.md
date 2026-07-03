@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 23.3.1 (AGENTS.md revision 23.3)
-**Last Updated**: 2026-06-29
+**Version**: 24.0.0 (AGENTS.md revision 24.0)
+**Last Updated**: 2026-07-03
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -21,6 +21,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - v23.3.2: Token economy wiring + budget enforcement; prediction calibration feedback loop; module consolidation (DepthGauge, TokenOptimizer shims); subprocess bridge timeout fixes (WM_SKIP_POLYGLOT); STRATA 10 new checkers + 5-phase auto-fix (3,008+ findings); SkillForge (43 skills); Citta P0 (Smarana, Presence, coherence auto-measure); de-slop pass; 3,337 unit tests passing
 - v23.3.1: Memory system overhaul — 10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal); CITTA memory type for consciousness-stream memories; citta bridge auto-persists significant moments; HNSW index with disk persistence (16,219 embeddings, 0.26ms search); galaxy-aware search (semantic + FTS5); `galaxy.canonical_taxonomy` + `galaxy.export_tutorial` tools; oracle readings auto-persist to dreams galaxy; content_hash backfilled for all 12,737 memories; holographic coords for all memories; 2,853 cross-galaxy associations; FTS5 phrase-first search + join bug fix; 3,206 unit + 259 integration tests passing
 - v23.3.3: Neuro PyO3 cleanup — removed ThalamicGate + MomentumDynamics from Rust (PyO3 FFI overhead > dict-lookup compute; only PredictiveCoder remains at 19x speedup); Session Memory system — `SessionRecorder` with chronological sequence numbers, progressive recall (token-budgeted), selective replay (importance-filtered), FTS5 session search, backfill for existing memories; 9 MCP tools (`session.record/recall/replay/search/memory_stats/backfill/continuity/consolidate`) mapped to `gana_heart`; auto-recording middleware in dispatch pipeline; cross-session continuity (previous session recall on reconnect); sleep consolidation (important turns → codex galaxy); emotional auto-tagging (citta cycle → valence mapping); polyglot test hang fix (WM_SKIP_POLYGLOT guard); 51 session tests + 506 total passing across affected suites
+- v24.0.0: Meta-strategy execution — 49,413 memories across 10 galaxies (3,715 documents ingested from WHITEMAGIC, archives, public, WindsurfRips, ~/.whitemagic, ~/.codeium); Phase 0 session mining (76 decisions, 19 breakthroughs, 540 user turns analyzed, 7+1 directive taxonomy, 3 proto-emotional turns discovered); FTS5 search bug fix (column-name escaping); agent registry heartbeat reset fix; 55 ruff fixes; STUB_REGISTRY updated (7 stubs resolved); Goal Graph (`goal_graph.py`) for cross-session intention tracking; Emotional Steering Signals (`emotional_steering.py`) — frustration, curiosity, satisfaction; Self-Directed Attention prototype (`self_directed_attention.py`) — 7+1 action types generated internally; 22 new consciousness tests; 4,190+ passing, 0 failing, 19 skipped
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -33,7 +34,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (current: 3337 passed, 15 skipped, 1 pre-existing failure, 38 citta P1 pending)
+# 2. Verify test baseline (current: 4190+ passed, 19 skipped, 0 failures)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift

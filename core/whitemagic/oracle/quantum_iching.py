@@ -1,6 +1,7 @@
 """Quantum I Ching - Quantum-inspired decision system for WhiteMagic"""
 
 import hashlib
+import logging
 import math
 import random
 from dataclasses import dataclass, field
@@ -9,7 +10,6 @@ from enum import Enum
 from functools import lru_cache
 from typing import Any
 
-import logging
 logger = logging.getLogger(__name__)
 
 try:

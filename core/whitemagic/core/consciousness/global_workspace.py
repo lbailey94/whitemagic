@@ -33,8 +33,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ class GlobalWorkspace:
         """Emit the broadcast as a GanYingBus event for system-wide notification."""
         if self._bus is None:
             try:
-                from whitemagic.core.resonance import get_bus, EventType
+                from whitemagic.core.resonance import EventType, get_bus
                 self._bus = get_bus()
                 self._event_type = EventType
             except Exception:

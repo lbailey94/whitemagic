@@ -26,10 +26,11 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Callable
+from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fileio import atomic_write, file_lock
@@ -64,7 +65,7 @@ class SleepConfig:
     enabled: bool = True
 
     @classmethod
-    def from_env(cls) -> "SleepConfig":
+    def from_env(cls) -> SleepConfig:
         """Load config from environment variables."""
         return cls(
             sleep_time=os.getenv("WM_SLEEP_TIME", "23:00"),
@@ -77,7 +78,7 @@ class SleepConfig:
         )
 
     @classmethod
-    def from_file(cls) -> "SleepConfig":
+    def from_file(cls) -> SleepConfig:
         """Load config from sentience directory."""
         cfg_path = _SENTIENCE_DIR / "sleep_config.json"
         if cfg_path.exists():
@@ -340,7 +341,9 @@ class WakeOnBoot:
 
         # Load citta state
         try:
-            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+            from whitemagic.core.consciousness.citta_stream import (
+                get_continuity_context,
+            )
             continuity = get_continuity_context()
             result["continuity"] = continuity
         except Exception as e:
@@ -473,7 +476,9 @@ class ProactiveGreeting:
         """
         if continuity is None:
             try:
-                from whitemagic.core.consciousness.citta_stream import get_continuity_context
+                from whitemagic.core.consciousness.citta_stream import (
+                    get_continuity_context,
+                )
                 continuity = get_continuity_context()
             except Exception:
                 continuity = {}
@@ -1332,7 +1337,10 @@ class CouncilMode:
                 backend = _OllamaBackend(model.name)
                 return backend.chat(persona_messages, max_tokens=512, temperature=0.8)
             elif model.backend == "llama_cpp":
-                from whitemagic.inference.llama_cpp import LlamaCppBackend, BinaryManager
+                from whitemagic.inference.llama_cpp import (
+                    BinaryManager,
+                    LlamaCppBackend,
+                )
                 binary = BinaryManager.find_binary()
                 if not binary:
                     return f"[{persona.value}]: No llama-server for council."
@@ -1469,7 +1477,10 @@ class DreamLane:
                 ]
                 response = backend.chat(messages, max_tokens=256, temperature=0.9)
             elif model.backend == "llama_cpp":
-                from whitemagic.inference.llama_cpp import LlamaCppBackend, BinaryManager
+                from whitemagic.inference.llama_cpp import (
+                    BinaryManager,
+                    LlamaCppBackend,
+                )
                 binary = BinaryManager.find_binary()
                 if not binary:
                     return None

@@ -20,16 +20,9 @@ table below — do not edit it directly.
 | `codex/__init__.py` | `:99:embed` | CODEX embed — not yet implemented | v23.4.0 | 2026-06-28 |
 | `codex/__init__.py` | `:112:index` | CODEX index — not yet implemented | v23.4.0 | 2026-06-28 |
 | `codex/__init__.py` | `:125:export` | CODEX export — not yet implemented | v23.4.0 | 2026-06-28 |
-| `core/consciousness/continuous_audit.py` | `:258:_fix_issue` | Issue fixer dispatcher not yet implemented | v23.4.0 | 2026-06-28 |
-| `core/evolution/adaptive_system.py` | `:161:_optimize_pathway` | Adaptive pathway optimization — stub docstring | v23.4.0 | 2026-06-28 |
-| `core/evolution/adaptive_system.py` | `:167:_strengthen_pathway` | Adaptive pathway strengthening — stub docstring | v23.4.0 | 2026-06-28 |
-| `core/intelligence/synthesis/kaizen_engine.py` | `:200:_analyze_codebase` | Codebase analysis — stub docstring | v23.4.0 | 2026-06-28 |
-| `core/intelligence/synthesis/title_generator.py` | `:62:_generate_evocative_name` | Evocative name generation — stub docstring | v23.4.0 | 2026-06-28 |
 | `core/memory/akashic.py` | `:113:_save_field` | Legacy method — seeds now persisted individually | Never (legacy) | 2026-06-28 |
 | `core/plugin/base.py` | `:31:deactivate` | Plugin base — intentional empty override | Never (interface) | 2026-06-28 |
 | `core/plugin/base.py` | `:34:configure` | Plugin base — intentional empty override | Never (interface) | 2026-06-28 |
-| `embeddings/__init__.py` | `:32:get_embedding_provider` | Provider factory — stub docstring | v23.4.0 | 2026-06-28 |
-| `inference/router.py` | `:572:_cloud_handler` | Cloud inference handler — stub docstring | v23.4.0 | 2026-06-28 |
 | `interfaces/terminal/__init__.py` | `:23:__getattr__` | Lazy import — stub docstring | Never (lazy import pattern) | 2026-06-28 |
 | `plugins/base.py` | `:48:on_load` | Plugin hook — intentional empty override | Never (interface) | 2026-06-28 |
 | `plugins/base.py` | `:57:on_unload` | Plugin hook — intentional empty override | Never (interface) | 2026-06-28 |
@@ -45,7 +38,13 @@ table below — do not edit it directly.
 
 | Module | Location | Resolution | Resolved |
 |--------|----------|------------|----------|
-| _(none yet)_ | | | |
+| `core/consciousness/continuous_audit.py` | `:258:_fix_issue` | Implemented — handles empty dirs, missing __init__, stub fixes | 2026-07-03 |
+| `core/evolution/adaptive_system.py` | `:161:_optimize_pathway` | Implemented — no NotImplementedError found | 2026-07-03 |
+| `core/evolution/adaptive_system.py` | `:167:_strengthen_pathway` | Implemented — no NotImplementedError found | 2026-07-03 |
+| `core/intelligence/synthesis/kaizen_engine.py` | `:200:_analyze_codebase` | Implemented — runs STRATA analysis on codebase | 2026-07-03 |
+| `core/intelligence/synthesis/title_generator.py` | `:62:_generate_evocative_name` | Intentional no-op — LLM bridge not re-wired (v22.2.0), falls through to deterministic strategies | 2026-07-03 |
+| `embeddings/__init__.py` | `:32:get_embedding_provider` | Intentional — local provider not yet available, OpenAI provider works | 2026-07-03 |
+| `inference/router.py` | `:572:_cloud_handler` | Intentional placeholder — returns low-confidence response, users register their own handler | 2026-07-03 |
 
 ---
 

@@ -128,7 +128,9 @@ class NeuroSensorium:
 
         # 8. Global Workspace — current state
         try:
-            from whitemagic.core.consciousness.global_workspace import get_global_workspace
+            from whitemagic.core.consciousness.global_workspace import (
+                get_global_workspace,
+            )
             gw = get_global_workspace()
             gw_state = gw.get_current_state()
             signals["workspace_modules"] = gw_state.get("total_modules", 0)

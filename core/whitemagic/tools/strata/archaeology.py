@@ -9,13 +9,13 @@ Subcommands:
   temper     — Measure how "heated" a file's history is
 """
 
+import logging
 import re
 import subprocess
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-import logging
 logger = logging.getLogger(__name__)
 
 

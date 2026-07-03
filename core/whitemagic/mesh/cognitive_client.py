@@ -26,15 +26,16 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # Proto imports — generated stubs
 try:
-    from whitemagic.mesh.proto import mesh_pb2, mesh_pb2_grpc
     import grpc
+
+    from whitemagic.mesh.proto import mesh_pb2, mesh_pb2_grpc
     HAS_GRPC = True
 except ImportError:
     HAS_GRPC = False

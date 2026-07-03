@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
-from whitemagic.utils.fileio import atomic_write, file_lock
+from whitemagic.utils.fileio import file_lock
 
 logger = logging.getLogger(__name__)
 

@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import os
 import threading
 import time
 from typing import Any
@@ -33,8 +32,8 @@ logger = logging.getLogger(__name__)
 try:
     from textual.app import App, ComposeResult
     from textual.containers import Horizontal, Vertical, VerticalScroll
-    from textual.widgets import Footer, Header, Input, Label, RichLog, Static
     from textual.reactive import reactive
+    from textual.widgets import Footer, Header, Input, Label, RichLog, Static
     HAS_TEXTUAL = True
 except ImportError:
     HAS_TEXTUAL = False
@@ -340,7 +339,10 @@ if HAS_TEXTUAL:
         def _load_agents(self) -> None:
             """Load registered agents from the interop registry."""
             try:
-                from whitemagic.tools.handlers.agent_registry import _all_agents, _is_active
+                from whitemagic.tools.handlers.agent_registry import (
+                    _all_agents,
+                    _is_active,
+                )
                 agents = _all_agents()
                 summaries = [
                     {"name": a.get("name", "?"), "active": _is_active(a)}
@@ -490,7 +492,10 @@ else:
 
                 # Agents
                 try:
-                    from whitemagic.tools.handlers.agent_registry import _all_agents, _is_active
+                    from whitemagic.tools.handlers.agent_registry import (
+                        _all_agents,
+                        _is_active,
+                    )
                     agents = _all_agents()
                     if agents:
                         table = Table(title="Registered Agents")
@@ -529,7 +534,7 @@ else:
                         if text.strip() == "/help":
                             print("Commands: /quit, /status, /agents, /help")
                         elif text.strip():
-                            print(f"WM: (local mode — start daemon for full interaction)")
+                            print("WM: (local mode — start daemon for full interaction)")
                     except (EOFError, KeyboardInterrupt):
                         break
             except ImportError:

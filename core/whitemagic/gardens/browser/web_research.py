@@ -21,7 +21,6 @@ import asyncio
 import logging
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path

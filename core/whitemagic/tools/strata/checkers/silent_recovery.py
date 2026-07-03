@@ -33,7 +33,6 @@ from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
 
-
 _LOG_ATTRS = frozenset({
     "debug", "info", "warning", "warn", "error", "critical", "exception", "log",
 })

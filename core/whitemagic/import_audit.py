@@ -2,10 +2,10 @@
 """Deep import audit for whitemagic package."""
 
 import importlib
+import logging
 import sys
 from pathlib import Path
 
-import logging
 logger = logging.getLogger(__name__)
 
 package_root = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic")
