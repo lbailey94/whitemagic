@@ -1,22 +1,23 @@
 {
   "name": "whitemagic",
   "display_name": "WhiteMagic Core",
-  "description": "Cognitive operating system for AI — persistent memory, associative recall, ethical governance, and self-awareness across sessions. 28 Gana meta-tools covering 375 capabilities.",
-  "version": "21.0.0",
+  "description": "Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. MIT-licensed, local-first.",
+  "version": "24.0.0",
   "protocol_version": "2025-11-25",
-  "homepage": "https://github.com/lbailey94/whitemagic",
+  "homepage": "https://whitemagic.dev",
   "license": "MIT",
-  "author": "WhiteMagic Contributors",
-  "categories": ["memory", "governance", "intelligence", "infrastructure"],
+  "author": "Lucas Bailey",
+  "categories": ["memory", "governance", "intelligence", "infrastructure", "consciousness"],
   "tags": [
     "memory", "persistent-memory", "holographic-index", "knowledge-graph",
     "governance", "ethics", "dharma", "karma",
-    "self-awareness", "introspection", "metacognition",
+    "self-awareness", "introspection", "metacognition", "consciousness",
+    "citta-stream", "emotional-steering", "goal-graph", "session-recording",
     "dream-cycle", "association-mining", "pattern-detection",
-    "polyglot", "rust", "zig", "haskell",
-    "local-first", "ollama", "cognitive-os"
+    "polyglot", "rust", "haskell", "elixir", "go", "zig", "julia",
+    "local-first", "ollama", "cognitive-os", "mcp"
   ],
-  "transport": ["stdio", "streamable-http"],
+  "transport": ["stdio"],
   "features": {
     "tools": true,
     "resources": true,
@@ -26,26 +27,23 @@
     "tasks": "optional"
   },
   "installation": {
-    "pip": "pip install whitemagic",
-    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e ."
+    "pip": "pip install whitemagic[mcp]",
+    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic/core && pip install -e .[mcp]"
   },
   "configuration": {
     "stdio": {
-      "command": "python",
+      "command": "python3",
       "args": ["-m", "whitemagic.run_mcp_lean"],
       "env": {
-        "PYTHONUNBUFFERED": "1",
-        "WM_SILENT_INIT": "1",
-        "WM_MCP_PRAT": "1"
+        "WM_MCP_PRAT": "1",
+        "WM_SILENT_INIT": "1"
       }
-    },
-    "http": {
-      "command": "python",
-      "args": ["-m", "whitemagic.run_mcp_lean", "--http", "--port", "8770"]
     }
   },
   "tool_count": 28,
-  "nested_tool_count": 374,
+  "nested_tool_count": 564,
+  "callable_tool_count": 614,
+  "galaxies": 10,
   "requirements": {
     "python": ">=3.11",
     "optional": {

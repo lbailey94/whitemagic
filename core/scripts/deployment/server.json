@@ -1,17 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic",
-  "description": "Cognitive operating system for AI agents — persistent memory, associative recall, ethical governance, and self-awareness across sessions. 28 Gana meta-tools covering 374 capabilities, organized by the Chinese Lunar Mansions.",
+  "description": "Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. MIT-licensed, local-first.",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "21.0.0",
+  "version": "24.0.0",
+  "websiteUrl": "https://whitemagic.dev",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "21.0.0",
+      "version": "24.0.0",
       "transport": {
         "type": "stdio"
       },
@@ -20,7 +21,7 @@
       "environmentVariables": [
         {
           "name": "WM_MCP_PRAT",
-          "description": "Set to 1 for PRAT mode (28 meta-tools) or 0 for classic mode (374 individual tools)",
+          "description": "Set to 2 for Seed mode (1 wm meta-tool, default), 1 for PRAT mode (28 Gana meta-tools), or 0 for classic mode (586 dispatch tools)",
           "isRequired": false,
           "format": "string",
           "isSecret": false
@@ -33,8 +34,8 @@
           "isSecret": false
         },
         {
-          "name": "OLLAMA_HOST",
-          "description": "URL for local Ollama LLM server (optional, for local inference)",
+          "name": "WM_STATE_ROOT",
+          "description": "Directory for runtime state (memory DB, logs). Defaults to ~/.whitemagic",
           "isRequired": false,
           "format": "string",
           "isSecret": false
