@@ -11,7 +11,7 @@ interface FirmRow {
 }
 
 const FIRMS: FirmRow[] = [
-  { name: "WhiteMagic Labs (solo, $0 budget)", avgLead: "~24.7 wks", resources: "Personal hardware + free AI APIs", crossDomain: true, score: "420+", highlight: true },
+  { name: "WhiteMagic Labs (solo, $0 budget)", avgLead: "~24.9 wks", resources: "Personal hardware + free AI APIs", crossDomain: true, score: "523", highlight: true },
   { name: "Gartner Hype Cycle", avgLead: "12–52 wks", resources: "$5B+/yr, 2,000+ analysts", crossDomain: false, score: "~200 est." },
   { name: "RAND Corporation", avgLead: "4–12 wks", resources: "$350M+/yr, 1,900+ analysts", crossDomain: false, score: "~120 est." },
   { name: "Good Judgment Superforecasters", avgLead: "1–6 wks", resources: "IARPA funding, trained teams", crossDomain: false, score: "~50 est." },
@@ -19,9 +19,9 @@ const FIRMS: FirmRow[] = [
 ];
 
 const STATS = [
-  { icon: Award, label: "Prescience score", value: "420+", sub: "1 point per validated week of lead time" },
-  { icon: Clock, label: "Avg lead time", value: "24.7 wks", sub: "per validated claim" },
-  { icon: TrendingUp, label: "Validated claims", value: "17", sub: "with independently verifiable sources" },
+  { icon: Award, label: "Prescience score", value: "523", sub: "1 point per validated week of lead time" },
+  { icon: Clock, label: "Avg lead time", value: "24.9 wks", sub: "per validated claim" },
+  { icon: TrendingUp, label: "Validated claims", value: "21", sub: "with independently verifiable sources" },
   { icon: Users, label: "Pending ceiling", value: "656+", sub: "if all remaining claims validate" },
 ];
 
@@ -33,7 +33,7 @@ export function PrescienceScore() {
         {/* Heading */}
         <div>
           <p className="mb-2 font-mono text-xs uppercase tracking-widest text-lavender">
-            Prescience score · updated June 3, 2026
+            Prescience score · updated June 5, 2026
           </p>
           <h2 className="font-head text-2xl font-semibold tracking-tight text-ink md:text-3xl">
             Lead-time scoring: 1 validated week = 1 point.

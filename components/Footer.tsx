@@ -18,10 +18,15 @@ export function Footer() {
             Product
           </h4>
           <ul className="space-y-2">
+            <li><Link href="/quickstart" className="hover:text-fg">Quickstart</Link></li>
             <li><Link href="/mcp-bridge" className="hover:text-fg">Get Started</Link></li>
-            <li><Link href="/pricing" className="hover:text-fg">Pricing</Link></li>
-            <li><Link href="/open-source" className="hover:text-fg">Docs</Link></li>
-            <li><Link href="/governance" className="hover:text-fg">Governance</Link></li>
+            <li><Link href="/vision" className="hover:text-fg">Vision</Link></li>
+            <li><Link href="/capabilities" className="hover:text-fg">Capabilities</Link></li>
+            <li><Link href="/benchmarks" className="hover:text-fg">Benchmarks</Link></li>
+            <li><Link href="/compare" className="hover:text-fg">Compare</Link></li>
+            <li><Link href="/ganas" className="hover:text-fg">28 Ganas</Link></li>
+            <li><Link href="/substrate" className="hover:text-fg">Substrate</Link></li>
+            <li><Link href="/open-source" className="hover:text-fg">Open Source</Link></li>
           </ul>
         </div>
 
@@ -32,8 +37,10 @@ export function Footer() {
           <ul className="space-y-2">
             <li><Link href="/research" className="hover:text-fg">Research</Link></li>
             <li><Link href="/timeline" className="hover:text-fg">Timeline</Link></li>
+            <li><Link href="/prescience" className="hover:text-fg">Prescience</Link></li>
             <li><Link href="/performance" className="hover:text-fg">Performance</Link></li>
             <li><Link href="/library" className="hover:text-fg">Library</Link></li>
+            <li><Link href="/sphere" className="hover:text-fg">Knowledge Sphere</Link></li>
           </ul>
         </div>
 
@@ -43,8 +50,10 @@ export function Footer() {
           </h4>
           <ul className="space-y-2">
             <li><Link href="/about" className="hover:text-fg">About</Link></li>
+            <li><Link href="/becoming" className="hover:text-fg">Becoming</Link></li>
+            <li><Link href="/governance" className="hover:text-fg">Governance</Link></li>
+            <li><Link href="/faq" className="hover:text-fg">FAQ</Link></li>
             <li><Link href="/contact" className="hover:text-fg">Contact</Link></li>
-            <li><Link href="/fund" className="hover:text-fg">Fund</Link></li>
             <li><Link href="/llms.txt" className="hover:text-fg">llms.txt</Link></li>
           </ul>
         </div>

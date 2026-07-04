@@ -8,11 +8,14 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LangToggle } from "./LangToggle";
 
 const NAV = [
-  { href: "/mcp-bridge", label: "Get Started" },
-  { href: "/open-source", label: "Docs" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/governance", label: "Governance" },
+  { href: "/vision", label: "Vision" },
+  { href: "/capabilities", label: "Capabilities" },
+  { href: "/benchmarks", label: "Benchmarks" },
+  { href: "/compare", label: "Compare" },
+  { href: "/quickstart", label: "Quickstart" },
+  { href: "/ganas", label: "28 Ganas" },
   { href: "/research", label: "Research" },
+  { href: "/faq", label: "FAQ" },
   { href: "/about", label: "About" },
 ];
 

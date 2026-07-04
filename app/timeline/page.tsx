@@ -4,10 +4,17 @@ import { WM_FACTS } from "@/lib/facts";
 
 export const metadata = {
   title: "Timeline — WhiteMagic",
-  description: "Month-by-month development history of WhiteMagic — from v1 in November 2025 to v24 in July 2026. 614 tools, 49K memories, 4191 tests.",
+  description: "Month-by-month development history of WhiteMagic — from Oct 2025 origin to v24 in July 2026. 614 tools, 49K memories, 4191 tests.",
 };
 
 const MILESTONES = [
+  {
+    date: "Oct 2025",
+    version: "v0",
+    title: "Origin",
+    description: "Development begins on a Dell Inspiron 3582 running Zorin OS. Original scope: emotional memory tool for AI agents. events.jsonl records 33,297 events — voice_expressed, memory_created, oracle_cast, pattern_detected. The system starts with feelings, not just storage.",
+    stats: ["Dell Inspiron", "Zorin OS", "Emotional memory"],
+  },
   {
     date: "Nov 2025",
     version: "v1.0",
@@ -78,7 +85,7 @@ export default function TimelinePage() {
     <>
       <PageHeader
         eyebrow="Timeline"
-        title="From 100 tools to 614 in 8 months."
+        title="From 100 tools to 614 in 9 months."
         lede="A solo developer's month-by-month progress building a cognitive operating system for AI agents. Every milestone shipped as working code, not position papers."
       />
 
@@ -87,7 +94,7 @@ export default function TimelinePage() {
           {/* Stats bar */}
           <div className="mb-12 grid grid-cols-3 gap-4">
             <div className="rounded-lg border border-border bg-surface p-4 text-center">
-              <div className="font-head text-2xl font-bold text-ink">8</div>
+              <div className="font-head text-2xl font-bold text-ink">9</div>
               <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-dim">Months</div>
             </div>
             <div className="rounded-lg border border-border bg-surface p-4 text-center">

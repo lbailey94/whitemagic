@@ -14,7 +14,7 @@
  * See docs/SITE_WIP_MODE.md for the rationale and the toggle.
  */
 
-export const WIP_MODE = process.env.NEXT_PUBLIC_WIP_MODE === "1";
+export const WIP_MODE = false;
 
 /**
  * Scramble mode — when true (default in WIP mode), the long-form copy
