@@ -16,6 +16,7 @@ export interface MatrixRainParams {
   charChangeInterval: number;
   lingerFrames: number;
   morphSteps: number;
+  fadeMode: number; // 0 = clearRect (zero residue), 1 = SynBio-style rgba fade overlay
   [key: string]: number;
 }
 
@@ -42,15 +43,16 @@ export const neoStore = {
   rainEnabled: loadRainEnabled(),
 
   matrixRain: {
-    fps: 60,
-    columnStride: 8,
-    trailSteps: 36,
-    dropStep: 6,
-    glimmerChance: 0.15,
-    freezeChance: 0.1,
-    charChangeInterval: 1,
-    lingerFrames: 20,
-    morphSteps: 3,
+    fps: 24,
+    columnStride: 20,
+    trailSteps: 10,
+    dropStep: 4,
+    glimmerChance: 0.015,
+    freezeChance: 0.003,
+    charChangeInterval: 4,
+    lingerFrames: 8,
+    morphSteps: 0,
+    fadeMode: 1,
   } as MatrixRainParams,
 
   dnaActive: false,

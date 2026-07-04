@@ -3,7 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { MatrixRain } from "@/components/MatrixRain";
+import { MatrixRainLazy } from "@/components/MatrixRainLazy";
 import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
 import { organizationLd, websiteLd, softwareApplicationLd } from "@/lib/jsonld";
@@ -51,7 +51,7 @@ export default function RootLayout({
       <body>
         <JsonLd data={[organizationLd(), websiteLd(), softwareApplicationLd()]} />
         <ThemeProvider>
-          <MatrixRain />
+          <MatrixRainLazy />
           <div className="relative z-10">
             <Header />
             <main>{children}</main>

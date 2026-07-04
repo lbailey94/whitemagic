@@ -29,6 +29,11 @@ export function MatrixRain() {
     neoStore.toggleRain();
   }, []);
 
+  const openControls = useCallback(() => {
+    const fn = (window as unknown as { __wmRainControlsToggle?: () => void }).__wmRainControlsToggle;
+    if (fn) fn();
+  }, []);
+
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
@@ -61,7 +66,7 @@ export function MatrixRain() {
     // Genetic code character set for DNA mode
     const DNA_CHARS = "ATGCUatgcuΔΨΩ∑∏∂∞≈≠≤≥←↑→↓↔⇌⇄⇅".split("");
 
-    const FONT_SIZE = 16;
+    const FONT_SIZE = 14;
 
     // Read mutable params from neoStore — canvas reads these each frame
     const getParams = () => neoStore.matrixRain;
@@ -125,7 +130,7 @@ export function MatrixRain() {
       const elapsed = currentTime - lastFrameTime;
       if (elapsed < fpsInterval) return;
       lastFrameTime = currentTime - (elapsed % fpsInterval);
-      hue = (hue + 0.35) % 360;
+      hue = (hue + 0.15) % 360;
 
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -135,9 +140,15 @@ export function MatrixRain() {
         resize();
       }
 
-      // Full clear each frame — zero residue, no ghosting
-      ctx.clearRect(0, 0, w, h);
-      ctx.globalCompositeOperation = "source-over";
+      // Fade mode: gradual erase using destination-out (theme-agnostic), or clearRect for zero residue
+      if (p.fadeMode > 0.5) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "source-over";
+      } else {
+        ctx.clearRect(0, 0, w, h);
+      }
       ctx.font = `${FONT_SIZE}px "JetBrains Mono", "Noto Sans CJK SC", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Hebrew", "Noto Sans", monospace`;
 
       const dna = neoStore.dnaActive;
@@ -210,7 +221,9 @@ export function MatrixRain() {
         ctx.fillText(ch, x, y);
 
         // Trail with hue shift — live trail length from store
-        for (let trail = 1; trail <= p.trailSteps; trail++) {
+        // In fade mode, the overlay handles trailing so we draw fewer manual trail chars
+        const effectiveTrail = p.fadeMode > 0.5 ? Math.min(p.trailSteps, 4) : p.trailSteps;
+        for (let trail = 1; trail <= effectiveTrail; trail++) {
           const trailAlpha = 0.28 - trail * 0.022;
           if (trailAlpha > 0) {
             const trailH = (colH + trail * 6) % 360;
@@ -301,14 +314,26 @@ export function MatrixRain() {
           className="pointer-events-none fixed inset-0 z-0"
         />
       )}
-      <button
-        onClick={toggle}
-        aria-label={enabled ? "Disable matrix rain" : "Enable matrix rain"}
-        title={enabled ? "Disable matrix rain" : "Enable matrix rain"}
-        className="fixed bottom-4 right-4 z-50 rounded-full border border-border bg-surface/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-dim backdrop-blur-sm transition hover:border-lavender hover:text-lavender"
-      >
-        {enabled ? "Rain: ON" : "Rain: OFF"}
-      </button>
+      <div className="fixed bottom-4 right-4 z-50 flex gap-2">
+        <button
+          onClick={toggle}
+          aria-label={enabled ? "Disable matrix rain" : "Enable matrix rain"}
+          title={enabled ? "Disable matrix rain" : "Enable matrix rain"}
+          className="rounded-full border border-border bg-surface/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-dim backdrop-blur-sm transition hover:border-lavender hover:text-lavender"
+        >
+          {enabled ? "Rain: ON" : "Rain: OFF"}
+        </button>
+        {enabled && (
+          <button
+            onClick={openControls}
+            aria-label="Matrix rain controls"
+            title="Adjust matrix rain parameters"
+            className="rounded-full border border-border bg-surface/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-dim backdrop-blur-sm transition hover:border-lavender hover:text-lavender"
+          >
+            ⚙
+          </button>
+        )}
+      </div>
     </>
   );
 }
