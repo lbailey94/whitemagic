@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "WhiteMagic Labs — Private AI deployed on your infrastructure";
+export const alt = "WhiteMagic — Private AI deployed on your infrastructure";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -75,7 +75,7 @@ export default async function Image() {
               fontFamily: "monospace",
             }}
           >
-            WhiteMagic Labs
+            WhiteMagic
           </div>
         </div>
 

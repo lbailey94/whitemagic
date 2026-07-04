@@ -1,22 +1,20 @@
-import { WipGuard } from "@/components/WipGuard";
 import Link from "next/link";
 import { ArrowRight, ExternalLink, Heart, Shield, Zap } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const metadata = {
-  title: "Fund WhiteMagic — WhiteMagic Labs",
+  title: "Support WhiteMagic — WhiteMagic",
   description:
     "Support open-source agent governance research. Every contribution goes directly to infrastructure that makes AI behavior more measurable, auditable, and reproducible.",
 };
 
 export default function FundPage() {
   return (
-    <WipGuard>
-      <>
+    <>
       <PageHeader
         eyebrow="Fund WhiteMagic"
         title="Support the work."
-        lede="WhiteMagic Labs is a solo-founded research lab with zero institutional backing. Every contribution goes directly to open-source infrastructure that makes agent behavior more measurable, auditable, and reproducible."
+        lede="WhiteMagic is a solo-founded project with zero institutional backing. Every contribution goes directly to open-source infrastructure that makes agent behavior more measurable, auditable, and reproducible."
       />
 
       <section className="container-site py-16">
@@ -78,7 +76,7 @@ export default function FundPage() {
             title="Apply for a grant"
             description="WhiteMagic has active applications with Schmidt Sciences, Foresight Institute, SFF, and others. Co-PI or institutional affiliation welcome."
             action="See opportunities"
-            href="/grants"
+            href="/fund"
             badge="Institutional"
           />
           <ContributionRow
@@ -177,7 +175,6 @@ export default function FundPage() {
         </div>
       </section>
     </>
-    </WipGuard>
   );
 }
 

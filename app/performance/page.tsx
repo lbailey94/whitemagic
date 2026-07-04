@@ -3,9 +3,9 @@ import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 import { Check, Zap, Shield, Activity } from "lucide-react";
 
 export const metadata = {
-  title: "Performance Benchmarks — WhiteMagic Labs",
+  title: "Performance — WhiteMagic",
   description:
-    "Comprehensive performance benchmarks showing WhiteMagic is 3-10x faster than typical MCP implementations. Sub-50ms latency, 100% success rate, minimal memory footprint.",
+    "WhiteMagic benchmarks: 29-33ms median latency, 100% success rate, 0.18MB memory per call. 3-10x faster than typical MCP implementations.",
 };
 
 const BENCHMARK_TOOLS = [
@@ -33,7 +33,7 @@ export default function PerformancePage() {
       <PageHeader
         eyebrow="Benchmarks"
         title="Performance that speaks for itself."
-        lede="Comprehensive benchmarks (June 2026) demonstrate WhiteMagic delivers 3-10x faster response times than typical MCP implementations, with 100% success rates and minimal resource usage."
+        lede="Comprehensive benchmarks (July 2026) demonstrate WhiteMagic delivers 3-10x faster response times than typical MCP implementations, with 100% success rates and minimal resource usage."
       />
 
       {/* Key Metrics */}
@@ -308,7 +308,7 @@ export default function PerformancePage() {
           <p className="text-sm leading-relaxed text-muted">
             Benchmarks conducted on {WM_FACTS.benchmarkDate} using 50 iterations
             per tool with 5 warmup calls. Tests run on production hardware with
-            all 516 tools loaded. Full benchmark suite available at{" "}
+            all 614 tools loaded. Full benchmark suite available at{" "}
             <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-fg">
               core/benchmark_results/benchmark_report.md
             </code>

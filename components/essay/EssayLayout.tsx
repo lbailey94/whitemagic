@@ -57,7 +57,7 @@ export function EssayLayout({
 
       <footer className="mt-16 border-t border-border pt-8">
         <Link
-          href="/essays"
+          href="/writing"
           className="font-mono text-sm text-lavender hover:text-lavender-dark"
         >
           ← All essays

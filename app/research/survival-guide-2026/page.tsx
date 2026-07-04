@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, Calendar, Tag, Shield, Zap, Radio, Sprout } from "lucide-react";
 
 export const metadata = {
-  title: "Practical Resonance: The 2026 Survival Guide — WhiteMagic Labs",
+  title: "Practical Resonance: The 2026 Survival Guide — WhiteMagic",
   description:
     "A guide for the Resonant Generalist — navigating the 2026 Phase Shift with autonomy rather than fear.",
 };

@@ -1,13 +1,12 @@
-import { WipGuard } from "@/components/WipGuard";
 import { PageHeader } from "@/components/PageHeader";
 import { ContactForm } from "@/components/ContactForm";
 import Link from "next/link";
 import { Mail, Calendar, Boxes } from "lucide-react";
 
 export const metadata = {
-  title: "Contact — WhiteMagic Labs",
+  title: "Contact — WhiteMagic",
   description:
-    "Book a discovery call or reach out directly. 30-minute conversation, no pitch deck.",
+    "Get in touch about WhiteMagic — deployment help, integration, enterprise, or just to say it helped.",
 };
 
 // Cal.com to be configured — for now, direct email booking.
@@ -16,12 +15,11 @@ const EMAIL = "whitemagicdev@proton.me";
 
 export default function ContactPage() {
   return (
-    <WipGuard>
-      <>
+    <>
       <PageHeader
         eyebrow="Contact"
         title="Let's talk."
-        lede="Thirty-minute discovery call. No deck, no pitch — a real conversation about what you're building and whether I'm the right person to help."
+        lede="Questions about deployment, integration, or enterprise use? Email directly — no forms, no funnels, no sales pipeline."
       />
 
       <section className="container-site py-16">
@@ -76,7 +74,6 @@ export default function ContactPage() {
         </div>
       </section>
     </>
-    </WipGuard>
   );
 }
 

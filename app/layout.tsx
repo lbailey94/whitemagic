@@ -6,11 +6,9 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRain } from "@/components/MatrixRain";
 import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
-import { WipBanner } from "@/components/WipBanner";
-import { WipScrambleAll } from "@/components/WipScrambleAll";
-import { WipUnregisterSw } from "@/components/WipUnregisterSw";
-import { WIP_MODE, WIP_SCRAMBLE } from "@/lib/wip";
 import { organizationLd, websiteLd, softwareApplicationLd } from "@/lib/jsonld";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "WhiteMagic — Cognitive Operating System for AI Agents",
@@ -50,20 +48,19 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={WIP_SCRAMBLE ? "wip-scrambling" : ""}>
-        <WipScrambleAll />
-        <WipUnregisterSw />
+      <body>
         <JsonLd data={[organizationLd(), websiteLd(), softwareApplicationLd()]} />
         <ThemeProvider>
           <MatrixRain />
           <div className="relative z-10">
-            <WipBanner />
             <Header />
             <main>{children}</main>
             <Footer />
           </div>
           <FloatingLibrarian />
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

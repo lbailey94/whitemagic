@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { LibrarianChat } from "@/components/LibrarianChat";
 
 export const metadata = {
-  title: "Librarian — WhiteMagic Labs",
+  title: "Librarian — WhiteMagic",
   description:
     "Ask the Librarian about WhiteMagic, services, pricing, and the open-source platform. Scope is the public site; no private material.",
 };

@@ -20,7 +20,7 @@ export function DomainIndex({
     <main className="container-site py-16">
       <nav className="mb-8">
         <a
-          href="/essays"
+          href="/writing"
           className="font-mono text-sm text-lavender hover:text-lavender-dark"
         >
           ← All essays

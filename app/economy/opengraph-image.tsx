@@ -1,7 +1,7 @@
 import { renderOg, OG_SIZE, OG_CONTENT_TYPE } from "@/lib/og";
 
 export const runtime = "edge";
-export const alt = "Agent Economy — WhiteMagic Labs";
+export const alt = "Agent Economy — WhiteMagic";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 

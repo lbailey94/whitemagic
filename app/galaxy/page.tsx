@@ -12,7 +12,7 @@ import { InteractiveGalaxySphere } from "@/components/InteractiveGalaxySphere";
 import { Globe, ArrowRight, Zap, Layers, MousePointer2, Link2 } from "lucide-react";
 
 export const metadata = {
-  title: "Live Galaxy — WhiteMagic Labs",
+  title: "Live Galaxy — WhiteMagic",
   description:
     "Explore your holographic memory core in real-time — 5D coordinates, zone-based navigation, and live resonance.",
 };
@@ -93,14 +93,14 @@ export default function GalaxyPage() {
               </ul>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/dashboard"
+                  href="/mcp-bridge"
                   className="btn-secondary inline-flex items-center gap-2"
                 >
                   Open Dashboard
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href="/sphere"
+                  href="/library"
                   className="btn-secondary inline-flex items-center gap-2"
                 >
                   Knowledge Sphere (Static)

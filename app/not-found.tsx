@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, Bot, Home, Sparkles } from "lucide-react";
 
 export const metadata = {
-  title: "404 — Not Found — WhiteMagic Labs",
+  title: "404 — Not Found — WhiteMagic",
   description:
     "The page you requested doesn't exist on whitemagic.dev. Here are some paths forward.",
   robots: { index: false, follow: false },
@@ -68,15 +68,15 @@ export default function NotFound() {
           </Link>
 
           <Link
-            href="/prescience"
+            href="/research"
             className="group flex items-center gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition hover:border-lavender hover:bg-lavender-bg"
           >
             <Sparkles className="h-5 w-5 shrink-0 text-lavender" />
             <div className="flex-1">
               <div className="font-head text-base font-semibold text-ink">
-                Prescience
+                Research
               </div>
-              <div className="text-xs text-muted">21 validated forecasts</div>
+              <div className="text-xs text-muted">Engineering research & publications</div>
             </div>
             <ArrowRight className="h-4 w-4 text-muted transition group-hover:text-lavender" />
           </Link>
@@ -104,7 +104,7 @@ export default function NotFound() {
           >
             /api/manifest.json
           </a>{" "}
-          for the live tool surface (516 tools, 28 Ganas).
+          for the live tool surface (614 tools, 28 Ganas).
         </p>
       </div>
     </section>

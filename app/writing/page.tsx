@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { WM_FACTS } from "@/lib/facts";
 
 export const metadata = {
-  title: "Writing — WhiteMagic Labs",
+  title: "Writing — WhiteMagic",
   description:
     `Technical writing on private AI, agent governance, MCP engineering, and the honest lessons from shipping a ${WM_FACTS.linesShort}-line solo project.`,
 };

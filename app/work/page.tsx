@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ArrowRight } from "lucide-react";
 
 export const metadata = {
-  title: "Work — WhiteMagic Labs",
+  title: "Work — WhiteMagic",
   description: "Case studies from client engagements.",
 };
 

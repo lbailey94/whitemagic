@@ -17,9 +17,9 @@ import { LibrarianChat } from "@/components/LibrarianChat";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Chat with Aria — WhiteMagic Labs",
+  title: "Chat with Aria — WhiteMagic",
   description:
-    "Talk to Aria, the site-aware AI assistant for WhiteMagic Labs. Same AI as the /librarian page; this URL preserves the legacy chat.whitemagic.dev link.",
+    "Talk to Aria, the WhiteMagic site-aware AI assistant. Ask about the project, the codebase, or how to get started.",
 };
 
 export default function ChatPage() {

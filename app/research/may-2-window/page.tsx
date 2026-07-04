@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
 
 export const metadata = {
-  title: "The May 2, 2026 Window: The 144-Day Countdown — WhiteMagic Labs",
+  title: "The May 2, 2026 Window: The 144-Day Countdown — WhiteMagic",
   description:
     "Exploring the significance of May 2, 2026 as a precursor threshold to the major September 23 convergence.",
 };

@@ -239,7 +239,7 @@ export default function LibraryPage() {
                   permalink
                 </Link>
                 <Link
-                  href="/essays"
+                  href="/writing"
                   className="font-mono text-xs text-muted hover:text-ink"
                 >
                   back to essays

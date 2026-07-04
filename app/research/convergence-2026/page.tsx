@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
 
 export const metadata = {
-  title: "Convergence 2026: The Great Crossroads — WhiteMagic Labs",
+  title: "Convergence 2026: The Great Crossroads — WhiteMagic",
   description:
     "Mapping the unprecedented alignment of technological, ontological, and esoteric thresholds occurring in the 2026-2027 window.",
 };
