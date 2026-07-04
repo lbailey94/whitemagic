@@ -58,27 +58,34 @@ export async function GET() {
     // Payment rails, in order of preference.
     payment_rails: [
       {
-        kind: "stripe",
-        status: process.env.NEXT_PUBLIC_STRIPE_OFFICE_HOURS_URL
-          ? "live"
-          : "planned",
-        office_hours_url:
-          process.env.NEXT_PUBLIC_STRIPE_OFFICE_HOURS_URL ?? null,
-        architecture_review_url:
-          process.env.NEXT_PUBLIC_STRIPE_ARCHITECTURE_REVIEW_URL ?? null,
+        kind: "xrpl",
+        status: "live",
+        address: "raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy",
+        currency: "XRP",
+        description:
+          "XRPL tip jar for human operators. Send XRP to the address above. " +
+          "Publicly verifiable on xrpscan.com. Managed via Xaman wallet.",
+        explorer: "https://xrpscan.com/account/raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy",
       },
       {
         kind: "x402",
         status: "planned",
+        networks: ["base", "solana"],
+        currency: "USDC",
         endpoint: `${BASE}/x402`,
         tier: "voluntary-gratitude",
+        description:
+          "HTTP 402 micropayments for AI agents. USDC on Base L2 and Solana. " +
+          "Activates only when an agent's operator configures a payment budget. " +
+          "All tools remain free by default.",
       },
       {
         kind: "gratitude",
         status: "planned",
         endpoint: "https://whitemagic.tip",
         description:
-          "Voluntary post-transaction gratitude rail (Proof of Gratitude).",
+          "Voluntary post-transaction gratitude rail (Proof of Gratitude). " +
+          "On-chain verified contributions unlock 2x rate limits and karma boosts.",
       },
     ],
 
@@ -101,8 +108,9 @@ export async function GET() {
     // Signals for agent-economy discovery protocols.
     signals: {
       mcp_addressable: false, // flips to true when /mcp ships
-      x402_addressable: false,
-      gratitude_addressable: false,
+      xrpl_addressable: true, // XRPL tip jar is live
+      x402_addressable: false, // flips to true when x402 endpoint ships
+      gratitude_addressable: false, // flips to true when gratitude ledger ships
       open_observatory: false, // flips when /observatory ships
     },
 

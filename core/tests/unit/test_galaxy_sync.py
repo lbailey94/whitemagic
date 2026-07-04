@@ -74,7 +74,7 @@ class TestGalaxySyncPublish:
         from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
 
         # Mock the _run to return immediately without actually running the coroutine
-        async def _fake_run(coro):
+        def _fake_run(coro):
             coro.close()
             return "msg_123"
 
