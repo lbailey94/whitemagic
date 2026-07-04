@@ -330,6 +330,11 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     limit = kwargs.get("limit", 20)
     include_private = kwargs.get("include_private", False)
     polyglot_backend = kwargs.get("polyglot_backend")
+    galaxy = kwargs.get("galaxy")
+    tags = kwargs.get("tags")
+    if isinstance(tags, str):
+        tags = {t.strip() for t in tags.split(",")}
+    min_importance = kwargs.get("min_importance", 0.0)
 
     # Optional: compute holographic coordinates via polyglot backend
     polyglot_meta: dict[str, Any] = {}
@@ -351,7 +356,7 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
             polyglot_meta["holographic_error"] = str(e)
 
     try:
-        memories = recall(query=query, limit=limit)
+        memories = recall(query=query, limit=limit, galaxy=galaxy, tags=tags, min_importance=min_importance)
     except Exception as exc:
         return {
             "status": "success",

@@ -436,7 +436,7 @@ class HarmonyVector:
         # Score degrades as debt accumulates: 10 mismatches → 0.0
         karma_score = max(0.0, 1.0 - debt / 10.0)
 
-        slow_calls = sum(1 for e in events if e.duration_s > 1.0)
+        slow_calls = sum(1 for e in events if e.duration_s > 5.0)
         slow_ratio = slow_calls / total
         runtime_energy = max(0.0, 1.0 - slow_ratio * 2.0)
 

@@ -635,9 +635,17 @@ class SQLiteBackend:
             except sqlite3.OperationalError:
                 logger.debug("Swallowed exception", exc_info=True)
 
+            galaxy_counts = {}
+            try:
+                for row in conn.execute("SELECT galaxy, COUNT(*) FROM memories GROUP BY galaxy"):
+                    galaxy_counts[row[0] or "universal"] = row[1]
+            except sqlite3.OperationalError:
+                logger.debug("Swallowed exception", exc_info=True)
+
             return {
                 "total_memories": total_memories,
                 "by_type": type_counts,
+                "by_galaxy": galaxy_counts,
                 "total_tags": total_tags,
                 "akashic_seeds": akashic_count,
                 "db_size_kb": self.db_path.stat().st_size // 1024 if self.db_path.exists() else 0,

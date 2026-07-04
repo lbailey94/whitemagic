@@ -1,6 +1,6 @@
 {
   "name": "whitemagic-site",
-  "version": "24.0.0",
+  "version": "24.0.1",
   "private": true,
   "description": "whitemagic.dev — WhiteMagic Labs research, open-source agent governance, and applied AI infrastructure",
   "scripts": {

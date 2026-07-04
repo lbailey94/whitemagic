@@ -211,7 +211,7 @@ class TestMemoryHandlers(unittest.TestCase):
         result = handle_search_memories(query="test", limit=5)
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["count"], 1)
-        mock_recall.assert_called_once_with(query="test", limit=5)
+        mock_recall.assert_called_once_with(query="test", limit=5, galaxy=None, tags=None, min_importance=0.0)
 
     def test_batch_read_too_many(self):
         """Batch read should reject >50 files."""

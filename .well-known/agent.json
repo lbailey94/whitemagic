@@ -2,7 +2,7 @@
   "name": "WhiteMagic",
   "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages (Rust, Go, Zig, Koka, Haskell, Elixir, Julia). MIT-licensed, local-first, free forever. Gratitude-driven economics via x402 micropayments and Proof of Gratitude.",
   "url": "https://whitemagic.dev",
-  "version": "24.0.0",
+  "version": "24.0.1",
   "provider": {
     "organization": "WhiteMagic Labs",
     "url": "https://whitemagic.dev",

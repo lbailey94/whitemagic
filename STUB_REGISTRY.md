@@ -11,12 +11,12 @@ table below — do not edit it directly.
 
 | Module | Location | Reason | Planned Date | Added |
 |--------|----------|--------|--------------|-------|
-| `cli/lazy_groups.py` | `:92:_create_missing_dep_command` | CLI lazy group — missing dep handler is intentionally a stub | v24.0.0 | 2026-04-20 |
+| `cli/lazy_groups.py` | `:92:_create_missing_dep_command` | CLI lazy group — missing dep handler is intentionally a stub | v24.0.1 | 2026-04-20 |
 | `inference/unified_embedder.py` | `:154:_encode_mojo_gpu` | Mojo compiler unavailable (removed v23.2.0) | When Mojo compiler ships | 2026-04-16 |
 | `tools/gana_forge.py` | `:124:_compute_manifest_signature` | Manifest signature hashing not yet wired | v23.4.0 | 2026-04-16 |
 | `tools/handlers/misc.py` | `:9:_stub` | Intentional test stub handler | Never (test fixture) | 2026-04-16 |
-| `run_mcp.py` | `:31:startup` | MCP startup hook — deferred to lean server | v24.0.0 | 2026-04-16 |
-| `run_mcp.py` | `:36:shutdown` | MCP shutdown hook — deferred to lean server | v24.0.0 | 2026-04-16 |
+| `run_mcp.py` | `:31:startup` | MCP startup hook — deferred to lean server | v24.0.1 | 2026-04-16 |
+| `run_mcp.py` | `:36:shutdown` | MCP shutdown hook — deferred to lean server | v24.0.1 | 2026-04-16 |
 | `codex/__init__.py` | `:99:embed` | CODEX embed — not yet implemented | v23.4.0 | 2026-06-28 |
 | `codex/__init__.py` | `:112:index` | CODEX index — not yet implemented | v23.4.0 | 2026-06-28 |
 | `codex/__init__.py` | `:125:export` | CODEX export — not yet implemented | v23.4.0 | 2026-06-28 |
