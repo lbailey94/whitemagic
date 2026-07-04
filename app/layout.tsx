@@ -10,24 +10,23 @@ import { WipBanner } from "@/components/WipBanner";
 import { WipScrambleAll } from "@/components/WipScrambleAll";
 import { WipUnregisterSw } from "@/components/WipUnregisterSw";
 import { WIP_MODE, WIP_SCRAMBLE } from "@/lib/wip";
-import { organizationLd, websiteLd } from "@/lib/jsonld";
+import { organizationLd, websiteLd, softwareApplicationLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
-  title: WIP_MODE
-    ? "WhiteMagic — A door is opening"
-    : "WhiteMagic Labs — Private AI Deployment",
-  description: WIP_MODE
-    ? "A local-first cognitive substrate. Permanent, private, yours. Subscribe to be notified when the public beta opens."
-    : "Private AI systems deployed on your infrastructure. Persistent memory, tool use, governance, full audit — your data never leaves the building.",
+  title: "WhiteMagic — Cognitive Operating System for AI Agents",
+  description: "614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first. pip install whitemagic[mcp]",
   metadataBase: new URL("https://whitemagic.dev"),
   openGraph: {
-    title: WIP_MODE ? "WhiteMagic — A door is opening" : "WhiteMagic Labs",
-    description: WIP_MODE
-      ? "A local-first cognitive substrate. Permanent, private, yours."
-      : "Private AI deployment for regulated enterprises.",
+    title: "WhiteMagic — Cognitive Operating System for AI Agents",
+    description: "Other memory systems store data. WhiteMagic gives AI a mind. 614 tools, 10-galaxy memory, ethical governance, consciousness primitives. MIT-licensed.",
     url: "https://whitemagic.dev",
-    siteName: WIP_MODE ? "WhiteMagic" : "WhiteMagic Labs",
+    siteName: "WhiteMagic",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WhiteMagic — Cognitive Operating System for AI Agents",
+    description: "614 tools, 10-galaxy memory, Dharma governance, citta stream. MIT-licensed, local-first.",
   },
 };
 
@@ -54,7 +53,7 @@ export default function RootLayout({
       <body className={WIP_SCRAMBLE ? "wip-scrambling" : ""}>
         <WipScrambleAll />
         <WipUnregisterSw />
-        <JsonLd data={[organizationLd(), websiteLd()]} />
+        <JsonLd data={[organizationLd(), websiteLd(), softwareApplicationLd()]} />
         <ThemeProvider>
           <MatrixRain />
           <div className="relative z-10">

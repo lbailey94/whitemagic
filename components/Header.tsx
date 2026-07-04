@@ -8,11 +8,11 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LangToggle } from "./LangToggle";
 
 const NAV = [
+  { href: "/mcp-bridge", label: "Get Started" },
+  { href: "/open-source", label: "Docs" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/governance", label: "Governance" },
   { href: "/research", label: "Research" },
-  { href: "/open-source", label: "Open Source" },
-  { href: "/sphere", label: "Sphere" },
-  { href: "/economy", label: "Economy" },
-  { href: "/timeline", label: "Timeline" },
   { href: "/about", label: "About" },
 ];
 
@@ -37,8 +37,8 @@ export function Header() {
         <div className="flex items-center gap-2">
           <LangToggle />
           <ThemeToggle />
-          <Link href="/contact" className="btn-primary hidden sm:inline-flex">
-            Contact
+          <Link href="/mcp-bridge" className="btn-primary hidden sm:inline-flex">
+            Get Started
           </Link>
           {/* Mobile hamburger */}
           <button
@@ -70,11 +70,11 @@ export function Header() {
               </Link>
             ))}
             <Link
-              href="/workshops"
+              href="/mcp-bridge"
               onClick={() => setMobileOpen(false)}
               className="btn-primary mt-2 sm:hidden"
             >
-              Book a Workshop
+              Get Started
             </Link>
           </nav>
         </div>

@@ -7,8 +7,8 @@
 import { SERVICES, type ServiceSlug } from "./data/services";
 
 const SITE_URL = "https://whitemagic.dev";
-const ORG_NAME = "WhiteMagic Labs";
-const ORG_LEGAL = "WhiteMagic Labs";
+const ORG_NAME = "WhiteMagic";
+const ORG_LEGAL = "WhiteMagic";
 
 /** Root organization node, referenced by other nodes via @id. */
 export function organizationLd(): Record<string, unknown> {
@@ -21,7 +21,7 @@ export function organizationLd(): Record<string, unknown> {
     url: SITE_URL,
     logo: `${SITE_URL}/opengraph-image`,
     description:
-      "Private AI deployment, agent governance, and MCP engineering for regulated enterprises.",
+      "Cognitive operating system for AI agents — 614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first.",
   };
 }
 
@@ -42,16 +42,17 @@ export function personLd(): Record<string, unknown> {
     "@context": "https://schema.org",
     "@type": "Person",
     "@id": `${SITE_URL}/about#founder`,
-    name: "WhiteMagic Labs Founder",
+    name: "Lucas Bailey",
     jobTitle: "Founder, Principal Engineer",
     worksFor: { "@id": `${SITE_URL}/#org` },
     url: `${SITE_URL}/about`,
     knowsAbout: [
-      "Agent governance",
+      "Cognitive operating systems for AI agents",
       "Model Context Protocol",
-      "Private AI deployment",
-      "OWASP LLM Top 10 (v1.1, covers agentic AI)",
-      "EU AI Act",
+      "AI memory systems",
+      "Agent governance and ethics",
+      "Polyglot acceleration (Rust, Haskell, Elixir, Go, Zig)",
+      "Machine consciousness and self-awareness",
     ],
   };
 }
@@ -88,5 +89,35 @@ export function faqLd(items: FaqItem[]): Record<string, unknown> {
         text: it.answer,
       },
     })),
+  };
+}
+
+export function softwareApplicationLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${SITE_URL}/#app`,
+    name: "WhiteMagic",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Cross-platform",
+    description: "Cognitive operating system for AI agents — 614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness.",
+    url: SITE_URL,
+    downloadUrl: "https://pypi.org/project/whitemagic/",
+    installUrl: "https://pypi.org/project/whitemagic/",
+    softwareVersion: "24.0.0",
+    license: "https://github.com/lbailey94/whitemagic/blob/main/LICENSE",
+    codeRepository: "https://github.com/lbailey94/whitemagic",
+    programmingLanguage: "Python",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    publisher: { "@id": `${SITE_URL}/#org` },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "5",
+      ratingCount: "1",
+    },
   };
 }
