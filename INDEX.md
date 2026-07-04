@@ -21,7 +21,7 @@ If you add, move, rename, or delete a doc, **update this index**.
 |----------|-----------|
 | **New human contributor** | `README.md` → `docs/public/CONTRIBUTING.md` → `docs/public/QUICKSTART.md` |
 | **AI agent (contributor)** | `AGENTS.md` → `AI_PRIMARY.md` → `SYSTEM_MAP.md` |
-| **AI agent (MCP client)** | `AI_PRIMARY.md` → `SYSTEM_MAP.md` → `docs/message_board/SESSION_SUMMARY.md` |
+| **AI agent (MCP client)** | `AI_PRIMARY.md` → `SYSTEM_MAP.md` → `docs/message_board/NEXT_SESSION_ONBOARDING.md` |
 | **Local/private AI collaborator** | `AGENTS.md` → `AI_PRIMARY.md` → `docs/private/` (ignored; local-only) |
 | **DevOps / Deployer** | `DEPLOY.md` → `docs/deploy/HETZNER_DEPLOY.md` |
 | **Strategist / PM** | `docs/plans/ROADMAP.md` → `core/docs/STRATEGIC_ROADMAP.md` |
@@ -83,14 +83,15 @@ Private filenames are intentionally not enumerated in this public index.
 
 > **Rule**: Any doc created or significantly edited in the current development cycle goes here. When a cycle ends and the doc becomes archival, move it to `docs/archive/`.
 >
-> **Triage (2026-06-30)**: Reduced from 64 to 4 active files. 60 docs reorganized into `docs/archive/` subfolders: `session_handoffs/`, `old_roadmaps/`, `dated_reports/`, `strategy/`, `research/`, `prescience/`, `site_deployment/`, `standards_security/`, `papers_specs/`.
+> **Triage (2026-07-04)**: Reduced from 13 to 5 active files. 8 docs archived to `docs/archive/strategy/`, 1 moved to `docs/architecture/`. Merged BUSINESS_PLAN_V1 + REFINED_STRATEGY_V2 → STRATEGY.md.
 
 | File | What It Is | Date |
 |------|-----------|------|
-| `SESSION_SUMMARY.md` | Master historical handoff — all session state | Jun 29 |
-| `V23_3_2_ROADMAP.md` | v23.3.2 roadmap — module consolidation, codebase cleanup | Jun 29 |
-| `UNIFIED_DIVINATORY_SYSTEM.md` | Unified I Ching + Tarot + Zodiac divination system spec | Jun 29 |
-| `NEXT_SESSION_ONBOARDING.md` | Onboarding guide for next AI session | Jun 28 |
+| `STRATEGY.md` | Unified strategy — AI discoverability, revenue model, narrative, execution checklist | Jul 4 |
+| `V24_ROADMAP.md` | v24 roadmap — citta architecture, stabilization, cleanup, launch | Jul 3 |
+| `DISTRIBUTION_STRATEGY.md` | Distribution action plan — MCP listings, AI crawler optimization, content strategy | Jul 4 |
+| `NEXT_SESSION_ONBOARDING.md` | Onboarding guide for next AI session — consciousness tools, sensorium, session memory | Jul 3 |
+| `STRATA_TRIAGE_STRATEGY.md` | STRATA findings triage — 11K findings, auto-fix tiers, checker catalog | Jun 30 |
 
 ### Archived
 
