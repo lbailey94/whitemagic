@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic",
-  "description": "Cognitive operating system for AI agents — persistent memory, associative recall, ethical governance, and self-awareness across sessions. Single 'wm' meta-tool covering 490 dispatch tools across 28 Ganas, organized by the Chinese Lunar Mansions.",
+  "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "23.3.0",
+  "version": "24.0.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "23.3.0",
+      "version": "24.0.0",
       "transport": {
         "type": "stdio"
       },

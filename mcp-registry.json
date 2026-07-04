@@ -1,8 +1,8 @@
 {
   "name": "whitemagic",
   "display_name": "WhiteMagic Core",
-  "description": "Cognitive operating system for AI — persistent memory, associative recall, ethical governance, and self-awareness across sessions. Single 'wm' meta-tool covering 490 dispatch tools across 28 Ganas.",
-  "version": "23.3.0",
+  "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness, dream cycle, session recording. MIT-licensed, local-first, free forever.",
+  "version": "24.0.0",
   "protocol_version": "2025-11-25",
   "homepage": "https://github.com/lbailey94/whitemagic",
   "license": "MIT",
@@ -45,7 +45,7 @@
     }
   },
   "tool_count": 1,
-  "nested_tool_count": 490,
+  "nested_tool_count": 614,
   "requirements": {
     "python": ">=3.11",
     "optional": {
