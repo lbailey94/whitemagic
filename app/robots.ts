@@ -4,16 +4,23 @@ export default function robots(): MetadataRoute.Robots {
   const allowedCrawlers = [
     "GPTBot",
     "OAI-SearchBot",
+    "ChatGPT-User",
     "ClaudeBot",
+    "Claude-Web",
+    "anthropic-ai",
     "PerplexityBot",
+    "Perplexity-User",
     "Google-Extended",
     "Bingbot",
     "Amazonbot",
     "Applebot",
+    "Applebot-Extended",
     "Bytespider",
     "CCBot",
     "FacebookBot",
+    "Meta-ExternalAgent",
     "Googlebot",
+    "AhrefsBot",
   ];
 
   return {
@@ -21,12 +28,11 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api/aria/", "/dashboard", "/api/librarian/"],
+        disallow: ["/admin", "/dashboard"],
       },
       ...allowedCrawlers.map((ua) => ({
         userAgent: ua,
         allow: "/",
-        disallow: ["/admin", "/api/aria/", "/dashboard"],
       })),
     ],
     sitemap: "https://whitemagic.dev/sitemap.xml",
