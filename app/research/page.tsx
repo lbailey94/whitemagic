@@ -16,7 +16,7 @@ const RESEARCH_AREAS = [
     status: "Shipped",
     details: [
       "10 galaxies: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal",
-      "49,429 memories in production",
+      "49,486 memories in production",
       "2,853 cross-galaxy associations",
       "0.26ms HNSW search latency",
     ],

@@ -108,7 +108,7 @@ export function softwareApplicationLd(): Record<string, unknown> {
     url: SITE_URL,
     downloadUrl: "https://pypi.org/project/whitemagic/",
     installUrl: "https://pypi.org/project/whitemagic/",
-    softwareVersion: "24.0.0",
+    softwareVersion: "24.0.1",
     license: "https://github.com/lbailey94/whitemagic/blob/main/LICENSE",
     codeRepository: "https://github.com/lbailey94/whitemagic",
     programmingLanguage: "Python",

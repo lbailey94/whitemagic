@@ -5,7 +5,7 @@ import { ArrowRight, Book, Shield, Brain, Database, Zap, Code, Terminal } from "
 
 export const metadata = {
   title: "Docs — WhiteMagic",
-  description: "WhiteMagic v24.0.0 documentation — 614 callable tools, 10-galaxy memory, Dharma governance, citta stream, 7 polyglot accelerators. MIT-licensed, local-first.",
+  description: "WhiteMagic v24.0.1 documentation — 614 callable tools, 10-galaxy memory, Dharma governance, citta stream, 7 polyglot accelerators. MIT-licensed, local-first.",
 };
 
 const DOC_SECTIONS = [
@@ -75,7 +75,7 @@ export default function OpenSourcePage() {
     <>
       <PageHeader
         eyebrow="Documentation"
-        title="WhiteMagic v24.0.0"
+        title="WhiteMagic v24.0.1"
         lede={`${WM_FACT_TEXT.toolSurface}. ${WM_FACT_TEXT.testSuite}. ${WM_FACT_TEXT.memorySurface}. 7 polyglot accelerators. MIT-licensed, local-first.`}
       />
 

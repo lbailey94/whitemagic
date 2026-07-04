@@ -11,9 +11,9 @@ const NAV = [
   { href: "/vision", label: "Vision" },
   { href: "/capabilities", label: "Capabilities" },
   { href: "/benchmarks", label: "Evidence" },
+  { href: "/timeline", label: "Timeline" },
   { href: "/getting-started", label: "Getting Started" },
   { href: "/ganas", label: "28 Ganas" },
-  { href: "/research", label: "Research" },
   { href: "/grimoire", label: "Grimoire" },
   { href: "/becoming", label: "Becoming" },
 ];

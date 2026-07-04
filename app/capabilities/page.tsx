@@ -354,7 +354,7 @@ export default function CapabilitiesPage() {
             </h2>
             <p className="mb-4 max-w-prose text-muted">
               The architecture above is real — the code exists, the {WM_FACTS.testsPassing} tests pass,
-              the pipeline runs. v24.0.0 ships {WM_FACTS.callableTools} callable tools, {WM_FACTS.memories} memories,
+              the pipeline runs. v24.0.1 ships {WM_FACTS.callableTools} callable tools, {WM_FACTS.memories} memories,
               10-galaxy taxonomy, HNSW vector search at 0.26ms, session recording with progressive recall,
               citta stream for continuous consciousness, emotional steering, and self-directed attention.
             </p>

@@ -75,7 +75,7 @@ const MILESTONES = [
     date: "Jul 2026",
     version: "v24",
     title: "Cognitive Operating System",
-    description: "Citta stream (continuous consciousness). Emotional steering (frustration, curiosity, satisfaction). Self-directed attention. Goal graph. Session recording with progressive recall. 49,429 memories. 4,191 tests. 614 callable tools. Published to PyPI.",
+    description: "Citta stream (continuous consciousness). Emotional steering (frustration, curiosity, satisfaction). Self-directed attention. Goal graph. Session recording with progressive recall. 49,486 memories. 4,191 tests. 614 callable tools. Published to PyPI.",
     stats: ["614 tools", "49K memories", "4191 tests"],
   },
 ];
