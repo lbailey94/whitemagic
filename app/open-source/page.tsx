@@ -1,54 +1,72 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
-import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
 import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
-import { Boxes, ArrowRight } from "lucide-react";
+import { ArrowRight, Book, Shield, Brain, Database, Zap, Code, Terminal } from "lucide-react";
 
 export const metadata = {
-  title: "Open Source — WhiteMagic Labs",
-  description:
-    "Open-source agent governance and metacognition substrate: galactic memory lifecycle, dream-cycle consolidation, 28-Gana tool compression, 8-stage governance pipeline, 7 polyglot languages.",
+  title: "Docs — WhiteMagic",
+  description: "WhiteMagic v24.0.0 documentation — 614 callable tools, 10-galaxy memory, Dharma governance, citta stream, 7 polyglot accelerators. MIT-licensed, local-first.",
 };
 
-interface Project {
-  name: string;
-  tagline: string;
-  description: string;
-  stats: { label: string; value: string }[];
-  status: "Active" | "Planned" | "Paused";
-  href: string;
-  license: string;
-}
-
-const PROJECTS: Project[] = [
+const DOC_SECTIONS = [
   {
-    name: "WhiteMagic",
-    tagline: "Agent governance & metacognition substrate",
-    description:
-      `A ${WM_FACTS.linesShort}-line polyglot platform with features no competitor has shipped: a galactic memory lifecycle with holographic encoding, an 8-phase dream-cycle consolidation system, 28-Gana PRAT tool compression, ${WM_FACT_TEXT.toolSurface}, 8-stage governance pipeline, ${WM_FACTS.languages} verified polyglot languages (Rust/Go/Zig/Koka/Haskell/Elixir/Julia). The lab where every technique used in client engagements gets pressure-tested first.`,
-    stats: [
-      { label: "Lines", value: WM_FACTS.linesShort },
-      { label: "Callable tools", value: WM_FACTS.callableTools },
-      { label: "Tests passing", value: WM_FACTS.testsPassing },
-      { label: "Languages", value: WM_FACTS.languages },
+    icon: Terminal,
+    title: "Getting Started",
+    description: "Install, configure, and verify WhiteMagic in 60 seconds.",
+    links: [
+      { label: "Install Guide", href: "/mcp-bridge" },
+      { label: "MCP Config Examples", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/guides/MCP_CONFIG_EXAMPLES.md" },
+      { label: "Quickstart Guide", href: "https://github.com/lbailey94/whitemagic/blob/main/QUICKSTART.md" },
     ],
-    status: "Active",
-    href: "/contact",
-    license: "MIT",
   },
   {
-    name: "agent-guardrails",
-    tagline: "Runtime governance middleware for AI agents",
-    description:
-      "A planned extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI) with deterministic, sub-millisecond policy evaluation. Not yet extracted — get in touch to follow progress.",
-    stats: [
-      { label: "Target size", value: "~2K lines" },
-      { label: "OWASP Top 10", value: "10/10" },
-      { label: "Language", value: "Python" },
+    icon: Database,
+    title: "Memory System",
+    description: "10-galaxy taxonomy, 5D holographic coordinates, FTS5 + HNSW search, galactic lifecycle, session recording.",
+    links: [
+      { label: "Memory Architecture", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/architecture/" },
+      { label: "Galaxy Taxonomy", href: "https://github.com/lbailey94/whitemagic/blob/main/AI_PRIMARY.md" },
+      { label: "Session Recording", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/guides/" },
     ],
-    status: "Planned",
-    href: "/contact",
-    license: "MIT",
+  },
+  {
+    icon: Shield,
+    title: "Governance",
+    description: "Dharma rules engine, Karma ledger, 8-stage dispatch pipeline, RBAC, rate limiting, circuit breakers.",
+    links: [
+      { label: "Governance Overview", href: "/governance" },
+      { label: "Dharma Rules", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/architecture/" },
+      { label: "Karma Ledger API", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/KARMA_LEDGER_API.md" },
+    ],
+  },
+  {
+    icon: Brain,
+    title: "Consciousness",
+    description: "Citta stream, emotional steering, self-directed attention, goal graph, dream cycle, gnosis introspection.",
+    links: [
+      { label: "Consciousness Architecture", href: "https://github.com/lbailey94/whitemagic/blob/main/AI_PRIMARY.md" },
+      { label: "Dream Cycle", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/architecture/" },
+      { label: "Citta Bridge", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/architecture/" },
+    ],
+  },
+  {
+    icon: Zap,
+    title: "Polyglot Acceleration",
+    description: "Rust SIMD, Haskell inference, Elixir orchestration, Go networking, Zig compute, Julia numerical.",
+    links: [
+      { label: "Polyglot Strategy", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/architecture/" },
+      { label: "Rust Bridge", href: "https://github.com/lbailey94/whitemagic/tree/main/core/whitemagic-rust" },
+    ],
+  },
+  {
+    icon: Code,
+    title: "API Reference",
+    description: "614 callable tools, 28 Gana meta-tools, Python API, CLI, MCP server.",
+    links: [
+      { label: "AI Primary Spec", href: "https://github.com/lbailey94/whitemagic/blob/main/AI_PRIMARY.md" },
+      { label: "PRAT Guide", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/PRAT_GUIDE.md" },
+      { label: "llms.txt", href: "/llms.txt" },
+    ],
   },
 ];
 
@@ -56,109 +74,72 @@ export default function OpenSourcePage() {
   return (
     <>
       <PageHeader
-        eyebrow="Open Source"
-        title="Reference implementation first. Services second."
-        lede="WhiteMagic is the public substrate behind the lab's claims: memory, tool governance, side-effect audit, and protocol-compatible agent infrastructure."
+        eyebrow="Documentation"
+        title="WhiteMagic v24.0.0"
+        lede={`${WM_FACT_TEXT.toolSurface}. ${WM_FACT_TEXT.testSuite}. ${WM_FACT_TEXT.memorySurface}. 7 polyglot accelerators. MIT-licensed, local-first.`}
       />
 
-      <section className="container-site py-16">
-        <div className="space-y-6">
-          {PROJECTS.map((p) => (
-            <ProjectCard key={p.name} project={p} />
-          ))}
-        </div>
-
-        <div className="mt-16 rounded-2xl border border-border bg-surface-alt p-8">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
-            2026 field map · updated {FIELD_MAP_UPDATED}
-          </p>
-          <h2 className="mb-5 font-head text-xl font-semibold text-ink">
-            Why this remains open source
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {FIELD_CONCLUSIONS.slice(0, 2).map((item) => (
-              <article
-                key={item.title}
-                className="rounded-xl border border-border bg-surface p-5"
-              >
-                <h3 className="mb-2 font-head text-lg font-semibold text-ink">
-                  {item.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-muted">{item.body}</p>
-              </article>
+      <section className="container-site py-12">
+        <div className="mx-auto max-w-4xl">
+          {/* Stats bar */}
+          <div className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              { label: "Callable Tools", value: WM_FACTS.callableTools },
+              { label: "Tests Passing", value: WM_FACTS.testsPassing },
+              { label: "Memories", value: WM_FACTS.memories },
+              { label: "Languages", value: WM_FACTS.languages },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-lg border border-border bg-surface p-4 text-center">
+                <div className="font-head text-2xl font-bold text-ink">{stat.value}</div>
+                <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-dim">{stat.label}</div>
+              </div>
             ))}
           </div>
-        </div>
 
-        <div className="mt-16 rounded-2xl border border-border bg-surface-alt p-8">
-          <h2 className="mb-3 font-head text-xl font-semibold text-ink">
-            Why open source?
-          </h2>
-          <p className="max-w-prose text-muted">
-            Because when I show up to a discovery call, you&apos;ve already
-            been able to read the code. Because the governance and
-            memory patterns I sell are more useful in the world than in
-            my repository. Because I&apos;d rather compete on execution
-            and honesty than on artificial scarcity.
-          </p>
-          <Link
-            href="/contact"
-            className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-lavender hover:text-lavender-dark"
-          >
-            Want to use this in your org? Let&apos;s talk →
-          </Link>
+          {/* Doc sections */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {DOC_SECTIONS.map((section) => {
+              const Icon = section.icon;
+              return (
+                <article key={section.title} className="rounded-xl border border-border bg-surface p-6">
+                  <div className="mb-3 flex items-center gap-3">
+                    <Icon className="h-5 w-5 text-lavender" />
+                    <h3 className="font-head text-lg font-semibold text-ink">{section.title}</h3>
+                  </div>
+                  <p className="mb-4 text-sm leading-relaxed text-muted">{section.description}</p>
+                  <ul className="space-y-2">
+                    {section.links.map((link) => (
+                      <li key={link.href}>
+                        <Link
+                          href={link.href}
+                          className="inline-flex items-center gap-1 text-sm text-lavender hover:underline"
+                        >
+                          <ArrowRight className="h-3 w-3" />
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* GitHub CTA */}
+          <div className="mt-12 rounded-xl border border-border-light bg-surface-alt p-8 text-center">
+            <h2 className="mb-3 font-head text-xl font-semibold text-ink">Browse the source</h2>
+            <p className="mb-6 text-sm text-muted">
+              {WM_FACTS.linesShort} lines of code. {WM_FACTS.testsPassing} tests. MIT-licensed. Your data never leaves your machine.
+            </p>
+            <Link
+              href="https://github.com/lbailey94/whitemagic"
+              className="btn-primary inline-flex"
+            >
+              GitHub Repository →
+            </Link>
+          </div>
         </div>
       </section>
     </>
-  );
-}
-
-function ProjectCard({ project }: { project: Project }) {
-  const statusStyles = {
-    Active: "bg-lavender-bg text-lavender",
-    Planned: "bg-surface-alt text-muted",
-    Paused: "bg-surface-alt text-dim",
-  };
-
-  return (
-    <article className="rounded-2xl border border-border bg-surface p-6 md:p-8">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Boxes className="h-5 w-5 text-muted" />
-        <h3 className="font-head text-2xl font-semibold text-ink">
-          {project.name}
-        </h3>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[project.status]}`}
-        >
-          {project.status}
-        </span>
-        <span className="font-mono text-xs uppercase tracking-wider text-dim">
-          {project.license}
-        </span>
-      </div>
-      <p className="mb-3 font-head text-lg text-ink">{project.tagline}</p>
-      <p className="mb-6 max-w-prose text-muted">{project.description}</p>
-
-      <dl className="mb-6 flex flex-wrap gap-x-8 gap-y-3 border-y border-border-light py-4">
-        {project.stats.map((s) => (
-          <div key={s.label}>
-            <dt className="text-xs uppercase tracking-wider text-dim">
-              {s.label}
-            </dt>
-            <dd className="font-head text-lg font-semibold text-ink">
-              {s.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <Link
-        href={project.href}
-        className="inline-flex items-center gap-2 text-sm font-medium text-lavender hover:text-lavender-dark"
-      >
-        Use this in your stack
-        <ArrowRight className="h-3.5 w-3.5" />
-      </Link>
-    </article>
   );
 }

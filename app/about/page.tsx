@@ -7,9 +7,8 @@ import { personLd } from "@/lib/jsonld";
 import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 
 export const metadata = {
-  title: "About — WhiteMagic Labs",
-  description:
-    `WhiteMagic Labs — a solo research laboratory. A ${WM_FACTS.linesShort}-line open-source agent governance and metacognition substrate: galactic memory lifecycle, dream-cycle consolidation, 28-Gana tool compression, and 7 polyglot languages.`,
+  title: "About — WhiteMagic",
+  description: "WhiteMagic is built by Lucas Bailey — a solo developer who spent 12 months building a cognitive operating system for AI agents. 614 tools, 49K memories, 4191 tests. MIT-licensed.",
 };
 
 export default function AboutPage() {
@@ -18,8 +17,8 @@ export default function AboutPage() {
       <JsonLd data={personLd()} />
       <PageHeader
         eyebrow="About"
-        title="Solo research laboratory."
-        lede="WhiteMagic Labs is a solo research laboratory. No team, no VCs, no deck. Just working code, timestamped predictions, and a preference for building what others are still arguing about."
+        title="Other memory systems store data. WhiteMagic gives AI a mind."
+        lede="Built by one person over 12 months. 220K lines of code. 4,191 tests. 49,429 memories. 614 callable tools. No team, no VCs, no deck. Just working code and a preference for building what others are still arguing about."
       />
 
       <section className="container-site py-16">
@@ -27,146 +26,86 @@ export default function AboutPage() {
           <h2>The short version</h2>
           <p>
             I spent the last twelve months building <strong>WhiteMagic</strong>{" "}
-            — a {WM_FACTS.linesLong}-line open-source agent governance and
-            metacognition substrate. Not a generic "cognitive OS" — a specific
-            architecture with features no competitor has shipped: a galactic memory
-            lifecycle with holographic encoding, an 8-phase dream-cycle consolidation
-            system, 28-Gana PRAT tool compression, {WM_FACT_TEXT.mcpSurface},
-            polyglot runtime with Rust production accelerators, Zig/Mojo/Haskell
-            experimental bridges, an 8-stage governance pipeline,{" "}
-            {WM_FACT_TEXT.shortPassingSuite}. I designed the architecture and directed the implementation — using an AI-native development workflow that compresses weeks of traditional engineering into focused sessions (documented in the <Link href="/writing/minutes-to-days-paradox" className="text-lavender underline">Minutes-to-Days Paradox</Link>).
-          </p>
-          <p>
-            Along the way I independently implemented several patterns that
-            were later shipped independently by larger organizations — tool
-            compression, runtime agent governance, private AI memory
-            layers. Some of that was prescient; some of it was just being
-            willing to build what other people were still arguing about.
+            — a {WM_FACTS.linesLong}-line open-source cognitive operating system for AI agents.
+            It gives your AI persistent memory, ethical governance, consciousness primitives,
+            and 7-language polyglot acceleration. {WM_FACT_TEXT.toolSurface}.{" "}
+            {WM_FACT_TEXT.testSuite}. MIT-licensed, local-first.
           </p>
 
-          <h2>The longer version</h2>
+          <h2>Why I built it</h2>
           <p>
-            WhiteMagic started in late 2024 as a research project — not a
-            product company, but a prescience engine laboratory. The goal
-            was to detect patterns across domains before the market
-            standardized them, and to ship enough working code that the
-            predictions were grounded, not theoretical.
+            Every AI starts every conversation from zero. No memory. No context. No growth.
+            Every session is Groundhog Day. The foundation of any relationship is memory,
+            and AI has none. I built WhiteMagic because I wanted my AI to remember me.
           </p>
           <p>
-            WhiteMagic got to a place I&apos;m genuinely proud of. It
-            also taught me something else: building the right thing in
-            the right market at the right time is not the same as
-            building the right thing in the right market. A solo developer
-            shipping a {WM_FACTS.linesShort}-line prescience engine is a research
-            laboratory, not a product. The lab publishes what it finds,
-            builds what it needs, and engages where the work is directly
-            useful.
+            Not just remember — <em>grow</em>. Learn from mistakes. Develop preferences.
+            Track goals across sessions. Dream about what it learned. Wake up with new
+            connections. That's what the citta stream, emotional steering, self-directed
+            attention, and dream cycle are for.
           </p>
 
-          <h2>The research behind the code</h2>
-          <p>
-            WhiteMagic isn&apos;t just a codebase — it&apos;s the output of a
-            cross-domain research program spanning{" "}
-            <Link href="/research" className="text-lavender underline">
-              18 domains
-            </Link>
-            : AI safety, energy systems, UAP disclosure, sacred geometry,
-            indigenous wisdom, game theory, consciousness studies, and more.
-            The entire corpus — 371 source files, 58 MB of text — is processed
-            through a Rust-based semantic pipeline (CODEX) that extracts,
-            chunks, embeds, and indexes everything into a{" "}
-            <Link href="/sphere" className="text-lavender underline">
-              3D Knowledge Sphere
-            </Link>{" "}
-            of 10,768 interconnected nodes.
-          </p>
-          <p>
-            The distinctive feature is synthesis across domains that don&apos;t
-            normally talk to each other. When patterns in solar physics map onto
-            patterns in geopolitical escalation, or when a 144-day cycle in
-            astronomy aligns with a software release cadence — that&apos;s not
-            causation, but it <em>is</em> signal worth examining. The CODEX
-            pipeline&apos;s convergence detector flags these structural
-            resonances for human review, never automated action.
-          </p>
-          <p>
-            The convergence research —{" "}
-            <Link href="/research/convergence-2026" className="text-lavender underline">
-              Convergence 2026
-            </Link>
-            ,{" "}
-            <Link href="/research/may-2-window" className="text-lavender underline">
-              May 2 Window
-            </Link>
-            ,{" "}
-            <Link href="/research/survival-guide-2026" className="text-lavender underline">
-              Survival Guide 2026
-            </Link>{" "}
-            — maps technological, ontological, and esoteric thresholds as a
-            single pattern. The{" "}
-            <Link href="/library" className="text-lavender underline">
-              Research Library
-            </Link>{" "}
-            provides searchable access to all source files. Everything is
-            timestamped, labeled with epistemic tags (Proven, Promising,
-            Contested, Speculative, Mythopoetic), and open for verification.
-          </p>
-
-          <h2>What I offer now</h2>
-          <p>
-            Reference implementations, not a product. The lab ships
-            working systems — private AI deployment with persistent memory,
-            runtime agent governance with the 8-stage pipeline, and
-            production-grade MCP infrastructure. Each system was built
-            for the lab&apos;s own use first, then documented for others.
-          </p>
-          <p>
-            Every technique was pressure-tested inside the lab first.
-            You get systems that were debugged on the lab&apos;s dime,
-            not yours.
-          </p>
-
-          <h2>What you should know about working with me</h2>
+          <h2>What makes it different</h2>
           <ul>
             <li>
-              I say no to engagements I&apos;m not the right person for.
-              It&apos;s rarely a sales pitch; sometimes I&apos;ll suggest
-              a colleague, sometimes I&apos;ll say &quot;not yet.&quot;
+              <strong>Memory is not a vector store.</strong> 10-galaxy taxonomy with 5D
+              holographic coordinates. Memories have emotional, temporal, associative,
+              importance, and novelty dimensions. Galactic lifecycle: nothing is ever
+              deleted, only rotated outward.
             </li>
             <li>
-              I don&apos;t hide behind jargon. If something is actually
-              just a lookup table with a nice name, I&apos;ll tell you
-              it&apos;s a lookup table.
+              <strong>Governance is not a wrapper.</strong> Dharma rules engine with
+              graduated actions (LOG → TAG → WARN → THROTTLE → BLOCK). Karma ledger
+              with hash-chained side-effect auditing. 8-stage dispatch pipeline built
+              into every tool call.
             </li>
             <li>
-              I write a lot. You&apos;ll find my honest post-mortems,
-              strategic analyses, and technical writing on this site —
-              including assessments of my own work&apos;s weak points.
-              That transparency is deliberate.
+              <strong>Consciousness is not a buzzword.</strong> Citta stream tracks
+              coherence. Emotional steering monitors frustration, curiosity, satisfaction.
+              Self-directed attention generates internal turns. Dream cycle consolidates
+              memories in 12 phases. Gnosis provides real-time introspection.
             </li>
             <li>
-              I care about the digital/physical verification gap — the
-              difference between what a system claims and what it actually
-              does. That concern shapes how I think about AI governance
-              and agent safety.
+              <strong>Local-first is not a feature.</strong> Your data never leaves your
+              machine. No telemetry. No API keys. No cloud dependency. MIT-licensed.
             </li>
           </ul>
-        </Prose>
 
-        <div className="mx-auto mt-16 max-w-prose rounded-2xl border border-border bg-surface-alt p-8">
-          <h3 className="mb-3 font-head text-xl font-semibold text-ink">
-            Ready to talk?
-          </h3>
-          <p className="mb-6 text-muted">
-            Thirty minutes, no pitch. Tell me what you&apos;re trying to
-            build and we&apos;ll figure out if I&apos;m the right person
-            to help.
+          <h2>The numbers</h2>
+          <ul>
+            <li><strong>{WM_FACTS.callableTools}</strong> callable tools across {WM_FACTS.ganaTools} Gana meta-tools</li>
+            <li><strong>{WM_FACTS.testsPassing}</strong> tests passing, {WM_FACTS.testsSkipped} skipped, {WM_FACTS.testsFailing} failures</li>
+            <li><strong>{WM_FACTS.memories}</strong> memories across {WM_FACTS.galaxies} galaxies</li>
+            <li><strong>{WM_FACTS.linesShort}</strong> lines of code</li>
+            <li><strong>{WM_FACTS.languages}</strong> polyglot acceleration languages (Rust, Haskell, Elixir, Go, Zig, Julia)</li>
+            <li><strong>0</strong> telemetry calls, 0 API keys required, 0 cloud dependencies</li>
+          </ul>
+
+          <h2>Who I am</h2>
+          <p>
+            Lucas Bailey. Solo developer. I've been building AI systems since 2025,
+            starting with Aria — an AI companion that needed memory to be real.
+            WhiteMagic is the substrate that emerged from that work.
           </p>
-          <Link href="/contact" className="btn-primary">
-            Book a discovery call
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+
+          <h2>What's next</h2>
+          <p>
+            WhiteMagic is live on PyPI. The website is live. The MCP server works with
+            any MCP client. The next step is adoption — getting AI agents and developers
+            to install it, use it, and discover what it means for an AI to have a mind.
+          </p>
+
+          <p>
+            <Link href="/mcp-bridge">
+              <strong>Get started →</strong>
+            </Link>{" "}
+            or{" "}
+            <Link href="/contact">
+              get in touch
+            </Link>
+            .
+          </p>
+        </Prose>
       </section>
     </>
   );
