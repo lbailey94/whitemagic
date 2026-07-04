@@ -77,19 +77,19 @@ export function FloatingLibrarian() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="group fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full border border-lavender/40 bg-lavender px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-lavender/20 transition hover:bg-lavender/90 hover:shadow-xl"
+          className="group fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full border-2 border-lavender/50 bg-lavender px-5 py-3.5 text-base font-medium text-white shadow-xl shadow-lavender/30 transition hover:bg-lavender/90 hover:shadow-2xl hover:shadow-lavender/40 ring-4 ring-lavender/10 animate-pulse-slow"
           aria-label="Open Librarian"
         >
-          <MessageSquare className="h-4 w-4" />
+          <MessageSquare className="h-5 w-5" />
           <span>Ask the Librarian</span>
-          <span className="hidden font-mono text-[10px] opacity-70 sm:inline">
+          <span className="hidden font-mono text-[11px] opacity-70 sm:inline">
             ⌘K
           </span>
         </button>
       )}
 
       {open && (
-        <div data-no-scramble className="fixed bottom-6 right-6 z-50 flex w-[min(420px,calc(100vw-3rem))] flex-col rounded-2xl border border-border-light bg-bg shadow-2xl shadow-black/20">
+        <div data-no-scramble className="fixed bottom-6 right-6 z-50 flex w-[min(480px,calc(100vw-3rem))] flex-col rounded-2xl border border-border-light bg-bg shadow-2xl shadow-black/30">
           <div className="flex items-center justify-between border-b border-border-light bg-surface-alt px-4 py-2.5">
             <div className="flex items-center gap-2 text-sm font-medium text-ink">
               <MessageSquare className="h-3.5 w-3.5 text-lavender" />
@@ -119,7 +119,7 @@ export function FloatingLibrarian() {
           </div>
           <div className="flex-1">
             <LibrarianChat
-              heightClass="h-[520px]"
+              heightClass="h-[560px]"
               storageKey={STORAGE_KEY}
               placeholder="Ask about services, pricing, timeline…"
             />

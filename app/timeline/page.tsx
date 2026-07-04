@@ -4,7 +4,7 @@ import { WM_FACTS } from "@/lib/facts";
 
 export const metadata = {
   title: "Timeline — WhiteMagic",
-  description: "Month-by-month development history of WhiteMagic — from Oct 2025 origin to v24 in July 2026. 614 tools, 49K memories, 4191 tests.",
+  description: "Month-by-month development history of WhiteMagic — from Oct 2025 origin to v24 in July 2026. 614 tools, 49K memories, 4191 tests. Measured benchmarks on consumer hardware.",
 };
 
 const MILESTONES = [
@@ -137,6 +137,87 @@ export default function TimelinePage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Benchmark results */}
+          <div className="mt-16 rounded-2xl border border-border bg-surface p-8 md:p-12">
+            <h2 className="mb-2 font-head text-2xl font-semibold text-ink">Measured benchmarks</h2>
+            <p className="mb-8 text-sm text-muted">
+              Every number measured on a Dell Inspiron 3582 (consumer laptop, Zorin OS). No server hardware. No GPU. No excuses.
+            </p>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">Performance</h3>
+                <dl className="space-y-3">
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">MCP tool dispatch (median)</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.perfMedianMs}ms</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">MCP tool dispatch (P95)</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.perfP95Ms}ms</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">HNSW vector search</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">0.26ms</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">FTS5 full-text search</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">2.6ms</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Skill retrieval</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">&lt;1ms</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Rate limiter pre-check</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">452K ops/s</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-muted">Throughput</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.perfThroughputRps} req/s</dd>
+                  </div>
+                </dl>
+              </div>
+              <div>
+                <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">Scale</h3>
+                <dl className="space-y-3">
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Memories stored</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.memories}</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Memory galaxies</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.galaxies}</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Callable tools</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.callableTools}</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Passing tests</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.testsPassing}</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Lines of code</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.linesShort}</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border-light pb-2">
+                    <dt className="text-sm text-muted">Polyglot accelerators</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">{WM_FACTS.languages}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-muted">Test suite runtime</dt>
+                    <dd className="font-mono text-sm font-semibold text-ink">~120s</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+            <div className="mt-8 border-t border-border-light pt-6">
+              <Link href="/benchmarks" className="font-mono text-xs uppercase tracking-widest text-lavender">
+                See full benchmark details →
+              </Link>
+            </div>
           </div>
 
           {/* CTA */}

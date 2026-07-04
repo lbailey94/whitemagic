@@ -37,13 +37,13 @@ export function SigilHero() {
       title="Click to replay"
     >
       {phase === "breathing" ? (
-        <BreathingSilhouette className="h-64 w-64 md:h-80 md:w-80" />
+        <BreathingSilhouette className="h-96 w-96 md:h-[32rem] md:w-[32rem]" />
       ) : (
         <AnimatedTriquetra
           key={triKey}
           rainbow
           rainbowSpeed={8}
-          className="h-64 w-64 md:h-80 md:w-80 opacity-90"
+          className="h-96 w-96 md:h-[32rem] md:w-[32rem] opacity-90"
         />
       )}
     </div>

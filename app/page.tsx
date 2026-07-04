@@ -38,8 +38,8 @@ export default function HomePage() {
                 <Link href="/vision" className="btn-ghost">
                   Read the Vision
                 </Link>
-                <Link href="/chat" className="btn-ghost">
-                  Talk to Aria
+                <Link href="/librarian" className="btn-ghost">
+                  Talk to the Librarian
                 </Link>
               </div>
             </div>
@@ -369,13 +369,13 @@ export default function HomePage() {
               For the curious
             </p>
             <h3 className="mb-2 font-head text-xl font-semibold text-ink">
-              Talk to Aria
+              Ask the Librarian
             </h3>
             <p className="mb-4 text-sm leading-relaxed text-muted">
-              A bounded research assistant that knows the public WhiteMagic corpus. Ask about the substrate, the 28 Ganas, the bridge catalog, or the chronology.
+              A bounded research assistant that knows the public WhiteMagic corpus. Ask about the substrate, the 28 Ganas, the bridge catalog, or the chronology. Open the bubble in the bottom-right corner or press ⌘K.
             </p>
-            <Link href="/chat" className="font-mono text-xs uppercase tracking-widest text-lavender">
-              Open the chat →
+            <Link href="/librarian" className="font-mono text-xs uppercase tracking-widest text-lavender">
+              Open the Librarian →
             </Link>
           </article>
           <article className="rounded-xl border border-border bg-surface p-6">
