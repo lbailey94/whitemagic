@@ -538,7 +538,13 @@ _MCP_JSON = """\
 @click.argument("directory", default=".", type=click.Path())
 @click.option("--force", "-f", is_flag=True, help="Overwrite existing files")
 @click.option("--minimal", "-m", is_flag=True, help="Only create README.md and run.sh")
-def init_command(directory: str, force: bool, minimal: bool) -> None:
+@click.option(
+    "--non-interactive",
+    "-y",
+    is_flag=True,
+    help="Skip all prompts, use defaults (for AI agents and CI)",
+)
+def init_command(directory: str, force: bool, minimal: bool, non_interactive: bool) -> None:
     """Initialize a new WhiteMagic project directory.
 
     Scaffolds the essential files an AI agent needs to understand, configure,
@@ -546,10 +552,11 @@ def init_command(directory: str, force: bool, minimal: bool) -> None:
 
     \b
     Examples:
-        wm init                  # Initialize current directory
-        wm init my-project       # Create and initialize my-project/
-        wm init . --force        # Overwrite existing files
-        wm init . --minimal      # Only README.md + run.sh
+        wm init                          # Initialize current directory
+        wm init my-project               # Create and initialize my-project/
+        wm init . --force                # Overwrite existing files
+        wm init . --minimal              # Only README.md + run.sh
+        wm init . --non-interactive      # No prompts, use defaults (AI agents)
     """
     try:
         from whitemagic import __version__
@@ -607,10 +614,14 @@ def init_command(directory: str, force: bool, minimal: bool) -> None:
             click.echo(f"    ~ {f}")
 
     click.echo("\n  Next steps:")
-    click.echo("    1. python playground.py      # Interactive demo")
-    click.echo("    2. ./run.sh                  # Launch MCP server")
-    click.echo("    3. wm doctor                 # System health check")
-    click.echo()
+    click.echo("    1. wm quickstart              # Verify system works (30s)")
+    click.echo("    2. python playground.py       # Interactive demo")
+    click.echo("    3. ./run.sh                   # Launch MCP server")
+    click.echo("    4. wm doctor                  # System health check")
+    if non_interactive:
+        click.echo("\n  ✅ Ready. Run 'wm quickstart' to verify.\n")
+    else:
+        click.echo()
 
 
 def register(main: click.Group) -> None:

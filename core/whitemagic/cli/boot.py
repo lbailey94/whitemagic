@@ -72,6 +72,7 @@ def register_all_commands(
         explore_command,
         init_command,
         list_tools,
+        quickstart_command,
         rules_command,
         setup,
         start_session_cli,
@@ -82,6 +83,7 @@ def register_all_commands(
     for cmd in [
         explore_command,
         init_command,
+        quickstart_command,
         rules_command,
         systemmap_command,
         start_session_cli,

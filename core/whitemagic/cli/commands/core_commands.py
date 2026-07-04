@@ -28,6 +28,7 @@ except ImportError:
 __all__ = [
     "explore_command",
     "init_command",
+    "quickstart_command",
     "rules_command",
     "systemmap_command",
     "start_session_cli",
@@ -422,3 +423,66 @@ def tools(ctx, json_output: bool) -> None:
 
     for cmd, desc in optional_commands:
         click.echo(f"  {cmd:<12} - {desc}")
+
+
+@click.command(name="quickstart")
+@click.option("--json", "json_output", is_flag=True, help="Output results as JSON")
+@click.pass_context
+def quickstart_command(ctx, json_output: bool) -> None:
+    """Run a full demo loop: create memory, search, health report.
+
+    Proves the system works end-to-end in under 30 seconds.
+    Perfect for AI agents verifying their installation.
+    """
+    from whitemagic.tools.unified_api import call_tool
+
+    steps = []
+
+    # Step 1: Health report
+    health = call_tool("health_report")
+    steps.append({"step": "health", "status": health.get("status", "error")})
+    if not json_output:
+        ver = health.get("details", {}).get("runtime", {}).get("version", "?")
+        tools = health.get("details", {}).get("runtime", {}).get("surface_counts", {}).get("callable_tools", "?")
+        click.echo(f"\n  1. Health: v{ver}, {tools} tools — {health.get('status')}\n")
+
+    # Step 2: Create a memory
+    mem = call_tool(
+        "create_memory",
+        title="Quickstart Memory",
+        content="WhiteMagic quickstart ran successfully. This memory proves the system works.",
+        tags=["quickstart", "test"],
+    )
+    steps.append({"step": "create_memory", "status": mem.get("status", "error")})
+    if not json_output:
+        mem_id = mem.get("details", {}).get("id", "?")
+        click.echo(f"  2. Created memory: {mem_id} — {mem.get('status')}\n")
+
+    # Step 3: Search for it
+    search = call_tool("search_memories", query="quickstart", limit=3)
+    steps.append({"step": "search", "status": search.get("status", "error")})
+    if not json_output:
+        count = search.get("details", {}).get("count", 0)
+        click.echo(f"  3. Search 'quickstart': {count} results — {search.get('status')}\n")
+
+    # Step 4: Gnosis (self-awareness snapshot)
+    gnosis = call_tool("gnosis", compact=True)
+    steps.append({"step": "gnosis", "status": gnosis.get("status", "error")})
+    if not json_output:
+        click.echo(f"  4. Gnosis: {gnosis.get('status')}\n")
+
+    if json_output:
+        click.echo(_json_dumps({"steps": steps, "version": __version__}))
+    else:
+        all_ok = all(s["status"] == "success" for s in steps)
+        if all_ok:
+            click.echo("  ✅ Quickstart complete — all systems operational.\n")
+            click.echo("  Next steps:")
+            click.echo("    • wm recall \"quickstart\"     # search your memories")
+            click.echo("    • wm status                   # system status")
+            click.echo("    • wm sleep                    # run dream cycle")
+            click.echo("    • python -m whitemagic.run_mcp_lean  # start MCP server\n")
+        else:
+            failed = [s["step"] for s in steps if s["status"] != "success"]
+            click.echo(f"  ❌ Quickstart failed at: {', '.join(failed)}\n")
+            click.echo("  Run 'wm doctor' for diagnostics.\n")

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whitemagic"
 version = "24.0.0"
-description = "Cognitive operating system for AI agents — 518 tools across 28 Gana meta-tools, 5D holographic memory, ethical governance, and 7-language polyglot acceleration"
+description = "Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -33,11 +33,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/whitemagic-ai/whitemagic"
-Documentation = "https://github.com/whitemagic-ai/whitemagic/blob/main/docs/QUICKSTART.md"
-Repository = "https://github.com/whitemagic-ai/whitemagic"
-Changelog = "https://github.com/whitemagic-ai/whitemagic/blob/main/CHANGELOG.md"
-Issues = "https://github.com/whitemagic-ai/whitemagic/issues"
+Homepage = "https://whitemagic.dev"
+Documentation = "https://github.com/lbailey94/whitemagic/blob/main/docs/QUICKSTART.md"
+Repository = "https://github.com/lbailey94/whitemagic"
+Changelog = "https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md"
+Issues = "https://github.com/lbailey94/whitemagic/issues"
 
 [project.optional-dependencies]
 # === MODULAR INSTALLATION OPTIONS ===
@@ -75,9 +75,10 @@ tui = [
     "textual>=0.50.0",
 ]
 
-# MCP support
+# MCP support (includes fastembed for lightweight semantic search — 50MB, no torch)
 mcp = [
     "fastmcp>=0.4.1",
+    "fastembed>=0.2.0",
 ]
 
 # REST / HTTP API stack (optional)
