@@ -221,7 +221,7 @@ class ResearchReport:
 
 
 _DEFAULT_HEADERS = {
-    "User-Agent": "WhiteMagic/15.0 (Research Agent; +https://github.com/whitemagic-ai/whitemagic)",
+    "User-Agent": "WhiteMagic/15.0 (Research Agent; +https://github.com/lbailey94/whitemagic)",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate",

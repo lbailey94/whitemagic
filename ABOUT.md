@@ -163,7 +163,7 @@ Every tip, no matter how small, goes directly toward development and infrastruct
 ## Contact
 
 - **Email**: contact@whitemagic.dev
-- **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
+- **GitHub**: [lbailey94/whitemagic](https://github.com/lbailey94/whitemagic)
 - **License**: MIT
 
 ---

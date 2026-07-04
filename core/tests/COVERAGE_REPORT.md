@@ -103,7 +103,7 @@ Skipped tests (per `.github/workflows/ci.yml`):
 
 Add to README:
 ```markdown
-[![Tests](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml)
+[![Tests](https://github.com/lbailey94/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/ci.yml)
 ```
 
 ## Future Improvements

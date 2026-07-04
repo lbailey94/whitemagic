@@ -13,7 +13,7 @@ Thank you for your interest in contributing to WhiteMagic! This document provide
 ## Quick Start
 
 ```bash
-git clone https://github.com/whitemagic-ai/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 python3 -m venv .venv && source .venv/bin/activate
 

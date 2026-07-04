@@ -387,5 +387,5 @@ WhiteMagic is MIT-licensed and designed to be a foundation, not a monolith. Some
 ---
 
 **Contact**: contact@whitemagic.dev
-**GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
+**GitHub**: [lbailey94/whitemagic](https://github.com/lbailey94/whitemagic)
 **XRP Tips**: `YOUR_XRPL_ADDRESS`

@@ -110,7 +110,7 @@ See `CHANGELOG.md` for the full version-by-version history.
 pip install whitemagic[mcp,cli]
 
 # Or from source:
-git clone https://github.com/whitemagic-ai/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,mcp,cli]"

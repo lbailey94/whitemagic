@@ -1,6 +1,6 @@
 # @whitemagic/sdk
 
-TypeScript client SDK for [WhiteMagic](https://github.com/whitemagic-ai/whitemagic) — memory, governance, and orchestration for AI agents.
+TypeScript client SDK for [WhiteMagic](https://github.com/lbailey94/whitemagic) — memory, governance, and orchestration for AI agents.
 
 ## Install
 

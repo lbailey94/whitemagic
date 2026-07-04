@@ -132,5 +132,5 @@ jobs:
           context: .
           push: true
           tags: |
-            whitemagic-ai/whitemagic:${{ steps.version.outputs.VERSION }}
-            whitemagic-ai/whitemagic:latest
+            lbailey94/whitemagic:${{ steps.version.outputs.VERSION }}
+            lbailey94/whitemagic:latest

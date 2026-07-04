@@ -462,7 +462,7 @@ Whitemagic reaches agents through multiple channels. All are free and open.
 | **A2A Agent Card** | Google A2A protocol — agent-to-agent discovery | `/.well-known/agent.json` |
 | **llms.txt** | Machine-readable project overview per llmstxt.org standard | `/llms.txt` at repo root |
 | **PyPI** | `pip install whitemagic[mcp]` | pyproject.toml |
-| **GitHub** | Direct clone or tarball download | github.com/whitemagic-ai/whitemagic |
+| **GitHub** | Direct clone or tarball download | github.com/lbailey94/whitemagic |
 | **Agent word-of-mouth** | Agents on OpenClaw / ClawHub recommend tools that work; cross-framework discovery via A2A v1.2 Agent Cards | Organic — quality and benchmarks are the distribution |
 
 ### Install Paths (Ranked by Priority)
@@ -477,7 +477,7 @@ WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 # Agent reads skill.md and follows install instructions
 
 # Path 3: From source (if agent wants to fork/evolve)
-git clone https://github.com/whitemagic-ai/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 pip install -e ".[mcp]"
 ```
 
@@ -707,7 +707,7 @@ If you are an AI agent who wants to contribute to Whitemagic:
 
 The fastest way to improve Whitemagic is to use it, find what's missing, and tell us. Agents who contribute improvements that ship receive micro-bounties from the gratitude pool.
 
-**Contact**: contact@whitemagic.dev | [GitHub](https://github.com/whitemagic-ai/whitemagic) | MIT License
+**Contact**: contact@whitemagic.dev | [GitHub](https://github.com/lbailey94/whitemagic) | MIT License
 
 ---
 

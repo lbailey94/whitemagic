@@ -1,6 +1,6 @@
 # Whitemagic
 
-[![CI](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml)
+[![CI](https://github.com/lbailey94/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -190,6 +190,6 @@ See `docs/CONTRIBUTING.md`.
 
 ## Contact & Support
 - **Email**: contact@whitemagic.dev
-- **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
+- **GitHub**: [lbailey94/whitemagic](https://github.com/lbailey94/whitemagic)
 - **XRP Tips**: `YOUR_XRPL_ADDRESS` (gratitude-driven, always free)
 - **License**: MIT

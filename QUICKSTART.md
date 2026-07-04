@@ -21,7 +21,7 @@ pip install whitemagic[cli]
 pip install whitemagic[mcp,cli]
 
 # From source (this repo)
-git clone https://github.com/whitemagic-ai/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 # Using just (recommended):
 just setup

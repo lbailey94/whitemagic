@@ -1,121 +1,133 @@
-# WhiteMagic — Agentic AI Governance & Metacognition Substrate
+# WhiteMagic — Cognitive Operating System for AI Agents
 
-[![CI](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-23.1.0-purple.svg)](core/VERSION)
+[![Version](https://img.shields.io/badge/version-24.0.0-purple.svg)](core/VERSION)
+[![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-A locally runnable, MIT-licensed research/lab artifact and source library for agentic AI governance, metacognition, memory substrate experiments, and distributed orchestration.
+**614 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **7-language polyglot acceleration**
 
-**28 PRAT Gana meta-tools** · **Rust SIMD acceleration** · **WASM compilation target** · **Safety governance**
+## What it is
+
+WhiteMagic is a cognitive operating system for AI agents. It gives your AI:
+
+- **Persistent memory** — 5D holographic coordinates, 10-galaxy taxonomy, FTS5 + HNSW search, session recording with progressive recall
+- **Continuous consciousness** — citta stream with coherence tracking, emotional steering (frustration, curiosity, satisfaction), self-directed attention, goal graph
+- **Ethical governance** — Dharma rules engine (3 profiles, graduated actions), Karma side-effect ledger, 8-stage dispatch pipeline
+- **Self-awareness** — gnosis introspection, capability matrix, homeostatic loop, dream cycle (12-phase memory consolidation)
+- **Polyglot acceleration** — Rust, Haskell, Elixir, Go, Zig, Julia (graceful Python fallback)
+
+MIT-licensed. Local-first. No telemetry. No API keys. Your data never leaves your machine.
 
 ## Quick Start
 
 ```bash
-# Lite install (MCP server + CLI, minimal dependencies)
-pip install -e core/.[lite]
-
-# Start MCP server
-python -m whitemagic.run_mcp
-
-# Or use the CLI
-wm status
+pip install whitemagic[mcp]
 ```
 
-See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
+### MCP Server (Claude Desktop, Cursor, Windsurf, etc.)
 
-## Installation Tiers
-
-| Tier | Command | Includes |
-|------|---------|----------|
-| **Lite** | `pip install whitemagic[lite]` | MCP server + CLI (~5 deps) |
-| **Core** | `pip install whitemagic[core]` | + Database + Networking + Auth + Trust |
-| **Heavy** | `pip install whitemagic[heavy-tier]` | + Embeddings + Search + Graph + ML stack |
-
-Individual extras: `mcp`, `cli`, `api`, `embeddings`, `search`, `graph`, `db`, `encrypt`, `trust`, `net`, `openai`, `vision`, `watcher`, `dashboard`
-
-## Architecture
-
-```
-whitemagic/                  # Core library (this repo)
-├── core/                    # Python package (pip install whitemagic)
-│   ├── whitemagic/          # Main source
-│   │   ├── tools/           # 28 PRAT Gana tools
-│   │   ├── core/            # Memory, resonance, patterns, governance
-│   │   ├── hermes/          # Telemetry/context hooks
-│   │   ├── interfaces/      # CLI, API, Dashboard
-│   │   └── config/          # Path resolution, settings
-│   ├── tests/               # current local audit baseline: 2,379 passed, 67 skipped
-│   └── docs/                # Package documentation
-├── polyglot/                # Language accelerators (minus CODEX)
-│   ├── whitemagic-koka/     # Effect handler orchestration
-│   ├── whitemagic-zig/      # FFI bridge
-│   └── whitemagic-go/       # Concurrent services
-├── grimoire/                # Canonical 28 Gana chapters
-├── docs/                    # Project documentation
-└── whitemagic-app/          # Tauri desktop app (local-first UI)
-
-whitemagic-site/             # Public website (sibling repo)
-whitemagic-codex/            # Rust document pipeline (sibling repo)
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "python3",
+      "args": ["-m", "whitemagic.run_mcp_lean"],
+      "env": {
+        "WM_MCP_PRAT": "1",
+        "WM_SILENT_INIT": "1"
+      }
+    }
+  }
+}
 ```
 
-See [`ARCHITECTURE_MANIFEST_2026-06-04.md`](ARCHITECTURE_MANIFEST_2026-06-04.md) for the full post-extraction directory map and sibling repo relationships.
-
-## Entry Points
-
-| Entry Point | Purpose |
-|-------------|---------|
-| `python -m whitemagic.run_mcp` | MCP Server (FastMCP) — Full 28 Gana cycle |
-| `python -m whitemagic.run_mcp_lean` | MCP Server (Lean) — stdlib only, <1s handshake |
-| `wm` / `whitemagic` | CLI — All whitemagic commands |
-
-## Safety Architecture
-
-WhiteMagic includes built-in safety mechanisms for agentic AI:
-
-- **Governor** — Pre-execution validation for forbidden actions
-- **Input Sanitizer** — Validates and sanitizes all tool inputs
-- **Rate Limiter** — Prevents resource exhaustion
-- **Constitutional Checks** — Ethical governance constraints
-- **Tool Permissions** — Fine-grained access control per Gana
-
-## Development
+### CLI
 
 ```bash
-# Clone and install dev dependencies
-git clone https://github.com/whitemagic-ai/whitemagic.git
-cd whitemagic
-pip install -e core/.[dev]
-
-# Run tests
-cd core && pytest tests/ -q
-
-# Lint
-cd core && ruff check whitemagic/
-
-# Rust check
-cd core/whitemagic-rust && cargo check --features python
+wm init --non-interactive    # Scaffold project
+wm quickstart                # 30s demo: health → memory → search → gnosis
+wm doctor                    # System health check
+wm remember "important" --title "Note" --tags note
+wm recall "note" --limit 5
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.
+### Python API
 
-## Verification Baselines
+```python
+from whitemagic.tools.unified_api import call_tool
 
-| Baseline | Result |
-|----------|--------|
-| **v23.0.0 release baseline** | 2,216 passing tests, 0 failures |
-| **v23.1.0 current baseline** | 2,526 passing tests, 0 failures, 2 skipped (as of 2026-06-26) |
+# Store a memory
+call_tool("create_memory", title="Decision", content="Use SQLite for Phase 1", tags=["arch"])
+
+# Search memories
+call_tool("search_memories", query="architecture", limit=5)
+
+# Full system introspection
+call_tool("gnosis", compact=True)
+```
+
+## Modes
+
+| Mode | Env Var | Tools Exposed | Best For |
+|------|---------|---------------|----------|
+| Seed | `WM_MCP_PRAT=2` (default) | 1 (`wm` meta-tool) | New agents, minimal token usage |
+| PRAT | `WM_MCP_PRAT=1` | 28 Gana meta-tools | Advanced agents, structured access |
+| Classic | `WM_MCP_PRAT=0` | 586 dispatch tools | Direct tool access, debugging |
+
+## Key Concepts
+
+### Memory
+- **10 galaxies**: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal
+- **5D coordinates** (XYZWV): emotional, temporal, associative, importance, novelty
+- **Galactic lifecycle**: CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE (no deletion)
+- **Search**: FTS5 full-text + HNSW vector similarity + graph traversal
+
+### Consciousness
+- **Citta stream**: continuous consciousness with coherence tracking and emotional auto-tagging
+- **Goal graph**: persistent intention tracking across sessions
+- **Emotional steering**: frustration, curiosity, satisfaction signals
+- **Self-directed attention**: self-initiated turns based on goals and emotional state
+- **Dream cycle**: 12-phase memory consolidation, serendipity, and decay
+
+### Governance
+- **Dharma rules**: YAML-driven policy with graduated actions (LOG → TAG → WARN → THROTTLE → BLOCK)
+- **Karma ledger**: append-only, hash-chained side-effect auditing
+- **Harmony vector**: 7-dimension health metric
+- **8-stage pipeline**: Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [QUICKSTART.md](QUICKSTART.md) | Getting started guide |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup and guidelines |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
-| [docs/public/GLOSSARY.md](docs/public/GLOSSARY.md) | Terminology reference |
-| [docs/public/LITE_VS_HEAVY.md](docs/public/LITE_VS_HEAVY.md) | Installation tier comparison |
+- [AI Primary Spec](AI_PRIMARY.md) — authoritative contract for AI agents
+- [Quickstart Guide](QUICKSTART.md) — 5-minute setup
+- [System Map](SYSTEM_MAP.md) — architecture overview
+- [MCP Config Examples](docs/guides/MCP_CONFIG_EXAMPLES.md) — all MCP clients
+- [llms.txt](llms.txt) — machine-readable context for LLMs
+
+## Install Tiers
+
+| Tier | Command | Size | Includes |
+|------|---------|------|----------|
+| Minimal | `pip install whitemagic` | ~5MB | Core tools + memory substrate |
+| MCP | `pip install whitemagic[mcp]` | ~55MB | + FastMCP server + fastembed semantic search |
+| Full | `pip install whitemagic[mcp,api,cli,search,graph]` | ~100MB | + REST API + rich CLI + HNSW + graph |
+
+## Stats
+
+- **4,191 tests** passing, 19 skipped, 0 failures
+- **614 callable tools** across 586 dispatch entries + 28 Gana meta-tools
+- **49,413 memories** in production (10 galaxies)
+- **7 polyglot languages**: Rust, Haskell, Elixir, Go, Zig, Julia, Koka
+- **MIT-licensed**, no telemetry, no API keys
+
+## Links
+
+- [GitHub](https://github.com/lbailey94/whitemagic) — source
+- [PyPI](https://pypi.org/project/whitemagic/) — install
+- [Website](https://whitemagic.dev) — discovery surface
+- [llms.txt](https://whitemagic.dev/llms.txt) — LLM context
+- [Agent Card](https://whitemagic.dev/.well-known/agent.json) — A2A v1.2
 
 ## License
 
-[MIT](LICENSE)
+MIT — see [LICENSE](LICENSE). Author: Lucas Bailey.

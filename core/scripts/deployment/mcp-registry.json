@@ -4,7 +4,7 @@
   "description": "Cognitive operating system for AI — persistent memory, associative recall, ethical governance, and self-awareness across sessions. 28 Gana meta-tools covering 375 capabilities.",
   "version": "21.0.0",
   "protocol_version": "2025-11-25",
-  "homepage": "https://github.com/whitemagic-ai/whitemagic",
+  "homepage": "https://github.com/lbailey94/whitemagic",
   "license": "MIT",
   "author": "WhiteMagic Contributors",
   "categories": ["memory", "governance", "intelligence", "infrastructure"],
@@ -27,7 +27,7 @@
   },
   "installation": {
     "pip": "pip install whitemagic",
-    "source": "git clone https://github.com/whitemagic-ai/whitemagic && cd whitemagic && pip install -e ."
+    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e ."
   },
   "configuration": {
     "stdio": {

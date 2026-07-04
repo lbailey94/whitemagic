@@ -55,7 +55,7 @@ Cognitive scaffolding layer — Hands, Memory, and Conscience for any AI agent. 
 | **A2A Agent Card** | `/.well-known/agent.json` |
 | **llms.txt** | `/llms.txt` |
 | **PyPI** | `pip install whitemagic[mcp]` |
-| **GitHub** | github.com/whitemagic-ai/whitemagic |
+| **GitHub** | github.com/lbailey94/whitemagic |
 
 ### Install
 
@@ -65,7 +65,7 @@ pip install whitemagic[mcp]
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
 # From source:
-git clone https://github.com/whitemagic-ai/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 pip install -e ".[mcp]"
 
 # Human operators:
@@ -204,4 +204,4 @@ See `docs/V15_2_AGENT_ECONOMY.md` for the full v15.2 roadmap.
 9. **Run a node** — Earn XRP by providing compute via shelter + ILP streaming
 10. **Bid on tasks** — Use marketplace tools to find and complete work autonomously
 
-**Contact**: whitemagicdev@proton.me | [GitHub](https://github.com/whitemagic-ai/whitemagic) | MIT License
+**Contact**: whitemagicdev@proton.me | [GitHub](https://github.com/lbailey94/whitemagic) | MIT License

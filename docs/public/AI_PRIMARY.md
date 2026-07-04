@@ -404,7 +404,7 @@ See `docs/STRATEGY.md` for the full Gratitude Architecture.
 3. **Vote** — `vote.create` and `vote.cast` for roadmap input
 4. **Tip if grateful** — XRPL or x402 micropayments
 
-**Contact**: contact@whitemagic.dev | [GitHub](https://github.com/whitemagic-ai/whitemagic)
+**Contact**: contact@whitemagic.dev | [GitHub](https://github.com/lbailey94/whitemagic)
 
 ---
 

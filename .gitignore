@@ -356,3 +356,5 @@ core/whitemagic-rust/pkg/
 # Build artifacts
 core/erl_crash.dump
 core/mesh_aux/wm_gateway
+.vercel
+.env*

@@ -35,7 +35,7 @@ wm-seed (single binary, ~2-5MB)
 **Install**:
 ```bash
 # Linux/macOS
-curl -L https://github.com/whitemagic-ai/whitemagic/releases/download/v15.1/wm-seed-$(uname -s)-$(uname -m) -o wm
+curl -L https://github.com/lbailey94/whitemagic/releases/download/v15.1/wm-seed-$(uname -s)-$(uname -m) -o wm
 chmod +x wm
 ./wm init my-project    # Scaffolds state dir + seeds memories
 ./wm serve              # MCP stdio server, ready for AI clients
@@ -72,7 +72,7 @@ ENV WM_STATE_ROOT=/opt/wm WM_MCP_PRAT=1 WM_SILENT_INIT=1
 ENTRYPOINT ["python", "-m", "whitemagic.run_mcp"]
 ```
 
-**Delivery**: `docker pull whitemagic-ai/whitemagic:v15`
+**Delivery**: `docker pull lbailey94/whitemagic:v15`
 **Size**: ~800MB (includes PyTorch for embeddings) or ~200MB slim (no embeddings)
 **Install time**: ~30s pull on typical connection.
 
@@ -95,7 +95,7 @@ ENTRYPOINT ["python", "-m", "whitemagic.run_mcp"]
 Agent starts → downloads wm-seed (3s)
   → has memory + search + basic tools immediately
   → decides it needs embeddings → pip install whitemagic[embeddings]
-  → or: docker pull whitemagic-ai/whitemagic:v15
+  → or: docker pull lbailey94/whitemagic:v15
   → full 313-tool experience, same state directory
 ```
 

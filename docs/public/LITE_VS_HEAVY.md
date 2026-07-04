@@ -179,7 +179,7 @@ Everything in Lite, plus:
 │  Agent decides it needs polyglot acceleration →     │
 ├─────────────────────────────────────────────────────┤
 │  Heavy (Docker)                                     │
-│  docker pull whitemagic-ai/whitemagic:heavy         │
+│  docker pull lbailey94/whitemagic:heavy         │
 │  462 tools + 8 polyglot cores, ~200-800MB, ~30s    │
 │  Mount state directory: -v ~/.whitemagic:/data/...  │
 │  10-200× faster on compute-heavy operations         │
@@ -210,4 +210,4 @@ The key insight: **state is portable across all tiers**. The SQLite database, Ka
 ## Contact
 
 Questions or contributions: contact@whitemagic.dev
-GitHub: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
+GitHub: [lbailey94/whitemagic](https://github.com/lbailey94/whitemagic)

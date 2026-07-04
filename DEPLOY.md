@@ -99,8 +99,8 @@ docker run --rm whitemagic:latest wm status
 ### GHCR (after release workflow runs)
 
 ```bash
-docker pull ghcr.io/whitemagic-ai/whitemagic:latest
-docker run --rm -i ghcr.io/whitemagic-ai/whitemagic:latest
+docker pull ghcr.io/lbailey94/whitemagic:latest
+docker run --rm -i ghcr.io/lbailey94/whitemagic:latest
 ```
 
 ---

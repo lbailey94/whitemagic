@@ -232,7 +232,7 @@ docs.whitemagic.dev/
 ```yaml
 site_name: WhiteMagic Documentation
 site_url: https://docs.whitemagic.dev
-repo_url: https://github.com/whitemagic-ai/whitemagic
+repo_url: https://github.com/lbailey94/whitemagic
 edit_uri: edit/main/docs/
 
 theme:
@@ -280,7 +280,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/whitemagic-ai/whitemagic
+      link: https://github.com/lbailey94/whitemagic
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/whitemagic/
 ```
@@ -301,7 +301,7 @@ extra:
 
 ### New Footer Links
 - Add `Docs` link → `https://docs.whitemagic.dev`
-- Add `Docker` link → `https://ghcr.io/whitemagic-ai/whitemagic`
+- Add `Docker` link → `https://ghcr.io/lbailey94/whitemagic`
 
 ### Schema.org Update
 - `softwareVersion`: "15.6.0" → "15.7.0"

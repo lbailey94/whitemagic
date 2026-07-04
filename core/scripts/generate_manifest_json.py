@@ -53,7 +53,7 @@ def generate_manifest() -> dict:
             "name": "WhiteMagic",
             "version": "22.2.0",
             "url": "https://whitemagic.dev",
-            "repository": "https://github.com/whitemagic-ai/whitemagic",
+            "repository": "https://github.com/lbailey94/whitemagic",
             "license": "MIT",
         },
         "counts": {

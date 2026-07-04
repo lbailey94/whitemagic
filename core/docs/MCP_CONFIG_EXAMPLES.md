@@ -107,14 +107,14 @@ If using an MCP extension for VS Code:
 ### Docker
 
 ```bash
-docker run --rm -i ghcr.io/whitemagic-ai/whitemagic:latest
+docker run --rm -i ghcr.io/lbailey94/whitemagic:latest
 ```
 
 Or with custom state:
 ```bash
 docker run --rm -i \
   -v /path/to/state:/data/whitemagic \
-  ghcr.io/whitemagic-ai/whitemagic:latest
+  ghcr.io/lbailey94/whitemagic:latest
 ```
 
 ### pip-installed (global)

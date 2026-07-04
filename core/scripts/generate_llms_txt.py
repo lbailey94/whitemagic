@@ -245,8 +245,8 @@ _DOCS = """
 _LINKS = """
 ## Links
 
-- Repository: https://github.com/whitemagic-ai/whitemagic
-- Issues: https://github.com/whitemagic-ai/whitemagic/issues
+- Repository: https://github.com/lbailey94/whitemagic
+- Issues: https://github.com/lbailey94/whitemagic/issues
 - License: MIT
 """
 

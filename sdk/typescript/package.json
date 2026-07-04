@@ -22,7 +22,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/whitemagic-ai/whitemagic",
+    "url": "https://github.com/lbailey94/whitemagic",
     "directory": "sdk/typescript"
   },
   "engines": {

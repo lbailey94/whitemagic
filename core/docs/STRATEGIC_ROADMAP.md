@@ -21,7 +21,7 @@ WhiteMagic v22.0.0 is the current release line. It delivers:
 - **Stub Zero Complete** — All 41 stubs eliminated; 0 `NotImplementedError` fallbacks in production paths
 - **Doc drift detection** — 7-dimension CI guard ensures docs stay in sync with code
 - **Cognitive OS Direction** — Post-v22 review confirmed WhiteMagic is not a "memory backend" but a **7-layer CyberBrain** (see Section: The Cognitive OS Pivot)
-- **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
+- **GitHub**: [lbailey94/whitemagic](https://github.com/lbailey94/whitemagic)
 
 ---
 
@@ -292,4 +292,4 @@ It changes **nothing** in the engine:
 ---
 
 **Contact**: contact@whitemagic.dev
-**GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
+**GitHub**: [lbailey94/whitemagic](https://github.com/lbailey94/whitemagic)

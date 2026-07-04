@@ -29,7 +29,7 @@ export async function GET() {
       name: "WhiteMagic",
       version: "23.1.0",
       url: BASE,
-      repository: "https://github.com/whitemagic-ai/whitemagic",
+      repository: "https://github.com/lbailey94/whitemagic",
       license: "MIT",
     },
     summary: BRIDGE_SUMMARY,

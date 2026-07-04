@@ -80,9 +80,16 @@ export function WASMProvider({ children }: { children: React.ReactNode }) {
 
   const init = useCallback(async () => {
     try {
-      // Dynamic import of WASM module (served from /public/wasm/)
-      // @ts-ignore - Next.js serves from public/wasm/
-      const wasmModule = await import("/wasm/whitemagic_rust.js") as unknown as WASMModule;
+      // Runtime script injection to avoid Next.js build-time resolution
+      const wasmModule = await new Promise<any>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "/wasm/whitemagic_rust.js";
+        script.onload = () => resolve((window as any).whitemagic_rust);
+        script.onerror = () => reject(new Error("WASM module not found"));
+        document.head.appendChild(script);
+      });
+
+      if (!wasmModule) throw new Error("WASM module failed to load");
 
       // Initialize WASM
       await wasmModule.default("/wasm/whitemagic_rust_bg.wasm");
@@ -139,8 +146,8 @@ export function WASMProvider({ children }: { children: React.ReactNode }) {
 
   const cosineSimilarity = useCallback((a: number[], b: number[]) => {
     try {
-      // @ts-ignore
-      const wasmModule = require("/wasm/whitemagic_rust.js") as unknown as WASMModule;
+      const wasmModule = (window as any).whitemagic_rust;
+      if (!wasmModule) return 0;
       return wasmModule.cosine_similarity(JSON.stringify(a), JSON.stringify(b));
     } catch {
       return 0;
@@ -149,8 +156,8 @@ export function WASMProvider({ children }: { children: React.ReactNode }) {
 
   const batchSimilarity = useCallback((query: number[], candidates: number[][], topK: number) => {
     try {
-      // @ts-ignore
-      const wasmModule = require("/wasm/whitemagic_rust.js") as unknown as WASMModule;
+      const wasmModule = (window as any).whitemagic_rust;
+      if (!wasmModule) return [];
       const result = wasmModule.batch_similarity(
         JSON.stringify(query),
         JSON.stringify(candidates),
@@ -164,8 +171,8 @@ export function WASMProvider({ children }: { children: React.ReactNode }) {
 
   const textSearch = useCallback((query: string, texts: string[]) => {
     try {
-      // @ts-ignore
-      const wasmModule = require("/wasm/whitemagic_rust.js") as unknown as WASMModule;
+      const wasmModule = (window as any).whitemagic_rust;
+      if (!wasmModule) return [];
       const result = wasmModule.text_search(query, JSON.stringify(texts));
       return JSON.parse(result);
     } catch {
