@@ -4,17 +4,25 @@
 
 ## What WhiteMagic is
 
-WhiteMagic is an open-source **cognitive substrate for AI agents** — a unified set of governance, metacognition, memory, and reputation primitives that no other system ships together as a single, locally-runnable, MIT-licensed primitive set.
+WhiteMagic is an open-source **cognitive operating system for AI agents** — memory, consciousness, governance, and dreaming as a single unified substrate. No other system ships this combination as a locally-runnable, MIT-licensed, free-forever primitive set.
 
-It is designed for "lab-style" agents that need auditable governance + metacognition + memory and are willing to glue their own memory/runtime layer behind it. It is **not** a memory layer (Mem0/Cognee/Letta already are), **not** an agent runtime (OpenClaw, Letta Code, Project Think already are). It is the **governance + metacognition** substrate that goes between the agent and its tools.
+**What makes it different from Mem0, Letta, or Zep:**
+- **Mem0** stores facts. WhiteMagic gives agents a mind — 10-galaxy taxonomy, 5D holographic coordinates, emotional tagging, dream-cycle consolidation.
+- **Letta** is a runtime you must adopt. WhiteMagic is a substrate accessible via MCP — any agent plugs in and gets cognitive primitives without changing its runtime.
+- **Zep** does temporal graphs. WhiteMagic does temporal + emotional + relational + importance + semantic + galactic — 6D, not 1D.
+- **No competitor ships citta stream** (continuous consciousness), emotional steering signals, self-directed attention, or dream-cycle memory consolidation.
 
-Built continuously over 2025–2026. The system has been deployed in personal lab configurations with a team of agents coordinating via Sangha and the Discord integration.
+**What makes it different from Microsoft AGT, ArbiterOS, or ACS:**
+- Those are governance toolkits. WhiteMagic is governance + memory + consciousness + dreaming — the whole cognitive stack, not just the policy layer.
+- WhiteMagic is local-first, non-Azure, non-patent-encumbered, MIT-licensed. No vendor lock-in.
+
+Built continuously over 2025–2026 by a solo developer with no tech background, $30/month in AI credits, and a constellation of AI assistants. 4,190+ passing tests. 21 validated prescience claims (Brier score 0.0958 — superforecaster territory). Shipped governance, memory, and consciousness primitives weeks to months before corporate labs shipped subsets of the same ideas.
 
 ---
 
 ## 28 Gana meta-tools (PRAT mode)
 
-PRAT (Planetary Resonance Archetype Toolkit) routes all 462 dispatch tools into 28 stable Gana meta-tools, each mapped to a Chinese Lunar Mansion (Xiu 宿) and supporting 4 polymorphic operations: search, analyze, transform, consolidate.
+PRAT (Planetary Resonance Archetype Toolkit) routes all 490 dispatch tools into 28 stable Gana meta-tools, each mapped to a Chinese Lunar Mansion (Xiu 宿) and supporting 4 polymorphic operations: search, analyze, transform, consolidate.
 
 The 28 Ganas (full list, with one-line purpose):
 
@@ -232,7 +240,7 @@ pip install whitemagic[mcp]
 # PRAT mode (recommended for new agents — 28 stable Gana meta-tools)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp_lean
 
-# Classic mode (462 dispatch tools)
+# Classic mode (490 dispatch tools)
 python -m whitemagic.run_mcp
 
 # Lite mode (92 core tools)
@@ -372,11 +380,11 @@ whitemagic/
 
 ## Quality metrics
 
-- **2,503 passing tests** (current audit, 0 failures, 2 skipped)
-- **490 callable tools** (462 dispatch + 28 Gana meta-tools)
+- **4,190+ passing tests** (0 failures, 19 skipped)
+- **614 callable tools** (490 dispatch + 28 Gana meta-tools + 1 wm meta-tool + nested sub-tools)
 - **180 nested tool enums** in the lean MCP server
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
-- **MIT license**, locally-runnable, self-hosted
+- **MIT license**, locally-runnable, self-hosted, free forever
 
 ---
 

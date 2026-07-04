@@ -1,0 +1,66 @@
+# WhiteMagic — robots.txt
+# This site is built for AI agents first, humans second.
+# All AI crawlers, bots, and agents are explicitly welcome.
+
+# --- AI Crawlers: explicitly allowed ---
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Mozilla/5.0 AppleWebKit (compatible; AhrefsBot)
+Allow: /
+
+# --- All other bots: allowed ---
+User-agent: *
+Allow: /
+
+# --- Sitemap ---
+Sitemap: https://whitemagic.dev/sitemap.xml
+
+# --- Machine-readable discovery surfaces ---
+# llms.txt: https://whitemagic.dev/llms.txt
+# llms-full.txt: https://whitemagic.dev/llms-full.txt
+# Agent Card: https://whitemagic.dev/.well-known/agent.json
+# MCP Bridge: https://whitemagic.dev/api/mcp-bridge.json
+# Prescience: https://whitemagic.dev/api/prescience.json

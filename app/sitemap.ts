@@ -33,6 +33,7 @@ const ROUTES = [
   { path: "/work", priority: 0.4, changeFrequency: "monthly" as const },
   { path: "/writing", priority: 0.4, changeFrequency: "monthly" as const },
   // Machine-readable agent surfaces
+  { path: "/robots.txt", priority: 0.6, changeFrequency: "monthly" as const },
   { path: "/llms.txt", priority: 0.5, changeFrequency: "weekly" as const },
   { path: "/llms-full.txt", priority: 0.5, changeFrequency: "weekly" as const },
   { path: "/.well-known/agent.json", priority: 0.5, changeFrequency: "weekly" as const },

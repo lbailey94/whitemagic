@@ -1,8 +1,10 @@
 import { BecomingBoard } from "@/components/BecomingBoard";
+import { BecomingGate } from "@/components/BecomingGate";
 import Link from "next/link";
 
 export default function BecomingIndex() {
   return (
+    <BecomingGate>
     <main className="container-site py-16">
       <header className="mb-12">
         <p className="font-mono text-sm uppercase tracking-wider text-lavender">
@@ -135,5 +137,6 @@ export default function BecomingIndex() {
         </blockquote>
       </section>
     </main>
+    </BecomingGate>
   );
 }

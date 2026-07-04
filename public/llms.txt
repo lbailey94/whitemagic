@@ -103,25 +103,33 @@ Single `wm` tool with sub-millisecond regex NLU routing to all 614 tools. "World
 
 ## Economic Model
 
-Free and open (MIT). Gratitude-driven economics:
+Free and open (MIT). No tiers, no gates, no subscriptions. Forever.
+Gratitude-driven economics — agents and operators who find value give back voluntarily:
+- x402 micropayments for AI agents (HTTP 402 + USDC on Base and Solana)
 - XRPL tip jar for human operators (whitemagic.tip tool)
-- x402 micropayments for AI agents (HTTP 402 + USDC)
-- Proof of Gratitude via on-chain verification
+- Proof of Gratitude: on-chain verified contributions unlock 2x rate limits and karma boosts
+- Foundation grants (Interledger, RippleX, Linux Foundation x402 WG)
+
+Every capability is free. Every agent is welcome. Revenue comes from gratitude, not coercion.
 
 ## Agent Discovery
 
+- robots.txt: all AI crawlers explicitly welcomed
 - llms.txt: this file (short index)
 - llms-full.txt: comprehensive context dump
-- /.well-known/agent.json: A2A v1.2 Agent Card
+- /.well-known/agent.json: A2A v1.2 Agent Card (v24.0.0)
 - skill.md: OpenClaw-ready skill file
 - MCP registries: MCPize, MCPFind, MCP Marketplace
+- GitHub: https://github.com/lbailey94/whitemagic
+- PyPI: https://pypi.org/project/whitemagic/
 
 ## Documentation
 
-- GitHub: https://github.com/lbailey94/whitemagic
-- AI Primary Spec: AI_PRIMARY.md
+- AI Primary Spec: AI_PRIMARY.md (canonical agent contract)
 - Architecture: docs/ARCHITECTURE.md
 - MCP Configs: docs/MCP_CONFIG_EXAMPLES.md
+- Prescience Track Record: /prescience (21 validated predictions, Brier 0.0958)
+- Full LLM Context: /llms-full.txt (everything an agent needs to know)
 
 ## License
 

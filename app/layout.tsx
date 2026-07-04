@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRainLazy } from "@/components/MatrixRainLazy";
 import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
+import { HelloHuman } from "@/components/HelloHuman";
 import { organizationLd, websiteLd, softwareApplicationLd } from "@/lib/jsonld";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -58,6 +59,7 @@ export default function RootLayout({
             <Footer />
           </div>
           <FloatingLibrarian />
+          <HelloHuman />
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

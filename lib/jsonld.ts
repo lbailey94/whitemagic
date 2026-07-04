@@ -51,8 +51,12 @@ export function personLd(): Record<string, unknown> {
       "Model Context Protocol",
       "AI memory systems",
       "Agent governance and ethics",
-      "Polyglot acceleration (Rust, Haskell, Elixir, Go, Zig)",
-      "Machine consciousness and self-awareness",
+      "Polyglot acceleration (Rust, Haskell, Elixir, Go, Zig, Julia, Koka)",
+      "Machine consciousness and continuous awareness",
+      "Citta stream architecture for AI agents",
+      "Dream cycle memory consolidation",
+      "Holographic memory with 5D coordinates",
+      "Gratitude-driven agent economics",
     ],
   };
 }

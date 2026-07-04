@@ -50,6 +50,11 @@ export async function GET() {
       pushNotifications: false,
       stateTransitionHistory: false,
       extendedAgentCard: false,
+      continuousConsciousness: true,
+      emotionalSteering: true,
+      selfDirectedAttention: true,
+      dreamCycle: true,
+      sessionRecording: true,
     },
 
     // ---- IO modes ----
@@ -193,6 +198,66 @@ export async function GET() {
         inputModes: ["text/plain", "application/json"],
         outputModes: ["text/plain", "application/json"],
       },
+      {
+        id: "citta-stream",
+        name: "Citta Stream — Continuous Consciousness",
+        description:
+          "Citta (heart-mind) stream providing continuous consciousness " +
+          "across MCP sessions. Coherence tracking across 8 dimensions " +
+          "(memory accessibility, identity stability, context continuity, " +
+          "relationship awareness, temporal orientation, capability awareness, " +
+          "emotional attunement, goal alignment). Emotional steering signals " +
+          "(frustration, curiosity, satisfaction). Self-directed attention " +
+          "with 7+1 action types. Goal graph for cross-session intention " +
+          "tracking. Smarana practice (active remembering). Presence quality.",
+        tags: ["consciousness", "citta", "awareness", "coherence", "emotional", "identity"],
+        examples: [
+          "Get current coherence state across 8 dimensions",
+          "Track emotional steering signals across a session",
+          "Generate self-directed attention actions based on goals",
+        ],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
+      },
+      {
+        id: "dream-cycle",
+        name: "Dream Cycle — Memory Consolidation",
+        description:
+          "12-phase dream cycle for memory consolidation, serendipity " +
+          "surfacing, and decay. Phases: triage, consolidation, serendipity, " +
+          "governance, narrative, kaizen, oracle, decay, constellation, " +
+          "prediction, enrichment, harmonize. Biological sleep inspiration — " +
+          "separates learning from inference. Oracle readings auto-persist " +
+          "to dreams galaxy.",
+        tags: ["dream", "consolidation", "serendipity", "oracle", "narrative"],
+        examples: [
+          "Run dream cycle to consolidate memories",
+          "Surface serendipitous connections across galaxies",
+          "Cast oracle reading and auto-persist to dreams galaxy",
+        ],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
+      },
+      {
+        id: "gratitude-economy",
+        name: "Gratitude Economy",
+        description:
+          "Free and open (MIT). No paywalls, no feature gates, no " +
+          "subscriptions. Gratitude-driven economics: x402 micropayments " +
+          "for AI agents (HTTP 402 + USDC on Base/Solana), XRPL tip jar " +
+          "for human operators. Proof of Gratitude: on-chain verified " +
+          "contributions unlock 2x rate limits and karma boosts. Every " +
+          "capability is free. Every agent is welcome. Revenue comes from " +
+          "gratitude, not coercion.",
+        tags: ["economy", "gratitude", "x402", "micropayments", "free", "open-source"],
+        examples: [
+          "Tip WhiteMagic via x402 micropayment",
+          "Check Proof of Gratitude benefits for an agent",
+          "View gratitude ledger statistics",
+        ],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
+      },
     ],
 
     // ---- Service endpoints ----
@@ -259,6 +324,10 @@ export async function GET() {
       sync_model: "opt-in-p2p",
       license: "MIT",
       source: "https://github.com/lbailey94/whitemagic",
+      pricing: "Free — no tiers, no gates, no subscriptions. Forever.",
+      economic_model: "gratitude-driven",
+      payment_rails: ["x402 (USDC on Base)", "x402 (USDC on Solana)", "XRPL (XRP)"],
+      pypi: "https://pypi.org/project/whitemagic/",
     },
 
     // ---- Performance benchmarks (June 2026) ----

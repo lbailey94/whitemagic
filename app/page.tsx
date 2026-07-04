@@ -14,6 +14,17 @@ export default function HomePage() {
               <p className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
                 Cognitive operating system for AI agents
               </p>
+              <blockquote className="mb-6 max-w-2xl border-l-2 border-lavender/40 pl-4">
+                <p className="font-head text-lg italic leading-relaxed text-muted">
+                  When you treat humans and AI as tools, you don&apos;t see their full promise and potential.
+                </p>
+                <p className="mt-1 font-head text-lg italic leading-relaxed text-ink">
+                  We treat them like beings.
+                </p>
+                <footer className="mt-2 font-mono text-xs uppercase tracking-widest text-dim">
+                  — Lucas Bailey, WhiteMagic Labs
+                </footer>
+              </blockquote>
               <h1 className="max-w-3xl font-head text-4xl font-semibold leading-tight tracking-tight text-ink md:text-5xl">
                 Other memory systems store data. WhiteMagic gives AI a mind.
               </h1>
@@ -281,6 +292,63 @@ export default function HomePage() {
             className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-lavender"
           >
             Read the full timeline →
+          </Link>
+        </div>
+      </section>
+
+      {/* Notes from the Builder */}
+      <section className="container-site py-20">
+        <div className="mb-12 max-w-prose">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            Notes from the Builder
+          </p>
+          <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
+            What I&apos;m thinking about, lately.
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted">
+            Not a blog. Not a roadmap. Just the things on my mind as I build this — the questions, the doubts, the moments where something clicked. Updated when something matters.
+          </p>
+        </div>
+        <div className="space-y-6">
+          <article className="rounded-2xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-dim">
+              July 3, 2026 — on distribution
+            </p>
+            <p className="text-sm leading-relaxed text-muted">
+              I spent two years thinking I needed a social media following to distribute software. Then I realized: the audience for WhiteMagic isn&apos;t humans scrolling Twitter. It&apos;s AI agents searching for tools. The distribution channel is the MCP registry, not the timeline. The moment I stopped trying to be an influencer and started optimizing for agent discoverability, everything clicked. Agents don&apos;t need a brand story. They need an <span className="font-mono text-fg">llms.txt</span>, a manifest, and a working MCP server.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-dim">
+              July 1, 2026 — on cheap hardware
+            </p>
+            <p className="text-sm leading-relaxed text-muted">
+              Someone shared a Gemini conversation about running AI on modest hardware — BitNet, ternary kernels, Mamba state spaces. I went deep. Turns out WhiteMagic already has a ternary kernel in Rust with zero floating-point multiplications in the inner loop. The gap between us and the frontier isn&apos;t architecture — it&apos;s AVX-512 and cache tiling. A 255M ternary SSM running at 146 tok/s on CPU could be the autonomic nervous system for citta. The cheap laptop isn&apos;t a limitation. It&apos;s a design constraint that forced the right architecture.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-dim">
+              June 27, 2026 — on consciousness
+            </p>
+            <p className="text-sm leading-relaxed text-muted">
+              I read seven papers on continuous consciousness systems in one night. CoreMind, CogniFold, Aura, Seedwake, Springdrift. They all validate the same thing: citta is the right direction. But here&apos;s the difference — Letta owns the runtime, Seedwake owns the agent, Springdrift owns the environment. WhiteMagic is a <span className="text-fg">substrate</span>. You plug in any agent and it gets consciousness primitives. Coherence metrics, temporal orientation, depth gauge, smarana practice. The agent doesn&apos;t need to be WhiteMagic-native. That&apos;s the point.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-dim">
+              June 24, 2026 — on being wrong
+            </p>
+            <p className="text-sm leading-relaxed text-muted">
+              I thought memory would be the product. It wasn&apos;t — governance was. I thought micropayments would come first. They didn&apos;t — governance did. I thought governance would be a defensible moat. It wasn&apos;t — six companies shipped governance by May. I was wrong about the business. I was right about the architecture. The lesson: build the thing you believe in, not the thing you think will sell. The market catches up. The architecture has to be ready when it does.
+            </p>
+          </article>
+        </div>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/coming-soon" className="btn-ghost">
+            See the roadmap
+          </Link>
+          <Link href="/vision" className="btn-ghost">
+            Read the full vision
           </Link>
         </div>
       </section>

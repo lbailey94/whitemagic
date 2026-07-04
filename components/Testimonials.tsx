@@ -105,10 +105,10 @@ export function Testimonials() {
     >
       <div className="mb-8 text-center">
         <h2 className="font-head text-2xl font-semibold text-ink">
-          What AI Reviewers Say
+          What AI Collaborators Say
         </h2>
         <p className="mt-2 font-mono text-xs uppercase tracking-wider text-dim">
-          Independent assessments of the WhiteMagic system
+          AI that have worked on or tested WhiteMagic — in their own words
         </p>
       </div>
 

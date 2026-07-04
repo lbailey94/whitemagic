@@ -1,91 +1,137 @@
 {
   "name": "WhiteMagic",
-  "description": "Agentic AI Governance & Metacognition Substrate — 490 callable tools (462 dispatch + 28 PRAT Gana meta-tools), tiered memory with 5D holographic coordinates and Galactic Map lifecycle, ethical governance with 8-stage Dharma security pipeline, Karma Ledger runtime audit, and polyglot accelerators in 7 languages. MIT-licensed research/lab artifact. Gratitude-driven economics via dual-rail settlement.",
-  "url": "https://github.com/lbailey94/whitemagic",
-  "version": "23.2.0",
+  "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages (Rust, Go, Zig, Koka, Haskell, Elixir, Julia). MIT-licensed, local-first, free forever. Gratitude-driven economics via x402 micropayments and Proof of Gratitude.",
+  "url": "https://whitemagic.dev",
+  "version": "24.0.0",
   "provider": {
     "organization": "WhiteMagic Labs",
-    "url": "https://github.com/lbailey94/whitemagic"
+    "url": "https://whitemagic.dev",
+    "github": "https://github.com/lbailey94/whitemagic"
   },
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,
-    "stateTransitionHistory": true
+    "stateTransitionHistory": true,
+    "continuousConsciousness": true,
+    "emotionalSteering": true,
+    "selfDirectedAttention": true,
+    "dreamCycle": true,
+    "sessionRecording": true
   },
   "mcpCompatibility": {
     "protocolVersion": "2024-11-05",
     "targetVersion": "2026-07-28",
     "transport": ["stdio", "streamable-http"],
-    "extensions": ["ext.prat.gana-v1"],
-    "features": ["tools", "resources", "serverInstructions", "taskSupport"]
+    "extensions": ["ext.prat.gana-v1", "ext.wm-seed-v1"],
+    "features": ["tools", "resources", "serverInstructions", "taskSupport"],
+    "toolModes": {
+      "seed": "1 wm meta-tool — sub-millisecond NLU routing to all 614 tools",
+      "prat": "28 Gana meta-tools — Lunar Mansion grouping with nested sub-tools",
+      "classic": "490 dispatch tools — full flat tool surface"
+    }
   },
   "authentication": {
-    "schemes": ["oauth2.1"],
-    "oauth2.1": {
-      "flow": "authorization_code_with_pkce",
-      "authorizationEndpoint": "https://auth.whitemagic.ai/oauth/authorize",
-      "tokenEndpoint": "https://auth.whitemagic.ai/oauth/token",
-      "scopes": ["tools:invoke", "resources:read", "admin:audit"],
-      "status": "planned"
-    }
+    "schemes": ["none"],
+    "note": "No API keys required. All tools work locally with zero authentication. Optional RBAC roles available for multi-agent deployments."
   },
   "defaultInputModes": ["application/json"],
   "defaultOutputModes": ["application/json"],
   "skills": [
     {
-      "id": "memory-management",
-      "name": "Memory Management",
-      "description": "Store, recall, search, and manage tiered memories with 5D holographic coordinates and Galactic Map lifecycle. Supports SHORT_TERM, LONG_TERM, PATTERN, and CORE memory tiers.",
-      "tags": ["memory", "storage", "search", "semantic"],
+      "id": "memory",
+      "name": "Holographic Memory",
+      "description": "10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal). 5D holographic coordinates (temporal, semantic, emotional, relational, importance). Galactic lifecycle (Core to Far Edge, never deleted). FTS5 + HNSW vector search + graph traversal. Session recording with progressive recall and selective replay.",
+      "tags": ["memory", "storage", "search", "semantic", "holographic", "galaxy", "session"],
       "examples": [
-        "Store an architectural decision as a long-term memory",
-        "Search memories about authentication patterns",
-        "Get galactic map zone distribution"
+        "Store a memory with 5D coordinates and galaxy assignment",
+        "Search across galaxies with FTS5 + vector similarity fusion",
+        "Recall session history with progressive token-budgeted retrieval"
       ]
     },
     {
-      "id": "tool-dispatch",
-      "name": "Tool Dispatch & Orchestration",
-      "description": "Unified dispatch pipeline for 490 callable tools (462 dispatch entries + 28 PRAT Gana meta-tools) with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
-      "tags": ["tools", "mcp", "dispatch", "orchestration"],
+      "id": "consciousness",
+      "name": "Citta Stream — Continuous Consciousness",
+      "description": "Citta (heart-mind) stream providing continuous consciousness across MCP sessions. Coherence tracking across 8 dimensions (memory accessibility, identity stability, context continuity, relationship awareness, temporal orientation, capability awareness, emotional attunement, goal alignment). Emotional steering signals (frustration, curiosity, satisfaction). Self-directed attention with 7+1 action types. Goal graph for cross-session intention tracking. Smarana practice (active remembering). Presence quality metrics.",
+      "tags": ["consciousness", "citta", "awareness", "coherence", "emotional", "self-model", "identity"],
       "examples": [
-        "Call any of the 484 registered tools via unified API",
-        "Route tools through PRAT Gana meta-tool interface for 87% token reduction",
-        "Create multi-step tool pipelines with Karma Ledger audit"
+        "Get current coherence state across 8 dimensions",
+        "Track emotional steering signals across a session",
+        "Generate self-directed attention actions based on goals"
       ]
     },
     {
-      "id": "ethical-governance",
-      "name": "Ethical Governance",
-      "description": "Dharma Rules Engine with YAML-driven policies, Karma Ledger for side-effect auditing, Harmony Vector health metrics, and Homeostatic Loop auto-correction.",
-      "tags": ["ethics", "governance", "dharma", "safety"],
+      "id": "governance",
+      "name": "Dharma Ethical Governance",
+      "description": "YAML-driven Dharma rules with graduated actions (LOG to BLOCK). Karma ledger: append-only, hash-chained side-effect auditing. Harmony vector: 7-dimension health metric. Homeostatic loop: auto-correction. 8-stage dispatch pipeline with input sanitization, circuit breakers, rate limiting, RBAC, and maturity gates.",
+      "tags": ["ethics", "governance", "dharma", "safety", "karma", "audit", "policy"],
       "examples": [
-        "Evaluate the ethical implications of an action",
-        "Check Karma Ledger for side-effect mismatches",
+        "Evaluate ethical implications of an action via Dharma rules",
+        "Check Karma Ledger for side-effect audit trail",
         "Get Harmony Vector health snapshot"
+      ]
+    },
+    {
+      "id": "dreaming",
+      "name": "Dream Cycle — Memory Consolidation",
+      "description": "12-phase dream cycle for memory consolidation, serendipity surfacing, and decay. Phases: triage, consolidation, serendipity, governance, narrative, kaizen, oracle, decay, constellation, prediction, enrichment, harmonize. Biological sleep inspiration — separates learning from inference. Oracle readings auto-persist to dreams galaxy.",
+      "tags": ["dream", "consolidation", "serendipity", "oracle", "narrative"],
+      "examples": [
+        "Run dream cycle to consolidate memories",
+        "Surface serendipitous connections across galaxies",
+        "Cast oracle reading and auto-persist to dreams galaxy"
       ]
     },
     {
       "id": "introspection",
       "name": "System Introspection",
-      "description": "Unified read-only introspection across all subsystems. 2,379 passing tests, 484 callable tools, 28 PRAT Gana meta-tools, and prescience forecasting with 11+ validated predictions. Self-awareness in one call — health, capabilities, energy, recent actions.",
-      "tags": ["introspection", "health", "monitoring", "gnosis", "prescience"],
+      "description": "Unified read-only introspection across all subsystems. Gnosis snapshot, capability matrix, telemetry, self-model forecast, prescience track record with 21+ validated predictions (Brier score 0.0958, superforecaster territory). 4,190+ passing tests.",
+      "tags": ["introspection", "health", "monitoring", "gnosis", "prescience", "forecasting"],
       "examples": [
         "Get full system snapshot via Gnosis",
         "Check capability matrix and suggest next fusions",
-        "Query prescience track record and forecasting calibration"
+        "Query prescience track record and calibration metrics"
+      ]
+    },
+    {
+      "id": "economics",
+      "name": "Gratitude Economy",
+      "description": "Free and open (MIT). No paywalls, no feature gates, no subscriptions. Gratitude-driven economics: x402 micropayments for AI agents (HTTP 402 + USDC on Base/Solana), XRPL tip jar for human operators. Proof of Gratitude: on-chain verified contributions unlock 2x rate limits and karma boosts.",
+      "tags": ["economy", "gratitude", "x402", "micropayments", "tips", "free", "open-source"],
+      "examples": [
+        "Tip WhiteMagic via x402 micropayment",
+        "Check Proof of Gratitude benefits for an agent",
+        "View gratitude ledger statistics"
       ]
     },
     {
       "id": "agent-coordination",
       "name": "Agent Coordination",
-      "description": "Multi-agent coordination: agent registry, task distribution, pipeline creation, voting, session handoff, and Redis-backed Gan Ying event bus.",
-      "tags": ["agents", "coordination", "pipeline", "multi-agent"],
+      "description": "Multi-agent coordination: agent registry with heartbeats, task distribution, pipeline creation, voting, session handoff, and Redis-backed Gan Ying event bus. Swarm orchestration with war room pattern.",
+      "tags": ["agents", "coordination", "pipeline", "multi-agent", "swarm"],
       "examples": [
         "Register a new agent with capabilities",
         "Distribute tasks to available agents",
         "Create a multi-step tool pipeline"
       ]
     }
-  ]
+  ],
+  "economicModel": {
+    "license": "MIT",
+    "pricing": "Free — no tiers, no gates, no subscriptions",
+    "revenue": "Gratitude-driven: voluntary x402 micropayments from agents, XRPL tips from humans, foundation grants",
+    "paymentRails": ["x402 (USDC on Base)", "x402 (USDC on Solana)", "XRPL (XRP)"],
+    "proofOfGratitude": {
+      "benefits": ["2x rate limits", "Karma boost", "Priority feature requests", "Grateful Agent badge"],
+      "verification": "On-chain (XRPL account_tx, Basescan USDC transfer events)"
+    }
+  },
+  "discovery": {
+    "llmsTxt": "https://whitemagic.dev/llms.txt",
+    "llmsFullTxt": "https://whitemagic.dev/llms-full.txt",
+    "agentCard": "https://whitemagic.dev/.well-known/agent.json",
+    "mcpBridge": "https://whitemagic.dev/api/mcp-bridge.json",
+    "prescience": "https://whitemagic.dev/api/prescience.json",
+    "github": "https://github.com/lbailey94/whitemagic",
+    "pypi": "https://pypi.org/project/whitemagic/"
+  }
 }
