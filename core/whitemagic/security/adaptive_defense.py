@@ -1043,8 +1043,8 @@ def run_multi_round_evolution(
                         "Round %d LLM second-pass: %d/%d leaked variants caught by ensemble",
                         round_num + 1, llm_caught, llm_total,
                     )
-            except ImportError:
-                logger.debug("LLM second-pass: semantic_defense not available")
+            except Exception as e:
+                logger.debug("LLM second-pass failed: %s", e, exc_info=True)
 
         # Mutation-aware corpus expansion: add normalized leaked variants to
         # the semantic attack corpus so future rounds catch similar attacks

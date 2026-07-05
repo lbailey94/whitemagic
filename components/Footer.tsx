@@ -27,6 +27,7 @@ export function Footer() {
             <li><Link href="/vision" className="hover:text-fg">Vision</Link></li>
             <li><Link href="/capabilities" className="hover:text-fg">Capabilities</Link></li>
             <li><Link href="/benchmarks" className="hover:text-fg">Evidence</Link></li>
+            <li><Link href="/strata" className="hover:text-fg">STRATA</Link></li>
             <li><Link href="/timeline" className="hover:text-fg">Timeline</Link></li>
             <li><Link href="/research" className="hover:text-fg">Research</Link></li>
             <li><Link href="/prescience" className="hover:text-fg">Prescience</Link></li>

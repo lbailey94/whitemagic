@@ -10,7 +10,8 @@ import { LangToggle } from "./LangToggle";
 const NAV = [
   { href: "/vision", label: "Vision" },
   { href: "/capabilities", label: "Capabilities" },
-  { href: "/benchmarks", label: "Evidence" },
+  { href: "/strata", label: "STRATA" },
+  { href: "/prescience", label: "Prescience" },
   { href: "/timeline", label: "Timeline" },
   { href: "/getting-started", label: "Getting Started" },
   { href: "/ganas", label: "28 Ganas" },
