@@ -98,8 +98,9 @@ class UnifiedMemory:
     def __init__(self, base_path: Path | None = None) -> None:
         # Use canonical Data Sea database location
         if base_path is None:
-            self.db_path = DB_PATH
-            self.base_path = MEMORY_DIR
+            from whitemagic.config.paths import DB_PATH as _db_path, MEMORY_DIR as _mem_dir
+            self.db_path = _db_path
+            self.base_path = _mem_dir
             self.base_path.mkdir(parents=True, exist_ok=True)
         else:
             self.base_path = base_path

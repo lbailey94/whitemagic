@@ -88,12 +88,18 @@ _WAL_PRAGMAS = (
     ("PRAGMA journal_mode=WAL",),
     ("PRAGMA synchronous=NORMAL",),
     ("PRAGMA busy_timeout=5000",),
-    ("PRAGMA foreign_keys=ON",),
     ("PRAGMA temp_store=MEMORY",),
 )
 
 
-def safe_connect(db_path: str, *, read_only: bool = False, timeout: float = 30.0) -> sqlite3.Connection:
+def safe_connect(
+    db_path: str,
+    *,
+    read_only: bool = False,
+    timeout: float = 30.0,
+    uri: bool = False,
+    **kwargs: Any,
+) -> sqlite3.Connection:
     """Create a SQLite connection with WAL mode and standard pragmas.
 
     ALL modules that need a direct sqlite3.connect() should use this instead
@@ -103,12 +109,16 @@ def safe_connect(db_path: str, *, read_only: bool = False, timeout: float = 30.0
         db_path: Path to the SQLite database file.
         read_only: If True, open in read-only mode (no WAL switch attempted).
         timeout: Busy timeout in seconds.
+        uri: If True, treat db_path as a URI (enables query params like ?mode=ro).
+        **kwargs: Additional kwargs passed to sqlite3.connect().
     """
     if read_only:
         uri_path = f"file:{db_path}?mode=ro"
-        conn = sqlite3.connect(uri_path, uri=True, timeout=timeout, check_same_thread=False)
+        kwargs.setdefault("check_same_thread", False)
+        conn = sqlite3.connect(uri_path, uri=True, timeout=timeout, **kwargs)
     else:
-        conn = sqlite3.connect(db_path, timeout=timeout, check_same_thread=False)
+        kwargs.setdefault("check_same_thread", False)
+        conn = sqlite3.connect(db_path, timeout=timeout, uri=uri, **kwargs)
     conn.row_factory = sqlite3.Row
     if not read_only:
         for pragma, in _WAL_PRAGMAS:

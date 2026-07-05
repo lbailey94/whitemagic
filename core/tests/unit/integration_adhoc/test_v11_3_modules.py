@@ -38,37 +38,90 @@ class TestMemoryLifecycle:
         assert mgr.is_attached
 
     def test_run_sweep_returns_report(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
 
-        mgr = MemoryLifecycleManager()
-        report = mgr.run_sweep(persist=False)
-        assert report["status"] == "success"
-        assert "sweep" in report
-        assert "lifetime" in report
+        mock_report = SimpleNamespace(
+            total_evaluated=0, retained=0, decayed=0, archived=0, protected=0,
+        )
+        with patch(
+            "whitemagic.core.memory.mindful_forgetting.get_retention_engine"
+        ) as mock_re, patch(
+            "whitemagic.core.memory.galactic_map.get_galactic_map"
+        ) as mock_gm, patch(
+            "whitemagic.core.memory.unified.get_unified_memory"
+        ) as mock_um:
+            mock_re.return_value.sweep.return_value = mock_report
+            mock_gm.return_value.full_sweep.return_value = {}
+            mock_gm.return_value.decay_drift.return_value = {}
+            mock_um.return_value.backend.decay_associations.return_value = {}
+
+            mgr = MemoryLifecycleManager()
+            report = mgr.run_sweep(persist=False)
+            assert report["status"] == "success"
+            assert "sweep" in report
+            assert "lifetime" in report
+            mgr._running = False
 
     def test_stats_update_after_sweep(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
 
-        mgr = MemoryLifecycleManager()
-        mgr.run_sweep(persist=False)
-        stats = mgr.get_stats()
-        assert stats["total_sweeps"] == 1
-        assert stats["last_sweep_at"] is not None
+        mock_report = SimpleNamespace(
+            total_evaluated=0, retained=0, decayed=0, archived=0, protected=0,
+        )
+        with patch(
+            "whitemagic.core.memory.mindful_forgetting.get_retention_engine"
+        ) as mock_re, patch(
+            "whitemagic.core.memory.galactic_map.get_galactic_map"
+        ) as mock_gm, patch(
+            "whitemagic.core.memory.unified.get_unified_memory"
+        ) as mock_um:
+            mock_re.return_value.sweep.return_value = mock_report
+            mock_gm.return_value.full_sweep.return_value = {}
+            mock_gm.return_value.decay_drift.return_value = {}
+            mock_um.return_value.backend.decay_associations.return_value = {}
+
+            mgr = MemoryLifecycleManager()
+            mgr.run_sweep(persist=False)
+            stats = mgr.get_stats()
+            assert stats["total_sweeps"] == 1
+            assert stats["last_sweep_at"] is not None
+            mgr._running = False
 
     def test_flush_count_triggers_sweep(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
         from whitemagic.core.memory.lifecycle import (
             LifecycleConfig,
             MemoryLifecycleManager,
         )
 
-        mgr = MemoryLifecycleManager(config=LifecycleConfig(sweep_interval_sweeps=2))
-        # Simulate slow-lane flushes
-        mgr._on_slow_flush([])  # flush 1 — no sweep
-        time.sleep(0.05)
-        assert mgr.get_stats()["total_sweeps"] == 0
-        mgr._on_slow_flush([])  # flush 2 — triggers sweep
-        time.sleep(0.2)  # allow background thread
-        assert mgr.get_stats()["total_sweeps"] == 1
+        mock_report = SimpleNamespace(
+            total_evaluated=0, retained=0, decayed=0, archived=0, protected=0,
+        )
+        with patch(
+            "whitemagic.core.memory.mindful_forgetting.get_retention_engine"
+        ) as mock_re, patch(
+            "whitemagic.core.memory.galactic_map.get_galactic_map"
+        ) as mock_gm, patch(
+            "whitemagic.core.memory.unified.get_unified_memory"
+        ) as mock_um:
+            mock_re.return_value.sweep.return_value = mock_report
+            mock_gm.return_value.full_sweep.return_value = {}
+            mock_gm.return_value.decay_drift.return_value = {}
+            mock_um.return_value.backend.decay_associations.return_value = {}
+
+            mgr = MemoryLifecycleManager(config=LifecycleConfig(sweep_interval_sweeps=2))
+            mgr._on_slow_flush([])  # flush 1 — no sweep
+            time.sleep(0.05)
+            assert mgr.get_stats()["total_sweeps"] == 0
+            mgr._on_slow_flush([])  # flush 2 — triggers sweep
+            time.sleep(0.5)  # allow background thread
+            assert mgr.get_stats()["total_sweeps"] == 1
+            mgr._running = False
 
 
 # =========================================================================

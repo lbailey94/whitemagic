@@ -35,10 +35,10 @@ class TestSafeConnect:
         assert timeout[0] == 5000
         conn.close()
 
-    def test_safe_connect_sets_foreign_keys(self, tmp_db: str) -> None:
+    def test_safe_connect_does_not_force_foreign_keys(self, tmp_db: str) -> None:
         conn = safe_connect(tmp_db)
         fk = conn.execute("PRAGMA foreign_keys").fetchone()
-        assert fk[0] == 1
+        assert fk[0] == 0
         conn.close()
 
     def test_safe_connect_read_only(self, tmp_db: str) -> None:
@@ -99,6 +99,9 @@ class TestIntegrityCheck:
         pool.close_all()
 
     def test_check_db_integrity_cached(self, tmp_db: str) -> None:
+        # Reset the integrity check cache (may be set by prior tests)
+        import whitemagic.core.memory.db_manager as _dbm
+        _dbm._last_integrity_check = 0.0
         # First call does the check
         result1 = check_db_integrity(tmp_db)
         assert result1 == "ok"

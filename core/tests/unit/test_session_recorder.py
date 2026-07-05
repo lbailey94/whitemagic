@@ -14,8 +14,8 @@ os.environ["WM_SKIP_POLYGLOT"] = "1"
 
 
 @pytest.fixture
-def recorder():
-    """Fresh SessionRecorder for each test."""
+def recorder(fresh_state_root):
+    """Fresh SessionRecorder for each test (with isolated DB)."""
     from whitemagic.core.memory.session_recorder import SessionRecorder
     return SessionRecorder()
 

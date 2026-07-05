@@ -262,6 +262,11 @@ class TestDeepLaneEscalation:
 class TestCouncilMode:
     """Test CouncilMode."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_model(self):
+        with patch("whitemagic.interfaces.chat.ModelDiscovery.best_model", return_value=None):
+            yield
+
     def test_convene_returns_dict(self):
         from whitemagic.core.consciousness.sentience import CouncilMode
 

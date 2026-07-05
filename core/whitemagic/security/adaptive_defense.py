@@ -1046,6 +1046,23 @@ def run_multi_round_evolution(
             except ImportError:
                 logger.debug("LLM second-pass: semantic_defense not available")
 
+        # Mutation-aware corpus expansion: add normalized leaked variants to
+        # the semantic attack corpus so future rounds catch similar attacks
+        if summary["total_leaked"] > 0:
+            try:
+                from whitemagic.security.semantic_defense import expand_attack_corpus
+
+                leaked_contents = [v.content for v in loop._all_leaked if not v.blocked]
+                added = expand_attack_corpus(leaked_contents)
+                if added > 0:
+                    results.rounds[-1]["corpus_expanded"] = added
+                    logger.info(
+                        "Round %d corpus expansion: +%d phrases from leaked variants",
+                        round_num + 1, added,
+                    )
+            except ImportError:
+                logger.debug("Corpus expansion: semantic_defense not available")
+
         logger.info(
             "Round %d complete: block_rate=%.1f%%, leak_rate=%.1f%%, total_patterns=%d",
             round_num + 1,

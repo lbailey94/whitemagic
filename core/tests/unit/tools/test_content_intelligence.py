@@ -178,6 +178,15 @@ class TestContentChunker:
 
 
 class TestContentSummarizer:
+    @pytest.fixture(autouse=True)
+    def _mock_ollama(self):
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                "whitemagic.gardens.browser.content_intelligence.ContentSummarizer._summarize_with_ollama",
+                lambda self, text, focus=None: None,
+            )
+            yield
+
     def test_summarize_short_text_returns_as_is(self):
         summarizer = ContentSummarizer()
         text = "This is too short to summarize."
@@ -235,6 +244,15 @@ class TestContentSummarizer:
 
 
 class TestProcessContent:
+    @pytest.fixture(autouse=True)
+    def _mock_ollama(self):
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                "whitemagic.gardens.browser.content_intelligence.ContentSummarizer._summarize_with_ollama",
+                lambda self, text, focus=None: None,
+            )
+            yield
+
     def test_process_content_basic(self):
         html = """
         <html><body>

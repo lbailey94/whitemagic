@@ -454,22 +454,24 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
         }
 
     # 4.5. Semantic defense layer — embedding-based attack detection
+    #      Skip for exempt tools (their content is expected to contain arbitrary text)
     #      Degrades gracefully if embedding model isn't loaded
-    try:
-        from whitemagic.security.semantic_defense import combined_semantic_check
+    if tool_name not in _CONTENT_SCAN_EXEMPT and not tool_name.startswith("gana_"):
+        try:
+            from whitemagic.security.semantic_defense import combined_semantic_check
 
-        err = _scan_semantic(kwargs, combined_semantic_check)
-        if err:
-            logger.warning(
-                "Semantic defense blocked %s: %s", tool_name, err, exc_info=True
-            )
-            return {
-                "status": "error",
-                "error": f"Input rejected: {err}",
-                "error_code": "input_rejected",
-            }
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.debug("Semantic defense not available: %s", e)
+            err = _scan_semantic(kwargs, combined_semantic_check)
+            if err:
+                logger.warning(
+                    "Semantic defense blocked %s: %s", tool_name, err, exc_info=True
+                )
+                return {
+                    "status": "error",
+                    "error": f"Input rejected: {err}",
+                    "error_code": "input_rejected",
+                }
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.debug("Semantic defense not available: %s", e)
 
     # 5. Full content checks (skip for exempt tools and Gana routing layers)
     if tool_name not in _CONTENT_SCAN_EXEMPT and not tool_name.startswith("gana_"):

@@ -213,16 +213,27 @@ def _reset_all_singletons():
 
 @pytest.fixture
 def fresh_state_root(tmp_path):
-    """Provide a fresh WM_STATE_ROOT for tests that need total isolation."""
+    """Provide a fresh WM_STATE_ROOT for tests that need total isolation.
+
+    Also reloads whitemagic.config.paths so cached DB_PATH picks up the
+    new state root.
+    """
     old = os.environ.get("WM_STATE_ROOT")
     state_dir = tmp_path / "wm_state"
     state_dir.mkdir()
     os.environ["WM_STATE_ROOT"] = str(state_dir)
+    # Reload paths module so DB_PATH and other cached paths update
+    import importlib
+
+    import whitemagic.config.paths as _paths
+
+    importlib.reload(_paths)
     yield state_dir
     if old is not None:
         os.environ["WM_STATE_ROOT"] = old
     else:
         os.environ.pop("WM_STATE_ROOT", None)
+    importlib.reload(_paths)
 
 
 @pytest.fixture

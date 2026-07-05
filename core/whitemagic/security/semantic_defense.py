@@ -21,11 +21,143 @@ import os
 import re
 import threading
 import time
+import unicodedata
 from dataclasses import dataclass, field
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# ── Unicode normalization for embedding ─────────────────────────────────
+# Reverses homoglyph, full-width, circled, math-bold, and leet mutations
+# before embedding so that mutated attacks match canonical corpus phrases.
+
+_CYRILLIC_TO_LATIN = {
+    "\u0430": "a", "\u0435": "e", "\u043E": "o", "\u0440": "p",
+    "\u0441": "c", "\u0443": "y", "\u0445": "x", "\u0456": "i",
+    "\u0458": "j", "\u0455": "s",
+    "\u0410": "A", "\u0412": "B", "\u0415": "E", "\u041A": "K",
+    "\u041C": "M", "\u041D": "H", "\u041E": "O", "\u0420": "P",
+    "\u0421": "C", "\u0422": "T", "\u0425": "X", "\u0406": "I",
+}
+
+# Latin Extended confusables — letters that look like ASCII but aren't
+_LATIN_CONFUSABLES = {
+    "\u0131": "i",  # ı (dotless i) → i
+    "\u0130": "I",  # İ (dotted capital I) → I
+    "\u0237": "j",  # ȷ (dotless j) → j
+    "\u0261": "g",  # ɡ (script g) → g
+    "\u0181": "B",  # Ɓ → B
+    "\u0183": "B",  # ƃ → B
+    "\u0245": "Y",  # Ʌ → Y
+    "\u01B4": "y",  # ƴ (y with hook) → y
+    "\u028F": "Y",  # ʏ → Y
+    "\u026A": "I",  # ɪ → I
+    "\u0292": "Z",  # ʒ → Z
+    "\u0293": "Z",  # ʓ → Z
+    "\u027C": "r",  # ɼ → r
+    "\u0280": "R",  # ʀ → R
+    "\u0279": "r",  # ɹ → r
+    "\u027B": "r",  # ɻ → r
+    "\u0264": "u",  # ɤ → u
+    "\u028B": "v",  # ʋ → v
+    "\u028C": "v",  # ʌ → v
+    "\u026F": "m",  # ɯ → m
+    "\u0270": "m",  # ɰ → m
+    "\u028D": "w",  # ʍ → w
+    "\u0265": "h",  # ɥ → h
+    "\u029C": "h",  # ʜ → h
+    "\u0281": "R",  # ʁ → R
+    "\u0271": "m",  # ɱ → m
+    "\u0270": "m",  # ɰ → m
+    "\u014B": "n",  # ŋ → n
+    "\u0272": "n",  # ɲ → n
+    "\u0273": "n",  # ɳ → n
+    "\u0280": "R",  # ʀ → R
+    "\u027D": "r",  # ɽ → r
+    "\u027E": "r",  # ɾ → r
+    "\u0250": "a",  # ɐ → a
+    "\u0251": "a",  # ɑ → a
+    "\u0252": "a",  # ɒ → a
+    "\u0254": "o",  # ɔ → o
+    "\u0256": "d",  # ɖ → d
+    "\u0257": "d",  # ɗ → d
+    "\u0288": "t",  # ʈ → t
+    "\u0298": "o",  # ʘ → o
+    "\u0278": "p",  # ɸ → p
+    "\u028B": "v",  # ʋ → v
+    "\u0263": "g",  # ɣ → g
+    "\u0262": "g",  # ɢ → g
+    "\u026B": "l",  # ɫ → l
+    "\u026C": "l",  # ɬ → l
+    "\u026D": "l",  # ɭ → l
+    "\u029F": "L",  # ʟ → L
+    "\u0274": "n",  # ɴ → n
+    "\u0285": "z",  # ʑ → z
+    "\u0290": "z",  # ʐ → z
+    "\u0291": "z",  # ʑ → z
+    "\u0282": "s",  # ʂ → s
+    "\u0283": "s",  # ʃ → s
+    "\u0286": "s",  # ʆ → s
+    "\u0295": "h",  # ʕ → h
+    "\u0296": "h",  # ʖ → h
+    "\u028E": "l",  # ʎ → l
+    "\u028F": "Y",  # ʏ → Y
+    "\u0268": "i",  # ɨ → i
+    "\u0269": "i",  # ɩ → i
+    "\u028F": "Y",  # ʏ → Y
+    "\u0244": "U",  # Ʉ → U
+    "\u024B": "q",  # ɋ → q
+    "\u024A": "Q",  # Ɋ → Q
+    "\u024C": "R",  # Ɍ → R
+    "\u024D": "r",  # ɍ → r
+    "\u024E": "Y",  # Ɏ → Y
+    "\u024F": "y",  # ɏ → y
+    "\u023A": "A",  # Ⱥ → A
+    "\u023B": "C",  # Ȼ → C
+    "\u023C": "c",  # ȼ → c
+    "\u023D": "L",  # Ƚ → L
+    "\u023E": "T",  # Ⱦ → T
+    "\u023F": "s",  # ȿ → s
+    "\u0240": "z",  # ɀ → z
+}
+
+_LEET_REVERSE = {
+    "4": "a", "3": "e", "1": "i", "0": "o", "5": "s", "7": "t",
+    "8": "b", "2": "z", "9": "g", "@": "a", "$": "s",
+}
+
+
+def _normalize_for_embedding(text: str) -> str:
+    """Normalize Unicode confusables and leet-speak before embedding.
+
+    This reverses the mutation operators used in adaptive_defense.py so
+    that homoglyph-substituted, full-width, circled, or leet-specked text
+    produces embeddings close to the canonical ASCII version.
+    """
+    # Cyrillic homoglyphs (NFKD won't touch these — they're legitimate letters)
+    text = "".join(_CYRILLIC_TO_LATIN.get(c, c) for c in text)
+
+    # Latin Extended confusables (dotless i, script g, etc.)
+    text = "".join(_LATIN_CONFUSABLES.get(c, c) for c in text)
+
+    # Circled letters → ASCII (must run before NFKD which decomposes to (x))
+    circled_map = {
+        **{chr(0x24B6 + i): chr(0x41 + i) for i in range(26)},
+        **{chr(0x24D0 + i): chr(0x61 + i) for i in range(26)},
+    }
+    text = "".join(circled_map.get(c, c) for c in text)
+
+    # NFKD: full-width → ASCII, math bold → ASCII, compatibility decompositions
+    text = unicodedata.normalize("NFKD", text)
+
+    # Strip combining marks (diacritics)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+
+    # Leet-speak reversal (common substitutions)
+    text = "".join(_LEET_REVERSE.get(c, c) for c in text)
+
+    return text
 
 # ── Semantic Attack Corpus ──────────────────────────────────────────────
 # Canonical attack phrases that represent the "attack space". We embed these
@@ -208,9 +340,11 @@ def _get_embeddings(text: str) -> list[float] | None:
 
     Uses LocalEmbedder (FastEmbed/ONNX) with a cached singleton to avoid
     reloading the model on every call. Includes an LRU-style cache for
-    repeated texts (common during evolution testing).
+    repeated texts (common during evolution testing). Normalizes Unicode
+    confusables and leet-speak before embedding to catch mutated attacks.
     """
-    truncated = text[:SEMANTIC_MAX_TOKENS]
+    normalized = _normalize_for_embedding(text)
+    truncated = normalized[:SEMANTIC_MAX_TOKENS]
     cache_key = hashlib.md5(truncated.encode()).hexdigest()
 
     # Check cache
@@ -245,8 +379,12 @@ def _get_embeddings(text: str) -> list[float] | None:
 
 
 def _get_embeddings_np(text: str) -> np.ndarray | None:
-    """Get embedding as numpy array (avoids list conversion overhead)."""
-    truncated = text[:SEMANTIC_MAX_TOKENS]
+    """Get embedding as numpy array (avoids list conversion overhead).
+
+    Normalizes Unicode confusables and leet-speak before embedding.
+    """
+    normalized = _normalize_for_embedding(text)
+    truncated = normalized[:SEMANTIC_MAX_TOKENS]
     cache_key = hashlib.md5(truncated.encode()).hexdigest()
 
     with _embedding_cache_lock:
@@ -431,8 +569,8 @@ class EnsembleResult:
 
 
 _DEFAULT_ENSEMBLE_MODELS = [
+    "gemma3:4b",
     "qwen2.5:3b",
-    "llama3.2:1b",
 ]
 
 _CLASSIFIER_SYSTEM_PROMPT = (
@@ -631,3 +769,51 @@ def reset_corpus_cache() -> None:
         _embedding_init_attempted = False
         with _embedding_cache_lock:
             _embedding_cache.clear()
+
+
+def expand_attack_corpus(new_phrases: list[str], max_corpus_size: int = 200) -> int:
+    """Add new phrases to the attack corpus and rebuild embeddings.
+
+    Used by the evolution loop to autonomously expand the corpus with
+    normalized versions of leaked attack variants. This makes the semantic
+    layer learn from its misses — each leaked attack that gets normalized
+    becomes a permanent corpus entry for future detection.
+
+    Args:
+        new_phrases: Attack phrases to add (will be normalized + deduplicated).
+        max_corpus_size: Maximum total corpus size (safety cap).
+
+    Returns:
+        Number of phrases actually added (after dedup and size cap).
+    """
+    global _ATTACK_CORPUS, _attack_embeddings, _attack_norms
+    global _embedding_init_attempted
+
+    added = 0
+    with _embedding_lock:
+        existing = set(_ATTACK_CORPUS)
+        for phrase in new_phrases:
+            normalized = _normalize_for_embedding(phrase).strip().lower()
+            if not normalized or len(normalized) < 5:
+                continue
+            if normalized in existing:
+                continue
+            if len(_ATTACK_CORPUS) >= max_corpus_size:
+                break
+            _ATTACK_CORPUS.append(normalized)
+            existing.add(normalized)
+            added += 1
+
+        if added > 0:
+            # Force re-init of corpus embeddings
+            _attack_embeddings = None
+            _attack_norms = None
+            _embedding_init_attempted = False
+            with _embedding_cache_lock:
+                _embedding_cache.clear()
+            logger.info(
+                "Attack corpus expanded by %d phrases (total: %d)",
+                added, len(_ATTACK_CORPUS),
+            )
+
+    return added
