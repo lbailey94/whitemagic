@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from dataclasses import dataclass, field
@@ -113,7 +114,7 @@ class CrossDomainCollisionDetector:
         self._total_schemas = 0
 
     def _get_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
+        conn = safe_connect(self.db_path, timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
             conn.execute("PRAGMA journal_mode = WAL")
@@ -264,7 +265,7 @@ class CrossDomainCollisionDetector:
         """Load embeddings for given memory IDs."""
         embeddings: dict[str, list[float]] = {}
         try:
-            conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
+            conn = safe_connect(self.db_path, timeout=30, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             placeholders = ",".join("?" * len(memory_ids))
             rows = conn.execute(

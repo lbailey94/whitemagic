@@ -10,7 +10,7 @@ This creates true recursive evolution.
 """
 
 import json
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -71,7 +71,7 @@ class AutodidacticLoop:
 
     def _init_db(self):
         """Initialize SQLite database for tracking"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         # Pattern applications
@@ -151,7 +151,7 @@ class AutodidacticLoop:
 
     def record_application(self, application: PatternApplication) -> None:
         """Record that a pattern was applied"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -175,7 +175,7 @@ class AutodidacticLoop:
 
     def record_outcome(self, outcome: PatternOutcome) -> None:
         """Record the measured outcome of a pattern application"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -208,7 +208,7 @@ class AutodidacticLoop:
 
     def _update_pattern_confidence(self, pattern_id: str) -> None:
         """Update pattern confidence based on accumulated outcomes"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -278,7 +278,7 @@ class AutodidacticLoop:
 
     def get_pattern_confidence(self, pattern_id: str) -> float | None:
         """Get the latest confidence score for a pattern"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -299,7 +299,7 @@ class AutodidacticLoop:
 
     def get_pattern_stats(self, pattern_id: str) -> dict[str, Any] | None:
         """Get comprehensive statistics for a pattern"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -355,7 +355,7 @@ class AutodidacticLoop:
 
     def get_top_patterns(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get top patterns by updated confidence"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute("""
@@ -378,7 +378,7 @@ class AutodidacticLoop:
 
     def get_learning_summary(self) -> dict[str, Any]:
         """Get overall learning statistics"""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         # Total applications
@@ -438,7 +438,7 @@ class AutodidacticLoop:
             pattern_id: The pattern that just had an outcome recorded.
             success: Whether the outcome was successful.
         """
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -524,7 +524,7 @@ class AutodidacticLoop:
         Returns:
             Correlation in [-1, 1], or 0.0 if no correlation data exists.
         """
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute(
@@ -568,7 +568,7 @@ class AutodidacticLoop:
         Returns:
             List of dicts with pattern_a, pattern_b, correlation, co_occurrences.
         """
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute("""

@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import uuid
 from contextlib import contextmanager
 from datetime import date, datetime
@@ -110,7 +111,7 @@ class TemporalForecastDB:
 
     @contextmanager
     def _conn(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
         try:
             yield conn

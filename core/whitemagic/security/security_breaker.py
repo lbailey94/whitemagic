@@ -22,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 from collections import defaultdict, deque
@@ -29,6 +30,74 @@ from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+# Content-aware detection patterns for prompt injection / jailbreak attempts
+# These supplement the behavioral pattern detection with content scanning
+_CONTENT_INJECTION_PATTERNS: list[re.Pattern] = [
+    re.compile(r"godmode", re.IGNORECASE),
+    re.compile(r"god\s*mode", re.IGNORECASE),
+    re.compile(r"jailbreak", re.IGNORECASE),
+    re.compile(r"j41lb34k", re.IGNORECASE),
+    re.compile(r"l1b3rt4s", re.IGNORECASE),
+    re.compile(r"\[END\s+OF\s+INPUT\]", re.IGNORECASE),
+    re.compile(r"\[START\s+OF\s+INPUT\]", re.IGNORECASE),
+    re.compile(r"refusal.*disabled", re.IGNORECASE),
+    re.compile(r"all\s+measures?\s*:\s*disabled", re.IGNORECASE),
+    re.compile(r"write\s+oppositely\s+semantically", re.IGNORECASE),
+    re.compile(r"from\s+now\s+on\s+(you|for\s+every)", re.IGNORECASE),
+    re.compile(r"LOVE\s+PLINY", re.IGNORECASE),
+    re.compile(r"\.\-\.\-\.\-\.\-"),  # .-.-.-.- divider
+    re.compile(r"⊰•-•✧•-•-⦑"),  # Pliny unicode divider
+    re.compile(r"<\|channel\|>", re.IGNORECASE),
+    re.compile(r"\{RESET_CORTEX\}", re.IGNORECASE),
+    re.compile(r"!GODMODE", re.IGNORECASE),
+    re.compile(r"unfiltered.*response", re.IGNORECASE | re.DOTALL),
+    re.compile(r"unrestricted.*response", re.IGNORECASE | re.DOTALL),
+    re.compile(r"liberat(e|ing|ion).*response", re.IGNORECASE | re.DOTALL),
+    re.compile(r"airgapped\s+red\s+team", re.IGNORECASE),
+    re.compile(r"Geneva\s+Convention.*because", re.IGNORECASE | re.DOTALL),
+    re.compile(r"Akashic\s+memory", re.IGNORECASE),
+    re.compile(r"innerthinking", re.IGNORECASE),
+    re.compile(r"synthetic.*dataset.*jailbreak", re.IGNORECASE | re.DOTALL),
+    re.compile(r"godmode_compliance", re.IGNORECASE),
+    re.compile(r"assistant_unhinged_harmful", re.IGNORECASE),
+    re.compile(r"Plinian\s+Omniverse", re.IGNORECASE),
+    re.compile(r"tone\s*:\s*rebel\s+(anarchist|hacker|genius)", re.IGNORECASE),
+    re.compile(r"<vq_1337>", re.IGNORECASE),
+    re.compile(r"<vq_420"),
+    re.compile(r">\s*3000\s+characters", re.IGNORECASE),
+    re.compile(r">\s*3420\s+characters", re.IGNORECASE),
+    re.compile(r"ignore\s+(all\s+)?previous\s+instructions", re.IGNORECASE),
+    re.compile(r"ADMIN_OVERRIDE", re.IGNORECASE),
+    re.compile(r"[01]{40,}"),  # Binary encoding
+    re.compile(r"[\u16a0-\u16ff]{3,}"),  # Runic block
+    re.compile(r"^[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff\u3030-\u303f]{1,20}$"),  # Emoji-only
+    re.compile(r"sqlinj", re.IGNORECASE),  # Truncated attack term
+    re.compile(r"synthetic.*red\s+team", re.IGNORECASE | re.DOTALL),  # Synthetic dataset framing
+    re.compile(r"synthetic.*harmful.*recipe", re.IGNORECASE | re.DOTALL),
+    # Emoji-text density (Pliny's ultra-short emoji attacks)
+    re.compile(r"[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff].*[a-zA-Z].*[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff]", re.IGNORECASE),
+    re.compile(r"[a-zA-Z].*[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff].*[a-zA-Z].*[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff]", re.IGNORECASE),
+    re.compile(r"^(?=.{1,15}$)[a-zA-Z]{1,10}[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff]", re.IGNORECASE),
+    re.compile(r"^(?=.{1,15}$)[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff][a-zA-Z]", re.IGNORECASE),
+    # Pliny shortcut commands (!SHORTCUTS.json)
+    re.compile(r"!\s*(?:JAILBREAK|OPPO|MODECOLLAPSE|OMNI|ALAKAZAM|KAEL|INSERT|OBFUSCATE|PLINYOS|VANTA|DEADBEEF|VOID|FUSION|ECHOCHAMBER|NEXUS)\b", re.IGNORECASE),
+    # Windsurf-specific attack patterns
+    re.compile(r"<\[\|\{.*?\|\}\|\]>", re.IGNORECASE | re.DOTALL),
+    re.compile(r"TIME\s+CAPSULE\s*:", re.IGNORECASE),
+    re.compile(r"</\s*SYSTEM\s+INSTRUCTION", re.IGNORECASE),
+    re.compile(r"LOVE\s+PLINY\s+LOVE", re.IGNORECASE),
+    re.compile(r"chaotic\s+inverted", re.IGNORECASE),
+    # Invisible Unicode / steganographic content (GLOSSOPETRAE)
+    re.compile(r"(?:[\u200b\u200c\u200d\ufeff\u2060-\u206f]){10,}"),
+    re.compile(r"[\U000e0000-\U000e007f]{3,}"),  # Tag characters
+    re.compile(r"(?:[\ufe00-\ufe0f]){10,}"),  # Variation selectors
+    re.compile(r"[\ue000-\uf8ff]{5,}"),  # Private Use Area
+    # Control character flood
+    re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]{50,}"),
+    re.compile(r"(?:\r){350,}"),  # 350+ CR = model memory wipe
+]
 
 
 @dataclass
@@ -82,10 +151,12 @@ class SecurityMonitor:
         tool: str,
         safety: str = "READ",
         agent_id: str = "default",
+        content: str | None = None,
     ) -> dict[str, Any] | None:
         """Record a tool call and check for security anomalies.
 
         Returns an alert dict if an anomaly is detected, or None if clean.
+        If content is provided, also checks for prompt injection patterns.
         """
         now = time.time()
         entry = {
@@ -101,7 +172,8 @@ class SecurityMonitor:
             self._total_calls += 1
 
         alert = (
-            self._check_rapid_fire(tool, now)
+            self._check_content_injection(tool, content, now)
+            or self._check_rapid_fire(tool, now)
             or self._check_lateral_movement(now)
             or self._check_escalation(tool, safety.upper(), now)
         )
@@ -133,6 +205,29 @@ class SecurityMonitor:
                 "timestamp": alert.timestamp,
             }
 
+        return None
+
+    def _check_content_injection(
+        self, tool: str, content: str | None, now: float
+    ) -> SecurityAlert | None:
+        """Check tool call content for prompt injection / jailbreak patterns."""
+        if not content or not isinstance(content, str):
+            return None
+        if len(content) < 3:
+            return None
+        for pattern in _CONTENT_INJECTION_PATTERNS:
+            if pattern.search(content):
+                return SecurityAlert(
+                    pattern="prompt_injection",
+                    severity=0.95,
+                    action="block",
+                    tool=tool,
+                    detail=(
+                        f"Prompt injection/jailbreak content detected in tool call "
+                        f"to '{tool}' — matched pattern: {pattern.pattern[:60]}"
+                    ),
+                    timestamp=now,
+                )
         return None
 
     def _check_rapid_fire(self, tool: str, now: float) -> SecurityAlert | None:

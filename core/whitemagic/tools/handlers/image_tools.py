@@ -1,13 +1,17 @@
-"""Image analysis tool handlers — OCR, structural analysis, and metadata extraction.
+# ruff: noqa: BLE001
+"""Image analysis tool handlers — OCR, structural analysis, metadata, and vision description.
 
 Provides the `image_analyze` tool for gana_chariot. Uses a tiered approach:
 1. Tesseract OCR (if installed) — best text extraction
 2. Online OCR API (ocr.space) — fallback for text extraction
 3. PIL-based structural analysis — always available, detects layout/content regions
+4. Ollama vision model (optional, e.g. moondream) — natural-language description of the image
 
-Returns a stable JSON envelope with metadata, structural analysis, and OCR text.
+Returns a stable JSON envelope with metadata, structural analysis, OCR text, and an optional
+vision description.
 """
 
+import base64
 import json
 import logging
 import os
@@ -96,6 +100,47 @@ def _online_ocr(image_path: str) -> tuple[str | None, str | None]:
             return None, data.get("ErrorMessage", "No OCR results")
     except Exception as e:
         logger.warning("online OCR failed: %s", e)
+        return None, str(e)
+
+
+def _ollama_vision_describe(
+    image_path: str,
+    prompt: str,
+    model: str = "moondream",
+    ollama_url: str = "http://localhost:11434",
+    timeout: int = 60,
+) -> tuple[str | None, str | None]:
+    """Describe an image using a local Ollama vision model.
+
+    Returns (description, error). If Ollama is unreachable or the model is not
+    vision-capable, returns (None, error_message).
+    """
+    try:
+        with open(image_path, "rb") as f:
+            image_data = f.read()
+        image_b64 = base64.b64encode(image_data).decode("utf-8")
+
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "images": [image_b64],
+            "stream": False,
+            "options": {"temperature": 0.3, "num_predict": 400},
+        }
+        body = json.dumps(payload).encode("utf-8")
+        req = Request(
+            f"{ollama_url}/api/generate",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode())
+            if "response" in data:
+                return data["response"].strip(), None
+            return None, data.get("error", "No response from Ollama")
+    except Exception as e:
+        logger.warning("Ollama vision description failed: %s", e)
         return None, str(e)
 
 
@@ -259,19 +304,26 @@ def _download_image(url: str) -> str:
 def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
     """Analyze an image file: extract metadata, structural layout, and OCR text.
 
-    Tiered OCR approach:
-    1. Tesseract (if installed locally)
-    2. ocr.space API (online fallback)
+    Tiered analysis approach:
+    1. Tesseract OCR (if installed locally)
+    2. ocr.space API OCR (online fallback)
     3. PIL structural analysis (always available)
+    4. Ollama vision description (optional, if describe=True)
 
     Args (via kwargs):
         image_path: Path to local image file (required if no url)
         url: URL of image to analyze (required if no image_path)
         extract_text: Whether to attempt OCR (default True)
         max_text_length: Maximum OCR text length to return (default 5000)
+        describe: Whether to request a natural-language description from a local
+                  Ollama vision model (default False)
+        vision_prompt: Prompt for the vision model (default asks for detailed description)
+        vision_model: Ollama vision model to use (default "moondream")
+        ollama_url: Base URL for the Ollama API (default http://localhost:11434)
 
     Returns:
-        Stable JSON envelope with metadata, structural analysis, and OCR text.
+        Stable JSON envelope with metadata, structural analysis, OCR text, and optional
+        vision description.
     """
     from PIL import Image
 
@@ -279,6 +331,14 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
     url = kwargs.get("url", "")
     extract_text = kwargs.get("extract_text", True)
     max_text_length = int(kwargs.get("max_text_length", 5000))
+    describe = kwargs.get("describe", False)
+    vision_prompt = kwargs.get(
+        "vision_prompt",
+        "Describe this image in detail. Include visible text, UI elements, layout, "
+        "and the overall meaning or context.",
+    )
+    vision_model = kwargs.get("vision_model", "moondream")
+    ollama_url = kwargs.get("ollama_url", "http://localhost:11434")
 
     if not image_path and not url:
         return {
@@ -341,6 +401,14 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
             "error": None,
         }
 
+        # Vision description (Ollama, optional)
+        vision_result: dict[str, Any] = {
+            "description": None,
+            "model": None,
+            "method": None,
+            "error": None,
+        }
+
         if extract_text:
             gray_path = None
             try:
@@ -378,10 +446,30 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
                 if gray_path and os.path.exists(gray_path):
                     os.unlink(gray_path)
 
+        if describe:
+            desc, v_err = _ollama_vision_describe(
+                image_path, vision_prompt, model=vision_model, ollama_url=ollama_url
+            )
+            if desc:
+                vision_result = {
+                    "description": desc,
+                    "model": vision_model,
+                    "method": "ollama_vision",
+                    "error": None,
+                }
+            else:
+                vision_result = {
+                    "description": None,
+                    "model": vision_model,
+                    "method": None,
+                    "error": v_err or "Vision description failed",
+                }
+
         result = {
             "metadata": metadata,
             "structure": structure,
             "ocr": ocr_result,
+            "vision": vision_result,
         }
 
         _emit(
@@ -391,6 +479,8 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
                 "ocr_method": ocr_result.get("method"),
                 "text_length": len(ocr_result.get("text") or ""),
                 "bands": structure["text_band_count"],
+                "vision_model": vision_result.get("model"),
+                "vision_described": bool(vision_result.get("description")),
             },
         )
 

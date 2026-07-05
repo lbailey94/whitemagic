@@ -546,9 +546,11 @@ BROWSER_TOOLS: list[ToolDefinition] = [
     ToolDefinition(
         name="image_analyze",
         description="Analyze an image file: extract metadata, structural layout (content regions, "
-        "text bands, grid map, dominant colors), and OCR text. Uses tiered OCR: "
-        "tesseract (local) → ocr.space API (online) → PIL structural analysis (always). "
-        "Accepts a local file path or URL. Belongs to gana_chariot (perception/navigation).",
+        "text bands, grid map, dominant colors), OCR text, and optional natural-language "
+        "description via a local Ollama vision model (moondream). Uses tiered analysis: "
+        "tesseract OCR → ocr.space API OCR → PIL structural analysis → Ollama vision "
+        "description (if describe=True). Accepts a local file path or URL. "
+        "Belongs to gana_chariot (perception/navigation).",
         category=ToolCategory.BROWSER,
         safety=ToolSafety.READ,
         input_schema={
@@ -571,6 +573,26 @@ BROWSER_TOOLS: list[ToolDefinition] = [
                     "type": "integer",
                     "description": "Max OCR text length to return (default 5000)",
                     "default": 5000,
+                },
+                "describe": {
+                    "type": "boolean",
+                    "description": "Request a natural-language description from a local Ollama vision model (default false)",
+                    "default": False,
+                },
+                "vision_prompt": {
+                    "type": "string",
+                    "description": "Prompt for the vision model (default asks for detailed description)",
+                    "default": "Describe this image in detail. Include visible text, UI elements, layout, and the overall meaning or context.",
+                },
+                "vision_model": {
+                    "type": "string",
+                    "description": "Ollama vision model to use (default moondream)",
+                    "default": "moondream",
+                },
+                "ollama_url": {
+                    "type": "string",
+                    "description": "Base URL for the Ollama API (default http://localhost:11434)",
+                    "default": "http://localhost:11434",
                 },
             },
         },

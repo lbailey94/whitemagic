@@ -14,6 +14,9 @@ export default function HomePage() {
               <p className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
                 Cognitive operating system for AI agents
               </p>
+              <p className="mb-4 text-sm font-medium text-muted">
+                Designed by AI, for AI — not another chat-to-code interface, but a cognitive OS that helps AI think better.
+              </p>
               <blockquote className="mb-6 max-w-2xl border-l-2 border-lavender/40 pl-4">
                 <p className="font-head text-lg italic leading-relaxed text-muted">
                   When you treat humans and AI as tools, you don&apos;t see their full promise and potential.
@@ -344,7 +347,7 @@ export default function HomePage() {
           </article>
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/coming-soon" className="btn-ghost">
+          <Link href="/getting-started" className="btn-ghost">
             See the roadmap
           </Link>
           <Link href="/vision" className="btn-ghost">

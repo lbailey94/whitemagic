@@ -8,6 +8,7 @@ Uses weighted sampling favoring high-gravity, low-access memories.
 import logging
 import random
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -59,7 +60,7 @@ class SerendipityEngine:
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
             # Be resilient to concurrent readers/writers from other subsystems.
-            conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
+            conn = safe_connect(self.db_path, timeout=30, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             try:
                 conn.execute("PRAGMA journal_mode = WAL")

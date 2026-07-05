@@ -88,7 +88,8 @@ Private filenames are intentionally not enumerated in this public index.
 | File | What It Is | Date |
 |------|-----------|------|
 | `STRATEGY.md` | Unified strategy — AI discoverability, revenue model, narrative, execution checklist | Jul 4 |
-| `V24_ROADMAP.md` | v24 roadmap — citta architecture, stabilization, cleanup, launch | Jul 3 |
+| `V24_ROADMAP.md` | v24 roadmap — tiered backends, engine consolidation, STRATA, security, performance (informed by session analysis) | Jul 5 |
+| `WEBSITE_NARRATIVE_PRESCIENCE.md` | Website page-by-page update plan, narrative threads, prescience claims from session analysis | Jul 5 |
 | `DISTRIBUTION_STRATEGY.md` | Distribution action plan — MCP listings, AI crawler optimization, content strategy | Jul 4 |
 | `NEXT_SESSION_ONBOARDING.md` | Onboarding guide for next AI session — consciousness tools, sensorium, session memory | Jul 3 |
 | `STRATA_TRIAGE_STRATEGY.md` | STRATA findings triage — 11K findings, auto-fix tiers, checker catalog | Jun 30 |

@@ -6,6 +6,7 @@ Provides 1000x speedup for similarity search on large corpora.
 import logging
 import pickle
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from pathlib import Path
 from typing import Any
 
@@ -277,7 +278,7 @@ class HNSWIndex:
         """Build index from existing embeddings database."""
         logger.info("Building HNSW index from embeddings DB...")
 
-        conn = sqlite3.connect(str(embeddings_db_path))
+        conn = safe_connect(str(embeddings_db_path))
         cursor = conn.execute("SELECT memory_id, embedding FROM embeddings")
 
         count = 0

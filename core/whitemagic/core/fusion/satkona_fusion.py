@@ -21,6 +21,7 @@ Phase: 2 (Fusion Opportunities)
 import logging
 import os
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -167,7 +168,7 @@ def get_constellation_density(
     Returns dict of quadrant -> memory count.
     """
     if conn is None:
-        conn = sqlite3.connect(str(MEM_DB))
+        conn = safe_connect(str(MEM_DB))
         close_conn = True
     else:
         close_conn = False
@@ -262,7 +263,7 @@ def get_dream_insights(limit: int = 10) -> list:
 
     """
     try:
-        conn = sqlite3.connect(str(MEM_DB))
+        conn = safe_connect(str(MEM_DB))
         rows = conn.execute(
             """
             SELECT content FROM memories

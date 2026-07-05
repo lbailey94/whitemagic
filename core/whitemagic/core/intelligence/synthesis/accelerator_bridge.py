@@ -1,7 +1,7 @@
 # ruff: noqa: BLE001
 import json
 import logging
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +55,7 @@ class AcceleratorBridge:
 
     def _promote_cluster_patterns(self, cluster_key: str) -> Any:
         """Promote Sol patterns from a successful cluster to the Solution Library."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         rows = conn.execute(
             "SELECT content FROM cluster_patterns WHERE cluster_id = ? AND pattern_type = 'Sol'",
             (cluster_key,),

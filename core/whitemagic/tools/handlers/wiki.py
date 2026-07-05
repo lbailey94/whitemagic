@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -49,7 +50,7 @@ _VALID_CATEGORIES = {
 
 
 def _get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = safe_connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.executescript(_WIKI_SCHEMA)
     return conn

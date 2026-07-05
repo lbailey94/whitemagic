@@ -116,13 +116,12 @@ class DharmaGovernor:
             metric = get_coherence_metric()
             # Measure with actual memory count for accurate assessment
             try:
-                import sqlite3
 
                 from whitemagic.config.paths import WM_ROOT
 
                 db_path = WM_ROOT / "memory" / "whitemagic.db"
                 if db_path.exists():
-                    conn = sqlite3.connect(str(db_path))
+                    conn = safe_connect(str(db_path))
                     count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
                     conn.close()
                     metric.measure(memories_accessible=count)

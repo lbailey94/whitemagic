@@ -1,19 +1,38 @@
 export const WM_FACTS = {
   version: "24.0.1",
-  verifiedDate: "July 4, 2026",
+  verifiedDate: "July 5, 2026",
   linesShort: "336K",
   linesLong: "336,000",
   callableTools: "614",
   dispatchTools: "586",
   ganaTools: "28",
   bridgeFunctions: "151",
-  testsPassing: "4191",
-  testsSkipped: "19",
+  testsPassing: "4205",
+  testsSkipped: "22",
   testsFailing: "0",
   testsFailingNote: "All tests pass cleanly. Suite runs in ~120s.",
   languages: "7",
   memories: "49,486",
-  galaxies: "10",
+  galaxies: "11",
+  // Tiered backend system (v24)
+  backendTiers: "3",
+  backendTiersDetail: "SQLite (per-galaxy) + DuckDB (analytics) + PostgreSQL (concurrency)",
+  // Engine system
+  engines: "28",
+  engineGardens: "28",
+  engineGanas: "28",
+  // Prescience
+  prescienceClaims: "28",
+  prescienceValidated: "21",
+  presciencePoints: "523",
+  // Session analysis
+  sessionsAnalyzed: "59",
+  sessionTurns: "36,718",
+  // STRATA
+  strataFindings: "1,555",
+  strataReduction: "58.9%",
+  // Security
+  securityScore: "85",
   // Performance benchmarks (July 2026)
   perfMedianMs: "29-33",
   perfP95Ms: "36-55",

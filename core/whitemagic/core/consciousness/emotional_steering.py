@@ -16,7 +16,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from whitemagic.config import paths as paths_mod
 
 
 class EmotionalSignal(Enum):

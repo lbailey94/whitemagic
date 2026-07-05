@@ -11,6 +11,7 @@ Provides:
 import json
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from enum import Enum
 from typing import Any
 
@@ -99,12 +100,11 @@ class PolyglotDB:
             logger.warning("SQLite pool initialization failed: %s", e, exc_info=True)
             # Fallback to direct connection
             try:
-                import sqlite3
 
                 from whitemagic.config.paths import MEMORY_DIR
 
                 db_path = MEMORY_DIR / "whitemagic.db"
-                self.sqlite_pool = sqlite3.connect(
+                self.sqlite_pool = safe_connect(
                     str(db_path), check_same_thread=False
                 )
                 logger.debug("SQLite direct connection initialized")

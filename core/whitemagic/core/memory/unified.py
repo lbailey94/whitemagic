@@ -106,6 +106,12 @@ class UnifiedMemory:
             self.base_path.mkdir(parents=True, exist_ok=True)
             self.db_path = self.base_path / "whitemagic.db"
 
+        # v24: Use GalaxyAwareBackend for per-galaxy SQLite routing
+        # This isolates corruption risk and reduces lock contention
+        from whitemagic.core.memory.backends.galaxy_router import GalaxyAwareBackend
+        self._galaxy_backend = GalaxyAwareBackend(self.db_path)
+        # Keep .backend pointing to the default SQLiteBackend for backward compat
+        # (code that accesses self.backend directly still works)
         self.backend = SQLiteBackend(self.db_path)
 
         # Holographic Memory (lazy-loaded via property)
@@ -202,9 +208,9 @@ class UnifiedMemory:
         # v14.1.1: Content hash dedup — check for exact duplicates before anything else
         content_hash = hashlib.sha256(str(content).encode()).hexdigest()
         try:
-            existing_id = self.backend.find_by_content_hash(content_hash)
+            existing_id = self._galaxy_backend.find_by_content_hash(content_hash)
             if existing_id:
-                existing = self.backend.recall(existing_id)
+                existing = self._galaxy_backend.recall(existing_id)
                 if existing:
                     existing.access_count += 1
                     existing.accessed_at = datetime.now()
@@ -271,7 +277,7 @@ class UnifiedMemory:
             **kwargs,
         )
 
-        self.backend.store(memory, content_hash=content_hash)
+        self._galaxy_backend.store(memory, content_hash=content_hash)
 
         # Index in Holographic Memory (5D Spatial: x, y, z, w, v)
         if enable_holographic_index and self.holographic:
@@ -348,7 +354,7 @@ class UnifiedMemory:
 
     def recall(self, memory_id: str) -> Memory | None:
         """Recall a specific memory by ID. Promotes it inward on the Galactic Map."""
-        memory = self.backend.recall(memory_id)
+        memory = self._galaxy_backend.recall(memory_id)
         if memory and memory.galactic_distance > 0.0:
             # Spiral inward: reduce galactic distance by 5% on each recall
             # A memory at the far edge (0.95) would need ~60 recalls to reach core
@@ -365,7 +371,7 @@ class UnifiedMemory:
                memory_type: MemoryType | None = None, min_importance: float = 0.0,
                limit: int = 10, galaxy: str | None = None) -> list[Memory]:
         """Search memories with various filters."""
-        results = self.backend.search(query=query, tags=tags, memory_type=memory_type,
+        results = self._galaxy_backend.search(query=query, tags=tags, memory_type=memory_type,
                                  min_importance=min_importance, limit=limit, galaxy=galaxy)
 
         # Annotate results with constellation context via hooks (breaks circular dep)

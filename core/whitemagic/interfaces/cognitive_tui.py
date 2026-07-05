@@ -396,7 +396,7 @@ if HAS_TEXTUAL:
             """Handle slash commands."""
             parts = cmd.split(maxsplit=1)
             command = parts[0]
-            args = parts[1] if len(parts) > 1 else ""
+            parts[1] if len(parts) > 1 else ""
 
             if command == "/quit":
                 self.exit()

@@ -715,13 +715,12 @@ def _get_citta_predecessor_context() -> dict[str, Any] | None:
 def _get_memory_count_for_sensorium() -> int:
     """Get total memory count from the SQLite backend."""
     try:
-        import sqlite3
 
         from whitemagic.config.paths import WM_ROOT
 
         db_path = WM_ROOT / "memory" / "whitemagic.db"
         if db_path.exists():
-            conn = sqlite3.connect(str(db_path))
+            conn = safe_connect(str(db_path))
             count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
             conn.close()
             return count

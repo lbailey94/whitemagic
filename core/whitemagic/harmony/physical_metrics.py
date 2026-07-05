@@ -318,7 +318,7 @@ class PhysicalMetricsSource:
                         temps.append({"type": zone_name, "temp": val})
                 except (ValueError, OSError):
                     continue
-            pkg_temp = next((t["temp"] for t in temps), None)
+            next((t["temp"] for t in temps), None)
 
             # Memory
             mem = psutil.virtual_memory()

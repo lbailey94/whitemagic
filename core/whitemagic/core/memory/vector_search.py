@@ -11,6 +11,7 @@ import logging
 import math
 import os
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import struct
 import threading
 from collections import Counter
@@ -137,12 +138,12 @@ class VectorSearch:
 
     def _init_db(self) -> None:
         os.makedirs(os.path.dirname(self._db),exist_ok=True)
-        with sqlite3.connect(self._db) as c:
+        with safe_connect(self._db) as c:
             c.execute("CREATE TABLE IF NOT EXISTS embeddings(memory_id TEXT PRIMARY KEY,vector BLOB,title TEXT DEFAULT '',snippet TEXT DEFAULT '')")
 
     def _load(self) -> None:
         try:
-            with sqlite3.connect(self._db) as c:
+            with safe_connect(self._db) as c:
                 for mid,vb,t,s in c.execute("SELECT memory_id,vector,title,snippet FROM embeddings"):
                     n=len(vb)//4
                     vec=list(struct.unpack(f"{n}f",vb))
@@ -174,7 +175,7 @@ class VectorSearch:
         vec = vecs[0]
         blob = struct.pack(f"{len(vec)}f",*vec)
         snip = content[:300]
-        with sqlite3.connect(self._db) as c:
+        with safe_connect(self._db) as c:
             c.execute("INSERT OR REPLACE INTO embeddings(memory_id,vector,title,snippet) VALUES(?,?,?,?)",(memory_id,blob,title,snip))
         with self._lock:
             self._cache[memory_id]=vec
@@ -356,7 +357,7 @@ def get_vector_status() -> dict[str, Any]:
 
     try:
         if db_exists:
-            with sqlite3.connect(db) as c:
+            with safe_connect(db) as c:
                 row = c.execute("SELECT COUNT(*) FROM embeddings").fetchone()
                 indexed = int(row[0]) if row else 0
     except Exception as e:

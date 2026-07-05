@@ -1,5 +1,5 @@
 import logging
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,7 +19,7 @@ class ConfidenceLearner:
 
     def _init_db(self) -> Any:
         """Ensure the confidence table exists."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         conn.execute("""
             CREATE TABLE IF NOT EXISTS cluster_confidence (
                 cluster_key TEXT PRIMARY KEY,
@@ -33,7 +33,7 @@ class ConfidenceLearner:
 
     def report_outcome(self, cluster_key: str, success: bool) -> Any:
         """Update confidence based on execution results."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         now = datetime.now().isoformat()
 
         if success:
@@ -69,7 +69,7 @@ class ConfidenceLearner:
 
     def get_score(self, cluster_key: str) -> float:
         """Calculate a confidence multiplier (0.5 to 1.5)."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         row = conn.execute(
             "SELECT success_count, failure_count FROM cluster_confidence WHERE cluster_key = ?",
             (cluster_key,),

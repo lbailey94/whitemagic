@@ -163,7 +163,7 @@ def process_queue(limit: int = 10) -> dict[str, Any]:
         item.status = "running"
         with _handlers_lock:
             handler_fn = _handlers.get(item.handler, _default_handler)
-        start = time.monotonic()
+        time.monotonic()
         try:
             result = handler_fn(item)
             item.status = "done"

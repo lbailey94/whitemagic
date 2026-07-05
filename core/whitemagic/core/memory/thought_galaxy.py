@@ -10,6 +10,7 @@ Enables introspection, pattern mining, and retrieval of past reasoning strategie
 import json
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import uuid
 from datetime import datetime
 from typing import Any
@@ -27,7 +28,7 @@ class ThoughtGalaxy:
 
     def _init_db(self):
         """Initialize the thought galaxy schema."""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS cognitive_episodes (
                     id TEXT PRIMARY KEY,
@@ -50,7 +51,7 @@ class ThoughtGalaxy:
         if not episode.id:
             episode.id = str(uuid.uuid4())
 
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO cognitive_episodes
                 (id, timestamp, task_type, strategy, thought_trace, context_summary,
@@ -97,7 +98,7 @@ class ThoughtGalaxy:
             logger.warning("Failed to retrieve Golden Rules: %s", e, exc_info=True)
 
         # 2. Fetch from Galaxy DB
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT * FROM cognitive_episodes
@@ -123,7 +124,7 @@ class ThoughtGalaxy:
         query += " ORDER BY outcome_score ASC LIMIT ?"
         params.append(str(limit))
 
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(query, tuple(params)).fetchall()
             return [self._row_to_episode(row) for row in rows]
@@ -144,7 +145,7 @@ class ThoughtGalaxy:
 
     def stats(self) -> dict[str, Any]:
         """Return statistics about the thought galaxy."""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             count = conn.execute("SELECT COUNT(*) FROM cognitive_episodes").fetchone()[0]
             avg_score = conn.execute("SELECT AVG(outcome_score) FROM cognitive_episodes").fetchone()[0] or 0.0
 

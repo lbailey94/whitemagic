@@ -6,6 +6,7 @@ Implements title-boosted vector scoring to lift recall from 48% → 70%.
 import logging
 import re
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -97,7 +98,7 @@ class OpenDomainRecall:
 
         Returns top-k results combining vector, title, and keyword scores.
         """
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
 
         cursor = conn.execute("""
             SELECT m.id, m.title, m.content, e.embedding
@@ -203,7 +204,7 @@ class OpenDomainRecall:
 
     def _title_search(self, query: str, k: int) -> list[SearchResult]:
         """Title-only search."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         cursor = conn.execute("""
             SELECT id, title, content FROM memories
             WHERE memory_type != 'quarantined' AND title IS NOT NULL
@@ -230,7 +231,7 @@ class OpenDomainRecall:
 
     def _keyword_search(self, query: str, k: int) -> list[SearchResult]:
         """Keyword/FTS search."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
 
         # Use FTS if available, otherwise fall back to LIKE
         try:

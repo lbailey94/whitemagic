@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -101,7 +102,7 @@ class KaizenEngine:
 
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            conn = sqlite3.connect(self.db_path)
+            conn = safe_connect(self.db_path)
             conn.row_factory = sqlite3.Row
             self._conn = conn
         return self._conn

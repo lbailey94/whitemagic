@@ -10,6 +10,7 @@ using the LLM Bridge and 4D spatial context.
 import json
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -78,7 +79,7 @@ class SectorSynthesizer:
             return ""
 
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = safe_connect(self.db_path)
             conn.row_factory = sqlite3.Row
             placeholders = ",".join("?" * len(memory_ids))
             rows = conn.execute(

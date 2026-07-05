@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -200,7 +201,7 @@ class CoreAccessLayer:
 
             from whitemagic.config.paths import DB_PATH
 
-            self._conn = sqlite3.connect(
+            self._conn = safe_connect(
                 str(DB_PATH), timeout=30, check_same_thread=False
             )
             self._conn.row_factory = sqlite3.Row

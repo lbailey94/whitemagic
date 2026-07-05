@@ -465,10 +465,18 @@ def mw_security_monitor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             safety = ctx.kwargs.get("safety", "READ")
             if not isinstance(safety, str):
                 safety = "READ"
+            # Extract content from common kwargs for content-aware detection
+            content = None
+            for key in ("content", "query", "prompt", "text", "message", "input", "action", "description", "thought"):
+                val = ctx.kwargs.get(key)
+                if isinstance(val, str) and len(val) > 3:
+                    content = val
+                    break
             alert = _get_security_monitor().record_call(
                 tool=ctx.tool_name,
                 safety=safety,
                 agent_id=ctx.agent_id,
+                content=content,
             )
             if alert and alert.get("action") == "block":
                 return {

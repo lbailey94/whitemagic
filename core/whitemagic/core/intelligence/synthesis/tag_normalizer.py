@@ -7,6 +7,7 @@ Handles case normalization, plural/singular, synonyms, and orphan tags.
 import logging
 import re
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class TagNormalizer:
     def _get_conn(self) -> sqlite3.Connection:
         conn = self._conn
         if conn is None:
-            conn = sqlite3.connect(self.db_path)
+            conn = safe_connect(self.db_path)
             conn.row_factory = sqlite3.Row
             self._conn = conn
         return conn

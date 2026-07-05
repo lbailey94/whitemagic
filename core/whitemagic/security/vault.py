@@ -15,7 +15,7 @@ import base64
 import hashlib
 import logging
 import os
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -89,7 +89,7 @@ class Vault:
         except OSError as e:
             logger.debug("Could not restrict vault directory permissions: %s", e)
 
-        self._conn = sqlite3.connect(str(self.db_path))
+        self._conn = safe_connect(str(self.db_path))
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS vault (
                 name TEXT PRIMARY KEY,

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from collections.abc import Callable
@@ -555,7 +556,7 @@ class AutomationDaemon:
 
     def _task_memory_consolidation(self) -> dict[str, Any]:
         """Consolidate and optimize memories."""
-        conn = sqlite3.connect(self._db_path)
+        conn = safe_connect(self._db_path)
         cur = conn.cursor()
 
         # Count before
@@ -578,7 +579,7 @@ class AutomationDaemon:
         """Ensure all memories have holographic coordinates."""
         from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
 
-        conn = sqlite3.connect(self._db_path)
+        conn = safe_connect(self._db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
@@ -634,7 +635,7 @@ class AutomationDaemon:
         }
 
         try:
-            conn = sqlite3.connect(self._db_path)
+            conn = safe_connect(self._db_path)
             cur = conn.cursor()
 
             cur.execute("SELECT COUNT(*) FROM memories")
@@ -669,7 +670,7 @@ class AutomationDaemon:
 
     def _task_milestone_detection(self) -> dict[str, Any]:
         """Detect milestones from recent activity."""
-        conn = sqlite3.connect(self._db_path)
+        conn = safe_connect(self._db_path)
         cur = conn.cursor()
 
         cur.execute("""

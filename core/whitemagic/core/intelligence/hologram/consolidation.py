@@ -5,6 +5,7 @@ import itertools
 import logging
 import math
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
@@ -73,7 +74,7 @@ class HolographicConsolidator:
 
     def get_all_coords_batched(self, batch_size: int = 50000) -> Any:
         """Generator to fetch coordinates without loading everything into RAM at once."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         cursor = conn.execute("""
@@ -176,7 +177,7 @@ class HolographicConsolidator:
         self, clusters: list[MemoryCluster], batch_size: int = 100
     ) -> Any:
         """Batch-hydrate titles and importance for multiple clusters."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         # N+1 fix: collect all unique IDs across all clusters, fetch in one query per batch
@@ -255,7 +256,7 @@ class HolographicConsolidator:
         logger.info("⏳ Hydrating %s clusters...", len(clusters))
         await self.hydrate_clusters(clusters)
 
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
 
         # Semaphore to limit concurrent LLM calls
         semaphore = asyncio.Semaphore(3)

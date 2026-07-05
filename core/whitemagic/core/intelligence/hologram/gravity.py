@@ -26,6 +26,7 @@ Output: Continuous value in [0.0, 1.0+] range
 import logging
 import math
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -203,7 +204,7 @@ class GravityCalculator:
 
     def recalculate_all(self, dry_run: bool = True) -> dict[str, Any]:
         """Recalculate gravity for all memories."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         memories = conn.execute("""

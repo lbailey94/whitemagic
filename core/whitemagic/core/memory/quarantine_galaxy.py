@@ -6,6 +6,7 @@ Moves noisy/duplicate memories from active DB to archival quarantine.
 import hashlib
 import os
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 
 from whitemagic.core.memory.unified_types import MemoryGalaxy
@@ -40,7 +41,7 @@ class QuarantineGalaxy(MemoryGalaxy):
         """Initialize quarantine database."""
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.executescript('''
             CREATE TABLE IF NOT EXISTS memories (
                 id TEXT PRIMARY KEY,
@@ -75,7 +76,7 @@ class QuarantineGalaxy(MemoryGalaxy):
         import sqlite3
 
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = safe_connect(self.db_path)
             conn.execute('''
                 INSERT OR REPLACE INTO memories
                 (id, content, content_hash, source_galaxy, reason, moved_at, original_metadata)
@@ -102,7 +103,7 @@ class QuarantineGalaxy(MemoryGalaxy):
 
         content_hash = self.calculate_content_hash(content)
 
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         cursor = conn.execute(
             'SELECT id, content, reason, moved_at FROM memories WHERE content_hash = ?',
             (content_hash,)
@@ -123,7 +124,7 @@ class QuarantineGalaxy(MemoryGalaxy):
         """Get quarantine statistics."""
         import sqlite3
 
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         cursor = conn.execute('''
             SELECT reason, COUNT(*) FROM memories GROUP BY reason
         ''')
@@ -200,7 +201,7 @@ class NoisyMemoryDetector:
         """Scan active DB and identify quarantine candidates."""
         import sqlite3
 
-        conn = sqlite3.connect(db_path)
+        conn = safe_connect(db_path)
         conn.row_factory = sqlite3.Row
 
         cursor = conn.execute('''

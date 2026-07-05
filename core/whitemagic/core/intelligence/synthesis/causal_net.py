@@ -4,7 +4,7 @@ Infers directed edges between memory clusters using 4D holographic coordinates.
 """
 
 import logging
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import subprocess
 from pathlib import Path
 from typing import Any, cast
@@ -32,7 +32,7 @@ class CausalNet:
         `query`, using the existing holographic coordinate gradient logic.
         """
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = safe_connect(str(self.db_path))
             rows = conn.execute(
                 "SELECT memory_id FROM memories_fts WHERE memories_fts MATCH ? LIMIT 50",
                 (query or "*",),
@@ -115,7 +115,7 @@ class CausalNet:
             if synthesis_engine and hasattr(synthesis_engine, "infer_dag_from_coords"):
                 # Build cluster_data dict for Rust
                 cluster_data: dict[str, Any] = {}
-                conn = sqlite3.connect(str(self.db_path))
+                conn = safe_connect(str(self.db_path))
                 for key, mids in active_clusters.items():
                     placeholders = ",".join("?" for _ in mids)
                     rows = conn.execute(
@@ -152,7 +152,7 @@ class CausalNet:
 
         # Python fallback
         cluster_data_py: dict[str, dict[str, Any]] = {}
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
 
         for key, mids in active_clusters.items():
             placeholders = ",".join("?" for _ in mids)

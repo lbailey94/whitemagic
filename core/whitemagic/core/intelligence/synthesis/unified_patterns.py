@@ -406,7 +406,7 @@ class UnifiedPatternAPI:
         """Search for frequently co-occurring tags in the database."""
         import sqlite3
 
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 

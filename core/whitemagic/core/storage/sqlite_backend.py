@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import time
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,7 @@ class SQLiteBackend:
 
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3.connect(str(self.db_path))
+            self._conn = safe_connect(str(self.db_path))
             self._conn.row_factory = sqlite3.Row
         return self._conn
 

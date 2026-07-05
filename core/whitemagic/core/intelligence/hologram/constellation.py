@@ -17,6 +17,7 @@ Axes:
 import logging
 import math
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -50,7 +51,7 @@ class ConstellationSearch:
 
     def _get_all_with_coords(self) -> list[dict]:
         """Get all memories with coordinates."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
         results = conn.execute("""
             SELECT m.id, m.title, m.content, m.importance,
@@ -71,7 +72,7 @@ class ConstellationSearch:
         limit: int = 10,
     ) -> list[SearchResult]:
         """Find memories near a 4D point using SQL range optimization."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         # Use a bounding box to limit search before fine-grained distance check
@@ -127,7 +128,7 @@ class ConstellationSearch:
         limit: int = 20,
     ) -> list[SearchResult]:
         """Find memories within a 4D sector using SQL."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         results = conn.execute(
@@ -173,7 +174,7 @@ class ConstellationSearch:
         self, memory_id: str, radius: float = 0.4, limit: int = 10
     ) -> list[SearchResult]:
         """Find memories near a specific memory."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         row = conn.execute(
@@ -276,7 +277,7 @@ class ConstellationSearch:
 
     def stats(self) -> dict[str, Any]:
         """Get distribution stats using SQL aggregates (O(1) memory)."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         row = conn.execute("""

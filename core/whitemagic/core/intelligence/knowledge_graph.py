@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 from dataclasses import dataclass
 from typing import Any
@@ -79,7 +80,7 @@ class KnowledgeGraph:
 
             if not DB_PATH.exists():
                 return None
-            conn = sqlite3.connect(str(DB_PATH))
+            conn = safe_connect(str(DB_PATH))
             conn.execute("PRAGMA journal_mode=WAL")
             return conn
         except (ImportError, ModuleNotFoundError):

@@ -4,7 +4,7 @@ Based on Grimoire Chapter 22: Well Deep Search.
 """
 
 import logging
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from enum import Enum
 
@@ -122,7 +122,7 @@ class MemoryNetworkExplorer:
     async def get_high_density_clusters(self, limit: int = 5) -> list[list[str]]:
         """Find naturally occurring high-density clusters in the Data Sea."""
         # This leverages the SQL holographic_coords table and tag counts
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             # Simple tag-based density first
             cursor = conn.execute(
                 """
@@ -153,7 +153,7 @@ class MemoryNetworkExplorer:
         """Find linked memories via DB associations and holographic proximity."""
         neighbors = []
 
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             # 1. Explicit associations
             cursor = conn.execute(
                 """

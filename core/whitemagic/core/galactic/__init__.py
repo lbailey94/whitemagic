@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from collections.abc import Iterator
@@ -114,7 +115,7 @@ def connect(read_only: bool = True) -> Iterator[sqlite3.Connection]:
             "Set WM_STATE_ROOT or WM_MEMORY_DB, or run the rehydration script."
         )
     uri = f"file:{path}?mode=ro" if read_only else f"file:{path}"
-    conn = sqlite3.connect(uri, uri=True, timeout=5.0)
+    conn = safe_connect(uri, uri=True, timeout=5.0)
     conn.row_factory = sqlite3.Row
     try:
         yield conn

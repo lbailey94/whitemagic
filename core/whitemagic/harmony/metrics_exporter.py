@@ -115,11 +115,10 @@ class MetricsExporter:
 
         # Memory metrics
         try:
-            import sqlite3
 
             from whitemagic.config.paths import DB_PATH
 
-            conn = sqlite3.connect(str(DB_PATH))
+            conn = safe_connect(str(DB_PATH))
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM memories")
             mem_count = cur.fetchone()[0]

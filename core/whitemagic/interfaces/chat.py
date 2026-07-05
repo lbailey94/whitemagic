@@ -889,7 +889,7 @@ class ChatLoop:
 
     def _generate_greeting(self) -> str:
         """Generate a contextual greeting based on sensorium."""
-        sensorium = self._sensorium_builder.build()
+        self._sensorium_builder.build()
 
         # Use continuity info if available
         try:

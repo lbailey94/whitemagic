@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 import math
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -114,7 +115,7 @@ class InvariantTracker:
         shannon_entropy = 0.0
 
         try:
-            conn = sqlite3.connect(self._db_path)
+            conn = safe_connect(self._db_path)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
 

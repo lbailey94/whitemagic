@@ -13,6 +13,7 @@ const ROUTES = [
   { path: "/governance", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/about", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/research", priority: 0.8, changeFrequency: "weekly" as const },
+  { path: "/bitter-lesson", priority: 0.7, changeFrequency: "monthly" as const },
   { path: "/timeline", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/prescience", priority: 0.7, changeFrequency: "monthly" as const },
   { path: "/performance", priority: 0.7, changeFrequency: "monthly" as const },

@@ -10,6 +10,7 @@ Fixes the scalability issue where _load_all() loads everything into RAM.
 import hashlib
 import json
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
@@ -74,7 +75,7 @@ class LazyMemoryStore:
 
     def _init_db(self) -> None:
         """Initialize SQLite index"""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS memories (
                     id TEXT PRIMARY KEY,
@@ -125,7 +126,7 @@ class LazyMemoryStore:
 
         # Index in SQLite
         content_preview = str(content)[:100] if content else ""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO memories
                 (id, memory_type, created_at, importance, content_preview, file_path)
@@ -179,7 +180,7 @@ class LazyMemoryStore:
 
     def search_by_tag(self, tag: str, limit: int = 10) -> list[MemoryMetadata]:
         """Search memories by tag (O(1) via index)"""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             cursor = conn.execute("""
                 SELECT m.id, m.memory_type, m.created_at, m.importance,
                        m.content_preview, m.file_path
@@ -211,7 +212,7 @@ class LazyMemoryStore:
     def search_by_importance(self, min_importance: float = 0.5,
                             limit: int = 10) -> list[MemoryMetadata]:
         """Search memories by importance threshold"""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             cursor = conn.execute("""
                 SELECT id, memory_type, created_at, importance,
                        content_preview, file_path
@@ -241,7 +242,7 @@ class LazyMemoryStore:
 
     def get_count(self) -> int:
         """Get total memory count (O(1))"""
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             cursor = conn.execute("SELECT COUNT(*) FROM memories")
             row = cursor.fetchone()
             if row is None:
@@ -269,7 +270,7 @@ class LazyMemoryStore:
             if file_path.exists():
                 file_path.unlink()
 
-            with sqlite3.connect(self.db_path) as conn:
+            with safe_connect(self.db_path) as conn:
                 conn.execute("DELETE FROM tags WHERE memory_id = ?", (memory_id,))
                 conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
 

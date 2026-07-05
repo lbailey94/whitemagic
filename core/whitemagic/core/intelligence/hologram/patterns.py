@@ -12,6 +12,7 @@ Outputs insights for decision-making engines.
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -51,7 +52,7 @@ class HolographicPatternEngine:
         self.db_path = db_path or DB_PATH
 
     def _get_memories(self) -> list[dict]:
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
         results = conn.execute("""
             SELECT m.id, m.title, m.content, m.importance, m.memory_type,
@@ -64,7 +65,7 @@ class HolographicPatternEngine:
 
     def detect_density_patterns(self) -> list[Pattern]:
         """Find regions of high memory density using SQL grouping."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
 
         # SQL-based spatial bucketing
@@ -113,7 +114,7 @@ class HolographicPatternEngine:
 
     def detect_temporal_flows(self) -> list[Pattern]:
         """Detect patterns in time dimension (Z-axis) using SQL."""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
 
         counts = conn.execute("""
             SELECT

@@ -2,8 +2,8 @@
 
 import os
 import tempfile
+from unittest.mock import patch
 
-import pytest
 from PIL import Image, ImageDraw
 
 
@@ -101,6 +101,65 @@ class TestImageAnalyzeHandler:
         assert meta["file_size_bytes"] > 0
         assert result["structure"]["dimensions"]["width"] == 200
         assert result["structure"]["dimensions"]["height"] == 200
+
+    def test_vision_disabled_by_default(self):
+        from whitemagic.tools.handlers.image_tools import handle_image_analyze
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            _make_test_image(tmp.name)
+            result = handle_image_analyze(
+                image_path=tmp.name,
+                extract_text=False,
+            )
+            os.unlink(tmp.name)
+
+        assert result["status"] == "success"
+        assert result["vision"]["description"] is None
+        assert result["vision"]["method"] is None
+
+    def test_vision_description_success(self):
+        from whitemagic.tools.handlers.image_tools import handle_image_analyze
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            _make_test_image(tmp.name)
+            with patch(
+                "whitemagic.tools.handlers.image_tools._ollama_vision_describe"
+            ) as mock_describe:
+                mock_describe.return_value = ("A white square with test content.", None)
+                result = handle_image_analyze(
+                    image_path=tmp.name,
+                    extract_text=False,
+                    describe=True,
+                    vision_model="moondream",
+                )
+            os.unlink(tmp.name)
+
+        assert result["status"] == "success"
+        assert result["vision"]["description"] == "A white square with test content."
+        assert result["vision"]["model"] == "moondream"
+        assert result["vision"]["method"] == "ollama_vision"
+        assert result["vision"]["error"] is None
+
+    def test_vision_description_failure_is_graceful(self):
+        from whitemagic.tools.handlers.image_tools import handle_image_analyze
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            _make_test_image(tmp.name)
+            with patch(
+                "whitemagic.tools.handlers.image_tools._ollama_vision_describe"
+            ) as mock_describe:
+                mock_describe.return_value = (None, "Ollama unreachable")
+                result = handle_image_analyze(
+                    image_path=tmp.name,
+                    extract_text=False,
+                    describe=True,
+                    vision_model="moondream",
+                )
+            os.unlink(tmp.name)
+
+        assert result["status"] == "success"
+        assert result["vision"]["description"] is None
+        assert result["vision"]["error"] == "Ollama unreachable"
 
 
 class TestImageAnalyzeRegistry:

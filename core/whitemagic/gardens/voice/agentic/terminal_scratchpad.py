@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -102,7 +103,7 @@ class TerminalScratchpad:
     def _save_to_memory(self) -> None:
         """Serialize thoughts and save to SQLite."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = safe_connect(self.db_path)
             cursor = conn.cursor()
 
             # Format content as markdown

@@ -7,6 +7,7 @@ Bridges the gap between raw pattern extraction and actionable code.
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -50,7 +51,7 @@ class SolutionLibrary:
 
     def _init_db(self) -> Any:
         """Ensure solution-specific tables exist."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         conn.execute("""
             CREATE TABLE IF NOT EXISTS solutions (
                 id TEXT PRIMARY KEY,
@@ -71,7 +72,7 @@ class SolutionLibrary:
         self, solution: Solution, index_holographically: bool = True
     ) -> Any:
         """Add a solution to the library and optionally index it in 4D space."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         conn.execute(
             """
             INSERT OR REPLACE INTO solutions (id, title, description, code_snippet, pattern_type, confidence, tags, metadata, created_at)
@@ -104,7 +105,7 @@ class SolutionLibrary:
 
     def get_solution(self, solution_id: str) -> Solution | None:
         """Retrieve a specific solution."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT * FROM solutions WHERE id = ?", (solution_id,)
@@ -190,7 +191,7 @@ class SolutionLibrary:
 
     def migrate_from_cluster_patterns(self) -> Any:
         """Migrate existing patterns from the 'cluster_patterns' table into the Solution Library."""
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         patterns = conn.execute("SELECT * FROM cluster_patterns").fetchall()
 

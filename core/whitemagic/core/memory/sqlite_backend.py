@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from whitemagic.core.memory.db_manager import get_db_pool
+from whitemagic.core.memory.db_manager import check_db_integrity, get_db_pool
 from whitemagic.core.memory.unified_types import Memory, MemoryType
 from whitemagic.utils.core import parse_datetime
 
@@ -80,6 +80,10 @@ class SQLiteBackend:
         set centrally in db_manager.ConnectionPool._create_connection().
         """
         self._auto_backup()
+        # Periodic integrity check — catches corruption early before it propagates
+        integrity = check_db_integrity(str(self.db_path))
+        if integrity not in ("ok", "ok (cached)"):
+            logger.error("Database corruption detected at init: %s", integrity)
         with self.pool.connection() as conn:
 
             # 1. Memories table

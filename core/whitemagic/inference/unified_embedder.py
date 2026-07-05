@@ -179,12 +179,11 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
     Returns:
         Number of memories embedded
     """
-    import sqlite3
 
     if embedder is None:
         embedder = UnifiedEmbedder()
 
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     cursor = conn.execute(
         "SELECT id, content FROM memories WHERE memory_type != 'quarantined'"
     )

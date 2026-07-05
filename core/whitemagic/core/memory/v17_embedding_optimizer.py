@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -108,7 +109,7 @@ class V17EmbeddingOptimizer:
                 """
                 Create a new conn.
                 """
-                conn = sqlite3.connect(str(DB_PATH))
+                conn = safe_connect(str(DB_PATH))
                 conn.execute("PRAGMA journal_mode=WAL")
                 conn.execute("PRAGMA synchronous=NORMAL")
                 conn.execute("PRAGMA mmap_size=268435456")

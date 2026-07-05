@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -57,7 +58,7 @@ class EmergenceEngine:
         self._start_listening()
 
     def _get_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
 

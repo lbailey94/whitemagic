@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from dataclasses import dataclass
@@ -141,7 +142,7 @@ class KnowledgeGraphV2:
 
             if not DB_PATH.exists():
                 return None
-            conn = sqlite3.connect(str(DB_PATH))
+            conn = safe_connect(str(DB_PATH))
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
             return conn

@@ -3,7 +3,7 @@
 
 import logging
 import shutil
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -98,7 +98,7 @@ def _load_cached_db_stats() -> dict[str, Any]:
         db = Path(DB_PATH)
         if not db.exists():
             return {"path": str(db), "exists": False}
-        conn = sqlite3.connect(str(db))
+        conn = safe_connect(str(db))
         try:
             count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
         finally:

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import uuid
 from datetime import datetime
 
@@ -49,14 +50,14 @@ class SQLiteBackend:
         self._init_db()
 
     def _init_db(self) -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with safe_connect(self.db_path) as conn:
             conn.executescript(SCHEMA)
 
     def get_connection(self) -> sqlite3.Connection:
         """
         Get the connection.
         """
-        return sqlite3.connect(self.db_path)
+        return safe_connect(self.db_path)
 
 class MemoryManager:
     """High-level facade for memory operations."""

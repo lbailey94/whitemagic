@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import threading
 from dataclasses import dataclass
 from typing import Any
@@ -158,7 +159,7 @@ class ResonanceEngine:
             from whitemagic.config.paths import DB_PATH
 
             self._db_path = str(DB_PATH)
-        conn = sqlite3.connect(self._db_path)
+        conn = safe_connect(self._db_path)
         conn.row_factory = sqlite3.Row
         return conn
 

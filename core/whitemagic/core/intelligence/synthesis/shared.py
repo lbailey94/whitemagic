@@ -5,6 +5,7 @@ Unifies logic for velocity tracking, intent classification, and pattern bridging
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -35,7 +36,7 @@ def calculate_unified_velocity(
         "total": 0,
     }
     try:
-        conn = sqlite3.connect(db_path)
+        conn = safe_connect(db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         cur.execute("""

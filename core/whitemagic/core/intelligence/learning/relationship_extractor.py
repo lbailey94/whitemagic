@@ -17,6 +17,7 @@ Usage:
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -197,7 +198,7 @@ def extract_relationships(
         logger.error("Database not found at %s", db_path)
         return {}
 
-    conn = sqlite3.connect(str(db_path), timeout=300.0)
+    conn = safe_connect(str(db_path), timeout=300.0)
     conn.row_factory = sqlite3.Row
 
     try:

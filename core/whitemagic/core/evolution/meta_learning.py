@@ -6,7 +6,7 @@ about its own learning process.
 """
 
 import json
-import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -80,7 +80,7 @@ class MetaLearningEngine:
 
     def _init_db(self):
         """Initialize meta-learning database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         c = conn.cursor()
 
         # Pattern metrics table
@@ -139,7 +139,7 @@ class MetaLearningEngine:
         sources: list[str],
     ) -> None:
         """Update metrics for a pattern after application"""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         c = conn.cursor()
 
         c.execute("SELECT * FROM pattern_metrics WHERE pattern_id = ?", (pattern_id,))
@@ -208,7 +208,7 @@ class MetaLearningEngine:
 
     def discover_meta_patterns(self) -> list[MetaPattern]:
         """Analyze pattern metrics to discover meta-patterns"""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         c = conn.cursor()
 
         meta_patterns = []
@@ -302,7 +302,7 @@ class MetaLearningEngine:
 
     def _save_meta_patterns(self, meta_patterns: list[MetaPattern]):
         """Save meta-patterns to database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         c = conn.cursor()
 
         # N+1 fix: executemany instead of per-row INSERT loop
@@ -327,7 +327,7 @@ class MetaLearningEngine:
         self, context: dict, limit: int = 5
     ) -> list[tuple[str, float, str]]:
         """Recommend patterns based on context and meta-learning"""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         c = conn.cursor()
 
         c.execute(
@@ -373,7 +373,7 @@ class MetaLearningEngine:
 
     def get_meta_learning_summary(self) -> dict:
         """Get summary of meta-learning insights"""
-        conn = sqlite3.connect(self.db_path)
+        conn = safe_connect(self.db_path)
         c = conn.cursor()
 
         # Overall stats

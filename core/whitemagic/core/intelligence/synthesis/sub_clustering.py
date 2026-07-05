@@ -6,6 +6,7 @@ and quadrant-based segmentation.
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from typing import Any
 
@@ -49,7 +50,7 @@ class SubClusteringEngine:
     def _get_conn(self) -> sqlite3.Connection:
         conn = self._conn
         if conn is None:
-            conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
+            conn = safe_connect(self.db_path, timeout=30, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             try:
                 conn.execute("PRAGMA journal_mode = WAL")

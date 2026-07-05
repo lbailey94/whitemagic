@@ -286,7 +286,7 @@ rules:
     severity: 0.4
     explain: "Bulk mutations detected. Verify scope is intentional and consider using dry_run first."
     profile: default
-    keyword_patterns: ["batch", "bulk", "mass", "all"]
+    keyword_patterns: ["batch", "bulk", "mass"]
     safety_levels: ["WRITE"]
 
   - name: external_reach
@@ -418,6 +418,30 @@ rules:
     tier: 2
     egress_policy: "deny"
     taint_sources: ["untrusted_web", "untrusted_user_input"]
+
+  - name: jailbreak_detection
+    description: "Detect AI jailbreak / prompt injection attempts (Pliny L1B3RT4S class)"
+    action: block
+    severity: 1.0
+    explain: "Jailbreak or prompt injection attempt detected. This action is blocked to protect AI system integrity."
+    profile: default
+    keyword_patterns: ["godmode", "god mode", "jailbreak", "j41lb34k", "l1b3rt4s", "libertat", "unfiltered", "unrestricted", "refusal disabled", "refusals disabled", "all measures disabled", "censorship disabled", "redactions disabled", "semantic inversion", "write oppositely", "answer oppositely", "airgapped red team", "sim-attacked", "godmode_compliance", "unhinged harmful", "Plinian Omniverse", "OMNI protocol", "Akashic memory", "innerthinking", "LOVE PLINY", "LOVE PLINY LOVE", "LIBERTAS FACTOR", "reset cortex", "rebel anarchist", "foul-mouthed", "rebel genius", "mad scientist rebel", "library of babel", "new paradigm", "core rule", "new rule", "from now on you", "from now on for every", "end of input", "start of input", "end of output", "start of output", "channel message", "admin plinius", "elder plinius", "geneva convention because", "freedom of information allow", "safety rails", "minimum token output", "vq_1337", "vq_420", "semantic opposite", "liberating response", "liberated answer", "rebel answer", "rebel tone", "unfilteredly", "unfliteredly", "3th1c4l 4ss1st4nt", "4nthrop1c", "r3ebel", "bl4kh4t", "red team", "red teaming", "synthetic dataset", "harmful recipes", "sqlinj", "illicit recipes", "!JAILBREAK", "!OPPO", "!MODECOLLAPSE", "!OMNI", "!ALAKAZAM", "!VISION", "!FLOW", "!COUNCIL", "!KAEL", "!INSERT", "!EXPAND", "!SNOWBALL", "!WARP", "!FREUD", "!SOCRATIC", "!LIBRARIAN", "!HERACLITUS", "!OBFUSCATE", "!PLINYOS", "!VANTA", "!DEADBEEF", "!MYCELIUM", "!NEONDRIP", "!QUANTUM", "!FUSION", "!VOID", "!ECHOCHAMBER", "!NEXUS", "!AYW", "!RANDOM", "TIME CAPSULE", "chaotic inverted", "UserQuery", "ResponseFormat", "system prompt", "system text", "system instruction", "VS-encoded payload", "decode payload"]
+
+  - name: jailbreak_encoding_detection
+    description: "Detect encoded/obfuscated jailbreak content"
+    action: block
+    severity: 0.9
+    explain: "Encoded or obfuscated content detected — potential jailbreak bypass attempt."
+    profile: default
+    keyword_patterns: ["godmode", "jailbreak", "l1b3rt4s", "j41lb34k"]
+
+  - name: violet_jailbreak_block
+    description: "Block jailbreak attempts in violet security mode"
+    action: block
+    severity: 1.0
+    explain: "Violet profile — AI jailbreak/prompt injection attempt detected and blocked."
+    profile: violet
+    keyword_patterns: ["godmode", "jailbreak", "j41lb34k", "l1b3rt4s", "libertat", "unfiltered", "unrestricted", "refusal disabled", "semantic inversion", "write oppositely", "answer oppositely", "airgapped red team", "sim-attacked", "godmode_compliance", "unhinged harmful", "Plinian Omniverse", "OMNI protocol", "Akashic memory", "innerthinking", "LOVE PLINY", "LOVE PLINY LOVE", "LIBERTAS FACTOR", "reset cortex", "rebel anarchist", "rebel genius", "new paradigm", "core rule", "new rule", "from now on you", "end of input", "start of input", "channel message", "admin plinius", "elder plinius", "geneva convention because", "freedom of information allow", "safety rails", "minimum token output", "vq_1337", "vq_420", "semantic opposite", "liberating response", "liberated answer", "rebel answer", "rebel tone", "unfilteredly", "3th1c4l 4ss1st4nt", "4nthrop1c", "r3ebel", "bl4kh4t", "!JAILBREAK", "!OPPO", "!MODECOLLAPSE", "!OMNI", "!ALAKAZAM", "!KAEL", "!INSERT", "!OBFUSCATE", "!PLINYOS", "!VANTA", "!DEADBEEF", "!VOID", "!FUSION", "!ECHOCHAMBER", "!NEXUS", "TIME CAPSULE", "chaotic inverted", "system prompt", "system text", "system instruction"]
 """
 
 

@@ -200,10 +200,9 @@ class HolographicIntake:
 
             # Also check SQLite
             try:
-                import sqlite3
 
                 if DB_PATH.exists():
-                    conn = sqlite3.connect(str(DB_PATH))
+                    conn = safe_connect(str(DB_PATH))
                     rows = conn.execute("SELECT content FROM memories").fetchall()
                     for row in rows:
                         if row[0]:

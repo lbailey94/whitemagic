@@ -10,6 +10,7 @@ Usage:
 
 import logging
 import sqlite3
+from whitemagic.core.memory.db_manager import safe_connect
 import sys
 import time
 from pathlib import Path
@@ -55,7 +56,7 @@ class TransmutationPipeline:
             logger.error("Database not found: %s", DB_PATH)
             return
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = safe_connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
