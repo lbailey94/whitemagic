@@ -536,13 +536,16 @@ def handle_alchemical_cycle(**kwargs: Any) -> dict[str, Any]:
     """
     task = kwargs.get("task", "")
     if not task:
-        raise ValueError("task is required")
+        return {"status": "error", "error_code": "invalid_params", "message": "task is required"}
 
-    cycles = int(kwargs.get("cycles", 2))
+    cycles = int(kwargs.get("cycles", 1))
 
     from whitemagic.core.intelligence.alchemical_loop import run_alchemical_cycle
 
-    result = run_alchemical_cycle(task=task, cycles=cycles)
+    try:
+        result = run_alchemical_cycle(task=task, cycles=cycles)
+    except Exception as exc:
+        return {"status": "error", "error_code": "alchemical_failed", "message": str(exc)[:200]}
 
     _emit(
         "ALCHEMICAL_CYCLE",

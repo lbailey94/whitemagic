@@ -66,11 +66,13 @@ def handle_reconsolidation_mark(**kwargs: Any) -> dict[str, Any]:
     """Mark memory for reconsolidation."""
     memory_id = kwargs.get("memory_id")
     if not memory_id:
-        return {"status": "error", "error": "memory_id required"}
+        return {"status": "error", "error_code": "invalid_params", "message": "memory_id required"}
 
     from whitemagic.core.memory.unified import get_unified_memory
 
     mem = get_unified_memory()
+    if not hasattr(mem, "mark_for_reconsolidation"):
+        return {"status": "error", "error_code": "not_implemented", "message": "mark_for_reconsolidation not available on UnifiedMemory"}
     mem.mark_for_reconsolidation(memory_id)
     return {"status": "success", "memory_id": memory_id}
 
@@ -81,11 +83,13 @@ def handle_reconsolidation_update(**kwargs: Any) -> dict[str, Any]:
     updates = kwargs.get("updates", {})
 
     if not memory_id:
-        return {"status": "error", "error": "memory_id required"}
+        return {"status": "error", "error_code": "invalid_params", "message": "memory_id required"}
 
     from whitemagic.core.memory.unified import get_unified_memory
 
     mem = get_unified_memory()
+    if not hasattr(mem, "update_reconsolidated"):
+        return {"status": "error", "error_code": "not_implemented", "message": "update_reconsolidated not available on UnifiedMemory"}
     mem.update_reconsolidated(memory_id, updates)
     return {"status": "success", "memory_id": memory_id, "updated": True}
 

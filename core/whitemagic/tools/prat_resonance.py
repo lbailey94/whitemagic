@@ -22,6 +22,7 @@ import time
 from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Any
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

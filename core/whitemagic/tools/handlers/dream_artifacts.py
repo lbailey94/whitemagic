@@ -17,11 +17,12 @@ from whitemagic.tools.unified_api import make_result
 logger = logging.getLogger(__name__)
 
 
-def handle_dream_list(params: dict[str, Any]) -> dict[str, Any]:
+def handle_dream_list(**kwargs: Any) -> dict[str, Any]:
     """List dream artifacts."""
     try:
         from whitemagic.core.dreaming.dream_artifacts import list_dreams
 
+        params = kwargs
         status_filter = params.get("status")
         dreams = list_dreams(status_filter=status_filter)
         return make_result(
@@ -37,17 +38,18 @@ def handle_dream_list(params: dict[str, Any]) -> dict[str, Any]:
         return make_result("dream.list", {}, error=str(exc))
 
 
-def handle_dream_read(params: dict[str, Any]) -> dict[str, Any]:
+def handle_dream_read(**kwargs: Any) -> dict[str, Any]:
     """Read a single dream artifact by ID."""
     try:
         from whitemagic.core.dreaming.dream_artifacts import read_dream, revisit_dream
 
+        params = kwargs
         dream_id = params.get("dream_id", "")
         if not dream_id:
-            return make_result("dream.read", {}, error="Missing 'dream_id' parameter")
+            return make_result("dream.read", {}, error="Missing 'dream_id' parameter", error_code="invalid_params")
         data = read_dream(dream_id)
         if data is None:
-            return make_result("dream.read", {}, error=f"Dream not found: {dream_id}")
+            return make_result("dream.read", {}, error=f"Dream not found: {dream_id}", error_code="not_found")
         # Auto-increment revisit count on read
         revisit_dream(dream_id)
         return make_result("dream.read", {"dream": data})
@@ -56,21 +58,22 @@ def handle_dream_read(params: dict[str, Any]) -> dict[str, Any]:
         return make_result("dream.read", {}, error=str(exc))
 
 
-def handle_dream_promote(params: dict[str, Any]) -> dict[str, Any]:
+def handle_dream_promote(**kwargs: Any) -> dict[str, Any]:
     """Promote a dream artifact to a real memory."""
     try:
         from whitemagic.core.dreaming.dream_artifacts import promote_dream
 
+        params = kwargs
         dream_id = params.get("dream_id", "")
         memory_id = params.get("memory_id")
         if not dream_id:
             return make_result(
-                "dream.promote", {}, error="Missing 'dream_id' parameter"
+                "dream.promote", {}, error="Missing 'dream_id' parameter", error_code="invalid_params"
             )
         result = promote_dream(dream_id, memory_id=memory_id)
         if result is None:
             return make_result(
-                "dream.promote", {}, error=f"Dream not found: {dream_id}"
+                "dream.promote", {}, error=f"Dream not found: {dream_id}", error_code="not_found"
             )
         return make_result(
             "dream.promote",
@@ -85,17 +88,18 @@ def handle_dream_promote(params: dict[str, Any]) -> dict[str, Any]:
         return make_result("dream.promote", {}, error=str(exc))
 
 
-def handle_dream_expire(params: dict[str, Any]) -> dict[str, Any]:
+def handle_dream_expire(**kwargs: Any) -> dict[str, Any]:
     """Expire a dream artifact (soft delete)."""
     try:
         from whitemagic.core.dreaming.dream_artifacts import expire_dream
 
+        params = kwargs
         dream_id = params.get("dream_id", "")
         if not dream_id:
-            return make_result("dream.expire", {}, error="Missing 'dream_id' parameter")
+            return make_result("dream.expire", {}, error="Missing 'dream_id' parameter", error_code="invalid_params")
         result = expire_dream(dream_id)
         if result is None:
-            return make_result("dream.expire", {}, error=f"Dream not found: {dream_id}")
+            return make_result("dream.expire", {}, error=f"Dream not found: {dream_id}", error_code="not_found")
         return make_result(
             "dream.expire",
             {

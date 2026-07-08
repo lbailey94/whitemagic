@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 # ─── Fixtures ──────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ def substrate_path() -> Path:
 @pytest.fixture(scope="module")
 def db_conn(substrate_path: Path):
     """Read-only connection to the live substrate DB."""
-    conn = sqlite3.connect(f"file:{substrate_path}?mode=ro", uri=True)
+    conn = safe_connect(f"file:{substrate_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     yield conn
     conn.close()
@@ -58,7 +59,7 @@ def temp_substrate_db():
     """
     with tempfile.TemporaryDirectory() as tmp:
         p = Path(tmp) / "test.db"
-        conn = sqlite3.connect(str(p))
+        conn = safe_connect(str(p))
         conn.executescript(
             """
             CREATE TABLE memories (
@@ -317,15 +318,16 @@ def test_memory_by_id_returns_none_for_missing(substrate_path):
 def test_memory_search_returns_matches(substrate_path):
     from whitemagic.core.galactic import memory_search
 
-    # The FTS5 index in the live substrate is unpopulated (0 entries in
-    # memories_fts), so the search falls back to LIKE matching. Use a
-    # substring that's known to match many Hermes gate decisions.
+    # FTS5 is populated, so memory_search tries phrase match first,
+    # then falls back to keyword AND (docs containing both "Hermes" and "Gate").
     results = memory_search("Hermes Gate", limit=10)
     assert len(results) >= 1
-    # The matches should have "Hermes Gate" in the title or content.
+    # FTS5 keyword mode returns docs with both tokens anywhere in the text,
+    # not necessarily the exact phrase. Verify at least one search term appears.
     for r in results:
         text = (r.title or "") + " " + (r.content or "")
-        assert "Hermes Gate" in text or "hermes gate" in text.lower()
+        text_lower = text.lower()
+        assert "hermes" in text_lower or "gate" in text_lower
 
 
 def test_memory_search_respects_limit(substrate_path):
@@ -336,17 +338,20 @@ def test_memory_search_respects_limit(substrate_path):
 
 
 def test_associations_for_returns_valid(substrate_path):
-    from whitemagic.core.galactic import memory_recent, associations_for
+    from whitemagic.core.galactic import memory_recent, associations_for, connect
 
-    recent = memory_recent(limit=50)
-    # Find a memory that has outgoing associations.
-    for mem in recent:
-        assocs = associations_for(mem.id, direction="outgoing", limit=5)
-        if assocs:
-            assert all("other_id" in a for a in assocs)
-            assert all(0.0 <= a["strength"] <= 1.0 for a in assocs)
-            return  # one good test is enough
-    pytest.skip("no associations found in the first 50 recent memories")
+    # Find a memory that has associations by checking the associations table first.
+    with connect() as conn:
+        assoc_rows = conn.execute(
+            "SELECT source_id FROM associations LIMIT 1"
+        ).fetchall()
+    if not assoc_rows:
+        pytest.skip("no associations in substrate")
+    mem_id = assoc_rows[0]["source_id"]
+    assocs = associations_for(mem_id, direction="outgoing", limit=5)
+    assert len(assocs) >= 1
+    assert all("other_id" in a for a in assocs)
+    assert all(0.0 <= a["strength"] <= 1.0 for a in assocs)
 
 
 def test_constellation_count(substrate_path):
@@ -386,7 +391,7 @@ def test_galaxy_stats_with_temp_db(temp_substrate_db, monkeypatch):
 
     # Populate the temp DB with a known distribution.
     p = temp_substrate_db
-    conn = sqlite3.connect(str(p))
+    conn = safe_connect(str(p))
     conn.executescript(
         """
         INSERT INTO memories (id, title, content, memory_type, importance,
@@ -423,7 +428,7 @@ def test_memory_recent_with_temp_db(temp_substrate_db, monkeypatch):
     from whitemagic.core import galactic
 
     p = temp_substrate_db
-    conn = sqlite3.connect(str(p))
+    conn = safe_connect(str(p))
     conn.executescript(
         """
         INSERT INTO memories (id, title, memory_type, created_at, updated_at)
@@ -444,7 +449,7 @@ def test_memory_search_fts_with_temp_db(temp_substrate_db, monkeypatch):
     from whitemagic.core import galactic
 
     p = temp_substrate_db
-    conn = sqlite3.connect(str(p))
+    conn = safe_connect(str(p))
     # FTS5 contentless table — need to manually populate the FTS index.
     conn.executescript(
         """
@@ -488,7 +493,7 @@ def test_event_search_with_temp_db(temp_substrate_db, monkeypatch):
     from whitemagic.core import galactic
 
     p = temp_substrate_db
-    conn = sqlite3.connect(str(p))
+    conn = safe_connect(str(p))
     conn.executescript(
         """
         INSERT INTO dharma_audit

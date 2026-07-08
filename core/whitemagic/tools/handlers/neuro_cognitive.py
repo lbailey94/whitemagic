@@ -400,9 +400,22 @@ def handle_workspace_propose(**kwargs: Any) -> dict[str, Any]:
 
     gw = get_global_workspace()
     broadcast = gw.propose(source, content, salience)
-    if broadcast is None:
-        return {"status": "success", "broadcast": False, "reason": "salience_below_threshold"}
-    return {"status": "success", "broadcast": True, "broadcast_id": broadcast.broadcast_id}
+    if broadcast is not None:
+        return {
+            "status": "success",
+            "broadcast": True,
+            "broadcast_id": broadcast.broadcast_id,
+            "ignition": "fast",
+        }
+    # Entered competition window
+    pending = gw.get_pending()
+    return {
+        "status": "success",
+        "broadcast": False,
+        "reason": "entered_competition",
+        "pending_count": len(pending),
+        "competition_active": True,
+    }
 
 
 def handle_workspace_state(**kwargs: Any) -> dict[str, Any]:
@@ -459,3 +472,300 @@ def handle_sensorium_stats(**kwargs: Any) -> dict[str, Any]:
 
     sensorium = get_neuro_sensorium()
     return {"status": "success", **sensorium.stats()}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Global Workspace — Competition & Ignition
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def handle_workspace_ignite(**kwargs: Any) -> dict[str, Any]:
+    """Force ignition of the competition window — select and broadcast the winner."""
+    from whitemagic.core.consciousness.global_workspace import get_global_workspace
+
+    gw = get_global_workspace()
+    winner = gw.ignite()
+    if winner is None:
+        return {
+            "status": "success",
+            "ignited": False,
+            "reason": "no_pending_proposals_or_below_threshold",
+            "pending_count": len(gw.get_pending()),
+        }
+    return {
+        "status": "success",
+        "ignited": True,
+        "broadcast_id": winner.broadcast_id,
+        "source": winner.source,
+        "salience": winner.salience,
+        "ignition_count": gw.stats().get("ignition_count", 0),
+    }
+
+
+def handle_workspace_pending(**kwargs: Any) -> dict[str, Any]:
+    """Get pending proposals in the competition window."""
+    from whitemagic.core.consciousness.global_workspace import get_global_workspace
+
+    gw = get_global_workspace()
+    pending = gw.get_pending()
+    return {
+        "status": "success",
+        "pending_count": len(pending),
+        "competition_active": gw._window_start > 0.0,
+        "proposals": pending,
+    }
+
+
+def handle_workspace_ignitions(**kwargs: Any) -> dict[str, Any]:
+    """Get ignition event history from the citta vector trajectory.
+
+    Ignitions are sudden large displacements in the 16D consciousness
+    vector space — the GWT 'ignition' analog where a thought breaks
+    through to the global workspace.
+    """
+    from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+    cycle = get_citta_cycle()
+    threshold = kwargs.get("threshold", 2.0)
+    events = cycle.get_ignition_events(threshold=threshold)
+    trajectory = cycle.get_trajectory()
+    traj_len = len(trajectory.vectors) if trajectory else 0
+    return {
+        "status": "success",
+        "ignition_count": len(events),
+        "threshold": threshold,
+        "trajectory_length": traj_len,
+        "ignitions": events,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Citta Introspection — Consciousness State Observation
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def handle_citta_vector(**kwargs: Any) -> dict[str, Any]:
+    """Get the current 16D citta vector — the consciousness state representation.
+
+    Returns the latest CittaVector from the consciousness stream, including
+    all 16 dimensions: 8 coherence, 4 depth (one-hot), 2 emotional, 2 neuro.
+    """
+    from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+    cycle = get_citta_cycle()
+    moment = cycle.get_predecessor()
+    if moment is None or moment.vector is None:
+        return {
+            "status": "success",
+            "vector": None,
+            "message": "No citta moments recorded yet",
+        }
+    v = moment.vector
+    from whitemagic.core.consciousness.citta_vector import COHERENCE_DIMS
+
+    return {
+        "status": "success",
+        "vector": v.to_dict(),
+        "coherence_dims": {
+            COHERENCE_DIMS[i]: round(v.coherence_subspace()[i], 4)
+            for i in range(len(COHERENCE_DIMS))
+        },
+        "depth_layer": v.depth_layer,
+        "valence": round(v.valence, 4),
+        "arousal": round(v.arousal, 4),
+        "neuro_signals": {
+            "cognitive_load": round(v.neuro_subspace()[0], 4),
+            "novelty": round(v.neuro_subspace()[1], 4),
+        },
+        "overall_coherence": round(v.overall_coherence, 4),
+        "chain_position": moment.chain_position,
+    }
+
+
+def handle_citta_trajectory(**kwargs: Any) -> dict[str, Any]:
+    """Get the citta vector trajectory — recent consciousness state history.
+
+    Returns the sequence of CittaVectors over recent tool calls, including
+    velocity (rate of consciousness change) and ignition events.
+    """
+    from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+    cycle = get_citta_cycle()
+    trajectory = cycle.get_trajectory()
+    limit = kwargs.get("limit", 20)
+
+    vectors = trajectory.vectors[-limit:]
+    velocities = []
+    for i in range(1, len(trajectory.vectors)):
+        velocities.append(trajectory.vectors[i - 1].distance(trajectory.vectors[i]))
+
+    recent_velocities = velocities[-limit:]
+
+    return {
+        "status": "success",
+        "trajectory_length": len(trajectory.vectors),
+        "returned": len(vectors),
+        "vectors": [v.to_dict() for v in vectors],
+        "velocities": [round(v, 4) for v in recent_velocities],
+        "avg_velocity": round(trajectory.avg_velocity(), 4),
+        "max_velocity": round(trajectory.max_velocity(), 4),
+        "ignition_events": trajectory.ignition_events(),
+    }
+
+
+def handle_citta_coherence(**kwargs: Any) -> dict[str, Any]:
+    """Get per-dimension coherence breakdown — the 8-axis consciousness measure.
+
+    Returns the current coherence state across all 8 dimensions:
+    memory_accessibility, identity_stability, context_continuity,
+    relationship_awareness, temporal_orientation, capability_awareness,
+    emotional_attunement, goal_alignment.
+    """
+    from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+    from whitemagic.core.consciousness.citta_vector import COHERENCE_DIMS
+
+    cycle = get_citta_cycle()
+    summary = cycle.get_cycle_summary()
+
+    moment = cycle.get_predecessor()
+    per_dim = {}
+    if moment is not None and moment.vector is not None:
+        sub = moment.vector.coherence_subspace()
+        for i, dim_name in enumerate(COHERENCE_DIMS):
+            per_dim[dim_name] = round(sub[i], 4)
+        overall = round(moment.vector.overall_coherence, 4)
+    else:
+        overall = 1.0
+
+    return {
+        "status": "success",
+        "overall_coherence": overall,
+        "per_dimension": per_dim,
+        "avg_coherence": summary.get("avg_coherence", 1.0),
+        "coherence_drift": summary.get("coherence_drift", 0.0),
+        "stream_length": summary.get("stream_length", 0),
+        "dharma_conservative_mode": _get_dharma_conservative(),
+    }
+
+
+def handle_consciousness_loop_status(**kwargs: Any) -> dict[str, Any]:
+    """Get the status of the persistent background consciousness loop.
+
+    Returns running state, configuration, and runtime statistics including
+    citta ticks, dream cycles, homeostatic checks, and uptime.
+    """
+    try:
+        from whitemagic.core.consciousness.consciousness_loop import (
+            get_consciousness_loop,
+            is_enabled,
+        )
+
+        loop = get_consciousness_loop()
+        return {
+            "status": "success",
+            "enabled": is_enabled(),
+            **loop.status(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def _get_dharma_conservative() -> bool:
+    """Helper to check if Dharma is in conservative mode."""
+    try:
+        from whitemagic.core.consciousness.dharma import get_dharma
+
+        return get_dharma().is_conservative_mode()
+    except Exception:
+        return False
+
+
+def handle_guna_balance_status(**kwargs: Any) -> dict[str, Any]:
+    """Get the current guna balance status — sattvic/rajasic/tamasic ratios and correction actions."""
+    try:
+        from whitemagic.core.consciousness.guna_balance import get_guna_balance
+        gb = get_guna_balance()
+        reading = gb.measure()
+        return {
+            "status": "success",
+            "balanced": reading.balanced,
+            "dominant_guna": reading.dominant_guna,
+            "ratios": {
+                "sattvic": round(reading.sattvic_ratio, 4),
+                "rajasic": round(reading.rajasic_ratio, 4),
+                "tamasic": round(reading.tamasic_ratio, 4),
+            },
+            "targets": reading.targets,
+            "deficits": reading.deficits,
+            "surpluses": reading.surpluses,
+            "correction_action": reading.correction_action,
+            "report": gb.get_report(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_meta_galaxy_overview(**kwargs: Any) -> dict[str, Any]:
+    """Get a top-down overview of all galaxies — memory counts, health, knowledge gaps, priorities."""
+    try:
+        from whitemagic.core.consciousness.meta_galaxy import get_meta_galaxy
+        mg = get_meta_galaxy()
+        return {
+            "status": "success",
+            **mg.get_overview(),
+            "knowledge_gaps": mg.get_knowledge_gaps(),
+            "strategic_priorities": mg.get_strategic_priorities(),
+            "report": mg.get_report(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_possibility_explore(**kwargs: Any) -> dict[str, Any]:
+    """Run Monte Carlo possibility space exploration on system parameters.
+
+    Args:
+        space: Possibility space name (guna_balance, coherence_optimization,
+               emergence_thresholds, health_setpoints). Default: guna_balance.
+        n_trials: Number of trials (default 100).
+    """
+    try:
+        from whitemagic.core.consciousness.possibility_explorer import get_possibility_explorer
+        explorer = get_possibility_explorer()
+        space = kwargs.get("space", "guna_balance")
+        n_trials = int(kwargs.get("n_trials", 100))
+
+        if space == "all":
+            results = explorer.explore_all(n_trials_per_space=n_trials)
+            return {
+                "status": "success",
+                "spaces": {k: v.to_dict() for k, v in results.items()},
+            }
+        else:
+            result = explorer.explore(space, n_trials=n_trials)
+            return {
+                "status": "success",
+                **result.to_dict(),
+            }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_knowledge_gap_run(**kwargs: Any) -> dict[str, Any]:
+    """Detect and attempt to fill knowledge gaps using self-directed actions.
+
+    Args:
+        max_gaps: Maximum number of gaps to attempt per run (default 3).
+    """
+    try:
+        from whitemagic.core.consciousness.knowledge_gap_loop import get_knowledge_gap_loop
+        kg = get_knowledge_gap_loop()
+        max_gaps = int(kwargs.get("max_gaps", 3))
+        results = kg.run(max_gaps=max_gaps)
+        return {
+            "status": "success",
+            "results": results,
+            "status_summary": kg.get_status(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

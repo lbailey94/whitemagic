@@ -37,6 +37,13 @@ from whitemagic.core.intelligence.omni.universal_router import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _mock_llm_name(monkeypatch):
+    """Mock _try_llm_name globally to avoid 7-14s Ollama timeout in all tests."""
+    monkeypatch.setattr(SkillForge, "_try_llm_name", lambda self, chain: None)
+    monkeypatch.setenv("WM_SKIP_POLYGLOT", "1")
+
+
 @pytest.fixture
 def forge(tmp_path: Path) -> SkillForge:
     """Create a SkillForge with an isolated temp directory."""

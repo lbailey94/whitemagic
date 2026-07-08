@@ -189,6 +189,23 @@ def _reset_singletons():
         ("whitemagic.core.intelligence.self_model", "_model"),
         # --- Dreaming ---
         ("whitemagic.core.dreaming.dream_cycle", "_dream_cycle"),
+        # --- Consciousness subsystem ---
+        ("whitemagic.core.consciousness.citta_cycle", "_cycle"),
+        ("whitemagic.core.consciousness.citta_cycle", "_always_on"),
+        ("whitemagic.core.consciousness.citta_cycle", "_replay_delivered"),
+        ("whitemagic.core.consciousness.coherence", "_coherence"),
+        ("whitemagic.core.consciousness.coherence", "_smarana"),
+        ("whitemagic.core.consciousness.guna_balance", "_guna_balance"),
+        ("whitemagic.core.consciousness.consciousness_loop", "_loop"),
+        ("whitemagic.core.consciousness.possibility_explorer", "_explorer"),
+        ("whitemagic.core.consciousness.meta_galaxy", "_meta_galaxy"),
+        ("whitemagic.core.consciousness.knowledge_gap_loop", "_kg_loop"),
+        ("whitemagic.core.consciousness.prediction_calibration", "_calibration"),
+        ("whitemagic.core.consciousness.apotheosis_engine", "_apotheosis_engine"),
+        # --- Intelligence / inference ---
+        ("whitemagic.core.inference.router", "_router"),
+        # --- Memory / scanning ---
+        ("whitemagic.core.memory.codebase_scanner", "_scanner"),
         # --- Pattern Consciousness ---
         (
             "whitemagic.core.patterns.pattern_consciousness.resonance_cascade",

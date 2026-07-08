@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 try:
@@ -14,7 +15,7 @@ except ImportError:
 def full_rebuild_fts(db_path: Path | str | None = None):
     path = Path(db_path) if db_path else Path(DB_PATH)
     logger.debug("Connecting to %s for FULL FTS REBUILD...", path)
-    conn = sqlite3.connect(str(path))
+    conn = safe_connect(str(path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA cache_size=-65536")  # 64MB cache

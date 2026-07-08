@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from whitemagic.config.paths import DB_PATH
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +19,7 @@ class Coords:
 
 def absolute_truth_sql():
     db_path = str(DB_PATH)
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     conn.row_factory = sqlite3.Row
 
     # Mirror QueryManager logic exactly

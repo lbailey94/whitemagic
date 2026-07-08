@@ -56,7 +56,7 @@ class LazyGroup(click.Group):
                         for name, cmd in result.commands.items():
                             self.add_command(cmd, name=name)
             except ImportError as e:
-                # Graceful degradation - add a placeholder command that shows error
+                # Graceful degradation - add a fallback command that shows error
                 self.add_command(_create_missing_dep_command(str(e)))
 
         self._loaded = True
@@ -92,7 +92,7 @@ def _create_missing_dep_command(error_msg: str) -> click.Command:
     """Create a CLI command that informs the user about a missing optional dependency.
 
     This is the intended runtime behavior when an extra (e.g. 'mcp', 'api') is
-    not installed — not a development stub.
+    not installed — not a development fallback.
     """
 
     @click.command(name="unavailable")

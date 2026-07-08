@@ -310,6 +310,7 @@ def route_prat_call(
             "health_report",
             "gnosis",
             "get_telemetry_summary",
+            "tool_usage_stats",
             "rust_status",
             "tool_graph",
             "tool_graph_full",

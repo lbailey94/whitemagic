@@ -172,11 +172,11 @@ def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:
     base_path = _resolve_base_path(kwargs)
     scratchpad_id = kwargs.get("scratchpad_id")
     if not scratchpad_id:
-        raise ValueError("scratchpad_id is required")
+        return {"status": "error", "error_code": "invalid_params", "message": "scratchpad_id is required"}
     manager = ScratchpadManager(scratch_dir=base_path / "scratchpads")
     pad = manager.scratchpads.get(scratchpad_id)
     if not pad:
-        raise ValueError(f"Scratchpad not found: {scratchpad_id}")
+        return {"status": "error", "error_code": "not_found", "message": f"Scratchpad not found: {scratchpad_id}"}
     sections = defaultdict(list)
     for entry in pad.entries:
         sections[entry.get("tag") or "notes"].append(entry.get("content", ""))

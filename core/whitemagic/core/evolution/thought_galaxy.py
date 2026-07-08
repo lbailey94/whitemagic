@@ -28,9 +28,9 @@ class ThoughtGalaxy:
         self._recalculate_gravity()
 
     def _recalculate_gravity(self):
-        # Simulated gravity clustering based on tag overlap and vector similarity
+        # Gravity clustering based on tag overlap and recency
         for ep in self.episodes:
-            ep.score = len(ep.tags) * 1.5  # Placeholder scoring
+            ep.score = len(ep.tags) * 1.5
 
     def recall(self, query_tags: list[str], top_k: int = 5) -> list[CognitiveEpisode]:
         # Simple intersection scoring for now

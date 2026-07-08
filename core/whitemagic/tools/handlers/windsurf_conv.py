@@ -28,8 +28,11 @@ def handle_windsurf_read_conversation(**kwargs: Any) -> dict[str, Any]:
     reader = WindsurfConversationReader()
     path = kwargs.get("path")
     if not path:
-        return {"status": "error", "error": "path is required"}
-    conv = reader.read_conversation(path)
+        return {"status": "error", "error_code": "invalid_params", "message": "path is required"}
+    try:
+        conv = reader.read_conversation(path)
+    except FileNotFoundError:
+        return {"status": "error", "error_code": "not_found", "message": f"Conversation file not found: {path}"}
     return {"status": "success", **conv.to_dict()}
 
 
@@ -45,8 +48,11 @@ def handle_windsurf_export_conversation(**kwargs: Any) -> dict[str, Any]:
     reader = WindsurfConversationReader()
     path = kwargs.get("path")
     if not path:
-        return {"status": "error", "error": "path is required"}
-    content = reader.export_conversation(path, kwargs.get("format", "markdown"))
+        return {"status": "error", "error_code": "invalid_params", "message": "path is required"}
+    try:
+        content = reader.export_conversation(path, kwargs.get("format", "markdown"))
+    except FileNotFoundError:
+        return {"status": "error", "error_code": "not_found", "message": f"Conversation file not found: {path}"}
     return {"status": "success", "content": content}
 
 

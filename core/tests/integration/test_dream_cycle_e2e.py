@@ -233,6 +233,7 @@ class TestDreamPhaseDecay:
 class TestDreamCycleE2E:
     """End-to-end: run all 5 phases sequentially and verify rotation."""
 
+    @pytest.mark.timeout(60)
     @pytest.mark.asyncio
     async def test_full_rotation_all_phases(self):
         """Run all 5 phases and verify each produces a valid DreamReport."""
@@ -280,6 +281,7 @@ class TestDreamCycleE2E:
                 "harmonize",
             )
 
+    @pytest.mark.timeout(60)
     @pytest.mark.asyncio
     async def test_phase_rotation_wraps_around(self):
         """After 12 phases, phase 13 should be TRIAGE again."""

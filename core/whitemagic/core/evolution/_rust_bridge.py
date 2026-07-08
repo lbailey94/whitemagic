@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import queue
 import subprocess
 import threading
@@ -62,9 +61,8 @@ def _ensure_running() -> subprocess.Popen | None:
     if _available is False:
         return None
 
-    if os.environ.get("WM_SKIP_POLYGLOT", ""):
-        _available = False
-        return None
+    # Note: WM_SKIP_POLYGLOT does NOT apply here — the Rust evolution bridge
+    # is a compiled binary, not a polyglot language runtime (Julia/Elixir/etc).
 
     if _proc is not None and _proc.poll() is None:
         return _proc

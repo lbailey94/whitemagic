@@ -19,6 +19,7 @@ from whitemagic.archaeology.dig import ChariotArchaeologist, Grimoire, Ganas
 from whitemagic.config.paths import ARCHIVE_DIR
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 
@@ -29,7 +30,7 @@ def get_all_db_files(root_dir: Path) -> list[Path]:
 def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
     logger.debug(f"\n[Scanning DB] {db_path.name} ({db_path.parent.name})")
     try:
-        conn = sqlite3.connect(str(db_path))
+        conn = safe_connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 

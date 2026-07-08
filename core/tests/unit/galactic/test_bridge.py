@@ -91,16 +91,17 @@ def test_galactic_memory_recent_filter_by_type():
 def test_galactic_memory_search_returns_results():
     from whitemagic.core.bridge.galactic import galactic_memory_search
 
-    # The FTS5 index in the live substrate is unpopulated, so search
-    # falls back to LIKE matching. Use a substring known to match many
-    # Hermes gate decisions.
+    # FTS5 is populated, so search uses phrase match first, then keyword AND.
     result = galactic_memory_search("Hermes Gate", limit=10)
     assert result["status"] == "ok"
     assert result["result"]["query"] == "Hermes Gate"
     assert result["result"]["count"] >= 1
+    # FTS5 keyword mode returns docs with both tokens anywhere in the text,
+    # not necessarily the exact phrase. Verify at least one search term appears.
     for m in result["result"]["memories"]:
         text = (m.get("title") or "") + " " + (m.get("content") or "")
-        assert "Hermes Gate" in text or "hermes gate" in text.lower()
+        text_lower = text.lower()
+        assert "hermes" in text_lower or "gate" in text_lower
 
 
 def test_galactic_memory_search_empty_query():

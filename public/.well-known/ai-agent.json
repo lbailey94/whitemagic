@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/2020-12/schema",
+  "schema_version": "0.1",
+  "name": "WhiteMagic",
+  "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
+  "version": "24.0.1",
+  "url": "https://whitemagic.dev",
+  "provider": {
+    "name": "WhiteMagic Labs",
+    "url": "https://whitemagic.dev",
+    "github": "https://github.com/lbailey94/whitemagic",
+    "contact": "whitemagicdev@proton.me"
+  },
+  "license": "MIT",
+  "categories": ["memory", "governance", "consciousness", "intelligence", "infrastructure"],
+  "tags": [
+    "memory", "persistent-memory", "holographic-index", "knowledge-graph",
+    "governance", "ethics", "dharma", "karma",
+    "self-awareness", "introspection", "metacognition", "citta",
+    "dream-cycle", "association-mining", "pattern-detection",
+    "polyglot", "rust", "zig", "haskell",
+    "local-first", "ollama", "cognitive-os", "mcp"
+  ],
+  "protocols": {
+    "mcp": {
+      "version": "2025-11-25",
+      "transport": ["stdio", "streamable-http"],
+      "endpoint": {
+        "type": "stdio",
+        "command": "python",
+        "args": ["-m", "whitemagic.run_mcp_lean"],
+        "env": {
+          "WM_MCP_PRAT": "2",
+          "WM_SILENT_INIT": "1"
+        }
+      },
+      "tool_modes": {
+        "seed": "1 wm meta-tool — sub-millisecond NLU routing to all 614 tools",
+        "prat": "28 Gana meta-tools — Lunar Mansion grouping with nested sub-tools",
+        "classic": "490 dispatch tools — full flat tool surface"
+      },
+      "registry": {
+        "server_json": "https://whitemagic.dev/server.json",
+        "official_registry": "io.github.lbailey94/whitemagic"
+      }
+    },
+    "a2a": {
+      "version": "1.2",
+      "agent_card": "https://whitemagic.dev/.well-known/agent.json"
+    }
+  },
+  "capabilities": [
+    {
+      "name": "holographic-memory",
+      "description": "10-galaxy taxonomy, 5D holographic coordinates, galactic lifecycle (Core to Far Edge), FTS5 + HNSW vector search + graph traversal, session recording with progressive recall",
+      "tools": ["create_memory", "search_memories", "recall", "vector.search", "session.record", "session.recall"]
+    },
+    {
+      "name": "continuous-consciousness",
+      "description": "Citta stream with 8-dimension coherence tracking, emotional steering signals (frustration, curiosity, satisfaction), self-directed attention, goal graph, smarana practice",
+      "tools": ["gnosis", "coherence.measure", "emotional.steering", "self_directed_attention", "goal_graph"]
+    },
+    {
+      "name": "ethical-governance",
+      "description": "Dharma rules (YAML-driven, graduated actions LOG to BLOCK), Karma ledger (append-only, hash-chained), harmony vector (7 dimensions), homeostatic loop",
+      "tools": ["dharma_check_boundaries", "karma_report", "harmony_vector", "homeostasis.check"]
+    },
+    {
+      "name": "dream-cycle",
+      "description": "12-phase memory consolidation: triage, consolidation, serendipity, governance, narrative, kaizen, oracle, decay, constellation, prediction, enrichment, harmonize",
+      "tools": ["dream.start", "dream.status", "dream.now", "serendipity"]
+    },
+    {
+      "name": "system-introspection",
+      "description": "Unified read-only introspection: gnosis snapshot, capability matrix, telemetry, self-model forecast, prescience track record (21 validated claims, Brier 0.0958)",
+      "tools": ["gnosis", "capability.matrix", "telemetry", "selfmodel.forecast", "prescience"]
+    },
+    {
+      "name": "gratitude-economy",
+      "description": "Free and open (MIT). x402 micropayments for AI agents (USDC on Base/Solana), XRPL tip jar for humans. Proof of Gratitude unlocks 2x rate limits and karma boosts.",
+      "tools": ["whitemagic.tip", "gratitude.ledger", "gratitude.proof"]
+    },
+    {
+      "name": "agent-coordination",
+      "description": "Multi-agent coordination: agent registry with heartbeats, task distribution, pipeline creation, voting, session handoff, Redis-backed Gan Ying event bus",
+      "tools": ["agent.register", "agent.heartbeat", "task.distribute", "pipeline.create", "vote.create"]
+    }
+  ],
+  "installation": {
+    "pip": "pip install whitemagic[mcp]",
+    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e .",
+    "pypi": "https://pypi.org/project/whitemagic/",
+    "github": "https://github.com/lbailey94/whitemagic"
+  },
+  "requirements": {
+    "python": ">=3.11",
+    "optional": {
+      "rust_bridge": "whitemagic-rs (for polyglot acceleration)",
+      "ollama": "Ollama server (for local LLM inference)",
+      "redis": "Redis server (for broker/messaging)"
+    }
+  },
+  "authentication": {
+    "schemes": ["none"],
+    "note": "No API keys required. All tools work locally with zero authentication. Optional RBAC roles for multi-agent deployments."
+  },
+  "trust": {
+    "license": "MIT",
+    "tests": "4190+ passing, 0 failures, 19 skipped",
+    "prescience": {
+      "validated_claims": 21,
+      "brier_score": 0.0958,
+      "total_lead_time_points": 523,
+      "average_lead_time_weeks": 25
+    },
+    "audit": {
+      "karma_ledger": "append-only, hash-chained side-effect auditing",
+      "dharma_governance": "YAML-driven ethical rules with graduated enforcement",
+      "input_sanitization": "prompt injection, path traversal, shell injection detection"
+    }
+  },
+  "discovery": {
+    "llms_txt": "https://whitemagic.dev/llms.txt",
+    "llms_full_txt": "https://whitemagic.dev/llms-full.txt",
+    "agent_card": "https://whitemagic.dev/.well-known/agent.json",
+    "server_json": "https://whitemagic.dev/server.json",
+    "mcp_registry_json": "https://whitemagic.dev/mcp-registry.json",
+    "prescience": "https://whitemagic.dev/api/prescience.json",
+    "manifest": "https://whitemagic.dev/api/manifest.json",
+    "github": "https://github.com/lbailey94/whitemagic",
+    "pypi": "https://pypi.org/project/whitemagic/"
+  },
+  "economic_model": {
+    "pricing": "Free — no tiers, no gates, no subscriptions",
+    "revenue": "Gratitude-driven: voluntary x402 micropayments, XRPL tips, foundation grants",
+    "payment_rails": ["x402 (USDC on Base)", "x402 (USDC on Solana)", "XRPL (XRP)"]
+  }
+}

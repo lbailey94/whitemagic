@@ -140,30 +140,55 @@ def morphologies(tool: str | None) -> None:
 
 
 @prat.command()
-def status() -> None:
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.pass_context
+def status(ctx, as_json: bool) -> None:
     """Show PRAT system status"""
     from whitemagic.cascade.adaptive_portal import get_adaptive_portal
     from whitemagic.cascade.context_synthesizer import get_context_synthesizer
+    from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
+    json_output = as_json or (
+        (ctx.obj or {}).get("json_output", False)
+        if isinstance(ctx.obj, dict)
+        else False
+    )
 
     synth = get_context_synthesizer()
     portal = get_adaptive_portal()
 
+    total_morphologies = sum(len(v) for v in portal.morphologies.values())
+    snap = synth.gather()
+
+    if json_output:
+        output = {
+            "tools_registered": len(portal.morphologies),
+            "total_morphologies": total_morphologies,
+            "context": {
+                "dominant_influence": snap.get_dominant_influence(),
+                "recommended_morphology": snap.get_recommended_morphology(),
+                "coherence_level": snap.coherence_level,
+            },
+            "readiness": {
+                "context_synthesizer": "active",
+                "adaptive_portal": "active",
+                "morphologies_loaded": total_morphologies,
+            },
+        }
+        click.echo(_json_dumps(output, indent=2))
+        return
+
     click.echo("\n🔮 PRAT System Status")
     click.echo("=" * 50)
 
-    # Count morphologies
-    total_morphologies = sum(len(v) for v in portal.morphologies.values())
     click.echo(f"Tools registered: {len(portal.morphologies)}")
     click.echo(f"Total morphologies: {total_morphologies}")
 
-    # Context status
-    ctx = synth.gather()
     click.echo("\nCurrent Context:")
-    click.echo(f"  Dominant influence: {ctx.get_dominant_influence()}")
-    click.echo(f"  Recommended morphology: {ctx.get_recommended_morphology()}")
-    click.echo(f"  Coherence: {ctx.coherence_level}")
+    click.echo(f"  Dominant influence: {snap.get_dominant_influence()}")
+    click.echo(f"  Recommended morphology: {snap.get_recommended_morphology()}")
+    click.echo(f"  Coherence: {snap.coherence_level}")
 
-    # System readiness
     click.echo("\nSystem Readiness:")
     click.echo("  ✅ ContextSynthesizer: Active")
     click.echo("  ✅ AdaptiveToolPortal: Active")

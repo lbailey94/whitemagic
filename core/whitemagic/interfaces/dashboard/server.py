@@ -180,7 +180,6 @@ def update_memory(memory_id: str) -> Any:
     """Update an existing memory."""
     try:
         data = request.get_json()
-        # Mock update
         try:
             manager.update_memory(memory_id, **data)
             return jsonify({"success": True})
@@ -194,7 +193,6 @@ def update_memory(memory_id: str) -> Any:
 def delete_memory(memory_id: str) -> Any:
     """Delete a memory."""
     try:
-        # Mock delete
         try:
             manager.delete_memory(memory_id)
             return jsonify({"success": True})

@@ -93,7 +93,13 @@ class TestApotheosisEngine:
         assert "response_time" in readings
         assert "error_rate" in readings
         assert "dream_freshness" in readings
-        assert len(loop._history) == 5
+        # Biological / immune-inspired metrics
+        assert "inflammation" in readings
+        assert "antibody_diversity" in readings
+        assert "signal_to_noise" in readings
+        assert "setpoint_deviation" in readings
+        assert "guna_balance" in readings
+        assert len(loop._history) == 12
 
     def test_auto_heal(self):
         loop = SelfMonitoringHealthLoop()

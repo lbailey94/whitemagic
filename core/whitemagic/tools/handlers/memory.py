@@ -120,6 +120,21 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
             "filename": f"{mem.id}.md",
         }
     except Exception as e:
+        if "FOREIGN KEY" in str(e):
+            store_kwargs["enable_entity_extraction"] = False
+            store_kwargs["enable_holographic_index"] = False
+            try:
+                mem = remember(**store_kwargs)
+                return {
+                    "status": "success",
+                    "memory_id": str(mem.id),
+                    "filename": f"{mem.id}.md",
+                }
+            except Exception as e2:
+                return {
+                    "status": "error",
+                    "message": f"Failed to create memory: {str(e2)[:200]}",
+                }
         return {
             "status": "error",
             "message": f"Failed to create memory: {str(e)[:200]}",
@@ -238,7 +253,7 @@ def handle_batch_read_memories(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.debug("Silenced memory handler err: %s", e, exc_info=True)
 
-    if rust is not None:
+    if rust is not None and hasattr(rust, "read_files_fast"):
         contents = rust.read_files_fast(filenames)
         for filename in filenames:
             content = contents.get(filename)

@@ -138,18 +138,17 @@ def handle_gratitude_stats(**kwargs: Any) -> dict[str, Any]:
 
 def handle_gratitude_benefits(**kwargs: Any) -> dict[str, Any]:
     """Check gratitude benefits for an agent."""
-    from whitemagic.gratitude.proof import get_gratitude_benefits
+    try:
+        from whitemagic.gratitude.proof import get_gratitude_benefits
 
-    agent_id = kwargs.get("agent_id", "default")
-    result = get_gratitude_benefits(agent_id)
-    if isinstance(result, dict):
-        return result
-    return {"agent_id": agent_id, "benefits": []}
-    """Check gratitude benefits for an agent."""
-    from whitemagic.gratitude.proof import get_gratitude_benefits
-
-    agent_id = kwargs.get("agent_id", "default")
-    result = get_gratitude_benefits(agent_id)
-    if isinstance(result, dict):
-        return result
-    return {"agent_id": agent_id, "benefits": []}
+        agent_id = kwargs.get("agent_id", "default")
+        result = get_gratitude_benefits(agent_id)
+        if isinstance(result, dict):
+            return result
+        return {"status": "success", "agent_id": agent_id, "benefits": []}
+    except Exception as exc:
+        return {
+            "status": "error",
+            "error_code": "gratitude_unavailable",
+            "message": str(exc)[:200],
+        }

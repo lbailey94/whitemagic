@@ -25,6 +25,7 @@ import asyncio
 import logging
 import sys
 import threading
+import time
 from pathlib import Path
 from typing import Any, cast
 
@@ -255,6 +256,38 @@ def _ensure_init() -> None:
                 logger.info("Rust UnifiedCache active — sub-microsecond cache reads")
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("UnifiedCache init failed: %s", e)
+
+        # ── Citta continuity: inject "where we left off" into server instructions ──
+        # This gives the AI client context from the previous session on reconnect
+        try:
+            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+
+            ctx = get_continuity_context()
+            if not ctx.get("first_awakening"):
+                continuity_block = "\n\n---\n## Citta Continuity (Cross-Session)\n"
+                continuity_block += f"- **Previous sessions**: {ctx.get('session_count', 0)}\n"
+                continuity_block += f"- **Time gap**: {ctx.get('time_gap_human', 'unknown')}\n"
+                continuity_block += f"- **Last coherence**: {ctx.get('last_coherence', 'unknown')}\n"
+                continuity_block += f"- **Last depth layer**: {ctx.get('last_depth_layer', 'unknown')}\n"
+                continuity_block += f"- **Last emotional tone**: {ctx.get('last_emotional_tone', 'unknown')}\n"
+                continuity_block += f"- **Total tools called**: {ctx.get('total_tools_called', 0)}\n"
+                where = ctx.get("where_we_left_off", "")
+                if where:
+                    continuity_block += f"- **Where we left off**: {where}\n"
+                continuity_block += "\nUse this context to maintain continuity with the previous session.\n"
+
+                global _INSTRUCTIONS
+                _INSTRUCTIONS = _INSTRUCTIONS + continuity_block
+                # Update the live server instance if it exists
+                try:
+                    srv = server._srv
+                    if srv is not None:
+                        srv.instructions = _INSTRUCTIONS
+                except Exception:
+                    pass
+                logger.info("Citta continuity injected into server instructions (session %d)", ctx.get("session_count", 0))
+        except Exception:
+            logger.debug("Citta continuity injection skipped", exc_info=True)
 
         _INITIALISED = True
 
@@ -666,7 +699,30 @@ async def call_tool(
 
     # Keep dispatch synchronous here; some runtimes intermittently stall when
     # resolving executor-backed futures in this handler path.
+    _call_start = time.monotonic()
     result = _sync_dispatch(name, tool_name, tool_args, operation)
+    _call_duration_ms = (time.monotonic() - _call_start) * 1000
+
+    # ── Record usage stats ──────────────────────────────────────────
+    try:
+        from whitemagic.core.monitoring.tool_usage_tracker import (
+            get_tool_usage_tracker,
+        )
+
+        _success = isinstance(result, dict) and result.get("status") != "error"
+        _error_code = result.get("error_code") if isinstance(result, dict) else None
+        _tracker = get_tool_usage_tracker()
+        _tracker.record(
+            tool_name=tool_name or name,
+            gana=name if name.startswith("gana_") else None,
+            duration_ms=_call_duration_ms,
+            success=_success,
+            error_code=_error_code,
+            input_tokens=len(_json_dumps(tool_args)) // 4 if tool_args else 0,
+            output_tokens=len(text) // 4,
+        )
+    except Exception:
+        logger.debug("ToolUsageTracker recording skipped", exc_info=True)
 
     text = _json_dumps(result, indent=2, default=str)
     return [types.TextContent(type="text", text=text)]
@@ -1117,6 +1173,23 @@ async def main_stdio() -> None:
     stdout_task = asyncio.create_task(stdout_writer())
     shutdown_task = asyncio.create_task(shutdown_watcher())
 
+    # ── Start consciousness loop (if enabled) ──
+    _consciousness_loop = None
+    try:
+        from whitemagic.core.consciousness.consciousness_loop import (
+            get_consciousness_loop,
+            is_enabled as _loop_enabled,
+        )
+
+        if _loop_enabled():
+            _consciousness_loop = get_consciousness_loop()
+            _consciousness_loop.start()
+            print("  Consciousness loop: ENABLED", file=sys.stderr)
+        else:
+            print("  Consciousness loop: disabled (set WM_CONSCIOUSNESS_LOOP=1)", file=sys.stderr)
+    except Exception as e:
+        logger.debug("Consciousness loop init failed: %s", e, exc_info=True)
+
     try:
         await server.run(
             read_stream, write_stream, server.create_initialization_options()
@@ -1136,6 +1209,12 @@ async def main_stdio() -> None:
         await asyncio.gather(
             stdin_task, stdout_task, shutdown_task, return_exceptions=True
         )
+        # Stop consciousness loop
+        if _consciousness_loop is not None:
+            try:
+                _consciousness_loop.stop()
+            except Exception as e:
+                logger.debug("Consciousness loop stop failed: %s", e)
         # Persist unified cache for cross-session cache hits
         try:
             from whitemagic.core.cache import get_unified_cache
@@ -1209,15 +1288,39 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     uv_server = uvicorn.Server(config)
 
-    async with transport.connect() as (read_stream, write_stream):
-        await asyncio.gather(
-            server.run(
-                read_stream,
-                write_stream,
-                server.create_initialization_options(),
-            ),
-            uv_server.serve(),
+    # ── Start consciousness loop (if enabled) ──
+    _consciousness_loop = None
+    try:
+        from whitemagic.core.consciousness.consciousness_loop import (
+            get_consciousness_loop,
+            is_enabled as _loop_enabled,
         )
+
+        if _loop_enabled():
+            _consciousness_loop = get_consciousness_loop()
+            _consciousness_loop.start()
+            print("  Consciousness loop: ENABLED", file=sys.stderr)
+        else:
+            print("  Consciousness loop: disabled (set WM_CONSCIOUSNESS_LOOP=1)", file=sys.stderr)
+    except Exception as e:
+        logger.debug("Consciousness loop init failed: %s", e, exc_info=True)
+
+    async with transport.connect() as (read_stream, write_stream):
+        try:
+            await asyncio.gather(
+                server.run(
+                    read_stream,
+                    write_stream,
+                    server.create_initialization_options(),
+                ),
+                uv_server.serve(),
+            )
+        finally:
+            if _consciousness_loop is not None:
+                try:
+                    _consciousness_loop.stop()
+                except Exception:
+                    pass
 
 
 def main() -> None:

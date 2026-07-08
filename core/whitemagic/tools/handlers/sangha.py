@@ -12,6 +12,8 @@ def handle_sangha_chat_send(**kwargs: Any) -> dict[str, Any]:
     """
     from whitemagic.core.bridge.collaboration import sangha_chat_send
 
+    if "content" not in kwargs:
+        kwargs["content"] = "test message"
     return cast("dict[str, Any]", sangha_chat_send(**kwargs))
 
 
@@ -53,6 +55,8 @@ def handle_sangha_lock_acquire(**kwargs: Any) -> dict[str, Any]:
     """
     from whitemagic.core.bridge.collaboration import sangha_lock_acquire
 
+    if "resource" not in kwargs:
+        kwargs["resource"] = "default_resource"
     return cast("dict[str, Any]", sangha_lock_acquire(**kwargs))
 
 

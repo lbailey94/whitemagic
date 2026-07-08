@@ -18,6 +18,7 @@ import sqlite3
 import sys
 import time
 from pathlib import Path
+from whitemagic.core.memory.db_manager import safe_connect
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def get_galaxy_backends(mono_conn: sqlite3.Connection) -> dict[str, sqlite3.Conn
         galaxy_dir.mkdir(parents=True, exist_ok=True)
         db_path = galaxy_dir / "whitemagic.db"
         
-        conn = sqlite3.connect(str(db_path))
+        conn = safe_connect(str(db_path))
         conn.row_factory = sqlite3.Row
         for pragma in WAL_PRAGMAS:
             try:
@@ -375,7 +376,7 @@ def main() -> int:
     
     logger.info("Source: %s (%.1f MB)", MONOLITHIC_DB, MONOLITHIC_DB.stat().st_size / 1e6)
     
-    mono_conn = sqlite3.connect(str(MONOLITHIC_DB))
+    mono_conn = safe_connect(str(MONOLITHIC_DB))
     mono_conn.row_factory = sqlite3.Row
     
     galaxy_conns = get_galaxy_backends(mono_conn)

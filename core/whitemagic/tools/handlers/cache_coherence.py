@@ -8,14 +8,14 @@ def handle_cache_status(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.core.memory.cache_registry import get_cache_registry
 
     registry = get_cache_registry()
-    return {"status": "success", **registry.status()}
+    caches = getattr(registry, "_caches", {})
+    return {"status": "success", "registered_caches": list(caches.keys()), "count": len(caches)}
 
 
 def handle_cache_flush(**kwargs: Any) -> dict[str, Any]:
     """Trigger an immediate cache catharsis (flush stale entries)."""
-    tag = kwargs.get("tag")
     from whitemagic.core.memory.cache_registry import get_cache_registry
 
     registry = get_cache_registry()
-    result = registry.flush_stale(tag=tag)
-    return {"status": "success", **result}
+    registry.flush_all()
+    return {"status": "success", "message": "All caches flushed"}

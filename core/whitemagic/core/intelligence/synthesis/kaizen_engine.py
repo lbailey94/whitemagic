@@ -209,7 +209,7 @@ class KaizenEngine:
         """Run STRATA static analysis on the WhiteMagic codebase itself.
 
         This extends kaizen beyond memory DB analysis to include codebase
-        quality checks: structural stubs, dead code, archive drift, hardcoded
+        quality checks: structural issues, dead code, archive drift, hardcoded
         paths, and 80+ other checks across 15 languages.
         """
         try:

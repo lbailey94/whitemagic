@@ -20,6 +20,7 @@ from whitemagic.core.memory.spreading_activation import (
     SpreadingActivation,
     get_spreading_activation,
 )
+from whitemagic.core.memory.db_manager import safe_connect
 
 # ── Fixtures ────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ def _temp_galaxy_dbs():
     for name in ["aria", "citta", "codex", "sessions", "dreams", "research", "universal"]:
         db_path = str(Path(tmpdir) / f"{name}.db")
         galaxy_dbs[name] = db_path
-        conn = sqlite3.connect(db_path)
+        conn = safe_connect(db_path)
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS memories (
                 id TEXT PRIMARY KEY,
@@ -84,7 +85,7 @@ def _temp_galaxy_dbs():
         conn.close()
 
     # Add cross-galaxy associations (aria ↔ citta)
-    conn = sqlite3.connect(galaxy_dbs["aria"])
+    conn = safe_connect(galaxy_dbs["aria"])
     conn.execute(
         "INSERT OR IGNORE INTO associations (source_id, target_id, strength, relation_type, edge_type) VALUES (?, ?, ?, ?, ?)",
         ("aria-mem-0", "citta-mem-1", 0.6, "cross_galaxy", "bridge"),
@@ -92,7 +93,7 @@ def _temp_galaxy_dbs():
     conn.commit()
     conn.close()
 
-    conn = sqlite3.connect(galaxy_dbs["citta"])
+    conn = safe_connect(galaxy_dbs["citta"])
     conn.execute(
         "INSERT OR IGNORE INTO associations (source_id, target_id, strength, relation_type, edge_type) VALUES (?, ?, ?, ?, ?)",
         ("citta-mem-1", "aria-mem-0", 0.6, "cross_galaxy", "bridge"),

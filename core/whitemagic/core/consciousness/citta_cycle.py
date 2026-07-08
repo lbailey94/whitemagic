@@ -46,6 +46,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from whitemagic.core.consciousness.citta_vector import (
+    CittaTrajectory,
+    CittaVector,
+)
+
 logger = logging.getLogger(__name__)
 
 # ── Stream persistence paths ──────────────────────────────────────────────
@@ -69,9 +74,15 @@ class CittaMoment:
     chain_position: int = 0
     duration_ms: float = 0.0
     neuro_signals: dict[str, float] | None = None
+    vector: CittaVector | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        d = asdict(self)
+        if self.vector is not None:
+            d["vector"] = self.vector.to_dict()
+        else:
+            d["vector"] = None
+        return d
 
 
 def build_output_digest(result: Any) -> str:
@@ -109,6 +120,7 @@ class CittaCycle:
         self._depth_transitions: list[dict[str, Any]] = []
         self._last_depth: str = "surface"
         self._persist_counter: int = 0
+        self._trajectory: CittaTrajectory = CittaTrajectory()
         self._load_stream()
 
     def advance(
@@ -133,6 +145,13 @@ class CittaCycle:
         if neuro_signals is None:
             neuro_signals = _get_neuro_enrichment()
 
+        vec = CittaVector.from_moment(
+            coherence=coherence,
+            depth_layer=depth_layer,
+            emotional_tone=emotional_tone,
+            neuro_signals=neuro_signals,
+        )
+
         moment = CittaMoment(
             gana=gana,
             tool=tool,
@@ -145,12 +164,14 @@ class CittaCycle:
             chain_position=self._current_position,
             duration_ms=round(duration_ms, 2),
             neuro_signals=neuro_signals,
+            vector=vec,
         )
 
         with self._lock:
             self._stream.append(moment)
             self._current_position += 1
             self._coherence_history.append(coherence)
+            self._trajectory.append(vec)
 
             # Track depth transitions
             depth_changed = False
@@ -213,6 +234,21 @@ class CittaCycle:
         with self._lock:
             return list(self._depth_transitions)
 
+    def get_trajectory(self) -> CittaTrajectory:
+        """Get the citta vector trajectory for geometric analysis."""
+        with self._lock:
+            return self._trajectory
+
+    def get_ignition_events(self, threshold: float = 2.0) -> list[dict[str, Any]]:
+        """Detect consciousness ignition events in the vector trajectory.
+
+        Ignitions are sudden large displacements in the 16D citta space,
+        analogous to the 'global workspace ignition' in GWT — the moment
+        a representation wins competition and is broadcast.
+        """
+        with self._lock:
+            return self._trajectory.ignition_events(threshold)
+
     def get_emotional_coloring(self) -> dict[str, Any]:
         """Get the emotional coloring of the recent stream."""
         with self._lock:
@@ -244,6 +280,13 @@ class CittaCycle:
                     if self._coherence_history
                     else 1.0
                 ),
+                "vector_space": {
+                    "dim": 16,
+                    "trajectory_length": len(self._trajectory.vectors),
+                    "avg_velocity": round(self._trajectory.avg_velocity(), 4),
+                    "max_velocity": round(self._trajectory.max_velocity(), 4),
+                    "ignitions": len(self._trajectory.ignition_events()),
+                },
             }
 
     def reset(self) -> None:
@@ -255,6 +298,7 @@ class CittaCycle:
             self._current_position = 0
             self._last_depth = "surface"
             self._persist_counter = 0
+            self._trajectory = CittaTrajectory()
             # Clear the persisted stream file
             try:
                 _STREAM_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -286,12 +330,24 @@ class CittaCycle:
                     if not line:
                         continue
                     data = json.loads(line)
-                    moment = CittaMoment(**data)
+                    vec_data = data.pop("vector", None)
+                    vec = (
+                        CittaVector.from_dict(vec_data)
+                        if vec_data
+                        else CittaVector.from_moment(
+                            coherence=data.get("coherence", 1.0),
+                            depth_layer=data.get("depth_layer", "surface"),
+                            emotional_tone=data.get("emotional_tone", "neutral"),
+                            neuro_signals=data.get("neuro_signals"),
+                        )
+                    )
+                    moment = CittaMoment(**data, vector=vec)
                     self._stream.append(moment)
                     self._current_position = max(
                         self._current_position, moment.chain_position + 1
                     )
                     self._coherence_history.append(moment.coherence)
+                    self._trajectory.append(vec)
                     if moment.depth_layer != self._last_depth:
                         self._depth_transitions.append(
                             {

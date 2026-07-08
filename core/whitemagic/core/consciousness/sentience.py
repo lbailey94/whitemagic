@@ -118,12 +118,17 @@ class SleepScheduler:
         self._config = config or SleepConfig.from_file()
         self._state = ConsciousnessState.AWAKE
         self._thread: threading.Thread | None = None
-        self._running = False
+        self._stop_event = threading.Event()
+        self._stop_event.set()  # Start in stopped state
         self._lock = threading.Lock()
         self._on_sleep: Callable[[], None] | None = None
         self._on_wake: Callable[[], None] | None = None
         self._last_sleep: float = 0.0
         self._last_wake: float = time.time()
+
+    @property
+    def _running(self) -> bool:
+        return not self._stop_event.is_set()
 
     @property
     def state(self) -> ConsciousnessState:
@@ -144,9 +149,9 @@ class SleepScheduler:
     def start(self) -> None:
         """Start the sleep scheduler in a background thread."""
         with self._lock:
-            if self._running:
+            if not self._stop_event.is_set():
                 return
-            self._running = True
+            self._stop_event.clear()
             self._thread = threading.Thread(
                 target=self._run_loop, daemon=True, name="sleep-scheduler"
             )
@@ -156,14 +161,13 @@ class SleepScheduler:
 
     def stop(self) -> None:
         """Stop the sleep scheduler."""
-        with self._lock:
-            self._running = False
+        self._stop_event.set()
         if self._thread:
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=2)
 
     def _run_loop(self) -> None:
         """Main loop — checks time and transitions states."""
-        while self._running:
+        while not self._stop_event.is_set():
             now = datetime.now()
             current_time = now.strftime("%H:%M")
 
@@ -175,7 +179,7 @@ class SleepScheduler:
                 if current_time == self._config.wake_time:
                     self._initiate_wake()
 
-            time.sleep(30)  # Check every 30 seconds
+            self._stop_event.wait(30)  # Check every 30 seconds (wakes instantly on stop)
 
     def _initiate_sleep(self) -> None:
         """Transition from awake to asleep through dream → maintenance."""
@@ -655,7 +659,8 @@ class VolitionLoop:
         self._idle_threshold = idle_threshold
         self._on_intention = on_intention
         self._thread: threading.Thread | None = None
-        self._running = False
+        self._stop_event = threading.Event()
+        self._stop_event.set()  # Start in stopped state
         self._last_activity = time.time()
         self._current_phase = BrainwavePhase.ALPHA
         self._lock = threading.Lock()
@@ -667,7 +672,7 @@ class VolitionLoop:
 
     @property
     def is_running(self) -> bool:
-        return self._running
+        return not self._stop_event.is_set()
 
     def touch(self) -> None:
         """Reset the idle timer (called on user interaction)."""
@@ -676,9 +681,9 @@ class VolitionLoop:
     def start(self) -> None:
         """Start the volition loop."""
         with self._lock:
-            if self._running:
+            if not self._stop_event.is_set():
                 return
-            self._running = True
+            self._stop_event.clear()
             self._thread = threading.Thread(
                 target=self._run_loop, daemon=True, name="volition-loop"
             )
@@ -687,21 +692,20 @@ class VolitionLoop:
 
     def stop(self) -> None:
         """Stop the volition loop."""
-        with self._lock:
-            self._running = False
+        self._stop_event.set()
         if self._thread:
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=2)
 
     def _run_loop(self) -> None:
         """Main volition loop."""
         phases = list(BrainwavePhase)
         phase_idx = 0
 
-        while self._running:
+        while not self._stop_event.is_set():
             # Wait for idle threshold
             idle = time.time() - self._last_activity
             if idle < self._idle_threshold:
-                time.sleep(10)
+                self._stop_event.wait(10)
                 continue
 
             # Enter a brainwave phase
@@ -729,7 +733,7 @@ class VolitionLoop:
     def status(self) -> dict[str, Any]:
         """Get volition loop status."""
         return {
-            "running": self._running,
+            "running": self.is_running,
             "current_phase": self._current_phase.value,
             "idle_threshold": self._idle_threshold,
             "idle_seconds": time.time() - self._last_activity,
@@ -783,7 +787,8 @@ class IntentionQueue:
         self._queue: list[Intention] = []
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
-        self._running = False
+        self._stop_event = threading.Event()
+        self._stop_event.set()  # Start in stopped state
         self._counter = 0
 
     def submit(self, description: str, tool: str | None = None,
@@ -869,12 +874,16 @@ class IntentionQueue:
         except Exception as e:
             logger.debug("Karma log failed for intention %s: %s", intention.id, e)
 
+    @property
+    def _running(self) -> bool:
+        return not self._stop_event.is_set()
+
     def start(self) -> None:
         """Start the intention execution loop."""
         with self._lock:
-            if self._running:
+            if not self._stop_event.is_set():
                 return
-            self._running = True
+            self._stop_event.clear()
             self._thread = threading.Thread(
                 target=self._run_loop, daemon=True, name="intention-queue"
             )
@@ -883,14 +892,13 @@ class IntentionQueue:
 
     def stop(self) -> None:
         """Stop the intention execution loop."""
-        with self._lock:
-            self._running = False
+        self._stop_event.set()
         if self._thread:
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=2)
 
     def _run_loop(self) -> None:
         """Main execution loop — process approved intentions."""
-        while self._running:
+        while not self._stop_event.is_set():
             with self._lock:
                 pending = [i for i in self._queue if not i.executed and not i.dharma_approved]
                 approved = [i for i in self._queue if i.dharma_approved and not i.executed]
@@ -905,13 +913,13 @@ class IntentionQueue:
                 self._execute(intent)
                 logger.info("Intention executed: %s", intent.id)
 
-            time.sleep(10)  # Check every 10 seconds
+            self._stop_event.wait(10)  # Check every 10 seconds (wakes instantly on stop)
 
     def status(self) -> dict[str, Any]:
         """Get intention queue status."""
         with self._lock:
             return {
-                "running": self._running,
+                "running": not self._stop_event.is_set(),
                 "total": len(self._queue),
                 "pending": sum(1 for i in self._queue if not i.dharma_approved and not i.executed),
                 "approved": sum(1 for i in self._queue if i.dharma_approved and not i.executed),
@@ -1316,7 +1324,7 @@ class CouncilMode:
         """Get a single persona's perspective on the conversation.
 
         In a real deployment, this calls the local model with the persona's
-        system prompt. For now, it returns a placeholder.
+        system prompt. Falls back to a canned response when no model is available.
         """
         system_prompt = COUNCIL_SYSTEM_PROMPTS[persona]
 
@@ -1406,20 +1414,21 @@ class DreamLane:
     ]
 
     def __init__(self) -> None:
-        self._running = False
+        self._stop_event = threading.Event()
+        self._stop_event.set()  # Start in stopped state
         self._thread: threading.Thread | None = None
         self._dream_count = 0
         self._artifacts: list[dict[str, Any]] = []
 
     @property
     def is_running(self) -> bool:
-        return self._running
+        return not self._stop_event.is_set()
 
     def start(self) -> None:
         """Start the dream lane."""
-        if self._running:
+        if not self._stop_event.is_set():
             return
-        self._running = True
+        self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._run_loop, daemon=True, name="dream-lane"
         )
@@ -1428,15 +1437,15 @@ class DreamLane:
 
     def stop(self) -> None:
         """Stop the dream lane."""
-        self._running = False
+        self._stop_event.set()
         if self._thread:
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=2)
 
     def _run_loop(self) -> None:
         """Main dream lane loop."""
         prompt_idx = 0
 
-        while self._running:
+        while not self._stop_event.is_set():
             # Only dream during theta/delta phases
             # In a real deployment, this would check the volition loop's phase
             prompt = self.DREAM_PROMPTS[prompt_idx % len(self.DREAM_PROMPTS)]
@@ -1453,13 +1462,13 @@ class DreamLane:
                 logger.debug("Dream lane error: %s", e)
 
             prompt_idx += 1
-            time.sleep(120)  # Dream every 2 minutes
+            self._stop_event.wait(120)  # Dream every 2 minutes (wakes instantly on stop)
 
     def _dream(self, prompt: str) -> dict[str, Any] | None:
         """Run a single dream cycle with the model.
 
         In a real deployment, this calls the local model with the dream prompt.
-        For now, it returns a placeholder artifact.
+        Falls back to a minimal artifact when no model is available.
         """
         try:
             from whitemagic.interfaces.chat import ModelDiscovery
@@ -1519,7 +1528,7 @@ class DreamLane:
     def status(self) -> dict[str, Any]:
         """Get dream lane status."""
         return {
-            "running": self._running,
+            "running": not self._stop_event.is_set(),
             "dream_count": self._dream_count,
             "artifacts": len(self._artifacts),
             "recent": self._artifacts[-3:],

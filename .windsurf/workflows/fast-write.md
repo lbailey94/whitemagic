@@ -30,7 +30,7 @@ If the content contains backticks or `$()`, use `python3 << 'PYEOF'` instead:
 ```bash
 python3 << 'PYEOF'
 from pathlib import Path
-Path("/path/to/file.py").write_text('''content with `backticks` and $vars''')
+Path("/path/to/file.py").write_text("""content with backticks and $vars""")
 PYEOF
 ```
 
@@ -55,19 +55,32 @@ PYEOF
 ## Step 4: Regex Transform
 
 // turbo
-Use `python3 -c` for regex-based transforms across files:
+Use `python3 << 'PYEOF'` (heredoc) for regex-based transforms across files.
 
-```bash
-python3 -c "
-import re, pathlib
-for f in pathlib.Path('whitemagic/').rglob('*.py'):
-    content = f.read_text()
-    fixed = re.sub(r'pattern', 'replacement', content)
-    if fixed != content:
-        f.write_text(fixed)
-        print(f'Fixed {f}')
-"
-```
+**CRITICAL**: Avoid `python3 -c "..."` with strings containing backslash escapes
+like `\b`, `\n`, `\t` inside triple-quoted strings. The outer non-raw string
+interprets these before the inner `r"..."` raw prefix can protect them, causing
+silent corruption (e.g. `\b` becomes `\x08` backspace).
+
+**Wrong** (corrupts `\b` to backspace):
+
+    python3 -c "
+    new = '''r\"(pattern)\b\"'''  # \b becomes \x08 here!
+    "
+
+**Right** (use heredoc):
+
+    python3 << 'PYEOF'
+    import re, pathlib
+    for f in pathlib.Path('whitemagic/').rglob('*.py'):
+        content = f.read_text()
+        fixed = re.sub(r'pattern', 'replacement', content)
+        if fixed != content:
+            f.write_text(fixed)
+            print(f'Fixed {f}')
+    PYEOF
+
+**If you must use `python3 -c`**, double-escape backslashes: `\\b` not `\b`.
 
 ## Step 5: Validate
 
@@ -85,3 +98,22 @@ For codebase analysis before or after writes:
 - `wm(route='gana_chariot.strata.survey')` — surface survey
 - `wm(route='gana_chariot.strata.analyze')` — static analysis with auto-fix
 - `wm(route='gana_winnowing_basket.fragment.search')` — Rust-accelerated code search
+
+## Appendix: Known Pitfalls
+
+### Backslash Corruption in `python3 -c`
+
+**Symptom**: Regex patterns containing `\b` (word boundary) silently become `\x08`
+(backspace character) when written via `python3 -c "..."`.
+
+**Root cause**: In `python3 -c "..."`, triple-quoted strings are **not** raw strings.
+The `\b` inside the outer triple-quoted string is interpreted as backspace before
+the inner `r"..."` raw string prefix can protect it.
+
+**Fix**: Use `python3 << 'PYEOF'` (heredoc) instead of `python3 -c "..."` whenever
+the content contains backslash escapes. The heredoc delimiter (quoted) prevents
+shell interpretation, and Python processes the content correctly.
+
+**Detection**: Check for `\x08` bytes in written files:
+
+    python3 -c "data = open('file.py','rb').read(); print(f'backspace count: {data.count(8)}')"

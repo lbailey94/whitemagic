@@ -174,7 +174,8 @@ class UnifiedMemory:
               tags: set[str] | None = None, emotional_valence: float = 0.0,
               importance: float = 0.5, metadata: dict | None = None, title: str | None = None,
               auto_embed: bool = True, galaxy: str = "universal",
-              subsystem: str | None = None, **kwargs: Any) -> Memory:
+              subsystem: str | None = None, source_trust: str = "user",
+              **kwargs: Any) -> Memory:
         """Store a new memory.
 
         v14.0: Surprise-gated ingestion evaluates novelty before storage.
@@ -182,6 +183,8 @@ class UnifiedMemory:
         v23.1: Galaxy parameter routes memory to cognitive galaxy (6D).
         v23.4: If galaxy is "universal" and subsystem is provided, auto-routes
                via GalaxyRouter.route(subsystem, metadata).
+        v24: source_trust tags provenance (user/tool_output/web/inferred) to
+             defend against Trojan Hippo memory poisoning attacks.
         """
         if isinstance(memory_type, str):
             try:
@@ -275,6 +278,7 @@ class UnifiedMemory:
             metadata=metadata,
             title=title,
             galaxy=galaxy,
+            source_trust=source_trust,
             **kwargs,
         )
 
@@ -284,7 +288,11 @@ class UnifiedMemory:
         if enable_holographic_index and self.holographic:
             coords = self.holographic.index_memory(memory.id, memory.to_dict())
             if coords:
-                self.backend.store_coords(memory.id, *coords)
+                try:
+                    self._galaxy_backend.store_coords(memory.id, *coords, galaxy=galaxy)
+                except (TypeError, AttributeError):
+                    # Older backends may not accept galaxy kwarg
+                    self.backend.store_coords(memory.id, *coords)
 
         # Compute and cache HRR vector for compositional memory operations
         # This binds the content embedding with a type role vector using HRR,

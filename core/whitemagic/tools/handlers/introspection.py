@@ -222,6 +222,58 @@ def handle_get_telemetry_summary(**kwargs: Any) -> dict[str, Any]:
     return cast("dict[str, Any]", _core.telemetry_summary())
 
 
+def handle_tool_usage_stats(**kwargs: Any) -> dict[str, Any]:
+    """Query the SQLite-persisted tool usage tracker.
+
+    Args (via kwargs):
+        action: One of "summary", "tool", "all", "never_used", "gana",
+                "recent", "top", "errors", "heatmap". Default: "summary".
+        tool_name: Tool name (required for "tool" action).
+        all_tool_names: List of all registered tool names (for "never_used").
+        limit: Max results (for "recent" and "top"). Default: 50/20.
+        days: Days to look back (for "heatmap"). Default: 7.
+    """
+    try:
+        from whitemagic.core.monitoring.tool_usage_tracker import (
+            get_tool_usage_tracker,
+        )
+
+        tracker = get_tool_usage_tracker()
+        action = kwargs.get("action", "summary")
+
+        if action == "summary":
+            return {"status": "success", "summary": tracker.get_summary()}
+        elif action == "tool":
+            tool_name = kwargs.get("tool_name", "")
+            if not tool_name:
+                return {"status": "error", "error": "tool_name required for 'tool' action"}
+            return {"status": "success", "tool_stats": tracker.get_tool_stats(tool_name)}
+        elif action == "all":
+            return {"status": "success", "all_tools": tracker.get_all_tool_stats()}
+        elif action == "never_used":
+            all_names = kwargs.get("all_tool_names", [])
+            if not all_names:
+                return {"status": "error", "error": "all_tool_names list required for 'never_used' action"}
+            return {"status": "success", "never_used": tracker.get_never_used_tools(all_names)}
+        elif action == "gana":
+            return {"status": "success", "gana_stats": tracker.get_gana_stats()}
+        elif action == "recent":
+            limit = int(kwargs.get("limit", 50))
+            return {"status": "success", "recent": tracker.get_recent_activity(limit)}
+        elif action == "top":
+            limit = int(kwargs.get("limit", 20))
+            return {"status": "success", "top_tools": tracker.get_top_tools(limit)}
+        elif action == "errors":
+            return {"status": "success", "errors": tracker.get_error_summary()}
+        elif action == "heatmap":
+            days = int(kwargs.get("days", 7))
+            return {"status": "success", "heatmap": tracker.get_usage_heatmap(days)}
+        else:
+            return {"status": "error", "error": f"Unknown action: {action}"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 def handle_gnosis(**kwargs: Any) -> dict[str, Any]:
     """Gnosis Portal — unified introspection across all Whitemagic subsystems."""
     from whitemagic.tools.gnosis import gnosis_snapshot
@@ -944,7 +996,10 @@ def handle_vitality(**kwargs: Any) -> dict[str, Any]:
     target = kwargs.get("gana")
     out: dict[str, Any] = {}
     try:
-        from whitemagic.tools.prat_resonance import get_vitality
+        try:
+            from whitemagic.tools.prat_resonance import get_vitality
+        except ImportError:
+            get_vitality = None
 
         for g in _GANA_28_SURFACE:
             gid = g["id"]

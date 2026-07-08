@@ -117,7 +117,7 @@ impl EdgeEngine {
         engine.add_rule(EdgeRule::new(
             "version",
             "version|what version",
-            "WhiteMagic version 23.2.0",
+            "WhiteMagic version 24.0.1",
             1.0,
         ));
         engine.add_rule(EdgeRule::new(
@@ -129,7 +129,7 @@ impl EdgeEngine {
         engine.add_rule(EdgeRule::new(
             "tests",
             "test|how many test",
-            "WhiteMagic has 2,564 passing tests",
+            "WhiteMagic has 4,223 passing tests",
             0.95,
         ));
         engine.add_rule(EdgeRule::new(
@@ -341,15 +341,112 @@ pub fn wasm_ready() -> bool {
 /// Get WASM version
 #[wasm_bindgen]
 pub fn wasm_version() -> String {
-    "23.2.0".to_string()
+    "24.0.1".to_string()
 }
 
 // ── Re-exports from whitemagic-math (holographic 5D encoding) ───────────
 // These are compiled into the same WASM binary via the wasm feature flag.
 
 pub use whitemagic_math::holographic_encoder_5d::holographic_encode_single;
-pub use whitemagic_math::holographic_encoder_5d::holographic_encode_batch;
+pub use whitemagic_math::holographic_encode_batch;
 pub use whitemagic_math::holographic_encoder_5d::Coordinate5D;
+
+// ── Re-exports from whitemagic-math (text embeddings) ───────────────────
+
+pub use whitemagic_math::text_embedding::embed_text_wasm;
+pub use whitemagic_math::text_embedding::embed_batch_wasm;
+pub use whitemagic_math::text_embedding::cosine_sim_wasm;
+pub use whitemagic_math::text_embedding::top_k_similar_wasm;
+pub use whitemagic_math::text_embedding::embed_dim;
+
+// ── HRR Resonance Engine (WASM) ──────────────────────────────────────────
+
+use whitemagic_math::hrr::HRREngine as HRRCore;
+
+/// WASM-exposed HRR Engine for compositional memory binding.
+#[wasm_bindgen]
+pub struct HrrEngine {
+    engine: HRRCore,
+}
+
+#[wasm_bindgen]
+impl HrrEngine {
+    #[wasm_bindgen(constructor)]
+    pub fn new(dim: usize) -> HrrEngine {
+        HrrEngine {
+            engine: HRRCore::new(dim),
+        }
+    }
+
+    /// Bind two vectors via circular convolution (A in the role of B).
+    /// Returns JSON array or error string.
+    pub fn bind(&self, a_json: &str, b_json: &str) -> String {
+        let a: Vec<f32> = match serde_json::from_str(a_json) {
+            Ok(v) => v,
+            Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+        };
+        let b: Vec<f32> = match serde_json::from_str(b_json) {
+            Ok(v) => v,
+            Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+        };
+        match self.engine.bind(&a, &b) {
+            Ok(result) => serde_json::to_string(&result).unwrap_or_else(|_| "[]".to_string()),
+            Err(e) => format!("{{\"error\":\"{}\"}}", e),
+        }
+    }
+
+    /// Unbind B from a bound vector (approximate recovery of A).
+    pub fn unbind(&self, bound_json: &str, b_json: &str) -> String {
+        let bound: Vec<f32> = match serde_json::from_str(bound_json) {
+            Ok(v) => v,
+            Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+        };
+        let b: Vec<f32> = match serde_json::from_str(b_json) {
+            Ok(v) => v,
+            Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+        };
+        match self.engine.unbind(&bound, &b) {
+            Ok(result) => serde_json::to_string(&result).unwrap_or_else(|_| "[]".to_string()),
+            Err(e) => format!("{{\"error\":\"{}\"}}", e),
+        }
+    }
+
+    /// Superpose (sum + normalize) multiple vectors.
+    pub fn superpose(&self, vectors_json: &str) -> String {
+        let vectors: Vec<Vec<f32>> = match serde_json::from_str(vectors_json) {
+            Ok(v) => v,
+            Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+        };
+        match self.engine.superpose(&vectors) {
+            Ok(result) => serde_json::to_string(&result).unwrap_or_else(|_| "[]".to_string()),
+            Err(e) => format!("{{\"error\":\"{}\"}}", e),
+        }
+    }
+
+    /// Cosine similarity between two vectors.
+    pub fn similarity(&self, a_json: &str, b_json: &str) -> f32 {
+        let a: Vec<f32> = serde_json::from_str(a_json).unwrap_or_default();
+        let b: Vec<f32> = serde_json::from_str(b_json).unwrap_or_default();
+        self.engine.similarity(&a, &b).unwrap_or(0.0)
+    }
+
+    /// Project an embedding through a named relation.
+    pub fn project(&mut self, embedding_json: &str, relation: &str) -> String {
+        let embedding: Vec<f32> = match serde_json::from_str(embedding_json) {
+            Ok(v) => v,
+            Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+        };
+        match self.engine.project(&embedding, relation) {
+            Ok(result) => serde_json::to_string(&result).unwrap_or_else(|_| "[]".to_string()),
+            Err(e) => format!("{{\"error\":\"{}\"}}", e),
+        }
+    }
+
+    /// Get the vector dimension.
+    pub fn dim(&self) -> usize {
+        self.engine.dim
+    }
+}
 
 // ── Memory Store (browser-local, HashMap-backed) ────────────────────────
 
@@ -1144,7 +1241,7 @@ mod tests {
     fn test_basic_inference() {
         let mut engine = EdgeEngine::new();
         let result = engine.infer("What version?");
-        assert!(result.answer.contains("23.2.0"));
+        assert!(result.answer.contains("24.0.1"));
         assert!(!result.needs_cloud);
     }
 
@@ -1416,5 +1513,86 @@ mod tests {
         let snapshot = gnosis_snapshot(&store, &karma, &dharma, &engine);
         let json = snapshot.to_json();
         assert!(json.contains("seedling"));
+    }
+
+    // ── HRR Engine tests ───────────────────────────────────────────
+
+    #[test]
+    fn test_hrr_bind_unbind() {
+        let engine = HrrEngine::new(64);
+        let a = "[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]";
+        let b = "[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]";
+
+        let bound = engine.bind(a, b);
+        assert!(!bound.contains("error"));
+
+        let recovered = engine.unbind(&bound, b);
+        assert!(!recovered.contains("error"));
+
+        let sim = engine.similarity(a, &recovered);
+        assert!(sim > 0.5, "Recovery similarity too low: {}", sim);
+    }
+
+    #[test]
+    fn test_hrr_superpose() {
+        let engine = HrrEngine::new(64);
+        let vecs = "[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]";
+        // Wrong dim should return error
+        let result = engine.superpose(vecs);
+        assert!(result.contains("error"));
+
+        // Correct dim
+        let v = format!("[{}]", (0..64).map(|_| "1.0").collect::<Vec<_>>().join(", "));
+        let vecs = format!("[{}, {}]", v, v);
+        let result = engine.superpose(&vecs);
+        assert!(!result.contains("error"));
+    }
+
+    #[test]
+    fn test_hrr_project() {
+        let mut engine = HrrEngine::new(64);
+        let emb = format!("[{}]", (0..64).map(|_| "0.5").collect::<Vec<_>>().join(", "));
+        let result = engine.project(&emb, "CAUSES");
+        assert!(!result.contains("error"));
+    }
+
+    #[test]
+    fn test_hrr_dim() {
+        let engine = HrrEngine::new(128);
+        assert_eq!(engine.dim(), 128);
+    }
+
+    // ── Text Embedding tests ───────────────────────────────────────
+
+    #[test]
+    fn test_embed_text() {
+        let result = embed_text_wasm("hello world", 384);
+        let vec: Vec<f32> = serde_json::from_str(&result).unwrap();
+        assert_eq!(vec.len(), 384);
+        let norm: f32 = vec.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!((norm - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_embed_similarity() {
+        let a = embed_text_wasm("rust programming language", 384);
+        let b = embed_text_wasm("rust programming language", 384);
+        let sim = cosine_sim_wasm(&a, &b);
+        assert!((sim - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_embed_dim() {
+        assert_eq!(embed_dim(), 384);
+    }
+
+    #[test]
+    fn test_top_k_similar() {
+        let query = embed_text_wasm("machine learning", 384);
+        let c1 = embed_text_wasm("machine learning AI", 384);
+        let c2 = embed_text_wasm("cooking pasta recipe", 384);
+        let candidates = format!("[{}, {}]", c1, c2);
+        let result = top_k_similar_wasm(&query, &candidates, 1);
+        assert!(result.contains("\"index\":0"));
     }
 }

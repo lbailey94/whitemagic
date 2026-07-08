@@ -43,6 +43,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from whitemagic.core.memory.db_manager import safe_connect
 
 # Default paths.
 HOME = Path.home()
@@ -264,7 +265,7 @@ def main() -> int:
             print(f"  audit/: {n} CLI commands")
         return 0
 
-    target = sqlite3.connect(str(args.target))
+    target = safe_connect(str(args.target))
     target.row_factory = sqlite3.Row
     t0 = time.perf_counter()
     grand_total = 0

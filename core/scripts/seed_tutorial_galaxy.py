@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from whitemagic.config.paths import DB_PATH, ensure_paths
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 TUTORIAL_MEMORIES = [
@@ -156,7 +157,7 @@ def seed_tutorial_galaxy(db_path: str | None = None) -> dict:
     ensure_paths()
     db = db_path or DB_PATH
 
-    conn = sqlite3.connect(db)
+    conn = safe_connect(db)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
 

@@ -281,8 +281,8 @@ class SemanticSearcher:
                         memory_embeddings.append(cached)
                         continue
 
-            # Not cached, need to embed
-            memory_embeddings.append(None)  # Placeholder
+            # Not cached, need to embed — slot filled after batch embed below
+            memory_embeddings.append(None)
             texts_to_embed.append(f"{memory['title']} {memory['content']}")
             indices_to_embed.append(i)
 

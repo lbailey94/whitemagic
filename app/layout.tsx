@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { ConditionalChrome } from "@/components/ConditionalChrome";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRainLazy } from "@/components/MatrixRainLazy";
-import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
-import { HelloHuman } from "@/components/HelloHuman";
 import { organizationLd, websiteLd, softwareApplicationLd } from "@/lib/jsonld";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -53,13 +50,7 @@ export default function RootLayout({
         <JsonLd data={[organizationLd(), websiteLd(), softwareApplicationLd()]} />
         <ThemeProvider>
           <MatrixRainLazy />
-          <div className="relative z-10">
-            <Header />
-            <main>{children}</main>
-            <Footer />
-          </div>
-          <FloatingLibrarian />
-          <HelloHuman />
+          <ConditionalChrome>{children}</ConditionalChrome>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

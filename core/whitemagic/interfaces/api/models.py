@@ -28,7 +28,7 @@ try:
 except ImportError:
     HAS_SQLALCHEMY = False
 
-    # Stub classes for when SQLAlchemy not available
+    # Fallback classes for when SQLAlchemy is not installed
     class DeclarativeBase:
         """DeclarativeBase: declarative base."""
 

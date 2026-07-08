@@ -39,6 +39,7 @@ _TOOL_CODEBOOK: dict[str, str] = {
     "capabilities": "Gc",
     "manifest": "Gm",
     "get_telemetry_summary": "Gt",
+    "tool_usage_stats": "Tu",
     "repo.summary": "Gr",
     "explain_this": "Ge",
     "selfmodel.forecast": "Gf",

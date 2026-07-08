@@ -637,8 +637,8 @@ class PolyglotRouter:
                 import whitemagic_rs
 
                 if hasattr(whitemagic_rs, "extract_patterns_py"):
-                    # Mock/Simulate complex pattern extraction bridge
-                    return {"status": "rust_accelerated", "patterns_extracted": 42}
+                    result = whitemagic_rs.extract_patterns_py()
+                    return {"status": "rust_accelerated", "patterns": result}
                 return {"status": "fallback"}
 
             return self._route_operation(

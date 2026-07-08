@@ -163,11 +163,19 @@ class OMSManager:
         try:
             with pool.connection() as conn:
                 conn.row_factory = sqlite3.Row
+                # Check which columns exist in the memories table
+                cols = {r[1] for r in conn.execute("PRAGMA table_info(memories)").fetchall()}
+                select_cols = ["id", "title", "content", "memory_type", "importance",
+                               "emotional_valence", "metadata", "created_at",
+                               "galactic_distance", "x", "y", "z", "w", "v"]
+                if "tags" in cols:
+                    select_cols.insert(6, "tags")
+                if "galaxy" in cols:
+                    select_cols.append("galaxy")
+                col_list = ", ".join(select_cols)
                 # Export memories
                 rows = conn.execute(
-                    """SELECT id, title, content, memory_type, importance,
-                              emotional_valence, tags, metadata, created_at,
-                              galactic_distance, x, y, z, w, v
+                    f"""SELECT {col_list}
                        FROM memories ORDER BY importance DESC"""
                 ).fetchall()
 
@@ -179,7 +187,7 @@ class OMSManager:
                         "memory_type": row["memory_type"] or "short_term",
                         "importance": row["importance"] or 0.5,
                         "emotional_valence": row["emotional_valence"] or 0.0,
-                        "tags": row["tags"] or "",
+                        "tags": row["tags"] if "tags" in cols and row["tags"] else "",
                         "galactic_distance": row["galactic_distance"] or 0.5,
                         "x": row["x"],
                         "y": row["y"],

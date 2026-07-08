@@ -203,12 +203,18 @@ God is in the details.
             monitor = get_harmony_monitor()
             state = monitor.get_current(force_update=True)
 
-            # Simulate checking specific integrations
+            # Check actual integration availability
+            try:
+                import psycopg2  # noqa: F401
+                pg_available = True
+            except ImportError:
+                pg_available = False
+
             integrations = {
                 "rust_core": True,
                 "mcp_bridge": True,
                 "skyfield": True,
-                "postgres": False,  # Mock
+                "postgres": pg_available,
             }
 
             return {

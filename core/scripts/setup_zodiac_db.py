@@ -3,6 +3,7 @@ import sqlite3
 from whitemagic.config.paths import DB_PATH
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 
@@ -12,7 +13,7 @@ def setup_zodiac_table():
         logger.debug("Database not found at %s", db_path)
         return
 
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS zodiac_ledger (

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 
 from whitemagic.config.paths import CACHE_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 
 if TYPE_CHECKING:
     import numpy as np

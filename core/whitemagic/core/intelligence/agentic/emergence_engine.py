@@ -55,6 +55,9 @@ class EmergenceEngine:
         self._past_insights: list[dict[str, Any]] = []
         self._creative_tensions: list[dict[str, Any]] = []
         self._listening = False
+        # Novelty filtering: track seen signatures to suppress recursive echoes
+        self._seen_signatures: dict[str, int] = {}  # signature → count seen
+        self._novelty_threshold = 2  # After seeing same signature N times, suppress
         self._start_listening()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -94,15 +97,83 @@ class EmergenceEngine:
         if len(self._creative_tensions) > 50:
             self._creative_tensions = self._creative_tensions[-50:]
 
-    def scan_for_emergence(self) -> list[EmergenceInsight]:
-        """Run full emergence scan across all detection modes."""
-        insights: list[EmergenceInsight] = []
+    def _compute_signature(self, insight: EmergenceInsight) -> str:
+        """Compute a novelty signature for an insight.
 
-        insights.extend(self._detect_tag_clusters())
-        insights.extend(self._detect_resonance_cascades())
-        insights.extend(self._detect_novelty_spikes())
-        insights.extend(self._detect_cross_domain_bridges())
-        insights.extend(self._detect_creative_tensions())
+        Two insights with the same signature are considered the same pattern.
+        For tag clusters, the signature includes the tag pair but NOT the count,
+        so that the same pair at different counts is still recognized as a repeat.
+        """
+        if insight.source == "tag_cluster":
+            tags = sorted([insight.metadata.get("tag_a", ""), insight.metadata.get("tag_b", "")])
+            return f"tag_cluster:{tags[0]}+{tags[1]}"
+        elif insight.source == "resonance_cascade":
+            return f"cascade:{insight.metadata.get('tag', '')}"
+        elif insight.source == "novelty_spike":
+            return f"novelty:{insight.metadata.get('tag', '')}"
+        elif insight.source == "cross_domain":
+            c1 = insight.metadata.get("constellation_1", "")
+            c2 = insight.metadata.get("constellation_2", "")
+            return f"bridge:{min(c1, c2)}+{max(c1, c2)}"
+        elif insight.source == "creative_tension":
+            return f"tension:{insight.metadata.get('query', '')[:60]}"
+        return insight.id
+
+    def _filter_novel(self, insights: list[EmergenceInsight]) -> list[EmergenceInsight]:
+        """Filter out recursive echoes — insights we've seen too many times.
+
+        An insight is suppressed if its signature has been seen >= novelty_threshold
+        times before. This prevents the emergence engine from reporting the same
+        tag clusters and patterns repeatedly, which creates a recursive echo
+        chamber rather than true emergence.
+
+        The first occurrence is always reported (novelty = 1.0).
+        The second is reported with reduced confidence (novelty = 0.5).
+        The third and beyond are suppressed entirely.
+        """
+        novel: list[EmergenceInsight] = []
+        for ins in insights:
+            sig = self._compute_signature(ins)
+            seen_count = self._seen_signatures.get(sig, 0)
+
+            if seen_count == 0:
+                # First occurrence — full novelty
+                novel.append(ins)
+            elif seen_count == 1:
+                # Second occurrence — reduced confidence, still reported
+                ins.confidence *= 0.5
+                ins.title = f"{ins.title} (recurring)"
+                novel.append(ins)
+            # seen_count >= 2: suppress (recursive echo)
+
+            self._seen_signatures[sig] = seen_count + 1
+
+        # Prune signatures that haven't been seen recently (keep dict bounded)
+        if len(self._seen_signatures) > 500:
+            # Keep only the most recent 250 signatures
+            sorted_sigs = sorted(self._seen_signatures.items(), key=lambda x: -x[1])
+            self._seen_signatures = dict(sorted_sigs[:250])
+
+        return novel
+
+    def scan_for_emergence(self) -> list[EmergenceInsight]:
+        """Run full emergence scan across all detection modes.
+
+        Applies novelty filtering to suppress recursive echoes — patterns
+        that have been detected before are suppressed or reported with
+        reduced confidence, ensuring the engine surfaces truly novel
+        emergence rather than repeating the same findings.
+        """
+        raw_insights: list[EmergenceInsight] = []
+
+        raw_insights.extend(self._detect_tag_clusters())
+        raw_insights.extend(self._detect_resonance_cascades())
+        raw_insights.extend(self._detect_novelty_spikes())
+        raw_insights.extend(self._detect_cross_domain_bridges())
+        raw_insights.extend(self._detect_creative_tensions())
+
+        # Novelty filter: suppress recursive echoes
+        insights = self._filter_novel(raw_insights)
 
         for ins in insights:
             self._past_insights.append(
@@ -120,7 +191,12 @@ class EmergenceEngine:
         if len(self._past_insights) > 100:
             self._past_insights = self._past_insights[-100:]
 
-        logger.info("Emergence scan complete: %s patterns detected", len(insights))
+        suppressed = len(raw_insights) - len(insights)
+        logger.info(
+            "Emergence scan: %s patterns detected, %s suppressed as recursive echoes",
+            len(insights),
+            suppressed,
+        )
         return insights
 
     def get_insights(self, limit: int = 5) -> list[dict[str, Any]]:

@@ -33,6 +33,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from whitemagic.core.memory.db_manager import safe_connect
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -53,7 +54,7 @@ def generate_memory_sample(n_memories: int = 50) -> dict[str, Any]:
     """
     logger.info(f"Generating memory sample from {DB_PATH}")
     
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = safe_connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     
     # Get diverse, high-quality memories

@@ -113,6 +113,7 @@ class Memory:
 
     # Metadata
     source: str = ""
+    source_trust: str = "user"  # Provenance: user, tool_output, web, inferred (defends against memory poisoning)
     last_recalled: datetime | None = None
     last_modified: datetime | None = None
     decay_rate: float = 0.02
@@ -261,6 +262,7 @@ class Memory:
             "retention_score": self.retention_score,
             "last_retention_sweep": self.last_retention_sweep.isoformat() if self.last_retention_sweep else None,
             "galaxy": self.galaxy,
+            "source_trust": self.source_trust,
             "metadata": self.metadata,
             "links": {
                 tid: {
@@ -305,6 +307,7 @@ class Memory:
             retention_score=data.get("retention_score", 0.5),
             last_retention_sweep=parse_datetime(data["last_retention_sweep"]) if data.get("last_retention_sweep") else None,
             galaxy=data.get("galaxy", "universal"),
+            source_trust=data.get("source_trust", "user"),
             metadata=data.get("metadata", {}),
         )
 

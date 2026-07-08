@@ -228,13 +228,25 @@ polyglot/whitemagic-hs/src/*_stub.h
 polyglot/whitemagic-hs/wm_hs_bridge.c
 polyglot/whitemagic-hs/wm_hs_bridge.o
 
-# === External projects (not part of WhiteMagic core) ===
-whitemagic-app/
-whitemagic-aux/
-WhiteMagic-Grants/
-/auxiliary projects/
-apps/site/
-test_zig
+# === Consolidated external folders (moved into WHITEMAGIC/ for discovery) ===
+# These are NOT part of the WhiteMagic core repo — they are sibling projects,
+# data archives, and auxiliary tooling consolidated here for AI tool discovery.
+# Symlinks point to standalone git repos; directories are non-git data/projects.
+archives/
+site/
+aux/
+app-layer/
+grants/
+windsurf-rips/
+codex-engine/
+blackmagic/
+alltexts/
+notes-scratch/
+reports/
+opencodeconvos/
+public-repo
+ide
+apps/
 
 # === Temporary ===
 tmp/
@@ -268,15 +280,12 @@ polyglot/whitemagic-rust-archive/wm-seed
 polyglot/whitemagic-rust-archive/pkg/
 
 # === Private / strategic content (not for public release) ===
-# These directories contain session reports, strategic plans, grant
-# applications, and personal research that should not be in a public repo.
 docs/message_board/
 docs/archive/
 docs/strategy_manifestos/
 docs/essay_frameworks/
 docs/SFW2/
 docs/private/
-WhiteMagic-Grants/
 ops/.env.production.local
 
 # Internal development artifacts
@@ -287,9 +296,6 @@ whitemagic_dream.log
 .strata-cache.json
 ARCHITECTURE_MANIFEST_2026-06-04.md
 C4_GIT_FILTER_REPO_SCRIPT.sh
-
-# Desktop app (lives in separate repo)
-whitemagic-app/
 
 # Build artifacts
 core/dist/
@@ -358,3 +364,4 @@ core/erl_crash.dump
 core/mesh_aux/wm_gateway
 .vercel
 .env*
+Agent-SafetyBench/

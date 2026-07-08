@@ -133,6 +133,7 @@ SKIP_NERVOUS_SYSTEM_CHECK: frozenset[str] = frozenset(
         "health_report",
         "gnosis",
         "get_telemetry_summary",
+        "tool_usage_stats",
         "rust_status",
         "tool.graph",
         "tool.graph_full",

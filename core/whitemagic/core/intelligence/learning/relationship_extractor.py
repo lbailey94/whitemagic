@@ -202,7 +202,7 @@ def extract_relationships(
     conn.row_factory = sqlite3.Row
 
     try:
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.execute("PRAGMA wal_checkpoint(RESTART)")
     except (sqlite3.Error, sqlite3.OperationalError) as e:
         logger.warning("WAL checkpoint failed (might be locked): %s", e, exc_info=True)
 

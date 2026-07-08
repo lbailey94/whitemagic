@@ -13,12 +13,13 @@ from whitemagic.core.intelligence.synthesis.cross_domain_detector import (
     CrossDomainCollisionDetector,
     get_cross_domain_detector,
 )
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 def _make_test_db(tmpdir: str) -> str:
     """Create a temporary test database with memories, tags, and embeddings."""
     db_path = str(Path(tmpdir) / "test_collisions.db")
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     conn.executescript("""
         CREATE TABLE memories (
             id TEXT PRIMARY KEY,
@@ -155,7 +156,7 @@ class TestCrossDomainCollisionDetector:
     def test_detect_returns_empty_on_empty_db(self, tmp_path):
         """Should return empty list when no memories exist."""
         db_path = str(tmp_path / "empty.db")
-        conn = sqlite3.connect(db_path)
+        conn = safe_connect(db_path)
         conn.executescript("""
             CREATE TABLE memories (id TEXT PRIMARY KEY, title TEXT, content TEXT, memory_type TEXT, created_at TEXT);
             CREATE TABLE tags (memory_id TEXT, tag TEXT);

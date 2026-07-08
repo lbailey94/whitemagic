@@ -122,17 +122,18 @@ def handle_retention_sweep(**kwargs: Any) -> dict[str, Any]:
         engine_factory = getattr(mindful_forgetting, "get_retention_engine")
     engine = engine_factory()
 
-    dry_run = kwargs.get("dry_run", True)
-    limit = kwargs.get("limit", 50)
+    persist = kwargs.get("persist", False)
 
-    results = engine.sweep(dry_run=dry_run, limit=limit)
+    results = engine.sweep(persist=persist)
+    if hasattr(results, "to_dict"):
+        results = results.to_dict()
     return {
         "status": "success",
-        "dry_run": dry_run,
-        "evaluated": results.get("evaluated", 0),
-        "would_forget": results.get("would_forget", 0),
-        "would_keep": results.get("would_keep", 0),
-        "details": results.get("details", [])[:10],
+        "persist": persist,
+        "evaluated": results.get("evaluated", 0) if isinstance(results, dict) else 0,
+        "would_forget": results.get("would_forget", 0) if isinstance(results, dict) else 0,
+        "would_keep": results.get("would_keep", 0) if isinstance(results, dict) else 0,
+        "details": (results.get("details", [])[:10] if isinstance(results, dict) else []),
     }
 
 

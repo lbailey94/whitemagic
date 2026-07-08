@@ -384,6 +384,8 @@ _CONTENT_SCAN_EXEMPT: set = {
     "working_memory.context",
     # Agent registration (arbitrary capability descriptions)
     "agent.register",
+    # Task distribution (command field contains arbitrary shell commands)
+    "task.distribute",
 }
 
 
@@ -686,12 +688,19 @@ def _levenshtein(a: str, b: str) -> int:
     return prev[-1]
 
 
+_UUID_RE = re_compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+
+
 def _fuzzy_match_attacks(text: str) -> str | None:
     """Check if any word in text is within Levenshtein distance of attack keywords.
 
     Runs on the Unicode-normalized, lowercased text to catch homoglyph/leet/case
     mutations that bypass exact regex matching.
     """
+    # Skip UUIDs — hex segments like "a1ba7" leet-normalize to "aibat" which
+    # falsely matches "liberat" at distance 3.
+    if _UUID_RE.search(text):
+        return None
     normalized = _normalize_unicode_confusables(text).lower()
     # Also apply leet normalization for fuzzy matching
     _leet_reverse = {"4": "a", "3": "e", "1": "i", "0": "o", "5": "s", "7": "t", "8": "b"}

@@ -25,6 +25,7 @@ import time
 from typing import Any
 
 from whitemagic.core.consciousness.citta_cycle import CittaMoment
+from whitemagic.core.consciousness.citta_vector import CittaVector
 from whitemagic.core.memory.galaxy_taxonomy import GALAXY_CITTA
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,8 @@ _DEPTH_TRANSITION_WEIGHT = 0.9
 _EMOTIONAL_SHIFT_THRESHOLD = 0.7
 _COHERENCE_MILESTONES = [0.5, 0.7, 0.8, 0.9, 0.95]
 _MIN_INTERVAL_SECONDS = 60.0  # Don't create citta memories more than once per minute
+_VECTOR_DISTANCE_THRESHOLD = 1.5  # Significant displacement in 16D citta space
+_IGNITION_RATIO_THRESHOLD = 2.0  # Velocity > 2x average = ignition
 
 
 class CittaBridge:
@@ -49,6 +52,8 @@ class CittaBridge:
         self._last_emotional_tone: str = "neutral"
         self._last_coherence: float = 1.0
         self._coherence_milestones_hit: set[float] = set()
+        self._last_vector: CittaVector | None = None
+        self._vector_velocity_history: list[float] = []
 
     def check_and_store(
         self,
@@ -57,10 +62,15 @@ class CittaBridge:
     ) -> str | None:
         """Check if a citta moment is significant enough to persist as a memory.
 
+        Uses both traditional heuristics (depth transitions, emotional shifts,
+        coherence milestones) and vector-space geometry (distance from previous
+        moment, ignition events) to determine significance.
+
         Returns the memory ID if a memory was created, None otherwise.
         """
         now = time.time()
         if now - self._last_store_time < _MIN_INTERVAL_SECONDS:
+            self._update_vector_state(moment)
             return None
 
         should_store = False
@@ -94,6 +104,23 @@ class CittaBridge:
                 self._coherence_milestones_hit.add(milestone)
                 break
         self._last_coherence = moment.coherence
+
+        # Vector-space significance: large displacement from previous moment
+        vec_distance = self._update_vector_state(moment)
+        if vec_distance is not None and vec_distance >= _VECTOR_DISTANCE_THRESHOLD:
+            if not should_store:
+                should_store = True
+                reason = f"vector_displacement:{vec_distance:.3f}"
+            else:
+                reason += f" +vector:{vec_distance:.3f}"
+
+        # Vector-space ignition: velocity > 2x running average
+        if self._detect_ignition():
+            if not should_store:
+                should_store = True
+                reason = "vector_ignition"
+            else:
+                reason += " +ignition"
 
         # High-importance tool call (coherence > 0.9 and non-trivial output)
         if (
@@ -150,6 +177,17 @@ class CittaBridge:
             f"**Emotional distribution**: {ec.get('distribution', {})}\n"
         )
 
+        vs = cycle_summary.get("vector_space")
+        if vs:
+            content += (
+                f"\n**Vector space**:\n"
+                f"- Dimensions: {vs.get('dim', 16)}\n"
+                f"- Trajectory length: {vs.get('trajectory_length', 0)}\n"
+                f"- Avg velocity: {vs.get('avg_velocity', 0.0):.4f}\n"
+                f"- Max velocity: {vs.get('max_velocity', 0.0):.4f}\n"
+                f"- Ignition events: {vs.get('ignitions', 0)}\n"
+            )
+
         title = f"Citta Session {session_id}"
         tags = {"citta", "consciousness", "session_summary", "citta_stream"}
 
@@ -169,6 +207,7 @@ class CittaBridge:
                     "depth_layer": current_depth,
                     "emotional_tone": dominant_tone,
                     "depth_transitions": depth_transitions,
+                    "vector_space": cycle_summary.get("vector_space"),
                 },
             )
             logger.debug("Stored citta session summary: %s", mem_id)
@@ -178,6 +217,41 @@ class CittaBridge:
                 "Failed to store citta session summary: %s", e, exc_info=True
             )
             return None
+
+    def _update_vector_state(self, moment: CittaMoment) -> float | None:
+        """Track vector displacement from previous moment.
+
+        Returns the distance from the previous vector, or None if this is
+        the first moment or no vector is available.
+        """
+        vec = moment.vector
+        if vec is None:
+            return None
+
+        distance = None
+        if self._last_vector is not None:
+            distance = self._last_vector.distance(vec)
+            self._vector_velocity_history.append(distance)
+            # Keep history bounded
+            if len(self._vector_velocity_history) > 50:
+                self._vector_velocity_history = self._vector_velocity_history[-50:]
+
+        self._last_vector = vec
+        return distance
+
+    def _detect_ignition(self) -> bool:
+        """Detect if the latest velocity is an ignition event.
+
+        Ignition = velocity > 2x running average (GWT broadcast analog).
+        """
+        history = self._vector_velocity_history
+        if len(history) < 3:
+            return False
+        latest = history[-1]
+        avg = sum(history[:-1]) / len(history[:-1])
+        if avg == 0:
+            return False
+        return latest > avg * _IGNITION_RATIO_THRESHOLD
 
     def _store_moment(
         self,
@@ -203,9 +277,21 @@ class CittaBridge:
             f"**Coherence**: {moment.coherence:.4f}\n"
             f"**Emotional tone**: {moment.emotional_tone}\n"
             f"**Chain position**: {moment.chain_position}\n"
-            f"**Duration**: {moment.duration_ms:.2f}ms\n\n"
-            f"**Output preview**:\n{moment.output_preview}\n"
+            f"**Duration**: {moment.duration_ms:.2f}ms\n"
         )
+
+        if moment.vector is not None:
+            v = moment.vector
+            content += (
+                f"\n**Vector space**:\n"
+                f"- Overall coherence: {v.overall_coherence:.4f}\n"
+                f"- Valence: {v.valence:.3f}, Arousal: {v.arousal:.3f}\n"
+                f"- Depth: {v.depth_layer}\n"
+                f"- Cognitive load: {v.neuro_subspace()[0]:.3f}\n"
+                f"- Novelty: {v.neuro_subspace()[1]:.3f}\n"
+            )
+
+        content += f"\n**Output preview**:\n{moment.output_preview}\n"
 
         if cycle_summary:
             content += (
@@ -231,6 +317,8 @@ class CittaBridge:
             importance = max(importance, 0.85)
         if "coherence_milestone" in reason:
             importance = max(importance, 0.9)
+        if "vector_displacement" in reason or "ignition" in reason:
+            importance = max(importance, 0.88)
 
         try:
             mem_id = um.store(
@@ -249,6 +337,7 @@ class CittaBridge:
                     "citta_emotional_tone": moment.emotional_tone,
                     "citta_chain_position": moment.chain_position,
                     "citta_duration_ms": moment.duration_ms,
+                    "citta_vector": moment.vector.to_dict() if moment.vector else None,
                 },
             )
             self._last_store_time = time.time()

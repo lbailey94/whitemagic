@@ -11,6 +11,7 @@ from datetime import datetime
 import uuid
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 # Paths
@@ -175,7 +176,7 @@ def ingest_longmemeval(data_file, conn):
 
 
 if __name__ == "__main__":
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = safe_connect(str(DB_PATH))
     init_locomo_db(conn)
     ingest_longmemeval(DATASET_FILE, conn)
     conn.close()

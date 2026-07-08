@@ -598,6 +598,35 @@ TOOLS: list[ToolDefinition] = [
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
     ),
+    ToolDefinition(
+        name="workspace.ignite",
+        description="Force ignition of the competition window — selects and broadcasts the most salient pending proposal.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.WRITE,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="workspace.pending",
+        description="Get pending proposals currently in the competition window.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="workspace.ignitions",
+        description="Get ignition events from the citta vector trajectory — sudden large displacements in consciousness state space.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "threshold": {
+                    "type": "number",
+                    "description": "Velocity ratio threshold for ignition detection (default 2.0 = 2x average).",
+                },
+            },
+        },
+    ),
     # ═══════════════════════════════════════════════════════════════════
     # Neuro-Cognitive Sensorium (Citta Integration)
     # ═══════════════════════════════════════════════════════════════════
@@ -621,5 +650,83 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYNTHESIS,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
+    ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Citta Introspection (Consciousness State Observation)
+    # ═══════════════════════════════════════════════════════════════════
+    ToolDefinition(
+        name="citta.vector",
+        description="Get the current 16D citta vector — the consciousness state representation with coherence, depth, emotional, and neuro dimensions.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="citta.trajectory",
+        description="Get the citta vector trajectory — recent consciousness state history with velocity and ignition events.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of recent vectors to return (default 20).",
+                },
+            },
+        },
+    ),
+    ToolDefinition(
+        name="citta.coherence",
+        description="Get per-dimension coherence breakdown — the 8-axis consciousness measure with Dharma conservative mode status.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="consciousness.loop.status",
+        description="Get status of the persistent background consciousness loop — citta ticks, dream cycles, homeostatic checks, uptime, and configuration.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="guna.balance.status",
+        description="Get current guna balance status — sattvic/rajasic/tamasic ratios, target biorhythm (1:2:3), deficits, surpluses, and correction actions.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="meta.galaxy.overview",
+        description="Get a top-down meta-cognitive overview of all galaxies — memory counts, health scores, knowledge gaps, cross-galaxy associations, and strategic priorities.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="possibility.explore",
+        description="Run Monte Carlo possibility space exploration on system parameters (guna balance, coherence, emergence thresholds, health setpoints). Returns best parameters and sensitivity analysis.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "space": {"type": "string", "default": "guna_balance", "description": "Possibility space: guna_balance, coherence_optimization, emergence_thresholds, health_setpoints, or all"},
+                "n_trials": {"type": "integer", "default": 100, "description": "Number of Monte Carlo trials"},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="knowledge_gap.run",
+        description="Detect and attempt to fill knowledge gaps using self-directed actions — seeds memories, generates code from vault, synthesizes strategies, searches and ingests.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "max_gaps": {"type": "integer", "default": 3, "description": "Maximum gaps to attempt per run"},
+            },
+        },
     ),
 ]

@@ -29,6 +29,7 @@ from datetime import datetime
 from typing import Any
 
 from whitemagic.utils.core import parse_datetime
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

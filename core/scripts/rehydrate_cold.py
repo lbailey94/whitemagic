@@ -15,6 +15,7 @@ import sqlite3
 import time
 import shutil
 from pathlib import Path
+from whitemagic.core.memory.db_manager import safe_connect
 
 HOME = Path.home()
 ACTIVE_DB = HOME / ".whitemagic" / "memory" / "whitemagic.db"
@@ -53,7 +54,7 @@ def main():
             shutil.copy2(ACTIVE_DB, backup)
             print(f"  ✅ Backup: {backup.stat().st_size / 1024 / 1024:.1f} MB")
 
-    conn = sqlite3.connect(str(ACTIVE_DB))
+    conn = safe_connect(str(ACTIVE_DB))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA cache_size=-128000")  # 128MB cache

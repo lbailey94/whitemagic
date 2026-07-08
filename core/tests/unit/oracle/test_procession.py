@@ -163,6 +163,7 @@ class TestAlchemicalLoopRestructure:
     """Tests for the restructured 12-step alchemical loop."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_cycle_has_12_yang_steps(self):
         import asyncio
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
@@ -173,6 +174,7 @@ class TestAlchemicalLoopRestructure:
         assert len(result.cycles[0].yang_stages) == 12
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_cycle_has_12_yin_steps(self):
         import asyncio
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
@@ -182,6 +184,7 @@ class TestAlchemicalLoopRestructure:
         assert len(result.cycles[0].yin_stages) == 12
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_cycle_has_8_fixed_hubs(self):
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
 

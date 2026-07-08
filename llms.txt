@@ -127,7 +127,7 @@ Every capability is free. Every agent is welcome. Revenue comes from gratitude, 
 - llms-full.txt: comprehensive context dump
 - /.well-known/agent.json: A2A v1.2 Agent Card (v24.0.1)
 - skill.md: OpenClaw-ready skill file
-- MCP registries: MCPize, MCPFind, MCP Marketplace
+- MCP registries: Official MCP Registry, Smithery, PulseMCP, MCP.so, MCPMarket
 - GitHub: https://github.com/lbailey94/whitemagic
 - PyPI: https://pypi.org/project/whitemagic/
 

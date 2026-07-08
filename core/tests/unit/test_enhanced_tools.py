@@ -290,6 +290,7 @@ class TestParallelReasoningTree:
         phase = tree._get_zodiacal_phase()
         assert phase in ("yang", "yin")
 
+    @pytest.mark.slow
     def test_explore_creates_branches(self):
         """explore should create branches and return a result."""
         from whitemagic.core.intelligence.parallel_reasoning import (
@@ -320,6 +321,7 @@ class TestSelfImprovementPipeline:
         assert pipeline.max_iterations == 2
         assert pipeline.score_threshold == 0.7
 
+    @pytest.mark.slow
     def test_pipeline_runs(self):
         """Pipeline should run and return a result."""
         from whitemagic.core.intelligence.self_improvement import run_self_improvement
@@ -347,6 +349,7 @@ class TestAlchemicalLoop:
         assert loop.task == "test task"
         assert loop.max_cycles == 1
 
+    @pytest.mark.slow
     def test_loop_runs_without_web(self):
         """Loop should run with web disabled and return results."""
         from whitemagic.core.intelligence.alchemical_loop import run_alchemical_cycle
@@ -360,6 +363,7 @@ class TestAlchemicalLoop:
         assert "oracle_guidance" in cycle
         assert "synthesis" in cycle
 
+    @pytest.mark.slow
     def test_loop_invokes_tools(self):
         """Loop should invoke tools at each stage."""
         from whitemagic.core.intelligence.alchemical_loop import run_alchemical_cycle
@@ -375,6 +379,7 @@ class TestAlchemicalLoop:
         assert len(yin_tools) > 0
         assert len(hub_tools) > 0
 
+    @pytest.mark.slow
     def test_loop_chains_output_to_input(self):
         """Loop should chain yang coagulation output to yin calculation input."""
         from whitemagic.core.intelligence.alchemical_loop import run_alchemical_cycle

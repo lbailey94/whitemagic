@@ -83,6 +83,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "capabilities": "gana_ghost",
     "manifest": "gana_ghost",
     "get_telemetry_summary": "gana_ghost",
+    "tool_usage_stats": "gana_ghost",
     "repo.summary": "gana_ghost",
     "explain_this": "gana_ghost",
     "drive.snapshot": "gana_ghost",
@@ -634,6 +635,12 @@ TOOL_TO_GANA: dict[str, str] = {
     "external.wiki_query": "gana_chariot",
     "external.repo_scan": "gana_chariot",
     "external.repo_compare": "gana_chariot",
+    # ── v24: Codebase Self-Model (Chariot — codebase perception + navigation) ──
+    "codebase.scan": "gana_chariot",
+    "codebase.recall": "gana_chariot",
+    "codebase.structure": "gana_chariot",
+    "codebase.status": "gana_chariot",
+    "codebase.find": "gana_chariot",
     # ── v23.1: Unified Read API — Winnowing Basket (unified search/recall) ──
     "wm_read": "gana_winnowing_basket",
     "wm_read.status": "gana_winnowing_basket",
@@ -678,10 +685,22 @@ TOOL_TO_GANA: dict[str, str] = {
     "workspace.state": "gana_three_stars",
     "workspace.history": "gana_three_stars",
     "workspace.stats": "gana_three_stars",
+    "workspace.ignite": "gana_three_stars",
+    "workspace.pending": "gana_three_stars",
+    "workspace.ignitions": "gana_three_stars",
     # Neuro sensorium → Ghost (introspection/self-model/citta)
     "sensorium.state": "gana_ghost",
     "sensorium.citta": "gana_ghost",
     "sensorium.stats": "gana_ghost",
+    # Citta introspection → Ghost (introspection/self-model/citta)
+    "citta.vector": "gana_ghost",
+    "citta.trajectory": "gana_ghost",
+    "citta.coherence": "gana_ghost",
+    "consciousness.loop.status": "gana_ghost",
+    "guna.balance.status": "gana_ghost",
+    "meta.galaxy.overview": "gana_ghost",
+    "possibility.explore": "gana_dipper",
+    "knowledge_gap.run": "gana_heart",
 }
 
 # Reverse: Gana → list of nested tools

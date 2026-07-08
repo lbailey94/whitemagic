@@ -1,11 +1,12 @@
 import sqlite3
 
 from whitemagic.config.paths import DB_PATH
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 def test_fts():
     db_path = str(DB_PATH)
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     conn.row_factory = sqlite3.Row
 
     # Query that failed: Foundation Comprehensive Project

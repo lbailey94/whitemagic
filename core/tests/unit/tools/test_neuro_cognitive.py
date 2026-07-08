@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from whitemagic.core.memory.db_manager import safe_connect
 
 # Set WM_STATE_ROOT to temp dir for test isolation
 _tmp = tempfile.mkdtemp(prefix="wm_test_neuro_")
@@ -22,7 +23,7 @@ def _mock_galaxy_dbs():
 
     for galaxy in ["universal", "codex", "sessions", "citta", "dreams", "research", "aria"]:
         db_path = tmpdir / f"{galaxy}.db"
-        conn = sqlite3.connect(str(db_path))
+        conn = safe_connect(str(db_path))
         conn.execute(
             """CREATE TABLE IF NOT EXISTS memories (
                 id TEXT PRIMARY KEY,
@@ -58,7 +59,7 @@ def _mock_galaxy_dbs():
         db_paths[galaxy] = str(db_path)
 
     # Add cross-galaxy association
-    conn = sqlite3.connect(db_paths["universal"])
+    conn = safe_connect(db_paths["universal"])
     conn.execute(
         "INSERT INTO associations (source_id, target_id, strength, direction) VALUES (?, ?, ?, ?)",
         ("mem-universal-1", "mem-codex-1", 0.8, "forward"),

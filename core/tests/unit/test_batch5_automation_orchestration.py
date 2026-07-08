@@ -6,6 +6,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import pytest
+
 os.environ.setdefault("WM_STATE_ROOT", str(Path(tempfile.mkdtemp())))
 
 
@@ -22,6 +24,7 @@ class TestConsolidationEngine:
         assert isinstance(should, bool)
         assert isinstance(reason, str)
 
+    @pytest.mark.slow
     def test_consolidate_force(self, tmp_path):
         from whitemagic.core.automation.consolidation_recovered import (
             ConsolidationEngine,

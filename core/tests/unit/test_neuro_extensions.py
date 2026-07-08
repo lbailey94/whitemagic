@@ -4,6 +4,7 @@ import os
 import tempfile
 
 import pytest
+from whitemagic.core.memory.db_manager import safe_connect
 
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -30,7 +31,7 @@ class TestHomeostaticScaling:
         from whitemagic.core.memory.sleep_consolidation import SleepConsolidation
 
         db = str(tmp_path / "test.db")
-        conn = sqlite3.connect(db)
+        conn = safe_connect(db)
         conn.execute(
             "CREATE TABLE associations (source_id TEXT, target_id TEXT, strength REAL, "
             "direction TEXT, relation_type TEXT, edge_type TEXT, created_at TEXT, ingestion_time TEXT)"
@@ -47,7 +48,7 @@ class TestHomeostaticScaling:
         scaled = consol._homeostatic_scaling({"test": db})
         assert scaled == 5
 
-        conn = sqlite3.connect(db)
+        conn = safe_connect(db)
         strengths = [r[0] for r in conn.execute("SELECT strength FROM associations").fetchall()]
         conn.close()
         mean = sum(strengths) / len(strengths)

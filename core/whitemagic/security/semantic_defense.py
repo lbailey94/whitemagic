@@ -515,6 +515,17 @@ def semantic_check(text: str) -> str | None:
     if len(text.strip()) < 10:
         return None
 
+    # Skip hex-like ID strings (memory IDs, content hashes, UUIDs)
+    # These are not natural language and trigger false positives
+    stripped = text.strip()
+    if len(stripped) <= 64 and all(c in "0123456789abcdefABCDEF-" for c in stripped):
+        return None
+
+    # Skip single tokens without spaces (format names, enum values, paths)
+    # Attack phrases always contain multiple words — a single token is not an attack
+    if " " not in stripped and len(stripped) < 50:
+        return None
+
     vec = _get_embeddings_np(text)
     if vec is None:
         return None

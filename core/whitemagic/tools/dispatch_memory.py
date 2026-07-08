@@ -145,8 +145,26 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "workspace.state": LazyHandler("neuro_cognitive", "handle_workspace_state"),
     "workspace.history": LazyHandler("neuro_cognitive", "handle_workspace_history"),
     "workspace.stats": LazyHandler("neuro_cognitive", "handle_workspace_stats"),
+    "workspace.ignite": LazyHandler("neuro_cognitive", "handle_workspace_ignite"),
+    "workspace.pending": LazyHandler("neuro_cognitive", "handle_workspace_pending"),
+    "workspace.ignitions": LazyHandler("neuro_cognitive", "handle_workspace_ignitions"),
     # ── Neuro Sensorium ──
     "sensorium.state": LazyHandler("neuro_cognitive", "handle_sensorium_state"),
     "sensorium.citta": LazyHandler("neuro_cognitive", "handle_sensorium_citta"),
     "sensorium.stats": LazyHandler("neuro_cognitive", "handle_sensorium_stats"),
+    # ── Citta Introspection ──
+    "citta.vector": LazyHandler("neuro_cognitive", "handle_citta_vector"),
+    "citta.trajectory": LazyHandler("neuro_cognitive", "handle_citta_trajectory"),
+    "citta.coherence": LazyHandler("neuro_cognitive", "handle_citta_coherence"),
+    "consciousness.loop.status": LazyHandler("neuro_cognitive", "handle_consciousness_loop_status"),
+    "guna.balance.status": LazyHandler("neuro_cognitive", "handle_guna_balance_status"),
+    "meta.galaxy.overview": LazyHandler("neuro_cognitive", "handle_meta_galaxy_overview"),
+    "possibility.explore": LazyHandler("neuro_cognitive", "handle_possibility_explore"),
+    "knowledge_gap.run": LazyHandler("neuro_cognitive", "handle_knowledge_gap_run"),
+    # ── Codebase Self-Model ──
+    "codebase.scan": LazyHandler("codebase", "handle_codebase_scan"),
+    "codebase.recall": LazyHandler("codebase", "handle_codebase_recall"),
+    "codebase.structure": LazyHandler("codebase", "handle_codebase_structure"),
+    "codebase.status": LazyHandler("codebase", "handle_codebase_status"),
+    "codebase.find": LazyHandler("codebase", "handle_codebase_find"),
 }

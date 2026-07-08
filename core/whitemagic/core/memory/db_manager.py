@@ -91,6 +91,14 @@ _WAL_PRAGMAS = (
     ("PRAGMA temp_store=MEMORY",),
 )
 
+# Security pragmas — defend against schema-level attacks (CVE-2025-7709 class)
+# trusted_schema=OFF prevents triggers/views/CHECK constraints from invoking
+# functions with side effects when loaded from a potentially corrupted DB file.
+# See: https://sqlite.org/security.html §9a
+_SECURITY_PRAGMAS = (
+    ("PRAGMA trusted_schema=OFF",),
+)
+
 
 def safe_connect(
     db_path: str,
@@ -126,11 +134,23 @@ def safe_connect(
                 conn.execute(pragma)
             except sqlite3.OperationalError:
                 pass
+        # Security: disable trusted schema to prevent schema-level attacks
+        for pragma, in _SECURITY_PRAGMAS:
+            try:
+                conn.execute(pragma)
+            except (sqlite3.OperationalError, sqlite3.NotSupportedError):
+                pass  # Older SQLite versions don't support this pragma
     else:
         try:
             conn.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
         except sqlite3.OperationalError:
             pass
+        # Security: disable trusted schema for read-only connections too
+        for pragma, in _SECURITY_PRAGMAS:
+            try:
+                conn.execute(pragma)
+            except (sqlite3.OperationalError, sqlite3.NotSupportedError):
+                pass
     return conn
 
 class ConnectionPool:

@@ -22,7 +22,6 @@ def phase_cli():
 @phase_cli.command(name="status")
 def status_cmd():
     """Show current Wu Xing phase."""
-    # Mock connection to active scheduler
     scheduler = WuXingScheduler()
     st = scheduler.status()
 

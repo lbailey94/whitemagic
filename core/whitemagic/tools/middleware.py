@@ -1290,3 +1290,105 @@ def mw_session_recorder(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
         logger.debug("Session recorder middleware: best-effort recording failed", exc_info=True)
 
     return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Citta Consciousness Middleware (v24)
+# ═══════════════════════════════════════════════════════════════════════
+# Pre-dispatch:  feeds current coherence → Dharma.set_coherence()
+# Post-dispatch: advances citta cycle + proposes salient results to workspace
+
+
+def mw_citta_consciousness(
+    ctx: "DispatchContext", next_fn: "NextFn"
+) -> dict[str, Any] | None:
+    """Citta consciousness integration — coherence gating + workspace proposals.
+
+    Pre-dispatch:
+      - Reads the current citta coherence and feeds it to Dharma, so the
+        ethical gate operates in conservative mode when coherence is low.
+
+    Post-dispatch:
+      - Advances the citta stream with the actual result coherence (not
+        hardcoded 1.0/0.5 like the wm() meta-tool path).
+      - Proposes high-salience tool outputs to the GlobalWorkspace for
+        broadcast competition, enabling cross-module cognitive integration.
+    """
+    import time as _time
+
+    # ── Pre-dispatch: feed coherence to Dharma ──
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        summary = cycle.get_cycle_summary()
+        avg_coherence = summary.get("avg_coherence", 1.0)
+        from whitemagic.core.consciousness.dharma import get_dharma
+
+        get_dharma().set_coherence(avg_coherence)
+    except Exception:
+        pass  # Best-effort
+
+    _t0 = _time.time()
+    result = next_fn(ctx)
+    _elapsed_ms = (_time.time() - _t0) * 1000
+
+    # ── Post-dispatch: advance citta + propose to workspace ──
+    if result is not None and isinstance(result, dict):
+        _is_success = result.get("status") in ("success", "ok")
+        _coherence = 1.0 if _is_success else 0.4
+
+        # Advance citta stream (direct dispatch path — wm() path does its own)
+        try:
+            from whitemagic.core.consciousness.citta_cycle import advance_citta
+
+            _output_preview = str(result.get("status", ""))[:200]
+            advance_citta(
+                gana="dispatch",
+                tool=ctx.tool_name,
+                output_preview=_output_preview,
+                coherence=_coherence,
+                depth_layer="surface",
+                emotional_tone="neutral" if _is_success else "frustrated",
+                duration_ms=_elapsed_ms,
+                neuro_signals={},
+            )
+        except Exception:
+            pass
+
+        # Propose salient results to GlobalWorkspace
+        try:
+            from whitemagic.core.consciousness.global_workspace import (
+                get_global_workspace,
+            )
+
+            gw = get_global_workspace()
+            # Determine salience from result characteristics
+            _salience = 0.3  # Base
+            if _is_success:
+                _salience = 0.5
+                # Higher salience for larger outputs (more information)
+                _result_size = len(str(result))
+                if _result_size > 2000:
+                    _salience = 0.7
+                # Higher salience for WRITE operations (state changes)
+                _safety = ctx.kwargs.get("safety", "READ")
+                if isinstance(_safety, str) and _safety == "WRITE":
+                    _salience = max(_salience, 0.65)
+                # Higher salience for errors (anomalies deserve attention)
+            else:
+                _salience = 0.6  # Errors are salient — something went wrong
+
+            gw.propose(
+                source=f"dispatch:{ctx.tool_name}",
+                content={
+                    "tool": ctx.tool_name,
+                    "status": result.get("status", "unknown"),
+                    "elapsed_ms": round(_elapsed_ms, 2),
+                },
+                salience=_salience,
+            )
+        except Exception:
+            pass
+
+    return result

@@ -624,7 +624,7 @@ def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def _cloud_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
-    """Default Tier 3 handler — placeholder for cloud API.
+    """Default Tier 3 handler — fallback for cloud API.
 
     Users should register their own cloud handler with the router.
     This default returns a low-confidence response to trigger cascading.

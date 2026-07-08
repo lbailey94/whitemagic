@@ -83,7 +83,7 @@ class AttractorManager:
 
             if importance >= threshold_mass:
                 # We need coordinates. If not in metadata, we can't simulate physics.
-                # Placeholder: get from holographic index if available
+                # Retrieve coordinates from holographic index
                 coords = self._get_coords(mem_id)
                 if coords:
                     # Event horizon scales with mass

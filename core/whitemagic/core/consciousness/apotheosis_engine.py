@@ -75,7 +75,12 @@ class DiscoveredCapability:
 
 
 class SelfMonitoringHealthLoop:
-    """Continuous self-monitoring system that watches WhiteMagic's own vitals."""
+    """Continuous self-monitoring system that watches WhiteMagic's own vitals.
+
+    Implements hysteresis-based alert suppression: only fires callbacks when
+    health status *changes*, not on every check. This prevents log spam when
+    a metric is consistently slightly below threshold.
+    """
 
     def __init__(self, check_interval_seconds: float = 60.0) -> None:
         self.interval = check_interval_seconds
@@ -84,12 +89,27 @@ class SelfMonitoringHealthLoop:
         self._history: list[HealthReading] = []
         self._callbacks: list[Callable[[HealthStatus, str], None]] = []
 
+        # Track last status per metric for hysteresis (suppress repeated alerts)
+        self._last_status: dict[str, HealthStatus] = {}
+        self._last_worst_status: HealthStatus = HealthStatus.HEALTHY
+        self._degraded_count: int = 0  # How many consecutive degraded checks
+        self._recovery_count: int = 0   # How many consecutive healthy checks
+
         self.thresholds = {
             "coherence": 0.6,
             "memory_usage_percent": 85.0,
             "response_time_ms": 1000.0,
             "error_rate": 0.05,
             "dream_cycle_age_hours": 24.0,
+            "galaxy_health": 0.7,
+            "citta_stream_health": 0.7,
+            "tool_dispatch_health": 0.8,
+            # Biological / immune-inspired metrics
+            "inflammation_index": 0.3,
+            "antibody_diversity": 0.5,
+            "signal_to_noise": 0.3,
+            "setpoint_deviation": 0.15,
+            "guna_balance": 0.7,
         }
 
     def register_callback(self, callback: Callable[[HealthStatus, str], None]) -> None:
@@ -106,11 +126,14 @@ class SelfMonitoringHealthLoop:
             from whitemagic.core.consciousness.coherence import get_coherence_metric
 
             coherence_metric = get_coherence_metric()
-            coherence_overall = (
-                sum(coherence_metric.scores.values()) / len(coherence_metric.scores)
-                if coherence_metric.scores
-                else 0.5
-            )
+            if coherence_metric.last_measured is None:
+                coherence_overall = 0.5
+            else:
+                coherence_overall = (
+                    sum(coherence_metric.scores.values()) / len(coherence_metric.scores)
+                    if coherence_metric.scores
+                    else 0.5
+                )
         except Exception:
             coherence_overall = 0.5
 
@@ -124,60 +147,299 @@ class SelfMonitoringHealthLoop:
             ),
         )
 
-        # 2. Memory usage check
+        # 2. Memory usage check — real memory count from galaxy backend
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            stats = um._galaxy_backend.get_stats()
+            mem_count = stats.get("total_memories", 0)
+            mem_usage_pct = min(100.0, (mem_count / 100000) * 100)
+        except Exception:
+            mem_usage_pct = 50.0
         readings["memory_usage"] = HealthReading(
             timestamp=now,
             metric_name="memory_usage_percent",
-            value=50.0,
+            value=mem_usage_pct,
             threshold=self.thresholds["memory_usage_percent"],
-            status=HealthStatus.HEALTHY,
+            status=self._status_from_value(
+                mem_usage_pct, self.thresholds["memory_usage_percent"], higher_is_better=False
+            ),
         )
 
-        # 3. Response time check
+        # 3. Response time check — real avg from calibration data
+        try:
+            import os as _os
+            import json as _json
+            state_root = _os.environ.get("WM_STATE_ROOT", _os.path.expanduser("~/.whitemagic"))
+            cal_path = _os.path.join(state_root, "citta", "calibration.jsonl")
+            if _os.path.exists(cal_path):
+                with open(cal_path) as f:
+                    cal_lines = f.readlines()[-10:]
+                if cal_lines:
+                    actuals = [_json.loads(l).get("actual_seconds_machine", 0) for l in cal_lines]
+                    avg_response_ms = (sum(actuals) / len(actuals)) * 1000
+                else:
+                    avg_response_ms = 100.0
+            else:
+                avg_response_ms = 100.0
+        except Exception:
+            avg_response_ms = 100.0
         readings["response_time"] = HealthReading(
             timestamp=now,
             metric_name="response_time_ms",
-            value=100.0,
+            value=avg_response_ms,
             threshold=self.thresholds["response_time_ms"],
-            status=HealthStatus.HEALTHY,
+            status=self._status_from_value(
+                avg_response_ms, self.thresholds["response_time_ms"], higher_is_better=False
+            ),
         )
 
-        # 4. Error rate check
+        # 4. Error rate check — real from telemetry
+        try:
+            import os as _os
+            import json as _json
+            state_root = _os.environ.get("WM_STATE_ROOT", _os.path.expanduser("~/.whitemagic"))
+            telem_path = _os.path.join(state_root, "citta", "telemetry.jsonl")
+            if _os.path.exists(telem_path):
+                with open(telem_path) as f:
+                    telem_lines = f.readlines()[-20:]
+                if telem_lines:
+                    errors = sum(1 for l in telem_lines if _json.loads(l).get("status") == "error")
+                    error_rate = errors / len(telem_lines)
+                else:
+                    error_rate = 0.0
+            else:
+                error_rate = 0.0
+        except Exception:
+            error_rate = 0.0
         readings["error_rate"] = HealthReading(
             timestamp=now,
             metric_name="error_rate",
-            value=0.01,
+            value=error_rate,
             threshold=self.thresholds["error_rate"],
-            status=HealthStatus.EXCELLENT,
+            status=self._status_from_value(
+                error_rate, self.thresholds["error_rate"], higher_is_better=False
+            ),
         )
 
-        # 5. Dream cycle freshness
+        # 5. Dream cycle freshness — real check
+        try:
+            from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+            dc = get_dream_cycle()
+            last_dream = getattr(dc, "_last_dream_time", 0)
+            if last_dream > 0:
+                dream_age_h = (now - last_dream) / 3600.0
+            else:
+                dream_age_h = 0.0
+        except Exception:
+            dream_age_h = 0.0
         readings["dream_freshness"] = HealthReading(
             timestamp=now,
             metric_name="dream_cycle_age_hours",
-            value=12.0,
+            value=dream_age_h,
             threshold=self.thresholds["dream_cycle_age_hours"],
-            status=HealthStatus.HEALTHY,
+            status=self._status_from_value(
+                dream_age_h, self.thresholds["dream_cycle_age_hours"], higher_is_better=False
+            ),
+        )
+
+        # 6. Galaxy health — fraction of galaxies with intact integrity
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            gb = um._galaxy_backend
+            galaxies = gb.list_galaxies()
+            if galaxies:
+                healthy = sum(1 for g in galaxies if gb._get_galaxy_backend(g).pool.quick_integrity_check())
+                galaxy_health = healthy / len(galaxies)
+            else:
+                galaxy_health = 1.0
+        except Exception:
+            galaxy_health = 1.0
+        readings["galaxy_health"] = HealthReading(
+            timestamp=now,
+            metric_name="galaxy_health",
+            value=galaxy_health,
+            threshold=self.thresholds["galaxy_health"],
+            status=self._status_from_value(
+                galaxy_health, self.thresholds["galaxy_health"], higher_is_better=True
+            ),
+        )
+
+        # 7. Citta stream health — stream length and coherence stability
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+            cycle = get_citta_cycle()
+            summary = cycle.get_cycle_summary()
+            stream_len = summary.get("stream_length", 0)
+            avg_coh = summary.get("avg_coherence", 0.5)
+            citta_health = min(1.0, (stream_len / 20) * 0.3 + avg_coh * 0.7)
+        except Exception:
+            citta_health = 0.5
+        readings["citta_stream_health"] = HealthReading(
+            timestamp=now,
+            metric_name="citta_stream_health",
+            value=citta_health,
+            threshold=self.thresholds["citta_stream_health"],
+            status=self._status_from_value(
+                citta_health, self.thresholds["citta_stream_health"], higher_is_better=True
+            ),
+        )
+
+        # 8. Inflammation index — repeated alerts in recent history
+        try:
+            recent = self._history[-20:] if self._history else []
+            stressed_count = sum(
+                1 for r in recent
+                if r.status in (HealthStatus.STRESSED, HealthStatus.DEGRADED, HealthStatus.CRITICAL)
+            )
+            inflammation = stressed_count / max(1, len(recent))
+        except Exception:
+            inflammation = 0.0
+        readings["inflammation"] = HealthReading(
+            timestamp=now,
+            metric_name="inflammation_index",
+            value=inflammation,
+            threshold=self.thresholds["inflammation_index"],
+            status=self._status_from_value(
+                inflammation, self.thresholds["inflammation_index"], higher_is_better=False
+            ),
+        )
+
+        # 9. Antibody diversity — distinct error types recovered from
+        try:
+            import os as _os2
+            import json as _json2
+            state_root = _os2.environ.get("WM_STATE_ROOT", _os2.path.expanduser("~/.whitemagic"))
+            recovery_path = _os2.path.join(state_root, "citta", "recovery_registry.jsonl")
+            if _os2.path.exists(recovery_path):
+                with open(recovery_path) as f:
+                    lines = f.readlines()[-50:]
+                error_types: set[str] = set()
+                for line in lines:
+                    try:
+                        entry = _json2.loads(line)
+                        error_types.add(entry.get("error_type", "unknown"))
+                    except Exception:
+                        continue
+                antibody_diversity = min(1.0, len(error_types) / 10.0)
+            else:
+                antibody_diversity = 0.5
+        except Exception:
+            antibody_diversity = 0.5
+        readings["antibody_diversity"] = HealthReading(
+            timestamp=now,
+            metric_name="antibody_diversity",
+            value=antibody_diversity,
+            threshold=self.thresholds["antibody_diversity"],
+            status=self._status_from_value(
+                antibody_diversity, self.thresholds["antibody_diversity"], higher_is_better=True
+            ),
+        )
+
+        # 10. Signal-to-noise ratio — user vs auto-generated activity
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+            cycle = get_citta_cycle()
+            summary = cycle.get_cycle_summary()
+            coloring = summary.get("emotional_coloring", {})
+            distribution = coloring.get("distribution", {})
+            total = sum(distribution.values()) if distribution else 1
+            signal = distribution.get("rajasic", 0) + distribution.get("frustrated", 0)
+            noise = distribution.get("sattvic", 0) + distribution.get("neutral", 0) + distribution.get("tamasic", 0)
+            if total > 0 and signal + noise > 0:
+                snr = signal / (signal + noise)
+            else:
+                snr = 0.5
+        except Exception:
+            snr = 0.5
+        readings["signal_to_noise"] = HealthReading(
+            timestamp=now,
+            metric_name="signal_to_noise",
+            value=snr,
+            threshold=self.thresholds["signal_to_noise"],
+            status=self._status_from_value(
+                snr, self.thresholds["signal_to_noise"], higher_is_better=True
+            ),
+        )
+
+        # 11. Setpoint deviation — average distance from target values
+        try:
+            deviations: list[float] = []
+            for r in readings.values():
+                if r.metric_name in ("inflammation_index", "antibody_diversity", "signal_to_noise", "setpoint_deviation", "guna_balance"):
+                    continue
+                threshold = r.threshold
+                if threshold > 0:
+                    ratio = r.value / threshold
+                    dev = abs(1.0 - min(2.0, ratio))
+                    deviations.append(dev)
+            avg_deviation = sum(deviations) / len(deviations) if deviations else 0.0
+        except Exception:
+            avg_deviation = 0.0
+        readings["setpoint_deviation"] = HealthReading(
+            timestamp=now,
+            metric_name="setpoint_deviation",
+            value=avg_deviation,
+            threshold=self.thresholds["setpoint_deviation"],
+            status=self._status_from_value(
+                avg_deviation, self.thresholds["setpoint_deviation"], higher_is_better=False
+            ),
+        )
+
+        # 12. Guna balance — biorhythm health
+        try:
+            from whitemagic.core.consciousness.guna_balance import get_guna_balance
+            gb = get_guna_balance()
+            gb_reading = gb.measure()
+            guna_health = 1.0 if gb_reading.balanced else max(0.0, 1.0 - sum(gb_reading.deficits.values()) - sum(gb_reading.surpluses.values()))
+        except Exception:
+            guna_health = 0.8
+        readings["guna_balance"] = HealthReading(
+            timestamp=now,
+            metric_name="guna_balance",
+            value=guna_health,
+            threshold=self.thresholds["guna_balance"],
+            status=self._status_from_value(
+                guna_health, self.thresholds["guna_balance"], higher_is_better=True
+            ),
         )
 
         self._history.extend(readings.values())
+        # Trim history to prevent unbounded growth
+        if len(self._history) > 1000:
+            self._history = self._history[-500:]
 
         worst_status = max(
             (r.status for r in readings.values()),
             key=lambda s: list(HealthStatus).index(s),
         )
 
+        # Hysteresis: only fire callbacks when status CHANGES
+        # or after 10 consecutive degraded checks (persistent issue)
+        status_changed = worst_status != self._last_worst_status
+
         if worst_status in (
             HealthStatus.STRESSED,
             HealthStatus.DEGRADED,
             HealthStatus.CRITICAL,
         ):
+            self._degraded_count += 1
+            self._recovery_count = 0
+            should_fire = status_changed or (self._degraded_count % 10 == 0)
+        else:
+            self._degraded_count = 0
+            self._recovery_count += 1
+            should_fire = status_changed and self._recovery_count == 1
+
+        if should_fire:
             for callback in self._callbacks:
                 try:
                     callback(worst_status, self._generate_diagnosis(readings))
                 except Exception as e:
                     logger.debug("Health callback error: %s", e)
 
+        self._last_worst_status = worst_status
         self._last_check = now
         return readings
 
@@ -231,24 +493,110 @@ class SelfMonitoringHealthLoop:
         ]
 
     def auto_heal(self, readings: dict[str, HealthReading]) -> list[str]:
-        """Automatically trigger healing measures based on health readings."""
+        """Automatically trigger healing measures based on health readings.
+
+        Cybernetic feedback loop: degradation in one system triggers
+        corrective actions across interconnected systems.
+        """
         actions: list[str] = []
 
+        # Coherence degradation → dream cycle + smarana practice
         if readings["coherence"].status in (
             HealthStatus.DEGRADED,
             HealthStatus.CRITICAL,
         ):
             actions.append("triggered_dream_cycle")
-            logger.warning(
-                "Auto-heal: Triggering dream cycle for coherence restoration"
-            )
+            logger.info("Auto-heal: Triggering dream cycle for coherence restoration")
+            try:
+                from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+                get_dream_cycle().trigger_cycle(reason="coherence_restoration")
+            except Exception:
+                pass
 
-        if readings["memory_usage"].status in (
+        # Coherence stressed but not degraded → warm memory access
+        if readings["coherence"].status == HealthStatus.STRESSED:
+            actions.append("warmed_memory_access")
+            logger.debug("Auto-heal: Warming memory access for coherence boost")
+            try:
+                from whitemagic.core.memory.unified import get_unified_memory
+                um = get_unified_memory()
+                recent = um.search(limit=5)
+                for m in recent:
+                    um.recall(m.id)
+            except Exception:
+                pass
+
+        # Memory usage high → galactic sweep
+        mem_reading = readings.get("memory_usage")
+        if mem_reading and mem_reading.status in (
             HealthStatus.STRESSED,
             HealthStatus.DEGRADED,
         ):
             actions.append("scheduled_galactic_sweep")
-            logger.warning("Auto-heal: Scheduling galactic sweep for memory pressure")
+            logger.info("Auto-heal: Scheduling galactic sweep for memory pressure")
+
+        # Error rate high → circuit breaker check
+        err_reading = readings.get("error_rate")
+        if err_reading and err_reading.status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
+            actions.append("circuit_breaker_check")
+            logger.info("Auto-heal: Error rate elevated, checking circuit breakers")
+
+        # Galaxy health degraded → integrity repair
+        gal_reading = readings.get("galaxy_health")
+        if gal_reading and gal_reading.status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
+            actions.append("galaxy_integrity_repair")
+            logger.info("Auto-heal: Galaxy integrity compromised, scheduling repair")
+
+        # Citta stream health low → stream reinforcement
+        citta_reading = readings.get("citta_stream_health")
+        if citta_reading and citta_reading.status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
+            actions.append("citta_stream_reinforcement")
+            logger.info("Auto-heal: Citta stream weak, reinforcing with background tick")
+
+        # Inflammation high → suppress non-critical alerts (immune system calming)
+        infl_reading = readings.get("inflammation")
+        if infl_reading and infl_reading.status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
+            actions.append("anti_inflammatory_suppression")
+            logger.info("Auto-heal: Inflammation high, suppressing non-critical alerts")
+
+        # Signal-to-noise low → system is talking to itself too much
+        snr_reading = readings.get("signal_to_noise")
+        if snr_reading and snr_reading.status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
+            actions.append("seek_external_input")
+            logger.info("Auto-heal: Low SNR, system needs external engagement")
+
+        # Guna imbalance → apply biorhythm correction
+        guna_reading = readings.get("guna_balance")
+        if guna_reading and guna_reading.status in (
+            HealthStatus.STRESSED,
+            HealthStatus.DEGRADED,
+            HealthStatus.CRITICAL,
+        ):
+            actions.append("guna_balance_correction")
+            logger.info("Auto-heal: Guna imbalance detected, applying biorhythm correction")
+            try:
+                from whitemagic.core.consciousness.guna_balance import get_guna_balance
+                gb = get_guna_balance()
+                reading = gb.measure()
+                if reading.correction_action:
+                    gb.apply_correction(reading.correction_action)
+            except Exception:
+                pass
 
         return actions
 
@@ -549,11 +897,20 @@ class ApotheosisEngine:
         return results
 
     def _on_health_degrade(self, status: HealthStatus, diagnosis: str) -> None:
-        """Callback when health degrades."""
-        logger.warning("Health degraded to %s: %s", status.value, diagnosis)
-
+        """Callback when health degrades — fires only on status changes (hysteresis)."""
         if status == HealthStatus.CRITICAL:
-            logger.error("CRITICAL HEALTH — Triggering emergency dream cycle")
+            logger.error("CRITICAL HEALTH — Triggering emergency dream cycle: %s", diagnosis)
+            try:
+                from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+                get_dream_cycle().trigger_cycle(reason="emergency_health_restoration")
+            except Exception:
+                pass
+        elif status == HealthStatus.STRESSED:
+            logger.debug("Health stressed (suppressed): %s", diagnosis)
+        elif status == HealthStatus.HEALTHY:
+            logger.info("Health recovered to healthy")
+        else:
+            logger.warning("Health degraded to %s: %s", status.value, diagnosis)
 
     def get_status_report(self) -> str:
         """Generate human-readable status report."""

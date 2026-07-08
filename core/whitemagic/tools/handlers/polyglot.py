@@ -204,7 +204,7 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
             "backends": {},
             "available": 0,
             "total": 0,
-            "health": 0.0,
+            "health_score": 0.0,
             "skipped": True,
             "reason": "WM_SKIP_POLYGLOT=1",
         }

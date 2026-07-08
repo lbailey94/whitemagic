@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 try:
@@ -26,7 +27,7 @@ except ImportError:
 
 def reindex(db_path: Path) -> None:
     logger.debug("Connecting to %s...", db_path)
-    conn = sqlite3.connect(str(db_path))
+    conn = safe_connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA cache_size=-65536")  # 64MB

@@ -26,6 +26,7 @@ import os
 import sqlite3
 import sys
 from pathlib import Path
+from whitemagic.core.memory.db_manager import safe_connect
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -47,7 +48,7 @@ def get_db_path() -> Path:
 
 
 def get_conn(db_path: Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(db_path))
+    conn = safe_connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")

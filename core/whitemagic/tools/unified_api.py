@@ -1063,7 +1063,8 @@ def inference_stats() -> dict:
 
 
 def make_result(
-    tool: str, data: Any = None, *, error: str | None = None
+    tool: str, data: Any = None, *, error: str | None = None,
+    error_code: str | None = None,
 ) -> dict[str, Any]:
     """Create a tool result envelope (legacy compatibility helper).
 
@@ -1074,6 +1075,7 @@ def make_result(
         tool: Tool name (e.g. ``"dream.list"``).
         data: Payload to include under ``details``.
         error: If provided, creates an error envelope with this message.
+        error_code: Error code to use (defaults to ``internal_error``).
 
     Returns:
         Envelope dict conforming to the WhiteMagic tool contract.
@@ -1085,7 +1087,7 @@ def make_result(
         return err(
             tool=tool,
             request_id=request_id,
-            error_code="internal_error",
+            error_code=error_code or "internal_error",
             message=error,
             details=data,
         )

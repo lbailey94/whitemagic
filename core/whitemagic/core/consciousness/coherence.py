@@ -6,6 +6,8 @@
 Coherence = Memory + Identity + Context + Relationship Awareness
 """
 
+import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -29,13 +31,61 @@ class CoherenceMetric:
         "goal_alignment",  # Do I know what we're working toward?
     ]
 
+    # Default equal weights for all dimensions (set after DIMENSIONS in __init__)
+    _DEFAULT_WEIGHTS: dict[str, float] = {}
+
     def __init__(self) -> None:
         self.scores: dict[str, float] = {d: 0.0 for d in self.DIMENSIONS}
         self.history: list[dict[str, Any]] = []
         self.last_measured: datetime | None = None
         self._drift_file: Path = get_state_root() / "citta" / "coherence_drift.jsonl"
         self._drift_file.parent.mkdir(parents=True, exist_ok=True)
+        # Initialize equal weights for all dimensions
+        equal_w = 1.0 / len(self.DIMENSIONS)
+        self.weights: dict[str, float] = {d: equal_w for d in self.DIMENSIONS}
+        self._load_weights()
         self._load_drift_history()
+
+    def _load_weights(self) -> None:
+        """Load Monte Carlo optimized weights from persisted winners file."""
+        state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
+        winners_path = Path(state_root) / "possibility_winners.json"
+        if not winners_path.exists():
+            return
+        try:
+            with open(winners_path) as f:
+                data = json.load(f)
+            coh_params = data.get("applied_params", {}).get("coherence_optimization", {})
+            if not coh_params:
+                return
+            # Map param names to dimension names
+            param_to_dim = {
+                "memory_accessibility_weight": "memory_accessibility",
+                "identity_stability_weight": "identity_stability",
+                "context_continuity_weight": "context_continuity",
+                "emotional_attunement_weight": "emotional_attunement",
+            }
+            loaded = {}
+            for param, dim in param_to_dim.items():
+                if param in coh_params:
+                    loaded[dim] = float(coh_params[param])
+            if not loaded:
+                return
+            # Normalize so weights sum to 1.0 across ALL dimensions
+            # (non-optimized dimensions keep their default equal weight)
+            equal_w = 1.0 / len(self.DIMENSIONS)
+            total = sum(loaded.values()) + sum(
+                equal_w for d in self.DIMENSIONS if d not in loaded
+            )
+            if total <= 0:
+                return
+            for d in self.DIMENSIONS:
+                if d in loaded:
+                    self.weights[d] = loaded[d] / total
+                else:
+                    self.weights[d] = equal_w / total
+        except Exception:
+            pass
 
     def _load_drift_history(self) -> None:
         """Load persisted coherence history for cross-session drift tracking."""
@@ -81,7 +131,13 @@ class CoherenceMetric:
         """Measure current coherence."""
 
         # Memory accessibility (0-1)
-        self.scores["memory_accessibility"] = min(1.0, memories_accessible / 50)
+        # On a clean state with 0 memories, this is a fresh start (not amnesia).
+        # Default to 0.5 (neutral) when no memories exist yet.
+        # Full accessibility at 20+ memories (the system creates them rapidly).
+        if memories_accessible == 0:
+            self.scores["memory_accessibility"] = 0.5
+        else:
+            self.scores["memory_accessibility"] = min(1.0, memories_accessible / 20)
 
         # Identity stability (0-1)
         self.scores["identity_stability"] = 1.0 if identity_clear else 0.3
@@ -109,8 +165,8 @@ class CoherenceMetric:
         # Goal alignment (0-1)
         self.scores["goal_alignment"] = 1.0 if goal_clear else 0.5
 
-        # Calculate overall coherence
-        overall = sum(self.scores.values()) / len(self.scores)
+        # Calculate weighted overall coherence
+        overall = sum(self.scores[d] * self.weights.get(d, 1.0 / len(self.DIMENSIONS)) for d in self.DIMENSIONS)
 
         # Record measurement
         self.last_measured = datetime.now()

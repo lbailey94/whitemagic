@@ -38,6 +38,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 os.environ["WM_SILENT_INIT"] = "1"
 
 from whitemagic.config.paths import DB_PATH
+from whitemagic.core.memory.db_manager import safe_connect
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,7 +49,7 @@ log = logging.getLogger("benchmark")
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = safe_connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

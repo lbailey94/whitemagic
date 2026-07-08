@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 # Import the envelope helper as a regular module (pytest conftest.py is not
 # importable). See tests/_envelope.py for the helper's location.
 _TESTS_DIR = Path(__file__).resolve().parent.parent.parent
@@ -76,6 +78,7 @@ class TestDryRun:
         assert_envelope_shape(result)
         assert result["status"] == "success"
 
+    @pytest.mark.slow
     def test_dry_run_not_injected_by_default(self, monkeypatch):
         from whitemagic.tools import unified_api
 

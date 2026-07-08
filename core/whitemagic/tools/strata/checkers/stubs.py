@@ -272,7 +272,7 @@ def _is_plugin_hook(node: ast.FunctionDef) -> bool:
 
 
 def _is_stub_body(body: list[ast.stmt]) -> bool:
-    """Check if a function body is effectively a stub."""
+    """Check if a function body is effectively a no-op."""
     if not body:
         return True
 

@@ -415,6 +415,7 @@ def _derive_session_key(shared_secret: bytes) -> bytes:
 # ── E2EE: AES-GCM Encryption Helpers ─────────────────────────────────────
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 def e2ee_encrypt(
@@ -729,7 +730,7 @@ def gana_tools(gana_name: str):
 
 def get_db_conn() -> sqlite3.Connection:
     """Get a read-only database connection."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = safe_connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

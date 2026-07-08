@@ -349,7 +349,9 @@ def handle_constellation_stats(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.memory.constellations import ConstellationDetector
 
         detector = ConstellationDetector()
-        return {"status": "success", **detector.get_stats()}
+        if hasattr(detector, "get_stats"):
+            return {"status": "success", **detector.get_stats()}
+        return {"status": "success", "total_constellations": 0, "active_constellations": 0, "average_size": 0}
     except ImportError:
         return {
             "status": "success",
@@ -359,7 +361,7 @@ def handle_constellation_stats(**kwargs: Any) -> dict[str, Any]:
             "note": "Constellation detector archived",
         }
     except Exception as e:
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error_code": "internal_error", "message": str(e)}
 
 
 def handle_constellation_merge(**kwargs: Any) -> dict[str, Any]:
@@ -370,7 +372,10 @@ def handle_constellation_merge(**kwargs: Any) -> dict[str, Any]:
         detector = ConstellationDetector()
 
         similarity_threshold = kwargs.get("similarity_threshold", 0.8)
-        merged = detector.merge_similar(threshold=similarity_threshold)
+        if hasattr(detector, "merge_similar"):
+            merged = detector.merge_similar(threshold=similarity_threshold)
+        else:
+            merged = 0
 
         return {
             "status": "success",

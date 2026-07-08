@@ -155,7 +155,7 @@ def handle_agent_heartbeat(**kwargs: Any) -> dict[str, Any]:
         else:
             # Auto-register a default agent if none exist
             res = handle_agent_register(name="Default Agent", agent_id="current-agent")
-            agent_id = res["agent"]["id"]
+            agent_id = res.get("agent", {}).get("id", "current-agent")
 
     agent = _load_agent(agent_id)
     if not agent:

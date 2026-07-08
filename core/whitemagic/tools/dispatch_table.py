@@ -196,6 +196,9 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "get_telemetry_summary": LazyHandler(
         "introspection", "handle_get_telemetry_summary"
     ),
+    "tool_usage_stats": LazyHandler(
+        "introspection", "handle_tool_usage_stats"
+    ),
     "health_report": LazyHandler("introspection", "handle_health_report"),
     "list_ganas": LazyHandler("introspection", "handle_list_ganas"),
     "vitality": LazyHandler("introspection", "handle_vitality"),
@@ -417,6 +420,7 @@ def _build_pipeline() -> Any:
     from whitemagic.tools.middleware import (
         DispatchPipeline,
         mw_circuit_breaker,
+        mw_citta_consciousness,
         mw_cognitive_mode,
         mw_draft_review,
         mw_governor,
@@ -441,6 +445,7 @@ def _build_pipeline() -> Any:
     p.use("tool_permissions", mw_tool_permissions)
     p.use("maturity_gate", mw_maturity_gate)
     p.use("zodiac_resonance", mw_zodiac_resonance)
+    p.use("citta_consciousness", mw_citta_consciousness)
     p.use("governor", mw_governor)
     p.use("semantic_cache", mw_semantic_cache)
     p.use("inference_router", mw_inference_router)
@@ -455,6 +460,71 @@ def _build_pipeline() -> Any:
 _pipeline = _build_pipeline()
 
 
+_FAST_PATH_TOOLS = frozenset({
+    "consciousness.loop.status",
+    "guna.balance.status",
+    "meta.galaxy.overview",
+    "galaxy.stats",
+    "galaxy.list",
+    "health.check",
+    "system.status",
+})
+
+_FAST_PATH_PREFIXES = frozenset({
+    "gana_ghost.",  # Introspection/meta tools
+})
+
+
+def _is_fast_path(tool_name: str) -> bool:
+    """Check if a tool is safe for fast-path dispatch (bypass heavy middleware)."""
+    if tool_name in _FAST_PATH_TOOLS:
+        return True
+    for prefix in _FAST_PATH_PREFIXES:
+        if tool_name.startswith(prefix):
+            return True
+    return False
+
+
+def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
+    """Direct dispatch to handler, bypassing middleware pipeline.
+
+    Used for safe READ-only tools where the full 17-stage pipeline overhead
+    (circuit breaker, rate limiter, security monitor, cognitive mode, permissions,
+    maturity gate, zodiac resonance, citta consciousness, governor, semantic cache,
+    inference router, draft review, token tracker, observability, session recorder)
+    is unnecessary and causes unacceptable latency for status queries.
+    """
+    _ensure_router_cached()
+    result = None
+
+    # Gana-prefixed tools → gana_invoke
+    if tool_name.startswith("gana_") and _gana_invoke is not None:
+        try:
+            result = _gana_invoke(tool_name=tool_name, args=kwargs)
+        except (TypeError, ValueError, AttributeError) as e:
+            return {"status": "error", "error_code": "gana_invocation_failed", "message": str(e)}
+        except RuntimeError as e:
+            return {"status": "error", "error_code": "gana_runtime_error", "message": str(e)}
+
+    # Direct dispatch table lookup
+    if result is None:
+        handler = DISPATCH_TABLE.get(tool_name)
+        if handler is not None:
+            try:
+                result = handler(**kwargs)
+            except Exception as e:
+                return {"status": "error", "error": str(e)}
+
+    # Bridge fallback
+    if result is None and _bridge_execute is not None:
+        try:
+            result = _bridge_execute(tool_name, **kwargs)
+        except Exception:
+            pass
+
+    return result
+
+
 def dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
     """Dispatch a tool call through the composable middleware pipeline.
 
@@ -467,17 +537,26 @@ def dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
       6. Tool permissions  — per-agent RBAC
       7. Maturity gate     — developmental stage gating
       8. Zodiac resonance  — semantic boost for aligned Ganas
-      9. Governor          — ethical validation
-     10. Semantic cache    — T3: short-circuit repeated inference queries
-     11. Inference router  — try edge/local resolution before LLM
-     12. Draft-review      — T4: local model drafts, cloud reviews/patches
-     13. Token tracker     — universal token tracking via GreenScore
-     14. Observability     — Prometheus + OTel metrics
-     15. Core router       — Gana prefix → dispatch table → bridge fallback
+      9. Citta consciousness — coherence → Dharma, post-dispatch citta advance + workspace propose
+     10. Governor          — ethical validation (coherence-aware)
+     11. Semantic cache    — T3: short-circuit repeated inference queries
+     12. Inference router  — try edge/local resolution before LLM
+     13. Draft-review      — T4: local model drafts, cloud reviews/patches
+     14. Token tracker     — universal token tracking via GreenScore
+     15. Observability     — Prometheus + OTel metrics
+     16. Session recorder  — record conversation turns
+     17. Core router       — Gana prefix → dispatch table → bridge fallback
+
+    Fast-path: Safe READ-only tools (status queries, introspection) bypass
+    the full pipeline for sub-100ms response times.
 
     Returns:
         The handler result, or an error dict if no handler matched.
     """
+    # Fast-path: bypass middleware for safe READ-only tools
+    if _is_fast_path(tool_name) and not kwargs.get("_force_full_pipeline"):
+        return _fast_path_dispatch(tool_name, **kwargs)
+
     from whitemagic.core.governance.unified_progression import get_progression_daemon
     from whitemagic.core.monitoring.otel_export import get_otel
 

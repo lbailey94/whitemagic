@@ -10,10 +10,14 @@ def handle_kg_extract(**kwargs: Any) -> dict[str, Any]:
     source_id = kwargs.get("source_id", "")
     text = kwargs.get("text", "")
     if not text:
-        return {"status": "error", "error": "text is required"}
+        return {"status": "error", "error_code": "invalid_params", "message": "text is required"}
     kg = get_knowledge_graph()
     result = kg.extract_from_text(source_id or "manual", text)
-    return {"status": "success", **result}  # type: ignore[dict-item]
+    if isinstance(result, tuple):
+        result = {"entities": result[0] if len(result) > 0 else [], "relations": result[1] if len(result) > 1 else []}
+    if not isinstance(result, dict):
+        result = {"result": result}
+    return {"status": "success", **result}
 
 
 def handle_kg_query(**kwargs: Any) -> dict[str, Any]:
@@ -22,9 +26,12 @@ def handle_kg_query(**kwargs: Any) -> dict[str, Any]:
 
     name = kwargs.get("name", "")
     if not name:
-        return {"status": "error", "error": "name is required"}
+        return {"status": "error", "error_code": "invalid_params", "message": "name is required"}
     kg = get_knowledge_graph()
-    return {"status": "success", **kg.query_entity(name)}
+    result = kg.query_entity(name)
+    if not isinstance(result, dict):
+        result = {"result": result}
+    return {"status": "success", **result}
 
 
 def handle_kg_top(**kwargs: Any) -> dict[str, Any]:
@@ -33,7 +40,13 @@ def handle_kg_top(**kwargs: Any) -> dict[str, Any]:
 
     limit = int(kwargs.get("limit", 20))
     kg = get_knowledge_graph()
-    return {"status": "success", "entities": kg.top_entities(limit=limit)}
+    # Try top_entities first, fall back to status which may include entity info
+    if hasattr(kg, "top_entities"):
+        entities = kg.top_entities(limit=limit)
+    else:
+        status = kg.status() if hasattr(kg, "status") else {}
+        entities = status.get("top_entities", status.get("entities", []))[:limit]
+    return {"status": "success", "entities": entities}
 
 
 def handle_kg_status(**kwargs: Any) -> dict[str, Any]:
@@ -120,9 +133,16 @@ def handle_embedding_daemon_status(**kwargs: Any) -> dict[str, Any]:
 
 def handle_embedding_daemon_process(**kwargs: Any) -> dict[str, Any]:
     """Process embeddings immediately (blocking)."""
-    from whitemagic.core.memory.embedding_daemon import get_embedding_daemon
+    try:
+        from whitemagic.core.memory.embedding_daemon import get_embedding_daemon
 
-    limit = int(kwargs.get("limit", 100))
-    daemon = get_embedding_daemon()
-    result = daemon.process_now(limit=limit)
-    return {"status": "success", **result}
+        limit = int(kwargs.get("limit", 100))
+        daemon = get_embedding_daemon()
+        result = daemon.process_now(limit=limit)
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {
+            "status": "error",
+            "error_code": "embedding_table_missing",
+            "message": str(exc)[:200],
+        }

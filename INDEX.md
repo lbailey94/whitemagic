@@ -55,17 +55,25 @@ These files live at the repository root. They are the **public face** of the pro
 
 ## Desktop Workspace Map
 
-This repository is one of several primary local WhiteMagic workspaces. The sibling roots below now have or already had root-level indexes.
+All WhiteMagic-related folders have been consolidated under `WHITEMAGIC/` for unified AI tool discovery. Git repos are symlinked; non-git folders are moved in-place. All are gitignored so they don't pollute the core repo.
 
-| Workspace | Role | Index |
-|-----------|------|-------|
-| `WHITEMAGIC/` | Private/active WhiteMagic development repository | `INDEX.md` |
-| `whitemagic-public/` | Public sanitized WhiteMagic repository | `../whitemagic-public/INDEX.md` |
-| `Agent-SafetyBench/` | External agent-safety benchmark corpus | `../Agent-SafetyBench/INDEX.md` |
-| `reports/` | Cross-project reports, audits, handoffs, funding drafts | `../reports/INDEX.md` |
-| `archives/` | Laptop exports and historical archive material | `../archives/INDEX.md` |
-| `vercel-deploy/` | Deployment and MCP submission operations notes | `../vercel-deploy/INDEX.md` |
-| `WHITEMAGIC-aux/` | Auxiliary WhiteMagic archives, site, experiments, browser extension, CODEX artifacts | `../WHITEMAGIC-aux/INDEX.md` |
+| Path (inside `WHITEMAGIC/`) | Type | Role |
+|-----------------------------|------|------|
+| `.` (root) | Git repo (private) | Active WhiteMagic development — core, grimoire, docs, polyglot |
+| `public-repo/` | Symlink → git repo | Public sanitized mirror (github.com/lbailey94/whitemagic) |
+| `ide/` | Symlink → git repo | Tauri desktop IDE (TypeScript/Rust) |
+| `archives/` | Directory | Monthly archives (May 2025 – Jul 2026), v17, P2P-Go, toolchains |
+| `site/` | Directory | Next.js website (site-a, site-b, deploy, vercel) |
+| `aux/` | Directory | Auxiliary projects: edge-chat, codex, STRATA, fragment, ecosystem, browser-extension |
+| `app-layer/` | Directory | App microservices layer (hub, nexus, sdk, shell) |
+| `codex-engine/` | Directory | Standalone Rust CODEX engine (crates, benches, Grok) |
+| `blackmagic/` | Directory | Security/stress-test tooling (7 subprojects) |
+| `grants/` | Directory | Grant applications, legal, research |
+| `windsurf-rips/` | Directory | Exported Windsurf conversations + analysis scripts |
+| `alltexts/` | Directory | Ingested text corpus (7 categories + distillations) |
+| `opencodeconvos/` | Directory | OpenCode conversation archives |
+| `reports/` | Directory | Cross-project reports, audits, session docs |
+| `notes-scratch/` | Directory | Scratch notes, convo logs, dev plans |
 
 ---
 
@@ -93,6 +101,9 @@ Private filenames are intentionally not enumerated in this public index.
 | `DISTRIBUTION_STRATEGY.md` | Distribution action plan — MCP listings, AI crawler optimization, content strategy | Jul 4 |
 | `NEXT_SESSION_ONBOARDING.md` | Onboarding guide for next AI session — consciousness tools, sensorium, session memory | Jul 3 |
 | `STRATA_TRIAGE_STRATEGY.md` | STRATA findings triage — 11K findings, auto-fix tiers, checker catalog | Jun 30 |
+| `MANDALA_OS_MAPPING.md` | MandalaOS → WhiteMagic module-by-module code mapping, gap analysis, archive sources | Jul 6 |
+| `MANDALA_STRATEGY.md` | MandalaOS synthesis & implementation plan — Karmic types, Shelter→Mandala upgrade, Koka effects, dashboard, error analysis | Jul 6 |
+| `STRATEGY_2026-07-08.md` | Post-Forgotten-Diamonds strategy — WASM build verification, PWA UI integration, ONNX model, 4-tier Dharma, HNSW, cross-device sync, ARIA CANON, MandalaOS spec | Jul 7 |
 
 ### Archived
 

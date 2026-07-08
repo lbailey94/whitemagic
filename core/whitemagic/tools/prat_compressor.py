@@ -83,6 +83,7 @@ _TOOL_CODES: dict[str, str] = {
     "manifest": "mf",
     "health_report": "hr",  # overlap ok, different gana
     "get_telemetry_summary": "ts",
+    "tool_usage_stats": "tu",
     # Neck (memory presence)
     "remember": "re",
     "recall": "rc",

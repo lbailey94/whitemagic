@@ -25,6 +25,7 @@ import time
 from pathlib import Path
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 # Paths
@@ -106,7 +107,7 @@ def count_table(conn, table):
 
 def ingest_memories(active_conn, source_path, dry_run=False):
     """Ingest memories from source DB into active DB."""
-    source_conn = sqlite3.connect(str(source_path))
+    source_conn = safe_connect(str(source_path))
     source_cols = get_source_columns(source_conn, "memories")
     cols = safe_columns(source_cols, ACTIVE_MEMORY_COLS)
 
@@ -136,7 +137,7 @@ def ingest_memories(active_conn, source_path, dry_run=False):
 
 def ingest_associations(active_conn, source_path, batch_size=50000, dry_run=False):
     """Ingest associations from source DB into active DB."""
-    source_conn = sqlite3.connect(str(source_path))
+    source_conn = safe_connect(str(source_path))
     source_cols = get_source_columns(source_conn, "associations")
     cols = safe_columns(source_cols, ACTIVE_ASSOC_COLS)
 
@@ -178,7 +179,7 @@ def ingest_associations(active_conn, source_path, batch_size=50000, dry_run=Fals
 
 def ingest_holographic_coords(active_conn, source_path, dry_run=False):
     """Ingest holographic coordinates."""
-    source_conn = sqlite3.connect(str(source_path))
+    source_conn = safe_connect(str(source_path))
     try:
         source_cols = get_source_columns(source_conn, "holographic_coords")
     except Exception:
@@ -213,7 +214,7 @@ def ingest_holographic_coords(active_conn, source_path, dry_run=False):
 
 def ingest_embeddings(active_conn, source_path, batch_size=5000, dry_run=False):
     """Ingest memory embeddings."""
-    source_conn = sqlite3.connect(str(source_path))
+    source_conn = safe_connect(str(source_path))
     try:
         source_cols = get_source_columns(source_conn, "memory_embeddings")
     except Exception:
@@ -261,7 +262,7 @@ def ingest_embeddings(active_conn, source_path, batch_size=5000, dry_run=False):
 
 def ingest_tags(active_conn, source_path, dry_run=False):
     """Ingest tags."""
-    source_conn = sqlite3.connect(str(source_path))
+    source_conn = safe_connect(str(source_path))
     try:
         source_cols = get_source_columns(source_conn, "tags")
     except Exception:
@@ -382,7 +383,7 @@ def main():
                 f"  ✅ Backup created ({backup_path.stat().st_size / 1024 / 1024:.1f} MB)"
             )
 
-    active_conn = sqlite3.connect(str(ACTIVE_DB))
+    active_conn = safe_connect(str(ACTIVE_DB))
     active_conn.execute("PRAGMA journal_mode=WAL")
     active_conn.execute("PRAGMA synchronous=NORMAL")
     active_conn.execute("PRAGMA cache_size=-64000")  # 64MB cache

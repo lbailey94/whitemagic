@@ -195,7 +195,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     """
     prompt = kwargs.get("prompt")
     if not prompt:
-        return {"status": "error", "error": "prompt is required"}
+        return {"status": "error", "error_code": "invalid_params", "error": "prompt is required"}
 
     models = kwargs.get("models")
     timeout = kwargs.get("timeout", 120)
@@ -214,6 +214,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     if not models:
         return {
             "status": "error",
+            "error_code": "unavailable",
             "error": "No models available. Specify models or ensure Ollama is running.",
         }
 
@@ -235,7 +236,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     try:
         raw_results = _run(_query_all())
     except Exception as e:
-        return {"status": "error", "error": f"Ensemble query failed: {e}"}
+        return {"status": "error", "error_code": "internal_error", "error": f"Ensemble query failed: {e}"}
 
     results: list[dict[str, Any]] = []
     for r in raw_results:
@@ -298,7 +299,7 @@ def handle_ensemble_status(**kwargs: Any) -> dict[str, Any]:
 
     path = _ensemble_dir() / f"{ensemble_id}.json"
     if not path.exists():
-        return {"status": "error", "error": f"Ensemble {ensemble_id} not found"}
+        return {"status": "error", "error_code": "not_found", "error": f"Ensemble {ensemble_id} not found"}
 
     try:
         record = _json_loads(path.read_text(encoding="utf-8"))

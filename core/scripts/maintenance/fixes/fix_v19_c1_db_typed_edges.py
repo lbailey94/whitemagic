@@ -11,11 +11,12 @@ if str(_REPO_ROOT) not in sys.path:
 from whitemagic.config.paths import DB_PATH
 
 import logging
+from whitemagic.core.memory.db_manager import safe_connect
 logger = logging.getLogger(__name__)
 
 
 def migrate_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = safe_connect(DB_PATH)
     try:
         cursor = conn.execute("PRAGMA table_info(associations)")
         columns = [col[1] for col in cursor.fetchall()]

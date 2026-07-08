@@ -192,9 +192,18 @@ def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
         else:
             # Auto-create a session if none exist
             res = handle_create_session(**kwargs)
-            session_id = res["session"]["id"]
+            if res.get("status") != "success":
+                return res
+            session_id = res.get("session", {}).get("id")
+            if not session_id:
+                return {"status": "error", "error_code": "session_creation_failed",
+                        "message": "Failed to auto-create session for checkpoint"}
 
-    session = _load_session(base_path, session_id)
+    try:
+        session = _load_session(base_path, session_id)
+    except FileNotFoundError:
+        return {"status": "error", "error_code": "not_found",
+                "message": f"Session not found: {session_id}"}
     checkpoint = {
         "id": f"checkpoint-{uuid4().hex[:8]}",
         "name": kwargs.get("checkpoint_name", "checkpoint"),
@@ -218,8 +227,11 @@ def handle_resume_session(**kwargs: Any) -> dict[str, Any]:
     base_path = _resolve_base_path(kwargs)
     session_id = kwargs.get("session_id")
     if not session_id:
-        raise ValueError("session_id is required")
-    session = _load_session(base_path, session_id)
+        return {"status": "error", "error_code": "invalid_params", "message": "session_id is required"}
+    try:
+        session = _load_session(base_path, session_id)
+    except FileNotFoundError:
+        return {"status": "error", "error_code": "not_found", "message": f"Session not found: {session_id}"}
     session["status"] = "resumed"
     session["last_resumed"] = datetime.now().isoformat()
     session["updated_at"] = session["last_resumed"]

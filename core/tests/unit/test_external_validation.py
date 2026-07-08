@@ -9,12 +9,13 @@ from whitemagic.core.evolution.external_validation import (
     EXTERNAL_BASELINES,
     ExternalValidator,
 )
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 def _make_test_db(db_path: Path, n_outcomes: int = 20) -> None:
     """Create a test feedback.db with sample outcomes."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
+    conn = safe_connect(str(db_path))
     c = conn.cursor()
 
     c.execute("""

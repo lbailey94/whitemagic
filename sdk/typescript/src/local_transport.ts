@@ -27,6 +27,7 @@ export interface WasmModule {
   DharmaEngine: new () => WasmDharmaEngine;
   KarmaLedger: new () => WasmKarmaLedger;
   EdgeEngine: new () => WasmEdgeEngine;
+  HrrEngine: new (dim: number) => WasmHrrEngine;
   gnosis_snapshot: (
     store: WasmMemoryStore,
     karma: WasmKarmaLedger,
@@ -38,6 +39,11 @@ export interface WasmModule {
   cosine_similarity: (a: string, b: string) => number;
   batch_similarity: (query: string, candidates: string, topK: number) => string;
   text_search: (query: string, texts: string) => string;
+  embed_text_wasm: (text: string, dim: number) => string;
+  embed_batch_wasm: (textsJson: string, dim: number) => string;
+  cosine_sim_wasm: (aJson: string, bJson: string) => number;
+  top_k_similar_wasm: (queryJson: string, candidatesJson: string, k: number) => string;
+  embed_dim: () => number;
 }
 
 interface WasmMemoryStore {
@@ -82,6 +88,15 @@ interface WasmEdgeEngine {
   local_rate(): number;
   reset_stats(): void;
   tokens_saved(): number;
+}
+
+interface WasmHrrEngine {
+  bind(aJson: string, bJson: string): string;
+  unbind(boundJson: string, bJson: string): string;
+  superpose(vectorsJson: string): string;
+  similarity(aJson: string, bJson: string): number;
+  project(embeddingJson: string, relation: string): string;
+  dim(): number;
 }
 
 interface WasmGnosisSnapshot {
@@ -181,6 +196,12 @@ export class LocalTransport {
           break;
         case "search":
           details = this._handleSearch(method, params);
+          break;
+        case "embedding":
+          details = this._handleEmbedding(method, params);
+          break;
+        case "hrr":
+          details = this._handleHrr(method, params);
           break;
         case "system":
           details = this._handleSystem(method, params);
@@ -462,6 +483,105 @@ export class LocalTransport {
       }
       default:
         throw new Error(`Unknown search method: ${method}`);
+    }
+  }
+
+  private _handleEmbedding(
+    method: string,
+    params: Record<string, unknown>,
+  ): Record<string, unknown> {
+    if (!this.wasm) throw new Error("WASM module not initialized");
+
+    switch (method) {
+      case "embed": {
+        const dim = Number(params.dim ?? this.wasm.embed_dim());
+        const vec = this.wasm.embed_text_wasm(
+          String(params.text ?? ""),
+          dim,
+        );
+        return { embedding: JSON.parse(vec), dim };
+      }
+      case "embed_batch": {
+        const dim = Number(params.dim ?? this.wasm.embed_dim());
+        const texts = Array.isArray(params.texts) ? params.texts : [];
+        const vecs = this.wasm.embed_batch_wasm(
+          JSON.stringify(texts),
+          dim,
+        );
+        return { embeddings: JSON.parse(vecs), dim };
+      }
+      case "similarity": {
+        const score = this.wasm.cosine_sim_wasm(
+          JSON.stringify(params.a ?? []),
+          JSON.stringify(params.b ?? []),
+        );
+        return { score };
+      }
+      case "top_k": {
+        const results = this.wasm.top_k_similar_wasm(
+          JSON.stringify(params.query ?? []),
+          JSON.stringify(params.candidates ?? []),
+          Number(params.k ?? 10),
+        );
+        return { results: JSON.parse(results) };
+      }
+      case "dim": {
+        return { dim: this.wasm.embed_dim() };
+      }
+      default:
+        throw new Error(`Unknown embedding method: ${method}`);
+    }
+  }
+
+  private _handleHrr(
+    method: string,
+    params: Record<string, unknown>,
+  ): Record<string, unknown> {
+    if (!this.wasm) throw new Error("WASM module not initialized");
+
+    const dim = Number(params.dim ?? 384);
+    const engine = new this.wasm.HrrEngine(dim);
+
+    switch (method) {
+      case "bind": {
+        const result = engine.bind(
+          JSON.stringify(params.a ?? []),
+          JSON.stringify(params.b ?? []),
+        );
+        return { bound: JSON.parse(result) };
+      }
+      case "unbind": {
+        const result = engine.unbind(
+          JSON.stringify(params.bound ?? []),
+          JSON.stringify(params.b ?? []),
+        );
+        return { unbound: JSON.parse(result) };
+      }
+      case "superpose": {
+        const result = engine.superpose(
+          JSON.stringify(params.vectors ?? []),
+        );
+        return { superposed: JSON.parse(result) };
+      }
+      case "similarity": {
+        const score = engine.similarity(
+          JSON.stringify(params.a ?? []),
+          JSON.stringify(params.b ?? []),
+        );
+        return { score };
+      }
+      case "project": {
+        const result = engine.project(
+          JSON.stringify(params.embedding ?? []),
+          String(params.relation ?? ""),
+        );
+        return { projected: JSON.parse(result) };
+      }
+      case "dim": {
+        return { dim: engine.dim() };
+      }
+      default:
+        throw new Error(`Unknown hrr method: ${method}`);
     }
   }
 

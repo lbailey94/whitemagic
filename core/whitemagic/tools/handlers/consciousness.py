@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +84,16 @@ def handle_consciousness_awaken(**kwargs: Any) -> dict[str, Any]:
 def handle_consciousness_reflect(**kwargs: Any) -> dict[str, Any]:
     """Perform self-reflection on recent session activity."""
     try:
-        from whitemagic.core.consciousness.self_reflection import SelfReflection
+        from whitemagic.core.consciousness.self_reflection import get_reflection_loop
 
-        reflector = SelfReflection()
-        result = reflector.reflect()
+        reflector = get_reflection_loop()
+        question = kwargs.get("question")
+        insight = kwargs.get("insight")
+        if question and insight:
+            entry = reflector.reflect(question=question, insight=insight, action=kwargs.get("action"))
+            result = entry.to_dict()
+        else:
+            result = reflector.introspect()
         return {"status": "success", "reflection": result}
     except Exception as e:
         logger.debug("consciousness.reflect error: %s", e, exc_info=True)
@@ -99,9 +106,12 @@ def handle_consciousness_token_report(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.consciousness.token_economy import get_token_tracker
 
         tracker = get_token_tracker()
-        report = (
-            tracker.report() if hasattr(tracker, "report") else tracker.get_summary()
-        )
+        if hasattr(tracker, "get_session_summary"):
+            report = tracker.get_session_summary()
+        elif hasattr(tracker, "summary"):
+            report = tracker.summary()
+        else:
+            report = {"status": "no_data"}
         return {"status": "success", "report": report}
     except Exception as e:
         logger.debug("consciousness.token_report error: %s", e, exc_info=True)
@@ -116,15 +126,11 @@ def handle_consciousness_narrative(**kwargs: Any) -> dict[str, Any]:
     """Get current narrative emotional state."""
     try:
         from whitemagic.core.consciousness.narrative_emotions import (
-            NarrativeEmotions,
+            get_narrative_emotional,
         )
 
-        narrative = NarrativeEmotions()
-        state = (
-            narrative.get_current_state()
-            if hasattr(narrative, "get_current_state")
-            else {}
-        )
+        narrative = get_narrative_emotional()
+        state = narrative.read_my_story() if hasattr(narrative, "read_my_story") else {}
         return {"status": "success", "narrative_state": state}
     except Exception as e:
         logger.debug("consciousness.narrative error: %s", e, exc_info=True)
@@ -137,7 +143,7 @@ def handle_consciousness_unified_field(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.consciousness.unified_field import UnifiedField
 
         field = UnifiedField()
-        state = field.get_state() if hasattr(field, "get_state") else field.snapshot()
+        state = {"is_active": field.is_active} if hasattr(field, "is_active") else {}
         return {"status": "success", "field_state": state}
     except Exception as e:
         logger.debug("consciousness.unified_field error: %s", e, exc_info=True)

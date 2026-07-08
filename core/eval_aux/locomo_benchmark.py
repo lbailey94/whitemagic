@@ -33,6 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from whitemagic.tools.unified_api import call_tool
+from whitemagic.core.memory.db_manager import safe_connect
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -56,7 +57,7 @@ class TestQuestion:
 def generate_test_corpus(db_path: Path, n_questions: int = 200, seed: int = 42) -> list[TestQuestion]:
     """Generate test questions from actual memory content."""
     rng = random.Random(seed)
-    conn = sqlite3.connect(str(db_path))
+    conn = safe_connect(str(db_path))
     conn.row_factory = sqlite3.Row
 
     # Exclude recovered library noise, benchmark junk, and tiny entries

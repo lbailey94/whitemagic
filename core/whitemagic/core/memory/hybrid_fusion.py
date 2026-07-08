@@ -294,7 +294,7 @@ def demo_hybrid_fusion():
 
     fusion = HybridFusion()
 
-    # Mock results
+    # Sample results for demonstration
     vector_results = [
         {'id': 'mem1', 'title': 'OpenAI API Guide', 'content': 'How to use the API', 'score': 0.95},
         {'id': 'mem2', 'title': 'GPT-4 Architecture', 'content': 'Model details', 'score': 0.85},

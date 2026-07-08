@@ -386,13 +386,14 @@ def handle_galaxy_list_types(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-async def handle_galaxy_export(params: dict) -> dict:
+async def handle_galaxy_export(**kwargs: Any) -> dict:
     """Export memories from a galaxy as Arrow IPC bytes (base64-encoded)."""
     try:
         import base64
 
         from whitemagic.core.memory.unified import get_unified_memory
 
+        params = kwargs
         um = get_unified_memory()
 
         galaxy = params.get("galaxy", "universal")
@@ -429,13 +430,14 @@ async def handle_galaxy_export(params: dict) -> dict:
         return {"status": "error", "error": str(e)}
 
 
-async def handle_galaxy_import(params: dict) -> dict:
+async def handle_galaxy_import(**kwargs: Any) -> dict:
     """Import memories from base64-encoded Arrow IPC bytes."""
     try:
         import base64
 
         from whitemagic.core.memory.unified import get_unified_memory
 
+        params = kwargs
         um = get_unified_memory()
 
         ipc_b64 = params.get("ipc_bytes_b64", "")

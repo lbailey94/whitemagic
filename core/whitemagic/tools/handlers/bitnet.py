@@ -13,12 +13,13 @@ def handle_bitnet_infer(**kwargs: Any) -> dict[str, Any]:
     if not ENABLED:
         return {
             "status": "error",
+            "error_code": "unavailable",
             "message": "BitNet not enabled. Set WHITEMAGIC_ENABLE_BITNET=1",
         }
 
     prompt = kwargs.get("prompt", "")
     if not prompt:
-        return {"status": "error", "message": "prompt is required"}
+        return {"status": "error", "error_code": "invalid_params", "message": "prompt is required"}
 
     n_predict = int(kwargs.get("n_predict", 128))
     temp = float(kwargs.get("temp", 0.8))

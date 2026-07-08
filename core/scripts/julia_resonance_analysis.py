@@ -27,6 +27,7 @@ import sqlite3
 import sys
 import time
 from pathlib import Path
+from whitemagic.core.memory.db_manager import safe_connect
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +50,7 @@ def get_db_path() -> Path:
 
 
 def get_conn(db_path: Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(db_path))
+    conn = safe_connect(str(db_path))
     conn.row_factory = sqlite3.Row
     return conn
 

@@ -465,6 +465,34 @@ class EmbeddingEngine:
             logger.debug("Operation failed: %s", e)
             return False
 
+    def cache_embeddings_batch(self, items: list[tuple[str, list[float]]]) -> int:
+        """Batch cache multiple embeddings in a single transaction.
+
+        Args:
+            items: List of (memory_id, embedding) pairs.
+
+        Returns:
+            Number of embeddings successfully cached.
+        """
+        db = self._get_db()
+        if db is None:
+            return 0
+        try:
+            rows = [
+                (mid, pack_embedding(vec), MODEL_NAME)
+                for mid, vec in items
+            ]
+            db.executemany(
+                "INSERT OR REPLACE INTO memory_embeddings (memory_id, embedding, model) VALUES (?, ?, ?)",
+                rows,
+            )
+            db.commit()
+            self._invalidate_vec_cache()
+            return len(items)
+        except Exception as e:
+            logger.debug("Batch cache failed: %s", e)
+            return 0
+
     def _invalidate_vec_cache(self) -> None:
         """Invalidate the in-memory vector cache and HNSW index."""
         with self._vec_cache_lock:

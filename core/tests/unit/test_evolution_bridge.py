@@ -108,26 +108,30 @@ class TestThermodynamicBridge:
 class TestBridgeDirect:
     """Test the bridge dispatcher directly (only if bridge is built)."""
 
-    @pytest.mark.skipif(not is_available(), reason="Rust evolution bridge not built")
     def test_ping(self):
+        if not is_available():
+            pytest.skip("Rust evolution bridge not built")
         result = call("ping")
         assert result is not None
         assert result["backend"] == "rust-evolution"
 
-    @pytest.mark.skipif(not is_available(), reason="Rust evolution bridge not built")
     def test_shannon_entropy_via_bridge(self):
+        if not is_available():
+            pytest.skip("Rust evolution bridge not built")
         result = call("shannon_entropy", p=0.5)
         assert result is not None
         assert abs(result["entropy"] - 1.0) < 1e-9
 
-    @pytest.mark.skipif(not is_available(), reason="Rust evolution bridge not built")
     def test_information_gain_via_bridge(self):
+        if not is_available():
+            pytest.skip("Rust evolution bridge not built")
         result = call("information_gain", p_success=0.7, n_prior=10)
         assert result is not None
         assert result["information_gain"] > 0.0
 
-    @pytest.mark.skipif(not is_available(), reason="Rust evolution bridge not built")
     def test_boltzmann_probabilities_via_bridge(self):
+        if not is_available():
+            pytest.skip("Rust evolution bridge not built")
         result = call(
             "boltzmann_probabilities", energies=[0.1, 0.2, 0.3], temperature=1.0
         )

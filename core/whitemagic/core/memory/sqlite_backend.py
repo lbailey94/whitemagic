@@ -133,6 +133,7 @@ class SQLiteBackend:
                 "is_private": "INTEGER DEFAULT 0",    # v15: exclude from MCP responses
                 "model_exclude": "INTEGER DEFAULT 0", # v15: exclude from AI context
                 "galaxy": "TEXT DEFAULT 'universal'",  # v23.1: 6D galaxy partition
+                "source_trust": "TEXT DEFAULT 'user'",  # v24: provenance tracking (user/tool_output/web/inferred)
             }
 
             for col_name, col_type in new_columns.items():
@@ -330,8 +331,8 @@ class SQLiteBackend:
                         metadata, title,
                         galactic_distance, retention_score, last_retention_sweep,
                         content_hash, event_time, ingestion_time,
-                        is_private, model_exclude, galaxy
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        is_private, model_exclude, galaxy, source_trust
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     memory.id,
                     json.dumps(memory.content) if not isinstance(memory.content, str) else memory.content,
@@ -358,6 +359,7 @@ class SQLiteBackend:
                     1 if memory.is_private else 0,
                     1 if memory.model_exclude else 0,
                     getattr(memory, 'galaxy', 'universal'),
+                    getattr(memory, 'source_trust', 'user'),
                 ))
 
                 # Update Tags
@@ -1440,4 +1442,6 @@ class SQLiteBackend:
             metadata=metadata,
             is_private=bool(row["is_private"]),
             model_exclude=bool(row["model_exclude"]),
+            galaxy=row["galaxy"] if "galaxy" in row.keys() else "universal",
+            source_trust=row["source_trust"] if "source_trust" in row.keys() else "user",
         )

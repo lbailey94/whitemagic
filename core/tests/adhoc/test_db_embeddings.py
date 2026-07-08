@@ -9,6 +9,8 @@ Not collected by pytest automatically (no test_ functions at module level).
 import sqlite3
 import sys
 
+from whitemagic.core.memory.db_manager import safe_connect
+
 
 def main() -> None:
     try:
@@ -21,7 +23,7 @@ def main() -> None:
         db_path = os.path.expanduser("~/.whitemagic/memory/whitemagic.db")
 
     print(f"Connecting to: {db_path}")
-    db = sqlite3.connect(db_path)
+    db = safe_connect(db_path)
     cursor = db.cursor()
     rows = cursor.execute(
         "SELECT memory_id, embedding FROM memory_embeddings"

@@ -293,11 +293,17 @@ class SwarmIntelligence:
             particle.position[key] = particle.position[key] + velocity
 
     def _is_promising(self, position: dict) -> bool:
-        """Simple heuristic for promising positions"""
-        # Placeholder - real version would have domain-specific logic
-        return random.random() > 0.7
+        """Heuristic check for promising positions based on objective value."""
+        score = position.get("score", position.get("fitness", 0.0))
+        return score > 0.3
 
     def _simple_clustering(self, positions: list[dict]) -> list[list[dict]]:
-        """Simple position clustering"""
-        # Placeholder - real version would use proper clustering algorithm
-        return [positions] if positions else []
+        """Group positions by proximity using score-based bucketing."""
+        if not positions:
+            return []
+        buckets: dict[int, list[dict]] = {}
+        for pos in positions:
+            score = pos.get("score", pos.get("fitness", 0.0))
+            bucket_key = int(score * 10)  # 0.1-width buckets
+            buckets.setdefault(bucket_key, []).append(pos)
+        return list(buckets.values())

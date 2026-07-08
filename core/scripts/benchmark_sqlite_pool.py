@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from whitemagic.config.paths import DB_PATH, ensure_paths
 from whitemagic.core.memory.db_manager import ConnectionPool
+from whitemagic.core.memory.db_manager import safe_connect
 
 QUERIES = [
     ("SELECT COUNT(*) FROM memories", ()),
@@ -40,7 +41,7 @@ def benchmark_open_close(db_path: str, iterations: int) -> dict:
     for i in range(iterations):
         query, params = QUERIES[i % len(QUERIES)]
         start = time.perf_counter_ns()
-        conn = sqlite3.connect(db_path)
+        conn = safe_connect(db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA mmap_size=268435456")
@@ -98,7 +99,7 @@ def main():
 
     # Warm up
     print("Warming up...")
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     conn.execute("SELECT 1").fetchone()
     conn.close()
 

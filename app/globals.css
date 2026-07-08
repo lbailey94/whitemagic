@@ -255,6 +255,157 @@
   }
 }
 
+/* ── Tome: golden trim (left + right edges, vertical reading) ──────── */
+.tome-trim-left,
+.tome-trim-right {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  pointer-events: none;
+  z-index: 60;
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.15) 8%,
+    rgba(212, 175, 55, 0.45) 50%,
+    rgba(212, 175, 55, 0.15) 92%,
+    rgba(212, 175, 55, 0) 100%
+  );
+}
+.tome-trim-left { left: 0; }
+.tome-trim-right { right: 0; }
+
+/* ── Tome: vertical scroll container ────────────────────────────────── */
+.tome-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.tome-scroll .tome-page {
+  min-height: auto;
+}
+
+/* ── Tome: cover section ────────────────────────────────────────────── */
+.tome-cover {
+  position: relative;
+}
+
+/* ── Tome: chapter ornaments ────────────────────────────────────────── */
+.tome-ornament {
+  text-align: center;
+  color: rgba(212, 175, 55, 0.4);
+  font-size: 1.5rem;
+  letter-spacing: 0.5em;
+  user-select: none;
+}
+
+/* ── Tome: progress indicator ───────────────────────────────────────── */
+.tome-progress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 65;
+  pointer-events: none;
+}
+.tome-progress-bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0.2),
+    rgba(212, 175, 55, 0.6),
+    rgba(212, 175, 55, 0.2)
+  );
+  transition: width 0.2s ease;
+}
+.tome-progress-label {
+  position: fixed;
+  bottom: 0.5rem;
+  right: 1rem;
+  z-index: 65;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(212, 175, 55, 0.5);
+  pointer-events: none;
+}
+
+/* ── Tome: index styling ────────────────────────────────────────────── */
+.tome-index-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+  transition: all 0.3s ease;
+}
+.tome-index-entry:hover {
+  border-bottom-color: rgba(212, 175, 55, 0.3);
+  padding-left: 0.5rem;
+}
+.tome-index-num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgba(212, 175, 55, 0.5);
+  min-width: 2.5rem;
+}
+.tome-index-title {
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+.tome-index-desc {
+  font-size: 0.8rem;
+  color: var(--dim-text);
+  margin-left: auto;
+  text-align: right;
+}
+
+/* ── Tome: book/chapter headings ────────────────────────────────────── */
+.tome-book-title {
+  font-family: var(--font-head);
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.tome-book-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: rgba(212, 175, 55, 0.6);
+  margin-bottom: 0.5rem;
+}
+.tome-chapter-title {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ── Tome: opaque cards (theme-aware) ───────────────────────────────── */
+.tome-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+.tome-card-flat {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tome-cover { transition: opacity 0.2s ease; }
+  .tome-scroll { scroll-behavior: auto; }
+}
+
 /* View Transitions — crossfade between pages */
 ::view-transition-old(root) {
   animation: fade-out 0.2s ease-out;

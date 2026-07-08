@@ -188,7 +188,7 @@ class TestRegistryDiscovery:
         authored = collect()
         defs = synthesize_callable_tool_definitions(authored)
         neuro_names = {d.name for d in defs if any(k in d.name for k in ['ripple.', 'replay.', 'neuro.', 'metaplasticity.', 'workspace.', 'sensorium.'])}
-        assert len(neuro_names) == 23
+        assert len(neuro_names) == 26
 
         # None should be stubs
         stubs = [d for d in defs if d.name in neuro_names and d.description.startswith("Dispatch-routable")]
@@ -199,7 +199,7 @@ class TestRegistryDiscovery:
 
         authored = collect()
         neuro_tools = [t for t in authored if any(k in t.name for k in ['ripple.', 'replay.', 'neuro.', 'metaplasticity.', 'workspace.', 'sensorium.'])]
-        assert len(neuro_tools) == 23
+        assert len(neuro_tools) == 26
         for tool in neuro_tools:
             assert tool.input_schema is not None
             assert "properties" in tool.input_schema

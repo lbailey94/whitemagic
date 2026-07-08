@@ -3,6 +3,8 @@ pub mod holographic_encoder_5d;
 pub mod holographic;
 pub mod hologram;
 pub mod embedding_minhash;
+pub mod text_embedding;
+pub mod hrr;
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;

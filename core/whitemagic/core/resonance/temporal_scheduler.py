@@ -48,7 +48,7 @@ def classify_event(event_type) -> TemporalLane:
     return _EVENT_LANE_MAP.get(name, TemporalLane.MEDIUM)
 
 
-# Stub for backward compatibility
+# Deprecated: backward compatibility shim
 def get_temporal_scheduler():
     """Deprecated: Temporal scheduler is now integrated into resonance subsystem."""
     warnings.warn(

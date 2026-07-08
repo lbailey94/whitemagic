@@ -15,11 +15,12 @@ from whitemagic.tools.unified_api import make_result
 logger = logging.getLogger(__name__)
 
 
-def handle_corpus_callosum_debate(params: dict[str, Any]) -> dict[str, Any]:
+def handle_corpus_callosum_debate(**kwargs: Any) -> dict[str, Any]:
     """Initiate a Corpus Callosum debate between hemispheres."""
     try:
         from whitemagic.core.intelligence.corpus_callosum import get_corpus_callosum_bus
 
+        params = kwargs
         topic = params.get("topic", "")
         if not topic:
             return make_result(
@@ -42,7 +43,7 @@ def handle_corpus_callosum_debate(params: dict[str, Any]) -> dict[str, Any]:
         return make_result("corpus_callosum.debate", {}, error=str(exc))
 
 
-def handle_corpus_callosum_status(params: dict[str, Any]) -> dict[str, Any]:
+def handle_corpus_callosum_status(**kwargs: Any) -> dict[str, Any]:
     """Get Corpus Callosum Bus statistics."""
     try:
         from whitemagic.core.intelligence.corpus_callosum import get_corpus_callosum_bus

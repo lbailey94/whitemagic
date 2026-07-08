@@ -24,9 +24,9 @@ class TestWasmRsStructure:
     def test_file_exists(self):
         assert WASM_RS.exists(), f"wasm.rs not found at {WASM_RS}"
 
-    def test_version_is_23_2_0(self):
+    def test_version_is_current(self):
         content = WASM_RS.read_text()
-        assert "23.2.0" in content, "wasm_version should return 23.2.0"
+        assert "24.0.1" in content, "wasm_version should return 24.0.1"
 
     def test_memory_store_defined(self):
         content = WASM_RS.read_text()
@@ -87,8 +87,8 @@ class TestWasmRsStructure:
 
     def test_edge_engine_has_updated_rules(self):
         content = WASM_RS.read_text()
-        assert "23.2.0" in content
-        assert "2,564" in content
+        assert "24.0.1" in content
+        assert "4,223" in content
 
     def test_wasm_memory_struct(self):
         content = WASM_RS.read_text()
@@ -119,6 +119,36 @@ class TestWasmRsStructure:
         ]
         assert "serde_json::json!" in stats_section
         assert "format!" not in stats_section
+
+    def test_hrr_engine_wasm_bindings(self):
+        """Verify HRR resonance engine is exposed via WASM."""
+        content = WASM_RS.read_text()
+        assert "pub struct HrrEngine" in content
+        assert "pub fn bind" in content
+        assert "pub fn unbind" in content
+        assert "pub fn superpose" in content
+        assert "pub fn similarity" in content
+        assert "pub fn project" in content
+        assert "whitemagic_math::hrr::HRREngine" in content
+
+    def test_text_embedding_wasm_bindings(self):
+        """Verify text embedding functions are exposed via WASM."""
+        content = WASM_RS.read_text()
+        assert "embed_text_wasm" in content
+        assert "embed_batch_wasm" in content
+        assert "cosine_sim_wasm" in content
+        assert "top_k_similar_wasm" in content
+        assert "embed_dim" in content
+
+    def test_hrr_wasm_tests_exist(self):
+        """Verify Rust tests for HRR and embeddings exist."""
+        content = WASM_RS.read_text()
+        assert "fn test_hrr_bind_unbind" in content
+        assert "fn test_hrr_superpose" in content
+        assert "fn test_hrr_project" in content
+        assert "fn test_embed_text" in content
+        assert "fn test_embed_similarity" in content
+        assert "fn test_top_k_similar" in content
 
 
 class TestCargoTomlWasmGating:
@@ -201,6 +231,8 @@ class TestLocalTransport:
             "edge",
             "similarity",
             "search",
+            "embedding",
+            "hrr",
             "system",
         ]:
             assert f'"{ns}"' in content, f"LocalTransport should handle namespace: {ns}"

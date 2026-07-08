@@ -11,6 +11,7 @@ from whitemagic.core.evolution.autodidactic_loop import (
     PatternApplication,
     PatternOutcome,
 )
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 def _make_loop(tmp_path: Path) -> AutodidacticLoop:
@@ -52,7 +53,7 @@ def _record_pair(
 class TestCorrelationTracking:
     def test_correlation_table_exists(self, tmp_path):
         loop = _make_loop(tmp_path)
-        conn = sqlite3.connect(str(loop.db_path))
+        conn = safe_connect(str(loop.db_path))
         c = conn.cursor()
         c.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='pattern_correlations'"

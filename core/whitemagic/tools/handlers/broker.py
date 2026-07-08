@@ -302,7 +302,7 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
     """Publish a message to a Redis channel."""
     channel = kwargs.get("channel")
     if not channel:
-        return {"status": "error", "error": "channel is required"}
+        return {"status": "error", "error_code": "invalid_params", "error": "channel is required"}
     host = kwargs.get("host", "localhost")
     port = int(kwargs.get("port", 6379))
     probe_timeout = float(
@@ -358,14 +358,14 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as exc:
         _emit("BROKER_DISCONNECTED", {"error": str(exc)})
-        return {"status": "error", "error": str(exc)}
+        return {"status": "error", "error_code": "internal_error", "error": str(exc)}
 
 
 def handle_broker_history(**kwargs: Any) -> dict[str, Any]:
     """Retrieve recent message history from a channel."""
     channel = kwargs.get("channel")
     if not channel:
-        return {"status": "error", "error": "channel is required"}
+        return {"status": "error", "error_code": "invalid_params", "error": "channel is required"}
     limit = kwargs.get("limit", 20)
     host = kwargs.get("host", "localhost")
     port = int(kwargs.get("port", 6379))
@@ -407,7 +407,7 @@ def handle_broker_history(**kwargs: Any) -> dict[str, Any]:
             "error_code": "missing_dependency",
         }
     except Exception as exc:
-        return {"status": "error", "error": str(exc)}
+        return {"status": "error", "error_code": "internal_error", "error": str(exc)}
 
 
 def handle_broker_status(**kwargs: Any) -> dict[str, Any]:
@@ -459,4 +459,4 @@ def handle_broker_status(**kwargs: Any) -> dict[str, Any]:
             "connected": False,
         }
     except Exception as exc:
-        return {"status": "error", "error": str(exc), "connected": False}
+        return {"status": "error", "error_code": "internal_error", "error": str(exc), "connected": False}

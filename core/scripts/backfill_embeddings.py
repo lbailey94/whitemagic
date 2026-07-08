@@ -11,6 +11,7 @@ import os
 import sqlite3
 import sys
 from pathlib import Path
+from whitemagic.core.memory.db_manager import safe_connect
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 CORE_DIR = SCRIPT_DIR.parent
@@ -41,7 +42,7 @@ def get_memories_without_embeddings(
     db_path: Path, limit: int | None = None
 ) -> list[tuple[int, str]]:
     """Get memories that don't have embeddings."""
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     cursor = conn.cursor()
 
     query = """
@@ -94,7 +95,7 @@ def batch_backfill(
             try:
                 embedding = engine.embed(content)
                 if embedding is not None:
-                    conn = sqlite3.connect(db_path)
+                    conn = safe_connect(db_path)
                     cursor = conn.cursor()
                     cursor.execute(
                         "INSERT INTO memory_embeddings (memory_id, embedding, model) VALUES (?, ?, ?)",

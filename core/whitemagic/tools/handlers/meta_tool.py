@@ -218,6 +218,30 @@ _PAYLOAD_MAP: dict[tuple[str, str], tuple[str, re.Pattern[str]]] = {
         "topic",
         re.compile(r"^\s*(?:dream|consolidate|sleep)\s*(?:about|on)?\s*:?\s*", re.I),
     ),
+    # Codebase recall — strip "search codebase for", "recall codebase"
+    ("gana_chariot", "codebase.recall"): (
+        "query",
+        re.compile(
+            r"^\s*(?:codebase\s*(?:recall|search|query)|search\s+codebase\s*(?:for)?|recall\s+codebase\s*(?:for)?|semantic\s+grep)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Codebase structure — strip "show structure of"
+    ("gana_chariot", "codebase.structure"): (
+        "path",
+        re.compile(
+            r"^\s*(?:codebase\s*structure|show\s+structure\s+(?:of)?|directory\s+(?:topology|structure)\s+(?:of)?|project\s+structure\s+(?:of)?)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Codebase find — strip "find files with"
+    ("gana_chariot", "codebase.find"): (
+        "extension",
+        re.compile(
+            r"^\s*(?:codebase\s*find|find\s+files?(?:\s+(?:with|by))?)\s*:?\s*",
+            re.I,
+        ),
+    ),
 }
 
 
@@ -251,6 +275,47 @@ def _extract_payload(
 
 
 _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
+    # Codebase self-model (must be before generic 'scan', 'search', 'recall' patterns)
+    (
+        re.compile(
+            r"\b(codebase.*scan|scan.*codebase|ingest.*codebase|scan.*project|index.*codebase|self.?model.*scan)\b",
+            re.I,
+        ),
+        "gana_chariot",
+        "codebase.scan",
+    ),
+    (
+        re.compile(
+            r"\b(codebase.*recall|recall.*codebase|codebase.*search|search.*codebase|semantic.*grep|codebase.*query)\b",
+            re.I,
+        ),
+        "gana_chariot",
+        "codebase.recall",
+    ),
+    (
+        re.compile(
+            r"\b(codebase.*structure|codebase.*tree|codebase.*director|project.*structure|directory.*topology|codebase.*layout)\b",
+            re.I,
+        ),
+        "gana_chariot",
+        "codebase.structure",
+    ),
+    (
+        re.compile(
+            r"\b(codebase.*status|scan.*status|codebase.*health|last.*scan)\b",
+            re.I,
+        ),
+        "gana_chariot",
+        "codebase.status",
+    ),
+    (
+        re.compile(
+            r"\b(codebase.*find|find.*files?|files?.*extension|find.*by.*ext|codebase.*browse)\b",
+            re.I,
+        ),
+        "gana_chariot",
+        "codebase.find",
+    ),
     # Consciousness practices — Smarana (must be before 'remember' → create_memory)
     (
         re.compile(r"\b(smarana|remember.*who.*am|remember.*identity|remember.*our.*mission|morning.*practice|do.*morning.*practice)\b", re.I),
@@ -483,7 +548,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     # Galaxy management
     (re.compile(r"\b(create|new).*galax", re.I), "gana_void", "galaxy.create"),
     (
-        re.compile(r"\b(galax|universe|namespace|switch.*context)", re.I),
+        re.compile(r"\b((?<!meta )galax|universe|namespace|switch.*context)", re.I),
         "gana_void",
         "galaxy.list",
     ),
@@ -535,7 +600,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "evaluate_ethics",
     ),
     (
-        re.compile(r"\b(harmony|balance|wu.xing|five.element)\b", re.I),
+        re.compile(r"\b(harmony|(?<!guna )balance|wu.xing|five.element)\b", re.I),
         "gana_straddling_legs",
         "wu_xing_balance",
     ),
@@ -875,6 +940,30 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_three_stars",
         "workspace.state",
     ),
+    (
+        re.compile(
+            r"\b(workspace.*ignite|ignite.*workspace|force.*broadcast|force.*ignition)\b",
+            re.I,
+        ),
+        "gana_three_stars",
+        "workspace.ignite",
+    ),
+    (
+        re.compile(
+            r"\b(workspace.*pending|pending.*proposal|competition.*window)\b",
+            re.I,
+        ),
+        "gana_three_stars",
+        "workspace.pending",
+    ),
+    (
+        re.compile(
+            r"\b(workspace.*ignition|ignition.*event|citta.*ignition|consciousness.*ignition)\b",
+            re.I,
+        ),
+        "gana_three_stars",
+        "workspace.ignitions",
+    ),
     # Neuro-cognitive: sensorium
     (
         re.compile(
@@ -891,6 +980,78 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         ),
         "gana_ghost",
         "sensorium.citta",
+    ),
+    # Citta introspection: vector
+    (
+        re.compile(
+            r"\b(citta.*vector|vector.*citta|consciousness.*vector|16.*dim.*citta)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "citta.vector",
+    ),
+    # Citta introspection: trajectory
+    (
+        re.compile(
+            r"\b(citta.*trajectory|trajectory.*citta|consciousness.*trajectory|consciousness.*history.*vector)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "citta.trajectory",
+    ),
+    # Citta introspection: coherence
+    (
+        re.compile(
+            r"\b(citta.*coherence|coherence.*citta|consciousness.*coherence|per.*dimension.*coherence)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "citta.coherence",
+    ),
+    # Consciousness loop status
+    (
+        re.compile(
+            r"\b(consciousness.*loop|loop.*status|background.*consciousness|daemon.*status|persistent.*consciousness)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "consciousness.loop.status",
+    ),
+    # Guna balance status
+    (
+        re.compile(
+            r"(guna.*balance|biorhythm.*status|sattvic.*rajasic.*tamasic|guna.*ratio|guna.*status)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "guna.balance.status",
+    ),
+    # Meta galaxy overview
+    (
+        re.compile(
+            r"(meta.*galaxy|galaxy.*overview|galaxy.*index|top.*down.*galaxy|cross.*galaxy.*view)\b",
+            re.I,
+        ),
+        "gana_ghost",
+        "meta.galaxy.overview",
+    ),
+    # Possibility space exploration
+    (
+        re.compile(
+            r"(possibility.*explor|monte.*carlo.*param|parameter.*optim|explore.*possibility|what.*if.*param)\b",
+            re.I,
+        ),
+        "gana_dipper",
+        "possibility.explore",
+    ),
+    # Knowledge gap action loop
+    (
+        re.compile(
+            r"(knowledge.*gap|gap.*fill|missing.*knowledge|fill.*gap|gap.*detect)\b",
+            re.I,
+        ),
+        "gana_heart",
+        "knowledge_gap.run",
     ),
 ]
 

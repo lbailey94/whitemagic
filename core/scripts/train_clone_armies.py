@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 from datetime import datetime
+from whitemagic.core.memory.db_manager import safe_connect
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logger = logging.getLogger("train_clone_armies")
@@ -109,7 +110,7 @@ async def scenario_2_immortal_clone():
         f.write("""import sqlite3
 
 def get_data(db_path):
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM memories")
     rows = cursor.fetchall()
@@ -117,7 +118,7 @@ def get_data(db_path):
     return rows
 
 def save_data(db_path, data):
-    conn = sqlite3.connect(db_path)
+    conn = safe_connect(db_path)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO memories VALUES (?)", (data,))
     conn.commit()

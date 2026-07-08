@@ -24,6 +24,7 @@ import os
 os.environ["WM_SILENT_INIT"] = "1"
 
 from whitemagic.config.paths import DB_PATH
+from whitemagic.core.memory.db_manager import safe_connect
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,7 +35,7 @@ log = logging.getLogger("test_systems")
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = safe_connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 

@@ -14,7 +14,7 @@ warnings.warn(
 )
 
 
-# Stub for backward compatibility
+# Deprecated: backward compatibility shim
 def setup_all_adapters():
     """Deprecated: Adapters are no longer needed in the unified resonance subsystem."""
     warnings.warn(

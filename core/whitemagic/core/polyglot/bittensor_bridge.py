@@ -21,34 +21,49 @@ class BittensorBridge:
 
     async def discover_resources(self, mining_type: str = "gpu") -> dict[str, Any]:
         """Scan SN51 for available compute resources.
-        In this phase, this is a read-only scaffold fetching marketplace status.
+
+        Attempts a live fetch from the lium.io marketplace API. Falls back
+        to cached/default data when the endpoint is unreachable.
         """
+        import aiohttp
+
+        logger.info("🔍 Scanning Bittensor SN51 for %s resources...", mining_type)
+
+        # Try live API fetch
         try:
-            # Mocking the discovery process for SN51
-            # In production, this would use the Bittensor API or a subnet-specific gateway
-            logger.info("🔍 Scanning Bittensor SN51 for %s resources...", mining_type)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.sn51_api}/marketplace/status",
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        data["subnet"] = 51
+                        data["timestamp"] = datetime.now().isoformat()
+                        self.discovery_cache = data
+                        self.last_discovery = datetime.now()
+                        return data
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
+            logger.debug("SN51 API unreachable, using fallback: %s", e)
 
-            # Simulated response from lium.io / Datura marketplace
-            mock_data = {
-                "subnet": 51,
-                "name": "Datura / lium.io",
-                "available_instances": 42,
-                "pricing": {
-                    "h100": "0.12 TAO/hr",
-                    "a100_80gb": "0.08 TAO/hr",
-                    "rtx_4090": "0.02 TAO/hr",
-                },
-                "status": "healthy",
-                "timestamp": datetime.now().isoformat(),
-            }
+        # Fallback when API is unreachable
+        fallback_data = {
+            "subnet": 51,
+            "name": "Datura / lium.io",
+            "available_instances": 0,
+            "pricing": {
+                "h100": "0.12 TAO/hr",
+                "a100_80gb": "0.08 TAO/hr",
+                "rtx_4090": "0.02 TAO/hr",
+            },
+            "status": "degraded",
+            "timestamp": datetime.now().isoformat(),
+            "fallback": True,
+        }
 
-            self.discovery_cache = mock_data
-            self.last_discovery = datetime.now()
-
-            return mock_data
-        except Exception as e:
-            logger.error("Bittensor discovery failed: %s", e, exc_info=True)
-            return {"status": "offline", "error": str(e)}
+        self.discovery_cache = fallback_data
+        self.last_discovery = datetime.now()
+        return fallback_data
 
     def get_resource_quote(self, requirement: str) -> dict[str, Any] | None:
         """Return a pricing quote for a specific requirement based on cache."""

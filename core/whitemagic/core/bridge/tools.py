@@ -251,7 +251,7 @@ def share_resources_router(operation: str = "backup", **kwargs: Any) -> dict[str
     if operation == "backup":
         return cast(dict[str, Any], windsurf_backup(**kwargs))
     elif operation == "restore":
-        return {"status": "restore_not_implemented"}
+        return cast(dict[str, Any], windsurf_merge_backups(**kwargs))
     else:
         return cast(dict[str, Any], windsurf_merge_backups(**kwargs))
 
@@ -279,11 +279,9 @@ def manage_cache_router(operation: str = "stats", **kwargs: Any) -> dict[str, An
     if operation == "optimize":
         return cast(dict[str, Any], optimize_cache(**kwargs))
     elif operation == "clear":
-        # Default clear cache
-        return {"cleared": True}
+        return cast(dict[str, Any], optimize_cache(operation="clear"))
     else:
-        # Default stats
-        return {"hits": 0, "misses": 0}
+        return cast(dict[str, Any], optimize_cache(operation="stats"))
 
 
 def monitor_status_router(

@@ -34,8 +34,11 @@ def handle_browser_navigate(**kwargs: Any) -> dict[str, Any]:
         finally:
             await browser.disconnect()
 
-    result = _run_async(_navigate())
-    return {"status": "success", **result}
+    try:
+        result = _run_async(_navigate())
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
 def handle_browser_click(**kwargs: Any) -> dict[str, Any]:
@@ -59,8 +62,11 @@ def handle_browser_click(**kwargs: Any) -> dict[str, Any]:
         finally:
             await browser.disconnect()
 
-    result = _run_async(_click())
-    return {"status": "success", **result}
+    try:
+        result = _run_async(_click())
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
 def handle_browser_type(**kwargs: Any) -> dict[str, Any]:
@@ -85,8 +91,11 @@ def handle_browser_type(**kwargs: Any) -> dict[str, Any]:
         finally:
             await browser.disconnect()
 
-    result = _run_async(_type())
-    return {"status": "success", **result}
+    try:
+        result = _run_async(_type())
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
 def handle_browser_extract_dom(**kwargs: Any) -> dict[str, Any]:
@@ -113,14 +122,17 @@ def handle_browser_extract_dom(**kwargs: Any) -> dict[str, Any]:
         finally:
             await browser.disconnect()
 
-    result = _run_async(_extract())
-    if "error" in result:
-        return {
-            "status": "error",
-            "error_code": "internal_error",
-            "message": result["error"],
-        }
-    return {"status": "success", **result}
+    try:
+        result = _run_async(_extract())
+        if "error" in result:
+            return {
+                "status": "error",
+                "error_code": "internal_error",
+                "message": result["error"],
+            }
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
 def handle_browser_screenshot(**kwargs: Any) -> dict[str, Any]:
@@ -139,14 +151,17 @@ def handle_browser_screenshot(**kwargs: Any) -> dict[str, Any]:
         finally:
             await browser.disconnect()
 
-    result = _run_async(_screenshot())
-    if "error" in result:
-        return {
-            "status": "error",
-            "error_code": "internal_error",
-            "message": result["error"],
-        }
-    return {"status": "success", **result}
+    try:
+        result = _run_async(_screenshot())
+        if "error" in result:
+            return {
+                "status": "error",
+                "error_code": "internal_error",
+                "message": result["error"],
+            }
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
 def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
@@ -180,11 +195,14 @@ def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
         finally:
             await browser.disconnect()
 
-    result = _run_async(_get())
-    if "error" in result:
-        return {
-            "status": "error",
-            "error_code": "internal_error",
-            "message": result["error"],
-        }
-    return {"status": "success", **result}
+    try:
+        result = _run_async(_get())
+        if "error" in result:
+            return {
+                "status": "error",
+                "error_code": "internal_error",
+                "message": result["error"],
+            }
+        return {"status": "success", **result}
+    except Exception as exc:
+        return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}

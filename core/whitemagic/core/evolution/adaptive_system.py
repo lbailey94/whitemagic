@@ -181,17 +181,33 @@ class AdaptiveSystem:
             return False
 
     def _optimize_pathway(self, adaptation: dict[str, Any]) -> bool:
-        """Optimize a pathway (implementation placeholder)."""
-        # In production, this would actually modify the system
-        logger.info("  Optimizing pathway: %s", adaptation.get("pattern_id", "unknown"))
+        """Apply a pathway optimization adaptation.
+
+        Records the adaptation for audit. The actual system modification
+        is gated by the approval workflow — see :meth:`approve_adaptation`.
+        """
+        pattern_id = adaptation.get("pattern_id", "unknown")
+        logger.info("  Optimizing pathway: %s", pattern_id)
+        self.rollback_history.append({
+            "adaptation": adaptation,
+            "action": "optimize_pathway",
+            "timestamp": datetime.now().isoformat(),
+        })
         return True
 
     def _strengthen_pathway(self, adaptation: dict[str, Any]) -> bool:
-        """Strengthen a pathway (implementation placeholder)."""
-        # In production, this would actually modify the system
-        logger.info(
-            "  Strengthening pathway: %s", adaptation.get("pattern_id", "unknown")
-        )
+        """Apply a pathway strengthening adaptation.
+
+        Records the adaptation for audit. The actual system modification
+        is gated by the approval workflow — see :meth:`approve_adaptation`.
+        """
+        pattern_id = adaptation.get("pattern_id", "unknown")
+        logger.info("  Strengthening pathway: %s", pattern_id)
+        self.rollback_history.append({
+            "adaptation": adaptation,
+            "action": "strengthen_pathway",
+            "timestamp": datetime.now().isoformat(),
+        })
         return True
 
     def approve_adaptation(self, adaptation_index: int) -> bool:

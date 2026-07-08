@@ -198,8 +198,8 @@ class MansionBridge:
 
                 similarity = getattr(whitemagic_rs, "fast_similarity")(text1, text2)
                 return float(similarity)
-            except (ImportError, ModuleNotFoundError) as e:
-                logger.warning("Rust similarity failed: %s", e, exc_info=True)
+            except (ImportError, ModuleNotFoundError, AttributeError) as e:
+                logger.debug("Rust similarity failed, using Python fallback: %s", e)
 
         # Fallback to Python
         return self._similarity_python(text1, text2)
@@ -315,7 +315,7 @@ class MansionBridge:
             result = getattr(whitemagic_rs, "zig_py_iching_cast")()
             if isinstance(result, dict):
                 return result
-        except (ImportError, ModuleNotFoundError) as e:
+        except (ImportError, ModuleNotFoundError, AttributeError) as e:
             logger.error("Zig I Ching failed: %s", e, exc_info=True)
             return None
         return None
@@ -329,7 +329,7 @@ class MansionBridge:
             import whitemagic_rs
 
             return getattr(whitemagic_rs, "zig_py_holographic_project")(*args)
-        except (ImportError, ModuleNotFoundError) as e:
+        except (ImportError, ModuleNotFoundError, AttributeError) as e:
             logger.error("Zig holographic failed: %s", e, exc_info=True)
             return None
 
@@ -367,7 +367,7 @@ class MansionBridge:
             import whitemagic_rs
 
             return getattr(whitemagic_rs, "cast_heavens_net")(directory, limit)
-        except (ImportError, ModuleNotFoundError) as e:
+        except (ImportError, ModuleNotFoundError, AttributeError) as e:
             logger.error("Heaven's Net failed: %s", e, exc_info=True)
             return None
 

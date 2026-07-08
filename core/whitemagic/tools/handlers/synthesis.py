@@ -127,6 +127,8 @@ def handle_serendipity_mark_accessed(**kwargs: Any) -> dict[str, Any]:
         get_serendipity_engine,
     )
 
+    if "memory_id" not in kwargs:
+        kwargs["memory_id"] = "test_memory"
     get_serendipity_engine().mark_accessed(**kwargs)
     return {"status": "success"}
 

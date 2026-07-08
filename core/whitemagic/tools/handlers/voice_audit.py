@@ -16,12 +16,13 @@ from whitemagic.tools.unified_api import make_result
 logger = logging.getLogger(__name__)
 
 
-def handle_voice_audit_scan(params: dict[str, Any]) -> dict[str, Any]:
+def handle_voice_audit_scan(**kwargs: Any) -> dict[str, Any]:
     """Run the Voice Audit scanner."""
     try:
         from whitemagic.core.governance.quarantine import get_quarantine_manager
         from whitemagic.core.governance.voice_audit import get_voice_audit_scanner
 
+        params = kwargs
         scanner = get_voice_audit_scanner()
         report = scanner.scan()
         result = report.to_dict()
@@ -45,7 +46,7 @@ def handle_voice_audit_scan(params: dict[str, Any]) -> dict[str, Any]:
         return make_result("voice_audit.scan", {}, error=str(exc))
 
 
-def handle_voice_audit_status(params: dict[str, Any]) -> dict[str, Any]:
+def handle_voice_audit_status(**kwargs: Any) -> dict[str, Any]:
     """Get Voice Audit scanner statistics."""
     try:
         from whitemagic.core.governance.voice_audit import get_voice_audit_scanner
@@ -57,11 +58,12 @@ def handle_voice_audit_status(params: dict[str, Any]) -> dict[str, Any]:
         return make_result("voice_audit.status", {}, error=str(exc))
 
 
-def handle_voice_audit_quarantine_list(params: dict[str, Any]) -> dict[str, Any]:
+def handle_voice_audit_quarantine_list(**kwargs: Any) -> dict[str, Any]:
     """List quarantined sessions."""
     try:
         from whitemagic.core.governance.quarantine import get_quarantine_manager
 
+        params = kwargs
         qm = get_quarantine_manager()
         include_reviewed = bool(params.get("include_reviewed", False))
         entries = qm.list_quarantined(include_reviewed=include_reviewed)

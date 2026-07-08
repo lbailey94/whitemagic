@@ -23,7 +23,7 @@ def handle_anomaly(**kwargs: Any) -> dict[str, Any]:
 def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
     """Check for active anomalies on Harmony Vector dimensions.
 
-    Includes STRATA codebase findings (structural_stub, dead_code, archive_drift)
+    Includes STRATA codebase findings (structural issues, dead code, archive drift)
     and thermal anomalies from laptop-optimizer when available.
     """
     from whitemagic.harmony.anomaly_detector import get_anomaly_detector

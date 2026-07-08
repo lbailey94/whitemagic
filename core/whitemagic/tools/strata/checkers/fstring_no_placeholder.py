@@ -23,7 +23,7 @@ from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 @register
 def check_fstring_no_placeholder(project_path: Path, file_index: FileIndex, findings: list[Finding]):
-    """Detect f-strings that don't contain any {...} placeholders."""
+    """Detect f-strings that don't contain any format fields."""
     for py_file in file_index.python_files():
         tree = file_index.get_ast(py_file)
         if tree is None:

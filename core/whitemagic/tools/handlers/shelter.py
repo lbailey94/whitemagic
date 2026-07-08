@@ -22,10 +22,15 @@ def handle_shelter_execute(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.shelter import get_shelter_manager
 
     mgr = get_shelter_manager()
-    return mgr.execute(
-        name=kwargs.get("name", "default"),
-        payload=kwargs.get("payload"),
-    )
+    name = kwargs.get("name", "default")
+    # Auto-create shelter if it doesn't exist
+    try:
+        return mgr.execute(name=name, payload=kwargs.get("payload"))
+    except Exception as e:
+        if "not found" in str(e).lower():
+            mgr.create(name=name, tier="auto", ephemeral=True)
+            return mgr.execute(name=name, payload=kwargs.get("payload"))
+        raise
 
 
 def handle_shelter_inspect(**kwargs: Any) -> dict[str, Any]:
@@ -33,10 +38,15 @@ def handle_shelter_inspect(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.shelter import get_shelter_manager
 
     mgr = get_shelter_manager()
-    return mgr.inspect(
-        name=kwargs.get("name", "default"),
-        artifact=kwargs.get("artifact", ""),
-    )
+    name = kwargs.get("name", "default")
+    # Auto-create shelter if it doesn't exist
+    try:
+        return mgr.inspect(name=name, artifact=kwargs.get("artifact", ""))
+    except Exception as e:
+        if "not found" in str(e).lower():
+            mgr.create(name=name, tier="auto", ephemeral=True)
+            return mgr.inspect(name=name, artifact=kwargs.get("artifact", ""))
+        raise
 
 
 def handle_shelter_destroy(**kwargs: Any) -> dict[str, Any]:
@@ -60,7 +70,12 @@ def handle_shelter_policy(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.shelter import get_shelter_manager
 
     mgr = get_shelter_manager()
-    return mgr.policy(
-        name=kwargs.get("name", "default"),
-        capabilities=kwargs.get("capabilities"),
-    )
+    name = kwargs.get("name", "default")
+    # Auto-create shelter if it doesn't exist
+    try:
+        return mgr.policy(name=name, capabilities=kwargs.get("capabilities"))
+    except Exception as e:
+        if "not found" in str(e).lower():
+            mgr.create(name=name, tier="auto", ephemeral=True)
+            return mgr.policy(name=name, capabilities=kwargs.get("capabilities"))
+        raise
