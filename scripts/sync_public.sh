@@ -2,11 +2,12 @@
 # sync_public.sh — Sanitize and push WHITEMAGIC main → public repo (lbailey94/whitemagic)
 #
 # Usage:
-#   ./scripts/sync_public.sh          # sync + push
+#   ./scripts/sync_public.sh          # sync + push (preserves history)
 #   ./scripts/sync_public.sh --dry    # sync only, no push (preview)
+#   ./scripts/sync_public.sh --fresh  # wipe history + push clean snapshot
 #
 # What it does:
-#   1. Creates a temporary branch from main
+#   1. Creates a temporary branch from main (or orphan branch with --fresh)
 #   2. Removes all paths listed in .publicignore
 #   3. Commits the sanitized state
 #   4. Force-pushes to the 'public' remote (lbailey94/whitemagic)
@@ -15,21 +16,27 @@
 # The public repo gets a clean, sanitized snapshot of the project
 # without internal strategy docs, deployment configs, conversation
 # extracts, or auxiliary workspaces.
+#
+# --fresh creates an orphan branch (no history) to wipe any previously
+# pushed sensitive content from the public repo's commit history.
 
 set -euo pipefail
 
 REMOTE_NAME="public"
 REMOTE_URL="https://github.com/lbailey94/whitemagic.git"
 DRY_RUN=false
+FRESH=false
 PUBLICIGNORE="$(git rev-parse --show-toplevel)/.publicignore"
 
 if [[ "${1:-}" == "--dry" ]]; then
     DRY_RUN=true
+elif [[ "${1:-}" == "--fresh" ]]; then
+    FRESH=true
 fi
 
 echo "=== sync_public.sh ==="
 echo "Remote: $REMOTE_NAME ($REMOTE_URL)"
-echo "Mode:   $(${DRY_RUN} && echo 'DRY RUN (no push)' || echo 'LIVE (will push)')"
+echo "Mode:   $(${DRY_RUN} && echo 'DRY RUN (no push)' || echo 'LIVE (will push)')  History: $(${FRESH} && echo 'FRESH (orphan — wipes history)' || echo 'PRESERVED')"
 echo ""
 
 # --- Sanity checks ---
@@ -56,8 +63,16 @@ echo ""
 
 # --- Create temp branch ---
 TEMP_BRANCH="sync-public-$(date +%Y%m%d-%H%M%S)"
-echo "Creating temp branch: $TEMP_BRANCH"
-git checkout -b "$TEMP_BRANCH"
+if $FRESH; then
+    echo "Creating orphan branch (no history): $TEMP_BRANCH"
+    git checkout --orphan "$TEMP_BRANCH"
+    git rm -rf --cached --quiet . 2>/dev/null || true
+    # Re-add all files from main's tree
+    git checkout main -- .
+else
+    echo "Creating temp branch: $TEMP_BRANCH"
+    git checkout -b "$TEMP_BRANCH"
+fi
 
 # --- Remove sensitive paths ---
 echo ""

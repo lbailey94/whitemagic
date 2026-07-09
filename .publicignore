@@ -4,15 +4,37 @@
 
 # === Internal strategy & session docs ===
 docs/message_board/
+docs/archive/strategy/
+docs/BOUNTY_TARGETING_2026.md
+docs/STRATEGY_SECURITY_BOUNTY_2026.md
+docs/POLYGLOT_NEURO_UPGRADES_STRATEGY.md
+docs/V23_ROADMAP.md
+docs/architecture/CONTINUOUS_CONSCIOUSNESS_STRATEGY.md
+docs/architecture/GALAXY_6D_STRATEGY.md
+
+# === Internal core docs (strategy, competitive, blueprints) ===
+core/docs/ECONOMIC_STRATEGY.md
+core/docs/STRATEGY.md
+core/docs/STRATEGIC_ROADMAP.md
+core/docs/COMPETITIVE_LANDSCAPE_2026.md
+core/docs/AGENT_COMPANY_BLUEPRINT.md
+core/docs/SHADOW_CLONE_DOCTRINE.md
+core/docs/internal_audit.py
 
 # === Internal tooling state ===
 .desloppify/
 
 # === Deployment config (contains project IDs) ===
 .vercel/
+.env.production
 
 # === Extracted conversation data ===
 windsurf-rips/
+
+# === Data files (JSONL outputs, not source) ===
+public/consolidate_output.jsonl
+public/consolidated_relabeled.jsonl
+public/consolidated_synthesized.jsonl
 
 # === Junk / scratch files ===
 test.txt
