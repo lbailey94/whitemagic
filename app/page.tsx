@@ -35,13 +35,6 @@ const MCP_CONFIG = `{
   }
 }`;
 
-const STATS = [
-  { value: "614", label: "Callable tools" },
-  { value: "10", label: "Memory galaxies" },
-  { value: "4,205", label: "Passing tests" },
-  { value: "7", label: "Polyglot cores" },
-];
-
 const AGENT_SURFACES = [
   { path: "/llms.txt", label: "llms.txt" },
   { path: "/.well-known/agent.json", label: "agent.json" },
@@ -85,9 +78,11 @@ export default function HomePage() {
 
       {/* Wordmark + tagline */}
       <div className="z-10 mt-8 flex flex-col items-center px-4 text-center">
+        <p className="font-zh text-lg text-dim md:text-xl">白術</p>
         <h1 className="font-head text-2xl font-bold tracking-tight text-ink md:text-3xl">
           WhiteMagic
         </h1>
+        <p className="mt-1 font-zh text-sm text-dim md:text-base">AI 智能體的認知操作系統</p>
         <p className="mt-2 font-mono text-xs uppercase tracking-[0.3em] text-dim">
           Cognitive OS for AI Agents
         </p>
@@ -103,6 +98,7 @@ export default function HomePage() {
           onClick={() => setShowConfig((v) => !v)}
           className="font-mono text-[10px] uppercase tracking-widest text-dim transition hover:text-fg"
         >
+          <span className="font-zh text-[10px] text-dim/50">MCP 配置</span>
           {showConfig ? "hide" : "show"} MCP config
         </button>
         {showConfig && (
@@ -110,16 +106,6 @@ export default function HomePage() {
             {MCP_CONFIG}
           </pre>
         )}
-      </div>
-
-      {/* Stats */}
-      <div className="z-10 mt-10 flex flex-wrap items-center justify-center gap-6 px-4">
-        {STATS.map((s) => (
-          <div key={s.label} className="text-center">
-            <p className="font-head text-lg font-bold text-ink">{s.value}</p>
-            <p className="font-mono text-[9px] uppercase tracking-widest text-dim">{s.label}</p>
-          </div>
-        ))}
       </div>
 
       {/* Agent surfaces — minimal links for crawlers/agents */}
@@ -141,8 +127,9 @@ export default function HomePage() {
       </div>
 
       {/* Version footer */}
-      <div className="z-10 mt-12 pb-8 font-mono text-[10px] text-dim/40">
-        v24.0.1 · MIT · Built by Lucas Bailey
+      <div className="z-10 mt-12 flex flex-col items-center pb-8 text-center">
+        <p className="font-zh text-[10px] text-dim/40">白魔法實驗室 · MIT 開源 · 盧卡斯·貝利 製作</p>
+        <p className="font-mono text-[10px] text-dim/40">v24.0.1 · MIT · Built by Lucas Bailey</p>
       </div>
     </main>
   );
