@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	Version    = "24.0.0-dev"
+	Version    = "24.0.1-dev"
 	SocketPath = "/tmp/whitemagic/wm.sock"
 	TCPPort    = 4730
 )

@@ -365,7 +365,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 # Per-test timeout (kill hangs). Use scripts/run_tests_batched.sh for parallel execution.
-addopts = "--timeout=30"
+addopts = "--timeout=15 -n auto --dist loadscope"
 # Exclude archived and pending tests
 norecursedirs = [
     "tests/archive",
