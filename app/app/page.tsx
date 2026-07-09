@@ -52,6 +52,7 @@ export default function AppPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [privacyBytes, setPrivacyBytes] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const storeRef = useRef<any>(null);
   const dharmaRef = useRef<any>(null);
@@ -73,7 +74,10 @@ export default function AppPage() {
     async function loadWasm() {
       try {
         const mod = await import("../../public/wasm/whitemagic_rust.js");
-        await mod.default();
+        // Pass explicit WASM binary URL — import.meta.url resolves to a
+        // Next.js chunk URL in production, not /wasm/, so the default
+        // path resolution would 404.
+        await mod.default("/wasm/whitemagic_rust_bg.wasm");
         const wasm = mod as unknown as WasmExports;
         wasmRef.current = wasm;
 
@@ -90,9 +94,8 @@ export default function AppPage() {
         try {
           const count = await store.hydrate();
           setHydrated(true);
-          if (count > 0) refreshMemories();
-        } catch {
-          // IndexedDB might not be available yet
+        } catch (e) {
+          console.warn("IndexedDB hydrate failed:", e);
         }
 
         setWasmVersion(wasm.wasm_version());
@@ -100,6 +103,7 @@ export default function AppPage() {
         refreshAll();
       } catch (err) {
         console.error("Failed to load WASM:", err);
+        setLoadError(err instanceof Error ? err.message : String(err));
       }
     }
     loadWasm();
@@ -166,7 +170,12 @@ export default function AppPage() {
 
   const handleSearch = () => {
     if (!storeRef.current || !searchQuery.trim()) return;
-    const results = JSON.parse(storeRef.current.search(searchQuery));
+    // search() returns JSON array of memory IDs (strings), not objects
+    const ids: string[] = JSON.parse(storeRef.current.search(searchQuery));
+    const results = ids.map((id) => {
+      const json = storeRef.current.read(id);
+      return json ? JSON.parse(json) : null;
+    }).filter(Boolean);
     setSearchResults(results);
   };
 
@@ -222,10 +231,26 @@ export default function AppPage() {
             </g>
           </svg>
         </div>
-        <p className="mt-4 font-mono text-xs uppercase tracking-widest text-dim">
-          Loading WASM module...
-        </p>
-        <p className="mt-1 font-zh text-xs text-dim/50">正在加載本地操作系統</p>
+        {loadError ? (
+          <>
+            <p className="mt-4 font-mono text-xs uppercase tracking-widest text-red-400">
+              WASM load failed
+            </p>
+            <p className="mt-2 max-w-md rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-2 font-mono text-[10px] text-red-300">
+              {loadError}
+            </p>
+            <p className="mt-2 font-mono text-[10px] text-dim/40">
+              Check browser console for details. Check Network tab for 404s on /wasm/ files.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-4 font-mono text-xs uppercase tracking-widest text-dim">
+              Loading WASM module...
+            </p>
+            <p className="mt-1 font-zh text-xs text-dim/50">正在加載本地操作系統</p>
+          </>
+        )}
       </main>
     );
   }
