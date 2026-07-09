@@ -165,10 +165,10 @@ def backfill(dry_run: bool = True, limit: int = 0) -> dict:
     Returns:
         Summary dict with counts.
     """
-    import sqlite3
+    from whitemagic.core.memory.db_manager import safe_connect
 
     db = get_db_path()
-    conn = sqlite3.connect(str(db))
+    conn = safe_connect(str(db))
 
     # Select zero-valence memories
     sql = (

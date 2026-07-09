@@ -34,6 +34,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from whitemagic.core.memory.db_manager import safe_connect
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,9 +53,7 @@ class ToolUsageTracker:
 
     def _init_db(self) -> None:
         """Initialize SQLite database with schema."""
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path))
+        conn = safe_connect(str(self.db_path))
         c = conn.cursor()
 
         c.execute("""
@@ -117,13 +117,11 @@ class ToolUsageTracker:
             output_tokens: Estimated output token count.
             locality: Where computation happened (edge/local/cloud).
         """
-        import sqlite3
-
         now = time.time()
         now_iso = datetime.now().isoformat()
 
         try:
-            conn = sqlite3.connect(str(self.db_path), timeout=5)
+            conn = safe_connect(str(self.db_path), timeout=5)
             conn.execute(
                 """INSERT INTO tool_calls
                    (timestamp, timestamp_iso, tool_name, gana, session_id,
@@ -147,7 +145,7 @@ class ToolUsageTracker:
             )
             conn.commit()
             conn.close()
-        except (sqlite3.Error, OSError) as e:
+        except (OSError, Exception) as e:
             logger.debug("ToolUsageTracker record failed: %s", e)
 
     def get_tool_stats(self, tool_name: str) -> dict[str, Any]:
@@ -157,9 +155,7 @@ class ToolUsageTracker:
             Dict with call_count, last_used, first_used, avg_duration_ms,
             p50_ms, p90_ms, error_rate, total_tokens, etc.
         """
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         c.execute(
@@ -210,9 +206,7 @@ class ToolUsageTracker:
 
     def get_all_tool_stats(self) -> dict[str, Any]:
         """Get statistics for all tools that have been called at least once."""
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         c.execute(
@@ -254,9 +248,7 @@ class ToolUsageTracker:
 
     def get_gana_stats(self) -> dict[str, Any]:
         """Get per-Gana aggregation statistics."""
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         c.execute(
@@ -288,9 +280,7 @@ class ToolUsageTracker:
         Returns:
             List of call records, most recent first.
         """
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         c.execute(
@@ -319,9 +309,7 @@ class ToolUsageTracker:
 
     def get_summary(self) -> dict[str, Any]:
         """Get overall usage summary statistics."""
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         c.execute(
@@ -377,9 +365,7 @@ class ToolUsageTracker:
         Returns:
             Dict mapping date strings to call counts.
         """
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         cutoff = time.time() - (days * 86400)
@@ -413,9 +399,7 @@ class ToolUsageTracker:
 
     def get_error_summary(self) -> dict[str, Any]:
         """Get error statistics across all tools."""
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         c = conn.cursor()
 
         c.execute(
@@ -444,9 +428,7 @@ class ToolUsageTracker:
 
     def reset(self) -> None:
         """Clear all usage data. Use with caution."""
-        import sqlite3
-
-        conn = sqlite3.connect(str(self.db_path), timeout=5)
+        conn = safe_connect(str(self.db_path), timeout=5)
         conn.execute("DELETE FROM tool_calls")
         conn.commit()
         conn.close()
