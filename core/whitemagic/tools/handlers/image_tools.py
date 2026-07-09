@@ -5,7 +5,7 @@ Provides the `image_analyze` tool for gana_chariot. Uses a tiered approach:
 1. Tesseract OCR (if installed) — best text extraction
 2. Online OCR API (ocr.space) — fallback for text extraction
 3. PIL-based structural analysis — always available, detects layout/content regions
-4. Ollama vision model (optional, e.g. moondream) — natural-language description of the image
+4. llama.cpp vision model (optional) — natural-language description of the image
 
 Returns a stable JSON envelope with metadata, structural analysis, OCR text, and an optional
 vision description.
@@ -103,16 +103,16 @@ def _online_ocr(image_path: str) -> tuple[str | None, str | None]:
         return None, str(e)
 
 
-def _ollama_vision_describe(
+def _llama_vision_describe(
     image_path: str,
     prompt: str,
-    model: str = "moondream",
-    ollama_url: str = "http://localhost:11434",
+    model: str = "llama-server",
+    llama_url: str = "http://localhost:8080",
     timeout: int = 60,
 ) -> tuple[str | None, str | None]:
-    """Describe an image using a local Ollama vision model.
+    """Describe an image using a local llama.cpp vision model.
 
-    Returns (description, error). If Ollama is unreachable or the model is not
+    Returns (description, error). If llama-server is unreachable or the model is not
     vision-capable, returns (None, error_message).
     """
     try:
@@ -127,20 +127,40 @@ def _ollama_vision_describe(
             "stream": False,
             "options": {"temperature": 0.3, "num_predict": 400},
         }
-        body = json.dumps(payload).encode("utf-8")
-        req = Request(
-            f"{ollama_url}/api/generate",
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
+        # Use OpenAI-compatible chat completions with vision
+        import base64 as _b64
+        import requests as _req
+
+        with open(image_path, "rb") as _f:
+            _img_data = _b64.b64encode(_f.read()).decode("utf-8")
+
+        _payload = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{_img_data}"},
+                        },
+                    ],
+                }
+            ],
+            "max_tokens": 300,
+            "stream": False,
+        }
+        _resp = _req.post(
+            f"{backend._base_url}/v1/chat/completions",
+            json=_payload,
+            timeout=timeout,
         )
-        with urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode())
-            if "response" in data:
-                return data["response"].strip(), None
-            return None, data.get("error", "No response from Ollama")
+        _resp.raise_for_status()
+        _data = _resp.json()
+        _content = _data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        return _content.strip() if _content else None, None
     except Exception as e:
-        logger.warning("Ollama vision description failed: %s", e)
+        logger.warning("llama.cpp vision description failed: %s", e)
         return None, str(e)
 
 
@@ -308,7 +328,7 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
     1. Tesseract OCR (if installed locally)
     2. ocr.space API OCR (online fallback)
     3. PIL structural analysis (always available)
-    4. Ollama vision description (optional, if describe=True)
+    4. llama.cpp vision description (optional, if describe=True)
 
     Args (via kwargs):
         image_path: Path to local image file (required if no url)
@@ -316,10 +336,10 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
         extract_text: Whether to attempt OCR (default True)
         max_text_length: Maximum OCR text length to return (default 5000)
         describe: Whether to request a natural-language description from a local
-                  Ollama vision model (default False)
+                  llama.cpp vision model (default False)
         vision_prompt: Prompt for the vision model (default asks for detailed description)
-        vision_model: Ollama vision model to use (default "moondream")
-        ollama_url: Base URL for the Ollama API (default http://localhost:11434)
+        vision_model: Vision model name (default "llama-server")
+        llama_url: Base URL for llama-server (default http://localhost:8080)
 
     Returns:
         Stable JSON envelope with metadata, structural analysis, OCR text, and optional
@@ -338,7 +358,7 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
         "and the overall meaning or context.",
     )
     vision_model = kwargs.get("vision_model", "moondream")
-    ollama_url = kwargs.get("ollama_url", "http://localhost:11434")
+    llama_url = kwargs.get("llama_url", "http://localhost:8080")
 
     if not image_path and not url:
         return {
@@ -401,7 +421,7 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
             "error": None,
         }
 
-        # Vision description (Ollama, optional)
+        # Vision description (llama.cpp, optional)
         vision_result: dict[str, Any] = {
             "description": None,
             "model": None,
@@ -447,14 +467,14 @@ def handle_image_analyze(**kwargs: Any) -> dict[str, Any]:
                     os.unlink(gray_path)
 
         if describe:
-            desc, v_err = _ollama_vision_describe(
-                image_path, vision_prompt, model=vision_model, ollama_url=ollama_url
+            desc, v_err = _llama_vision_describe(
+                image_path, vision_prompt, model=vision_model, llama_url=llama_url
             )
             if desc:
                 vision_result = {
                     "description": desc,
                     "model": vision_model,
-                    "method": "ollama_vision",
+                    "method": "llama_vision",
                     "error": None,
                 }
             else:

@@ -441,8 +441,15 @@ class ConsciousnessLoop:
                 self._stats.last_error = str(e)
                 logger.debug("Consciousness loop error: %s", e, exc_info=True)
 
-            # Sleep in small increments so stop is responsive
-            self._stop_event.wait(timeout=5.0)
+            # Sleep until the nearest tier deadline (sub-second responsive)
+            next_deadline = min(
+                self._last_citta + self._config.citta_interval_s,
+                self._last_meta_fast + self._config.meta_fast_interval_s,
+                self._last_meta_slow + self._config.meta_slow_interval_s,
+                self._last_meta_deep + self._config.meta_deep_interval_s,
+            )
+            wait_s = max(0.05, min(next_deadline - now, 5.0))
+            self._stop_event.wait(timeout=wait_s)
 
     def _advance_citta(self) -> None:
         """Advance the citta stream with current system telemetry."""

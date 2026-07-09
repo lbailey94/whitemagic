@@ -532,6 +532,10 @@ def handle_galaxy_search_multi(**kwargs: Any) -> dict[str, Any]:
     try:
         gm = get_galaxy_manager()
         galaxies = kwargs.get("galaxies")
+        if galaxies is None:
+            galaxy = kwargs.get("galaxy")
+            if galaxy:
+                galaxies = [galaxy] if isinstance(galaxy, str) else list(galaxy)
         if isinstance(galaxies, str):
             galaxies = [g.strip() for g in galaxies.split(",")]
 

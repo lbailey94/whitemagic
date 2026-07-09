@@ -490,8 +490,9 @@ WM_STATE_ROOT=./.whitemagic
 # Dharma profile (ethical governance strictness)
 # WM_DHARMA_PROFILE=default   # Options: default, creative, secure, violet
 
-# Ollama endpoint for local LLM inference
-# OLLAMA_HOST=http://localhost:11434
+# llama-server endpoint for local LLM inference
+# WM_LLAMA_HOST=localhost
+# WM_LLAMA_PORT=8080
 
 # XRP receive address for gratitude tips (opt-in)
 # Leave blank to disable tipping feature:

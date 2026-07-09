@@ -1071,7 +1071,7 @@ class DreamCycle:
                 "file_path": re.compile(r"[\w/]+\.\w{1,5}"),
                 "version": re.compile(r"v?\d+\.\d+(?:\.\d+)?"),
                 "tool_name": re.compile(
-                    r"\b(?:fragment|strata|ollama|cargo|maturin|pytest)\b", re.I
+                    r"\b(?:fragment|strata|llama.cpp|cargo|maturin|pytest)\b", re.I
                 ),
                 "python_module": re.compile(r"\bwhitemagic\.[a-z_.]+\b"),
                 "rust_crate": re.compile(r"\bwhitemagic_rs\b|\bfragment\b"),

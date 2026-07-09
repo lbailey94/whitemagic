@@ -38,9 +38,9 @@ class EmbeddingEngine:
         if self._engine is None:
             try:
                 from whitemagic.core.memory.embeddings import (
-                    EmbeddingEngine as RealEngine,
+                    get_embedding_engine as _get_real_engine,
                 )
-                self._engine = RealEngine()
+                self._engine = _get_real_engine()
             except Exception as e:
                 logger.warning("Real EmbeddingEngine unavailable: %s", e, exc_info=True)
                 self._engine = None

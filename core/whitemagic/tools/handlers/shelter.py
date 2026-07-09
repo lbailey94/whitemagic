@@ -23,13 +23,16 @@ def handle_shelter_execute(**kwargs: Any) -> dict[str, Any]:
 
     mgr = get_shelter_manager()
     name = kwargs.get("name", "default")
+    payload = kwargs.get("payload")
+    if payload is not None and not isinstance(payload, dict):
+        payload = {"type": "python", "code": str(payload)}
     # Auto-create shelter if it doesn't exist
     try:
-        return mgr.execute(name=name, payload=kwargs.get("payload"))
+        return mgr.execute(name=name, payload=payload)
     except Exception as e:
         if "not found" in str(e).lower():
             mgr.create(name=name, tier="auto", ephemeral=True)
-            return mgr.execute(name=name, payload=kwargs.get("payload"))
+            return mgr.execute(name=name, payload=payload)
         raise
 
 

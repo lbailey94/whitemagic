@@ -7,7 +7,7 @@ Tracks the environmental efficiency of AI operations by measuring:
   - **Tokens saved**: Tokens avoided via local caching, context
     compression, and local model inference
   - **Inference locality**: Whether inference ran on-device (CPU/GPU),
-    local network (Ollama), or remote cloud
+    local network (llama.cpp), or remote cloud
   - **Compute efficiency**: Operations per watt-hour equivalent
     (estimated from CPU time × TDP)
 
@@ -42,7 +42,7 @@ class InferenceLocality:
     """Where inference was executed."""
 
     EDGE = "edge"  # On-device CPU/GPU (Rust, Zig, Mojo accelerators)
-    LOCAL_LLM = "local_llm"  # Local Ollama or similar
+    LOCAL_LLM = "local_llm"  # Local llama.cpp or similar
     LOCAL_NET = "local_net"  # LAN-accessible service
     CLOUD = "cloud"  # Remote API (OpenAI, Anthropic, etc.)
 

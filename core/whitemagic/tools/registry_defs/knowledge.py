@@ -56,4 +56,62 @@ TOOLS: list[ToolDefinition] = [
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
     ),
+    ToolDefinition(
+        name="kg2.extract",
+        description="Extract entities and relations using LightNER (fast pattern-based extraction)",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "source_id": {
+                    "type": "string",
+                    "description": "Source memory/document ID",
+                    "default": "manual",
+                },
+                "text": {
+                    "type": "string",
+                    "description": "Text to extract entities from",
+                },
+            },
+        },
+    ),
+    ToolDefinition(
+        name="kg2.batch",
+        description="Batch extract entities from multiple unextracted memories",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum memories to process",
+                    "default": 100,
+                },
+            },
+        },
+    ),
+    ToolDefinition(
+        name="kg2.entity",
+        description="Query entity graph with typed edges (KG v2 with LightNER)",
+        category=ToolCategory.MEMORY,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Entity name to query",
+                },
+            },
+        },
+    ),
+    ToolDefinition(
+        name="kg2.stats",
+        description="Get KG2 extraction statistics — entity/relation counts, coverage",
+        category=ToolCategory.INTROSPECTION,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
 ]

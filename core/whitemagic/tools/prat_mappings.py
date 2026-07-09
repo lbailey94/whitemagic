@@ -225,6 +225,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "karma.anchor": "gana_hairy_head",
     "karma.verify_anchor": "gana_hairy_head",
     "karma.anchor_status": "gana_hairy_head",
+    # Dharma 4-tier escalation → Straddling Legs (ethics & balance)
+    "dharma.escalate": "gana_straddling_legs",
+    "dharma.review_queue": "gana_straddling_legs",
+    "dharma.resolve_review": "gana_straddling_legs",
     # ═══ TURTLE BEAK — Precision & Protection ═══
     "edge_infer": "gana_turtle_beak",
     "edge_batch_infer": "gana_turtle_beak",
@@ -316,11 +320,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "think": "gana_three_stars",
     "check": "gana_root",
     # ═══ ROOF — Shelter & Zodiac Cores ═══
-    "ollama.models": "gana_roof",
-    "ollama.generate": "gana_roof",
-    "ollama.chat": "gana_roof",
-    "ollama.agent": "gana_roof",
-    "ollama_agent": "gana_roof",
+    "llama.models": "gana_roof",
+    "llama.generate": "gana_roof",
+    "llama.chat": "gana_roof",
+    "llama.agent": "gana_roof",
     "zodiac.status": "gana_roof",
     # ═══ ENCAMPMENT — Transition & Handoff ═══
     "sangha_chat_send": "gana_encampment",
@@ -701,6 +704,73 @@ TOOL_TO_GANA: dict[str, str] = {
     "meta.galaxy.overview": "gana_ghost",
     "possibility.explore": "gana_dipper",
     "knowledge_gap.run": "gana_heart",
+    # ── v24.1: Security Bounty Tools ──
+    # Foundry + ABI → Chariot (codebase analysis & navigation)
+    "foundry.build": "gana_chariot",
+    "foundry.test": "gana_chariot",
+    "foundry.test_json": "gana_chariot",
+    "abi.parse": "gana_chariot",
+    "abi.summarize": "gana_chariot",
+    "abi.decode_calldata": "gana_chariot",
+    # Vuln Knowledge → Extended Net (pattern connectivity)
+    "vuln.search": "gana_extended_net",
+    "vuln.status": "gana_extended_net",
+    "vuln.ingest_report": "gana_extended_net",
+    # Contest → Wall (boundaries & marketplace / submissions)
+    "contest.add_finding": "gana_wall",
+    "contest.format": "gana_wall",
+    "contest.status": "gana_wall",
+    # OSS Bounty → Chariot (external repo scanning)
+    "oss.scan_repo": "gana_chariot",
+    "oss.scan_org": "gana_chariot",
+    # Aggregate status → Ghost (introspection)
+    "security.status": "gana_ghost",
+    # PoC Pipeline → Chariot (codebase analysis & generation)
+    "poc.generate": "gana_chariot",
+    "poc.verify": "gana_chariot",
+    "contest.prepare": "gana_wall",
+    # HTTP Probe → Chariot (external exploration)
+    "http_probe.get": "gana_chariot",
+    "http_probe.post": "gana_chariot",
+    "http_probe.xss": "gana_chariot",
+    "http_probe.sqli": "gana_chariot",
+    "http_probe.idor": "gana_chariot",
+    "http_probe.ssrf": "gana_chariot",
+    "api.state_machine": "gana_chariot",
+    # Echidna → Chariot (codebase analysis)
+    "echidna.fuzz": "gana_chariot",
+    "echidna.status": "gana_chariot",
+    # Fix Generator → Chariot (code generation) + Wall (PR submission)
+    "fix.generate": "gana_chariot",
+    "fix.apply": "gana_chariot",
+    "pr.create": "gana_wall",
+    "bounty.track": "gana_abundance",
+    # Report Scraper → Extended Net (pattern ingestion)
+    "report.scrape": "gana_extended_net",
+    "report.ingest": "gana_extended_net",
+    # Phase 7: Advanced Tools
+    # Vuln Graph → Extended Net (pattern connectivity / graph)
+    "vuln_graph.status": "gana_extended_net",
+    "vuln_graph.chains": "gana_extended_net",
+    "vuln_graph.cross_chain": "gana_extended_net",
+    # Formal Verification → Three Stars (judgment & synthesis)
+    "formal.verify": "gana_three_stars",
+    "formal.status": "gana_three_stars",
+    # Multi-Agent Swarm → Ox (endurance / swarm decompose)
+    "swarm.analyze": "gana_ox",
+    "swarm.status": "gana_ox",
+    # Predictive Scoring → Dipper (strategy / cognitive modes)
+    "predictive.score": "gana_dipper",
+    "predictive.batch": "gana_dipper",
+    # Audit Report → Chariot (codebase navigation / output)
+    "audit.report": "gana_chariot",
+    # Monitor → Hairy Head (detail & debug / anomaly monitoring)
+    "monitor.status": "gana_hairy_head",
+    "monitor.alerts": "gana_hairy_head",
+    "monitor.contract": "gana_hairy_head",
+    # Slither → Three Stars (judgment & synthesis)
+    "slither.scan": "gana_three_stars",
+    "slither.status": "gana_three_stars",
 }
 
 # Reverse: Gana → list of nested tools

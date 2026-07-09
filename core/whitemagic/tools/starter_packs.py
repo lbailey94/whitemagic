@@ -244,7 +244,7 @@ _PACKS: dict[str, dict[str, Any]] = {
                 "when": "Execute named tool sequences (reusable workflows)",
             },
             {
-                "name": "ollama.agent",
+                "name": "llama.agent",
                 "when": "Run an agentic loop with a local LLM + WhiteMagic tools",
             },
             {
@@ -431,7 +431,7 @@ def suggest_pack(context: str) -> dict[str, Any]:
             "engineer",
             "code",
             "platform",
-            "ollama",
+            "llama_cpp",
         ],
         "team_tier": [
             "team",

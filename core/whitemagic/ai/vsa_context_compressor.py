@@ -79,9 +79,9 @@ class VSAContextCompressor:
 
     def _get_embedding_engine(self) -> Any:
         if self._embedding_engine is None:
-            from whitemagic.core.memory.embeddings import EmbeddingEngine
+            from whitemagic.core.memory.embeddings import get_embedding_engine
 
-            self._embedding_engine = EmbeddingEngine()
+            self._embedding_engine = get_embedding_engine()
         return self._embedding_engine
 
     def compress(

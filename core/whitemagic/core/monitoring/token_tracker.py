@@ -56,7 +56,7 @@ def _determine_locality(ctx: DispatchContext, result: dict[str, Any] | None) -> 
         return InferenceLocality.EDGE
 
     tool_lower = ctx.tool_name.lower()
-    if any(p in tool_lower for p in ("ollama", "bitnet", "local")):
+    if any(p in tool_lower for p in ("llama", "bitnet", "local")):
         return InferenceLocality.LOCAL_LLM
     if any(p in tool_lower for p in ("cloud", "openai", "anthropic", "api")):
         return InferenceLocality.CLOUD

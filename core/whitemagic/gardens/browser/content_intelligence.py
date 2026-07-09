@@ -4,14 +4,14 @@
 Provides three capabilities for AI-friendly content processing:
 1. ContentChunker — splits text into ~2K-char semantic chunks with overlap
 2. OutlineBuilder — extracts heading structure from HTML before text conversion
-3. ContentSummarizer — LLM-powered summarization via Ollama with extractive fallback
+3. ContentSummarizer — LLM-powered summarization via llama.cpp with extractive fallback
 
 Inspired by Windsurf's approach of building outlines and chunking content for
 progressive loading, but designed for WhiteMagic's local-first, no-API-key ethos.
 
 Integration:
     Used by web_fetch_enhanced handler in gana_chariot.
-    Summarizer falls back to extractive summarization when Ollama is unavailable.
+    Summarizer falls back to extractive summarization when llama-server is unavailable.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ class EnhancedContent:
     total_chunks: int
     chunk_size: int
     overlap: int
-    summarizer_used: str  # "ollama" | "extractive" | "none"
+    summarizer_used: str  # "llama_cpp" | "extractive" | "none"
 
 
 class OutlineBuilder:
@@ -271,17 +271,17 @@ class ContentChunker:
 
 
 class ContentSummarizer:
-    """Summarizes content using Ollama (local LLM) with extractive fallback.
+    """Summarizes content using llama.cpp (local LLM) with extractive fallback.
 
-    Tries Ollama first for abstractive summarization.
-    Falls back to extractive summarization (sentence scoring) if Ollama is unavailable.
+    Tries llama-server first for abstractive summarization.
+    Falls back to extractive summarization (sentence scoring) if llama-server is unavailable.
     """
 
-    def __init__(self, model: str = "gemma3:4b", max_summary_chars: int = 1000) -> None:
+    def __init__(self, model: str = "", max_summary_chars: int = 1000) -> None:
         """Initialize the summarizer.
 
         Args:
-            model: Ollama model to use (default gemma3:4b — small and fast)
+            model: Model name for logging (llama-server uses its loaded model)
             max_summary_chars: Maximum summary length in characters
         """
         self.model = model
@@ -296,70 +296,50 @@ class ContentSummarizer:
 
         Returns:
             Tuple of (summary_text, method_name) where method_name is
-            "ollama" or "extractive"
+            "llama_cpp" or "extractive"
         """
         if not text or len(text) < 200:
             return text[: self.max_summary_chars], "none"
 
         try:
-            summary = self._summarize_with_ollama(text, focus)
+            summary = self._summarize_with_llama(text, focus)
             if summary:
-                return summary[: self.max_summary_chars], "ollama"
+                return summary[: self.max_summary_chars], "llama_cpp"
         except Exception as exc:
             logger.debug(
-                "Ollama summarization failed: %s, falling back to extractive", exc
+                "llama.cpp summarization failed: %s, falling back to extractive", exc
             )
 
         # Fallback: extractive summarization
         return self._summarize_extractive(text, focus), "extractive"
 
-    def _summarize_with_ollama(self, text: str, focus: str) -> str | None:
-        """Use Ollama to generate an abstractive summary."""
+    def _summarize_with_llama(self, text: str, focus: str) -> str | None:
+        """Use llama.cpp to generate an abstractive summary."""
         try:
-            import aiohttp
-        except ImportError:
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+
+            backend = get_llama_cpp_backend()
+            if not backend.is_available:
+                return None
+
+            truncated = text[:8000]
+
+            prompt = "Summarize the following content in 3-5 concise sentences"
+            if focus:
+                prompt += f", focusing on {focus}"
+            prompt += f".\n\nContent:\n{truncated}\n\nSummary:"
+
+            response = backend.complete(
+                prompt,
+                max_tokens=200,
+                temperature=0.3,
+            )
+            if response.startswith("Error:"):
+                return None
+            return response.strip()
+        except Exception as exc:
+            logger.debug("llama.cpp summarization failed: %s", exc)
             return None
-
-        import asyncio
-        import os
-
-        ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-
-        # Truncate input to avoid token explosion (~8K chars = ~2K tokens)
-        truncated = text[:8000]
-
-        prompt = "Summarize the following content in 3-5 concise sentences"
-        if focus:
-            prompt += f", focusing on {focus}"
-        prompt += f".\n\nContent:\n{truncated}\n\nSummary:"
-
-        async def _call() -> str | None:
-            async with aiohttp.ClientSession() as session:
-                payload: dict[str, Any] = {
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.3, "num_predict": 200},
-                }
-                async with session.post(
-                    f"{ollama_url}/api/generate",
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    data = await resp.json()
-                    return data.get("response", "").strip()
-
-        try:
-            return asyncio.get_event_loop().run_until_complete(_call())
-        except RuntimeError:
-            # No event loop in this thread — create one
-            loop = asyncio.new_event_loop()
-            try:
-                return loop.run_until_complete(_call())
-            finally:
-                loop.close()
 
     def _summarize_extractive(self, text: str, focus: str) -> str:
         """Extractive summarization using sentence scoring.
@@ -427,7 +407,7 @@ def process_content(
     overlap: int = 200,
     summarize: bool = True,
     focus: str = "",
-    ollama_model: str = "gemma3:4b",
+    llama_model: str = "",
 ) -> EnhancedContent:
     """Process HTML/text into an EnhancedContent with outline, chunks, and summary.
 
@@ -441,7 +421,7 @@ def process_content(
         overlap: Overlap chars between chunks
         summarize: Whether to generate a summary
         focus: Optional focus topic for summarization
-        ollama_model: Ollama model for summarization
+        llama_model: llama.cpp model for summarization
 
     Returns:
         EnhancedContent with all components
@@ -464,7 +444,7 @@ def process_content(
     summary = ""
     summarizer_used = "none"
     if summarize and text:
-        summarizer = ContentSummarizer(model=ollama_model)
+        summarizer = ContentSummarizer(model=llama_model)
         summary, summarizer_used = summarizer.summarize(text, focus=focus)
 
     return EnhancedContent(

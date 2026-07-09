@@ -463,6 +463,43 @@ class SQLiteBackend:
             rows = conn.execute(sql, params).fetchall()
             return [str(row["content"]) for row in rows if row["content"]]
 
+    def rebuild_fts(self, batch_size: int = 500) -> int:
+        """Rebuild the FTS5 index for memories missing from it.
+
+        Returns the number of memories reindexed.
+        """
+        import time
+
+        with self.pool.connection() as conn:
+            conn.row_factory = sqlite3.Row
+            missing = conn.execute("""
+                SELECT m.id, m.title, m.content
+                FROM memories m
+                LEFT JOIN memories_fts f ON m.id = f.id
+                WHERE f.id IS NULL
+            """).fetchall()
+
+            if not missing:
+                return 0
+
+            rebuilt = 0
+            for i in range(0, len(missing), batch_size):
+                batch = missing[i:i + batch_size]
+                for row in batch:
+                    tag_rows = conn.execute(
+                        "SELECT tag FROM tags WHERE memory_id = ?", (row["id"],)
+                    ).fetchall()
+                    tags_text = " ".join(r["tag"] for r in tag_rows)
+                    conn.execute(
+                        "INSERT OR REPLACE INTO memories_fts (id, title, content, tags_text) VALUES (?, ?, ?, ?)",
+                        (row["id"], row["title"] or "", str(row["content"] or ""), tags_text),
+                    )
+                conn.commit()
+                rebuilt += len(batch)
+                logger.info("FTS rebuild: %d/%d", rebuilt, len(missing))
+
+            return rebuilt
+
     def search(self, query: str | None = None, tags: set[str] | None = None,
                memory_type: MemoryType | None = None, min_importance: float = 0.0,
                limit: int = 10, galaxy: str | None = None) -> list[Memory]:
@@ -475,7 +512,7 @@ class SQLiteBackend:
                 fts_query = query.strip()
                 # Sanitize FTS5-unsafe characters (brackets, quotes, colons, etc.)
                 # FTS5 treats : as column filter, , as syntax, etc.
-                for ch in r'[]{}()^~*:,;\/':
+                for ch in r'[]{}()^~*:,;\/?!.\'\"':
                     fts_query = fts_query.replace(ch, ' ')
                 # Remove FTS5 column names that could be interpreted as column filters
                 fts5_columns = {"content", "title", "tags", "metadata", "galaxy", "id", "existing", "directed", "memory_type", "importance"}

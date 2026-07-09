@@ -414,7 +414,7 @@ class ImmortalClone:
     def generate_action(self) -> Action:
         """Generate next action based on current context.
 
-        Uses LLM to decide next action when Ollama is available.
+        Uses LLM to decide next action when llama.cpp is available.
         Falls back to heuristic cycling when LLM is not running.
         """
         action_type = self._llm_choose_action()
@@ -821,7 +821,7 @@ class ImmortalClone:
     def check_victory_conditions(self) -> list[str]:
         """Check which task victory conditions are met.
 
-        Uses LLM to evaluate VCs when Ollama is available.
+        Uses LLM to evaluate VCs when llama.cpp is available.
         Falls back to heuristic (compile+test passed) when not.
 
         Returns:

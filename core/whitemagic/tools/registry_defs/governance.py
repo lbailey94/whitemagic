@@ -126,4 +126,66 @@ TOOLS: list[ToolDefinition] = [
         quadrant="southern",
         element="fire",
     ),
+    # ── Dharma 4-Tier Escalation Pipeline ───────────────────────────
+    ToolDefinition(
+        name="dharma.escalate",
+        description=(
+            "Run the 4-tier Dharma escalation pipeline on an action. "
+            "Tiers: policy (declarative rules) → heuristic (embedding similarity) "
+            "→ LLM (llama.cpp safety assessment) → human (review queue). "
+            "Only escalates when the current tier returns an ambiguous score (0.3-0.7)."
+        ),
+        category=ToolCategory.GOVERNANCE,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "object",
+                    "description": "The action dict to evaluate (tool, description, args)",
+                },
+            },
+            "required": ["action"],
+        },
+        gana="StraddlingLegs",
+        garden="dharma",
+        quadrant="western",
+        element="metal",
+    ),
+    ToolDefinition(
+        name="dharma.review_queue",
+        description=(
+            "Get pending human review items from the Dharma escalation pipeline. "
+            "Items are added when the LLM tier cannot resolve an ambiguous action."
+        ),
+        category=ToolCategory.GOVERNANCE,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+        gana="StraddlingLegs",
+        garden="dharma",
+        quadrant="western",
+        element="metal",
+    ),
+    ToolDefinition(
+        name="dharma.resolve_review",
+        description=(
+            "Resolve a human review item from the escalation pipeline. "
+            "Sets the human-assigned decision and score, marking the review as resolved."
+        ),
+        category=ToolCategory.GOVERNANCE,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "review_id": {"type": "string", "description": "The review ID to resolve"},
+                "decision": {"type": "string", "enum": ["allow", "warn", "block"]},
+                "score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            },
+            "required": ["review_id", "decision", "score"],
+        },
+        gana="StraddlingLegs",
+        garden="dharma",
+        quadrant="western",
+        element="metal",
+    ),
 ]

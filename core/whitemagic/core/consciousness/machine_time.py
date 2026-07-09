@@ -122,7 +122,7 @@ _TOOL_TYPE_MAP: dict[str, str] = {
     "vote": "task",
     "broker": "task",
     "gratitude": "task",
-    "ollama": "inference",
+    "llama": "inference",
     "inference": "inference",
     "edge": "inference",
     "model": "inference",

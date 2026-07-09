@@ -350,7 +350,7 @@ class SessionStartupOrchestrator:
         )
         results.append(self._safe_activate("Rapid Cognition", self.start_cognition))
 
-        # 3. Archived: embedded local-model inference (Ollama/BitNet/etc)
+        # 3. Archived: embedded local-model inference (llama.cpp/BitNet/etc)
         if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() in {
             "1",
             "true",

@@ -72,6 +72,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Embedding dimension (384 for both all-MiniLM-L6-v2 and BAAI/bge-small-en-v1.5)
+# When using LlamaCppEmbedder, dimension is detected from the running model.
 EMBEDDING_DIM = 384
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
@@ -113,6 +114,18 @@ class EmbeddingEngine:
         self._hnsw_ids_path = MEMORY_DIR / "hnsw_ids.json"
         self._cold_hnsw_index_path = MEMORY_DIR / "hnsw_cold_index.bin"
         self._cold_hnsw_ids_path = MEMORY_DIR / "hnsw_cold_ids.json"
+
+    def _get_embedding_dim(self) -> int:
+        """Get the actual embedding dimension from the loaded model.
+
+        Falls back to EMBEDDING_DIM (384) if model not loaded or dimension unknown.
+        """
+        model = self._model
+        if model is not None and hasattr(model, "embedding_dim"):
+            dim = model.embedding_dim
+            if dim is not None and dim > 0:
+                return dim
+        return EMBEDDING_DIM
 
     def close(self) -> None:
         """Close SQLite connections and release resources."""
@@ -177,6 +190,16 @@ class EmbeddingEngine:
         if self._available is not None:
             return self._available
 
+        # 1. Try llama.cpp embeddings (no extra download needed)
+        try:
+            from whitemagic.inference.local_embedder import LlamaCppEmbedder
+            if LlamaCppEmbedder().is_available:
+                self._available = True
+                return True
+        except ImportError:
+            pass
+
+        # 2. Try FastEmbed (LocalEmbedder)
         try:
             from whitemagic.inference.local_embedder import LocalEmbedder
             if LocalEmbedder().is_available:
@@ -185,18 +208,18 @@ class EmbeddingEngine:
         except ImportError:
             pass
 
-        # Fallback to sentence-transformers
+        # 3. Fallback to sentence-transformers
         try:
             import sentence_transformers  # noqa: F401
 
             self._available = True
         except ImportError:
             self._available = False
-            logger.debug("Neither fastembed nor sentence-transformers installed — embedding engine unavailable")
+            logger.debug("No embedding backend available (llama.cpp, FastEmbed, or sentence-transformers)")
         return bool(self._available)
 
     def _get_model(self) -> Any:
-        """Lazy-load the embedding model (FastEmbed or SentenceTransformer)."""
+        """Lazy-load the embedding model (llama.cpp > FastEmbed > SentenceTransformer)."""
         if self._model is not None:
             return self._model
         with self._model_lock:
@@ -205,20 +228,29 @@ class EmbeddingEngine:
             if not self.available():
                 return None
 
-            # 1. Try FastEmbed (LocalEmbedder)
+            # 1. Try llama.cpp embeddings (no download, uses running server)
+            try:
+                from whitemagic.inference.local_embedder import LlamaCppEmbedder
+                embedder = LlamaCppEmbedder()
+                if embedder.is_available:
+                    logger.info("Loaded LlamaCppEmbedder (dim=%d) via llama-server", embedder.embedding_dim)
+                    self._model = embedder
+                    return self._model
+            except ImportError:
+                pass
+
+            # 2. Try FastEmbed (LocalEmbedder)
             try:
                 from whitemagic.inference.local_embedder import LocalEmbedder
                 embedder = LocalEmbedder(model_name="BAAI/bge-small-en-v1.5")
                 if embedder.is_available:
                     logger.info("Loaded LocalEmbedder (FastEmbed): %s", embedder.model_name, exc_info=True)
                     self._model = embedder
-                    # Monkey-patch or wrap to match expected interface if needed
-                    # LocalEmbedder.embed returns arrays, we need list[float]
                     return self._model
             except ImportError:
                 pass
 
-            # 2. Fallback to SentenceTransformer
+            # 3. Fallback to SentenceTransformer
             try:
                 from sentence_transformers import SentenceTransformer
                 logger.info("Loading embedding model: %s", MODEL_NAME, exc_info=True)
@@ -659,11 +691,12 @@ class EmbeddingEngine:
             if not rows:
                 return [], []
             # Filter by embedding dimension (avoid inhomogeneous shape errors)
+            dim = self._get_embedding_dim()
             valid_ids = []
             valid_vecs = []
             for r in rows:
                 vec = unpack_embedding(r[1])
-                if len(vec) == EMBEDDING_DIM:
+                if len(vec) == dim:
                     valid_ids.append(r[0])
                     valid_vecs.append(vec)
 
@@ -675,7 +708,7 @@ class EmbeddingEngine:
                     dtype=_float32,
                 )
                 if vecs.ndim == 1:
-                    vecs = vecs.reshape(-1, EMBEDDING_DIM)
+                    vecs = vecs.reshape(-1, dim)
                 # Pre-normalize: each row becomes unit-length
                 norms = _linalg_norm(vecs, axis=1, keepdims=True)
                 norms[norms == 0] = 1.0

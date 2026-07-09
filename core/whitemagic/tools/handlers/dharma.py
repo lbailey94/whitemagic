@@ -215,3 +215,69 @@ def handle_karma_anchor_status(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.dharma.karma_anchor import anchor_status
 
     return {"status": "success", **anchor_status()}
+
+
+def handle_dharma_escalate(**kwargs: Any) -> dict[str, Any]:
+    """Run the 4-tier Dharma escalation pipeline on an action.
+
+    Tiers: policy → heuristic → LLM → human.
+    Only escalates when the policy tier returns an ambiguous score.
+
+    Args:
+        action: The action dict to evaluate (tool, description, args).
+    """
+    from whitemagic.dharma import get_dharma_system
+
+    action = kwargs.get("action", {})
+    if not isinstance(action, dict):
+        action = {"tool": str(action)}
+
+    dharma = get_dharma_system()
+    result = dharma.evaluate_with_escalation(action)
+    return {"status": "success", **result}
+
+
+def handle_dharma_review_queue(**kwargs: Any) -> dict[str, Any]:
+    """Get pending human review items from the escalation pipeline."""
+    from whitemagic.dharma.escalation import get_escalation_pipeline
+
+    pipeline = get_escalation_pipeline()
+    queue = pipeline.get_review_queue()
+    pending = [item for item in queue if item.get("status") == "pending"]
+    return {
+        "status": "success",
+        "pending_count": len(pending),
+        "total_count": len(queue),
+        "reviews": pending,
+    }
+
+
+def handle_dharma_resolve_review(**kwargs: Any) -> dict[str, Any]:
+    """Resolve a human review item from the escalation pipeline.
+
+    Args:
+        review_id: The review ID to resolve.
+        decision: "allow", "warn", or "block".
+        score: Human-assigned score (0.0-1.0).
+    """
+    from whitemagic.dharma.escalation import get_escalation_pipeline
+
+    review_id = kwargs.get("review_id", "")
+    decision = kwargs.get("decision", "warn")
+    score = float(kwargs.get("score", 0.5))
+
+    if not review_id:
+        return {"status": "error", "error": "review_id is required"}
+
+    pipeline = get_escalation_pipeline()
+    resolved = pipeline.resolve_review(review_id, decision, score)
+    if not resolved:
+        return {"status": "error", "error": f"Review {review_id} not found or already resolved"}
+
+    return {
+        "status": "success",
+        "review_id": review_id,
+        "decision": decision,
+        "score": score,
+        "message": f"Review {review_id} resolved as {decision}",
+    }

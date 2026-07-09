@@ -420,11 +420,11 @@ class NarrativeCompressor:
     ) -> str:
         """Generate narrative text from cluster contents.
 
-        Tries Ollama first, falls back to template.
+        Tries llama.cpp first, falls back to template.
         """
         try:
-            from whitemagic.tools.handlers.ollama import (
-                handle_ollama_generate as _ollama_generate,
+            from whitemagic.tools.handlers.llama_tools import (
+                handle_llama_generate as _llama_generate,
             )
 
             evidence_text = "\n".join(contents[:10])
@@ -436,7 +436,7 @@ class NarrativeCompressor:
                 f"Memories:\n{evidence_text}\n\n"
                 f"Narrative summary:"
             )
-            result = _ollama_generate(prompt=prompt, model=None)
+            result = _llama_generate(prompt=prompt, model=None)
             if isinstance(result, dict) and result.get("response"):
                 return str(result["response"]).strip()
         except (ImportError, AttributeError):

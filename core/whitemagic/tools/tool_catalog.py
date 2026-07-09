@@ -66,7 +66,7 @@ GANA_SHORT_DESC: dict[str, str] = {
     "gana_ox": "Endurance — swarm decompose/route/complete/vote/plan/resolve/status, worker",
     "gana_girl": "Nurture — agent register/heartbeat/list/capabilities/deregister/trust",
     "gana_void": "Stillness & galaxies — galactic dashboard, gardens, galaxy CRUD/transfer/merge/sync/lineage/taxonomy, OMS export/import/inspect",
-    "gana_roof": "Shelter — ollama models/generate/chat/agent, model signing/verify, sovereign sandbox (shelter create/execute/inspect/destroy)",
+    "gana_roof": "Shelter — llama.cpp models/generate/chat/agent, model signing/verify, sovereign sandbox (shelter create/execute/inspect/destroy)",
     "gana_encampment": "Community — sangha chat, broker publish/history/status, gan ying emit/history/listeners",
     "gana_wall": "Boundaries & marketplace — vote create/cast/analyze/list/record_outcome, engagement tokens (issue/validate/revoke/list/status), marketplace (publish/discover/negotiate/complete)",
 }

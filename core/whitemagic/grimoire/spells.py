@@ -382,12 +382,12 @@ class SpellBook:
             ),
             Spell(
                 "Shelter",
-                "Shelter what is vulnerable — Ollama local AI, "
+                "Shelter what is vulnerable — llama.cpp local AI, "
                 "OMS-compatible model signing, cryptographic integrity "
                 "verification, trust-level gating",
                 26,
                 SpellType.PROTECTION,
-                ["ollama", "shelter", "protect", "model", "signing", "verify"],
+                ["llama_cpp", "shelter", "protect", "model", "signing", "verify"],
                 "water",
                 "yin",
             ),

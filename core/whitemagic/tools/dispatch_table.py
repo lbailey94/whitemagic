@@ -255,7 +255,6 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "galactic_dashboard": LazyHandler(
         "galactic_dashboard", "handle_galactic_dashboard"
     ),
-    "ollama_agent": LazyHandler("ollama_agent", "handle_ollama_agent"),
     "foresight.analyze": LazyHandler("foresight", "handle_foresight_analyze"),
     "foresight.constellations": LazyHandler(
         "foresight", "handle_foresight_constellations"

@@ -129,9 +129,9 @@ class CompositionalReasoner:
 
         # Encode the subject text into an embedding
         try:
-            from whitemagic.core.memory.embeddings import EmbeddingEngine
+            from whitemagic.core.memory.embeddings import get_embedding_engine
 
-            engine = EmbeddingEngine()
+            engine = get_embedding_engine()
             subject_embedding = engine.encode(subject)
             if subject_embedding is None:
                 return CompositionalResult(
@@ -210,9 +210,9 @@ class CompositionalReasoner:
         that match the HRR-projected query vector.
         """
         try:
-            from whitemagic.core.memory.embeddings import EmbeddingEngine
+            from whitemagic.core.memory.embeddings import get_embedding_engine
 
-            engine = EmbeddingEngine()
+            engine = get_embedding_engine()
 
             # Use search_similar with the projected vector
             results = engine.search_similar_by_vector(

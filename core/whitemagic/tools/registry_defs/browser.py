@@ -98,7 +98,7 @@ BROWSER_TOOLS: list[ToolDefinition] = [
         name="web_fetch_enhanced",
         description="Enhanced web fetch with outline extraction, content chunking, and summarization. "
         "Fetches a URL, extracts heading hierarchy (outline), splits content into ~2K-char semantic chunks "
-        "with overlap, and generates a summary via Ollama (extractive fallback). "
+        "with overlap, and generates a summary via llama-server (extractive fallback). "
         "Supports progressive loading: use chunk_index to retrieve individual chunks. "
         "Inspired by Windsurf's chunking and outline-building approach.",
         category=ToolCategory.BROWSER,
@@ -126,10 +126,10 @@ BROWSER_TOOLS: list[ToolDefinition] = [
                     "type": "string",
                     "description": "Optional focus topic to guide summarization",
                 },
-                "ollama_model": {
+                "llama_model": {
                     "type": "string",
-                    "description": "Ollama model for summarization (default gemma3:4b)",
-                    "default": "gemma3:4b",
+                    "description": "lla.cpp model for summarization (optional — uses WM_LLAMA_MODEL by default)",
+                    "default": "",
                 },
                 "max_chars": {
                     "type": "integer",
@@ -547,8 +547,8 @@ BROWSER_TOOLS: list[ToolDefinition] = [
         name="image_analyze",
         description="Analyze an image file: extract metadata, structural layout (content regions, "
         "text bands, grid map, dominant colors), OCR text, and optional natural-language "
-        "description via a local Ollama vision model (moondream). Uses tiered analysis: "
-        "tesseract OCR → ocr.space API OCR → PIL structural analysis → Ollama vision "
+        "description via a local llama.cpp vision model (moondream). Uses tiered analysis: "
+        "tesseract OCR → ocr.space API OCR → PIL structural analysis → llama.cpp vision "
         "description (if describe=True). Accepts a local file path or URL. "
         "Belongs to gana_chariot (perception/navigation).",
         category=ToolCategory.BROWSER,
@@ -576,7 +576,7 @@ BROWSER_TOOLS: list[ToolDefinition] = [
                 },
                 "describe": {
                     "type": "boolean",
-                    "description": "Request a natural-language description from a local Ollama vision model (default false)",
+                    "description": "Request a natural-language description from a local llama.cpp vision model (default false)",
                     "default": False,
                 },
                 "vision_prompt": {
@@ -586,13 +586,13 @@ BROWSER_TOOLS: list[ToolDefinition] = [
                 },
                 "vision_model": {
                     "type": "string",
-                    "description": "Ollama vision model to use (default moondream)",
-                    "default": "moondream",
+                    "description": "Vision model name (default llama-server)",
+                    "default": "llama-server",
                 },
-                "ollama_url": {
+                "llama_url": {
                     "type": "string",
-                    "description": "Base URL for the Ollama API (default http://localhost:11434)",
-                    "default": "http://localhost:11434",
+                    "description": "Base URL for llama-server (default http://localhost:8080)",
+                    "default": "http://localhost:8080",
                 },
             },
         },

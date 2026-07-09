@@ -2,7 +2,7 @@
 Local ML (Archived)
 ===================
 
-This package used to embed local model execution (BitNet/Ollama/etc) directly
+This package used to embed local model execution (BitNet/llama.cpp/etc) directly
 inside Whitemagic.
 
 Whitemagic's current direction is to be model-agnostic and expose capabilities

@@ -18,7 +18,7 @@ from typing import Any
 import numpy as np
 from sklearn.cluster import KMeans
 
-from whitemagic.core.memory.embeddings import EmbeddingEngine
+from whitemagic.core.memory.embeddings import get_embedding_engine
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class AlbedoPurifier:
     """Vectorizes and clusters novelty memories."""
 
     def __init__(self):
-        self.engine = EmbeddingEngine()
+        self.engine = get_embedding_engine()
         if not self.engine.available():
             logger.warning("Embedding engine not available. Albedo will fail.")
 

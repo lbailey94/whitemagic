@@ -5,7 +5,7 @@ During the dream cycle's SERENDIPITY phase, the bridge synthesizer
 takes bridge nodes (memories connecting otherwise disconnected communities)
 and generates hypotheses about why these connections exist.
 
-Optionally uses Ollama LLM for hypothesis generation, with a structured
+Optionally uses llama.cpp LLM for hypothesis generation, with a structured
 template fallback when LLM is unavailable.
 
 Usage:
@@ -219,7 +219,7 @@ class BridgeSynthesizer:
         tags_a: list[str],
         tags_b: list[str],
     ) -> str | None:
-        """Try to generate hypothesis via Ollama LLM."""
+        """Try to generate hypothesis via llama-server LLM."""
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
@@ -236,13 +236,12 @@ class BridgeSynthesizer:
                 f"In one sentence, hypothesize why this memory connects these two domains:"
             )
 
-            import subprocess
-            result = subprocess.run(
-                ["ollama", "run", "llama3.2:1b", prompt],
-                capture_output=True, text=True, timeout=15,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()[:500]
+            from whitemagic.inference.local_llm import LocalLLM
+            llm = LocalLLM()
+            if llm.is_available:
+                response = llm.complete_background(prompt, max_tokens=100, temperature=0.3)
+                if response and "Error:" not in response:
+                    return response.strip()[:500]
         except OSError:
             logger.debug("Swallowed exception", exc_info=True)
         return None

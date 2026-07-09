@@ -1041,37 +1041,70 @@ class ParallelReasoningTree:
     def _generate_thought(self, branch: ReasoningBranch, step: int) -> str:
         """Generate the next thought for a branch.
 
-        This uses simple heuristics to simulate reasoning steps. In a
-        full deployment, this would call the LLM or multi-spectral reasoner.
+        Uses WhiteMagic's own memory systems (hybrid_recall, search_memories)
+        to pull relevant context for each reasoning step, making the thought
+        tree grounded in real data rather than heuristic templates.
         """
+        # Step 1: Always do the basic analysis
+        if step <= 2:
+            thought_templates = [
+                "Analyzing the problem from the perspective of {hyp}",
+                "Identifying key factors and constraints in this approach",
+            ]
+            template = thought_templates[min(step - 1, len(thought_templates) - 1)]
+            return template.format(hyp=branch.hypothesis[:60])
+
+        # Steps 3+: Query WhiteMagic memory for relevant context
+        query = f"{self.question} {branch.hypothesis[:50]}"
+        memory_context = ""
+
+        if _HAS_MEMORY:
+            try:
+                mem = get_unified_memory()
+                results = mem.search(query, limit=3)
+                if results:
+                    snippets = []
+                    for r in results[:3]:
+                        content = r.content if hasattr(r, "content") else str(r)
+                        snippets.append(content[:120])
+                    memory_context = " | Related memories: " + " ... ".join(snippets)
+            except Exception as e:
+                logger.debug("Memory query in thought tree failed: %s", e)
+
+        # Build thought from memory context + branch state
         thought_templates = [
-            "Analyzing the problem from the perspective of {hyp}",
-            "Identifying key factors and constraints in this approach",
-            "Evaluating evidence for and against this direction",
-            "Synthesizing findings so far -- what patterns emerge?",
-            "Testing the hypothesis: does the evidence support it?",
-            "Drawing preliminary conclusions from this exploration",
-            "Final assessment: confidence in this approach is {conf}",
+            "Evaluating evidence for and against: {hyp}.{ctx}",
+            "Synthesizing findings -- what patterns emerge from {hyp}?{ctx}",
+            "Testing the hypothesis: does the evidence support {hyp}?{ctx}",
+            "Drawing preliminary conclusions from exploring {hyp}.{ctx}",
+            "Final assessment: confidence in this approach is {conf}.{ctx}",
         ]
 
-        template = thought_templates[min(step - 1, len(thought_templates) - 1)]
+        template = thought_templates[min(step - 3, len(thought_templates) - 1)]
         hyp = branch.hypothesis[:60]
         conf = "moderate" if branch.score > 0.4 else "low"
-        return template.format(hyp=hyp, conf=conf)
+        return template.format(hyp=hyp, conf=conf, ctx=memory_context)
 
     def _estimate_confidence(self, branch: ReasoningBranch, step: int) -> float:
         """Estimate confidence for the current step.
 
-        Confidence tends to increase with depth if the branch is productive,
-        but plateaus. Adds some variation to simulate real reasoning.
+        Confidence increases with depth if the branch is productive,
+        with adjustments based on hypothesis style and memory relevance.
         """
         base = 0.4 + (step * 0.08)
         if "creative" in branch.hypothesis.lower():
-            base += 0.05  # Creative branches start lower but grow
+            base += 0.05
         if "risk" in branch.hypothesis.lower():
-            base -= 0.03  # Risk analysis is more cautious
+            base -= 0.03
         if "contrarian" in branch.hypothesis.lower():
-            base -= 0.05  # Contrarian is exploratory
+            base -= 0.05
+
+        # Boost confidence if recent thoughts have memory context
+        if _HAS_MEMORY and branch.thoughts:
+            recent = branch.thoughts[-1]
+            if hasattr(recent, "content") and "Related memories:" in recent.content:
+                base += 0.1  # Memory-grounded thoughts are more confident
+
         return min(base, 0.95)
 
 

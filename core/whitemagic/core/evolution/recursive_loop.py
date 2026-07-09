@@ -6,7 +6,7 @@ Connects the existing intelligence systems into a closed loop:
   1. OBSERVE    KaizenEngine + PredictiveEngine + EmergenceEngine → proposals
   2. IMAGINE    MC-HLL simulates impact, SurpriseGate evaluates novelty
   3. PREDICT    TemporalForecastDB stores predictions with confidence
-  4. ACT        ToolBandit recommends tools, Ollama agent executes
+  4. ACT        ToolBandit recommends tools, llama.cpp agent executes
   5. CALIBRATE  MC engine scores predictions vs actual outcomes
   6. LEARN      AutodidacticLoop records outcomes, bandit updates posteriors
 

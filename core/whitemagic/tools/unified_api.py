@@ -36,10 +36,18 @@ _MAX_TOOL_ID = 28  # Maximum tool ID for dispatch bridge (0-27)
 
 
 def _get_or_assign_tool_id(tool_name: str) -> int:
-    """Get or assign a unique tool ID from the registry, avoiding hash collisions."""
+    """Get or assign a unique tool ID from the registry, avoiding hash collisions.
+
+    Uses the Gana prefix slot map from circuit_breaker to ensure tools
+    are routed to the correct StateBoard slot for their Gana. This prevents
+    unrelated tools from colliding on the same slot and tripping each
+    other's circuit breakers.
+    """
     if tool_name not in _TOOL_ID_REGISTRY:
-        # Assign next available ID
-        tool_id = len(_TOOL_ID_REGISTRY) % _MAX_TOOL_ID
+        from whitemagic.tools.circuit_breaker import _tool_to_engine_slot
+
+        slot = _tool_to_engine_slot(tool_name)
+        tool_id = slot if slot is not None else (len(_TOOL_ID_REGISTRY) % _MAX_TOOL_ID)
         _TOOL_ID_REGISTRY[tool_name] = tool_id
     return _TOOL_ID_REGISTRY[tool_name]
 
@@ -361,9 +369,9 @@ _TOOL_ALIASES: dict[str, str] = {
     "vote_analyze": "vote.analyze",
     "vote_list": "vote.list",
     "vote_record_outcome": "vote.record_outcome",
-    "ollama_models": "ollama.models",
-    "ollama_generate": "ollama.generate",
-    "ollama_chat": "ollama.chat",
+    "llama.models": "llama.models",
+    "llama.generate": "llama.generate",
+    "llama.chat": "llama.chat",
     "agent_register": "agent.register",
     "agent_heartbeat": "agent.heartbeat",
     "agent_list": "agent.list",

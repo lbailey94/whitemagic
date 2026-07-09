@@ -123,9 +123,9 @@ def _ensure_cached() -> None:
     except Exception as e:
         logger.debug("Middleware: otel_export dependency missing: %s", e)
     try:
-        from whitemagic.utils.core import compact_dict
+        from whitemagic.tools.compact_response import compact as _compact_impl
 
-        _compact_fn = compact_dict
+        _compact_fn = _compact_impl
     except (ImportError, AttributeError):
         pass
     try:
@@ -706,7 +706,7 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
 
 
 _INFERENCE_TOOL_PATTERNS = (
-    "ollama",
+    "llama_cpp",
     "chat",
     "generate",
     "reason",
@@ -871,7 +871,7 @@ def mw_inference_router(
 
 
 _CACHEABLE_TOOL_PATTERNS = (
-    "ollama",
+    "llama_cpp",
     "chat",
     "generate",
     "reason",
@@ -1064,8 +1064,8 @@ def mw_semantic_cache(
 
 
 _DRAFT_REVIEW_TOOLS = (
-    "ollama.chat",
-    "ollama.generate",
+    "llama.chat",
+    "llama.generate",
     "query_llm",
     "infer",
     "reason",
@@ -1103,7 +1103,7 @@ def mw_draft_review(
     """Draft-review flow: local model drafts, cloud reviews/patches.
 
     T4 from local-splitter research. For generative tasks:
-    1. Local model (Ollama 3B) generates a draft answer
+    1. Local model (llama.cpp 3B) generates a draft answer
     2. Cloud model receives the draft + a review instruction (much shorter
        than generating from scratch)
     3. Cloud model patches only what needs fixing
@@ -1119,9 +1119,9 @@ def mw_draft_review(
     if not _is_draft_review_candidate(ctx.tool_name, ctx.kwargs):
         return next_fn(ctx)
 
-    # Only attempt draft-review if we have a local Ollama handler
+    # Only attempt draft-review if we have a local llama.cpp handler
     try:
-        from whitemagic.tools.handlers.ollama import handle_ollama_chat
+        from whitemagic.tools.handlers.llama_tools import handle_llama_chat
     except ImportError:
         return next_fn(ctx)
 
@@ -1135,9 +1135,9 @@ def mw_draft_review(
         return next_fn(ctx)
 
     try:
-        draft_result = handle_ollama_chat(
+        draft_result = handle_llama_chat(
             prompt=prompt,
-            model=ctx.kwargs.get("draft_model", "llama3.2:3b"),
+            model=ctx.kwargs.get("draft_model", ""),
             stream=False,
             _internal=True,
         )
@@ -1190,7 +1190,7 @@ def mw_draft_review(
             "review_prompt_tokens": review_tokens,
             "original_prompt_tokens": original_prompt_tokens,
             "tokens_saved": original_prompt_tokens - review_tokens,
-            "draft_model": ctx.kwargs.get("draft_model", "llama3.2:3b"),
+            "draft_model": ctx.kwargs.get("draft_model", "auto"),
         }
 
         # Record to GreenScore

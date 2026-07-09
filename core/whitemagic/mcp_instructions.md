@@ -44,7 +44,7 @@ If you omit `tool`, the Gana will use `operation` to decide what to do.
 ### Acceleration & Performance
 - **gana_tail** — SIMD operations. `simd.cosine` for fast similarity, `simd.batch` for bulk operations.
 - **gana_turtle_beak** — Edge inference. `edge_infer` for local model inference.
-- **gana_roof** — Local LLM via Ollama. `ollama.chat` for conversation, `ollama.generate` for completion.
+- **gana_roof** — Local LLM via llama.cpp. `llama.cpp.chat` for conversation, `llama.cpp.generate` for completion.
 
 ### Community & Coordination
 - **gana_encampment** — Messaging. `broker.publish` to send events, `sangha_chat_send` for inter-agent communication.

@@ -232,7 +232,7 @@ class DocxProcessor:
 
 
 class ImageProcessor:
-    """Extract text descriptions from images using BLIP-2 or Ollama vision."""
+    """Extract text descriptions from images using BLIP-2 or llama.cpp vision."""
 
     _available: bool | None = None
 
@@ -292,7 +292,7 @@ class ImageProcessor:
             mode = img.mode
             img_format = img.format or path.suffix.lstrip(".")
 
-            caption = self._caption_ollama(path)
+            caption = self._caption_llama_cpp(path)
 
             # Fallback: basic metadata description
             if not caption:
@@ -305,8 +305,8 @@ class ImageProcessor:
                     "image_height": height,
                     "image_mode": mode,
                     "image_format": img_format,
-                    "captioning_method": "ollama"
-                    if "ollama" not in caption[:20].lower()
+                    "captioning_method": "llama_cpp"
+                    if "llama_cpp" not in caption[:20].lower()
                     else "basic",
                 },
                 holographic_bias={
@@ -323,8 +323,8 @@ class ImageProcessor:
             logger.warning("Image extraction failed for %s: %s", path, e, exc_info=True)
             return None
 
-    def _caption_ollama(self, path: Path) -> str:
-        """Use Ollama vision model for image captioning."""
+    def _caption_llama_cpp(self, path: Path) -> str:
+        """Use llama.cpp vision model for image captioning."""
         try:
             import base64
             import urllib.request
@@ -344,14 +344,13 @@ class ImageProcessor:
                 }
             ).encode("utf-8")
 
-            req = urllib.request.Request(
-                "http://localhost:11434/api/generate",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                result = _json_loads(resp.read().decode("utf-8"))
-                return str(result.get("response", ""))
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            backend = get_llama_cpp_backend()
+            prompt = "Describe this image in detail. What do you see?"
+            response = backend.complete(prompt, max_tokens=200, temperature=0.3)
+            if response.startswith("Error:"):
+                return ""
+            return response
         except (OSError, FileNotFoundError, PermissionError):
             return ""
 

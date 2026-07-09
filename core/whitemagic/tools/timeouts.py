@@ -69,11 +69,11 @@ _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     "read_memory": "memory_read",
     "batch_read_memories": "memory_read",
     "memory.consolidate": "memory_consolidate",
-    # Ollama/local generation
-    "ollama.generate": "local_generation",
-    "ollama.chat": "local_generation",
-    "ollama.models": "cold_status",
-    "ollama.agent": "agent_generation",
+    # llama.cpp/local generation
+    "llama.generate": "local_generation",
+    "llama.chat": "local_generation",
+    "llama.models": "cold_status",
+    "llama.agent": "agent_generation",
     # File system operations
     "garden.list_files": "file_read",
     "garden.read_file": "file_read",

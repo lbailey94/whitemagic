@@ -152,7 +152,7 @@ class ContextOptimizer:
                 items.append(
                     ContextItem(
                         id=mem.id,
-                        content=f"[{mem.title or 'untitled'}] {mem.content[:2000]}",
+                        content=f"[{mem.title or 'untitled'}] {mem.content[:2000] if isinstance(mem.content, str) else str(mem.content)[:2000]}",
                         source="memory",
                         importance=getattr(mem, "importance", 0.5) or 0.5,
                         recency=recency,
@@ -247,7 +247,7 @@ class ContextOptimizer:
                 items.append(
                     ContextItem(
                         id=mem.id,
-                        content=f"[{mem.title or 'untitled'}] {mem.content[:2000]}",
+                        content=f"[{mem.title or 'untitled'}] {mem.content[:2000] if isinstance(mem.content, str) else str(mem.content)[:2000]}",
                         source="memory",
                         importance=getattr(mem, "importance", 0.5) or 0.5,
                         recency=recency,

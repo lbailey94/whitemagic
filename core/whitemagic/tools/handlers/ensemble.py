@@ -2,7 +2,7 @@
 """Ensemble Voting tool handlers — multi-LLM consensus orchestration.
 
 Extends the existing vote.* tools with the ability to actually *query*
-multiple LLM backends (Ollama models, BitNet) on the same prompt and
+multiple LLM backends (llama-server, BitNet) on the same prompt and
 synthesize their responses into a consensus result.
 
 Inspired by Tools(copy)/scripts/distributed/ai-voting-system.sh.
@@ -74,44 +74,32 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
         return pool.submit(asyncio.run, coro).result()
 
 
-async def _query_ollama(model: str, prompt: str, timeout: int = 300) -> dict[str, Any]:
-    """Query a single Ollama model and return the result."""
+async def _query_llama_cpp(model: str, prompt: str, timeout: int = 300) -> dict[str, Any]:
+    """Query llama-server and return the result. (Name kept for backward compat.)"""
     try:
-        import aiohttp
-    except ImportError:
-        return {"model": model, "error": "aiohttp not installed", "success": False}
+        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
 
-    host = os.environ.get("OLLAMA_HOST", "localhost")
-    port = os.environ.get("OLLAMA_PORT", "11434")
-    url = f"http://{host}:{port}/api/generate"
+        backend = get_llama_cpp_backend()
+        if not backend.is_available:
+            return {"model": model, "error": "llama-server not available", "success": False}
 
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-    }
+        start = time.time()
+        response = backend.complete(prompt, max_tokens=512, temperature=0.7)
+        elapsed = time.time() - start
+        if response.startswith("Error:"):
+            return {"model": model, "error": response, "success": False}
+        result = {"response": response}
+        elapsed = time.time() - start
+        response_text = result.get("response", "")
 
-    start = time.time()
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                url,
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as resp:
-                resp.raise_for_status()
-                result = await resp.json()
-                elapsed = time.time() - start
-                response_text = result.get("response", "")
-
-                return {
-                    "model": model,
-                    "response": response_text,
-                    "confidence": _extract_confidence(response_text),
-                    "latency_s": round(elapsed, 2),
-                    "eval_count": result.get("eval_count"),
-                    "success": True,
-                }
+        return {
+            "model": model,
+            "response": response_text,
+            "confidence": _extract_confidence(response_text),
+            "latency_s": round(elapsed, 2),
+            "eval_count": result.get("eval_count"),
+            "success": True,
+        }
     except Exception as e:
         return {
             "model": model,
@@ -189,7 +177,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
 
     Args:
         prompt: The question or task to send to all models.
-        models: List of Ollama model names to query (default: auto-detect).
+        models: List of llama.cpp model names to query (default: auto-detect).
         timeout: Per-model timeout in seconds (default: 120).
 
     """
@@ -203,10 +191,10 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
     # Auto-detect available models if not specified
     if not models:
         try:
-            from whitemagic.tools.handlers.ollama import _list_models
-            from whitemagic.tools.handlers.ollama import _run as ollama_run
+            from whitemagic.tools.handlers.llama_tools import _list_models
+            from whitemagic.tools.handlers.llama_tools import _run as llama_run
 
-            available = ollama_run(_list_models())
+            available = llama_run(_list_models())
             models = [m.get("name", "") for m in available[:5]]  # Max 5
         except (ImportError, ModuleNotFoundError):
             models = []
@@ -215,7 +203,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
         return {
             "status": "error",
             "error_code": "unavailable",
-            "error": "No models available. Specify models or ensure Ollama is running.",
+            "error": "No models available. Specify models or ensure llama.cpp is running.",
         }
 
     # Build the ensemble prompt
@@ -230,7 +218,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
 
     # Query all models in parallel
     async def _query_all() -> list[Any]:
-        tasks = [_query_ollama(m, ensemble_prompt, timeout) for m in models]
+        tasks = [_query_llama_cpp(m, ensemble_prompt, timeout) for m in models]
         return cast("list[Any]", await asyncio.gather(*tasks, return_exceptions=True))
 
     try:

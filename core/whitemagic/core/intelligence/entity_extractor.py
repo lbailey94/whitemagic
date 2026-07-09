@@ -1,7 +1,7 @@
 # ruff: noqa: BLE001
 """LLM-Driven Entity & Relation Extraction (v14.2).
 ===================================================
-Uses Ollama (local) to extract structured entities and relations
+Uses llama.cpp (local) to extract structured entities and relations
 from memory content, transforming statistical keyword associations
 into a typed knowledge graph.
 
@@ -9,7 +9,7 @@ Extracts:
   - Entities: (name, type) — e.g., ("WhiteMagic", "PROJECT")
   - Relations: (subject, predicate, object) — e.g., ("Lucas", "CREATED", "WhiteMagic")
 
-Graceful degradation: when Ollama is unavailable, falls back to
+Graceful degradation: when llama-server is unavailable, falls back to
 regex-based NER (proper nouns, capitalized phrases).
 
 Usage:
@@ -87,7 +87,7 @@ class ExtractionResult:
 
     entities: list[Entity] = field(default_factory=list)
     relations: list[Relation] = field(default_factory=list)
-    method: str = "none"  # "ollama", "regex", "none"
+    method: str = "none"  # "llama_cpp", "regex", "none"
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -129,45 +129,38 @@ class EntityExtractor:
 
     def __init__(
         self,
-        ollama_url: str = "http://localhost:11434",
-        model: str = "llama3.2",
+        llama_url: str = "http://localhost:8080",
+        model: str = "llama-server",
         timeout: int = 30,
     ) -> None:
-        self._ollama_url = ollama_url
+        self._llama_url = llama_url
         self._model = model
         self._timeout = timeout
-        self._ollama_available: bool | None = None
+        self._llama_available: bool | None = None
         self._lock = threading.Lock()
         self._total_extractions = 0
         self._total_entities = 0
         self._total_relations = 0
 
-    def _check_ollama(self) -> bool:
-        """Check if Ollama is reachable."""
-        if self._ollama_available is not None:
-            return self._ollama_available
+    def _check_llama(self) -> bool:
+        """Check if llama-server is reachable."""
+        if self._llama_available is not None:
+            return self._llama_available
         try:
-            import urllib.request
-
-            req = urllib.request.Request(
-                f"{self._ollama_url}/api/tags",
-                method="GET",
-            )
-            # Reduced timeout from 5s to 1s for faster fallback
-            with urllib.request.urlopen(req, timeout=1) as resp:
-                if resp.status == 200:
-                    self._ollama_available = True
-                    return True
-        except (urllib.error.URLError, TimeoutError, ConnectionError):
-            logger.debug("Swallowed exception", exc_info=True)
-        self._ollama_available = False
-        logger.debug("Ollama not available — falling back to regex extraction")
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            backend = get_llama_cpp_backend()
+            self._llama_available = backend.is_available
+            return self._llama_available
+        except Exception:
+            pass
+        self._llama_available = False
+        logger.debug("llama-server not available — falling back to regex extraction")
         return False
 
     def extract(self, text: str, max_chars: int = 4000) -> ExtractionResult:
         """Extract entities and relations from text.
 
-        Tries Ollama first, falls back to regex-based extraction.
+        Tries llama.cpp first, falls back to regex-based extraction.
         """
         if not text or not text.strip():
             return ExtractionResult()
@@ -175,8 +168,8 @@ class EntityExtractor:
         # Truncate to avoid overwhelming the LLM
         truncated = text[:max_chars]
 
-        if self._check_ollama():
-            result = self._extract_ollama(truncated)
+        if self._check_llama():
+            result = self._extract_llama_cpp(truncated)
             if result and (result.entities or result.relations):
                 with self._lock:
                     self._total_extractions += 1
@@ -192,32 +185,24 @@ class EntityExtractor:
             self._total_relations += len(result.relations)
         return result
 
-    def _extract_ollama(self, text: str) -> ExtractionResult | None:
-        """Extract entities/relations using Ollama."""
+    def _extract_llama(self, text: str) -> ExtractionResult | None:
+        """Extract entities/relations using llama.cpp with grammar-constrained JSON."""
         try:
-            import urllib.request
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            from whitemagic.inference.grammar_schemas import ENTITY_EXTRACTION_SCHEMA
 
+            backend = get_llama_cpp_backend()
             prompt = _EXTRACTION_PROMPT + text
 
-            payload = _json_dumps(
-                {
-                    "model": self._model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0.1, "num_predict": 1024},
-                }
-            ).encode("utf-8")
-
-            req = urllib.request.Request(
-                f"{self._ollama_url}/api/generate",
-                data=payload,
-                headers={"Content-Type": "application/json"},
+            response_text = backend.complete(
+                prompt,
+                max_tokens=1024,
+                temperature=0.1,
+                json_schema=ENTITY_EXTRACTION_SCHEMA,
             )
 
-            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
-                raw = _json_loads(resp.read().decode("utf-8"))
-                response_text = raw.get("response", "")
+            if response_text.startswith("Error:"):
+                return None
 
             data = _json_loads(response_text)
             entities = [
@@ -243,10 +228,10 @@ class EntityExtractor:
             return ExtractionResult(
                 entities=entities[:10],
                 relations=relations[:10],
-                method="ollama",
+                method="llama_cpp",
             )
         except Exception as e:
-            logger.debug("Ollama extraction failed: %s", e, exc_info=True)
+            logger.debug("llama.cpp extraction failed: %s", e, exc_info=True)
             return None
 
     def _extract_regex(self, text: str) -> ExtractionResult:
@@ -385,7 +370,7 @@ class EntityExtractor:
                 "total_extractions": self._total_extractions,
                 "total_entities": self._total_entities,
                 "total_relations": self._total_relations,
-                "ollama_available": self._ollama_available,
+                "llama_available": self._llama_available,
                 "model": self._model,
             }
 

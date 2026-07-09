@@ -1,5 +1,5 @@
 # ruff: noqa: BLE001
-"""Thompson sampling bandit for Ollama agent tool selection.
+"""Thompson sampling bandit for llama.cpp agent tool selection.
 
 Maintains a Beta(α, β) posterior for each tool in the WhiteMagic
 tool registry. When the agent needs to decide which tools to suggest,
@@ -72,7 +72,7 @@ class ToolStats:
 class ToolBandit:
     """Thompson sampling multi-armed bandit over the WhiteMagic tool space.
 
-    Tracks Beta posteriors per tool and per task-type, enabling the Ollama
+    Tracks Beta posteriors per tool and per task-type, enabling the llama.cpp
     agent to learn which tools work best for different kinds of tasks.
     """
 

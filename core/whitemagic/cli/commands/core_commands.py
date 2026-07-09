@@ -99,12 +99,12 @@ def explore_command() -> None:
 @click.command(name="init")
 @click.option("--galaxy", default="default", help="Name for the default galaxy")
 @click.option("--skip-seed", is_flag=True, help="Skip seeding quickstart memories")
-@click.option("--skip-ollama", is_flag=True, help="Skip Ollama detection")
+@click.option("--skip-llama", is_flag=True, help="Skip llama-server detection")
 @click.pass_context
-def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
+def init_command(ctx, galaxy: str, skip_seed: bool, skip_llama: bool) -> None:
     """🧙 First-time setup wizard for WhiteMagic.
 
-    Creates state directory, seeds quickstart memories, detects Ollama,
+    Creates state directory, seeds quickstart memories, detects llama-server,
     and runs a health check.
     """
 
@@ -174,32 +174,20 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
         except Exception as e:
             _fail(f"Seed: {e}")
 
-    _echo("Step 4/5: Ollama detection")
-    if skip_ollama:
-        _skip("Skipped (--skip-ollama)")
+    _echo("Step 4/5: llama-server detection")
+    if skip_llama:
+        _skip("Skipped (--skip-llama-cpp)")
     else:
-        ollama_bin = shutil.which("ollama")
-        if ollama_bin:
-            _ok(f"Ollama found: {ollama_bin}")
-            try:
-                import subprocess
+        try:
+            from whitemagic.inference.llama_cpp import BinaryManager
+            llama_bin = BinaryManager.find_binary()
+            if llama_bin:
+                _ok(f"llama-server found: {llama_bin}")
+            else:
+                _skip("llama-server not found (optional — build from llama.cpp)")
+        except Exception:
+            _skip("llama-server not found (optional — build from llama.cpp)")
 
-                result = subprocess.run(
-                    ["ollama", "list"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                if result.returncode == 0:
-                    lines = result.stdout.strip().split("\n")
-                    model_count = max(0, len(lines) - 1)  # subtract header
-                    _ok(f"{model_count} model(s) available")
-                else:
-                    _skip("Ollama installed but not running")
-            except OSError:
-                _skip("Ollama installed but not responding")
-        else:
-            _skip("Ollama not found (optional — install from ollama.com)")
 
     _echo("Step 5/5: Health check")
     try:

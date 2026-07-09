@@ -172,10 +172,10 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
         "grimoire_walkthrough", "handle_grimoire_walkthrough"
     ),
     "grimoire_read": LazyHandler("misc", "handle_grimoire_read"),
-    "ollama.models": LazyHandler("ollama", "handle_ollama_models"),
-    "ollama.generate": LazyHandler("ollama", "handle_ollama_generate"),
-    "ollama.chat": LazyHandler("ollama", "handle_ollama_chat"),
-    "ollama.agent": LazyHandler("ollama", "handle_ollama_agent"),
+    "llama.models": LazyHandler("llama_tools", "handle_llama_models"),
+    "llama.generate": LazyHandler("llama_tools", "handle_llama_generate"),
+    "llama.chat": LazyHandler("llama_tools", "handle_llama_chat"),
+    "llama.agent": LazyHandler("llama_agent", "handle_llama_agent"),
     "voice_audit.scan": LazyHandler("voice_audit", "handle_voice_audit_scan"),
     "voice_audit.status": LazyHandler("voice_audit", "handle_voice_audit_status"),
     "voice_audit.quarantine_list": LazyHandler(

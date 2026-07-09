@@ -130,7 +130,7 @@ MODE_PROFILES: dict[CognitiveMode, ModeProfile] = {
             "swarm.decompose",
             "execute_cascade",
             "kaizen_apply_fixes",
-            "ollama.agent",
+            "llama.agent",
         ],
         avoided_tools=[],
         context_window_multiplier=0.8,
@@ -198,7 +198,7 @@ MODE_PROFILES: dict[CognitiveMode, ModeProfile] = {
             "swarm.decompose",
             "pipeline.create",
             "sandbox.set_limits",
-            "ollama.agent",
+            "llama.agent",
         ],
         context_window_multiplier=0.5,
         dream_phase_priority=[

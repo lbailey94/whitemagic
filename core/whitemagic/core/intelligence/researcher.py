@@ -478,27 +478,27 @@ class JITResearcher:
     ) -> str:
         """Synthesize accumulated evidence into a coherent summary.
 
-        Uses Ollama if available, otherwise falls back to template synthesis.
+        Uses llama.cpp if available, otherwise falls back to template synthesis.
         """
         if not evidence:
             return f"No relevant memories found for: {query}"
 
-        synthesis = self._ollama_synthesize(query, evidence)
+        synthesis = self._llama_synthesize(query, evidence)
         if synthesis:
             return synthesis
 
         # Fallback: template-based synthesis
         return self._template_synthesize(query, evidence)
 
-    def _ollama_synthesize(
+    def _llama_synthesize(
         self,
         query: str,
         evidence: list[dict[str, Any]],
     ) -> str | None:
-        """Attempt LLM-based synthesis via Ollama."""
+        """Attempt LLM-based synthesis via llama-server."""
         try:
-            from whitemagic.tools.handlers.ollama import (
-                handle_ollama_generate as _ollama_generate,
+            from whitemagic.tools.handlers.llama_tools import (
+                handle_llama_generate as _llama_generate,
             )
 
             evidence_text = "\n".join(
@@ -510,7 +510,7 @@ class JITResearcher:
                 f"to the question: {query}\n\nEvidence:\n{evidence_text}\n\n"
                 f"Synthesize in 2-3 sentences:"
             )
-            result = _ollama_generate(prompt=prompt, model=None)
+            result = _llama_generate(prompt=prompt, model=None)
             if isinstance(result, dict) and result.get("response"):
                 return str(result["response"]).strip()
         except Exception as e:

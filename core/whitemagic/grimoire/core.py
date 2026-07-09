@@ -164,7 +164,7 @@ class Grimoire:
         23: ["swarm", "endurance", "worker", "persistence"],
         24: ["agent", "nurture", "register", "trust", "wonder"],
         25: ["galaxy", "stillness", "void", "meditation", "garden"],
-        26: ["ollama", "shelter", "protection", "local", "ai"],
+        26: ["llama_cpp", "shelter", "protection", "local", "ai"],
         27: ["sangha", "community", "chat", "broker", "encampment"],
         28: ["vote", "boundary", "wall", "air", "invisible"],
     }

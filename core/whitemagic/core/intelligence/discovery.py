@@ -77,12 +77,12 @@ Text:
 
 
 class EntityExtractor:
-    """Extracts entities and relations using LLM (Ollama) or regex fallbacks."""
+    """Extracts entities and relations using LLM (llama.cpp) or regex fallbacks."""
 
     def __init__(
-        self, ollama_url: str = "http://localhost:11434", model: str = "mistral:v0.3"
+        self, llama_url: str = "http://localhost:8080", model: str = "llama-server"
     ):
-        self._ollama_url = ollama_url
+        self._llama_url = llama_url
         self._model = model
         self._lock = threading.Lock()
         self._total_extractions = 0

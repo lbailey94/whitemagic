@@ -30,7 +30,7 @@ TOOLS: list[ToolDefinition] = [
                 "models": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Ollama model names (for query, auto-detect if omitted).",
+                    "description": "llama.cpp model names (for query, auto-detect if omitted).",
                 },
                 "timeout": {
                     "type": "integer",

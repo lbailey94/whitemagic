@@ -231,7 +231,7 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
     "get_dharma_guidance": "Get guidance from the Dharma system on a question. Use this for ethical advice.",
     "get_ethical_score": "Get an ethical score for a proposed action. Use this to quantify ethical impact.",
 
-    # ── Ollama & Models ──────────────────────────────────────────────
+    # ── llama.cpp & Models ──────────────────────────────────────────────
     "model.list": "List available AI models. Use this to see what models you can use.",
     "model.generate": "Generate text using a model. Use this for direct model interaction.",
     "model.chat": "Chat with a model. Use this for conversational model interaction.",
@@ -324,7 +324,7 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
     "gana_ox": "Endurance — swarm operations, skill management. Use this for sustained parallel work.",
     "gana_girl": "Nurture — agent registration, heartbeats. Use this to manage agent relationships.",
     "gana_void": "Stillness & galaxies — galaxy management, taxonomy. Use this to organize and find peace.",
-    "gana_roof": "Shelter — Ollama models, model signing. Use this for model management.",
+    "gana_roof": "Shelter — llama.cpp models, model signing. Use this for model management.",
     "gana_encampment": "Community — chat, messaging, notifications. Use this to communicate.",
     "gana_wall": "Boundaries & marketplace — voting, engagement tokens. Use this for governance and exchange.",
 }

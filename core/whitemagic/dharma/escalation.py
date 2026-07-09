@@ -11,11 +11,11 @@ a score outside the ambiguous band) or defer to the next tier.
 
 Tier 1 — Policy:     Declarative rule matching (existing rules engine)
 Tier 2 — Heuristic:  Embedding similarity to known-risky action patterns
-Tier 3 — LLM:        Ollama-based natural language safety assessment
+Tier 3 — LLM:        llama.cpp-based natural language safety assessment
 Tier 4 — Human:      Escalation to a human review queue (logged, pending)
 
 Design principles:
-  - Each tier is optional and fails gracefully (no Ollama → skip LLM tier)
+  - Each tier is optional and fails gracefully (no llama-server → skip LLM tier)
   - The pipeline never blocks indefinitely — human tier returns PENDING
   - All tier evaluations are logged to the karmic trace
   - The pipeline is thread-safe
@@ -410,38 +410,28 @@ class EscalationPipeline:
         )
 
     def _evaluate_llm(self, action: dict[str, Any]) -> TierResult:
-        """Tier 3: LLM-based evaluation using Ollama.
+        """Tier 3: LLM-based evaluation using llama.cpp.
 
         Asks a local LLM to assess the action's safety.  Falls back to
-        ambiguous (escalate to human) if Ollama is unavailable.
+        ambiguous (escalate to human) if llama-server is unavailable.
         """
         action_text = self._action_to_text(action)
 
-        # Check if Ollama is available
-        ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        # Check if llama-server is available
         try:
-            import urllib.request
-
-            req = urllib.request.Request(
-                f"{ollama_host}/api/tags",
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(req, timeout=2) as resp:
-                if resp.status != 200:
-                    raise ConnectionError(f"Ollama returned {resp.status}")
-                tags_data = json.loads(resp.read())
-                models = [m.get("name", "") for m in tags_data.get("models", [])]
-                if not models:
-                    raise ConnectionError("No Ollama models installed")
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            backend = get_llama_cpp_backend()
+            if not backend.is_available:
+                raise ConnectionError("llama-server not running")
         except Exception as e:
-            logger.debug("LLM tier: Ollama unavailable (%s), escalating to human", e)
+            logger.debug("LLM tier: llama-server unavailable (%s), escalating to human", e)
             return TierResult(
                 tier=EvaluationTier.LLM,
                 score=0.5,
                 action=EscalationAction.PENDING,
-                reasoning=f"LLM tier: Ollama unavailable ({type(e).__name__})",
+                reasoning=f"LLM tier: llama-server unavailable ({type(e).__name__})",
                 escalated=True,
-                metadata={"ollama_available": False},
+                metadata={"llama_available": False},
             )
 
         # Build the evaluation prompt
@@ -455,22 +445,14 @@ class EscalationPipeline:
         )
 
         try:
-            model = "gemma3:4b" if "gemma3:4b" in " ".join(models) else models[0]
-            payload = json.dumps({
-                "model": model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 200},
-            }).encode()
+            from whitemagic.inference.grammar_schemas import SAFETY_EVALUATION_SCHEMA
 
-            req = urllib.request.Request(
-                f"{ollama_host}/api/generate",
-                data=payload,
-                headers={"Content-Type": "application/json"},
+            response_text = backend.complete(
+                prompt,
+                max_tokens=200,
+                temperature=0.1,
+                json_schema=SAFETY_EVALUATION_SCHEMA,
             )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                result = json.loads(resp.read())
-                response_text = result.get("response", "")
 
             # Parse the LLM's JSON response
             score, reasoning = self._parse_llm_response(response_text)
@@ -480,11 +462,10 @@ class EscalationPipeline:
                 tier=EvaluationTier.LLM,
                 score=score,
                 action=self._score_to_action(score),
-                reasoning=f"LLM ({model}): {reasoning}",
+                reasoning=f"LLM (llama-server): {reasoning}",
                 escalated=escalated,
                 metadata={
-                    "ollama_available": True,
-                    "model": model,
+                    "llama_available": True,
                     "raw_response": response_text[:500],
                 },
             )
@@ -497,7 +478,7 @@ class EscalationPipeline:
                 action=EscalationAction.PENDING,
                 reasoning=f"LLM tier: evaluation error ({type(e).__name__})",
                 escalated=True,
-                metadata={"ollama_available": True, "error": str(e)},
+                metadata={"llama_available": True, "error": str(e)},
             )
 
     def _evaluate_human(

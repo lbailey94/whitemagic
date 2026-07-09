@@ -743,7 +743,7 @@ _CHAPTERS_28: list[Chapter] = [
         "without depending on external APIs — using the Mojo batch "
         "encoder and embedding quantizer for maximum throughput on "
         "CPU. Adjacent: Tail (Ch 6) for SIMD acceleration, Roof "
-        "(Ch 26) for Ollama integration. Tools: edge_infer, "
+        "(Ch 26) for llama.cpp integration. Tools: edge_infer, "
         "edge_batch_infer, edge_stats, bitnet_infer, bitnet_status.",
         [
             "precision",
@@ -959,10 +959,10 @@ _CHAPTERS_28: list[Chapter] = [
         26,
         "The Roof — Shelter & Local AI",
         "The Roof (危 Wēi) shelters what is vulnerable. This chapter "
-        "manages local AI model operations via Ollama and model "
-        "security: ollama.models lists available local models, "
-        "ollama.generate runs text generation, ollama.chat provides "
-        "conversational inference, and ollama.agent runs a full "
+        "manages local AI model operations via llama-server and model "
+        "security: llama.models lists available local models, "
+        "llama.generate runs text generation, llama.chat provides "
+        "conversational inference, and llama.agent runs a full "
         "agentic loop (system prompt → model → parse tool_call blocks "
         "→ execute → feed back, max 10 iterations, 17 allowed safe "
         "tools). The model signing subsystem (model.register, "
@@ -972,11 +972,11 @@ _CHAPTERS_28: list[Chapter] = [
         "protects the system from running untrusted models and gives "
         "it the ability to think independently. Adjacent: Turtle Beak "
         "(Ch 20) for edge inference, Room (Ch 4) for security. Tools: "
-        "ollama.models, ollama.generate, ollama.chat, ollama.agent, "
+        "llama.models, llama.generate, llama.chat, llama.agent, "
         "model.register, model.verify, model.list, model.hash, "
         "model.signing_status.",
         [
-            "ollama",
+            "llama_cpp",
             "shelter",
             "protection",
             "local",

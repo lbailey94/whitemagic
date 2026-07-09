@@ -200,7 +200,7 @@ def _find_handler_file(tool_name: str) -> Path | None:
         "agent": "agents.py",
         "broker": "broker.py",
         "pipeline": "pipeline.py",
-        "ollama": "ollama.py",
+        "llama_tools": "llama_tools.py",
         "edge_": "edge.py",
         "bitnet": "bitnet.py",
         "vector": "vector_search.py",

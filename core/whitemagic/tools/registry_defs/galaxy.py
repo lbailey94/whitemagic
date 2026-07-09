@@ -320,6 +320,10 @@ TOOLS: list[ToolDefinition] = [
                     "items": {"type": "string"},
                     "description": "Galaxy names to search. If omitted, searches all galaxies.",
                 },
+                "galaxy": {
+                    "type": "string",
+                    "description": "Single galaxy name to search (shorthand for galaxies=[name]).",
+                },
                 "tags": {
                     "type": "array",
                     "items": {"type": "string"},

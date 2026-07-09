@@ -825,7 +825,7 @@ class GalaxyManager:
                         all_results.append({
                             "id": r.id,
                             "title": r.title,
-                            "content": r.content[:200] if r.content else "",
+                            "content": str(r.content)[:200] if r.content else "",
                             "galaxy": self._galaxies[gk].name,
                             "importance": r.importance,
                             "memory_type": r.memory_type.value if hasattr(r.memory_type, 'value') else str(r.memory_type),

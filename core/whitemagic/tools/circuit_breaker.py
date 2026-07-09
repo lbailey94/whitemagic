@@ -303,6 +303,8 @@ _GANA_PREFIX_TO_SLOT: dict[str, int] = {
     "gana_root": 2,
     "boundary": 2,
     "health": 2,
+    "state.": 2,
+    "ship.check": 2,
     "gana_room": 3,
     "circuit": 3,
     "gana_heart": 4,
@@ -381,14 +383,14 @@ def _tool_to_engine_slot(tool_name: str) -> int | None:
 
 
 _TOOL_BREAKER_OVERRIDES: dict[str, BreakerConfig] = {
-    # Ollama may restart frequently — fail fast, retry quickly
-    "ollama.models": BreakerConfig(
+    # llama.cpp may restart frequently — fail fast, retry quickly
+    "llama.models": BreakerConfig(
         failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0
     ),
-    "ollama.generate": BreakerConfig(
+    "llama.generate": BreakerConfig(
         failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0
     ),
-    "ollama.chat": BreakerConfig(
+    "llama.chat": BreakerConfig(
         failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0
     ),
     # Redis broker — slightly more tolerant but still fast-fail

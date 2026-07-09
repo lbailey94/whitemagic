@@ -572,7 +572,7 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
     Fetches a URL, then processes the content through three stages:
     1. Outline Builder — extracts heading hierarchy from HTML
     2. Content Chunker — splits text into ~2K-char semantic chunks with overlap
-    3. Content Summarizer — generates summary via Ollama (extractive fallback)
+    3. Content Summarizer — generates summary via llama-server (extractive fallback)
 
     Supports progressive loading: return outline + summary + chunk metadata first,
     then load individual chunks on demand via the chunk_index parameter.
@@ -587,7 +587,7 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
     overlap = int(kwargs.get("overlap", 200))
     summarize = kwargs.get("summarize", True)
     focus = kwargs.get("focus", "")
-    ollama_model = kwargs.get("ollama_model", "gemma3:4b")
+    llama_model = kwargs.get("llama_model", "")
     max_chars = int(kwargs.get("max_chars", 50_000))
     chunk_index = kwargs.get("chunk_index")
 
@@ -620,7 +620,7 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
             overlap=overlap,
             summarize=False,  # Don't re-summarize for chunk retrieval
             focus=focus,
-            ollama_model=ollama_model,
+            llama_model=llama_model,
         )
         idx = int(chunk_index)
         if idx < 0 or idx >= len(enhanced.chunks):
@@ -669,7 +669,7 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
         overlap=overlap,
         summarize=summarize,
         focus=focus,
-        ollama_model=ollama_model,
+        llama_model=llama_model,
     )
 
     result = enhanced_to_dict(enhanced, include_chunks=True)

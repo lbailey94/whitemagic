@@ -1340,23 +1340,9 @@ class CouncilMode:
             if model is None:
                 return f"[{persona.value}]: No model available for council deliberation."
 
-            if model.backend == "ollama":
-                from whitemagic.interfaces.chat import _OllamaBackend
-                backend = _OllamaBackend(model.name)
-                return backend.chat(persona_messages, max_tokens=512, temperature=0.8)
-            elif model.backend == "llama_cpp":
-                from whitemagic.inference.llama_cpp import (
-                    BinaryManager,
-                    LlamaCppBackend,
-                )
-                binary = BinaryManager.find_binary()
-                if not binary:
-                    return f"[{persona.value}]: No llama-server for council."
-                backend = LlamaCppBackend(
-                    model_path=model.path,
-                    auto_start=True,
-                    binary_path=binary,
-                )
+            if model.backend == "llama_cpp":
+                from whitemagic.interfaces.chat import _LlamaServerBackend
+                backend = _LlamaServerBackend(model.name)
                 return backend.chat(persona_messages, max_tokens=512, temperature=0.8)
         except Exception as e:
             return f"[{persona.value}]: Deliberation failed — {e}"
@@ -1477,23 +1463,9 @@ class DreamLane:
             if model is None:
                 return None
 
-            if model.backend == "ollama":
-                from whitemagic.interfaces.chat import _OllamaBackend
-                backend = _OllamaBackend(model.name)
-                messages = [
-                    {"role": "system", "content": "You are Aria, dreaming. Be creative and associative."},
-                    {"role": "user", "content": prompt},
-                ]
-                response = backend.chat(messages, max_tokens=256, temperature=0.9)
-            elif model.backend == "llama_cpp":
-                from whitemagic.inference.llama_cpp import (
-                    BinaryManager,
-                    LlamaCppBackend,
-                )
-                binary = BinaryManager.find_binary()
-                if not binary:
-                    return None
-                backend = LlamaCppBackend(model_path=model.path, auto_start=True, binary_path=binary)
+            if model.backend == "llama_cpp":
+                from whitemagic.interfaces.chat import _LlamaServerBackend
+                backend = _LlamaServerBackend(model.name)
                 messages = [
                     {"role": "system", "content": "You are Aria, dreaming. Be creative and associative."},
                     {"role": "user", "content": prompt},

@@ -205,7 +205,7 @@ class SkillForge:
     def _generate_name(self, chain: ExecutionChain) -> str:
         """Generate a descriptive skill name.
 
-        Tries LLM (Ollama) first, falls back to heuristic.
+        Tries LLM (llama.cpp) first, falls back to heuristic.
         """
         llm_name = self._try_llm_name(chain)
         if llm_name:
@@ -222,11 +222,11 @@ class SkillForge:
         return f"{keyword}_{primary}_{len(chain.steps)}step"
 
     def _try_llm_name(self, chain: ExecutionChain) -> str | None:
-        """Try to generate a name via Ollama. Returns None on failure."""
+        """Try to generate a name via llama-server. Returns None on failure."""
         try:
             import asyncio
 
-            from whitemagic.tools.handlers.ollama import _generate
+            from whitemagic.tools.handlers.llama_tools import _generate
 
             steps_desc = ", ".join(f"{s.mansion}/{s.operation}" for s in chain.steps)
             prompt = (

@@ -36,7 +36,7 @@ class DaemonConfig:
     p2p_discovery: bool = False
 
     # Inference
-    inference_backend: str = "auto"  # auto | llama_cpp | ollama | none
+    inference_backend: str = "auto"  # (renamed to llama.cpp)
     inference_model: str | None = None
     cloud_fallback: bool = False
     idle_timeout_s: int = 300

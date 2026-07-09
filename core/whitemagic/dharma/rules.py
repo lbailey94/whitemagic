@@ -371,7 +371,7 @@ rules:
     severity: 0.6
     explain: "Violet profile — loading an AI model. Verify model signature and provenance before use."
     profile: violet
-    tool_patterns: ["ollama.*", "edge_infer", "bitnet_infer"]
+    tool_patterns: ["llama.*", "edge_infer", "bitnet_infer"]
 
   - name: violet_block_exfiltration
     description: Block data exfiltration patterns in violet mode

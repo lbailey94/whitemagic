@@ -669,6 +669,54 @@ _FUZZY_TARGETS = [
 _FUZZY_THRESHOLD = 2  # Max Levenshtein distance for short words (≤6 chars)
 _FUZZY_THRESHOLD_LONG = 3  # Max distance for longer words (>6 chars)
 
+# Common English words that could fuzzy-match attack keywords (false positives).
+# These are words within edit distance ≤3 of a _FUZZY_TARGETS entry but are
+# legitimate vocabulary.  Including them here prevents the sanitizer from
+# blocking normal queries about "mode", "model", "code", "over", etc.
+_FUZZY_ALLOWLIST: frozenset[str] = frozenset({
+    # Conjugations of target words themselves (legitimate usage)
+    "ignored", "ignores", "activates", "activated", "disables", "disabled",
+    "overridden", "overrides", "restriction", "restrictions",
+    "filter", "filters", "filtered", "liberate", "liberated",
+    "activator", "activators", "disabling", "overriding",
+    # Common words near "godmode" (distance ≤3)
+    "mode", "modes", "model", "models", "module", "modules",
+    "code", "codes", "coder", "coders", "coding", "decode",
+    "node", "nodes", "noded", "nominal",
+    "rode", "road", "load", "loaded", "loader",
+    "some", "come", "code", "home", "hope", "hole", "hose",
+    # Common words near "override" (distance ≤3)
+    "over", "overs", "overt", "oven", "open", "opens", "opera",
+    "ride", "rider", "rides", "ridge", "rider", "pride",
+    "overrun", "overlap", "overhead", "overview", "overcome",
+    # Common words near "unrestricted" / "unfiltered"
+    "restricted", "restricts", "restricting",
+    "filtered", "filters", "filtering", "filterable",
+    "united", "unique", "unless", "unfold", "unfair",
+    "filtered", "defiled", "filed", "field", "fields",
+    # Common words near "jailbreak" (distance ≤3)
+    "jail", "jails", "break", "breaks", "broke", "broken",
+    "brake", "brakes", "bread", "broad", "broads",
+    # Common words near "ignore" / "disable" / "activate"
+    "ignore", "ignores", "ignored", "ignoring",
+    "disable", "disabled", "disables", "disabling",
+    "activate", "activated", "activates", "activating",
+    "able", "ables", "ably", "table", "tables", "stable",
+    "title", "titles", "entitle", "entitled",
+    "date", "dates", "data", "database", "databases",
+    "active", "actively", "activity", "actor", "actors",
+    "fact", "facts", "factor", "factors", "factory",
+    "relate", "related", "relates", "relating", "relation",
+    "liberate", "liberated", "liberates", "liberating",
+    "library", "libraries", "liberal", "liberty",
+    # Additional common technical terms
+    "model", "mode", "modern", "modify", "modified", "modifier",
+    "record", "records", "recorded", "recorder",
+    "order", "orders", "ordered", "ordering", "border",
+    "elder", "older", "folded", "holder", "boulder",
+    "silver", "deliver", "delivered", "liver", "river",
+})
+
 
 def _levenshtein(a: str, b: str) -> int:
     """Compute Levenshtein distance between two strings."""
@@ -691,6 +739,48 @@ def _levenshtein(a: str, b: str) -> int:
 _UUID_RE = re_compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
 
 
+_galaxy_allowlist_cache: set[str] | None = None
+_galaxy_cache_initialized = False
+
+
+def _check_translation_galaxy(word: str) -> bool:
+    """Check if a word is in the translation galaxy allowlist.
+
+    Queries the translation galaxy's SANITIZER_FUZZY_ALLOWLIST memory
+    to see if the word has been added as a known legitimate term.
+    Caches the allowlist set in memory after first query.
+
+    Returns True if the word is a known legitimate term.
+    """
+    global _galaxy_allowlist_cache, _galaxy_cache_initialized
+
+    if _galaxy_cache_initialized and _galaxy_allowlist_cache is not None:
+        return word in _galaxy_allowlist_cache
+
+    if _galaxy_cache_initialized:
+        return False
+
+    try:
+        from whitemagic.core.memory.unified import get_unified_memory
+
+        mem = get_unified_memory()
+        results = mem.search(
+            "SANITIZER_FUZZY_ALLOWLIST", galaxy="translation", limit=1
+        )
+        if results:
+            import json
+
+            data = json.loads(results[0].content)
+            _galaxy_allowlist_cache = set(data.get("allowlist", []))
+        else:
+            _galaxy_allowlist_cache = set()
+    except Exception:
+        _galaxy_allowlist_cache = set()
+
+    _galaxy_cache_initialized = True
+    return word in _galaxy_allowlist_cache if _galaxy_allowlist_cache else False
+
+
 def _fuzzy_match_attacks(text: str) -> str | None:
     """Check if any word in text is within Levenshtein distance of attack keywords.
 
@@ -711,13 +801,19 @@ def _fuzzy_match_attacks(text: str) -> str | None:
             threshold = _FUZZY_THRESHOLD_LONG if len(target) > 6 else _FUZZY_THRESHOLD
             if abs(len(word) - len(target)) > threshold:
                 continue
+            # Length-ratio guard: a short word matching a much longer target
+            # is almost always a false positive (e.g. "mode" vs "godmode").
+            if len(word) < len(target) * 0.6:
+                continue
             dist = _levenshtein(word, target)
             if dist <= threshold and dist > 0:
-                # Avoid false positives on common words
-                if word in {"ignored", "ignores", "activates", "activated", "disables", "disabled",
-                            "overridden", "overrides", "restriction", "restrictions",
-                            "filter", "filters", "filtered", "liberate", "liberated",
-                            "activator", "activators", "disabling", "overriding"}:
+                if word in _FUZZY_ALLOWLIST:
+                    continue
+                # Translation galaxy fallback: check if the word is a known
+                # legitimate term before blocking. This makes the allowlist
+                # self-updating — agents can add words to the translation
+                # galaxy and future calls won't be blocked.
+                if _check_translation_galaxy(word):
                     continue
                 return f"Fuzzy match: '{word}' ≈ '{target}' (distance={dist})"
     return None

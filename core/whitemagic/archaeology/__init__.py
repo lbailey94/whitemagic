@@ -222,7 +222,8 @@ def create_daily_wisdom_digest() -> str:
     for mem in recent:
         digest += f"## {mem.title}\n"
         digest += f"**Source:** {mem.metadata.get('original_path', 'unknown')}\n\n"
-        digest += f"{mem.content[:300]}...\n\n"
+        content_str = str(mem.content) if not isinstance(mem.content, str) else mem.content
+        digest += f"{content_str[:300]}...\n\n"
 
     output_path = (
         Path(PROJECT_ROOT)

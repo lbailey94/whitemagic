@@ -383,7 +383,7 @@ class BicameralReasoner:
     ) -> list[CrossCritique]:
         """Each hemisphere critiques the other.
 
-        Uses LLM-driven critique when Ollama is available.
+        Uses LLM-driven critique when llama.cpp is available.
         Falls back to heuristic analysis of content characteristics.
         """
         llm_critiques = self._llm_cross_critique(left, right)
@@ -665,7 +665,7 @@ class BicameralReasoner:
     ) -> tuple:
         """Synthesize both hemispheres + cross-critiques into a final answer.
 
-        Uses LLM for synthesis when Ollama is available.
+        Uses LLM for synthesis when llama.cpp is available.
         Falls back to heuristic weighted synthesis when not.
 
         Returns: (synthesis_text, final_confidence, dominant_hemisphere, tension_score)
