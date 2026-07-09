@@ -1,0 +1,37 @@
+# Paths listed here are excluded when syncing to the public repo (lbailey94/whitemagic).
+# One pattern per line. Trailing slash = directory. No trailing slash = file or dir.
+# Used by scripts/sync_public.sh
+
+# === Internal strategy & session docs ===
+docs/message_board/
+
+# === Internal tooling state ===
+.desloppify/
+
+# === Deployment config (contains project IDs) ===
+.vercel/
+
+# === Extracted conversation data ===
+windsurf-rips/
+
+# === Junk / scratch files ===
+test.txt
+
+# === Auxiliary workspaces (not part of the public project) ===
+archives/
+notes-scratch/
+opencodeconvos/
+logs/
+memory/
+alltexts/
+blackmagic/
+Agent-SafetyBench/
+app-layer/
+aux/
+codex-engine/
+data/
+grants/
+ide/
+public-repo/
+reports/
+site/
