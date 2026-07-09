@@ -13,7 +13,7 @@ os.environ["WM_SILENT_INIT"] = "1"
 os.environ["WM_SKIP_POLYGLOT"] = "1"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def project_dir():
     """Create a temporary project directory with sample files."""
     d = tempfile.mkdtemp(prefix="wm_proj_")

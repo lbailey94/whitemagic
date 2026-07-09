@@ -115,6 +115,7 @@ class TestCriticalPathMemoryStorage:
 
 
 @pytest.mark.skipif(not HAS_WHITEMAGIC, reason="WhiteMagic not available")
+@pytest.mark.xdist_group(name="rust_search_index")
 class TestCriticalPathSearchOperations(unittest.TestCase):
     """Critical path: Search operations (FTS + BM25)."""
 

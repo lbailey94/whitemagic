@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from click.testing import CliRunner
 
@@ -54,7 +56,10 @@ class TestSentienceCLI:
 
     def test_wake_command(self, cli_runner, cli_main):
         """wm wake should produce a greeting."""
-        result = cli_runner.invoke(cli_main, ["wake"])
+        with patch("whitemagic.core.consciousness.citta_stream.get_continuity_context", return_value={}), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_agent_messages", return_value=[]):
+            result = cli_runner.invoke(cli_main, ["wake"])
         # May not have citta state, but should not crash
         assert result.exit_code == 0
 

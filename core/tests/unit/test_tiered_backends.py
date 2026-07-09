@@ -1,8 +1,6 @@
 """Tests for the tiered backend system: per-galaxy SQLite, DuckDB, PostgreSQL."""
 
-import json
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -133,13 +131,16 @@ class TestGalaxyAwareBackend:
 class TestDuckDBBackend:
     """Tests for the DuckDB analytical backend."""
 
-    def test_duckdb_store_and_recall(self, tmp_path: Path) -> None:
-        """Test basic store and recall in DuckDB."""
+    @pytest.fixture(scope="class")
+    def duckdb_backend(self, tmp_path_factory):
+        """Shared DuckDB backend to avoid 5s re-init per test."""
         from whitemagic.core.memory.backends.duckdb_backend import DuckDBBackend
 
-        db_path = tmp_path / "analytics.duckdb"
-        backend = DuckDBBackend(db_path)
+        db_path = tmp_path_factory.mktemp("duckdb") / "analytics.duckdb"
+        return DuckDBBackend(db_path)
 
+    def test_duckdb_store_and_recall(self, duckdb_backend) -> None:
+        """Test basic store and recall in DuckDB."""
         mem = Memory(
             id="duck-test-001",
             content="DuckDB analytical test",
@@ -147,14 +148,12 @@ class TestDuckDBBackend:
             importance=0.9,
             galaxy="codex",
         )
-        backend.store(mem)
+        duckdb_backend.store(mem)
 
-        result = backend.recall("duck-test-001")
+        result = duckdb_backend.recall("duck-test-001")
         assert result is not None
         assert result.id == "duck-test-001"
         assert result.galaxy == "codex"
-
-        backend.close()
 
     def test_duckdb_search_by_galaxy(self, tmp_path: Path) -> None:
         """Test galaxy-filtered search in DuckDB."""

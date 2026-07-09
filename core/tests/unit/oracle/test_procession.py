@@ -1,16 +1,18 @@
 """Tests for the 12-step procession definitions and alchemical loop restructure."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from whitemagic.core.intelligence.procession_steps import (
-    YIN_PROCESSION,
-    YANG_PROCESSION,
+    COLOR_STAGES,
     FIXED_CHECKPOINTS,
-    YIN_BY_SIGN,
     YANG_BY_SIGN,
+    YANG_PROCESSION,
+    YIN_BY_SIGN,
+    YIN_PROCESSION,
     get_checkpoint_description,
     get_color_stage_for_step,
-    COLOR_STAGES,
 )
 
 
@@ -162,10 +164,23 @@ class TestProcessionStructure:
 class TestAlchemicalLoopRestructure:
     """Tests for the restructured 12-step alchemical loop."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_heavy_ops(self):
+        """Mock rabbit_hole and filter_research to avoid 7s+ tool dispatch."""
+        with patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._call_rabbit_hole",
+            new_callable=AsyncMock,
+            return_value={"entries": 0, "connections": 0, "new_holes": 0, "synthesis": "test"},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._filter_research",
+            new_callable=AsyncMock,
+            return_value={"filtered": [], "count": 0},
+        ):
+            yield
+
     @pytest.mark.asyncio
     @pytest.mark.slow
     async def test_cycle_has_12_yang_steps(self):
-        import asyncio
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
 
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)
@@ -176,7 +191,6 @@ class TestAlchemicalLoopRestructure:
     @pytest.mark.asyncio
     @pytest.mark.slow
     async def test_cycle_has_12_yin_steps(self):
-        import asyncio
         from whitemagic.core.intelligence.alchemical_loop import AlchemicalLoop
 
         loop = AlchemicalLoop(task="test task", cycles=1, enable_web=False)

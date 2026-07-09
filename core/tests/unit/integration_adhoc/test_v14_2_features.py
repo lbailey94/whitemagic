@@ -14,8 +14,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 # ═══════════════════════════════════════════════════════════════
 # 1. JIT Memory Researcher
 # ═══════════════════════════════════════════════════════════════
@@ -119,9 +117,9 @@ class TestJITResearcher(unittest.TestCase):
         result = r._synthesize("test", [])
         self.assertIn("No relevant memories", result)
 
+    @patch("whitemagic.core.intelligence.researcher.JITResearcher._llama_synthesize", return_value=None)
     @patch("whitemagic.core.intelligence.researcher.JITResearcher._search")
-    @pytest.mark.timeout(20)
-    def test_research_runs_multiple_rounds(self, mock_search):
+    def test_research_runs_multiple_rounds(self, mock_search, mock_llama):
         """Research should iterate through rounds."""
         mock_search.return_value = [
             {
@@ -139,8 +137,9 @@ class TestJITResearcher(unittest.TestCase):
         self.assertIsInstance(result.synthesis, str)
         self.assertGreater(len(result.synthesis), 0)
 
+    @patch("whitemagic.core.intelligence.researcher.JITResearcher._llama_synthesize", return_value=None)
     @patch("whitemagic.core.intelligence.researcher.JITResearcher._search")
-    def test_research_saturates(self, mock_search):
+    def test_research_saturates(self, mock_search, mock_llama):
         """Research should stop when no new evidence is found."""
         mock_search.return_value = []
         from whitemagic.core.intelligence.researcher import get_researcher

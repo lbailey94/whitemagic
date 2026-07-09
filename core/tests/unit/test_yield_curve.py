@@ -85,7 +85,10 @@ class TestYieldPortfolio:
         portfolio = YieldPortfolio()
         curve = YieldCurve(improvement_id="h1", yield_type=YieldType.DECAYING)
         portfolio.add_curve(curve)
-        assert portfolio.get_curve("h1") is not None
+        retrieved = portfolio.get_curve("h1")
+        assert retrieved is not None
+        assert retrieved.improvement_id == "h1"
+        assert retrieved.yield_type == YieldType.DECAYING
 
     def test_portfolio_duration(self):
         portfolio = YieldPortfolio()

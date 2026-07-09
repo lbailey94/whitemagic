@@ -33,6 +33,7 @@ def _has_binary(name: str) -> bool:
 HAS_JULIA = _has_binary("julia")
 HAS_ELIXIR = _has_binary("elixir")
 HAS_HASKELL = _has_binary("runhaskell")
+_SKIP_POLYGLOT = bool(os.environ.get("WM_SKIP_POLYGLOT"))
 
 
 # --- Polyglot dispatcher availability ---
@@ -200,7 +201,7 @@ class TestPolyglotMemoryQueryJulia:
 class TestPolyglotMemoryQueryElixir:
     """Test polyglot.memory_query routed to Elixir backend."""
 
-    @pytest.mark.skipif(not HAS_ELIXIR, reason="elixir not installed")
+    @pytest.mark.skipif(not HAS_ELIXIR or _SKIP_POLYGLOT, reason="elixir not installed or WM_SKIP_POLYGLOT set")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     def test_elixir_encode(self):
         result = handle_polyglot_memory_query(
@@ -213,7 +214,7 @@ class TestPolyglotMemoryQueryElixir:
         assert "x" in r
         assert "zone" in r
 
-    @pytest.mark.skipif(not HAS_ELIXIR, reason="elixir not installed")
+    @pytest.mark.skipif(not HAS_ELIXIR or _SKIP_POLYGLOT, reason="elixir not installed or WM_SKIP_POLYGLOT set")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     def test_elixir_nearest_neighbors(self):
         result = handle_polyglot_memory_query(
@@ -232,7 +233,7 @@ class TestPolyglotMemoryQueryElixir:
 class TestPolyglotMemoryQueryHaskell:
     """Test polyglot.memory_query routed to Haskell backend."""
 
-    @pytest.mark.skipif(not HAS_HASKELL, reason="runhaskell not available")
+    @pytest.mark.skipif(not HAS_HASKELL or _SKIP_POLYGLOT, reason="runhaskell not available or WM_SKIP_POLYGLOT set")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     def test_haskell_encode(self):
         result = handle_polyglot_memory_query(
@@ -245,7 +246,7 @@ class TestPolyglotMemoryQueryHaskell:
         assert "x" in r
         assert "zone" in r
 
-    @pytest.mark.skipif(not HAS_HASKELL, reason="runhaskell not available")
+    @pytest.mark.skipif(not HAS_HASKELL or _SKIP_POLYGLOT, reason="runhaskell not available or WM_SKIP_POLYGLOT set")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     def test_haskell_nearest_neighbors(self):
         result = handle_polyglot_memory_query(

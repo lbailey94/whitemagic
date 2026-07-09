@@ -203,15 +203,15 @@ class TestGranularAwareness:
         monitor = HomeostaticMonitor(project_root=tmp_path)
         monitor.save_snapshot()
         awareness = GranularAwareness()
-        # Patch get_monitor to use our temp-based monitor instead of singleton
-        import whitemagic.defense.homeostatic_monitor as hm_mod
+        # Patch get_monitor in granular_awareness's namespace (not homeostatic_monitor's)
+        import whitemagic.defense.granular_awareness as ga_mod
 
-        original_hm_get = hm_mod.get_monitor
-        hm_mod.get_monitor = lambda: monitor
+        original = ga_mod.get_monitor
+        ga_mod.get_monitor = lambda: monitor
         try:
             result = awareness.scan()
         finally:
-            hm_mod.get_monitor = original_hm_get
+            ga_mod.get_monitor = original
         assert "total_changes" in result
         assert "immune_assessment" in result
 

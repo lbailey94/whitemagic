@@ -50,7 +50,8 @@ os.environ["WM_SKIP_HOLO_INDEX"] = "1"
 os.environ["WM_SKIP_POLYGLOT"] = "1"
 
 # Suppress noisy INFO logs from SQLite schema migrations during tests
-import logging as _logging
+import logging as _logging  # noqa: E402
+
 _logging.getLogger("whitemagic.core.memory.sqlite_backend").setLevel(_logging.WARNING)
 _logging.getLogger("whitemagic.core.memory.embeddings").setLevel(_logging.WARNING)
 
@@ -225,11 +226,28 @@ def _reset_singletons():
         ),
         # --- Mesh ---
         ("whitemagic.mesh.awareness", "_awareness"),
+        # --- Intelligence / Session / Monitoring ---
+        ("whitemagic.core.intelligence.researcher", "_researcher"),
+        ("whitemagic.core.intelligence.omni.skill_forge", "_forge"),
+        ("whitemagic.core.memory.session_recorder", "_recorder"),
+        ("whitemagic.core.monitoring.tool_usage_tracker", "_tracker"),
     ]
     for mod_name, attr_name in _singleton_modules:
         mod = sys.modules.get(mod_name)
         if mod and hasattr(mod, attr_name):
             setattr(mod, attr_name, None)
+
+    # Reset class-level _instance singletons (__new__-based pattern)
+    # These aren't caught by the module-level _var = None pattern above
+    for mod_name, cls_name in (
+        ("whitemagic.core.consciousness.dharma", "DharmaProtocol"),
+        ("whitemagic.core.nervous_system", "NervousSystem"),
+    ):
+        mod = sys.modules.get(mod_name)
+        if mod and hasattr(mod, cls_name):
+            cls = getattr(mod, cls_name)
+            if hasattr(cls, "_instance"):
+                cls._instance = None
 
 
 @pytest.fixture(autouse=True, scope="module")

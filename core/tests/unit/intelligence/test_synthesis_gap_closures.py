@@ -11,7 +11,6 @@ G5: Consolidation → KG relations
 import unittest
 from unittest.mock import MagicMock, patch
 
-
 # =========================================================================
 # G1: Dream SERENDIPITY uses AssociationMiner
 # =========================================================================
@@ -36,7 +35,15 @@ class TestG1DreamSerendipity(unittest.TestCase):
         dc = DreamCycle.__new__(DreamCycle)
         # Initialize minimal state needed
         dc._memory_store = None
-        result = dc._dream_serendipity()
+        # Mock heavy graph/miner operations to avoid 30s DB scan
+        with patch("whitemagic.core.memory.graph_engine.get_graph_engine") as mock_ge, \
+             patch("whitemagic.core.memory.association_miner.get_association_miner") as mock_am:
+            mock_ge.return_value.rebuild.return_value = None
+            mock_ge.return_value.find_bridge_nodes.return_value = []
+            mock_am.return_value.mine.return_value = MagicMock(
+                top_proposals=[], links_proposed=0, links_created=0, pairs_evaluated=0
+            )
+            result = dc._dream_serendipity()
         self.assertIsInstance(result, dict)
 
     @patch("whitemagic.core.dreaming.dream_cycle.DreamCycle._dream_serendipity")

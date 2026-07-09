@@ -3,6 +3,7 @@
 # ruff: noqa: BLE001
 import os
 import tempfile
+from unittest.mock import patch
 
 import pytest
 
@@ -11,6 +12,8 @@ _tmp = tempfile.mkdtemp(prefix="wm_sr_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
 os.environ["WM_SILENT_INIT"] = "1"
 os.environ["WM_SKIP_POLYGLOT"] = "1"
+
+pytestmark = pytest.mark.xdist_group(name="session_recorder")
 
 
 @pytest.fixture
@@ -228,9 +231,10 @@ class TestStats:
 class TestBackfill:
     def test_backfill_assigns_sequences(self, recorder):
         # Create memories without sequence numbers by directly storing
+        from uuid import uuid4
+
         from whitemagic.core.memory.unified import UnifiedMemory
         from whitemagic.core.memory.unified_types import Memory, MemoryType
-        from uuid import uuid4
 
         um = UnifiedMemory()
         for i in range(5):
@@ -282,7 +286,7 @@ class TestSequenceRestoration:
 
 
 class TestCrossSessionContinuity:
-    def test_continuity_finds_previous_session(self):
+    def test_continuity_finds_previous_session(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         # Create and populate a previous session
         prev = SessionRecorder(session_id="prev-session-1")
@@ -301,7 +305,7 @@ class TestCrossSessionContinuity:
         assert "formatted" in result
         assert "Hello from previous session" in result["formatted"]
 
-    def test_continuity_first_awakening(self):
+    def test_continuity_first_awakening(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         # Use a unique session ID that won't have prior data
         r = SessionRecorder(session_id="lone-session-unique-xyz")
@@ -314,7 +318,7 @@ class TestCrossSessionContinuity:
             assert result["first_awakening"] is True
             assert result["count"] == 0
 
-    def test_continuity_excludes_current_session(self):
+    def test_continuity_excludes_current_session(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="current-only-unique-abc")
         r.record_user("This is the current session", turn_type="message")
@@ -323,7 +327,7 @@ class TestCrossSessionContinuity:
         if result["previous_session_id"]:
             assert result["previous_session_id"] != "current-only-unique-abc"
 
-    def test_continuity_limits_n(self):
+    def test_continuity_limits_n(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         prev = SessionRecorder(session_id="prev-long-session-unique")
         for i in range(20):
@@ -338,7 +342,7 @@ class TestCrossSessionContinuity:
 
 
 class TestSleepConsolidation:
-    def test_consolidate_dry_run(self):
+    def test_consolidate_dry_run(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="consolidate-dry-test")
         r.record_user("Let's build X", turn_type="decision", importance=0.9)
@@ -356,7 +360,7 @@ class TestSleepConsolidation:
         assert "answer" not in types
         assert "message" not in types
 
-    def test_consolidate_promotes_to_codex(self):
+    def test_consolidate_promotes_to_codex(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="consolidate-real-test")
         r.record_user("Important decision", turn_type="decision", importance=0.9)
@@ -369,7 +373,7 @@ class TestSleepConsolidation:
         assert result["turns_promoted"][0]["turn_type"] == "decision"
         assert "source_id" in result["turns_promoted"][0]
 
-    def test_consolidate_skips_low_importance(self):
+    def test_consolidate_skips_low_importance(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="consolidate-skip-test")
         r.record_user("Low importance", turn_type="decision", importance=0.3)
@@ -380,7 +384,7 @@ class TestSleepConsolidation:
         assert result["promoted"] == 1
         assert result["turns_promoted"][0]["importance"] == 0.9
 
-    def test_consolidate_skips_message_and_context_types(self):
+    def test_consolidate_skips_message_and_context_types(self, fresh_state_root):
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="consolidate-type-test")
         r.record_user("Just chatting", turn_type="message", importance=0.9)
@@ -398,7 +402,8 @@ class TestEmotionalAutoTagging:
         """When citta is unavailable, valence should default to 0.0."""
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="emotional-test")
-        valence = r.get_auto_emotional_valence()
+        with patch("whitemagic.core.consciousness.citta_cycle.get_citta_cycle", side_effect=ImportError("test")):
+            valence = r.get_auto_emotional_valence()
         # Should be 0.0 when citta cycle is not available
         assert valence == 0.0
 
@@ -406,7 +411,8 @@ class TestEmotionalAutoTagging:
         """record_user should auto-assign emotional_valence when not specified."""
         from whitemagic.core.memory.session_recorder import SessionRecorder
         r = SessionRecorder(session_id="emotional-auto-test")
-        mem_id = r.record_user("Test message", turn_type="message")
+        with patch("whitemagic.core.consciousness.citta_cycle.get_citta_cycle", side_effect=ImportError("test")):
+            r.record_user("Test message", turn_type="message")
         turns = r.recall_recent(n=1)
         assert len(turns) == 1
         # Should have some emotional_valence (0.0 when citta unavailable)

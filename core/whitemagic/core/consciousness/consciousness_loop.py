@@ -443,7 +443,7 @@ class ConsciousnessLoop:
 
             # Sleep until the nearest tier deadline (sub-second responsive)
             next_deadline = min(
-                self._last_citta + self._config.citta_interval_s,
+                self._last_citta_tick + self._config.citta_interval_s,
                 self._last_meta_fast + self._config.meta_fast_interval_s,
                 self._last_meta_slow + self._config.meta_slow_interval_s,
                 self._last_meta_deep + self._config.meta_deep_interval_s,

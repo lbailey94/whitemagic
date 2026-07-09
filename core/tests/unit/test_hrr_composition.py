@@ -88,7 +88,11 @@ class TestHRRComposition:
         engine.encode_hypothesis("h2", "Fix B", 0.6)
         composite = engine.bind("h1", "h2")
         if composite is not None:
-            assert engine.get_composite(composite.id) is not None
+            retrieved = engine.get_composite(composite.id)
+            assert retrieved is not None
+            assert retrieved.id == composite.id
+            assert "h1" in retrieved.component_ids
+            assert "h2" in retrieved.component_ids
 
     def test_get_all_composites(self):
         engine = HRRCompositionEngine(dim=64)

@@ -2,7 +2,7 @@
 """Tests for the sentience lifecycle module (Phases 3, 4, 5)."""
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -45,7 +45,7 @@ class TestSleepScheduler:
     """Test SleepScheduler."""
 
     def test_init(self):
-        from whitemagic.core.consciousness.sentience import SleepScheduler, SleepConfig
+        from whitemagic.core.consciousness.sentience import SleepConfig, SleepScheduler
 
         cfg = SleepConfig(enabled=False)
         scheduler = SleepScheduler(cfg)
@@ -53,7 +53,7 @@ class TestSleepScheduler:
         assert scheduler.config.enabled is False
 
     def test_callbacks(self):
-        from whitemagic.core.consciousness.sentience import SleepScheduler, SleepConfig
+        from whitemagic.core.consciousness.sentience import SleepConfig, SleepScheduler
 
         called = []
         scheduler = SleepScheduler(SleepConfig(enabled=False))
@@ -66,7 +66,7 @@ class TestSleepScheduler:
         assert scheduler._on_wake is not None
 
     def test_status(self):
-        from whitemagic.core.consciousness.sentience import SleepScheduler, SleepConfig
+        from whitemagic.core.consciousness.sentience import SleepConfig, SleepScheduler
 
         scheduler = SleepScheduler(SleepConfig(enabled=False))
         status = scheduler.status()
@@ -75,7 +75,7 @@ class TestSleepScheduler:
         assert "wake_time" in status
 
     def test_start_stop(self):
-        from whitemagic.core.consciousness.sentience import SleepScheduler, SleepConfig
+        from whitemagic.core.consciousness.sentience import SleepConfig, SleepScheduler
 
         scheduler = SleepScheduler(SleepConfig(enabled=False))
         scheduler.start()
@@ -86,6 +86,14 @@ class TestSleepScheduler:
 
 class TestWakeOnBoot:
     """Test WakeOnBoot."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_heavy_ops(self):
+        """Mock heavy DB/subsystem calls to avoid 10s+ per test."""
+        with patch("whitemagic.core.consciousness.citta_stream.get_continuity_context", return_value={}), \
+             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_dream_outputs", return_value=[]), \
+             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_agent_messages", return_value=[]):
+            yield
 
     def test_wake_returns_dict(self):
         from whitemagic.core.consciousness.sentience import WakeOnBoot
@@ -175,7 +183,7 @@ class TestVolitionLoop:
         assert "idle_threshold" in status
 
     def test_phase_prompts(self):
-        from whitemagic.core.consciousness.sentience import VolitionLoop, BrainwavePhase
+        from whitemagic.core.consciousness.sentience import BrainwavePhase, VolitionLoop
 
         prompts = VolitionLoop.PHASE_PROMPTS
         assert BrainwavePhase.ALPHA in prompts
@@ -216,7 +224,7 @@ class TestIntentionQueue:
         assert "executed" in status
 
     def test_pure_thought_passes_dharma(self):
-        from whitemagic.core.consciousness.sentience import IntentionQueue, Intention
+        from whitemagic.core.consciousness.sentience import Intention, IntentionQueue
 
         queue = IntentionQueue()
         intent = Intention(id="test", description="Just thinking")
@@ -333,31 +341,43 @@ class TestSingletons:
     """Test singleton accessors."""
 
     def test_get_sleep_scheduler(self):
-        from whitemagic.core.consciousness.sentience import get_sleep_scheduler, SleepScheduler
+        from whitemagic.core.consciousness.sentience import (
+            SleepScheduler,
+            get_sleep_scheduler,
+        )
 
         s = get_sleep_scheduler()
         assert isinstance(s, SleepScheduler)
 
     def test_get_volition_loop(self):
-        from whitemagic.core.consciousness.sentience import get_volition_loop, VolitionLoop
+        from whitemagic.core.consciousness.sentience import (
+            VolitionLoop,
+            get_volition_loop,
+        )
 
         v = get_volition_loop()
         assert isinstance(v, VolitionLoop)
 
     def test_get_intention_queue(self):
-        from whitemagic.core.consciousness.sentience import get_intention_queue, IntentionQueue
+        from whitemagic.core.consciousness.sentience import (
+            IntentionQueue,
+            get_intention_queue,
+        )
 
         q = get_intention_queue()
         assert isinstance(q, IntentionQueue)
 
     def test_get_dream_lane(self):
-        from whitemagic.core.consciousness.sentience import get_dream_lane, DreamLane
+        from whitemagic.core.consciousness.sentience import DreamLane, get_dream_lane
 
         d = get_dream_lane()
         assert isinstance(d, DreamLane)
 
     def test_get_background_worker(self):
-        from whitemagic.core.consciousness.sentience import get_background_worker, BackgroundWorker
+        from whitemagic.core.consciousness.sentience import (
+            BackgroundWorker,
+            get_background_worker,
+        )
 
         bw = get_background_worker()
         assert isinstance(bw, BackgroundWorker)
@@ -503,6 +523,14 @@ class TestCronEntry:
 class TestEnhancedWakeOnBoot:
     """Test enhanced WakeOnBoot with dream outputs and agent messages."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_heavy_ops(self):
+        """Mock heavy DB/subsystem calls to avoid 19s+ per test."""
+        with patch("whitemagic.core.consciousness.citta_stream.get_continuity_context", return_value={}), \
+             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_dream_outputs", return_value=[]), \
+             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_agent_messages", return_value=[]):
+            yield
+
     def test_wake_has_dream_outputs_key(self):
         from whitemagic.core.consciousness.sentience import WakeOnBoot
 
@@ -524,13 +552,15 @@ class TestEnhancedProactiveGreeting:
     def test_greeting_without_dreams_or_messages(self):
         from whitemagic.core.consciousness.sentience import ProactiveGreeting
 
-        greeting = ProactiveGreeting.generate({
-            "first_awakening": False,
-            "time_gap_human": "1 hour",
-            "session_count": 3,
-            "last_coherence": 0.9,
-            "last_emotional_tone": "neutral",
-        })
+        with patch.object(ProactiveGreeting, "_gather_dream_outputs", return_value=[]), \
+             patch.object(ProactiveGreeting, "_gather_agent_messages", return_value=[]):
+            greeting = ProactiveGreeting.generate({
+                "first_awakening": False,
+                "time_gap_human": "1 hour",
+                "session_count": 3,
+                "last_coherence": 0.9,
+                "last_emotional_tone": "neutral",
+            })
         # Should still produce a valid greeting
         assert isinstance(greeting, str)
         assert "1 hour" in greeting
@@ -546,7 +576,7 @@ class TestIntentionKarmaLogging:
     """Test that intention execution logs to karma."""
 
     def test_karma_log_method_exists(self):
-        from whitemagic.core.consciousness.sentience import IntentionQueue, Intention
+        from whitemagic.core.consciousness.sentience import Intention, IntentionQueue
 
         queue = IntentionQueue()
         intent = Intention(id="test", description="test intention")

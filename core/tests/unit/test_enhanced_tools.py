@@ -19,8 +19,7 @@ from __future__ import annotations
 import asyncio
 import os
 import tempfile
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -75,8 +74,8 @@ class TestWebContentCache:
         """cache_web_content and read_cached_content should round-trip."""
         from whitemagic.gardens.browser.web_research import (
             cache_web_content,
-            read_cached_content,
             clear_cached_content,
+            read_cached_content,
         )
 
         url = "https://test.example.com/cache-test"
@@ -94,8 +93,8 @@ class TestWebContentCache:
         """list_cached_content should return cached items."""
         from whitemagic.gardens.browser.web_research import (
             cache_web_content,
-            list_cached_content,
             clear_cached_content,
+            list_cached_content,
         )
 
         clear_cached_content()
@@ -110,8 +109,8 @@ class TestWebContentCache:
         """clear_cached_content with older_than_hours should only remove old files."""
         from whitemagic.gardens.browser.web_research import (
             cache_web_content,
-            list_cached_content,
             clear_cached_content,
+            list_cached_content,
         )
 
         clear_cached_content()
@@ -340,6 +339,20 @@ class TestSelfImprovementPipeline:
 
 class TestAlchemicalLoop:
     """Tests for the alchemical procession meta-loop."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_heavy_ops(self):
+        """Mock rabbit_hole and filter_research to avoid 8s+ tool dispatch."""
+        with patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._call_rabbit_hole",
+            new_callable=AsyncMock,
+            return_value={"entries": 0, "connections": 0, "new_holes": 0, "synthesis": "test"},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._filter_research",
+            new_callable=AsyncMock,
+            return_value={"filtered": [], "count": 0},
+        ):
+            yield
 
     def test_loop_initializes(self):
         """Loop should initialize correctly."""

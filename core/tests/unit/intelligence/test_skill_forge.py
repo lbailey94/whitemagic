@@ -152,6 +152,10 @@ class TestSkillForgeInit:
         from whitemagic.config import paths as paths_module
 
         monkeypatch.setattr(paths_module, "WM_ROOT", tmp_path)
+        # Patch get_state_root in skill_forge's namespace since it was imported by reference
+        from whitemagic.core.intelligence.omni import skill_forge as sf_module
+
+        monkeypatch.setattr(sf_module, "get_state_root", lambda: tmp_path)
 
         forge = SkillForge()
         assert forge.skill_library_path == tmp_path / "skills"

@@ -96,6 +96,8 @@ class TestGetMemoryForGalaxy:
         gm = _clean_galaxy_manager
         um = gm.get_memory_for_galaxy("default")
         assert um is not None
+        assert hasattr(um, "store")
+        assert hasattr(um, "search")
 
     def test_get_memory_for_galaxy_invalid_raises(self, _clean_galaxy_manager):
         gm = _clean_galaxy_manager

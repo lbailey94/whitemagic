@@ -44,9 +44,11 @@ class TestToolBandit:
 
     def test_register_tools_batch(self):
         self.bandit.register_tools(["tool_a", "tool_b", "tool_c"])
-        assert self.bandit.get_tool_stats("tool_a") is not None
-        assert self.bandit.get_tool_stats("tool_b") is not None
-        assert self.bandit.get_tool_stats("tool_c") is not None
+        for name in ("tool_a", "tool_b", "tool_c"):
+            stats = self.bandit.get_tool_stats(name)
+            assert stats["total_calls"] == 0
+            assert stats["alpha"] == 1.0
+            assert stats["beta"] == 1.0
 
     def test_record_success(self):
         self.bandit.register_tool("test_tool")
