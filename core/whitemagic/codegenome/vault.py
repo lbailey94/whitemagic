@@ -14,12 +14,19 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import threading
 import time
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Phase 3: Deprecation threshold
+_DEPRECATION_THRESHOLD = 0.3
+_EMA_ALPHA = 0.1  # Weight for new observations
 
 
 def _emit_gan_ying(event_type: str, data: dict[str, Any]) -> None:
@@ -46,24 +53,62 @@ class GeneseedVault:
         self._parser = get_vibe_parser()
         self._lock = threading.Lock()
         self._usage_stats: dict[str, dict[str, Any]] = {}
+        self._stats_file: Path | None = None
+        self._load_usage_stats()
 
-    def vibe_render(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
-        """End-to-end: parse vibe prompt -> find template -> render code."""
+    def vibe_render(
+        self, prompt: str, *, polymorph: bool = False, **kwargs: Any
+    ) -> dict[str, Any]:
+        """End-to-end: parse vibe prompt -> find template -> render code.
+
+        Args:
+            prompt: Natural language code request
+            polymorph: If True, apply stochastic variation (Phase 1)
+            **kwargs: Extra variable substitutions
+        """
         query = self._parser.parse(prompt)
 
         if query.get("status") != "matched":
+            # Phase 3: Include success-rate-weighted suggestions for ambiguous matches
+            suggestions = self._get_suggestions(query)
             return {
                 "status": "error",
                 "error_code": "no_template_match",
                 "details": query,
+                "suggestions": suggestions,
             }
 
         template_name = query["template_name"]
         tier = query.get("tier", "xianfeng")
         variables = {**query.get("variables", {}), **kwargs}
 
+        # Phase 3: Skip deprecated templates unless explicitly named
+        template = self._engine.get_template(template_name)
+        if template and template.deprecated:
+            logger.warning("Template %s is deprecated (success_rate=%.2f)", template_name, template.success_rate)
+
         # Render
         code = self._engine.render(template_name, tier=tier, **variables)
+
+        # Phase 1: Apply polymorphism if requested
+        if polymorph:
+            from .polymorphism import PolymorphismEngine
+
+            engine = PolymorphismEngine()
+            code = engine.polymorph(code)
+
+        # Phase 4: Validate generated code
+        validation = None
+        try:
+            from .validator import get_validator
+
+            validator = get_validator()
+            val_result = validator.validate(code, template_name)
+            validation = val_result.to_dict()
+            if not val_result.valid:
+                logger.warning("Validation failed for %s: %s", template_name, val_result.issues)
+        except Exception as e:
+            logger.debug("Validation skipped: %s", e)
 
         # Track usage
         self._record_usage(template_name, tier, variables)
@@ -75,11 +120,13 @@ class GeneseedVault:
                 "template": template_name,
                 "tier": tier,
                 "variables": list(variables.keys()),
+                "polymorph": polymorph,
+                "validation_valid": validation.get("valid") if validation else None,
             },
         )
 
         template = self._engine.get_template(template_name)
-        return {
+        result = {
             "status": "success",
             "template_name": template_name,
             "tier": tier,
@@ -88,6 +135,9 @@ class GeneseedVault:
             "signature": template.signature if template else "",
             "variables": variables,
         }
+        if validation:
+            result["validation"] = validation
+        return result
 
     def generate_with_llm(
         self,
@@ -142,6 +192,7 @@ class GeneseedVault:
         final_code = base_code
         try:
             from whitemagic.inference.local_llm import LocalLLM
+            from whitemagic.inference.grammar_schemas import PYTHON_CODE_GRAMMAR
 
             llm = LocalLLM()
             if llm.is_available:
@@ -152,10 +203,15 @@ class GeneseedVault:
                     f"Generated code:\n{base_code}\n"
                     f"{patterns_context}\n\n"
                     f"Improve this code: fix issues, add missing error handling, "
-                    f"optimize performance. Return ONLY the improved code."
+                    f"optimize performance. Return ONLY the improved Python code."
                 )
-                response = llm.complete(llm_prompt)
-                if response and response.strip():
+                response = llm.complete(
+                    llm_prompt,
+                    max_tokens=2048,
+                    temperature=0.3,
+                    grammar=PYTHON_CODE_GRAMMAR,
+                )
+                if response and response.strip() and not response.startswith("Error:"):
                     final_code = response.strip()
                     llm_refined = True
         except Exception as e:
@@ -197,6 +253,180 @@ class GeneseedVault:
             "write_result": write_result,
             "variables": render_result.get("variables", {}),
         }
+
+    def vibe_render_project(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
+        """Render a project template into multiple files (Phase 2).
+
+        Args:
+            prompt: Natural language project description
+            **kwargs: Extra variable substitutions
+
+        Returns:
+            Dict with status, files (dict[filepath, code]), and metadata
+        """
+        query = self._parser.parse(prompt)
+        if query.get("status") != "matched":
+            return {
+                "status": "error",
+                "error_code": "no_template_match",
+                "details": query,
+            }
+
+        template_name = query["template_name"]
+        tier = query.get("tier", "xianfeng")
+        variables = {**query.get("variables", {}), **kwargs}
+
+        files = self._engine.render_project(template_name, tier=tier, **variables)
+
+        _emit_gan_ying(
+            "geneseed.render_project",
+            {
+                "template": template_name,
+                "tier": tier,
+                "file_count": len(files),
+            },
+        )
+
+        return {
+            "status": "success",
+            "template_name": template_name,
+            "tier": tier,
+            "files": files,
+            "file_count": len(files),
+            "variables": variables,
+        }
+
+    def record_outcome(
+        self, template_name: str, tier: str, success: bool, confidence: float = 1.0
+    ) -> dict[str, Any]:
+        """Record a render outcome for the success-rate feedback loop (Phase 3).
+
+        Uses exponential moving average: rate = (1-α)*old + α*new
+        Auto-deprecates templates that fall below _DEPRECATION_THRESHOLD.
+        """
+        with self._lock:
+            if template_name not in self._usage_stats:
+                self._usage_stats[template_name] = {
+                    "render_count": 0,
+                    "tiers": {},
+                    "last_render": "",
+                    "success_rate": 1.0,
+                    "outcomes": 0,
+                }
+            stats = self._usage_stats[template_name]
+            stats["outcomes"] = stats.get("outcomes", 0) + 1
+            old_rate = stats.get("success_rate", 1.0)
+            new_obs = 1.0 if success else 0.0
+            new_rate = (1 - _EMA_ALPHA) * old_rate + _EMA_ALPHA * new_obs
+            stats["success_rate"] = new_rate
+
+            # Update template's success_rate field
+            template = self._engine.get_template(template_name)
+            if template:
+                template.success_rate = new_rate
+                # Auto-deprecate
+                if new_rate < _DEPRECATION_THRESHOLD and not template.deprecated:
+                    template.deprecated = True
+                    _emit_gan_ying(
+                        "geneseed.deprecated",
+                        {"template": template_name, "success_rate": new_rate},
+                    )
+                    logger.warning(
+                        "Template %s auto-deprecated (success_rate=%.2f)",
+                        template_name,
+                        new_rate,
+                    )
+                # Auto-un-deprecate if it recovers
+                elif new_rate >= _DEPRECATION_THRESHOLD and template.deprecated:
+                    template.deprecated = False
+                    logger.info(
+                        "Template %s recovered from deprecation (success_rate=%.2f)",
+                        template_name,
+                        new_rate,
+                    )
+
+            self._save_usage_stats()
+
+        return {
+            "template": template_name,
+            "success_rate": new_rate,
+            "deprecated": template.deprecated if template else False,
+        }
+
+    def sign_template(self, name: str) -> dict[str, Any]:
+        """Sign a template using AuditSigner (Phase 5)."""
+        from .engine import _sign_template
+
+        template = self._engine.get_template(name)
+        if template is None:
+            return {"status": "error", "error_code": "template_not_found"}
+
+        _sign_template(template)
+
+        _emit_gan_ying(
+            "geneseed.signed",
+            {"template": name, "content_hash": template.content_hash},
+        )
+
+        return {
+            "status": "success",
+            "template": name,
+            "content_hash": template.content_hash,
+            "signed": bool(template.signature_key),
+        }
+
+    def _get_suggestions(self, query: dict[str, Any]) -> list[dict[str, Any]]:
+        """Get success-rate-weighted template suggestions for ambiguous queries (Phase 3)."""
+        keywords = set(query.get("keywords", []))
+        all_templates = self._engine.list_templates()
+        scored: list[tuple[float, dict[str, Any]]] = []
+
+        for t in all_templates:
+            if t.get("deprecated"):
+                continue
+            # Score by tag overlap with keywords
+            tags = set(t.get("tags", []))
+            overlap = len(keywords & tags)
+            if overlap > 0:
+                score = t.get("success_rate", 1.0) * overlap
+                scored.append((score, t))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [
+            {"name": t["name"], "success_rate": t.get("success_rate", 1.0), "tags": t.get("tags", [])}
+            for _, t in scored[:5]
+        ]
+
+    def _load_usage_stats(self) -> None:
+        """Load usage stats from disk (Phase 3)."""
+        try:
+            from whitemagic.config.paths import WM_ROOT
+
+            stats_path = WM_ROOT / "codegenome" / "usage_stats.json"
+            self._stats_file = stats_path
+            if stats_path.exists():
+                with open(stats_path) as f:
+                    self._usage_stats = json.load(f)
+                # Apply loaded success rates to templates
+                for name, stats in self._usage_stats.items():
+                    template = self._engine.get_template(name)
+                    if template and "success_rate" in stats:
+                        template.success_rate = stats["success_rate"]
+                        if stats["success_rate"] < _DEPRECATION_THRESHOLD:
+                            template.deprecated = True
+        except Exception as e:
+            logger.debug("Usage stats load skipped: %s", e)
+
+    def _save_usage_stats(self) -> None:
+        """Save usage stats to disk (Phase 3)."""
+        if self._stats_file is None:
+            return
+        try:
+            self._stats_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self._stats_file, "w") as f:
+                json.dump(self._usage_stats, f, indent=2)
+        except Exception as e:
+            logger.debug("Usage stats save skipped: %s", e)
 
     def fork(
         self, parent_name: str, new_name: str, body_delta: str = ""

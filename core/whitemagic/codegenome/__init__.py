@@ -6,6 +6,8 @@ Supports variable substitution, tiered variant selection, dependency tracking, a
 """
 
 from .engine import CodeGenomeEngine, CodeTemplate, get_codegenome_engine
+from .polymorphism import PolymorphismEngine
+from .validator import CodeValidator, ValidationResult, get_validator
 from .vault import GeneseedVault, get_geneseed_vault
 from .vibe_parser import VibeParser, get_vibe_parser
 
@@ -13,6 +15,10 @@ __all__ = [
     "CodeGenomeEngine",
     "CodeTemplate",
     "get_codegenome_engine",
+    "PolymorphismEngine",
+    "CodeValidator",
+    "ValidationResult",
+    "get_validator",
     "VibeParser",
     "get_vibe_parser",
     "GeneseedVault",
