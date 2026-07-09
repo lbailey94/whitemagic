@@ -321,7 +321,11 @@ export function MatrixRain() {
           title={enabled ? "Disable matrix rain" : "Enable matrix rain"}
           className="rounded-full border border-border bg-surface/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-dim backdrop-blur-sm transition hover:border-lavender hover:text-lavender"
         >
-          {enabled ? "Rain: ON" : "Rain: OFF"}
+          {enabled ? (
+            <span><span className="font-zh text-[9px] text-dim/50">雨</span> Rain: ON</span>
+          ) : (
+            <span><span className="font-zh text-[9px] text-dim/50">雨</span> Rain: OFF</span>
+          )}
         </button>
         {enabled && (
           <button

@@ -32,7 +32,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
       className="rounded-md border border-border bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-dim transition hover:border-lavender hover:text-lavender"
       aria-label="Copy to clipboard"
     >
-      {copied ? "✓ Copied" : label}
+      {copied ? "✓ 已複製" : label}
     </button>
   );
 }

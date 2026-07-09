@@ -62,7 +62,7 @@ export default function HomePage() {
       <div
         onClick={() => setTriKey((k) => k + 1)}
         className="cursor-pointer transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
-        title="Click to replay"
+        title="點擊重播 · Click to replay"
       >
         {phase === "breathing" ? (
           <BreathingSilhouette className="h-[60vh] w-[60vh] max-w-[520px]" />
@@ -90,6 +90,7 @@ export default function HomePage() {
 
       {/* Install command */}
       <div className="z-10 mt-8 flex flex-col items-center gap-3 px-4">
+        <p className="font-zh text-[10px] text-dim/50">安裝</p>
         <div className="flex items-center gap-2 rounded-lg border border-border-light bg-surface/80 px-4 py-2.5 backdrop-blur-sm">
           <code className="font-mono text-sm text-fg">$ {INSTALL_CMD}</code>
           <CopyButton text={INSTALL_CMD} />
@@ -109,7 +110,9 @@ export default function HomePage() {
       </div>
 
       {/* Agent surfaces — minimal links for crawlers/agents */}
-      <div className="z-10 mt-12 flex flex-wrap items-center justify-center gap-3 px-4">
+      <div className="z-10 mt-12 flex flex-col items-center gap-2 px-4">
+        <p className="font-zh text-[10px] text-dim/40">機器可讀接口</p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
         {AGENT_SURFACES.map((s) => (
           <a
             key={s.path}
@@ -119,6 +122,7 @@ export default function HomePage() {
             {s.label}
           </a>
         ))}
+        </div>
       </div>
 
       {/* Theme toggle — bottom right */}

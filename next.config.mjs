@@ -1,4 +1,3 @@
-import createMDX from "@next/mdx";
 import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
@@ -70,31 +69,13 @@ const withPWA = withPWAInit({
           },
         },
       },
-      {
-        urlPattern: /\/wasm\/.*\.(?:wasm|js)$/i,
-        handler: "CacheFirst",
-        options: {
-          cacheName: "wasm-modules",
-          expiration: {
-            maxEntries: 10,
-            maxAgeSeconds: 60 * 60 * 24 * 365,
-          },
-          cacheableResponse: {
-            statuses: [0, 200],
-          },
-        },
-      },
     ],
   },
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  pageExtensions: ["ts", "tsx", "md", "mdx"],
   outputFileTracingRoot: process.cwd(),
-  experimental: {
-    mdxRs: true,
-  },
   async headers() {
     if (process.env.NEXT_PUBLIC_WIP_MODE !== "1") {
       return [];
@@ -114,13 +95,8 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    return [
-      // All machine-readable surfaces are static files in public/.
-      // No API route rewrites needed.
-    ];
+    return [];
   },
 };
 
-const withMDX = createMDX({});
-
-export default withPWA(withMDX(nextConfig));
+export default withPWA(nextConfig);
