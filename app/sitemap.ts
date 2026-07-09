@@ -4,6 +4,7 @@ const BASE_URL = "https://whitemagic.dev";
 
 const ROUTES = [
   { path: "/", priority: 1.0, changeFrequency: "weekly" as const },
+  { path: "/app", priority: 0.9, changeFrequency: "weekly" as const },
   // Machine-readable agent surfaces
   { path: "/llms.txt", priority: 0.9, changeFrequency: "weekly" as const },
   { path: "/.well-known/agent.json", priority: 0.9, changeFrequency: "weekly" as const },

@@ -1,8 +1,8 @@
 {
-  "name": "WhiteMagic — Cognitive Operating System",
+  "name": "WhiteMagic — Local Memory OS",
   "short_name": "WhiteMagic",
-  "description": "Cognitive operating system for AI agents — 614 callable tools, 10-galaxy holographic memory, Dharma governance, citta stream. MIT-licensed, local-first.",
-  "start_url": "/",
+  "description": "Local-first cognitive OS running entirely in your browser via WASM. Memory, governance, karma, and self-introspection — zero network calls.",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#7c3aed",
@@ -49,23 +49,21 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
+  "screenshots": [],
+  "shortcuts": [
     {
-      "src": "/screenshots/dashboard.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "WhiteMagic Dashboard"
+      "name": "Local App",
+      "short_name": "App",
+      "url": "/app",
+      "description": "Open the local WASM-powered memory OS"
     },
     {
-      "src": "/screenshots/memory-graph.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Memory Graph Visualization"
+      "name": "Homepage",
+      "short_name": "Home",
+      "url": "/",
+      "description": "WhiteMagic landing page"
     }
   ],
-  "shortcuts": [],
   "related_applications": [
     {
       "platform": "webapp",

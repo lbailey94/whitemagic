@@ -125,6 +125,20 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* PWA install link */}
+      <div className="z-10 mt-8 flex flex-col items-center gap-2">
+        <a
+          href="/app"
+          className="rounded-lg border border-lavender bg-lavender/10 px-6 py-2.5 font-mono text-xs uppercase tracking-wider text-lavender transition hover:bg-lavender/20"
+        >
+          <span className="font-zh text-[10px] text-lavender/60 mr-2">本地操作系統</span>
+          Launch Local OS →
+        </a>
+        <p className="font-mono text-[9px] text-dim/40 max-w-xs text-center">
+          WASM-powered memory, governance, karma — runs entirely in your browser
+        </p>
+      </div>
+
       {/* Theme toggle — bottom right */}
       <div className="fixed bottom-4 right-4 z-50">
         <ThemeToggle />
