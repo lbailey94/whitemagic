@@ -7,8 +7,8 @@ routing research (tianpan.co, CallSphere, Zylos Research 2026).
 Classifies prompts along multiple dimensions to determine the minimum tier
 that can handle the request:
   Tier 0: Edge rules (cache + Rust PatternEngine) — <1ms
-  Tier 1: Local small model (Ollama 1.5B-7B quantized) — 50-500ms
-  Tier 2: Local large model (BitNet/Ollama 8B+) — 1-10s
+  Tier 1: Local small model (llama.cpp 1.5B-7B quantized) — 50-500ms
+  Tier 2: Local large model (BitNet/llama.cpp 8B+) — 1-10s
   Tier 3: Cloud API (frontier model) — 2-30s
 
 Routing signals:
@@ -36,8 +36,8 @@ class InferenceTier(IntEnum):
 
     EDGE_RULES = 0  # Pattern matching, cache — sub-millisecond
     LOCAL_LLAMA_CPP = 1  # llama.cpp small model (continuous) — 10-100ms
-    LOCAL_SMALL = 2  # Ollama 1.5B-7B quantized — 50-500ms
-    LOCAL_LARGE = 3  # BitNet/Ollama 8B+ — 1-10s
+    LOCAL_SMALL = 2  # llama.cpp 1.5B-7B quantized — 50-500ms
+    LOCAL_LARGE = 3  # BitNet/llama.cpp 8B+ — 1-10s
     CLOUD = 4  # Frontier model via API — 2-30s
 
 

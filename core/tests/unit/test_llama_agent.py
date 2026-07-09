@@ -1,12 +1,12 @@
-"""Unit tests for Ollama agent loop — tool call parsing, completion detection, system prompt."""
+"""Unit tests for llama.cpp agent loop — tool call parsing, completion detection, system prompt."""
 
 from unittest.mock import patch
 
-from whitemagic.tools.handlers.ollama_agent import (
+from whitemagic.tools.handlers.llama_agent import (
     _build_system_prompt,
     _check_completion,
     _parse_tool_calls,
-    handle_ollama_agent,
+    handle_llama_agent,
 )
 
 
@@ -117,32 +117,33 @@ class TestBuildSystemPrompt:
         assert "DONE" in prompt
 
 
-class TestHandleOllamaAgent:
+class TestHandleLlamaAgent:
     """Test the main handler function."""
 
     def test_missing_task(self):
-        result = handle_ollama_agent(model="llama3.2", task="")
+        result = handle_llama_agent(model="llama3.2", task="")
         assert result["status"] == "error"
         assert result["error_code"] == "invalid_params"
 
     def test_no_task_key(self):
-        result = handle_ollama_agent(model="llama3.2")
+        result = handle_llama_agent(model="llama3.2")
         assert result["status"] == "error"
         assert result["error_code"] == "invalid_params"
 
-    def test_ollama_unavailable(self):
-        """When Ollama is not running, should return service_unavailable."""
+    def test_llama_cpp_unavailable(self):
+        """When llama-server is not running, should return service_unavailable."""
+        from unittest.mock import MagicMock
+
+        mock_backend = MagicMock()
+        mock_backend.is_available = False
         with (
             patch(
-                "whitemagic.tools.handlers.ollama._require_aiohttp", return_value=True
-            ),
-            patch(
-                "whitemagic.tools.handlers.ollama._ollama_preflight",
-                return_value="connection refused",
+                "whitemagic.inference.llama_cpp.get_llama_cpp_backend",
+                return_value=mock_backend,
             ),
         ):
-            result = handle_ollama_agent(
-                model="llama3.2",
+            result = handle_llama_agent(
+                model="llama-server",
                 task="test task",
             )
         assert result["status"] == "error"

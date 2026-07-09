@@ -20,6 +20,20 @@
 
 export { WhiteMagicClient } from "./client.js";
 export { LocalTransport } from "./local_transport.js";
+export { BrowserEmbedder } from "./browser_embedder.js";
+export {
+  MemoryDecayModel,
+  PatternResonanceDetector,
+  ConstellationMerger,
+  GardenResonanceMatrix,
+} from "./resonance_models.js";
+export type {
+  DecayParams,
+  RetentionResult,
+  ResonantCluster,
+  Constellation,
+  GardenInfo,
+} from "./resonance_models.js";
 export { MemoryClient } from "./memory.js";
 export { sanitizeContext } from "./sanitizer.js";
 export type {

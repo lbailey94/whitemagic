@@ -108,3 +108,131 @@ class LocalEmbedder:
         if vecs is None:
             return []
         return list(vecs)
+
+
+class LlamaCppEmbedder:
+    """Embedding provider using llama-server's /v1/embeddings endpoint.
+
+    Requires llama-server started with --embeddings flag.
+    Dimension depends on the loaded GGUF model (e.g. 384 for bge-small,
+    768 for bge-base, 1024 for bge-large).
+
+    No model download needed — uses the already-running llama-server.
+    """
+
+    def __init__(self, model_name: str = "llama-server") -> None:
+        self.model_name = model_name
+        self._available = False
+        self._dim: int | None = None
+        self._embed_url: str = ""
+        self._try_connect()
+
+    def _try_connect(self) -> None:
+        """Check if llama-server supports embeddings.
+
+        Checks the foreground backend first (port 8080), then falls back
+        to the background model (port 8081) which has --embeddings enabled.
+        """
+        try:
+            import requests
+
+            # 1. Try foreground backend (default port 8080)
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+
+            backend = get_llama_cpp_backend()
+            if backend.is_available:
+                vec = backend.embed("test")
+                if vec and len(vec) > 0:
+                    self._dim = len(vec)
+                    self._available = True
+                    self._embed_url = backend.base_url
+                    logger.info(
+                        "LlamaCppEmbedder connected (dim=%d) via %s",
+                        self._dim,
+                        self._embed_url,
+                    )
+                    return
+
+            # 2. Try background model via DualModelManager (port 8081)
+            from whitemagic.inference.llama_cpp import get_dual_model_manager
+
+            dmm = get_dual_model_manager()
+            if dmm is not None and dmm.background.is_available:
+                bg_url = dmm.background.base_url
+                resp = requests.post(
+                    f"{bg_url}/v1/embeddings",
+                    json={"input": "test", "model": "local"},
+                    timeout=10,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                vec = data.get("data", [{}])[0].get("embedding", [])
+                if vec and len(vec) > 0:
+                    self._dim = len(vec)
+                    self._available = True
+                    self._embed_url = bg_url
+                    logger.info(
+                        "LlamaCppEmbedder connected (dim=%d) via background %s",
+                        self._dim,
+                        bg_url,
+                    )
+                    return
+
+            self._available = False
+        except Exception as e:
+            logger.debug("LlamaCppEmbedder connect failed: %s", e)
+            self._available = False
+
+    @property
+    def is_available(self) -> bool:
+        return self._available
+
+    @property
+    def embedding_dim(self) -> int | None:
+        return self._dim
+
+    def embed(self, texts: str | list[str]) -> np.ndarray | None:
+        """Generate embeddings. Returns numpy array of shape (N, D)."""
+        if not self._available:
+            return None
+
+        import requests as _requests
+
+        if isinstance(texts, str):
+            texts = [texts]
+
+        try:
+            vecs = []
+            for text in texts:
+                resp = _requests.post(
+                    f"{self._embed_url}/v1/embeddings",
+                    json={"input": text, "model": "local"},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                v = data.get("data", [{}])[0].get("embedding", [])
+                if v:
+                    vecs.append(v)
+                else:
+                    return None
+            return np.array(vecs, dtype=np.float32)
+        except Exception as e:
+            logger.error("LlamaCppEmbedder embed failed: %s", e, exc_info=True)
+            return None
+
+    def embed_query(self, query: str) -> np.ndarray | None:
+        """Embed a single query string."""
+        res = self.embed([query])
+        if res is not None and len(res) > 0:
+            return res[0]
+        return None
+
+    def encode(
+        self, sentences: str | list[str], batch_size: int = 256, **kwargs
+    ) -> list[np.ndarray]:
+        """Match SentenceTransformer.encode() interface."""
+        vecs = self.embed(sentences)
+        if vecs is None:
+            return []
+        return list(vecs)

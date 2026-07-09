@@ -18,9 +18,9 @@ class TestLlamaCppBackend:
 
     def test_backend_init_defaults(self):
         from whitemagic.inference.llama_cpp import LlamaCppBackend
-        backend = LlamaCppBackend()
+        backend = LlamaCppBackend(port=19999)  # unused port to avoid false positive
         assert backend._host == "localhost"
-        assert backend._port == 8080
+        assert backend._port == 19999
         assert backend.is_available is False  # no server running
 
     def test_backend_init_custom(self):
@@ -31,25 +31,25 @@ class TestLlamaCppBackend:
 
     def test_backend_complete_not_available(self):
         from whitemagic.inference.llama_cpp import LlamaCppBackend
-        backend = LlamaCppBackend()
+        backend = LlamaCppBackend(port=19999)
         result = backend.complete("test")
         assert "Error" in result
 
     def test_backend_chat_not_available(self):
         from whitemagic.inference.llama_cpp import LlamaCppBackend
-        backend = LlamaCppBackend()
+        backend = LlamaCppBackend(port=19999)
         result = backend.chat([{"role": "user", "content": "hi"}])
         assert "Error" in result
 
     def test_backend_embed_not_available(self):
         from whitemagic.inference.llama_cpp import LlamaCppBackend
-        backend = LlamaCppBackend()
+        backend = LlamaCppBackend(port=19999)
         result = backend.embed("test")
         assert result == []
 
     def test_backend_get_status(self):
         from whitemagic.inference.llama_cpp import LlamaCppBackend
-        backend = LlamaCppBackend()
+        backend = LlamaCppBackend(port=19999)
         status = backend.get_status()
         assert status["available"] is False
 
@@ -68,7 +68,7 @@ class TestLlamaCppConfig:
         config = LlamaCppConfig()
         assert config.host == "localhost"
         assert config.port == 8080
-        assert config.n_ctx == 4096
+        assert config.n_ctx == 8192
 
     def test_config_to_args(self):
         from whitemagic.inference.llama_cpp import LlamaCppConfig
@@ -109,7 +109,7 @@ class TestDualModelManager:
 
     def test_route_inference_no_models(self):
         from whitemagic.inference.llama_cpp import DualModelManager
-        dmm = DualModelManager()
+        dmm = DualModelManager(background_port=19998, foreground_port=19999)
         result = dmm.route_inference("test")
         assert "Error" in result
 
@@ -117,6 +117,47 @@ class TestDualModelManager:
         from whitemagic.inference.llama_cpp import DualModelManager
         dmm = DualModelManager()
         dmm.stop_all()  # should not crash
+
+    def test_get_dual_model_manager_returns_none_without_env(self):
+        import os
+        from whitemagic.inference import llama_cpp as _lc
+        # Save and clear env
+        old_bg = os.environ.pop("WM_LLAMA_BG_MODEL", None)
+        old_fg = os.environ.pop("WM_LLAMA_FG_MODEL", None)
+        _lc._dual_manager = None  # reset singleton
+        try:
+            result = _lc.get_dual_model_manager()
+            assert result is None
+        finally:
+            if old_bg:
+                os.environ["WM_LLAMA_BG_MODEL"] = old_bg
+            if old_fg:
+                os.environ["WM_LLAMA_FG_MODEL"] = old_fg
+            _lc._dual_manager = None  # reset for other tests
+
+    def test_get_dual_model_manager_with_env(self):
+        import os
+        from whitemagic.inference import llama_cpp as _lc
+        old_bg = os.environ.get("WM_LLAMA_BG_MODEL", "")
+        old_fg = os.environ.get("WM_LLAMA_FG_MODEL", "")
+        _lc._dual_manager = None
+        os.environ["WM_LLAMA_BG_MODEL"] = "/models/bg.gguf"
+        os.environ["WM_LLAMA_FG_MODEL"] = "/models/fg.gguf"
+        try:
+            dmm = _lc.get_dual_model_manager()
+            assert dmm is not None
+            assert dmm.background._model_path == "/models/bg.gguf"
+            assert dmm.foreground._model_path == "/models/fg.gguf"
+        finally:
+            if old_bg:
+                os.environ["WM_LLAMA_BG_MODEL"] = old_bg
+            else:
+                os.environ.pop("WM_LLAMA_BG_MODEL", None)
+            if old_fg:
+                os.environ["WM_LLAMA_FG_MODEL"] = old_fg
+            else:
+                os.environ.pop("WM_LLAMA_FG_MODEL", None)
+            _lc._dual_manager = None  # reset for other tests
 
 
 class TestRouterUpdate:

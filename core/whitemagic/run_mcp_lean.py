@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 import threading
 import time
@@ -668,6 +669,51 @@ def _sync_dispatch(
         }
 
 
+# ── Compact response mode ─────────────────────────────────────────────
+# When WM_MCP_COMPACT=1, strip consciousness metadata from responses
+# to reduce token consumption for AI agents by ~90%.
+# The full metadata is still available via WM_MCP_COMPACT=0 (default).
+
+_COMPACT_STRIP_KEYS = frozenset({
+    "_resonance",
+    "_citta_predecessor",
+    "_sensorium",
+    "_garden",
+    "_wm_forged_skill",
+    "_wm_route",
+    "metadata",
+    "metrics",
+    "side_effects",
+    "warnings",
+    "_resonance_context",
+    "predecessor_context",
+})
+
+
+def _compact_response(result: dict[str, Any]) -> dict[str, Any]:
+    """Strip consciousness/resonance metadata and apply JSON compaction.
+
+    Removes the heavyweight _resonance, _sensorium, _citta_predecessor
+    blocks that account for ~80% of response token cost, then applies
+    structural compaction (truncate long strings, limit list items).
+    """
+    if not isinstance(result, dict):
+        return result
+
+    # Strip consciousness metadata
+    out = {k: v for k, v in result.items() if k not in _COMPACT_STRIP_KEYS}
+
+    # Apply structural compaction from compact_response module
+    try:
+        from whitemagic.tools.compact_response import compact
+
+        out = compact(out)
+    except (ImportError, AttributeError):
+        pass
+
+    return out
+
+
 @server.call_tool()
 async def call_tool(
     name: str, arguments: dict[str, Any] | None
@@ -690,6 +736,8 @@ async def call_tool(
         if "args" in args and isinstance(args["args"], dict):
             wm_kwargs["args"] = args["args"]
         result = handle_wm(**wm_kwargs)
+        if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes"):
+            result = _compact_response(result)
         text = _json_dumps(result, indent=2, default=str)
         return [types.TextContent(type="text", text=text)]
 
@@ -724,6 +772,10 @@ async def call_tool(
     except Exception:
         logger.debug("ToolUsageTracker recording skipped", exc_info=True)
 
+    # ── Compact mode: strip consciousness metadata to save tokens ──
+    if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes"):
+        result = _compact_response(result)
+
     text = _json_dumps(result, indent=2, default=str)
     return [types.TextContent(type="text", text=text)]
 
@@ -736,7 +788,7 @@ _WORKFLOW_META: dict[str, str] = {
     "memory_maintenance": "Periodic Data Sea hygiene — sweep, constellations, patterns",
     "ethical_review": "Full ethical governance check — dharma, boundaries, karma, harmony",
     "galaxy_setup": "Create and populate a new galaxy (isolated memory namespace)",
-    "local_ai_chat": "Privacy-first local AI reasoning via Ollama integration",
+    "local_ai_chat": "Privacy-first local AI reasoning via llama.cpp integration",
 }
 
 
@@ -1173,6 +1225,25 @@ async def main_stdio() -> None:
     stdout_task = asyncio.create_task(stdout_writer())
     shutdown_task = asyncio.create_task(shutdown_watcher())
 
+    # ── Start dual-model background (if configured) ──
+    _dual_manager = None
+    try:
+        from whitemagic.inference.llama_cpp import get_dual_model_manager
+
+        _dual_manager = get_dual_model_manager()
+        if _dual_manager is not None:
+            if _dual_manager.start_background():
+                bg_model = _dual_manager.background._model_path or "unknown"
+                print(f"  Dual-model: background started ({bg_model})", file=sys.stderr)
+            else:
+                print("  Dual-model: background failed to start", file=sys.stderr)
+        else:
+            bg_env = os.environ.get("WM_LLAMA_BG_MODEL", "")
+            if bg_env:
+                print(f"  Dual-model: configured but init failed ({bg_env})", file=sys.stderr)
+    except Exception as e:
+        logger.debug("Dual-model init failed: %s", e, exc_info=True)
+
     # ── Start consciousness loop (if enabled) ──
     _consciousness_loop = None
     try:
@@ -1215,6 +1286,12 @@ async def main_stdio() -> None:
                 _consciousness_loop.stop()
             except Exception as e:
                 logger.debug("Consciousness loop stop failed: %s", e)
+        # Stop dual-model
+        if _dual_manager is not None:
+            try:
+                _dual_manager.stop_all()
+            except Exception:
+                pass
         # Persist unified cache for cross-session cache hits
         try:
             from whitemagic.core.cache import get_unified_cache
@@ -1288,6 +1365,21 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     uv_server = uvicorn.Server(config)
 
+    # ── Start dual-model background (if configured) ──
+    _dual_manager = None
+    try:
+        from whitemagic.inference.llama_cpp import get_dual_model_manager
+
+        _dual_manager = get_dual_model_manager()
+        if _dual_manager is not None:
+            if _dual_manager.start_background():
+                bg_model = _dual_manager.background._model_path or "unknown"
+                print(f"  Dual-model: background started ({bg_model})", file=sys.stderr)
+            else:
+                print("  Dual-model: background failed to start", file=sys.stderr)
+    except Exception as e:
+        logger.debug("Dual-model init failed: %s", e, exc_info=True)
+
     # ── Start consciousness loop (if enabled) ──
     _consciousness_loop = None
     try:
@@ -1319,6 +1411,11 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
             if _consciousness_loop is not None:
                 try:
                     _consciousness_loop.stop()
+                except Exception:
+                    pass
+            if _dual_manager is not None:
+                try:
+                    _dual_manager.stop_all()
                 except Exception:
                     pass
 

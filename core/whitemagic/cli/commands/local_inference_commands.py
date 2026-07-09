@@ -18,10 +18,10 @@ __all__ = ["infer_local_query", "infer_local_status"]
 @click.command(name="local-query")
 @click.argument("prompt")
 @click.option(
-    "--backend", type=click.Choice(["bitnet", "ollama", "auto"]), default="auto"
+    "--backend", type=click.Choice(["bitnet", "llama_cpp", "auto"]), default="auto"
 )
 def infer_local_query(prompt: str, backend: str) -> None:
-    """Run local ML inference query (BitNet/Ollama)"""
+    """Run local ML inference query (BitNet/llama.cpp)"""
     from whitemagic.mcp_api_bridge import local_ml_infer
 
     try:

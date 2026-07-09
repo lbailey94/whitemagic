@@ -1,22 +1,22 @@
 # Workflow: Local AI Chat
 
-Use WhiteMagic's Ollama integration for privacy-first local AI reasoning.
+Use WhiteMagic's llama.cpp integration for privacy-first local AI reasoning.
 
 ## Steps
 
 1. **Check available models** — see what's installed locally
    ```
-   gana_roof(tool="ollama.models", args={})
+   gana_roof(tool="llama.cpp.models", args={})
    ```
 
 2. **Start agent loop** — agentic conversation with tool access
    ```
-   gana_roof(tool="ollama.agent", args={"prompt": "<question>", "model": "llama3.2"})
+   gana_roof(tool="llama.cpp.agent", args={"prompt": "<question>", "model": "llama3.2"})
    ```
 
 3. **Direct chat** — simple completion without tool access
    ```
-   gana_roof(tool="ollama.chat", args={"messages": [{"role": "user", "content": "<question>"}]})
+   gana_roof(tool="llama.cpp.chat", args={"messages": [{"role": "user", "content": "<question>"}]})
    ```
 
 4. **Store insights** — save any interesting findings

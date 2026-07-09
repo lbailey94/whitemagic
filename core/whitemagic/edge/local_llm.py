@@ -2,7 +2,7 @@
 """Edge Local LLM (Archived)
 ========================
 
-This module called a locally-running Ollama instance as part of the edge cascade.
+This module called a locally-running llama.cpp instance as part of the edge cascade.
 
 The implementation has been archived and is no longer available.
 """

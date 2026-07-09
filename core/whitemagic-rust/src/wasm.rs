@@ -348,7 +348,7 @@ pub fn wasm_version() -> String {
 // These are compiled into the same WASM binary via the wasm feature flag.
 
 pub use whitemagic_math::holographic_encoder_5d::holographic_encode_single;
-pub use whitemagic_math::holographic_encode_batch;
+pub use whitemagic_math::holographic_encoder_5d::holographic_encode_batch;
 pub use whitemagic_math::holographic_encoder_5d::Coordinate5D;
 
 // ── Re-exports from whitemagic-math (text embeddings) ───────────────────
@@ -1520,16 +1520,16 @@ mod tests {
     #[test]
     fn test_hrr_bind_unbind() {
         let engine = HrrEngine::new(64);
-        let a = "[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]";
-        let b = "[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]";
+        let a = format!("[{}]", (0..64).map(|_| "1.0").collect::<Vec<_>>().join(", "));
+        let b = format!("[{}]", (0..64).map(|_| "0.5").collect::<Vec<_>>().join(", "));
 
-        let bound = engine.bind(a, b);
+        let bound = engine.bind(&a, &b);
         assert!(!bound.contains("error"));
 
-        let recovered = engine.unbind(&bound, b);
+        let recovered = engine.unbind(&bound, &b);
         assert!(!recovered.contains("error"));
 
-        let sim = engine.similarity(a, &recovered);
+        let sim = engine.similarity(&a, &recovered);
         assert!(sim > 0.5, "Recovery similarity too low: {}", sim);
     }
 

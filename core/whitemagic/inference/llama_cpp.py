@@ -3,9 +3,9 @@
 
 This module provides a Python interface to llama-server (the llama.cpp
 HTTP server), which offers better performance and memory predictability
-than Ollama for continuous consciousness workloads.
+than llama.cpp for continuous consciousness workloads.
 
-Key advantages over Ollama:
+Key advantages over llama.cpp:
 - Predictable memory (no dynamic quantization swapping)
 - Better throughput for continuous inference (no model loading overhead)
 - Supports speculative decoding with draft models
@@ -37,18 +37,24 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8080
-DEFAULT_TIMEOUT = 120
+DEFAULT_TIMEOUT = 300
 
 
 @dataclass
 class LlamaCppConfig:
-    """Configuration for the llama.cpp backend."""
+    """Configuration for the llama.cpp backend.
 
+    All parameters map directly to llama-server CLI flags.
+    See: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
+    """
+
+    # ── Core ──────────────────────────────────────────────────────────
     model_path: str = ""
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
-    n_ctx: int = 4096
-    n_threads: int | None = None
+    n_ctx: int = 8192
+    n_threads: int | None = None  # generation threads
+    n_threads_batch: int | None = None  # prompt processing threads
     n_gpu_layers: int = 0
     temperature: float = 0.7
     top_p: float = 0.9
@@ -56,6 +62,47 @@ class LlamaCppConfig:
     seed: int = -1
     flash_attn: bool = True
     no_mmap: bool = False
+
+    # ── KV Cache Quantization ────────────────────────────────────────
+    # Reduces memory for KV cache, enabling larger context windows.
+    # q8_0 = 50% reduction (practically lossless)
+    # q4_0 = 75% reduction (minimal quality loss)
+    cache_type_k: str = "q8_0"
+    cache_type_v: str = "q8_0"
+
+    # ── Speculative Decoding ─────────────────────────────────────────
+    # ngram-mod: no draft model needed, uses token history hash pool (~16MB)
+    # draft-simple: uses a separate draft model
+    # draft-eagle3: EAGLE-3 draft model (reads target hidden states)
+    # Comma-separated list to combine: "ngram-mod,draft-simple"
+    spec_type: str = "ngram-mod"
+    draft_model_path: str = ""  # path to draft model GGUF
+    spec_ngram_mod_n_match: int = 24  # ngram lookup length
+    spec_ngram_mod_n_min: int = 48  # min draft tokens
+    spec_ngram_mod_n_max: int = 64  # max draft tokens
+    spec_draft_n_max: int = 16  # max tokens for draft model
+    spec_draft_n_min: int = 5  # min tokens for draft model
+    spec_draft_p_min: float = 0.9  # min probability for greedy drafting
+
+    # ── Parallel Decoding ────────────────────────────────────────────
+    # Number of concurrent server slots for continuous batching.
+    # Citta heartbeats, entity extraction, salience, user chat can all share.
+    parallel: int = 4
+
+    # ── Thread Optimization ──────────────────────────────────────────
+    cpu_strict: bool = False  # strict CPU placement
+    poll: bool = False  # polling mode (reduces latency for continuous workloads)
+
+    # ── Grammar / JSON Schema Constraints ────────────────────────────
+    # Constrains output to valid JSON — zero parsing failures.
+    # Set json_schema at server level for always-on constraints,
+    # or pass response_format per-request via chat API.
+    json_schema: str = ""  # JSON schema string for constrained generation
+    grammar_file: str = ""  # path to GBNF grammar file
+    jinja: bool = True  # enable Jinja templating for tool-use chat templates
+
+    # ── Embeddings ───────────────────────────────────────────────────
+    embeddings: bool = False  # restrict to embedding-only use case
 
     def to_args(self) -> list[str]:
         """Convert to llama-server CLI arguments."""
@@ -66,17 +113,52 @@ class LlamaCppConfig:
             "--temp", str(self.temperature),
             "--top-p", str(self.top_p),
             "--repeat-penalty", str(self.repeat_penalty),
+            "--cache-type-k", self.cache_type_k,
+            "--cache-type-v", self.cache_type_v,
+            "--parallel", str(self.parallel),
         ]
         if self.n_threads:
             args.extend(["--threads", str(self.n_threads)])
+        if self.n_threads_batch:
+            args.extend(["--threads-batch", str(self.n_threads_batch)])
         if self.n_gpu_layers > 0:
             args.extend(["--n-gpu-layers", str(self.n_gpu_layers)])
         if self.flash_attn:
-            args.append("--flash-attn")
+            args.extend(["--flash-attn", "on"])
         if self.no_mmap:
             args.append("--no-mmap")
         if self.seed >= 0:
             args.extend(["--seed", str(self.seed)])
+        if self.cpu_strict:
+            args.append("--cpu-strict")
+        if self.poll:
+            args.append("--poll")
+        if self.jinja:
+            args.append("--jinja")
+        if self.embeddings:
+            args.append("--embeddings")
+
+        # Speculative decoding
+        if self.spec_type and self.spec_type != "none":
+            args.extend(["--spec-type", self.spec_type])
+            if "ngram-mod" in self.spec_type:
+                args.extend([
+                    "--spec-ngram-mod-n-match", str(self.spec_ngram_mod_n_match),
+                    "--spec-ngram-mod-n-min", str(self.spec_ngram_mod_n_min),
+                    "--spec-ngram-mod-n-max", str(self.spec_ngram_mod_n_max),
+                ])
+            if "draft" in self.spec_type and self.draft_model_path:
+                args.extend(["--model-draft", self.draft_model_path])
+                args.extend(["--spec-draft-n-max", str(self.spec_draft_n_max)])
+                args.extend(["--spec-draft-n-min", str(self.spec_draft_n_min)])
+                args.extend(["--spec-draft-p-min", str(self.spec_draft_p_min)])
+
+        # Grammar constraints
+        if self.json_schema:
+            args.extend(["--json-schema", self.json_schema])
+        if self.grammar_file:
+            args.extend(["--grammar-file", self.grammar_file])
+
         return args
 
 
@@ -90,6 +172,7 @@ class LlamaCppBackend:
         port: int = DEFAULT_PORT,
         auto_start: bool = False,
         binary_path: str | None = None,
+        config: LlamaCppConfig | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -98,11 +181,17 @@ class LlamaCppBackend:
         self._binary_path = binary_path or os.environ.get("WM_LLAMA_SERVER", "llama-server")
         self._process: subprocess.Popen | None = None
         self._available = False
-        self._config = LlamaCppConfig(
-            model_path=self._model_path,
-            host=host,
-            port=port,
-        )
+        if config:
+            self._config = config
+            self._config.model_path = self._model_path
+            self._config.host = host
+            self._config.port = port
+        else:
+            self._config = LlamaCppConfig(
+                model_path=self._model_path,
+                host=host,
+                port=port,
+            )
 
         # Check if server is already running
         self._check_availability()
@@ -141,15 +230,15 @@ class LlamaCppBackend:
                 stderr=subprocess.PIPE,
                 env={**os.environ, "LLAMA_LOG_PREFIX": "0"},
             )
-            # Wait for server to be ready
-            for _ in range(30):
+            # Wait for server to be ready (up to 120s for large models from SD card)
+            for _ in range(240):
                 time.sleep(0.5)
                 self._check_availability()
                 if self._available:
                     logger.info("llama-server started (PID %d)", self._process.pid)
                     return True
 
-            logger.error("llama-server failed to start within 15s")
+            logger.error("llama-server failed to start within 120s")
             self.stop_server()
             return False
         except Exception as e:
@@ -186,8 +275,20 @@ class LlamaCppBackend:
         temperature: float | None = None,
         stop: list[str] | None = None,
         stream: bool = False,
+        json_schema: str | None = None,
+        grammar: str | None = None,
     ) -> str:
-        """Generate a completion."""
+        """Generate a completion.
+
+        Args:
+            prompt: The prompt text.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature override.
+            stop: Stop sequences.
+            stream: Whether to stream the response.
+            json_schema: JSON schema string for constrained output.
+            grammar: GBNF grammar string for constrained output.
+        """
         if not self.is_available:
             return "Error: llama-server not available. Start with start_server()."
 
@@ -201,6 +302,14 @@ class LlamaCppBackend:
         }
         if stop:
             payload["stop"] = stop
+        if json_schema:
+            # llama-server expects json_schema as a JSON object, not a string
+            if isinstance(json_schema, str):
+                payload["json_schema"] = json.loads(json_schema)
+            else:
+                payload["json_schema"] = json_schema
+        if grammar:
+            payload["grammar"] = grammar
 
         try:
             start = time.time()
@@ -238,17 +347,32 @@ class LlamaCppBackend:
         messages: list[dict[str, str]],
         max_tokens: int = 512,
         temperature: float | None = None,
+        response_format: dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> str:
-        """Chat completion using OpenAI-compatible endpoint."""
+        """Chat completion using OpenAI-compatible endpoint.
+
+        Args:
+            messages: List of {role, content} message objects.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature override.
+            response_format: JSON schema constraint, e.g.
+                {"type": "json_object", "schema": {...}}
+            tools: List of tool definitions for function calling.
+        """
         if not self.is_available:
             return "Error: llama-server not available."
 
-        payload = {
+        payload: dict[str, Any] = {
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature if temperature is not None else self._config.temperature,
             "stream": False,
         }
+        if response_format:
+            payload["response_format"] = response_format
+        if tools:
+            payload["tools"] = tools
 
         try:
             resp = requests.post(
@@ -264,7 +388,11 @@ class LlamaCppBackend:
             return f"Error: {e}"
 
     def embed(self, text: str) -> list[float]:
-        """Get embeddings for text."""
+        """Get embeddings for text.
+
+        Uses the native /embedding endpoint (per-token embeddings averaged).
+        Falls back to /v1/embeddings if the model supports pooling.
+        """
         if not self.is_available:
             return []
 
@@ -275,10 +403,30 @@ class LlamaCppBackend:
                 timeout=30,
             )
             resp.raise_for_status()
-            return resp.json().get("embedding", [])
-        except Exception as e:
-            logger.error("llama.cpp embedding failed: %s", e)
+            data = resp.json()
+            if isinstance(data, list) and data:
+                emb = data[0].get("embedding", [])
+                # Per-token embeddings come as list of lists — average them
+                if emb and isinstance(emb[0], list):
+                    import numpy as np
+                    arr = np.array(emb)
+                    return arr.mean(axis=0).tolist()
+                return emb
             return []
+        except Exception:
+            # Fallback to OpenAI-compatible endpoint
+            try:
+                resp = requests.post(
+                    f"{self._base_url}/v1/embeddings",
+                    json={"input": text},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                return data.get("data", [{}])[0].get("embedding", [])
+            except Exception as e:
+                logger.error("llama.cpp embedding failed: %s", e)
+                return []
 
     def tokenize(self, text: str) -> list[int]:
         """Tokenize text."""
@@ -298,23 +446,37 @@ class LlamaCppBackend:
             return []
 
     def get_status(self) -> dict[str, Any]:
-        """Get server status."""
+        """Get server status including tuning parameters."""
         if not self.is_available:
             return {"available": False}
+
+        status: dict[str, Any] = {
+            "available": True,
+            "pid": self._process.pid if self._process else None,
+            "base_url": self._base_url,
+            "model_path": self._model_path,
+            "config": {
+                "n_ctx": self._config.n_ctx,
+                "cache_type_k": self._config.cache_type_k,
+                "cache_type_v": self._config.cache_type_v,
+                "spec_type": self._config.spec_type,
+                "parallel": self._config.parallel,
+                "flash_attn": self._config.flash_attn,
+                "jinja": self._config.jinja,
+            },
+        }
 
         try:
             resp = requests.get(f"{self._base_url}/props", timeout=5)
             if resp.status_code == 200:
                 props = resp.json()
-                return {
-                    "available": True,
-                    "model": props.get("model_path", ""),
-                    "context_size": props.get("default_generation_settings", {}).get("n_ctx", 0),
-                    "pid": self._process.pid if self._process else None,
-                }
+                status["model"] = props.get("model_path", "")
+                status["context_size"] = props.get(
+                    "default_generation_settings", {}
+                ).get("n_ctx", 0)
         except Exception:
             pass
-        return {"available": True, "pid": self._process.pid if self._process else None}
+        return status
 
 
 def _which(binary: str) -> str | None:
@@ -340,14 +502,35 @@ class DualModelManager:
         foreground_model: str = "",
         background_port: int = 8081,
         foreground_port: int = 8080,
+        background_config: LlamaCppConfig | None = None,
+        foreground_config: LlamaCppConfig | None = None,
     ) -> None:
+        bg_cfg = background_config or LlamaCppConfig(
+            n_ctx=4096,
+            cache_type_k="q8_0",
+            cache_type_v="q8_0",
+            parallel=2,
+            spec_type="ngram-mod",
+            temperature=0.3,
+            embeddings=True,
+        )
+        fg_cfg = foreground_config or LlamaCppConfig(
+            n_ctx=8192,
+            cache_type_k="q8_0",
+            cache_type_v="q8_0",
+            parallel=4,
+            spec_type="ngram-mod",
+            jinja=True,
+        )
         self._background = LlamaCppBackend(
             model_path=background_model,
             port=background_port,
+            config=bg_cfg,
         )
         self._foreground = LlamaCppBackend(
             model_path=foreground_model,
             port=foreground_port,
+            config=fg_cfg,
         )
         self._background_started = False
 
@@ -407,6 +590,7 @@ class BinaryManager:
         "/usr/bin/llama-server",
         os.path.expanduser("~/.local/bin/llama-server"),
         os.path.expanduser("~/llama.cpp/build/bin/llama-server"),
+        os.path.expanduser("~/llama.cpp/build/bin/Release/llama-server"),
     ]
 
     @classmethod
@@ -450,11 +634,73 @@ class BinaryManager:
 # ── Singleton ────────────────────────────────────────────────────────
 
 _backend: LlamaCppBackend | None = None
+_dual_manager: DualModelManager | None = None
 
 
 def get_llama_cpp_backend() -> LlamaCppBackend:
-    """Get the global LlamaCppBackend singleton."""
+    """Get the global LlamaCppBackend singleton.
+
+    Auto-discovers model and binary if not explicitly configured.
+    Reads from environment variables:
+        WM_LLAMA_MODEL: path to GGUF model file
+        WM_LLAMA_SERVER: path to llama-server binary
+        WM_LLAMA_HOST: server host (default: localhost)
+        WM_LLAMA_PORT: server port (default: 8080)
+    """
     global _backend
     if _backend is None:
-        _backend = LlamaCppBackend()
+        model = os.environ.get("WM_LLAMA_MODEL", "")
+        binary = os.environ.get("WM_LLAMA_SERVER", "llama-server")
+        host = os.environ.get("WM_LLAMA_HOST", DEFAULT_HOST)
+        port = int(os.environ.get("WM_LLAMA_PORT", str(DEFAULT_PORT)))
+
+        # Auto-discover binary if not in PATH
+        if not _which(binary):
+            found = BinaryManager.find_binary()
+            if found:
+                binary = found
+
+        # Auto-discover model if not set
+        if not model:
+            from whitemagic.interfaces.chat import ModelDiscovery
+            best = ModelDiscovery.best_model()
+            if best and best.backend == "llama_cpp":
+                model = best.path
+
+        _backend = LlamaCppBackend(
+            model_path=model,
+            host=host,
+            port=port,
+            binary_path=binary,
+        )
     return _backend
+
+
+def get_dual_model_manager() -> DualModelManager | None:
+    """Get the global DualModelManager singleton.
+
+    Returns None if dual-model is not configured (no background model path set).
+
+    Reads from environment variables:
+        WM_LLAMA_BG_MODEL: path to background (small) GGUF model
+        WM_LLAMA_FG_MODEL: path to foreground (large) GGUF model
+        WM_LLAMA_BG_PORT: background server port (default: 8081)
+        WM_LLAMA_FG_PORT: foreground server port (default: 8080)
+    """
+    global _dual_manager
+    if _dual_manager is None:
+        bg_model = os.environ.get("WM_LLAMA_BG_MODEL", "")
+        fg_model = os.environ.get("WM_LLAMA_FG_MODEL", "")
+        bg_port = int(os.environ.get("WM_LLAMA_BG_PORT", "8081"))
+        fg_port = int(os.environ.get("WM_LLAMA_FG_PORT", str(DEFAULT_PORT)))
+
+        if not bg_model and not fg_model:
+            return None
+
+        _dual_manager = DualModelManager(
+            background_model=bg_model,
+            foreground_model=fg_model,
+            background_port=bg_port,
+            foreground_port=fg_port,
+        )
+    return _dual_manager

@@ -393,9 +393,9 @@ class EdgeInference:
                 confidence=0.9,
             ),
             CompiledRule(
-                id="ollama",
-                pattern="ollama|local llm|run locally",
-                response="Ollama provides local LLM inference. Install: curl -fsSL https://ollama.com/install.sh | sh",
+                id="llama_cpp",
+                pattern="llama.cpp|local llm|run locally",
+                response="llama.cpp provides local LLM inference. Install: curl -fsSL https://llama.cpp.com/install.sh | sh",
                 confidence=0.95,
             ),
             CompiledRule(

@@ -1,18 +1,12 @@
 # ruff: noqa: BLE001
-"""Ollama agent handler — autonomous agentic loop with tool calling.
+"""llama.cpp agent handler — autonomous agentic loop with tool calling.
 
 Implements a real iterative tool-calling loop inspired by Sakana Fugu's
 Conductor pattern (ICLR 2026). The local LLM generates responses, parses
 tool-call requests, dispatches WhiteMagic tools via the unified API, and
 feeds results back — iterating until task completion or max iterations.
 
-Supports:
-- Iterative tool calling with JSON-structured requests
-- WhiteMagic tool dispatch via unified_api
-- Memory-augmented context injection
-- Completion detection (model says "DONE" or no more tool calls)
-- Token budget tracking
-- Recursive self-delegation (model can request another agent iteration)
+Uses LlamaCppBackend (llama-server) for inference with full tuning support.
 """
 
 import json
@@ -25,7 +19,6 @@ from whitemagic.tools.handlers.tool_bandit import get_tool_bandit
 
 logger = logging.getLogger(__name__)
 
-# Tool call parsing patterns
 _TOOL_CALL_PATTERN = re.compile(
     r"```(?:json)?\s*(\{.*?\})\s*```",
     re.DOTALL,
@@ -37,11 +30,11 @@ _TOOL_CALL_INLINE = re.compile(
 _COMPLETION_MARKERS = {"DONE", "TASK_COMPLETE", "COMPLETE", "FINISHED"}
 
 
-def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
-    """Run an autonomous agentic loop with a local LLM.
+def handle_llama_agent(**kwargs: Any) -> dict[str, Any]:
+    """Run an autonomous agentic loop with a local LLM (llama.cpp).
 
     Args:
-        model: Ollama model name (e.g. "llama3.2")
+        model: Model name (ignored — uses loaded llama-server model)
         task: The task to accomplish
         max_iterations: Maximum loop iterations (default 10)
         system: Optional system prompt override
@@ -53,7 +46,7 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     Returns:
         Result with iteration log, final answer, and tool calls made.
     """
-    model = kwargs.get("model", "llama3.2")
+    model = kwargs.get("model", "llama-server")
     task = kwargs.get("task", "")
     if not task:
         return {
@@ -66,33 +59,16 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
     temperature = float(kwargs.get("temperature", 0.7))
     store_output = kwargs.get("store", True)
 
-    try:
-        from whitemagic.tools.handlers.ollama import (
-            _ollama_preflight,
-            _ollama_url,
-            _require_aiohttp,
-            _run,
-        )
+    from whitemagic.inference.llama_cpp import get_llama_cpp_backend
 
-        _require_aiohttp()
-    except ImportError as exc:
+    backend = get_llama_cpp_backend()
+    if not backend.is_available:
         return {
             "status": "error",
-            "error": str(exc),
-            "error_code": "missing_dependency",
-        }
-
-    preflight_error = _ollama_preflight()
-    if preflight_error:
-        return {
-            "status": "error",
-            "error": preflight_error,
+            "error": "llama-server not available",
             "error_code": "service_unavailable",
-            "ollama_url": _ollama_url(),
         }
 
-    # Build system prompt with tool-calling instructions
-    # Use Thompson sampling bandit to recommend tools
     bandit = get_tool_bandit()
     task_type = bandit.classify_task_type(task)
     available_tools = kwargs.get("available_tools")
@@ -103,7 +79,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         available_tools, recommended, task_type
     )
 
-    # Context injection
     inject = kwargs.get("context", True)
     context_block = ""
     if inject:
@@ -125,9 +100,7 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         logger.info("Agent iteration %d/%d", iteration, max_iterations)
 
         try:
-            from whitemagic.tools.handlers.ollama import _chat
-
-            result = _run(_chat(model, messages, temperature=temperature))
+            response = backend.chat(messages, temperature=temperature)
         except Exception as exc:
             logger.error("Agent iteration %d failed: %s", iteration, exc)
             iterations.append(
@@ -139,21 +112,29 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
             )
             break
 
-        response = result.get("response", "")
-        eval_count = result.get("eval_count", 0)
+        if response.startswith("Error:"):
+            iterations.append(
+                {
+                    "iteration": iteration,
+                    "error": response,
+                    "duration_ms": (time.time() - iter_start) * 1000,
+                }
+            )
+            break
+
+        eval_count = len(response) // 4  # rough token estimate
         total_tokens += eval_count
-        # Token economy: record actual local LLM token usage
+
         try:
             from whitemagic.core.consciousness.token_economy import get_token_tracker
 
             get_token_tracker().record_usage(
-                eval_count, source="local", operation=f"ollama_agent:{model}"
+                eval_count, source="local", operation=f"llama_agent:{model}"
             )
         except (ImportError, AttributeError):
             pass
 
         calls = _parse_tool_calls(response)
-
         is_complete = _check_completion(response, calls)
 
         iter_info: dict[str, Any] = {
@@ -186,7 +167,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
                     }
                 )
 
-                # Feed result back to the model
                 messages.append({"role": "assistant", "content": response})
                 messages.append(
                     {
@@ -202,7 +182,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
             break
 
         if not calls:
-            # No tool calls and not complete — treat as final answer
             final_answer = response
             completed = True
             logger.info(
@@ -214,7 +193,6 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
             messages.append({"role": "assistant", "content": response})
 
     if not final_answer and iterations:
-        # Use last response as final answer
         final_answer = iterations[-1].get("response_preview", "")
 
     stored_id = None
@@ -284,7 +262,7 @@ Be concise and efficient. Use tools when they help, but don't over-use them."""
 def _inject_task_context(task: str) -> str:
     """Inject relevant WhiteMagic memories as context for the task."""
     try:
-        from whitemagic.tools.handlers.ollama import _inject_context
+        from whitemagic.tools.handlers.llama_tools import _inject_context
 
         _, memories = _inject_context(task, strategy="hybrid", max_memories=5)
         if memories:
@@ -300,12 +278,7 @@ def _inject_task_context(task: str) -> str:
 
 
 def _parse_tool_calls(response: str) -> list[dict[str, Any]]:
-    """Parse tool-call requests from model response.
-
-    Supports two formats:
-    1. JSON code blocks: ```json {"tool": "...", "args": {...}} ```
-    2. Inline markers: [TOOL_CALL]{"tool": "...", "args": {...}}[/TOOL_CALL]
-    """
+    """Parse tool-call requests from model response."""
     calls: list[dict[str, Any]] = []
 
     for match in _TOOL_CALL_PATTERN.finditer(response):
@@ -384,8 +357,8 @@ def _store_agent_output(
         memory_id = mem.remember(
             content=content,
             title=f"Agent: {task[:60]}",
-            tags=["agent", "ollama", model, "autonomous"],
-            source="ollama_agent",
+            tags=["agent", "llama_cpp", model, "autonomous"],
+            source="llama_agent",
             metadata={
                 "model": model,
                 "iterations": len(iterations),

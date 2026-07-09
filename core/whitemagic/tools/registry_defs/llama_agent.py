@@ -1,4 +1,4 @@
-"""Ollama tool definitions — Local LLM inference via Ollama.
+"""llama.cpp tool definitions — Local LLM inference via llama-server.
 ==========================================================
 Provides generate, chat, model listing, and agent loop.
 """
@@ -7,8 +7,8 @@ from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(
-        name="ollama.models",
-        description="List available models on the local Ollama server.",
+        name="llama.models",
+        description="List available models on the local llama-server.",
         category=ToolCategory.INFERENCE,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
@@ -18,9 +18,9 @@ TOOLS: list[ToolDefinition] = [
         element="water",
     ),
     ToolDefinition(
-        name="ollama.generate",
+        name="llama.generate",
         description=(
-            "Generate text with a local Ollama model. "
+            "Generate text with a local llama.cpp model. "
             "Supports context injection from WhiteMagic memories and optional "
             "Memory-Augmented Generation (store output as a memory)."
         ),
@@ -29,7 +29,7 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "model": {"type": "string", "description": "Ollama model name"},
+                "model": {"type": "string", "description": "llama.cpp model name"},
                 "prompt": {"type": "string", "description": "Prompt text"},
                 "context": {
                     "type": "boolean",
@@ -51,9 +51,9 @@ TOOLS: list[ToolDefinition] = [
         element="water",
     ),
     ToolDefinition(
-        name="ollama.chat",
+        name="llama.chat",
         description=(
-            "Chat with a local Ollama model using message history. "
+            "Chat with a local llama.cpp model using message history. "
             "Supports context injection and optional memory storage."
         ),
         category=ToolCategory.INFERENCE,
@@ -61,7 +61,7 @@ TOOLS: list[ToolDefinition] = [
         input_schema={
             "type": "object",
             "properties": {
-                "model": {"type": "string", "description": "Ollama model name"},
+                "model": {"type": "string", "description": "llama.cpp model name"},
                 "messages": {
                     "type": "array",
                     "description": "List of {role, content} messages",
@@ -85,9 +85,9 @@ TOOLS: list[ToolDefinition] = [
         element="water",
     ),
     ToolDefinition(
-        name="ollama.agent",
+        name="llama.agent",
         description=(
-            "Run an agentic loop with a local Ollama model that can autonomously "
+            "Run an agentic loop with a local llama.cpp model that can autonomously "
             "call WhiteMagic tools (search, create memories, analyze patterns) to "
             "complete a given task. Injects relevant memories as context and supports "
             "up to 10 tool-call iterations."
@@ -99,7 +99,7 @@ TOOLS: list[ToolDefinition] = [
             "properties": {
                 "model": {
                     "type": "string",
-                    "description": "Ollama model name (e.g., 'llama3.2', 'phi4', 'qwen2.5')",
+                    "description": "llama.cpp model name (e.g., 'llama3.2', 'phi4', 'qwen2.5')",
                 },
                 "task": {
                     "type": "string",

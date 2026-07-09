@@ -1,7 +1,7 @@
 # ruff: noqa: BLE001
 """Local Model / Inference Bridge (Group A — resurfaced from archive).
 
-Whitemagic previously included *embedded* local model inference (Ollama/BitNet/etc).
+Whitemagic previously included *embedded* local model inference (llama.cpp/BitNet/etc).
 The current direction is to keep Whitemagic model-agnostic and expose capabilities
 via MCP/REST so *external* models (local or cloud) can use Whitemagic as a memory
 and cognition substrate.

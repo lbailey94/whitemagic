@@ -8,8 +8,8 @@ cheapest, fastest, most appropriate tier that can handle it.
 Architecture:
     Prompt → ComplexityClassifier → Route Decision
                                         ├─ Tier 0: Edge rules (cache + Rust PatternEngine)
-                                        ├─ Tier 1: Local small model (Ollama 1.5B-7B)
-                                        ├─ Tier 2: Local large model (BitNet/Ollama 8B+)
+                                        ├─ Tier 1: Local llama.cpp (DualModelManager background/foreground)
+                                        ├─ Tier 2: Local large model (BitNet/llama-server 8B+)
                                         └─ Tier 3: Cloud API (frontier model)
 
     With confidence cascading: if Tier N output confidence < threshold,
@@ -17,8 +17,9 @@ Architecture:
 
 Integration points:
     - EdgeInference (edge/inference.py): Tier 0 handler
-    - LocalLLM (inference/local_llm.py): Tier 1-2 handler
-    - Ollama handlers (tools/handlers/ollama.py): Tier 1-2 MCP interface
+    - LlamaCppBackend (inference/llama_cpp.py): Tier 1-2 handler
+    - DualModelManager (inference/llama_cpp.py): Background/foreground routing
+    - llama_tools handlers (tools/handlers/llama_tools.py): MCP interface (delegates to llama.cpp)
     - BitNet bridge (inference/bitnet_bridge.py): Tier 2 handler
     - Cloud API: Tier 3 (user-provided API key)
 """
@@ -551,7 +552,7 @@ def _edge_rules_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
-    """Default Tier 1 handler — uses Ollama with a small model."""
+    """Default Tier 1 handler — uses llama.cpp with a small model."""
     try:
         from whitemagic.inference.local_llm import LocalLLM
 
@@ -560,7 +561,7 @@ def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
             return {
                 "answer": "",
                 "confidence": 0.0,
-                "metadata": {"error": "ollama_unavailable"},
+                "metadata": {"error": "llama_unavailable"},
             }
 
         max_tokens = kwargs.get("max_tokens", 256)
@@ -580,11 +581,11 @@ def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
-    """Default Tier 2 handler — uses Ollama with a larger model or BitNet."""
+    """Default Tier 2 handler — uses llama.cpp with a larger model or BitNet."""
     try:
         from whitemagic.inference.local_llm import LocalLLM
 
-        llm = LocalLLM(model="llama3.1:8b")
+        llm = LocalLLM()  # Uses WM_LLAMA_MODEL env var or auto-discovery
         if not llm.is_available:
             # Try BitNet as fallback
             try:
@@ -641,10 +642,41 @@ _router: InferenceRouter | None = None
 
 
 def _llama_cpp_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
-    """Default Tier 1 handler — uses llama.cpp backend (continuous background model)."""
-    try:
-        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+    """Default Tier 1 handler — uses llama.cpp backend.
 
+    When DualModelManager is configured (WM_LLAMA_BG_MODEL set), routes
+    background tasks to the small continuous model and foreground tasks
+    to the large on-demand model. Falls back to single backend otherwise.
+    """
+    try:
+        from whitemagic.inference.llama_cpp import (
+            get_dual_model_manager,
+            get_llama_cpp_backend,
+        )
+
+        max_tokens = kwargs.get("max_tokens", 128)
+        is_background = kwargs.get("is_background", False)
+
+        # Try dual-model first
+        dmm = get_dual_model_manager()
+        if dmm is not None:
+            answer = dmm.route_inference(prompt, is_background=is_background)
+            if not answer.startswith("Error"):
+                model_path = (
+                    dmm.background._model_path if is_background
+                    else dmm.foreground._model_path
+                )
+                return {
+                    "answer": answer,
+                    "confidence": 0.7,
+                    "metadata": {
+                        "backend": "llama_cpp_dual",
+                        "model": model_path,
+                        "tier": "background" if is_background else "foreground",
+                    },
+                }
+
+        # Fallback to single backend
         backend = get_llama_cpp_backend()
         if not backend.is_available:
             return {
@@ -653,7 +685,6 @@ def _llama_cpp_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
                 "metadata": {"error": "llama_cpp_unavailable"},
             }
 
-        max_tokens = kwargs.get("max_tokens", 128)
         answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.3)
         if answer.startswith("Error"):
             return {"answer": "", "confidence": 0.0, "metadata": {"error": answer}}

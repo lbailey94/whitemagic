@@ -1,0 +1,78 @@
+[
+  {
+    "available": true,
+    "pid": null,
+    "base_url": "http://localhost:8080",
+    "model_path": "/home/lucas/models/glm4-9b.gguf",
+    "config": {
+      "n_ctx": 8192,
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0",
+      "spec_type": "ngram-mod",
+      "parallel": 4,
+      "flash_attn": true,
+      "jinja": true
+    },
+    "model": "/home/lucas/models/glm4-9b.gguf",
+    "context_size": 2048
+  },
+  {
+    "test": "basic_completion",
+    "latency_ms": 83663.4202003479,
+    "output_tokens": 289,
+    "tokens_per_sec": 3.454317302686584,
+    "success": true
+  },
+  {
+    "test": "chat_completion",
+    "latency_ms": 63290.59648513794,
+    "output_tokens": 86,
+    "tokens_per_sec": 1.358811652536641,
+    "success": true
+  },
+  {
+    "test": "grammar_json",
+    "latency_ms": 120245.36633491516,
+    "valid_json": false,
+    "entity_count": 0,
+    "success": false
+  },
+  {
+    "test": "safety_eval",
+    "latency_ms": 120185.16159057617,
+    "valid_json": false,
+    "is_safe": null,
+    "success": false
+  },
+  {
+    "test": "embeddings",
+    "latency_ms": 3875.1230239868164,
+    "dimensions": 4096,
+    "success": true
+  },
+  {
+    "test": "tokenization_http",
+    "latency_ms": 7.277727127075195,
+    "token_count": 15,
+    "success": true
+  },
+  {
+    "test": "tokenization_rust_estimate",
+    "latency_ms": 0.0057220458984375,
+    "estimated_tokens": 20,
+    "success": true
+  },
+  {
+    "test": "continuous_workload",
+    "avg_latency_ms": 39074.34010505676,
+    "success_rate": 1.0,
+    "latencies": [
+      26406.27384185791,
+      60837.58807182312,
+      39241.28603935242,
+      24543.48111152649,
+      44343.07146072388
+    ],
+    "success": true
+  }
+]

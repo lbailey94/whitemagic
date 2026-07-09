@@ -17,14 +17,15 @@ from ..core.async_layer import batch_process, gather_with_concurrency
 
 logger = logging.getLogger(__name__)
 
-# Tier → Ollama model mapping (configurable via env)
+# Tier → model mapping (configurable via env, defaults to WM_LLAMA_MODEL)
 # Xianfeng (vanguard): fast, lightweight model for reconnaissance
 # Wei Wuzu (martial): balanced model for complex logic
 # Huben (tiger): heavy model for critical reasoning
+_DEFAULT_MODEL = os.environ.get("WM_LLAMA_MODEL", "")
 _TIER_MODELS: dict[str, str] = {
-    "xianfeng": os.environ.get("WM_XIANFENG_MODEL", "qwen2.5:3b"),
-    "wei_wuzu": os.environ.get("WM_WEIWUZU_MODEL", "qwen2.5:7b"),
-    "huben": os.environ.get("WM_HUBEN_MODEL", "qwen2.5:7b"),
+    "xianfeng": os.environ.get("WM_XIANFENG_MODEL", _DEFAULT_MODEL),
+    "wei_wuzu": os.environ.get("WM_WEIWUZU_MODEL", _DEFAULT_MODEL),
+    "huben": os.environ.get("WM_HUBEN_MODEL", _DEFAULT_MODEL),
 }
 
 # Strategy → system prompt suffix for diverse LLM reasoning
@@ -520,14 +521,14 @@ class AsyncThoughtCloneArmy:
     ) -> AsyncThoughtPath:
         """Single clone's thought process.
 
-        Calls Ollama LLM when available for real reasoning.
-        Falls back to simulation when Ollama is not running.
+        Calls llama.cpp LLM when available for real reasoning.
+        Falls back to simulation when llama.cpp is not running.
         """
         async with self.semaphore:
             start_time = datetime.now()
 
             try:
-                # Attempt real LLM call via Ollama
+                # Attempt real LLM call via llama.cpp
                 content, tokens, llm_used = await self._llm_think(
                     prompt,
                     strategy,
@@ -563,6 +564,7 @@ class AsyncThoughtCloneArmy:
                         "timestamp": datetime.now().isoformat(),
                         "prompt_length": len(prompt),
                         "llm_used": llm_used,
+                        "tier": tier_hint,
                         "model": _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"])
                         if llm_used
                         else None,
@@ -589,14 +591,24 @@ class AsyncThoughtCloneArmy:
         clone_id: int,
         tier_hint: str,
     ) -> tuple[str, int, bool]:
-        """Call Ollama LLM for real reasoning. Returns (content, tokens, used_llm)."""
+        """Call llama.cpp LLM for real reasoning. Returns (content, tokens, used_llm).
+
+        Tier routing:
+        - xianfeng (vanguard): background model (fast, continuous) — max 256 tokens
+        - wei_wuzu (martial): foreground model (balanced) — max 512 tokens
+        - huben (tiger): foreground model (heavy) — max 1024 tokens
+        """
         try:
-            from whitemagic.tools.handlers.ollama import _generate, _ollama_preflight
+            from whitemagic.inference.llama_cpp import (
+                get_dual_model_manager,
+                get_llama_cpp_backend,
+            )
 
-            if _ollama_preflight() is not None:
-                return "", 0, False
+            # Tier-specific settings
+            is_background = tier_hint == "xianfeng"
+            tier_max_tokens = {"xianfeng": 256, "wei_wuzu": 512, "huben": 1024}
+            max_tokens = tier_max_tokens.get(tier_hint, 512)
 
-            model = _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"])
             strategy_guidance = _STRATEGY_PROMPTS.get(
                 strategy.split("_")[-1] if "_" in strategy else strategy,
                 _STRATEGY_PROMPTS.get(
@@ -604,11 +616,34 @@ class AsyncThoughtCloneArmy:
                 ),
             )
             system = f"You are clone {clone_id} in a thought clone army. {strategy_guidance} Be concise."
-            result = await _generate(model, prompt, system=system)
-            content = result.get("response", "")
-            if not content:
+            full_prompt = f"{system}\n\n{prompt}" if system else prompt
+
+            # Try dual-model routing first
+            dmm = get_dual_model_manager()
+            if dmm is not None:
+                if is_background and dmm.background.is_available:
+                    content = dmm.route_inference(full_prompt, is_background=True)
+                elif dmm.foreground.is_available:
+                    content = dmm.foreground.complete(
+                        full_prompt, max_tokens=max_tokens, temperature=0.7
+                    )
+                elif dmm.background.is_available:
+                    # Fallback to background if foreground not running
+                    content = dmm.route_inference(full_prompt, is_background=True)
+                else:
+                    return "", 0, False
+            else:
+                # Single backend mode
+                backend = get_llama_cpp_backend()
+                if not backend.is_available:
+                    return "", 0, False
+                content = backend.complete(
+                    full_prompt, max_tokens=max_tokens, temperature=0.7
+                )
+
+            if not content or content.startswith("Error:"):
                 return "", 0, False
-            tokens = result.get("eval_count") or len(content.split())
+            tokens = len(content.split())
             return content, tokens, True
         except Exception as e:
             logger.debug("LLM think fallback for clone %s: %s", clone_id, e)

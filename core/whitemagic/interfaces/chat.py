@@ -36,8 +36,8 @@ class ModelInfo:
     path: str
     name: str
     size_mb: float
-    source: str  # "ollama", "lm_studio", "llama_cpp", "manual"
-    backend: str  # "llama_cpp", "ollama"
+    source: str  # "llama_cpp", "lm_studio", "llama_cpp", "manual"
+    backend: str  # "llama_cpp", "llama_cpp"
 
 
 class ModelDiscovery:
@@ -56,16 +56,16 @@ class ModelDiscovery:
     def find_models(cls) -> list[ModelInfo]:
         """Find all available local models."""
         models: list[ModelInfo] = []
-        models.extend(cls._find_ollama_models())
+        models.extend(cls._find_installed_models())
         models.extend(cls._find_gguf_models())
         return models
 
     @classmethod
-    def _find_ollama_models(cls) -> list[ModelInfo]:
-        """Find models via `ollama list`."""
+    def _find_installed_models(cls) -> list[ModelInfo]:
+        """Find models via `llama-server status` (if installed — models are GGUF, usable by llama-server)."""
         try:
             result = subprocess.run(
-                ["ollama", "list"],
+                ["llama.cpp", "list"],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -85,8 +85,8 @@ class ModelDiscovery:
                         path=name,
                         name=name,
                         size_mb=size_mb,
-                        source="ollama",
-                        backend="ollama",
+                        source="llama_cpp_installed",
+                        backend="llama_cpp",
                     )
                 )
             return models
@@ -130,7 +130,7 @@ class ModelDiscovery:
     def best_model(cls) -> ModelInfo | None:
         """Pick the best available model for chat.
 
-        Preference: 1.5B-8B GGUF (sweet spot for CPU), then Ollama models.
+        Preference: 1.5B-8B GGUF (sweet spot for CPU), then llama.cpp models.
         """
         models = cls.find_models()
         if not models:
@@ -144,18 +144,18 @@ class ModelDiscovery:
                 return min(sized, key=lambda m: abs(m.size_mb - 3000))
             return gguf[0]
 
-        # Fall back to Ollama — prefer smaller models
-        ollama = [m for m in models if m.backend == "ollama"]
-        if ollama:
+        # Fall back to installed models — prefer smaller models
+        installed = [m for m in models if m.backend == "llama_cpp"]
+        if installed:
             # Prefer models with "qwen", "llama", "phi", "gemma" in name
             preferred = [
                 m
-                for m in ollama
+                for m in installed
                 if any(k in m.name.lower() for k in ("qwen", "llama", "phi", "gemma"))
             ]
             if preferred:
                 return preferred[0]
-            return ollama[0]
+            return installed[0]
 
         return models[0]
 
@@ -654,15 +654,13 @@ class ChatLoop:
         if model is None:
             print("No local model found. Install one of:")
             print("  - llama.cpp + a GGUF model (e.g., Qwen2.5-3B-Instruct-Q4_K_M.gguf)")
-            print("  - Ollama + a model (e.g., `ollama pull qwen2.5:3b`)")
+            print("  - llama.cpp + a model (e.g., `llama-server --model qwen2.5:3b`)")
             print()
             print("Set WM_LLAMA_MODEL=/path/to/model.gguf or pass --model")
             return False
 
         if model.backend == "llama_cpp":
             return self._init_llama_cpp(model)
-        elif model.backend == "ollama":
-            return self._init_ollama(model)
         return False
 
     def _init_llama_cpp(self, model: ModelInfo) -> bool:
@@ -690,20 +688,21 @@ class ChatLoop:
         print(f"Model loaded: {model.name}")
         return True
 
-    def _init_ollama(self, model: ModelInfo) -> bool:
-        """Initialize Ollama backend via its OpenAI-compatible API."""
+    def _init_llama_server(self, model: ModelInfo) -> bool:
+        """Initialize llama.cpp backend via its OpenAI-compatible API."""
         try:
             import requests
 
-            resp = requests.get("http://localhost:11434/api/tags", timeout=3)
-            if resp.status_code != 200:
-                print("Ollama not running. Start with: ollama serve")
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            backend = get_llama_cpp_backend()
+            if not backend.is_available:
+                print("llama-server not running. Start with: llama-server --model <model>")
                 return False
-            self._backend = _OllamaBackend(model.name)
-            print(f"Model loaded: {model.name} (via Ollama)")
+            self._backend = _LlamaServerBackend(model.name)
+            print(f"Model loaded: {model.name} (via llama-server)")
             return True
         except Exception:
-            print("Ollama not running. Start with: ollama serve")
+            print("llama-server not running. Start with: llama-server")
             return False
 
     def _init_session_recorder(self) -> None:
@@ -976,15 +975,18 @@ class ChatLoop:
         return False
 
 
-# ── Ollama Backend Adapter ───────────────────────────────────────────
+# ── llama.cpp Backend Adapter ───────────────────────────────────────────
 
 
-class _OllamaBackend:
-    """Adapter for Ollama's OpenAI-compatible API."""
+class _LlamaServerBackend:
+    """Adapter for llama-server's OpenAI-compatible API.
+
+    Name kept as _LlamaServerBackend for backward compatibility.
+    """
 
     def __init__(self, model_name: str) -> None:
         self._model = model_name
-        self._base_url = "http://localhost:11434"
+        self._base_url = "http://localhost:8080"
 
     @property
     def is_available(self) -> bool:
@@ -996,26 +998,11 @@ class _OllamaBackend:
         max_tokens: int = 1024,
         temperature: float = 0.7,
     ) -> str:
-        """Chat via Ollama's API."""
-        import requests
-
+        """Chat via llama-server's OpenAI-compatible API."""
         try:
-            resp = requests.post(
-                f"{self._base_url}/api/chat",
-                json={
-                    "model": self._model,
-                    "messages": messages,
-                    "stream": False,
-                    "options": {
-                        "num_predict": max_tokens,
-                        "temperature": temperature,
-                    },
-                },
-                timeout=120,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("message", {}).get("content", "")
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            backend = get_llama_cpp_backend()
+            return backend.chat(messages, temperature=temperature)
         except Exception as e:
             return f"Error: {e}"
 
@@ -1025,30 +1012,16 @@ class _OllamaBackend:
         max_tokens: int = 512,
         temperature: float = 0.7,
     ) -> str:
-        """Completion via Ollama's API."""
-        import requests
-
+        """Completion via llama-server's OpenAI-compatible API."""
         try:
-            resp = requests.post(
-                f"{self._base_url}/api/generate",
-                json={
-                    "model": self._model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "num_predict": max_tokens,
-                        "temperature": temperature,
-                    },
-                },
-                timeout=120,
-            )
-            resp.raise_for_status()
-            return resp.json().get("response", "")
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+            backend = get_llama_cpp_backend()
+            return backend.complete(prompt, max_tokens=max_tokens, temperature=temperature)
         except Exception as e:
             return f"Error: {e}"
 
     def stop_server(self) -> None:
-        pass  # Ollama manages its own lifecycle
+        pass  # llama-server manages its own lifecycle
 
 
 # ── Entry Point ──────────────────────────────────────────────────────

@@ -1,0 +1,18 @@
+[package]
+name = "wm-llama"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "WhiteMagic llama.cpp FFI — zero-HTTP hot paths for tokenization, embeddings, and fast completion"
+
+[lib]
+name = "wm_llama"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+
+[features]
+default = ["pyo3"]
+python = ["pyo3"]
