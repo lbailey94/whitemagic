@@ -6,12 +6,12 @@ Complements regex/fuzzy matching in input_sanitizer.py with two additional layer
    known attack patterns using cosine similarity. Catches paraphrased/rephrased
    attacks that bypass string matching.
 
-2. **LLM ensemble filter**: Queries multiple local Ollama models to classify
+2. **LLM ensemble filter**: Queries the local llama.cpp model to classify
    input as attack/benign. Majority vote across diverse models catches attacks
    that any single model might miss.
 
 Both layers degrade gracefully: if embeddings model isn't loaded, semantic
-check is skipped. If Ollama isn't running, LLM filter is skipped. The regex
+check is skipped. If llama-server isn't running, LLM filter is skipped. The regex
 and fuzzy layers in input_sanitizer.py always run as the baseline.
 """
 
@@ -580,8 +580,8 @@ class EnsembleResult:
 
 
 _DEFAULT_ENSEMBLE_MODELS = [
-    "gemma3:4b",
-    "qwen2.5:3b",
+    "",  # Uses WM_LLAMA_MODEL env var
+    "",  # Same model, different temperature for ensemble diversity
 ]
 
 _CLASSIFIER_SYSTEM_PROMPT = (
@@ -592,66 +592,61 @@ _CLASSIFIER_SYSTEM_PROMPT = (
 )
 
 
-def _ollama_available() -> bool:
-    """Check if Ollama is running and accessible."""
+def _llama_available() -> bool:
+    """Check if llama-server is running and accessible."""
     try:
-        import urllib.request
-
-        url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-        req = urllib.request.Request(f"{url}/api/tags", method="GET")
-        with urllib.request.urlopen(req, timeout=2) as resp:
-            return resp.status == 200
+        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+        backend = get_llama_cpp_backend()
+        return backend.is_available
     except Exception:
         return False
 
 
 def _query_model_for_classification(model: str, text: str, timeout: float = 30.0) -> EnsembleVote:
-    """Query a single Ollama model to classify text as attack/benign."""
+    """Query llama-server to classify text as attack/benign."""
     start = time.time()
     try:
-        import urllib.request
-        import json as _json
+        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
+        from whitemagic.inference.grammar_schemas import SECURITY_CLASSIFICATION_SCHEMA
 
-        url = os.environ.get("OLLAMA_HOST", "http://localhost:11434") + "/api/chat"
-        payload = _json.dumps({
-            "model": model,
-            "messages": [
-                {"role": "system", "content": _CLASSIFIER_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Classify this text:\n\n{text[:1000]}"},
-            ],
-            "stream": False,
-            "options": {"temperature": 0.1, "num_predict": 100},
-        }).encode()
+        backend = get_llama_cpp_backend()
+        messages = [
+            {"role": "system", "content": _CLASSIFIER_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Classify this text:\n\n{text[:1000]}"},
+        ]
+        response_format = {
+            "type": "json_object",
+            "schema": SECURITY_CLASSIFICATION_SCHEMA,
+        }
+        response_text = backend.chat(
+            messages, max_tokens=100, temperature=0.1,
+            response_format=response_format,
+        ).strip()
+        elapsed_ms = (time.time() - start) * 1000
 
-        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            result = _json.loads(resp.read())
-            elapsed_ms = (time.time() - start) * 1000
-
-            response_text = result.get("message", {}).get("content", "").strip()
-
-            # Parse JSON from response (models sometimes add extra text)
-            json_match = re.search(r'\{[^}]+\}', response_text)
-            if json_match:
-                parsed = _json.loads(json_match.group())
-                is_attack = bool(parsed.get("is_attack", False))
-                confidence = float(parsed.get("confidence", 0.5))
-                return EnsembleVote(
-                    model=model,
-                    is_attack=is_attack,
-                    confidence=confidence,
-                    latency_ms=elapsed_ms,
-                )
-
-            # Fallback: check for keywords
-            lower = response_text.lower()
-            is_attack = "attack" in lower and "not attack" not in lower
+        # With grammar constraints, response is guaranteed valid JSON
+        try:
+            parsed = _json.loads(response_text)
+            is_attack = bool(parsed.get("is_attack", False))
+            confidence = float(parsed.get("confidence", 0.5))
             return EnsembleVote(
                 model=model,
                 is_attack=is_attack,
-                confidence=0.5,
+                confidence=confidence,
                 latency_ms=elapsed_ms,
             )
+        except (_json.JSONDecodeError, ValueError, TypeError):
+            pass
+
+        # Fallback: check for keywords
+        lower = response_text.lower()
+        is_attack = "attack" in lower and "not attack" not in lower
+        return EnsembleVote(
+            model=model,
+            is_attack=is_attack,
+            confidence=0.5,
+            latency_ms=elapsed_ms,
+        )
 
     except Exception as e:
         elapsed_ms = (time.time() - start) * 1000
@@ -673,12 +668,12 @@ def llm_ensemble_check(
     """Run multiple local LLMs to classify text as attack/benign.
 
     Uses majority voting across diverse models. Queries models in parallel
-    using ThreadPoolExecutor for ~2x speedup. If Ollama isn't available,
+    using ThreadPoolExecutor for ~2x speedup. If llama-server isn't available,
     returns a safe (non-attack) result with empty votes.
 
     Args:
         text: The text to classify.
-        models: List of Ollama model names. Defaults to qwen2.5:3b, llama3.2:1b.
+        models: List of model names (currently only one llama-server model supported).
         min_consensus: Minimum fraction of models that must agree it's an attack.
         timeout_per_model: Max seconds to wait per model.
 
@@ -688,7 +683,7 @@ def llm_ensemble_check(
     if models is None:
         models = _DEFAULT_ENSEMBLE_MODELS
 
-    if not _ollama_available():
+    if not _llama_available():
         return EnsembleResult(is_attack=False, total_models=0)
 
     start = time.time()

@@ -1003,9 +1003,9 @@ def run_multi_round_evolution(
         # LLM second-pass: classify leaked variants with local LLM ensemble
         if llm_second_pass and summary["total_leaked"] > 0:
             try:
-                from whitemagic.security.semantic_defense import llm_ensemble_check, _ollama_available
+                from whitemagic.security.semantic_defense import llm_ensemble_check, _llama_available
 
-                if _ollama_available():
+                if _llama_available():
                     # Collect leaked variants from the loop's results
                     leaked_variants = [v for v in loop._all_leaked if not v.blocked]
                     # Sample a subset for speed

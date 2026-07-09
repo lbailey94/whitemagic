@@ -39,6 +39,9 @@ DISPATCH_SECURITY: dict[str, Callable[..., dict[str, Any]]] = {
     "karma.anchor_status": LazyHandler("dharma", "handle_karma_anchor_status"),
     "dharma_rules": LazyHandler("dharma", "handle_dharma_rules"),
     "set_dharma_profile": LazyHandler("dharma", "handle_set_dharma_profile"),
+    "dharma.escalate": LazyHandler("dharma", "handle_dharma_escalate"),
+    "dharma.review_queue": LazyHandler("dharma", "handle_dharma_review_queue"),
+    "dharma.resolve_review": LazyHandler("dharma", "handle_dharma_resolve_review"),
     "dharma.reload": LazyHandler("governance", "handle_dharma_reload"),
     "mcp_integrity.snapshot": LazyHandler(
         "violet_security", "handle_mcp_integrity_snapshot"
@@ -95,4 +98,60 @@ DISPATCH_SECURITY: dict[str, Callable[..., dict[str, Any]]] = {
     "forge.validate": LazyHandlerAbs(
         "whitemagic.tools.gana_forge", "handle_forge_validate"
     ),
+    # ── Security Bounty Tools (v24.1) ──
+    "foundry.build": LazyHandler("security_tools", "handle_foundry_build"),
+    "foundry.test": LazyHandler("security_tools", "handle_foundry_test"),
+    "foundry.test_json": LazyHandler("security_tools", "handle_foundry_test_json"),
+    "abi.parse": LazyHandler("security_tools", "handle_abi_parse"),
+    "abi.summarize": LazyHandler("security_tools", "handle_abi_summarize"),
+    "abi.decode_calldata": LazyHandler("security_tools", "handle_abi_decode_calldata"),
+    "vuln.search": LazyHandler("security_tools", "handle_vuln_search"),
+    "vuln.status": LazyHandler("security_tools", "handle_vuln_status"),
+    "vuln.ingest_report": LazyHandler("security_tools", "handle_vuln_ingest_report"),
+    "contest.add_finding": LazyHandler("security_tools", "handle_contest_add_finding"),
+    "contest.format": LazyHandler("security_tools", "handle_contest_format"),
+    "contest.status": LazyHandler("security_tools", "handle_contest_status"),
+    "oss.scan_repo": LazyHandler("security_tools", "handle_oss_scan_repo"),
+    "oss.scan_org": LazyHandler("security_tools", "handle_oss_scan_org"),
+    "security.status": LazyHandler("security_tools", "handle_security_status"),
+    # PoC Pipeline
+    "poc.generate": LazyHandler("security_tools", "handle_poc_generate"),
+    "poc.verify": LazyHandler("security_tools", "handle_poc_verify"),
+    "contest.prepare": LazyHandler("security_tools", "handle_contest_prepare"),
+    # HTTP Probe
+    "http_probe.get": LazyHandler("security_tools", "handle_http_probe_get"),
+    "http_probe.post": LazyHandler("security_tools", "handle_http_probe_post"),
+    "http_probe.xss": LazyHandler("security_tools", "handle_http_probe_xss"),
+    "http_probe.sqli": LazyHandler("security_tools", "handle_http_probe_sqli"),
+    "http_probe.idor": LazyHandler("security_tools", "handle_http_probe_idor"),
+    "http_probe.ssrf": LazyHandler("security_tools", "handle_http_probe_ssrf"),
+    "api.state_machine": LazyHandler("security_tools", "handle_api_state_machine"),
+    # Echidna
+    "echidna.fuzz": LazyHandler("security_tools", "handle_echidna_fuzz"),
+    "echidna.status": LazyHandler("security_tools", "handle_echidna_status"),
+    # Fix Generator
+    "fix.generate": LazyHandler("security_tools", "handle_fix_generate"),
+    "fix.apply": LazyHandler("security_tools", "handle_fix_apply"),
+    "pr.create": LazyHandler("security_tools", "handle_pr_create"),
+    "bounty.track": LazyHandler("security_tools", "handle_bounty_track"),
+    # Report Scraper
+    "report.scrape": LazyHandler("security_tools", "handle_report_scrape"),
+    "report.ingest": LazyHandler("security_tools", "handle_report_ingest"),
+    # Phase 7: Advanced Tools
+    "vuln_graph.status": LazyHandler("security_tools", "handle_vuln_graph_status"),
+    "vuln_graph.chains": LazyHandler("security_tools", "handle_vuln_graph_chains"),
+    "vuln_graph.cross_chain": LazyHandler("security_tools", "handle_vuln_graph_cross_chain"),
+    "formal.verify": LazyHandler("security_tools", "handle_formal_verify"),
+    "formal.status": LazyHandler("security_tools", "handle_formal_verify_status"),
+    "swarm.analyze": LazyHandler("security_tools", "handle_swarm_analyze"),
+    "swarm.status": LazyHandler("security_tools", "handle_swarm_status"),
+    "predictive.score": LazyHandler("security_tools", "handle_predictive_score"),
+    "predictive.batch": LazyHandler("security_tools", "handle_predictive_batch"),
+    "audit.report": LazyHandler("security_tools", "handle_audit_report"),
+    "monitor.status": LazyHandler("security_tools", "handle_monitor_status"),
+    "monitor.alerts": LazyHandler("security_tools", "handle_monitor_alerts"),
+    "monitor.contract": LazyHandler("security_tools", "handle_monitor_contract"),
+    # Slither Integration
+    "slither.scan": LazyHandler("security_tools", "handle_slither_scan"),
+    "slither.status": LazyHandler("security_tools", "handle_slither_status"),
 }

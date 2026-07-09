@@ -2,7 +2,7 @@
 """Model Signing Verification — Edgerunner Violet Security Layer
 ================================================================
 Implements OpenSSF Model Signing (OMS)-compatible verification for
-AI models loaded through Ollama, edge inference, or BitNet paths.
+AI models loaded through llama.cpp, edge inference, or BitNet paths.
 
 Maintains a manifest of known-good model hashes and verifies model
 integrity before allowing inference.  Unsigned or tampered models
@@ -50,7 +50,7 @@ class ModelManifest:
     model_name: str
     sha256: str  # SHA-256 of model weights/file
     trust: str = ModelTrust.UNSIGNED
-    signer: str = ""  # Who signed (e.g., "openssf", "user", "ollama")
+    signer: str = ""  # Who signed (e.g., "openssf", "user", "llama_cpp")
     license: str = ""  # Model license (e.g., "apache-2.0", "llama-community")
     training_disclosure: str = ""  # Training data provenance summary
     safety_profile: str = ""  # Safety evaluation result (e.g., "cyberseceval-4-pass")
@@ -141,7 +141,7 @@ class ModelSigningRegistry:
         """Verify a model against its registered manifest.
 
         Args:
-            model_name: Name of the model (as used in Ollama/edge inference).
+            model_name: Name of the model (as used in llama.cpp/edge inference).
             current_sha256: Optional current hash to verify against manifest.
                            If empty, only checks if model is registered.
         """
