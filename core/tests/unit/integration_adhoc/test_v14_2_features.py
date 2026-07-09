@@ -14,6 +14,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 # ═══════════════════════════════════════════════════════════════
 # 1. JIT Memory Researcher
 # ═══════════════════════════════════════════════════════════════
@@ -118,6 +120,7 @@ class TestJITResearcher(unittest.TestCase):
         self.assertIn("No relevant memories", result)
 
     @patch("whitemagic.core.intelligence.researcher.JITResearcher._search")
+    @pytest.mark.timeout(20)
     def test_research_runs_multiple_rounds(self, mock_search):
         """Research should iterate through rounds."""
         mock_search.return_value = [

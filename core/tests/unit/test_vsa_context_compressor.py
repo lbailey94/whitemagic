@@ -104,15 +104,15 @@ class TestVSAContextCompressor(unittest.TestCase):
         self.assertIn("race", combined)
 
     @patch("whitemagic.ai.vsa_context_compressor.get_hrr_engine")
-    @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
+    @patch("whitemagic.core.memory.embeddings.get_embedding_engine")
     def test_compress_handles_encoding_failure(
         self,
-        mock_embed_cls: MagicMock,
+        mock_embed_getter: MagicMock,
         mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = None  # Encoding fails
-        mock_embed_cls.return_value = mock_engine
+        mock_embed_getter.return_value = mock_engine
 
         mock_hrr = MagicMock()
         mock_hrr_getter.return_value = mock_hrr

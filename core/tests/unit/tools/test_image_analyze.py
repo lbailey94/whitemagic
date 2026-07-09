@@ -123,7 +123,7 @@ class TestImageAnalyzeHandler:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             _make_test_image(tmp.name)
             with patch(
-                "whitemagic.tools.handlers.image_tools._ollama_vision_describe"
+                "whitemagic.tools.handlers.image_tools._llama_vision_describe"
             ) as mock_describe:
                 mock_describe.return_value = ("A white square with test content.", None)
                 result = handle_image_analyze(
@@ -137,7 +137,7 @@ class TestImageAnalyzeHandler:
         assert result["status"] == "success"
         assert result["vision"]["description"] == "A white square with test content."
         assert result["vision"]["model"] == "moondream"
-        assert result["vision"]["method"] == "ollama_vision"
+        assert result["vision"]["method"] == "llama_vision"
         assert result["vision"]["error"] is None
 
     def test_vision_description_failure_is_graceful(self):
@@ -146,9 +146,9 @@ class TestImageAnalyzeHandler:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             _make_test_image(tmp.name)
             with patch(
-                "whitemagic.tools.handlers.image_tools._ollama_vision_describe"
+                "whitemagic.tools.handlers.image_tools._llama_vision_describe"
             ) as mock_describe:
-                mock_describe.return_value = (None, "Ollama unreachable")
+                mock_describe.return_value = (None, "llama.cpp unreachable")
                 result = handle_image_analyze(
                     image_path=tmp.name,
                     extract_text=False,
@@ -159,7 +159,7 @@ class TestImageAnalyzeHandler:
 
         assert result["status"] == "success"
         assert result["vision"]["description"] is None
-        assert result["vision"]["error"] == "Ollama unreachable"
+        assert result["vision"]["error"] == "llama.cpp unreachable"
 
 
 class TestImageAnalyzeRegistry:

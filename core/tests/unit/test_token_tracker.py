@@ -42,8 +42,8 @@ class TestDetermineLocality(unittest.TestCase):
         result = {"resolved_locally": True}
         self.assertEqual(_determine_locality(ctx, result), "edge")
 
-    def test_ollama_is_local_llm(self) -> None:
-        ctx = DispatchContext(tool_name="ollama_chat", kwargs={})
+    def test_llama_cpp_is_local_llm(self) -> None:
+        ctx = DispatchContext(tool_name="llama.chat", kwargs={})
         result = {"status": "success"}
         self.assertEqual(_determine_locality(ctx, result), "local_llm")
 
@@ -113,7 +113,7 @@ class TestTokenTrackerMiddleware(unittest.TestCase):
         mock_gs_getter.return_value = mock_gs
 
         ctx = DispatchContext(
-            tool_name="ollama_chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "What is the version?"},
         )
 

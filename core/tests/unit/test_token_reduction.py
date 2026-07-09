@@ -25,7 +25,7 @@ class TestSemanticCache:
     """Test mw_semantic_cache middleware."""
 
     def test_cacheable_tool_detection(self):
-        assert _is_cacheable_tool("ollama.chat")
+        assert _is_cacheable_tool("llama.chat")
         assert _is_cacheable_tool("think")
         assert _is_cacheable_tool("analyze")
         assert not _is_cacheable_tool("memory.search")
@@ -34,20 +34,20 @@ class TestSemanticCache:
     def test_cache_key_deterministic(self):
         kwargs1 = {"prompt": "What is the meaning of life?"}
         kwargs2 = {"prompt": "What is the meaning of life?"}
-        key1 = _cache_key("ollama.chat", kwargs1)
-        key2 = _cache_key("ollama.chat", kwargs2)
+        key1 = _cache_key("llama.chat", kwargs1)
+        key2 = _cache_key("llama.chat", kwargs2)
         assert key1 == key2
         assert len(key1) == 16
 
     def test_cache_key_differs_by_tool(self):
         kwargs = {"prompt": "What is the meaning of life?"}
-        key1 = _cache_key("ollama.chat", kwargs)
+        key1 = _cache_key("llama.chat", kwargs)
         key2 = _cache_key("think", kwargs)
         assert key1 != key2
 
     def test_cache_key_differs_by_prompt(self):
-        key1 = _cache_key("ollama.chat", {"prompt": "What is 2+2?"})
-        key2 = _cache_key("ollama.chat", {"prompt": "What is 3+3?"})
+        key1 = _cache_key("llama.chat", {"prompt": "What is 2+2?"})
+        key2 = _cache_key("llama.chat", {"prompt": "What is 3+3?"})
         assert key1 != key2
 
     def test_non_cacheable_passes_through(self):
@@ -72,7 +72,7 @@ class TestSemanticCache:
                 return {"status": "success", "result": "42 is the answer"}
 
             ctx = DispatchContext(
-                tool_name="ollama.chat",
+                tool_name="llama.chat",
                 kwargs={"prompt": "What is the meaning of life?"},
             )
 
@@ -88,7 +88,7 @@ class TestSemanticCache:
             from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
 
             cache = QueryCache(cache_file=Path(tmpdir) / "dispatch_query_cache.json")
-            key = _cache_key("ollama.chat", {"prompt": "cached question"})
+            key = _cache_key("llama.chat", {"prompt": "cached question"})
             cache.set(key, "cached answer", 100)
 
             dispatched = False
@@ -99,7 +99,7 @@ class TestSemanticCache:
                 return {"status": "success", "result": "should not see this"}
 
             ctx = DispatchContext(
-                tool_name="ollama.chat",
+                tool_name="llama.chat",
                 kwargs={"prompt": "cached question"},
             )
 
@@ -122,12 +122,12 @@ class TestDraftReview:
     def test_draft_review_candidate_detection(self):
         # Long prompt with inference tool → candidate
         assert _is_draft_review_candidate(
-            "ollama.chat",
+            "llama.chat",
             {"prompt": "x" * 200},
         )
         # Short prompt → not a candidate
         assert not _is_draft_review_candidate(
-            "ollama.chat",
+            "llama.chat",
             {"prompt": "short"},
         )
         # Non-inference tool → not a candidate
@@ -146,7 +146,7 @@ class TestDraftReview:
             return {"status": "success", "result": "ok"}
 
         ctx = DispatchContext(
-            tool_name="ollama.chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "x" * 200, "_draft_review": True},
         )
         result = mw_draft_review(ctx, next_fn)
@@ -170,7 +170,7 @@ class TestDraftReview:
         assert called
 
     def test_draft_review_falls_back_on_import_error(self):
-        """If Ollama handler is unavailable, should fall through to normal dispatch."""
+        """If llama.cpp handler is unavailable, should fall through to normal dispatch."""
         called = False
 
         def next_fn(ctx):
@@ -179,13 +179,13 @@ class TestDraftReview:
             return {"status": "success", "result": "ok"}
 
         ctx = DispatchContext(
-            tool_name="ollama.chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "x" * 200},
         )
 
         with patch(
-            "whitemagic.tools.handlers.ollama.handle_ollama_chat",
-            side_effect=ImportError("no ollama"),
+            "whitemagic.tools.handlers.llama_tools.handle_llama_chat",
+            side_effect=ImportError("no llama.cpp"),
         ):
             result = mw_draft_review(ctx, next_fn)
             assert called  # Fell through to normal dispatch

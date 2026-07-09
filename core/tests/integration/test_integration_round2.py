@@ -541,12 +541,12 @@ class TestTemporalClassification:
 
 
 class TestCircuitBreakerOverrides:
-    def test_ollama_tools_have_custom_config(self):
+    def test_llama_cpp_tools_have_custom_config(self):
         from whitemagic.tools.circuit_breaker import _TOOL_BREAKER_OVERRIDES
 
-        assert "ollama.models" in _TOOL_BREAKER_OVERRIDES
-        assert "ollama.generate" in _TOOL_BREAKER_OVERRIDES
-        cfg = _TOOL_BREAKER_OVERRIDES["ollama.models"]
+        assert "llama.models" in _TOOL_BREAKER_OVERRIDES
+        assert "llama.generate" in _TOOL_BREAKER_OVERRIDES
+        cfg = _TOOL_BREAKER_OVERRIDES["llama.models"]
         assert cfg.failure_threshold == 2
         assert cfg.cooldown_seconds == 1.0  # Reduced from 10s for fast recovery
 
@@ -562,8 +562,8 @@ class TestCircuitBreakerOverrides:
         from whitemagic.tools.circuit_breaker import BreakerRegistry
 
         reg = BreakerRegistry()
-        ollama_breaker = reg.get("ollama.generate")
-        assert ollama_breaker.config.failure_threshold == 2
+        llama_breaker = reg.get("llama.generate")
+        assert llama_breaker.config.failure_threshold == 2
 
         normal_breaker = reg.get("task.list")
         assert normal_breaker.config.failure_threshold == 5  # default

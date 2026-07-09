@@ -45,7 +45,7 @@ class TestClassifyTool:
         assert classify_tool("garden.joy") == "garden"
 
     def test_inference(self):
-        assert classify_tool("ollama.generate") == "inference"
+        assert classify_tool("llama.generate") == "inference"
 
 
 class TestClassifyEffort:

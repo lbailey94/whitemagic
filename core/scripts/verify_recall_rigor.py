@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # Paths
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = REPO_ROOT / "whitemagic/memory/LOCOMO_GALAXY.db"
-DATASET_FILE = REPO_ROOT / "scripts/archaeology_results/longmemeval_s.json"
+DB_PATH = REPO_ROOT / "eval_aux/galaxy/eval_galaxy.db"
+DATASET_FILE = REPO_ROOT / "eval_aux/data/longmemeval_oracle.json"
 
 
 def run_rigor_test(limit=50):
@@ -45,21 +45,37 @@ def run_rigor_test(limit=50):
         found_memories = backend.search(expanded_query, limit=10)
 
         clean_targets = [tid.replace("answer_", "") for tid in target_sessions]
-        found = any(any(tid in m.id for tid in clean_targets) for m in found_memories)
+
+        def _matches(mem):
+            if any(tid in mem.id for tid in clean_targets):
+                return True
+            meta = getattr(mem, "metadata", None) or {}
+            if isinstance(meta, dict):
+                mem_session = meta.get("session_id", "")
+                if mem_session:
+                    for tid in target_sessions:
+                        if tid == mem_session or tid in mem_session:
+                            return True
+            return False
+
+        found = any(_matches(m) for m in found_memories)
 
         if not found:
             # Broad Keyword Sweep
             keywords = " ".join([k for k in golden_answer.split() if len(k) > 3])
             broad_memories = backend.search(keywords, limit=20)
-            found_memories.extend(broad_memories)
+            seen_ids = {m.id for m in found_memories}
+            for m in broad_memories:
+                if m.id not in seen_ids:
+                    found_memories.append(m)
+                    seen_ids.add(m.id)
 
         hits = []
         if found_memories:
-            logger.debug(f"  [DB_DEBUG] Found IDs: {[m.id for m in found_memories]}")
+            logger.debug(f"  [DB_DEBUG] Found IDs: {[m.id for m in found_memories[:10]]}")
 
         for j, mem in enumerate(found_memories):
-            # LoCoMo sessions are ingested as locomo_{session_id}
-            if any(tid in mem.id for tid in clean_targets):
+            if _matches(mem):
                 hits.append(j + 1)
 
         recall_at_1 = 1 if 1 in hits else 0

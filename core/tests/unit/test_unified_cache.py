@@ -229,12 +229,12 @@ class TestSemanticCacheUnifiedIntegration:
         )
 
         cache = UnifiedCacheBridge(max_size=100, persist=False)
-        key = _cache_key("ollama.chat", {"prompt": "test unified cache"})
+        key = _cache_key("llama.chat", {"prompt": "test unified cache"})
         payload = json.dumps(
             {
                 "result": "unified cache answer",
                 "tokens_saved": 42,
-                "tool": "ollama.chat",
+                "tool": "llama.chat",
             }
         )
         cache.set("semantic", key, payload, ttl_seconds=3600)
@@ -247,7 +247,7 @@ class TestSemanticCacheUnifiedIntegration:
             return {"status": "success", "result": "should not see this"}
 
         ctx = DispatchContext(
-            tool_name="ollama.chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "test unified cache"},
         )
 
@@ -272,7 +272,7 @@ class TestSemanticCacheUnifiedIntegration:
             return {"status": "success", "result": "fresh answer"}
 
         ctx = DispatchContext(
-            tool_name="ollama.chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "test cache miss and store"},
         )
 
@@ -282,7 +282,7 @@ class TestSemanticCacheUnifiedIntegration:
             assert result["result"] == "fresh answer"
 
             # Verify it was cached
-            key = _cache_key("ollama.chat", {"prompt": "test cache miss and store"})
+            key = _cache_key("llama.chat", {"prompt": "test cache miss and store"})
             cached = cache.get_json("semantic", key)
             assert cached is not None
             assert cached["result"] == "fresh answer"

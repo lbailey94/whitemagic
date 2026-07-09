@@ -1,11 +1,11 @@
 """
-Tests for new tool families: broker, task distribution, voting, ollama.
+Tests for new tool families: broker, task distribution, voting, llama.cpp.
 
 These tests validate the handler logic and the tool contract integration
-without requiring external services (Redis, Ollama).
+without requiring external services (Redis, llama.cpp).
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
 # ---------------------------------------------------------------------------
@@ -357,44 +357,51 @@ class TestBroker:
 
 
 # ---------------------------------------------------------------------------
-# Ollama Tests (mock aiohttp)
+# llama.cpp Tests (mock aiohttp)
 # ---------------------------------------------------------------------------
 
 
-class TestOllama:
-    """Test ollama handlers with mocked HTTP."""
+class TestLlamaTools:
+    """Test llama.cpp handlers with mocked HTTP."""
 
-    def test_ollama_models_no_aiohttp(self):
-        from whitemagic.tools.handlers.ollama import handle_ollama_models
+    def test_llama_models_no_backend(self):
+        from whitemagic.tools.handlers.llama_tools import handle_llama_models
 
         with patch(
-            "whitemagic.tools.handlers.ollama._require_aiohttp",
-            side_effect=ImportError("aiohttp not installed"),
+            "whitemagic.tools.handlers.llama_tools._get_backend",
+            return_value=type("FakeBackend", (), {"is_available": False})(),
+        ), patch(
+            "whitemagic.interfaces.chat.ModelDiscovery.find_models",
+            classmethod(lambda cls: []),
         ):
-            result = handle_ollama_models()
+            result = handle_llama_models()
             assert result["status"] == "error"
-            assert "missing_dependency" in str(
-                result.get("error_code", "")
-            ) or "aiohttp" in result.get("error", "")
+            assert "service_unavailable" in str(result.get("error_code", ""))
 
-    def test_ollama_generate_requires_model(self):
-        from whitemagic.tools.handlers.ollama import handle_ollama_generate
+    def test_llama_generate_no_backend(self):
+        from whitemagic.tools.handlers.llama_tools import handle_llama_generate
 
-        result = handle_ollama_generate(prompt="hello")
+        with patch(
+            "whitemagic.inference.llama_cpp.get_llama_cpp_backend"
+        ) as mock_get:
+            mock_backend = MagicMock()
+            mock_backend.is_available = False
+            mock_get.return_value = mock_backend
+            result = handle_llama_generate(prompt="hello")
         assert result["status"] == "error"
-        assert "model" in result["error"]
+        assert "service_unavailable" in str(result.get("error_code", ""))
 
-    def test_ollama_generate_requires_prompt(self):
-        from whitemagic.tools.handlers.ollama import handle_ollama_generate
+    def test_llama_generate_requires_prompt(self):
+        from whitemagic.tools.handlers.llama_tools import handle_llama_generate
 
-        result = handle_ollama_generate(model="phi3")
+        result = handle_llama_generate(model="phi3")
         assert result["status"] == "error"
         assert "prompt" in result["error"]
 
-    def test_ollama_chat_requires_messages(self):
-        from whitemagic.tools.handlers.ollama import handle_ollama_chat
+    def test_llama_chat_requires_messages(self):
+        from whitemagic.tools.handlers.llama_tools import handle_llama_chat
 
-        result = handle_ollama_chat(model="phi3")
+        result = handle_llama_chat(model="phi3")
         assert result["status"] == "error"
         assert "messages" in result["error"]
 

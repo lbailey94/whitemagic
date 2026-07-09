@@ -94,38 +94,38 @@ class TestChunkSplitting:
 class TestScan:
     def test_scan_returns_scanresult(self, scanner):
         from whitemagic.core.memory.codebase_scanner import ScanResult
-        result = scanner.scan(incremental=False)
+        result = scanner.scan(incremental=False, embed=False)
         assert isinstance(result, ScanResult)
 
     def test_scan_finds_files(self, scanner):
-        result = scanner.scan(incremental=False)
+        result = scanner.scan(incremental=False, embed=False)
         assert result.total_files == 6  # 6 text files (png skipped)
         assert result.errors == 0
 
     def test_scan_skips_binary(self, scanner):
-        result = scanner.scan(incremental=False)
+        result = scanner.scan(incremental=False, embed=False)
         assert ".png" not in result.by_extension
 
     def test_scan_counts_dirs(self, scanner):
-        result = scanner.scan(incremental=False)
+        result = scanner.scan(incremental=False, embed=False)
         assert result.total_dirs > 0
 
     def test_scan_creates_chunks(self, scanner):
-        result = scanner.scan(incremental=False)
+        result = scanner.scan(incremental=False, embed=False)
         assert result.chunks_created > 0
         assert result.ingested > 0
 
     def test_scan_to_dict(self, scanner):
-        result = scanner.scan(incremental=False)
+        result = scanner.scan(incremental=False, embed=False)
         d = result.to_dict()
         assert "chunks_created" in d
         assert "embedded" in d
         assert "scanner_version" not in d  # Only in manifest
 
     def test_scan_incremental_unchanged(self, scanner):
-        result1 = scanner.scan(incremental=False)
+        result1 = scanner.scan(incremental=False, embed=False)
         assert result1.ingested > 0
-        result2 = scanner.scan(incremental=True)
+        result2 = scanner.scan(incremental=True, embed=False)
         assert result2.ingested == 0
         assert result2.unchanged > 0
 
@@ -133,7 +133,7 @@ class TestScan:
         phases: list[str] = []
         def cb(phase, current, total):
             phases.append(phase)
-        scanner.scan(incremental=False, progress_cb=cb)
+        scanner.scan(incremental=False, embed=False, progress_cb=cb)
         assert "walking" in phases
         assert "reading" in phases
         assert "chunking" in phases
@@ -144,12 +144,12 @@ class TestScan:
 
 class TestRecall:
     def test_recall_returns_results(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         results = scanner.recall("main function")
         assert isinstance(results, list)
 
     def test_recall_with_tags(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         results = scanner.recall("helper", tags=["ext:py"])
         assert isinstance(results, list)
 
@@ -158,13 +158,13 @@ class TestRecall:
         assert results == []
 
     def test_recall_has_recall_type(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         results = scanner.recall("main", semantic=False)  # Force FTS5
         if results:
             assert "recall_type" in results[0]
 
     def test_recall_semantic_flag(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         # With semantic=True but no embeddings, should fall back to FTS5
         results = scanner.recall("main", semantic=True)
         assert isinstance(results, list)
@@ -175,15 +175,16 @@ class TestRecall:
 
 class TestStructure:
     def test_structure_root(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         result = scanner.structure()
         assert "files" in result
         assert "subdirs" in result
         # Root should have at least some files
         assert len(result["files"]) > 0
 
+    @pytest.mark.timeout(20)
     def test_structure_subdir(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         result = scanner.structure("src")
         assert "files" in result
         assert "utils.py" in result["files"] or any("utils" in f for f in result["files"])
@@ -203,7 +204,7 @@ class TestStatus:
         assert "last_scan" in result
 
     def test_status_after_scan(self, scanner):
-        scanner.scan(incremental=False)
+        scanner.scan(incremental=False, embed=False)
         result = scanner.status()
         assert result["last_scan"] != "never"
         assert "chunks_created" in result

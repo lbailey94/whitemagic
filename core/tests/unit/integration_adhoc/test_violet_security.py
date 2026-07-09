@@ -189,7 +189,7 @@ class TestVioletDharmaProfile:
     def test_violet_warns_model_load(self):
         engine = self._make_engine()
         decision = engine.evaluate(
-            {"tool": "ollama.generate", "description": "generate text"}
+            {"tool": "llama.generate", "description": "generate text"}
         )
         assert "violet_warn_model_load" in decision.triggered_rules
         assert decision.action.value == "warn"

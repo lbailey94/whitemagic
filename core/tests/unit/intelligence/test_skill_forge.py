@@ -39,7 +39,7 @@ from whitemagic.core.intelligence.omni.universal_router import (
 
 @pytest.fixture(autouse=True)
 def _mock_llm_name(monkeypatch):
-    """Mock _try_llm_name globally to avoid 7-14s Ollama timeout in all tests."""
+    """Mock _try_llm_name globally to avoid 7-14s llama.cpp timeout in all tests."""
     monkeypatch.setattr(SkillForge, "_try_llm_name", lambda self, chain: None)
     monkeypatch.setenv("WM_SKIP_POLYGLOT", "1")
 

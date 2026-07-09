@@ -16,9 +16,9 @@ from whitemagic.tools.middleware import (
 class TestInferenceToolDetection(unittest.TestCase):
     """Test the inference tool pattern matching."""
 
-    def test_detects_ollama(self) -> None:
-        self.assertTrue(_is_inference_tool("ollama_chat"))
-        self.assertTrue(_is_inference_tool("ollama_generate"))
+    def test_detects_llama_cpp(self) -> None:
+        self.assertTrue(_is_inference_tool("llama.chat"))
+        self.assertTrue(_is_inference_tool("llama.generate"))
 
     def test_detects_reason(self) -> None:
         self.assertTrue(_is_inference_tool("reason"))
@@ -77,7 +77,7 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
 
     def test_inference_tool_without_prompt_passes_through(self) -> None:
         """Inference tool without a prompt should pass through."""
-        ctx = DispatchContext(tool_name="ollama_chat", kwargs={"model": "llama2"})
+        ctx = DispatchContext(tool_name="llama.chat", kwargs={"model": "llama2"})
         called = [False]
 
         def next_fn(c: DispatchContext) -> dict:
@@ -110,7 +110,7 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
         mock_green.return_value = mock_gs
 
         ctx = DispatchContext(
-            tool_name="ollama_chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "what version is whitemagic?"},
         )
         called = [False]
@@ -146,7 +146,7 @@ class TestInferenceRouterMiddleware(unittest.TestCase):
         mock_edge_getter.return_value = mock_edge
 
         ctx = DispatchContext(
-            tool_name="ollama_chat",
+            tool_name="llama.chat",
             kwargs={"prompt": "explain quantum entanglement"},
         )
         called = [False]

@@ -179,10 +179,10 @@ class TestContentChunker:
 
 class TestContentSummarizer:
     @pytest.fixture(autouse=True)
-    def _mock_ollama(self):
+    def _mock_llama_cpp(self):
         with pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "whitemagic.gardens.browser.content_intelligence.ContentSummarizer._summarize_with_ollama",
+                "whitemagic.gardens.browser.content_intelligence.ContentSummarizer._summarize_with_llama",
                 lambda self, text, focus=None: None,
             )
             yield
@@ -201,7 +201,7 @@ class TestContentSummarizer:
         assert method == "none"
 
     def test_summarize_extractive_fallback(self):
-        """Test extractive summarization (Ollama won't be available in tests)."""
+        """Test extractive summarization (llama.cpp won't be available in tests)."""
         summarizer = ContentSummarizer()
         # Generate a longer text
         text = (
@@ -215,8 +215,8 @@ class TestContentSummarizer:
             "These advances represent significant progress toward commercial fusion energy. "
         )
         summary, method = summarizer.summarize(text, focus="fusion energy")
-        # Should get either ollama (if running) or extractive
-        assert method in ("ollama", "extractive")
+        # Should get either llama.cpp (if running) or extractive
+        assert method in ("llama_cpp", "extractive")
         assert len(summary) > 0
         assert len(summary) <= 1000
 
@@ -245,10 +245,10 @@ class TestContentSummarizer:
 
 class TestProcessContent:
     @pytest.fixture(autouse=True)
-    def _mock_ollama(self):
+    def _mock_llama_cpp(self):
         with pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "whitemagic.gardens.browser.content_intelligence.ContentSummarizer._summarize_with_ollama",
+                "whitemagic.gardens.browser.content_intelligence.ContentSummarizer._summarize_with_llama",
                 lambda self, text, focus=None: None,
             )
             yield
@@ -293,7 +293,7 @@ class TestProcessContent:
         )
 
         assert enhanced.summary  # Should have a summary
-        assert enhanced.summarizer_used in ("ollama", "extractive", "none")
+        assert enhanced.summarizer_used in ("llama_cpp", "extractive", "none")
 
     def test_enhanced_to_dict(self):
         html = "<html><body><h1>Title</h1><p>Content</p></body></html>"

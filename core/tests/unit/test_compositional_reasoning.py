@@ -70,15 +70,15 @@ class TestCompositionalReasoner(unittest.TestCase):
     @patch(
         "whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine"
     )
-    @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
+    @patch("whitemagic.core.memory.embeddings.get_embedding_engine")
     def test_resolve_returns_unresolved_when_no_embedding(
         self,
-        mock_embed_cls: MagicMock,
+        mock_embed_getter: MagicMock,
         mock_hrr_getter: MagicMock,
     ) -> None:
         mock_engine = MagicMock()
         mock_engine.encode.return_value = None
-        mock_embed_cls.return_value = mock_engine
+        mock_embed_getter.return_value = mock_engine
 
         reasoner = CompositionalReasoner(hrr=mock_hrr_getter.return_value)
         result = reasoner.resolve("what caused the outage?")
@@ -89,10 +89,10 @@ class TestCompositionalReasoner(unittest.TestCase):
     @patch(
         "whitemagic.core.intelligence.agentic.compositional_reasoning.get_hrr_engine"
     )
-    @patch("whitemagic.core.memory.embeddings.EmbeddingEngine")
+    @patch("whitemagic.core.memory.embeddings.get_embedding_engine")
     def test_resolve_returns_result_with_matches(
         self,
-        mock_embed_cls: MagicMock,
+        mock_embed_getter: MagicMock,
         mock_hrr_getter: MagicMock,
     ) -> None:
         # Setup embedding engine
@@ -110,7 +110,7 @@ class TestCompositionalReasoner(unittest.TestCase):
                 "content": "Related to concurrent access",
             },
         ]
-        mock_embed_cls.return_value = mock_engine
+        mock_embed_getter.return_value = mock_engine
 
         # Setup HRR engine
         mock_hrr = MagicMock()

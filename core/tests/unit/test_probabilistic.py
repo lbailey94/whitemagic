@@ -194,10 +194,10 @@ class TestMemoryAnalytics:
     def test_source_frequency(self):
         analytics = MemoryAnalytics(cms_width=2048, cms_depth=7)
         for _ in range(30):
-            analytics.observe_memory("mem_1", source="ollama")
+            analytics.observe_memory("mem_1", source="llama_cpp")
         for _ in range(20):
             analytics.observe_memory("mem_2", source="user")
-        assert analytics.estimate_source_count("ollama") >= 30
+        assert analytics.estimate_source_count("llama_cpp") >= 30
         assert analytics.estimate_source_count("user") >= 20
 
     def test_access_frequency(self):

@@ -3,6 +3,7 @@ import os
 import queue
 import sys
 import tempfile
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -38,11 +39,20 @@ except ImportError:
 # We unconditionally override WM_STATE_ROOT to a fresh temp dir so that
 # paths.py (and every singleton that depends on it) resolves to an empty DB.
 # ---------------------------------------------------------------------------
-_TEST_STATE_ROOT = tempfile.mkdtemp(prefix="wm_pytest_state_")
+# Each xdist worker gets its own state root to prevent SQLite contention.
+_xdist_worker = os.environ.get("PYTEST_XDIST_WORKER", "gw0")
+_TEST_STATE_ROOT = tempfile.mkdtemp(prefix=f"wm_pytest_state_{_xdist_worker}_")
 os.environ["WM_STATE_ROOT"] = _TEST_STATE_ROOT
 os.environ["WM_SILENT_INIT"] = "1"
 # Skip heavy holographic index loading during tests
 os.environ["WM_SKIP_HOLO_INDEX"] = "1"
+# Skip polyglot subprocess checks (Elixir/Haskell/Julia) during tests
+os.environ["WM_SKIP_POLYGLOT"] = "1"
+
+# Suppress noisy INFO logs from SQLite schema migrations during tests
+import logging as _logging
+_logging.getLogger("whitemagic.core.memory.sqlite_backend").setLevel(_logging.WARNING)
+_logging.getLogger("whitemagic.core.memory.embeddings").setLevel(_logging.WARNING)
 
 # If paths.py was already imported (e.g. by a plugin), force-reload it so
 # the module-level constants pick up the new WM_STATE_ROOT.
@@ -85,12 +95,14 @@ def _stop_background_daemons():
         except Exception:  # noqa: BLE001
             pass
 
-    # Stop the GanYingBus global async worker thread
+    # Drain the GanYingBus global async queue to prevent stale events.
+    # IMPORTANT: Do NOT null _GLOBAL_WORKER_THREAD — the thread is a daemon
+    # and will keep running. Nullning it causes _ensure_global_worker() to
+    # create a NEW thread on the next test, leading to thread accumulation
+    # and eventual hang from thread saturation.
     try:
         import whitemagic.core.resonance._consolidated as _cons
 
-        _cons._GLOBAL_WORKER_THREAD = None
-        # Drain the queue to prevent stale events from being processed
         while not _cons._GLOBAL_ASYNC_QUEUE.empty():
             try:
                 _cons._GLOBAL_ASYNC_QUEUE.get_nowait()
@@ -220,10 +232,15 @@ def _reset_singletons():
             setattr(mod, attr_name, None)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="module")
 def _reset_all_singletons():
-    """Auto-reset singletons before each test to prevent cross-test leakage."""
-    _reset_singletons()
+    """Auto-reset singletons once per module to prevent cross-module leakage.
+
+    Module scope avoids reinitializing expensive singletons (SQLite schema,
+    Karma ledger, Harmony Vector, Cascade Protocols) between every test.
+    Tests needing fresh state within a module can use the fresh_state_root
+    fixture or call _reset_singletons() explicitly.
+    """
     yield
     _reset_singletons()
 
@@ -253,7 +270,7 @@ def fresh_state_root(tmp_path):
     importlib.reload(_paths)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def tool_caller():
     """Convenience wrapper for call_tool with assertion helpers."""
     from whitemagic.tools.unified_api import call_tool
@@ -277,7 +294,7 @@ def tool_caller():
     return ToolCaller()
 
 
-@pytest.fixture(autouse=True, scope="module")
+@pytest.fixture(scope="module")
 def mcp_test_env(tmp_path_factory):
     """Set up an isolated WM_STATE_ROOT + WM_SILENT_INIT for MCP tests.
 
@@ -314,6 +331,55 @@ def mcp_test_env(tmp_path_factory):
 # conftest.py is auto-loaded by pytest but not importable as
 # `from tests.conftest import ...`. Any code that needs the
 # envelope helpers should import them from _envelope directly.
+
+
+# ---------------------------------------------------------------------------
+# Global ML engine mock — prevents loading FastEmbed/MiniLM/sentence-transformers
+# in unit tests. Per AGENTS.md test purity rules, unit tests must never load ML
+# models. Tests that genuinely need the engine can override this mock by
+# patching `get_embedding_engine` themselves with a more specific mock.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _mock_heavy_engines(request):
+    """Mock embedding engine to prevent ML model loading in unit tests.
+
+    Returns fake 384-dim vectors so VSA/HRR/compression tests work
+    without loading FastEmbed/MiniLM (~2-3s per load).
+    """
+    import whitemagic.core.memory.embeddings as _emb_mod
+
+    _FAKE_DIM = 384
+
+    def _fake_encode(text, **kwargs):
+        if isinstance(text, str):
+            return [0.0] * _FAKE_DIM
+        return [[0.0] * _FAKE_DIM for _ in text]
+
+    def _fake_encode_batch(texts, **kwargs):
+        return [[0.0] * _FAKE_DIM for _ in texts]
+
+    _mock_embedding = MagicMock()
+    _mock_embedding.available.return_value = True
+    _mock_embedding.encode.side_effect = _fake_encode
+    _mock_embedding.encode_batch.side_effect = _fake_encode_batch
+    _mock_embedding.search_similar.return_value = []
+    _mock_embedding.search_similar_by_vector.return_value = []
+    _mock_embedding.embedding_dim = _FAKE_DIM
+
+    # Set the singleton directly — get_embedding_engine() checks this first
+    _old_instance = getattr(_emb_mod, "_engine_instance", None)
+    _emb_mod._engine_instance = _mock_embedding
+
+    # Also patch the function for modules that import it at module level
+    p = patch(
+        "whitemagic.core.memory.embeddings.get_embedding_engine",
+        return_value=_mock_embedding,
+    )
+    p.start()
+    yield
+    p.stop()
+    _emb_mod._engine_instance = _old_instance
 
 
 # ---------------------------------------------------------------------------

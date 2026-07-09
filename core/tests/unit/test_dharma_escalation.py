@@ -200,9 +200,9 @@ class TestEscalationPipeline:
                 tier=EvaluationTier.LLM,
                 score=0.5,
                 action=EscalationAction.PENDING,
-                reasoning="Ollama unavailable",
+                reasoning="llama.cpp unavailable",
                 escalated=True,
-                metadata={"ollama_available": False},
+                metadata={"llama_available": False},
             ),
         ):
             result = pipeline.evaluate(

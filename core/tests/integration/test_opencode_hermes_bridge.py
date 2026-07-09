@@ -42,8 +42,12 @@ pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 # ── Environment setup ───────────────────────────────────────────────────
 
 # _mcp_env fixture removed in v22.2.2; the conftest.py
-# `mcp_test_env` autouse fixture (scope=module) provides the
-# same isolation automatically for this test module.
+# `mcp_test_env` fixture (scope=module) provides the
+# same isolation. Request it explicitly via this autouse wrapper.
+@pytest.fixture(scope="module", autouse=True)
+def _mcp_env(mcp_test_env):
+    """Activate mcp_test_env for this module."""
+    yield mcp_test_env
 
 # ── Simulated External Agent Client ──────────────────────────────────────
 

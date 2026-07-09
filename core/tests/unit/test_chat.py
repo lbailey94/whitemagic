@@ -33,8 +33,8 @@ class TestModelDiscovery:
     def test_find_models_empty(self, monkeypatch):
         from whitemagic.interfaces.chat import ModelDiscovery
 
-        # Mock _find_ollama_models and _find_gguf_models to return empty
-        monkeypatch.setattr(ModelDiscovery, "_find_ollama_models", classmethod(lambda cls: []))
+        # Mock _find_installed_models and _find_gguf_models to return empty
+        monkeypatch.setattr(ModelDiscovery, "_find_installed_models", classmethod(lambda cls: []))
         monkeypatch.setattr(ModelDiscovery, "_find_gguf_models", classmethod(lambda cls: []))
         assert ModelDiscovery.find_models() == []
 
@@ -54,17 +54,17 @@ class TestModelDiscovery:
             source="llama_cpp",
             backend="llama_cpp",
         )
-        ollama_model = ModelInfo(
+        llama_model = ModelInfo(
             path="qwen2.5:3b",
             name="qwen2.5:3b",
             size_mb=3000,
-            source="ollama",
-            backend="ollama",
+            source="llama_cpp",
+            backend="llama_cpp",
         )
         monkeypatch.setattr(
             ModelDiscovery,
             "find_models",
-            classmethod(lambda cls: [ollama_model, gguf_model]),
+            classmethod(lambda cls: [llama_model, gguf_model]),
         )
         best = ModelDiscovery.best_model()
         assert best is not None
@@ -217,20 +217,21 @@ class TestSystemPromptBuilder:
             assert len(desc) > 10  # meaningful description
 
 
-class TestOllamaBackend:
-    """Test the Ollama backend adapter."""
+class TestLlamaBackend:
+    """Test the llama.cpp backend adapter."""
 
     def test_init(self):
-        from whitemagic.interfaces.chat import _OllamaBackend
+        from whitemagic.inference.llama_cpp import LlamaCppBackend
 
-        backend = _OllamaBackend("qwen2.5:3b")
-        assert backend._model == "qwen2.5:3b"
-        assert backend.is_available is True
+        backend = LlamaCppBackend(model_path="test.gguf", port=19999)
+        assert backend._model_path == "test.gguf"
+        # is_available checks if server is running — should be False without server
+        assert backend.is_available is False
 
     def test_stop_server_noop(self):
-        from whitemagic.interfaces.chat import _OllamaBackend
+        from whitemagic.inference.llama_cpp import LlamaCppBackend
 
-        backend = _OllamaBackend("test")
+        backend = LlamaCppBackend("test", port=19999)
         backend.stop_server()  # should not raise
 
 
