@@ -1,2 +1,0 @@
-import { PRESCIENCE_MISSES } from "@/lib/data/prescience";
-export function MissesSection(){return(<section className="border-t border-border-light bg-surface-alt py-16"><div className="container-site mx-auto max-w-3xl"><h2 className="font-head text-2xl font-semibold text-ink">Honest Misses</h2>{PRESCIENCE_MISSES.map((m,i)=><div key={i} className="rounded-2xl border border-amber/20 bg-amber/5 p-6 mt-4"><p className="font-head font-semibold">{m.claim}</p><p className="text-sm text-muted mt-2">{m.reality}</p></div>)}</div></section>);}

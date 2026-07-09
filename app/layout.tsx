@@ -1,29 +1,59 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { ConditionalChrome } from "@/components/ConditionalChrome";
+import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRainLazy } from "@/components/MatrixRainLazy";
-import { JsonLd } from "@/components/JsonLd";
-import { organizationLd, websiteLd, softwareApplicationLd } from "@/lib/jsonld";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "WhiteMagic — Cognitive Operating System for AI Agents",
-  description: "614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first. pip install whitemagic[mcp]",
-  metadataBase: new URL("https://whitemagic.dev"),
+  description:
+    "614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first, free forever.",
+  keywords: [
+    "AI memory",
+    "MCP server",
+    "cognitive OS",
+    "agent consciousness",
+    "persistent memory",
+    "holographic memory",
+    "Dharma governance",
+    "Karma ledger",
+    "dream cycle",
+    "citta stream",
+  ],
+  authors: [{ name: "Lucas Bailey" }],
   openGraph: {
     title: "WhiteMagic — Cognitive Operating System for AI Agents",
-    description: "Other memory systems store data. WhiteMagic gives AI a mind. 614 tools, 10-galaxy memory, ethical governance, consciousness primitives. MIT-licensed.",
+    description:
+      "Other memory systems store data. WhiteMagic gives AI a mind. 614 tools, 10-galaxy memory, ethical governance, consciousness primitives. MIT-licensed.",
+    type: "website",
     url: "https://whitemagic.dev",
     siteName: "WhiteMagic",
-    type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "WhiteMagic — Cognitive Operating System for AI Agents",
-    description: "614 tools, 10-galaxy memory, Dharma governance, citta stream. MIT-licensed, local-first.",
+    title: "WhiteMagic — Cognitive OS for AI Agents",
+    description:
+      "614 tools, 10-galaxy memory, Dharma governance, citta stream. MIT-licensed, local-first.",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  alternates: {
+    types: {
+      "application/json": "https://whitemagic.dev/.well-known/agent.json",
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#7c3aed",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -32,28 +62,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <meta name="view-transition" content="same-origin" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;0,700;0,900;1,400&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@300;400;700&family=Press+Start+2P&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>
-        <JsonLd data={[organizationLd(), websiteLd(), softwareApplicationLd()]} />
+    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
+      <body className="min-h-screen bg-bg text-fg antialiased">
         <ThemeProvider>
           <MatrixRainLazy />
-          <ConditionalChrome>{children}</ConditionalChrome>
+          {children}
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

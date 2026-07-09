@@ -1,7 +1,7 @@
 {
   "name": "WhiteMagic — Cognitive Operating System",
   "short_name": "WhiteMagic",
-  "description": "AI cognitive operating system with persistent memory, 479 tools, 28 Ganas, and galactic lifecycle",
+  "description": "Cognitive operating system for AI agents — 614 callable tools, 10-galaxy holographic memory, Dharma governance, citta stream. MIT-licensed, local-first.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",
@@ -65,36 +65,7 @@
       "label": "Memory Graph Visualization"
     }
   ],
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Open the WhiteMagic dashboard",
-      "url": "/dashboard",
-      "icons": [{ "src": "/icons/icon-192x192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
-    },
-    {
-      "name": "Memory Browser",
-      "short_name": "Memory",
-      "description": "Browse your memories",
-      "url": "/dashboard",
-      "icons": [{ "src": "/icons/icon-192x192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
-    },
-    {
-      "name": "Knowledge Sphere",
-      "short_name": "Sphere",
-      "description": "Explore the 3D knowledge sphere",
-      "url": "/sphere",
-      "icons": [{ "src": "/icons/icon-192x192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
-    },
-    {
-      "name": "Gana Map",
-      "short_name": "Ganas",
-      "description": "View the 28 lunar mansions",
-      "url": "/dashboard",
-      "icons": [{ "src": "/icons/icon-192x192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
-    }
-  ],
+  "shortcuts": [],
   "related_applications": [
     {
       "platform": "webapp",

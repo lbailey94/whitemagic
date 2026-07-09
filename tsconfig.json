@@ -20,5 +20,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "core/sdk_aux", "sdk/typescript/src", "sdk/typescript/node_modules"]
+  "exclude": ["node_modules", "core/sdk_aux", "sdk/typescript/src", "sdk/typescript/node_modules", "app-layer", "aux", "site", "scripts", "core", "polyglot", "grimoire", "eval", "examples", "archives", "notes-scratch", "opencodeconvos", "logs", "memory", "alltexts", "blackmagic", "Agent-SafetyBench", "codex-engine", "data", "grants", "ide", "reports"]
 }
