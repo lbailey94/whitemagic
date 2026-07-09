@@ -130,10 +130,30 @@ Code4rena runs 3-14 day contests with $50K-$500K pools. Check [code4rena.com/aud
 ## 5. Execution Schedule
 
 ### Week 1-2 (Jul 8-22): Pipeline Validation
-- [ ] Select 1 Immunefi target (recommend Lombard Finance — good fit, $250K ceiling)
+- [ ] Select 1 Immunefi target (recommend Lombard Finance — good fit, $250K ceiling, only $40K paid so far)
 - [ ] Run full WhiteMagic pipeline end-to-end
 - [ ] Submit at least 1 finding (even low/info for pipeline validation)
 - [ ] Measure time spent per finding
+
+### Updated Target Landscape (Jul 9, 2026 research)
+
+**192 active bounty programs on Immunefi** as of Jul 8, 2026. Top targets by max payout:
+
+| Protocol | Max Bounty | Total Paid | Status | Notes |
+|----------|-----------|------------|--------|-------|
+| Ethena | $3M | $12.4K | Active | Low paid/$ ratio = unexplored surface |
+| Lido V3 | $2M | — | Competition ended Jan 2026 | May reopen as ongoing bounty |
+| DeXe Protocol | $500K | $219.3K | Active | High paid = competitive, but complex |
+| SSV Network | $250K | $310.4K | Active | High total paid, but novel architecture |
+| Lombard Finance | $250K | $40K | Active, Immunefi-triaged | **Best first target** — BTC bridge, low competition |
+| Alchemix | $300K | — | Active since Feb 2026 | Self-repaying loans, complex |
+| Paradex | $500K | — | Active | ZK Layer 2 perp DEX |
+| Ern | $50K | — | Active since Mar 2026 | Immutable contracts, BTC yield |
+
+**Registry submission mechanics (researched Jul 9, 2026):**
+- Immunefi: Register at immunefi.com, KYC required for payout (USDC on ETH)
+- PoC required for Medium+ severity on most programs
+- Speed matters — first valid submission wins on duplicates
 
 ### Week 3-4 (Jul 22-Aug 5): First Real Submission
 - [ ] Enter next Code4rena or Sherlock contest
@@ -183,11 +203,11 @@ Code4rena runs 3-14 day contests with $50K-$500K pools. Check [code4rena.com/aud
 
 | Platform | Status | Handle | Notes |
 |----------|--------|--------|-------|
-| Immunefi | TODO | — | Register at immunefi.com |
-| Code4rena | TODO | — | Register at code4rena.com |
+| Immunefi | TODO | — | Register at immunefi.com — 192 active bounties, KYC required |
+| Code4rena | TODO | — | Register at code4rena.com — weekly contests, $50K-$500K pools |
 | Sherlock | TODO | — | Register at audits.sherlock.xyz, join Discord |
-| CodeHawks | TODO | — | Register at codehawks.cyfrin.io |
-| Cantina | TODO | — | Register at cantina.xyz |
+| CodeHawks | TODO | — | Register at codehawks.cyfrin.io — First Flights good for pipeline testing |
+| Cantina | TODO | — | Register at cantina.xyz — mega-comps $200K-$2M |
 | HackerOne | TODO | — | For traditional web vuln targets |
 | Bugcrowd | TODO | — | For traditional web vuln targets |
 

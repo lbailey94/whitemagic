@@ -101,10 +101,11 @@ Mem0 gives your AI a notepad. WhiteMagic gives your AI a mind.
 - [x] llms.txt exists (v24 updated)
 - [x] ai-agent.json manifest created
 - [x] agent-economy.json endpoint live (XRPL, x402 planned)
-- [ ] List on Official MCP Registry (registry.modelcontextprotocol.io)
-- [ ] List on PulseMCP
-- [ ] List on Smithery
-- [ ] List on mcp.so
+- [ ] List on Official MCP Registry (registry.modelcontextprotocol.io) — `mcp-publisher` CLI + `server.json` ready
+- [ ] List on Smithery — `smithery mcp publish` CLI, auto-discovers from registry
+- [ ] List on mcp.so — 20K+ servers, crawls registry + GitHub
+- [ ] List on PulseMCP — community directory, ingests registry feed
+- [ ] List on Glama (glama.ai/mcp) — discovery directory with quality scoring
 - [ ] Set up Stripe for subscriptions (agent-facing)
 - [ ] Submit to Cloudflare's isitagentready.com
 
@@ -112,8 +113,28 @@ Mem0 gives your AI a notepad. WhiteMagic gives your AI a mind.
 - [ ] Wire citta sensorium into MCP response cycle (the breakthrough)
 - [ ] Migrate monolithic DB to per-galaxy SQLite
 - [x] Migrate raw sqlite3.connect() to safe_connect() (113 calls, 55 files)
-- [ ] Test suite optimization (target <60s)
+- [ ] Test suite optimization (target <15s, deferred — order-dependent failures need singleton state audit)
 - [ ] Re-run LoCoMo benchmark on v24
+
+### MCP Registry Submission Details (researched Jul 9, 2026)
+
+**`server.json` status**: Ready at repo root + `core/scripts/deployment/server.json`. Schema `2025-12-11`, namespace `io.github.lbailey94/whitemagic`, PyPI package, stdio transport.
+
+**Official Registry** (registry.modelcontextprotocol.io):
+1. Install `mcp-publisher` CLI
+2. Authenticate with GitHub login (proves `io.github.*` namespace)
+3. Run `mcp-publisher publish server.json`
+4. Bump version in `server.json` for any listing update
+5. Downstream directories (Smithery, mcp.so, PulseMCP, Glama) ingest automatically
+
+**Pre-submission checklist**:
+- [ ] Verify `initialize` handshake returns correct `protocolVersion` + `serverInfo`
+- [ ] Verify `tools/list` is public (no auth on initialize/list)
+- [ ] Tool descriptions are rich (what it does, what it returns, when to use it) — quality scorers read these
+- [ ] `websiteUrl` field is live (whitemagic.dev or GitHub README)
+- [ ] Test with `curl` JSON-RPC initialize probe before publishing
+
+**Key insight**: Publishing to the official registry propagates to all downstream directories automatically. One publish, multiple listings.
 
 ### Phase 3: Deep Stealth Content (AI-facing only)
 - [ ] GitHub README optimization (for AI scrapers, not humans)
