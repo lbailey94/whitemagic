@@ -111,7 +111,7 @@ Mem0 gives your AI a notepad. WhiteMagic gives your AI a mind.
 ### Phase 2: Technical Gap Closure (this week)
 - [ ] Wire citta sensorium into MCP response cycle (the breakthrough)
 - [ ] Migrate monolithic DB to per-galaxy SQLite
-- [ ] Migrate raw sqlite3.connect() to safe_connect() (113 calls, 55 files)
+- [x] Migrate raw sqlite3.connect() to safe_connect() (113 calls, 55 files)
 - [ ] Test suite optimization (target <60s)
 - [ ] Re-run LoCoMo benchmark on v24
 
