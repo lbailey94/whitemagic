@@ -69,6 +69,20 @@ const withPWA = withPWAInit({
           },
         },
       },
+      {
+        urlPattern: /\.(?:wasm|js)$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "wasm-cache",
+          expiration: {
+            maxEntries: 20,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
     ],
   },
 });

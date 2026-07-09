@@ -1,4 +1,5 @@
 {
+  "id": "/app",
   "name": "WhiteMagic — Local Memory OS",
   "short_name": "WhiteMagic",
   "description": "Local-first cognitive OS running entirely in your browser via WASM. Memory, governance, karma, and self-introspection — zero network calls.",

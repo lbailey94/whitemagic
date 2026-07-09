@@ -2,15 +2,26 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRainLazy } from "@/components/MatrixRainLazy";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
+  manifest: "/manifest.json",
   title: "WhiteMagic — Cognitive Operating System for AI Agents",
   description:
     "614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first, free forever.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "WhiteMagic",
+  },
+  icons: {
+    icon: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
   keywords: [
     "AI memory",
     "MCP server",
@@ -67,6 +78,7 @@ export default function RootLayout({
         <ThemeProvider>
           <MatrixRainLazy />
           {children}
+          <InstallPrompt />
         </ThemeProvider>
       </body>
     </html>
