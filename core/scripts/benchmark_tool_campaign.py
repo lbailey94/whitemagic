@@ -136,6 +136,8 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     "sabha.convene": {"task": "evaluate system readiness for release"},
     # Activation spread — needs higher timeout for cold-start embedding load
     "activation.spread": {"seed_ids": ["test-id"], "_timeout_s": 30.0},
+    # Knowledge gap — cold-start MetaGalaxy + memory search/store per gap
+    "knowledge_gap.run": {"max_gaps": 1, "_timeout_s": 30.0},
 }
 
 
