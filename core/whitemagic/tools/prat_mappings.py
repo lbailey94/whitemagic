@@ -758,7 +758,6 @@ TOOL_TO_GANA: dict[str, str] = {
     "formal.status": "gana_three_stars",
     # Multi-Agent Swarm → Ox (endurance / swarm decompose)
     "swarm.analyze": "gana_ox",
-    "swarm.status": "gana_ox",
     # Predictive Scoring → Dipper (strategy / cognitive modes)
     "predictive.score": "gana_dipper",
     "predictive.batch": "gana_dipper",
@@ -771,6 +770,33 @@ TOOL_TO_GANA: dict[str, str] = {
     # Slither → Three Stars (judgment & synthesis)
     "slither.scan": "gana_three_stars",
     "slither.status": "gana_three_stars",
+    # ── Previously orphaned tools (in dispatch table but not PRAT-mapped) ──
+    # Alchemical cycle → Abundance (regeneration / dream cycle)
+    "alchemical_cycle": "gana_abundance",
+    # Code genome / DNA → Chariot (codebase navigation)
+    "codegenome_validate": "gana_chariot",
+    "dna_principles": "gana_chariot",
+    "dna_validate": "gana_chariot",
+    # Fast write → Ox (endurance / worker skills)
+    "fast_write.append": "gana_ox",
+    "fast_write.batch": "gana_ox",
+    "fast_write.validate": "gana_ox",
+    "fast_write.write": "gana_ox",
+    # Galaxy management → Void (galaxies)
+    "galaxy.export": "gana_void",
+    "galaxy.import": "gana_void",
+    "galaxy.list_types": "gana_void",
+    "galaxy.migrate": "gana_void",
+    "galaxy.route": "gana_void",
+    "galaxy.stats": "gana_void",
+    # Polyglot → Tail (performance & acceleration)
+    "polyglot.actor": "gana_tail",
+    "polyglot.evolution": "gana_tail",
+    "polyglot.yield": "gana_tail",
+    # Zodiac progression → Dipper (strategy / cognitive modes)
+    "zodiac.activate": "gana_dipper",
+    "zodiac.council": "gana_dipper",
+    "zodiac.stats": "gana_dipper",
 }
 
 # Reverse: Gana → list of nested tools

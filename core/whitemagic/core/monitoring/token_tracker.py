@@ -49,7 +49,7 @@ def _estimate_tokens(text: Any) -> int:
 
 def _determine_locality(ctx: DispatchContext, result: dict[str, Any] | None) -> str:
     """Determine where the computation happened based on context and result."""
-    if result is None:
+    if result is None or not isinstance(result, dict):
         return InferenceLocality.EDGE
 
     if result.get("resolved_locally"):

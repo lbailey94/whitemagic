@@ -77,8 +77,23 @@ class LazyHandler:
 
         result = self._cached_func(*args, **kwargs)
 
+        # Guard: if handler is async and returns a coroutine, await it
+        import inspect as _inspect
+
+        if _inspect.iscoroutine(result):
+            import asyncio as _asyncio
+
+            try:
+                _asyncio.get_running_loop()
+                # Event loop already running - can't await here
+                # Close the coroutine to avoid warnings
+                result.close()
+                result = {"status": "error", "error": "Async handler called from sync context with running event loop"}
+            except RuntimeError:
+                result = _asyncio.run(result)
+
         if should_audit:
-            status = "success" if result.get("status") == "success" else "failure"
+            status = "success" if (isinstance(result, dict) and result.get("status") == "success") else "failure"
             _audit_tool_call(self.tool_name, status, kwargs, result)
 
         return result
@@ -96,7 +111,19 @@ class LazyHandlerAbs:
         if self._cached_func is None:
             mod = importlib.import_module(self.module_path)
             self._cached_func = getattr(mod, self.function_name)
-        return self._cached_func(*args, **kwargs)
+        result = self._cached_func(*args, **kwargs)
+        import inspect as _inspect
+
+        if _inspect.iscoroutine(result):
+            import asyncio as _asyncio
+
+            try:
+                _asyncio.get_running_loop()
+                result.close()
+                result = {"status": "error", "error": "Async handler called from sync context with running event loop"}
+            except RuntimeError:
+                result = _asyncio.run(result)
+        return result
 
 
 def _audit_tool_call(

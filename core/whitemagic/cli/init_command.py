@@ -220,7 +220,7 @@ See `.env` for all configurable options. Key ones:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `WM_STATE_ROOT` | `~/.whitemagic` | Where runtime data lives |
-| `WM_MCP_PRAT` | `2` (Seed) | `2`=Seed (1 tool: `wm`), `1`=PRAT (29 tools), `0`=Full (490 tools) |
+| `WM_MCP_PRAT` | `2` (Seed) | `2`=Seed (1 tool: `wm`), `1`=PRAT (29 tools), `0`=Full (630 tools) |
 | `WM_SILENT_INIT` | `0` | Suppress startup logging |
 | `WM_DB_PATH` | `$WM_STATE_ROOT/memory/whitemagic.db` | Database location |
 

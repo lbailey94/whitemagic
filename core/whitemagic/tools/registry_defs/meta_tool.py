@@ -21,7 +21,7 @@ TOOLS: list[ToolDefinition] = [
         name="wm",
         description=(
             "[WM] WhiteMagic meta-tool — single entry point that auto-routes "
-            "natural language to 28 Ganas / 490 tools. 'World in a seed'. "
+            "natural language to 28 Ganas / 630 tools. 'World in a seed'. "
             "Use for any WhiteMagic operation without knowing the specific tool name. "
             "Supports explicit route= override (e.g. route='gana_neck.create_memory'). "
             "Use thought='help' or route='discover' to see all Ganas and their tools. "

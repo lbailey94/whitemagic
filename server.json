@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic",
-  "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
+  "description": "Cognitive operating system for AI agents — 630 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
@@ -20,7 +20,7 @@
       "environmentVariables": [
         {
           "name": "WM_MCP_PRAT",
-          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (490 tools)",
+          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (630 tools)",
           "isRequired": false,
           "format": "string",
           "isSecret": false

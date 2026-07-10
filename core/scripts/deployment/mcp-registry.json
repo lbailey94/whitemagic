@@ -1,7 +1,7 @@
 {
   "name": "whitemagic",
   "display_name": "WhiteMagic Core",
-  "description": "Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. MIT-licensed, local-first.",
+  "description": "Cognitive operating system for AI agents — 630 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. MIT-licensed, local-first.",
   "version": "24.0.1",
   "protocol_version": "2025-11-25",
   "homepage": "https://whitemagic.dev",
@@ -41,8 +41,8 @@
     }
   },
   "tool_count": 28,
-  "nested_tool_count": 564,
-  "callable_tool_count": 614,
+  "nested_tool_count": 630,
+  "callable_tool_count": 680,
   "galaxies": 10,
   "requirements": {
     "python": ">=3.11",

@@ -1,5 +1,5 @@
 # ruff: noqa: BLE001
-"""Agent-friendly tool descriptions — natural language overlay for all 490 tools.
+"""Agent-friendly tool descriptions — natural language overlay for all 630 tools.
 
 This module provides natural-language descriptions of WhiteMagic's tools
 that make sense to an LLM agent. Instead of technical descriptions like
@@ -203,7 +203,6 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
     "homeostasis.status": "Get the homeostatic loop status. Use this to see what adjustments are being made.",
 
     # ── Export & Backup ──────────────────────────────────────────────
-    "export_memories": "Export your memories to a file. Use this for backup or migration.",
     "audit.export": "Export your audit trail. Use this for compliance or review.",
     "galaxy_backup": "Backup all galaxies to a file. Use this before major changes.",
     "galaxy_restore": "Restore galaxies from a backup file.",
@@ -261,7 +260,7 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
     "browser.search": "Search the web. Use this to find information online.",
 
     # ── Meta-Tool ────────────────────────────────────────────────────
-    "wm": "The meta-tool: route to any of the 490 tools via natural language. Describe what you want to do and it finds the right tool. Use this when you're not sure which tool to call.",
+    "wm": "The meta-tool: route to any of the 630 tools via natural language. Describe what you want to do and it finds the right tool. Use this when you're not sure which tool to call.",
 
     # ── Gratitude Economy ────────────────────────────────────────────
     "gratitude.record": "Record a gratitude event. Use this to acknowledge contributions.",

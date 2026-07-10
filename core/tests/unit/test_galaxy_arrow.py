@@ -135,7 +135,7 @@ class TestGalaxyExportImportHandlersExist(unittest.TestCase):
         filepath = _SRC / "tools/handlers/galaxy.py"
         source = filepath.read_text()
         self.assertIn(
-            "async def handle_galaxy_export",
+            "def handle_galaxy_export",
             source,
             "handle_galaxy_export must be defined",
         )
@@ -144,7 +144,7 @@ class TestGalaxyExportImportHandlersExist(unittest.TestCase):
         filepath = _SRC / "tools/handlers/galaxy.py"
         source = filepath.read_text()
         self.assertIn(
-            "async def handle_galaxy_import",
+            "def handle_galaxy_import",
             source,
             "handle_galaxy_import must be defined",
         )

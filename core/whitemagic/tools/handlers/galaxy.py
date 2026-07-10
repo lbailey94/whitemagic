@@ -386,7 +386,7 @@ def handle_galaxy_list_types(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-async def handle_galaxy_export(**kwargs: Any) -> dict:
+def handle_galaxy_export(**kwargs: Any) -> dict[str, Any]:
     """Export memories from a galaxy as Arrow IPC bytes (base64-encoded)."""
     try:
         import base64
@@ -430,7 +430,7 @@ async def handle_galaxy_export(**kwargs: Any) -> dict:
         return {"status": "error", "error": str(e)}
 
 
-async def handle_galaxy_import(**kwargs: Any) -> dict:
+def handle_galaxy_import(**kwargs: Any) -> dict[str, Any]:
     """Import memories from base64-encoded Arrow IPC bytes."""
     try:
         import base64

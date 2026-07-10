@@ -261,7 +261,9 @@ def _ensure_init() -> None:
         # ── Citta continuity: inject "where we left off" into server instructions ──
         # This gives the AI client context from the previous session on reconnect
         try:
-            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+            from whitemagic.core.consciousness.citta_stream import (
+                get_continuity_context,
+            )
 
             ctx = get_continuity_context()
             if not ctx.get("first_awakening"):
@@ -459,7 +461,7 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
 
     desc = (
         "[WM] WhiteMagic meta-tool — single entry point that auto-routes "
-        "natural language to 28 Ganas / 614 tools. 'World in a seed'.\n\n"
+        "natural language to 28 Ganas / 630 tools. 'World in a seed'.\n\n"
         "Usage:\n"
         "  wm(thought='remember that the API uses X-User-Id headers')  # auto-route\n"
         "  wm(thought='search for memories', args={'limit': 10})       # with args\n"
@@ -508,7 +510,7 @@ async def list_tools() -> list[types.Tool]:  # type: ignore[name-defined]
     )
 
     # Seed mode is the default (WM_MCP_PRAT=2 or unset).
-    # Set WM_MCP_PRAT=1 for PRAT mode (29 tools), WM_MCP_PRAT=0 for classic (490 tools).
+    # Set WM_MCP_PRAT=1 for PRAT mode (29 tools), WM_MCP_PRAT=0 for classic (630 tools).
     prat_val = os.environ.get("WM_MCP_PRAT", "2").strip()
     prat2 = prat_val in ("2", "2.0", "")
     if prat2:
@@ -1249,6 +1251,8 @@ async def main_stdio() -> None:
     try:
         from whitemagic.core.consciousness.consciousness_loop import (
             get_consciousness_loop,
+        )
+        from whitemagic.core.consciousness.consciousness_loop import (
             is_enabled as _loop_enabled,
         )
 
@@ -1385,6 +1389,8 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     try:
         from whitemagic.core.consciousness.consciousness_loop import (
             get_consciousness_loop,
+        )
+        from whitemagic.core.consciousness.consciousness_loop import (
             is_enabled as _loop_enabled,
         )
 
