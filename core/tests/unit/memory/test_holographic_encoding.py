@@ -1,4 +1,4 @@
-"""Tests for holographic coordinate encoding — 5D coordinate round-trips."""
+"""Tests for holographic coordinate encoding — 6D coordinate round-trips."""
 import pytest
 
 from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder, HolographicCoordinate
@@ -10,12 +10,12 @@ def encoder():
 
 
 def test_encode_returns_coordinate(encoder):
-    """Encoding any memory dict returns a HolographicCoordinate with 5 floats."""
+    """Encoding any memory dict returns a HolographicCoordinate with 6 floats."""
     memory = {"title": "test", "content": "hello world", "tags": []}
     coord = encoder.encode(memory)
     assert isinstance(coord, HolographicCoordinate)
     vec = coord.to_vector()
-    assert len(vec) == 5
+    assert len(vec) == 6
     for v in vec:
         assert isinstance(v, float)
 
@@ -58,11 +58,11 @@ def test_w_axis_minimum(encoder):
 
 
 def test_to_dict_round_trip(encoder):
-    """to_dict() should return a dict with x, y, z, w, v keys."""
+    """to_dict() should return a dict with x, y, z, w, v, u keys."""
     memory = {"title": "test", "content": "hello", "tags": ["code"]}
     coord = encoder.encode(memory)
     d = coord.to_dict()
-    assert set(d.keys()) == {"x", "y", "z", "w", "v"}
+    assert set(d.keys()) == {"x", "y", "z", "w", "v", "u"}
     # Round-trip: reconstruct from dict
     reconstructed = HolographicCoordinate(**d)
     assert reconstructed.x == coord.x
@@ -70,6 +70,7 @@ def test_to_dict_round_trip(encoder):
     assert reconstructed.z == coord.z
     assert reconstructed.w == coord.w
     assert reconstructed.v == coord.v
+    assert reconstructed.u == coord.u
 
 
 def test_encode_deterministic_for_same_input(encoder):

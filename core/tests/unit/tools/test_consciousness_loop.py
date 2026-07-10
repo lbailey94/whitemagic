@@ -237,7 +237,7 @@ class TestMetaEngine:
         )
         loop = ConsciousnessLoop(config=config)
         loop.start()
-        time.sleep(2.0)
+        time.sleep(1.5)
         loop.stop()
         # At least one T2 tick should have fired
         assert loop._stats.health_checks > 0 or loop._stats.emergence_scans > 0

@@ -10,16 +10,20 @@ The meta-galaxy stores:
 - Knowledge gap maps (what's missing, where)
 - Strategic index (what the system should focus on next)
 
-This is NOT a separate SQLite database — it's a virtual layer that aggregates
-data from all galaxy backends and caches the result for fast access.
+The meta-galaxy persists its index to the meta galaxy database, making
+summaries and cross-galaxy associations queryable as memories.
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import os
+import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -65,7 +69,7 @@ class MetaGalaxyIndex:
     galaxies: dict[str, GalaxySummary] = field(default_factory=dict)
     total_memories: int = 0
     total_galaxies: int = 0
-    cross_galaxy_associations: int = 0
+    cross_galaxy_associations: dict[str, int] = field(default_factory=dict)
     top_knowledge_gaps: list[str] = field(default_factory=list)
     strategic_priorities: list[str] = field(default_factory=list)
     generated_at: float = field(default_factory=time.time)
@@ -112,6 +116,26 @@ class MetaGalaxy:
             logger.debug("MetaGalaxy: could not get galaxy backend: %s", e)
             return None
 
+    def _get_galaxies_dir(self) -> Any:
+        """Get the galaxies directory path."""
+        try:
+            from whitemagic.config.paths import STATE_ROOT
+            return os.path.join(STATE_ROOT, "users", "local", "galaxies")
+        except Exception:
+            return os.path.expanduser("~/.whitemagic/users/local/galaxies")
+
+    def _scan_disk_galaxies(self) -> dict[str, str]:
+        """Scan the galaxies directory for all galaxy DBs on disk."""
+        result = {}
+        gdir = self._get_galaxies_dir()
+        if not os.path.isdir(gdir):
+            return result
+        for entry in os.listdir(gdir):
+            db_path = os.path.join(gdir, entry, "whitemagic.db")
+            if os.path.exists(db_path):
+                result[entry] = db_path
+        return result
+
     def _summarize_galaxy(self, name: str, backend: Any) -> GalaxySummary:
         """Summarize a single galaxy's state."""
         summary = GalaxySummary(name=name)
@@ -143,21 +167,20 @@ class MetaGalaxy:
         except Exception as e:
             logger.debug("MetaGalaxy: tag scan failed for %s: %s", name, e)
 
-        # Determine galaxy zone based on memory count and importance
+        # Use canonical galaxy zones from taxonomy
+        from whitemagic.core.memory.galaxy_taxonomy import GALAXY_ZONES
+        summary.galaxy_zone = GALAXY_ZONES.get(name, "OUTER_RIM")
+
+        # Health score based on memory count and importance
         if summary.memory_count == 0:
-            summary.galaxy_zone = "FAR_EDGE"
             summary.health_score = 0.3
         elif summary.memory_count < 10:
-            summary.galaxy_zone = "OUTER_RIM"
             summary.health_score = 0.6
         elif summary.memory_count < 50:
-            summary.galaxy_zone = "MID_BAND"
             summary.health_score = 0.8
         elif summary.memory_count < 200:
-            summary.galaxy_zone = "INNER_RIM"
             summary.health_score = 0.9
         else:
-            summary.galaxy_zone = "CORE"
             summary.health_score = 1.0
 
         # Detect knowledge gaps
@@ -189,29 +212,32 @@ class MetaGalaxy:
 
         return gaps
 
-    def _detect_cross_galaxy_refs(self, galaxies: dict[str, GalaxySummary]) -> int:
-        """Count cross-galaxy associations."""
-        total = 0
-        try:
-            backend = self._get_galaxy_backend()
-            if backend is None:
-                return 0
-            for name, gb in getattr(backend, "_galaxy_backends", {}).items():
-                try:
-                    conn = gb._get_conn() if hasattr(gb, "_get_conn") else None
-                    if conn is None:
+    def _detect_cross_galaxy_refs(self, galaxies: dict[str, GalaxySummary]) -> dict[str, int]:
+        """Count cross-galaxy associations by scanning galaxy DBs on disk."""
+        refs: dict[str, int] = {}
+        disk_galaxies = self._scan_disk_galaxies()
+        for name, db_path in disk_galaxies.items():
+            try:
+                from whitemagic.core.memory.db_manager import safe_connect
+                conn = safe_connect(db_path)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                # Count memories that reference other galaxy names
+                for other_name in disk_galaxies:
+                    if other_name == name:
                         continue
-                    cur = conn.cursor()
-                    # Check for memories that reference other galaxies
                     cur.execute(
-                        "SELECT COUNT(*) FROM memories WHERE content LIKE '%galaxy:%'"
+                        "SELECT COUNT(*) FROM memories WHERE content LIKE ?",
+                        (f'%galaxy:{other_name}%',),
                     )
-                    total += cur.fetchone()[0]
-                except Exception:
-                    continue
-        except Exception as e:
-            logger.debug("MetaGalaxy: cross-galaxy ref scan failed: %s", e)
-        return total
+                    count = cur.fetchone()[0]
+                    if count > 0:
+                        key = f"{name}->{other_name}"
+                        refs[key] = count
+                conn.close()
+            except Exception:
+                continue
+        return refs
 
     def _generate_strategic_priorities(
         self, galaxies: dict[str, GalaxySummary], gaps: list[str]
@@ -243,31 +269,124 @@ class MetaGalaxy:
 
         return priorities
 
-    def refresh(self) -> MetaGalaxyIndex:
-        """Refresh the meta-galaxy index by scanning all galaxies."""
-        with self._lock:
-            backend = self._get_galaxy_backend()
-            if backend is None:
-                return MetaGalaxyIndex()
+    def _summarize_galaxy_from_disk(self, name: str, db_path: str) -> GalaxySummary:
+        """Summarize a galaxy by reading its DB file directly."""
+        summary = GalaxySummary(name=name)
+        try:
+            from whitemagic.core.memory.db_manager import safe_connect
+            conn = safe_connect(db_path)
+            cur = conn.cursor()
 
+            count = cur.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+            summary.memory_count = count
+
+            if count > 0:
+                avg = cur.execute("SELECT AVG(importance) FROM memories").fetchone()[0]
+                summary.avg_importance = avg or 0.0
+
+                # Top tags
+                try:
+                    cur.execute(
+                        "SELECT tag, COUNT(*) as cnt FROM tags GROUP BY tag ORDER BY cnt DESC LIMIT 10"
+                    )
+                    for row in cur.fetchall():
+                        summary.top_tags.append((row[0], row[1]))
+                except Exception:
+                    pass
+
+                # Oldest and newest
+                try:
+                    cur.execute("SELECT MIN(created_at), MAX(created_at) FROM memories")
+                    row = cur.fetchone()
+                    if row:
+                        summary.oldest_memory = row[0] or ""
+                        summary.newest_memory = row[1] or ""
+                except Exception:
+                    pass
+
+            conn.close()
+        except Exception as e:
+            logger.debug("MetaGalaxy: disk scan failed for %s: %s", name, e)
+
+        # Use canonical galaxy zones
+        from whitemagic.core.memory.galaxy_taxonomy import GALAXY_ZONES
+        summary.galaxy_zone = GALAXY_ZONES.get(name, "OUTER_RIM")
+
+        if summary.memory_count == 0:
+            summary.health_score = 0.3
+        elif summary.memory_count < 10:
+            summary.health_score = 0.6
+        elif summary.memory_count < 50:
+            summary.health_score = 0.8
+        elif summary.memory_count < 200:
+            summary.health_score = 0.9
+        else:
+            summary.health_score = 1.0
+
+        summary.knowledge_gaps = self._detect_galaxy_gaps(name, summary)
+        return summary
+
+    def _persist_to_meta_db(self, index: MetaGalaxyIndex) -> None:
+        """Persist the meta-galaxy index to the meta galaxy DB as memories."""
+        try:
+            gdir = self._get_galaxies_dir()
+            meta_db = os.path.join(gdir, "meta", "whitemagic.db")
+            if not os.path.exists(meta_db):
+                return
+
+            from whitemagic.core.memory.db_manager import safe_connect
+            conn = safe_connect(meta_db)
+            now = datetime.utcnow().isoformat() + "Z"
+
+            # Store galaxy summaries as metadata entries
+            for name, summary in index.galaxies.items():
+                mem_id = f"meta_summary_{name}_{int(time.time())}"
+                content = json.dumps(summary.to_dict())
+                conn.execute(
+                    "INSERT OR REPLACE INTO memories (id, content, memory_type, created_at, title, galaxy, importance, metadata) "
+                    "VALUES (?, ?, 'LONG_TERM', ?, ?, 'meta', ?, '{}')",
+                    (mem_id, content, now, f"Galaxy Summary: {name}", summary.health_score),
+                )
+
+            # Store cross-galaxy associations
+            for ref_key, count in index.cross_galaxy_associations.items():
+                mem_id = f"meta_xref_{ref_key}_{int(time.time())}"
+                content = json.dumps({"link": ref_key, "count": count})
+                conn.execute(
+                    "INSERT OR REPLACE INTO memories (id, content, memory_type, created_at, title, galaxy, importance, metadata) "
+                    "VALUES (?, ?, 'LONG_TERM', ?, ?, 'meta', 0.5, '{}')",
+                    (mem_id, content, now, f"Cross-galaxy Ref: {ref_key}"),
+                )
+
+            # Store strategic priorities
+            for i, priority in enumerate(index.strategic_priorities):
+                mem_id = f"meta_priority_{i}_{int(time.time())}"
+                conn.execute(
+                    "INSERT OR REPLACE INTO memories (id, content, memory_type, created_at, title, galaxy, importance, metadata) "
+                    "VALUES (?, ?, 'LONG_TERM', ?, ?, 'meta', 0.8, '{}')",
+                    (mem_id, priority, now, f"Strategic Priority: {i+1}"),
+                )
+
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.debug("MetaGalaxy: persist to meta DB failed: %s", e)
+
+    def refresh(self) -> MetaGalaxyIndex:
+        """Refresh the meta-galaxy index by scanning all galaxies on disk."""
+        with self._lock:
             galaxies: dict[str, GalaxySummary] = {}
 
-            # Scan all galaxy backends
-            galaxy_backends = getattr(backend, "_galaxy_backends", {})
-            for name, gb in galaxy_backends.items():
+            # Scan all galaxy DBs on disk (not just cached backends)
+            disk_galaxies = self._scan_disk_galaxies()
+            for name, db_path in disk_galaxies.items():
+                if name == "meta":
+                    continue  # Don't scan ourselves
                 try:
-                    galaxies[name] = self._summarize_galaxy(name, gb)
+                    galaxies[name] = self._summarize_galaxy_from_disk(name, db_path)
                 except Exception as e:
                     logger.debug("MetaGalaxy: failed to summarize galaxy %s: %s", name, e)
                     galaxies[name] = GalaxySummary(name=name)
-
-            # Also scan the default backend
-            try:
-                default_backend = getattr(backend, "_get_default_backend", lambda: None)()
-                if default_backend is not None:
-                    galaxies["universal"] = self._summarize_galaxy("universal", default_backend)
-            except Exception:
-                pass
 
             # Collect all knowledge gaps
             all_gaps: list[str] = []
@@ -293,11 +412,14 @@ class MetaGalaxy:
             self._cache = index
             self._cache_time = time.time()
 
+            # Persist to meta galaxy DB
+            self._persist_to_meta_db(index)
+
             logger.info(
-                "MetaGalaxy refreshed: %s galaxies, %s memories, %s gaps, %s priorities",
+                "MetaGalaxy refreshed: %s galaxies, %s memories, %s cross-refs, %s priorities",
                 index.total_galaxies,
                 index.total_memories,
-                len(all_gaps),
+                len(cross_refs),
                 len(priorities),
             )
 
@@ -350,7 +472,7 @@ class MetaGalaxy:
         lines = [
             "META-GALAXY OVERVIEW",
             "=" * 50,
-            f"Galaxies: {index.total_galaxies} | Memories: {index.total_memories} | Cross-refs: {index.cross_galaxy_associations}",
+            f"Galaxies: {index.total_galaxies} | Memories: {index.total_memories} | Cross-refs: {len(index.cross_galaxy_associations)}",
             "",
             "Galaxy Summaries:",
         ]
@@ -362,6 +484,11 @@ class MetaGalaxy:
             if summary.knowledge_gaps:
                 for gap in summary.knowledge_gaps[:2]:
                     lines.append(f"    └─ ⚠ {gap}")
+
+        if index.cross_galaxy_associations:
+            lines.append("\nCross-Galaxy Associations:")
+            for ref, count in sorted(index.cross_galaxy_associations.items(), key=lambda x: -x[1])[:10]:
+                lines.append(f"  {ref}: {count} references")
 
         if index.strategic_priorities:
             lines.append("\nStrategic Priorities:")

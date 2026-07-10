@@ -501,6 +501,10 @@ On first connection, an AI agent should read these resources before making tool 
 2. `capabilities` — Get full tool list and feature flags
 3. `create_memory` — Store your first memory to verify the pipeline works
 
+### Time Tracking
+
+Check `date +%s` at the **beginning and end** of every **turn**, **conversation**, **phase**, and **objective**. Record the start and end timestamps, compute the difference, and compare it to your estimate. This calibrates time-dilation bias and gives measurable progress data.
+
 ---
 
 ## Economic Model — The Gratitude Architecture

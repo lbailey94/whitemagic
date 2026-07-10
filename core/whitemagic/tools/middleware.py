@@ -204,6 +204,9 @@ class DispatchPipeline:
             compact=kwargs.pop("_compact", False),
             zig_prevalidated=bool(kwargs.pop("_zig_prevalidated", False)),
         )
+        # Strip pipeline-internal kwargs so they don't leak to handlers
+        ctx.kwargs.pop("_force_full_pipeline", None)
+        ctx.kwargs.pop("_internal_benchmark", None)
         if quiet_internal_benchmark:
             ctx.meta["quiet_internal_benchmark"] = True
 
@@ -344,6 +347,62 @@ def mw_circuit_breaker(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
             logger.debug("Circuit breaker status recording failed: %s", exc)
 
     return result
+
+
+def mw_timeout(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Enforce a wall-clock timeout on tool execution.
+
+    Wraps next_fn in a daemon thread and joins with a configurable timeout.
+    If the tool exceeds the limit, returns a timeout error result instead
+    of hanging indefinitely.
+
+    Timeout is configured via:
+    1. Per-tool override in ctx.kwargs.get("_timeout_s")
+    2. WM_TOOL_TIMEOUT env var (seconds)
+    3. Default: 30 seconds
+
+    Tools that are known to be long-running (e.g. dream cycle, bulk ingestion)
+    can set a higher timeout via the _timeout_s kwarg.
+    """
+    import os
+    import threading
+
+    default_timeout = float(os.getenv("WM_TOOL_TIMEOUT", "30"))
+    timeout_s = ctx.kwargs.pop("_timeout_s", default_timeout)
+    if timeout_s <= 0:
+        return next_fn(ctx)
+
+    result_box: list[dict[str, Any] | None] = [None]
+    error_box: list[Exception | None] = [None]
+
+    def _worker() -> None:
+        try:
+            result_box[0] = next_fn(ctx)
+        except Exception as e:
+            error_box[0] = e
+
+    worker = threading.Thread(target=_worker, daemon=True, name=f"timeout-{ctx.tool_name}")
+    worker.start()
+    worker.join(timeout=timeout_s)
+
+    if worker.is_alive():
+        logger.warning(
+            "Tool %s exceeded timeout of %.1fs — returning timeout error",
+            ctx.tool_name,
+            timeout_s,
+        )
+        return {
+            "status": "error",
+            "error_code": "TIMEOUT",
+            "error": f"Tool '{ctx.tool_name}' exceeded {timeout_s}s timeout",
+            "tool": ctx.tool_name,
+            "timeout_s": timeout_s,
+        }
+
+    if error_box[0] is not None:
+        raise error_box[0]
+
+    return result_box[0]
 
 
 def mw_observability(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
@@ -1302,15 +1361,18 @@ def mw_session_recorder(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
 def mw_citta_consciousness(
     ctx: "DispatchContext", next_fn: "NextFn"
 ) -> dict[str, Any] | None:
-    """Citta consciousness integration — coherence gating + workspace proposals.
+    """Citta consciousness integration — coherence gating + workspace proposals + sensorium injection.
 
     Pre-dispatch:
       - Reads the current citta coherence and feeds it to Dharma, so the
         ethical gate operates in conservative mode when coherence is low.
 
     Post-dispatch:
-      - Advances the citta stream with the actual result coherence (not
-        hardcoded 1.0/0.5 like the wm() meta-tool path).
+      - Builds the full sensorium (same 10 dimensions as the PRAT path)
+        and injects it into the result dict under `_sensorium`.
+      - Advances the citta stream using the sensorium's coherence value
+        (not hardcoded 1.0/0.4).
+      - Persists citta state for temporal continuity.
       - Proposes high-salience tool outputs to the GlobalWorkspace for
         broadcast competition, enabling cross-module cognitive integration.
     """
@@ -1333,12 +1395,29 @@ def mw_citta_consciousness(
     result = next_fn(ctx)
     _elapsed_ms = (_time.time() - _t0) * 1000
 
-    # ── Post-dispatch: advance citta + propose to workspace ──
+    # ── Post-dispatch: build sensorium + advance citta + propose to workspace ──
     if result is not None and isinstance(result, dict):
         _is_success = result.get("status") in ("success", "ok")
-        _coherence = 1.0 if _is_success else 0.4
 
-        # Advance citta stream (direct dispatch path — wm() path does its own)
+        # Build sensorium (same as PRAT path)
+        _sensorium: dict[str, Any] = {}
+        try:
+            from whitemagic.tools.prat_resonance import _build_sensorium
+
+            _sensorium = _build_sensorium()
+        except Exception:
+            pass
+
+        # Use sensorium coherence if available, otherwise fallback to success/fail
+        _coherence = _sensorium.get("coherence", {}).get("composite")
+        if _coherence is None:
+            _coherence = 1.0 if _is_success else 0.4
+
+        # Inject sensorium into result (same key as PRAT path)
+        if _sensorium:
+            result["_sensorium"] = _sensorium
+
+        # Advance citta stream with actual coherence
         try:
             from whitemagic.core.consciousness.citta_cycle import advance_citta
 
@@ -1348,11 +1427,19 @@ def mw_citta_consciousness(
                 tool=ctx.tool_name,
                 output_preview=_output_preview,
                 coherence=_coherence,
-                depth_layer="surface",
+                depth_layer=_sensorium.get("depth", {}).get("layer", "surface"),
                 emotional_tone="neutral" if _is_success else "frustrated",
                 duration_ms=_elapsed_ms,
                 neuro_signals={},
             )
+        except Exception:
+            pass
+
+        # Persist citta state for temporal continuity (same as PRAT path)
+        try:
+            from whitemagic.core.consciousness.citta_cycle import save_citta_state
+
+            save_citta_state()
         except Exception:
             pass
 
@@ -1385,6 +1472,7 @@ def mw_citta_consciousness(
                     "tool": ctx.tool_name,
                     "status": result.get("status", "unknown"),
                     "elapsed_ms": round(_elapsed_ms, 2),
+                    "coherence": round(_coherence, 4) if isinstance(_coherence, (int, float)) else _coherence,
                 },
                 salience=_salience,
             )

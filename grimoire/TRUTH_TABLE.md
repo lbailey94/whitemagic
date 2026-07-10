@@ -77,7 +77,7 @@ If any document, registry, or code file disagrees with this table, **this table 
 | 23 | **Ox** (牛 Niu) | `patience` | Earth | `swarm.decompose`, `swarm.route`, `swarm.vote`, `swarm.plan`, `worker.status` | Endurance, persistence, watchdog |
 | 24 | **Girl** (女 Nu) | `connection` | Earth | `agent.register`, `agent.heartbeat`, `agent.list`, `agent.capabilities`, `agent.trust` | Nurture, user profile, relationships |
 | 25 | **Void** (虚 Xu) | `mystery` | Water | `galactic.dashboard`, `garden_activate`, `garden_status`, `galaxy.create`, `galaxy.switch` | Emptiness, gardens, galaxies |
-| 26 | **Roof** (危 Wei) | `protection` | Earth | `ollama.models`, `ollama.generate`, `ollama.chat`, `zodiac.status`, `model.register` | Shelter, zodiac cores, local AI |
+| 26 | **Roof** (危 Wei) | `protection` | Earth | `llama_cpp.models`, `llama_cpp.generate`, `llama_cpp.chat`, `zodiac.status`, `model.register` | Shelter, zodiac cores, local AI |
 | 27 | **Encampment** (室 Shi) | `transformation` | Fire | `sangha_chat_send`, `broker.publish`, `broker.history`, `broker.status` | Structure, transition, handoff |
 | 28 | **Wall** (壁 Bi) | `truth` | Earth | `vote.create`, `vote.cast`, `vote.analyze`, `engagement.issue`, `engagement.validate`, `marketplace.publish`, `marketplace.discover`, `marketplace.complete` | Boundaries, marketplace, engagement tokens |
 
@@ -211,7 +211,7 @@ orphaned tools** to their Gana/Garden homes based on semantic domain alignment.
 `galactic.dashboard`, `galactic_dashboard`, `garden_activate`, `garden_browse`, `garden_health`, `garden_list_files`, `garden_list_functions`, `garden_map_system`, `garden_resolve`, `garden_resonance`, `garden_search`, `garden_stats`, `garden_status`, `garden_synergy`, `galaxy.create`, `galaxy.delete`, `galaxy.ingest`, `galaxy.lineage`, `galaxy.lineage_stats`, `galaxy.list`, `galaxy.merge`, `galaxy.restore`, `galaxy.status`, `galaxy.switch`, `galaxy.sync`, `galaxy.taxonomy`, `galaxy.transfer`, `galaxy.backup`, `galactic.stats`, `galactic.sweep`, `oms.export`, `oms.import`, `oms.inspect`, `oms.list`, `oms.price`, `oms.status`, `oms.verify`
 
 ### Ch 26 Roof — Shelter (protection)
-`ollama.models`, `ollama.generate`, `ollama.chat`, `ollama.agent`, `ollama_agent`, `model.list`, `model.register`, `model.hash`, `model.signing_status`, `model.verify`, `zodiac.status`, `shelter.create`, `shelter.destroy`, `shelter.execute`, `shelter.inspect`, `shelter.policy`, `shelter.status`
+`llama_cpp.models`, `llama_cpp.generate`, `llama_cpp.chat`, `llama_cpp.agent`, `llama_agent`, `model.list`, `model.register`, `model.hash`, `model.signing_status`, `model.verify`, `zodiac.status`, `shelter.create`, `shelter.destroy`, `shelter.execute`, `shelter.inspect`, `shelter.policy`, `shelter.status`
 
 ### Ch 27 Encampment — Community (transformation)
 `sangha_chat_send`, `sangha_chat_read`, `broker.publish`, `broker.history`, `broker.status`, `ganying_emit`, `ganying_history`, `ganying_listeners`

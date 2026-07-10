@@ -429,6 +429,7 @@ def _build_pipeline() -> Any:
         mw_security_monitor,
         mw_semantic_cache,
         mw_session_recorder,
+        mw_timeout,
         mw_tool_permissions,
         mw_zodiac_resonance,
     )
@@ -436,6 +437,7 @@ def _build_pipeline() -> Any:
     p = DispatchPipeline()
     p.use("input_sanitizer", mw_input_sanitizer)
     p.use("circuit_breaker", mw_circuit_breaker)
+    p.use("timeout", mw_timeout)
     p.use("rate_limiter", mw_rate_limiter)
     p.use("security_monitor", mw_security_monitor)
     p.use("cognitive_mode", mw_cognitive_mode)
@@ -492,6 +494,10 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
     is unnecessary and causes unacceptable latency for status queries.
     """
     _ensure_router_cached()
+    # Strip pipeline-internal kwargs so they don't leak to handlers
+    kwargs.pop("_timeout_s", None)
+    kwargs.pop("_force_full_pipeline", None)
+    kwargs.pop("_internal_benchmark", None)
     result = None
 
     # Gana-prefixed tools → gana_invoke

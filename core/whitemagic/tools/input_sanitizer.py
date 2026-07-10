@@ -384,6 +384,26 @@ _CONTENT_SCAN_EXEMPT: set = {
     "agent.register",
     # Task distribution (command field contains arbitrary shell commands)
     "task.distribute",
+    # Governance goals (free-form text descriptions)
+    "governor_set_goal",
+    "governor_set_dharma",
+    # JIT research (free-form research queries)
+    "jit_research",
+    # Alchemical cycle (free-form task descriptions)
+    "alchemical_cycle",
+    # Consult wisdom council (free-form queries)
+    "consult_wisdom_council",
+    # Ensemble reasoning (free-form prompts)
+    "ensemble",
+    "ensemble.query",
+    # Serendipity (free-form topic queries)
+    "serendipity_surface",
+    "serendipity_mark_accessed",
+    # Contest (repo URLs and project paths)
+    "contest.prepare",
+    # Metrics (timeframe/format params, not user content)
+    "get_metrics_summary",
+    "track_metric",
 }
 
 

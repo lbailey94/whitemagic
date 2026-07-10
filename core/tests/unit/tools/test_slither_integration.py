@@ -5,14 +5,14 @@ import pytest
 class TestSlitherHandlers:
     def test_slither_status(self):
         from whitemagic.tools.handlers.security_tools import handle_slither_status
-        result = handle_slither_status({})
+        result = handle_slither_status()
         assert "available" in result
         assert "path" in result
 
     def test_slither_scan_no_slither(self, monkeypatch):
         from whitemagic.tools.handlers.security_tools import handle_slither_scan
         monkeypatch.setattr("shutil.which", lambda x: None)
-        result = handle_slither_scan({"project_dir": "."})
+        result = handle_slither_scan(project_dir=".")
         assert result["status"] == "error"
         assert "not installed" in result["error"]
 

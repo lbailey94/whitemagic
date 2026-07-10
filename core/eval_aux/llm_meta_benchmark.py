@@ -388,8 +388,8 @@ async def main():
     
     if not benchmark.harness.is_available:
         logger.debug("ERROR: Model %s not available", model_name)
-        logger.debug("Make sure Ollama is running: ollama serve")
-        logger.debug("And model is pulled: ollama pull %s", model_name)
+        logger.debug("Make sure llama-server is running")
+        logger.debug("And model is available: %s", model_name)
         return
     
     results = await benchmark.run_benchmark()

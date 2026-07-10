@@ -280,46 +280,13 @@ class AssociationMiner:
             logger.error("Association mining: could not get memory system: %s", e, exc_info=True)
             return report
 
-        # Sample diverse memories: mix of zones
+        # Sample diverse memories using galaxy-aware backend
         all_mems = []
         try:
-            core_mems = um.backend.list_recent(limit=sample_size // 4)
-            # Also get some random from deeper zones via SQL
-            import sqlite3
-            with um.backend.pool.connection() as conn:
-                conn.row_factory = sqlite3.Row
-                # Sample from different galactic zones
-                rows = conn.execute(
-                    """SELECT * FROM memories
-                       WHERE galactic_distance < 0.40
-                         AND memory_type != 'quarantined'
-                       ORDER BY RANDOM() LIMIT ?""",
-                    (sample_size // 4,),
-                ).fetchall()
-                inner_mems = um.backend._batch_hydrate(rows, conn)
-
-                rows = conn.execute(
-                    """SELECT * FROM memories
-                       WHERE galactic_distance BETWEEN 0.40 AND 0.70
-                         AND memory_type != 'quarantined'
-                       ORDER BY RANDOM() LIMIT ?""",
-                    (sample_size // 4,),
-                ).fetchall()
-                mid_mems = um.backend._batch_hydrate(rows, conn)
-
-                rows = conn.execute(
-                    """SELECT * FROM memories
-                       WHERE galactic_distance > 0.70
-                         AND memory_type != 'quarantined'
-                       ORDER BY RANDOM() LIMIT ?""",
-                    (sample_size // 4,),
-                ).fetchall()
-                outer_mems = um.backend._batch_hydrate(rows, conn)
-
-            all_mems = core_mems + inner_mems + mid_mems + outer_mems
-        except Exception as e:
-            logger.warning("Association mining: sampling failed, using recent: %s", e, exc_info=True)
             all_mems = um.backend.list_recent(limit=sample_size)
+        except Exception as e:
+            logger.warning("Association mining: sampling failed: %s", e, exc_info=True)
+            all_mems = []
 
         if len(all_mems) < 2:
             return report
@@ -423,32 +390,13 @@ class AssociationMiner:
         # Persist if enabled
         if self._persist and proposals:
             try:
-                import sqlite3
-                with um.backend.pool.connection() as conn:
-                    with conn:
-                        for p in proposals:
-                            # Bidirectional links with overlap_score as strength
-                            try:
-                                _now = datetime.now().isoformat()
-                                conn.execute(
-                                    """INSERT OR IGNORE INTO associations
-                                       (source_id, target_id, strength,
-                                        direction, relation_type, edge_type,
-                                        created_at, ingestion_time)
-                                       VALUES (?, ?, ?, 'undirected', 'associated_with', 'semantic', ?, ?)""",
-                                    (p.source_id, p.target_id, p.overlap_score, _now, _now),
-                                )
-                                conn.execute(
-                                    """INSERT OR IGNORE INTO associations
-                                       (source_id, target_id, strength,
-                                        direction, relation_type, edge_type,
-                                        created_at, ingestion_time)
-                                       VALUES (?, ?, ?, 'undirected', 'associated_with', 'semantic', ?, ?)""",
-                                    (p.target_id, p.source_id, p.overlap_score, _now, _now),
-                                )
-                                report.links_created += 1
-                            except Exception as e:
-                                logger.debug("Association link insert failed: %s", e)
+                for p in proposals:
+                    try:
+                        um.backend.add_association(p.source_id, p.target_id, p.overlap_score)
+                        um.backend.add_association(p.target_id, p.source_id, p.overlap_score)
+                        report.links_created += 1
+                    except Exception as e:
+                        logger.debug("Association link insert failed: %s", e)
             except Exception as e:
                 logger.error("Association mining: persistence failed: %s", e, exc_info=True)
 

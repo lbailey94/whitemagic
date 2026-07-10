@@ -189,14 +189,30 @@ class SQLiteBackend:
             """)
 
             # 4. Full Text Search (FTS5) - Use internal content for string ID support
-            conn.execute("""
-                CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
-                    id UNINDEXED,
-                    title,
-                    content,
-                    tags_text
-                )
-            """)
+            try:
+                conn.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+                        id UNINDEXED,
+                        title,
+                        content,
+                        tags_text
+                    )
+                """)
+            except sqlite3.OperationalError:
+                # FTS5 vtable constructor failed — shadow tables corrupted/missing
+                logger.warning("FTS5 vtable broken, rebuilding memories_fts")
+                conn.execute("PRAGMA writable_schema=ON")
+                conn.execute("DELETE FROM sqlite_master WHERE name='memories_fts' AND type='table'")
+                conn.execute("PRAGMA writable_schema=OFF")
+                conn.execute("""
+                    CREATE VIRTUAL TABLE memories_fts USING fts5(
+                        id UNINDEXED,
+                        title,
+                        content,
+                        tags_text
+                    )
+                """)
+                logger.info("FTS5 vtable rebuilt successfully")
 
             # 5. Holographic Coordinates table
             conn.execute("""
@@ -240,6 +256,14 @@ class SQLiteBackend:
                 try:
                     conn.execute("ALTER TABLE holographic_coords ADD COLUMN v REAL DEFAULT 0.5")
                     logger.info("Added v column to holographic_coords table")
+                except sqlite3.OperationalError:
+                    logger.debug("Swallowed exception", exc_info=True)
+
+            # Migration: add u column (6D galaxy affinity) if missing
+            if "u" not in hc_columns:
+                try:
+                    conn.execute("ALTER TABLE holographic_coords ADD COLUMN u REAL DEFAULT 0.5")
+                    logger.info("Added u column to holographic_coords table")
                 except sqlite3.OperationalError:
                     logger.debug("Swallowed exception", exc_info=True)
 
@@ -837,34 +861,59 @@ class SQLiteBackend:
                 )
             return len(updates)
 
-    def store_coords(self, memory_id: str, x: float, y: float, z: float, w: float, v: float = 0.5) -> None:
-        """Store holographic coordinates (5D: x, y, z, w, v)."""
+    def store_coords(self, memory_id: str, x: float, y: float, z: float, w: float, v: float = 0.5, u: float = 0.5) -> None:
+        """Store holographic coordinates (6D: x, y, z, w, v, u)."""
         with self.pool.connection() as conn:
             with conn:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO holographic_coords (memory_id, x, y, z, w, v)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (memory_id, x, y, z, w, v),
-                )
+                try:
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO holographic_coords (memory_id, x, y, z, w, v, u)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (memory_id, x, y, z, w, v, u),
+                    )
+                except sqlite3.OperationalError:
+                    # Fallback for DBs without u column
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO holographic_coords (memory_id, x, y, z, w, v)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (memory_id, x, y, z, w, v),
+                    )
 
     def get_coords(self, memory_id: str) -> tuple | None:
-        """Get holographic coordinates for a memory (5D: x, y, z, w, v)."""
+        """Get holographic coordinates for a memory (6D: x, y, z, w, v, u)."""
         with self.pool.connection() as conn:
-            row = conn.execute(
-                "SELECT x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords WHERE memory_id = ?",
-                (memory_id,),
-            ).fetchone()
+            try:
+                row = conn.execute(
+                    "SELECT x, y, z, w, COALESCE(v, 0.5), COALESCE(u, 0.5) FROM holographic_coords WHERE memory_id = ?",
+                    (memory_id,),
+                ).fetchone()
+            except sqlite3.OperationalError:
+                # Fallback for DBs without u column
+                row = conn.execute(
+                    "SELECT x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords WHERE memory_id = ?",
+                    (memory_id,),
+                ).fetchone()
+                if row:
+                    return (row[0], row[1], row[2], row[3], row[4], 0.5)
+                return None
             if row:
-                return (row[0], row[1], row[2], row[3], row[4])
+                return (row[0], row[1], row[2], row[3], row[4], row[5])
             return None
 
     def get_all_coords(self) -> dict[str, tuple]:
-        """Get all holographic coordinates (5D: x, y, z, w, v)."""
+        """Get all holographic coordinates (6D: x, y, z, w, v, u)."""
         with self.pool.connection() as conn:
-            cursor = conn.execute("SELECT memory_id, x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords")
-            return {row[0]: (row[1], row[2], row[3], row[4], row[5]) for row in cursor}
+            try:
+                cursor = conn.execute("SELECT memory_id, x, y, z, w, COALESCE(v, 0.5), COALESCE(u, 0.5) FROM holographic_coords")
+                return {row[0]: (row[1], row[2], row[3], row[4], row[5], row[6]) for row in cursor}
+            except sqlite3.OperationalError:
+                # Fallback for DBs without u column
+                cursor = conn.execute("SELECT memory_id, x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords")
+                return {row[0]: (row[1], row[2], row[3], row[4], row[5], 0.5) for row in cursor}
 
     def _batch_hydrate(self, rows: list[Any], conn: sqlite3.Connection) -> list[Memory]:
         """Efficiently hydrate Memory objects from raw rows in batch.
@@ -1034,6 +1083,22 @@ class SQLiteBackend:
                 raise
 
         return consolidated_count
+
+    def add_association(self, source_id: str, target_id: str, strength: float = 0.5) -> bool:
+        """Add a single association edge between two memories.
+
+        Uses INSERT OR IGNORE to avoid duplicates. Does not update
+        the Memory object — this is a direct DB operation for use by
+        subsystems like the association miner.
+        """
+        strength = max(0.0, min(1.0, strength))
+        with self.pool.connection() as conn:
+            with conn:
+                conn.execute(
+                    "INSERT OR IGNORE INTO associations (source_id, target_id, strength) VALUES (?, ?, ?)",
+                    (source_id, target_id, strength),
+                )
+        return True
 
     def decay_associations(self, batch_size: int = 5000) -> dict[str, Any]:
         """Apply time-based decay to association strengths (v14.0 Living Graph).

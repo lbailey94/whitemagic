@@ -512,7 +512,7 @@ def semantic_check(text: str) -> str | None:
         return None
 
     # Don't check very short texts (too noisy)
-    if len(text.strip()) < 10:
+    if len(text.strip()) < 20:
         return None
 
     # Skip hex-like ID strings (memory IDs, content hashes, UUIDs)

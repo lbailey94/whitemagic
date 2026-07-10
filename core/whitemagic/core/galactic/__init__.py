@@ -150,7 +150,8 @@ class Memory:
             if lo <= distance < hi:
                 zone = name
                 break
-        tags_raw = row["tags"] or ""
+        row_keys = set(row.keys())
+        tags_raw = row["tags"] if "tags" in row_keys else ""
         tags = (
             [t for t in tags_raw.split(",") if t] if isinstance(tags_raw, str) else []
         )
@@ -168,11 +169,11 @@ class Memory:
             importance=float(row["importance"] or 0.5),
             emotional_valence=float(row["emotional_valence"] or 0.0),
             neuro_score=float(row["neuro_score"] or 0.0),
-            novelty_score=float(row["novelty_score"] or 0.5),
+            novelty_score=float(row["novelty_score"] if "novelty_score" in row_keys else 0.5),
             galactic_distance=distance,
             galactic_zone=zone,
             created_at=row["created_at"],
-            updated_at=row["updated_at"],
+            updated_at=row["updated_at"] if "updated_at" in row_keys else None,
             tags=tags,
             metadata=meta,
         )
@@ -232,6 +233,8 @@ def galaxy_stats() -> GalaxyStats:
     Returns counts, zone distribution, type distribution, averages,
     and oldest/newest memory timestamps. Used by /api/galactic/stats
     and the librarian's `galactic.stats` bridge function.
+
+    Aggregates from galaxy DBs when the monolith has insufficient data.
     """
     t0 = time.perf_counter()
     with connect() as conn:
@@ -240,7 +243,6 @@ def galaxy_stats() -> GalaxyStats:
         total_associations = cur.execute(
             "SELECT COUNT(*) FROM associations"
         ).fetchone()[0]
-        # memory_embeddings may be missing in older substrates.
         try:
             total_embeddings = cur.execute(
                 "SELECT COUNT(*) FROM memory_embeddings"
@@ -248,7 +250,6 @@ def galaxy_stats() -> GalaxyStats:
         except sqlite3.OperationalError:
             total_embeddings = 0
 
-        # Zone distribution via single GROUP BY.
         by_zone: dict[str, int] = {name: 0 for name in GALACTIC_ZONES.values()}
         for row in cur.execute(
             "SELECT galactic_distance FROM memories WHERE galactic_distance IS NOT NULL"
@@ -280,6 +281,58 @@ def galaxy_stats() -> GalaxyStats:
             "ORDER BY created_at DESC LIMIT 1"
         ).fetchone()
 
+    # Aggregate from galaxy DBs if monolith has insufficient data
+    if total_memories < 100:
+        path = _resolve_db_path()
+        galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
+        if not galaxy_dir.exists():
+            galaxy_dir = path.parent / "galaxies"
+        if galaxy_dir.exists():
+            for gdir in galaxy_dir.iterdir():
+                if not gdir.is_dir():
+                    continue
+                gdb = gdir / "whitemagic.db"
+                if not gdb.exists() or gdb == path:
+                    continue
+                try:
+                    gconn = safe_connect(str(gdb), timeout=3.0)
+                    gcur = gconn.cursor()
+                    total_memories += gcur.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                    try:
+                        total_associations += gcur.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
+                    except sqlite3.OperationalError:
+                        pass
+                    try:
+                        total_embeddings += gcur.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0]
+                    except sqlite3.OperationalError:
+                        pass
+                    for row in gcur.execute(
+                        "SELECT galactic_distance FROM memories WHERE galactic_distance IS NOT NULL"
+                    ):
+                        d = float(row[0] or 0.0)
+                        for (lo, hi), name in GALACTIC_ZONES.items():
+                            if lo <= d < hi:
+                                by_zone[name] += 1
+                                break
+                    for row in gcur.execute(
+                        "SELECT memory_type, COUNT(*) FROM memories GROUP BY memory_type"
+                    ):
+                        tname = row[0] or "UNKNOWN"
+                        by_type[tname] = by_type.get(tname, 0) + row[1]
+                    g_oldest = gcur.execute(
+                        "SELECT created_at FROM memories WHERE created_at IS NOT NULL ORDER BY created_at ASC LIMIT 1"
+                    ).fetchone()
+                    g_newest = gcur.execute(
+                        "SELECT created_at FROM memories WHERE created_at IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+                    ).fetchone()
+                    if g_oldest and (oldest is None or g_oldest[0] < oldest[0]):
+                        oldest = g_oldest
+                    if g_newest and (newest is None or g_newest[0] > newest[0]):
+                        newest = g_newest
+                    gconn.close()
+                except Exception:
+                    continue
+
     return GalaxyStats(
         total_memories=total_memories,
         total_associations=total_associations,
@@ -308,7 +361,40 @@ def memory_recent(limit: int = 10, memory_type: str | None = None) -> list[Memor
     params = params + (limit,)
     with connect() as conn:
         rows = conn.execute(query, params).fetchall()
-    return [Memory.from_row(r) for r in rows]
+    mems = [Memory.from_row(r) for r in rows]
+
+    # If monolith has insufficient results, check galaxy DBs
+    if len(mems) < limit:
+        path = _resolve_db_path()
+        galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
+        if not galaxy_dir.exists():
+            galaxy_dir = path.parent / "galaxies"
+        if galaxy_dir.exists():
+            for gdir in galaxy_dir.iterdir():
+                if not gdir.is_dir() or len(mems) >= limit:
+                    continue
+                gdb = gdir / "whitemagic.db"
+                if not gdb.exists() or gdb == path:
+                    continue
+                try:
+                    gconn = safe_connect(str(gdb), timeout=3.0)
+                    gconn.row_factory = sqlite3.Row
+                    gquery = "SELECT * FROM memories"
+                    if memory_type:
+                        gquery += " WHERE memory_type = ?"
+                        gparams: tuple[Any, ...] = (memory_type,)
+                    else:
+                        gparams = ()
+                    gquery += " ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?"
+                    gparams = gparams + (limit - len(mems),)
+                    grows = gconn.execute(gquery, gparams).fetchall()
+                    mems.extend(Memory.from_row(r) for r in grows)
+                    gconn.close()
+                except Exception:
+                    continue
+            mems.sort(key=lambda m: m.updated_at or m.created_at or "", reverse=True)
+            mems = mems[:limit]
+    return mems
 
 
 def memory_search(
@@ -385,7 +471,38 @@ def memory_search(
         sql += " ORDER BY created_at DESC LIMIT ?"
         params = params + (limit,)
         rows = conn.execute(sql, params).fetchall()
-    return [Memory.from_row(r) for r in rows]
+    mems = [Memory.from_row(r) for r in rows]
+
+    # If monolith has no results, search galaxy DBs
+    if not mems:
+        path = _resolve_db_path()
+        galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
+        if not galaxy_dir.exists():
+            galaxy_dir = path.parent / "galaxies"
+        if galaxy_dir.exists():
+            for gdir in galaxy_dir.iterdir():
+                if not gdir.is_dir() or len(mems) >= limit:
+                    continue
+                gdb = gdir / "whitemagic.db"
+                if not gdb.exists() or gdb == path:
+                    continue
+                try:
+                    gconn = safe_connect(str(gdb), timeout=3.0)
+                    gconn.row_factory = sqlite3.Row
+                    like = f"%{query}%"
+                    gsql = "SELECT * FROM memories WHERE (title LIKE ? OR content LIKE ?)"
+                    gparams: tuple[Any, ...] = (like, like)
+                    if memory_type:
+                        gsql += " AND memory_type = ?"
+                        gparams = gparams + (memory_type,)
+                    gsql += " ORDER BY created_at DESC LIMIT ?"
+                    gparams = gparams + (limit - len(mems),)
+                    grows = gconn.execute(gsql, gparams).fetchall()
+                    mems.extend(Memory.from_row(r) for r in grows)
+                    gconn.close()
+                except Exception:
+                    continue
+    return mems
 
 
 def memory_by_id(memory_id: str) -> Memory | None:
@@ -479,7 +596,7 @@ def event_search(
     params.append(limit)
     with connect() as conn:
         rows = conn.execute(sql, params).fetchall()
-    return [
+    events = [
         {
             "id": r["id"],
             "timestamp": r["timestamp"],
@@ -490,6 +607,38 @@ def event_search(
         }
         for r in rows
     ]
+
+    # If monolith has no events, search galaxy DBs
+    if not events:
+        path = _resolve_db_path()
+        galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
+        if not galaxy_dir.exists():
+            galaxy_dir = path.parent / "galaxies"
+        if galaxy_dir.exists():
+            for gdir in galaxy_dir.iterdir():
+                if not gdir.is_dir() or len(events) >= limit:
+                    continue
+                gdb = gdir / "whitemagic.db"
+                if not gdb.exists() or gdb == path:
+                    continue
+                try:
+                    gconn = safe_connect(str(gdb), timeout=3.0)
+                    gconn.row_factory = sqlite3.Row
+                    grows = gconn.execute(sql, params).fetchall()
+                    for r in grows:
+                        events.append({
+                            "id": r["id"],
+                            "timestamp": r["timestamp"],
+                            "action": r["action"],
+                            "boundary_type": r["boundary_type"],
+                            "ethical_score": float(r["ethical_score"] or 0.0),
+                            "concerns": r["concerns"],
+                        })
+                    gconn.close()
+                except Exception:
+                    continue
+            events = events[:limit]
+    return events
 
 
 def constellation_count() -> int:
@@ -509,6 +658,9 @@ def substrate_health() -> dict[str, Any]:
 
     Returns a dict with: db_path, db_exists, db_size_bytes, total_memories,
     total_associations, total_embeddings, total_dharma_audits, substrate_version.
+
+    Aggregates counts from galaxy DBs when the monolith has insufficient data
+    (post-galaxy-migration the monolith may be nearly empty).
     """
     path = _resolve_db_path()
     out: dict[str, Any] = {
@@ -558,6 +710,45 @@ def substrate_health() -> dict[str, Any]:
             except sqlite3.OperationalError:
                 out["total_akashic_seeds"] = 0
         out["status"] = "alive"
+
+        # Aggregate from galaxy DBs if monolith counts are low (post-migration)
+        if out["total_memories"] < 100 or out["total_associations"] == 0:
+            galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
+            if not galaxy_dir.exists():
+                galaxy_dir = path.parent / "galaxies"
+            if galaxy_dir.exists():
+                for gdir in galaxy_dir.iterdir():
+                    if not gdir.is_dir():
+                        continue
+                    gdb = gdir / "whitemagic.db"
+                    if not gdb.exists() or gdb == path:
+                        continue
+                    try:
+                        gconn = safe_connect(str(gdb), timeout=3.0)
+                        out["total_memories"] += gconn.execute(
+                            "SELECT COUNT(*) FROM memories"
+                        ).fetchone()[0]
+                        try:
+                            out["total_associations"] += gconn.execute(
+                                "SELECT COUNT(*) FROM associations"
+                            ).fetchone()[0]
+                        except sqlite3.OperationalError:
+                            pass
+                        try:
+                            out["total_embeddings"] += gconn.execute(
+                                "SELECT COUNT(*) FROM memory_embeddings"
+                            ).fetchone()[0]
+                        except sqlite3.OperationalError:
+                            pass
+                        try:
+                            out["total_dharma_audits"] += gconn.execute(
+                                "SELECT COUNT(*) FROM dharma_audit"
+                            ).fetchone()[0]
+                        except sqlite3.OperationalError:
+                            pass
+                        gconn.close()
+                    except Exception:
+                        continue
     except sqlite3.DatabaseError as e:
         out["status"] = "error"
         out["error"] = str(e)

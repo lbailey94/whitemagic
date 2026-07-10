@@ -42,7 +42,7 @@ The 28 Gana skills map 1:1 to the Chinese Lunar Mansions (Xiu 宿). Each skill d
 | 23 | `23_ox_endurance.md` | gana_ox | wm-swarm | Swarm orchestration, war room, worker management |
 | 24 | `24_girl_nurture.md` | gana_girl | wm-agents | Agent registration, heartbeat, trust, capabilities |
 | 25 | `25_void_emptiness.md` | gana_void | wm-galaxy | Galaxy lifecycle — create, transfer, merge, sync |
-| 26 | `26_roof_shelter.md` | gana_roof | wm-ollama | Local LLMs via Ollama, model signing, sovereign sandbox |
+| 26 | `26_roof_shelter.md` | gana_roof | wm-llama-cpp | Local LLMs via llama.cpp, model signing, sovereign sandbox |
 | 27 | `27_encampment_structure.md` | gana_encampment | wm-community | Event broker, GanYing emissions, sangha chat |
 | 28 | `28_wall_boundaries.md` | gana_wall | wm-marketplace | Voting, engagement tokens, marketplace |
 
@@ -98,7 +98,7 @@ WhiteMagic includes an internal `SkillForge` (`core/whitemagic/core/intelligence
 
 1. **Assesses** the chain (slop detection, duplicate detection via Jaccard similarity)
 2. **Forges** a new skill (or increments `forge_count` if duplicate found)
-3. **Generates** a descriptive name via LLM (Ollama gemma3:4b) with heuristic fallback
+3. **Generates** a descriptive name via LLM (llama-server qwen3-4b) with heuristic fallback
 4. **Persists** to `WM_STATE_ROOT/skills/` as JSON + updates `SKILLS.md` catalog
 5. **Exports** to portable `SKILL.md` format via `export_skill_md()` / `export_all_skills_md()`
 

@@ -198,20 +198,20 @@ SEED_MEMORIES = [
     },
     # ── Local AI Integration ─────────────────────────────────────
     {
-        "title": "[GUIDE] Local AI Integration via Ollama",
+        "title": "[GUIDE] Local AI Integration via llama.cpp",
         "content": (
-            "WhiteMagic integrates with local AI models through Ollama (gana_roof). Three modes: "
-            "1) ollama.models — List available local models. "
-            "2) ollama.generate — Single-turn text generation with a local model. "
-            "3) ollama.chat — Multi-turn conversation with a local model. "
-            "4) ollama.agent — AGENTIC LOOP: Give a task to a local model and it will autonomously "
+            "WhiteMagic integrates with local AI models through llama.cpp (gana_roof). Three modes: "
+            "1) llama_cpp.models — List available local models. "
+            "2) llama_cpp.generate — Single-turn text generation with a local model. "
+            "3) llama_cpp.chat — Multi-turn conversation with a local model. "
+            "4) llama_cpp.agent — AGENTIC LOOP: Give a task to a local model and it will autonomously "
             "call WhiteMagic tools (search, create memories, analyze patterns) to complete it. "
             "The agent loop injects relevant memories as context, parses tool-call intents from the "
             "model's output, executes them, and feeds results back. Max 10 iterations. "
-            "Requires: Ollama server running (default localhost:11434). "
-            "Environment variables: OLLAMA_HOST, OLLAMA_PORT, WHITEMAGIC_OLLAMA_TIMEOUT_S."
+            "Requires: llama-server running (default localhost:8080). "
+            "Environment variables: WM_LLAMA_HOST, WM_LLAMA_PORT."
         ),
-        "tags": {"quickstart", "system", "ollama", "local-ai", "agent", "guide"},
+        "tags": {"quickstart", "system", "llama_cpp", "local-ai", "agent", "guide"},
         "importance": 0.8,
     },
     # ── Introspection ────────────────────────────────────────────
@@ -252,7 +252,7 @@ SEED_MEMORIES = [
             "REASON: gana_three_stars → reasoning.bicameral {topic, perspectives}\n"
             "ETHICS: gana_straddling_legs → evaluate_ethics {action} or harmony_vector\n"
             "GALAXIES: gana_void → galaxy.list / galaxy.create {name, path} / galaxy.switch {name}\n"
-            "LOCAL AI: gana_roof → ollama.agent {model, task}\n"
+            "LOCAL AI: gana_roof → llama_cpp.agent {model, task}\n"
             "SESSION: gana_horn → session_bootstrap / gana_heart → scratchpad {content}"
         ),
         "tags": {"quickstart", "system", "reference", "cheatsheet", "guide"},
@@ -346,7 +346,7 @@ SEED_MEMORIES = [
             "Graph walk to explore related concepts. Entity resolve to deduplicate.\n"
             "AI GOVERNANCE — Use Dharma profiles to control tool access, Karma ledger for "
             "audit trails, Harmony Vector for health monitoring.\n"
-            "AUTONOMOUS AGENTS — Use ollama.agent for local AI-powered task automation "
+            "AUTONOMOUS AGENTS — Use llama_cpp.agent for local AI-powered task automation "
             "with WhiteMagic tools. Swarm decompose for parallel task distribution."
         ),
         "tags": {"quickstart", "system", "use-cases", "guide"},

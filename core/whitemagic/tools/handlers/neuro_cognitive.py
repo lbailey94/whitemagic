@@ -695,7 +695,11 @@ def handle_guna_balance_status(**kwargs: Any) -> dict[str, Any]:
                 "rajasic": round(reading.rajasic_ratio, 4),
                 "tamasic": round(reading.tamasic_ratio, 4),
             },
-            "targets": reading.targets,
+            "targets": {
+                "sattvic": round(reading.sattvic_target, 4),
+                "rajasic": round(reading.rajasic_target, 4),
+                "tamasic": round(reading.tamasic_target, 4),
+            },
             "deficits": reading.deficits,
             "surpluses": reading.surpluses,
             "correction_action": reading.correction_action,

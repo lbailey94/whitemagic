@@ -70,7 +70,7 @@ class TestRecording:
         mem_id = recorder.record_user("test", tags={"custom-tag"})
         from whitemagic.core.memory.unified import UnifiedMemory
         um = UnifiedMemory()
-        mem = um.backend.recall(mem_id)
+        mem = um._galaxy_backend.recall(mem_id)
         assert mem is not None
         assert "user" in mem.tags
         assert f"session:{recorder.session_id}" in mem.tags
@@ -81,7 +81,7 @@ class TestRecording:
         mem_id = recorder.record_ai("response", turn_type="decision", importance=0.9)
         from whitemagic.core.memory.unified import UnifiedMemory
         um = UnifiedMemory()
-        mem = um.backend.recall(mem_id)
+        mem = um._galaxy_backend.recall(mem_id)
         assert mem is not None
         assert mem.metadata["session_id"] == recorder.session_id
         assert mem.metadata["sequence"] == 1
@@ -92,7 +92,7 @@ class TestRecording:
         mem_id = recorder.record_user("test")
         from whitemagic.core.memory.unified import UnifiedMemory
         um = UnifiedMemory()
-        mem = um.backend.recall(mem_id)
+        mem = um._galaxy_backend.recall(mem_id)
         assert mem is not None
         assert mem.galaxy == "sessions"
 
@@ -100,7 +100,7 @@ class TestRecording:
         mem_id = recorder.record_user("test")
         from whitemagic.core.memory.unified import UnifiedMemory
         um = UnifiedMemory()
-        mem = um.backend.recall(mem_id)
+        mem = um._galaxy_backend.recall(mem_id)
         assert mem is not None
         assert mem.memory_type.name == "CITTA"
 
@@ -246,7 +246,7 @@ class TestBackfill:
                 galaxy="sessions",
                 tags={"user", f"session:{recorder.session_id}"},
             )
-            um.backend.store(mem)
+            um._galaxy_backend.store(mem)
 
         # Backfill
         updated = recorder.backfill_sequences()

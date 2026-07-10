@@ -206,9 +206,12 @@ class ConnectionPool:
         Returns 'ok' if healthy, or the first error message if corrupted.
         Should be called periodically to detect corruption early.
         """
-        with self.connection() as conn:
-            result = conn.execute("PRAGMA integrity_check").fetchone()
-            return result[0] if result else "unknown"
+        try:
+            with self.connection() as conn:
+                result = conn.execute("PRAGMA integrity_check").fetchone()
+                return result[0] if result else "unknown"
+        except sqlite3.DatabaseError as e:
+            return str(e)
 
     def quick_integrity_check(self) -> bool:
         """Fast integrity check — returns True if healthy, False if corrupted."""

@@ -113,6 +113,8 @@ class HomeostaticConfig:
     codebase_health_check_interval: int = 6  # every N check cycles
     # Apotheosis engine (autonomous evolution)
     apotheosis_check_interval: int = 3  # every N check cycles
+    # Memory subsystem health (FTS5, coords, associations)
+    memory_health_check_interval: int = 5  # every N check cycles
 
 
 class HomeostaticLoop:
@@ -269,6 +271,9 @@ class HomeostaticLoop:
 
         codebase_actions = self._check_codebase_health()
         actions.extend(codebase_actions)
+
+        memory_actions = self._check_memory_health()
+        actions.extend(memory_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -918,6 +923,128 @@ class HomeostaticLoop:
         except Exception as e:
             logger.debug("Codebase health check skipped: %s", e)
         return []
+
+    def _check_memory_health(self) -> list[HomeostaticAction]:
+        """Check memory subsystem health: FTS5 integrity, coord completeness, association freshness.
+
+        Runs every N check cycles to avoid overhead. Performs:
+        1. FTS5 integrity — verifies memories_fts row count matches memories table
+        2. Coordinate completeness — checks for memories missing holographic coords
+        3. Association freshness — triggers decay/prune if associations are stale
+
+        Auto-repairs by calling rebuild_fts() when FTS is out of sync.
+        """
+        if self._total_checks % self._config.memory_health_check_interval != 0:
+            return []
+
+        actions: list[HomeostaticAction] = []
+
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+
+            um = get_unified_memory()
+            backend = um.backend
+
+            # 1. FTS5 integrity check
+            try:
+                with backend.pool.connection() as conn:
+                    mem_count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                    try:
+                        fts_count = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
+                    except Exception:
+                        fts_count = -1
+
+                if fts_count >= 0 and abs(mem_count - fts_count) > max(10, mem_count // 100):
+                    # FTS out of sync — auto-repair
+                    try:
+                        rebuilt = backend.rebuild_fts()
+                        actions.append(HomeostaticAction(
+                            dimension="memory_fts_integrity",
+                            level=ActionLevel.CORRECT,
+                            value=float(fts_count) / max(mem_count, 1),
+                            threshold=0.99,
+                            action_taken=f"FTS5 index rebuilt ({rebuilt} rows) — was {fts_count}/{mem_count}",
+                        ))
+                    except Exception as e:
+                        actions.append(HomeostaticAction(
+                            dimension="memory_fts_integrity",
+                            level=ActionLevel.ADVISE,
+                            value=float(fts_count) / max(mem_count, 1),
+                            threshold=0.99,
+                            action_taken=f"FTS5 index out of sync ({fts_count}/{mem_count}) but rebuild failed: {e}",
+                        ))
+            except Exception as e:
+                logger.debug("FTS5 integrity check skipped: %s", e)
+
+            # 2. Coordinate completeness check
+            try:
+                with backend.pool.connection() as conn:
+                    total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                    if total > 0:
+                        missing_coords = conn.execute(
+                            """SELECT COUNT(*) FROM memories m
+                               LEFT JOIN holographic_coords h ON m.id = h.memory_id
+                               WHERE h.memory_id IS NULL AND m.memory_type != 'quarantined'"""
+                        ).fetchone()[0]
+                        coord_completeness = 1.0 - (missing_coords / total)
+
+                        if coord_completeness < 0.5:
+                            actions.append(HomeostaticAction(
+                                dimension="memory_coord_completeness",
+                                level=ActionLevel.CORRECT,
+                                value=coord_completeness,
+                                threshold=0.5,
+                                action_taken=f"{missing_coords}/{total} memories missing holographic coords — run backfill_coords",
+                            ))
+                        elif coord_completeness < 0.9:
+                            actions.append(self._advise(
+                                "memory_coord_completeness",
+                                coord_completeness,
+                                0.9,
+                                f"{missing_coords}/{total} memories missing holographic coords",
+                            ))
+            except Exception as e:
+                logger.debug("Coord completeness check skipped: %s", e)
+
+            # 3. Association freshness — trigger decay if not run recently
+            try:
+                with backend.pool.connection() as conn:
+                    total_assocs = conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
+                    if total_assocs > 0:
+                        stale = conn.execute(
+                            """SELECT COUNT(*) FROM associations
+                               WHERE strength < 0.1"""
+                        ).fetchone()[0]
+                        stale_ratio = stale / total_assocs
+
+                        if stale_ratio > 0.3:
+                            # Auto-repair: run decay + prune
+                            try:
+                                backend.decay_associations()
+                                pruned = backend.prune_associations(min_strength=0.05)
+                                actions.append(HomeostaticAction(
+                                    dimension="memory_assoc_freshness",
+                                    level=ActionLevel.CORRECT,
+                                    value=1.0 - stale_ratio,
+                                    threshold=0.7,
+                                    action_taken=f"Association decay+prune triggered ({stale}/{total_assocs} were stale, pruned {pruned.get('pruned', 0)})",
+                                ))
+                            except Exception as e:
+                                actions.append(self._advise(
+                                    "memory_assoc_freshness",
+                                    1.0 - stale_ratio,
+                                    0.7,
+                                    f"{stale}/{total_assocs} associations stale but prune failed: {e}",
+                                ))
+            except Exception as e:
+                logger.debug("Association freshness check skipped: %s", e)
+
+        except (ImportError, ModuleNotFoundError):
+            pass
+        except Exception as e:
+            logger.debug("Memory health check skipped: %s", e)
+
+        return actions
 
     def get_stats(self) -> dict[str, Any]:
         """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Clone Army Training Exercises — Deploy armies across tactical and strategic scenarios.
 
-Measures real-world performance with live LLM (Ollama qwen2.5:7b).
+Measures real-world performance with live LLM (llama-server qwen3-4b).
 """
 
 import asyncio
@@ -448,17 +448,17 @@ async def scenario_6_war_room():
 async def main():
     print_header("WHITE MAGIC CLONE ARMY TRAINING EXERCISES")
     logger.debug(f"Timestamp: {datetime.now().isoformat()}")
-    logger.debug(f"LLM: Ollama qwen2.5:7b at http://localhost:11434")
+    logger.debug(f"LLM: llama-server qwen3-4b at http://localhost:8080")
     logger.debug(f"Python: {sys.version.split()[0]}")
     logger.debug()
 
-    from whitemagic.inference.local_llm import LocalLLM
+    from whitemagic.inference.llama_cpp import get_llama_cpp_backend
 
-    llm = LocalLLM()
-    if not llm.is_available:
-        logger.debug("FATAL: Ollama not available. Run 'ollama serve' first.")
+    backend = get_llama_cpp_backend()
+    if not backend.is_available:
+        logger.debug("FATAL: llama-server not available. Start it first.")
         sys.exit(1)
-    logger.debug(f"LLM verified: {llm.model}")
+    logger.debug(f"LLM verified: {backend.config.model_path}")
 
     results = []
 

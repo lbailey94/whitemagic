@@ -138,7 +138,14 @@ def contest_prepare(
     checkers: list[str] | None = None,
 ) -> dict[str, Any]:
     """One-command contest setup: clone → scan → filter → prioritize."""
-    from whitemagic.tools.strata.engine import StrataEngine
+    try:
+        from whitemagic.tools.strata.engine import StrataEngine
+    except ImportError:
+        return {
+            "success": False,
+            "error": "StrataEngine not yet implemented — use strata.archaeology for codebase analysis",
+            "elapsed_s": 0.0,
+        }
     from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
     from whitemagic.tools.security.vuln_knowledge import get_vuln_knowledge_base
 

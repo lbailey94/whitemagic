@@ -23,7 +23,7 @@ Use this chapter when you need to:
 - **Create a secure housing** for session data, memory shards, and generated assets
 - **Ensure the roof is secure** before moving to handoff or archival
 - **Finalize the structural integrity** of the work through systematic verification
-- **Query local LLM models** via Ollama for private synthesis without exposing data to external APIs
+- **Query local LLM models** via llama.cpp for private synthesis without exposing data to external APIs
 - **Register and verify model signatures** to ensure provenance and detect tampering
 - **Align protection protocols** with celestial influences through zodiac core status
 - **Validate that all protective layers** are in place before declaring the session complete
@@ -59,7 +59,7 @@ redundant safeguards. A memory stored in one location is a memory at risk; a mem
 three, with checksums and signatures, is a memory protected.
 
 **Resonance keywords**: protect, shelter, synthesize, finalize, secure, model, verify, signature,
-ollama, local, provenance, integrity, celestial, alignment, differential, conflict, resolution
+llama_cpp, local, provenance, integrity, celestial, alignment, differential, conflict, resolution
 
 ---
 
@@ -67,22 +67,23 @@ ollama, local, provenance, integrity, celestial, alignment, differential, confli
 
 | Tool | Gana | Description | Usage |
 |------|------|-------------|-------|
-| `ollama.models` | gana_roof | List available local LLM models | Discover synthesis models before generation |
-| `ollama.generate` | gana_roof | Generate text with local LLM | Private synthesis without external API exposure |
-| `ollama.chat` | gana_roof | Chat with local LLM using conversation history | Multi-turn synthesis for complex reasoning |
+| `llama_cpp.models` | gana_roof | List available local LLM models | Discover synthesis models before generation |
+| `llama_cpp.generate` | gana_roof | Generate text with local LLM | Private synthesis without external API exposure |
+| `llama_cpp.chat` | gana_roof | Chat with local LLM using conversation history | Multi-turn synthesis for complex reasoning |
+| `llama_cpp.agent` | gana_roof | Agentic loop with WhiteMagic tool access | Autonomous task completion with local LLM |
 | `zodiac.status` | gana_roof | Check active zodiac core status | Astrological protection alignment verification |
 | `model.register` | gana_roof | Register a model artifact for cryptographic signing | Provenance tracking and tamper detection |
 | `model.verify` | gana_roof | Verify a model's cryptographic signature | Integrity validation against registered hash |
 | `model.list` | gana_roof | List all registered models with metadata | Model inventory and audit trail access |
 | `model.signing_status` | gana_roof | Overall model signing health dashboard | Security audit and compliance reporting |
 
-The RoofGana toolset is designed around three protective pillars: **local synthesis** (Ollama),
+The RoofGana toolset is designed around three protective pillars: **local synthesis** (llama.cpp),
 **provenance verification** (model signing), and **celestial alignment** (zodiac). Each pillar
 addresses a distinct threat vector: data exfiltration, supply-chain tampering, and systemic
 desynchronization. Together they form a defense-in-depth architecture that assumes breach at
 every layer and compensates with redundancy at the next.
 
-**Tool selection guidance**: Use Ollama tools when data sensitivity precludes cloud APIs; use
+**Tool selection guidance**: Use llama.cpp tools when data sensitivity precludes cloud APIs; use
 model signing when reproducibility and audit trails are required; use zodiac status when
 symbolic confirmation or seasonal rhythm matters to the operator.
 
@@ -92,7 +93,7 @@ symbolic confirmation or seasonal rhythm matters to the operator.
 
 ### Workflow 1: Local Synthesis of Sensitive Data
 
-**Goal**: Synthesize confidential session data using a local LLM (Ollama) instead of external APIs,
+**Goal**: Synthesize confidential session data using a local LLM (llama.cpp) instead of external APIs,
 ensuring that proprietary code, personal data, or classified content never leaves the local machine.
 
 **When to use**: Processing proprietary code, personal data, HIPAA-protected information, trade
@@ -101,7 +102,7 @@ secrets, or any content that must not traverse public networks.
 ```python
 import asyncio
 from datetime import datetime
-from whitemagic.tools import ollama_models, ollama_generate, ollama_chat
+from whitemagic.tools import llama_cpp_models, llama_cpp_generate, llama_cpp_chat
 
 async def sheltered_synthesis(
     source_memories: list,
@@ -118,14 +119,14 @@ async def sheltered_synthesis(
     data to external APIs. The output is optionally stored as a new memory.
     """
     # 1. Discover available models
-    available = ollama_models()
+    available = llama_cpp_models()
     model_names = [m["name"] for m in available.get("models", [])]
     if model not in model_names:
         print(f"⚠️ Model '{model}' not found. Available: {model_names}")
         # Fallback to first available
         model = model_names[0] if model_names else None
         if not model:
-            return {"status": "error", "error": "No Ollama models available"}
+            return {"status": "error", "error": "No local LLM models available"}
 
     print(f"🛡️ Using local model: {model}")
 
@@ -151,7 +152,7 @@ async def sheltered_synthesis(
     prompt = "\n".join(prompt_parts)
 
     # 3. Generate synthesis
-    result = ollama_generate(
+    result = llama_cpp_generate(
         model=model,
         prompt=prompt,
         context=context_injection,   # Inject relevant WhiteMagic memories
@@ -180,7 +181,7 @@ async def iterative_sheltered_synthesis(source_memories: list, model: str = "lla
         {"role": "user", "content": f"Synthesize these memories: {source_memories[:3]}"},
     ]
 
-    result = ollama_chat(
+    result = llama_cpp_chat(
         model=model,
         messages=messages,
         store=True,
@@ -414,7 +415,7 @@ def differential_celestial_check(baseline: Dict, current: Dict) -> Dict:
 - From Chapter 22 (Dipper): When governance identifies critical assets requiring protection
 - From Chapter 20 (Bell): When a signal indicates the session output is ready for synthesis
 - From Chapter 14 (Abundance): After creative overflow, the harvest must be gathered under a roof
-- Trigger keywords: "synthesize", "protect", "finalize", "ollama", "model", "verify", "signature",
+- Trigger keywords: "synthesize", "protect", "finalize", "llama_cpp", "model", "verify", "signature",
   "local", "provenance", "integrity", "celestial", "shelter", "vault", "secure"
 
 **Exiting Chapter 26**:
@@ -433,13 +434,13 @@ becomes "in existence." This is the moment of ontological shift—from becoming 
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| `ollama.generate` returns "missing_dependency" | aiohttp or requests not installed | `pip install aiohttp requests` or install `whitemagic[net]` |
-| `ollama.generate` timeout after 30s | Ollama server not running or model loading | Start Ollama daemon, check `OLLAMA_HOST`/`OLLAMA_PORT`, or increase timeout |
-| `ollama.generate` returns "model_not_found" | Specified model not pulled locally | Run `ollama pull <model>` or use `ollama.models` to find available models |
+| `llama_cpp.generate` returns "missing_dependency" | requests not installed | `pip install requests` or install `whitemagic[net]` |
+| `llama_cpp.generate` timeout after 30s | llama-server not running or model loading | Start llama-server, check `WM_LLAMA_HOST`/`WM_LLAMA_PORT`, or increase timeout |
+| `llama_cpp.generate` returns "model_not_found" | Specified model not found | Use `llama_cpp.models` to find available models |
 | `model.verify` fails with "hash_mismatch" | Model file modified since registration | Re-register with `model.register` if change is legitimate; investigate if unexpected |
 | `model.verify` fails with "not_registered" | Model never registered | Call `model.register` first with the model artifact path and metadata |
 | `zodiac.status` returns empty list | No active zodiac cores or system time incorrect | Cores activate automatically based on season; verify system time and timezone |
-| Synthesis quality is poor or hallucinated | Wrong model for task or temperature too high | Use `ollama.models` to find a larger model (e.g., `phi4`, `qwen2.5`); set temperature <= 0.3 |
+| Synthesis quality is poor or hallucinated | Wrong model for task or temperature too high | Use `llama_cpp.models` to find a larger model (e.g., `phi4`, `qwen3`); set temperature <= 0.3 |
 | `model.signing_status` shows "degraded" | Partial signature failures or clock skew | Run `verify_roof_integrity()` to identify specific failures; sync system clock with NTP |
 
 ---

@@ -516,6 +516,22 @@ class DreamCycle:
         except Exception as e:
             result["consolidation_error"] = str(e)
 
+        # Cross-galaxy association mining (v24: auto-discover cross-galaxy links)
+        try:
+            from whitemagic.core.memory.association_miner import get_association_miner
+
+            miner = get_association_miner()
+            cg_report = miner.mine_cross_galaxy(sample_per_galaxy=15)
+            result["cross_galaxy_mining"] = {
+                "memories_sampled": cg_report.memories_sampled,
+                "proposals": cg_report.proposals,
+                "associations_created": cg_report.associations_created,
+                "duration_ms": round(cg_report.duration_ms, 1),
+            }
+        except Exception as e:
+            logger.debug("Cross-galaxy mining in dream cycle failed: %s", e)
+            result["cross_galaxy_mining"] = {"error": str(e)}
+
         # Constellation refresh via CoreAccessLayer
         try:
             from whitemagic.core.memory.constellations import get_constellation_detector

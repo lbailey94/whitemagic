@@ -85,13 +85,13 @@ class HolographicMemory:
             "performance_mode": "optimized" if self._has_index else "slow_fallback",
         }
 
-    def index_memory(self, memory_id: str, memory_data: dict[str, Any]) -> tuple[float, float, float, float, float] | None:
+    def index_memory(self, memory_id: str, memory_data: dict[str, Any]) -> tuple[float, float, float, float, float, float] | None:
         """Encode and add a memory to the spatial index.
-        Returns the calculated coordinates (x, y, z, w, v) if successful, None otherwise.
+        Returns the calculated coordinates (x, y, z, w, v, u) if successful, None otherwise.
         """
         # Always try to encode, even if Rust index is missing
         try:
-            # Encode memory to 5D coordinates
+            # Encode memory to 6D coordinates
             coord = self._encoder.encode(memory_data)
 
             if self._index_5d:
@@ -99,7 +99,7 @@ class HolographicMemory:
             elif self._index:
                 self._index.add(memory_id, coord.x, coord.y, coord.z, coord.w)
 
-            return (coord.x, coord.y, coord.z, coord.w, coord.v)
+            return (coord.x, coord.y, coord.z, coord.w, coord.v, coord.u)
         except Exception as e:
             logger.error("Failed to index memory %s: %s", memory_id, e, exc_info=True)
             logger.debug("❌ HOLOGRAPHIC ERROR: %s", e)

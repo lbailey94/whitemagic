@@ -230,48 +230,48 @@ class TestOSSScanner:
 
 class TestMCPHandlers:
     def test_vuln_search(self):
-        result = handle_vuln_search({"query": "reentrancy"})
+        result = handle_vuln_search(query="reentrancy")
         assert result["count"] >= 1
         assert any(r["name"] == "Reentrancy in withdrawal function" for r in result["results"])
 
     def test_vuln_status(self):
-        result = handle_vuln_status({})
+        result = handle_vuln_status()
         assert "total_patterns" in result
 
     def test_contest_status(self):
-        result = handle_contest_status({})
+        result = handle_contest_status()
         assert "total_findings" in result
 
     def test_contest_add_and_format(self):
-        handle_contest_add_finding({
-            "title": "Test vuln",
-            "severity": "high",
-            "category": "reentrancy",
-            "file": "Test.sol",
-            "line": 1,
-            "description": "Test",
-            "impact": "Test",
-            "proof_of_concept": "",
-            "mitigation": "Test",
-        })
-        result = handle_contest_format({"platform": "sherlock"})
+        handle_contest_add_finding(
+            title="Test vuln",
+            severity="high",
+            category="reentrancy",
+            file="Test.sol",
+            line=1,
+            description="Test",
+            impact="Test",
+            proof_of_concept="",
+            mitigation="Test",
+        )
+        result = handle_contest_format(platform="sherlock")
         assert "Sherlock" in result["report"]
 
     def test_abi_parse_handler(self):
-        result = handle_abi_parse({"abi_json": SAMPLE_ABI})
+        result = handle_abi_parse(abi_json=SAMPLE_ABI)
         assert len(result["signatures"]) == 2
         assert "transfer(address,uint256)" in result["signatures"]
 
     def test_abi_summarize_handler(self):
-        result = handle_abi_summarize({"abi_json": SAMPLE_ABI})
+        result = handle_abi_summarize(abi_json=SAMPLE_ABI)
         assert result["total_functions"] == 2
 
     def test_abi_decode_handler(self):
-        result = handle_abi_decode_calldata({"calldata": "0xa9059cbb" + "00" * 64})
+        result = handle_abi_decode_calldata(calldata="0xa9059cbb" + "00" * 64)
         assert result["selector"] == "0xa9059cbb"
 
     def test_security_status(self):
-        result = handle_security_status({})
+        result = handle_security_status()
         assert "foundry" in result
         assert "vuln_kb" in result
         assert "contest" in result

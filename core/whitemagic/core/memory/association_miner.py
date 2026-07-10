@@ -193,43 +193,23 @@ class AssociationMiner:
         # Sample diverse memories: mix of zones
         all_mems = []
         try:
-            core_mems = um.backend.list_recent(limit=sample_size // 4)
-            # Also get some random from deeper zones via SQL
-            import sqlite3
-            with um.backend.pool.connection() as conn:
-                conn.row_factory = sqlite3.Row
-                # Sample from different galactic zones
-                rows = conn.execute(
-                    """SELECT * FROM memories
-                       WHERE galactic_distance < 0.40
-                         AND memory_type != 'quarantined'
-                       ORDER BY RANDOM() LIMIT ?""",
-                    (sample_size // 4,),
-                ).fetchall()
-                inner_mems = um.backend._batch_hydrate(rows, conn)
-
-                rows = conn.execute(
-                    """SELECT * FROM memories
-                       WHERE galactic_distance BETWEEN 0.40 AND 0.70
-                         AND memory_type != 'quarantined'
-                       ORDER BY RANDOM() LIMIT ?""",
-                    (sample_size // 4,),
-                ).fetchall()
-                mid_mems = um.backend._batch_hydrate(rows, conn)
-
-                rows = conn.execute(
-                    """SELECT * FROM memories
-                       WHERE galactic_distance > 0.70
-                         AND memory_type != 'quarantined'
-                       ORDER BY RANDOM() LIMIT ?""",
-                    (sample_size // 4,),
-                ).fetchall()
-                outer_mems = um.backend._batch_hydrate(rows, conn)
-
-            all_mems = core_mems + inner_mems + mid_mems + outer_mems
-        except Exception as e:
-            logger.warning("Association mining: sampling failed, using recent: %s", e)
+            # Use galaxy-aware list_recent which aggregates across galaxy DBs
             all_mems = um.backend.list_recent(limit=sample_size)
+            # If we got enough, try to diversify by searching different importance bands
+            if len(all_mems) < sample_size:
+                # Supplement with lower-importance memories
+                more = um.backend.search(
+                    query="", limit=sample_size - len(all_mems), min_importance=0.0
+                )
+                # Deduplicate by ID
+                existing_ids = {m.id for m in all_mems}
+                for m in more:
+                    if m.id not in existing_ids:
+                        all_mems.append(m)
+                        existing_ids.add(m.id)
+        except Exception as e:
+            logger.warning("Association mining: sampling failed: %s", e)
+            all_mems = []
 
         if len(all_mems) < 2:
             return report
@@ -333,32 +313,13 @@ class AssociationMiner:
         # Persist if enabled
         if self._persist and proposals:
             try:
-                import sqlite3
-                with um.backend.pool.connection() as conn:
-                    with conn:
-                        for p in proposals:
-                            # Bidirectional links with overlap_score as strength
-                            try:
-                                _now = datetime.now().isoformat()
-                                conn.execute(
-                                    """INSERT OR IGNORE INTO associations
-                                       (source_id, target_id, strength,
-                                        direction, relation_type, edge_type,
-                                        created_at, ingestion_time)
-                                       VALUES (?, ?, ?, 'undirected', 'associated_with', 'semantic', ?, ?)""",
-                                    (p.source_id, p.target_id, p.overlap_score, _now, _now),
-                                )
-                                conn.execute(
-                                    """INSERT OR IGNORE INTO associations
-                                       (source_id, target_id, strength,
-                                        direction, relation_type, edge_type,
-                                        created_at, ingestion_time)
-                                       VALUES (?, ?, ?, 'undirected', 'associated_with', 'semantic', ?, ?)""",
-                                    (p.target_id, p.source_id, p.overlap_score, _now, _now),
-                                )
-                                report.links_created += 1
-                            except Exception:
-                                logger.debug("Swallowed exception", exc_info=True)
+                for p in proposals:
+                    try:
+                        um.backend.add_association(p.source_id, p.target_id, p.overlap_score)
+                        um.backend.add_association(p.target_id, p.source_id, p.overlap_score)
+                        report.links_created += 1
+                    except Exception:
+                        logger.debug("Swallowed exception", exc_info=True)
             except Exception as e:
                 logger.error("Association mining: persistence failed: %s", e)
 
@@ -471,6 +432,7 @@ class AssociationMiner:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
+            # Use pool connection (proxied to default backend via GalaxyAwareBackend)
             with um.backend.pool.connection() as conn:
                 candidate_ids = set()
                 for pair_item in pairs:
@@ -517,45 +479,16 @@ class AssociationMiner:
             | {pair_item["target_id"] for pair_item in pairs}
         )
 
-        # Persist
+        # Persist using galaxy-aware add_association
         if persist and proposals:
             try:
-                with um.backend.pool.connection() as conn:
-                    with conn:
-                        for proposal in proposals:
-                            try:
-                                _now = datetime.now().isoformat()
-                                conn.execute(
-                                    """INSERT OR IGNORE INTO associations
-                                       (source_id, target_id, strength,
-                                        direction, relation_type, edge_type,
-                                        created_at, ingestion_time)
-                                       VALUES (?, ?, ?, 'undirected', 'associated_with', 'semantic', ?, ?)""",
-                                    (
-                                        proposal.source_id,
-                                        proposal.target_id,
-                                        proposal.overlap_score,
-                                        _now,
-                                        _now,
-                                    ),
-                                )
-                                conn.execute(
-                                    """INSERT OR IGNORE INTO associations
-                                       (source_id, target_id, strength,
-                                        direction, relation_type, edge_type,
-                                        created_at, ingestion_time)
-                                       VALUES (?, ?, ?, 'undirected', 'associated_with', 'semantic', ?, ?)""",
-                                    (
-                                        proposal.target_id,
-                                        proposal.source_id,
-                                        proposal.overlap_score,
-                                        _now,
-                                        _now,
-                                    ),
-                                )
-                                report.links_created += 1
-                            except Exception:
-                                logger.debug("Swallowed exception", exc_info=True)
+                for proposal in proposals:
+                    try:
+                        um.backend.add_association(proposal.source_id, proposal.target_id, proposal.overlap_score)
+                        um.backend.add_association(proposal.target_id, proposal.source_id, proposal.overlap_score)
+                        report.links_created += 1
+                    except Exception:
+                        logger.debug("Swallowed exception", exc_info=True)
             except Exception as e:
                 logger.error("Semantic mining: persistence failed: %s", e)
 
@@ -661,6 +594,127 @@ class AssociationMiner:
         if eng is None:
             return set()
         return eng.get_cluster(start_id, memories, max_depth=max_depth)
+
+    def mine_cross_galaxy(self, sample_per_galaxy: int = 30) -> MiningReport:
+        """Mine associations across different galaxy DBs.
+
+        Samples memories from each galaxy and finds cross-galaxy semantic
+        links using keyword overlap. Stores discovered links in the meta
+        galaxy DB for cross-galaxy navigation.
+
+        Args:
+            sample_per_galaxy: How many memories to sample from each galaxy.
+
+        Returns:
+            MiningReport with cross-galaxy association results.
+        """
+        start = time.perf_counter()
+        report = MiningReport()
+
+        try:
+            from whitemagic.core.memory.backends.galaxy_router import GalaxyAwareBackend
+            from whitemagic.core.memory.galaxy_manager import GalaxyManager
+            gm = GalaxyManager()
+            galaxies = [g["name"] for g in gm.list_galaxies() if g.get("name")]
+        except Exception as e:
+            logger.error("Cross-galaxy mining: could not list galaxies: %s", e)
+            return report
+
+        # Sample memories from each galaxy
+        galaxy_samples: dict[str, list[Any]] = {}
+        for galaxy in galaxies:
+            if galaxy in ("test", "test_bench_galaxy", "test_benchmark_galaxy", "bench_galaxy"):
+                continue
+            try:
+                from whitemagic.core.memory.unified import get_unified_memory
+                um = get_unified_memory()
+                mems = um.search(galaxy=galaxy, limit=sample_per_galaxy)
+                if mems:
+                    galaxy_samples[galaxy] = mems
+            except Exception:
+                continue
+
+        if len(galaxy_samples) < 2:
+            report.duration_ms = (time.perf_counter() - start) * 1000
+            return report
+
+        report.memories_sampled = sum(len(v) for v in galaxy_samples.values())
+
+        # Compare across galaxies
+        proposals: list[ProposedLink] = []
+        galaxy_list = list(galaxy_samples.keys())
+
+        for i in range(len(galaxy_list)):
+            for j in range(i + 1, len(galaxy_list)):
+                g1, g2 = galaxy_list[i], galaxy_list[j]
+                for mem1 in galaxy_samples[g1]:
+                    kw1 = self._extract_keywords(f"{mem1.title or ''} {str(mem1.content)[:500]}")
+                    if not kw1:
+                        continue
+                    for mem2 in galaxy_samples[g2]:
+                        kw2 = self._extract_keywords(f"{mem2.title or ''} {str(mem2.content)[:500]}")
+                        if not kw2:
+                            continue
+                        score, shared = self._compute_overlap(kw1, kw2)
+                        if score >= self._min_overlap:
+                            proposals.append(ProposedLink(
+                                source_id=mem1.id,
+                                target_id=mem2.id,
+                                overlap_score=score,
+                                shared_keywords=shared,
+                                reason=f"cross-galaxy({g1}↔{g2}): shared={','.join(sorted(shared)[:5])}",
+                            ))
+
+        report.proposals = len(proposals)
+        report.strong_proposals = sum(1 for p in proposals if p.overlap_score >= 0.5)
+
+        # Persist associations
+        if self._persist and proposals:
+            persisted = 0
+            try:
+                from whitemagic.core.memory.unified import get_unified_memory
+                um = get_unified_memory()
+                # Sort by score descending, take top N
+                proposals.sort(key=lambda p: p.overlap_score, reverse=True)
+                gb = um._galaxy_backend if hasattr(um, '_galaxy_backend') else None
+                # Build memory_id → galaxy cache from samples (avoids expensive lookups)
+                mem_galaxy: dict[str, str] = {}
+                for gname, mems in galaxy_samples.items():
+                    for mem in mems:
+                        mem_galaxy[mem.id] = gname
+                for prop in proposals[:self._max_proposals]:
+                    try:
+                        source_galaxy = mem_galaxy.get(prop.source_id)
+                        if source_galaxy and gb and hasattr(gb, '_get_galaxy_backend'):
+                            gbackend = gb._get_galaxy_backend(source_galaxy)
+                            with gbackend.pool.connection() as conn:
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO associations (source_id, target_id, strength) VALUES (?, ?, ?)",
+                                    (prop.source_id, prop.target_id, prop.overlap_score),
+                                )
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO associations (source_id, target_id, strength) VALUES (?, ?, ?)",
+                                    (prop.target_id, prop.source_id, prop.overlap_score),
+                                )
+                                conn.commit()
+                            persisted += 1
+                        else:
+                            um.backend.add_association(prop.source_id, prop.target_id, prop.overlap_score)
+                            um.backend.add_association(prop.target_id, prop.source_id, prop.overlap_score)
+                            persisted += 1
+                    except Exception:
+                        continue
+                report.associations_created = persisted
+            except Exception as e:
+                logger.error("Cross-galaxy mining: persist failed: %s", e)
+
+        report.duration_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "Cross-galaxy mining: %d galaxies, %d memories, %d proposals, %d persisted (%.1fms)",
+            len(galaxy_samples), report.memories_sampled, report.proposals,
+            report.associations_created, report.duration_ms,
+        )
+        return report
 
 
 _miner_instance: AssociationMiner | None = None

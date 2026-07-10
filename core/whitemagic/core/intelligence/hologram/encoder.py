@@ -2,7 +2,7 @@
 """Holographic Coordinate Encoder v2.0.
 ===================================
 
-Converts Memory objects into 5D coordinate vectors [x, y, z, w, v].
+Converts Memory objects into 6D coordinate vectors [x, y, z, w, v, u].
 
 Axis Definitions:
 -----------------
@@ -32,7 +32,16 @@ V-Axis (Vitality / Galactic Distance):
     0.0: Far Edge (Deep archive, low retention, rarely accessed)
     Derived from galactic_distance: v = 1.0 - galactic_distance
 
-v2.0 Changes:
+U-Axis (Galaxy Affinity):
+    0.0: FAR_EDGE (telemetry, archive — noise, cold storage)
+    0.3: OUTER_RIM (substrate, tutorial, universal — infrastructure)
+    0.5: MID_BAND (research, journals, dreams — exploration)
+    0.7: INNER_RIM (sessions, codex, knowledge — active knowledge)
+    1.0: CORE (aria, citta, meta — identity, consciousness, index)
+    Derived from the canonical GALAXY_ZONES mapping.
+
+v2.1 Changes:
+- Added U-Axis (Galaxy Affinity) based on canonical galaxy zones
 - Improved keyword matching for all axes
 - Fixed memory_type field name
 - Better time calculation using actual timestamps
@@ -70,6 +79,7 @@ class HolographicCoordinate:
     z: float  # Time
     w: float  # Importance/Gravity
     v: float = 0.5  # Vitality/Galactic Distance (1.0=core, 0.0=edge)
+    u: float = 0.5  # Galaxy Affinity (1.0=core zone, 0.0=far edge zone)
 
     def to_vector(self) -> list[float]:
         """
@@ -78,11 +88,15 @@ class HolographicCoordinate:
         Returns:
             list[float]
         """
-        return [self.x, self.y, self.z, self.w, self.v]
+        return [self.x, self.y, self.z, self.w, self.v, self.u]
 
     def to_vector_4d(self) -> list[float]:
         """Legacy 4D vector for backward compatibility."""
         return [self.x, self.y, self.z, self.w]
+
+    def to_vector_5d(self) -> list[float]:
+        """5D vector (without U-axis) for backward compatibility."""
+        return [self.x, self.y, self.z, self.w, self.v]
 
     def to_dict(self) -> dict[str, float]:
         """
@@ -91,7 +105,7 @@ class HolographicCoordinate:
         Returns:
             dict[str, float]
         """
-        return {"x": self.x, "y": self.y, "z": self.z, "w": self.w, "v": self.v}
+        return {"x": self.x, "y": self.y, "z": self.z, "w": self.w, "v": self.v, "u": self.u}
 
 
 class CoordinateEncoder:
@@ -326,6 +340,7 @@ class CoordinateEncoder:
         z = self._calculate_z(memory)
         w = self._calculate_w(memory)
         v = self._calculate_v(memory)
+        u = self._calculate_u(memory)
 
         # 2. Try Rust v13.1 accelerated encoding (fastest path)
         # to ensure the high-variance signal is preserved even on stale binaries.
@@ -352,7 +367,7 @@ class CoordinateEncoder:
                     w = result.get("w", w)
                     v = result.get("v", v)
 
-                    return HolographicCoordinate(x, y, z, w, v)
+                    return HolographicCoordinate(x, y, z, w, v, u)
         except Exception as _e:
             logger.debug("Non-fatal error silenced in holographic encoder: %s", _e)
 
@@ -380,6 +395,7 @@ class CoordinateEncoder:
                         mojo_coords.get("z", z),
                         mojo_coords.get("w", w),
                         mojo_coords.get("v", v),
+                        u,
                     )
             except Exception as e:
                 logger.debug(
@@ -405,7 +421,7 @@ class CoordinateEncoder:
 
         x, y = self._apply_gana_alignment(memory, x, y)  # type: ignore[arg-type]
 
-        return HolographicCoordinate(x, y, z, w, v)
+        return HolographicCoordinate(x, y, z, w, v, u)
 
     def encode_batch(
         self, memories: list[dict[str, Any]]
@@ -453,8 +469,9 @@ class CoordinateEncoder:
                         r.get("z", 0.0),
                         r.get("w", 0.5),
                         r.get("v", 0.5),
+                        self._calculate_u(m),
                     )
-                    for r in results
+                    for r, m in zip(results, memories)
                 ]
             except Exception as e:
                 logger.warning(
@@ -983,6 +1000,40 @@ class CoordinateEncoder:
             v += 0.1
 
         return float(max(0.0, min(1.0, v)))
+
+    def _calculate_u(self, memory: dict[str, Any]) -> float:
+        """Calculate U-Axis: Galaxy Affinity.
+        Range: [0.0, 1.0]
+        1.0 = CORE zone (aria, citta, meta — identity, consciousness, index)
+        0.7 = INNER_RIM (sessions, codex, knowledge — active knowledge)
+        0.5 = MID_BAND (research, journals, dreams — exploration)
+        0.3 = OUTER_RIM (substrate, tutorial, universal — infrastructure)
+        0.0 = FAR_EDGE (telemetry, archive — noise, cold storage)
+        """
+        galaxy = memory.get("galaxy", "")
+        if not galaxy:
+            # Try to infer from metadata
+            meta = memory.get("metadata", {})
+            if isinstance(meta, dict):
+                galaxy = meta.get("galaxy", "")
+
+        if not galaxy:
+            return 0.5  # Unknown galaxy defaults to mid-range
+
+        try:
+            from whitemagic.core.memory.galaxy_taxonomy import GALAXY_ZONES
+
+            zone = GALAXY_ZONES.get(galaxy, "OUTER_RIM")
+            zone_values = {
+                "CORE": 1.0,
+                "INNER_RIM": 0.7,
+                "MID_BAND": 0.5,
+                "OUTER_RIM": 0.3,
+                "FAR_EDGE": 0.0,
+            }
+            return zone_values.get(zone, 0.5)
+        except Exception:
+            return 0.5
 
 
 # Integration helper

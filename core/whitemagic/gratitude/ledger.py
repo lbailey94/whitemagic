@@ -78,7 +78,7 @@ class GratitudeLedger:
             self._path = ledger_path
             self._path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._events: list[GratitudeEvent] = []
         self._load()
 

@@ -542,6 +542,39 @@ SAFE_DEFAULTS: dict[str, dict] = {
     # ── exception fixes ──
     "alchemical_cycle": {"task": "test", "cycles": 1},
     "gratitude.benefits": {},
+    # ── security tool defaults ──
+    "abi.parse": {"abi_json": "[]"},
+    "abi.summarize": {"abi_json": "[]"},
+    "abi.decode_calldata": {"calldata": "0x", "abi_json": "[]"},
+    "api.state_machine": {"base_url": "https://example.com", "sequences": []},
+    "audit.report": {"project_name": "test", "findings": []},
+    "bounty.track": {"source": "test", "bounty_amount": 0, "platform": "test", "issue_url": "test"},
+    "foundry.build": {"project_dir": "."},
+    "foundry.test": {"project_dir": "."},
+    "foundry.test_json": {"project_dir": "."},
+    "vuln.search": {"query": "test"},
+    "vuln.status": {},
+    "vuln.ingest_report": {"report_text": "test"},
+    "contest.add_finding": {"title": "test", "severity": "low", "category": "test"},
+    "contest.format": {"platform": "code4rena"},
+    "contest.status": {},
+    "contest.prepare": {"repo_url": "test", "findings": []},
+    "oss.scan_repo": {"repo": "test"},
+    "oss.scan_org": {"org": "test"},
+    "security.status": {},
+    "poc.generate": {"template_name": "test", "variables": {}},
+    "poc.verify": {"template_name": "test", "calldata": "0x"},
+    "http_probe.get": {"url": "https://example.com"},
+    "http_probe.post": {"url": "https://example.com"},
+    "http_probe.xss": {"url": "https://example.com", "param": "q"},
+    "http_probe.sqli": {"url": "https://example.com", "param": "q"},
+    "http_probe.idor": {"base_url": "https://example.com", "resource_path": "/api"},
+    "http_probe.ssrf": {"url": "https://example.com", "param": "q"},
+    "echidna.fuzz": {"contract": "test", "config": {}},
+    "echidna.status": {},
+    "fix.generate": {"findings": [], "project_path": "."},
+    "fix.apply": {"fix_id": "test"},
+    "fix.list": {},
 }
 
 
@@ -659,6 +692,10 @@ SKIP_TOOLS: set[str] = {
     "corpus_callosum.debate", # Multiple llama-server HTTP calls, 3+ min per call
     "embedding.daemon_process", # ONNX runtime blocks signal timeout
     "galaxy.ingest",          # ONNX embedding blocks signal timeout
+    "codegenome.generate",    # Blocks on llama-server HTTP call
+    "rabbit_hole_research",   # Blocks on llama-server HTTP call
+    "session_bootstrap",      # Blocks on session I/O
+    "wm",                     # Meta-tool dispatches to other tools, blocks
 }
 
 # Dynamic context — populated by _setup_context() before the main run.
