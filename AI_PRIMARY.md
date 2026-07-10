@@ -136,7 +136,8 @@ WM_MCP_LITE=1 python -m whitemagic.run_mcp
 | `WM_MCP_PRAT` | Enable 28-tool PRAT mode | `1` |
 | `WM_MCP_LITE` | Enable 92-tool lite mode | `1` |
 | `WM_MCP_CLIENT` | Schema adaptation per client | `gemini`, `deepseek`, `qwen` |
-| `OLLAMA_HOST` | Ollama server for inference | `localhost:11434` |
+| `WM_LLAMA_HOST` | llama-server host for inference | `localhost` |
+| `WM_LLAMA_PORT` | llama-server port for inference | `8080` |
 | `REDIS_URL` | Redis for Gan Ying events / mesh | `redis://localhost:6379` |
 
 ### Polyglot Accelerators (Optional)
@@ -379,15 +380,16 @@ No external deps. Multi-AI consensus under `WM_STATE_ROOT/votes/`:
 Confidence is auto-extracted from solution text if not explicitly provided.
 Consensus strength is classified as `strong` / `moderate` / `weak`.
 
-### Ollama Bridge (`ollama.*`)
+### Local AI Bridge (`llama_cpp.*`)
 
-Requires `whitemagic[net]` (aiohttp) and a running Ollama server:
+Requires `whitemagic[net]` (requests) and a running llama-server:
 
-- `ollama.models` — List available local models (READ)
-- `ollama.generate` — Single-turn text generation (READ)
-- `ollama.chat` — Multi-turn conversation (READ)
+- `llama_cpp.models` — List available local models (READ)
+- `llama_cpp.generate` — Single-turn text generation (READ)
+- `llama_cpp.chat` — Multi-turn conversation (READ)
+- `llama_cpp.agent` — Agentic loop with WhiteMagic tool access (READ)
 
-Configure via `OLLAMA_HOST` / `OLLAMA_PORT` env vars (default: `localhost:11434`).
+Configure via `WM_LLAMA_HOST` / `WM_LLAMA_PORT` env vars (default: `localhost:8080`).
 
 ## CLI Adapter Rules (AI-Friendly)
 
@@ -662,8 +664,8 @@ For Whitemagic to be release-ready (v22.0.0), the following must be verified:
 ### Multi-Galaxy Memory (Project-Scoped Databases)
 WhiteMagic now supports multiple "galaxies" — separate memory databases for different projects or domains. Each galaxy has its own SQLite database, holographic index, and association graph. Tools: `galaxy.create`, `galaxy.switch`, `galaxy.list`, `galaxy.status`, `galaxy.ingest`, `galaxy.delete`. The `default` galaxy ships with quickstart guide memories.
 
-### Ollama Agent Loop
-`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 490 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
+### llama.cpp Agent Loop
+`llama_cpp.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 490 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any GGUF model (qwen3, phi4-mini, deepseek-r1, etc.).
 
 ### Edgerunner Violet Security Layer
 15 new security tools: MCP Integrity (SHA-256 schema fingerprinting), Model Signing (OMS-compatible manifests with trust levels), Engagement Tokens (HMAC-SHA256 scoped authorization for offensive security), Security Monitor (anomaly detection for rapid-fire, lateral movement, privilege escalation). Violet Dharma profile adds 5 security rules. Karma ledger now has ops_class field for dual-log transparency.

@@ -204,8 +204,6 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
 
     # ── Export & Backup ──────────────────────────────────────────────
     "audit.export": "Export your audit trail. Use this for compliance or review.",
-    "galaxy_backup": "Backup all galaxies to a file. Use this before major changes.",
-    "galaxy_restore": "Restore galaxies from a backup file.",
 
     # ── Pipeline & Tasks ─────────────────────────────────────────────
     "pipeline.create": "Create a processing pipeline. Use this for multi-step automated workflows.",

@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/badge/version-24.0.1-purple.svg)](core/VERSION)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-**614 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **7-language polyglot acceleration**
+**678 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **7-language polyglot acceleration**
 
 ## What it is
 
@@ -73,7 +73,7 @@ call_tool("gnosis", compact=True)
 |------|---------|---------------|----------|
 | Seed | `WM_MCP_PRAT=2` (default) | 1 (`wm` meta-tool) | New agents, minimal token usage |
 | PRAT | `WM_MCP_PRAT=1` | 28 Gana meta-tools | Advanced agents, structured access |
-| Classic | `WM_MCP_PRAT=0` | 586 dispatch tools | Direct tool access, debugging |
+| Classic | `WM_MCP_PRAT=0` | 650 dispatch tools | Direct tool access, debugging |
 
 ## Key Concepts
 
@@ -115,7 +115,7 @@ call_tool("gnosis", compact=True)
 ## Stats
 
 - **4,191 tests** passing, 19 skipped, 0 failures
-- **614 callable tools** across 586 dispatch entries + 28 Gana meta-tools
+- **678 callable tools** across 650 dispatch entries + 28 Gana meta-tools
 - **49,413 memories** in production (10 galaxies)
 - **7 polyglot languages**: Rust, Haskell, Elixir, Go, Zig, Julia, Koka
 - **MIT-licensed**, no telemetry, no API keys

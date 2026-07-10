@@ -121,7 +121,7 @@ call_tool("swarm.route", subtask_id="...", agent_id="parser_agent")
 ### 4. Local LLM Enhancement Layer
 
 **The problem**: Local models (Llama, Mistral, Phi) are powerful but lack memory and tools.
-**The solution**: WhiteMagic + Ollama = a local AI with 313 tools and persistent memory.
+**The solution**: WhiteMagic + Ollama = a local AI with 650 tools and persistent memory.
 
 ```bash
 # Start Ollama with your favorite model

@@ -247,8 +247,6 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "watcher_recent_events": LazyHandler("watcher", "handle_watcher_recent_events"),
     "watcher_stats": LazyHandler("watcher", "handle_watcher_stats"),
     "watcher_list": LazyHandler("watcher", "handle_watcher_list"),
-    "galaxy_backup": LazyHandler("backup", "handle_galaxy_backup"),
-    "galaxy_restore": LazyHandler("backup", "handle_galaxy_restore"),
     "grimoire_walkthrough": LazyHandler(
         "grimoire_walkthrough", "handle_grimoire_walkthrough"
     ),

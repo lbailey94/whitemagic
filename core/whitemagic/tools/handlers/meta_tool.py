@@ -339,19 +339,21 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "delete_memory",
     ),
     (re.compile(r"\b(import).*memor", re.I), "gana_neck", "import_memories"),
+    (re.compile(r"\b(polyglot.*memory.*query|memory.*query.*polyglot)\b", re.I), "gana_tail", "polyglot.memory_query"),
     # Memory search / recall
     (
-        re.compile(r"\b(search|find|recall|look up|query).*memor", re.I),
+        re.compile(r"\b(search|find|recall|look up|query).*memor|memor.*(search|find|query)", re.I),
         "gana_winnowing_basket",
         "search_memories",
     ),
+    (re.compile(r"\b(session.*recall|recall.*session)\b", re.I), "gana_heart", "session.recall"),
     (re.compile(r"\brecall\b", re.I), "gana_winnowing_basket", "search_memories"),
     (
         re.compile(r"\b(list|show).*memor", re.I),
         "gana_winnowing_basket",
         "list_memories",
     ),
-    (re.compile(r"\b(read|get).*memor", re.I), "gana_winnowing_basket", "read_memory"),
+    (re.compile(r"\b(read|get).*memor|memor.*(read|get)", re.I), "gana_winnowing_basket", "read_memory"),
     (
         re.compile(r"\b(vector|embedding|similarity).*search", re.I),
         "gana_winnowing_basket",
@@ -390,6 +392,8 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_heart",
         "working_memory.attend",
     ),
+    (re.compile(r"\b(session.*handoff.*transfer|handoff.*transfer.*session)\b", re.I), "gana_horn", "session.handoff_transfer"),
+    (re.compile(r"\b(session.*accept.*handoff|accept.*handoff.*session)\b", re.I), "gana_horn", "session.accept_handoff"),
     (
         re.compile(r"\b(context pack|session context|handoff)\b", re.I),
         "gana_heart",
@@ -437,6 +441,12 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "session.consolidate",
     ),
     # Reasoning / thinking
+    # Specific analyze patterns (must be before generic 'analyze')
+    (re.compile(r"\b(vote.*analyze|analyze.*vote)\b", re.I), "gana_wall", "vote.analyze"),
+    (re.compile(r"\b(image.*analyze|analyze.*image)\b", re.I), "gana_chariot", "image_analyze"),
+    (re.compile(r"\b(strata.*analyze|analyze.*strata)\b", re.I), "gana_chariot", "strata.analyze"),
+    (re.compile(r"\b(swarm.*analyze|analyze.*swarm)\b", re.I), "gana_ox", "swarm.analyze"),
+    (re.compile(r"\b(analyze.*scratchpad|scratchpad.*analyze)\b", re.I), "gana_heart", "analyze_scratchpad"),
     (
         re.compile(r"\b(reason|think|analyze|deliberate|ponder)\b", re.I),
         "gana_three_stars",
@@ -452,6 +462,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_three_stars",
         "kaizen_analyze",
     ),
+    (re.compile(r"\b(selfmodel.*forecast|forecast.*selfmodel)\b", re.I), "gana_ghost", "selfmodel.forecast"),
     (
         re.compile(r"\b(foresight|predict|forecast|convergence)\b", re.I),
         "gana_three_stars",
@@ -462,6 +473,8 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_three_stars",
         "sabha.convene",
     ),
+    (re.compile(r"\b(dharma.*guidance|get.*dharma.*guidance)\b", re.I), "gana_straddling_legs", "get_dharma_guidance"),
+    (re.compile(r"\b(archaeology.*wisdom|wisdom.*archaeology)\b", re.I), "gana_chariot", "archaeology_process_wisdom"),
     (
         re.compile(r"\b(wisdom|counsel|guidance|iching|i.ching)\b", re.I),
         "gana_three_stars",
@@ -474,11 +487,14 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     ),
     # System health
     (re.compile(r"\b(rust|cargo)\b", re.I), "gana_root", "rust_status"),
+    (re.compile(r"\b(garden.*health|health.*garden)\b", re.I), "gana_void", "garden_health"),
+    (re.compile(r"\b(community.*health|health.*community)\b", re.I), "gana_extended_net", "community.health"),
     (
         re.compile(r"\b(health|diagnose|root.*cause|system.*status)\b", re.I),
         "gana_root",
         "health_report",
     ),
+    (re.compile(r"\b(sangha.*lock.*release|release.*sangha.*lock)\b", re.I), "gana_room", "sangha_lock_release"),
     (re.compile(r"\b(ship|deploy|release|version)\b", re.I), "gana_root", "ship.check"),
     (
         re.compile(r"\b(state|paths|summary).*system", re.I),
@@ -486,6 +502,8 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "state.summary",
     ),
     # Introspection / self-model
+    (re.compile(r"\bget.*agent.*capabilit", re.I), "gana_ghost", "get_agent_capabilities"),
+    (re.compile(r"\bagent.*capabilit", re.I), "gana_girl", "agent.capabilities"),
     (
         re.compile(r"\b(capabilit|manifest.*tool|telemetry)", re.I),
         "gana_ghost",
@@ -525,16 +543,22 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "skill.list",
     ),
     (
-        re.compile(r"\b(invoke.*skill|run.*skill|replay.*skill|use.*skill)\b", re.I),
+        re.compile(r"\b(invoke.*skill|skill.*invoke|run.*skill|skill.*run|replay.*skill|use.*skill)\b", re.I),
         "gana_ox",
         "skill.invoke",
     ),
     (
-        re.compile(r"\b(seed.*skills|plant.*skills|initialize.*skills)\b", re.I),
+        re.compile(r"\b(seed.*skills?|skills?.*seed|plant.*skills?|initialize.*skills?)\b", re.I),
         "gana_ox",
         "skill.seed",
     ),
-    # Session management
+    # Session management — specific session tools (must be before generic 'session')
+    (re.compile(r"\b(session.*record|record.*session)\b", re.I), "gana_heart", "session.record"),
+    (re.compile(r"\b(session.*replay|replay.*session)\b", re.I), "gana_heart", "session.replay"),
+    (re.compile(r"\b(session.*search|search.*session)\b", re.I), "gana_heart", "session.search"),
+    (re.compile(r"\b(session.*backfill|backfill.*session)\b", re.I), "gana_heart", "session.backfill"),
+    (re.compile(r"\b(session.*consolidate|consolidate.*session)\b", re.I), "gana_heart", "session.consolidate"),
+    (re.compile(r"\b(browser.*session.*status|session.*status.*browser)\b", re.I), "gana_chariot", "browser_session_status"),
     (
         re.compile(r"\b(session|bootstrap|startup|init.*session)\b", re.I),
         "gana_horn",
@@ -547,6 +571,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     ),
     # Galaxy management
     (re.compile(r"\b(create|new).*galax", re.I), "gana_void", "galaxy.create"),
+    (re.compile(r"\b(galaxy.*export.*tutorial|export.*tutorial.*galaxy)\b", re.I), "gana_void", "galaxy.export_tutorial"),
     (
         re.compile(r"\b((?<!meta )galax|universe|namespace|switch.*context)", re.I),
         "gana_void",
@@ -594,16 +619,23 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "serendipity_surface",
     ),
     # Ethics / governance
+    (re.compile(r"\b(dharma.*reload|reload.*dharma)\b", re.I), "gana_star", "dharma.reload"),
+    (re.compile(r"\b(set.*dharma.*profile|dharma.*profile.*set)\b", re.I), "gana_star", "set_dharma_profile"),
+    (re.compile(r"^dharma[\s_.]rules$", re.I), "gana_hairy_head", "dharma_rules"),
+    (re.compile(r"\b(governor.*check.*dharma|check.*dharma.*governor)\b", re.I), "gana_star", "governor_check_dharma"),
     (
         re.compile(r"\b(ethics?|dharma|moral|consent|boundar)\b", re.I),
         "gana_straddling_legs",
         "evaluate_ethics",
     ),
+    (re.compile(r"\b(yin.*yang.*balance|balance.*yin.*yang)\b", re.I), "gana_mound", "get_yin_yang_balance"),
+    (re.compile(r"\b(ilp.*balance|balance.*ilp)\b", re.I), "gana_abundance", "ilp.balance"),
     (
         re.compile(r"\b(harmony|(?<!guna )balance|wu.xing|five.element)\b", re.I),
         "gana_straddling_legs",
         "wu_xing_balance",
     ),
+    (re.compile(r"\b(karma.*verify.*chain|verify.*chain.*karma)\b", re.I), "gana_net", "karma.verify_chain"),
     (
         re.compile(r"\b(attest|verification.*status|verify.*chain)\b", re.I),
         "gana_straddling_legs",
@@ -615,6 +647,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_star",
         "governor_validate",
     ),
+    (re.compile(r"\b(prompt.*reload|reload.*prompt)\b", re.I), "gana_net", "prompt.reload"),
     (
         re.compile(r"\b(forge|reload|validate.*tool)\b", re.I),
         "gana_star",
@@ -643,7 +676,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "sandbox.status",
     ),
     (
-        re.compile(r"\b(security.*alert|threat|intrusion)\b", re.I),
+        re.compile(r"\b(security.*alerts?|threat|intrusion)\b", re.I),
         "gana_room",
         "security.alerts",
     ),
@@ -671,7 +704,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     ),
     # Deployment / export
     (
-        re.compile(r"\b(export.*memor|deploy|mesh.*broadcast.*memory)\b", re.I),
+        re.compile(r"\b(export.*memor|memor.*export|deploy|mesh.*broadcast.*memory)", re.I),
         "gana_wings",
         "export_memories",
     ),
@@ -693,6 +726,9 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_ox",
         "swarm.decompose",
     ),
+    # Nurture / agent registry — specific patterns (must be before generic 'agent')
+    (re.compile(r"\b(llama.*agent|agent.*llama)\b", re.I), "gana_roof", "llama.agent"),
+    (re.compile(r"\b(model.*register|register.*model)\b", re.I), "gana_roof", "model.register"),
     # Nurture / agent registry
     (
         re.compile(r"\b(agent|register|heartbeat|deregister|trust)\b", re.I),
@@ -753,6 +789,8 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_extended_net",
         "learning.patterns",
     ),
+    (re.compile(r"\b(immune.*scan|scan.*immune)\b", re.I), "gana_room", "immune_scan"),
+    (re.compile(r"\b(slither.*scan|scan.*slither)\b", re.I), "gana_three_stars", "slither.scan"),
     # Codebase / archaeology
     (
         re.compile(r"\b(archaeology|codebase|scan|strata|code.*genome)\b", re.I),
@@ -1009,6 +1047,14 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "citta.coherence",
     ),
     # Consciousness loop status
+    (
+        re.compile(
+            r"\b(embedding.*daemon.*status|daemon.*status.*embedding)\b",
+            re.I,
+        ),
+        "gana_chariot",
+        "embedding.daemon_status",
+    ),
     (
         re.compile(
             r"\b(consciousness.*loop|loop.*status|background.*consciousness|daemon.*status|persistent.*consciousness)\b",
@@ -1313,7 +1359,6 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(fool.*guard|guard.*fool|fool.*ralph|dare.*to.*die)\b", re.I), "gana_willow", "fool_guard.status"),
     (re.compile(r"\b(rate.*limit.*stats|throttle.*stats|circuit.*breaker.*stats)\b", re.I), "gana_willow", "rate_limiter.stats"),
     # ── gana_wings: export, mesh ──
-    (re.compile(r"\b(galaxy.*backup|backup.*galaxy|galaxy.*restore|restore.*galaxy)\b", re.I), "gana_wings", "galaxy_backup"),
     (re.compile(r"\b(mesh.*broadcast|broadcast.*mesh|mesh.*connect|connect.*mesh|mesh.*status)\b", re.I), "gana_wings", "mesh.status"),
     (re.compile(r"\b(audit.*export|export.*audit|verify.*export)\b", re.I), "gana_wings", "audit.export"),
     # ── gana_winnowing_basket: fragment, graph walk, rerank, JIT, batch read ──
@@ -1607,7 +1652,6 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(grimoire.*suggest)\b", re.I), "gana_willow", "grimoire_suggest"),
     (re.compile(r"\b(grimoire.*walkthrough)\b", re.I), "gana_willow", "grimoire_walkthrough"),
     (re.compile(r"\b(navigate.*grimoire)\b", re.I), "gana_willow", "navigate_grimoire"),
-    (re.compile(r"\b(galaxy.*restore)\b", re.I), "gana_wings", "galaxy_restore"),
     (re.compile(r"\b(mesh.*broadcast)\b", re.I), "gana_wings", "mesh.broadcast"),
     (re.compile(r"\b(mesh.*connect)\b", re.I), "gana_wings", "mesh.connect"),
     (re.compile(r"\b(fast.*read.*memory)\b", re.I), "gana_winnowing_basket", "fast_read_memory"),
@@ -1621,6 +1665,20 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(search.*query.*memor)\b", re.I), "gana_winnowing_basket", "search_query"),
     (re.compile(r"\b(vector.*status)\b", re.I), "gana_winnowing_basket", "vector.status"),
     (re.compile(r"\b(wm.*read.*status)\b", re.I), "gana_winnowing_basket", "wm_read.status"),
+    # ── Remaining unmatched tools ──
+    (re.compile(r"\b(reasoning.*bicameral|bicameral.*reasoning)\b", re.I), "gana_three_stars", "reasoning.bicameral"),
+    (re.compile(r"\b(check|health.*check|system.*check)\b", re.I), "gana_root", "check"),
+    (re.compile(r"\b(state.*summary|summary.*state)\b", re.I), "gana_root", "state.summary"),
+    (re.compile(r"\b(token.*report(?!.*simd)|token.*usage)\b", re.I), "gana_tail", "token_report"),
+    (re.compile(r"\b(browser.*get.*interactables|interactables.*browser)\b", re.I), "gana_chariot", "browser_get_interactables"),
+    (re.compile(r"\b(cognitive.*hints|hints.*cognitive)\b", re.I), "gana_dipper", "cognitive.hints"),
+    (re.compile(r"\b(gating.*detect|detect.*gating)\b", re.I), "gana_dipper", "gating.detect"),
+    (re.compile(r"\b(pattern.*search|search.*pattern)\b", re.I), "gana_extended_net", "pattern_search"),
+    (re.compile(r"\b(replay.*run|run.*replay)\b", re.I), "gana_abundance", "replay.run"),
+    (re.compile(r"\b(workspace.*ignitions|ignitions.*workspace)\b", re.I), "gana_three_stars", "workspace.ignitions"),
+    (re.compile(r"\b(memory.*read\b|read.*memory\b)", re.I), "gana_winnowing_basket", "memory_read"),
+    (re.compile(r"\b(memory.*search\b)", re.I), "gana_winnowing_basket", "memory_search"),
+    (re.compile(r"\b(search.*query\b|query.*search\b)", re.I), "gana_winnowing_basket", "search_query"),
 ]
 
 
@@ -1644,7 +1702,7 @@ def classify(input_text: str) -> tuple[str, str | None, float]:
         return "gana_three_stars", "kaizen_analyze", 1.0
     if "art of war" in text_lower:
         return "gana_three_stars", "art_of_war.assess", 1.0
-    if "sabha" in text_lower or "council" in text_lower:
+    if "sabha" in text_lower:
         return "gana_three_stars", "sabha.convene", 1.0
     # Web research — check before "think/reason/analyze" to prevent collision
     if "rabbit hole" in text_lower:
@@ -1674,14 +1732,6 @@ def classify(input_text: str) -> tuple[str, str | None, float]:
         return "gana_chariot", "web_search", 1.0
     if "research topic" in text_lower or "research_topic" in text_lower:
         return "gana_chariot", "research_topic", 1.0
-    if (
-        "think" in text_lower
-        or "reason" in text_lower
-        or "analyze" in text_lower
-        or "deliberate" in text_lower
-        or "ponder" in text_lower
-    ):
-        return "gana_three_stars", "reasoning.bicameral", 1.0
     for pattern, gana, tool in _ROUTING_PATTERNS:
         if pattern.search(input_text):
             return gana, tool, 1.0

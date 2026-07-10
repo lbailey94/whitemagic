@@ -590,6 +590,7 @@ class TestHermesHookScripts:
             capture_output=True,
             text=True,
             env=env,
+            timeout=15,
         )
         assert proc.returncode == 0, f"Hook crashed: {proc.stderr}"
         return json.loads(proc.stdout)

@@ -104,8 +104,6 @@ _TOOL_CODEBOOK: dict[str, str] = {
     "watcher_recent_events": "Wr",
     "watcher_stats": "Ws",
     "watcher_list": "Wl",
-    "galaxy_backup": "Yb",
-    "galaxy_restore": "Yr",
     "galaxy_status": "Ys",
     "galaxy_list": "Yl",
     "galaxy_switch": "Yw",

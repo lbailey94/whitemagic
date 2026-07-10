@@ -158,8 +158,6 @@ TOOL_TO_GANA: dict[str, str] = {
     "mesh.connect": "gana_wings",
     "mesh.broadcast": "gana_wings",
     "mesh.status": "gana_wings",
-    "galaxy_backup": "gana_wings",
-    "galaxy_restore": "gana_wings",
     # ═══ CHARIOT — Mobility & Archaeology ═══
     "archaeology": "gana_chariot",
     "kg.extract": "gana_chariot",

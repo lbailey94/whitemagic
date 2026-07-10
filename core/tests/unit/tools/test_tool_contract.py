@@ -1,6 +1,26 @@
 import json
 from uuid import uuid4
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _isolated_state_root(monkeypatch, tmp_path):
+    """Isolate DB state to prevent order-dependent failures."""
+    monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+    monkeypatch.setenv("WM_SILENT_INIT", "1")
+    # Patch DB paths to use isolated temp dir
+    import whitemagic.config.paths as _paths
+    monkeypatch.setattr(_paths, "WM_ROOT", tmp_path)
+    monkeypatch.setattr(_paths, "MEMORY_DIR", tmp_path / "memory")
+    monkeypatch.setattr(_paths, "DB_PATH", tmp_path / "memory" / "whitemagic.db")
+    (tmp_path / "memory").mkdir(parents=True, exist_ok=True)
+    # Reset unified memory singleton so it picks up new paths
+    import whitemagic.core.memory.unified as _unified
+    _unified._unified_memory = None
+    yield
+    _unified._unified_memory = None
+
 
 def _assert_envelope_shape(out: dict) -> None:
     expected = {

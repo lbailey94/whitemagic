@@ -1,7 +1,30 @@
 """Tests for Success-Rate Feedback Loop (Phase 3) and Provenance Signing (Phase 5)."""
 
-from whitemagic.codegenome.engine import CodeGenomeEngine, CodeTemplate, get_codegenome_engine
+import pytest
+
+from whitemagic.codegenome.engine import (
+    CodeGenomeEngine,
+    CodeTemplate,
+    get_codegenome_engine,
+)
 from whitemagic.codegenome.vault import GeneseedVault
+
+
+@pytest.fixture(autouse=True)
+def _fresh_vault():
+    """Reset GeneseedVault usage stats and template state between tests."""
+    vault = GeneseedVault()
+    vault._usage_stats.clear()
+    # Reset template deprecated flags that may have been set by prior tests
+    engine = get_codegenome_engine()
+    for tmpl in getattr(engine, "_templates", {}).values():
+        tmpl.deprecated = False
+        tmpl.success_rate = 1.0
+    yield
+    vault._usage_stats.clear()
+    for tmpl in getattr(engine, "_templates", {}).values():
+        tmpl.deprecated = False
+        tmpl.success_rate = 1.0
 
 
 class TestFeedbackLoop:

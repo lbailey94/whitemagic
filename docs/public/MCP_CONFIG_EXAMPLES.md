@@ -1,6 +1,6 @@
 # MCP Integration Cookbook
 
-WhiteMagic exposes its 313 tools (or 28 PRAT Gana meta-tools) via the Model Context Protocol (MCP) over stdio. This guide covers configuration for all major MCP clients.
+WhiteMagic exposes its 650 tools (or 28 PRAT Gana meta-tools) via the Model Context Protocol (MCP) over stdio. This guide covers configuration for all major MCP clients.
 
 ---
 
@@ -9,7 +9,7 @@ WhiteMagic exposes its 313 tools (or 28 PRAT Gana meta-tools) via the Model Cont
 | Mode | Tools | Env Var | Best For |
 |------|-------|---------|----------|
 | **PRAT** | 28 Gana meta-tools | `WM_MCP_PRAT=1` | AI agents (recommended) |
-| **Classic** | 313 individual tools | _(default)_ | Power users |
+| **Classic** | 650 individual tools | _(default)_ | Power users |
 | **Lite** | 92 core tools | `WM_MCP_LITE=1` | Fast startup |
 
 ---

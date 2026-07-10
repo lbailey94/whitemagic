@@ -208,8 +208,6 @@ SAFE_DEFAULTS: dict[str, dict] = {
     "karma.verify_chain": {},
     "export_memories": {"limit": 1},
     "audit.export": {},
-    "galaxy_backup": {},
-    "galaxy_restore": {},
     "galaxy.canonical_taxonomy": {},
     "galaxy.export_tutorial": {},
     "agent.register": {"agent_id": "test", "name": "test"},
@@ -221,10 +219,10 @@ SAFE_DEFAULTS: dict[str, dict] = {
     "model.hash": {"model_path": "test"},
     "model.signing_status": {},
     "model.register": {},
-    "ollama.models": {},
-    "ollama.generate": {"prompt": "test"},
-    "ollama.chat": {"prompt": "test"},
-    "ollama.agent": {"prompt": "test"},
+    "llama_cpp.models": {},
+    "llama_cpp.generate": {"prompt": "test"},
+    "llama_cpp.chat": {"prompt": "test"},
+    "llama_cpp.agent": {"prompt": "test"},
     "shelter.create": {},
     "shelter.execute": {},
     "shelter.inspect": {},
@@ -371,11 +369,10 @@ SAFE_DEFAULTS: dict[str, dict] = {
     "browser_type": {"selector": "input", "text": "test"},
     "consult_wisdom_council": {"query": "test"},
     "galaxy.restore": {"galaxy": "default", "backup_path": "test_backup.tar.gz"},
-    "galaxy_restore": {"galaxy": "default", "backup_path": "test_backup.tar.gz"},
     "image_analyze": {"image_path": "test.png"},
     "navigate_grimoire": {"query": "test"},
-    "ollama.agent": {"task": "test"},
-    "ollama_agent": {"task": "test"},
+    "llama_cpp.agent": {"task": "test"},
+    "llama_agent": {"task": "test"},
     "session.record": {"content": "test"},
     "verification.attest": {"request_id": "test", "attestation": "test"},
     "verification.request": {"target": "test"},
@@ -474,8 +471,8 @@ SAFE_DEFAULTS: dict[str, dict] = {
     "model.verify": {"path": "test", "model_name": "test"},
     "narrative.compress": {"content": "test"},
     "neuro.modulate": {"memories": [{"memory_id": "test"}]},
-    "ollama.chat": {"model": "test", "messages": [{"role": "user", "content": "test"}]},
-    "ollama.generate": {"model": "test", "prompt": "test"},
+    "llama_cpp.chat": {"model": "test", "messages": [{"role": "user", "content": "test"}]},
+    "llama_cpp.generate": {"model": "test", "prompt": "test"},
     "oms.export": {"galaxy": "default"},
     "oms.import": {"path": "test.mem"},
     "oms.inspect": {"path": "test.mem"},
@@ -659,7 +656,7 @@ SKIP_TOOLS: set[str] = {
     "citta.sensorium",        # Blocks on embedding model loading
     "checkpoint_session",     # Blocks on session I/O
     "consciousness.smarana",  # Blocks on embedding model loading
-    "corpus_callosum.debate", # Multiple Ollama HTTP calls, 3+ min per call
+    "corpus_callosum.debate", # Multiple llama-server HTTP calls, 3+ min per call
     "embedding.daemon_process", # ONNX runtime blocks signal timeout
     "galaxy.ingest",          # ONNX embedding blocks signal timeout
 }
@@ -672,7 +669,7 @@ _ctx: dict[str, str] = {}
 def _setup_context() -> None:
     """Create prerequisite resources so dependent tools have valid IDs."""
     print("Setting up test context...")
-    _ctx["ollama_model"] = "gemma3:4b"
+    _ctx["llama_model"] = "qwen3-4b"
 
     # 1. Create a watcher
     try:
@@ -841,8 +838,8 @@ DYNAMIC_DEFAULTS: dict[str, dict[str, str]] = {
     "dream.read": {"dream_id": "dream_id"},
     "dream.promote": {"dream_id": "dream_id"},
     "dream.expire": {"dream_id": "dream_id"},
-    "ollama.chat": {"model": "ollama_model"},
-    "ollama.generate": {"model": "ollama_model"},
+    "llama_cpp.chat": {"model": "llama_model"},
+    "llama_cpp.generate": {"model": "llama_model"},
     "windsurf_read_conversation": {"path": "windsurf_path"},
     "windsurf_export_conversation": {"path": "windsurf_path"},
     "oms.import": {"path": "oms_mem_path"},

@@ -338,8 +338,6 @@ _CONTENT_SCAN_EXEMPT: set = {
     "galaxy.merge",
     "galaxy.transfer",
     "galaxy.restore",
-    "galaxy_backup",
-    "galaxy_restore",
     # Export & broadcast (arbitrary content)
     "export_memories",
     "audit.export",
