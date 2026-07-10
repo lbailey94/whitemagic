@@ -123,6 +123,12 @@ def register_all_commands(
 
     main_group.add_command(vault_group)
 
+    from whitemagic.cli.commands.polyglot_commands import (
+        register_polyglot_commands,
+    )
+
+    register_polyglot_commands(main_group)
+
     from whitemagic.cli.commands.memory_commands import (
         consolidate,
         context,

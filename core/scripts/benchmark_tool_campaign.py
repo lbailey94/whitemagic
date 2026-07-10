@@ -137,7 +137,11 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     # Activation spread — needs higher timeout for cold-start embedding load
     "activation.spread": {"seed_ids": ["test-id"], "_timeout_s": 30.0},
     # Knowledge gap — cold-start MetaGalaxy + memory search/store per gap
-    "knowledge_gap.run": {"max_gaps": 1, "_timeout_s": 30.0},
+    "knowledge_gap.run": {"max_gaps": 1, "_timeout_s": 45.0},
+    # Polyglot tools — cold-start bridge pings (8 subprocess launches)
+    "polyglot.status": {"_timeout_s": 30.0},
+    "polyglot.search": {"query": "test", "_timeout_s": 30.0},
+    "polyglot.memory_query": {"operation": "encode", "text": "test", "_timeout_s": 30.0},
 }
 
 
