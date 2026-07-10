@@ -86,7 +86,7 @@ class ElixirActorBridge:
             )
             self._proc.stdin.write(json.dumps({"method": "ping", "params": {}}) + "\n")
             self._proc.stdin.flush()
-            line = self._readline_timeout(timeout=5.0)
+            line = self._readline_timeout(timeout=30.0)
             if not line:
                 self._available = False
                 return None

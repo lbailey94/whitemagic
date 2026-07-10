@@ -4,7 +4,7 @@
 # Protocol: {"method": "value_at", "params": {...}}
 
 using JSON
-include(joinpath(@__DIR__, "..", "src", "YieldCurve.jl"))
+include(joinpath(@__DIR__, "..", "..", "whitemagic-jl", "src", "YieldCurve.jl"))
 using .YieldCurveJL
 
 # Main loop: read JSON line, handle, write JSON line
@@ -13,6 +13,10 @@ while !eof(stdin)
     isempty(line) && continue
     try
         req = JSON.parse(line)
+        # Convert JSON.Object to Dict for handle_request compatibility
+        if !isa(req, Dict)
+            req = Dict(string(k) => v for (k, v) in req)
+        end
         # Translate standard protocol {"method": ..., "params": {...}}
         # to YieldCurveJL format {"command": ..., ...flat params...}
         if haskey(req, "method") && !haskey(req, "command")

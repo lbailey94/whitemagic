@@ -85,7 +85,7 @@ def _ensure_running() -> subprocess.Popen | None:
             + "\n"
         )
         _proc.stdin.flush()
-        line = _readline_timeout(_proc, timeout=5.0)
+        line = _readline_timeout(_proc, timeout=30.0)
         if not line:
             _available = False
             return None

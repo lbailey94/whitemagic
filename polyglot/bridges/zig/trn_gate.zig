@@ -99,37 +99,38 @@ fn checkGate(galaxy: Galaxy, context: Context, activation: f64) bool {
     return true;
 }
 
-pub fn main() !void {
-    const stdin = std.io.getStdIn().reader();
-    const stdout = std.io.getStdOut().writer();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const stdout_file = std.Io.File.stdout();
+    const stdin_file = std.Io.File.stdin();
 
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+    var write_buf: [4096]u8 = undefined;
+    var stdout_w = stdout_file.writerStreaming(io, &write_buf);
+
+    var read_buf: [4096]u8 = undefined;
+    var stdin_r = stdin_file.readerStreaming(io, &read_buf);
 
     // Signal startup
-    try stdout.printAll("{\"status\": \"started\", \"backend\": \"zig-trn-gate\"}\n");
+    try stdout_w.interface.writeAll("{\"status\": \"started\", \"backend\": \"zig-trn-gate\"}\n");
+    try stdout_w.flush();
 
-    var line_buf: [4096]u8 = undefined;
     while (true) {
-        const line = stdin.readUntilDelimiterOrEof(&line_buf, '\n') catch break;
+        const line = stdin_r.interface.takeDelimiter('\n') catch break;
         if (line == null) break;
 
-        // Parse JSON manually (simple substring search for fields)
         const input = line.?;
 
         if (std.mem.indexOf(u8, input, "\"method\": \"ping\"") != null) {
-            try stdout.printAll("{\"status\": \"ok\", \"backend\": \"zig-trn-gate\"}\n");
+            try stdout_w.interface.writeAll("{\"status\": \"ok\", \"backend\": \"zig-trn-gate\"}\n");
+            try stdout_w.flush();
             continue;
         }
 
         if (std.mem.indexOf(u8, input, "\"method\": \"check\"") != null) {
-            // Extract galaxy, context, activation from JSON
             var galaxy_name: []const u8 = "universal";
             var context_name: []const u8 = "default";
             var activation: f64 = 1.0;
 
-            // Simple JSON field extraction
             if (std.mem.indexOf(u8, input, "\"galaxy\": \"")) |pos| {
                 const start = pos + 11;
                 if (std.mem.indexOfScalarPos(u8, input, start, '"')) |end| {
@@ -150,26 +151,29 @@ pub fn main() !void {
             }
 
             const galaxy = galaxyFromString(galaxy_name) orelse {
-                try stdout.printAll("{\"status\": \"error\", \"error\": \"unknown galaxy\"}\n");
+                try stdout_w.interface.writeAll("{\"status\": \"error\", \"error\": \"unknown galaxy\"}\n");
+                try stdout_w.flush();
                 continue;
             };
             const context = contextFromString(context_name);
             const allowed = checkGate(galaxy, context, activation);
 
-            try stdout.print("{{\"status\": \"ok\", \"allowed\": {}, \"galaxy\": \"{s}\", \"context\": \"{s}\"}}\n", .{
+            try stdout_w.interface.print("{{\"status\": \"ok\", \"allowed\": {s}, \"galaxy\": \"{s}\", \"context\": \"{s}\"}}\n", .{
                 if (allowed) "true" else "false",
                 galaxy_name,
                 context_name,
             });
+            try stdout_w.flush();
             continue;
         }
 
         if (std.mem.indexOf(u8, input, "\"method\": \"batch_check\"") != null) {
-            // For batch check, just return all allowed (simplified)
-            try stdout.printAll("{\"status\": \"ok\", \"results\": []}\n");
+            try stdout_w.interface.writeAll("{\"status\": \"ok\", \"results\": []}\n");
+            try stdout_w.flush();
             continue;
         }
 
-        try stdout.printAll("{\"status\": \"error\", \"error\": \"unknown method\"}\n");
+        try stdout_w.interface.writeAll("{\"status\": \"error\", \"error\": \"unknown method\"}\n");
+        try stdout_w.flush();
     }
 }
