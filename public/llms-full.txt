@@ -430,7 +430,7 @@ Stable tool names (not under the `gana_` prefix, so they bypass the PRAT router 
 
 ---
 
-## A2A v1.2 discovery surface (v24.1.0)
+## A2A v1.2 discovery surface (v24.2.0)
 
 WhiteMagic Labs is a v1.2 A2A peer. The main Agent Card lists 7 high-level
 skills; a per-category skill tree and a 12-Gana directory extend it.
@@ -480,7 +480,7 @@ skills; a per-category skill tree and a 12-Gana directory extend it.
 
 ---
 
-## Librarian chat (v24.1.0)
+## Librarian chat (v24.2.0)
 
 The `/chat` and `/librarian` pages route through `/api/librarian/chat`,
 a streaming server-sent response with inline tool-call events. The
@@ -539,7 +539,7 @@ local model with no per-token cost.
 
 ---
 
-## Data Sovereignty (v24.1.0)
+## Data Sovereignty (v24.2.0)
 
 WhiteMagic is a **local-first** cognitive substrate. The principle is
 foundational, not a feature:

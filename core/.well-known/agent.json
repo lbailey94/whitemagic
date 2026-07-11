@@ -1,8 +1,8 @@
 {
   "name": "WhiteMagic",
-  "description": "The Tool Substrate for Agentic AI — 678 MCP tools (28 Gana meta-tools in seed mode, 650 nested tools), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Gratitude-driven economics via XRPL + x402. LoCoMo benchmark: 78.3% recall accuracy. See mcp-registry.json for current tool count.",
+  "description": "The Tool Substrate for Agentic AI — 687 MCP tools (28 Gana meta-tools in seed mode, 659 nested tools), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, MandalaOS compartments with Koka effect enforcement, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Gratitude-driven economics via XRPL + x402. See mcp-registry.json for current tool count.",
   "url": "https://github.com/lbailey94/whitemagic",
-  "version": "24.1.0",
+  "version": "24.2.0",
   "provider": {
     "organization": "WhiteMagic Contributors",
     "url": "https://github.com/lbailey94/whitemagic"

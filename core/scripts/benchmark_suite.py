@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WhiteMagic Comprehensive Benchmark Suite — v24.1.0
+"""WhiteMagic Comprehensive Benchmark Suite — v24.2.0
 
 Unifies acceleration, memory, and dispatch benchmarks into a single
 report with cross-sectional insights.
@@ -9,7 +9,7 @@ Usage:
 
 Outputs:
     - Terminal summary with speedups and percentiles
-    - JSON report to core/reports/benchmark_suite_v24.1.0.json
+    - JSON report to core/reports/benchmark_suite_v24.2.0.json
 """
 
 from __future__ import annotations
@@ -374,13 +374,13 @@ def benchmark_prat_compression() -> dict[str, Any]:
 # Main
 def main() -> int:
     print("=" * 65)
-    print(" WhiteMagic Comprehensive Benchmark Suite — v24.1.0")
+    print(" WhiteMagic Comprehensive Benchmark Suite — v24.2.0")
     print("=" * 65)
 
     from whitemagic.utils.progress_bar import ProgressBar
 
     results: dict[str, Any] = {
-        "version": "v24.1.0",
+        "version": "v24.2.0",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
@@ -433,7 +433,7 @@ def main() -> int:
     # Write report
     report_dir = REPO_ROOT / "reports"
     report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = report_dir / "benchmark_suite_v24.1.0.json"
+    report_path = report_dir / "benchmark_suite_v24.2.0.json"
     report_path.write_text(json.dumps(results, indent=2) + "\n")
 
     print("\n" + "=" * 65)

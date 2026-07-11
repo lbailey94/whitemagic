@@ -118,7 +118,7 @@ def generate_facts(tests: dict, tools: dict, version: str) -> str:
   // Recent changes
   mcpApiBridgeFixed: true,
   bridgeModulesRecovered: 25,
-  bridgeModulesNote: "13 core/bridge/* modules ported from SD card archive, 10 more surfaced, mcp_api_bridge crash fixed. v24.1.0 added gana_dipper (Dipper Gana) to the public MCP API.",
+  bridgeModulesNote: "13 core/bridge/* modules ported from SD card archive, 10 more surfaced, mcp_api_bridge crash fixed. v24.2.0 added gana_dipper (Dipper Gana) to the public MCP API.",
 }} as const;
 
 export const WM_FACT_TEXT = {{

@@ -11,9 +11,9 @@
 WhiteMagic is a **cognitive operating system** for agentic AI — not merely a memory tool. It provides:
 
 - Persistent memory with 5D holographic coordinates and galactic lifecycle
-- 518 callable tools across 490 dispatch entries + 28 Gana meta-tools (PRAT)
+- 687 callable tools across 659 dispatch entries + 28 Gana meta-tools (PRAT)
 - 8-stage dispatch pipeline with Dharma ethical governance
-- Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig)
+- Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Koka, Julia)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
 - v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
 - v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup

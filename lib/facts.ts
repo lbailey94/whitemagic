@@ -1,18 +1,18 @@
 export const WM_FACTS = {
-  version: "24.0.1",
-  verifiedDate: "July 4, 2026",
+  version: "24.2.0",
+  verifiedDate: "July 11, 2026",
   linesShort: "336K",
   linesLong: "336,000",
-  callableTools: "614",
-  dispatchTools: "586",
+  callableTools: "687",
+  dispatchTools: "659",
   ganaTools: "28",
   bridgeFunctions: "151",
-  testsPassing: "4191",
-  testsSkipped: "19",
+  testsPassing: "4695",
+  testsSkipped: "6",
   testsFailing: "0",
-  testsFailingNote: "All tests pass cleanly. Suite runs in ~120s.",
+  testsFailingNote: "All tests pass cleanly. Unit suite runs in ~42s.",
   languages: "7",
-  memories: "49,486",
+  memories: "49,400+",
   galaxies: "10",
   // Performance benchmarks (July 2026)
   perfMedianMs: "29-33",
@@ -21,7 +21,7 @@ export const WM_FACTS = {
   perfSuccessRate: "100",
   perfMemoryMB: "0-0.18",
   perfThroughputRps: "29.38",
-  benchmarkDate: "July 4, 2026",
+  benchmarkDate: "July 11, 2026",
 } as const;
 
 export const WM_FACT_TEXT = {
