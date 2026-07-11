@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic",
-  "description": "Cognitive operating system for AI agents — 630 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
+  "description": "Cognitive operating system for AI agents — 687 callable tools via single wm meta-tool (28 Gana meta-tools in PRAT mode, 659 in classic mode), 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, MandalaOS compartments with Koka effect enforcement, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "24.1.0",
+  "version": "24.2.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "24.1.0",
+      "version": "24.2.0",
       "transport": {
         "type": "stdio"
       },
@@ -20,7 +20,7 @@
       "environmentVariables": [
         {
           "name": "WM_MCP_PRAT",
-          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (630 tools)",
+          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (659 tools)",
           "isRequired": false,
           "format": "string",
           "isSecret": false
