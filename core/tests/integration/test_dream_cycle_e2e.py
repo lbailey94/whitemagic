@@ -369,9 +369,8 @@ class TestDreamCycleE2E:
         time.sleep(0.15)  # let it enter dream state
 
         dc.touch()  # interrupt
+        dc.stop()  # stop thread before asserting to prevent race
         assert not dc._dreaming
-
-        dc.stop()
 
     @pytest.mark.asyncio
     async def test_event_emission(self):

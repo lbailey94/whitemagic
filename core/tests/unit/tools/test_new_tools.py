@@ -440,6 +440,7 @@ class TestCallToolIntegration:
         assert result["tool"] == "task.distribute"
 
     def test_vote_create_via_call_tool(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import whitemagic.config.paths as paths_mod
 
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
@@ -452,6 +453,7 @@ class TestCallToolIntegration:
         assert "envelope_version" in result
 
     def test_vote_list_via_call_tool(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import whitemagic.config.paths as paths_mod
 
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)

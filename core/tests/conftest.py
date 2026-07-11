@@ -233,6 +233,8 @@ def _reset_singletons():
         ("whitemagic.core.monitoring.tool_usage_tracker", "_tracker"),
         # --- Cache ---
         ("whitemagic.core.cache.unified_cache_bridge", "_unified_cache"),
+        # --- PRAT resonance state ---
+        ("whitemagic.tools.prat_resonance", "_state"),
     ]
     for mod_name, attr_name in _singleton_modules:
         mod = sys.modules.get(mod_name)

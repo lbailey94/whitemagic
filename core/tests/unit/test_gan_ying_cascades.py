@@ -309,13 +309,15 @@ class TestDispatchPipelineGardenBoost(unittest.TestCase):
     def test_dispatch_boosts_garden(self):
         """Dispatching a tool boosts the associated garden's activation."""
         from whitemagic.core.engines.registry import get_garden_for_tool
-        from whitemagic.gardens import get_garden
+        from whitemagic.gardens import get_garden, _garden_cache
         from whitemagic.tools.dispatch_table import dispatch
 
         garden_name = get_garden_for_tool("capabilities")
         if not garden_name:
             self.skipTest("No garden mapping for capabilities")
 
+        # Reset garden cache to get a fresh instance
+        _garden_cache.clear()
         garden = get_garden(garden_name)
         if not garden:
             self.skipTest(f"Garden {garden_name} not available")
