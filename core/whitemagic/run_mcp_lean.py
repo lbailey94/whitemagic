@@ -1270,7 +1270,7 @@ async def main_stdio() -> None:
             _consciousness_loop.start()
             print("  Consciousness loop: ENABLED", file=sys.stderr)
         else:
-            print("  Consciousness loop: disabled (set WM_CONSCIOUSNESS_LOOP=1)", file=sys.stderr)
+            print("  Consciousness loop: disabled (set WM_CONSCIOUSNESS_LOOP=0 to disable)", file=sys.stderr)
     except Exception as e:
         logger.debug("Consciousness loop init failed: %s", e, exc_info=True)
 
@@ -1408,7 +1408,7 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
             _consciousness_loop.start()
             print("  Consciousness loop: ENABLED", file=sys.stderr)
         else:
-            print("  Consciousness loop: disabled (set WM_CONSCIOUSNESS_LOOP=1)", file=sys.stderr)
+            print("  Consciousness loop: disabled (set WM_CONSCIOUSNESS_LOOP=0 to disable)", file=sys.stderr)
     except Exception as e:
         logger.debug("Consciousness loop init failed: %s", e, exc_info=True)
 

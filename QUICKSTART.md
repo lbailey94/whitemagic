@@ -40,7 +40,7 @@ Expected output:
 ```
 ✅ Core: OK
 ✅ Memory DB: OK
-✅ Tools: 490 registered (462 dispatch + 28 Gana meta-tools)
+✅ Tools: 678 registered (650 dispatch + 28 Gana meta-tools)
 ✅ MCP: fastmcp available
 ```
 
@@ -109,7 +109,7 @@ wm doctor           # Full diagnostics
 
 ### Option A: PRAT Mode (Recommended)
 
-28 Gana meta-tools — each a consciousness lens that groups related tools. Compresses 490 tools into a stable, model-friendly surface:
+28 Gana meta-tools — each a consciousness lens that groups related tools. Compresses 650 tools into a stable, model-friendly surface:
 
 ```bash
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
@@ -134,7 +134,7 @@ Add to your `.mcp.json`:
 
 ### Option B: Classic Mode
 
-All 490 individual tools:
+All 650 individual tools:
 
 ```bash
 python -m whitemagic.run_mcp
@@ -142,7 +142,7 @@ python -m whitemagic.run_mcp
 
 ### Option C: Lite Mode
 
-92 core tools (faster startup):
+92 core tools (faster startup, unchanged):
 
 ```bash
 WM_MCP_LITE=1 python -m whitemagic.run_mcp

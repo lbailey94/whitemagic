@@ -215,6 +215,8 @@ def _reset_singletons():
         ("whitemagic.core.consciousness.knowledge_gap_loop", "_kg_loop"),
         ("whitemagic.core.consciousness.prediction_calibration", "_calibration"),
         ("whitemagic.core.consciousness.apotheosis_engine", "_apotheosis_engine"),
+        # --- Evolution ---
+        ("whitemagic.core.evolution.recursive_loop", "_loop"),
         # --- Intelligence / inference ---
         ("whitemagic.core.inference.router", "_router"),
         # --- Memory / scanning ---

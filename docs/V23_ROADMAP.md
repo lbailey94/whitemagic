@@ -1,9 +1,9 @@
-# v23 Roadmap
+# v23 Roadmap (COMPLETED — superseded by v24.1.0)
 
 **Version**: 1.0.0
 **Date**: 2026-06-20
 **Owner**: Lucas Bailey, WhiteMagic Labs
-**Status**: v23.0.0-alpha.1 SHIPPED; v23.0.0-alpha.2-WIP in progress
+**Status**: ✅ All phases complete. v23.3.3 shipped. Superseded by v24.1.0 (2026-07-10).
 
 ## Why v23
 

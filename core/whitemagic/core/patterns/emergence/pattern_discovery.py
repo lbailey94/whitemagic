@@ -71,9 +71,9 @@ class PatternDiscovery:
             self.base_dir = base_dir
         else:
             try:
-                from whitemagic.config.paths import WM_STATE_ROOT
+                from whitemagic.config.paths import get_state_root
 
-                self.base_dir = Path(WM_STATE_ROOT)
+                self.base_dir = get_state_root()
             except (ImportError, AttributeError):
                 self.base_dir = Path(".")
 

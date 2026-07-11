@@ -235,10 +235,10 @@ class DevToolsServer:
             return {"error": str(e)}
 
     def _handle_db_query(self, db_path: str, query: str, params: list[Any] | None = None) -> dict[str, Any]:
-        import sqlite3
+        from whitemagic.core.memory.db_manager import safe_connect
 
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        conn = safe_connect(db_path)
+        conn.row_factory = __import__("sqlite3").Row
         try:
             cursor = conn.execute(query, params or [])
             rows = [dict(r) for r in cursor.fetchall()]
@@ -247,9 +247,9 @@ class DevToolsServer:
             conn.close()
 
     def _handle_db_schema(self, db_path: str) -> dict[str, Any]:
-        import sqlite3
+        from whitemagic.core.memory.db_manager import safe_connect
 
-        conn = sqlite3.connect(db_path)
+        conn = safe_connect(db_path)
         try:
             cursor = conn.execute(
                 "SELECT name, type FROM sqlite_master WHERE type IN ('table','index','view') AND name NOT LIKE 'sqlite_%'"

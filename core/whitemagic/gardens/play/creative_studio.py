@@ -199,9 +199,9 @@ def meditate(depth: int = 0) -> "awareness":
     def __init__(self, gallery_dir: str | Path | None = None) -> None:
         if gallery_dir is None:
             # Use WM_STATE_ROOT for state hygiene
-            from whitemagic.config.paths import WM_STATE_ROOT
+            from whitemagic.config.paths import get_state_root
 
-            self.gallery_dir = Path(WM_STATE_ROOT) / "gallery"
+            self.gallery_dir = get_state_root() / "gallery"
         else:
             self.gallery_dir = Path(gallery_dir)
         try:

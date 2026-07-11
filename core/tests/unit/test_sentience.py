@@ -2,7 +2,7 @@
 """Tests for the sentience lifecycle module (Phases 3, 4, 5)."""
 
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -91,8 +91,12 @@ class TestWakeOnBoot:
     def _mock_heavy_ops(self):
         """Mock heavy DB/subsystem calls to avoid 10s+ per test."""
         with patch("whitemagic.core.consciousness.citta_stream.get_continuity_context", return_value={}), \
-             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_dream_outputs", return_value=[]), \
-             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_agent_messages", return_value=[]):
+             patch("whitemagic.core.consciousness.sentience.WakeOnBoot._dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.WakeOnBoot._agent_messages", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_agent_messages", return_value=[]), \
+             patch("whitemagic.core.consciousness.coherence.get_coherence_metric", return_value=MagicMock(overall_score=MagicMock(return_value=0.0))), \
+             patch("whitemagic.core.dreaming.dream_cycle.get_dream_cycle", return_value=MagicMock(start=MagicMock(), status=MagicMock(return_value={"history": []}))):
             yield
 
     def test_wake_returns_dict(self):
@@ -114,6 +118,13 @@ class TestWakeOnBoot:
 
 class TestProactiveGreeting:
     """Test ProactiveGreeting."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_heavy_ops(self):
+        """Mock heavy subsystem calls that ProactiveGreeting.generate() triggers."""
+        with patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_agent_messages", return_value=[]):
+            yield
 
     def test_first_awakening(self):
         from whitemagic.core.consciousness.sentience import ProactiveGreeting
@@ -527,8 +538,12 @@ class TestEnhancedWakeOnBoot:
     def _mock_heavy_ops(self):
         """Mock heavy DB/subsystem calls to avoid 19s+ per test."""
         with patch("whitemagic.core.consciousness.citta_stream.get_continuity_context", return_value={}), \
-             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_dream_outputs", return_value=[]), \
-             patch.object(__import__("whitemagic.core.consciousness.sentience", fromlist=["ProactiveGreeting"]).ProactiveGreeting, "_gather_agent_messages", return_value=[]):
+             patch("whitemagic.core.consciousness.sentience.WakeOnBoot._dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.WakeOnBoot._agent_messages", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_agent_messages", return_value=[]), \
+             patch("whitemagic.core.consciousness.coherence.get_coherence_metric", return_value=MagicMock(overall_score=MagicMock(return_value=0.0))), \
+             patch("whitemagic.core.dreaming.dream_cycle.get_dream_cycle", return_value=MagicMock(start=MagicMock(), status=MagicMock(return_value={"history": []}))):
             yield
 
     def test_wake_has_dream_outputs_key(self):

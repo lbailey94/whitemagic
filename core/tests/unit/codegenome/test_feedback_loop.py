@@ -15,6 +15,10 @@ def _fresh_vault():
     """Reset GeneseedVault usage stats and template state between tests."""
     vault = GeneseedVault()
     vault._usage_stats.clear()
+    # Also remove the persisted stats file so a new GeneseedVault()
+    # doesn't reload stale data from a prior test module.
+    if vault._stats_file and vault._stats_file.exists():
+        vault._stats_file.unlink()
     # Reset template deprecated flags that may have been set by prior tests
     engine = get_codegenome_engine()
     for tmpl in getattr(engine, "_templates", {}).values():
@@ -22,6 +26,8 @@ def _fresh_vault():
         tmpl.success_rate = 1.0
     yield
     vault._usage_stats.clear()
+    if vault._stats_file and vault._stats_file.exists():
+        vault._stats_file.unlink()
     for tmpl in getattr(engine, "_templates", {}).values():
         tmpl.deprecated = False
         tmpl.success_rate = 1.0

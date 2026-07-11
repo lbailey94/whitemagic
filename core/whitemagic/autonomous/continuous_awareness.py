@@ -60,9 +60,9 @@ class ContinuousSelfAwareness:
     @staticmethod
     def _get_state_dir() -> Path:
         """Get the runtime state directory via canonical paths config."""
-        from whitemagic.config.paths import WM_STATE_ROOT
+        from whitemagic.config.paths import get_state_root
 
-        return Path(WM_STATE_ROOT) / "awareness"
+        return get_state_root() / "awareness"
 
     def observe_once(self) -> dict[str, Any]:
         """Single observation cycle."""

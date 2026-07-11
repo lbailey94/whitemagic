@@ -1,6 +1,6 @@
 # WhiteMagic
 
-> Cognitive operating system for AI agents — 614 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, HNSW semantic search, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. Polyglot accelerators: Rust, Haskell, Elixir, Go, Zig, Julia. MIT-licensed.
+> Cognitive operating system for AI agents — 678 callable tools across 28 Gana meta-tools, 6D holographic memory with 14-galaxy taxonomy, HNSW semantic search, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. Polyglot accelerators: Rust, Haskell, Elixir, Go, Zig, Julia. MIT-licensed.
 
 ## Install
 
@@ -18,7 +18,7 @@ WM_MCP_PRAT=2 python -m whitemagic.run_mcp
 # PRAT mode — 28 Gana meta-tools
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
-# Classic mode — all 586 dispatch tools
+# Classic mode — all 678 dispatch tools
 WM_MCP_PRAT=0 python -m whitemagic.run_mcp
 ```
 
@@ -63,8 +63,8 @@ call_tool("gnosis", compact=True)
 ## Core Concepts
 
 ### Memory
-- **10-galaxy taxonomy**: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal
-- **5D holographic coordinates** (XYZWV): emotional, temporal, associative, importance, novelty
+- **14-galaxy taxonomy**: aria, citta, journals, dreams, research, sessions, codex, knowledge, substrate, telemetry, meta, tutorial, archive, universal
+- **6D holographic coordinates** (XYZWVU): temporal, semantic, emotional, relational, importance, galaxy-affinity
 - **Galactic lifecycle**: CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE — no memory is ever deleted
 - **Search**: FTS5 full-text + HNSW vector similarity + graph traversal
 - **Session recording**: chronological conversation recording with progressive recall and selective replay
@@ -86,10 +86,10 @@ call_tool("gnosis", compact=True)
 Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response
 
 ### PRAT Mode (28 Ganas)
-28 Gana meta-tools (Chinese Lunar Mansions) route to 564 nested tools. Each Gana accepts `{tool, args, operation}`.
+28 Gana meta-tools (Chinese Lunar Mansions) route to 678 nested tools. Each Gana accepts `{tool, args, operation}`.
 
 ### Seed Mode (wm meta-tool)
-Single `wm` tool with sub-millisecond regex NLU routing to all 614 tools. "World in a seed."
+Single `wm` tool with sub-millisecond regex NLU routing to all 678 tools. "World in a seed."
 
 ## Key Environment Variables
 
