@@ -387,7 +387,10 @@ def handle_galaxy_list_types(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_galaxy_export(**kwargs: Any) -> dict[str, Any]:
-    """Export memories from a galaxy as Arrow IPC bytes (base64-encoded)."""
+    """Export memories from a galaxy as Arrow IPC bytes (base64-encoded).
+
+    Falls back to JSON format when Arrow/Rust bridge is unavailable.
+    """
     try:
         import base64
 
@@ -399,6 +402,7 @@ def handle_galaxy_export(**kwargs: Any) -> dict[str, Any]:
         galaxy = params.get("galaxy", "universal")
         memory_type_str = params.get("memory_type")
         limit = params.get("limit", 10000)
+        format_hint = params.get("format", "arrow")  # "arrow" or "json"
 
         memory_type = None
         if memory_type_str:
@@ -409,29 +413,42 @@ def handle_galaxy_export(**kwargs: Any) -> dict[str, Any]:
             except (KeyError, ValueError):
                 logger.debug("Swallowed exception", exc_info=True)
 
-        ipc_bytes = um.arrow_export(memory_type=memory_type, limit=limit, galaxy=galaxy)
-        if ipc_bytes is None:
-            return {
-                "status": "success",
-                "galaxy": galaxy,
-                "exported": 0,
-                "ipc_bytes_b64": None,
-                "message": "Arrow bridge unavailable or no memories found",
-            }
+        # Try Arrow first (unless json explicitly requested)
+        if format_hint != "json":
+            ipc_bytes = um.arrow_export(memory_type=memory_type, limit=limit, galaxy=galaxy)
+            if ipc_bytes is not None:
+                return {
+                    "status": "success",
+                    "galaxy": galaxy,
+                    "format": "arrow",
+                    "exported": len(ipc_bytes),
+                    "ipc_bytes_b64": base64.b64encode(ipc_bytes).decode("ascii"),
+                    "size_bytes": len(ipc_bytes),
+                }
+
+        # Fallback to JSON
+        json_str = um.json_export(memory_type=memory_type, limit=limit, galaxy=galaxy)
+        import json as _json
+        data = _json.loads(json_str)
+        mem_count = data.get("galaxy_meta", {}).get("memory_count", 0)
 
         return {
             "status": "success",
             "galaxy": galaxy,
-            "exported": len(ipc_bytes),
-            "ipc_bytes_b64": base64.b64encode(ipc_bytes).decode("ascii"),
-            "size_bytes": len(ipc_bytes),
+            "format": "json",
+            "exported": mem_count,
+            "json_data": json_str,
+            "galaxy_meta": data.get("galaxy_meta", {}),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
 
 def handle_galaxy_import(**kwargs: Any) -> dict[str, Any]:
-    """Import memories from base64-encoded Arrow IPC bytes."""
+    """Import memories from base64-encoded Arrow IPC bytes or JSON string.
+
+    Accepts either `ipc_bytes_b64` (Arrow format) or `json_data` (JSON format).
+    """
     try:
         import base64
 
@@ -440,17 +457,28 @@ def handle_galaxy_import(**kwargs: Any) -> dict[str, Any]:
         params = kwargs
         um = get_unified_memory()
 
+        # Try Arrow first
         ipc_b64 = params.get("ipc_bytes_b64", "")
-        if not ipc_b64:
-            return {"status": "error", "error": "Missing ipc_bytes_b64 parameter"}
+        if ipc_b64:
+            ipc_bytes = base64.b64decode(ipc_b64)
+            count = um.arrow_import(ipc_bytes)
+            return {
+                "status": "success",
+                "format": "arrow",
+                "imported": count,
+            }
 
-        ipc_bytes = base64.b64decode(ipc_b64)
-        count = um.arrow_import(ipc_bytes)
+        # Fallback to JSON
+        json_data = params.get("json_data", "")
+        if json_data:
+            count = um.json_import(json_data)
+            return {
+                "status": "success",
+                "format": "json",
+                "imported": count,
+            }
 
-        return {
-            "status": "success",
-            "imported": count,
-        }
+        return {"status": "error", "error": "Missing ipc_bytes_b64 or json_data parameter"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
 

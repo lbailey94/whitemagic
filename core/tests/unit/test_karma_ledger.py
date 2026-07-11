@@ -10,7 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from whitemagic.dharma.karma_ledger import KarmaEntry, KarmaLedger, get_karma_ledger
+from whitemagic.dharma.karma_ledger import (
+    EffectSignature,
+    EffectType,
+    KarmaEntry,
+    KarmaLedger,
+    get_karma_ledger,
+)
 
 
 class TestKarmaEntry:
@@ -314,3 +320,171 @@ class TestGetKarmaLedger:
             finally:
                 if "WM_STATE_ROOT" in os.environ:
                     del os.environ["WM_STATE_ROOT"]
+
+
+class TestEffectSignature:
+    def test_effect_type_values(self):
+        assert EffectType.PURE.value == "pure"
+        assert EffectType.LOCAL_WRITE.value == "local"
+        assert EffectType.NETWORK.value == "network"
+        assert EffectType.DESTRUCTIVE.value == "destructive"
+        assert EffectType.OBSERVATION.value == "observation"
+
+    def test_effect_signature_creation(self):
+        sig = EffectSignature(
+            effect_type=EffectType.LOCAL_WRITE,
+            target="memory:1234",
+            description="store memory",
+        )
+        assert sig.effect_type == EffectType.LOCAL_WRITE
+        assert sig.target == "memory:1234"
+        assert sig.declared is True
+
+    def test_effect_signature_to_dict(self):
+        sig = EffectSignature(
+            effect_type=EffectType.NETWORK,
+            target="api:github",
+            description="fetch repo data",
+            declared=False,
+        )
+        d = sig.to_dict()
+        assert d["effect_type"] == "network"
+        assert d["target"] == "api:github"
+        assert d["declared"] is False
+
+    def test_effect_signature_from_dict(self):
+        d = {
+            "effect_type": "destructive",
+            "target": "file:/tmp/data",
+            "description": "delete temp file",
+            "declared": True,
+        }
+        sig = EffectSignature.from_dict(d)
+        assert sig.effect_type == EffectType.DESTRUCTIVE
+        assert sig.target == "file:/tmp/data"
+
+
+class TestRecordWithEffects:
+    def test_record_with_matching_effects_no_debt(self):
+        ledger = KarmaLedger()
+        declared = [EffectSignature(EffectType.LOCAL_WRITE, "memory:1", "write")]
+        actual = [EffectSignature(EffectType.LOCAL_WRITE, "memory:1", "write")]
+        entry = ledger.record_with_effects(
+            tool="create_memory",
+            declared_safety="WRITE",
+            actual_writes=1,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        assert entry.debt_delta == 0.0
+        assert entry.mismatch is False
+        assert len(entry.effect_mismatches) == 0
+
+    def test_record_with_undeclared_destructive_effect(self):
+        ledger = KarmaLedger()
+        declared = [EffectSignature(EffectType.LOCAL_WRITE, "memory:1", "write")]
+        actual = [
+            EffectSignature(EffectType.LOCAL_WRITE, "memory:1", "write"),
+            EffectSignature(EffectType.DESTRUCTIVE, "file:/old", "delete old file"),
+        ]
+        entry = ledger.record_with_effects(
+            tool="update_memory",
+            declared_safety="WRITE",
+            actual_writes=2,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        assert entry.debt_delta == 2.0  # undeclared destructive
+        assert entry.mismatch is True
+        assert any("destructive" in m for m in entry.effect_mismatches)
+
+    def test_record_with_undeclared_network_effect(self):
+        ledger = KarmaLedger()
+        declared = [EffectSignature(EffectType.PURE, "", "read")]
+        actual = [
+            EffectSignature(EffectType.PURE, "", "read"),
+            EffectSignature(EffectType.NETWORK, "api:webhook", "send webhook"),
+        ]
+        entry = ledger.record_with_effects(
+            tool="read_config",
+            declared_safety="READ",
+            actual_writes=0,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        assert entry.debt_delta == 1.5  # undeclared network
+        assert any("network" in m for m in entry.effect_mismatches)
+
+    def test_record_with_observation_no_debt(self):
+        ledger = KarmaLedger()
+        declared = [EffectSignature(EffectType.PURE, "", "read")]
+        actual = [
+            EffectSignature(EffectType.PURE, "", "read"),
+            EffectSignature(EffectType.OBSERVATION, "log", "log access"),
+        ]
+        entry = ledger.record_with_effects(
+            tool="read_data",
+            declared_safety="READ",
+            actual_writes=0,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        assert entry.debt_delta == 0.0  # observation is benign
+        assert len(entry.effect_mismatches) == 0
+
+    def test_record_with_declared_no_op(self):
+        ledger = KarmaLedger()
+        declared = [
+            EffectSignature(EffectType.LOCAL_WRITE, "memory:1", "write"),
+            EffectSignature(EffectType.NETWORK, "api:notify", "notify"),
+        ]
+        actual = [EffectSignature(EffectType.LOCAL_WRITE, "memory:1", "write")]
+        entry = ledger.record_with_effects(
+            tool="write_and_notify",
+            declared_safety="WRITE",
+            actual_writes=1,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        # 0.1 for declared network that didn't occur
+        assert entry.debt_delta == 0.1
+        assert any("did not occur" in m for m in entry.effect_mismatches)
+
+    def test_record_with_effects_stores_in_entry(self):
+        ledger = KarmaLedger()
+        declared = [EffectSignature(EffectType.LOCAL_WRITE, "db:1", "db write")]
+        actual = [EffectSignature(EffectType.LOCAL_WRITE, "db:1", "db write")]
+        entry = ledger.record_with_effects(
+            tool="db_write",
+            declared_safety="WRITE",
+            actual_writes=1,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        assert len(entry.declared_effects) == 1
+        assert entry.declared_effects[0]["effect_type"] == "local"
+        assert len(entry.actual_effects) == 1
+
+    def test_report_includes_effect_mismatch_count(self):
+        ledger = KarmaLedger()
+        declared = [EffectSignature(EffectType.PURE, "", "read")]
+        actual = [
+            EffectSignature(EffectType.PURE, "", "read"),
+            EffectSignature(EffectType.DESTRUCTIVE, "file:1", "delete"),
+        ]
+        ledger.record_with_effects(
+            tool="bad_tool",
+            declared_safety="READ",
+            actual_writes=1,
+            success=True,
+            declared_effects=declared,
+            actual_effects=actual,
+        )
+        report = ledger.report()
+        assert report["effect_mismatch_count"] >= 1

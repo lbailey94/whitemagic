@@ -61,9 +61,14 @@ class TestPythonArrowImportGalaxy(unittest.TestCase):
         source = filepath.read_text()
         # Find the arrow_import method and check it passes galaxy to store
         self.assertIn(
-            'galaxy=doc.get("galaxy", "universal")',
+            'galaxy=galaxy',
             source,
             "arrow_import must pass galaxy to store()",
+        )
+        self.assertIn(
+            'doc.get("g")',
+            source,
+            "arrow_import must extract 6th dimension 'g' from docs",
         )
 
 

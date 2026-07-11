@@ -119,8 +119,8 @@ class MetaGalaxy:
     def _get_galaxies_dir(self) -> Any:
         """Get the galaxies directory path."""
         try:
-            from whitemagic.config.paths import STATE_ROOT
-            return os.path.join(STATE_ROOT, "users", "local", "galaxies")
+            from whitemagic.config.paths import WM_ROOT
+            return str(WM_ROOT / "users" / "local" / "galaxies")
         except Exception:
             return os.path.expanduser("~/.whitemagic/users/local/galaxies")
 
@@ -517,3 +517,10 @@ def get_meta_galaxy() -> MetaGalaxy:
             if _meta_galaxy is None:
                 _meta_galaxy = MetaGalaxy()
     return _meta_galaxy
+
+
+def reset_meta_galaxy() -> None:
+    """Reset the singleton — for testing only."""
+    global _meta_galaxy
+    with _mg_lock:
+        _meta_galaxy = None

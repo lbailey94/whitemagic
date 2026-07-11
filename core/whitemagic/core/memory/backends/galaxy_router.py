@@ -488,3 +488,46 @@ class GalaxyAwareBackend:
             except Exception:
                 continue
         return all_coords
+
+    def get_constellation_memberships(self, memory_id: str) -> list:
+        """Get constellation memberships — searches all backends."""
+        for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
+            try:
+                memberships = gbackend.get_constellation_memberships(memory_id)
+                if memberships:
+                    return memberships
+            except Exception:
+                continue
+        return []
+
+    def consolidate(self) -> int:
+        """Consolidate memories across all backends."""
+        total = 0
+        for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
+            try:
+                total += gbackend.consolidate()
+            except Exception:
+                continue
+        return total
+
+    def list_accessed(self, limit: int = 10) -> list:
+        """List recently accessed memories across all backends."""
+        all_mems: list = []
+        for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
+            try:
+                all_mems.extend(gbackend.list_accessed(limit=limit))
+            except Exception:
+                continue
+        all_mems.sort(key=lambda m: getattr(m, "accessed_at", ""), reverse=True)
+        return all_mems[:limit]
+
+    def get_tag_counts(self, limit: int = 10) -> list[tuple[str, int]]:
+        """Get tag counts across all backends."""
+        tag_map: dict[str, int] = {}
+        for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
+            try:
+                for tag, count in gbackend.get_tag_counts(limit=limit * 3):
+                    tag_map[tag] = tag_map.get(tag, 0) + count
+            except Exception:
+                continue
+        return sorted(tag_map.items(), key=lambda x: x[1], reverse=True)[:limit]

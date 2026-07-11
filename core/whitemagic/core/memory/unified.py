@@ -155,7 +155,7 @@ class UnifiedMemory:
 
             count = 0
             try:
-                coords_map = self.backend.get_all_coords()
+                coords_map = self._galaxy_backend.get_all_coords()
                 for mem_id, coords in coords_map.items():
                     x, y, z, w = coords[0], coords[1], coords[2], coords[3]
                     v = coords[4] if len(coords) > 4 else 0.5
@@ -219,7 +219,7 @@ class UnifiedMemory:
                     existing.accessed_at = datetime.now()
                     existing.metadata["last_reinforced"] = now_iso()
                     existing.metadata["reinforcement_count"] = existing.metadata.get("reinforcement_count", 0) + 1
-                    self.backend.store(existing, content_hash=content_hash)
+                    self._galaxy_backend.store(existing, content_hash=content_hash)
                     logger.debug("Content hash dedup: reinforced %s instead of creating duplicate", existing_id, exc_info=True)
                     return existing
         except (sqlite3.Error, AttributeError, TypeError) as _e:
@@ -242,13 +242,13 @@ class UnifiedMemory:
                     target_id = surprise_verdict.nearest_memory_id
                     if target_id:
                         try:
-                            existing = self.backend.recall(target_id)
+                            existing = self._galaxy_backend.recall(target_id)
                             if existing:
                                 existing.access_count += 1
                                 existing.importance = min(1.0, existing.importance + 0.03)
                                 existing.metadata["last_reinforced"] = now_iso()
                                 existing.metadata["reinforcement_count"] = existing.metadata.get("reinforcement_count", 0) + 1
-                                self.backend.store(existing)
+                                self._galaxy_backend.store(existing)
                                 logger.debug("Surprise gate: reinforced %s instead of creating duplicate", target_id, exc_info=True)
                                 return existing
                         except (sqlite3.Error, AttributeError, TypeError) as _e:
@@ -370,7 +370,7 @@ class UnifiedMemory:
             if new_distance != memory.galactic_distance:
                 memory.galactic_distance = new_distance
                 try:
-                    self.backend.update_galactic_distance(memory_id, new_distance)
+                    self._galaxy_backend.update_galactic_distance(memory_id, new_distance)
                 except (sqlite3.Error, AttributeError, TypeError) as _e:
                     logger.debug("Galactic distance update failed for %s: %s", memory_id, _e)  # Don't fail recall
         return memory
@@ -417,7 +417,7 @@ class UnifiedMemory:
             if rs and hasattr(rs, "rust_search_memories"):
                 try:
                     # 1. Get candidate memories from backend
-                    candidates = self.backend.search(query=None, memory_type=memory_type, limit=limit * 10)  # type: ignore[no-redef]
+                    candidates = self._galaxy_backend.search(query=None, memory_type=memory_type, limit=limit * 10)  # type: ignore[no-redef]
                     if candidates:
                         # 2. Prepare data for Rust: list of (id, content)
                         mem_tuples = [(c.id, str(c.content)) for c in candidates]
@@ -464,7 +464,7 @@ class UnifiedMemory:
             # Fallback to single-pair similarity if batch is not available but fast_similarity is
             elif rs and hasattr(rs, "fast_similarity"):
                 try:
-                    candidates = self.backend.search(query=None, memory_type=memory_type, limit=limit * 5)
+                    candidates = self._galaxy_backend.search(query=None, memory_type=memory_type, limit=limit * 5)
                     scored_results = []
                     for cand in candidates:
                         score = rs.fast_similarity(query, str(cand.content))
@@ -488,7 +488,7 @@ class UnifiedMemory:
                 for mem in results:
                     coords = None
                     try:
-                        c = self.backend.get_coords(mem.id)
+                        c = self._galaxy_backend.get_coords(mem.id)
                         if c:
                             coords = list(c)
                     except (sqlite3.Error, AttributeError, TypeError) as _e:
@@ -578,7 +578,7 @@ class UnifiedMemory:
                 search_query,
             )
             if rust_search_available():
-                candidates = self.backend.search(
+                candidates = self._galaxy_backend.search(
                     query=None, memory_type=memory_type, limit=limit * 10,
                 )
                 if candidates:
@@ -599,7 +599,7 @@ class UnifiedMemory:
             logger.debug("BM25 search failed: %s", _e, exc_info=True)
 
         if not lexical_results:
-            lexical_results = self.backend.search(
+            lexical_results = self._galaxy_backend.search(
                 query=query, memory_type=memory_type, limit=limit * 3,
             )
             for m in lexical_results:
@@ -620,7 +620,7 @@ class UnifiedMemory:
                 for hit in hits:
                     mid = hit["memory_id"]
                     if mid not in all_memories:
-                        recalled = self.backend.recall(mid)
+                        recalled = self._galaxy_backend.recall(mid)
                         if recalled:
                             if hit.get("source") == "cold":
                                 recalled.metadata["storage_tier"] = "cold"
@@ -643,7 +643,7 @@ class UnifiedMemory:
                 for rank, hit in enumerate(hits):
                     mid = hit.memory_id
                     if mid not in all_memories:
-                        recalled = self.backend.recall(mid)
+                        recalled = self._galaxy_backend.recall(mid)
                         if recalled:
                             all_memories[mid] = recalled
                     spatial_results.append(mid)
@@ -670,7 +670,7 @@ class UnifiedMemory:
         if query_constellation_name:
             for mid in rrf_scores:
                 try:
-                    memberships = self.backend.get_constellation_memberships(mid)
+                    memberships = self._galaxy_backend.get_constellation_memberships(mid)
                     if memberships:
                         matching_confidences = [
                             m.get("membership_confidence", 0.5)
@@ -788,12 +788,12 @@ class UnifiedMemory:
         if m1 and m2:
             m1.associate(memory_id2, strength)
             m2.associate(memory_id1, strength)
-            self.backend.store(m1)
-            self.backend.store(m2)
+            self._galaxy_backend.store(m1)
+            self._galaxy_backend.store(m2)
 
     def consolidate(self) -> int:
         """Consolidate memories - strengthen important, decay unimportant."""
-        count: int = self.backend.consolidate()
+        count: int = self._galaxy_backend.consolidate()
         # Automate pruning of weak/archived memories after consolidation
         self.prune()
         return count
@@ -816,7 +816,7 @@ class UnifiedMemory:
             refiner = None
 
         # 1. Identify candidates (WEAK) using neuro_score sorting
-        candidates = self.backend.get_weakest_memories(limit=100)
+        candidates = self._galaxy_backend.get_weakest_memories(limit=100)
         weak_candidates = [m for m in candidates if m.neuro_score <= threshold and not m.is_protected]
 
         if not weak_candidates:
@@ -836,7 +836,7 @@ class UnifiedMemory:
                     logger.debug("Refining fire failed: %s", _e, exc_info=True)
 
             # 3. Rotate to galactic edge (NEVER delete)
-            self.backend.archive_to_edge(mem.id, galactic_distance=0.95)
+            self._galaxy_backend.archive_to_edge(mem.id, galactic_distance=0.95)
             rotated_count += 1
 
         if rotated_count > 0:
@@ -866,7 +866,7 @@ class UnifiedMemory:
             if not arrow_available():
                 return None
 
-            memories = self.backend.search(
+            memories = self._galaxy_backend.search(
                 query=None, memory_type=memory_type, limit=limit, galaxy=galaxy,
             )
             if not memories:
@@ -875,7 +875,8 @@ class UnifiedMemory:
             import json as _json
             docs = []
             for m in memories:
-                coords = self.backend.get_coords(m.id) if self.holographic else None
+                coords = self._galaxy_backend.get_coords(m.id) if self.holographic else None
+                galaxy_name = getattr(m, 'galaxy', 'universal')
                 docs.append({
                     "id": m.id,
                     "title": m.title or "",
@@ -887,8 +888,9 @@ class UnifiedMemory:
                     "z": coords[2] if coords else 0.0,
                     "w": coords[3] if coords else 0.5,
                     "v": coords[4] if coords and len(coords) > 4 else 0.5,
+                    "g": galaxy_name,  # 6th dimension: galaxy identity
                     "tags": sorted(m.tags) if m.tags else [],
-                    "galaxy": getattr(m, 'galaxy', 'universal'),
+                    "galaxy": galaxy_name,
                 })
             return arrow_encode_memories(_json.dumps(docs))
         except (ImportError, ModuleNotFoundError, AttributeError) as _e:
@@ -932,13 +934,15 @@ class UnifiedMemory:
                 else:
                     tags = set()
                 tags.discard("")
+                # Use 6th dimension 'g' if present, fall back to 'galaxy' field
+                galaxy = doc.get("g") or doc.get("galaxy", "universal")
                 self.store(
                     content=doc.get("content", ""),
                     memory_type=mt,
                     title=doc.get("title"),
                     importance=doc.get("importance", 0.5),
                     tags=tags,
-                    galaxy=doc.get("galaxy", "universal"),
+                    galaxy=galaxy,
                 )
                 count += 1
             logger.info("Arrow IPC import: %s memories imported", count, exc_info=True)
@@ -946,6 +950,106 @@ class UnifiedMemory:
         except (ImportError, ModuleNotFoundError, AttributeError, ValueError) as _e:
             logger.debug("Arrow import failed: %s", _e, exc_info=True)
             return 0
+
+    def json_export(
+        self,
+        memory_type: MemoryType | None = None,
+        limit: int = 10000,
+        galaxy: str | None = None,
+    ) -> str:
+        """Export memories as JSON string with galaxy metadata header.
+
+        Fallback for when Arrow/Rust is unavailable. Includes galaxy
+        metadata (name, memory count, export timestamp) as a header
+        object followed by the memory documents.
+
+        Returns:
+            JSON string with structure: {"galaxy_meta": {...}, "memories": [...]}
+        """
+        import json as _json
+        from datetime import datetime
+
+        memories = self._galaxy_backend.search(
+            query=None, memory_type=memory_type, limit=limit, galaxy=galaxy,
+        )
+
+        galaxy_name = galaxy or "universal"
+        docs = []
+        for m in memories:
+            coords = self._galaxy_backend.get_coords(m.id) if self.holographic else None
+            mg = getattr(m, 'galaxy', 'universal')
+            docs.append({
+                "id": m.id,
+                "title": m.title or "",
+                "content": str(m.content)[:10000],
+                "importance": m.importance,
+                "memory_type": m.memory_type.name if m.memory_type else "SHORT_TERM",
+                "x": coords[0] if coords else 0.0,
+                "y": coords[1] if coords else 0.0,
+                "z": coords[2] if coords else 0.0,
+                "w": coords[3] if coords else 0.5,
+                "v": coords[4] if coords and len(coords) > 4 else 0.5,
+                "g": mg,  # 6th dimension
+                "tags": sorted(m.tags) if m.tags else [],
+                "galaxy": mg,
+            })
+
+        return _json.dumps({
+            "galaxy_meta": {
+                "galaxy": galaxy_name,
+                "memory_count": len(docs),
+                "exported_at": datetime.now().isoformat(),
+                "format": "json_v2",
+                "dimensions": 6,
+            },
+            "memories": docs,
+        })
+
+    def json_import(self, json_str: str) -> int:
+        """Import memories from JSON string with galaxy metadata.
+
+        Fallback for when Arrow/Rust is unavailable. Accepts the
+        format produced by json_export().
+
+        Returns:
+            Number of memories imported.
+        """
+        import json as _json
+
+        data = _json.loads(json_str)
+        # Support both wrapped format (json_export) and flat list (legacy)
+        if isinstance(data, dict) and "memories" in data:
+            docs = data["memories"]
+        elif isinstance(data, list):
+            docs = data
+        else:
+            docs = []
+
+        count = 0
+        for doc in docs:
+            try:
+                mt = MemoryType[doc.get("memory_type", "SHORT_TERM")]
+            except (KeyError, ValueError):
+                mt = MemoryType.SHORT_TERM
+            raw_tags = doc.get("tags", [])
+            if isinstance(raw_tags, list):
+                tags = set(raw_tags)
+            elif isinstance(raw_tags, str) and raw_tags:
+                tags = set(raw_tags.split(","))
+            else:
+                tags = set()
+            tags.discard("")
+            galaxy = doc.get("g") or doc.get("galaxy", "universal")
+            self.store(
+                content=doc.get("content", ""),
+                memory_type=mt,
+                title=doc.get("title"),
+                importance=doc.get("importance", 0.5),
+                tags=tags,
+                galaxy=galaxy,
+            )
+            count += 1
+        return count
 
     def save(self, memory_type: MemoryType | None = None) -> None:
         """Save memories to disk - No-op for SQLite (auto-save)."""
@@ -955,23 +1059,23 @@ class UnifiedMemory:
 
     def get_stats(self) -> dict[str, Any]:
         """Get memory system statistics."""
-        return cast(dict[str, Any], self.backend.get_stats())
+        return cast(dict[str, Any], self._galaxy_backend.get_stats())
 
     def list_recent(self, limit: int = 10, memory_type: MemoryType | None = None) -> list[Memory]:
         """List recent memories."""
-        return cast(list[Memory], self.backend.list_recent(limit=limit, memory_type=memory_type))
+        return cast(list[Memory], self._galaxy_backend.list_recent(limit=limit, memory_type=memory_type))
 
     def fetch_all_contents(self, memory_type: str | None = None, limit: int = 10000) -> list[str]:
         """Fetch all memory contents efficiently."""
-        return cast(list[str], self.backend.fetch_memory_contents(memory_type, limit))
+        return cast(list[str], self._galaxy_backend.fetch_memory_contents(memory_type, limit))
 
     def list_accessed(self, limit: int = 10) -> list[Memory]:
         """List recently accessed memories."""
-        return cast(list[Memory], self.backend.list_accessed(limit=limit))
+        return cast(list[Memory], self._galaxy_backend.list_accessed(limit=limit))
 
     def get_tag_counts(self, limit: int = 10) -> list[tuple[str, int]]:
         """Get most common tags."""
-        return cast(list[tuple[str, int]], self.backend.get_tag_counts(limit=limit))
+        return cast(list[tuple[str, int]], self._galaxy_backend.get_tag_counts(limit=limit))
 
 
 # Singleton instance
