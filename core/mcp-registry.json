@@ -2,13 +2,13 @@
   "_generated_by": "scripts/generate_mcp_registry.py",
   "_note": "Auto-generated \u2014 do not edit manually. Run: python3 scripts/generate_mcp_registry.py",
   "gana_tools": 28,
-  "nested_tools": 423,
+  "nested_tools": 650,
   "tool_domains": {
-    "memory": 56,
-    "intelligence": 120,
-    "agents": 71,
-    "security": 69,
-    "operational": 107
+    "memory": 125,
+    "intelligence": 139,
+    "agents": 83,
+    "security": 121,
+    "operational": 182
   },
   "modes": {
     "prat": {
@@ -18,7 +18,7 @@
     },
     "flat": {
       "description": "Flat mode: all individual tools exposed directly",
-      "tool_count": 423,
+      "tool_count": 650,
       "env": "WM_MCP_PRAT=0"
     }
   }

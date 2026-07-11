@@ -101,7 +101,10 @@ class ModelDiscovery:
             if not search_dir.exists():
                 continue
             for gguf in search_dir.rglob("*.gguf"):
-                size_mb = gguf.stat().st_size / (1024 * 1024)
+                try:
+                    size_mb = gguf.stat().st_size / (1024 * 1024)
+                except OSError:
+                    continue
                 models.append(
                     ModelInfo(
                         path=str(gguf),

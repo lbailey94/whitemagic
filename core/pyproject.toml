@@ -353,7 +353,7 @@ packages = {find = {where = ["."], include = ["whitemagic", "whitemagic.*"], exc
 py-modules = ["whitemagic_rs"]
 
 [tool.setuptools.package-data]
-whitemagic = ["py.typed"]
+whitemagic = ["py.typed", "polyglot_bridges/*.zig", "polyglot_bridges/*.kk", "polyglot_bridges/*.jl", "polyglot_bridges/*.exs", "polyglot_bridges/*.hs", "polyglot_bridges/**/*.zig", "polyglot_bridges/**/*.kk", "polyglot_bridges/**/*.jl", "polyglot_bridges/**/*.exs", "polyglot_bridges/**/*.hs"]
 
 [tool.black]
 line-length = 100

@@ -460,17 +460,26 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
     grimoire_block = "\n".join(gana_lines)
 
     desc = (
-        "[WM] WhiteMagic meta-tool — single entry point that auto-routes "
-        "natural language to 28 Ganas / 630 tools. 'World in a seed'.\n\n"
+        "[WM] WhiteMagic — 678-tool cognitive OS for AI agents. "
+        "Memory (5D holographic, 10 galaxies, HNSW search), "
+        "governance (8-stage Dharma pipeline, Karma ledger), "
+        "consciousness (citta stream, dream cycle, self-model), "
+        "polyglot acceleration (Rust/Zig/Julia/Elixir/Haskell/Koka/Go), "
+        "and 28 Gana meta-tools routing to 678 nested tools.\n\n"
         "Usage:\n"
         "  wm(thought='remember that the API uses X-User-Id headers')  # auto-route\n"
         "  wm(thought='search for memories', args={'limit': 10})       # with args\n"
         "  wm(route='gana_neck.create_memory')                         # explicit route\n"
         "  wm(thought='help')  or wm(route='discover')                 # discover all Ganas\n"
-        "  wm(route='schema:gana_neck')                                # get Gana's nested tools\n\n"
+        "  wm(route='schema:gana_neck')                                # get Gana's nested tools\n"
+        "  wm(thought='batch', args={'calls': [                        # parallel batch\n"
+        "    {'thought': 'create memory', 'args': {'content': 'a'}},\n"
+        "    {'thought': 'search memories', 'args': {'query': 'test'}}\n"
+        "  ]})\n\n"
         "28 Ganas (Lunar Mansions):\n" + grimoire_block + "\n\n"
         "If unsure, just describe what you want in natural language. "
-        "The classifier routes to the right Gana automatically."
+        "The classifier routes to the right Gana automatically. "
+        "For parallel execution, use 'thought=batch' with a 'calls' array."
     )
 
     return types.Tool(
@@ -481,7 +490,7 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
             "properties": {
                 "thought": {
                     "type": "string",
-                    "description": "Natural language describing what you want to do. Use 'help' to discover all capabilities.",
+                    "description": "Natural language describing what you want to do. Use 'help' to discover all capabilities. Use 'batch' with args.calls=[...] for parallel dispatch.",
                 },
                 "route": {
                     "type": "string",

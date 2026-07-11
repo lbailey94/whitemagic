@@ -1849,6 +1849,79 @@ def _sensorium_enabled() -> bool:
     return os.environ.get("WM_SENSORIUM", "1").strip().lower() not in ("0", "false", "no", "off")
 
 
+def _handle_batch(calls: list[dict[str, Any]]) -> dict[str, Any]:
+    """Dispatch multiple wm calls in parallel via ThreadPoolExecutor.
+
+    Each call in the list is a dict with optional 'thought', 'route', and 'args' keys.
+    Results are returned in the same order as the input calls.
+
+    Primary benefit: 1 MCP round-trip instead of N (saves LLM tokens + network latency).
+    Secondary benefit: parallel execution for I/O-bound operations (subprocess bridges, network).
+
+    Returns:
+        Aggregated result with per-call outcomes, success count, and timing.
+    """
+    import os as _os
+    import time as _time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    start = _time.time()
+    # Cap workers — the parent call's timeout covers all sub-calls
+    max_workers = min(len(calls), 4)
+    results: list[dict[str, Any]] = [None] * len(calls)
+
+    # Disable sensorium for batch sub-calls to reduce per-call overhead
+    _orig_sensorium = _os.environ.get("WM_SENSORIUM", "")
+    _os.environ["WM_SENSORIUM"] = "0"
+
+    def _dispatch_one(idx: int, call: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        """Dispatch a single call within the batch."""
+        try:
+            sub_kwargs: dict[str, Any] = {}
+            if "thought" in call:
+                sub_kwargs["thought"] = call["thought"]
+            if "route" in call:
+                sub_kwargs["route"] = call["route"]
+            if "args" in call and isinstance(call["args"], dict):
+                sub_kwargs["args"] = call["args"]
+            result = handle_wm(**sub_kwargs)
+            return idx, result
+        except Exception as e:
+            return idx, {"status": "error", "error": str(e), "_batch_index": idx}
+
+    try:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {
+                pool.submit(_dispatch_one, i, call): i for i, call in enumerate(calls)
+            }
+            for future in as_completed(futures):
+                idx, result = future.result()
+                if isinstance(result, dict):
+                    result["_batch_index"] = idx
+                results[idx] = result
+    finally:
+        # Restore sensorium setting
+        if _orig_sensorium:
+            _os.environ["WM_SENSORIUM"] = _orig_sensorium
+        else:
+            _os.environ.pop("WM_SENSORIUM", None)
+
+    elapsed_ms = (_time.time() - start) * 1000
+    success_count = sum(
+        1 for r in results if isinstance(r, dict) and r.get("status") in ("success", "ok")
+    )
+
+    return {
+        "status": "success",
+        "batch": True,
+        "total": len(calls),
+        "succeeded": success_count,
+        "failed": len(calls) - success_count,
+        "elapsed_ms": round(elapsed_ms, 2),
+        "results": results,
+    }
+
+
 def handle_wm(**kwargs: Any) -> dict[str, Any]:
     """WhiteMagic meta-tool handler — 'world in a seed'.
 
@@ -1896,6 +1969,10 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
 
     if route and route.startswith("schema:"):
         return _schema_for_gana(route[7:])
+
+    # ── Batch mode: parallel dispatch of multiple calls ──
+    if thought and thought.strip().lower() == "batch" and isinstance(passthrough_args.get("calls"), list):
+        return _handle_batch(passthrough_args["calls"])
 
     start_time = time.time()
 

@@ -28,6 +28,8 @@ import click
 # core/whitemagic/cli/commands/ → core/ → repo root
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _POLYGLOT_DIR = _PROJECT_ROOT / "polyglot"
+# Bridges shipped inside the Python package (available in pip-installed environments)
+_PACKAGE_BRIDGES = Path(__file__).resolve().parent.parent.parent / "polyglot_bridges"
 
 
 @dataclass
@@ -221,16 +223,35 @@ def _version_ge(v1: str, v2: str) -> bool:
         return False
 
 
+def _resolve_bridge_source(source: str) -> Path | None:
+    """Find a bridge source file — checks repo root first, then package-included copies."""
+    if not source:
+        return None
+    # 1. Check repo root (git clone / development)
+    repo_path = _PROJECT_ROOT / source
+    if repo_path.exists():
+        return repo_path
+    # 2. Check package-included bridges (pip install)
+    filename = Path(source).name
+    subdir = Path(source).parent.name  # e.g. "zig", "koka", "julia", "elixir", "haskell"
+    pkg_path = _PACKAGE_BRIDGES / subdir / filename
+    if pkg_path.exists():
+        return pkg_path
+    return None
+
+
 def _detect_bridge_status(bridge: dict[str, Any]) -> dict[str, Any]:
     """Check if a bridge's source/binary exists and its runtime is available."""
     status: dict[str, Any] = {"name": bridge["name"], "runtime": bridge["runtime"]}
-    # Check source file exists
+    # Check source file exists (repo or package)
     source = bridge.get("source")
     binary_path = bridge.get("binary_path")
     if source:
-        full_path = _PROJECT_ROOT / source
-        status["source_exists"] = full_path.exists()
+        resolved = _resolve_bridge_source(source)
+        status["source_exists"] = resolved is not None
         status["source_path"] = source
+        if resolved:
+            status["source_resolved"] = str(resolved)
     if binary_path:
         full_path = _PROJECT_ROOT / binary_path
         status["binary_exists"] = full_path.exists()
@@ -695,6 +716,57 @@ def _do_compile(tasks: list[dict[str, Any]], yes: bool = False) -> None:
                     click.echo(f"     {result.stderr[:200]}")
         except Exception as e:
             click.echo(f"  ❌ {task['name']} error: {e}")
+
+
+@polyglot_group.command(name="fetch")
+@click.option("--dest", "-d", help="Destination directory (default: ~/.whitemagic/polyglot_bridges).")
+def polyglot_fetch(dest: str | None) -> None:
+    """Download polyglot bridge sources from GitHub (for pip-installed users)."""
+    import urllib.request
+
+    click.echo("\n📥 Fetching polyglot bridge sources...")
+
+    from whitemagic.config.paths import WM_ROOT
+
+    dest_dir = Path(dest) if dest else WM_ROOT / "polyglot_bridges"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    base_url = "https://raw.githubusercontent.com/lbailey94/whitemagic/main/polyglot/bridges"
+    files = [
+        ("zig/trn_gate.zig", "zig"),
+        ("koka/bridge.kk", "koka"),
+        ("koka/cascade_bridge.kk", "koka"),
+        ("koka/disinhibition.kk", "koka"),
+        ("julia/bridge.jl", "julia"),
+        ("julia/neuromodulation.jl", "julia"),
+        ("julia/yield_bridge.jl", "julia"),
+        ("elixir/bridge.exs", "elixir"),
+        ("elixir/ripple_tagging.exs", "elixir"),
+        ("elixir/actor_bridge.exs", "elixir"),
+        ("haskell/bridge.hs", "haskell"),
+        ("haskell/cascade_bridge.hs", "haskell"),
+        ("haskell/replay_sim.hs", "haskell"),
+    ]
+
+    downloaded = 0
+    failed = 0
+    for filepath, subdir in files:
+        url = f"{base_url}/{filepath}"
+        filename = Path(filepath).name
+        target = dest_dir / subdir / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            urllib.request.urlretrieve(url, target)
+            click.echo(f"  ✅ {subdir}/{filename}")
+            downloaded += 1
+        except Exception as e:
+            click.echo(f"  ❌ {subdir}/{filename}: {e}")
+            failed += 1
+
+    click.echo(f"\n📊 Downloaded {downloaded}/{len(files)} bridge sources to {dest_dir}")
+    if failed > 0:
+        click.echo("   Some downloads failed. Check your network connection.")
+    click.echo("\n💡 Run 'wm polyglot status' to verify bridges are detected.")
 
 
 def register_polyglot_commands(main_group: click.Group) -> None:
