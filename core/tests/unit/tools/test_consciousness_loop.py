@@ -185,12 +185,17 @@ class TestConsciousnessLoop:
     def test_is_enabled(self):
         old = os.environ.get("WM_CONSCIOUSNESS_LOOP")
         try:
+            # Default is now enabled (v24.1)
+            os.environ.pop("WM_CONSCIOUSNESS_LOOP", None)
+            assert is_enabled() is True
             os.environ["WM_CONSCIOUSNESS_LOOP"] = "1"
             assert is_enabled() is True
             os.environ["WM_CONSCIOUSNESS_LOOP"] = "0"
             assert is_enabled() is False
             os.environ["WM_CONSCIOUSNESS_LOOP"] = "true"
             assert is_enabled() is True
+            os.environ["WM_CONSCIOUSNESS_LOOP"] = "false"
+            assert is_enabled() is False
         finally:
             if old is not None:
                 os.environ["WM_CONSCIOUSNESS_LOOP"] = old

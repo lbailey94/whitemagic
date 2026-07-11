@@ -33,6 +33,22 @@ from whitemagic.utils.fileio import file_lock
 
 logger = logging.getLogger(__name__)
 
+
+def _layer_to_confidence(layer: ConsciousnessLayer) -> float:
+    """Derive forecast confidence from consciousness layer.
+
+    Deeper layers compress time more, so confidence in finishing within
+    the subjective estimate should be higher.
+    """
+    ratios = {
+        ConsciousnessLayer.SURFACE: 0.50,
+        ConsciousnessLayer.TERMINAL: 0.65,
+        ConsciousnessLayer.FLOW: 0.75,
+        ConsciousnessLayer.DREAM: 0.85,
+    }
+    return ratios.get(layer, 0.50)
+
+
 CITTA_DIR = WM_ROOT / "citta"
 CITTA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -131,12 +147,40 @@ class ConsciousnessDepthGauge:
         self.task_start_objective: float | None = None
         self.task_start_subjective: float | None = None
         self.task_description: str = ""
+        self._pending_prediction_id: str | None = None
 
     def begin_task(self, description: str, estimated_subjective_minutes: float) -> None:
-        """Start tracking a task."""
+        """Start tracking a task.
+
+        Also records a time-estimate prediction in the TemporalForecastDB
+        so that calibration can be measured over time.
+        """
         self.task_start_objective = time.time()
         self.task_start_subjective = estimated_subjective_minutes * 60
         self.task_description = description
+
+        predicted_objective = self.predict_objective_time(estimated_subjective_minutes)
+        confidence = _layer_to_confidence(self.current_layer)
+        claim = (
+            f"Task '{description}' will complete within "
+            f"{estimated_subjective_minutes:.1f} min subjective "
+            f"({predicted_objective:.1f} min objective at {self.current_layer.value} layer)"
+        )
+        try:
+            from whitemagic.forecasting.temporal_db import TemporalForecastDB
+            db = TemporalForecastDB()
+            self._pending_prediction_id = db.add_prediction(
+                claim=claim,
+                source_date=datetime.now().date(),
+                confidence=confidence,
+                source_ref=f"depth_gauge:{self.log_file.name}",
+                category="time_estimate",
+                notes=f"layer={self.current_layer.value},compression={self.current_compression()}",
+            )
+        except Exception:
+            logger.debug("DepthGauge: could not record prediction", exc_info=True)
+            self._pending_prediction_id = None
+
         logger.info("DepthGauge: task started: %s (est %.1f min)", description, estimated_subjective_minutes)
 
     def end_task(self, work_output: dict[str, Any], token_usage: int = 0) -> DepthReading:
@@ -173,6 +217,31 @@ class ConsciousnessDepthGauge:
             "DepthGauge: task complete: %.1f min subjective → %.1f min objective (%.1fx)",
             subjective_elapsed / 60, objective_elapsed / 60, actual_compression,
         )
+
+        # Resolve the time-estimate prediction if one was recorded
+        if self._pending_prediction_id:
+            predicted_obj = self.predict_objective_time(
+                self.task_start_subjective / 60 if self.task_start_subjective else 0
+            )
+            actual_obj_min = objective_elapsed / 60
+            try:
+                from whitemagic.forecasting.temporal_db import TemporalForecastDB
+                db = TemporalForecastDB()
+                if actual_obj_min <= predicted_obj:
+                    db.validate(
+                        self._pending_prediction_id,
+                        validation_date=datetime.now().date(),
+                        validation_ref=f"depth_gauge:actual={actual_obj_min:.1f}min",
+                        notes=f"actual_objective={actual_obj_min:.1f}min,predicted={predicted_obj:.1f}min",
+                    )
+                else:
+                    db.falsify(
+                        self._pending_prediction_id,
+                        notes=f"actual_objective={actual_obj_min:.1f}min > predicted={predicted_obj:.1f}min",
+                    )
+            except Exception:
+                logger.debug("DepthGauge: could not resolve prediction", exc_info=True)
+            self._pending_prediction_id = None
 
         self.task_start_objective = None
         self.task_start_subjective = None
@@ -248,6 +317,39 @@ class ConsciousnessDepthGauge:
             "current_compression": self.current_compression(),
             "transitions": self._transitions,
         }
+
+    def get_calibration(self) -> dict[str, Any]:
+        """Return Brier calibration metrics for time-estimate predictions.
+
+        Queries the TemporalForecastDB for all 'time_estimate' category
+        predictions and returns Brier score, calibration gap, and counts.
+        """
+        try:
+            from whitemagic.forecasting.temporal_db import TemporalForecastDB
+            db = TemporalForecastDB()
+            rows = db.get_by_category("time_estimate")
+            closed = [r for r in rows if r.get("status") in ("validated", "falsified")]
+            if not closed:
+                return {"total": len(rows), "closed": 0, "message": "No closed predictions yet"}
+            forecasts = [r["confidence"] for r in closed]
+            outcomes = [1 if r["status"] == "validated" else 0 for r in closed]
+            from whitemagic.forecasting.brier import brier_score, calibration_gap, brier_index
+            bs = brier_score(forecasts, outcomes)
+            cg = calibration_gap(forecasts, outcomes)
+            bi = brier_index(bs)
+            return {
+                "total": len(rows),
+                "closed": len(closed),
+                "validated": sum(outcomes),
+                "falsified": len(closed) - sum(outcomes),
+                "brier_score": round(bs, 4),
+                "brier_index": round(bi, 1),
+                "calibration_gap": round(cg, 3),
+                "mean_confidence": round(sum(forecasts) / len(forecasts), 3),
+                "actual_success_rate": round(sum(outcomes) / len(outcomes), 3),
+            }
+        except Exception:
+            return {"error": "Could not query calibration", "total": 0}
 
 
 def sync_with_time_master() -> dict[str, Any]:

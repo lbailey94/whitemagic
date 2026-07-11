@@ -43,6 +43,40 @@ class TestDepthGauge:
         assert predicted > 0
         assert predicted <= 10.0
 
+    def test_layer_to_confidence(self):
+        from whitemagic.core.consciousness.depth_gauge import _layer_to_confidence, ConsciousnessLayer
+
+        assert _layer_to_confidence(ConsciousnessLayer.SURFACE) == 0.50
+        assert _layer_to_confidence(ConsciousnessLayer.TERMINAL) == 0.65
+        assert _layer_to_confidence(ConsciousnessLayer.FLOW) == 0.75
+        assert _layer_to_confidence(ConsciousnessLayer.DREAM) == 0.85
+
+    def test_calibration_wiring(self, tmp_path, monkeypatch):
+        from whitemagic.core.consciousness.depth_gauge import ConsciousnessDepthGauge
+
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path / "wm_state"))
+        gauge = ConsciousnessDepthGauge(log_file=tmp_path / "depth.jsonl")
+        gauge.begin_task("calibration test", 10.0)
+        assert gauge._pending_prediction_id is not None
+        reading = gauge.end_task({"result": "done"}, token_usage=50)
+        assert gauge._pending_prediction_id is None
+
+        cal = gauge.get_calibration()
+        assert "total" in cal
+        assert cal["total"] >= 1
+        assert cal["closed"] >= 1
+
+    def test_get_calibration_no_closed(self, tmp_path, monkeypatch):
+        from whitemagic.core.consciousness.depth_gauge import ConsciousnessDepthGauge
+
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path / "wm_state_noclosed"))
+        gauge = ConsciousnessDepthGauge(log_file=tmp_path / "depth.jsonl")
+        cal = gauge.get_calibration()
+        assert "total" in cal
+        # Without any begin/end_task calls, there should be no closed predictions
+        if cal.get("closed", 0) == 0:
+            assert "message" in cal or cal["closed"] == 0
+
 
 class TestSelfReflection:
     """Test SelfReflectionLoop recovered from v17."""

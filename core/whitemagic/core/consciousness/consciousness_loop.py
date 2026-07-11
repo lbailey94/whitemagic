@@ -49,7 +49,8 @@ Usage:
     loop.status()  # introspection
 
 Environment variables:
-    WM_CONSCIOUSNESS_LOOP=1          — enable the loop (default: disabled)
+    WM_CONSCIOUSNESS_LOOP=1          — enable the loop (default: enabled)
+    WM_CONSCIOUSNESS_LOOP=0          — disable the loop
     WM_CITTA_INTERVAL=30             — T1: seconds between citta advancements
     WM_META_FAST_INTERVAL=60         — T2: seconds between fast meta checks
     WM_META_SLOW_INTERVAL=300        — T3: seconds between slow meta cycle
@@ -1113,7 +1114,10 @@ def get_consciousness_loop(config: LoopConfig | None = None) -> ConsciousnessLoo
 
 
 def is_enabled() -> bool:
-    """Check if the consciousness loop is enabled via env var."""
-    return os.environ.get("WM_CONSCIOUSNESS_LOOP", "0").strip().lower() in (
-        "1", "true", "yes", "on",
+    """Check if the consciousness loop is enabled via env var.
+
+    Default is enabled (v24.1). Set WM_CONSCIOUSNESS_LOOP=0 to disable.
+    """
+    return os.environ.get("WM_CONSCIOUSNESS_LOOP", "1").strip().lower() not in (
+        "0", "false", "no", "off",
     )
