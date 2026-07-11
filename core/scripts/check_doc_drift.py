@@ -379,7 +379,6 @@ def check_doc_gitignore_hygiene() -> None:
     tracked = set(result.stdout.splitlines())
 
     must_not_track = [
-        "AGENTS.md",
         "AI_PRIMARY.md",
         "SYSTEM_MAP.md",
         "INDEX.md",

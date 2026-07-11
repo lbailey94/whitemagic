@@ -304,7 +304,6 @@ core/build/
 # === Internal docs (not for public release) ===
 # Root-level internal docs — dev-only, not needed by end users or AI agents
 /skill.md
-/AGENTS.md
 /AI_PRIMARY.md
 /DEPLOY.md
 /INDEX.md
