@@ -62,6 +62,11 @@ TOOL_TO_GANA: dict[str, str] = {
     "hexagram.simd_execute": "gana_tail",
     "hexagram.dispatch": "gana_tail",
     "hexagram.boltzmann_select": "gana_tail",
+    "hexagram.interaction_score": "gana_tail",
+    "hexagram.synergies": "gana_tail",
+    "hexagram.superpose": "gana_tail",
+    "hexagram.vector": "gana_tail",
+    "hexagram.nearest": "gana_tail",
     "execute_cascade": "gana_tail",
     "list_cascade_patterns": "gana_tail",
     # ═══ WINNOWING BASKET — Wisdom & Tag Filtering ═══

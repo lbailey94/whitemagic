@@ -314,6 +314,14 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hexagram_dispatch_info, m)?)?;
     m.add_function(wrap_pyfunction!(hexagram_boltzmann_select, m)?)?;
 
+    // Hexagram HRR vectorization (Phase 5a → Python bindings)
+    m.add_function(wrap_pyfunction!(hexagram_hrr_by_number_py, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_interaction_score_py, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_detect_synergies_py, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_top_synergies_py, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_superpose_py, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_interaction_matrix_py, m)?)?;
+
     Ok(())
 }
 
@@ -382,4 +390,48 @@ fn hexagram_boltzmann_select(temperature: f64) -> u32 {
     use rand::rngs::SmallRng;
     let mut rng = SmallRng::from_entropy();
     iching_dispatch::boltzmann_select(&mut rng, temperature)
+}
+
+// ── Hexagram HRR vectorization bindings ──────────────────────────────
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_hrr_by_number_py(king_wen: u32) -> Vec<f64> {
+    hexagram_hrr::hexagram_hrr_by_number(king_wen)
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_interaction_score_py(kw1: u32, kw2: u32) -> f64 {
+    hexagram_hrr::interaction_score(kw1, kw2)
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_detect_synergies_py(threshold: f64) -> Vec<(u32, u32, f64)> {
+    hexagram_hrr::detect_synergies(threshold)
+        .into_iter()
+        .map(|p| (p.hexagram_a, p.hexagram_b, p.similarity))
+        .collect()
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_top_synergies_py(k: usize) -> Vec<(u32, u32, f64)> {
+    hexagram_hrr::top_synergies(k)
+        .into_iter()
+        .map(|p| (p.hexagram_a, p.hexagram_b, p.similarity))
+        .collect()
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_superpose_py(a: Vec<f64>, b: Vec<f64>) -> Vec<f64> {
+    hexagram_hrr::superpose(&a, &b)
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_interaction_matrix_py() -> Vec<f64> {
+    hexagram_hrr::interaction_matrix()
 }

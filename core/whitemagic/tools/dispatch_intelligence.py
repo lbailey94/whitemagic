@@ -22,6 +22,13 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
     "hexagram.boltzmann_select": LazyHandler(
         "simd", "handle_hexagram_boltzmann_select"
     ),
+    "hexagram.interaction_score": LazyHandler(
+        "simd", "handle_hexagram_interaction_score"
+    ),
+    "hexagram.synergies": LazyHandler("simd", "handle_hexagram_synergies"),
+    "hexagram.superpose": LazyHandler("simd", "handle_hexagram_superpose"),
+    "hexagram.vector": LazyHandler("simd", "handle_hexagram_vector"),
+    "hexagram.nearest": LazyHandler("simd", "handle_hexagram_nearest"),
     "kg.extract": LazyHandler("knowledge_graph", "handle_kg_extract"),
     "kg.query": LazyHandler("knowledge_graph", "handle_kg_query"),
     "kg.top": LazyHandler("knowledge_graph", "handle_kg_top"),

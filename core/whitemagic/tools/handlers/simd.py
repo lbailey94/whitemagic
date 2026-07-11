@@ -89,3 +89,106 @@ def handle_hexagram_boltzmann_select(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", "hexagram": num, "temperature": temperature}
     except ImportError:
         return {"status": "error", "error": "whitemagic_rs not installed"}
+
+
+def handle_hexagram_interaction_score(**kwargs: Any) -> dict[str, Any]:
+    """Compute HRR cosine similarity between two hexagrams (King Wen 1-64)."""
+    kw1 = kwargs.get("hexagram_a", kwargs.get("kw1", 0))
+    kw2 = kwargs.get("hexagram_b", kwargs.get("kw2", 0))
+    if not (1 <= kw1 <= 64) or not (1 <= kw2 <= 64):
+        return {"status": "error", "error": "hexagram_a and hexagram_b must be 1-64"}
+    from whitemagic.core.intelligence.hexagram_vectors import get_hexagram_vectors
+
+    hv = get_hexagram_vectors()
+    score = hv.interaction_score(kw1, kw2)
+    return {
+        "status": "success",
+        "hexagram_a": kw1,
+        "hexagram_b": kw2,
+        "similarity": round(score, 6),
+    }
+
+
+def handle_hexagram_synergies(**kwargs: Any) -> dict[str, Any]:
+    """Find synergistic hexagram pairs by HRR similarity.
+
+    Args:
+        threshold: Minimum cosine similarity (default 0.3)
+        top_k: Return top K pairs instead of threshold-based (optional)
+    """
+    from whitemagic.core.intelligence.hexagram_vectors import get_hexagram_vectors
+
+    hv = get_hexagram_vectors()
+    top_k = kwargs.get("top_k")
+    if top_k is not None:
+        pairs = hv.top_synergies(int(top_k))
+    else:
+        threshold = kwargs.get("threshold", 0.3)
+        pairs = hv.detect_synergies(float(threshold))
+    return {
+        "status": "success",
+        "pairs": pairs,
+        "count": len(pairs),
+    }
+
+
+def handle_hexagram_superpose(**kwargs: Any) -> dict[str, Any]:
+    """Superpose two hexagram HRR vectors (combine influences).
+
+    Args:
+        hexagram_a, hexagram_b: King Wen numbers (1-64)
+    """
+    kw1 = kwargs.get("hexagram_a", kwargs.get("kw1", 0))
+    kw2 = kwargs.get("hexagram_b", kwargs.get("kw2", 0))
+    if not (1 <= kw1 <= 64) or not (1 <= kw2 <= 64):
+        return {"status": "error", "error": "hexagram_a and hexagram_b must be 1-64"}
+    from whitemagic.core.intelligence.hexagram_vectors import get_hexagram_vectors
+
+    hv = get_hexagram_vectors()
+    vector = hv.superpose(kw1, kw2)
+    return {
+        "status": "success",
+        "hexagram_a": kw1,
+        "hexagram_b": kw2,
+        "vector": vector,
+        "dimension": len(vector),
+    }
+
+
+def handle_hexagram_vector(**kwargs: Any) -> dict[str, Any]:
+    """Get the HRR vector for a single hexagram (King Wen 1-64)."""
+    kw = kwargs.get("hexagram_num", kwargs.get("king_wen", 0))
+    if not (1 <= kw <= 64):
+        return {"status": "error", "error": "hexagram_num must be 1-64"}
+    from whitemagic.core.intelligence.hexagram_vectors import get_hexagram_vectors
+
+    hv = get_hexagram_vectors()
+    vector = hv.get_vector(kw)
+    return {
+        "status": "success",
+        "hexagram": kw,
+        "vector": vector,
+        "dimension": len(vector),
+    }
+
+
+def handle_hexagram_nearest(**kwargs: Any) -> dict[str, Any]:
+    """Find nearest hexagrams to a given vector in HRR space.
+
+    Args:
+        vector: A float vector (any dimensionality, padded/truncated to 64)
+        top_k: Number of nearest hexagrams (default 5)
+    """
+    vector = kwargs.get("vector", [])
+    if not vector:
+        return {"status": "error", "error": "vector is required"}
+    top_k = kwargs.get("top_k", 5)
+    from whitemagic.core.intelligence.hexagram_vectors import get_hexagram_vectors
+
+    hv = get_hexagram_vectors()
+    nearest = hv.nearest_hexagrams(vector, k=int(top_k))
+    return {
+        "status": "success",
+        "nearest": nearest,
+        "count": len(nearest),
+    }
