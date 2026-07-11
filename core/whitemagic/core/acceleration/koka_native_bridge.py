@@ -56,6 +56,7 @@ _MODULE_BINS = {
     "metrics": _BASE_DIR / "metrics",
     "hot_paths": _BASE_DIR / "hot_paths",
     "shm_search": _BASE_DIR / "shm_search",
+    "karmic": _BASE_DIR / "karmic_effects",  # MandalaOS Phase C: karmic effect enforcement
 }
 
 
@@ -423,6 +424,38 @@ class KokaNativeBridge:
         finally:
             if proc.poll() is None:
                 self._return_process(module, proc)
+
+    def dispatch_karmic(
+        self,
+        tool: str,
+        params: dict[str, Any],
+        declared_effects: list[dict[str, Any]] | None = None,
+        actual_effects: list[dict[str, Any]] | None = None,
+        timeout: float = 5.0,
+    ) -> dict[str, Any] | None:
+        """Dispatch through Koka with effect tracking (MandalaOS Phase C).
+
+        Sends declared and actual effect signatures to the Koka karmic_effects
+        module, which compares them using Koka's type system and returns
+        mismatch information + debt calculation.
+
+        Args:
+            tool: Tool name being dispatched.
+            params: Tool parameters.
+            declared_effects: List of declared effect dicts (effect_type, target, declared).
+            actual_effects: List of actual effect dicts.
+            timeout: Maximum seconds to wait.
+
+        Returns:
+            Karmic result dict with mismatch, debt, and mismatches fields.
+        """
+        args = {
+            "tool": tool,
+            "params": params,
+            "declared": declared_effects or [],
+            "actual": actual_effects or [],
+        }
+        return self.dispatch("karmic", "compare", args, timeout=timeout)
 
     def close(self) -> None:
         """Close all Koka processes."""

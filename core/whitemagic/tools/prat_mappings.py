@@ -223,6 +223,11 @@ TOOL_TO_GANA: dict[str, str] = {
     "karma.anchor": "gana_hairy_head",
     "karma.verify_anchor": "gana_hairy_head",
     "karma.anchor_status": "gana_hairy_head",
+    "karmic.effects": "gana_hairy_head",
+    "karmic.debt": "gana_hairy_head",
+    "karmic.verify": "gana_hairy_head",
+    "effect.trace": "gana_ghost",
+    "effect.visualize": "gana_ghost",
     # Dharma 4-tier escalation → Straddling Legs (ethics & balance)
     "dharma.escalate": "gana_straddling_legs",
     "dharma.review_queue": "gana_straddling_legs",
@@ -506,6 +511,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "shelter.destroy": "gana_roof",
     "shelter.status": "gana_roof",
     "shelter.policy": "gana_roof",
+    "mandala.create": "gana_roof",
+    "mandala.status": "gana_roof",
+    "mandala.destroy": "gana_roof",
+    "mandala.templates": "gana_roof",
     # ── v15.2: Optimized Memory States (Void — Export/Import) ──
     "oms.export": "gana_void",
     "oms.import": "gana_void",

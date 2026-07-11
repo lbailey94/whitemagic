@@ -18,6 +18,10 @@ DISPATCH_SECURITY: dict[str, Callable[..., dict[str, Any]]] = {
     "shelter.destroy": LazyHandler("shelter", "handle_shelter_destroy"),
     "shelter.status": LazyHandler("shelter", "handle_shelter_status"),
     "shelter.policy": LazyHandler("shelter", "handle_shelter_policy"),
+    "mandala.create": LazyHandler("shelter", "handle_mandala_create"),
+    "mandala.status": LazyHandler("shelter", "handle_mandala_status"),
+    "mandala.destroy": LazyHandler("shelter", "handle_mandala_destroy"),
+    "mandala.templates": LazyHandler("shelter", "handle_mandala_templates"),
     "governor_validate": LazyHandler("governor", "handle_governor_validate"),
     "governor_validate_path": LazyHandler("governor", "handle_governor_validate_path"),
     "governor_set_goal": LazyHandler("governor", "handle_governor_set_goal"),
@@ -42,6 +46,11 @@ DISPATCH_SECURITY: dict[str, Callable[..., dict[str, Any]]] = {
     "dharma.escalate": LazyHandler("dharma", "handle_dharma_escalate"),
     "dharma.review_queue": LazyHandler("dharma", "handle_dharma_review_queue"),
     "dharma.resolve_review": LazyHandler("dharma", "handle_dharma_resolve_review"),
+    "karmic.effects": LazyHandler("dharma", "handle_karmic_effects"),
+    "karmic.debt": LazyHandler("dharma", "handle_karmic_debt"),
+    "karmic.verify": LazyHandler("dharma", "handle_karmic_verify"),
+    "effect.trace": LazyHandler("dharma", "handle_effect_trace"),
+    "effect.visualize": LazyHandler("dharma", "handle_effect_visualize"),
     "dharma.reload": LazyHandler("governance", "handle_dharma_reload"),
     "mcp_integrity.snapshot": LazyHandler(
         "violet_security", "handle_mcp_integrity_snapshot"

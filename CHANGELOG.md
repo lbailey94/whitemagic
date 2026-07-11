@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — MandalaOS Phase A-D
+
+#### Phase A: Karmic Effect Types
+- `EffectType` enum (`pure`, `local`, `network`, `destructive`, `observation`) and `EffectSignature` dataclass in `karma_ledger.py`
+- Effect registry (`dharma/effect_registry.py`) — auto-infers `EffectSignature` for all 692 tools from `ToolDefinition` metadata
+- `mw_karma_effects` middleware — auto-records declared/actual effects for every tool call via `record_with_effects()`
+- `karmic.effects` MCP tool — query declared effect signatures per-tool or system-wide
+- `karmic.debt` MCP tool — per-tool or system-wide karma debt reports with graduated debt weights
+- `karmic.verify` MCP tool — Merkle chain + effect mismatch integrity check
+
+#### Phase B: Mandala Compartments
+- `dharma_profile` field on `Shelter` dataclass (default, creative, secure)
+- `template` field on `Shelter` for tracking template origin
+- `SHELTER_TEMPLATES` dict with 4 templates: `research`, `sandbox`, `production`, `secure`
+- `shelter_id` field on `KarmaEntry` for per-shelter karma scoping
+- `mandala.create` MCP tool — create compartment from template or explicit config
+- `mandala.status` MCP tool — list compartments + available templates
+- `mandala.destroy` MCP tool — destroy compartment (Dharma-governed)
+- `mandala.templates` MCP tool — list templates with capabilities/limits/Dharma profiles
+
+#### Phase C: Koka Effect Enforcement
+- `karmic_effects.kk` — Koka module with `effect-sig` struct, `karmic-result` struct, and effect comparison logic
+- `KokaNativeBridge.dispatch_karmic()` — sends declared/actual effects to Koka for type-safe comparison
+- `HybridDispatcher.karmic_compare()` — adaptive routing between Koka and Python for effect comparison
+- `OperationProfile` entries for `karmic_compare` (complexity 0.8) and `karmic_dispatch` (complexity 0.85)
+- `effect.trace` MCP tool — get effect trace for a tool call with optional Koka enforcement
+- `effect.visualize` MCP tool — export DOT/Mermaid/JSON effect flow visualizations
+
+#### Phase D: Mandala Dashboard
+- `/mandala` Next.js page with live MandalaOS dashboard
+- `MandalaDashboard` client component — stat cards, effect distribution, template cards, active compartments, isolation tiers
+- API routes: `/api/mandala/status`, `/api/mandala/debt`, `/api/mandala/effects`, `/api/mandala/templates`
+- Sitemap updated with `/mandala`, `/galaxy`, `/zodiac`, `/ganas`, `/grimoire`
+
+### Test Results
+- 41 new tests (25 Phase A+B + 16 Phase C) — all pass
+- 379 existing dispatch/middleware/pipeline/registry tests — all pass
+- 692 tools in effect registry (582 pure, 61 local, 20 destructive, 16 network, 13 observation)
+
 ## [23.3.2] - 2026-06-30
 
 ### Added

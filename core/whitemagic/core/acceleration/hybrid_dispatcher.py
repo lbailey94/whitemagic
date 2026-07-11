@@ -71,6 +71,9 @@ OPERATION_PROFILES = {
     "circuit_record": OperationProfile("circuit_record", True, True, False, 0.7),
     "dream_phase": OperationProfile("dream_phase", True, True, True, 0.9),
     "dream_run": OperationProfile("dream_run", True, True, True, 0.95),
+    # MandalaOS Phase C: Karmic effect enforcement
+    "karmic_compare": OperationProfile("karmic_compare", True, True, False, 0.8),
+    "karmic_dispatch": OperationProfile("karmic_dispatch", True, True, True, 0.85),
 }
 
 
@@ -392,6 +395,63 @@ class HybridDispatcher:
         self._stats["koka_calls"] += 1
         self._stats["koka_time_us"] += (time.perf_counter() - start) * 1_000_000
         return dict(result)
+
+    # Karmic effect comparison (MandalaOS Phase C)
+    def karmic_compare(
+        self,
+        tool: str,
+        declared_effects: list[dict[str, Any]],
+        actual_effects: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Compare declared vs actual effects via Koka type system.
+
+        When Koka is available, delegates to the karmic_effects binary for
+        type-safe comparison. Falls back to Python comparison when Koka is
+        unavailable.
+        """
+        if self._should_use_koka("karmic_compare"):
+            start = time.perf_counter()
+            result = self._get_koka("karmic_effects").call({
+                "op": "compare",
+                "tool": tool,
+                "declared": declared_effects,
+                "actual": actual_effects,
+            })
+            self._stats["koka_calls"] += 1
+            self._stats["koka_time_us"] += (time.perf_counter() - start) * 1_000_000
+            if "error" not in result:
+                return dict(result)
+            # Fall through to Python on Koka error
+
+        # Python fallback: compare effect types
+        from whitemagic.dharma.karma_ledger import EffectSignature, EffectType, KarmaLedger
+        declared_sigs = [
+            EffectSignature(
+                effect_type=EffectType(e.get("effect_type", "pure")),
+                target=e.get("target", ""),
+                declared=e.get("declared", True),
+            )
+            for e in declared_effects
+        ]
+        actual_sigs = [
+            EffectSignature(
+                effect_type=EffectType(e.get("effect_type", "pure")),
+                target=e.get("target", ""),
+                declared=e.get("declared", False),
+            )
+            for e in actual_effects
+        ]
+        debt, mismatches = KarmaLedger._compare_effects(declared_sigs, actual_sigs)
+        start = time.perf_counter()
+        self._stats["python_calls"] += 1
+        self._stats["python_time_us"] += (time.perf_counter() - start) * 1_000_000
+        return {
+            "status": "success",
+            "mismatch": len(mismatches) > 0,
+            "debt": debt,
+            "mismatches": mismatches,
+            "fallback": True,
+        }
 
     @contextmanager
     def session(self) -> Generator["HybridDispatcher", None, None]:

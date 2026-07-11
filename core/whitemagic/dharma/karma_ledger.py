@@ -27,11 +27,12 @@ Usage:
 
 from __future__ import annotations
 
+import enum
 import hashlib
 import logging
 import threading
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,48 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
+
+
+class EffectType(enum.Enum):
+    """MandalaOS karmic effect types — classifies the nature of a side effect."""
+
+    PURE = "pure"           # No side effects (read-only, no mutations)
+    LOCAL_WRITE = "local"   # Writes to local state (memory, file, SQLite)
+    NETWORK = "network"     # External network call (HTTP, API, WebSocket)
+    DESTRUCTIVE = "destructive"  # Deletes or irreversibly modifies data
+    OBSERVATION = "observation"  # Passive monitoring (logging, metrics)
+
+
+@dataclass
+class EffectSignature:
+    """MandalaOS typed effect — declared or actual side effect of a tool invocation.
+
+    Each effect has a type, an optional target (what was affected),
+    and a description. Tools declare their expected effects before execution;
+    the ledger compares declared vs actual effects to detect karmic mismatches.
+    """
+
+    effect_type: EffectType
+    target: str = ""        # e.g. "memory:1234", "file:/path/to/x", "api:github"
+    description: str = ""   # Human-readable description of the effect
+    declared: bool = True   # True if this was pre-declared, False if observed after
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "effect_type": self.effect_type.value,
+            "target": self.target,
+            "description": self.description,
+            "declared": self.declared,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EffectSignature:
+        return cls(
+            effect_type=EffectType(data.get("effect_type", "pure")),
+            target=data.get("target", ""),
+            description=data.get("description", ""),
+            declared=data.get("declared", True),
+        )
 
 
 def _hash_entry(data: str, prev_hash: str) -> str:
@@ -80,6 +123,10 @@ class KarmaEntry:
     ops_class: str = ""  # Edgerunner Violet: "red-ops", "blue-ops", or "" (normal)
     signature: str = ""  # Ed25519 signature (base64)
     key_id: str = ""  # signing key fingerprint
+    declared_effects: list[dict[str, Any]] = field(default_factory=list)
+    actual_effects: list[dict[str, Any]] = field(default_factory=list)
+    effect_mismatches: list[str] = field(default_factory=list)  # descriptions of mismatches
+    shelter_id: str = ""  # MandalaOS Phase B: which shelter executed this tool
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -105,6 +152,14 @@ class KarmaEntry:
             d["signature"] = self.signature
         if self.key_id:
             d["key_id"] = self.key_id
+        if self.declared_effects:
+            d["declared_effects"] = self.declared_effects
+        if self.actual_effects:
+            d["actual_effects"] = self.actual_effects
+        if self.effect_mismatches:
+            d["effect_mismatches"] = self.effect_mismatches
+        if self.shelter_id:
+            d["shelter_id"] = self.shelter_id
         return d
 
 
@@ -215,6 +270,165 @@ class KarmaLedger:
 
         return entry
 
+    def record_with_effects(
+        self,
+        tool: str,
+        declared_safety: str,
+        actual_writes: int,
+        success: bool,
+        declared_effects: list[EffectSignature] | None = None,
+        actual_effects: list[EffectSignature] | None = None,
+        ops_class: str = "",
+        shelter_id: str = "",
+    ) -> KarmaEntry:
+        """Record a tool invocation with typed effect signatures (MandalaOS Phase A).
+
+        Compares declared vs actual effects at the type level and accrues
+        additional karma debt for mismatches:
+          - Undeclared DESTRUCTIVE effect: debt += 2.0
+          - Undeclared NETWORK effect: debt += 1.5
+          - Undeclared LOCAL_WRITE effect: debt += 1.0
+          - Declared effect that didn't occur (no-op): debt += 0.1
+          - OBSERVATION effects are always benign (no debt)
+
+        Args:
+            declared_effects: Effects the tool declared it would produce.
+            actual_effects: Effects actually observed after execution.
+        """
+        declared = declared_safety.upper()
+        base_mismatch = False
+        base_debt = 0.0
+
+        if declared == "READ" and actual_writes > 0:
+            base_mismatch = True
+            base_debt = 1.0
+        elif declared in ("WRITE", "DELETE") and actual_writes == 0 and success:
+            base_mismatch = True
+            base_debt = 0.2 if declared == "WRITE" else 0.1
+
+        # Compare declared vs actual effects
+        effect_mismatches: list[str] = []
+        extra_debt = 0.0
+
+        if declared_effects is not None and actual_effects is not None:
+            extra_debt, effect_mismatches = self._compare_effects(
+                declared_effects, actual_effects
+            )
+
+        total_debt = base_debt + extra_debt
+        has_mismatch = base_mismatch or len(effect_mismatches) > 0
+
+        ts = datetime.now().isoformat()
+        prev_hash = self._chain_head
+        payload = (
+            f"{tool}:{declared}:{actual_writes}:{success}:{has_mismatch}:"
+            f"{total_debt}:{ts}"
+        )
+        entry_hash = _hash_entry(payload, prev_hash)
+
+        sig_data = None
+        try:
+            signer = get_audit_signer()
+            if signer.is_available():
+                sig_data = signer.sign(payload)
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
+
+        entry = KarmaEntry(
+            tool=tool,
+            declared_safety=declared,
+            actual_writes=actual_writes,
+            success=success,
+            mismatch=has_mismatch,
+            debt_delta=total_debt,
+            timestamp=ts,
+            prev_hash=prev_hash,
+            entry_hash=entry_hash,
+            ops_class=ops_class,
+            signature=sig_data["signature"] if sig_data else "",
+            key_id=sig_data["key_id"] if sig_data else "",
+            declared_effects=[e.to_dict() for e in (declared_effects or [])],
+            actual_effects=[e.to_dict() for e in (actual_effects or [])],
+            effect_mismatches=effect_mismatches,
+            shelter_id=shelter_id,
+        )
+
+        with self._lock:
+            self._chain_head = entry_hash
+            self._entries.append(entry)
+            self._total_debt += total_debt
+            self._tool_debt[tool] += total_debt
+            self._tool_calls[tool] += 1
+            if has_mismatch:
+                self._tool_mismatches[tool] += 1
+            if len(self._entries) > 10000:
+                self._entries = self._entries[-5000:]
+
+        self._persist(entry)
+
+        if total_debt > 0:
+            try:
+                from whitemagic.harmony.vector import get_harmony_vector
+
+                get_harmony_vector()
+            except (ImportError, ModuleNotFoundError):
+                pass
+
+        return entry
+
+    @staticmethod
+    def _compare_effects(
+        declared: list[EffectSignature],
+        actual: list[EffectSignature],
+    ) -> tuple[float, list[str]]:
+        """Compare declared vs actual effects, return (debt, mismatch_descriptions).
+
+        Debt accrues for:
+        - Actual effects not declared (undeclared side effects)
+        - Declared effects that didn't occur (wasteful no-ops)
+
+        OBSERVATION effects are exempt from debt (benign monitoring).
+        """
+        debt = 0.0
+        mismatches: list[str] = []
+
+        # Debt weights per effect type for undeclared effects
+        undeclared_weights = {
+            EffectType.DESTRUCTIVE: 2.0,
+            EffectType.NETWORK: 1.5,
+            EffectType.LOCAL_WRITE: 1.0,
+            EffectType.PURE: 0.0,
+            EffectType.OBSERVATION: 0.0,
+        }
+
+        # Build lookup of declared effect types
+        declared_types = {e.effect_type for e in declared}
+        actual_types = {e.effect_type for e in actual}
+
+        # Check for undeclared actual effects
+        for act in actual:
+            if act.effect_type == EffectType.OBSERVATION:
+                continue  # Observation is always benign
+            if act.effect_type not in declared_types:
+                weight = undeclared_weights.get(act.effect_type, 0.5)
+                debt += weight
+                mismatches.append(
+                    f"Undeclared {act.effect_type.value} effect"
+                    + (f" on {act.target}" if act.target else "")
+                )
+
+        # Check for declared effects that didn't occur (no-ops)
+        for dec in declared:
+            if dec.effect_type == EffectType.OBSERVATION:
+                continue
+            if dec.effect_type not in actual_types:
+                debt += 0.1
+                mismatches.append(
+                    f"Declared {dec.effect_type.value} effect did not occur"
+                )
+
+        return debt, mismatches
+
     def report(self, limit: int = 100) -> dict[str, Any]:
         """Generate a karma report."""
         with self._lock:
@@ -245,6 +459,9 @@ class KarmaLedger:
                     if d > 0
                 ],
                 "recent_entries": [e.to_dict() for e in recent[-20:]],
+                "effect_mismatch_count": sum(
+                    len(e.effect_mismatches) for e in self._entries
+                ),
             }
 
     def get_debt(self) -> float:

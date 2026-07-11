@@ -423,6 +423,7 @@ def _build_pipeline() -> Any:
         mw_governor,
         mw_inference_router,
         mw_input_sanitizer,
+        mw_karma_effects,
         mw_maturity_gate,
         mw_observability,
         mw_rate_limiter,
@@ -450,6 +451,7 @@ def _build_pipeline() -> Any:
     p.use("inference_router", mw_inference_router)
     p.use("draft_review", mw_draft_review)
     p.use("token_tracker", mw_token_tracker)
+    p.use("karma_effects", mw_karma_effects)
     p.use("observability", mw_observability)
     p.use("session_recorder", mw_session_recorder)
     p.use("core_router", _mw_core_router)

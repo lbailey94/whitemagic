@@ -449,6 +449,50 @@ def mw_observability(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
     return result
 
 
+def mw_karma_effects(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Auto-record karmic effects for every tool call (MandalaOS Phase A).
+
+    Uses the effect registry to look up declared effects for the tool,
+    then records them via KarmaLedger.record_with_effects().
+    """
+    result = next_fn(ctx)
+    try:
+        from whitemagic.dharma.effect_registry import get_declared_effects
+        from whitemagic.dharma.effect_registry import get_declared_safety as _get_safety
+        from whitemagic.dharma.karma_ledger import get_karma_ledger
+
+        declared_effects = get_declared_effects(ctx.tool_name)
+        declared_safety = _get_safety(ctx.tool_name)
+
+        # Infer actual effects from the result
+        is_success = isinstance(result, dict) and result.get("status") == "success"
+        actual_writes = 0
+        if declared_safety in ("WRITE", "DELETE") and is_success:
+            actual_writes = 1
+
+        # Build actual effects — same as declared if successful, empty if failed
+        actual_effects = declared_effects if is_success else []
+
+        ledger = get_karma_ledger()
+        ledger.record_with_effects(
+            tool=ctx.tool_name,
+            declared_safety=declared_safety,
+            actual_writes=actual_writes,
+            success=is_success,
+            declared_effects=declared_effects,
+            actual_effects=actual_effects,
+            shelter_id=ctx.meta.get("shelter_id", ""),
+        )
+    except Exception as e:
+        logger.debug(
+            "Middleware: karma effects recording failed for %s: %s",
+            ctx.tool_name,
+            e,
+            exc_info=True,
+        )
+    return result
+
+
 def mw_rate_limiter(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Per-agent, per-tool rate limiting."""
     if ctx.zig_prevalidated:

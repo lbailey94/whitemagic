@@ -131,6 +131,8 @@ class Shelter:
     output: str = ""
     error: str = ""
     duration_ms: float = 0.0
+    dharma_profile: str = "default"  # MandalaOS Phase B: per-shelter Dharma rules profile
+    template: str = ""  # MandalaOS Phase B: template name this shelter was created from
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -153,6 +155,8 @@ class Shelter:
             "output_length": len(self.output),
             "error_length": len(self.error),
             "duration_ms": round(self.duration_ms, 1),
+            "dharma_profile": self.dharma_profile,
+            "template": self.template,
         }
 
 
@@ -349,6 +353,8 @@ class ShelterManager:
         capabilities: list[str] | None = None,
         limits: dict[str, int] | None = None,
         ephemeral: bool = True,
+        dharma_profile: str = "default",
+        template: str = "",
     ) -> dict[str, Any]:
         """Create a new shelter.
 
@@ -358,6 +364,8 @@ class ShelterManager:
             capabilities: List of capability grants (e.g., ["network_read"]).
             limits: Resource limits dict.
             ephemeral: Auto-destroy on completion.
+            dharma_profile: Dharma rules profile for this shelter (MandalaOS Phase B).
+            template: Template name this shelter was created from (MandalaOS Phase B).
 
         Returns:
             Shelter status dict.
@@ -428,6 +436,8 @@ class ShelterManager:
             limits=lim,
             ephemeral=ephemeral,
             work_dir=work_dir,
+            dharma_profile=dharma_profile,
+            template=template,
         )
 
         with self._lock:
@@ -659,6 +669,36 @@ class ShelterManager:
 
 _manager: ShelterManager | None = None
 _manager_lock = threading.Lock()
+
+
+# ── MandalaOS Phase B: Shelter Templates ───────────────────────────────
+
+SHELTER_TEMPLATES: dict[str, dict[str, Any]] = {
+    "research": {
+        "capabilities": ["network_read", "fs_read:/tmp", "fs_write:/tmp"],
+        "limits": {"timeout_s": 600, "max_memory_mb": 2048, "max_cpu_s": 120, "max_disk_mb": 1000},
+        "dharma_profile": "creative",
+        "description": "Research shelter — network read, generous resources, creative Dharma profile",
+    },
+    "sandbox": {
+        "capabilities": ["fs_write:/tmp"],
+        "limits": {"timeout_s": 60, "max_memory_mb": 512, "max_cpu_s": 30, "max_disk_mb": 100},
+        "dharma_profile": "default",
+        "description": "Sandbox shelter — no network, limited resources, default Dharma profile",
+    },
+    "production": {
+        "capabilities": ["network_read", "fs_read:/data"],
+        "limits": {"timeout_s": 300, "max_memory_mb": 1024, "max_cpu_s": 60, "max_disk_mb": 500},
+        "dharma_profile": "secure",
+        "description": "Production shelter — read-only, secure Dharma profile, standard resources",
+    },
+    "secure": {
+        "capabilities": [],
+        "limits": {"timeout_s": 30, "max_memory_mb": 256, "max_cpu_s": 15, "max_disk_mb": 50},
+        "dharma_profile": "secure",
+        "description": "Secure shelter — no network, no filesystem, minimal resources, secure Dharma",
+    },
+}
 
 
 def get_shelter_manager() -> ShelterManager:
