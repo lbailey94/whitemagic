@@ -40,7 +40,7 @@ Expected output:
 ```
 ✅ Core: OK
 ✅ Memory DB: OK
-✅ Tools: 678 registered (650 dispatch + 28 Gana meta-tools)
+✅ Tools: 687 registered (659 dispatch + 28 Gana meta-tools)
 ✅ MCP: fastmcp available
 ```
 

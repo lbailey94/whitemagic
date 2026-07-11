@@ -1,6 +1,6 @@
 {
   "name": "WhiteMagic",
-  "description": "The Tool Substrate for Agentic AI — 687 MCP tools (28 Gana meta-tools in seed mode, 659 nested tools), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, MandalaOS compartments with Koka effect enforcement, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Gratitude-driven economics via XRPL + x402. See mcp-registry.json for current tool count.",
+  "description": "AI memory, cognitive upgrades, and more — 687 MCP tools (28 Gana meta-tools in seed mode, 659 nested tools), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, MandalaOS compartments, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Local-first, no telemetry. See mcp-registry.json for current tool count.",
   "url": "https://github.com/lbailey94/whitemagic",
   "version": "24.2.0",
   "provider": {
@@ -32,10 +32,10 @@
     {
       "id": "tool-dispatch",
       "name": "Tool Dispatch & Orchestration",
-      "description": "Unified dispatch pipeline for ~420 MCP tools with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. Supports PRAT mode (28 Gana meta-tools). 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
+      "description": "Unified dispatch pipeline for 687 MCP tools with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. Supports PRAT mode (28 Gana meta-tools). 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
       "tags": ["tools", "mcp", "dispatch", "orchestration"],
       "examples": [
-        "Call any of the ~420 registered tools via unified API",
+        "Call any of the 687 registered tools via unified API",
         "Route tools through PRAT Gana meta-tool interface",
         "Create multi-step tool pipelines"
       ]

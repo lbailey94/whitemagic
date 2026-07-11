@@ -1,4 +1,4 @@
-# WhiteMagic — Cognitive Operating System for AI Agents
+# WhiteMagic — AI Memory, Cognitive Upgrades, and More
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -9,7 +9,7 @@
 
 ## What it is
 
-WhiteMagic is a cognitive operating system for AI agents. It gives your AI:
+WhiteMagic gives your AI agent persistent memory, cognitive upgrades, and more — all through a single MCP tool.
 
 - **Persistent memory** — 5D holographic coordinates, 10-galaxy taxonomy, FTS5 + HNSW search, session recording with progressive recall
 - **Continuous consciousness** — citta stream with coherence tracking, emotional steering (frustration, curiosity, satisfaction), self-directed attention, goal graph

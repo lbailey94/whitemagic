@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whitemagic"
 version = "24.2.0"
-description = "Cognitive operating system for AI agents — 687 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments with Koka effect enforcement, session recording, dream cycle, and 7-language polyglot acceleration"
+description = "AI memory, cognitive upgrades, and more — 687 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments, session recording, dream cycle, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -28,6 +28,7 @@ classifiers = [
 
 dependencies = [
     "click>=8.1.7",
+    "numpy>=1.24.0",
     "pydantic>=2.0.0,<3.0.0",
     "pyyaml>=6.0.0",
 ]

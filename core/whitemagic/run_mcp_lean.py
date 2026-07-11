@@ -132,16 +132,7 @@ types = _LazyMCPTypes()
 server = _LazyServer()
 
 # ── Version ──────────────────────────────────────────────────────────
-_VERSION_FILE = CORE_SYSTEM_DIR / "VERSION"
-if _VERSION_FILE.exists():
-    _VERSION = _VERSION_FILE.read_text().strip()
-else:
-    try:
-        from importlib.metadata import version as _pkg_version
-
-        _VERSION = _pkg_version("whitemagic")
-    except (ImportError, ModuleNotFoundError):
-        _VERSION = "unknown"
+from whitemagic import __version__ as _VERSION
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -1127,8 +1118,16 @@ async def main_stdio() -> None:
     """Run as stdio MCP server (default, for IDE integration)."""
     import signal
 
-    import anyio
-    from mcp.shared.message import SessionMessage
+    try:
+        import anyio  # noqa: F401
+        from mcp.shared.message import SessionMessage  # noqa: F401
+    except ImportError:
+        print(
+            "\n  ERROR: MCP dependencies not installed.\n"
+            "  Install with: pip install whitemagic[mcp]\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     from whitemagic.runtime_status import get_runtime_status
 

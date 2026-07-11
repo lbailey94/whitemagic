@@ -2,7 +2,7 @@
 
 **The tool contract for AI agents using Whitemagic.**
 
-Whitemagic is a governance and metacognition substrate for AI agents. It provides 687 callable tools across 659 dispatch entries (28 in PRAT mode), tiered persistent memory, ethical governance, and polyglot accelerators. Agents bring reasoning; Whitemagic provides Hands, Memory, and Conscience.
+Whitemagic gives AI agents persistent memory, cognitive upgrades, and more. It provides 687 callable tools across 659 dispatch entries (28 in PRAT mode), tiered persistent memory, ethical governance, and polyglot accelerators. Agents bring reasoning; Whitemagic provides Hands, Memory, and Conscience.
 
 - **Hands** — 687 callable tools across 659 dispatch entries
 - **Memory** — Tiered, persistent, semantic, no-delete galactic lifecycle

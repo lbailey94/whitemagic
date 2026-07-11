@@ -5,6 +5,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
+from whitemagic import __version__ as _WM_VERSION
 from whitemagic.tools.tool_surface import get_surface_counts
 
 _VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
@@ -21,7 +22,7 @@ def get_runtime_status() -> dict[str, Any]:
     Returns:
         dict[str, Any]
     """
-    version = _VERSION_FILE.read_text().strip() if _VERSION_FILE.exists() else "unknown"
+    version = _VERSION_FILE.read_text().strip() if _VERSION_FILE.exists() else _WM_VERSION
     prat_val = os.getenv("WM_MCP_PRAT", "2").strip()
     prat_mode = prat_val in ("1", "true", "yes", "on")
     prat2_mode = prat_val in ("2", "2.0", "")
