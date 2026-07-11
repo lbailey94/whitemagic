@@ -185,7 +185,7 @@ class InferenceRouter:
 
     def __init__(
         self,
-        confidence_threshold: float = 0.85,
+        confidence_threshold: float = 0.5,
         max_escalations: int = 2,
         cloud_available: bool = True,
         token_budget: int | None = None,
@@ -551,6 +551,44 @@ def _edge_rules_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
         return {"answer": "", "confidence": 0.0, "metadata": {"error": str(e)}}
 
 
+_small_backend: LlamaCppBackend | None = None
+
+
+def _get_small_backend() -> LlamaCppBackend | None:
+    """Get or create the small-model llama.cpp backend singleton."""
+    global _small_backend
+    if _small_backend is not None:
+        return _small_backend if _small_backend.is_available else None
+
+    import os
+    from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+    model_path = (
+        os.environ.get("WM_MODEL_SMALL", "")
+        or os.environ.get("WM_MODEL_QWEN3_1_7B", "")
+        or os.environ.get("WM_MODEL_QWEN25_1_5B", "")
+        or os.environ.get("WM_MODEL_LLAMA32_1B", "")
+    )
+
+    if not model_path:
+        from whitemagic.interfaces.chat import ModelDiscovery
+        best = ModelDiscovery.best_model()
+        if best and best.backend == "llama_cpp":
+            model_path = best.path
+
+    if not model_path or not os.path.exists(model_path):
+        return None
+
+    port = int(os.environ.get("WM_LLAMA_SMALL_PORT", "8091"))
+    _small_backend = LlamaCppBackend(
+        model_path=model_path,
+        port=port,
+        auto_start=True,
+        config=LlamaCppConfig(n_ctx=4096, jinja=True, temperature=0.3, parallel=2),
+    )
+    return _small_backend if _small_backend.is_available else None
+
+
 def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
     """Default Tier 1 handler — uses llama.cpp with a small model.
 
@@ -560,53 +598,72 @@ def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
     3. ModelDiscovery.best_model() auto-discovery
     """
     try:
-        import os
-        from whitemagic.inference.llama_cpp import LlamaCppBackend
-
-        model_path = (
-            os.environ.get("WM_MODEL_SMALL", "")
-            or os.environ.get("WM_MODEL_QWEN3_1_7B", "")
-            or os.environ.get("WM_MODEL_QWEN25_1_5B", "")
-            or os.environ.get("WM_MODEL_LLAMA32_1B", "")
-        )
-
-        if not model_path:
-            from whitemagic.interfaces.chat import ModelDiscovery
-            best = ModelDiscovery.best_model()
-            if best and best.backend == "llama_cpp":
-                model_path = best.path
-
-        if not model_path or not os.path.exists(model_path):
+        backend = _get_small_backend()
+        if backend is None:
             return {
                 "answer": "",
                 "confidence": 0.0,
                 "metadata": {"error": "no_small_model_configured"},
             }
 
-        backend = LlamaCppBackend(
-            model_path=model_path,
-            auto_start=False,
-        )
-        if not backend.is_available:
-            return {
-                "answer": "",
-                "confidence": 0.0,
-                "metadata": {"error": "llama_cpp_unavailable"},
-            }
-
         max_tokens = kwargs.get("max_tokens", 256)
-        answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.3)
-        if answer.startswith("Error"):
-            return {"answer": "", "confidence": 0.0, "metadata": {"error": answer}}
+        answer = backend.chat(
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant. Answer briefly and accurately."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=0.3,
+        )
+        if answer.startswith("Error") or not answer.strip():
+            return {"answer": "", "confidence": 0.0, "metadata": {"error": answer or "empty_response"}}
 
         return {
             "answer": answer,
             "confidence": 0.75,
-            "metadata": {"model": model_path, "method": "llama_cpp_small"},
+            "metadata": {"model": backend._model_path, "method": "llama_cpp_small"},
         }
     except Exception as e:
         logger.debug("Local small handler failed: %s", e)
         return {"answer": "", "confidence": 0.0, "metadata": {"error": str(e)}}
+
+
+_large_backend: LlamaCppBackend | None = None
+
+
+def _get_large_backend() -> LlamaCppBackend | None:
+    """Get or create the large-model llama.cpp backend singleton."""
+    global _large_backend
+    if _large_backend is not None:
+        return _large_backend if _large_backend.is_available else None
+
+    import os
+    from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+    model_path = (
+        os.environ.get("WM_MODEL_LARGE", "")
+        or os.environ.get("WM_MODEL_QWEN3_4B", "")
+        or os.environ.get("WM_MODEL_PHI4_MINI", "")
+        or os.environ.get("WM_LLAMA_MODEL", "")
+    )
+
+    if not model_path:
+        from whitemagic.interfaces.chat import ModelDiscovery
+        best = ModelDiscovery.best_model()
+        if best and best.backend == "llama_cpp":
+            model_path = best.path
+
+    if not model_path or not os.path.exists(model_path):
+        return None
+
+    port = int(os.environ.get("WM_LLAMA_LARGE_PORT", "8090"))
+    _large_backend = LlamaCppBackend(
+        model_path=model_path,
+        port=port,
+        auto_start=True,
+        config=LlamaCppConfig(n_ctx=8192, jinja=True, temperature=0.5, parallel=4),
+    )
+    return _large_backend if _large_backend.is_available else None
 
 
 def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
@@ -620,36 +677,23 @@ def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
     5. BitNet fallback
     """
     try:
-        import os
-        from whitemagic.inference.llama_cpp import LlamaCppBackend
-
-        model_path = (
-            os.environ.get("WM_MODEL_LARGE", "")
-            or os.environ.get("WM_MODEL_QWEN3_4B", "")
-            or os.environ.get("WM_MODEL_PHI4_MINI", "")
-            or os.environ.get("WM_LLAMA_MODEL", "")
-        )
-
-        if not model_path:
-            from whitemagic.interfaces.chat import ModelDiscovery
-            best = ModelDiscovery.best_model()
-            if best and best.backend == "llama_cpp":
-                model_path = best.path
-
-        if model_path and os.path.exists(model_path):
-            backend = LlamaCppBackend(
-                model_path=model_path,
-                auto_start=False,
+        backend = _get_large_backend()
+        if backend is not None:
+            max_tokens = kwargs.get("max_tokens", 512)
+            answer = backend.chat(
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant. Answer accurately and thoroughly."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.5,
             )
-            if backend.is_available:
-                max_tokens = kwargs.get("max_tokens", 512)
-                answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.5)
-                if not answer.startswith("Error"):
-                    return {
-                        "answer": answer,
-                        "confidence": 0.85,
-                        "metadata": {"model": model_path, "method": "llama_cpp_large"},
-                    }
+            if not answer.startswith("Error") and answer.strip():
+                return {
+                    "answer": answer,
+                    "confidence": 0.85,
+                    "metadata": {"model": backend._model_path, "method": "llama_cpp_large"},
+                }
 
         # Try BitNet as fallback
         try:
@@ -738,9 +782,16 @@ def _llama_cpp_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
                 "metadata": {"error": "llama_cpp_unavailable"},
             }
 
-        answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.3)
-        if answer.startswith("Error"):
-            return {"answer": "", "confidence": 0.0, "metadata": {"error": answer}}
+        answer = backend.chat(
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant. Answer briefly."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=0.3,
+        )
+        if answer.startswith("Error") or not answer.strip():
+            return {"answer": "", "confidence": 0.0, "metadata": {"error": answer or "empty_response"}}
 
         return {
             "answer": answer,

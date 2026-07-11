@@ -570,12 +570,16 @@ class DualModelManager:
 
     def route_inference(self, prompt: str, is_background: bool = False) -> str:
         """Route inference to appropriate model."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Answer briefly."},
+            {"role": "user", "content": prompt},
+        ]
         if is_background and self._background.is_available:
-            return self._background.complete(prompt, max_tokens=64)
+            return self._background.chat(messages, max_tokens=64)
         elif self._foreground.is_available:
-            return self._foreground.complete(prompt)
+            return self._foreground.chat(messages, max_tokens=512)
         elif self._background.is_available:
-            return self._background.complete(prompt)
+            return self._background.chat(messages, max_tokens=64)
         return "Error: No model available"
 
 
