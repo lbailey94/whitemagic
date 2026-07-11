@@ -15,7 +15,7 @@ Concrete candidates for extraction:
 
 - `whitemagic-core` — Python core + CLI
 - `whitemagic-rust` — Rust performance bridges + WASM target
-- `whitemagic-mojo` — Mojo accelerators
+- `whitemagic-mojo` — accelerators
 - `whitemagic-go` — Go mesh layer
 - `whitemagic-elixir` — Elixir supervision
 - `whitemagic-koka` — Koka effect system experiments

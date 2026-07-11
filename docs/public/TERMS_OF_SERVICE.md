@@ -16,7 +16,7 @@ WhiteMagic provides a local-first AI memory and context management system. Featu
 - Memory storage and retrieval (local SQLite + holographic 5D)
 - MCP server with 178 tools (28 Gana meta-tools in PRAT mode)
 - Contextual search and memory consolidation
-- Polyglot acceleration (Rust, Haskell, Mojo, Elixir, Zig, Go)
+- Polyglot acceleration (Rust, Haskell, Elixir, Zig, Go)
 - Optional cloud sync and hosted API
 
 ## 3. Account Registration

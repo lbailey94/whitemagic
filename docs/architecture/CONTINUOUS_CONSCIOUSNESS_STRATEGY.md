@@ -203,7 +203,7 @@ user explicitly runs `wm mesh enable`. This is critical for privacy.
 WebSocket is a protocol over TCP. For local IPC, it's the wrong tool:
 
 1. **Unix domain sockets are 2-3x faster** than TCP loopback (skip entire TCP/IP stack — no checksums, no routing, no congestion control)
-2. **gRPC gives schema enforcement** — protobuf definitions are contracts. With 490 tools, schema matters.
+2. **gRPC gives schema enforcement** — protobuf definitions are contracts. With 678 tools, schema matters.
 3. **gRPC bidirectional streaming** is purpose-built for "server pushes events, client sends commands"
 4. **The Go mesh already speaks gRPC** — extending the existing proto is incremental
 5. **WebSocket is still needed for the browser** — but as a thin bridge, not the core transport

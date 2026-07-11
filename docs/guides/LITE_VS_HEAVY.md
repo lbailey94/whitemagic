@@ -82,7 +82,6 @@ An agent equipped with Heavy gets everything in Standard, plus:
 | **Rust** | `whitemagic_rs` Python extension | 10-200× | Spatial index, search, rate limiting, state board, event ring, holographic encoding |
 | **Zig** | SIMD batch operations | 50-100× | Vector math, holographic 5D coords, constellation mapping |
 | **Go** | `whitemagic-mesh` binary | N/A | Multi-agent gossip networking, gRPC agent streams |
-| **Mojo** | Batch encoder, embedding quantization | 10-50× | ML inference, neural batch processing |
 | **Julia** | Self-model forecast, memory stats | 5-20× | Statistical analysis, time-series forecasting |
 | **Haskell** | Boundary detection, maturity gates, rule composition | N/A | Formal verification, pure functional governance |
 | **Elixir** | Cascade executor, garden pub/sub, harmony monitor | N/A | Distributed supervision, fault-tolerant event streaming |

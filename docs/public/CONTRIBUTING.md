@@ -8,7 +8,7 @@ Thank you for your interest in contributing to WhiteMagic! This document provide
 
 - **Python**: 3.10+
 - **Git**: For version control
-- **Optional polyglot toolchains**: Rust (maturin), Haskell (GHC), Mojo, Elixir, Zig, Go — only needed if touching accelerator code
+- **Optional polyglot toolchains**: Rust (maturin), Haskell (GHC), Elixir, Zig, Go — only needed if touching accelerator code
 
 ## Quick Start
 
@@ -57,7 +57,6 @@ cd whitemagic-rust && maturin develop --release --features python && cd ..
 # Haskell FFI
 cd haskell && cabal build && cd ..
 
-# Mojo SIMD
 cd whitemagic-mojo && mojo build src/coordinate_encoder.mojo && cd ..
 ```
 
@@ -133,7 +132,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat: add constellation detection to galactic map
 fix: graceful fallback when Rust bridge unavailable
-docs: update POLYGLOT_STATUS for Mojo 0.26
+docs: update POLYGLOT_STATUS for polyglot changes
 refactor: merge autonomous_execution into autonomous/executor
 test: add 38 tests for v12.8 fusions
 ```

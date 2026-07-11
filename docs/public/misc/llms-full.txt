@@ -1,14 +1,14 @@
 # WhiteMagic
 
-> The Tool Substrate for Agentic AI — 356 MCP tools, tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance, and polyglot accelerators in 11 languages.
+> The Tool Substrate for Agentic AI — 678 callable tools, tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance, and polyglot accelerators in 7 languages.
 
 ## Overview
 
 WhiteMagic is a high-performance memory and tool infrastructure for AI agents. It provides:
-- 356 MCP tools (or 28 PRAT Gana meta-tools) via unified dispatch
+- 678 callable tools (or 28 PRAT Gana meta-tools) via unified dispatch
 - Tiered memory with SQLite backing, 5D holographic coordinates (XYZWV), Galactic Map lifecycle
 - Ethical governance: Dharma Rules Engine, Karma Ledger, Harmony Vector, Homeostatic Loop
-- Polyglot accelerators: Rust (PyO3), Zig (SIMD), Haskell (FFI), Elixir (OTP), Mojo, Go, Julia, TypeScript
+- Polyglot accelerators: Rust (PyO3), Zig (SIMD), Haskell (FFI), Elixir (OTP), Go, Julia, Koka
 - Self-regulating: Circuit Breakers, Rate Limiter, RBAC, Maturity Gates, Agent Trust
 
 Version: 15.7.0
@@ -49,10 +49,10 @@ call_tool("gnosis", compact=True)
 ### MCP Server (stdio)
 ```bash
 # PRAT mode — 28 Gana meta-tools (recommended)
-WM_MCP_PRAT=1 python -m whitemagic.run_mcp
+WM_MCP_PRAT=1 python -m whitemagic.run_mcp_lean
 
 # Classic mode — all 313 tools
-python -m whitemagic.run_mcp
+python -m whitemagic.run_mcp_lean
 ```
 
 ### CLI

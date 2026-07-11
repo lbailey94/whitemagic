@@ -222,6 +222,8 @@ class TestSemanticCacheUnifiedIntegration:
 
     def test_cache_hit_via_unified_cache(self):
         """Pre-populate unified cache, verify middleware short-circuits."""
+        import tempfile
+        from pathlib import Path as _Path
         from whitemagic.tools.middleware import (
             DispatchContext,
             _cache_key,
@@ -229,7 +231,8 @@ class TestSemanticCacheUnifiedIntegration:
         )
 
         cache = UnifiedCacheBridge(max_size=100, persist=False)
-        key = _cache_key("llama.chat", {"prompt": "test unified cache"})
+        unique_prompt = "test unified cache — unique-hit-2b8e"
+        key = _cache_key("llama.chat", {"prompt": unique_prompt})
         payload = json.dumps(
             {
                 "result": "unified cache answer",
@@ -248,10 +251,11 @@ class TestSemanticCacheUnifiedIntegration:
 
         ctx = DispatchContext(
             tool_name="llama.chat",
-            kwargs={"prompt": "test unified cache"},
+            kwargs={"prompt": unique_prompt},
         )
 
-        with patch("whitemagic.core.cache.get_unified_cache", return_value=cache):
+        with patch("whitemagic.core.cache.get_unified_cache", return_value=cache), \
+             patch("whitemagic.config.paths.CACHE_DIR", _Path(tempfile.mkdtemp())):
             result = mw_semantic_cache(ctx, next_fn)
             assert not dispatched
             assert result["method"] == "semantic_cache"
@@ -260,6 +264,7 @@ class TestSemanticCacheUnifiedIntegration:
 
     def test_cache_miss_dispatches_and_caches(self):
         """On cache miss, should dispatch and store in unified cache."""
+        import tempfile
         from whitemagic.tools.middleware import (
             DispatchContext,
             _cache_key,
@@ -271,18 +276,24 @@ class TestSemanticCacheUnifiedIntegration:
         def next_fn(ctx):
             return {"status": "success", "result": "fresh answer"}
 
+        # Use a unique prompt to avoid legacy QueryCache collisions from prior tests
+        unique_prompt = "test cache miss and store — unique-batch-7a3f"
         ctx = DispatchContext(
             tool_name="llama.chat",
-            kwargs={"prompt": "test cache miss and store"},
+            kwargs={"prompt": unique_prompt},
         )
 
-        with patch("whitemagic.core.cache.get_unified_cache", return_value=cache):
+        # Patch both unified cache and legacy cache to prevent cross-test state leakage
+        from pathlib import Path as _Path
+        tmp_cache_file = _Path(tempfile.mkdtemp()) / "empty_cache.json"
+        with patch("whitemagic.core.cache.get_unified_cache", return_value=cache), \
+             patch("whitemagic.config.paths.CACHE_DIR", tmp_cache_file.parent):
             result = mw_semantic_cache(ctx, next_fn)
             assert result["status"] == "success"
             assert result["result"] == "fresh answer"
 
             # Verify it was cached
-            key = _cache_key("llama.chat", {"prompt": "test cache miss and store"})
+            key = _cache_key("llama.chat", {"prompt": unique_prompt})
             cached = cache.get_json("semantic", key)
             assert cached is not None
             assert cached["result"] == "fresh answer"

@@ -51,7 +51,7 @@ and updates the 6th dimension.
 
 ---
 
-## 3. Polyglot Language Assignments (7 languages, no Mojo)
+## 3. Polyglot Language Assignments (7 languages, no 
 
 Each language handles the part of the galaxy system it is naturally best
 at. All communicate through the existing JSON stdio bridge protocol

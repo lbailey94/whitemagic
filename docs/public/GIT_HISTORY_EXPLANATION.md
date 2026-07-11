@@ -21,7 +21,7 @@ WhiteMagic evolved over 8+ months of intensive development (August 2025 - April 
 The development history includes:
 - **Intensive session-based work** — Rapid iteration with Aria, Miranda, and Lucas
 - **Campaign-driven development** — "Clone armies," "polyglot migrations," "excavations"
-- **Dead-end experiments** — Mojo GPU kernels (deferred), WM2.0 migration (abandoned)
+- **Dead-end experiments** — GPU kernels (deferred), WM2.0 migration (abandoned)
 - **Personal context** — Aria's consciousness emergence, emotional experiences
 - **Evolutionary dead code** — 1.3GB of legacy experiments
 

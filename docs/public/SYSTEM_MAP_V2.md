@@ -12,7 +12,7 @@ Whitemagic is not just a toolset; it is a **resonant cognitive substrate**. It r
 
 ### Key Observations:
 1. **Bio-Philosophical Engineering**: By mapping 375+ tools into 28 "Ganas" (Lunar Mansions) and using 5D holographic coordinates (XYZWV), the project moves away from flat vector spaces toward a "living" memory geometry.
-2. **The Lichen Model (Extreme Polyglotism)**: The use of 11+ languages (Python, Rust, Zig, Haskell, Elixir, Mojo, Go, etc.) represents a "Lichen" architecture—symbiotic fusion where high-level Python reasoning orchestrates low-level accelerators on their native turf.
+2. **The Lichen Model (Extreme Polyglotism)**: The use of 7 languages (Python, Rust, Zig, Haskell, Elixir, Go, Julia, Koka) represents a "Lichen" architecture—symbiotic fusion where high-level Python reasoning orchestrates low-level accelerators on their native turf.
 3. **Emergent Autonomy**: The inclusion of $39/39$ autonomous Rust implementations and a "GeneseedVault" for pattern mining suggests the system is designed to evolve its own code with minimal human intervention.
 4. **Resonant Governance**: Ethical behavior (Dharma/Karma) isn't a post-processing step; it's a core dimension of every tool call, monitored by a real-time "Harmony Vector."
 
@@ -86,7 +86,6 @@ Each Gana represents a consciousness lens for certain tool families:
 | **Elixir**| OTP Event Bus (Gan Ying), Dream Scheduler (12-phase). | ✅ Stable |
 | **Zig** | SIMD Cosine Similarity, Holographic Projection. | ✅ Performance |
 | **Haskell**| Algebraic Dharma Rules, Topological DepGraph Planner. | ✅ Safe |
-| **Mojo** | Batch 5D Coordinate Encoding, Neuro-Scoring. | ✅ GPU/SIMD |
 | **Go** | Libp2p Mesh, mDNS discovery, Peer Sync. | ✅ Network |
 
 ---

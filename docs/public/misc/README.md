@@ -20,7 +20,7 @@ If you're integrating Whitemagic into an agent runtime, start with `AI_PRIMARY.m
 4.  **Capability Matrix**: 25 subsystems, 28 active cross-system fusions, 0 unexplored — all queryable via `capability.matrix` MCP tool.
 5.  **MCP Native**: Built from the ground up to be served via the Model Context Protocol (MCP).
 6.  **Self-Regulating**: Harmony Vector (7-dimension health), Dharma Rules Engine (ethical governance with YAML hot-reload), Homeostatic Loop (auto-correction), Karma Ledger (side-effect auditing), Circuit Breakers, Maturity Gates, Agent Trust scoring.
-7.  **9-Language Polyglot**: Python core with compiled accelerators in Rust (PyO3), Zig (SIMD), Haskell (FFI), Elixir (OTP), Mojo (GPU/SIMD), Go (libp2p mesh), Julia (statistical forecasting), and TypeScript (SDK). Every module has a Python bridge with graceful fallback.
+7.  **9-Language Polyglot**: Python core with compiled accelerators in Rust (PyO3), Zig (SIMD), Haskell (FFI), Elixir (OTP), (GPU/SIMD), Go (libp2p mesh), Julia (statistical forecasting), and TypeScript (SDK). Every module has a Python bridge with graceful fallback.
 
 ### ⚡ v21 Polyglot Architecture ("The Lichen Model")
 
@@ -38,7 +38,7 @@ WhiteMagic v21 marks the transition to a true **Lichen Architecture**, where hig
 
 ### From Source (Recommended For This Repo)
 ```bash
-# A pre-configured venv exists at .venv/ with all deps + Mojo 0.26.1
+# A pre-configured venv exists at .venv/ with all deps + 0.26.1
 source .venv/bin/activate
 
 # Or create a fresh venv:
@@ -68,7 +68,7 @@ cd mesh && go build ./...
 # Zig (SIMD cosine similarity, holographic projection)
 cd whitemagic-zig && zig build
 
-# Mojo (batch encoding, neuro scoring — requires Mojo 0.26+)
+# (batch encoding, neuro scoring — requires 0.26+)
 cd whitemagic-mojo && mojo build src/satkona_yang.mojo
 ```
 
@@ -163,7 +163,7 @@ out = call_tool("gnosis", compact=True)
 *   `elixir/`: Elixir OTP (~1.4K LOC) — actor-model Gan Ying event bus, dream scheduler, supervision trees.
 *   `whitemagic-go/` + `mesh/`: Go (~913 LOC) — libp2p P2P mesh, mDNS discovery, protobuf messaging.
 *   `whitemagic-zig/`: Zig (~795 LOC) — SIMD cosine similarity, holographic projection, memory management.
-*   `whitemagic-mojo/`: Mojo (~1.2K LOC) — batch coordinate encoding, neuro scoring, satkona yang.
+*   `whitemagic-mojo/`: (~1.2K LOC) — batch coordinate encoding, neuro scoring, satkona yang.
 
 > **Note:** Local inference (Ollama/LlamaCPP) has been decoupled from the core loop in v11. Agents should bring their own "Brain" (via MCP or direct API calls) and use Whitemagic purely as their *Hands and Memory*.
 >

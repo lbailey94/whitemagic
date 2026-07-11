@@ -82,7 +82,6 @@ An agent equipped with Heavy gets everything in Standard, plus:
 | **Rust** | `whitemagic_rs` Python extension | 10-200× | Spatial index, search, rate limiting, state board, event ring, holographic encoding |
 | **Zig** | SIMD batch operations | 50-100× | Vector math, holographic 5D coords, constellation mapping |
 | **Go** | `whitemagic-mesh` binary | N/A | Multi-agent gossip networking, gRPC agent streams |
-| **Mojo** | Batch encoder, embedding quantization | 10-50× | ML inference, neural batch processing |
 | **Julia** | Self-model forecast, memory stats | 5-20× | Statistical analysis, time-series forecasting |
 | **Haskell** | Boundary detection, maturity gates, rule composition | N/A | Formal verification, pure functional governance |
 | **Elixir** | Cascade executor, garden pub/sub, harmony monitor | N/A | Distributed supervision, fault-tolerant event streaming |
@@ -124,7 +123,7 @@ An agent equipped with Heavy gets everything in Standard, plus:
 | **Metrics** | harmony_vector |
 | **Audit** | karma_report |
 
-### Standard/Heavy (462 tools across 28 Gana meta-tools)
+### Standard/Heavy (678 tools across 28 Gana meta-tools)
 
 Everything in Lite, plus:
 
@@ -173,14 +172,14 @@ Everything in Lite, plus:
 ├─────────────────────────────────────────────────────┤
 │  Standard (pip install)                             │
 │  pip install whitemagic[mcp] → python -m ...        │
-│  462 tools, ~25MB, Python 3.10+, ~60s               │
+│  678 tools, ~25MB, Python 3.10+, ~60s               │
 │  Same state directory, same memories                │
 │                                                     │
 │  Agent decides it needs polyglot acceleration →     │
 ├─────────────────────────────────────────────────────┤
 │  Heavy (Docker)                                     │
 │  docker pull lbailey94/whitemagic:heavy         │
-│  462 tools + 8 polyglot cores, ~200-800MB, ~30s    │
+│  678 tools + 7 polyglot cores, ~200-800MB, ~30s    │
 │  Mount state directory: -v ~/.whitemagic:/data/...  │
 │  10-200× faster on compute-heavy operations         │
 └─────────────────────────────────────────────────────┘

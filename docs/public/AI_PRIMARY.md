@@ -26,7 +26,7 @@ Non-goals:
 ## Bootstrap (Quickstart)
 
 ```bash
-# Activate the pre-configured venv (contains all Python deps + Mojo 0.26.1)
+# Activate the pre-configured venv (contains all Python deps + all polyglot runtimes)
 cd "$(git rev-parse --show-toplevel)"
 source .venv/bin/activate
 
@@ -68,7 +68,6 @@ cd elixir && mix compile --force                  # Elixir (OTP) — actor-model
 cd whitemagic-go && go build ./...                # Go — general bridge
 cd mesh && go build ./...                         # Go mesh — libp2p P2P, mDNS, protobuf
 cd whitemagic-zig && zig build                    # Zig — SIMD cosine, holographic projection
-cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — batch encoding
 ```
 
 ## Canonical Interfaces

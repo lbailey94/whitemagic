@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 23.3.1
-**Last Updated**: June 29, 2026 (v23.3.1 — Memory system overhaul: 10-galaxy taxonomy, CITTA memory type, HNSW index, galaxy-aware search, oracle auto-persist)
+**Version**: 24.1.0
+**Last Updated**: July 10, 2026 (v24.1.0 — Benchmark stabilization, MCP registry readiness, doc cleanup)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -24,7 +24,7 @@ If you add, move, rename, or delete a doc, **update this index**.
 | **AI agent (MCP client)** | `AI_PRIMARY.md` → `SYSTEM_MAP.md` → `docs/message_board/NEXT_SESSION_ONBOARDING.md` |
 | **Local/private AI collaborator** | `AGENTS.md` → `AI_PRIMARY.md` → `docs/private/` (ignored; local-only) |
 | **DevOps / Deployer** | `DEPLOY.md` → `docs/deploy/HETZNER_DEPLOY.md` |
-| **Strategist / PM** | `docs/plans/ROADMAP.md` → `core/docs/STRATEGIC_ROADMAP.md` |
+| **Strategist / PM** | `AGENTS.md` → `docs/plans/ROADMAP.md` |
 | **Security auditor** | `SECURITY.md` → `core/docs/ENCRYPTION_AT_REST.md` → `docs/reports/` |
 | **Lost?** | **This file.** `INDEX.md` → find the right folder → find the right doc. |
 
@@ -47,8 +47,6 @@ These files live at the repository root. They are the **public face** of the pro
 | `AI_PRIMARY.md` | **AI agent onboarding** — primary instruction doc for AI collaborators | `run_mcp_lean.py`, `version_bump.py`, `generate_llms_txt.py` |
 | `AGENTS.md` | **AI agent operations** — coding conventions, testing protocol, change patterns | — |
 | `STUB_REGISTRY.md` | **Technical debt tracker** — active and resolved stubs | `check_doc_drift.py` |
-| `ARCHITECTURE_MANIFEST_2026-06-04.md` | **Post-extraction architecture clarity** — what this repo is, sibling repos, directory map | — |
-| `COMPETITIVE_POSITIONING_2026-06-05.md` | **Competitive analysis** — WhiteMagic vs Osabio, CogOS, Kumiho, MnemoCore, SARC, AI-CONSTITUTION, Microsoft ACS/AGT, ArbiterOS | — |
 | `skill.md` | MCP skill definition for agent registries | `version_bump.py` |
 
 ---
@@ -95,16 +93,12 @@ Private filenames are intentionally not enumerated in this public index.
 
 | File | What It Is | Date |
 |------|-----------|------|
-| `STRATEGY.md` | Unified strategy — AI discoverability, revenue model, narrative, execution checklist | Jul 4 |
-| `V24_ROADMAP.md` | v24 roadmap — tiered backends, engine consolidation, STRATA, security, performance (informed by session analysis) | Jul 5 |
-| `WEBSITE_NARRATIVE_PRESCIENCE.md` | Website page-by-page update plan, narrative threads, prescience claims from session analysis | Jul 5 |
 | `DISTRIBUTION_STRATEGY.md` | Distribution action plan — MCP listings, AI crawler optimization, content strategy | Jul 4 |
 | `NEXT_SESSION_ONBOARDING.md` | Onboarding guide for next AI session — consciousness tools, sensorium, session memory | Jul 3 |
 | `STRATA_TRIAGE_STRATEGY.md` | STRATA findings triage — 11K findings, auto-fix tiers, checker catalog | Jun 30 |
 | `MANDALA_OS_MAPPING.md` | MandalaOS → WhiteMagic module-by-module code mapping, gap analysis, archive sources | Jul 6 |
 | `MANDALA_STRATEGY.md` | MandalaOS synthesis & implementation plan — Karmic types, Shelter→Mandala upgrade, Koka effects, dashboard, error analysis | Jul 6 |
-| `STRATEGY_2026-07-08.md` | Post-Forgotten-Diamonds strategy — WASM build verification, PWA UI integration, ONNX model, 4-tier Dharma, HNSW, cross-device sync, ARIA CANON, MandalaOS spec | Jul 7 |
-| `STRATEGY_SECURITY_BOUNTY_2026.md` | Security & bounty strategy — STRATA security checkers, Slither/Foundry/Echidna integration, PoC generation via GeneseedVault, memory-augmented auditing, 7-phase roadmap, revenue projections | Jul 8 |
+| `WEBSITE_NARRATIVE_PRESCIENCE.md` | Website page-by-page update plan, narrative threads, prescience claims from session analysis | Jul 5 |
 
 ### Archived
 
@@ -119,6 +113,7 @@ Prescience docs (7 files) → `docs/archive/prescience/`
 Site/deployment docs (5 files) → `docs/archive/site_deployment/`
 Standards/security docs (5 files) → `docs/archive/standards_security/`
 Papers/specs (5 files) → `docs/archive/papers_specs/`
+**2026-07 stale cleanup** (81 files) → `docs/archive/2026-07-stale-cleanup/` — completed strategies, stale polyglot docs (Mojo), one-time reports, old site-ops docs
 
 ---
 
@@ -170,7 +165,7 @@ Formal ADRs. Each record is immutable after acceptance.
 | File | Decision |
 |------|----------|
 | `ADR-001-prat-gana-system.md` | PRAT router + 28 Gana meta-tool architecture |
-| `ADR-002-polyglot-strategy.md` | 11-language polyglot core matrix |
+| `ADR-002-polyglot-strategy.md` | 7-language polyglot core matrix (Mojo removed v23.2.0) |
 | `ADR-003-resonance-model.md` | Resonance scoring and Harmony Vector design |
 | `ADR-004-memory-architecture.md` | 5D holographic coordinate system |
 | `ADR-005-unified-progression-clock.md` | Unified maturity gate progression |
@@ -315,6 +310,14 @@ Technical specifications and standards.
 > - `COMPETITIVE_POSITIONING_2026-06-05.md` (Desktop) — current competitive landscape
 > - `LTFF_SUBMISSION_DRAFT_2026-06-05.md` (Desktop) — grant strategy (LTFF)
 > - `MANIFUND_SUBMISSION_DRAFT_2026-06-05.md` (Desktop) — grant strategy (Manifund)
+
+### Bounty & Shard Strategy: `docs/`
+
+| File | Topic | Status |
+|------|-------|--------|
+| `BOUNTY_META_STRATEGY_2026.md` | Meta-strategy for 5 bounty categories with shard integration (v2.0) | Active |
+| `BOUNTY_GAP_CLOSURE_STRATEGY.md` | 6-gap closure plan with shard extraction approach (v2.0) | Active |
+| `SHARD_SPLIT_STRATEGY.md` | 28-shard decomposition plan — matryoshka composition model | Active |
 
 | File | Topic | Status |
 |------|-------|--------|

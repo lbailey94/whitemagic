@@ -48,7 +48,6 @@ WhiteMagic uses a configurable path system. See `core/whitemagic/config/paths.py
 - **Rust**: `cd core/whitemagic-rust && maturin develop --release --features python`
 - **Go**: `cd polyglot/whitemagic-go && go build`
 - **Zig**: `cd polyglot/whitemagic-zig && zig build`
-- **Mojo**: `cd polyglot/mojo && pixi run mojo build -I src hot_paths.mojo`
 
 ## Quick Commands (justfile)
 

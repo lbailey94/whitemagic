@@ -109,7 +109,6 @@ WhiteMagic implements a full neurosymbolic architecture, not just a tool registr
 | **Zig** | ✅ Builds | SIMD cosine, holographic projection | Fast embedding ops |
 | **Koka** | ✅ Compiles | Effect handlers | Type-safe policy composition |
 | **Julia** | ✅ Loads | Self-model forecasting, memory stats | Numerical analysis |
-| **Mojo** | ❌ No compiler | Batch encoding | Future GPU acceleration |
 
 ### 0.4 The 28 Ganas — What They Actually Do
 

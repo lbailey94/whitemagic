@@ -11,7 +11,7 @@ table below — do not edit it directly.
 
 | Module | Location | Reason | Planned Date | Added |
 |--------|----------|--------|--------------|-------|
-| `inference/unified_embedder.py` | `:154:_encode_mojo_gpu` | Mojo compiler unavailable (removed v23.2.0) | When Mojo compiler ships | 2026-04-16 |
+| `inference/unified_embedder.py` | `:154:_encode_mojo_gpu` | Mojo removed in v23.2.0 — stub resolved (no longer needed) | 2026-04-16 |
 | `tools/handlers/misc.py` | `:10:_stub` | Intentional test stub handler | Never (test fixture) | 2026-04-16 |
 | `run_mcp.py` | `:32:startup` | MCP startup hook — deferred to lean server | v24.0.1 | 2026-04-16 |
 | `run_mcp.py` | `:37:shutdown` | MCP shutdown hook — deferred to lean server | v24.0.1 | 2026-04-16 |

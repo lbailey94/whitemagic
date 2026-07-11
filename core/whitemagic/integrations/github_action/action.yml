@@ -1,0 +1,77 @@
+name: 'WhiteMagic Code Review'
+description: 'AI-powered, memory-augmented code review using WhiteMagic STRATA'
+inputs:
+  github_token:
+    description: 'GitHub token for posting reviews'
+    required: true
+    default: ${{ github.token }}
+  severity:
+    description: 'Minimum severity to report (critical, warning, style, nitpick)'
+    required: false
+    default: 'warning'
+  auto_approve:
+    description: 'Automatically approve if no critical issues'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install WhiteMagic
+      shell: bash
+      run: pip install whitemagic[codereview]
+
+    - name: Run code review
+      shell: python
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        WM_SEVERITY: ${{ inputs.severity }}
+        WM_AUTO_APPROVE: ${{ inputs.auto_approve }}
+        WM_PR_NUMBER: ${{ github.event.pull_request.number }}
+        WM_REPO: ${{ github.repository }}
+      run: |
+        import os
+        import sys
+        import json
+        import logging
+
+        logging.basicConfig(level=logging.INFO)
+
+        from whitemagic.integrations.github_pr import GitHubPRReviewer
+        from whitemagic.tools.suggestions import SuggestionEngine
+
+        repo = os.environ["WM_REPO"]
+        pr_number = int(os.environ["WM_PR_NUMBER"])
+        severity = os.environ.get("WM_SEVERITY", "warning")
+        auto_approve = os.environ.get("WM_AUTO_APPROVE", "false").lower() == "true"
+
+        reviewer = GitHubPRReviewer()
+        review = reviewer.review_pr(repo, pr_number, severity_threshold=severity)
+
+        engine = SuggestionEngine()
+        suggestions = engine.generate_batch([
+            {
+                "file": f["file"],
+                "line": f["line"],
+                "severity": f["severity"],
+                "message": f["message"],
+                "checker": f["checker"],
+                "suggestion": f.get("suggestion"),
+            }
+            for f in review.findings
+        ])
+
+        formatted = engine.format_for_github(suggestions)
+        print(formatted)
+
+        if review.findings:
+            posted = reviewer.post_review(repo, pr_number, review)
+            if posted:
+                print("Review posted successfully.")
+            else:
+                print("Failed to post review.")
+                sys.exit(1)
+        else:
+            print("No findings. PR is clean!")
+
+        if auto_approve and review.approved:
+            print("Auto-approving PR (no critical issues).")
