@@ -990,11 +990,40 @@ _CACHEABLE_TOOL_PATTERNS = (
     "edge_infer",
 )
 
+# Read-only tools that are safe to cache with longer TTL
+_READ_ONLY_CACHEABLE_PATTERNS = (
+    "search_memories",
+    "read_memory",
+    "list_memories",
+    "fast_read",
+    "batch_read",
+    "gnosis",
+    "capabilities",
+    "galaxy.stats",
+    "galaxy.list",
+    "meta_galaxy",
+    "karma.report",
+    "karmic.debt",
+    "coherence",
+    "consciousness.loop.status",
+    "effect.trace",
+    "effect.visualize",
+    "cache.status",
+)
+
 
 def _is_cacheable_tool(tool_name: str) -> bool:
     """Check if a tool's results are worth caching."""
     name_lower = tool_name.lower()
-    return any(p in name_lower for p in _CACHEABLE_TOOL_PATTERNS)
+    if any(p in name_lower for p in _CACHEABLE_TOOL_PATTERNS):
+        return True
+    return any(p in name_lower for p in _READ_ONLY_CACHEABLE_PATTERNS)
+
+
+def _is_read_only_tool(tool_name: str) -> bool:
+    """Check if a tool is read-only (longer TTL safe)."""
+    name_lower = tool_name.lower()
+    return any(p in name_lower for p in _READ_ONLY_CACHEABLE_PATTERNS)
 
 
 def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
@@ -1006,6 +1035,12 @@ def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
         val = kwargs.get(key)
         if isinstance(val, str) and val.strip():
             prompt_parts.append(val)
+    # For read-only tools, also include structural kwargs
+    if _is_read_only_tool(tool_name):
+        for key in ("memory_id", "galaxy", "limit", "offset", "tool_name", "format"):
+            val = kwargs.get(key)
+            if val is not None:
+                prompt_parts.append(f"{key}={val}")
     # Include tool name to avoid cross-tool collisions
     content = f"{tool_name}:{':'.join(prompt_parts)}"
     return hashlib.md5(content.lower().strip().encode()).hexdigest()[:16]
@@ -1118,8 +1153,16 @@ def mw_semantic_cache(
         and result.get("status") in ("success", "ok")
     ):
         answer = result.get("result", result.get("answer", ""))
-        if answer and isinstance(answer, str):
-            output_tokens = max(1, len(answer) // 4)
+        is_read_only = _is_read_only_tool(ctx.tool_name)
+        # Read-only tools may return dict results; inference tools return strings
+        if not isinstance(answer, str) and is_read_only:
+            import json as _json2
+            answer = _json2.dumps(answer, default=str)
+        if answer:
+            output_tokens = max(1, len(str(answer)) // 4)
+            # Read-only tools: 60s TTL (data changes on write)
+            # Inference tools: 24h TTL (answers don't change)
+            cache_ttl = 60.0 if is_read_only else 86400.0
             try:
                 import json as _json
 
@@ -1134,23 +1177,24 @@ def mw_semantic_cache(
                     }
                 )
                 unified.set(
-                    "semantic", key, cache_payload, ttl_seconds=86400.0
-                )  # 24h TTL
+                    "semantic", key, cache_payload, ttl_seconds=cache_ttl
+                )
             except Exception:
                 logger.debug("Swallowed exception", exc_info=True)
-            # Also store in legacy cache for backward compat
-            try:
-                from whitemagic.config.paths import CACHE_DIR
-                from whitemagic.core.intelligence.agentic.token_optimizer import (
-                    QueryCache,
-                )
+            # Also store in legacy cache for backward compat (inference only)
+            if not is_read_only:
+                try:
+                    from whitemagic.config.paths import CACHE_DIR
+                    from whitemagic.core.intelligence.agentic.token_optimizer import (
+                        QueryCache,
+                    )
 
-                legacy_cache = QueryCache(
-                    cache_file=CACHE_DIR / "dispatch_query_cache.json"
-                )
-                legacy_cache.set(key, answer, output_tokens)
-            except Exception:
-                logger.debug("Swallowed exception", exc_info=True)
+                    legacy_cache = QueryCache(
+                        cache_file=CACHE_DIR / "dispatch_query_cache.json"
+                    )
+                    legacy_cache.set(key, str(answer), output_tokens)
+                except Exception:
+                    logger.debug("Swallowed exception", exc_info=True)
 
     # Record transition for speculative prefetcher (Markov prediction)
     try:

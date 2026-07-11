@@ -167,6 +167,17 @@ def get_query_cache() -> QueryCache:
         with _cache_lock:
             if _query_cache is None:
                 _query_cache = QueryCache(max_size=1000, default_ttl=60)
+                # Auto-register with CacheRegistry
+                try:
+                    from whitemagic.core.memory.cache_registry import get_cache_registry
+                    reg = get_cache_registry()
+                    reg.register(
+                        "query",
+                        flush_func=_query_cache.clear,
+                        stats_func=_query_cache.get_stats,
+                    )
+                except Exception:
+                    logger.debug("CacheRegistry registration skipped", exc_info=True)
     return _query_cache
 
 

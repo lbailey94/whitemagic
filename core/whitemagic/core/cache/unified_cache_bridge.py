@@ -422,6 +422,19 @@ def get_unified_cache() -> UnifiedCacheBridge:
         with _cache_lock:
             if _unified_cache is None:
                 _unified_cache = UnifiedCacheBridge()
+                # Auto-register with CacheRegistry
+                try:
+                    from whitemagic.core.memory.cache_registry import get_cache_registry
+                    reg = get_cache_registry()
+                    reg.register(
+                        "unified",
+                        flush_func=_unified_cache.clear,
+                        stats_func=_unified_cache.stats,
+                        cleanup_func=_unified_cache.cleanup_expired,
+                        invalidate_func=_unified_cache.invalidate_namespace,
+                    )
+                except Exception:
+                    logger.debug("CacheRegistry registration skipped", exc_info=True)
     return _unified_cache
 
 

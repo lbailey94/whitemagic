@@ -183,4 +183,15 @@ def get_hybrid_cache() -> HybridRecallCache:
     with _cache_lock:
         if _cache_instance is None:
             _cache_instance = HybridRecallCache()
+            # Auto-register with CacheRegistry
+            try:
+                from whitemagic.core.memory.cache_registry import get_cache_registry
+                reg = get_cache_registry()
+                reg.register(
+                    "hybrid_recall",
+                    flush_func=_cache_instance.clear_all,
+                    stats_func=_cache_instance.stats,
+                )
+            except Exception:
+                logger.debug("CacheRegistry registration skipped", exc_info=True)
         return _cache_instance

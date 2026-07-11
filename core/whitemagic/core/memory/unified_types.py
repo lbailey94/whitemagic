@@ -19,6 +19,7 @@ class MemoryType(Enum):
     IMMUNE = auto()          # Threat patterns
     PATTERN = auto()         # Discovered patterns
     CITTA = auto()           # Consciousness-stream memories (thoughts, reflections, awareness)
+    PROCEDURAL = auto()      # Skills, execution chains, how-to procedures
 
 
 class MemoryState(Enum):
@@ -110,6 +111,10 @@ class Memory:
     last_retention_sweep: datetime | None = None  # When last evaluated by retention engine
 
     galaxy: str = "universal"  # Which galaxy this memory belongs to
+
+    # Version vector for multi-agent cache coherence (Phase 3)
+    version: int = 0  # Incremented on each write
+    agent_id: str = ""  # ID of the agent that last wrote this memory
 
     # Metadata
     source: str = ""
@@ -263,6 +268,8 @@ class Memory:
             "last_retention_sweep": self.last_retention_sweep.isoformat() if self.last_retention_sweep else None,
             "galaxy": self.galaxy,
             "source_trust": self.source_trust,
+            "version": self.version,
+            "agent_id": self.agent_id,
             "metadata": self.metadata,
             "links": {
                 tid: {
@@ -308,6 +315,8 @@ class Memory:
             last_retention_sweep=parse_datetime(data["last_retention_sweep"]) if data.get("last_retention_sweep") else None,
             galaxy=data.get("galaxy", "universal"),
             source_trust=data.get("source_trust", "user"),
+            version=data.get("version", 0),
+            agent_id=data.get("agent_id", ""),
             metadata=data.get("metadata", {}),
         )
 

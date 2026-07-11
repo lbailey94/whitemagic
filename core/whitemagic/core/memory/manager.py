@@ -309,6 +309,28 @@ class MemoryManager:
             conn.commit()
         finally:
             conn.close()
+        # Cache invalidation: write-invalidate protocol
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            galaxy = memory.galaxy if hasattr(memory, "galaxy") else "universal"
+            get_cache_registry().invalidate_namespace(galaxy)
+        except Exception:
+            pass
+        # Emit CACHE_INVALIDATE event for multi-agent coherence
+        try:
+            from whitemagic.core.resonance import emit_event, EventType
+            emit_event(
+                source="memory_delete",
+                event_type=EventType.CACHE_INVALIDATE,
+                data={
+                    "galaxy": galaxy,
+                    "memory_id": memory_id,
+                    "namespace": galaxy,
+                    "operation": "delete",
+                },
+            )
+        except Exception:
+            pass
         return {"success": True, "status": "success", "id": memory_id, "action": "permanently_deleted"}
 
     def delete(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:

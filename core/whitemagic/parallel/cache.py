@@ -213,3 +213,29 @@ class DistributedCache:
     def is_redis(self) -> bool:
         """Check if using Redis."""
         return self._redis_client is not None
+
+    def clear_sync(self) -> None:
+        """Synchronous clear (for CacheRegistry flush callback)."""
+        self._cache.clear()
+
+
+# Global singleton
+_distributed_cache: DistributedCache | None = None
+
+
+def get_distributed_cache(redis_url: str | None = None) -> DistributedCache:
+    """Get or create the global DistributedCache singleton."""
+    global _distributed_cache
+    if _distributed_cache is None:
+        _distributed_cache = DistributedCache(redis_url=redis_url)
+        # Auto-register with CacheRegistry
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            reg = get_cache_registry()
+            reg.register(
+                "distributed",
+                flush_func=_distributed_cache.clear_sync,
+            )
+        except Exception:
+            logger.debug("CacheRegistry registration skipped", exc_info=True)
+    return _distributed_cache

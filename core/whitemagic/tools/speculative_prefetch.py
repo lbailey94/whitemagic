@@ -201,6 +201,21 @@ class SpeculativePrefetcher:
             self._tracker.record(self._last_gana, gana_name)
         self._last_gana = gana_name
 
+        # Broadcast transition for cross-agent prefetch (Phase 4)
+        try:
+            from whitemagic.core.resonance import emit_event, EventType
+            emit_event(
+                source="speculative_prefetch",
+                event_type=EventType.CACHE_TRANSFER,
+                data={
+                    "gana": gana_name,
+                    "previous_gana": self._last_gana,
+                    "operation": "gana_transition",
+                },
+            )
+        except Exception:
+            pass
+
         # Predict next and prefetch in background
         predictions = self._tracker.predict(gana_name, top_k=2)
         if predictions:
@@ -285,7 +300,7 @@ class SpeculativePrefetcher:
         This runs the search/retrieval that would normally happen
         when the tool is called, caching the result.
         """
-        # Only prefetch tools that involve memory search (the expensive path)
+        # Only prefetch tools that involve memory search or introspection (the expensive path)
         search_tools = {
             "search_memories",
             "vector.search",
@@ -295,6 +310,17 @@ class SpeculativePrefetcher:
             "batch_read_memories",
             "pattern_search",
             "gnosis",
+            # Phase 4: introspection and consciousness tools
+            "capabilities",
+            "galaxy.stats",
+            "galaxy.list",
+            "meta_galaxy",
+            "coherence",
+            "consciousness.loop.status",
+            "karma.report",
+            "karmic.debt",
+            "cache.status",
+            "effect.trace",
         }
         if tool_name not in search_tools:
             return
@@ -371,4 +397,32 @@ def get_prefetcher() -> SpeculativePrefetcher:
         with _prefetcher_lock:
             if _prefetcher is None:
                 _prefetcher = SpeculativePrefetcher()
+                # Auto-register with CacheRegistry
+                try:
+                    from whitemagic.core.memory.cache_registry import get_cache_registry
+                    reg = get_cache_registry()
+                    reg.register(
+                        "prefetch",
+                        flush_func=_prefetcher._cache.invalidate,
+                        stats_func=_prefetcher.stats,
+                    )
+                except Exception:
+                    logger.debug("CacheRegistry registration skipped", exc_info=True)
+                # Listen for cross-agent Gana transitions (Phase 4)
+                try:
+                    from whitemagic.core.resonance import EventType, get_bus
+                    bus = get_bus()
+
+                    def _on_cache_transfer(event):
+                        if event.event_type == EventType.CACHE_TRANSFER:
+                            data = event.data
+                            prev = data.get("previous_gana")
+                            curr = data.get("gana")
+                            if prev and curr:
+                                _prefetcher._tracker.record(prev, curr)
+
+                    bus.listen(EventType.CACHE_TRANSFER, _on_cache_transfer)
+                    logger.debug("Prefetcher listening for CACHE_TRANSFER events")
+                except Exception:
+                    logger.debug("CACHE_TRANSFER subscription skipped", exc_info=True)
     return _prefetcher

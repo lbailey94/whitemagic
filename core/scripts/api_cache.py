@@ -12,6 +12,7 @@ class TTLCache:
     def __init__(self, default_ttl: float = 60.0):
         self._store: dict[str, tuple[Any, float]] = {}  # key -> (value, expires_at)
         self._default_ttl = default_ttl
+        self._registered: bool = False
 
     def get(self, key: str) -> Any | None:
         """Get cached value if not expired."""
@@ -80,4 +81,16 @@ def cached(key: str, ttl: float | None = None):
 
 def get_api_cache() -> TTLCache:
     """Get the global API cache instance."""
+    global _api_cache
+    if not _api_cache._registered:
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            reg = get_cache_registry()
+            reg.register(
+                "api",
+                flush_func=_api_cache.clear,
+            )
+            _api_cache._registered = True
+        except Exception:
+            pass
     return _api_cache

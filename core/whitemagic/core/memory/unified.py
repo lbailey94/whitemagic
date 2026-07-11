@@ -358,6 +358,29 @@ class UnifiedMemory:
             except Exception as _e:
                 logger.debug("Entity extraction failed: %s", _e, exc_info=True)
 
+        # Cache invalidation: write-invalidate protocol
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            get_cache_registry().invalidate_namespace(galaxy)
+        except Exception:
+            pass
+
+        # Emit CACHE_INVALIDATE event for multi-agent coherence
+        try:
+            from whitemagic.core.resonance import emit_event, EventType
+            emit_event(
+                source="memory_store",
+                event_type=EventType.CACHE_INVALIDATE,
+                data={
+                    "galaxy": galaxy,
+                    "memory_id": memory.id,
+                    "namespace": galaxy,
+                    "operation": "store",
+                },
+            )
+        except Exception:
+            pass
+
         return memory
 
     def recall(self, memory_id: str) -> Memory | None:
@@ -548,9 +571,18 @@ class UnifiedMemory:
         spatial_weight: float = 0.5,
         include_cold: bool = False,
         axis_weights: dict[str, float] | None = None,
+        entity_boost_weight: float = 0.3,
+        rerank: bool = True,
+        include_skills: bool = True,
     ) -> list[Memory]:
         """Hybrid retrieval combining BM25 lexical search + embedding semantic
         search + 5D holographic spatial search via Reciprocal Rank Fusion (RRF).
+
+        v24.3 upgrades:
+          - Entity-graph retrieval boosting (entity_boost_weight)
+          - Second-pass reranking (rerank=True)
+          - Procedural memory integration (include_skills=True)
+          - Time-decay scoring (built into reranker)
 
         RRF score = Σ weight_i / (k + rank_i)
 
@@ -564,6 +596,10 @@ class UnifiedMemory:
             spatial_weight: Weight for 5D spatial rankings (v15.1 Enhancement).
             include_cold: If True, also search cold DB embeddings.
             axis_weights: Optional weights for 5D axes (x, y, z, w, v).
+            entity_boost_weight: Weight for entity-graph retrieval boosting (v24.3).
+                Set to 0 to disable entity boosting.
+            rerank: If True, apply second-pass multi-signal reranking (v24.3).
+            include_skills: If True, match query against SkillForge triggers (v24.3).
         """
         from collections import defaultdict
 
@@ -651,6 +687,26 @@ class UnifiedMemory:
             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
                 logger.debug("Holographic query failed: %s", _e, exc_info=True)
 
+        # v24.3: Entity-graph retrieval boosting
+        query_entities: list[str] = []
+        if entity_boost_weight > 0:
+            try:
+                from whitemagic.core.memory.entity_reranker import (
+                    apply_entity_boosts,
+                    extract_query_entities,
+                )
+
+                query_entities = extract_query_entities(query)
+                if query_entities:
+                    rrf_scores = apply_entity_boosts(
+                        rrf_scores,
+                        query_entities,
+                        entity_weight=entity_boost_weight,
+                        backend=self._galaxy_backend,
+                    )
+            except (ImportError, ModuleNotFoundError, Exception) as _e:
+                logger.debug("Entity boost failed: %s", _e, exc_info=True)
+
         if not rrf_scores:
             return []
 
@@ -695,7 +751,7 @@ class UnifiedMemory:
         ranked_ids = sorted(rrf_scores.keys(), key=lambda mid: rrf_scores[mid], reverse=True)
         results = []
         for mid in ranked_ids[:
-            limit]:
+            limit * 2]:  # Over-fetch for reranking
             mem = all_memories.get(mid)  # type: ignore[assignment]
             if mem:
                 mem.metadata["rrf_score"] = round(rrf_scores[mid], 6)
@@ -711,6 +767,46 @@ class UnifiedMemory:
                 if query_constellation_name:
                     mem.metadata["query_constellation"] = query_constellation_name
                 results.append(mem)
+
+        # v24.3: Second-pass reranking with multi-signal scoring
+        if rerank and len(results) > 1:
+            try:
+                from whitemagic.core.memory.entity_reranker import rerank_results
+
+                results = rerank_results(results, query, query_entities)
+            except (ImportError, ModuleNotFoundError, Exception) as _e:
+                logger.debug("Reranking failed: %s", _e, exc_info=True)
+
+        # Trim to final limit after reranking
+        results = results[:limit]
+
+        # v24.3: Procedural memory integration — inject matching skills
+        if include_skills:
+            try:
+                from whitemagic.core.memory.entity_reranker import match_procedural_skills
+
+                skill_matches = match_procedural_skills(query)
+                if skill_matches:
+                    for skill_info in skill_matches:
+                        # Inject as metadata on first result, or as a standalone entry
+                        if results:
+                            existing_skills = results[0].metadata.get("procedural_skills", [])
+                            existing_skills.append(skill_info)  # type: ignore[assignment]
+                            results[0].metadata["procedural_skills"] = existing_skills
+                        else:
+                            # No regular results — create a synthetic skill result
+                            skill_mem = Memory(
+                                id=f"skill:{skill_info['skill_name']}",
+                                content=f"Procedural skill: {skill_info['description']}",
+                                memory_type=MemoryType.PROCEDURAL,
+                                importance=0.8,
+                                title=skill_info["skill_name"],
+                            )
+                            skill_mem.metadata["procedural_skill"] = skill_info
+                            skill_mem.metadata["retrieval_channels"] = "procedural"
+                            results.append(skill_mem)
+            except (ImportError, ModuleNotFoundError, Exception) as _e:
+                logger.debug("Skill matching failed: %s", _e, exc_info=True)
 
         # Constellation annotation via hooks (breaks circular dep)
         if results:
@@ -734,13 +830,24 @@ class UnifiedMemory:
 
         Returns list of dicts with memory data + reasoning paths.
         """
+        # Check HybridRecallCache first
+        try:
+            from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
+            hcache = get_hybrid_cache()
+            cached = hcache.get_query_result(query, limit=final_limit)
+            if cached:
+                logger.debug("hybrid_recall cache HIT for query: %s", query[:80])
+                return cached
+        except Exception:
+            pass
+
         # 1. Try CoreAccessLayer (vector + graph RRF with Rust acceleration)
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
             cal = get_core_access()
             results = cal.hybrid_recall(query=query, k=final_limit)
             if results:
-                return [
+                formatted = [
                     {
                         "memory_id": r.memory_id,
                         "title": r.title,
@@ -751,6 +858,12 @@ class UnifiedMemory:
                     }
                     for r in results
                 ]
+                try:
+                    from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
+                    get_hybrid_cache().put_query_result(query, formatted, limit=final_limit)
+                except Exception:
+                    pass
+                return formatted
         except Exception as e:
             logger.debug("hybrid_recall: CoreAccessLayer unavailable: %s", e, exc_info=True)
 
@@ -758,18 +871,25 @@ class UnifiedMemory:
         try:
             from whitemagic.core.memory.graph_walker import get_graph_walker
             walker = get_graph_walker()
-            return cast(list[dict[str, Any]], walker.hybrid_recall(
+            gw_results = cast(list[dict[str, Any]], walker.hybrid_recall(
                 query=query,
                 hops=hops,
                 anchor_limit=anchor_limit,
                 final_limit=final_limit,
             ))
+            if gw_results:
+                try:
+                    from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
+                    get_hybrid_cache().put_query_result(query, gw_results, limit=final_limit)
+                except Exception:
+                    pass
+            return gw_results
         except Exception as e:
             logger.debug("hybrid_recall: graph walker unavailable, falling back to search_hybrid: %s", e, exc_info=True)
 
         # 3. Fallback to standard 3-channel hybrid search
         results = self.search_hybrid(query=query, limit=final_limit)
-        return [
+        formatted = [
             {
                 "memory_id": m.id,
                 "title": m.title,
@@ -779,6 +899,13 @@ class UnifiedMemory:
             }
             for m in results
         ]
+        if formatted:
+            try:
+                from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
+                get_hybrid_cache().put_query_result(query, formatted, limit=final_limit)
+            except Exception:
+                pass
+        return formatted
 
     def associate(self, memory_id1: str, memory_id2: str, strength: float = 0.5) -> None:
         """Create bidirectional association between memories."""

@@ -400,4 +400,15 @@ def get_memory_cache(max_size: int = 1000) -> MemoryCache:
     global _memory_cache
     if _memory_cache is None:
         _memory_cache = MemoryCache(max_size=max_size)
+        # Auto-register with CacheRegistry
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            reg = get_cache_registry()
+            reg.register(
+                "predictive",
+                flush_func=_memory_cache.cache.clear,
+                stats_func=_memory_cache.get_stats,
+            )
+        except Exception:
+            logger.debug("CacheRegistry registration skipped", exc_info=True)
     return _memory_cache

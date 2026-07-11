@@ -57,7 +57,6 @@ class ConsolidationEngine:
         self.enable_parallel = self.config.get("enable_parallel", True)
         self.worker_count = self.config.get("worker_count", IO_WORKERS)
 
-    @lru_cache(maxsize=128)
     def should_consolidate(self) -> dict[str, Any]:
         """Check if consolidation is needed (sync version)."""
         try:
@@ -132,7 +131,6 @@ class ConsolidationEngine:
                 "error": str(e),
             }
 
-    @lru_cache(maxsize=128)
     def find_old_memories(self) -> list[dict[str, Any]]:
         """Find memories older than age threshold."""
         cutoff_date = datetime.now() - timedelta(days=self.thresholds["age_days"])
@@ -157,7 +155,6 @@ class ConsolidationEngine:
 
         return old
 
-    @lru_cache(maxsize=128)
     def find_duplicates(self) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
         """Find similar/duplicate memories by title."""
         short_term_files = self.manager.read_recent_memories(

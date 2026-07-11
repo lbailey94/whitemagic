@@ -66,6 +66,7 @@ def test_full_cognitive_cycle():
 
     from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
     sensorium = get_neuro_sensorium()
+    sensorium.invalidate()  # Clear any stale cache from prior tests
     state = sensorium.compute_sensorium()
     enrichment = sensorium.get_citta_enrichment()
 
@@ -94,6 +95,7 @@ def test_neuro_sensorium_reflects_activity():
     tag_ripple(["s1", "s2", "s3"], emotional_weight=1.5)
 
     sensorium = get_neuro_sensorium()
+    sensorium.invalidate()  # Clear cache to pick up new thalamic context
     state = sensorium.compute_sensorium()
 
     assert state["thalamic_context"] == "introspection"

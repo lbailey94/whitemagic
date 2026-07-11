@@ -184,8 +184,8 @@ class ContextSynthesizer:
     Caches results briefly to avoid redundant computation.
     """
 
-    # Cache TTL in seconds
-    CACHE_TTL = 2.0
+    # Cache TTL in seconds (extended from 2s to 10s per cache coherence strategy)
+    CACHE_TTL = 10.0
 
     def __init__(self) -> None:
         self._cache: UnifiedContext | None = None
@@ -199,6 +199,11 @@ class ContextSynthesizer:
         self._gan_ying_bus: Any | None = None
 
         logger.info("ContextSynthesizer initialized")
+
+    def invalidate(self) -> None:
+        """Invalidate cached context, forcing re-gather on next access."""
+        self._cache = None
+        self._cache_time = None
 
     def _ensure_initialized(self) -> None:
         """Lazy initialization of system connections."""

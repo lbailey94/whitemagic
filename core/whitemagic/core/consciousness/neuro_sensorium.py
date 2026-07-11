@@ -37,6 +37,12 @@ class NeuroSensorium:
         self._last_update = 0.0
         self._cached_state: dict[str, Any] = {}
         self._total_updates = 0
+        self._cache_ttl = 5.0  # 5s cache for sensorium signals
+
+    def invalidate(self) -> None:
+        """Clear cached sensorium state, forcing recompute on next access."""
+        self._cached_state = {}
+        self._last_update = 0.0
 
     def compute_sensorium(self) -> dict[str, Any]:
         """Compute the full neuro-cognitive sensorium state.
@@ -44,8 +50,13 @@ class NeuroSensorium:
         Returns a dict with signals from all 9 neuro-upgrade systems,
         normalized for injection into the citta cycle.
         """
+        # Cache check: return cached state if fresh
+        now = time.time()
+        if self._cached_state and (now - self._last_update) < self._cache_ttl:
+            return self._cached_state
+
         self._total_updates += 1
-        self._last_update = time.time()
+        self._last_update = now
 
         signals: dict[str, Any] = {}
 

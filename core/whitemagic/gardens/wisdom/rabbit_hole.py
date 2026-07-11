@@ -586,7 +586,6 @@ class ResearchReport:
     novelty_by_level: list[float] = field(default_factory=list)  # novelty per level
     created: datetime = field(default_factory=datetime.now)
 
-    @lru_cache(maxsize=128)
     def to_markdown(self) -> str:
         """Convert report to markdown format."""
         lines = [

@@ -42,16 +42,13 @@ class InferenceResult:
 class PatternMatcher:
     """Fast pattern matching using regex and fuzzy search."""
 
-    @lru_cache(maxsize=128)  # type: ignore[misc]
     def __init__(self) -> None:
         self._patterns: dict[str, tuple[str, str]] = {}  # name -> (pattern, template)
 
-    @lru_cache(maxsize=128)
     def add_pattern(self, name: str, pattern: str, response_template: str) -> None:
         """Add a pattern with response template."""
         self._patterns[name] = (pattern, response_template)
 
-    @lru_cache(maxsize=128)
     def match(self, query: str) -> tuple[str, str, dict[str, Any]] | None:
         """Match query against patterns, return (name, response, captures)."""
         query_lower = query.lower()

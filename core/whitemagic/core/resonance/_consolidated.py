@@ -380,6 +380,10 @@ class EventType(Enum):
     # Adapter events
     DECISION_REQUESTED = "decision_requested"
 
+    # Cache coherence events (Phase 3: Multi-agent cache coherence)
+    CACHE_INVALIDATE = "cache_invalidate"
+    CACHE_TRANSFER = "cache_transfer"
+
 
 @dataclass
 class ResonanceEvent:

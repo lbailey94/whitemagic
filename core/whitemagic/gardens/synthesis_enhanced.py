@@ -42,7 +42,6 @@ class SynthesisEvent:
 class InsightGenerator:
     """Local inference engine for generating insights"""
 
-    @lru_cache(maxsize=128)
     def __init__(self):
         # Insight templates based on garden combinations
         self.insight_templates = {

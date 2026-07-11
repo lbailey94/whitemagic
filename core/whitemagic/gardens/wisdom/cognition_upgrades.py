@@ -52,7 +52,6 @@ class CognitionUpgrade:
     implementation: str
     applied_at: datetime = field(default_factory=datetime.now)
 
-    @lru_cache(maxsize=128)
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
@@ -78,12 +77,10 @@ class SakshiObserver:
     From Rabbit Hole #9 and Lucas's consciousness.md
     """
 
-    @lru_cache(maxsize=128)
     def __init__(self):
         self._observations: list[dict[str, Any]] = []
         self._meta_observations: list[dict[str, Any]] = []  # Observing the observer
 
-    @lru_cache(maxsize=128)
     def observe(self, subject: str, state: Any, metadata: dict | None = None) -> dict:
         """
         Pure observation without modification.
@@ -100,7 +97,6 @@ class SakshiObserver:
         self._observations.append(observation)
         return observation
 
-    @lru_cache(maxsize=128)
     def observe_self(self) -> dict:
         """
         Meta-observation: the observer observing itself.
@@ -117,7 +113,6 @@ class SakshiObserver:
         self._meta_observations.append(meta)
         return meta
 
-    @lru_cache(maxsize=128)
     def _get_current_state(self) -> str:
         """Determine current consciousness state"""
         count = len(self._observations)

@@ -380,6 +380,16 @@ def get_redis_cache(config: CacheConfig | None = None) -> RedisCache:
         if config is None:
             config = CacheConfig()
         _redis_cache = RedisCache(config)
+        # Auto-register with CacheRegistry
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            reg = get_cache_registry()
+            reg.register(
+                "redis",
+                flush_func=_redis_cache.clear,
+            )
+        except Exception:
+            logger.debug("CacheRegistry registration skipped", exc_info=True)
 
     return _redis_cache
 
