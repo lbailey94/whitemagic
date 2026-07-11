@@ -63,6 +63,7 @@ jupyter_core==5.9.1
 jupyterlab_pygments==0.3.0
 keyring==25.7.0
 librt==0.7.8
+loro==1.13.1
 lupa==2.6
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3

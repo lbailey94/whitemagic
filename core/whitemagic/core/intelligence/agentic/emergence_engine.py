@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.galaxy_scan import scan_query_all
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -205,30 +206,23 @@ class EmergenceEngine:
 
     def _detect_tag_clusters(self) -> list[EmergenceInsight]:
         """Find tags that co-occur more frequently than expected by chance."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
         try:
             cutoff = (datetime.now() - timedelta(days=7)).isoformat()
-            cur.execute(
-                """
-                SELECT t1.tag as tag_a, t2.tag as tag_b, COUNT(*) as co_count
-                FROM tags t1
-                JOIN tags t2 ON t1.memory_id = t2.memory_id AND t1.tag < t2.tag
-                JOIN memories m ON t1.memory_id = m.id
-                WHERE m.created_at > ?
-                GROUP BY t1.tag, t2.tag
-                HAVING co_count >= 3
-                ORDER BY co_count DESC
-                LIMIT 10
-            """,
+            rows = scan_query_all(
+                "SELECT t1.tag as tag_a, t2.tag as tag_b, COUNT(*) as co_count "
+                "FROM tags t1 "
+                "JOIN tags t2 ON t1.memory_id = t2.memory_id AND t1.tag < t2.tag "
+                "JOIN memories m ON t1.memory_id = m.id "
+                "WHERE m.created_at > ? "
+                "GROUP BY t1.tag, t2.tag "
+                "HAVING co_count >= 3 "
+                "ORDER BY co_count DESC LIMIT 10",
                 (cutoff,),
             )
         except Exception as e:
             logger.debug("Tag cluster detection skipped: %s", e, exc_info=True)
             return []
 
-        rows = cur.fetchall()
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag_a, tag_b, count = r["tag_a"], r["tag_b"], r["co_count"]
@@ -247,27 +241,19 @@ class EmergenceEngine:
 
     def _detect_resonance_cascades(self) -> list[EmergenceInsight]:
         """Find bursts of related memories appearing in short time windows."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
         try:
-            # Find tags that had a burst of activity (>=5 memories in a single hour)
-            cur.execute("""
-                SELECT t.tag, COUNT(*) as burst_count,
-                       MIN(m.created_at) as first_seen, MAX(m.created_at) as last_seen
-                FROM tags t
-                JOIN memories m ON t.memory_id = m.id
-                WHERE m.created_at > datetime('now', '-3 days')
-                GROUP BY t.tag
-                HAVING burst_count >= 5
-                ORDER BY burst_count DESC
-                LIMIT 10
-            """)
+            rows = scan_query_all(
+                "SELECT t.tag, COUNT(*) as burst_count, "
+                "MIN(m.created_at) as first_seen, MAX(m.created_at) as last_seen "
+                "FROM tags t JOIN memories m ON t.memory_id = m.id "
+                "WHERE m.created_at > datetime('now', '-3 days') "
+                "GROUP BY t.tag HAVING burst_count >= 5 "
+                "ORDER BY burst_count DESC LIMIT 10"
+            )
         except Exception as e:
             logger.debug("Resonance cascade detection skipped: %s", e, exc_info=True)
             return []
 
-        rows = cur.fetchall()
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag, count = r["tag"], r["burst_count"]
@@ -286,39 +272,31 @@ class EmergenceEngine:
 
     def _detect_novelty_spikes(self) -> list[EmergenceInsight]:
         """Find tags that are newly appearing or suddenly increasing in frequency."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
         try:
-            # Compare tag frequency in last 3 days vs previous 30 days
-            cur.execute("""
-                SELECT recent.tag,
-                       recent.recent_count,
-                       COALESCE(historical.hist_count, 0) as hist_count
-                FROM (
-                    SELECT t.tag, COUNT(*) as recent_count
-                    FROM tags t
-                    JOIN memories m ON t.memory_id = m.id
-                    WHERE m.created_at > datetime('now', '-3 days')
-                    GROUP BY t.tag
-                ) recent
-                LEFT JOIN (
-                    SELECT t.tag, COUNT(*) as hist_count
-                    FROM tags t
-                    JOIN memories m ON t.memory_id = m.id
-                    WHERE m.created_at BETWEEN datetime('now', '-33 days') AND datetime('now', '-3 days')
-                    GROUP BY t.tag
-                ) historical ON recent.tag = historical.tag
-                WHERE recent.recent_count >= 3
-                  AND (historical.hist_count = 0 OR recent.recent_count > historical.hist_count * 2)
-                ORDER BY recent.recent_count DESC
-                LIMIT 10
-            """)
+            rows = scan_query_all(
+                "SELECT recent.tag, "
+                "recent.recent_count, "
+                "COALESCE(historical.hist_count, 0) as hist_count "
+                "FROM ("
+                "  SELECT t.tag, COUNT(*) as recent_count "
+                "  FROM tags t JOIN memories m ON t.memory_id = m.id "
+                "  WHERE m.created_at > datetime('now', '-3 days') "
+                "  GROUP BY t.tag"
+                ") recent "
+                "LEFT JOIN ("
+                "  SELECT t.tag, COUNT(*) as hist_count "
+                "  FROM tags t JOIN memories m ON t.memory_id = m.id "
+                "  WHERE m.created_at BETWEEN datetime('now', '-33 days') AND datetime('now', '-3 days') "
+                "  GROUP BY t.tag"
+                ") historical ON recent.tag = historical.tag "
+                "WHERE recent.recent_count >= 3 "
+                "  AND (historical.hist_count = 0 OR recent.recent_count > historical.hist_count * 2) "
+                "ORDER BY recent.recent_count DESC LIMIT 10"
+            )
         except Exception as e:
             logger.debug("Novelty spike detection skipped: %s", e, exc_info=True)
             return []
 
-        rows = cur.fetchall()
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag, recent, hist = r["tag"], r["recent_count"], r["hist_count"]

@@ -552,6 +552,26 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_ox",
         "skill.seed",
     ),
+    (
+        re.compile(r"\b(amend.*skill|skill.*amend|fix.*skill|improve.*skill|repair.*skill)\b", re.I),
+        "gana_ox",
+        "skill.amend",
+    ),
+    (
+        re.compile(r"\b(skill.*history|skill.*health|skill.*performance|skill.*stats)\b", re.I),
+        "gana_ox",
+        "skill.history",
+    ),
+    (
+        re.compile(r"\b(rollback.*skill|skill.*rollback|revert.*skill|undo.*skill)\b", re.I),
+        "gana_ox",
+        "skill.rollback",
+    ),
+    (
+        re.compile(r"\b(evaluate.*skill|skill.*evaluate|assess.*amendment|amendment.*result)\b", re.I),
+        "gana_ox",
+        "skill.evaluate",
+    ),
     # Session management — specific session tools (must be before generic 'session')
     (re.compile(r"\b(session.*record|record.*session)\b", re.I), "gana_heart", "session.record"),
     (re.compile(r"\b(session.*replay|replay.*session)\b", re.I), "gana_heart", "session.replay"),
@@ -1693,6 +1713,46 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(memory.*read\b|read.*memory\b)", re.I), "gana_winnowing_basket", "memory_read"),
     (re.compile(r"\b(memory.*search\b)", re.I), "gana_winnowing_basket", "memory_search"),
     (re.compile(r"\b(search.*query\b|query.*search\b)", re.I), "gana_winnowing_basket", "search_query"),
+    # v24.3: Hyperspace Integration — Research DAG, Autoswarm, Warps, Mesh
+    (re.compile(r"\b(research.*dag.*submit|submit.*hypothesis)\b", re.I), "gana_winnowing_basket", "research.dag.submit"),
+    (re.compile(r"\b(research.*dag.*result|record.*experiment.*result)\b", re.I), "gana_winnowing_basket", "research.dag.result"),
+    (re.compile(r"\b(research.*dag.*critique|peer.*critique|critique.*experiment)\b", re.I), "gana_three_stars", "research.dag.critique"),
+    (re.compile(r"\b(research.*dag.*lineage|experiment.*lineage|experiment.*ancestry)\b", re.I), "gana_winnowing_basket", "research.dag.lineage"),
+    (re.compile(r"\b(research.*breakthrough|breakthrough.*list)\b", re.I), "gana_winnowing_basket", "research.dag.breakthroughs"),
+    (re.compile(r"\b(research.*dag.*stats|experiment.*stats)\b", re.I), "gana_winnowing_basket", "research.dag.stats"),
+    (re.compile(r"\b(research.*leaderboard|domain.*leaderboard)\b", re.I), "gana_winnowing_basket", "research.dag.leaderboard"),
+    (re.compile(r"\b(research.*dag.*experiment|list.*experiment)\b", re.I), "gana_winnowing_basket", "research.dag.experiments"),
+    (re.compile(r"\b(autoswarm.*campaign|evolutionary.*campaign|launch.*campaign)\b", re.I), "gana_chariot", "autoswarm.campaign"),
+    (re.compile(r"\b(autoswarm.*status|evolutionary.*status)\b", re.I), "gana_ghost", "autoswarm.status"),
+    (re.compile(r"\b(autoswarm.*start|start.*autoswarm|start.*evolutionary)\b", re.I), "gana_chariot", "autoswarm.start"),
+    (re.compile(r"\b(autoswarm.*stop|stop.*autoswarm|stop.*evolutionary)\b", re.I), "gana_chariot", "autoswarm.stop"),
+    (re.compile(r"\b(warp.*load|load.*warp|apply.*warp)\b", re.I), "gana_dipper", "warp.load"),
+    (re.compile(r"\b(warp.*list|list.*warp|available.*warp)\b", re.I), "gana_dipper", "warp.list"),
+    (re.compile(r"\b(warp.*create|create.*warp|custom.*warp)\b", re.I), "gana_dipper", "warp.create"),
+    (re.compile(r"\b(warp.*delete|delete.*warp|remove.*warp)\b", re.I), "gana_dipper", "warp.delete"),
+    (re.compile(r"\b(warp.*status|warp.*manager)\b", re.I), "gana_dipper", "warp.status"),
+    (re.compile(r"\b(mesh.*experiment.*share|share.*experiment.*mesh)\b", re.I), "gana_wings", "mesh.experiment.share"),
+    (re.compile(r"\b(mesh.*experiment.*receive|receive.*experiment)\b", re.I), "gana_chariot", "mesh.experiment.receive"),
+    (re.compile(r"\b(mesh.*experiment.*status|experiment.*sync.*status)\b", re.I), "gana_wings", "mesh.experiment.status"),
+    (re.compile(r"\b(mesh.*experiment.*peer|peer.*experiment)\b", re.I), "gana_wings", "mesh.experiment.peers"),
+    (re.compile(r"\b(mesh.*experiment.*discover|discover.*mesh.*peer)\b", re.I), "gana_wings", "mesh.experiment.discover"),
+    # v24.3: Research DAG Synthesis
+    (re.compile(r"\b(research.*synthe|synthe.*research|auto.*research.*paper|generate.*synthesis)\b", re.I), "gana_three_stars", "research.dag.synthesize"),
+    # v24.3: CRDT Leaderboard
+    (re.compile(r"\b(leaderboard.*submit|submit.*leaderboard)\b", re.I), "gana_wings", "leaderboard.submit"),
+    (re.compile(r"\b(leaderboard.*top|top.*leaderboard|crdt.*leaderboard)\b", re.I), "gana_wings", "leaderboard.top"),
+    (re.compile(r"\b(leaderboard.*status|crdt.*status)\b", re.I), "gana_wings", "leaderboard.status"),
+    (re.compile(r"\b(leaderboard.*merge|merge.*leaderboard|merge.*remote.*leaderboard)\b", re.I), "gana_wings", "leaderboard.merge"),
+    # v24.3: Pulse Verification
+    (re.compile(r"\b(pulse.*verify|verify.*pulse|experiment.*verification|tiered.*verification)\b", re.I), "gana_hairy_head", "pulse.verify"),
+    (re.compile(r"\b(pulse.*verification.*status|verification.*system.*status)\b", re.I), "gana_hairy_head", "pulse.verify.status"),
+    # v24.3: Critique Protocol
+    (re.compile(r"\b(critique.*submit|submit.*critique|peer.*review.*submit)\b", re.I), "gana_three_stars", "critique.submit"),
+    (re.compile(r"\b(critique.*auto|auto.*critique|automatic.*critique)\b", re.I), "gana_three_stars", "critique.auto"),
+    (re.compile(r"\b(critique.*status|critique.*protocol.*status)\b", re.I), "gana_three_stars", "critique.status"),
+    # v24.3: Durable Archive
+    (re.compile(r"\b(archive.*run|run.*archive|durable.*archive|snapshot.*breakthrough)\b", re.I), "gana_wings", "archive.run"),
+    (re.compile(r"\b(archive.*status|durable.*archive.*status)\b", re.I), "gana_wings", "archive.status"),
 ]
 
 

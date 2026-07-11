@@ -9,6 +9,10 @@ import logging
 import random
 import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.galaxy_scan import (
+    execute_across_galaxies,
+    scan_query_all,
+)
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -169,24 +173,15 @@ class SerendipityEngine:
             return self._surface_random(count)
 
     def _surface_dormant(self, count: int) -> list[SurfacedMemory]:
-        """Surface high-gravity, rarely-accessed memories."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
-                   h.w as gravity, m.accessed_at, m.access_count
-            FROM memories m
-            JOIN holographic_coords h ON m.id = h.memory_id
-            WHERE h.w > 0.5
-            ORDER BY (1.0 / MAX(1, m.access_count)) * h.w DESC
-            LIMIT ?
-        """,
+        """Surface high-gravity, rarely-accessed memories across all galaxies."""
+        candidates = scan_query_all(
+            "SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview, "
+            "h.w as gravity, m.accessed_at, m.access_count "
+            "FROM memories m JOIN holographic_coords h ON m.id = h.memory_id "
+            "WHERE h.w > 0.5 "
+            "ORDER BY (1.0 / MAX(1, m.access_count)) * h.w DESC LIMIT ?",
             (count * 2,),
         )
-
-        candidates = cur.fetchall()
 
         # Weighted random selection
         if not candidates:
@@ -217,26 +212,17 @@ class SerendipityEngine:
         ]
 
     def _surface_ancient(self, count: int) -> list[SurfacedMemory]:
-        """Surface old memories that may be forgotten."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
+        """Surface old memories that may be forgotten across all galaxies."""
         threshold = (datetime.now() - timedelta(days=30)).isoformat()
 
-        cur.execute(
-            """
-            SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
-                   h.w as gravity, m.accessed_at, m.access_count, m.created_at
-            FROM memories m
-            JOIN holographic_coords h ON m.id = h.memory_id
-            WHERE m.created_at < ? AND h.w > 0.3
-            ORDER BY RANDOM()
-            LIMIT ?
-        """,
+        memories = scan_query_all(
+            "SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview, "
+            "h.w as gravity, m.accessed_at, m.access_count, m.created_at "
+            "FROM memories m JOIN holographic_coords h ON m.id = h.memory_id "
+            "WHERE m.created_at < ? AND h.w > 0.3 "
+            "ORDER BY RANDOM() LIMIT ?",
             (threshold, count),
         )
-
-        memories = cur.fetchall()
 
         return [
             SurfacedMemory(
@@ -255,26 +241,16 @@ class SerendipityEngine:
         ]
 
     def _surface_bridges(self, count: int) -> list[SurfacedMemory]:
-        """Surface memories that could bridge clusters."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
-        # Find memories near cluster boundaries (x or y near 0)
-        cur.execute(
-            """
-            SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
-                   h.w as gravity, m.accessed_at, m.access_count,
-                   ABS(h.x) + ABS(h.y) as boundary_distance
-            FROM memories m
-            JOIN holographic_coords h ON m.id = h.memory_id
-            WHERE ABS(h.x) < 0.3 OR ABS(h.y) < 0.3
-            ORDER BY RANDOM()
-            LIMIT ?
-        """,
+        """Surface memories that could bridge clusters across all galaxies."""
+        memories = scan_query_all(
+            "SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview, "
+            "h.w as gravity, m.accessed_at, m.access_count, "
+            "ABS(h.x) + ABS(h.y) as boundary_distance "
+            "FROM memories m JOIN holographic_coords h ON m.id = h.memory_id "
+            "WHERE ABS(h.x) < 0.3 OR ABS(h.y) < 0.3 "
+            "ORDER BY RANDOM() LIMIT ?",
             (count,),
         )
-
-        memories = cur.fetchall()
 
         return [
             SurfacedMemory(
@@ -293,23 +269,14 @@ class SerendipityEngine:
         ]
 
     def _surface_random(self, count: int) -> list[SurfacedMemory]:
-        """Pure random selection."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview,
-                   h.w as gravity, m.accessed_at, m.access_count
-            FROM memories m
-            JOIN holographic_coords h ON m.id = h.memory_id
-            ORDER BY RANDOM()
-            LIMIT ?
-        """,
+        """Pure random selection across all galaxies."""
+        memories = scan_query_all(
+            "SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview, "
+            "h.w as gravity, m.accessed_at, m.access_count "
+            "FROM memories m JOIN holographic_coords h ON m.id = h.memory_id "
+            "ORDER BY RANDOM() LIMIT ?",
             (count,),
         )
-
-        memories = cur.fetchall()
 
         return [
             SurfacedMemory(
@@ -329,26 +296,20 @@ class SerendipityEngine:
 
     def mark_accessed(self, memory_id: str) -> None:
         """Mark a memory as accessed and emit Gan Ying event."""
-        import sqlite3
         import time
 
-        conn = self._get_conn()
-        cur = conn.cursor()
         for attempt in range(6):
             try:
-                cur.execute(
-                    """
-                    UPDATE memories
-                    SET access_count = COALESCE(access_count, 0) + 1,
-                        accessed_at = ?
-                    WHERE id = ?
-                    """,
+                affected = execute_across_galaxies(
+                    "UPDATE memories "
+                    "SET access_count = COALESCE(access_count, 0) + 1, "
+                    "    accessed_at = ? "
+                    "WHERE id = ?",
                     (datetime.now().isoformat(), memory_id),
                 )
-                conn.commit()
-                break
-            except sqlite3.OperationalError as exc:
-                # SQLite can transiently lock under concurrent writers. Retry a few times.
+                if affected > 0:
+                    break
+            except Exception as exc:
                 if "locked" not in str(exc).lower() or attempt >= 5:
                     raise
                 time.sleep(0.05 * (2**attempt))
@@ -402,7 +363,6 @@ class SerendipityEngine:
         if not bridges:
             return self._surface_random(count)
 
-        conn = self._get_conn()
         results = []
 
         # N+1 fix: collect all unique IDs first, then batch-fetch in one query
@@ -420,16 +380,16 @@ class SerendipityEngine:
         if ordered_mids:
             try:
                 ph = ",".join("?" * len(ordered_mids))
-                rows = conn.execute(
+                rows = scan_query_all(
                     "SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as preview, "
                     "h.w as gravity, m.accessed_at, m.access_count "
                     "FROM memories m "
                     "JOIN holographic_coords h ON m.id = h.memory_id "
                     f"WHERE m.id IN ({ph})",
                     ordered_mids,
-                ).fetchall()
+                )
                 row_map = {r["id"]: r for r in rows}
-            except sqlite3.Error:
+            except Exception:
                 row_map = {}
         else:
             row_map = {}
@@ -475,22 +435,21 @@ class SerendipityEngine:
         if not orphans:
             return self._surface_random(count)
 
-        conn = self._get_conn()
         results = []
 
-        # N+1 fix: batch-fetch all orphan previews in one query
+        # N+1 fix: batch-fetch all orphan previews across all galaxies
         orphan_ids = [o.get("id", "") for o in orphans if o.get("id")]
         row_map: dict[str, Any] = {}
         if orphan_ids:
             try:
                 ph = ",".join("?" * len(orphan_ids))
-                rows = conn.execute(
+                rows = scan_query_all(
                     f"SELECT id, SUBSTR(content, 1, 200) as preview, accessed_at, access_count "
                     f"FROM memories WHERE id IN ({ph})",
                     orphan_ids,
-                ).fetchall()
+                )
                 row_map = {r["id"]: r for r in rows}
-            except sqlite3.Error:
+            except Exception:
                 logger.debug("Swallowed exception", exc_info=True)
 
         for orphan in orphans:

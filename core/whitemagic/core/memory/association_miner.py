@@ -427,29 +427,27 @@ class AssociationMiner:
 
         report.pairs_evaluated = len(pairs)
 
-        # Filter out existing associations
+        # Filter out existing associations across all galaxy DBs
         existing_assoc: set[tuple[str, str]] = set()
         try:
-            from whitemagic.core.memory.unified import get_unified_memory
-            um = get_unified_memory()
-            # Use pool connection (proxied to default backend via GalaxyAwareBackend)
-            with um.backend.pool.connection() as conn:
-                candidate_ids = set()
-                for pair_item in pairs:
-                    candidate_ids.add(pair_item["source_id"])
-                    candidate_ids.add(pair_item["target_id"])
+            from whitemagic.core.memory.galaxy_scan import scan_query_all
+            candidate_ids = set()
+            for pair_item in pairs:
+                candidate_ids.add(pair_item["source_id"])
+                candidate_ids.add(pair_item["target_id"])
 
-                if candidate_ids:
-                    placeholders = ",".join("?" * len(candidate_ids))
-                    rows = conn.execute(
-                        f"""SELECT source_id, target_id FROM associations
-                            WHERE source_id IN ({placeholders})
-                            OR target_id IN ({placeholders})""",
-                        list(candidate_ids) + list(candidate_ids),
-                    ).fetchall()
-                    for row in rows:
-                        existing_assoc.add((row[0], row[1]))
-                        existing_assoc.add((row[1], row[0]))
+            if candidate_ids:
+                placeholders = ",".join("?" * len(candidate_ids))
+                id_list = list(candidate_ids)
+                rows = scan_query_all(
+                    f"SELECT source_id, target_id FROM associations "
+                    f"WHERE source_id IN ({placeholders}) "
+                    f"OR target_id IN ({placeholders})",
+                    id_list + id_list,
+                )
+                for row in rows:
+                    existing_assoc.add((row[0], row[1]))
+                    existing_assoc.add((row[1], row[0]))
         except Exception as e:
             logger.debug("Semantic mining: could not load existing associations: %s", e)
 
@@ -482,6 +480,8 @@ class AssociationMiner:
         # Persist using galaxy-aware add_association
         if persist and proposals:
             try:
+                from whitemagic.core.memory.unified import get_unified_memory
+                um = get_unified_memory()
                 for proposal in proposals:
                     try:
                         um.backend.add_association(proposal.source_id, proposal.target_id, proposal.overlap_score)

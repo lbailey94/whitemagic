@@ -1398,7 +1398,11 @@ class TestSkillForgeMcpHandlers:
         """Dispatch table contains all skill forge handlers."""
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 
-        expected = ["skill.list", "skill.invoke", "skill.seed", "skill.export_all", "skill.import"]
+        expected = [
+            "skill.list", "skill.invoke", "skill.seed", "skill.export_all",
+            "skill.import", "skill.amend", "skill.history", "skill.rollback",
+            "skill.evaluate",
+        ]
         for name in expected:
             assert name in DISPATCH_TABLE, f"Missing dispatch entry: {name}"
 
@@ -1406,7 +1410,585 @@ class TestSkillForgeMcpHandlers:
         """PRAT mappings route skill tools to gana_ox."""
         from whitemagic.tools.prat_mappings import TOOL_TO_GANA
 
-        expected = ["skill.list", "skill.invoke", "skill.seed", "skill.export_all", "skill.import"]
+        expected = [
+            "skill.list", "skill.invoke", "skill.seed", "skill.export_all",
+            "skill.import", "skill.amend", "skill.history", "skill.rollback",
+            "skill.evaluate",
+        ]
         for name in expected:
             assert name in TOOL_TO_GANA, f"Missing PRAT mapping: {name}"
             assert TOOL_TO_GANA[name] == "gana_ox"
+
+
+class TestSkillExecutionRecording:
+    """Test record_execution and get_failure_rate — the Observe step."""
+
+    def test_record_execution_success(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """record_execution stores a successful execution."""
+        skill = forge.forge(simple_chain, name="observed_skill")
+        forge.record_execution("observed_skill", success=True, steps_completed=3, total_steps=3)
+
+        skill = forge.known_skills["observed_skill"]
+        assert len(skill.execution_history) == 1
+        assert skill.execution_history[0].success is True
+
+    def test_record_execution_failure(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """record_execution stores a failed execution with error info."""
+        forge.forge(simple_chain, name="failing_skill")
+        forge.record_execution(
+            "failing_skill", success=False, error="timeout",
+            steps_completed=1, total_steps=3,
+        )
+
+        skill = forge.known_skills["failing_skill"]
+        assert len(skill.execution_history) == 1
+        assert skill.execution_history[0].success is False
+        assert skill.execution_history[0].error == "timeout"
+        assert skill.execution_history[0].steps_completed == 1
+
+    def test_record_execution_case_insensitive(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """record_execution finds skills case-insensitively."""
+        forge.forge(simple_chain, name="CaseSkill")
+        forge.record_execution("caseskill", success=True)
+
+        skill = forge.known_skills["CaseSkill"]
+        assert len(skill.execution_history) == 1
+
+    def test_record_execution_unknown_skill(self, forge: SkillForge):
+        """record_execution on unknown skill does not crash."""
+        forge.record_execution("nonexistent", success=True)
+
+    def test_failure_rate_all_success(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """get_failure_rate returns 0.0 when all executions succeed."""
+        forge.forge(simple_chain, name="perfect_skill")
+        for _ in range(5):
+            forge.record_execution("perfect_skill", success=True)
+
+        assert forge.get_failure_rate("perfect_skill") == 0.0
+
+    def test_failure_rate_all_failures(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """get_failure_rate returns 1.0 when all executions fail."""
+        forge.forge(simple_chain, name="terrible_skill")
+        for _ in range(5):
+            forge.record_execution("terrible_skill", success=False, error="fail")
+
+        assert forge.get_failure_rate("terrible_skill") == 1.0
+
+    def test_failure_rate_mixed(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """get_failure_rate computes correct ratio for mixed outcomes."""
+        forge.forge(simple_chain, name="mixed_skill")
+        for i in range(10):
+            forge.record_execution("mixed_skill", success=(i < 7))
+
+        rate = forge.get_failure_rate("mixed_skill")
+        assert rate == 0.3
+
+    def test_failure_rate_no_history(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """get_failure_rate returns 0.0 for skill with no execution history."""
+        forge.forge(simple_chain, name="no_history_skill")
+        assert forge.get_failure_rate("no_history_skill") == 0.0
+
+    def test_execution_history_persisted_to_disk(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """Execution history is saved to JSON and loaded back."""
+        forge.forge(simple_chain, name="persisted_skill")
+        forge.record_execution("persisted_skill", success=True)
+        forge.record_execution("persisted_skill", success=False, error="bad")
+
+        forge2 = SkillForge(skill_library_path=forge.skill_library_path)
+        skill = forge2.known_skills.get("persisted_skill")
+        assert skill is not None
+        assert len(skill.execution_history) == 2
+        assert skill.execution_history[0].success is True
+        assert skill.execution_history[1].success is False
+        assert skill.execution_history[1].error == "bad"
+
+    def test_get_skill_health(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """get_skill_health returns health metrics for all skills."""
+        different_chain = ExecutionChain(
+            intent="monitor system health",
+            steps=[
+                GanaStep(mansion="ROOT", operation="analyze", context_key="health", parameters={}),
+                GanaStep(mansion="MOUND", operation="transform", context_key="metrics", parameters={}),
+                GanaStep(mansion="HAIRY_HEAD", operation="consolidate", context_key="karma", parameters={}),
+            ],
+            estimated_complexity=2.0,
+            required_capabilities=[],
+        )
+        forge.forge(simple_chain, name="healthy_skill")
+        forge.forge(different_chain, name="sick_skill")
+
+        for _ in range(10):
+            forge.record_execution("healthy_skill", success=True)
+        for _ in range(10):
+            forge.record_execution("sick_skill", success=False, error="fail")
+
+        health = forge.get_skill_health()
+        assert len(health) == 2
+
+        by_name = {h["name"]: h for h in health}
+        assert by_name["healthy_skill"]["failure_rate"] == 0.0
+        assert by_name["sick_skill"]["failure_rate"] == 1.0
+        assert by_name["sick_skill"]["needs_amendment"] is True
+        assert by_name["healthy_skill"]["needs_amendment"] is False
+
+
+class TestSkillAmend:
+    """Test amend() — the Inspect -> Amend step."""
+
+    def test_amend_removes_failing_step(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """amend removes the step that consistently fails."""
+        skill = forge.forge(simple_chain, name="amend_target")
+        original_step_count = len(skill.optimized_chain.steps)
+
+        for _ in range(5):
+            forge.record_execution(
+                "amend_target", success=False, error="step 2 fails",
+                steps_completed=1, total_steps=original_step_count,
+            )
+
+        proposal = forge.amend("amend_target")
+
+        assert proposal is not None
+        assert proposal.old_version == 1
+        assert proposal.new_version == 2
+        assert len(proposal.changes) > 0
+
+        skill = forge.known_skills["amend_target"]
+        assert skill.version == 2
+        assert len(skill.optimized_chain.steps) < original_step_count
+        assert len(skill.previous_versions) == 1
+        assert skill.amendment_count == 1
+        assert skill.last_amended is not None
+
+    def test_amend_adds_verification_step(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """amend adds a verification step when failure rate is very high but no specific step."""
+        forge.forge(simple_chain, name="high_fail_skill")
+        original_step_count = len(simple_chain.steps)
+
+        for _ in range(5):
+            forge.record_execution(
+                "high_fail_skill", success=False, error="total failure",
+                steps_completed=0, total_steps=original_step_count,
+            )
+
+        proposal = forge.amend("high_fail_skill")
+
+        assert proposal is not None
+        skill = forge.known_skills["high_fail_skill"]
+        assert len(skill.optimized_chain.steps) == original_step_count + 1
+        assert any("verification" in c.lower() for c in proposal.changes)
+
+    def test_amend_insufficient_history(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """amend returns None when there are fewer than 3 executions."""
+        forge.forge(simple_chain, name="low_history_skill")
+        forge.record_execution("low_history_skill", success=False, error="fail")
+        forge.record_execution("low_history_skill", success=False, error="fail")
+
+        proposal = forge.amend("low_history_skill")
+        assert proposal is None
+
+    def test_amend_low_failure_rate(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """amend returns None when failure rate is below 30%."""
+        forge.forge(simple_chain, name="good_enough_skill")
+        for _ in range(8):
+            forge.record_execution("good_enough_skill", success=True)
+        for _ in range(2):
+            forge.record_execution("good_enough_skill", success=False, error="rare fail")
+
+        proposal = forge.amend("good_enough_skill")
+        assert proposal is None
+
+    def test_amend_unknown_skill(self, forge: SkillForge):
+        """amend returns None for unknown skill."""
+        proposal = forge.amend("nonexistent")
+        assert proposal is None
+
+    def test_amend_persists_previous_version(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """amend saves the old chain in previous_versions and persists to disk."""
+        forge.forge(simple_chain, name="versioned_skill")
+
+        for _ in range(5):
+            forge.record_execution(
+                "versioned_skill", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+
+        forge.amend("versioned_skill")
+
+        forge2 = SkillForge(skill_library_path=forge.skill_library_path)
+        skill = forge2.known_skills["versioned_skill"]
+        assert skill.version == 2
+        assert len(skill.previous_versions) == 1
+        assert skill.amendment_count == 1
+
+
+class TestSkillRollback:
+    """Test rollback() — the Evaluate safety net."""
+
+    def test_rollback_restores_previous_version(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """rollback restores the previous chain and decrements version."""
+        forge.forge(simple_chain, name="rollback_target")
+
+        for _ in range(5):
+            forge.record_execution(
+                "rollback_target", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+        forge.amend("rollback_target")
+
+        skill = forge.known_skills["rollback_target"]
+        assert skill.version == 2
+        amended_step_count = len(skill.optimized_chain.steps)
+
+        result = forge.rollback("rollback_target")
+        assert result is True
+
+        skill = forge.known_skills["rollback_target"]
+        assert skill.version == 1
+        assert len(skill.optimized_chain.steps) > amended_step_count
+        assert len(skill.previous_versions) == 0
+
+    def test_rollback_no_previous_version(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """rollback returns False when there's no previous version."""
+        forge.forge(simple_chain, name="no_rollback_skill")
+
+        result = forge.rollback("no_rollback_skill")
+        assert result is False
+
+    def test_rollback_unknown_skill(self, forge: SkillForge):
+        """rollback returns False for unknown skill."""
+        result = forge.rollback("nonexistent")
+        assert result is False
+
+    def test_rollback_persists_to_disk(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """rollback persists the version change to disk."""
+        forge.forge(simple_chain, name="persist_rollback")
+
+        for _ in range(5):
+            forge.record_execution(
+                "persist_rollback", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+        forge.amend("persist_rollback")
+        forge.rollback("persist_rollback")
+
+        forge2 = SkillForge(skill_library_path=forge.skill_library_path)
+        skill = forge2.known_skills["persist_rollback"]
+        assert skill.version == 1
+        assert len(skill.previous_versions) == 0
+
+
+class TestEvaluateAmendment:
+    """Test evaluate_amendment() — the Evaluate step."""
+
+    def test_evaluate_no_amendment(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """evaluate_amendment returns has_amendment=False for never-amended skill."""
+        forge.forge(simple_chain, name="never_amended")
+
+        result = forge.evaluate_amendment("never_amended")
+        assert result["has_amendment"] is False
+
+    def test_evaluate_improved(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """evaluate_amendment detects improvement after amendment."""
+        forge.forge(simple_chain, name="improved_skill")
+
+        for _ in range(5):
+            forge.record_execution(
+                "improved_skill", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+
+        forge.amend("improved_skill")
+
+        for _ in range(5):
+            forge.record_execution("improved_skill", success=True)
+
+        result = forge.evaluate_amendment("improved_skill")
+        assert result["has_amendment"] is True
+        assert result["improved"] is True
+        assert result["recommendation"] == "keep"
+        assert result["post_amendment_failure_rate"] == 0.0
+
+    def test_evaluate_not_improved(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """evaluate_amendment detects no improvement and recommends rollback."""
+        forge.forge(simple_chain, name="worse_skill")
+
+        for _ in range(5):
+            forge.record_execution(
+                "worse_skill", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+
+        forge.amend("worse_skill")
+
+        for _ in range(5):
+            forge.record_execution("worse_skill", success=False, error="still bad")
+
+        result = forge.evaluate_amendment("worse_skill")
+        assert result["has_amendment"] is True
+        assert result["improved"] is False
+        assert result["recommendation"] == "rollback"
+
+    def test_evaluate_insufficient_post_data(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """evaluate_amendment returns insufficient_data with too few post-amendment executions."""
+        forge.forge(simple_chain, name="insufficient_skill")
+
+        for _ in range(5):
+            forge.record_execution(
+                "insufficient_skill", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+
+        forge.amend("insufficient_skill")
+        forge.record_execution("insufficient_skill", success=True)
+
+        result = forge.evaluate_amendment("insufficient_skill")
+        assert result["has_amendment"] is True
+        assert result["recommendation"] == "insufficient_data"
+
+
+class TestChainTrackerExecutionLink:
+    """Test ChainTracker linking executions to existing skills."""
+
+    def test_matching_chain_records_execution(self, tmp_path: Path):
+        """ChainTracker records execution against a matching existing skill."""
+        reset_chain_tracker()
+        reset_skill_forge()
+
+        forge = SkillForge(skill_library_path=tmp_path / "skills")
+        tracker = ChainTracker()
+
+        tracker.record("gana_neck", "create_memory", "store X", True, 10.0)
+        tracker.record("gana_ghost", "gnosis", "analyze X", True, 20.0)
+        tracker.record("gana_winnowing_basket", "search_memories", "find X", True, 30.0)
+
+        import time as _time
+
+        tracker._last_flush = _time.time() - 100
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            forged = tracker.try_auto_forge()
+            assert forged is not None
+
+            tracker2 = ChainTracker()
+            tracker2.record("gana_neck", "create_memory", "store X", True, 10.0)
+            tracker2.record("gana_ghost", "gnosis", "analyze X", True, 20.0)
+            tracker2.record("gana_winnowing_basket", "search_memories", "find X", True, 30.0)
+            tracker2._last_flush = _time.time() - 100
+
+            tracker2.try_auto_forge()
+
+            skill = list(forge.known_skills.values())[0]
+            assert len(skill.execution_history) >= 1
+
+    def test_failing_chain_records_failure(self, tmp_path: Path):
+        """ChainTracker records a failure when a matching chain has failures."""
+        reset_chain_tracker()
+        reset_skill_forge()
+
+        forge = SkillForge(skill_library_path=tmp_path / "skills")
+        tracker = ChainTracker()
+
+        tracker.record("gana_neck", "create_memory", "store X", True, 10.0)
+        tracker.record("gana_ghost", "gnosis", "analyze X", True, 20.0)
+        tracker.record("gana_winnowing_basket", "search_memories", "find X", True, 30.0)
+
+        import time as _time
+
+        tracker._last_flush = _time.time() - 100
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            tracker.try_auto_forge()
+
+            tracker2 = ChainTracker()
+            tracker2.record("gana_neck", "create_memory", "store X", True, 10.0)
+            tracker2.record("gana_ghost", "gnosis", "analyze X", False, 20.0)
+            tracker2.record("gana_winnowing_basket", "search_memories", "find X", False, 30.0)
+            tracker2._last_flush = _time.time() - 100
+
+            tracker2.try_auto_forge()
+
+            skill = list(forge.known_skills.values())[0]
+            # First run forged the skill (no execution recorded — skill didn't exist yet).
+            # Second run matched and recorded 1 failure.
+            assert len(skill.execution_history) >= 1
+            failures = [e for e in skill.execution_history if not e.success]
+            assert len(failures) >= 1
+
+
+class TestSkillAmendMcpHandlers:
+    """Test MCP handler wrappers for skill self-improvement tools."""
+
+    def test_handle_skill_amend_success(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """handle_skill_amend amends a skill with failures."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_amend
+
+        forge.forge(simple_chain, name="amend_handler_test")
+        for _ in range(5):
+            forge.record_execution(
+                "amend_handler_test", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_amend(name="amend_handler_test")
+
+        assert result["status"] == "success"
+        assert result["amended"] is True
+        assert result["old_version"] == 1
+        assert result["new_version"] == 2
+
+    def test_handle_skill_amend_no_amendment_needed(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """handle_skill_amend returns amended=False when no amendment needed."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_amend
+
+        forge.forge(simple_chain, name="healthy_handler_skill")
+        for _ in range(5):
+            forge.record_execution("healthy_handler_skill", success=True)
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_amend(name="healthy_handler_skill")
+
+        assert result["status"] == "success"
+        assert result["amended"] is False
+
+    def test_handle_skill_amend_missing_name(self):
+        """handle_skill_amend requires a name parameter."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_amend
+
+        result = handle_skill_amend()
+        assert result["status"] == "error"
+        assert result["error_code"] == "missing_name"
+
+    def test_handle_skill_history(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """handle_skill_history returns health metrics."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_history
+
+        forge.forge(simple_chain, name="history_test")
+        for _ in range(10):
+            forge.record_execution("history_test", success=False, error="fail")
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_history()
+
+        assert result["status"] == "success"
+        assert result["total_skills"] == 1
+        assert result["needs_amendment_count"] == 1
+
+    def test_handle_skill_rollback_success(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """handle_skill_rollback rolls back an amended skill."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_rollback
+
+        forge.forge(simple_chain, name="rollback_handler_test")
+        for _ in range(5):
+            forge.record_execution(
+                "rollback_handler_test", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+        forge.amend("rollback_handler_test")
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_rollback(name="rollback_handler_test")
+
+        assert result["status"] == "success"
+        assert result["rolled_back"] is True
+
+    def test_handle_skill_rollback_no_previous(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """handle_skill_rollback fails when no previous version."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_rollback
+
+        forge.forge(simple_chain, name="no_prev_handler")
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_rollback(name="no_prev_handler")
+
+        assert result["status"] == "error"
+        assert result["error_code"] == "no_previous_version"
+
+    def test_handle_skill_evaluate(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """handle_skill_evaluate returns evaluation results."""
+        from whitemagic.tools.handlers.skill_forge import handle_skill_evaluate
+
+        forge.forge(simple_chain, name="evaluate_handler_test")
+        for _ in range(5):
+            forge.record_execution(
+                "evaluate_handler_test", success=False, error="fail",
+                steps_completed=1, total_steps=3,
+            )
+        forge.amend("evaluate_handler_test")
+        for _ in range(5):
+            forge.record_execution("evaluate_handler_test", success=True)
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            result = handle_skill_evaluate(name="evaluate_handler_test")
+
+        assert result["status"] == "success"
+        assert result["has_amendment"] is True
+        assert result["improved"] is True
+        assert result["recommendation"] == "keep"
+
+
+class TestKaizenSkillHealth:
+    """Test KaizenEngine skill health analysis."""
+
+    def test_kaizen_detects_failing_skill(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """KaizenEngine _check_skill_health generates proposals for failing skills."""
+        forge.forge(simple_chain, name="kaizen_target")
+        for _ in range(10):
+            forge.record_execution("kaizen_target", success=False, error="fail")
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            from whitemagic.core.intelligence.synthesis.kaizen_engine import KaizenEngine
+
+            engine = KaizenEngine.__new__(KaizenEngine)
+            proposals = engine._check_skill_health()
+
+        assert len(proposals) >= 1
+        skill_proposals = [p for p in proposals if p.category == "skill_health"]
+        assert len(skill_proposals) == 1
+        assert skill_proposals[0].auto_fixable is True
+        assert "amend" in skill_proposals[0].fix_action
+
+    def test_kaizen_no_proposals_for_healthy_skills(self, forge: SkillForge, simple_chain: ExecutionChain):
+        """KaizenEngine generates no proposals for healthy skills."""
+        forge.forge(simple_chain, name="kaizen_healthy")
+        for _ in range(10):
+            forge.record_execution("kaizen_healthy", success=True)
+
+        with patch(
+            "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
+            return_value=forge,
+        ):
+            from whitemagic.core.intelligence.synthesis.kaizen_engine import KaizenEngine
+
+            engine = KaizenEngine.__new__(KaizenEngine)
+            proposals = engine._check_skill_health()
+
+        assert len(proposals) == 0

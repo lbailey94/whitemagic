@@ -280,6 +280,10 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
     "skill.import": "Import skills from another system. Use this to gain new capabilities.",
     "skill.invoke": "Invoke a specific skill. Use this to use a learned capability.",
     "skill.list": "List all available skills. Use this to see what you can do.",
+    "skill.amend": "Amend a skill based on its failure history. Use this to improve underperforming skills.",
+    "skill.history": "Get skill health metrics and execution history. Use this to check skill performance.",
+    "skill.rollback": "Roll back a skill to its previous version. Use this if an amendment made things worse.",
+    "skill.evaluate": "Evaluate whether an amendment improved outcomes. Use this to verify skill changes.",
 
     # ── Swarm ────────────────────────────────────────────────────────
     "swarm.decompose": "Decompose a complex task into subtasks. Use this for parallel work.",

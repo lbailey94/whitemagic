@@ -48,6 +48,9 @@ WRITE_TOOLS: set[str] = {
     "sangha_lock",
     # Unified Write API (v23.1)
     "wm_write",
+    # Skill mutations (self-improvement)
+    "skill.amend",
+    "skill.rollback",
 }
 
 

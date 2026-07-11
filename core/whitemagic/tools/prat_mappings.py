@@ -279,6 +279,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "skill.seed": "gana_ox",
     "skill.export_all": "gana_ox",
     "skill.import": "gana_ox",
+    "skill.amend": "gana_ox",
+    "skill.history": "gana_ox",
+    "skill.rollback": "gana_ox",
+    "skill.evaluate": "gana_ox",
     # ═══ GIRL — Nurture & User Profile ═══
     "agent.register": "gana_girl",
     "agent.heartbeat": "gana_girl",
@@ -809,6 +813,50 @@ TOOL_TO_GANA: dict[str, str] = {
     "zodiac.activate": "gana_dipper",
     "zodiac.council": "gana_dipper",
     "zodiac.stats": "gana_dipper",
+    # ── v24.3: Hyperspace Integration — Research DAG, Autoswarm, Warps, Mesh ──
+    # Research DAG → Winnowing Basket (wisdom & search) + Three Stars (judgment)
+    "research.dag.submit": "gana_winnowing_basket",
+    "research.dag.result": "gana_winnowing_basket",
+    "research.dag.critique": "gana_three_stars",
+    "research.dag.lineage": "gana_winnowing_basket",
+    "research.dag.breakthroughs": "gana_winnowing_basket",
+    "research.dag.stats": "gana_winnowing_basket",
+    "research.dag.leaderboard": "gana_winnowing_basket",
+    "research.dag.experiments": "gana_winnowing_basket",
+    # Autoswarm → Chariot (mobility & exploration) + Ghost (introspection)
+    "autoswarm.campaign": "gana_chariot",
+    "autoswarm.status": "gana_ghost",
+    "autoswarm.start": "gana_chariot",
+    "autoswarm.stop": "gana_chariot",
+    # Warps → Dipper (strategy & cognitive modes)
+    "warp.load": "gana_dipper",
+    "warp.list": "gana_dipper",
+    "warp.create": "gana_dipper",
+    "warp.delete": "gana_dipper",
+    "warp.status": "gana_dipper",
+    # Mesh Experiment Sync → Wings (deployment & export) + Chariot (mobility)
+    "mesh.experiment.share": "gana_wings",
+    "mesh.experiment.receive": "gana_chariot",
+    "mesh.experiment.status": "gana_wings",
+    "mesh.experiment.peers": "gana_wings",
+    "mesh.experiment.discover": "gana_wings",
+    # ── v24.3: Research DAG Synthesis ──
+    "research.dag.synthesize": "gana_three_stars",
+    # ── v24.3: CRDT Leaderboard ──
+    "leaderboard.submit": "gana_wings",
+    "leaderboard.top": "gana_wings",
+    "leaderboard.status": "gana_wings",
+    "leaderboard.merge": "gana_wings",
+    # ── v24.3: Pulse Verification ──
+    "pulse.verify": "gana_hairy_head",
+    "pulse.verify.status": "gana_hairy_head",
+    # ── v24.3: Critique Protocol ──
+    "critique.submit": "gana_three_stars",
+    "critique.auto": "gana_three_stars",
+    "critique.status": "gana_three_stars",
+    # ── v24.3: Durable Archive ──
+    "archive.run": "gana_wings",
+    "archive.status": "gana_wings",
 }
 
 # Reverse: Gana → list of nested tools

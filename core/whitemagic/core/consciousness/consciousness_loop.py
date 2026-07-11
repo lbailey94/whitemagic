@@ -120,6 +120,11 @@ class LoopConfig:
     enable_meta_galaxy: bool = True
     enable_knowledge_gap: bool = True
     enable_possibility: bool = True
+    # v24.3: Hyperspace integration
+    enable_autoswarm: bool = False
+    enable_mesh_sync: bool = False
+    autoswarm_interval_s: float = 300.0
+    mesh_sync_interval_s: float = 60.0
     # Human check-in thresholds
     checkin_novelty_threshold: float = 0.8
     checkin_contention_threshold: float = 0.6
@@ -160,6 +165,10 @@ class LoopConfig:
             enable_meta_galaxy=_get_bool("WM_ENABLE_META_GALAXY", True),
             enable_knowledge_gap=_get_bool("WM_ENABLE_KNOWLEDGE_GAP", True),
             enable_possibility=_get_bool("WM_ENABLE_POSSIBILITY", True),
+            enable_autoswarm=_get_bool("WM_ENABLE_AUTOSWARM", False),
+            enable_mesh_sync=_get_bool("WM_ENABLE_MESH_SYNC", False),
+            autoswarm_interval_s=_get_float("WM_AUTOSWARM_INTERVAL", 300.0),
+            mesh_sync_interval_s=_get_float("WM_MESH_SYNC_INTERVAL", 60.0),
             checkin_novelty_threshold=_get_float("WM_CHECKIN_NOVELTY_THRESHOLD", 0.8),
             checkin_contention_threshold=_get_float("WM_CHECKIN_CONTENTION_THRESHOLD", 0.6),
         )
@@ -210,6 +219,12 @@ class LoopStats:
     knowledge_gaps_filled: int = 0
     possibility_runs: int = 0
     last_possibility_best: float = 0.0
+    # v24.3: Hyperspace
+    autoswarm_ticks: int = 0
+    autoswarm_campaigns: int = 0
+    autoswarm_breakthroughs: int = 0
+    mesh_sync_ticks: int = 0
+    mesh_sync_synced: int = 0
     # Error tracking
     last_error: str = ""
     last_dream_phase: str = ""
@@ -250,6 +265,11 @@ class LoopStats:
             "knowledge_gaps_filled": self.knowledge_gaps_filled,
             "possibility_runs": self.possibility_runs,
             "last_possibility_best": round(self.last_possibility_best, 4),
+            "autoswarm_ticks": self.autoswarm_ticks,
+            "autoswarm_campaigns": self.autoswarm_campaigns,
+            "autoswarm_breakthroughs": self.autoswarm_breakthroughs,
+            "mesh_sync_ticks": self.mesh_sync_ticks,
+            "mesh_sync_synced": self.mesh_sync_synced,
             "last_error": self.last_error,
             "last_dream_phase": self.last_dream_phase,
             "total_uptime_s": round(self.total_uptime_s, 1),
@@ -276,6 +296,8 @@ class ConsciousnessLoop:
         self._last_meta_fast = 0.0
         self._last_meta_slow = 0.0
         self._last_meta_deep = 0.0
+        self._last_autoswarm = 0.0
+        self._last_mesh_sync = 0.0
         self._dream_started = False
         self._homeostatic_attached = False
         self._lock = threading.Lock()
@@ -376,6 +398,10 @@ class ConsciousnessLoop:
                     "enable_oracle": self._config.enable_oracle,
                     "enable_proactive_dream": self._config.enable_proactive_dream,
                     "enable_association_mining": self._config.enable_association_mining,
+                    "enable_autoswarm": self._config.enable_autoswarm,
+                    "enable_mesh_sync": self._config.enable_mesh_sync,
+                    "autoswarm_interval_s": self._config.autoswarm_interval_s,
+                    "mesh_sync_interval_s": self._config.mesh_sync_interval_s,
                     "checkin_novelty_threshold": self._config.checkin_novelty_threshold,
                     "checkin_contention_threshold": self._config.checkin_contention_threshold,
                 },
@@ -438,6 +464,22 @@ class ConsciousnessLoop:
                     self._run_meta_deep()
                     self._last_meta_deep = now
 
+                # v24.3: Autoswarm — single campaign tick
+                if (
+                    self._config.enable_autoswarm
+                    and now - self._last_autoswarm >= self._config.autoswarm_interval_s
+                ):
+                    self._run_autoswarm_tick()
+                    self._last_autoswarm = now
+
+                # v24.3: Mesh sync — sync pending broadcasts
+                if (
+                    self._config.enable_mesh_sync
+                    and now - self._last_mesh_sync >= self._config.mesh_sync_interval_s
+                ):
+                    self._run_mesh_sync()
+                    self._last_mesh_sync = now
+
             except Exception as e:
                 self._stats.last_error = str(e)
                 logger.debug("Consciousness loop error: %s", e, exc_info=True)
@@ -448,6 +490,8 @@ class ConsciousnessLoop:
                 self._last_meta_fast + self._config.meta_fast_interval_s,
                 self._last_meta_slow + self._config.meta_slow_interval_s,
                 self._last_meta_deep + self._config.meta_deep_interval_s,
+                self._last_autoswarm + self._config.autoswarm_interval_s,
+                self._last_mesh_sync + self._config.mesh_sync_interval_s,
             )
             wait_s = max(0.05, min(next_deadline - now, 5.0))
             self._stop_event.wait(timeout=wait_s)
@@ -1033,6 +1077,60 @@ class ConsciousnessLoop:
                 )
         except Exception as e:
             logger.debug("Possibility exploration failed: %s", e, exc_info=True)
+
+    # ── v24.3: Hyperspace integration ───────────────────────────────
+
+    def _run_autoswarm_tick(self) -> None:
+        """Run a single autoswarm campaign cycle.
+
+        Called at autoswarm_interval_s cadence. Runs one campaign from
+        the default config cycle, records stats, and feeds breakthroughs
+        to the dream cycle via the autoswarm's own _feed_to_dream.
+        """
+        try:
+            from whitemagic.core.evolution.autoswarm import get_autoswarm
+
+            swarm = get_autoswarm()
+            result = swarm.tick()
+            self._stats.autoswarm_ticks += 1
+
+            if result:
+                self._stats.autoswarm_campaigns += 1
+                self._stats.autoswarm_breakthroughs += result.breakthroughs
+                logger.info(
+                    "Autoswarm tick: campaign='%s' experiments=%d breakthroughs=%d best=%.4f",
+                    result.campaign_name,
+                    result.experiments_run,
+                    result.breakthroughs,
+                    result.best_fitness,
+                )
+                if result.breakthroughs > 0:
+                    self._propose_to_workspace(
+                        source="autoswarm",
+                        content=f"Breakthrough in {result.campaign_name}: fitness={result.best_fitness:.4f}",
+                        salience=min(result.best_fitness, 1.0),
+                    )
+        except Exception as e:
+            logger.debug("Autoswarm tick failed: %s", e, exc_info=True)
+
+    def _run_mesh_sync(self) -> None:
+        """Sync pending mesh broadcasts and check for peer experiments.
+
+        Called at mesh_sync_interval_s cadence (faster than autoswarm).
+        Flushes pending experiment broadcasts when mesh becomes available.
+        """
+        try:
+            from whitemagic.core.evolution.autoswarm import get_autoswarm
+
+            swarm = get_autoswarm()
+            result = swarm.tick_mesh_sync()
+            self._stats.mesh_sync_ticks += 1
+            synced = result.get("synced", 0)
+            if synced:
+                self._stats.mesh_sync_synced += synced
+                logger.info("Mesh sync: %d pending broadcasts synced", synced)
+        except Exception as e:
+            logger.debug("Mesh sync failed: %s", e, exc_info=True)
 
     # ── Insight persistence & workspace proposal ─────────────────────
 

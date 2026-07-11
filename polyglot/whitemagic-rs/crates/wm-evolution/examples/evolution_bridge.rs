@@ -35,7 +35,9 @@ use wm_evolution::{
     counterfactual,
     hrr_composition,
     info_theory::{shannon_entropy, kl_divergence, information_gain, system_uncertainty, AdaptiveWeights},
+    mc_advanced,
     mc_integration,
+    mc_sensitivity,
     thermodynamic::{boltzmann_probabilities, boltzmann_select, ThermodynamicState},
 };
 
@@ -393,6 +395,304 @@ fn handle_request(req: serde_json::Value) -> String {
                 "ci_upper": ci_hi,
                 "significant": significant,
             }))
+        }
+
+        "mc_multid_gaussian" => {
+            let n_samples = params.get("n_samples").and_then(|v| v.as_u64()).unwrap_or(1000) as usize;
+            let mean: Vec<f64> = params.get("mean")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let cov: Vec<f64> = params.get("cov")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            if mean.is_empty() || cov.is_empty() {
+                json_error("mc_multid_gaussian requires non-empty 'mean' and 'cov' arrays")
+            } else {
+                let samples = mc_advanced::multid_gaussian(n_samples, &mean, &cov, seed);
+                json_ok(serde_json::json!({"samples": samples, "n_samples": samples.len()}))
+            }
+        }
+
+        "mc_latin_hypercube" => {
+            let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+            let d = params.get("d").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let samples = mc_advanced::latin_hypercube(n, d, seed);
+            json_ok(serde_json::json!({"samples": samples, "n": samples.len()}))
+        }
+
+        "mc_lhs_trials" => {
+            // LHS sampling + parallel fitness evaluation
+            // fitness_fn is passed as a JSON expression string (evaluated in Python)
+            // Here we just generate the LHS samples; Python evaluates fitness
+            let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+            let ranges: Vec<(f64, f64)> = params.get("ranges")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|r| {
+                        let ra = r.as_array()?;
+                        if ra.len() >= 2 {
+                            Some((ra[0].as_f64()?, ra[1].as_f64()?))
+                        } else {
+                            None
+                        }
+                    }).collect()
+                })
+                .unwrap_or_default();
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            if ranges.is_empty() {
+                json_error("mc_lhs_trials requires non-empty 'ranges' array of [lo, hi] pairs")
+            } else {
+                let unit = mc_advanced::latin_hypercube(n, ranges.len(), seed);
+                let scaled: Vec<Vec<f64>> = unit.iter().map(|s| {
+                    s.iter().enumerate().map(|(i, &v)| {
+                        let (lo, hi) = ranges[i];
+                        lo + v * (hi - lo)
+                    }).collect()
+                }).collect();
+                json_ok(serde_json::json!({
+                    "samples": scaled,
+                    "n": scaled.len(),
+                    "d": ranges.len()
+                }))
+            }
+        }
+
+        "mc_compute_statistics" => {
+            let values: Vec<f64> = params.get("values")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            if values.is_empty() {
+                json_error("mc_compute_statistics requires non-empty 'values' array")
+            } else {
+                let (mean, variance, min, max, p5, p25, p50, p75, p95) =
+                    mc_advanced::compute_statistics(&values);
+                let (ci_lo, ci_hi) = mc_advanced::confidence_interval(mean, variance);
+                json_ok(serde_json::json!({
+                    "mean": mean, "variance": variance,
+                    "min": min, "max": max,
+                    "percentiles": {"p5": p5, "p25": p25, "p50": p50, "p75": p75, "p95": p95},
+                    "ci_95": {"lower": ci_lo, "upper": ci_hi}
+                }))
+            }
+        }
+
+        "mc_pce_fit" => {
+            // Fit PCE surrogate to (X, Y) data
+            let x_data: Vec<Vec<f64>> = params.get("x_data")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|row| {
+                        row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                    }).collect()
+                })
+                .unwrap_or_default();
+            let y_data: Vec<f64> = params.get("y_data")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let max_order = params.get("max_order").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+            let dist_type = params.get("dist_type").and_then(|v| v.as_str()).unwrap_or("uniform");
+            if x_data.is_empty() || y_data.is_empty() {
+                json_error("mc_pce_fit requires non-empty 'x_data' and 'y_data' arrays")
+            } else if x_data.len() != y_data.len() {
+                json_error("x_data and y_data must have the same length")
+            } else {
+                let pce = mc_sensitivity::PCESurrogate::fit(&x_data, &y_data, max_order, dist_type);
+                let r2 = pce.r_squared(&x_data, &y_data);
+                json_ok(serde_json::json!({
+                    "dim": pce.dim,
+                    "max_order": pce.max_order,
+                    "n_terms": pce.n_terms(),
+                    "coefficients": pce.coefficients,
+                    "multi_indices": pce.multi_indices,
+                    "dist_type": pce.dist_type,
+                    "r_squared": r2
+                }))
+            }
+        }
+
+        "mc_pce_evaluate" => {
+            // Evaluate a fitted PCE at new points
+            let coefficients: Vec<f64> = params.get("coefficients")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let multi_indices: Vec<Vec<usize>> = params.get("multi_indices")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|row| {
+                        row.as_array().map(|r| r.iter().filter_map(|x| x.as_u64().map(|n| n as usize)).collect())
+                    }).collect()
+                })
+                .unwrap_or_default();
+            let dist_type = params.get("dist_type").and_then(|v| v.as_str()).unwrap_or("uniform");
+            let x_data: Vec<Vec<f64>> = params.get("x_data")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|row| {
+                        row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                    }).collect()
+                })
+                .unwrap_or_default();
+            let max_order = params.get("max_order").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+            if coefficients.is_empty() || x_data.is_empty() {
+                json_error("mc_pce_evaluate requires 'coefficients', 'multi_indices', and 'x_data'")
+            } else {
+                let pce = mc_sensitivity::PCESurrogate {
+                    dim: if x_data.is_empty() { 0 } else { x_data[0].len() },
+                    max_order,
+                    dist_type: dist_type.to_string(),
+                    coefficients,
+                    multi_indices,
+                };
+                let predictions = pce.evaluate_batch(&x_data);
+                json_ok(serde_json::json!({"predictions": predictions}))
+            }
+        }
+
+        "mc_parameter_sensitivity" => {
+            // Compute Pearson correlations for each parameter vs fitness
+            let samples: Vec<Vec<f64>> = params.get("samples")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|row| {
+                        row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                    }).collect()
+                })
+                .unwrap_or_default();
+            let fitness: Vec<f64> = params.get("fitness")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            if samples.is_empty() || fitness.is_empty() {
+                json_error("mc_parameter_sensitivity requires 'samples' and 'fitness' arrays")
+            } else {
+                let sens = mc_sensitivity::parameter_sensitivity(&samples, &fitness);
+                let result: Vec<serde_json::Value> = sens.iter().map(|(idx, corr)| {
+                    serde_json::json!({"param_index": idx, "correlation": corr, "abs_correlation": corr.abs()})
+                }).collect();
+                json_ok(serde_json::json!({"sensitivities": result}))
+            }
+        }
+
+        "mc_sobol_indices" => {
+            // Compute Sobol sensitivity indices via Saltelli's method
+            // fitness_fn is a JSON expression string evaluated in Python
+            // Here we can't evaluate arbitrary Python, so we require pre-computed
+            // fitness values for the Saltelli sample matrices
+            let n_base = params.get("n_base").and_then(|v| v.as_u64()).unwrap_or(500) as usize;
+            let d = params.get("d").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let ranges: Vec<(f64, f64)> = params.get("ranges")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|r| {
+                        let ra = r.as_array()?;
+                        if ra.len() >= 2 {
+                            Some((ra[0].as_f64()?, ra[1].as_f64()?))
+                        } else {
+                            None
+                        }
+                    }).collect()
+                })
+                .unwrap_or_default();
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            if ranges.is_empty() {
+                json_error("mc_sobol_indices requires 'ranges' array of [lo, hi] pairs")
+            } else {
+                // Generate Saltelli sample matrices A and B
+                use rand::{RngCore, SeedableRng};
+                use rand_xoshiro::Xoshiro256PlusPlus;
+                let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+                let scale = |u: f64, i: usize| -> f64 {
+                    let (lo, hi) = ranges[i];
+                    lo + u * (hi - lo)
+                };
+                let mut a_samples = vec![vec![0.0f64; d]; n_base];
+                let mut b_samples = vec![vec![0.0f64; d]; n_base];
+                for i in 0..n_base {
+                    for j in 0..d {
+                        a_samples[i][j] = scale(rng.next_u64() as f64 / u64::MAX as f64, j);
+                        b_samples[i][j] = scale(rng.next_u64() as f64 / u64::MAX as f64, j);
+                    }
+                }
+                // Generate AB_j matrices
+                let mut ab_matrices = vec![vec![vec![0.0f64; d]; n_base]; d];
+                for j in 0..d {
+                    for i in 0..n_base {
+                        ab_matrices[j][i] = a_samples[i].clone();
+                        ab_matrices[j][i][j] = b_samples[i][j];
+                    }
+                }
+                json_ok(serde_json::json!({
+                    "a_samples": a_samples,
+                    "b_samples": b_samples,
+                    "ab_matrices": ab_matrices,
+                    "n_base": n_base,
+                    "d": d,
+                    "instructions": "Evaluate fitness for a_samples, b_samples, and each ab_matrices[j]. Then call mc_sobol_compute with f_a, f_b, f_ab arrays."
+                }))
+            }
+        }
+
+        "mc_sobol_compute" => {
+            // Compute Sobol indices from pre-evaluated fitness values
+            let f_a: Vec<f64> = params.get("f_a")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let f_b: Vec<f64> = params.get("f_b")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let f_ab: Vec<Vec<f64>> = params.get("f_ab")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|row| {
+                        row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                    }).collect()
+                })
+                .unwrap_or_default();
+            if f_a.is_empty() || f_b.is_empty() || f_ab.is_empty() {
+                json_error("mc_sobol_compute requires 'f_a', 'f_b', and 'f_ab' arrays")
+            } else {
+                let n_base = f_a.len();
+                let d = f_ab.len();
+                let f_mean: f64 = f_a.iter().sum::<f64>() / n_base as f64;
+                let f_var: f64 = f_a.iter().map(|f| (f - f_mean).powi(2)).sum::<f64>() / n_base as f64;
+                if f_var < 1e-15 {
+                    json_ok(serde_json::json!({
+                        "first_order": vec![0.0; d],
+                        "total_order": vec![0.0; d],
+                        "f_mean": f_mean,
+                        "f_var": 0.0
+                    }))
+                } else {
+                    let mut first_order = vec![0.0f64; d];
+                    let mut total_order = vec![0.0f64; d];
+                    for j in 0..d {
+                        let f_abj = &f_ab[j];
+                        let v_j: f64 = f_a.iter().zip(f_abj.iter())
+                            .map(|(fa, fab)| fa * fab)
+                            .sum::<f64>() / n_base as f64 - f_mean * f_mean;
+                        let s_tj: f64 = f_a.iter().zip(f_abj.iter())
+                            .map(|(fa, fab)| (fa - fab).powi(2))
+                            .sum::<f64>() / (2.0 * n_base as f64) / f_var;
+                        first_order[j] = (v_j / f_var).max(0.0);
+                        total_order[j] = s_tj.max(0.0);
+                    }
+                    json_ok(serde_json::json!({
+                        "first_order": first_order,
+                        "total_order": total_order,
+                        "f_mean": f_mean,
+                        "f_var": f_var
+                    }))
+                }
+            }
         }
 
         _ => json_error(&format!("Unknown method: {}", method)),

@@ -8,7 +8,12 @@
 pub mod counterfactual;
 pub mod hrr_composition;
 pub mod info_theory;
+pub mod mc_advanced;
+pub mod mc_bayesian;
 pub mod mc_integration;
+pub mod mc_rare_event;
+pub mod mc_sde;
+pub mod mc_sensitivity;
 pub mod thermodynamic;
 
 pub use info_theory::{shannon_entropy, kl_divergence, information_gain, system_uncertainty};

@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from whitemagic.inference.llama_cpp import LlamaCppBackend
+    from whitemagic.inference.speculative_decoder import SpeculativeDecoder
 
 from whitemagic.inference.complexity import (
     ComplexityAssessment,
@@ -192,6 +193,7 @@ class InferenceRouter:
         max_escalations: int = 2,
         cloud_available: bool = True,
         token_budget: int | None = None,
+        use_speculative: bool = False,
     ) -> None:
         self._classifier = ComplexityClassifier()
         self._metrics = get_routing_metrics()
@@ -199,6 +201,7 @@ class InferenceRouter:
         self._max_escalations = max_escalations
         self._cloud_available = cloud_available
         self._budget_tracker = TokenBudgetTracker(total_budget=token_budget or 100_000)
+        self._use_speculative = use_speculative
 
         # Tier handlers — lazily initialized
         self._edge_handler: Callable[..., dict[str, Any]] | None = None
@@ -530,6 +533,55 @@ class InferenceRouter:
         """Get a summary of routing metrics."""
         return self._metrics.summary()
 
+    def speculative_route(
+        self,
+        prompt: str,
+        max_tokens: int = 128,
+        temperature: float = 0.7,
+        force_tier: InferenceTier | None = None,
+    ) -> InferenceResponse:
+        """Route through speculative decoding (draft + verify models).
+
+        Only available when both draft and verify backends are running.
+        Falls back to normal routing if speculative decoding is unavailable.
+        """
+        if not self._use_speculative:
+            return self.route(prompt, max_output_tokens=max_tokens, force_tier=force_tier)
+
+        try:
+            decoder = get_speculative_router()
+            if not decoder.is_available:
+                logger.debug("Speculative decoding unavailable — falling back to normal routing")
+                return self.route(prompt, max_output_tokens=max_tokens, force_tier=force_tier)
+
+            result = decoder.generate(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            if not result.text:
+                return self.route(prompt, max_output_tokens=max_tokens)
+
+            return InferenceResponse(
+                answer=result.text,
+                confidence=0.8,
+                tier=InferenceTier.LOCAL_LARGE,
+                latency_ms=result.total_latency_ms,
+                metadata={
+                    "speculative": True,
+                    "accepted_tokens": result.accepted_tokens,
+                    "rejected_tokens": result.rejected_tokens,
+                    "acceptance_rate": result.acceptance_rate,
+                    "speedup": result.speedup_vs_sequential,
+                    "adaptive_k": result.metadata.get("adaptive_k"),
+                    "rounds": result.metadata.get("rounds"),
+                },
+            )
+        except Exception as e:
+            logger.debug("Speculative routing failed: %s — falling back", e)
+            return self.route(prompt, max_output_tokens=max_tokens, force_tier=force_tier)
+
 
 # ── Default handlers ──────────────────────────────────────────────────────
 
@@ -746,18 +798,16 @@ def _llama_cpp_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
     When DualModelManager is configured (WM_LLAMA_BG_MODEL set), routes
     background tasks to the small continuous model and foreground tasks
-    to the large on-demand model. Falls back to single backend otherwise.
+    to the large on-demand model. Falls back to _get_small_backend which
+    uses WM_MODEL_SMALL / WM_MODEL_QWEN3_1_7B / ModelDiscovery.
     """
     try:
-        from whitemagic.inference.llama_cpp import (
-            get_dual_model_manager,
-            get_llama_cpp_backend,
-        )
-
         max_tokens = kwargs.get("max_tokens", 128)
         is_background = kwargs.get("is_background", False)
 
-        # Try dual-model first
+        # Try dual-model first (legacy WM_LLAMA_BG_MODEL / WM_LLAMA_FG_MODEL)
+        from whitemagic.inference.llama_cpp import get_dual_model_manager
+
         dmm = get_dual_model_manager()
         if dmm is not None:
             answer = dmm.route_inference(prompt, is_background=is_background)
@@ -776,9 +826,9 @@ def _llama_cpp_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
                     },
                 }
 
-        # Fallback to single backend
-        backend = get_llama_cpp_backend()
-        if not backend.is_available:
+        # Fallback to small backend (WM_MODEL_SMALL / ModelDiscovery)
+        backend = _get_small_backend()
+        if backend is None:
             return {
                 "answer": "",
                 "confidence": 0.0,
@@ -817,6 +867,127 @@ def get_inference_router() -> InferenceRouter:
         _router.register_handler(InferenceTier.LOCAL_LARGE, _local_large_handler)
         _router.register_handler(InferenceTier.CLOUD, _cloud_handler)
     return _router
+
+
+# ── Speculative Decoding Handlers ──────────────────────────────────────
+
+
+_draft_backend: LlamaCppBackend | None = None
+
+
+def _get_draft_backend() -> LlamaCppBackend | None:
+    """Get or create the draft-model llama.cpp backend singleton.
+
+    Uses the smallest available model for fast draft token generation.
+    Model selection order:
+    1. WM_MODEL_DRAFT env var (explicit path)
+    2. WM_MODEL_SMOLLM2_360M env var
+    3. SmolLM2-360M auto-discovery
+    4. Fallback to _get_small_backend()
+    """
+    global _draft_backend
+    if _draft_backend is not None:
+        return _draft_backend if _draft_backend.is_available else None
+
+    import os
+    from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+    model_path = (
+        os.environ.get("WM_MODEL_DRAFT", "")
+        or os.environ.get("WM_MODEL_SMOLLM2_360M", "")
+    )
+
+    if not model_path:
+        from whitemagic.interfaces.chat import ModelDiscovery
+        models = ModelDiscovery.find_models()
+        draft_match = next(
+            (m for m in models if "smollm2-360m" in m.name.lower()
+             or "smollm2" in m.name.lower()),
+            None,
+        )
+        if draft_match:
+            model_path = draft_match.path
+
+    if not model_path or not os.path.exists(model_path):
+        # Fallback to small backend — it's still faster than large
+        return _get_small_backend()
+
+    port = int(os.environ.get("WM_LLAMA_DRAFT_PORT", "8092"))
+    _draft_backend = LlamaCppBackend(
+        model_path=model_path,
+        port=port,
+        auto_start=True,
+        config=LlamaCppConfig(n_ctx=2048, jinja=True, temperature=0.3, parallel=1),
+    )
+    return _draft_backend if _draft_backend.is_available else None
+
+
+def _draft_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
+    """Draft model handler for speculative decoding.
+
+    Generates K candidate tokens quickly using a small model.
+    """
+    try:
+        backend = _get_draft_backend()
+        if backend is None:
+            return {"text": "", "tokens": [], "latency_ms": 0.0}
+
+        max_tokens = kwargs.get("max_tokens", 4)
+        temperature = kwargs.get("temperature", 0.3)
+        result = backend.complete_with_tokens(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        # Estimate verify model per-token cost for speedup calculation
+        result["verify_per_token_ms"] = 50.0
+        return result
+    except Exception as e:
+        logger.debug("Draft handler failed: %s", e)
+        return {"text": "", "tokens": [], "latency_ms": 0.0}
+
+
+def _verify_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
+    """Verify model handler for speculative decoding.
+
+    Checks draft tokens against the large model. Generates K tokens
+    and returns them for token-level comparison.
+    """
+    try:
+        backend = _get_large_backend()
+        if backend is None:
+            # Fallback to small backend
+            backend = _get_small_backend()
+        if backend is None:
+            return {"text": "", "tokens": [], "latency_ms": 0.0}
+
+        max_tokens = kwargs.get("max_tokens", 4)
+        temperature = kwargs.get("temperature", 0.5)
+        result = backend.complete_with_tokens(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return result
+    except Exception as e:
+        logger.debug("Verify handler failed: %s", e)
+        return {"text": "", "tokens": [], "latency_ms": 0.0}
+
+
+def get_speculative_router() -> SpeculativeDecoder:
+    """Get or create a speculative decoder wired to the local model backends.
+
+    The decoder uses the draft backend (SmolLM2-360M or small model) for
+    fast token generation and the large backend (Qwen3-4B or Phi4-mini)
+    for verification.
+    """
+    from whitemagic.inference.speculative_decoder import get_speculative_decoder
+
+    decoder = get_speculative_decoder()
+    if not decoder.is_available:
+        decoder.register_draft(_draft_handler)
+        decoder.register_verify(_verify_handler)
+    return decoder
 
 
 def route_inference(

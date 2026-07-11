@@ -15,7 +15,8 @@ This is the core of Recursive Self-Improvement.
 import json
 import logging
 import re
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,32 @@ from whitemagic.config.paths import get_state_root
 from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SkillExecution:
+    """A single execution record for a forged skill."""
+
+    timestamp: float
+    success: bool
+    error: str = ""
+    steps_completed: int = 0
+    total_steps: int = 0
+    duration_ms: float = 0.0
+
+
+@dataclass
+class AmendmentProposal:
+    """A proposed amendment to a skill's chain."""
+
+    skill_name: str
+    rationale: str
+    changes: list[str]
+    failing_steps: list[int]
+    old_version: int
+    new_version: int
+    old_failure_rate: float
+    estimated_improvement: float
 
 
 @dataclass
@@ -35,6 +62,10 @@ class ForgedSkill:
     optimized_chain: ExecutionChain
     version: int = 1
     forge_count: int = 1
+    execution_history: list[SkillExecution] = field(default_factory=list)
+    previous_versions: list[ExecutionChain] = field(default_factory=list)
+    amendment_count: int = 0
+    last_amended: float | None = None
 
 
 def _normalize_steps(steps: list[GanaStep]) -> str:
@@ -93,12 +124,52 @@ class SkillForge:
                     required_capabilities=[],
                 )
 
+                # Load previous versions if present
+                previous_versions: list[ExecutionChain] = []
+                for pv in data.get("previous_versions", []):
+                    pv_steps = [
+                        GanaStep(
+                            mansion=s["mansion"],
+                            operation=s["operation"],
+                            context_key=s["context"],
+                            parameters={},
+                        )
+                        for s in pv.get("steps", [])
+                    ]
+                    previous_versions.append(
+                        ExecutionChain(
+                            intent=pv.get("intent", ""),
+                            steps=pv_steps,
+                            estimated_complexity=len(pv_steps),
+                            required_capabilities=[],
+                        )
+                    )
+
+                # Load execution history if present
+                execution_history: list[SkillExecution] = []
+                for eh in data.get("execution_history", []):
+                    execution_history.append(
+                        SkillExecution(
+                            timestamp=eh["timestamp"],
+                            success=eh["success"],
+                            error=eh.get("error", ""),
+                            steps_completed=eh.get("steps_completed", 0),
+                            total_steps=eh.get("total_steps", 0),
+                            duration_ms=eh.get("duration_ms", 0.0),
+                        )
+                    )
+
                 skill = ForgedSkill(
                     name=data["name"],
                     description=data["description"],
                     trigger_phrases=data["triggers"],
                     optimized_chain=chain,
                     forge_count=data.get("forge_count", 1),
+                    version=data.get("version", 1),
+                    execution_history=execution_history,
+                    previous_versions=previous_versions,
+                    amendment_count=data.get("amendment_count", 0),
+                    last_amended=data.get("last_amended"),
                 )
 
                 self.known_skills[skill.name] = skill
@@ -265,6 +336,9 @@ class SkillForge:
             "description": skill.description,
             "triggers": skill.trigger_phrases,
             "forge_count": skill.forge_count,
+            "version": skill.version,
+            "amendment_count": skill.amendment_count,
+            "last_amended": skill.last_amended,
             "steps": [
                 {
                     "mansion": s.mansion,
@@ -272,6 +346,31 @@ class SkillForge:
                     "context": s.context_key,
                 }
                 for s in skill.optimized_chain.steps
+            ],
+            "previous_versions": [
+                {
+                    "intent": pv.intent,
+                    "steps": [
+                        {
+                            "mansion": s.mansion,
+                            "operation": s.operation,
+                            "context": s.context_key,
+                        }
+                        for s in pv.steps
+                    ],
+                }
+                for pv in skill.previous_versions
+            ],
+            "execution_history": [
+                {
+                    "timestamp": eh.timestamp,
+                    "success": eh.success,
+                    "error": eh.error,
+                    "steps_completed": eh.steps_completed,
+                    "total_steps": eh.total_steps,
+                    "duration_ms": eh.duration_ms,
+                }
+                for eh in skill.execution_history[-100:]  # Keep last 100
             ],
         }
 
@@ -543,6 +642,322 @@ wm(thought="{chain_intent}")
             "Invoking skill '%s' (%d steps)", name, len(skill.optimized_chain.steps)
         )
         return skill.optimized_chain
+
+    # ── Self-Improvement: Observe → Inspect → Amend → Evaluate ──────────
+
+    def record_execution(
+        self,
+        skill_name: str,
+        success: bool,
+        error: str = "",
+        steps_completed: int = 0,
+        total_steps: int = 0,
+        duration_ms: float = 0.0,
+    ) -> None:
+        """Record a skill execution outcome.
+
+        This is the Observe step — every skill invocation should be recorded
+        so that the system has evidence of what happened when the skill ran.
+
+        Args:
+            skill_name: The skill that was executed (case-insensitive).
+            success: Whether the execution succeeded overall.
+            error: Error message if the execution failed.
+            steps_completed: How many steps completed before failure.
+            total_steps: Total steps in the chain.
+            duration_ms: Execution duration in milliseconds.
+        """
+        skill = self._find_skill_by_name(skill_name)
+        if skill is None:
+            logger.warning("Cannot record execution: skill '%s' not found", skill_name)
+            return
+
+        execution = SkillExecution(
+            timestamp=time.time(),
+            success=success,
+            error=error,
+            steps_completed=steps_completed,
+            total_steps=total_steps or len(skill.optimized_chain.steps),
+            duration_ms=duration_ms,
+        )
+        skill.execution_history.append(execution)
+
+        # Keep history bounded (last 200 executions)
+        if len(skill.execution_history) > 200:
+            skill.execution_history = skill.execution_history[-200:]
+
+        self._save_skill(skill)
+        logger.debug(
+            "Recorded execution for '%s': success=%s, total=%d",
+            skill_name,
+            success,
+            len(skill.execution_history),
+        )
+
+    def get_failure_rate(self, skill_name: str, window: int = 20) -> float:
+        """Compute the failure rate for a skill over recent executions.
+
+        Args:
+            skill_name: The skill to analyze (case-insensitive).
+            window: Number of recent executions to consider.
+
+        Returns:
+            Failure rate (0.0–1.0), or 0.0 if no execution history.
+        """
+        skill = self._find_skill_by_name(skill_name)
+        if skill is None or not skill.execution_history:
+            return 0.0
+
+        recent = skill.execution_history[-window:]
+        failures = sum(1 for e in recent if not e.success)
+        return failures / len(recent) if recent else 0.0
+
+    def get_skill_health(self) -> list[dict[str, Any]]:
+        """Get health metrics for all skills.
+
+        Returns a list of dicts with skill name, failure rate, execution count,
+        version, and amendment count. Skills with high failure rates are
+        candidates for amendment.
+        """
+        results = []
+        for name, skill in sorted(self.known_skills.items()):
+            recent = skill.execution_history[-20:]
+            total = len(recent)
+            failures = sum(1 for e in recent if not e.success)
+            failure_rate = failures / total if total > 0 else 0.0
+            results.append({
+                "name": name,
+                "version": skill.version,
+                "forge_count": skill.forge_count,
+                "execution_count": len(skill.execution_history),
+                "recent_executions": total,
+                "recent_failures": failures,
+                "failure_rate": round(failure_rate, 3),
+                "amendment_count": skill.amendment_count,
+                "needs_amendment": failure_rate > 0.3 and total >= 3,
+            })
+        return results
+
+    def amend(self, skill_name: str) -> AmendmentProposal | None:
+        """Propose and apply an amendment to a skill based on failure history.
+
+        This is the Inspect → Amend step. Analyzes execution history to find
+        failing steps, then proposes and applies a revised chain.
+
+        The amendment may:
+        - Remove consistently failing steps
+        - Reorder steps to put reliable ones first
+        - Add a verification step at the end
+        - Update trigger phrases based on observed intent
+
+        Args:
+            skill_name: The skill to amend (case-insensitive).
+
+        Returns:
+            The amendment proposal if applied, None if no amendment needed.
+        """
+        skill = self._find_skill_by_name(skill_name)
+        if skill is None:
+            logger.warning("Cannot amend: skill '%s' not found", skill_name)
+            return None
+
+        recent = skill.execution_history[-20:]
+        if len(recent) < 3:
+            logger.info("Skill '%s' has insufficient history for amendment", skill_name)
+            return None
+
+        failure_rate = self.get_failure_rate(skill_name)
+        if failure_rate < 0.3:
+            logger.info("Skill '%s' failure rate %.2f below amendment threshold", skill_name, failure_rate)
+            return None
+
+        # Inspect: identify failing steps
+        step_fail_counts = [0] * len(skill.optimized_chain.steps)
+        for exec in recent:
+            if not exec.success and 0 < exec.steps_completed < len(step_fail_counts):
+                for i in range(exec.steps_completed, len(step_fail_counts)):
+                    step_fail_counts[i] += 1
+
+        failing_steps = [
+            i for i, count in enumerate(step_fail_counts)
+            if count > len(recent) * 0.4
+        ]
+
+        changes = []
+        old_chain = skill.optimized_chain
+        new_steps = list(old_chain.steps)
+
+        if failing_steps:
+            # Remove the worst-failing steps (keep at least 2)
+            steps_to_remove = sorted(failing_steps, reverse=True)
+            for idx in steps_to_remove:
+                if len(new_steps) > 2:
+                    removed = new_steps.pop(idx)
+                    changes.append(
+                        f"Removed step {idx + 1} ({removed.mansion}/{removed.operation}) "
+                        f"— failed in {step_fail_counts[idx]}/{len(recent)} recent executions"
+                    )
+
+        # If all steps fail equally, add a verification step at the end
+        if not changes and failure_rate > 0.5:
+            new_steps.append(
+                GanaStep(
+                    mansion="GHOST",
+                    operation="analyze",
+                    context_key="verify_result",
+                    parameters={},
+                )
+            )
+            changes.append(
+                "Added verification step (GHOST/analyze) — high failure rate "
+                f"({failure_rate:.0%}) with no specific step identified"
+            )
+
+        if not changes:
+            logger.info("Skill '%s' has failures but no actionable amendment", skill_name)
+            return None
+
+        # Save old version
+        old_version = skill.version
+        old_failure_rate = failure_rate
+
+        # Apply amendment
+        skill.previous_versions.append(old_chain)
+        skill.optimized_chain = ExecutionChain(
+            intent=old_chain.intent,
+            steps=new_steps,
+            estimated_complexity=len(new_steps) * 0.8,
+            required_capabilities=old_chain.required_capabilities,
+        )
+        skill.version += 1
+        skill.amendment_count += 1
+        skill.last_amended = time.time()
+
+        # Update signature
+        self._step_signatures[skill.name] = _normalize_steps(new_steps)
+
+        self._save_skill(skill)
+
+        proposal = AmendmentProposal(
+            skill_name=skill.name,
+            rationale=f"Failure rate {old_failure_rate:.0%} triggered amendment",
+            changes=changes,
+            failing_steps=failing_steps,
+            old_version=old_version,
+            new_version=skill.version,
+            old_failure_rate=old_failure_rate,
+            estimated_improvement=0.3,
+        )
+
+        logger.info(
+            "Amended skill '%s' v%d → v%d: %s",
+            skill.name,
+            old_version,
+            skill.version,
+            "; ".join(changes),
+        )
+        return proposal
+
+    def rollback(self, skill_name: str) -> bool:
+        """Roll back a skill to its previous version.
+
+        This is the Evaluate safety net — if an amendment made things worse,
+        restore the previous chain.
+
+        Args:
+            skill_name: The skill to roll back (case-insensitive).
+
+        Returns:
+            True if rollback succeeded, False if no previous version exists.
+        """
+        skill = self._find_skill_by_name(skill_name)
+        if skill is None:
+            logger.warning("Cannot rollback: skill '%s' not found", skill_name)
+            return False
+
+        if not skill.previous_versions:
+            logger.warning("Skill '%s' has no previous version to rollback to", skill_name)
+            return False
+
+        # Current chain becomes a version entry (for audit)
+        old_chain = skill.optimized_chain
+        previous = skill.previous_versions.pop()
+
+        skill.optimized_chain = previous
+        skill.version -= 1
+        skill.last_amended = time.time()
+
+        self._step_signatures[skill.name] = _normalize_steps(previous.steps)
+        self._save_skill(skill)
+
+        logger.info(
+            "Rolled back skill '%s' from v%d to v%d",
+            skill.name,
+            skill.version + 1,
+            skill.version,
+        )
+        return True
+
+    def evaluate_amendment(self, skill_name: str, window: int = 10) -> dict[str, Any]:
+        """Evaluate whether the last amendment improved outcomes.
+
+        This is the Evaluate step — compares failure rates before and after
+        the most recent amendment.
+
+        Args:
+            skill_name: The skill to evaluate (case-insensitive).
+            window: Number of recent executions to use for post-amendment rate.
+
+        Returns:
+            Dict with evaluation results, or empty dict if no amendment.
+        """
+        skill = self._find_skill_by_name(skill_name)
+        if skill is None or skill.last_amended is None:
+            return {"skill_name": skill_name, "has_amendment": False}
+
+        # Split history at amendment time
+        pre_amendment = [
+            e for e in skill.execution_history if e.timestamp < skill.last_amended
+        ]
+        post_amendment = [
+            e for e in skill.execution_history if e.timestamp >= skill.last_amended
+        ]
+
+        pre_failures = sum(1 for e in pre_amendment[-20:] if not e.success)
+        pre_total = len(pre_amendment[-20:])
+        pre_rate = pre_failures / pre_total if pre_total > 0 else 0.0
+
+        post_failures = sum(1 for e in post_amendment[-window:] if not e.success)
+        post_total = len(post_amendment[-window:])
+        post_rate = post_failures / post_total if post_total > 0 else 0.0
+
+        improved = post_rate < pre_rate if post_total > 0 else None
+
+        return {
+            "skill_name": skill.name,
+            "has_amendment": True,
+            "amendment_version": skill.version,
+            "pre_amendment_failure_rate": round(pre_rate, 3),
+            "post_amendment_failure_rate": round(post_rate, 3),
+            "pre_amendment_executions": pre_total,
+            "post_amendment_executions": post_total,
+            "improved": improved,
+            "recommendation": (
+                "keep" if improved and post_total >= 3 else
+                "rollback" if improved is False and post_total >= 3 else
+                "insufficient_data"
+            ),
+        }
+
+    def _find_skill_by_name(self, name: str) -> ForgedSkill | None:
+        """Find a skill by name (case-insensitive)."""
+        skill = self.known_skills.get(name)
+        if skill is not None:
+            return skill
+        for key, s in self.known_skills.items():
+            if key.lower() == name.lower():
+                return s
+        return None
 
     def seed_common_skills(self) -> list[ForgedSkill]:
         """Pre-forge common high-value tool chains as seed skills.

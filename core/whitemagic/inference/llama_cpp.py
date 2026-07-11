@@ -342,6 +342,57 @@ class LlamaCppBackend:
             logger.error("llama.cpp inference failed: %s", e)
             return f"Error: {e}"
 
+    def complete_with_tokens(
+        self,
+        prompt: str,
+        max_tokens: int = 64,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        """Generate a completion and return both text and token IDs.
+
+        Used by the speculative decoding pipeline which needs token-level
+        comparison between draft and verify models.
+
+        Returns:
+            {"text": str, "tokens": list[int], "latency_ms": float}
+        """
+        if not self.is_available:
+            return {"text": "", "tokens": [], "latency_ms": 0.0}
+
+        payload: dict[str, Any] = {
+            "prompt": prompt,
+            "n_predict": max_tokens,
+            "temperature": temperature if temperature is not None else self._config.temperature,
+            "top_p": self._config.top_p,
+            "repeat_penalty": self._config.repeat_penalty,
+            "stream": False,
+        }
+
+        try:
+            start = time.time()
+            resp = requests.post(
+                f"{self._base_url}/completion",
+                json=payload,
+                timeout=DEFAULT_TIMEOUT,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            latency_ms = (time.time() - start) * 1000
+            text = data.get("content", "")
+            # llama-server doesn't always return token IDs in the response.
+            # Use the tokenize endpoint to convert generated text to tokens.
+            tokens = data.get("tokens", [])
+            if not tokens and text:
+                tokens = self.tokenize(text)
+            return {
+                "text": text,
+                "tokens": tokens,
+                "latency_ms": round(latency_ms, 2),
+            }
+        except Exception as e:
+            logger.error("llama.cpp complete_with_tokens failed: %s", e)
+            return {"text": "", "tokens": [], "latency_ms": 0.0}
+
     def chat(
         self,
         messages: list[dict[str, str]],

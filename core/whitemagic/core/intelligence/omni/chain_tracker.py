@@ -11,6 +11,7 @@ This is the bridge between the live MCP dispatch path and the SkillForge.
 import logging
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from whitemagic.core.intelligence.omni.skill_forge import ForgedSkill
 from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep
@@ -149,6 +150,7 @@ class ChainTracker:
         """Check if the current sequence should be flushed and forged.
 
         Returns the forged skill if one was created, None otherwise.
+        Also records execution outcomes against any matching existing skills.
         """
         if not self.should_flush():
             return None
@@ -167,12 +169,49 @@ class ChainTracker:
 
             forge = get_skill_forge()
 
+            # Record execution against any matching existing skill
+            self._record_execution_for_match(forge, chain, success_ratio, total)
+
             if forge.assess_pattern(chain, success_ratio):
                 return forge.forge(chain)
         except Exception as e:
             logger.warning("Auto-forge from ChainTracker failed: %s", e)
 
         return None
+
+    def _record_execution_for_match(
+        self,
+        forge: Any,
+        chain: ExecutionChain,
+        success_ratio: float,
+        total: int,
+    ) -> None:
+        """Record execution outcome against any existing skill that matches.
+
+        This is the Observe step — links ChainTracker call sequences back to
+        ForgedSkills so that failure rates can be tracked per-skill.
+        """
+        try:
+            from whitemagic.core.intelligence.omni.skill_forge import _step_similarity
+
+            for name, skill in forge.known_skills.items():
+                similarity = _step_similarity(chain.steps, skill.optimized_chain.steps)
+                if similarity >= forge.SIMILARITY_THRESHOLD:
+                    is_success = success_ratio >= 0.8
+                    error = "" if is_success else "chain execution had failures"
+                    steps_completed = sum(
+                        1 for c in self._calls[:total] if c.success
+                    )
+                    forge.record_execution(
+                        skill_name=name,
+                        success=is_success,
+                        error=error,
+                        steps_completed=steps_completed,
+                        total_steps=len(skill.optimized_chain.steps),
+                    )
+                    break
+        except Exception as e:
+            logger.debug("Execution recording for match failed: %s", e)
 
     def reset(self) -> None:
         """Clear all tracked calls."""

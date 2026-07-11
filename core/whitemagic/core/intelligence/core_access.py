@@ -34,6 +34,12 @@ from __future__ import annotations
 import logging
 import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.galaxy_scan import (
+    galaxy_connection,
+    get_galaxy_db_paths,
+    scan_query_all,
+    scan_query_one,
+)
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -397,19 +403,19 @@ class CoreAccessLayer:
         except Exception as e:
             logger.debug("Failed to execute core access query: %s", e, exc_info=True)
 
-        conn = self._get_conn()
         visited: dict[str, AssociationNode] = {}
         frontier = list(seed_ids)
         current_depth = 0
 
+        galaxy_paths = get_galaxy_db_paths()
+
         for sid in seed_ids:
-            try:
-                row = conn.execute(
-                    "SELECT id, title FROM memories WHERE id = ?", (sid,)
-                ).fetchone()
-                title = row["title"] if row else None
-            except (sqlite3.Error, sqlite3.OperationalError):
-                title = None
+            title = None
+            row = scan_query_one(
+                "SELECT id, title FROM memories WHERE id = ?", (sid,)
+            )
+            if row:
+                title = row["title"]
             visited[sid] = AssociationNode(
                 memory_id=sid,
                 title=title,
@@ -421,37 +427,31 @@ class CoreAccessLayer:
             current_depth += 1
             next_frontier = []
 
-            # Batch all frontier association queries into one IN(...) query per depth level
+            # Batch all frontier association queries across all galaxy DBs
             frontier_neighbors: dict[str, list[tuple[str, float]]] = {
                 mid: [] for mid in frontier
             }
             if frontier:
-                try:
-                    ph = ",".join("?" * len(frontier))
-                    frontier_list = list(frontier)
-                    batch_rows = conn.execute(
-                        f"""
-                        SELECT source_id, target_id as neighbor_id, strength FROM associations
-                        WHERE source_id IN ({ph}) AND strength >= ?
-                        UNION
-                        SELECT target_id as source_id, source_id as neighbor_id, strength FROM associations
-                        WHERE target_id IN ({ph}) AND strength >= ?
-                        ORDER BY strength DESC
-                        """,
-                        frontier_list + [min_strength] + frontier_list + [min_strength],
-                    ).fetchall()
-                    for r in batch_rows:
-                        src = r["source_id"]
-                        if src in frontier_neighbors:
-                            frontier_neighbors[src].append(
-                                (r["neighbor_id"], r["strength"])
-                            )
-                except Exception as e:
-                    logger.debug(
-                        "Failed to process frontier neighbors: %s", e, exc_info=True
-                    )
+                ph = ",".join("?" * len(frontier))
+                frontier_list = list(frontier)
+                assoc_sql = (
+                    f"SELECT source_id, target_id as neighbor_id, strength FROM associations "
+                    f"WHERE source_id IN ({ph}) AND strength >= ? "
+                    f"UNION "
+                    f"SELECT target_id as source_id, source_id as neighbor_id, strength FROM associations "
+                    f"WHERE target_id IN ({ph}) AND strength >= ? "
+                    f"ORDER BY strength DESC"
+                )
+                assoc_params = frontier_list + [min_strength] + frontier_list + [min_strength]
+                batch_rows = scan_query_all(assoc_sql, assoc_params)
+                for r in batch_rows:
+                    src = r["source_id"]
+                    if src in frontier_neighbors:
+                        frontier_neighbors[src].append(
+                            (r["neighbor_id"], r["strength"])
+                        )
 
-            # Collect all new neighbor IDs, then batch-fetch titles (N+1 fix)
+            # Collect all new neighbor IDs, then batch-fetch titles across galaxies
             new_nids = [
                 nid
                 for neighbors in frontier_neighbors.values()
@@ -460,17 +460,12 @@ class CoreAccessLayer:
             ]
             neighbor_titles: dict[str, str | None] = {}
             if new_nids:
-                try:
-                    ph = ",".join("?" * len(new_nids))
-                    title_rows = conn.execute(
-                        f"SELECT id, title FROM memories WHERE id IN ({ph})",
-                        new_nids,
-                    ).fetchall()
-                    neighbor_titles = {r["id"]: r["title"] for r in title_rows}
-                except (sqlite3.Error, sqlite3.OperationalError) as e:
-                    logger.debug(
-                        "Failed to resolve neighbor titles: %s", e, exc_info=True
-                    )
+                ph = ",".join("?" * len(new_nids))
+                title_rows = scan_query_all(
+                    f"SELECT id, title FROM memories WHERE id IN ({ph})",
+                    new_nids,
+                )
+                neighbor_titles = {r["id"]: r["title"] for r in title_rows}
 
             for neighbors in frontier_neighbors.values():
                 for nid, strength in neighbors:
@@ -485,8 +480,8 @@ class CoreAccessLayer:
 
             frontier = next_frontier
 
-        # Update traversal tracking for edges we actually walked
-        self._record_traversals(visited, conn)
+        # Update traversal tracking — best-effort across galaxy DBs
+        self._record_traversals_galaxy(visited, galaxy_paths)
 
         nodes = list(visited.values())
         nodes.sort(key=lambda n: (n.depth, -n.strength))
@@ -522,56 +517,97 @@ class CoreAccessLayer:
                 "Non-critical commit error in core_access: %s", e, exc_info=True
             )
 
+    def _record_traversals_galaxy(
+        self,
+        visited: dict[str, AssociationNode],
+        galaxy_paths: dict[str, str],
+    ) -> None:
+        """Update traversal tracking across all galaxy DBs."""
+        now = datetime.now().isoformat()
+        batch_params: list[tuple[str, str, str]] = []
+        for node in visited.values():
+            if node.depth == 0:
+                continue
+            batch_params.append((now, node.memory_id, node.memory_id))
+        if not batch_params:
+            return
+        for _galaxy, db_path in galaxy_paths.items():
+            try:
+                with galaxy_connection(db_path) as conn:
+                    conn.executemany(
+                        """
+                        UPDATE associations
+                        SET last_traversed_at = ?,
+                            traversal_count = COALESCE(traversal_count, 0) + 1
+                        WHERE (source_id = ? OR target_id = ?)
+                        AND strength >= 0.3
+                    """,
+                        batch_params,
+                    )
+                    conn.commit()
+            except Exception as e:
+                logger.debug(
+                    "Non-critical traversal update failed for galaxy: %s", e, exc_info=True
+                )
+
     def get_association_stats(self) -> dict[str, Any]:
-        """Get association graph statistics."""
-        conn = self._get_conn()
-        try:
-            row = conn.execute("""
-                SELECT COUNT(*) as total,
-                       AVG(strength) as avg_strength,
-                       MIN(strength) as min_strength,
-                       MAX(strength) as max_strength
-                FROM associations
-            """).fetchone()
-            return {
-                "total_associations": row["total"],
-                "avg_strength": round(row["avg_strength"] or 0, 3),
-                "min_strength": round(row["min_strength"] or 0, 3),
-                "max_strength": round(row["max_strength"] or 0, 3),
-            }
-        except (sqlite3.Error, TypeError):
+        """Get association graph statistics across all galaxies."""
+        total = 0
+        sum_strength = 0.0
+        min_strength = float("inf")
+        max_strength = 0.0
+
+        for _galaxy, db_path in get_galaxy_db_paths().items():
+            try:
+                with galaxy_connection(db_path) as conn:
+                    row = conn.execute(
+                        "SELECT COUNT(*) as total, SUM(strength) as sum_s, "
+                        "MIN(strength) as min_s, MAX(strength) as max_s "
+                        "FROM associations"
+                    ).fetchone()
+                    if row and row["total"] > 0:
+                        total += row["total"]
+                        sum_strength += row["sum_s"] or 0.0
+                        min_strength = min(min_strength, row["min_s"] or 0.0)
+                        max_strength = max(max_strength, row["max_s"] or 0.0)
+            except Exception:
+                pass
+
+        if total == 0:
             return {"total_associations": 0}
+        return {
+            "total_associations": total,
+            "avg_strength": round(sum_strength / total, 3),
+            "min_strength": round(min_strength, 3),
+            "max_strength": round(max_strength, 3),
+        }
 
     def find_broken_associations(self, limit: int = 20) -> list[dict[str, Any]]:
         """Find high-strength associations where one end has drifted to FAR_EDGE."""
-        conn = self._get_conn()
-        try:
-            rows = conn.execute(
-                """
-                SELECT a.source_id, a.target_id, a.strength,
-                       m1.galactic_distance as src_distance,
-                       m2.galactic_distance as tgt_distance,
-                       m1.title as src_title, m2.title as tgt_title
-                FROM associations a
-                JOIN memories m1 ON a.source_id = m1.id
-                JOIN memories m2 ON a.target_id = m2.id
-                WHERE a.strength > 0.5
-                AND (m1.galactic_distance > 0.85 OR m2.galactic_distance > 0.85)
-                ORDER BY a.strength DESC
-                LIMIT ?
-            """,
-                (limit,),
-            ).fetchall()
-            return [dict(r) for r in rows]
-        except sqlite3.Error:
-            return []
+        rows = scan_query_all(
+            """
+            SELECT a.source_id, a.target_id, a.strength,
+                   m1.galactic_distance as src_distance,
+                   m2.galactic_distance as tgt_distance,
+                   m1.title as src_title, m2.title as tgt_title
+            FROM associations a
+            JOIN memories m1 ON a.source_id = m1.id
+            JOIN memories m2 ON a.target_id = m2.id
+            WHERE a.strength > 0.5
+            AND (m1.galactic_distance > 0.85 OR m2.galactic_distance > 0.85)
+            ORDER BY a.strength DESC
+            LIMIT ?
+        """,
+            (limit,),
+        )
+        return [dict(r) for r in rows]
 
     def query_temporal_activity(
         self,
         time_window: str = "7d",
         bucket: str = "1d",
     ) -> list[TemporalBucket]:
-        """Time-bucketed memory creation and access metrics.
+        """Time-bucketed memory creation and access metrics across all galaxies.
 
         Args:
             time_window: How far back to look ("7d", "30d", "90d")
@@ -579,41 +615,36 @@ class CoreAccessLayer:
 
         Returns list of TemporalBucket objects.
         """
-        conn = self._get_conn()
-
         days = int(time_window.rstrip("d"))
         bucket_days = int(bucket.rstrip("d"))
 
         threshold = (datetime.now() - timedelta(days=days)).isoformat()
 
-        try:
-            # Memory creation by date
-            rows = conn.execute(
-                """
-                SELECT DATE(created_at) as day, COUNT(*) as cnt
-                FROM memories
-                WHERE created_at > ?
-                GROUP BY day ORDER BY day
-            """,
-                (threshold,),
-            ).fetchall()
+        creation_by_day: dict[str, int] = {}
+        access_by_day: dict[str, int] = {}
 
-            creation_by_day: dict[str, int] = {r["day"]: r["cnt"] for r in rows}
+        for _galaxy, db_path in get_galaxy_db_paths().items():
+            try:
+                with galaxy_connection(db_path) as conn:
+                    rows = conn.execute(
+                        "SELECT DATE(created_at) as day, COUNT(*) as cnt "
+                        "FROM memories WHERE created_at > ? "
+                        "GROUP BY day ORDER BY day",
+                        (threshold,),
+                    ).fetchall()
+                    for r in rows:
+                        creation_by_day[r["day"]] = creation_by_day.get(r["day"], 0) + r["cnt"]
 
-            # Memory access by date
-            access_rows = conn.execute(
-                """
-                SELECT DATE(accessed_at) as day, COUNT(*) as cnt
-                FROM memories
-                WHERE accessed_at > ? AND accessed_at IS NOT NULL
-                GROUP BY day ORDER BY day
-            """,
-                (threshold,),
-            ).fetchall()
-
-            access_by_day: dict[str, int] = {r["day"]: r["cnt"] for r in access_rows}
-        except sqlite3.Error:
-            return []
+                    access_rows = conn.execute(
+                        "SELECT DATE(accessed_at) as day, COUNT(*) as cnt "
+                        "FROM memories WHERE accessed_at > ? AND accessed_at IS NOT NULL "
+                        "GROUP BY day ORDER BY day",
+                        (threshold,),
+                    ).fetchall()
+                    for r in access_rows:
+                        access_by_day[r["day"]] = access_by_day.get(r["day"], 0) + r["cnt"]
+            except Exception:
+                pass
 
         # Build buckets
         buckets: list[TemporalBucket] = []
@@ -644,35 +675,42 @@ class CoreAccessLayer:
         return buckets
 
     def get_velocity_metrics(self) -> dict[str, float]:
-        """Calculate memory creation velocity metrics."""
-        conn = self._get_conn()
-        try:
-            row = conn.execute("""
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(CASE WHEN created_at > datetime('now', '-1 days') THEN 1 END) as last_1d,
-                    COUNT(CASE WHEN created_at > datetime('now', '-7 days') THEN 1 END) as last_7d,
-                    COUNT(CASE WHEN created_at > datetime('now', '-30 days') THEN 1 END) as last_30d
-                FROM memories
-            """).fetchone()
+        """Calculate memory creation velocity metrics across all galaxies."""
+        total = 0
+        last_1d = 0
+        last_7d = 0
+        last_30d = 0
 
-            last_7d = row["last_7d"]
-            last_30d = row["last_30d"]
-            acceleration = (
-                (last_7d / 7) / max(0.01, last_30d / 30) if last_30d > 0 else 1.0
-            )
+        for _galaxy, db_path in get_galaxy_db_paths().items():
+            try:
+                with galaxy_connection(db_path) as conn:
+                    row = conn.execute(
+                        "SELECT COUNT(*) as total, "
+                        "COUNT(CASE WHEN created_at > datetime('now', '-1 days') THEN 1 END) as last_1d, "
+                        "COUNT(CASE WHEN created_at > datetime('now', '-7 days') THEN 1 END) as last_7d, "
+                        "COUNT(CASE WHEN created_at > datetime('now', '-30 days') THEN 1 END) as last_30d "
+                        "FROM memories"
+                    ).fetchone()
+                    if row:
+                        total += row["total"]
+                        last_1d += row["last_1d"]
+                        last_7d += row["last_7d"]
+                        last_30d += row["last_30d"]
+            except Exception:
+                pass
 
-            return {
-                "total": row["total"],
-                "last_1d": row["last_1d"],
-                "last_7d": last_7d,
-                "last_30d": last_30d,
-                "daily_avg_7d": round(last_7d / 7, 1),
-                "daily_avg_30d": round(last_30d / 30, 1),
-                "acceleration": round(acceleration, 2),  # >1 = accelerating
-            }
-        except (sqlite3.Error, TypeError):
-            return {"total": 0}
+        acceleration = (
+            (last_7d / 7) / max(0.01, last_30d / 30) if last_30d > 0 else 1.0
+        )
+        return {
+            "total": total,
+            "last_1d": last_1d,
+            "last_7d": last_7d,
+            "last_30d": last_30d,
+            "daily_avg_7d": round(last_7d / 7, 1),
+            "daily_avg_30d": round(last_30d / 30, 1),
+            "acceleration": round(acceleration, 2),
+        }
 
     def query_holographic_neighbors(
         self,
@@ -680,49 +718,42 @@ class CoreAccessLayer:
         k: int = 20,
         include_cold: bool = False,
     ) -> list[HolographicNeighbor]:
-        """KNN in 5D holographic space.
+        """KNN in 5D holographic space across all galaxies.
 
-        Uses Zig SIMD accelerated distance when available, falls back
-        to SQL-based brute force.
+        Queries each galaxy DB, merges results, re-sorts by distance.
         """
-        conn = self._get_conn()
+        import math
+
         x, y, z, w, v = coords
+        all_rows = scan_query_all(
+            """
+            SELECT hc.memory_id,
+                   m.title,
+                   hc.x, hc.y, hc.z, hc.w, hc.v,
+                   ((hc.x - ?) * (hc.x - ?) +
+                    (hc.y - ?) * (hc.y - ?) +
+                    (hc.z - ?) * (hc.z - ?) +
+                    (hc.w - ?) * (hc.w - ?) +
+                    (hc.v - ?) * (hc.v - ?)) as dist_sq
+            FROM holographic_coords hc
+            JOIN memories m ON hc.memory_id = m.id
+            WHERE hc.x IS NOT NULL
+            ORDER BY dist_sq ASC
+            LIMIT ?
+        """,
+            (x, x, y, y, z, z, w, w, v, v, k),
+        )
 
-        try:
-            # SQL-based brute force with distance calculation
-            rows = conn.execute(
-                """
-                SELECT hc.memory_id,
-                       m.title,
-                       hc.x, hc.y, hc.z, hc.w, hc.v,
-                       ((hc.x - ?) * (hc.x - ?) +
-                        (hc.y - ?) * (hc.y - ?) +
-                        (hc.z - ?) * (hc.z - ?) +
-                        (hc.w - ?) * (hc.w - ?) +
-                        (hc.v - ?) * (hc.v - ?)) as dist_sq
-                FROM holographic_coords hc
-                JOIN memories m ON hc.memory_id = m.id
-                WHERE hc.x IS NOT NULL
-                ORDER BY dist_sq ASC
-                LIMIT ?
-            """,
-                (x, x, y, y, z, z, w, w, v, v, k),
-            ).fetchall()
-
-            import math
-
-            return [
-                HolographicNeighbor(
-                    memory_id=r["memory_id"],
-                    title=r["title"],
-                    distance=math.sqrt(max(0, r["dist_sq"])),
-                    coords=(r["x"], r["y"], r["z"], r["w"], r["v"]),
-                )
-                for r in rows
-            ]
-        except Exception as e:
-            logger.debug("Holographic neighbor query failed: %s", e, exc_info=True)
-            return []
+        all_rows.sort(key=lambda r: r["dist_sq"])
+        return [
+            HolographicNeighbor(
+                memory_id=r["memory_id"],
+                title=r["title"],
+                distance=math.sqrt(max(0, r["dist_sq"])),
+                coords=(r["x"], r["y"], r["z"], r["w"], r["v"]),
+            )
+            for r in all_rows[:k]
+        ]
 
     def invalidate_hrr_cache(self) -> None:
         """Invalidate the HRR pre-filter cache.
@@ -753,10 +784,9 @@ class CoreAccessLayer:
 
                 from whitemagic.core.memory.qfhrr import get_quantized_hrr_engine
 
-                conn = self._get_conn()
-                rows = conn.execute(
+                rows = scan_query_all(
                     "SELECT memory_id, embedding FROM memory_embeddings ORDER BY memory_id",
-                ).fetchall()
+                )
 
                 if not rows:
                     self._hrr_cache_ids = []
@@ -1000,10 +1030,10 @@ class CoreAccessLayer:
             title = None
             preview = ""
             try:
-                row = conn.execute(
+                row = scan_query_one(
                     "SELECT title, SUBSTR(content, 1, 200) as preview FROM memories WHERE id = ?",
                     (mid,),
-                ).fetchone()
+                )
                 if row:
                     title = row["title"]
                     preview = row["preview"] or ""
@@ -1048,7 +1078,6 @@ class CoreAccessLayer:
             constellation_members[c["name"]] = set(c.get("member_ids", []))
 
         # Find memories that appear in associations linking two different constellations
-        conn = self._get_conn()
         bridges: list[dict[str, Any]] = []
 
         try:
@@ -1066,11 +1095,11 @@ class CoreAccessLayer:
 
             if all_sample_ids:
                 ph = ",".join("?" * len(all_sample_ids))
-                assoc_rows = conn.execute(
+                assoc_rows = scan_query_all(
                     f"SELECT source_id, target_id, strength FROM associations "
                     f"WHERE source_id IN ({ph}) AND strength > 0.4",
                     all_sample_ids,
-                ).fetchall()
+                )
                 # Index by source_id for fast lookup
                 assoc_by_src: dict[str, list[tuple[str, float]]] = {}
                 for r in assoc_rows:
@@ -1123,25 +1152,22 @@ class CoreAccessLayer:
 
         These are isolated knowledge nodes that should be connected.
         """
-        conn = self._get_conn()
-        try:
-            rows = conn.execute(
-                """
-                SELECT m.id, m.title, h.w as gravity,
-                       (SELECT COUNT(*) FROM associations
-                        WHERE source_id = m.id OR target_id = m.id) as assoc_count
-                FROM memories m
-                JOIN holographic_coords h ON m.id = h.memory_id
-                WHERE h.w > ?
-                HAVING assoc_count < 3
-                ORDER BY h.w DESC
-                LIMIT ?
-            """,
-                (min_gravity, limit),
-            ).fetchall()
-            return [dict(r) for r in rows]
-        except sqlite3.Error:
-            return []
+        rows = scan_query_all(
+            """
+            SELECT m.id, m.title, h.w as gravity,
+                   (SELECT COUNT(*) FROM associations
+                    WHERE source_id = m.id OR target_id = m.id) as assoc_count
+            FROM memories m
+            JOIN holographic_coords h ON m.id = h.memory_id
+            WHERE h.w > ?
+              AND (SELECT COUNT(*) FROM associations
+                   WHERE source_id = m.id OR target_id = m.id) < 3
+            ORDER BY h.w DESC
+            LIMIT ?
+        """,
+            (min_gravity, limit),
+        )
+        return [dict(r) for r in rows]
 
     def compress_context(
         self,

@@ -104,4 +104,47 @@ DISPATCH_AGENTS: dict[str, Callable[..., dict[str, Any]]] = {
     "codegenome.list": LazyHandler("codegenome", "handle_codegenome_list"),
     "codegenome.fork": LazyHandler("codegenome", "handle_codegenome_fork"),
     "codegenome.status": LazyHandler("codegenome", "handle_codegenome_status"),
+    # ── Research DAG ──
+    "research.dag.submit": LazyHandler("research", "handle_research_dag_submit"),
+    "research.dag.result": LazyHandler("research", "handle_research_dag_result"),
+    "research.dag.critique": LazyHandler("research", "handle_research_dag_critique"),
+    "research.dag.lineage": LazyHandler("research", "handle_research_dag_lineage"),
+    "research.dag.breakthroughs": LazyHandler("research", "handle_research_dag_breakthroughs"),
+    "research.dag.stats": LazyHandler("research", "handle_research_dag_stats"),
+    "research.dag.leaderboard": LazyHandler("research", "handle_research_dag_leaderboard"),
+    "research.dag.experiments": LazyHandler("research", "handle_research_dag_experiments"),
+    # ── Autoswarm ──
+    "autoswarm.campaign": LazyHandler("research", "handle_autoswarm_campaign"),
+    "autoswarm.status": LazyHandler("research", "handle_autoswarm_status"),
+    "autoswarm.start": LazyHandler("research", "handle_autoswarm_start"),
+    "autoswarm.stop": LazyHandler("research", "handle_autoswarm_stop"),
+    # ── Warps ──
+    "warp.load": LazyHandler("research", "handle_warp_load"),
+    "warp.list": LazyHandler("research", "handle_warp_list"),
+    "warp.create": LazyHandler("research", "handle_warp_create"),
+    "warp.delete": LazyHandler("research", "handle_warp_delete"),
+    "warp.status": LazyHandler("research", "handle_warp_status"),
+    # ── Mesh Experiment Sync ──
+    "mesh.experiment.share": LazyHandler("research", "handle_mesh_experiment_share"),
+    "mesh.experiment.receive": LazyHandler("research", "handle_mesh_experiment_receive"),
+    "mesh.experiment.status": LazyHandler("research", "handle_mesh_experiment_status"),
+    "mesh.experiment.peers": LazyHandler("research", "handle_mesh_experiment_peers"),
+    "mesh.experiment.discover": LazyHandler("research", "handle_mesh_experiment_discover"),
+    # ── Research DAG Synthesis ──
+    "research.dag.synthesize": LazyHandler("research", "handle_research_dag_synthesize"),
+    # ── CRDT Leaderboard ──
+    "leaderboard.submit": LazyHandler("research", "handle_leaderboard_submit"),
+    "leaderboard.top": LazyHandler("research", "handle_leaderboard_top"),
+    "leaderboard.status": LazyHandler("research", "handle_leaderboard_status"),
+    "leaderboard.merge": LazyHandler("research", "handle_leaderboard_merge"),
+    # ── Pulse Verification ──
+    "pulse.verify": LazyHandler("research", "handle_pulse_verify"),
+    "pulse.verify.status": LazyHandler("research", "handle_pulse_status"),
+    # ── Critique Protocol ──
+    "critique.submit": LazyHandler("research", "handle_critique_submit"),
+    "critique.auto": LazyHandler("research", "handle_critique_auto"),
+    "critique.status": LazyHandler("research", "handle_critique_status"),
+    # ── Durable Archive ──
+    "archive.run": LazyHandler("research", "handle_archive_run"),
+    "archive.status": LazyHandler("research", "handle_archive_status"),
 }

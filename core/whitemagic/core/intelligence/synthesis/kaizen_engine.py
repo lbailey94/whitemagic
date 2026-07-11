@@ -10,6 +10,11 @@ from __future__ import annotations
 import logging
 import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.galaxy_scan import (
+    galaxy_connection,
+    get_galaxy_db_paths,
+    scan_query_all,
+)
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -142,6 +147,9 @@ class KaizenEngine:
         # Solution Library Applications
         proposals.extend(self._find_solution_applications(proposals))
 
+        # Skill health check (self-improving skills)
+        proposals.extend(self._check_skill_health())
+
         # Codebase analysis (STRATA integration)
         codebase_proposals = self._analyze_codebase()
         proposals.extend(codebase_proposals)
@@ -150,12 +158,9 @@ class KaizenEngine:
 
         # Collect remaining metrics from SQLite if not from Rust
         if "total_memories" not in metrics:
-            conn = self._get_conn()
-            cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM memories")
-            metrics["total_memories"] = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(DISTINCT tag) FROM tags")
-            metrics["unique_tags"] = cur.fetchone()[0]
+            from whitemagic.core.memory.galaxy_scan import scan_count_all
+            metrics["total_memories"] = scan_count_all("SELECT COUNT(*) FROM memories")
+            metrics["unique_tags"] = scan_count_all("SELECT COUNT(DISTINCT tag) FROM tags")
 
         return KaizenReport(
             timestamp=datetime.now(),
@@ -164,7 +169,7 @@ class KaizenEngine:
         )
 
     def _gather_rust_metrics(self) -> dict[str, Any]:
-        """Gather metrics using Rust fast-path acceleration."""
+        """Gather metrics using Rust fast-path acceleration across all galaxies."""
         try:
             import whitemagic_rust as rs
 
@@ -173,16 +178,9 @@ class KaizenEngine:
             ):
                 return {}
 
-            conn = self._get_conn()
-            cur = conn.cursor()
-
-            # Gather memory titles
-            cur.execute("SELECT title FROM memories")
-            titles = [row[0] or "" for row in cur.fetchall()]
-
-            # Gather holographic coordinates
-            cur.execute("SELECT x, y, z, w FROM holographic_coords")
-            coords = [[row[0], row[1], row[2], row[3]] for row in cur.fetchall()]
+            titles = [r[0] or "" for r in scan_query_all("SELECT title FROM memories")]
+            coord_rows = scan_query_all("SELECT x, y, z, w FROM holographic_coords")
+            coords = [[r[0], r[1], r[2], r[3]] for r in coord_rows]
 
             rust_result = rs.synthesis_engine.fast_kaizen_metrics(titles, coords)
 
@@ -204,6 +202,52 @@ class KaizenEngine:
                 exc_info=True,
             )
             return {}
+
+    def _check_skill_health(self) -> list[ImprovementProposal]:
+        """Check SkillForge skills for high failure rates and generate proposals.
+
+        This extends kaizen beyond memory and codebase analysis to include
+        self-improving skill health. Skills with failure rates above 30%
+        and sufficient execution history are flagged for amendment.
+        """
+        try:
+            from whitemagic.core.intelligence.omni.skill_forge import get_skill_forge
+
+            forge = get_skill_forge()
+            health = forge.get_skill_health()
+        except Exception as e:
+            logger.debug("Skill health check skipped: %s", e, exc_info=True)
+            return []
+
+        proposals: list[ImprovementProposal] = []
+        for skill in health:
+            if skill["needs_amendment"]:
+                proposals.append(
+                    ImprovementProposal(
+                        id=f"skill_health_{skill['name']}",
+                        category="skill_health",
+                        title=f"Amend failing skill: {skill['name']} (failure rate {skill['failure_rate']:.0%})",
+                        description=(
+                            f"Skill '{skill['name']}' v{skill['version']} has a failure rate of "
+                            f"{skill['failure_rate']:.0%} over {skill['recent_executions']} recent executions. "
+                            f"Amendment count: {skill['amendment_count']}. "
+                            f"Use skill.amend to propose and apply a revision."
+                        ),
+                        impact="high",
+                        effort="low",
+                        auto_fixable=True,
+                        fix_action=f"skill_forge.amend('{skill['name']}')",
+                        metadata={
+                            "skill_name": skill["name"],
+                            "version": skill["version"],
+                            "failure_rate": skill["failure_rate"],
+                            "recent_executions": skill["recent_executions"],
+                            "recent_failures": skill["recent_failures"],
+                            "amendment_count": skill["amendment_count"],
+                        },
+                    )
+                )
+        return proposals
 
     def _analyze_codebase(self) -> list[ImprovementProposal]:
         """Run STRATA static analysis on the WhiteMagic codebase itself.
@@ -257,14 +301,11 @@ class KaizenEngine:
             return []
 
     def _check_untitled(self) -> list[ImprovementProposal]:
-        """Find memories without meaningful titles."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, title FROM memories
-            WHERE title IS NULL OR title = '' OR title LIKE 'Untitled%'
-        """)
-        untitled = cur.fetchall()
+        """Find memories without meaningful titles across all galaxies."""
+        untitled = scan_query_all(
+            "SELECT id, title FROM memories "
+            "WHERE title IS NULL OR title = '' OR title LIKE 'Untitled%'"
+        )
 
         if not untitled:
             return []
@@ -287,15 +328,12 @@ class KaizenEngine:
         ]
 
     def _check_untagged(self) -> list[ImprovementProposal]:
-        """Find memories without tags."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT m.id, m.title FROM memories m
-            LEFT JOIN tags t ON m.id = t.memory_id
-            WHERE t.tag IS NULL
-        """)
-        untagged = cur.fetchall()
+        """Find memories without tags across all galaxies."""
+        untagged = scan_query_all(
+            "SELECT m.id, m.title FROM memories m "
+            "LEFT JOIN tags t ON m.id = t.memory_id "
+            "WHERE t.tag IS NULL"
+        )
 
         if not untagged:
             return []
@@ -315,14 +353,11 @@ class KaizenEngine:
         ]
 
     def _check_orphan_tags(self) -> list[ImprovementProposal]:
-        """Find tags used only once."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT tag, COUNT(*) as cnt FROM tags
-            GROUP BY tag HAVING cnt = 1
-        """)
-        orphans = cur.fetchall()
+        """Find tags used only once across all galaxies."""
+        orphans = scan_query_all(
+            "SELECT tag, COUNT(*) as cnt FROM tags "
+            "GROUP BY tag HAVING cnt = 1"
+        )
 
         if len(orphans) < 10:
             return []
@@ -344,24 +379,22 @@ class KaizenEngine:
         ]
 
     def _find_knowledge_gaps(self) -> list[ImprovementProposal]:
-        """Find sparse regions in 4D holographic space."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
+        """Find sparse regions in 4D holographic space across all galaxies."""
         gaps = []
         try:
-            cur.execute("""
-                SELECT
-                    CASE WHEN x < 0 THEN 'logical' ELSE 'emotional' END as x_region,
-                    CASE WHEN y < 0 THEN 'detail' ELSE 'strategic' END as y_region,
-                    COUNT(*) as cnt
-                FROM holographic_coords
-                GROUP BY x_region, y_region
-            """)
+            rows = scan_query_all(
+                "SELECT "
+                "CASE WHEN x < 0 THEN 'logical' ELSE 'emotional' END as x_region, "
+                "CASE WHEN y < 0 THEN 'detail' ELSE 'strategic' END as y_region, "
+                "COUNT(*) as cnt "
+                "FROM holographic_coords "
+                "GROUP BY x_region, y_region"
+            )
 
-            quadrants = {
-                (r["x_region"], r["y_region"]): r["cnt"] for r in cur.fetchall()
-            }
+            quadrants: dict[tuple[str, str], int] = {}
+            for r in rows:
+                key = (r["x_region"], r["y_region"])
+                quadrants[key] = quadrants.get(key, 0) + r["cnt"]
 
             for (x_reg, y_reg), count in quadrants.items():
                 if count < 10:
@@ -387,21 +420,13 @@ class KaizenEngine:
         return gaps
 
     def _find_large_clusters(self) -> list[ImprovementProposal]:
-        """Find clusters that may need subdivision."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
+        """Find clusters that may need subdivision across all galaxies."""
         try:
-            cur.execute("""
-                SELECT
-                    ROUND(x, 1) as rx, ROUND(y, 1) as ry,
-                    COUNT(*) as cnt
-                FROM holographic_coords
-                GROUP BY rx, ry
-                HAVING cnt > 20
-                ORDER BY cnt DESC
-                LIMIT 5
-            """)
+            rows = scan_query_all(
+                "SELECT ROUND(x, 1) as rx, ROUND(y, 1) as ry, COUNT(*) as cnt "
+                "FROM holographic_coords GROUP BY rx, ry HAVING cnt > 20 "
+                "ORDER BY cnt DESC LIMIT 5"
+            )
         except Exception as e:
             logger.debug(
                 "Large cluster analysis skipped (no holographic_coords): %s",
@@ -410,10 +435,8 @@ class KaizenEngine:
             )
             return []
 
-        large = cur.fetchall()
         proposals = []
-
-        for cluster in large:
+        for cluster in rows:
             proposals.append(
                 ImprovementProposal(
                     id=f"integration_cluster_{cluster['rx']}_{cluster['ry']}",
@@ -434,30 +457,22 @@ class KaizenEngine:
         return proposals
 
     def _discover_themes(self) -> list[ImprovementProposal]:
-        """Find emergent themes that could become gardens."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
+        """Find emergent themes that could become gardens across all galaxies."""
         try:
-            cur.execute("""
-                SELECT t.tag, COUNT(*) as cnt, AVG(h.w) as avg_gravity
-                FROM tags t
-                JOIN holographic_coords h ON t.memory_id = h.memory_id
-                GROUP BY t.tag
-                HAVING cnt >= 5 AND avg_gravity > 0.6
-                ORDER BY avg_gravity DESC
-                LIMIT 10
-            """)
+            rows = scan_query_all(
+                "SELECT t.tag, COUNT(*) as cnt, AVG(h.w) as avg_gravity "
+                "FROM tags t JOIN holographic_coords h ON t.memory_id = h.memory_id "
+                "GROUP BY t.tag HAVING cnt >= 5 AND avg_gravity > 0.6 "
+                "ORDER BY avg_gravity DESC LIMIT 10"
+            )
         except Exception as e:
             logger.debug(
                 "Theme discovery skipped (no holographic_coords): %s", e, exc_info=True
             )
             return []
 
-        themes = cur.fetchall()
         proposals = []
-
-        for theme in themes:
+        for theme in rows:
             if theme["tag"] not in ["long_term", "short_term", "session", "handoff"]:
                 proposals.append(
                     ImprovementProposal(
@@ -479,16 +494,12 @@ class KaizenEngine:
         return proposals
 
     def _find_duplicates(self) -> list[ImprovementProposal]:
-        """Find potential duplicate memories using Rust-accelerated similarity."""
-        conn = self._get_conn()
-        cur = conn.cursor()
-
-        cur.execute("""
-            SELECT title, COUNT(*) as cnt FROM memories
-            WHERE title IS NOT NULL AND title != ''
-            GROUP BY title HAVING cnt > 1
-        """)
-        exact_dupes = cur.fetchall()
+        """Find potential duplicate memories across all galaxies."""
+        exact_dupes = scan_query_all(
+            "SELECT title, COUNT(*) as cnt FROM memories "
+            "WHERE title IS NOT NULL AND title != '' "
+            "GROUP BY title HAVING cnt > 1"
+        )
 
         similar_pairs = []
         try:
@@ -496,10 +507,10 @@ class KaizenEngine:
 
             bridge = get_mansion_bridge()
 
-            cur.execute(
-                "SELECT id, title FROM memories WHERE title IS NOT NULL AND title != '' LIMIT 200"
+            memories = scan_query_all(
+                "SELECT id, title FROM memories "
+                "WHERE title IS NOT NULL AND title != '' LIMIT 200"
             )
-            memories = cur.fetchall()
 
             for i, m1 in enumerate(memories):
                 for j, m2 in enumerate(memories):
@@ -754,6 +765,16 @@ class KaizenEngine:
                         )
 
                         get_sub_clustering_engine().subdivide_large_clusters()
+                    elif "skill_forge.amend" in proposal.fix_action:
+                        from whitemagic.core.intelligence.omni.skill_forge import (
+                            get_skill_forge,
+                        )
+
+                        import re as _re
+
+                        match = _re.search(r"amend\('([^']+)'\)", proposal.fix_action)
+                        if match:
+                            get_skill_forge().amend(match.group(1))
                     results["applied"] += 1
                 except Exception as e:
                     logger.debug("Kaizen proposal apply failed: %s", e, exc_info=True)

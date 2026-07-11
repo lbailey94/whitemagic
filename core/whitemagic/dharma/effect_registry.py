@@ -75,6 +75,12 @@ _NETWORK_TOOLS: set[str] = {
     "galaxy.share",
     "broker.publish",
     "broker.history",
+    # v24.3: Hyperspace mesh tools
+    "mesh.experiment.share",
+    "mesh.experiment.receive",
+    "mesh.experiment.peers",
+    "mesh.experiment.discover",
+    "leaderboard.merge",
 }
 
 # ── Tools that are destructive ─────────────────────────────────────────
@@ -89,6 +95,8 @@ _DESTRUCTIVE_TOOLS: set[str] = {
     "session.delete",
     "delete_session",
     "vitality",
+    # v24.3: Hyperspace
+    "warp.delete",
 }
 
 # ── Tools that are pure (no side effects) ──────────────────────────────
@@ -118,6 +126,26 @@ _PURE_TOOLS: set[str] = {
     "grimoire_auto_status",
     "grimoire_walkthrough",
     "grimoire_recommend",
+    "skill.list",
+    "skill.history",
+    "skill.evaluate",
+    # v24.3: Hyperspace read-only tools
+    "research.dag.lineage",
+    "research.dag.breakthroughs",
+    "research.dag.stats",
+    "research.dag.leaderboard",
+    "research.dag.experiments",
+    "autoswarm.status",
+    "warp.load",
+    "warp.list",
+    "warp.status",
+    "mesh.experiment.status",
+    "leaderboard.top",
+    "leaderboard.status",
+    "pulse.verify",
+    "pulse.verify.status",
+    "critique.status",
+    "archive.status",
 }
 
 # ── Tools that only observe (logging, metrics, telemetry) ──────────────
@@ -217,6 +245,10 @@ def _infer_target(tool_name: str, effect_type: EffectType) -> str:
             return "garden:db"
         if "galaxy" in tool_name:
             return "galaxy:db"
+        if "research.dag" in tool_name or "autoswarm" in tool_name:
+            return "research:db"
+        if "warp" in tool_name:
+            return "warp:store"
         return "state:local"
     if effect_type == EffectType.OBSERVATION:
         return "telemetry"
