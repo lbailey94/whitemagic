@@ -96,11 +96,11 @@ export default async function EssayPage({
     );
   }
 
-  // Dynamic MDX import — loads content/essays/<domain>/<slug>.mdx
+  // Dynamic import — loads content/essays/<domain>/<slug>.tsx
   let Content: React.ComponentType | null = null;
   try {
     const mod = await import(
-      `@/content/essays/${domain}/${slug}.mdx`
+      `@/content/essays/${domain}/${slug}.tsx`
     );
     Content = mod.default;
   } catch {
