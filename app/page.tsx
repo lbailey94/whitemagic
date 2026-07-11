@@ -147,7 +147,7 @@ export default function HomePage() {
       {/* Version footer */}
       <div className="z-10 mt-12 flex flex-col items-center pb-8 text-center">
         <p className="font-zh text-[10px] text-dim/40">白魔法實驗室 · MIT 開源 · 盧卡斯·貝利 製作</p>
-        <p className="font-mono text-[10px] text-dim/40">v24.0.1 · MIT · Built by Lucas Bailey</p>
+        <p className="font-mono text-[10px] text-dim/40">v24.1.0 · MIT · Built by Lucas Bailey</p>
       </div>
     </main>
   );

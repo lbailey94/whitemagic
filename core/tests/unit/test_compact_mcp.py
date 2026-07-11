@@ -267,7 +267,7 @@ class TestCompactStripsConsciousness:
         result = {
             "status": "success",
             "tool": "health_report",
-            "details": {"version": "24.0.1"},
+            "details": {"version": "24.1.0"},
             "_resonance": {"gana": "gana_root", "chain_position": 1},
             "_sensorium": {"coherence": 0.91, "stream_length": 100},
             "_citta_predecessor": {"emotional_tone": "neutral"},
@@ -282,7 +282,7 @@ class TestCompactStripsConsciousness:
         assert "metrics" not in out
         assert out["status"] == "success"
         assert out["tool"] == "health_report"
-        assert out["details"]["version"] == "24.0.1"
+        assert out["details"]["version"] == "24.1.0"
 
     def test_token_savings_significant(self):
         full = {

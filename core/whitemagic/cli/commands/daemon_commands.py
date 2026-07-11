@@ -48,7 +48,7 @@ def _register_daemon_commands(cli: click.Group) -> None:
                 pid_file.write_text(str(pid))
                 return
 
-        click.echo("🌐 WhiteMagic Consciousness Daemon v24.0.1-dev")
+        click.echo("🌐 WhiteMagic Consciousness Daemon v24.1.0-dev")
         click.echo(f"   Privacy: local_only (mesh={mesh})")
         click.echo()
 

@@ -1,0 +1,23 @@
+{
+  "name": "@whitemagic/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript client SDK for WhiteMagic — local-first, encrypted memory for AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["whitemagic", "mcp", "ai", "memory", "agents", "governance"],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

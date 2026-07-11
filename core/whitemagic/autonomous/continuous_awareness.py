@@ -2,7 +2,7 @@
 """Continuous Self-Awareness (Group A — resurfaced from archive).
 
 Original implementation depended on whitemagic.autonomous.parallel_cognition
-and whitemagic.fileio, which are not yet implemented in v22.2.3. The module
+and whitemagic.fileio, which are not yet implemented in v24.1.0. The module
 is ported with defensive try/except so the public API works gracefully
 and reports the dependency status honestly.
 """

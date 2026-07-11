@@ -6,12 +6,12 @@
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "24.0.1",
+  "version": "24.1.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "24.0.1",
+      "version": "24.1.0",
       "transport": {
         "type": "stdio"
       },

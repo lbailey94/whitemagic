@@ -107,7 +107,7 @@ class ParallelTestRunner:
 
     Run tests in parallel using multiple workers.
 
-    Deprecated since v23.3.1. Use pytest-xdist:
+    Deprecated since v24.1.0. Use pytest-xdist:
         pytest -n auto --dist=loadgroup --progress
     """
 

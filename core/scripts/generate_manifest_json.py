@@ -51,7 +51,7 @@ def generate_manifest() -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "system": {
             "name": "WhiteMagic",
-            "version": "22.2.0",
+            "version": "24.1.0",
             "url": "https://whitemagic.dev",
             "repository": "https://github.com/lbailey94/whitemagic",
             "license": "MIT",

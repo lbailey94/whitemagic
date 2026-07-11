@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "wm-cascade"
-version = "22.2.0"
+version = "24.1.0"
 description = "PyO3 bindings for WhiteMagic cascade acceleration"
 requires-python = ">=3.10"
 

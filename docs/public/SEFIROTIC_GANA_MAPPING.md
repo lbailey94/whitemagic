@@ -1,6 +1,6 @@
 # Sefirotic Gana Mapping: Tree of Life ↔ 28 Lunar Mansions
 
-**Version**: 22.2.0  
+**Version**: 24.1.0  
 **Status**: Canonical cross-reference — not a replacement for the Grimoire Truth Table, but a parallel reading lens.  
 **Last Updated**: May 30, 2026  
 **Location**: `docs/public/SEFIROTIC_GANA_MAPPING.md`

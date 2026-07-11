@@ -124,7 +124,7 @@ async def lifespan(app: FastAPI):
     _emit_event(
         event_type="server_ready",
         source="rest_api",
-        data={"host": "127.0.0.1", "port": 8770, "version": "22.2.0"},
+        data={"host": "127.0.0.1", "port": 8770, "version": "24.1.0"},
     )
     logger.info("SSE event stream initialized")
     yield
@@ -138,7 +138,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="WhiteMagic REST API",
     description="HTTP interface to all 479 WhiteMagic tools across 28 Ganas",
-    version="22.2.0",
+    version="24.1.0",
     lifespan=lifespan,
 )
 

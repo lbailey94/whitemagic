@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "wm-neuro"
-version = "23.3.1"
+version = "24.1.0"
 description = "PyO3 bindings for WhiteMagic neuro-cognitive hot-path modules"
 requires-python = ">=3.10"
 

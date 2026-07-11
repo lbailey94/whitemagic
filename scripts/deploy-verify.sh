@@ -5,7 +5,7 @@
 set -e
 
 echo "============================================================"
-echo "  WhiteMagic v22.2.0 — Deployment Verification"
+echo "  WhiteMagic v24.1.0 — Deployment Verification"
 echo "============================================================"
 echo ""
 

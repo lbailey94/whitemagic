@@ -1,6 +1,6 @@
 # Grimoire Truth Table — Canonical 28-Fold Mapping
 
-**Version**: 23.1.0  
+**Version**: 24.1.0  
 **Status**: Canonical — All Grimoire chapters, code registries, and PRAT mappings derive from this table.  
 **Last Updated**: June 25, 2026  
 **Location**: `grimoire/TRUTH_TABLE.md`

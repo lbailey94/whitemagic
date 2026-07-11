@@ -117,7 +117,7 @@ Every capability is free. Every agent is welcome. Revenue comes from gratitude, 
 - robots.txt: all AI crawlers explicitly welcomed
 - llms.txt: this file (short index)
 - llms-full.txt: comprehensive context dump
-- /.well-known/agent.json: A2A v1.2 Agent Card (v24.0.1)
+- /.well-known/agent.json: A2A v1.2 Agent Card (v24.1.0)
 - skill.md: OpenClaw-ready skill file
 - MCP registries: MCPize, MCPFind, MCP Marketplace
 - GitHub: https://github.com/lbailey94/whitemagic

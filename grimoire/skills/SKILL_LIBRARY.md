@@ -4,7 +4,7 @@
 >
 > Compatible with Claude Code, Codex CLI, Gemini CLI, Copilot, Cursor, Cline, Windsurf, and OpenCode.
 
-**Version**: 23.3.1
+**Version**: 24.1.0
 **Location**: `grimoire/skills/`
 
 ---

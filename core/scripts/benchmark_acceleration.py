@@ -147,7 +147,7 @@ def benchmark_zig_batch(
 
 def main() -> dict[str, Any]:
     results: dict[str, Any] = {
-        "version": "v22.2.0",
+        "version": "v24.1.0",
         "dimensions_tested": [128, 384, 768, 1536],
         "corpus_sizes_tested": [100, 1000, 5000],
         "single_cosine": {},
@@ -170,7 +170,7 @@ def main() -> dict[str, Any]:
             }
 
     print("╔══════════════════════════════════════════════════════════════╗")
-    print("║  WhiteMagic Acceleration Benchmark  —  v22.2.0               ║")
+    print("║  WhiteMagic Acceleration Benchmark  —  v24.1.0               ║")
     print("╚══════════════════════════════════════════════════════════════╝")
     print()
 

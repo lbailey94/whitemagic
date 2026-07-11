@@ -2,7 +2,7 @@
 
 > Comprehensive document for AI agents and LLM-powered tools that want a complete picture of WhiteMagic without scraping the site. This is the canonical "everything you need to know" file. See [`/llms.txt`](/llms.txt) for the short index version.
 >
-> **Version**: 24.0.1 | **Updated**: 2026-07-06 | **Tests**: 4,190+ passing, 0 failures, 19 skipped
+> **Version**: 24.1.0 | **Updated**: 2026-07-06 | **Tests**: 4,190+ passing, 0 failures, 19 skipped
 
 ## What WhiteMagic is
 
@@ -430,7 +430,7 @@ Stable tool names (not under the `gana_` prefix, so they bypass the PRAT router 
 
 ---
 
-## A2A v1.2 discovery surface (v24.0.1)
+## A2A v1.2 discovery surface (v24.1.0)
 
 WhiteMagic Labs is a v1.2 A2A peer. The main Agent Card lists 7 high-level
 skills; a per-category skill tree and a 12-Gana directory extend it.
@@ -480,7 +480,7 @@ skills; a per-category skill tree and a 12-Gana directory extend it.
 
 ---
 
-## Librarian chat (v24.0.1)
+## Librarian chat (v24.1.0)
 
 The `/chat` and `/librarian` pages route through `/api/librarian/chat`,
 a streaming server-sent response with inline tool-call events. The
@@ -539,7 +539,7 @@ local model with no per-token cost.
 
 ---
 
-## Data Sovereignty (v24.0.1)
+## Data Sovereignty (v24.1.0)
 
 WhiteMagic is a **local-first** cognitive substrate. The principle is
 foundational, not a feature:

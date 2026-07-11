@@ -19,7 +19,6 @@ build/
 venv/
 env/
 # Python venv lib dirs (scoped — do NOT match apps/site/lib or similar source dirs)
-/lib/
 /lib64/
 **/.venv/lib/
 **/venv/lib/
@@ -257,6 +256,7 @@ test_fs
 test_fs2
 test_fs3
 /memory/
+examples/
 .restructure_backups/whitemagic-legacy-v21.0.0.tar.gz
 polyglot/codex/
 polyglot/codex/00_source/
@@ -304,6 +304,13 @@ core/build/
 # === Internal docs (not for public release) ===
 # Root-level internal docs — dev-only, not needed by end users or AI agents
 /skill.md
+/AGENTS.md
+/AI_PRIMARY.md
+/DEPLOY.md
+/INDEX.md
+/RELEASE_NOTES.md
+/STUB_REGISTRY.md
+/SYSTEM_MAP.md
 
 # core/ internal docs — architecture, strategy, post-mortems, etc.
 core/docs/
@@ -365,3 +372,12 @@ core/mesh_aux/wm_gateway
 .vercel
 .env*
 Agent-SafetyBench/
+
+# === External projects & local-only directories ===
+bitnet.cpp/
+bitmamba.cpp/
+models/
+whitemagic-ide/
+erl_crash.dump
+archives/whitemagic-public-retired-20260709/
+archives/whitemagic-site-backup-20260709/

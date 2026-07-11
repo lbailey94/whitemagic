@@ -3,7 +3,7 @@
   "generated_at": "2026-07-09T00:00:00.000000+00:00",
   "system": {
     "name": "WhiteMagic",
-    "version": "24.0.1",
+    "version": "24.1.0",
     "url": "https://whitemagic.dev",
     "repository": "https://github.com/lbailey94/whitemagic",
     "pypi": "https://pypi.org/project/whitemagic/",

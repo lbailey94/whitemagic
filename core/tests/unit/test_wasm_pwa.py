@@ -26,7 +26,7 @@ class TestWasmRsStructure:
 
     def test_version_is_current(self):
         content = WASM_RS.read_text()
-        assert "24.0.1" in content, "wasm_version should return 24.0.1"
+        assert "24.1.0" in content, "wasm_version should return 24.1.0"
 
     def test_memory_store_defined(self):
         content = WASM_RS.read_text()
@@ -87,7 +87,7 @@ class TestWasmRsStructure:
 
     def test_edge_engine_has_updated_rules(self):
         content = WASM_RS.read_text()
-        assert "24.0.1" in content
+        assert "24.1.0" in content
         assert "4,223" in content
 
     def test_wasm_memory_struct(self):
