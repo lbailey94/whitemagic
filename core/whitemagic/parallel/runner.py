@@ -16,7 +16,14 @@ Version: 2.7.0 "Ganapati Day — Retired"
 """
 
 import logging
+import subprocess
+import time
 import warnings
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from whitemagic.config.concurrency import TEST_RUNNER_WORKERS
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +33,6 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-
-# Re-export dataclasses for backward compat
-import subprocess
-import time
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
-from pathlib import Path
-
-from whitemagic.config.concurrency import TEST_RUNNER_WORKERS
 
 
 @dataclass

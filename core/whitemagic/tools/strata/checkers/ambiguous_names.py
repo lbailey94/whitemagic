@@ -1,6 +1,6 @@
 """Detect ambiguous single-letter variable names.
 
-PEP 8 recommends avoiding lowercase `l` (confusable with `1`), 
+PEP 8 recommends avoiding lowercase `l` (confusable with `1`),
 `O` (confusable with `0`), and `I` (confusable with `l` and `1`).
 
 These are real readability hazards that aislop catches but STRATA

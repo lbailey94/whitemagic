@@ -23,12 +23,15 @@ from pathlib import Path
 from typing import Any, TypeVar, cast
 from uuid import uuid4
 
+from whitemagic.utils.event_emit import make_emitter
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+_emit = make_emitter("ensemble")
 
 
 def handle_ensemble(**kwargs: Any) -> dict[str, Any]:
@@ -46,11 +49,6 @@ def handle_ensemble(**kwargs: Any) -> dict[str, Any]:
             "message": f"Unknown action '{action}'. Valid: {sorted(dispatch.keys())}",
         }
     return handler(**kwargs)
-
-
-from whitemagic.utils.event_emit import make_emitter
-
-_emit = make_emitter("ensemble")
 
 
 def _ensemble_dir() -> Path:

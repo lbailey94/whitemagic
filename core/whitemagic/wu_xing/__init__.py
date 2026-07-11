@@ -460,34 +460,6 @@ ZODIAC_TO_WUXING: dict[str, Element] = {
     "pisces": Element.WATER,
 }
 
-
-def assess_balance() -> dict[str, Any]:
-    """Assess the current Wu Xing balance and provide recommendations.
-
-    Unified method combining energy tracking (from WuXingEngine) and
-    balance assessment (from wisdom/wu_xing.py).
-    """
-    engine = get_wuxing_engine()
-    balance = engine.get_balance_score()
-    harmony = engine.get_harmony_score()
-
-    # Find dominant and deficient elements
-    energies = {e: s.energy for e, s in engine.elements.items()}
-    dominant = max(energies, key=energies.get) if energies else Element.EARTH
-    deficient = min(energies, key=energies.get) if energies else Element.EARTH
-
-    return {
-        "balance": balance,
-        "harmony": harmony,
-        "dominant": dominant.value,
-        "deficient": deficient.value,
-        "dominant_meaning": ELEMENT_MEANINGS.get(dominant, ""),
-        "deficient_meaning": ELEMENT_MEANINGS.get(deficient, ""),
-        "generative_cycle": f"{dominant.value} generates {GENERATIVE.get(dominant, dominant).value}",
-        "recommendation": f"Nourish {deficient.value} through {GENERATIVE.get(deficient, deficient).value}",
-        "energies": {e.value: round(s.energy, 3) for e, s in engine.elements.items()},
-    }
-
 # ---------------------------------------------------------------------------
 # Unified constants — single source of truth for Wu Xing cycles
 # ---------------------------------------------------------------------------

@@ -80,7 +80,7 @@ class BenchmarkSuite:
 
     def summary(self) -> str:
         lines = [
-            f"WhiteMagic Memory Benchmark Suite",
+            "WhiteMagic Memory Benchmark Suite",
             f"{'='*60}",
             f"Timestamp: {self.timestamp}",
             f"Duration: {self.total_duration_s:.2f}s",

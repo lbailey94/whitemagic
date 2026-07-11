@@ -1,3 +1,5 @@
+import importlib
+import pkgutil
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,8 +22,5 @@ def get_checkers() -> list[CheckerFunc]:
 
 
 # Auto-import all checker modules so they self-register
-import importlib
-import pkgutil
-
 for _, modname, _ in pkgutil.iter_modules(__path__):
     importlib.import_module(f"{__name__}.{modname}")

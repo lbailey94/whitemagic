@@ -28,6 +28,8 @@ import sys
 import threading
 import time
 from pathlib import Path
+
+from whitemagic import __version__ as _VERSION
 from typing import Any, cast
 
 # ── Ensure project root is on sys.path ──────────────────────────────
@@ -130,9 +132,6 @@ class _LazyServer:
 
 types = _LazyMCPTypes()
 server = _LazyServer()
-
-# ── Version ──────────────────────────────────────────────────────────
-from whitemagic import __version__ as _VERSION
 
 
 # ══════════════════════════════════════════════════════════════════════

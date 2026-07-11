@@ -16,7 +16,6 @@ The registry is used by the dispatch pipeline to automatically call
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from whitemagic.dharma.karma_ledger import EffectSignature, EffectType
 

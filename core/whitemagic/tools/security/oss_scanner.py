@@ -64,7 +64,7 @@ class OSSBountyScanner:
 
         bounties = []
         for issue in issues:
-            labels = [l.get("name", "").lower() for l in issue.get("labels", [])]
+            labels = [label.get("name", "").lower() for label in issue.get("labels", [])]
             platform = self._detect_platform(labels)
             amount = self._extract_bounty_amount(issue.get("body", ""))
             bounties.append(BountyIssue(

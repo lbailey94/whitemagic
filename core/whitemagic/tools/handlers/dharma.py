@@ -1,6 +1,9 @@
 """Dharma bridge tool handlers."""
 
+import logging
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 
 def handle_evaluate_ethics(**kwargs: Any) -> dict[str, Any]:

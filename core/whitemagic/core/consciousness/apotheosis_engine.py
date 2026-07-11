@@ -176,7 +176,7 @@ class SelfMonitoringHealthLoop:
                 with open(cal_path) as f:
                     cal_lines = f.readlines()[-10:]
                 if cal_lines:
-                    actuals = [_json.loads(l).get("actual_seconds_machine", 0) for l in cal_lines]
+                    actuals = [_json.loads(line).get("actual_seconds_machine", 0) for line in cal_lines]
                     avg_response_ms = (sum(actuals) / len(actuals)) * 1000
                 else:
                     avg_response_ms = 100.0
@@ -204,7 +204,7 @@ class SelfMonitoringHealthLoop:
                 with open(telem_path) as f:
                     telem_lines = f.readlines()[-20:]
                 if telem_lines:
-                    errors = sum(1 for l in telem_lines if _json.loads(l).get("status") == "error")
+                    errors = sum(1 for line in telem_lines if _json.loads(line).get("status") == "error")
                     error_rate = errors / len(telem_lines)
                 else:
                     error_rate = 0.0

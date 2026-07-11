@@ -109,8 +109,8 @@ class AuditReportGenerator:
             "",
             "## Finding Summary",
             "",
-            f"| Severity | Count |",
-            f"|----------|-------|",
+            "| Severity | Count |",
+            "|----------|-------|",
             f"| Critical | {severity_counts['critical']} |",
             f"| High | {severity_counts['high']} |",
             f"| Medium | {severity_counts['medium']} |",
@@ -128,21 +128,21 @@ class AuditReportGenerator:
             lines.append(f"**File**: `{f.get('file', 'N/A')}`" + (f":{f.get('line', '')}" if f.get('line') else ""))
             lines.append(f"**Category**: {f.get('category', 'N/A')}")
             lines.append("")
-            lines.append(f"**Description**")
+            lines.append("**Description**")
             lines.append(f"{f.get('description', f.get('message', 'N/A'))}")
             lines.append("")
             if f.get("impact"):
-                lines.append(f"**Impact**")
+                lines.append("**Impact**")
                 lines.append(f"{f.get('impact')}")
                 lines.append("")
             if f.get("proof_of_concept"):
-                lines.append(f"**Proof of Concept**")
-                lines.append(f"```solidity")
+                lines.append("**Proof of Concept**")
+                lines.append("```solidity")
                 lines.append(f"{f.get('proof_of_concept')}")
-                lines.append(f"```")
+                lines.append("```")
                 lines.append("")
             if f.get("mitigation") or f.get("suggestion"):
-                lines.append(f"**Recommendation**")
+                lines.append("**Recommendation**")
                 lines.append(f"{f.get('mitigation', f.get('suggestion', 'N/A'))}")
                 lines.append("")
 

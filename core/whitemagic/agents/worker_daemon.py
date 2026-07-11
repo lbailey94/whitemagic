@@ -33,10 +33,14 @@ from pathlib import Path
 from typing import Any, cast
 
 from whitemagic.config.paths import TASKS_DIR, WM_ROOT
+from whitemagic.utils.event_emit import make_emitter
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
+
+
+_emit = make_emitter("worker_daemon")
 
 
 def _tasks_dir() -> Path:
@@ -50,11 +54,6 @@ def _results_dir() -> Path:
     d = _tasks_dir() / "results"
     d.mkdir(parents=True, exist_ok=True)
     return d
-
-
-from whitemagic.utils.event_emit import make_emitter
-
-_emit = make_emitter("worker_daemon")
 
 
 class WorkerDaemon:

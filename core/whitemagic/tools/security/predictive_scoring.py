@@ -49,7 +49,7 @@ class PredictiveScorer:
 
         # Complexity: lines of code
         lines = content.splitlines()
-        loc = len([l for l in lines if l.strip() and not l.strip().startswith("//")])
+        loc = len([line for line in lines if line.strip() and not line.strip().startswith("//")])
         factors["complexity"] = min(1.0, loc / 500.0)
 
         # External calls

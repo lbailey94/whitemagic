@@ -30,7 +30,10 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from whitemagic.inference.llama_cpp import LlamaCppBackend
 
 from whitemagic.inference.complexity import (
     ComplexityAssessment,

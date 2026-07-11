@@ -268,10 +268,6 @@ class GalaxyAwareBackend:
         # Fallback: try default backend
         self._get_default_backend().store_coords(memory_id, x, y, z, w, v, u)
 
-    def get_all_coords(self) -> dict[str, tuple[float, float, float, float, float]]:
-        """Get all coordinates from the default backend."""
-        return self._get_default_backend().get_all_coords()
-
     def integrity_check(self) -> str:
         """Check integrity of all backends."""
         results = []
