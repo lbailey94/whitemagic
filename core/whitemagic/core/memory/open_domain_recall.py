@@ -5,7 +5,6 @@ Implements title-boosted vector scoring to lift recall from 48% → 70%.
 
 import logging
 import re
-import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from pathlib import Path

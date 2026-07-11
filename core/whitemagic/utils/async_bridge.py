@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from typing import TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
 
-def run_async(coro: asyncio.Coroutine[Any, Any, T]) -> T:
+def run_async(coro: "asyncio.Coroutine[Any, Any, T]") -> T:
     """Run a coroutine from synchronous context.
 
     If no event loop is running, uses asyncio.run directly.

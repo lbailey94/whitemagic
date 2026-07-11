@@ -1,5 +1,4 @@
 """Echidna integration — property-based fuzzing for Solidity contracts."""
-import json
 import logging
 import shutil
 import subprocess

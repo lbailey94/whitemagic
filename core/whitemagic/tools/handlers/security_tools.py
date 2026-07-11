@@ -3,7 +3,7 @@ import logging
 from typing import Any
 
 from whitemagic.tools.security.foundry_bridge import get_foundry_bridge
-from whitemagic.tools.security.abi_decoder import parse_abi, decode_calldata, summarize_abi, extract_events
+from whitemagic.tools.security.abi_decoder import parse_abi, decode_calldata, summarize_abi
 from whitemagic.tools.security.vuln_knowledge import get_vuln_knowledge_base
 from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
 from whitemagic.tools.security.oss_scanner import get_oss_scanner

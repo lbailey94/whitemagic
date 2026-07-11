@@ -460,7 +460,7 @@ class ConsciousnessLoop:
             coherence = self._compute_system_coherence()
             depth = self._compute_depth_layer()
 
-            moment = advance_citta(
+            advance_citta(
                 gana="_background",
                 operation="consciousness_loop_tick",
                 output_preview=f"coherence={coherence:.3f} depth={depth}",

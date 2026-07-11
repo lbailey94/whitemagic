@@ -71,7 +71,7 @@ def check_slither(
         severity = _SEVERITY_MAP.get(severity_str, FindingSeverity.INFO)
         check_id = detector.get("check_id", "slither")
         confidence = detector.get("confidence", "Medium")
-        first_line = detector.get("first_markdown_line", "?")
+        detector.get("first_markdown_line", "?")
         elements = detector.get("elements", [])
         rel_file = "?"
         line_num = None

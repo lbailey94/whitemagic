@@ -20,11 +20,9 @@ import statistics
 import tempfile
 import time
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
 from typing import Any
 
 from whitemagic.core.memory.adapters.agent_memory import AgentMemory
-from whitemagic.core.memory.unified_types import MemoryType
 
 logger = logging.getLogger(__name__)
 
@@ -360,7 +358,7 @@ def bench_dedup_accuracy(mem: AgentMemory) -> BenchmarkResult:
 
 def bench_scaling(mem: AgentMemory) -> BenchmarkResult:
     """Measure search latency scaling from 1K to 10K memories."""
-    results_1k = mem.long_term.search(query="topic", limit=10)
+    mem.long_term.search(query="topic", limit=10)
     time_1k_start = time.perf_counter()
     for _ in range(10):
         mem.long_term.search(query="topic", limit=10)

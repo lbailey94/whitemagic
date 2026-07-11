@@ -1,5 +1,4 @@
 """HTTP probe tool — send HTTP requests for API testing and vulnerability probing."""
-import json
 import logging
 import time
 from dataclasses import dataclass

@@ -47,7 +47,6 @@ class GalaxyAwareBackend:
     def _resolve_galaxies_dir(self) -> Path:
         """Resolve the per-galaxy database directory."""
         try:
-            from whitemagic.config.paths import WM_ROOT
             from whitemagic.core.user_profile import get_user_dir
             user_dir = get_user_dir("local")
             galaxies_dir = user_dir / "galaxies"

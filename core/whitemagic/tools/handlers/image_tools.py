@@ -118,15 +118,8 @@ def _llama_vision_describe(
     try:
         with open(image_path, "rb") as f:
             image_data = f.read()
-        image_b64 = base64.b64encode(image_data).decode("utf-8")
+        base64.b64encode(image_data).decode("utf-8")
 
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "images": [image_b64],
-            "stream": False,
-            "options": {"temperature": 0.3, "num_predict": 400},
-        }
         # Use OpenAI-compatible chat completions with vision
         import base64 as _b64
         import requests as _req
@@ -151,7 +144,7 @@ def _llama_vision_describe(
             "stream": False,
         }
         _resp = _req.post(
-            f"{backend._base_url}/v1/chat/completions",
+            f"{llama_url}/v1/chat/completions",
             json=_payload,
             timeout=timeout,
         )

@@ -492,7 +492,6 @@ class SQLiteBackend:
 
         Returns the number of memories reindexed.
         """
-        import time
 
         with self.pool.connection() as conn:
             conn.row_factory = sqlite3.Row

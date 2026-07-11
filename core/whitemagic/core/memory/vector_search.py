@@ -10,7 +10,6 @@ import importlib.util
 import logging
 import math
 import os
-import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
 import struct
 import threading

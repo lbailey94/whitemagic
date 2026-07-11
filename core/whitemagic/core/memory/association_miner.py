@@ -612,7 +612,6 @@ class AssociationMiner:
         report = MiningReport()
 
         try:
-            from whitemagic.core.memory.backends.galaxy_router import GalaxyAwareBackend
             from whitemagic.core.memory.galaxy_manager import GalaxyManager
             gm = GalaxyManager()
             galaxies = [g["name"] for g in gm.list_galaxies() if g.get("name")]

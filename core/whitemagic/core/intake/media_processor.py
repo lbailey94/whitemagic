@@ -327,15 +327,13 @@ class ImageProcessor:
         """Use llama.cpp vision model for image captioning."""
         try:
             import base64
-            import urllib.request
 
             from whitemagic.utils.fast_json import dumps_str as _json_dumps
-            from whitemagic.utils.fast_json import loads as _json_loads
 
             # Read and base64-encode the image
             image_data = base64.b64encode(path.read_bytes()).decode("utf-8")
 
-            payload = _json_dumps(
+            _json_dumps(
                 {
                     "model": "llava",  # Common vision model
                     "prompt": "Describe this image in detail. What do you see?",

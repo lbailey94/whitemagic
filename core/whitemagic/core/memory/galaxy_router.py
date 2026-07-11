@@ -270,7 +270,6 @@ class GalaxyRouter:
             Dict with count, avg_importance, avg_galactic_distance, zone_distribution.
         """
         import sqlite3
-        import json
 
         try:
             with unified_memory.backend.pool.connection() as conn:

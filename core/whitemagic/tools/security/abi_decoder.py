@@ -1,7 +1,6 @@
 """ABI decoder — parse Solidity ABI JSON, extract function signatures, decode calldata."""
 import json
 import logging
-import re
 from dataclasses import dataclass
 from typing import Any
 

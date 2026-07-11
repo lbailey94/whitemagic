@@ -33,7 +33,7 @@ try:
     from textual.app import App, ComposeResult
     from textual.containers import Horizontal, Vertical, VerticalScroll
     from textual.reactive import reactive
-    from textual.widgets import Footer, Header, Input, Label, RichLog, Static
+    from textual.widgets import Footer, Header, Input, RichLog, Static
     HAS_TEXTUAL = True
 except ImportError:
     HAS_TEXTUAL = False

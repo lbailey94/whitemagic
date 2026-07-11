@@ -1,6 +1,5 @@
 """Memory-augmented STRATA checker — cross-reference findings with known patterns."""
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
@@ -116,7 +115,7 @@ def dream_cycle_serendipity(findings: list[dict[str, Any]]) -> list[dict[str, An
     # Look for findings in different file types with similar patterns
     sol_findings = [f for f in findings if f.get("file", "").endswith(".sol")]
     py_findings = [f for f in findings if f.get("file", "").endswith(".py")]
-    js_findings = [f for f in findings if f.get("file", "").endswith((".js", ".ts", ".jsx", ".tsx"))]
+    [f for f in findings if f.get("file", "").endswith((".js", ".ts", ".jsx", ".tsx"))]
 
     # Access control issues across languages
     sol_access = [f for f in sol_findings if "access" in f.get("category", "").lower()]

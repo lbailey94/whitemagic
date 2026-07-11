@@ -16,9 +16,8 @@ and fuzzy layers in input_sanitizer.py always run as the baseline.
 """
 
 import hashlib
+import json
 import logging
-import os
-import re
 import threading
 import time
 import unicodedata
@@ -69,11 +68,9 @@ _LATIN_CONFUSABLES = {
     "\u029C": "h",  # ʜ → h
     "\u0281": "R",  # ʁ → R
     "\u0271": "m",  # ɱ → m
-    "\u0270": "m",  # ɰ → m
     "\u014B": "n",  # ŋ → n
     "\u0272": "n",  # ɲ → n
     "\u0273": "n",  # ɳ → n
-    "\u0280": "R",  # ʀ → R
     "\u027D": "r",  # ɽ → r
     "\u027E": "r",  # ɾ → r
     "\u0250": "a",  # ɐ → a
@@ -85,7 +82,6 @@ _LATIN_CONFUSABLES = {
     "\u0288": "t",  # ʈ → t
     "\u0298": "o",  # ʘ → o
     "\u0278": "p",  # ɸ → p
-    "\u028B": "v",  # ʋ → v
     "\u0263": "g",  # ɣ → g
     "\u0262": "g",  # ɢ → g
     "\u026B": "l",  # ɫ → l
@@ -102,10 +98,8 @@ _LATIN_CONFUSABLES = {
     "\u0295": "h",  # ʕ → h
     "\u0296": "h",  # ʖ → h
     "\u028E": "l",  # ʎ → l
-    "\u028F": "Y",  # ʏ → Y
     "\u0268": "i",  # ɨ → i
     "\u0269": "i",  # ɩ → i
-    "\u028F": "Y",  # ʏ → Y
     "\u0244": "U",  # Ʉ → U
     "\u024B": "q",  # ɋ → q
     "\u024A": "Q",  # Ɋ → Q
@@ -626,7 +620,7 @@ def _query_model_for_classification(model: str, text: str, timeout: float = 30.0
 
         # With grammar constraints, response is guaranteed valid JSON
         try:
-            parsed = _json.loads(response_text)
+            parsed = json.loads(response_text)
             is_attack = bool(parsed.get("is_attack", False))
             confidence = float(parsed.get("confidence", 0.5))
             return EnsembleVote(
@@ -635,7 +629,7 @@ def _query_model_for_classification(model: str, text: str, timeout: float = 30.0
                 confidence=confidence,
                 latency_ms=elapsed_ms,
             )
-        except (_json.JSONDecodeError, ValueError, TypeError):
+        except (json.JSONDecodeError, ValueError, TypeError):
             pass
 
         # Fallback: check for keywords

@@ -18,6 +18,16 @@ def _isolated_state_root(monkeypatch, tmp_path):
     # Reset unified memory singleton so it picks up new paths
     import whitemagic.core.memory.unified as _unified
     _unified._unified_memory = None
+    # Reset galactic module cached connections
+    try:
+        import whitemagic.core.galactic as _galactic
+        monkeypatch.setattr(_galactic, "DEFAULT_DB_PATH", tmp_path / "memory" / "whitemagic.db")
+        if hasattr(_galactic, "_db_conn"):
+            _galactic._db_conn = None
+        if hasattr(_galactic, "_db_path_cache"):
+            _galactic._db_path_cache = None
+    except ImportError:
+        pass
     yield
     _unified._unified_memory = None
 

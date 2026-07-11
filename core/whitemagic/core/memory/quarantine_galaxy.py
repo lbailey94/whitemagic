@@ -5,7 +5,6 @@ Moves noisy/duplicate memories from active DB to archival quarantine.
 
 import hashlib
 import os
-import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 
@@ -73,7 +72,6 @@ class QuarantineGalaxy(MemoryGalaxy):
         original_metadata: dict | None = None
     ) -> bool:
         """Move a memory to quarantine."""
-        import sqlite3
 
         try:
             conn = safe_connect(self.db_path)
@@ -99,7 +97,6 @@ class QuarantineGalaxy(MemoryGalaxy):
 
     def find_duplicates(self, content: str, threshold: float = 0.95) -> list[dict]:
         """Find similar content already in quarantine."""
-        import sqlite3
 
         content_hash = self.calculate_content_hash(content)
 
@@ -122,7 +119,6 @@ class QuarantineGalaxy(MemoryGalaxy):
 
     def get_stats(self) -> dict:
         """Get quarantine statistics."""
-        import sqlite3
 
         conn = safe_connect(self.db_path)
         cursor = conn.execute('''

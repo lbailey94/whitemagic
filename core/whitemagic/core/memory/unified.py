@@ -13,7 +13,6 @@ import hashlib
 import os
 import sqlite3
 
-from whitemagic.config.paths import DB_PATH, MEMORY_DIR
 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 
 # Re-export Memory and MemoryType for compatibility

@@ -33,7 +33,7 @@ from typing import Any
 from whitemagic.core.intelligence.working_memory import WorkingMemory
 from whitemagic.core.memory.session_recorder import SessionRecorder
 from whitemagic.core.memory.unified import UnifiedMemory
-from whitemagic.core.memory.unified_types import Memory, MemoryType
+from whitemagic.core.memory.unified_types import MemoryType
 
 logger = logging.getLogger(__name__)
 

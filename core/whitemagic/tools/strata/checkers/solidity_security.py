@@ -76,7 +76,7 @@ def check_solidity_oracle_manipulation(
             continue
         lines = content.splitlines()
         rel = str(sol_file.relative_to(project_path))
-        full = content.lower()
+        content.lower()
         for i, line in enumerate(lines, 1):
             code = _strip(line.strip())
             if not code:
@@ -194,7 +194,6 @@ def check_solidity_reentrancy_patterns(
         lines = content.splitlines()
         rel = str(sol_file.relative_to(project_path))
         in_func = False
-        func_start = 0
         brace_depth = 0
         for i, line in enumerate(lines, 1):
             code = _strip(line.strip())
@@ -202,7 +201,6 @@ def check_solidity_reentrancy_patterns(
                 continue
             if re.match(r"\s*function\s+\w+", line) and "{" in line:
                 in_func = True
-                func_start = i
                 brace_depth = code.count("{") - code.count("}")
                 continue
             if in_func:

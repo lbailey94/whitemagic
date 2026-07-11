@@ -37,7 +37,6 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.core.memory.adapters.agent_memory import AgentMemory
-from whitemagic.core.memory.unified_types import Memory, MemoryType
 
 logger = logging.getLogger(__name__)
 

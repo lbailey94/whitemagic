@@ -1,5 +1,4 @@
 """Public audit report scraper — Code4rena, Sherlock, CodeHawks."""
-import json
 import logging
 import re
 import time

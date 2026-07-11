@@ -1,6 +1,5 @@
 """Vulnerability knowledge graph — cross-link findings, patterns, and exploit chains."""
 import logging
-import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any

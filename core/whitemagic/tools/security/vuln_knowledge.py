@@ -4,7 +4,6 @@ Integrates with WhiteMagic's memory system to persist vulnerability findings
 across engagements. The key differentiator: every finding, false positive, and
 pattern is remembered for future audits.
 """
-import json
 import logging
 import re
 import time
@@ -178,7 +177,7 @@ class VulnKnowledgeBase:
         """Match STRATA findings against known vulnerability patterns."""
         matched = []
         for finding in findings:
-            category = finding.get("category", "")
+            finding.get("category", "")
             message = finding.get("message", "")
             for pattern in self._patterns.values():
                 if pattern.detection_regex and re.search(pattern.detection_regex, message):

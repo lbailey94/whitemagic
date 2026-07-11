@@ -1,8 +1,7 @@
 """Contest pipeline — format findings for Code4rena, Sherlock, CodeHawks submissions."""
 import hashlib
 import logging
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)

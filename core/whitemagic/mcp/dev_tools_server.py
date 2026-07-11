@@ -288,7 +288,6 @@ class DevToolsServer:
     def _handle_file_write(self, path: str, content: str, append: bool = False) -> dict[str, Any]:
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
-        mode = "a" if append else "w"
         p.write_text(content + ("\n" if not content.endswith("\n") else ""), encoding="utf-8")
         return {"path": path, "bytes_written": len(content), "appended": append}
 
