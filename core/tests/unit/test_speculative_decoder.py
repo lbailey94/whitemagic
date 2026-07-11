@@ -220,8 +220,10 @@ class TestSpeculativeDecoder:
             [1, 2, 3, 4, 5],
             [1, 2, 9, 4, 5],
         )
-        assert accepted == [0, 1]
-        assert rejected == [2]
+        # Tokens 1,2 match; at index 2 draft=3 vs verify=9 mismatch
+        # so verify's token 9 is accepted as correction, rest rejected
+        assert accepted == [1, 2, 9]
+        assert rejected == [4, 5]
 
     def test_accept_reject_all_match(self):
         decoder = SpeculativeDecoder(
@@ -232,7 +234,7 @@ class TestSpeculativeDecoder:
             [1, 2, 3],
             [1, 2, 3],
         )
-        assert accepted == [0, 1, 2]
+        assert accepted == [1, 2, 3]
         assert rejected == []
 
     def test_accept_reject_draft_longer(self):
@@ -244,8 +246,8 @@ class TestSpeculativeDecoder:
             [1, 2, 3, 4, 5],
             [1, 2, 3],
         )
-        assert accepted == [0, 1, 2]
-        assert rejected == [3, 4]
+        assert accepted == [1, 2, 3]
+        assert rejected == [4, 5]
 
     def test_multiple_rounds(self):
         """Test that multiple rounds accumulate tokens."""

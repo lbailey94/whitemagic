@@ -552,28 +552,57 @@ def _edge_rules_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
-    """Default Tier 1 handler — uses llama.cpp with a small model."""
-    try:
-        from whitemagic.inference.local_llm import LocalLLM
+    """Default Tier 1 handler — uses llama.cpp with a small model.
 
-        llm = LocalLLM(model="qwen2.5-coder:1.5b")
-        if not llm.is_available:
+    Model selection order:
+    1. WM_MODEL_SMALL env var (explicit path to GGUF)
+    2. WM_MODEL_QWEN3_1_7B / WM_MODEL_QWEN25_1_5B env vars
+    3. ModelDiscovery.best_model() auto-discovery
+    """
+    try:
+        import os
+        from whitemagic.inference.llama_cpp import LlamaCppBackend
+
+        model_path = (
+            os.environ.get("WM_MODEL_SMALL", "")
+            or os.environ.get("WM_MODEL_QWEN3_1_7B", "")
+            or os.environ.get("WM_MODEL_QWEN25_1_5B", "")
+            or os.environ.get("WM_MODEL_LLAMA32_1B", "")
+        )
+
+        if not model_path:
+            from whitemagic.interfaces.chat import ModelDiscovery
+            best = ModelDiscovery.best_model()
+            if best and best.backend == "llama_cpp":
+                model_path = best.path
+
+        if not model_path or not os.path.exists(model_path):
             return {
                 "answer": "",
                 "confidence": 0.0,
-                "metadata": {"error": "llama_unavailable"},
+                "metadata": {"error": "no_small_model_configured"},
+            }
+
+        backend = LlamaCppBackend(
+            model_path=model_path,
+            auto_start=False,
+        )
+        if not backend.is_available:
+            return {
+                "answer": "",
+                "confidence": 0.0,
+                "metadata": {"error": "llama_cpp_unavailable"},
             }
 
         max_tokens = kwargs.get("max_tokens", 256)
-        answer = llm.complete(prompt, max_tokens=max_tokens, temperature=0.3)
+        answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.3)
         if answer.startswith("Error"):
             return {"answer": "", "confidence": 0.0, "metadata": {"error": answer}}
 
-        # Small models get moderate confidence — the router will cascade if needed
         return {
             "answer": answer,
-            "confidence": 0.75,  # Default for small model — cascading will escalate if needed
-            "metadata": {"model": llm.model, "method": "local_llm"},
+            "confidence": 0.75,
+            "metadata": {"model": model_path, "method": "llama_cpp_small"},
         }
     except Exception as e:
         logger.debug("Local small handler failed: %s", e)
@@ -581,43 +610,67 @@ def _local_small_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def _local_large_handler(prompt: str, **kwargs: Any) -> dict[str, Any]:
-    """Default Tier 2 handler — uses llama.cpp with a larger model or BitNet."""
+    """Default Tier 2 handler — uses llama.cpp with a larger model or BitNet.
+
+    Model selection order:
+    1. WM_MODEL_LARGE env var (explicit path to GGUF)
+    2. WM_MODEL_QWEN3_4B / WM_MODEL_PHI4_MINI env vars
+    3. WM_LLAMA_MODEL env var (legacy)
+    4. ModelDiscovery.best_model() auto-discovery
+    5. BitNet fallback
+    """
     try:
-        from whitemagic.inference.local_llm import LocalLLM
+        import os
+        from whitemagic.inference.llama_cpp import LlamaCppBackend
 
-        llm = LocalLLM()  # Uses WM_LLAMA_MODEL env var or auto-discovery
-        if not llm.is_available:
-            # Try BitNet as fallback
-            try:
-                from whitemagic.inference.bitnet_bridge import infer as bitnet_infer
+        model_path = (
+            os.environ.get("WM_MODEL_LARGE", "")
+            or os.environ.get("WM_MODEL_QWEN3_4B", "")
+            or os.environ.get("WM_MODEL_PHI4_MINI", "")
+            or os.environ.get("WM_LLAMA_MODEL", "")
+        )
 
-                result = bitnet_infer(prompt, n_predict=kwargs.get("max_tokens", 512))
-                if result.get("status") == "success":
+        if not model_path:
+            from whitemagic.interfaces.chat import ModelDiscovery
+            best = ModelDiscovery.best_model()
+            if best and best.backend == "llama_cpp":
+                model_path = best.path
+
+        if model_path and os.path.exists(model_path):
+            backend = LlamaCppBackend(
+                model_path=model_path,
+                auto_start=False,
+            )
+            if backend.is_available:
+                max_tokens = kwargs.get("max_tokens", 512)
+                answer = backend.complete(prompt, max_tokens=max_tokens, temperature=0.5)
+                if not answer.startswith("Error"):
                     return {
-                        "answer": result.get("response", ""),
+                        "answer": answer,
                         "confidence": 0.85,
-                        "metadata": {
-                            "method": "bitnet",
-                            "model": result.get("model", "bitnet"),
-                        },
+                        "metadata": {"model": model_path, "method": "llama_cpp_large"},
                     }
-            except Exception:
-                logger.debug("Swallowed exception", exc_info=True)
-            return {
-                "answer": "",
-                "confidence": 0.0,
-                "metadata": {"error": "no_local_large"},
-            }
 
-        max_tokens = kwargs.get("max_tokens", 512)
-        answer = llm.complete(prompt, max_tokens=max_tokens, temperature=0.5)
-        if answer.startswith("Error"):
-            return {"answer": "", "confidence": 0.0, "metadata": {"error": answer}}
+        # Try BitNet as fallback
+        try:
+            from whitemagic.inference.bitnet_bridge import infer as bitnet_infer
 
+            result = bitnet_infer(prompt, n_predict=kwargs.get("max_tokens", 512))
+            if result.get("status") == "success":
+                return {
+                    "answer": result.get("response", ""),
+                    "confidence": 0.85,
+                    "metadata": {
+                        "method": "bitnet",
+                        "model": result.get("model", "bitnet"),
+                    },
+                }
+        except Exception:
+            logger.debug("Swallowed exception", exc_info=True)
         return {
-            "answer": answer,
-            "confidence": 0.85,
-            "metadata": {"model": llm.model, "method": "local_llm"},
+            "answer": "",
+            "confidence": 0.0,
+            "metadata": {"error": "no_local_large"},
         }
     except Exception as e:
         logger.debug("Local large handler failed: %s", e)

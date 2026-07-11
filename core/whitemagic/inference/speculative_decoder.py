@@ -227,29 +227,23 @@ class SpeculativeDecoder:
             verify_tokens = verify_result.get("tokens", [])
             verify_text = verify_result.get("text", "")
 
-            # Phase 3: Accept/reject
+            # Phase 3: Accept/reject at token level
             accepted, rejected = self._accept_reject(
                 draft_tokens, verify_tokens
             )
 
             if accepted:
                 all_tokens.extend(accepted)
-                # Map accepted token indices to text
-                for idx in accepted:
-                    if idx < len(draft_text):
-                        all_text.append(draft_text[idx])
-                    elif idx - len(draft_tokens) < len(verify_text):
-                        all_text.append(verify_text[idx - len(draft_tokens)])
+                # Reconstruct text from accepted tokens using verify text
+                # (verify model is authoritative for text decoding)
+                for i, tok_id in enumerate(accepted):
+                    if i < len(verify_text):
+                        all_text.append(verify_text[i])
+                    elif i < len(draft_text):
+                        all_text.append(draft_text[i])
                 total_accepted += len(accepted)
 
             if rejected:
-                # Use verify model's token at the first rejection point
-                reject_idx = len(accepted)
-                if reject_idx < len(verify_tokens):
-                    all_tokens.append(verify_tokens[reject_idx])
-                    if reject_idx < len(verify_text):
-                        all_text.append(verify_text[reject_idx])
-                    total_accepted += 1
                 total_rejected += len(rejected)
 
             # Adaptive K: adjust based on acceptance rate
@@ -301,11 +295,13 @@ class SpeculativeDecoder:
         draft_tokens: list[int],
         verify_tokens: list[int],
     ) -> tuple[list[int], list[int]]:
-        """Compare draft and verify tokens, return (accepted_indices, rejected_indices).
+        """Compare draft and verify tokens at the token ID level.
 
-        Uses simple token ID matching. In production, this would use logit-level
-        rejection sampling, but token ID matching is a reasonable approximation
-        when both models use the same tokenizer.
+        Returns (accepted_token_ids, rejected_token_ids).
+
+        Accepts tokens where draft[i] == verify[i]. At the first mismatch,
+        accepts the verify model's token (correction) and stops — remaining
+        draft tokens are rejected since the context has diverged.
         """
         accepted: list[int] = []
         rejected: list[int] = []
@@ -314,14 +310,17 @@ class SpeculativeDecoder:
 
         for i in range(min_len):
             if draft_tokens[i] == verify_tokens[i]:
-                accepted.append(i)
+                accepted.append(draft_tokens[i])
             else:
-                rejected.append(i)
-                break  # Stop at first mismatch — rest need re-verification
+                # First mismatch: take verify model's token as correction
+                accepted.append(verify_tokens[i])
+                # All remaining draft tokens are rejected (context diverged)
+                rejected.extend(draft_tokens[i + 1 :])
+                break
 
-        # If verify produced fewer tokens, reject the rest
-        if len(draft_tokens) > min_len:
-            rejected.extend(range(min_len, len(draft_tokens)))
+        # If verify produced fewer tokens, reject the extra draft tokens
+        if len(draft_tokens) > min_len and not rejected:
+            rejected.extend(draft_tokens[min_len:])
 
         return accepted, rejected
 

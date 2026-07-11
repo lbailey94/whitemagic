@@ -43,6 +43,40 @@ class ModelInfo:
 class ModelDiscovery:
     """Find local GGUF models for the chat loop."""
 
+    # Env-var → model name mapping for explicit model configuration
+    MODEL_ENV_VARS = {
+        "WM_MODEL_QWEN3_8B": "qwen3-8b",
+        "WM_MODEL_GLM4_9B": "glm4-9b",
+        "WM_MODEL_DEEPSEEK_R1_7B": "deepseek-r1-7b",
+        "WM_MODEL_QWEN25VL_7B": "qwen2.5vl-7b",
+        "WM_MODEL_QWEN3_4B": "qwen3-4b",
+        "WM_MODEL_QWEN3_1_7B": "qwen3-1.7b",
+        "WM_MODEL_PHI4_MINI": "phi4-mini",
+        "WM_MODEL_GLM4": "glm4",
+        "WM_MODEL_LLAMA32_1B": "llama-3.2-1b",
+        "WM_MODEL_QWEN25_1_5B": "qwen2.5-1.5b",
+        "WM_MODEL_FALCON3_1B": "falcon3-1b",
+        "WM_MODEL_BITNET": "bitnet",
+        "WM_MODEL_SMOLLM2_360M": "smollm2-360m",
+    }
+
+    # Preferred model order (best first for CPU inference on i5-8350U)
+    # 4B models are the sweet spot; 7B+ models are slow but capable
+    PREFERRED_ORDER = [
+        "qwen3-4b",
+        "phi4-mini",
+        "qwen3-1.7b",
+        "qwen2.5-1.5b",
+        "llama-3.2-1b",
+        "falcon3-1b",
+        "bitnet",
+        "smollm2-360m",
+        "qwen3-8b",
+        "glm4-9b",
+        "deepseek-r1-7b",
+        "qwen2.5vl-7b",
+    ]
+
     GGUF_SEARCH_PATHS = [
         Path.home() / ".cache" / "lm-studio" / "models",
         Path.home() / "models",
@@ -101,6 +135,9 @@ class ModelDiscovery:
             if not search_dir.exists():
                 continue
             for gguf in search_dir.rglob("*.gguf"):
+                # Skip llama.cpp vocab test files
+                if "ggml-vocab" in gguf.name:
+                    continue
                 try:
                     size_mb = gguf.stat().st_size / (1024 * 1024)
                 except OSError:
@@ -133,13 +170,39 @@ class ModelDiscovery:
     def best_model(cls) -> ModelInfo | None:
         """Pick the best available model for chat.
 
-        Preference: 1.5B-8B GGUF (sweet spot for CPU), then llama.cpp models.
+        Preference order:
+        1. Explicit env var (WM_MODEL_QWEN3_4B, WM_MODEL_PHI4_MINI, etc.)
+        2. Preferred model by name (qwen3-4b > phi4-mini > qwen3-1.7b > ...)
+        3. GGUF models in the 1-8GB range (sweet spot for CPU)
+        4. Any discovered model
         """
+        # 1. Check env vars first
+        import os
+        for env_var, model_name in cls.MODEL_ENV_VARS.items():
+            path = os.environ.get(env_var, "")
+            if path and Path(path).exists():
+                return ModelInfo(
+                    path=path,
+                    name=model_name,
+                    size_mb=Path(path).stat().st_size / (1024 * 1024),
+                    source="env_var",
+                    backend="llama_cpp",
+                )
+
         models = cls.find_models()
         if not models:
             return None
 
-        # Prefer GGUF models in the 1-8GB range (1.5B-8B params at Q4)
+        # 2. Prefer by name order
+        for preferred_name in cls.PREFERRED_ORDER:
+            match = next(
+                (m for m in models if preferred_name in m.name.lower()),
+                None,
+            )
+            if match:
+                return match
+
+        # 3. GGUF models in the 1-8GB range
         gguf = [m for m in models if m.backend == "llama_cpp"]
         if gguf:
             sized = [m for m in gguf if 500 < m.size_mb < 8000]
@@ -147,19 +210,7 @@ class ModelDiscovery:
                 return min(sized, key=lambda m: abs(m.size_mb - 3000))
             return gguf[0]
 
-        # Fall back to installed models — prefer smaller models
-        installed = [m for m in models if m.backend == "llama_cpp"]
-        if installed:
-            # Prefer models with "qwen", "llama", "phi", "gemma" in name
-            preferred = [
-                m
-                for m in installed
-                if any(k in m.name.lower() for k in ("qwen", "llama", "phi", "gemma"))
-            ]
-            if preferred:
-                return preferred[0]
-            return installed[0]
-
+        # 4. Fall back to any discovered model
         return models[0]
 
     @classmethod
