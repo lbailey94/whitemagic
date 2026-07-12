@@ -37,7 +37,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (current: 5247 passed, 9 skipped, 0 new failures)
+# 2. Verify test baseline (current: 5697 passed, 3 skipped, 0 new failures)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift
