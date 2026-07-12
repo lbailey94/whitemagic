@@ -38,6 +38,8 @@ use wm_evolution::{
     mc_advanced,
     mc_bayesian,
     mc_integration,
+    mc_mcmc,
+    mc_qmc,
     mc_rare_event,
     mc_sde,
     mc_sensitivity,
@@ -398,25 +400,6 @@ fn handle_request(req: serde_json::Value) -> String {
                 "ci_upper": ci_hi,
                 "significant": significant,
             }))
-        }
-
-        "mc_multid_gaussian" => {
-            let n_samples = params.get("n_samples").and_then(|v| v.as_u64()).unwrap_or(1000) as usize;
-            let mean: Vec<f64> = params.get("mean")
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
-                .unwrap_or_default();
-            let cov: Vec<f64> = params.get("cov")
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
-                .unwrap_or_default();
-            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
-            if mean.is_empty() || cov.is_empty() {
-                json_error("mc_multid_gaussian requires non-empty 'mean' and 'cov' arrays")
-            } else {
-                let samples = mc_advanced::multid_gaussian(n_samples, &mean, &cov, seed);
-                json_ok(serde_json::json!({"samples": samples, "n_samples": samples.len()}))
-            }
         }
 
         "mc_latin_hypercube" => {
@@ -1012,6 +995,277 @@ fn handle_request(req: serde_json::Value) -> String {
                 "estimate": estimate,
                 "variance": var,
                 "levels": levels
+            }))
+        }
+
+        // ── Tier 5: Additional Advanced Methods ──
+
+        "mc_multid_gaussian" => {
+            let n_samples = params.get("n_samples").and_then(|v| v.as_u64()).unwrap_or(1000) as usize;
+            let mean: Vec<f64> = params.get("mean")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let cov: Vec<f64> = params.get("cov")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            if mean.is_empty() || cov.is_empty() {
+                json_error("mc_multid_gaussian requires non-empty 'mean' and 'cov' arrays")
+            } else {
+                let samples = mc_advanced::multid_gaussian(n_samples, &mean, &cov, seed);
+                json_ok(serde_json::json!({"samples": samples, "n_samples": samples.len()}))
+            }
+        }
+
+        "mc_gp_optimize_hyperparameters" => {
+            let x_train: Vec<Vec<f64>> = params.get("x_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|row| row.as_array().map(|r| r.iter().filter_map(|v| v.as_f64()).collect())).collect())
+                .unwrap_or_default();
+            let y_train: Vec<f64> = params.get("y_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+                .unwrap_or_default();
+            let sigma_n = params.get("sigma_n").and_then(|v| v.as_f64()).unwrap_or(1e-6);
+            let n_grid = params.get("n_grid").and_then(|v| v.as_i64()).unwrap_or(10) as usize;
+
+            if x_train.is_empty() || y_train.is_empty() {
+                json_error("x_train and y_train required")
+            } else {
+                let gp = mc_bayesian::GaussianProcess::optimize_hyperparameters(
+                    x_train, y_train, sigma_n, n_grid,
+                );
+                let lml = gp.log_marginal_likelihood();
+                json_ok(serde_json::json!({
+                    "length_scale": gp.length_scale,
+                    "sigma_f": gp.sigma_f,
+                    "sigma_n": gp.sigma_n,
+                    "log_marginal_likelihood": lml,
+                    "n_train": gp.y_train.len()
+                }))
+            }
+        }
+
+        "mc_expected_improvement" => {
+            let x_train: Vec<Vec<f64>> = params.get("x_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|row| row.as_array().map(|r| r.iter().filter_map(|v| v.as_f64()).collect())).collect())
+                .unwrap_or_default();
+            let y_train: Vec<f64> = params.get("y_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+                .unwrap_or_default();
+            let x_candidates: Vec<Vec<f64>> = params.get("x_candidates")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|row| row.as_array().map(|r| r.iter().filter_map(|v| v.as_f64()).collect())).collect())
+                .unwrap_or_default();
+            let length_scale = params.get("length_scale").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let sigma_f = params.get("sigma_f").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let sigma_n = params.get("sigma_n").and_then(|v| v.as_f64()).unwrap_or(1e-6);
+
+            if x_train.is_empty() || x_candidates.is_empty() {
+                json_error("x_train, y_train, and x_candidates required")
+            } else {
+                let gp = mc_bayesian::GaussianProcess::fit(x_train.clone(), y_train, length_scale, sigma_f, sigma_n);
+                let f_best = gp.y_train.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                let xi = params.get("xi").and_then(|v| v.as_f64()).unwrap_or(0.01);
+                let ei_batch = mc_bayesian::expected_improvement_batch(&gp, &x_candidates, f_best, xi);
+                let result: Vec<serde_json::Value> = ei_batch.iter().map(|(ei, mu)| {
+                    serde_json::json!({"ei": ei, "mu": mu})
+                }).collect();
+                json_ok(serde_json::json!({"ei_values": result, "f_best": f_best}))
+            }
+        }
+
+        // ── Tier 6: Quasi-Monte Carlo ──
+
+        "mc_sobol_sequence" => {
+            let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+            let d = params.get("d").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let scramble = params.get("scramble").and_then(|v| v.as_bool()).unwrap_or(true);
+            let samples = mc_qmc::sobol_sequence(n, d, seed, scramble);
+            json_ok(serde_json::json!({"samples": samples, "n": samples.len(), "d": d}))
+        }
+
+        "mc_halton_sequence" => {
+            let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+            let d = params.get("d").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let samples = mc_qmc::halton_sequence(n, d, seed);
+            json_ok(serde_json::json!({"samples": samples, "n": samples.len(), "d": d}))
+        }
+
+        "mc_qmc_integrate" => {
+            let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(1000) as usize;
+            let d = params.get("d").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let method = params.get("qmc_method").and_then(|v| v.as_str()).unwrap_or("sobol");
+            let ranges: Vec<(f64, f64)> = params.get("ranges")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|r| {
+                        let ra = r.as_array()?;
+                        if ra.len() >= 2 {
+                            Some((ra[0].as_f64()?, ra[1].as_f64()?))
+                        } else {
+                            None
+                        }
+                    }).collect()
+                })
+                .unwrap_or_else(|| vec![(0.0, 1.0); d]);
+
+            let unit_samples = match method {
+                "halton" => mc_qmc::halton_sequence(n, d, seed),
+                _ => mc_qmc::sobol_sequence(n, d, seed, true),
+            };
+            let scaled: Vec<Vec<f64>> = unit_samples.iter().map(|s| {
+                s.iter().enumerate().map(|(i, &v)| {
+                    let (lo, hi) = ranges.get(i).copied().unwrap_or((0.0, 1.0));
+                    lo + v * (hi - lo)
+                }).collect()
+            }).collect();
+            json_ok(serde_json::json!({
+                "samples": scaled,
+                "n": scaled.len(),
+                "d": d,
+                "method": method
+            }))
+        }
+
+        // ── Tier 7: MCMC Samplers ──
+
+        "mc_metropolis_hastings" => {
+            let n_samples = params.get("n_samples").and_then(|v| v.as_u64()).unwrap_or(1000) as usize;
+            let n_burn = params.get("n_burn").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let x0: Vec<f64> = params.get("x0")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_else(|| vec![0.0]);
+            let proposal_std = params.get("proposal_std").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let target_type = params.get("target_type").and_then(|v| v.as_str()).unwrap_or("gaussian");
+            let target_mean: Vec<f64> = params.get("target_mean")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_else(|| vec![0.0]);
+            let target_cov: Vec<f64> = params.get("target_cov")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_else(|| vec![1.0]);
+
+            let (samples, acceptance_rate) = mc_mcmc::metropolis_hastings(
+                n_samples, n_burn, &x0, proposal_std, seed,
+                target_type, &target_mean, &target_cov,
+            );
+            json_ok(serde_json::json!({
+                "samples": samples,
+                "n_samples": samples.len(),
+                "acceptance_rate": acceptance_rate,
+            }))
+        }
+
+        "mc_hamiltonian_mc" => {
+            let n_samples = params.get("n_samples").and_then(|v| v.as_u64()).unwrap_or(500) as usize;
+            let n_burn = params.get("n_burn").and_then(|v| v.as_u64()).unwrap_or(50) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let x0: Vec<f64> = params.get("x0")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_else(|| vec![0.0]);
+            let step_size = params.get("step_size").and_then(|v| v.as_f64()).unwrap_or(0.1);
+            let n_leapfrog = params.get("n_leapfrog").and_then(|v| v.as_i64()).unwrap_or(10) as usize;
+            let target_type = params.get("target_type").and_then(|v| v.as_str()).unwrap_or("gaussian");
+            let target_mean: Vec<f64> = params.get("target_mean")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_else(|| vec![0.0]);
+            let target_cov: Vec<f64> = params.get("target_cov")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_else(|| vec![1.0]);
+
+            let (samples, acceptance_rate) = mc_mcmc::hamiltonian_monte_carlo(
+                n_samples, n_burn, &x0, step_size, n_leapfrog, seed,
+                target_type, &target_mean, &target_cov,
+            );
+            json_ok(serde_json::json!({
+                "samples": samples,
+                "n_samples": samples.len(),
+                "acceptance_rate": acceptance_rate,
+            }))
+        }
+
+        // ── Tier 8: Expanded SDE Models ──
+
+        "mc_sde_jump_diffusion" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.2);
+            let jump_intensity = params.get("jump_intensity").and_then(|v| v.as_f64()).unwrap_or(0.1);
+            let jump_mean = params.get("jump_mean").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let jump_std = params.get("jump_std").and_then(|v| v.as_f64()).unwrap_or(0.1);
+
+            let path = mc_sde::jump_diffusion_merton(
+                x0, t0, t_end, n_steps, mu, sigma,
+                jump_intensity, jump_mean, jump_std, seed,
+            );
+            let final_val = path.last().map(|(_, x)| *x).unwrap_or(x0);
+            json_ok(serde_json::json!({
+                "final_value": final_val,
+                "n_steps": n_steps,
+                "path_length": path.len()
+            }))
+        }
+
+        "mc_sde_heston" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let v0 = params.get("v0").and_then(|v| v.as_f64()).unwrap_or(0.04);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let kappa = params.get("kappa").and_then(|v| v.as_f64()).unwrap_or(2.0);
+            let theta = params.get("theta").and_then(|v| v.as_f64()).unwrap_or(0.04);
+            let xi = params.get("xi").and_then(|v| v.as_f64()).unwrap_or(0.3);
+            let rho = params.get("rho").and_then(|v| v.as_f64()).unwrap_or(-0.7);
+
+            let (price_path, var_path) = mc_sde::heston(
+                x0, v0, t0, t_end, n_steps, mu, kappa, theta, xi, rho, seed,
+            );
+            let final_price = price_path.last().copied().unwrap_or(x0);
+            let final_var = var_path.last().copied().unwrap_or(v0);
+            json_ok(serde_json::json!({
+                "final_price": final_price,
+                "final_variance": final_var,
+                "n_steps": n_steps,
+                "price_path_length": price_path.len(),
+            }))
+        }
+
+        "mc_sde_cir" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(0.04);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let kappa = params.get("kappa").and_then(|v| v.as_f64()).unwrap_or(2.0);
+            let theta = params.get("theta").and_then(|v| v.as_f64()).unwrap_or(0.04);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.3);
+
+            let path = mc_sde::cir(x0, t0, t_end, n_steps, kappa, theta, sigma, seed);
+            let final_val = path.last().map(|(_, x)| *x).unwrap_or(x0);
+            json_ok(serde_json::json!({
+                "final_value": final_val,
+                "n_steps": n_steps,
+                "path_length": path.len()
             }))
         }
 

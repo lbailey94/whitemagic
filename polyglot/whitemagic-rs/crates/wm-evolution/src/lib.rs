@@ -11,6 +11,8 @@ pub mod info_theory;
 pub mod mc_advanced;
 pub mod mc_bayesian;
 pub mod mc_integration;
+pub mod mc_mcmc;
+pub mod mc_qmc;
 pub mod mc_rare_event;
 pub mod mc_sde;
 pub mod mc_sensitivity;

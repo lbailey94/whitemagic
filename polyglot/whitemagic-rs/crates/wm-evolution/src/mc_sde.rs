@@ -251,6 +251,158 @@ fn box_muller(rng: &mut Xoshiro256PlusPlus) -> f64 {
     (-2.0_f64 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
 }
 
+// ── Jump-Diffusion (Merton model) ────────────────────────────────────
+
+/// Merton jump-diffusion model:
+/// dX_t = mu*X_t dt + sigma*X_t dW_t + J_t dN_t
+///
+/// where N_t is a Poisson process with intensity lambda,
+/// and J_t are i.i.d. log-normal jumps: ln(J) ~ N(jump_mean, jump_std^2).
+///
+/// Returns the full path as Vec<(t, x)>.
+pub fn jump_diffusion_merton(
+    x0: f64,
+    t0: f64,
+    t_end: f64,
+    n_steps: usize,
+    mu: f64,
+    sigma: f64,
+    jump_intensity: f64,
+    jump_mean: f64,
+    jump_std: f64,
+    seed: u64,
+) -> Vec<(f64, f64)> {
+    if n_steps == 0 {
+        return Vec::new();
+    }
+
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+    let dt = (t_end - t0) / n_steps as f64;
+    let sqrt_dt = dt.sqrt();
+
+    let mut path = Vec::with_capacity(n_steps + 1);
+    let mut x = x0;
+    path.push((t0, x));
+
+    for i in 0..n_steps {
+        let t = t0 + (i + 1) as f64 * dt;
+        let dw = box_muller(&mut rng) * sqrt_dt;
+
+        // Diffusion part: Euler-Maruyama
+        x += mu * x * dt + sigma * x * dw;
+
+        // Jump part: Poisson arrivals
+        let u: f64 = (rng.next_u64() as f64) / (u64::MAX as f64);
+        let n_jumps = if u < jump_intensity * dt { 1 } else { 0 };
+
+        for _ in 0..n_jumps {
+            let jump = (jump_mean + jump_std * box_muller(&mut rng)).exp();
+            x *= jump;
+        }
+
+        path.push((t, x));
+    }
+
+    path
+}
+
+// ── Heston stochastic volatility model ───────────────────────────────
+
+/// Heston model:
+/// dS_t = mu*S_t dt + sqrt(v_t)*S_t dW1_t
+/// dv_t = kappa*(theta - v_t) dt + xi*sqrt(v_t) dW2_t
+///
+/// where dW1*dW2 = rho*dt (correlated Brownian motions).
+///
+/// Returns (price_path, variance_path) as Vec<f64> (values only, no time).
+pub fn heston(
+    s0: f64,
+    v0: f64,
+    t0: f64,
+    t_end: f64,
+    n_steps: usize,
+    mu: f64,
+    kappa: f64,
+    theta: f64,
+    xi: f64,
+    rho: f64,
+    seed: u64,
+) -> (Vec<f64>, Vec<f64>) {
+    if n_steps == 0 {
+        return (Vec::new(), Vec::new());
+    }
+
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+    let dt = (t_end - t0) / n_steps as f64;
+    let sqrt_dt = dt.sqrt();
+
+    let mut s = s0;
+    let mut v = v0.max(0.0);
+
+    let mut price_path = Vec::with_capacity(n_steps + 1);
+    let mut var_path = Vec::with_capacity(n_steps + 1);
+    price_path.push(s);
+    var_path.push(v);
+
+    for _ in 0..n_steps {
+        // Generate correlated Brownian increments
+        let z1 = box_muller(&mut rng);
+        let z2 = rho * z1 + (1.0 - rho * rho).sqrt() * box_muller(&mut rng);
+
+        // Variance process (CIR-like, full truncation)
+        v += kappa * (theta - v) * dt + xi * v.max(0.0).sqrt() * z2 * sqrt_dt;
+        v = v.max(0.0); // Full truncation scheme
+
+        // Price process
+        s += mu * s * dt + s * v.sqrt() * z1 * sqrt_dt;
+
+        price_path.push(s);
+        var_path.push(v);
+    }
+
+    (price_path, var_path)
+}
+
+// ── Cox-Ingersoll-Ross (CIR) model ───────────────────────────────────
+
+/// CIR model for interest rates / mean-reverting square-root process:
+/// dX_t = kappa*(theta - X_t) dt + sigma*sqrt(X_t) dW_t
+///
+/// Returns the full path as Vec<(t, x)>.
+pub fn cir(
+    x0: f64,
+    t0: f64,
+    t_end: f64,
+    n_steps: usize,
+    kappa: f64,
+    theta: f64,
+    sigma: f64,
+    seed: u64,
+) -> Vec<(f64, f64)> {
+    if n_steps == 0 {
+        return Vec::new();
+    }
+
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+    let dt = (t_end - t0) / n_steps as f64;
+    let sqrt_dt = dt.sqrt();
+
+    let mut path = Vec::with_capacity(n_steps + 1);
+    let mut x = x0.max(0.0);
+    path.push((t0, x));
+
+    for i in 0..n_steps {
+        let t = t0 + (i + 1) as f64 * dt;
+        let dw = box_muller(&mut rng) * sqrt_dt;
+        // Full truncation: use max(x, 0) in sqrt
+        x += kappa * (theta - x) * dt + sigma * x.max(0.0).sqrt() * dw;
+        x = x.max(0.0);
+        path.push((t, x));
+    }
+
+    path
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
