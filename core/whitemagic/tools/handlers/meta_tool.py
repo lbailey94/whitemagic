@@ -1835,6 +1835,24 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(chern.*number|chern.*invariant)\b", re.I), "gana_three_stars", "topological.chern_number"),
     (re.compile(r"\b(topological.*encode|topology.*encode)\b", re.I), "gana_three_stars", "topological.encode"),
     (re.compile(r"\b(topological.*decode|topology.*decode)\b", re.I), "gana_three_stars", "topological.decode"),
+    # ── v24.3.0: Screenshot Upgrade Strategy tools ──
+    (re.compile(r"\b(transaction.*firewall|tx.*firewall)\b", re.I), "gana_room", "tx_firewall.status"),
+    (re.compile(r"\b(firewall.*policy|tx.*policy)\b", re.I), "gana_room", "tx_firewall.set_policy"),
+    (re.compile(r"\b(ambient.*state|ambient.*sensor)\b", re.I), "gana_ghost", "ambient.state"),
+    (re.compile(r"\b(ambient.*status|sensorium.*status)\b", re.I), "gana_ghost", "ambient.status"),
+    (re.compile(r"\b(wasm.*verify|verify.*wasm)\b", re.I), "gana_room", "wasm_verify.status"),
+    (re.compile(r"\b(network.*state.*identity|create.*identity)\b", re.I), "gana_wall", "network_state.create_identity"),
+    (re.compile(r"\b(network.*state.*propose|governance.*propose)\b", re.I), "gana_wall", "network_state.propose"),
+    (re.compile(r"\b(network.*state.*vote|governance.*vote)\b", re.I), "gana_wall", "network_state.vote"),
+    (re.compile(r"\b(network.*state.*resolve|governance.*resolve)\b", re.I), "gana_wall", "network_state.resolve"),
+    (re.compile(r"\b(network.*state.*status|sovereign.*status)\b", re.I), "gana_wall", "network_state.status"),
+    (re.compile(r"\b(genetic.*algorithm|genetic.*run|ga.*run)\b", re.I), "gana_ox", "genetic.run"),
+    (re.compile(r"\b(genetic.*status|ga.*status)\b", re.I), "gana_ox", "genetic.status"),
+    (re.compile(r"\b(model.*optimi[sz]e|auto.*optimi[sz]e)\b", re.I), "gana_dipper", "model.optimize"),
+    (re.compile(r"\b(model.*optimi[sz]e.*status|auto.*optim.*status)\b", re.I), "gana_dipper", "model.optimize_status"),
+    (re.compile(r"\b(bounty.*scan|scan.*bounty)\b", re.I), "gana_abundance", "bounty.scan"),
+    (re.compile(r"\b(bounty.*auto.*claim|auto.*claim.*bounty)\b", re.I), "gana_abundance", "bounty.auto_claim"),
+    (re.compile(r"\b(bounty.*connector|connector.*status)\b", re.I), "gana_abundance", "bounty.connector_status"),
 ]
 
 

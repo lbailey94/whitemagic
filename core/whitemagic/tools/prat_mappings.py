@@ -354,6 +354,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "network_state.status": "gana_wall",
     "network_state.vote": "gana_wall",
     "tx_firewall.set_policy": "gana_room",
+    "tx_firewall.status": "gana_room",
+    "wasm_verify.status": "gana_room",
     # ═══ SIMPLIFIED ALIASES ═══
     "remember": "gana_neck",
     "recall": "gana_winnowing_basket",
