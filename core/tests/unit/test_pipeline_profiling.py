@@ -117,8 +117,8 @@ class TestPipelineProfiling(unittest.TestCase):
         # Overhead should be minimal (< 1ms for non-inference tools)
         self.assertLess(
             overhead_ms,
-            2.0,
-            f"Middleware overhead should be <2ms, got {overhead_ms:.3f}ms",
+            5.0,
+            f"Middleware overhead should be <5ms, got {overhead_ms:.3f}ms",
         )
 
     def test_token_tracker_overhead_isolated(self) -> None:

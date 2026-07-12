@@ -46,6 +46,8 @@ os.environ["WM_STATE_ROOT"] = _TEST_STATE_ROOT
 os.environ["WM_SILENT_INIT"] = "1"
 # Skip heavy holographic index loading during tests
 os.environ["WM_SKIP_HOLO_INDEX"] = "1"
+# PostgreSQL integration tests (skipped gracefully if unavailable)
+os.environ.setdefault("WM_PG_PASSWORD", "whitemagic")
 # Polyglot subprocess checks are gated per-test via skipif decorators.
 
 # Suppress noisy INFO logs from SQLite schema migrations during tests
