@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Cache Coherence & Hot-Path Optimization Strategy (v24.3.0)
+
+#### Tier 1: Core Cache Coherence
+- **1.1** `auto_tune_ttls()` wired into `HomeostaticLoop._check_cache_health()` — periodic cache health with corrective actions
+- **1.2** `cache.tune` MCP tool via `gana_mound` — exposes stats + TTL tuning recommendations (dispatch table, PRAT, NLU, vectorized, agent descriptions)
+- **1.3** Version-aware `HybridRecallCache` — stores `(results, version)` tuples, checks `get_version()` on read
+- **1.4** Markov model persistence for `TransitionTracker` — `save_state`/`load_state` with auto-save every 50 records
+
+#### Tier 2: Cross-Process & Semantic
+- **2.1** Redis pub/sub for cross-process cache invalidation — `publish_invalidation`/`subscribe_invalidation` on `RedisCache`, lazy subscription in `CacheRegistry`, echo loop prevention
+- **2.2** Cache warming on idle — `_maybe_warm_caches()` in `ConsciousnessLoop`, flushes stale + runs `auto_tune_ttls()` on configurable interval
+- **2.3** Embedding-based semantic cache keys — `_semantic_cache_lookup()` with cosine similarity > 0.95, opt-in via `WM_SEMANTIC_CACHE_EMBEDDINGS=1`, bounded at 500 entries
+
+#### Tier 3: Multi-Agent & Dispatch
+- **3.1** CRDT LWW merge — `_lww_resolve()` on `UnifiedMemory`, higher version wins, agent_id tiebreak
+- **3.2** Cache-aware dispatch routing — `governance_skipped: True` flag on Rust-backend cache hits for read-only tools
+
+#### Tier 4: Research/Advanced
+- **4.1** Citta-informed speculative prefetch — `predict_with_citta()` on `SpeculativePrefetcher`, biases Markov predictions by emotional valence, coherence, and depth
+- **4.2** Holographic spatial invalidation — `invalidate_spatial()` on `CacheRegistry`, accepts 4D coords + radius for region-based cache flushing
+
+#### Deeper Integrations
+- Citta-informed prediction wired into `on_call_complete` via `_predict_with_citta_if_available()`
+- Spatial invalidation wired into `UnifiedMemory.store()` and `update_memory()` — flushes cache entries near written memory's holographic coordinates
+- `merge_remote_memory()` in `galaxy_sync.py` — uses `_lww_resolve()` for cross-agent memory merges via Redis sync
+- 24 unit tests in `test_cache_evolution.py`, all passing
+- 5247 total unit tests passing, 0 regressions
+
+### Added — Screenshot Upgrade Strategy (v24.3.0)
+
+#### §3.1 Transaction Firewall
+- `security/transaction_firewall.py` — per-agent spend limits, rate limiting, recipient allow/block lists, Dharma ethical sign-off
+- `mw_transaction_firewall` middleware in dispatch pipeline (after governor, before semantic cache)
+- Audit log persistence with daily spend tracking
+- Opt-in via `WM_TRANSACTION_FIREWALL` env var
+- 14 unit tests + 6 integration tests
+
+#### §3.2 BountyPlatform Auto-Connector
+- `agents/bounty_connector.py` — external bounty scanning, capability-based agent matching, auto-claim + import to local BountyBoard
+- `ReachingAIPlatform` adapter (reaching.ai API) + `MockBountyPlatform` for testing
+- `BountyBoard.import_external_bounty()` method for external bounty import
+- 11 unit tests
+
+#### §3.3 Model Auto-Optimization Loop
+- `inference/auto_optimizer.py` — benchmark → explore → converge optimization loop
+- Parameter space search across `LlamaCppConfig` fields (n_ctx, n_threads, temperature, top_p, etc.)
+- Config persistence to `optimal_model_config.json`
+- Fitness function: `tokens_per_second × quality / memory`
+- 14 unit tests
+
+#### §4.1 Ambient Sensorium Layer
+- `core/consciousness/ambient_sensorium.py` — 4 sensor sources (SystemPressure, UserPattern, Temporal, Environment)
+- Ambient state aggregation with pressure/engagement/temporal/health classification
+- Proactive action suggestions (dream cycle, memory consolidation, load reduction)
+- Background polling thread with configurable interval
+- 17 unit tests
+
+#### §4.2 WASM Compute Verification
+- `security/wasm_verifier.py` — checksum + replay verification for pure/read tools
+- `mw_wasm_verify` middleware in dispatch pipeline (post-execution, non-blocking)
+- Karmic debt tracking on mismatch
+- Opt-in via `WM_WASM_VERIFY=1` env var
+- 9 unit tests + 3 integration tests
+
+#### §4.3 Network State Profile
+- `core/identity/network_state.py` — sovereign agent identities with Ed25519 keypairs
+- Reputation tracking with ±0.1 per-call clamping
+- Governance proposals with reputation-weighted voting
+- Governance stake accumulation for participation
+- Identity + proposal persistence to disk
+- 17 unit tests
+
+#### §5.1 Genetic Algorithm Harness
+- `core/evolution/genetic_harness.py` — tournament selection, uniform crossover, bounded Gaussian mutation
+- Elitism (top N preserved unchanged), convergence detection
+- Configurable gene bounds with int/float support
+- Per-generation fitness history (best/avg/worst)
+- 14 unit tests
+
+#### Dispatch Wiring
+- `tools/handlers/v24_3_handlers.py` — 17 new MCP tool handlers
+- 729 total dispatch entries (up from 712)
+- New tools: `tx_firewall.status`, `tx_firewall.set_policy`, `bounty.scan`, `bounty.auto_claim`, `bounty.connector_status`, `model.optimize`, `model.optimize_status`, `ambient.state`, `ambient.status`, `wasm_verify.status`, `network_state.status`, `network_state.create_identity`, `network_state.propose`, `network_state.vote`, `network_state.resolve`, `genetic.run`, `genetic.status`
+
 ### Added — Cache Coherence & Hot-Path Optimization Strategy
 
 #### Phase 1: Consolidate & Register

@@ -46,8 +46,7 @@ os.environ["WM_STATE_ROOT"] = _TEST_STATE_ROOT
 os.environ["WM_SILENT_INIT"] = "1"
 # Skip heavy holographic index loading during tests
 os.environ["WM_SKIP_HOLO_INDEX"] = "1"
-# Skip polyglot subprocess checks (Elixir/Haskell/Julia) during tests
-os.environ["WM_SKIP_POLYGLOT"] = "1"
+# Polyglot subprocess checks are gated per-test via skipif decorators.
 
 # Suppress noisy INFO logs from SQLite schema migrations during tests
 import logging as _logging  # noqa: E402

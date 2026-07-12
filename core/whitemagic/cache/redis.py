@@ -302,6 +302,59 @@ class RedisCache:
             logger.error("Cache clear error: %s", e, exc_info=True)
             return 0
 
+    def publish_invalidation(self, namespace: str) -> bool:
+        """Publish a cache invalidation event to the Redis pub/sub channel.
+
+        Other processes subscribed to the channel will invalidate their
+        local caches for the given namespace.
+
+        Returns True if published, False if Redis not connected.
+        """
+        if not self._connected or not self._client:
+            return False
+        try:
+            channel = f"{self.config.key_prefix}cache_invalidate"
+            self._client.publish(channel, json.dumps({"namespace": namespace}))
+            return True
+        except Exception as e:
+            logger.debug("Publish invalidation failed: %s", e)
+            return False
+
+    def subscribe_invalidation(
+        self, callback: Callable[[str], None]
+    ) -> Any | None:
+        """Subscribe to cache invalidation events from other processes.
+
+        The callback receives the namespace string to invalidate.
+        Returns the pubsub object, or None if Redis not connected.
+        """
+        if not self._connected or not self._client:
+            return None
+        try:
+            channel = f"{self.config.key_prefix}cache_invalidate"
+            pubsub = self._client.pubsub()
+            pubsub.subscribe(channel)
+
+            import threading
+
+            def _listener() -> None:
+                for message in pubsub.listen():
+                    if message["type"] == "message":
+                        try:
+                            data = json.loads(message["data"])
+                            ns = data.get("namespace", "")
+                            if ns:
+                                callback(ns)
+                        except Exception:
+                            pass
+
+            thread = threading.Thread(target=_listener, daemon=True, name="redis-cache-invalidate-sub")
+            thread.start()
+            return pubsub
+        except Exception as e:
+            logger.debug("Subscribe invalidation failed: %s", e)
+            return None
+
     # Async methods
     async def aget(self, key: str, default: Any = None) -> Any:
         """Async get value from cache."""

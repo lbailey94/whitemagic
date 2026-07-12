@@ -324,6 +324,29 @@ class TestResearchAdapters:
 class TestResearchDAGSynthesis:
     """Test synthesis generation in ResearchDAG."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_dag_state(self):
+        """Clear DAG state to prevent cross-test contamination."""
+        try:
+            from whitemagic.core.memory.phylogenetics import get_phylogenetics
+            pg = get_phylogenetics()
+            pg._initialized = False
+        except Exception:
+            pass
+        from whitemagic.core.evolution.research_dag import get_research_dag
+        dag = get_research_dag()
+        dag._initialized = False
+        dag._cache.clear()
+        dag._ensure_table()
+        try:
+            with dag._get_conn() as conn:
+                conn.execute("DELETE FROM research_experiments")
+                conn.execute("DELETE FROM lineage_edges WHERE target_galaxy = 'research' OR source_galaxy = 'research'")
+                conn.commit()
+        except Exception:
+            pass
+        yield
+
     def test_synthesis_stage_exists(self):
         from whitemagic.core.evolution.research_dag import ExperimentStage
         assert ExperimentStage.SYNTHESIS.value == "synthesis"
@@ -372,6 +395,20 @@ class TestResearchDAGSynthesis:
 
 class TestPulseVerification:
     """Test tiered pulse verification."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_pulse_state(self):
+        """Clear pulse verifier state to prevent cross-test contamination."""
+        from whitemagic.mesh.pulse_verification import get_pulse_verifier, _KEY_CACHE
+        verifier = get_pulse_verifier()
+        # Clear in-memory pulses to prevent stale data from prior tests
+        if hasattr(verifier, "_pulses"):
+            verifier._pulses.clear()
+        if hasattr(verifier, "_verifications"):
+            verifier._verifications.clear()
+        # Clear Ed25519 key cache so keys are regenerated for current WM_STATE_ROOT
+        _KEY_CACHE.clear()
+        yield
 
     def test_create_pulse(self):
         from whitemagic.mesh.pulse_verification import get_pulse_verifier, VerificationTier

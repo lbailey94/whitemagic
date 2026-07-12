@@ -391,4 +391,129 @@ TOOLS: list[ToolDefinition] = [
         quadrant="northern",
         element="water",
     ),
+    ToolDefinition(
+        name="galaxy.snapshot",
+        description=(
+            "Create a full snapshot of a galaxy — memories, 6D coordinates, "
+            "associations, and metadata. Unlike galaxy.export, this includes "
+            "associations and full metadata, enabling trajectory branching "
+            "for simulation. Returns a snapshot dict that can be passed to "
+            "galaxy.restore."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "galaxy": {
+                    "type": "string",
+                    "description": "Galaxy to snapshot (default: universal)",
+                },
+            },
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.restore",
+        description=(
+            "Restore a galaxy from a snapshot created by galaxy.snapshot. "
+            "Can restore into the original galaxy or a different target galaxy, "
+            "enabling trajectory branching. Memories, coordinates, and "
+            "associations are all restored."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "snapshot": {
+                    "type": "object",
+                    "description": "Snapshot dict from galaxy.snapshot",
+                },
+                "target_galaxy": {
+                    "type": "string",
+                    "description": "Galaxy to restore into (default: snapshot's galaxy)",
+                },
+                "merge": {
+                    "type": "boolean",
+                    "description": "Merge with existing memories (default: true)",
+                },
+            },
+            "required": ["snapshot"],
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.package",
+        description=(
+            "Create a portable cross-AI galaxy package from a snapshot. "
+            "Wraps the snapshot with a manifest containing source AI info, "
+            "content hash for integrity verification, trust level, and "
+            "capability declarations. Enables sharing galaxies between "
+            "different AI instances."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "galaxy": {
+                    "type": "string",
+                    "description": "Galaxy to package (default: universal)",
+                },
+                "trust_level": {
+                    "type": "string",
+                    "enum": ["verified", "unverified", "quarantined"],
+                    "description": "Trust level for the package (default: verified)",
+                },
+                "source_instance": {
+                    "type": "string",
+                    "description": "Source AI instance identifier (default: local/default)",
+                },
+            },
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.receive",
+        description=(
+            "Receive and import a cross-AI galaxy package. Verifies package "
+            "integrity (content hash, format version), then imports the "
+            "snapshot into a target or quarantined galaxy. Supports "
+            "quarantine mode for inspecting untrusted packages."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "package": {
+                    "type": "object",
+                    "description": "Galaxy package from galaxy.package",
+                },
+                "target_galaxy": {
+                    "type": "string",
+                    "description": "Galaxy to import into (default: package's galaxy)",
+                },
+                "quarantine": {
+                    "type": "boolean",
+                    "description": "Import to quarantined galaxy for inspection (default: false)",
+                },
+            },
+            "required": ["package"],
+        },
+        gana="Void",
+        garden="stillness",
+        quadrant="northern",
+        element="water",
+    ),
 ]

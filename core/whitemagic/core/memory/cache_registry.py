@@ -42,6 +42,24 @@ class CacheRegistry:
         self._cleanup_funcs: dict[str, Callable[[], int]] = {}
         self._invalidate_funcs: dict[str, Callable[[str], int]] = {}
         self._versions: dict[str, int] = {}
+        self._redis_subscribed = False
+
+    def _subscribe_redis(self) -> None:
+        """Subscribe to Redis pub/sub for cross-process cache invalidation.
+
+        Called lazily when REDIS_URL is set and WM_SILENT_INIT is not 1.
+        Uses _from_redis=True on invalidate_namespace to prevent echo loops.
+        """
+        if self._redis_subscribed:
+            return
+        self._redis_subscribed = True
+        try:
+            from whitemagic.cache.redis import get_redis_cache
+            get_redis_cache().subscribe_invalidation(
+                lambda ns: self.invalidate_namespace(ns, _from_redis=True)
+            )
+        except Exception:
+            pass
 
     def register(
         self,
@@ -111,14 +129,18 @@ class CacheRegistry:
                 logger.error("  Cleanup failed for %s: %s", name, e, exc_info=True)
         return {"total": total, "per_cache": per_cache}
 
-    def invalidate_namespace(self, namespace: str) -> dict[str, int]:
+    def invalidate_namespace(self, namespace: str, _from_redis: bool = False) -> dict[str, int]:
         """Invalidate a specific namespace across all caches that support it.
 
         Used by the write-invalidate protocol after memory writes.
+        Also publishes to Redis pub/sub for cross-process invalidation
+        (unless _from_redis=True, to prevent echo loops).
 
         Args:
             namespace: Namespace to invalidate (e.g. "query", "semantic",
                 "hybrid_recall", or a galaxy name).
+            _from_redis: If True, this call was triggered by Redis pub/sub
+                — skip publishing to avoid echo.
 
         Returns:
             Dict mapping cache name to count of entries invalidated.
@@ -133,6 +155,18 @@ class CacheRegistry:
             except Exception as e:
                 logger.debug("  Invalidate failed for %s: %s", name, e)
         self._versions[namespace] = self._versions.get(namespace, 0) + 1
+
+        # Publish to Redis for cross-process invalidation (unless echo)
+        if not _from_redis:
+            try:
+                import os
+                if os.environ.get("REDIS_URL") and os.environ.get("WM_SILENT_INIT") != "1":
+                    self._subscribe_redis()
+                    from whitemagic.cache.redis import get_redis_cache
+                    get_redis_cache().publish_invalidation(namespace)
+            except Exception:
+                pass
+
         return results
 
     def get_version(self, namespace: str) -> int:
@@ -142,6 +176,52 @@ class CacheRegistry:
         Used by graph.py and other components to detect stale cached data.
         """
         return self._versions.get(namespace, 0)
+
+    def invalidate_spatial(
+        self,
+        coords: tuple[float, float, float, float],
+        radius: float = 0.3,
+    ) -> dict[str, int]:
+        """Invalidate cache entries within a holographic spatial radius.
+
+        Uses 4D holographic coordinates (x, y, z, w) to identify cache entries
+        that are spatially close to a given point. Entries within the Euclidean
+        radius are invalidated. This enables fine-grained invalidation when a
+        memory is updated — only cache entries in the same region are flushed,
+        rather than invalidating an entire namespace.
+
+        Args:
+            coords: (x, y, z, w) holographic coordinates of the updated memory.
+            radius: Euclidean distance threshold for invalidation.
+
+        Returns:
+            Dict mapping cache name to count of entries invalidated.
+        """
+        results: dict[str, int] = {}
+        x0, y0, z0, w0 = coords
+
+        for name, inv_fn in self._invalidate_funcs.items():
+            try:
+                # Check if the invalidate function supports spatial coords
+                # by inspecting its signature
+                import inspect
+                sig = inspect.signature(inv_fn)
+                if len(sig.parameters) >= 2:
+                    # Pass coords + radius as second arg
+                    count = inv_fn(f"spatial:{x0:.2f},{y0:.2f},{z0:.2f},{w0:.2f}", radius)
+                else:
+                    # Fallback: invalidate entire namespace
+                    count = inv_fn(f"spatial:{x0:.2f},{y0:.2f},{z0:.2f},{w0:.2f}")
+                if count > 0:
+                    results[name] = count
+                    logger.debug(
+                        "  Spatial invalidation: %d entries in %s (r=%.2f)",
+                        count, name, radius,
+                    )
+            except Exception as e:
+                logger.debug("  Spatial invalidate failed for %s: %s", name, e)
+
+        return results
 
     def get_all_stats(self) -> dict[str, Any]:
         """Collect stats from all registered caches that support it."""

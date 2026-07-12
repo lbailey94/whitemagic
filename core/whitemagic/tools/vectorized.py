@@ -86,6 +86,7 @@ _TOOL_CODEBOOK: dict[str, str] = {
     "green.report": "Og",
     "cache.status": "Oc",
     "cache.flush": "Of",
+    "cache.tune": "Ou",
     "evaluate_ethics": "Ee",
     "check_boundaries": "Eb",
     "verify_consent": "Ec",

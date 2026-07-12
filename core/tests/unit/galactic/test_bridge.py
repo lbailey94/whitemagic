@@ -30,6 +30,12 @@ def use_live_substrate(monkeypatch):
         try:
             conn = safe_connect(str(live))
             count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+            # Also verify associations table is intact (may be corrupted on live DB)
+            try:
+                conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
+            except Exception:
+                conn.close()
+                pytest.skip(f"Monolith DB at {live} has corrupted associations table")
             conn.close()
             if count == 0:
                 pytest.skip(f"Monolith DB at {live} is empty (memories migrated to galaxy DBs)")

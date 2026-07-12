@@ -225,6 +225,7 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "ilp.status": LazyHandler("ilp", "handle_ilp_status"),
     "cache.status": LazyHandler("cache_coherence", "handle_cache_status"),
     "cache.flush": LazyHandler("cache_coherence", "handle_cache_flush"),
+    "cache.tune": LazyHandler("cache_coherence", "handle_cache_tune"),
     "skill.list": LazyHandler("skill_forge", "handle_skill_list"),
     "skill.invoke": LazyHandler("skill_forge", "handle_skill_invoke"),
     "skill.seed": LazyHandler("skill_forge", "handle_skill_seed"),
@@ -312,6 +313,38 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "consciousness.stillness": LazyHandler(
         "consciousness", "handle_consciousness_stillness"
     ),
+    # ── v24.3 Screenshot Upgrade Strategy Tools ──
+    "tx_firewall.status": LazyHandler("v24_3_handlers", "handle_tx_firewall_status"),
+    "tx_firewall.set_policy": LazyHandler("v24_3_handlers", "handle_tx_firewall_set_policy"),
+    "bounty.scan": LazyHandler("v24_3_handlers", "handle_bounty_scan"),
+    "bounty.auto_claim": LazyHandler("v24_3_handlers", "handle_bounty_auto_claim"),
+    "bounty.connector_status": LazyHandler("v24_3_handlers", "handle_bounty_connector_status"),
+    "model.optimize": LazyHandler("v24_3_handlers", "handle_model_optimize"),
+    "model.optimize_status": LazyHandler("v24_3_handlers", "handle_model_optimize_status"),
+    "ambient.state": LazyHandler("v24_3_handlers", "handle_ambient_state"),
+    "ambient.status": LazyHandler("v24_3_handlers", "handle_ambient_status"),
+    "wasm_verify.status": LazyHandler("v24_3_handlers", "handle_wasm_verify_status"),
+    "network_state.status": LazyHandler("v24_3_handlers", "handle_network_state_status"),
+    "network_state.create_identity": LazyHandler("v24_3_handlers", "handle_network_state_create_identity"),
+    "network_state.propose": LazyHandler("v24_3_handlers", "handle_network_state_propose"),
+    "network_state.vote": LazyHandler("v24_3_handlers", "handle_network_state_vote"),
+    "network_state.resolve": LazyHandler("v24_3_handlers", "handle_network_state_resolve"),
+    "genetic.run": LazyHandler("v24_3_handlers", "handle_genetic_run"),
+    "genetic.status": LazyHandler("v24_3_handlers", "handle_genetic_status"),
+    # ── Quantum Geometry Tools ──
+    "quantum.manifold_distance": LazyHandler("quantum", "handle_quantum_manifold_distance"),
+    "quantum.fubini_study": LazyHandler("quantum", "handle_quantum_fubini_study"),
+    "quantum.natural_gradient": LazyHandler("quantum", "handle_quantum_natural_gradient"),
+    "quantum.mps_compress": LazyHandler("quantum", "handle_quantum_mps_compress"),
+    "quantum.auto_manifold": LazyHandler("quantum", "handle_quantum_auto_manifold"),
+    "quantum.born_sample": LazyHandler("quantum", "handle_quantum_born_sample"),
+    "quantum.born_distribution": LazyHandler("quantum", "handle_quantum_born_distribution"),
+    "quantum.interference": LazyHandler("quantum", "handle_quantum_interference"),
+    # ── Topological Protection Tools ──
+    "topological.berry_phase": LazyHandler("quantum", "handle_topological_berry_phase"),
+    "topological.chern_number": LazyHandler("quantum", "handle_topological_chern_number"),
+    "topological.encode": LazyHandler("quantum", "handle_topological_encode"),
+    "topological.decode": LazyHandler("quantum", "handle_topological_decode"),
 }
 
 DISPATCH_TABLE: dict[str, Callable[..., dict[str, Any]]] = {
@@ -420,6 +453,7 @@ def _build_pipeline() -> Any:
     from whitemagic.core.monitoring.token_tracker import mw_token_tracker
     from whitemagic.tools.middleware import (
         DispatchPipeline,
+        mw_auto_optimize,
         mw_circuit_breaker,
         mw_citta_consciousness,
         mw_cognitive_mode,
@@ -436,6 +470,8 @@ def _build_pipeline() -> Any:
         mw_session_recorder,
         mw_timeout,
         mw_tool_permissions,
+        mw_transaction_firewall,
+        mw_wasm_verify,
         mw_zodiac_resonance,
     )
 
@@ -451,13 +487,16 @@ def _build_pipeline() -> Any:
     p.use("zodiac_resonance", mw_zodiac_resonance)
     p.use("citta_consciousness", mw_citta_consciousness)
     p.use("governor", mw_governor)
+    p.use("transaction_firewall", mw_transaction_firewall)
     p.use("semantic_cache", mw_semantic_cache)
+    p.use("auto_optimize", mw_auto_optimize)
     p.use("inference_router", mw_inference_router)
     p.use("draft_review", mw_draft_review)
     p.use("token_tracker", mw_token_tracker)
     p.use("karma_effects", mw_karma_effects)
     p.use("observability", mw_observability)
     p.use("session_recorder", mw_session_recorder)
+    p.use("wasm_verify", mw_wasm_verify)
     p.use("core_router", _mw_core_router)
     return p
 
@@ -467,6 +506,7 @@ _pipeline = _build_pipeline()
 
 _FAST_PATH_TOOLS = frozenset({
     "consciousness.loop.status",
+    "consciousness.mode",
     "guna.balance.status",
     "meta.galaxy.overview",
     "galaxy.stats",

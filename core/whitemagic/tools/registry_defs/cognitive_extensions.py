@@ -691,6 +691,22 @@ TOOLS: list[ToolDefinition] = [
         input_schema={"type": "object", "properties": {}},
     ),
     ToolDefinition(
+        name="consciousness.mode",
+        description="Set or get the consciousness frequency mode. Modes: normal (default 30s), meditation (300s inward focus, dreaming off), rem (60s dream-heavy consolidation), deep (10s high-frequency active processing). Pass mode to set, omit to get current.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["normal", "meditation", "rem", "deep"],
+                    "description": "Frequency mode to switch to. Omit to get current mode.",
+                },
+            },
+        },
+    ),
+    ToolDefinition(
         name="guna.balance.status",
         description="Get current guna balance status — sattvic/rajasic/tamasic ratios, target biorhythm (1:2:3), deficits, surpluses, and correction actions.",
         category=ToolCategory.SYNTHESIS,

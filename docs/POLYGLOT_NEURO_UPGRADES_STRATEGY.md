@@ -1,3 +1,5 @@
+> **Superseded by**: [architecture/COGNITIVE_ARCHITECTURE_STRATEGY.md](architecture/COGNITIVE_ARCHITECTURE_STRATEGY.md)
+
 # Polyglot Neuro-Upgrades: Comprehensive Strategy
 
 **Version**: 1.1

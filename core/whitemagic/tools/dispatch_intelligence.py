@@ -64,6 +64,7 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
     "dream.expire": LazyHandler("dream_artifacts", "handle_dream_expire"),
     "cache.status": LazyHandler("cache_coherence", "handle_cache_status"),
     "cache.flush": LazyHandler("cache_coherence", "handle_cache_flush"),
+    "cache.tune": LazyHandler("cache_coherence", "handle_cache_tune"),
     "zodiac.status": LazyHandler("zodiac_progression", "handle_zodiac_status"),
     "zodiac.activate": LazyHandler("zodiac_progression", "handle_zodiac_activate"),
     "zodiac.council": LazyHandler("zodiac_progression", "handle_zodiac_council"),

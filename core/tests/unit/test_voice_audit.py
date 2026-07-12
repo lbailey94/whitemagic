@@ -35,6 +35,32 @@ class TestClaimLog:
 
 
 class TestVoiceAuditScanner:
+    @pytest.fixture(autouse=True)
+    def _isolate_karma_ledger(self):
+        """Mock karma ledger to prevent real DB entries from interfering."""
+        import threading
+        from unittest.mock import MagicMock, patch
+
+        entries: list = []
+        lock = threading.Lock()
+
+        class MockLedger:
+            def __init__(self):
+                self._entries = entries
+                self._lock = lock
+
+            def record(self, **kwargs):
+                from unittest.mock import MagicMock
+                e = MagicMock()
+                e.to_dict.return_value = kwargs
+                entries.append(e)
+
+        with patch(
+            "whitemagic.dharma.karma_ledger.get_karma_ledger",
+            return_value=MockLedger(),
+        ):
+            yield
+
     def test_scan_finds_hallucination(self):
         scanner = VoiceAuditScanner()
         scanner.register_claim("module_a", "delete_memory")

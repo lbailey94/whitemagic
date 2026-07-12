@@ -69,7 +69,8 @@ class HNSWIndex:
     """
 
     def __init__(self, dim: int = 384, m: int = 16, ef_construction: int = 200,
-                 db_path: Path | None = None, use_rust: bool = True):
+                 db_path: Path | None = None, use_rust: bool = True,
+                 manifold: str = "euclidean"):
         self.dim = dim
         self.m = m  # Number of neighbors per layer
         self.ef_construction = ef_construction
@@ -77,6 +78,7 @@ class HNSWIndex:
         self.nodes: dict[str, dict] = {}  # memory_id -> {vector, level, neighbors}
         self.entry_point: str | None = None
         self.db_path = db_path or MEMORY_DIR / "hnsw_index.pkl"
+        self.manifold = manifold
 
         # Use Rust implementation if available and requested
         self._rust_index = None
@@ -85,7 +87,19 @@ class HNSWIndex:
             logger.info("Using Rust HNSW implementation for accelerated search")
 
     def _distance(self, a: np.ndarray, b: np.ndarray) -> float:
-        """Cosine distance (1 - cosine similarity)."""
+        """Manifold-aware distance (1 - similarity)."""
+        if self.manifold == "euclidean":
+            dot_product = np.dot(a, b)
+            norm_a = np.linalg.norm(a)
+            norm_b = np.linalg.norm(b)
+            return float(1.0 - dot_product / (norm_a * norm_b))
+        elif self.manifold == "hyperbolic":
+            from whitemagic.core.acceleration.quantum_bridge import manifold_distance
+            return float(manifold_distance(a.tolist(), b.tolist(), "hyperbolic"))
+        elif self.manifold == "spherical":
+            from whitemagic.core.acceleration.quantum_bridge import manifold_distance
+            return float(manifold_distance(a.tolist(), b.tolist(), "spherical"))
+        # Default: cosine
         dot_product = np.dot(a, b)
         norm_a = np.linalg.norm(a)
         norm_b = np.linalg.norm(b)

@@ -510,6 +510,139 @@ class PossibilitySpaceExplorer:
                     )
         return "\n".join(lines)
 
+    def natural_gradient_optimize(
+        self,
+        space_name: str,
+        n_steps: int = 20,
+        learning_rate: float = 0.01,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Optimize parameters using natural gradient descent.
+
+        Uses the Fubini-Study metric to compute the natural gradient,
+        which respects the geometry of the parameter space. This typically
+        converges in fewer steps than flat gradient descent because it
+        accounts for the curvature of the optimization landscape.
+
+        The Jacobian is approximated numerically via finite differences
+        of the fitness function.
+
+        Args:
+            space_name: Name of the possibility space to optimize.
+            n_steps: Number of natural gradient steps.
+            learning_rate: Step size for parameter updates.
+            seed: Random seed for reproducibility.
+
+        Returns:
+            Dict with optimization history, best parameters, and convergence info.
+        """
+        import random as _rng
+
+        space = self.DEFAULT_SPACES.get(space_name)
+        if space is None:
+            return {"error": f"Unknown space: {space_name}"}
+
+        param_ranges = space["params"]
+        param_names = list(param_ranges.keys())
+        n_params = len(param_names)
+        fitness_fn = self._get_fitness_fn(space["fitness"])
+
+        rng = _rng.Random(seed)
+
+        # Initialize at midpoint of each range
+        params = {
+            name: (lo + hi) / 2.0
+            for name, (lo, hi) in param_ranges.items()
+        }
+
+        history: list[dict[str, Any]] = []
+        best_fitness = fitness_fn(params)
+        best_params = dict(params)
+
+        for step in range(n_steps):
+            param_vec = [params[name] for name in param_names]
+
+            # Numerical Jacobian via finite differences
+            h = 1e-4
+            jacobian: list[list[float]] = []
+            for i in range(n_params):
+                params_plus = dict(params)
+                params_plus[param_names[i]] = params[param_names[i]] + h
+                params_minus = dict(params)
+                params_minus[param_names[i]] = params[param_names[i]] - h
+                f_plus = fitness_fn(params_plus)
+                f_minus = fitness_fn(params_minus)
+                # Jacobian row: df/dparam_i
+                grad_i = (f_plus - f_minus) / (2 * h)
+                jacobian.append([grad_i])
+
+            # Gradients (flatten Jacobian)
+            gradients = [jacobian[i][0] for i in range(n_params)]
+
+            # Compute Fubini-Study metric
+            try:
+                from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+
+                orchestrator = PolyglotMCOrchestrator()
+                metric_result = orchestrator.fubini_study_metric(
+                    state=param_vec,
+                    jacobian=jacobian,
+                    n_params=n_params,
+                )
+                metric = metric_result.get("metric", [])
+
+                if metric and not metric_result.get("fallback"):
+                    ng_result = orchestrator.natural_gradient(
+                        params=param_vec,
+                        gradients=gradients,
+                        metric=metric,
+                        learning_rate=learning_rate,
+                    )
+                    new_param_vec = ng_result.get("new_params", param_vec)
+                else:
+                    # Fallback to flat gradient descent
+                    new_param_vec = [
+                        p - learning_rate * g
+                        for p, g in zip(param_vec, gradients)
+                    ]
+            except Exception:
+                # Fallback to flat gradient descent
+                new_param_vec = [
+                    p - learning_rate * g
+                    for p, g in zip(param_vec, gradients)
+                ]
+
+            # Update params with clamping to ranges
+            for i, name in enumerate(param_names):
+                lo, hi = param_ranges[name]
+                params[name] = max(lo, min(hi, new_param_vec[i]))
+
+            fitness = fitness_fn(params)
+            if fitness > best_fitness:
+                best_fitness = fitness
+                best_params = dict(params)
+
+            history.append({
+                "step": step,
+                "fitness": round(fitness, 6),
+                "params": {k: round(v, 6) for k, v in params.items()},
+                "gradient_norm": round(sum(g * g for g in gradients) ** 0.5, 6),
+            })
+
+        # Store best params
+        with self._lock:
+            self._best_params[space_name] = best_params
+
+        return {
+            "space_name": space_name,
+            "n_steps": n_steps,
+            "best_fitness": round(best_fitness, 6),
+            "best_params": {k: round(v, 6) for k, v in best_params.items()},
+            "converged": len(history) > 2 and abs(history[-1]["fitness"] - history[-2]["fitness"]) < 1e-5,
+            "history": history,
+            "method": "natural_gradient",
+        }
+
 
 # ── Singleton ───────────────────────────────────────────────────────
 

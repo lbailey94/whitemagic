@@ -249,8 +249,8 @@ class TestIntegration:
             assert signal.signal_type in ("novelty", "anomaly", "emotional_shift", "background")
         autonomic.reset()
 
-    # Skip real pulse test in CI — it spawns a subprocess that may time out
+    # Run real pulse test when the bitmamba binary and model are available.
     test_real_pulse = pytest.mark.skipif(
-        os.environ.get("WM_SKIP_INTEGRATION", "1") == "1",
+        os.environ.get("WM_SKIP_INTEGRATION", "0") == "1",
         reason="Integration test requires WM_SKIP_INTEGRATION=0",
     )(test_real_pulse)

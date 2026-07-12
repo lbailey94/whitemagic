@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whitemagic"
-version = "24.2.0"
+version = "24.3.0"
 description = "AI memory, cognitive upgrades, and more — 687 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments, session recording, dream cycle, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"

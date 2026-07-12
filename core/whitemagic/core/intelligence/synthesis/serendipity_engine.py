@@ -6,6 +6,7 @@ Uses weighted sampling favoring high-gravity, low-access memories.
 """
 
 import logging
+import math
 import random
 import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
@@ -147,12 +148,26 @@ class SerendipityEngine:
             # 4. Interference fusion of results
             fused_probs = engine.interference_fusion(walk_results)
 
-            # 5. Map back to SurfacedMemory objects
-            sorted_mids = sorted(fused_probs.items(), key=lambda x: x[1], reverse=True)
+            # 5. Born-rule sampling: probability ∝ |amplitude|²
+            #    This replaces deterministic sort with quantum measurement postulate,
+            #    favoring high-amplitude memories while preserving exploration.
+            from whitemagic.core.acceleration.quantum_bridge import born_rule_sample
+
+            candidate_mids = list(fused_probs.keys())
+            amplitudes = [fused_probs[mid] for mid in candidate_mids]
+
             surfaced: list[SurfacedMemory] = []
-            for mid, prob in sorted_mids:
-                if len(surfaced) >= count:
+            selected_indices: set[int] = set()
+            for i in range(min(count * 3, len(candidate_mids))):
+                idx = born_rule_sample(amplitudes, seed=42 + i)
+                if idx not in selected_indices:
+                    selected_indices.add(idx)
+                if len(selected_indices) >= count:
                     break
+
+            for idx in selected_indices:
+                mid = candidate_mids[idx]
+                prob = fused_probs[mid]
                 mem = um.recall(mid)
                 if mem:
                     surfaced.append(
@@ -163,11 +178,11 @@ class SerendipityEngine:
                             gravity=getattr(mem, "importance", 0.5),
                             last_accessed=getattr(mem, "accessed_at", None),
                             access_count=getattr(mem, "access_count", 0),
-                            reason="Quantum Superposition Walk",
+                            reason="Quantum Born-Rule Sampling",
                             relevance_score=prob,
                         )
                     )
-            return surfaced
+            return surfaced[:count]
         except Exception as e:
             logger.warning("Quantum serendipity failed: %s", e, exc_info=True)
             return self._surface_random(count)
@@ -183,17 +198,25 @@ class SerendipityEngine:
             (count * 2,),
         )
 
-        # Weighted random selection
+        # Born-rule sampling: amplitude = sqrt(weight), probability ∝ |amplitude|² = weight
+        # This naturally concentrates on high-weight memories while preserving exploration.
         if not candidates:
             return []
 
-        weights = [(1.0 / max(1, c["access_count"])) * c["gravity"] for c in candidates]
-        total = sum(weights)
-        weights = [w / total for w in weights]
+        from whitemagic.core.acceleration.quantum_bridge import born_rule_sample
 
-        selected = random.choices(
-            candidates, weights=weights, k=min(count, len(candidates))
-        )
+        weights = [(1.0 / max(1, c["access_count"])) * c["gravity"] for c in candidates]
+        amplitudes = [math.sqrt(w) if w > 0 else 0.0 for w in weights]
+
+        selected_indices: set[int] = set()
+        for i in range(min(count * 3, len(candidates))):
+            idx = born_rule_sample(amplitudes, seed=42 + i)
+            if idx not in selected_indices:
+                selected_indices.add(idx)
+            if len(selected_indices) >= count:
+                break
+
+        selected = [candidates[idx] for idx in selected_indices if idx < len(candidates)]
 
         return [
             SurfacedMemory(

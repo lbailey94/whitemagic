@@ -27,10 +27,11 @@ def _substrate_copy(tmp_path_factory):
     tmp_db = tmp_dir / "whitemagic.db"
     if LIVE_SUBSTRATE_DB.exists():
         # Use SQLite backup API for a safe, consistent copy
-        import sqlite3
+        # Must use safe_connect to properly handle WAL-mode databases
+        from whitemagic.core.memory.db_manager import safe_connect
 
-        src = sqlite3.connect(str(LIVE_SUBSTRATE_DB))
-        dst = sqlite3.connect(str(tmp_db))
+        src = safe_connect(str(LIVE_SUBSTRATE_DB), read_only=True)
+        dst = safe_connect(str(tmp_db))
         src.backup(dst)
         src.close()
         dst.close()

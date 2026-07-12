@@ -427,9 +427,16 @@ class GraphWalker:
                 if total_score <= 0:
                     continue
 
-                # Select top neighbors (weighted, not pure random)
-                scored.sort(key=lambda x: x[1], reverse=True)
-                selected = scored[:self._max_paths]
+                # Born-rule sampling: amplitude = sqrt(score), prob ∝ |amp|² = score
+                # This replaces deterministic sort with quantum measurement postulate,
+                # favoring high-scoring neighbors while preserving exploration.
+                from whitemagic.core.acceleration.quantum_bridge import born_rule_select
+
+                scores = [max(0.0, s) for _, s in scored]
+                amplitudes = [math.sqrt(s) if s > 0 else 0.0 for s in scores]
+                n_select = min(self._max_paths, len(scored))
+                selected_indices = born_rule_select(amplitudes, n_select, seed=42 + hop * 100 + len(next_frontier))
+                selected = [scored[idx] for idx in selected_indices if idx < len(scored)]
 
                 for neighbor, score in selected:
                     prob = score / total_score

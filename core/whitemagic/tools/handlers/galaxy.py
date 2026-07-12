@@ -623,3 +623,99 @@ def handle_galaxy_list_shared(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_snapshot(**kwargs: Any) -> dict[str, Any]:
+    """Create a full snapshot of a galaxy — memories, coords, associations, metadata.
+
+    Unlike galaxy.export (which only exports memories + coords), this includes
+    associations and full metadata, enabling trajectory branching for simulation.
+    """
+    try:
+        from whitemagic.core.memory.unified import get_unified_memory
+
+        um = get_unified_memory()
+        galaxy = kwargs.get("galaxy")
+        snapshot = um.galaxy_snapshot(galaxy=galaxy)
+        return {
+            "status": "success",
+            **snapshot["galaxy_meta"],
+            "snapshot": snapshot,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_restore(**kwargs: Any) -> dict[str, Any]:
+    """Restore a galaxy from a snapshot.
+
+    Args (via kwargs):
+        snapshot: Snapshot dict from galaxy.snapshot (required)
+        target_galaxy: Galaxy to restore into (optional, defaults to snapshot's galaxy)
+        merge: If True, merge with existing; if False, replace (default: True)
+    """
+    try:
+        from whitemagic.core.memory.unified import get_unified_memory
+
+        um = get_unified_memory()
+        snapshot = kwargs.get("snapshot")
+        if not snapshot or not isinstance(snapshot, dict):
+            return {"status": "error", "error": "Missing or invalid 'snapshot' parameter"}
+
+        target = kwargs.get("target_galaxy")
+        merge = kwargs.get("merge", True)
+        result = um.galaxy_restore(snapshot, target_galaxy=target, merge=merge)
+        return {"status": "success", **result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_package(**kwargs: Any) -> dict[str, Any]:
+    """Create a portable cross-AI galaxy package from a snapshot.
+
+    Wraps a galaxy snapshot with a manifest containing source AI info,
+    content hash, trust level, and capability declarations.
+    """
+    try:
+        from whitemagic.core.memory.galaxy_sharing import create_galaxy_package
+        from whitemagic.core.memory.unified import get_unified_memory
+
+        um = get_unified_memory()
+        galaxy = kwargs.get("galaxy")
+        snapshot = um.galaxy_snapshot(galaxy=galaxy)
+
+        package = create_galaxy_package(
+            snapshot=snapshot,
+            source_instance=kwargs.get("source_instance", "local/default"),
+            source_version=kwargs.get("source_version", "24.3.0"),
+            trust_level=kwargs.get("trust_level", "verified"),
+            capabilities=kwargs.get("capabilities"),
+        )
+        return {
+            "status": "success",
+            "manifest": package["manifest"],
+            "package": package,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_receive(**kwargs: Any) -> dict[str, Any]:
+    """Receive and import a cross-AI galaxy package.
+
+    Verifies package integrity, then imports the snapshot into a target
+    or quarantined galaxy.
+    """
+    try:
+        from whitemagic.core.memory.galaxy_sharing import receive_galaxy_package
+
+        package = kwargs.get("package")
+        if not package or not isinstance(package, dict):
+            return {"status": "error", "error": "Missing or invalid 'package' parameter"}
+
+        target = kwargs.get("target_galaxy")
+        quarantine = kwargs.get("quarantine", False)
+        result = receive_galaxy_package(package, target_galaxy=target, quarantine=quarantine)
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

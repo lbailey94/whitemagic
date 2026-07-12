@@ -670,6 +670,48 @@ def handle_consciousness_loop_status(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
+def handle_consciousness_mode(**kwargs: Any) -> dict[str, Any]:
+    """Set or get the consciousness frequency mode.
+
+    Modes:
+    - **normal**: Default operating mode (30s citta intervals)
+    - **meditation**: Low-frequency inward focus (300s citta, dreaming suppressed)
+    - **rem**: Dream-heavy consolidation mode (60s citta, dream idle 30s)
+    - **deep**: High-frequency active processing (10s citta, all meta loops accelerated)
+
+    Pass `mode` to set, or omit to get current mode.
+    """
+    try:
+        from whitemagic.core.consciousness.consciousness_loop import (
+            CittaMode,
+            get_consciousness_loop,
+        )
+
+        loop = get_consciousness_loop()
+        mode_str = kwargs.get("mode", "").strip().lower()
+
+        if not mode_str:
+            return {
+                "status": "success",
+                "current_mode": loop.get_mode().value,
+                "available_modes": [m.value for m in CittaMode],
+            }
+
+        try:
+            mode = CittaMode(mode_str)
+        except ValueError:
+            return {
+                "status": "error",
+                "error": f"Unknown mode: {mode_str}",
+                "available_modes": [m.value for m in CittaMode],
+            }
+
+        result = loop.set_mode(mode)
+        return {"status": "success", **result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 def _get_dharma_conservative() -> bool:
     """Helper to check if Dharma is in conservative mode."""
     try:

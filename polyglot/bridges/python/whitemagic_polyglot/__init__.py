@@ -192,6 +192,21 @@ class HaskellCascadeBackend(PolyglotBackend):
             )
 
 
+class HaskellTopologicalBackend(PolyglotBackend):
+    """Haskell topological protection backend (Berry phase, Chern number, roundtrip verify)."""
+
+    def __init__(self):
+        binary = POLYGLOT_ROOT / "bridges" / "haskell" / "topological_bridge"
+        if binary.exists():
+            super().__init__([str(binary)])
+        else:
+            bridge = POLYGLOT_ROOT / "bridges" / "haskell" / "topological_bridge.hs"
+            super().__init__(
+                ["runhaskell", str(bridge)],
+                cwd=POLYGLOT_ROOT / "bridges" / "haskell",
+            )
+
+
 class RustEvolutionBackend(PolyglotBackend):
     """Rust wm-evolution backend (compiled binary)."""
 
@@ -208,6 +223,17 @@ class JuliaYieldBackend(PolyglotBackend):
 
     def __init__(self):
         bridge = POLYGLOT_ROOT / "bridges" / "julia" / "yield_bridge.jl"
+        super().__init__(
+            ["julia", str(bridge)],
+            cwd=POLYGLOT_ROOT / "whitemagic-jl",
+        )
+
+
+class JuliaQuantumBackend(PolyglotBackend):
+    """Julia quantum geometry backend for manifold operations and natural gradient."""
+
+    def __init__(self):
+        bridge = POLYGLOT_ROOT / "bridges" / "julia" / "quantum_bridge.jl"
         super().__init__(
             ["julia", str(bridge)],
             cwd=POLYGLOT_ROOT / "whitemagic-jl",

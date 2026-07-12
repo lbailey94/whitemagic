@@ -1027,7 +1027,12 @@ def _is_read_only_tool(tool_name: str) -> bool:
 
 
 def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
-    """Build a deterministic cache key from tool name + prompt kwargs."""
+    """Build a deterministic cache key from tool name + prompt kwargs.
+
+    When WM_SEMANTIC_CACHE_EMBEDDINGS=1, also checks for embedding-based
+    similarity against recently cached keys (cosine similarity > 0.95).
+    If a similar key is found, returns it instead of computing a new one.
+    """
     import hashlib
 
     prompt_parts = []
@@ -1043,7 +1048,80 @@ def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
                 prompt_parts.append(f"{key}={val}")
     # Include tool name to avoid cross-tool collisions
     content = f"{tool_name}:{':'.join(prompt_parts)}"
-    return hashlib.md5(content.lower().strip().encode()).hexdigest()[:16]
+    base_key = hashlib.md5(content.lower().strip().encode()).hexdigest()[:16]
+
+    # Opt-in embedding-based semantic similarity check
+    import os
+    if os.environ.get("WM_SEMANTIC_CACHE_EMBEDDINGS") == "1" and prompt_parts:
+        sem_key = _semantic_cache_lookup(tool_name, " ".join(prompt_parts), base_key)
+        if sem_key:
+            return sem_key
+
+    return base_key
+
+
+# Embedding cache for semantic similarity lookups
+_embedding_cache_store: dict[str, list[float]] = {}
+_embedding_cache_lock: Any = None
+
+
+def _semantic_cache_lookup(tool_name: str, prompt: str, base_key: str) -> str | None:
+    """Check for semantically similar cached queries using embedding cosine similarity.
+
+    Returns the existing cache key if a similar query (cosine > 0.95) is found,
+    None otherwise. Also stores the current embedding for future lookups.
+    """
+    global _embedding_cache_lock
+    if _embedding_cache_lock is None:
+        import threading
+        _embedding_cache_lock = threading.Lock()
+
+    try:
+        from whitemagic.core.intelligence.embeddings import get_embedding_engine
+        engine = get_embedding_engine()
+        embedding = engine.embed(prompt)
+        if not embedding:
+            return None
+
+        with _embedding_cache_lock:
+            # Check existing embeddings for similarity
+            best_sim = 0.0
+            best_key = None
+            for cached_key, cached_emb in _embedding_cache_store.items():
+                if not cached_key.startswith(tool_name):
+                    continue
+                # Cosine similarity
+                dot = sum(a * b for a, b in zip(embedding, cached_emb, strict=False))
+                norm_a = sum(a * a for a in embedding) ** 0.5
+                norm_b = sum(b * b for b in cached_emb) ** 0.5
+                if norm_a > 0 and norm_b > 0:
+                    sim = dot / (norm_a * norm_b)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_key = cached_key
+
+            # Store this embedding for future lookups
+            cache_key = f"{tool_name}:{base_key}"
+            _embedding_cache_store[cache_key] = embedding
+
+            # Keep cache bounded
+            if len(_embedding_cache_store) > 500:
+                # Remove oldest entries (first 100)
+                for k in list(_embedding_cache_store.keys())[:100]:
+                    del _embedding_cache_store[k]
+
+            # Return existing key if similarity is high enough
+            if best_sim > 0.95 and best_key:
+                logger.debug(
+                    "Semantic cache key match: sim=%.4f for %s",
+                    best_sim, tool_name,
+                )
+                return best_key.split(":", 1)[1] if ":" in best_key else best_key
+
+    except Exception:
+        logger.debug("Semantic cache embedding lookup failed", exc_info=True)
+
+    return None
 
 
 def mw_semantic_cache(
@@ -1113,6 +1191,7 @@ def mw_semantic_cache(
                 "tokens_saved": cached.get("tokens_saved", 0),
                 "cache_backend": unified.backend,
                 "latency_ms": 0.02 if unified.is_rust else 0.1,
+                "governance_skipped": unified.is_rust and _is_read_only_tool(ctx.tool_name),
             }
     except Exception as e:
         logger.debug("Unified cache check failed: %s", e)
@@ -1568,3 +1647,173 @@ def mw_citta_consciousness(
             pass
 
     return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Transaction Firewall Middleware (v24.3)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def mw_transaction_firewall(
+    ctx: DispatchContext, next_fn: NextFn
+) -> dict[str, Any] | None:
+    """Intercept economic tool calls and validate through TransactionFirewall.
+
+    Pre-dispatch: if the tool is in ECONOMIC_TOOLS, build a TransactionRequest
+    from kwargs and validate. Block if not approved.
+    Post-dispatch: log result for audit trail.
+    """
+    import os as _os
+
+    if _os.environ.get("WM_TRANSACTION_FIREWALL", "1") in ("0", "false", "no"):
+        return next_fn(ctx)
+
+    try:
+        from whitemagic.security.transaction_firewall import (
+            ECONOMIC_TOOLS,
+            TransactionRequest,
+            get_transaction_firewall,
+        )
+
+        if ctx.tool_name not in ECONOMIC_TOOLS:
+            return next_fn(ctx)
+
+        fw = get_transaction_firewall()
+        amount = float(ctx.kwargs.get("amount", 0.0))
+        currency = str(ctx.kwargs.get("currency", "XRP"))
+        recipient = str(ctx.kwargs.get("recipient", ctx.kwargs.get("destination", "")))
+        purpose = str(ctx.kwargs.get("purpose", ctx.kwargs.get("task", ctx.tool_name)))
+
+        request = TransactionRequest(
+            agent_id=ctx.agent_id,
+            amount=amount,
+            currency=currency,
+            recipient=recipient,
+            purpose=purpose,
+            tool_name=ctx.tool_name,
+        )
+        verdict = fw.validate(request)
+        if not verdict.approved:
+            return {
+                "status": "error",
+                "error_code": "transaction_firewall_blocked",
+                "message": f"Transaction firewall blocked: {verdict.reason}",
+                "verdict": {
+                    "approved": verdict.approved,
+                    "reason": verdict.reason,
+                    "daily_spent": verdict.daily_spent,
+                    "rate_remaining": verdict.rate_remaining,
+                },
+            }
+    except Exception as e:
+        logger.debug("Transaction firewall middleware error: %s", e, exc_info=True)
+
+    return next_fn(ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# WASM Compute Verification Middleware (v24.3)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def mw_wasm_verify(
+    ctx: DispatchContext, next_fn: NextFn
+) -> dict[str, Any] | None:
+    """Post-dispatch WASM compute verification for pure/read tools.
+
+    Non-blocking: runs after tool execution, logs mismatches as karmic debt.
+    """
+    import os as _os
+
+    if _os.environ.get("WM_WASM_VERIFY", "0") not in ("1", "true", "yes"):
+        return next_fn(ctx)
+
+    result = next_fn(ctx)
+
+    try:
+        from whitemagic.security.wasm_verifier import (
+            VERIFIABLE_TOOLS,
+            VerificationRequest,
+            get_wasm_verifier,
+        )
+
+        if ctx.tool_name not in VERIFIABLE_TOOLS:
+            return result
+
+        if not isinstance(result, dict):
+            return result
+
+        verifier = get_wasm_verifier()
+        vr = verifier.verify(
+            VerificationRequest(
+                tool_name=ctx.tool_name,
+                inputs=dict(ctx.kwargs),
+                outputs=result,
+                agent_id=ctx.agent_id,
+            )
+        )
+        if not vr.verified:
+            logger.warning(
+                "WASM verification mismatch for %s: %s", ctx.tool_name, vr.details
+            )
+            try:
+                from whitemagic.dharma.karma_ledger import get_karma_ledger
+
+                ledger = get_karma_ledger()
+                ledger.record(
+                    tool=ctx.tool_name,
+                    agent_id=ctx.agent_id,
+                    outcome="verification_mismatch",
+                    metadata={"details": vr.details, "method": vr.method},
+                )
+            except Exception:
+                pass
+    except Exception as e:
+        logger.debug("WASM verify middleware error: %s", e, exc_info=True)
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Auto-Optimization Middleware
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def mw_auto_optimize(
+    ctx: DispatchContext, next_fn: NextFn
+) -> dict[str, Any] | None:
+    """Load optimal model config on first inference call and track usage.
+
+    On the first inference-type tool call, loads a previously saved optimal
+    config and applies it to the active llama.cpp backends. Also records
+    the call count for the background optimizer.
+
+    When WM_AUTO_OPTIMIZE=1, starts the background optimization thread
+    which periodically benchmarks and tunes model parameters.
+    """
+    import os as _os
+
+    _ensure_cached()
+
+    if not _is_inference_tool(ctx.tool_name):
+        return next_fn(ctx)
+
+    try:
+        from whitemagic.inference.auto_optimizer import get_background_optimizer
+
+        bg_opt = get_background_optimizer()
+
+        # Load optimal config on first call
+        bg_opt.load_optimal_on_startup()
+
+        # Record this call
+        bg_opt.record_call()
+
+        # Start background thread if enabled
+        if _os.environ.get("WM_AUTO_OPTIMIZE", "0") in ("1", "true", "yes"):
+            if not bg_opt.is_running:
+                bg_opt.start()
+    except Exception as e:
+        logger.debug("Auto-optimize middleware error: %s", e, exc_info=True)
+
+    return next_fn(ctx)

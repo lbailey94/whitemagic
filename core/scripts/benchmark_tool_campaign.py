@@ -142,6 +142,13 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     "polyglot.status": {"_timeout_s": 30.0},
     "polyglot.search": {"query": "test", "_timeout_s": 30.0},
     "polyglot.memory_query": {"operation": "encode", "text": "test", "_timeout_s": 30.0},
+    # v24.3 tools
+    "tx_firewall.set_policy": {"agent_id": "bench-agent", "max_single": 50.0, "daily_limit": 500.0, "dharma_check": False},
+    "network_state.create_identity": {"agent_id": "bench-agent", "display_name": "Bench Agent", "capabilities": ["testing"], "bio": "Benchmark test agent"},
+    "network_state.propose": {"title": "Bench test proposal", "description": "Test proposal for benchmarking", "proposer": "bench-agent"},
+    "network_state.vote": {"proposal_id": "bench-proposal", "agent_id": "bench-agent", "support": True, "confidence": 0.8},
+    "network_state.resolve": {"proposal_id": "bench-proposal"},
+    "genetic.run": {"gene_bounds": {"x": [0, 10], "y": [0, 10]}, "generations": 5, "population_size": 10, "fitness_mode": "sum"},
 }
 
 

@@ -115,6 +115,8 @@ class HomeostaticConfig:
     apotheosis_check_interval: int = 3  # every N check cycles
     # Memory subsystem health (FTS5, coords, associations)
     memory_health_check_interval: int = 5  # every N check cycles
+    # Cache subsystem health (TTL tuning, hit rates)
+    cache_health_check_interval: int = 6  # every N check cycles
 
 
 class HomeostaticLoop:
@@ -274,6 +276,9 @@ class HomeostaticLoop:
 
         memory_actions = self._check_memory_health()
         actions.extend(memory_actions)
+
+        cache_actions = self._check_cache_health()
+        actions.extend(cache_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -1043,6 +1048,45 @@ class HomeostaticLoop:
             pass
         except Exception as e:
             logger.debug("Memory health check skipped: %s", e)
+
+        return actions
+
+    def _check_cache_health(self) -> list[HomeostaticAction]:
+        """Check cache subsystem health via CacheRegistry.auto_tune_ttls().
+
+        Runs every N check cycles to avoid overhead. Calls auto_tune_ttls()
+        and reports any caches that need TTL adjustment as advisory or
+        corrective actions.
+        """
+        if self._total_checks % self._config.cache_health_check_interval != 0:
+            return []
+
+        actions: list[HomeostaticAction] = []
+
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+
+            reg = get_cache_registry()
+            recommendations = reg.auto_tune_ttls()
+
+            for cache_name, rec in recommendations.items():
+                action_type = rec.get("action", "maintain")
+                if action_type == "error":
+                    continue
+                if action_type in ("increase_ttl", "decrease_ttl"):
+                    level = ActionLevel.CORRECT if action_type == "increase_ttl" else ActionLevel.ADVISE
+                    actions.append(HomeostaticAction(
+                        dimension=f"cache_{cache_name}",
+                        level=level,
+                        value=rec.get("current_hit_rate", 0.0),
+                        threshold=50.0,
+                        action_taken=rec.get("reason", f"{cache_name}: {action_type}"),
+                    ))
+
+        except (ImportError, ModuleNotFoundError):
+            logger.debug("CacheRegistry not available for homeostatic check")
+        except Exception as e:
+            logger.debug("Cache health check skipped: %s", e)
 
         return actions
 

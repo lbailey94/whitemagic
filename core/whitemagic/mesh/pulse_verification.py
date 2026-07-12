@@ -35,7 +35,71 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Any
 
+# Lazy import PyNaCl for real Ed25519 signatures
+_NACL_AVAILABLE: bool | None = None
+
+
+def _check_nacl() -> bool:
+    """Check if PyNaCl is available (cached)."""
+    global _NACL_AVAILABLE
+    if _NACL_AVAILABLE is None:
+        try:
+            import nacl  # type: ignore[import-untyped]  # noqa: F401
+            _NACL_AVAILABLE = True
+        except ImportError:
+            _NACL_AVAILABLE = False
+            logger.info("PyNaCl not available, using simulated Ed25519 signatures")
+    return _NACL_AVAILABLE
+
+
 logger = logging.getLogger(__name__)
+
+# ── Ed25519 Key Management ─────────────────────────────────────────────
+
+_KEY_CACHE: dict[str, tuple[bytes, bytes]] = {}  # node_id → (private_key, public_key)
+_KEY_LOCK = threading.Lock()
+
+
+def _get_or_create_keypair(node_id: str) -> tuple[bytes, bytes]:
+    """Get or create an Ed25519 keypair for a node.
+
+    Returns (private_key_bytes, public_key_bytes).
+    Keys are cached in memory and persisted to WM_STATE_ROOT.
+    """
+    with _KEY_LOCK:
+        if node_id in _KEY_CACHE:
+            return _KEY_CACHE[node_id]
+
+        state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
+        key_dir = os.path.join(state_root, "keys")
+        key_path = os.path.join(key_dir, f"ed25519_{node_id}.bin")
+
+        try:
+            if os.path.exists(key_path):
+                with open(key_path, "rb") as f:
+                    private_key_bytes = f.read()
+                from nacl.signing import SigningKey  # type: ignore[import-untyped]
+                sk = SigningKey(private_key_bytes)
+                public_key_bytes = bytes(sk.verify_key)
+            else:
+                from nacl.signing import SigningKey  # type: ignore[import-untyped]
+                sk = SigningKey.generate()
+                private_key_bytes = bytes(sk)
+                public_key_bytes = bytes(sk.verify_key)
+                os.makedirs(key_dir, exist_ok=True)
+                with open(key_path, "wb") as f:
+                    f.write(private_key_bytes)
+                os.chmod(key_path, 0o600)
+        except Exception:
+            # Fallback: deterministic key from node_id
+            seed = hashlib.sha256(f"ed25519:{node_id}".encode()).digest()[:32]
+            from nacl.signing import SigningKey  # type: ignore[import-untyped]
+            sk = SigningKey(seed)
+            private_key_bytes = bytes(sk)
+            public_key_bytes = bytes(sk.verify_key)
+
+        _KEY_CACHE[node_id] = (private_key_bytes, public_key_bytes)
+        return private_key_bytes, public_key_bytes
 
 
 class VerificationTier(IntEnum):
@@ -110,6 +174,7 @@ class PulseVerifier:
     _lock = threading.Lock()
 
     def __init__(self) -> None:
+        self._node_id = os.environ.get("WM_MESH_NODE_ID", f"node_{os.getpid()}")
         self._pulses: dict[str, PulseRecord] = {}
         self._pulses_lock = threading.RLock()
         self._stats_lock = threading.RLock()
@@ -147,8 +212,8 @@ class PulseVerifier:
             f"{experiment_id}:{data_str}".encode()
         ).hexdigest()
 
-        # Generate signature (simulated Ed25519 — real keys would use nacl)
-        signature = self._sign(f"{experiment_id}:{merkle_root}:{fitness_claim}")
+        # Generate signature (real Ed25519 via PyNaCl, or fallback hash)
+        signature = self._sign(f"{experiment_id}:{merkle_root}:{fitness_claim}", node_id=node_id)
 
         pulse = PulseRecord(
             experiment_id=experiment_id,
@@ -280,11 +345,8 @@ class PulseVerifier:
 
             merkle_valid = expected_root == pulse.merkle_root
 
-            # Verify signature (simulated)
-            expected_sig = self._sign(
-                f"{pulse.experiment_id}:{pulse.merkle_root}:{pulse.fitness_claim}"
-            )
-            sig_valid = pulse.signature == expected_sig
+            # Verify signature (real Ed25519 or fallback)
+            sig_valid = self._verify_signature(pulse)
 
             passed = merkle_valid and sig_valid
             score = (0.5 if merkle_valid else 0.0) + (0.5 if sig_valid else 0.0)
@@ -398,31 +460,66 @@ class PulseVerifier:
             metadata={"implemented": False},
         )
 
-    def _sign(self, message: str) -> str:
-        """Sign a message with Ed25519 (simulated).
+    def _sign(self, message: str, node_id: str | None = None) -> str:
+        """Sign a message with Ed25519 (real via PyNaCl, fallback to hash-based).
 
-        In production, this would use PyNaCl or similar for real Ed25519.
-        For now, we use a deterministic hash-based signature.
+        When PyNaCl is available, uses real Ed25519 signatures with
+        persistent keypairs per node. Falls back to deterministic
+        hash-based signatures otherwise.
+
+        Args:
+            message: The message to sign.
+            node_id: Node ID to sign with. Defaults to this verifier's node ID.
         """
-        # Try to use a persistent key from state root
-        state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
-        key_path = os.path.join(state_root, "ed25519_key.txt")
+        sign_node = node_id or self._node_id
 
-        key_material = ""
-        try:
-            if os.path.exists(key_path):
-                with open(key_path) as f:
-                    key_material = f.read().strip()
-            else:
-                # Generate a deterministic key from hostname + PID
-                import socket
-                key_material = f"{socket.gethostname()}:whitemagic:pulse"
-                os.makedirs(os.path.dirname(key_path), exist_ok=True)
-                with open(key_path, "w") as f:
-                    f.write(key_material)
-        except Exception:
-            key_material = "fallback_key"
+        if _check_nacl():
+            try:
+                from nacl.signing import SigningKey  # type: ignore[import-untyped]
 
+                private_key_bytes, _ = _get_or_create_keypair(sign_node)
+                sk = SigningKey(private_key_bytes)
+                signed = sk.sign(message.encode())
+                return signed.signature.hex()
+            except Exception as e:
+                logger.debug("Ed25519 sign failed, falling back to hash: %s", e)
+
+        # Fallback: deterministic hash-based signature
+        # Must use same key material as _sign_hash_fallback for verification to work
+        key_material = f"{sign_node}:whitemagic:pulse"
+        return hashlib.sha256(f"{key_material}:{message}".encode()).hexdigest()
+
+    def _verify_signature(self, pulse: PulseRecord) -> bool:
+        """Verify a pulse signature.
+
+        When PyNaCl is available, verifies the real Ed25519 signature
+        against the node's public key. Falls back to comparing against
+        a locally re-computed hash signature.
+        """
+        message = f"{pulse.experiment_id}:{pulse.merkle_root}:{pulse.fitness_claim}"
+
+        if _check_nacl():
+            try:
+                from nacl.signing import VerifyKey  # type: ignore[import-untyped]
+                from nacl.exceptions import BadSignatureError  # type: ignore[import-untyped]
+
+                _, public_key_bytes = _get_or_create_keypair(pulse.node_id)
+                vk = VerifyKey(public_key_bytes)
+                sig_bytes = bytes.fromhex(pulse.signature)
+                vk.verify(message.encode(), sig_bytes)
+                return True
+            except BadSignatureError:
+                return False
+            except Exception as e:
+                logger.debug("Ed25519 verify failed, falling back to hash: %s", e)
+
+        # Fallback: re-compute hash signature and compare
+        expected_sig = self._sign_hash_fallback(message, pulse.node_id)
+        return pulse.signature == expected_sig
+
+    def _sign_hash_fallback(self, message: str, node_id: str) -> str:
+        """Hash-based fallback signature for when PyNaCl is not available."""
+        key_material = f"{node_id}:whitemagic:pulse"
         return hashlib.sha256(f"{key_material}:{message}".encode()).hexdigest()
 
     def _get_node_karma(self, node_id: str) -> float:

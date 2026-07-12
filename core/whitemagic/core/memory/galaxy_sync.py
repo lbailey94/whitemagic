@@ -158,3 +158,64 @@ def stop_galaxy_sync_listener(user_id: str, galaxy_name: str | None = None) -> b
     except Exception as e:
         logger.debug("Galaxy sync unsubscribe failed: %s", e, exc_info=True)
         return False
+
+
+def merge_remote_memory(remote_memory_data: dict[str, Any]) -> dict[str, Any]:
+    """Merge a remote memory update using CRDT Last-Writer-Wins resolution.
+
+    Called when a galaxy sync event delivers a remote memory update.
+    Uses UnifiedMemory._lww_resolve() to pick the winning version.
+
+    Args:
+        remote_memory_data: Dict with memory fields (id, content, version, agent_id, etc.)
+
+    Returns:
+        Dict with merge result: success, winner (local/remote), memory_id.
+    """
+    try:
+        from whitemagic.core.memory.unified import get_unified_memory
+        from whitemagic.core.memory.unified_types import Memory, MemoryType
+
+        memory_id = remote_memory_data.get("id", "")
+        if not memory_id:
+            return {"success": False, "error": "missing memory id"}
+
+        um = get_unified_memory()
+        local = um.recall(memory_id)
+
+        # Reconstruct remote Memory from dict
+        mem_type_str = remote_memory_data.get("memory_type", "SHORT_TERM")
+        try:
+            mem_type = MemoryType(mem_type_str)
+        except ValueError:
+            mem_type = MemoryType.SHORT_TERM
+
+        remote = Memory(
+            id=memory_id,
+            content=remote_memory_data.get("content", ""),
+            memory_type=mem_type,
+            version=remote_memory_data.get("version", 0),
+            agent_id=remote_memory_data.get("agent_id", ""),
+        )
+
+        if local is None:
+            # No local copy — store remote directly
+            um.store(
+                content=remote.content,
+                memory_type=remote.memory_type,
+                galaxy=remote_memory_data.get("galaxy", "universal"),
+                agent_id=remote.agent_id,
+            )
+            return {"success": True, "winner": "remote (no local)", "memory_id": memory_id}
+
+        winner = um._lww_resolve(local, remote)
+        won_by = "local" if winner is local else "remote"
+
+        if winner is remote:
+            # Apply remote update locally
+            um.update_memory(memory_id, {"content": remote.content}, agent_id=remote.agent_id)
+
+        return {"success": True, "winner": won_by, "memory_id": memory_id}
+    except Exception as e:
+        logger.debug("merge_remote_memory failed: %s", e, exc_info=True)
+        return {"success": False, "error": str(e)}

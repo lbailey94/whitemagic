@@ -19,3 +19,21 @@ def handle_cache_flush(**kwargs: Any) -> dict[str, Any]:
     registry = get_cache_registry()
     registry.flush_all()
     return {"status": "success", "message": "All caches flushed"}
+
+
+def handle_cache_tune(**kwargs: Any) -> dict[str, Any]:
+    """Analyze cache stats and return TTL tuning recommendations.
+
+    Combines cache stats and auto_tune_ttls() recommendations into a single
+    response so agents can assess cache health and apply adjustments.
+    """
+    from whitemagic.core.memory.cache_registry import get_cache_registry
+
+    registry = get_cache_registry()
+    stats = registry.get_all_stats()
+    recommendations = registry.auto_tune_ttls()
+    return {
+        "status": "success",
+        "stats": stats,
+        "recommendations": recommendations,
+    }

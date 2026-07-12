@@ -194,6 +194,7 @@ _AGENT_DESCRIPTIONS: dict[str, str] = {
     "get_yin_yang_balance": "Get your yin-yang balance — how active vs. receptive you are. Use this to check your state.",
     "cache.flush": "Flush the system cache. Use this when things feel stale or inconsistent.",
     "cache.status": "Check the cache status. Use this to see what's cached.",
+    "cache.tune": "Analyze cache health and get TTL tuning recommendations. Use this to optimize cache performance.",
     "anomaly.check": "Check for anomalies in system behavior. Use this when something seems off.",
     "anomaly.history": "Get the history of detected anomalies. Use this to see past issues.",
     "anomaly.status": "Get the anomaly detection system status.",

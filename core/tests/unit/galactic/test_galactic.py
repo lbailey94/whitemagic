@@ -44,6 +44,12 @@ def substrate_path() -> Path:
     try:
         conn = safe_connect(str(p))
         count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+        # Also verify associations table is intact (may be corrupted on live DB)
+        try:
+            conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
+        except sqlite3.DatabaseError:
+            conn.close()
+            pytest.skip(f"Substrate DB at {p} has corrupted associations table")
         conn.close()
         if count == 0:
             pytest.skip(f"Substrate DB at {p} is empty (memories migrated to galaxy DBs)")

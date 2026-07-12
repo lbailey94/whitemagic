@@ -175,6 +175,45 @@ class BountyBoard:
         """
         return [b for b in self._bounties.values() if b.status == status]
 
+    def import_external_bounty(
+        self,
+        platform: str,
+        external_id: str,
+        title: str,
+        description: str,
+        reward: float,
+        currency: str = "XRP",
+        executor: str = "",
+        url: str = "",
+        required_capabilities: list[str] | None = None,
+    ) -> Bounty:
+        """Import an externally-claimed bounty into the local board.
+
+        Creates a local bounty record linked to an external platform.
+        Status starts as 'active' (already claimed externally).
+        """
+        import uuid as _uuid
+
+        bounty_id = str(_uuid.uuid4())[:8]
+        bounty = Bounty(
+            id=bounty_id,
+            task_description=title,
+            amount=reward,
+            currency=currency,
+            executor=executor,
+            status="active",
+            metadata={
+                "external_platform": platform,
+                "external_id": external_id,
+                "external_url": url,
+                "description": description,
+                "required_capabilities": required_capabilities or [],
+            },
+        )
+        self._bounties[bounty_id] = bounty
+        self._persist(bounty)
+        return bounty
+
 
 _board: BountyBoard | None = None
 

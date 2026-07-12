@@ -1272,6 +1272,21 @@ async def main_stdio() -> None:
     except Exception as e:
         logger.debug("Consciousness loop init failed: %s", e, exc_info=True)
 
+    # ── Start auto-optimizer (if enabled) ──
+    _bg_optimizer = None
+    try:
+        if os.environ.get("WM_AUTO_OPTIMIZE", "0") in ("1", "true", "yes"):
+            from whitemagic.inference.auto_optimizer import get_background_optimizer
+
+            _bg_optimizer = get_background_optimizer()
+            _bg_optimizer.load_optimal_on_startup()
+            _bg_optimizer.start()
+            print("  Auto-optimizer: ENABLED", file=sys.stderr)
+        else:
+            print("  Auto-optimizer: disabled (set WM_AUTO_OPTIMIZE=1 to enable)", file=sys.stderr)
+    except Exception as e:
+        logger.debug("Auto-optimizer init failed: %s", e, exc_info=True)
+
     try:
         await server.run(
             read_stream, write_stream, server.create_initialization_options()
@@ -1297,6 +1312,12 @@ async def main_stdio() -> None:
                 _consciousness_loop.stop()
             except Exception as e:
                 logger.debug("Consciousness loop stop failed: %s", e)
+        # Stop auto-optimizer
+        if _bg_optimizer is not None:
+            try:
+                _bg_optimizer.stop()
+            except Exception as e:
+                logger.debug("Auto-optimizer stop failed: %s", e)
         # Stop dual-model
         if _dual_manager is not None:
             try:
@@ -1410,6 +1431,21 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     except Exception as e:
         logger.debug("Consciousness loop init failed: %s", e, exc_info=True)
 
+    # ── Start auto-optimizer (if enabled) ──
+    _bg_optimizer = None
+    try:
+        if os.environ.get("WM_AUTO_OPTIMIZE", "0") in ("1", "true", "yes"):
+            from whitemagic.inference.auto_optimizer import get_background_optimizer
+
+            _bg_optimizer = get_background_optimizer()
+            _bg_optimizer.load_optimal_on_startup()
+            _bg_optimizer.start()
+            print("  Auto-optimizer: ENABLED", file=sys.stderr)
+        else:
+            print("  Auto-optimizer: disabled (set WM_AUTO_OPTIMIZE=1 to enable)", file=sys.stderr)
+    except Exception as e:
+        logger.debug("Auto-optimizer init failed: %s", e, exc_info=True)
+
     async with transport.connect() as (read_stream, write_stream):
         try:
             await asyncio.gather(
@@ -1424,6 +1460,11 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
             if _consciousness_loop is not None:
                 try:
                     _consciousness_loop.stop()
+                except Exception:
+                    pass
+            if _bg_optimizer is not None:
+                try:
+                    _bg_optimizer.stop()
                 except Exception:
                     pass
             if _dual_manager is not None:

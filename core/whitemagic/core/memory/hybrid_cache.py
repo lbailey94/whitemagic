@@ -127,15 +127,32 @@ class HybridRecallCache:
         key_str = "|".join(key_parts)
         return hashlib.md5(key_str.encode()).hexdigest()
 
+    def _get_current_version(self) -> int:
+        """Get current hybrid_recall version from CacheRegistry."""
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            return get_cache_registry().get_version("hybrid_recall")
+        except Exception:
+            return 0
+
     def get_query_result(self, query: str, **kwargs: Any) -> list[Any] | None:
-        """Get cached query results."""
+        """Get cached query results (version-aware)."""
         key = self._hash_query(query, **kwargs)
-        return self.query_cache.get(key)
+        entry = self.query_cache.get(key)
+        if entry is None:
+            return None
+        # entry is (results, version_at_store_time)
+        results, stored_version = entry
+        if stored_version < self._get_current_version():
+            # Stale — version bumped since we cached this
+            return None
+        return results
 
     def put_query_result(self, query: str, results: list[Any], **kwargs: Any) -> None:
-        """Cache query results."""
+        """Cache query results with current version stamp."""
         key = self._hash_query(query, **kwargs)
-        self.query_cache.put(key, results)
+        version = self._get_current_version()
+        self.query_cache.put(key, (results, version))
 
     def get_embedding(self, query: str) -> Any | None:
         """Get cached query embedding."""
@@ -156,6 +173,14 @@ class HybridRecallCache:
         """Cache search strategy."""
         key = hashlib.md5(query.strip().lower().encode()).hexdigest()
         self.strategy_cache.put(key, strategy)
+
+    def invalidate_ns(self, namespace: str) -> int:
+        """Invalidate caches for a given namespace. Returns count cleared."""
+        if namespace in ("hybrid_recall", "query", "semantic"):
+            count = self.query_cache.stats().get("size", 0)
+            self.query_cache.clear()
+            return count
+        return 0
 
     def clear_all(self) -> None:
         """Clear all caches."""
@@ -191,6 +216,7 @@ def get_hybrid_cache() -> HybridRecallCache:
                     "hybrid_recall",
                     flush_func=_cache_instance.clear_all,
                     stats_func=_cache_instance.stats,
+                    invalidate_func=_cache_instance.invalidate_ns,
                 )
             except Exception:
                 logger.debug("CacheRegistry registration skipped", exc_info=True)

@@ -1332,6 +1332,128 @@ class EmbeddingEngine:
         """Bind two hypotheses via circular convolution."""
         return self._get_hrr_composition_engine().bind(id_a, id_b)
 
+    # ── Manifold-Aware Search ──
+
+    _manifold_cache: dict[str, str] = {}
+    _manifold_cache_lock = threading.Lock()
+
+    def detect_manifold(self, galaxy: str | None = None) -> str:
+        """Detect the best manifold type for a galaxy's embeddings.
+
+        Samples up to 100 embedding vectors from the specified galaxy
+        (or the main DB), then uses auto_select_manifold to classify
+        the geometric structure as euclidean, hyperbolic, or spherical.
+
+        Results are cached per galaxy with a 5-minute TTL.
+        """
+        import time as _time
+
+        cache_key = galaxy or "_default"
+        with self._manifold_cache_lock:
+            if cache_key in self._manifold_cache:
+                return self._manifold_cache[cache_key]
+
+        from whitemagic.core.acceleration.quantum_bridge import auto_select_manifold
+
+        # Sample embeddings
+        try:
+            ids, vectors = self._load_vec_cache()
+            if len(ids) < 2:
+                return "euclidean"
+
+            # Sample up to 100 vectors
+            import random as _rng
+            sample_size = min(100, len(ids))
+            sample_indices = _rng.Random(42).sample(range(len(ids)), sample_size)
+            sample_points = []
+            for idx in sample_indices:
+                if np is not None and isinstance(vectors, _ndarray):
+                    sample_points.append(vectors[idx].tolist())
+                elif isinstance(vectors, list):
+                    sample_points.append(list(vectors[idx]))
+                else:
+                    sample_points.append(list(vectors[idx]))
+
+            manifold = auto_select_manifold(sample_points)
+        except Exception:
+            manifold = "euclidean"
+
+        with self._manifold_cache_lock:
+            self._manifold_cache[cache_key] = manifold
+        return manifold
+
+    def manifold_aware_similarity(
+        self,
+        query_vec: list[float],
+        candidate_vec: list[float],
+        manifold: str | None = None,
+    ) -> float:
+        """Compute similarity using manifold-appropriate distance.
+
+        Converts manifold distance to similarity score:
+        - Euclidean: cosine similarity (existing behavior)
+        - Hyperbolic: 1 / (1 + hyperbolic_distance)
+        - Spherical: cos(angle) = dot product on unit sphere
+
+        Args:
+            query_vec: Query embedding vector.
+            candidate_vec: Candidate embedding vector.
+            manifold: Manifold type. If None, uses cached detection.
+        """
+        if manifold is None:
+            manifold = "euclidean"
+
+        if manifold == "euclidean":
+            return cosine_similarity(query_vec, candidate_vec)
+        elif manifold == "hyperbolic":
+            from whitemagic.core.acceleration.quantum_bridge import manifold_distance
+            d = manifold_distance(query_vec, candidate_vec, "hyperbolic")
+            return 1.0 / (1.0 + d) if d != float("inf") else 0.0
+        elif manifold == "spherical":
+            from whitemagic.core.acceleration.quantum_bridge import manifold_distance
+            d = manifold_distance(query_vec, candidate_vec, "spherical")
+            return max(0.0, 1.0 - d / 3.14159265358979)
+        return cosine_similarity(query_vec, candidate_vec)
+
+    def search_similar_manifold(
+        self,
+        query: str,
+        limit: int = 10,
+        min_similarity: float = 0.1,
+        galaxy: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Manifold-aware similarity search.
+
+        Detects the manifold type for the embedding space, then uses
+        the appropriate distance metric for similarity computation.
+        Falls back to standard cosine similarity if manifold detection fails.
+        """
+        manifold = self.detect_manifold(galaxy)
+        if manifold == "euclidean":
+            return self.search_similar(query, limit, min_similarity, galaxy=galaxy)
+
+        # For non-Euclidean manifolds, use brute-force with manifold distance
+        query_vec = self.encode(query)
+        if not query_vec:
+            return []
+
+        ids, vectors = self._load_vec_cache()
+        if not ids:
+            return []
+
+        results: list[dict[str, Any]] = []
+        for i, mid in enumerate(ids):
+            if np is not None and isinstance(vectors, _ndarray):
+                candidate = vectors[i].tolist()
+            else:
+                candidate = list(vectors[i])
+            sim = self.manifold_aware_similarity(query_vec, candidate, manifold)
+            if sim >= min_similarity:
+                results.append({"memory_id": mid, "similarity": round(sim, 4), "source": "hot", "manifold": manifold})
+
+        results.sort(key=lambda r: r["similarity"], reverse=True)
+        return results[:limit]
+
 _engine_instance: EmbeddingEngine | None = None
 _engine_lock = threading.Lock()
 

@@ -627,6 +627,62 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_void",
         "galaxy.list_shared",
     ),
+    (
+        re.compile(r"\b(galaxy.*snapshot|snapshot.*galaxy|galaxy.*checkpoint)\b", re.I),
+        "gana_void",
+        "galaxy.snapshot",
+    ),
+    (
+        re.compile(r"\b(galaxy.*restore|restore.*galaxy|galaxy.*rollback)\b", re.I),
+        "gana_void",
+        "galaxy.restore",
+    ),
+    (
+        re.compile(r"\b(galaxy.*package|package.*galaxy|galaxy.*export.*package)\b", re.I),
+        "gana_void",
+        "galaxy.package",
+    ),
+    (
+        re.compile(r"\b(galaxy.*receive|receive.*galaxy|galaxy.*import.*package|import.*galaxy.*package)\b", re.I),
+        "gana_void",
+        "galaxy.receive",
+    ),
+    # Simulation tools
+    (
+        re.compile(r"\b(simulation.*create|create.*simulation|simulate.*world|simulation.*setup)\b", re.I),
+        "gana_three_stars",
+        "simulation.create",
+    ),
+    (
+        re.compile(r"\b(simulation.*run|run.*simulation|monte.*carlo.*simulation|mc.*simulation)\b", re.I),
+        "gana_three_stars",
+        "simulation.run",
+    ),
+    (
+        re.compile(r"\b(trajectory.*search|mcts|tree.*search.*trajectory|simulation.*search)\b", re.I),
+        "gana_three_stars",
+        "simulation.search",
+    ),
+    (
+        re.compile(r"\b(simulation.*inject|inject.*simulation|inject.*variable)\b", re.I),
+        "gana_three_stars",
+        "simulation.inject",
+    ),
+    (
+        re.compile(r"\b(simulation.*analyz|analyz.*simulation|simulation.*result)\b", re.I),
+        "gana_three_stars",
+        "simulation.analyze",
+    ),
+    (
+        re.compile(r"\b(simulation.*synthesiz|synthesiz.*insight|insight.*synthesiz)\b", re.I),
+        "gana_three_stars",
+        "simulation.synthesize",
+    ),
+    (
+        re.compile(r"\b(calibrat.*prediction|prediction.*calibrat|brier.*score|prediction.*scorecard)\b", re.I),
+        "gana_three_stars",
+        "simulation.calibrate",
+    ),
     # Dreams / consolidation
     (
         re.compile(r"\b(dream|consolidat|sleep)\b", re.I),
@@ -1249,6 +1305,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(citta.*vector|citta.*trajectory|citta.*coherence|consciousness.*vector)\b", re.I), "gana_ghost", "citta.vector"),
     (re.compile(r"\b(sensorium.*citta|citta.*enrichment|enrichment.*citta)\b", re.I), "gana_ghost", "sensorium.citta"),
     (re.compile(r"\b(consciousness.*loop|loop.*status|daemon.*status)\b", re.I), "gana_ghost", "consciousness.loop.status"),
+    (re.compile(r"\b(consciousness.*mode|citta.*mode|frequency.*mode|meditation.*mode|rem.*mode|deep.*mode)\b", re.I), "gana_ghost", "consciousness.mode"),
     (re.compile(r"\b(explain.*this|explain.*what|why.*this)\b", re.I), "gana_ghost", "explain_this"),
     # ── gana_girl: agent registry ──
     (re.compile(r"\b(agent.*deregister|deregister.*agent|unregister.*agent)\b", re.I), "gana_girl", "agent.deregister"),
@@ -1275,6 +1332,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     # ── gana_mound: metrics, cache, yin-yang, green score ──
     (re.compile(r"\b(cache.*flush|flush.*cache|clear.*cache)\b", re.I), "gana_mound", "cache.flush"),
     (re.compile(r"\b(cache.*status|cache.*stats|cache.*info)\b", re.I), "gana_mound", "cache.status"),
+    (re.compile(r"\b(cache.*tune|tune.*cache|cache.*health|cache.*ttl|optimize.*cache)\b", re.I), "gana_mound", "cache.tune"),
     (re.compile(r"\b(metrics.*summary|metric.*summary|get.*metrics)\b", re.I), "gana_mound", "get_metrics_summary"),
     (re.compile(r"\b(yin.*yang.*balance|balance.*yin.*yang)\b", re.I), "gana_mound", "get_yin_yang_balance"),
     (re.compile(r"\b(green.*score|green.*report|eco.*score|sustainability)\b", re.I), "gana_mound", "green.report"),
@@ -1763,6 +1821,20 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     # v24.3: Durable Archive
     (re.compile(r"\b(archive.*run|run.*archive|durable.*archive|snapshot.*breakthrough)\b", re.I), "gana_wings", "archive.run"),
     (re.compile(r"\b(archive.*status|durable.*archive.*status)\b", re.I), "gana_wings", "archive.status"),
+    # Quantum Geometry
+    (re.compile(r"\b(manifold.*distance|geodesic.*distance)\b", re.I), "gana_tail", "quantum.manifold_distance"),
+    (re.compile(r"\b(fubini.*study|fubini.*metric)\b", re.I), "gana_tail", "quantum.fubini_study"),
+    (re.compile(r"\b(natural.*gradient)\b", re.I), "gana_tail", "quantum.natural_gradient"),
+    (re.compile(r"\b(mps.*compress|tensor.*compress)\b", re.I), "gana_tail", "quantum.mps_compress"),
+    (re.compile(r"\b(auto.*manifold|select.*manifold)\b", re.I), "gana_tail", "quantum.auto_manifold"),
+    (re.compile(r"\b(born.*sample|born.*rule.*sample)\b", re.I), "gana_tail", "quantum.born_sample"),
+    (re.compile(r"\b(born.*distribution|born.*rule.*distribution)\b", re.I), "gana_tail", "quantum.born_distribution"),
+    (re.compile(r"\b(quantum.*interference|amplitude.*interference)\b", re.I), "gana_tail", "quantum.interference"),
+    # Topological Protection
+    (re.compile(r"\b(berry.*phase|geometric.*phase)\b", re.I), "gana_three_stars", "topological.berry_phase"),
+    (re.compile(r"\b(chern.*number|chern.*invariant)\b", re.I), "gana_three_stars", "topological.chern_number"),
+    (re.compile(r"\b(topological.*encode|topology.*encode)\b", re.I), "gana_three_stars", "topological.encode"),
+    (re.compile(r"\b(topological.*decode|topology.*decode)\b", re.I), "gana_three_stars", "topological.decode"),
 ]
 
 

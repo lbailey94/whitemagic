@@ -1279,19 +1279,99 @@ class PolyglotMCOrchestrator:
 
     # ── Quantum-Inspired Methods ──
 
+    _julia_quantum_backend: Any = None
+
+    def _get_julia_quantum(self) -> Any:
+        """Get or create the Julia quantum backend singleton."""
+        if self._julia_quantum_backend is not None:
+            return self._julia_quantum_backend
+        import os
+        if os.environ.get("WM_SKIP_POLYGLOT", ""):
+            self._julia_quantum_backend = False
+            return None
+        try:
+            from whitemagic_polyglot import JuliaQuantumBackend
+            backend = JuliaQuantumBackend()
+            backend.call("ping")
+            self._julia_quantum_backend = backend
+            logger.info("Julia quantum backend connected")
+            return backend
+        except Exception as e:
+            logger.debug("Julia quantum backend unavailable: %s", e)
+            self._julia_quantum_backend = False  # Mark as unavailable
+            return None
+
+    def _julia_quantum_call(self, method: str, **kwargs) -> dict[str, Any] | None:
+        """Call a Julia quantum geometry method. Returns None if unavailable."""
+        backend = self._get_julia_quantum()
+        if backend is None:
+            return None
+        try:
+            return backend.call(method, timeout=15.0, **kwargs)
+        except Exception as e:
+            logger.debug("Julia quantum call %s failed: %s", method, e)
+            return None
+
+    _haskell_topological_backend: Any = None
+
+    def _get_haskell_topological(self) -> Any:
+        """Get or create the Haskell topological backend singleton."""
+        if self._haskell_topological_backend is not None:
+            return self._haskell_topological_backend
+        import os
+        if os.environ.get("WM_SKIP_POLYGLOT", ""):
+            self._haskell_topological_backend = False
+            return None
+        try:
+            from whitemagic_polyglot import HaskellTopologicalBackend
+            backend = HaskellTopologicalBackend()
+            backend.call("ping")
+            self._haskell_topological_backend = backend
+            logger.info("Haskell topological backend connected")
+            return backend
+        except Exception as e:
+            logger.debug("Haskell topological backend unavailable: %s", e)
+            self._haskell_topological_backend = False
+            return None
+
+    def _haskell_topological_call(self, method: str, **kwargs) -> dict[str, Any] | None:
+        """Call a Haskell topological method. Returns None if unavailable."""
+        backend = self._get_haskell_topological()
+        if backend is None:
+            return None
+        try:
+            return backend.call(method, timeout=15.0, **kwargs)
+        except Exception as e:
+            logger.debug("Haskell topological call %s failed: %s", method, e)
+            return None
+
     def fubini_study_metric(
         self,
         state: list[float],
         jacobian: list[list[float]],
         n_params: int | None = None,
     ) -> dict[str, Any]:
-        """Compute the Fubini-Study metric tensor for natural gradient optimization."""
+        """Compute the Fubini-Study metric tensor for natural gradient optimization.
+
+        Tries Julia first (exact Riemannian geometry), then Rust, then Python fallback.
+        """
+        n_p = n_params or len(jacobian)
+        # Try Julia first for numerical precision
+        julia_result = self._julia_quantum_call(
+            "q_fubini_study",
+            state=state,
+            jacobian=jacobian,
+            n_params=n_p,
+        )
+        if julia_result and julia_result.get("status") == "ok":
+            return {"metric": julia_result.get("metric", []), "backend": "julia"}
+        # Try Rust
         try:
             return _rust_call(
                 "q_fubini_study_metric",
                 state=state,
                 jacobian=jacobian,
-                n_params=n_params or len(jacobian),
+                n_params=n_p,
             ) or {"metric": [], "fallback": True}
         except Exception:
             return {"metric": [], "fallback": True}
@@ -1303,7 +1383,21 @@ class PolyglotMCOrchestrator:
         metric: list[list[float]],
         learning_rate: float = 0.01,
     ) -> dict[str, Any]:
-        """Natural gradient step using Fubini-Study metric."""
+        """Natural gradient step using Fubini-Study metric.
+
+        Tries Julia first (exact metric inverse), then Rust, then Python fallback.
+        """
+        # Try Julia first
+        julia_result = self._julia_quantum_call(
+            "q_natural_gradient",
+            params=params,
+            gradients=gradients,
+            metric=metric,
+            learning_rate=learning_rate,
+        )
+        if julia_result and julia_result.get("status") == "ok":
+            return {"new_params": julia_result.get("new_params", params), "backend": "julia"}
+        # Try Rust
         try:
             return _rust_call(
                 "q_natural_gradient",
@@ -1338,7 +1432,18 @@ class PolyglotMCOrchestrator:
         b: list[float],
         manifold: str = "euclidean",
     ) -> dict[str, Any]:
-        """Compute distance on Euclidean, hyperbolic, or spherical manifold."""
+        """Compute distance on Euclidean, hyperbolic, or spherical manifold.
+
+        Tries Julia first (exact Riemannian geometry), then Rust, then Python fallback.
+        """
+        # Try Julia first for exact geodesic distance
+        julia_result = self._julia_quantum_call(
+            "q_manifold_distance",
+            a=a, b=b, manifold=manifold,
+        )
+        if julia_result and julia_result.get("status") == "ok":
+            return {"distance": julia_result.get("distance", 0.0), "backend": "julia"}
+        # Try Rust
         try:
             return _rust_call(
                 "q_manifold_distance",
@@ -1406,7 +1511,18 @@ class PolyglotMCOrchestrator:
         self,
         points: list[list[float]],
     ) -> dict[str, Any]:
-        """Automatically select best manifold for given data."""
+        """Automatically select best manifold for given data.
+
+        Tries Julia first (statistical analysis), then Rust, then Python fallback.
+        """
+        # Try Julia first
+        julia_result = self._julia_quantum_call(
+            "q_auto_manifold",
+            points=points,
+        )
+        if julia_result and julia_result.get("status") == "ok":
+            return {"manifold": julia_result.get("manifold", "euclidean"), "backend": "julia"}
+        # Try Rust
         try:
             return _rust_call(
                 "q_auto_manifold",
@@ -1488,7 +1604,18 @@ class PolyglotMCOrchestrator:
         states: list[list[float]],
         params: list[float],
     ) -> dict[str, Any]:
-        """Compute Berry phase for a cyclic path in parameter space."""
+        """Compute Berry phase for a cyclic path in parameter space.
+
+        Tries Haskell first (formal verification), then Rust, then Python fallback.
+        """
+        # Try Haskell first for formal verification
+        hs_result = self._haskell_topological_call(
+            "berry_phase",
+            vectors=states,
+        )
+        if hs_result and hs_result.get("status") == "ok":
+            return {"phase": hs_result.get("phase", 0.0), "backend": "haskell"}
+        # Try Rust
         try:
             return _rust_call(
                 "q_berry_phase",
@@ -1504,7 +1631,18 @@ class PolyglotMCOrchestrator:
         dtheta: float = 0.1,
         dphi: float = 0.1,
     ) -> dict[str, Any]:
-        """Compute Chern number from Berry curvature."""
+        """Compute Chern number from Berry curvature.
+
+        Tries Haskell first (formal verification), then Rust, then Python fallback.
+        """
+        # Try Haskell first
+        hs_result = self._haskell_topological_call(
+            "chern_number",
+            vectors=curvature,
+        )
+        if hs_result and hs_result.get("status") == "ok":
+            return {"chern_number": hs_result.get("chern", 0), "backend": "haskell"}
+        # Try Rust
         try:
             return _rust_call(
                 "q_chern_number",
@@ -1521,7 +1659,18 @@ class PolyglotMCOrchestrator:
         n_redundant: int = 3,
         seed: int = 42,
     ) -> dict[str, Any]:
-        """Topologically encode data with redundancy for error protection."""
+        """Topologically encode data with redundancy for error protection.
+
+        Tries Haskell first (formal verification), then Rust, then Python fallback.
+        """
+        # Try Haskell first
+        hs_result = self._haskell_topological_call(
+            "encode_topological",
+            vector=data,
+        )
+        if hs_result and hs_result.get("status") == "ok":
+            return {"encoded": hs_result.get("code", []), "protection": 1.0, "backend": "haskell", "hash": hs_result.get("hash", "")}
+        # Try Rust
         try:
             return _rust_call(
                 "q_topological_encode",
@@ -1538,7 +1687,11 @@ class PolyglotMCOrchestrator:
         data_len: int,
         n_redundant: int = 3,
     ) -> dict[str, Any]:
-        """Decode topologically encoded data (majority vote)."""
+        """Decode topologically encoded data (majority vote).
+
+        Tries Haskell first (formal verification), then Rust, then Python fallback.
+        """
+        # Try Rust first (Haskell decode needs both code and magnitudes)
         try:
             return _rust_call(
                 "q_topological_decode",

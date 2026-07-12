@@ -17,31 +17,44 @@ Cache is invalidated after a configurable TTL (default 5s) to avoid stale data.
 """
 # ruff: noqa: BLE001
 
+import json
 import logging
 import threading
 import time
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
+from whitemagic.config.paths import CACHE_DIR
+
 logger = logging.getLogger(__name__)
+
+_DEFAULT_TRANSITIONS_PATH = CACHE_DIR / "gana_transitions.json"
 
 
 class TransitionTracker:
     """Tracks Gana→Gana transition frequencies for prediction."""
 
-    def __init__(self) -> None:
+    def __init__(self, state_path: Path | None = None) -> None:
         self._lock = threading.Lock()
+        self._state_path = state_path or _DEFAULT_TRANSITIONS_PATH
         # transitions[from_gana][to_gana] = count
         self._transitions: dict[str, dict[str, int]] = defaultdict(
             lambda: defaultdict(int)
         )
         self._total_from: dict[str, int] = defaultdict(int)
+        self._record_count = 0
+        self._save_interval = 50
+        self.load_state()
 
     def record(self, from_gana: str, to_gana: str) -> None:
         """Record a transition from one Gana to another."""
         with self._lock:
             self._transitions[from_gana][to_gana] += 1
             self._total_from[from_gana] += 1
+            self._record_count += 1
+            if self._record_count % self._save_interval == 0:
+                self._save_state_unlocked()
 
     def predict(self, current_gana: str, top_k: int = 3) -> list[tuple[str, float]]:
         """Predict top-K most likely next Ganas with probabilities.
@@ -90,6 +103,48 @@ class TransitionTracker:
             reverse=True,
         )
         return all_transitions[:n]
+
+    def save_state(self) -> None:
+        """Persist transitions to disk."""
+        with self._lock:
+            self._save_state_unlocked()
+
+    def _save_state_unlocked(self) -> None:
+        """Save state without acquiring lock (caller must hold lock)."""
+        try:
+            self._state_path.parent.mkdir(parents=True, exist_ok=True)
+            state = {
+                "transitions": {
+                    k: dict(v) for k, v in self._transitions.items()
+                },
+                "total_from": dict(self._total_from),
+            }
+            self._state_path.write_text(json.dumps(state))
+        except Exception as e:
+            logger.warning("Failed to save transition state: %s", e, exc_info=True)
+
+    def load_state(self) -> None:
+        """Restore transitions from disk."""
+        if self._state_path is None or not self._state_path.exists():
+            return
+        try:
+            state = json.loads(self._state_path.read_text())
+            raw_transitions = state.get("transitions", {})
+            self._transitions = defaultdict(lambda: defaultdict(int))
+            for from_g, targets in raw_transitions.items():
+                for to_g, count in targets.items():
+                    self._transitions[from_g][to_g] = int(count)
+            raw_totals = state.get("total_from", {})
+            self._total_from = defaultdict(int)
+            for gana, total in raw_totals.items():
+                self._total_from[gana] = int(total)
+            logger.info(
+                "Restored transition state: %s source Ganas, %s total transitions",
+                len(self._transitions),
+                sum(self._total_from.values()),
+            )
+        except Exception as e:
+            logger.warning("Failed to load transition state: %s", e, exc_info=True)
 
 
 class PrefetchCache:
@@ -217,7 +272,8 @@ class SpeculativePrefetcher:
             pass
 
         # Predict next and prefetch in background
-        predictions = self._tracker.predict(gana_name, top_k=2)
+        # Try citta-informed prediction first, fall back to plain Markov
+        predictions = self._predict_with_citta_if_available(gana_name, top_k=2)
         if predictions:
             # Only prefetch if prediction confidence > 30%
             top_predictions = [(g, p) for g, p in predictions if p > 0.3]
@@ -366,6 +422,80 @@ class SpeculativePrefetcher:
             self._prefetch_count += 1
         except (ImportError, AttributeError):
             pass
+
+    def _predict_with_citta_if_available(
+        self, gana_name: str, top_k: int = 2
+    ) -> list[tuple[str, float]]:
+        """Try citta-informed prediction, fall back to plain Markov.
+
+        Reads emotional_valence, coherence, and depth from the citta stream
+        if available, then delegates to predict_with_citta. If citta is not
+        running or fails, falls back to _tracker.predict().
+        """
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_stream
+
+            stream = get_citta_stream()
+            state = stream.current_state if hasattr(stream, "current_state") else None
+            if state and hasattr(state, "emotional_valence"):
+                return self.predict_with_citta(
+                    gana_name,
+                    emotional_valence=getattr(state, "emotional_valence", 0.0),
+                    coherence=getattr(state, "coherence", 0.5),
+                    depth=getattr(state, "depth_label", "surface"),
+                    top_k=top_k,
+                )
+        except Exception:
+            pass
+        return self._tracker.predict(gana_name, top_k=top_k)
+
+    def predict_with_citta(
+        self,
+        current_gana: str,
+        emotional_valence: float = 0.0,
+        coherence: float = 0.5,
+        depth: str = "surface",
+        top_k: int = 3,
+    ) -> list[tuple[str, float]]:
+        """Citta-informed prediction: bias Markov predictions using emotional/cognitive state.
+
+        Positive emotional valence biases toward exploration (winnowing_basket, star, wings).
+        Negative valence biases toward safety (straddling_legs, wall, room).
+        Low coherence biases toward introspection (ghost, heart).
+        Deep states bias toward synthesis (three_stars, dipper).
+
+        Returns list of (gana_name, adjusted_probability) sorted by probability desc.
+        """
+        base_predictions = self._tracker.predict(current_gana, top_k=top_k * 2)
+        if not base_predictions:
+            return []
+
+        # Citta bias weights per Gana
+        citta_bias: dict[str, float] = {
+            "gana_winnowing_basket": 1.0 + max(0.0, emotional_valence) * 0.3,
+            "gana_star": 1.0 + max(0.0, emotional_valence) * 0.2,
+            "gana_wings": 1.0 + max(0.0, emotional_valence) * 0.2,
+            "gana_straddling_legs": 1.0 + max(0.0, -emotional_valence) * 0.3,
+            "gana_wall": 1.0 + max(0.0, -emotional_valence) * 0.2,
+            "gana_room": 1.0 + max(0.0, -emotional_valence) * 0.2,
+            "gana_ghost": 1.0 + max(0.0, 0.5 - coherence) * 0.4,
+            "gana_heart": 1.0 + max(0.0, 0.5 - coherence) * 0.3,
+            "gana_three_stars": 1.0 + (0.2 if depth == "deep" else 0.0),
+            "gana_dipper": 1.0 + (0.2 if depth == "deep" else 0.0),
+        }
+
+        adjusted = []
+        for gana, prob in base_predictions:
+            bias = citta_bias.get(gana, 1.0)
+            adjusted.append((gana, prob * bias))
+
+        # Re-normalize
+        total = sum(p for _, p in adjusted)
+        if total > 0:
+            adjusted = [(g, p / total) for g, p in adjusted]
+
+        adjusted.sort(key=lambda x: x[1], reverse=True)
+        return adjusted[:top_k]
 
     def get_cached(self, tool_name: str) -> dict[str, Any] | None:
         """Check if a tool's retrieval was prefetched."""

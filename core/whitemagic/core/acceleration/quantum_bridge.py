@@ -300,6 +300,25 @@ def born_rule_sample(amplitudes: list[float], seed: int = 42) -> int:
     return len(amplitudes) - 1
 
 
+def born_rule_select(amplitudes: list[float], n: int, seed: int = 42) -> list[int]:
+    """Select n unique indices via Born-rule sampling without replacement.
+
+    Repeatedly samples using Born-rule, removing selected items by zeroing
+    their amplitude and renormalizing. This gives quantum-measurement-style
+    selection that favors high-amplitude items while preserving diversity.
+    """
+    if n <= 0 or not amplitudes:
+        return []
+    n = min(n, len(amplitudes))
+    amps = list(amplitudes)
+    selected: list[int] = []
+    for i in range(n):
+        idx = born_rule_sample(amps, seed=seed + i)
+        selected.append(idx)
+        amps[idx] = 0.0  # Zero out selected, renormalize happens in born_rule_sample
+    return selected
+
+
 def born_rule_distribution(amplitudes: list[float]) -> list[tuple[int, float]]:
     """Return Born-rule probability distribution: (index, probability) pairs."""
     total = sum(a * a for a in amplitudes)

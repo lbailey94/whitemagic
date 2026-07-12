@@ -1,3 +1,5 @@
+> **Archived 2026-07-12**: Session complete or superseded. See `docs/message_board/` for active docs.
+
 # v23 Roadmap (COMPLETED — superseded by v24.2.0)
 
 **Version**: 1.0.0

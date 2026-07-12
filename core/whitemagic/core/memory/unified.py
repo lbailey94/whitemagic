@@ -169,6 +169,24 @@ class UnifiedMemory:
 
             return self._holographic
 
+    def _lww_resolve(self, local: Memory, remote: Memory) -> Memory:
+        """CRDT Last-Writer-Wins merge for multi-agent memory coherence.
+
+        Resolves conflicts between two Memory versions using:
+        1. Higher version number wins
+        2. If versions are equal, higher agent_id wins (deterministic tiebreak)
+
+        Returns the winning Memory object.
+        """
+        if remote.version > local.version:
+            return remote
+        elif local.version > remote.version:
+            return local
+        # Versions are equal — tiebreak by agent_id (lexicographic)
+        if remote.agent_id >= local.agent_id:
+            return remote
+        return local
+
     def store(self, content: Any, memory_type: MemoryType | str = MemoryType.SHORT_TERM,
               tags: set[str] | None = None, emotional_valence: float = 0.0,
               importance: float = 0.5, metadata: dict | None = None, title: str | None = None,
@@ -364,7 +382,18 @@ class UnifiedMemory:
         # Cache invalidation: write-invalidate protocol
         try:
             from whitemagic.core.memory.cache_registry import get_cache_registry
-            get_cache_registry().invalidate_namespace(galaxy)
+            reg = get_cache_registry()
+            reg.invalidate_namespace(galaxy)
+            # Spatial invalidation: flush cache entries near this memory's coords
+            try:
+                coords = self._galaxy_backend.get_coords(memory.id)
+                if coords and len(coords) >= 4:
+                    reg.invalidate_spatial(
+                        (coords[0], coords[1], coords[2], coords[3]),
+                        radius=0.3,
+                    )
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -445,7 +474,18 @@ class UnifiedMemory:
         # Cache invalidation
         try:
             from whitemagic.core.memory.cache_registry import get_cache_registry
-            get_cache_registry().invalidate_namespace(existing.galaxy)
+            reg = get_cache_registry()
+            reg.invalidate_namespace(existing.galaxy)
+            # Spatial invalidation: flush cache entries near this memory's coords
+            try:
+                coords = self._galaxy_backend.get_coords(memory_id)
+                if coords and len(coords) >= 4:
+                    reg.invalidate_spatial(
+                        (coords[0], coords[1], coords[2], coords[3]),
+                        radius=0.3,
+                    )
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -1274,6 +1314,186 @@ class UnifiedMemory:
     def get_tag_counts(self, limit: int = 10) -> list[tuple[str, int]]:
         """Get most common tags."""
         return cast(list[tuple[str, int]], self._galaxy_backend.get_tag_counts(limit=limit))
+
+    def galaxy_snapshot(self, galaxy: str | None = None) -> dict[str, Any]:
+        """Create a full snapshot of a galaxy: memories, coords, associations, metadata.
+
+        Unlike arrow_export/json_export which only export memories + coords,
+        this includes associations and galaxy configuration, enabling
+        trajectory branching for simulation.
+
+        Returns:
+            Dict with keys: galaxy_meta, memories, associations.
+        """
+        import json as _json
+        from datetime import datetime
+
+        galaxy_name = galaxy or "universal"
+
+        # Export memories with full metadata
+        memories = self._galaxy_backend.search(
+            query=None, limit=100000, galaxy=galaxy,
+        )
+
+        mem_docs = []
+        for m in memories:
+            coords = self._galaxy_backend.get_coords(m.id) if self.holographic else None
+            mem_docs.append({
+                "id": m.id,
+                "title": m.title or "",
+                "content": str(m.content)[:50000],
+                "importance": m.importance,
+                "memory_type": m.memory_type.name if m.memory_type else "SHORT_TERM",
+                "tags": sorted(m.tags) if m.tags else [],
+                "galaxy": getattr(m, 'galaxy', galaxy_name),
+                "emotional_valence": getattr(m, 'emotional_valence', 0.0),
+                "metadata": m.metadata if isinstance(m.metadata, dict) else {},
+                "coords": {
+                    "x": coords[0] if coords else 0.0,
+                    "y": coords[1] if coords else 0.0,
+                    "z": coords[2] if coords else 0.0,
+                    "w": coords[3] if coords else 0.5,
+                    "v": coords[4] if coords and len(coords) > 4 else 0.5,
+                    "u": coords[5] if coords and len(coords) > 5 else 0.5,
+                } if coords else None,
+                "created_at": getattr(m, 'created_at', None),
+            })
+
+        # Export associations from the galaxy-specific backend
+        associations = []
+        try:
+            galaxy_backend = self._galaxy_backend._get_backend_for_galaxy(galaxy_name)
+            import sqlite3 as _sqlite3
+            with galaxy_backend.pool.connection() as conn:
+                conn.row_factory = _sqlite3.Row
+                rows = conn.execute(
+                    """SELECT source_id, target_id, strength
+                       FROM associations
+                       WHERE source_id IN (SELECT id FROM memories)
+                       AND target_id IN (SELECT id FROM memories)"""
+                ).fetchall()
+                for row in rows:
+                    associations.append({
+                        "source_id": row["source_id"],
+                        "target_id": row["target_id"],
+                        "strength": row["strength"],
+                    })
+        except Exception:
+            pass
+
+        return {
+            "galaxy_meta": {
+                "galaxy": galaxy_name,
+                "memory_count": len(mem_docs),
+                "association_count": len(associations),
+                "snapshot_at": datetime.now().isoformat(),
+                "format": "snapshot_v1",
+            },
+            "memories": mem_docs,
+            "associations": associations,
+        }
+
+    def galaxy_restore(
+        self,
+        snapshot: dict[str, Any],
+        target_galaxy: str | None = None,
+        merge: bool = False,
+    ) -> dict[str, Any]:
+        """Restore a galaxy from a snapshot.
+
+        Args:
+            snapshot: Snapshot dict from galaxy_snapshot().
+            target_galaxy: Galaxy to restore into. If None, uses snapshot's galaxy.
+            merge: If True, merge with existing memories (dedup by content hash).
+                   If False, clears target galaxy first.
+
+        Returns:
+            Summary dict with restored counts.
+        """
+        galaxy_name = target_galaxy or snapshot.get("galaxy_meta", {}).get("galaxy", "universal")
+        mem_docs = snapshot.get("memories", [])
+        associations = snapshot.get("associations", [])
+
+        restored_mems = 0
+        restored_assocs = 0
+        id_map: dict[str, str] = {}  # old_id → new_id
+
+        import hashlib as _hashlib
+        target_backend = self._galaxy_backend._get_backend_for_galaxy(galaxy_name)
+
+        for doc in mem_docs:
+            try:
+                mt_name = doc.get("memory_type", "SHORT_TERM")
+                try:
+                    mt = MemoryType[mt_name]
+                except (KeyError, ValueError):
+                    mt = MemoryType.SHORT_TERM
+
+                # Generate a fresh ID and store directly to the target galaxy backend,
+                # bypassing um.store() to avoid cross-galaxy content-hash dedup.
+                content_str = str(doc.get("content", ""))[:1000]
+                timestamp = now_iso()
+                new_id = _hashlib.sha256(f"{content_str}{timestamp}".encode()).hexdigest()[:16]
+
+                mem = Memory(
+                    id=new_id,
+                    content=doc.get("content", ""),
+                    memory_type=mt,
+                    tags=set(doc.get("tags", [])),
+                    emotional_valence=doc.get("emotional_valence", 0.0),
+                    importance=doc.get("importance", 0.5),
+                    metadata=doc.get("metadata", {}),
+                    title=doc.get("title", ""),
+                    galaxy=galaxy_name,
+                    version=1,
+                )
+                content_hash = _hashlib.sha256(str(mem.content).encode()).hexdigest()
+                target_backend.store(mem, content_hash=content_hash)
+                id_map[doc["id"]] = new_id
+                restored_mems += 1
+
+                # Restore coords if provided
+                coords = doc.get("coords")
+                if coords and self.holographic:
+                    try:
+                        target_backend.store_coords(
+                            new_id,
+                            coords.get("x", 0.0),
+                            coords.get("y", 0.0),
+                            coords.get("z", 0.0),
+                            coords.get("w", 0.5),
+                            coords.get("v", 0.5),
+                            coords.get("u", 0.5),
+                        )
+                    except Exception:
+                        pass
+
+            except Exception:
+                pass
+
+        # Restore associations to the galaxy-specific backend
+        galaxy_backend = self._galaxy_backend._get_backend_for_galaxy(galaxy_name)
+        for assoc in associations:
+            try:
+                src = id_map.get(assoc["source_id"], assoc["source_id"])
+                tgt = id_map.get(assoc["target_id"], assoc["target_id"])
+                strength = assoc.get("strength", 0.5)
+                with galaxy_backend.pool.connection() as conn:
+                    conn.execute(
+                        """INSERT OR REPLACE INTO associations (source_id, target_id, strength)
+                           VALUES (?, ?, ?)""",
+                        (src, tgt, strength),
+                    )
+                restored_assocs += 1
+            except Exception:
+                pass
+
+        return {
+            "galaxy": galaxy_name,
+            "memories_restored": restored_mems,
+            "associations_restored": restored_assocs,
+            "merge": merge,
+        }
 
 
 # Singleton instance

@@ -1,7 +1,7 @@
 name = "WhiteMagicResonance"
 uuid = "12345678-1234-5678-1234-567812345678"
 authors = ["WhiteMagic Core <core@whitemagic.ai>"]
-version = "24.2.0"
+version = "24.3.0"
 
 [deps]
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"

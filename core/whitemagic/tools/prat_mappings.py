@@ -206,6 +206,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "get_yin_yang_balance": "gana_mound",
     "cache.flush": "gana_mound",
     "cache.status": "gana_mound",
+    "cache.tune": "gana_mound",
     # ═══ STOMACH — Digestion & Resource Management ═══
     "pipeline": "gana_stomach",
     "task.distribute": "gana_stomach",
@@ -325,6 +326,17 @@ TOOL_TO_GANA: dict[str, str] = {
     "galaxy.search_multi": "gana_void",
     "galaxy.share": "gana_void",
     "galaxy.list_shared": "gana_void",
+    "galaxy.snapshot": "gana_void",
+    "galaxy.restore": "gana_void",
+    "galaxy.package": "gana_void",
+    "galaxy.receive": "gana_void",
+    "simulation.create": "gana_three_stars",
+    "simulation.run": "gana_three_stars",
+    "simulation.search": "gana_three_stars",
+    "simulation.inject": "gana_three_stars",
+    "simulation.analyze": "gana_three_stars",
+    "simulation.synthesize": "gana_three_stars",
+    "simulation.calibrate": "gana_three_stars",
     "galaxy.lineage_stats": "gana_void",
     # ═══ SIMPLIFIED ALIASES ═══
     "remember": "gana_neck",
@@ -716,6 +728,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "citta.trajectory": "gana_ghost",
     "citta.coherence": "gana_ghost",
     "consciousness.loop.status": "gana_ghost",
+    "consciousness.mode": "gana_ghost",
     "guna.balance.status": "gana_ghost",
     "meta.galaxy.overview": "gana_ghost",
     "possibility.explore": "gana_dipper",
@@ -867,6 +880,20 @@ TOOL_TO_GANA: dict[str, str] = {
     # ── v24.3: Durable Archive ──
     "archive.run": "gana_wings",
     "archive.status": "gana_wings",
+    # ── Quantum Geometry → gana_tail (Performance & Acceleration) ──
+    "quantum.manifold_distance": "gana_tail",
+    "quantum.fubini_study": "gana_tail",
+    "quantum.natural_gradient": "gana_tail",
+    "quantum.mps_compress": "gana_tail",
+    "quantum.auto_manifold": "gana_tail",
+    "quantum.born_sample": "gana_tail",
+    "quantum.born_distribution": "gana_tail",
+    "quantum.interference": "gana_tail",
+    # ── Topological Protection → gana_three_stars (Judgment & Synthesis) ──
+    "topological.berry_phase": "gana_three_stars",
+    "topological.chern_number": "gana_three_stars",
+    "topological.encode": "gana_three_stars",
+    "topological.decode": "gana_three_stars",
 }
 
 # Reverse: Gana → list of nested tools

@@ -21,14 +21,23 @@ from whitemagic.core.evolution.research_dag import (
 @pytest.fixture
 def dag():
     """Get a fresh ResearchDAG instance for each test."""
+    # Reset phylogenetics singleton so it re-initializes with the current DB
+    try:
+        from whitemagic.core.memory.phylogenetics import get_phylogenetics
+        pg = get_phylogenetics()
+        pg._initialized = False
+    except Exception:
+        pass
+
     dag = get_research_dag()
     dag._initialized = False
     dag._cache.clear()
     dag._ensure_table()
-    # Clear table to prevent state leakage from prior test files
+    # Clear tables to prevent state leakage from prior test files
     try:
         with dag._get_conn() as conn:
             conn.execute("DELETE FROM research_experiments")
+            conn.execute("DELETE FROM lineage_edges WHERE target_galaxy = 'research' OR source_galaxy = 'research'")
             conn.commit()
     except Exception:
         pass

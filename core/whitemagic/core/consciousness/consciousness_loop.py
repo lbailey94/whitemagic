@@ -82,11 +82,84 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class CittaMode(str, Enum):
+    """Frequency modes for the consciousness loop.
+
+    Each mode adjusts the tier intervals and feature enables to produce
+    a different cognitive rhythm:
+
+    - **normal**: Default operating mode (30s citta, 60s fast, 300s slow, 1800s deep)
+    - **meditation**: Low-frequency inward focus (300s citta, dreaming suppressed,
+      self-directed attention heightened, emergence/foresight suppressed)
+    - **rem**: Dream-heavy consolidation mode (60s citta, dream idle threshold
+      reduced to 30s, association mining heightened, oracle suppressed)
+    - **deep**: High-frequency active processing (10s citta, all meta loops
+      accelerated, dreaming suppressed, possibility explorer heightened)
+    """
+
+    NORMAL = "normal"
+    MEDITATION = "meditation"
+    REM = "rem"
+    DEEP = "deep"
+
+
+# Per-mode configuration overrides.  Keys not listed inherit from LoopConfig defaults.
+_MODE_PRESETS: dict[CittaMode, dict[str, Any]] = {
+    CittaMode.NORMAL: {},
+    CittaMode.MEDITATION: {
+        "citta_interval_s": 300.0,
+        "meta_fast_interval_s": 600.0,
+        "meta_slow_interval_s": 1800.0,
+        "meta_deep_interval_s": 7200.0,
+        "dream_idle_threshold_s": 999999.0,  # effectively suppress
+        "enable_dream": False,
+        "enable_proactive_dream": False,
+        "enable_emergence": False,
+        "enable_foresight": False,
+        "enable_self_directed": True,  # heightened inward attention
+        "enable_oracle": False,
+        "enable_possibility": False,
+        "emotional_tone": "sattvic",
+    },
+    CittaMode.REM: {
+        "citta_interval_s": 60.0,
+        "meta_fast_interval_s": 120.0,
+        "meta_slow_interval_s": 600.0,
+        "meta_deep_interval_s": 1800.0,
+        "dream_idle_threshold_s": 30.0,  # dream quickly
+        "enable_dream": True,
+        "enable_proactive_dream": True,
+        "enable_association_mining": True,
+        "enable_emergence": True,
+        "enable_foresight": False,
+        "enable_oracle": False,
+        "enable_possibility": False,
+        "emotional_tone": "tamasic",
+    },
+    CittaMode.DEEP: {
+        "citta_interval_s": 10.0,
+        "meta_fast_interval_s": 30.0,
+        "meta_slow_interval_s": 120.0,
+        "meta_deep_interval_s": 600.0,
+        "dream_idle_threshold_s": 999999.0,  # suppress dreaming
+        "enable_dream": False,
+        "enable_proactive_dream": False,
+        "enable_self_directed": False,
+        "enable_emergence": True,
+        "enable_foresight": True,
+        "enable_oracle": True,
+        "enable_possibility": True,
+        "emotional_tone": "rajasic",
+    },
+}
 
 
 @dataclass
@@ -128,6 +201,13 @@ class LoopConfig:
     # Human check-in thresholds
     checkin_novelty_threshold: float = 0.8
     checkin_contention_threshold: float = 0.6
+    # Cache warming on idle
+    enable_cache_warming: bool = True
+    cache_warming_interval_s: float = 300.0
+    # Frequency mode
+    mode: CittaMode = CittaMode.NORMAL
+    # Emotional tone override (used by citta advancement)
+    emotional_tone: str = "sattvic"
 
     @classmethod
     def from_env(cls) -> LoopConfig:
@@ -171,7 +251,18 @@ class LoopConfig:
             mesh_sync_interval_s=_get_float("WM_MESH_SYNC_INTERVAL", 60.0),
             checkin_novelty_threshold=_get_float("WM_CHECKIN_NOVELTY_THRESHOLD", 0.8),
             checkin_contention_threshold=_get_float("WM_CHECKIN_CONTENTION_THRESHOLD", 0.6),
+            mode=CittaMode(os.environ.get("WM_CITTA_MODE", "normal")),
         )
+
+    @classmethod
+    def for_mode(cls, mode: CittaMode) -> LoopConfig:
+        """Create a config preset for a specific frequency mode."""
+        cfg = cls.from_env()
+        overrides = _MODE_PRESETS.get(mode, {})
+        for key, value in overrides.items():
+            setattr(cfg, key, value)
+        cfg.mode = mode
+        return cfg
 
 
 @dataclass
@@ -229,6 +320,9 @@ class LoopStats:
     last_error: str = ""
     last_dream_phase: str = ""
     total_uptime_s: float = 0.0
+    # Frequency mode tracking
+    last_mode: str = "normal"
+    mode_changes: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -273,6 +367,8 @@ class LoopStats:
             "last_error": self.last_error,
             "last_dream_phase": self.last_dream_phase,
             "total_uptime_s": round(self.total_uptime_s, 1),
+            "last_mode": self.last_mode,
+            "mode_changes": self.mode_changes,
         }
 
 
@@ -298,6 +394,7 @@ class ConsciousnessLoop:
         self._last_meta_deep = 0.0
         self._last_autoswarm = 0.0
         self._last_mesh_sync = 0.0
+        self._last_cache_warm = 0.0
         self._dream_started = False
         self._homeostatic_attached = False
         self._lock = threading.Lock()
@@ -358,6 +455,57 @@ class ConsciousnessLoop:
             self._thread.join(timeout=5.0)
         logger.info("Consciousness loop stopped")
 
+    def set_mode(self, mode: CittaMode) -> dict[str, Any]:
+        """Switch the consciousness loop to a different frequency mode.
+
+        Updates the config in-place and restarts subsystems as needed.
+        Returns a summary of the mode change.
+        """
+        with self._lock:
+            old_mode = self._config.mode
+            # Build new config from mode preset, preserving env-derived base settings
+            new_config = LoopConfig.for_mode(mode)
+            self._config = new_config
+            self._stats.last_mode = mode.value
+            self._stats.mode_changes += 1
+
+        # Propagate mode to neuro-upgrades
+        try:
+            from whitemagic.core.consciousness.neuro_upgrades import get_neuro_upgrades
+            get_neuro_upgrades().set_mode(mode.value)
+        except Exception:
+            pass
+
+        # Restart dream cycle if enable state changed
+        dream_was_started = self._dream_started
+        if self._config.enable_dream and not dream_was_started:
+            self._start_dream_cycle()
+        elif not self._config.enable_dream and dream_was_started:
+            try:
+                from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+                get_dream_cycle().stop()
+                self._dream_started = False
+            except Exception:
+                pass
+
+        logger.info(
+            "Consciousness mode changed: %s → %s (citta=%.0fs, dream=%s)",
+            old_mode.value, mode.value,
+            self._config.citta_interval_s,
+            self._config.enable_dream,
+        )
+        return {
+            "old_mode": old_mode.value,
+            "new_mode": mode.value,
+            "citta_interval_s": self._config.citta_interval_s,
+            "enable_dream": self._config.enable_dream,
+            "emotional_tone": self._config.emotional_tone,
+        }
+
+    def get_mode(self) -> CittaMode:
+        """Get the current frequency mode."""
+        return self._config.mode
+
     def touch(self) -> None:
         """Record activity — resets dream idle timer."""
         try:
@@ -404,6 +552,8 @@ class ConsciousnessLoop:
                     "mesh_sync_interval_s": self._config.mesh_sync_interval_s,
                     "checkin_novelty_threshold": self._config.checkin_novelty_threshold,
                     "checkin_contention_threshold": self._config.checkin_contention_threshold,
+                    "mode": self._config.mode.value,
+                    "emotional_tone": self._config.emotional_tone,
                 },
                 "stats": self._stats.to_dict(),
             }
@@ -480,6 +630,14 @@ class ConsciousnessLoop:
                     self._run_mesh_sync()
                     self._last_mesh_sync = now
 
+                # Cache warming on idle — flush stale + auto-tune TTLs
+                if (
+                    self._config.enable_cache_warming
+                    and now - self._last_cache_warm >= self._config.cache_warming_interval_s
+                ):
+                    self._maybe_warm_caches()
+                    self._last_cache_warm = now
+
             except Exception as e:
                 self._stats.last_error = str(e)
                 logger.debug("Consciousness loop error: %s", e, exc_info=True)
@@ -496,6 +654,24 @@ class ConsciousnessLoop:
             wait_s = max(0.05, min(next_deadline - now, 5.0))
             self._stop_event.wait(timeout=wait_s)
 
+    def _maybe_warm_caches(self) -> None:
+        """Flush stale cache entries and run auto_tune_ttls() during idle periods.
+
+        This is a lightweight maintenance task that runs on the cache_warming
+        interval. It removes expired entries and collects TTL tuning recommendations
+        without blocking the main loop.
+        """
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+
+            reg = get_cache_registry()
+            # Flush stale entries
+            reg.flush_stale()
+            # Collect tuning recommendations (non-applying, just analysis)
+            reg.auto_tune_ttls()
+        except Exception as e:
+            logger.debug("Cache warming skipped: %s", e)
+
     def _advance_citta(self) -> None:
         """Advance the citta stream with current system telemetry."""
         try:
@@ -505,15 +681,40 @@ class ConsciousnessLoop:
             coherence = self._compute_system_coherence()
             depth = self._compute_depth_layer()
 
+            # Advance neuro-upgrades (P4.3)
+            neuro_signals: dict[str, Any] = {}
+            try:
+                from whitemagic.core.consciousness.neuro_upgrades import get_neuro_upgrades
+                nu = get_neuro_upgrades()
+                citta_dims = {
+                    "context_continuity": coherence,
+                    "relationship_awareness": 0.5,
+                    "goal_alignment": coherence * 0.8,
+                    "identity_stability": coherence * 0.9,
+                    "memory_accessibility": 0.5,
+                    "emotional_attunement": 0.5,
+                    "capability_awareness": 0.5,
+                    "temporal_orientation": 0.5,
+                }
+                neuro_result = nu.advance_cycle(citta_dims, input_signal=coherence, context=coherence)
+                neuro_signals = {
+                    "dendritic_output": neuro_result["dendritic_output"],
+                    "binding_strength": neuro_result["binding_strength"],
+                    "prediction_surprise": neuro_result["prediction_errors"].get("surprise", 0.0),
+                    "cortical_l4": neuro_result["cortical_layers"]["l4_output"],
+                }
+            except Exception:
+                pass
+
             advance_citta(
                 gana="_background",
                 operation="consciousness_loop_tick",
                 output_preview=f"coherence={coherence:.3f} depth={depth}",
                 coherence=coherence,
                 depth_layer=depth,
-                emotional_tone="sattvic",
+                emotional_tone=self._config.emotional_tone,
                 duration_ms=0.0,
-                neuro_signals={},
+                neuro_signals=neuro_signals,
             )
 
             self._stats.citta_ticks += 1
