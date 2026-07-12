@@ -313,6 +313,81 @@ class InsightSynthesizer:
         """Get top N insights by composite rank."""
         return sorted(self._insights.values(), key=lambda i: i.composite_rank, reverse=True)[:n]
 
+    def persist_insights(
+        self,
+        scenario_name: str,
+        top_n: int = 5,
+        min_rank: float = 0.3,
+    ) -> dict[str, Any]:
+        """Persist top insights as memories in the codex galaxy.
+
+        Args:
+            scenario_name: Name of the simulation scenario.
+            top_n: Maximum number of insights to persist.
+            min_rank: Minimum composite_rank threshold for persistence.
+
+        Returns:
+            Summary dict with persisted count and any errors.
+        """
+        top = [
+            i for i in self.get_top_insights(top_n)
+            if i.composite_rank >= min_rank
+        ]
+        persisted = 0
+        errors: list[str] = []
+
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+
+            for insight in top:
+                try:
+                    content = (
+                        f"Simulation Insight ({insight.insight_type}): {insight.statement}\n\n"
+                        f"Composite rank: {insight.composite_rank:.3f}\n"
+                        f"Novelty: {insight.novelty_score:.3f}\n"
+                        f"Impact: {insight.impact_score:.3f}\n"
+                        f"Coherence: {insight.coherence_score:.3f}\n"
+                        f"Confidence: {insight.confidence:.3f}\n"
+                        f"Source trajectories: {', '.join(insight.source_trajectories)}\n"
+                        f"Scenario: {scenario_name}"
+                    )
+                    um.store(
+                        content=content,
+                        memory_type="long_term",
+                        tags={"simulation_insight", insight.insight_type, f"scenario:{scenario_name}"},
+                        galaxy="codex",
+                        importance=min(1.0, insight.composite_rank),
+                        title=f"Sim Insight: {insight.statement[:80]}",
+                        source_trust="inferred",
+                        metadata={
+                            "simulation_scenario": scenario_name,
+                            "insight_id": insight.id,
+                            "insight_type": insight.insight_type,
+                            "composite_rank": insight.composite_rank,
+                            "novelty_score": insight.novelty_score,
+                            "impact_score": insight.impact_score,
+                            "coherence_score": insight.coherence_score,
+                            "confidence": insight.confidence,
+                        },
+                        auto_embed=False,
+                        enable_surprise_gate=False,
+                        enable_entity_extraction=False,
+                        enable_holographic_index=False,
+                    )
+                    persisted += 1
+                except Exception as e:
+                    errors.append(f"{insight.id}: {e}")
+        except Exception as e:
+            errors.append(f"unified_memory: {e}")
+
+        logger.info("Persisted %d/%d insights to codex galaxy", persisted, len(top))
+        return {
+            "persisted": persisted,
+            "considered": len(top),
+            "errors": errors,
+        }
+
     def stats(self) -> dict[str, Any]:
         return {
             "total_insights": len(self._insights),

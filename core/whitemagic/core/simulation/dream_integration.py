@@ -302,6 +302,83 @@ class DreamCycleIntegration:
     def get_cross_sim_associations(self) -> list[dict[str, Any]]:
         return self._cross_sim_associations
 
+    def persist_consolidation(
+        self,
+        simulation_id: str,
+        reports: list[ConsolidationReport] | None = None,
+    ) -> dict[str, Any]:
+        """Persist consolidation reports as memories in appropriate galaxies.
+
+        Routes narrative and oracle insights to dreams galaxy,
+        kaizen/pattern reports to research galaxy.
+
+        Args:
+            simulation_id: ID of the simulation.
+            reports: Optional list of reports (defaults to stored reports).
+
+        Returns:
+            Summary dict with persisted counts per galaxy.
+        """
+        if reports is None:
+            reports = self._reports.get(simulation_id, [])
+
+        if not reports:
+            return {"persisted": 0, "errors": []}
+
+        persisted = 0
+        errors: list[str] = []
+
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+
+            for report in reports:
+                try:
+                    # Route by phase: dreams for narrative/oracle, research for kaizen/prediction
+                    if report.phase in ("narrative", "oracle"):
+                        galaxy = "dreams"
+                    elif report.phase in ("kaizen", "prediction"):
+                        galaxy = "research"
+                    else:
+                        galaxy = "codex"
+
+                    content = (
+                        f"Dream Cycle Phase: {report.phase}\n"
+                        f"Simulation: {simulation_id}\n"
+                        f"Memories consolidated: {report.memories_consolidated}\n"
+                        f"Associations discovered: {report.associations_discovered}\n"
+                        f"Insights: {'; '.join(report.insights)}\n"
+                        f"Recommendations: {'; '.join(report.recommendations)}\n"
+                        f"Narrative: {report.narrative}"
+                    )
+                    um.store(
+                        content=content,
+                        memory_type="long_term",
+                        tags={"dream_cycle", report.phase, f"simulation:{simulation_id}"},
+                        galaxy=galaxy,
+                        importance=0.6,
+                        title=f"Dream {report.phase}: {simulation_id}",
+                        source_trust="inferred",
+                        metadata={
+                            "simulation_id": simulation_id,
+                            "phase": report.phase,
+                            "memories_consolidated": report.memories_consolidated,
+                            "associations_discovered": report.associations_discovered,
+                        },
+                        auto_embed=False,
+                        enable_surprise_gate=False,
+                        enable_entity_extraction=False,
+                        enable_holographic_index=False,
+                    )
+                    persisted += 1
+                except Exception as e:
+                    errors.append(f"{report.phase}: {e}")
+        except Exception as e:
+            errors.append(f"unified_memory: {e}")
+
+        logger.info("Persisted %d/%d consolidation reports for %s", persisted, len(reports), simulation_id)
+        return {"persisted": persisted, "considered": len(reports), "errors": errors}
+
     def stats(self) -> dict[str, Any]:
         return {
             "total_simulations_consolidated": len(self._reports),

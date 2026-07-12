@@ -61,6 +61,20 @@ class PredictionCalibrationBridge:
         self._predictions: dict[str, Prediction] = {}
         self._calibration_history: list[float] = []  # historical Brier scores
         self._calibration_gap: float = 0.0  # average Brier gap
+        self._forecast_db: Any | None = None
+        self._forecast_db_checked: bool = False
+
+    def _get_forecast_db(self) -> Any | None:
+        """Lazily get TemporalForecastDB instance."""
+        if not self._forecast_db_checked:
+            self._forecast_db_checked = True
+            try:
+                from whitemagic.forecasting.temporal_db import TemporalForecastDB
+                self._forecast_db = TemporalForecastDB()
+            except Exception:
+                logger.debug("TemporalForecastDB unavailable", exc_info=True)
+                self._forecast_db = None
+        return self._forecast_db
 
     def record_prediction(
         self,
@@ -96,6 +110,23 @@ class PredictionCalibrationBridge:
             metadata=metadata or {},
         )
         self._predictions[pid] = pred
+
+        # Persist to TemporalForecastDB
+        db = self._get_forecast_db()
+        if db is not None:
+            try:
+                db_pred_id = db.add_prediction(
+                    claim=statement,
+                    source_date=pred.created_at[:10],
+                    confidence=adjusted_prob,
+                    source_ref=f"calibration_bridge:{pid}",
+                    category=f"simulation_{scenario_name}",
+                    notes=f"confidence={confidence}, adjustment={self._calibration_gap:.4f}",
+                )
+                pred.metadata["forecast_db_id"] = db_pred_id
+            except Exception:
+                logger.debug("Failed to persist prediction to TemporalForecastDB", exc_info=True)
+
         logger.info("Recorded prediction %s: P=%.2f (adjusted from %.2f)",
                      statement[:50], adjusted_prob, probability)
         return pred
@@ -121,6 +152,19 @@ class PredictionCalibrationBridge:
         recent = self._calibration_history[-50:]
         avg_brier = sum(recent) / len(recent)
         self._calibration_gap = avg_brier * 0.1  # small adjustment
+
+        # Persist resolution to TemporalForecastDB
+        db_id = pred.metadata.get("forecast_db_id")
+        if db_id:
+            db = self._get_forecast_db()
+            if db is not None:
+                try:
+                    if outcome:
+                        db.validate(db_id, pred.created_at[:10], validation_ref="simulation")
+                    else:
+                        db.falsify(db_id, notes=f"brier={brier:.4f}")
+                except Exception:
+                    logger.debug("Failed to persist resolution to TemporalForecastDB", exc_info=True)
 
         return {
             "status": "success",
