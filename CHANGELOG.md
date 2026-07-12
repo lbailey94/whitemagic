@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [24.3.0] - 2026-07-12
+
 ### Added — Cache Coherence & Hot-Path Optimization Strategy (v24.3.0)
 
 #### Tier 1: Core Cache Coherence
@@ -90,35 +92,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tools/handlers/v24_3_handlers.py` — 17 new MCP tool handlers
 - 729 total dispatch entries (up from 712)
 - New tools: `tx_firewall.status`, `tx_firewall.set_policy`, `bounty.scan`, `bounty.auto_claim`, `bounty.connector_status`, `model.optimize`, `model.optimize_status`, `ambient.state`, `ambient.status`, `wasm_verify.status`, `network_state.status`, `network_state.create_identity`, `network_state.propose`, `network_state.vote`, `network_state.resolve`, `genetic.run`, `genetic.status`
-
-### Added — Cache Coherence & Hot-Path Optimization Strategy
-
-#### Phase 1: Consolidate & Register
-- Upgraded `CacheRegistry` with `flush_stale()`, `invalidate_namespace()`, `get_version()`, `get_all_stats()`
-- Registered all 8 system caches (UnifiedCacheBridge, QueryCache, HybridRecallCache, PredictiveCache, PrefetchCache, DistributedCache, RedisCache, TTLCache)
-- Removed `@lru_cache` from 13 mutable-state methods across 5 files
-- Added write-invalidate hooks after `memory.store()` and `memory.delete()`
-
-#### Phase 2: Cache the Hot Paths
-- Extended semantic cache to 17 read-only tool patterns with 60s TTL (vs 24h for inference)
-- Updated `_cache_key` to include structural kwargs for read-only tools
-- Wired `HybridRecallCache` into `hybrid_recall()` (all 3 recall pathways)
-- Added 5s TTL cache to `NeuroSensorium.compute_sensorium()`
-- Extended `ContextSynthesizer` CACHE_TTL from 2s to 10s with `invalidate()` method
-
-#### Phase 3: Versioned Cache Coherence
-- Added `CACHE_INVALIDATE` and `CACHE_TRANSFER` event types to `EventType` enum
-- Added version vector fields (`version`, `agent_id`) to `Memory` dataclass with serialization
-- Emit `CACHE_INVALIDATE` events after memory writes via GanYingBus
-- `CacheRegistry` auto-subscribes to `CACHE_INVALIDATE` events on singleton init
-
-#### Phase 4: Multi-Agent Cache Coherence
-- `SpeculativePrefetcher` broadcasts Gana transitions via `CACHE_TRANSFER` events
-- Prefetcher singleton listens for cross-agent transitions to update Markov model
-
-#### Phase 5: Predictive Pre-warming
-- Extended prefetch `search_tools` from 8 to 17 tools (added introspection, consciousness, karma tools)
-- Added `CacheRegistry.auto_tune_ttls()` for adaptive TTL recommendations based on hit rate + evictions
 
 ### Added — MandalaOS Phase A-D
 

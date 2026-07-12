@@ -398,3 +398,280 @@ def handle_simulation_calibrate(**kwargs: Any) -> dict[str, Any]:
 
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# MC Simulation Handlers (v24.2.0 — Tier 2-4)
+# ═══════════════════════════════════════════════════════════════════
+
+
+def handle_mc_surrogate(**kwargs: Any) -> dict[str, Any]:
+    """Fit and optionally evaluate a Gaussian Process surrogate model."""
+    try:
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+        orch = PolyglotMCOrchestrator()
+        x_train = kwargs.get("x_train", [])
+        y_train = kwargs.get("y_train", [])
+        if not x_train or not y_train:
+            return {"status": "error", "error": "x_train and y_train are required"}
+        result = orch.fit_surrogate(
+            x_data=x_train,
+            y_data=y_train,
+            max_order=kwargs.get("max_order", 3),
+            dist_type=kwargs.get("dist_type", "uniform"),
+        )
+        x_predict = kwargs.get("x_predict")
+        preds = []
+        if x_predict:
+            for xp in x_predict:
+                p = orch.gp_predict(x_train, y_train, xp)
+                preds.append(p)
+        return {"status": "success", "fit": result, "predictions": preds}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_mc_optimize(**kwargs: Any) -> dict[str, Any]:
+    """Run Bayesian optimization to find optimal parameters."""
+    try:
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+        import numpy as np
+        orch = PolyglotMCOrchestrator()
+        param_ranges = kwargs.get("param_ranges", [[0.0, 1.0]])
+        fitness_expr = kwargs.get("fitness_expr", "x[0]")
+        n_initial = kwargs.get("n_initial_samples", 50)
+        n_iterations = kwargs.get("n_iterations", 20)
+        n_candidates = kwargs.get("n_candidates", 100)
+        seed = kwargs.get("seed", 42)
+
+        rng = np.random.RandomState(seed)
+        initial_x = [[rng.uniform(lo, hi) for lo, hi in param_ranges] for _ in range(n_initial)]
+
+        def fitness_fn(x):
+            try:
+                return float(eval(fitness_expr, {"x": x, "np": np}))
+            except Exception:
+                return 0.0
+
+        initial_y = [fitness_fn(x) for x in initial_x]
+        result = orch.bayesian_optimize(
+            initial_x=initial_x,
+            initial_y=initial_y,
+            param_ranges=param_ranges,
+            fitness_expr=fitness_expr,
+            n_iterations=n_iterations,
+            n_candidates=n_candidates,
+            seed=seed,
+        )
+        return {"status": "success", **result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_mc_rare_event(**kwargs: Any) -> dict[str, Any]:
+    """Estimate rare event probabilities."""
+    try:
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+        orch = PolyglotMCOrchestrator()
+        method = kwargs.get("method", "subset")
+        dim = kwargs.get("dim", 2)
+        n_samples = kwargs.get("n_samples", 1000)
+        threshold = kwargs.get("threshold", 2.0)
+        g_expr = kwargs.get("g_expr", "threshold - sum_sq")
+        seed = kwargs.get("seed", 42)
+
+        if method == "subset":
+            result = orch.subset_simulation(
+                dim=dim, n_samples=n_samples, target_pf=0.1,
+                threshold=threshold, g_expr=g_expr, seed=seed,
+            )
+        elif method == "splitting":
+            result = orch.subset_simulation(
+                dim=dim, n_samples=n_samples, target_pf=0.1,
+                threshold=threshold, g_expr=g_expr, seed=seed,
+            )
+        elif method == "importance":
+            result = orch.importance_sampling_rare(
+                dim=dim, n_samples=n_samples, threshold=threshold,
+                g_expr=g_expr, seed=seed,
+            )
+        else:
+            return {"status": "error", "error": f"Unknown method: {method}"}
+
+        return {"status": "success", "probability": result.get("probability", 0.0), **result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_mc_sde(**kwargs: Any) -> dict[str, Any]:
+    """Solve stochastic differential equations."""
+    try:
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+        orch = PolyglotMCOrchestrator()
+        x0 = float(kwargs.get("x0", 100.0))
+        t_end = float(kwargs.get("t_end", 1.0))
+        n_steps = int(kwargs.get("n_steps", 100))
+        n_paths = int(kwargs.get("n_paths", 1000))
+        drift_type = kwargs.get("drift_type", "gbm")
+        mu = float(kwargs.get("mu", 0.05))
+        sigma = float(kwargs.get("sigma", 0.2))
+        solver = kwargs.get("solver", "euler")
+        mlmc = kwargs.get("mlmc", False)
+        seed = kwargs.get("seed", 42)
+
+        if n_paths > 1:
+            result = orch.sde_parallel_euler(
+                x0=x0, t_end=t_end, n_steps=n_steps, n_paths=n_paths,
+                drift_type=drift_type, mu=mu, sigma=sigma, seed=seed,
+            )
+        else:
+            result = orch.sde_euler(
+                x0=x0, t_end=t_end, n_steps=n_steps,
+                drift_type=drift_type, mu=mu, sigma=sigma, seed=seed,
+            )
+
+        if mlmc:
+            mlmc_result = orch.sde_mlmc(
+                x0=x0, t_end=t_end, n_steps=n_steps,
+                drift_type=drift_type, mu=mu, sigma=sigma, seed=seed,
+            )
+            result["mlmc"] = mlmc_result
+
+        return {"status": "success", **result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_mc_superforecaster(**kwargs: Any) -> dict[str, Any]:
+    """Run the full superforecaster pipeline."""
+    try:
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+        import numpy as np
+        orch = PolyglotMCOrchestrator()
+        param_ranges = kwargs.get("param_ranges", [[0.0, 1.0]])
+        fitness_expr = kwargs.get("fitness_expr", "x[0]")
+        n_initial = kwargs.get("n_initial_samples", 100)
+        n_bo_iterations = kwargs.get("n_bo_iterations", 20)
+        seed = kwargs.get("seed", 42)
+
+        rng = np.random.RandomState(seed)
+        initial_x = [[rng.uniform(lo, hi) for lo, hi in param_ranges] for _ in range(n_initial)]
+
+        def fitness_fn(x):
+            try:
+                return float(eval(fitness_expr, {"x": x, "np": np}))
+            except Exception:
+                return 0.0
+
+        result = orch.superforecaster_estimate(
+            param_ranges=param_ranges,
+            fitness_fn=fitness_fn,
+            n_initial_samples=n_initial,
+            n_bo_iterations=n_bo_iterations,
+            seed=seed,
+        )
+        return {"status": "success", **result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_simulation_introspect(**kwargs: Any) -> dict[str, Any]:
+    """Run introspective simulation (yin-within-yang) via SimulationOrchestrator."""
+    try:
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            get_simulation_orchestrator,
+        )
+        orch = get_simulation_orchestrator()
+        result = orch.run_introspective(
+            space=kwargs.get("space", "guna_balance"),
+            n_trials=kwargs.get("n_trials", 100),
+            n_bo_iterations=kwargs.get("n_bo_iterations", 20),
+            seed=kwargs.get("seed", 42),
+        )
+        d = result.to_dict()
+        return {
+            "status": "success",
+            "space": result.subtype,
+            "best_fitness": d["best_fitness"],
+            "optimal_parameters": d["best_params"],
+            "sensitivity": d["sensitivity"],
+            "statistics": d["statistics"],
+            "execution_time_ms": d["execution_time_ms"],
+            "memory_id": d["memory_id"],
+            "dag_experiment_id": d["dag_experiment_id"],
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_simulation_forecast(**kwargs: Any) -> dict[str, Any]:
+    """Run external research simulation (yang-within-yin) via SimulationOrchestrator."""
+    try:
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            get_simulation_orchestrator,
+        )
+        orch = get_simulation_orchestrator()
+        model_type = kwargs.get("model_type", "sde")
+        research_query = kwargs.get("research_query", "")
+        result = orch.run_external(
+            model_type=model_type,
+            research_query=research_query,
+            **{k: v for k, v in kwargs.items() if k not in ("model_type", "research_query")},
+        )
+        d = result.to_dict()
+        return {
+            "status": "success",
+            "model_type": result.subtype,
+            "research_query": research_query,
+            "best_fitness": d["best_fitness"],
+            "statistics": d["statistics"],
+            "execution_time_ms": d["execution_time_ms"],
+            "memory_id": d["memory_id"],
+            "dag_experiment_id": d["dag_experiment_id"],
+            "error": d["error"],
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_simulation_status(**kwargs: Any) -> dict[str, Any]:
+    """Get SimulationOrchestrator status."""
+    try:
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            get_simulation_orchestrator,
+        )
+        orch = get_simulation_orchestrator()
+        status = orch.get_status()
+        return {"status": "success", **status}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_simulation_recursive(**kwargs: Any) -> dict[str, Any]:
+    """Run recursive yin/yang simulation cycle."""
+    try:
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            get_simulation_orchestrator,
+        )
+        orch = get_simulation_orchestrator()
+        n_cycles = kwargs.get("n_cycles", 3)
+        results = orch.run_recursive_cycle(
+            n_cycles=n_cycles,
+            introspective_space=kwargs.get("introspective_space", "guna_balance"),
+            external_model=kwargs.get("external_model", "sde"),
+            seed=kwargs.get("seed", 42),
+        )
+        intro_count = sum(1 for r in results if r.mode == "introspective")
+        ext_count = sum(1 for r in results if r.mode == "external")
+        return {
+            "status": "success",
+            "n_cycles": n_cycles,
+            "results": [r.to_dict() for r in results],
+            "summary": {
+                "total_simulations": len(results),
+                "introspective_count": intro_count,
+                "external_count": ext_count,
+            },
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
