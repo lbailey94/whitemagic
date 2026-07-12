@@ -22,6 +22,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _try_import_dream_cycle():
+    """Lazy import DreamCycle to avoid circular dependencies."""
+    try:
+        from whitemagic.core.dreaming.dream_cycle import DreamCycle, DreamPhase
+        return DreamCycle, DreamPhase
+    except Exception:
+        return None, None
+
+
 @dataclass
 class ConsolidationReport:
     """Report from dream-cycle consolidation of a simulation."""
@@ -102,9 +111,32 @@ class DreamCycleIntegration:
         data: dict[str, Any],
         galaxy: str | None,
     ) -> ConsolidationReport:
-        """Run a single dream-cycle phase for simulation consolidation."""
+        """Run a single dream-cycle phase for simulation consolidation.
+
+        Delegates to the real DreamCycle when available, falling back to
+        simulated phases for standalone operation.
+        """
         report = ConsolidationReport(simulation_id=sim_id, phase=phase)
 
+        # Try delegating to the real DreamCycle
+        DreamCycle, DreamPhase = _try_import_dream_cycle()
+        if DreamCycle is not None:
+            try:
+                real_result = self._delegate_to_dream_cycle(
+                    phase, data, galaxy, DreamPhase
+                )
+                if real_result is not None:
+                    report.memories_consolidated = real_result.get("memories_consolidated", 0)
+                    report.associations_discovered = real_result.get("associations_discovered", 0)
+                    if real_result.get("insights"):
+                        report.insights.extend(real_result["insights"])
+                    if real_result.get("narrative"):
+                        report.narrative = real_result["narrative"]
+                    return report
+            except Exception as e:
+                logger.debug("DreamCycle delegation failed for %s: %s", phase, e)
+
+        # Fallback: simulated phases
         if phase == "consolidation":
             # Cluster and promote simulation memories
             report.memories_consolidated = data.get("events_count", 0)
@@ -159,6 +191,60 @@ class DreamCycleIntegration:
             )
 
         return report
+
+    def _delegate_to_dream_cycle(
+        self,
+        phase: str,
+        data: dict[str, Any],
+        galaxy: str | None,
+        DreamPhase: Any,
+    ) -> dict[str, Any] | None:
+        """Delegate a phase to the real DreamCycle implementation.
+
+        Maps simulation phases to DreamPhase enum values and calls the
+        corresponding dream cycle method.
+        """
+        from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+
+        try:
+            dc = get_dream_cycle()
+
+            phase_map = {
+                "consolidation": DreamPhase.CONSOLIDATION,
+                "serendipity": DreamPhase.SERENDIPITY,
+                "kaizen": DreamPhase.KAIZEN,
+                "oracle": DreamPhase.ORACLE,
+                "prediction": DreamPhase.PREDICTION,
+                "narrative": DreamPhase.NARRATIVE,
+            }
+
+            dp = phase_map.get(phase)
+            if dp is None:
+                return None
+
+            # Call the corresponding dream phase method
+            method_map = {
+                DreamPhase.CONSOLIDATION: "_dream_consolidation",
+                DreamPhase.SERENDIPITY: "_dream_serendipity",
+                DreamPhase.KAIZEN: "_dream_kaizen",
+                DreamPhase.ORACLE: "_dream_oracle",
+                DreamPhase.PREDICTION: "_dream_prediction",
+                DreamPhase.NARRATIVE: "_dream_narrative",
+            }
+
+            method_name = method_map.get(dp)
+            if method_name and hasattr(dc, method_name):
+                result = getattr(dc, method_name)()
+                return {
+                    "memories_consolidated": result.get("consolidated", 0) if isinstance(result, dict) else 0,
+                    "associations_discovered": result.get("connections", 0) if isinstance(result, dict) else 0,
+                    "insights": [result.get("insight", "")] if isinstance(result, dict) and result.get("insight") else [],
+                    "narrative": result.get("narrative", "") if isinstance(result, dict) else "",
+                }
+        except Exception as e:
+            logger.debug("DreamCycle delegation error: %s", e)
+
+        return None
 
     def _mine_cross_sim_associations(
         self, sim_id: str, data: dict[str, Any]

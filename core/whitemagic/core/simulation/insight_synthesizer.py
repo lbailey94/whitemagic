@@ -32,6 +32,7 @@ class Insight:
     cross_domain_score: float = 0.0  # cross-domain potential
     calibration_confidence: float = 0.0  # from calibration bridge
     composite_rank: float = 0.0  # weighted combination
+    confidence: float = 1.0  # adjusted by EmergenceEngine novelty filtering
     source_trajectories: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
@@ -110,8 +111,46 @@ class InsightSynthesizer:
         # 6. Rank by composite score
         insights.sort(key=lambda i: i.composite_rank, reverse=True)
 
+        # 7. Feed to EmergenceEngine for novelty filtering
+        insights = self._filter_via_emergence_engine(insights)
+
         logger.info("Synthesized %d insights from %d trajectories", len(insights), len(trajectory_results))
         return insights
+
+    def _filter_via_emergence_engine(self, insights: list[Insight]) -> list[Insight]:
+        """Feed insights through EmergenceEngine novelty filtering.
+
+        The EmergenceEngine suppresses recursive echoes — insights that
+        are structurally identical to previously reported ones get
+        reduced confidence or are suppressed entirely.
+        """
+        try:
+            from whitemagic.core.intelligence.agentic.emergence_engine import (
+                get_emergence_engine,
+            )
+            engine = get_emergence_engine()
+            filtered = []
+            for insight in insights:
+                # Create an EmergenceInsight-like dict for the engine
+                emergence_dict = {
+                    "type": insight.insight_type,
+                    "description": insight.statement,
+                    "tags": [f"sim_{insight.insight_type}"],
+                    "confidence": insight.composite_rank,
+                }
+                # Use the engine's novelty filter
+                novel = engine._filter_novel(emergence_dict)
+                if novel is not None:
+                    # If confidence was reduced, reflect it
+                    if novel.get("confidence", 1.0) < insight.composite_rank:
+                        insight.confidence = novel["confidence"]
+                        if "(recurring)" in novel.get("description", ""):
+                            insight.statement = f"{insight.statement} (recurring)"
+                    filtered.append(insight)
+            return filtered if filtered else insights
+        except Exception:
+            # If EmergenceEngine isn't available, return unfiltered
+            return insights
 
     def _extract_patterns(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Extract recurring patterns from trajectory results."""
