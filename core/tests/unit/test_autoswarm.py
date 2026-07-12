@@ -24,8 +24,12 @@ def autoswarm():
     """Get a fresh autoswarm instance with clean DAG state."""
     from whitemagic.core.evolution.research_dag import ResearchDAG
     ResearchDAG._instance = None
+    EvolutionaryAutoswarm._instance = None
     swarm = get_autoswarm()
-    return swarm
+    yield swarm
+    # Teardown: reset singletons to prevent state leakage in parallel tests
+    EvolutionaryAutoswarm._instance = None
+    ResearchDAG._instance = None
 
 
 class TestCampaignConfig:
