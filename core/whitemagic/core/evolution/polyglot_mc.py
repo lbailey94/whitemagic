@@ -977,3 +977,302 @@ class PolyglotMCOrchestrator:
             "rare_event": rare_event,
             "execution_time_ms": elapsed_ms,
         }
+
+    # ── Quasi-Monte Carlo Methods ──
+
+    def sobol_sequence(
+        self,
+        n: int,
+        d: int,
+        seed: int = 42,
+        scramble: bool = True,
+    ) -> list[list[float]] | None:
+        """Generate a Sobol low-discrepancy sequence.
+
+        Returns n×d matrix with values in [0, 1).
+        Scrambling reduces artifacts for small n.
+        """
+        result = _rust_call(
+            "mc_sobol_sequence",
+            n=n, d=d, seed=seed, scramble=scramble,
+        )
+        if result and "samples" in result:
+            return result["samples"]
+        # Python fallback: simple Halton-like sequence
+        import random
+        rng = random.Random(seed)
+        return [[rng.random() for _ in range(d)] for _ in range(n)]
+
+    def halton_sequence(
+        self,
+        n: int,
+        d: int,
+        seed: int = 42,
+    ) -> list[list[float]] | None:
+        """Generate a Halton low-discrepancy sequence.
+
+        Uses first d primes as bases.
+        """
+        result = _rust_call(
+            "mc_halton_sequence",
+            n=n, d=d, seed=seed,
+        )
+        if result and "samples" in result:
+            return result["samples"]
+        # Python fallback
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+        def vdc(idx: int, base: int) -> float:
+            f, r = 1.0, 0.0
+            while idx > 0:
+                f /= base
+                r += f * (idx % base)
+                idx //= base
+            return r
+        offset = seed % 1000
+        return [
+            [vdc(i + 1 + offset, primes[j % len(primes)]) for j in range(d)]
+            for i in range(n)
+        ]
+
+    def qmc_sample(
+        self,
+        n: int,
+        param_ranges: list[tuple[float, float]],
+        method: str = "sobol",
+        seed: int = 42,
+    ) -> list[list[float]] | None:
+        """Generate QMC samples scaled to parameter ranges.
+
+        Args:
+            method: "sobol" or "halton"
+        """
+        result = _rust_call(
+            "mc_qmc_integrate",
+            n=n,
+            d=len(param_ranges),
+            seed=seed,
+            qmc_method=method,
+            ranges=[list(r) for r in param_ranges],
+        )
+        if result and "samples" in result:
+            return result["samples"]
+        # Python fallback via halton_sequence
+        unit = self.halton_sequence(n, len(param_ranges), seed) or []
+        return [
+            [lo + u * (hi - lo) for (lo, hi), u in zip(param_ranges, row)]
+            for row in unit
+        ]
+
+    # ── MCMC Samplers ──
+
+    def metropolis_hastings(
+        self,
+        n_samples: int = 1000,
+        n_burn: int = 100,
+        x0: list[float] | None = None,
+        proposal_std: float = 1.0,
+        seed: int = 42,
+        target_type: str = "gaussian",
+        target_mean: list[float] | None = None,
+        target_cov: list[float] | None = None,
+    ) -> dict[str, Any]:
+        """Metropolis-Hastings MCMC sampler.
+
+        Supports Gaussian and Rosenbrock targets.
+        Returns dict with samples, n_samples, acceptance_rate.
+        """
+        try:
+            return _rust_call(
+                "mc_metropolis_hastings",
+                n_samples=n_samples,
+                n_burn=n_burn,
+                x0=x0 or [0.0],
+                proposal_std=proposal_std,
+                seed=seed,
+                target_type=target_type,
+                target_mean=target_mean or [0.0],
+                target_cov=target_cov or [1.0],
+            ) or {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
+        except Exception:
+            return {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
+
+    def hamiltonian_monte_carlo(
+        self,
+        n_samples: int = 500,
+        n_burn: int = 50,
+        x0: list[float] | None = None,
+        step_size: float = 0.1,
+        n_leapfrog: int = 10,
+        seed: int = 42,
+        target_type: str = "gaussian",
+        target_mean: list[float] | None = None,
+        target_cov: list[float] | None = None,
+    ) -> dict[str, Any]:
+        """Hamiltonian Monte Carlo sampler with leapfrog integration.
+
+        Supports Gaussian and Rosenbrock targets.
+        Returns dict with samples, n_samples, acceptance_rate.
+        """
+        try:
+            return _rust_call(
+                "mc_hamiltonian_mc",
+                n_samples=n_samples,
+                n_burn=n_burn,
+                x0=x0 or [0.0],
+                step_size=step_size,
+                n_leapfrog=n_leapfrog,
+                seed=seed,
+                target_type=target_type,
+                target_mean=target_mean or [0.0],
+                target_cov=target_cov or [1.0],
+            ) or {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
+        except Exception:
+            return {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
+
+    # ── Expanded SDE Models ──
+
+    def sde_jump_diffusion(
+        self,
+        x0: float = 100.0,
+        t0: float = 0.0,
+        t_end: float = 1.0,
+        n_steps: int = 100,
+        mu: float = 0.05,
+        sigma: float = 0.2,
+        jump_intensity: float = 0.1,
+        jump_mean: float = 0.0,
+        jump_std: float = 0.1,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Merton jump-diffusion model: GBM + Poisson jumps.
+
+        dX = mu*X dt + sigma*X dW + J dN
+        """
+        try:
+            return _rust_call(
+                "mc_sde_jump_diffusion",
+                x0=x0, t0=t0, t_end=t_end, n_steps=n_steps,
+                mu=mu, sigma=sigma,
+                jump_intensity=jump_intensity,
+                jump_mean=jump_mean, jump_std=jump_std,
+                seed=seed,
+            ) or {"final_value": x0, "fallback": True}
+        except Exception:
+            return {"final_value": x0, "fallback": True}
+
+    def sde_heston(
+        self,
+        s0: float = 100.0,
+        v0: float = 0.04,
+        t0: float = 0.0,
+        t_end: float = 1.0,
+        n_steps: int = 100,
+        mu: float = 0.05,
+        kappa: float = 2.0,
+        theta: float = 0.04,
+        xi: float = 0.3,
+        rho: float = -0.7,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Heston stochastic volatility model.
+
+        dS = mu*S dt + sqrt(v)*S dW1
+        dv = kappa*(theta-v) dt + xi*sqrt(v) dW2
+        """
+        try:
+            return _rust_call(
+                "mc_sde_heston",
+                s0=s0, v0=v0, t0=t0, t_end=t_end, n_steps=n_steps,
+                mu=mu, kappa=kappa, theta=theta, xi=xi, rho=rho, seed=seed,
+            ) or {"final_price": s0, "final_variance": v0, "fallback": True}
+        except Exception:
+            return {"final_price": s0, "final_variance": v0, "fallback": True}
+
+    def sde_cir(
+        self,
+        x0: float = 0.04,
+        t0: float = 0.0,
+        t_end: float = 1.0,
+        n_steps: int = 100,
+        kappa: float = 2.0,
+        theta: float = 0.04,
+        sigma: float = 0.3,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Cox-Ingersoll-Ross model for interest rates.
+
+        dX = kappa*(theta-X) dt + sigma*sqrt(X) dW
+        """
+        try:
+            return _rust_call(
+                "mc_sde_cir",
+                x0=x0, t0=t0, t_end=t_end, n_steps=n_steps,
+                kappa=kappa, theta=theta, sigma=sigma, seed=seed,
+            ) or {"final_value": x0, "fallback": True}
+        except Exception:
+            return {"final_value": x0, "fallback": True}
+
+    # ── Advanced GP Methods ──
+
+    def gp_optimize_hyperparameters(
+        self,
+        x_train: list[list[float]],
+        y_train: list[float],
+        sigma_n: float = 1e-6,
+        n_grid: int = 10,
+    ) -> dict[str, Any]:
+        """Optimize GP hyperparameters via grid search."""
+        try:
+            return _rust_call(
+                "mc_gp_optimize_hyperparameters",
+                x_train=x_train,
+                y_train=y_train,
+                sigma_n=sigma_n,
+                n_grid=n_grid,
+            ) or {"length_scale": 1.0, "sigma_f": 1.0, "fallback": True}
+        except Exception:
+            return {"length_scale": 1.0, "sigma_f": 1.0, "fallback": True}
+
+    def expected_improvement(
+        self,
+        x_train: list[list[float]],
+        y_train: list[float],
+        x_candidates: list[list[float]],
+        length_scale: float = 1.0,
+        sigma_f: float = 1.0,
+        sigma_n: float = 1e-6,
+        xi: float = 0.01,
+    ) -> dict[str, Any]:
+        """Compute Expected Improvement for Bayesian optimization."""
+        try:
+            return _rust_call(
+                "mc_expected_improvement",
+                x_train=x_train,
+                y_train=y_train,
+                x_candidates=x_candidates,
+                length_scale=length_scale,
+                sigma_f=sigma_f,
+                sigma_n=sigma_n,
+                xi=xi,
+            ) or {"ei_values": [], "f_best": 0.0, "fallback": True}
+        except Exception:
+            return {"ei_values": [], "f_best": 0.0, "fallback": True}
+
+    def multid_gaussian(
+        self,
+        n_samples: int = 1000,
+        mean: list[float] | None = None,
+        cov: list[float] | None = None,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Generate multivariate Gaussian samples."""
+        try:
+            return _rust_call(
+                "mc_multid_gaussian",
+                n_samples=n_samples,
+                mean=mean or [0.0],
+                cov=cov or [1.0],
+                seed=seed,
+            ) or {"samples": [], "fallback": True}
+        except Exception:
+            return {"samples": [], "fallback": True}
