@@ -728,6 +728,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "mc.superforecaster": "gana_dipper",
     "simulation.introspect": "gana_ghost",
     "simulation.forecast": "gana_chariot",
+    "simulation.status": "gana_ghost",
+    "simulation.recursive": "gana_ghost",
     # ── v24.1: Security Bounty Tools ──
     # Foundry + ABI → Chariot (codebase analysis & navigation)
     "foundry.build": "gana_chariot",

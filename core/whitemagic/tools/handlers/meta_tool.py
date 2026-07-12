@@ -1213,6 +1213,8 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(superforecast\w*|super.*forecast)\b", re.I), "gana_dipper", "mc.superforecaster"),
     (re.compile(r"\b(introspect.*sim|simulat.*introspect|internal.*optim|self.*optim)\b", re.I), "gana_ghost", "simulation.introspect"),
     (re.compile(r"\b(forecast.*sim|simulat.*forecast|external.*sim|research.*sim)\b", re.I), "gana_chariot", "simulation.forecast"),
+    (re.compile(r"\b(simulation.*status|sim.*status|sim.*history)\b", re.I), "gana_ghost", "simulation.status"),
+    (re.compile(r"\b(recursive.*sim|sim.*recursive|yin.*yang.*cycle|yang.*yin.*cycle)\b", re.I), "gana_ghost", "simulation.recursive"),
     # ── gana_encampment: broker, sangha, gan ying ──
     (re.compile(r"\b(broker.*history|broker.*status|message.*history)\b", re.I), "gana_encampment", "broker.history"),
     (re.compile(r"\b(ganying.*emit|emit.*ganying|gan.*ying.*emit)\b", re.I), "gana_encampment", "ganying_emit"),

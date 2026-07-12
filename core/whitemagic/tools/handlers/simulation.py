@@ -378,6 +378,9 @@ def handle_simulation_introspect(**kwargs: Any) -> dict[str, Any]:
     system. Uses the superforecaster pipeline to optimize consciousness parameters
     (guna balance, coherence weights, emergence thresholds, health setpoints).
 
+    Delegates to SimulationOrchestrator.run_introspective() which handles
+    persistence to memory and Research DAG recording.
+
     Args:
         space: Which internal space to optimize (guna_balance, coherence_optimization,
                emergence_thresholds, health_setpoints). Default: guna_balance.
@@ -386,67 +389,31 @@ def handle_simulation_introspect(**kwargs: Any) -> dict[str, Any]:
         seed: Random seed.
     """
     try:
-        from whitemagic.core.consciousness.possibility_explorer import get_possibility_explorer
-        explorer = get_possibility_explorer()
+        from whitemagic.core.consciousness.simulation_orchestrator import get_simulation_orchestrator
+        orch = get_simulation_orchestrator()
         space = kwargs.get("space", "guna_balance")
         n_trials = int(kwargs.get("n_trials", 100))
         n_bo_iterations = int(kwargs.get("n_bo_iterations", 20))
         seed = int(kwargs.get("seed", 42))
 
-        space_def = explorer.DEFAULT_SPACES.get(space, {})
-        param_ranges = space_def.get("params", {})
-        fitness_name = space_def.get("fitness", "")
-        fitness_fn = explorer._get_fitness_fn(fitness_name)
-
-        if not param_ranges:
-            return {"status": "error", "error": f"Unknown space: {space}"}
-
-        ranges_list = [[lo, hi] for lo, hi in param_ranges.values()]
-        param_names = list(param_ranges.keys())
-
-        def wrapped_fitness(params):
-            param_dict = dict(zip(param_names, params))
-            return fitness_fn(param_dict)
-
-        orch = _get_orchestrator()
-        result = orch.superforecaster_estimate(
-            param_ranges=[(r[0], r[1]) for r in ranges_list],
-            fitness_fn=wrapped_fitness,
-            n_initial_samples=n_trials,
+        result = orch.run_introspective(
+            space=space,
+            n_trials=n_trials,
             n_bo_iterations=n_bo_iterations,
             seed=seed,
         )
 
-        best_params_list = result.get("best_params", [])
-        best_params_dict = dict(zip(param_names, best_params_list)) if best_params_list else {}
-
-        _persist_simulation_memory(
-            title=f"Introspective simulation: {space} fitness={result.get('best_fitness', 0):.4f}",
-            content=f"Introspective simulation of {space}. Optimal parameters: {best_params_dict}. "
-                    f"Surrogate R²: {result.get('surrogate_r_squared', 0):.4f}. "
-                    f"Sensitivity: {result.get('parameter_sensitivity', [])}. "
-                    f"Statistics: {result.get('output_statistics', {})}",
-            tags=["introspective_simulation", space, "yin_within_yang"],
-            importance=0.8,
-            metadata={"space": space, **result},
-        )
-
-        _record_dag_experiment(
-            hypothesis=f"Introspective optimization of {space}",
-            parameters=best_params_dict,
-            fitness_score=result.get("best_fitness", 0),
-            outcome={"space": space, **result},
-        )
-
         return {
-            "status": "success",
+            "status": "success" if result.success else "error",
             "space": space,
-            "optimal_parameters": best_params_dict,
-            "best_fitness": result.get("best_fitness", 0),
-            "surrogate_r_squared": result.get("surrogate_r_squared", 0),
-            "parameter_sensitivity": result.get("parameter_sensitivity", []),
-            "output_statistics": result.get("output_statistics", {}),
-            "execution_time_ms": result.get("execution_time_ms", 0),
+            "optimal_parameters": result.best_params,
+            "best_fitness": result.best_fitness,
+            "statistics": result.statistics,
+            "parameter_sensitivity": result.sensitivity,
+            "execution_time_ms": result.execution_time_ms,
+            "memory_id": result.memory_id,
+            "dag_experiment_id": result.dag_experiment_id,
+            "error": result.error,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -462,6 +429,9 @@ def handle_simulation_forecast(**kwargs: Any) -> dict[str, Any]:
     simulation framework. Uses SDE solvers and rare event estimation to model
     external systems, forecast outcomes, and assess risks.
 
+    Delegates to SimulationOrchestrator.run_external() which handles
+    persistence to memory and Research DAG recording.
+
     Args:
         model_type: 'sde' for stochastic differential equations, 'rare_event' for
                     rare event probability estimation, 'superforecaster' for full pipeline.
@@ -475,41 +445,92 @@ def handle_simulation_forecast(**kwargs: Any) -> dict[str, Any]:
         seed: Random seed.
     """
     try:
-        model_type = kwargs.get("model_type", "sde")
-        research_query = kwargs.get("research_query", "")
-        seed = int(kwargs.get("seed", 42))
-        start = time.time()
+        from whitemagic.core.consciousness.simulation_orchestrator import get_simulation_orchestrator
+        orch = get_simulation_orchestrator()
+        model_type = kwargs.pop("model_type", "sde")
+        research_query = kwargs.pop("research_query", "")
 
-        if model_type == "sde":
-            sub_handler = handle_mc_sde
-            sub_result = sub_handler(**kwargs)
-        elif model_type == "rare_event":
-            sub_handler = handle_mc_rare_event
-            sub_result = sub_handler(**kwargs)
-        elif model_type == "superforecaster":
-            sub_handler = handle_mc_superforecaster
-            sub_result = sub_handler(**kwargs)
-        else:
-            return {"status": "error", "error": f"Unknown model_type: {model_type}"}
-
-        elapsed_ms = (time.time() - start) * 1000
-
-        if sub_result.get("status") == "success":
-            _persist_simulation_memory(
-                title=f"External forecast: {model_type} ({research_query[:60]})" if research_query else f"External forecast: {model_type}",
-                content=f"Yang-within-yin simulation: {model_type}. Query: {research_query}. "
-                        f"Result: {sub_result}. Elapsed: {elapsed_ms:.1f}ms",
-                tags=["external_forecast", model_type, "yang_within_yin"],
-                importance=0.7,
-                metadata={"model_type": model_type, "research_query": research_query, **sub_result},
-            )
+        result = orch.run_external(
+            model_type=model_type,
+            research_query=research_query,
+            **kwargs,
+        )
 
         return {
-            "status": sub_result.get("status", "error"),
+            "status": "success" if result.success else "error",
             "model_type": model_type,
             "research_query": research_query,
-            "execution_time_ms": elapsed_ms,
-            **{k: v for k, v in sub_result.items() if k != "status"},
+            "statistics": result.statistics,
+            "best_params": result.best_params,
+            "best_fitness": result.best_fitness,
+            "parameter_sensitivity": result.sensitivity,
+            "execution_time_ms": result.execution_time_ms,
+            "memory_id": result.memory_id,
+            "dag_experiment_id": result.dag_experiment_id,
+            "error": result.error,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ── Simulation Orchestrator Status & Recursive Cycle ──────────────────
+
+
+def handle_simulation_status(**kwargs: Any) -> dict[str, Any]:
+    """Get SimulationOrchestrator status — simulation history and counts.
+
+    Returns total simulations run, introspective vs external counts,
+    and recent results (last 10).
+    """
+    try:
+        from whitemagic.core.consciousness.simulation_orchestrator import get_simulation_orchestrator
+        orch = get_simulation_orchestrator()
+        return {"status": "success", **orch.get_status()}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_simulation_recursive(**kwargs: Any) -> dict[str, Any]:
+    """Run a recursive yin/yang simulation cycle.
+
+    Alternates between introspective (yin-within-yang) and external
+    (yang-within-yin) simulation, feeding results forward:
+
+        introspective -> external -> introspective -> external -> ...
+
+    Each cycle's results inform the next cycle's parameters.
+
+    Args:
+        n_cycles: Number of yin/yang cycles (default 3).
+        introspective_space: Internal space to optimize (default guna_balance).
+        external_model: External model type (default sde).
+        seed: Random seed.
+    """
+    try:
+        from whitemagic.core.consciousness.simulation_orchestrator import get_simulation_orchestrator
+        orch = get_simulation_orchestrator()
+        n_cycles = int(kwargs.get("n_cycles", 3))
+        introspective_space = kwargs.get("introspective_space", "guna_balance")
+        external_model = kwargs.get("external_model", "sde")
+        seed = int(kwargs.get("seed", 42))
+
+        results = orch.run_recursive_cycle(
+            n_cycles=n_cycles,
+            introspective_space=introspective_space,
+            external_model=external_model,
+            seed=seed,
+        )
+
+        return {
+            "status": "success",
+            "n_cycles": n_cycles,
+            "results": [r.to_dict() for r in results],
+            "summary": {
+                "total_simulations": len(results),
+                "introspective_count": sum(1 for r in results if r.mode == "introspective"),
+                "external_count": sum(1 for r in results if r.mode == "external"),
+                "avg_fitness": sum(r.best_fitness for r in results) / len(results) if results else 0.0,
+            },
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}

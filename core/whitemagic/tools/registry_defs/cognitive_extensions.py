@@ -847,4 +847,26 @@ TOOLS: list[ToolDefinition] = [
             },
         },
     ),
+    ToolDefinition(
+        name="simulation.status",
+        description="Get SimulationOrchestrator status: total simulations, introspective vs external counts, and recent results.",
+        category=ToolCategory.METRICS,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+    ),
+    ToolDefinition(
+        name="simulation.recursive",
+        description="Run a recursive yin/yang simulation cycle: alternates introspective (yin-within-yang) and external (yang-within-yin) simulation, feeding results forward across cycles.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "n_cycles": {"type": "integer", "default": 3, "description": "Number of yin/yang cycles"},
+                "introspective_space": {"type": "string", "default": "guna_balance", "description": "Internal space to optimize"},
+                "external_model": {"type": "string", "default": "sde", "description": "External model type (sde, rare_event, superforecaster)"},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
 ]

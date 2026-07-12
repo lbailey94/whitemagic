@@ -169,6 +169,8 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "mc.superforecaster": LazyHandler("simulation", "handle_mc_superforecaster"),
     "simulation.introspect": LazyHandler("simulation", "handle_simulation_introspect"),
     "simulation.forecast": LazyHandler("simulation", "handle_simulation_forecast"),
+    "simulation.status": LazyHandler("simulation", "handle_simulation_status"),
+    "simulation.recursive": LazyHandler("simulation", "handle_simulation_recursive"),
     # ── Codebase Self-Model ──
     "codebase.scan": LazyHandler("codebase", "handle_codebase_scan"),
     "codebase.recall": LazyHandler("codebase", "handle_codebase_recall"),
