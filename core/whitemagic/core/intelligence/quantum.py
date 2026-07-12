@@ -29,7 +29,13 @@ from whitemagic.core.acceleration.quantum_bridge import (
     QuantumGraphEngine,
     QuantumNode,
     QuantumWalkConfig,
+    auto_select_manifold,
+    born_rule_distribution,
+    born_rule_sample,
+    embed_manifold,
     get_quantum_engine,
+    manifold_distance,
+    quantum_interference,
 )
 
 __all__ = [
@@ -38,5 +44,11 @@ __all__ = [
     "QuantumGraphEngine",
     "QuantumNode",
     "QuantumWalkConfig",
+    "auto_select_manifold",
+    "born_rule_distribution",
+    "born_rule_sample",
+    "embed_manifold",
     "get_quantum_engine",
+    "manifold_distance",
+    "quantum_interference",
 ]

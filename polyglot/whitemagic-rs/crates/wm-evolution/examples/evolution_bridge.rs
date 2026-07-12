@@ -40,6 +40,7 @@ use wm_evolution::{
     mc_integration,
     mc_mcmc,
     mc_qmc,
+    mc_quantum,
     mc_rare_event,
     mc_sde,
     mc_sensitivity,
@@ -1267,6 +1268,269 @@ fn handle_request(req: serde_json::Value) -> String {
                 "n_steps": n_steps,
                 "path_length": path.len()
             }))
+        }
+
+        // ── Quantum-Inspired Methods ──
+
+        "q_fubini_study_metric" => {
+            let state: Vec<f64> = params.get("state")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let jacobian: Vec<Vec<f64>> = params.get("jacobian")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let n_params = params.get("n_params").and_then(|v| v.as_u64()).unwrap_or(jacobian.len() as u64) as usize;
+            let metric = mc_quantum::fubini_study_metric(&state, &jacobian, n_params);
+            json_ok(serde_json::json!({"metric": metric, "n_params": n_params}))
+        }
+
+        "q_natural_gradient" => {
+            let params_arr: Vec<f64> = params.get("params")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let gradients: Vec<f64> = params.get("gradients")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let metric: Vec<Vec<f64>> = params.get("metric")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let lr = params.get("learning_rate").and_then(|v| v.as_f64()).unwrap_or(0.01);
+            let new_params = mc_quantum::natural_gradient_step(&params_arr, &gradients, &metric, lr);
+            json_ok(serde_json::json!({"new_params": new_params}))
+        }
+
+        "q_multiscale_bind" => {
+            let vectors: Vec<Vec<f64>> = params.get("vectors")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let bond_dim = params.get("bond_dim").and_then(|v| v.as_u64()).unwrap_or(2) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let result = mc_quantum::multiscale_bind(&vectors, bond_dim, seed);
+            json_ok(serde_json::json!({"result": result, "dim": result.len()}))
+        }
+
+        "q_manifold_distance" => {
+            let a: Vec<f64> = params.get("a")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let b: Vec<f64> = params.get("b")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let manifold = params.get("manifold").and_then(|v| v.as_str()).unwrap_or("euclidean");
+            let mt = match manifold {
+                "hyperbolic" => mc_quantum::ManifoldType::Hyperbolic,
+                "spherical" => mc_quantum::ManifoldType::Spherical,
+                _ => mc_quantum::ManifoldType::Euclidean,
+            };
+            let dist = mc_quantum::manifold_distance(&a, &b, mt);
+            json_ok(serde_json::json!({"distance": dist, "manifold": manifold}))
+        }
+
+        "q_embed_manifold" => {
+            let point: Vec<f64> = params.get("point")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let manifold = params.get("manifold").and_then(|v| v.as_str()).unwrap_or("euclidean");
+            let mt = match manifold {
+                "hyperbolic" => mc_quantum::ManifoldType::Hyperbolic,
+                "spherical" => mc_quantum::ManifoldType::Spherical,
+                _ => mc_quantum::ManifoldType::Euclidean,
+            };
+            let embedded = mc_quantum::embed_manifold(&point, mt);
+            json_ok(serde_json::json!({"embedded": embedded, "manifold": manifold}))
+        }
+
+        "q_riemannian_gradient" => {
+            let point: Vec<f64> = params.get("point")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let grad: Vec<f64> = params.get("gradient")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let manifold = params.get("manifold").and_then(|v| v.as_str()).unwrap_or("euclidean");
+            let mt = match manifold {
+                "hyperbolic" => mc_quantum::ManifoldType::Hyperbolic,
+                "spherical" => mc_quantum::ManifoldType::Spherical,
+                _ => mc_quantum::ManifoldType::Euclidean,
+            };
+            let rg = mc_quantum::riemannian_gradient(&point, &grad, mt);
+            json_ok(serde_json::json!({"riemannian_gradient": rg}))
+        }
+
+        "q_exponential_map" => {
+            let point: Vec<f64> = params.get("point")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let tangent: Vec<f64> = params.get("tangent")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let manifold = params.get("manifold").and_then(|v| v.as_str()).unwrap_or("euclidean");
+            let mt = match manifold {
+                "hyperbolic" => mc_quantum::ManifoldType::Hyperbolic,
+                "spherical" => mc_quantum::ManifoldType::Spherical,
+                _ => mc_quantum::ManifoldType::Euclidean,
+            };
+            let result = mc_quantum::exponential_map(&point, &tangent, mt);
+            json_ok(serde_json::json!({"result": result}))
+        }
+
+        "q_auto_manifold" => {
+            let points: Vec<Vec<f64>> = params.get("points")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let mt = mc_quantum::auto_select_manifold(&points);
+            let name = match mt {
+                mc_quantum::ManifoldType::Hyperbolic => "hyperbolic",
+                mc_quantum::ManifoldType::Spherical => "spherical",
+                mc_quantum::ManifoldType::Euclidean => "euclidean",
+            };
+            json_ok(serde_json::json!({"manifold": name}))
+        }
+
+        "q_born_sample" => {
+            let amplitudes: Vec<f64> = params.get("amplitudes")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let idx = mc_quantum::born_rule_sample(&amplitudes, seed);
+            json_ok(serde_json::json!({"index": idx}))
+        }
+
+        "q_born_batch" => {
+            let amplitudes: Vec<f64> = params.get("amplitudes")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let samples = mc_quantum::born_rule_batch_sample(&amplitudes, n, seed);
+            json_ok(serde_json::json!({"samples": samples, "n": samples.len()}))
+        }
+
+        "q_born_distribution" => {
+            let amplitudes: Vec<f64> = params.get("amplitudes")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let dist = mc_quantum::born_rule_distribution(&amplitudes);
+            let result: Vec<serde_json::Value> = dist.iter()
+                .map(|(i, p)| serde_json::json!({"index": i, "probability": p}))
+                .collect();
+            json_ok(serde_json::json!({"distribution": result}))
+        }
+
+        "q_interference" => {
+            let a: Vec<f64> = params.get("a")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let b: Vec<f64> = params.get("b")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let result = mc_quantum::quantum_interference(&a, &b);
+            json_ok(serde_json::json!({"interference": result}))
+        }
+
+        "q_berry_phase" => {
+            let states: Vec<Vec<f64>> = params.get("states")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let path_params: Vec<f64> = params.get("params")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let phase = mc_quantum::berry_phase(&states, &path_params);
+            json_ok(serde_json::json!({"phase": phase}))
+        }
+
+        "q_chern_number" => {
+            let curvature: Vec<Vec<f64>> = params.get("curvature")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let dtheta = params.get("dtheta").and_then(|v| v.as_f64()).unwrap_or(0.1);
+            let dphi = params.get("dphi").and_then(|v| v.as_f64()).unwrap_or(0.1);
+            let c = mc_quantum::chern_number(&curvature, dtheta, dphi);
+            json_ok(serde_json::json!({"chern_number": c}))
+        }
+
+        "q_topological_encode" => {
+            let data: Vec<f64> = params.get("data")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let n_redundant = params.get("n_redundant").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let (encoded, protection) = mc_quantum::topological_encode(&data, n_redundant, seed);
+            json_ok(serde_json::json!({"encoded": encoded, "protection": protection}))
+        }
+
+        "q_topological_decode" => {
+            let encoded: Vec<f64> = params.get("encoded")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+                .unwrap_or_default();
+            let data_len = params.get("data_len").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+            let n_redundant = params.get("n_redundant").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+            let decoded = mc_quantum::topological_decode(&encoded, data_len, n_redundant);
+            json_ok(serde_json::json!({"decoded": decoded}))
+        }
+
+        "q_quantum_walk_optimize" => {
+            let cost_matrix: Vec<Vec<f64>> = params.get("cost_matrix")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let n_steps = params.get("n_steps").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
+            let gamma = params.get("gamma").and_then(|v| v.as_f64()).unwrap_or(0.5);
+            let beta = params.get("beta").and_then(|v| v.as_f64()).unwrap_or(0.5);
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let (amps, best, cost) = mc_quantum::quantum_walk_optimize(&cost_matrix, n_steps, gamma, beta, seed);
+            json_ok(serde_json::json!({"amplitudes": amps, "best_index": best, "cost": cost}))
+        }
+
+        "q_qaoa_maxcut" => {
+            let adjacency: Vec<Vec<f64>> = params.get("adjacency")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|row| {
+                    row.as_array().map(|r| r.iter().filter_map(|x| x.as_f64()).collect())
+                }).collect())
+                .unwrap_or_default();
+            let n_steps = params.get("n_steps").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+            let (partition, cut) = mc_quantum::qaoa_maxcut(&adjacency, n_steps, seed);
+            json_ok(serde_json::json!({"partition": partition, "cut_value": cut}))
         }
 
         _ => json_error(&format!("Unknown method: {}", method)),

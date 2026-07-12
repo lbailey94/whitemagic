@@ -271,3 +271,130 @@ def get_quantum_engine() -> QuantumEngine:
     if _quantum_engine is None:
         _quantum_engine = QuantumEngine()
     return _quantum_engine
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Quantum-Inspired Upgrades: Born-rule, Manifold, Natural Gradient
+# ═════════════════════════════════════════════════════════════════════
+
+
+def born_rule_sample(amplitudes: list[float], seed: int = 42) -> int:
+    """Born-rule sampling: probability of outcome i = |amplitude_i|² / Σ|a_j|².
+
+    This is the fundamental quantum measurement postulate applied to
+    classical probability distributions. It naturally concentrates
+    probability on high-amplitude outcomes while maintaining exploration.
+    """
+    import random
+
+    total = sum(a * a for a in amplitudes)
+    if total < 1e-15:
+        return 0
+    rng = random.Random(seed)
+    r = rng.random() * total
+    cumsum = 0.0
+    for i, a in enumerate(amplitudes):
+        cumsum += a * a
+        if r <= cumsum:
+            return i
+    return len(amplitudes) - 1
+
+
+def born_rule_distribution(amplitudes: list[float]) -> list[tuple[int, float]]:
+    """Return Born-rule probability distribution: (index, probability) pairs."""
+    total = sum(a * a for a in amplitudes)
+    if total < 1e-15:
+        return [(i, 0.0) for i in range(len(amplitudes))]
+    return [(i, a * a / total) for i, a in enumerate(amplitudes)]
+
+
+def quantum_interference(a: list[float], b: list[float]) -> list[float]:
+    """Compute quantum interference pattern: |a + b|² = a² + b² + 2ab.
+
+    The cross term 2ab represents constructive (same sign) or
+    destructive (opposite sign) interference.
+    """
+    return [ai * ai + bi * bi + 2 * ai * bi for ai, bi in zip(a, b)]
+
+
+def manifold_distance(
+    a: list[float],
+    b: list[float],
+    manifold: str = "euclidean",
+) -> float:
+    """Compute distance on Euclidean, hyperbolic (Poincaré ball), or spherical manifold.
+
+    - Euclidean: sqrt(Σ(a-b)²)
+    - Hyperbolic: acosh(1 + 2||a-b||² / ((1-||a||²)(1-||b||²)))
+    - Spherical: arccos(a·b / (||a||·||b||))
+    """
+    if manifold == "euclidean":
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+    elif manifold == "hyperbolic":
+        norm_a = math.sqrt(sum(x * x for x in a))
+        norm_b = math.sqrt(sum(x * x for x in b))
+        diff_sq = sum((x - y) ** 2 for x, y in zip(a, b))
+        na = min(norm_a, 0.999)
+        nb = min(norm_b, 0.999)
+        denom = (1 - na * na) * (1 - nb * nb)
+        if denom < 1e-15:
+            return float("inf")
+        return math.acosh(1 + 2 * diff_sq / denom)
+    elif manifold == "spherical":
+        dot = sum(x * y for x, y in zip(a, b))
+        norm_a = math.sqrt(sum(x * x for x in a)) or 1e-15
+        norm_b = math.sqrt(sum(x * x for x in b)) or 1e-15
+        cos_theta = max(-1, min(1, dot / (norm_a * norm_b)))
+        return math.acos(cos_theta)
+    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+
+def embed_manifold(point: list[float], manifold: str = "euclidean") -> list[float]:
+    """Embed a point onto the specified manifold.
+
+    - Euclidean: identity
+    - Hyperbolic (Poincaré ball): x / (1 + sqrt(1 + ||x||²))
+    - Spherical: x / ||x||
+    """
+    if manifold == "euclidean":
+        return list(point)
+    elif manifold == "hyperbolic":
+        norm_sq = sum(x * x for x in point)
+        denom = 1 + math.sqrt(1 + norm_sq)
+        return [x / denom for x in point]
+    elif manifold == "spherical":
+        norm = math.sqrt(sum(x * x for x in point)) or 1e-15
+        return [x / norm for x in point]
+    return list(point)
+
+
+def auto_select_manifold(points: list[list[float]]) -> str:
+    """Automatically select the best manifold for given data.
+
+    Uses pairwise distance ratio: high ratio → hyperbolic (hierarchical),
+    many close points → spherical (clustered), else Euclidean.
+    """
+    if len(points) < 2:
+        return "euclidean"
+
+    distances = []
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            d = math.sqrt(
+                sum((a - b) ** 2 for a, b in zip(points[i], points[j]))
+            )
+            distances.append(d)
+    distances.sort()
+
+    min_d = distances[0] if distances else 1.0
+    max_d = distances[-1] if distances else 1.0
+    ratio = max_d / max(min_d, 1e-15)
+
+    n_close = sum(1 for d in distances if d < max_d * 0.3)
+    close_fraction = n_close / len(distances) if distances else 0
+
+    if ratio > 10 and close_fraction < 0.3:
+        return "hyperbolic"
+    elif close_fraction > 0.3:
+        return "spherical"
+    return "euclidean"

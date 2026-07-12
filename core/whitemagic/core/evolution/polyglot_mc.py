@@ -1276,3 +1276,315 @@ class PolyglotMCOrchestrator:
             ) or {"samples": [], "fallback": True}
         except Exception:
             return {"samples": [], "fallback": True}
+
+    # ── Quantum-Inspired Methods ──
+
+    def fubini_study_metric(
+        self,
+        state: list[float],
+        jacobian: list[list[float]],
+        n_params: int | None = None,
+    ) -> dict[str, Any]:
+        """Compute the Fubini-Study metric tensor for natural gradient optimization."""
+        try:
+            return _rust_call(
+                "q_fubini_study_metric",
+                state=state,
+                jacobian=jacobian,
+                n_params=n_params or len(jacobian),
+            ) or {"metric": [], "fallback": True}
+        except Exception:
+            return {"metric": [], "fallback": True}
+
+    def natural_gradient(
+        self,
+        params: list[float],
+        gradients: list[float],
+        metric: list[list[float]],
+        learning_rate: float = 0.01,
+    ) -> dict[str, Any]:
+        """Natural gradient step using Fubini-Study metric."""
+        try:
+            return _rust_call(
+                "q_natural_gradient",
+                params=params,
+                gradients=gradients,
+                metric=metric,
+                learning_rate=learning_rate,
+            ) or {"new_params": params, "fallback": True}
+        except Exception:
+            return {"new_params": [p - learning_rate * g for p, g in zip(params, gradients)], "fallback": True}
+
+    def multiscale_bind(
+        self,
+        vectors: list[list[float]],
+        bond_dim: int = 2,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Hierarchical tensor network bind (MPS-based)."""
+        try:
+            return _rust_call(
+                "q_multiscale_bind",
+                vectors=vectors,
+                bond_dim=bond_dim,
+                seed=seed,
+            ) or {"result": [], "fallback": True}
+        except Exception:
+            return {"result": [], "fallback": True}
+
+    def manifold_distance(
+        self,
+        a: list[float],
+        b: list[float],
+        manifold: str = "euclidean",
+    ) -> dict[str, Any]:
+        """Compute distance on Euclidean, hyperbolic, or spherical manifold."""
+        try:
+            return _rust_call(
+                "q_manifold_distance",
+                a=a, b=b, manifold=manifold,
+            ) or {"distance": 0.0, "fallback": True}
+        except Exception:
+            import math
+            if manifold == "spherical":
+                dot = sum(x * y for x, y in zip(a, b))
+                na = math.sqrt(sum(x * x for x in a)) or 1e-15
+                nb = math.sqrt(sum(x * x for x in b)) or 1e-15
+                return {"distance": math.acos(max(-1, min(1, dot / (na * nb)))), "fallback": True}
+            return {"distance": math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b))), "fallback": True}
+
+    def embed_manifold(
+        self,
+        point: list[float],
+        manifold: str = "euclidean",
+    ) -> dict[str, Any]:
+        """Embed a point onto the specified manifold."""
+        try:
+            return _rust_call(
+                "q_embed_manifold",
+                point=point,
+                manifold=manifold,
+            ) or {"embedded": point, "fallback": True}
+        except Exception:
+            return {"embedded": point, "fallback": True}
+
+    def riemannian_gradient(
+        self,
+        point: list[float],
+        gradient: list[float],
+        manifold: str = "euclidean",
+    ) -> dict[str, Any]:
+        """Project Euclidean gradient onto manifold tangent space."""
+        try:
+            return _rust_call(
+                "q_riemannian_gradient",
+                point=point,
+                gradient=gradient,
+                manifold=manifold,
+            ) or {"riemannian_gradient": gradient, "fallback": True}
+        except Exception:
+            return {"riemannian_gradient": gradient, "fallback": True}
+
+    def exponential_map(
+        self,
+        point: list[float],
+        tangent: list[float],
+        manifold: str = "euclidean",
+    ) -> dict[str, Any]:
+        """Move along geodesic via exponential map."""
+        try:
+            return _rust_call(
+                "q_exponential_map",
+                point=point,
+                tangent=tangent,
+                manifold=manifold,
+            ) or {"result": [p + t for p, t in zip(point, tangent)], "fallback": True}
+        except Exception:
+            return {"result": [p + t for p, t in zip(point, tangent)], "fallback": True}
+
+    def auto_select_manifold(
+        self,
+        points: list[list[float]],
+    ) -> dict[str, Any]:
+        """Automatically select best manifold for given data."""
+        try:
+            return _rust_call(
+                "q_auto_manifold",
+                points=points,
+            ) or {"manifold": "euclidean", "fallback": True}
+        except Exception:
+            return {"manifold": "euclidean", "fallback": True}
+
+    def born_sample(
+        self,
+        amplitudes: list[float],
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Born-rule sampling: probability = |amplitude|²."""
+        try:
+            return _rust_call(
+                "q_born_sample",
+                amplitudes=amplitudes,
+                seed=seed,
+            ) or {"index": 0, "fallback": True}
+        except Exception:
+            import random
+            total = sum(a * a for a in amplitudes) or 1e-15
+            r = random.Random(seed).random() * total
+            cum = 0.0
+            for i, a in enumerate(amplitudes):
+                cum += a * a
+                if r <= cum:
+                    return {"index": i, "fallback": True}
+            return {"index": len(amplitudes) - 1, "fallback": True}
+
+    def born_batch_sample(
+        self,
+        amplitudes: list[float],
+        n: int = 100,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Batch Born-rule sampling."""
+        try:
+            return _rust_call(
+                "q_born_batch",
+                amplitudes=amplitudes,
+                n=n,
+                seed=seed,
+            ) or {"samples": [], "fallback": True}
+        except Exception:
+            return {"samples": [self.born_sample(amplitudes, seed + i)["index"] for i in range(n)], "fallback": True}
+
+    def born_distribution(
+        self,
+        amplitudes: list[float],
+    ) -> dict[str, Any]:
+        """Born-rule probability distribution."""
+        try:
+            return _rust_call(
+                "q_born_distribution",
+                amplitudes=amplitudes,
+            ) or {"distribution": [], "fallback": True}
+        except Exception:
+            total = sum(a * a for a in amplitudes) or 1e-15
+            return {"distribution": [{"index": i, "probability": a * a / total} for i, a in enumerate(amplitudes)], "fallback": True}
+
+    def quantum_interference(
+        self,
+        a: list[float],
+        b: list[float],
+    ) -> dict[str, Any]:
+        """Compute quantum interference pattern between two amplitude vectors."""
+        try:
+            return _rust_call(
+                "q_interference",
+                a=a, b=b,
+            ) or {"interference": [], "fallback": True}
+        except Exception:
+            return {"interference": [ai * ai + bi * bi + 2 * ai * bi for ai, bi in zip(a, b)], "fallback": True}
+
+    def berry_phase(
+        self,
+        states: list[list[float]],
+        params: list[float],
+    ) -> dict[str, Any]:
+        """Compute Berry phase for a cyclic path in parameter space."""
+        try:
+            return _rust_call(
+                "q_berry_phase",
+                states=states,
+                params=params,
+            ) or {"phase": 0.0, "fallback": True}
+        except Exception:
+            return {"phase": 0.0, "fallback": True}
+
+    def chern_number(
+        self,
+        curvature: list[list[float]],
+        dtheta: float = 0.1,
+        dphi: float = 0.1,
+    ) -> dict[str, Any]:
+        """Compute Chern number from Berry curvature."""
+        try:
+            return _rust_call(
+                "q_chern_number",
+                curvature=curvature,
+                dtheta=dtheta,
+                dphi=dphi,
+            ) or {"chern_number": 0.0, "fallback": True}
+        except Exception:
+            return {"chern_number": 0.0, "fallback": True}
+
+    def topological_encode(
+        self,
+        data: list[float],
+        n_redundant: int = 3,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Topologically encode data with redundancy for error protection."""
+        try:
+            return _rust_call(
+                "q_topological_encode",
+                data=data,
+                n_redundant=n_redundant,
+                seed=seed,
+            ) or {"encoded": data, "protection": 0.0, "fallback": True}
+        except Exception:
+            return {"encoded": data, "protection": 0.0, "fallback": True}
+
+    def topological_decode(
+        self,
+        encoded: list[float],
+        data_len: int,
+        n_redundant: int = 3,
+    ) -> dict[str, Any]:
+        """Decode topologically encoded data (majority vote)."""
+        try:
+            return _rust_call(
+                "q_topological_decode",
+                encoded=encoded,
+                data_len=data_len,
+                n_redundant=n_redundant,
+            ) or {"decoded": [], "fallback": True}
+        except Exception:
+            return {"decoded": encoded[:data_len], "fallback": True}
+
+    def quantum_walk_optimize(
+        self,
+        cost_matrix: list[list[float]],
+        n_steps: int = 10,
+        gamma: float = 0.5,
+        beta: float = 0.5,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Quantum walk optimization for combinatorial problems."""
+        try:
+            return _rust_call(
+                "q_quantum_walk_optimize",
+                cost_matrix=cost_matrix,
+                n_steps=n_steps,
+                gamma=gamma,
+                beta=beta,
+                seed=seed,
+            ) or {"amplitudes": [], "best_index": 0, "cost": 0.0, "fallback": True}
+        except Exception:
+            n = len(cost_matrix)
+            return {"amplitudes": [1.0 / n ** 0.5] * n, "best_index": 0, "cost": cost_matrix[0][0] if n else 0.0, "fallback": True}
+
+    def qaoa_maxcut(
+        self,
+        adjacency: list[list[float]],
+        n_steps: int = 20,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Solve MaxCut using QAOA-style quantum walk."""
+        try:
+            return _rust_call(
+                "q_qaoa_maxcut",
+                adjacency=adjacency,
+                n_steps=n_steps,
+                seed=seed,
+            ) or {"partition": [], "cut_value": 0.0, "fallback": True}
+        except Exception:
+            n = len(adjacency)
+            return {"partition": [0] * n, "cut_value": 0.0, "fallback": True}
