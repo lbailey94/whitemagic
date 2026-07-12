@@ -433,7 +433,15 @@ class LlamaCppBackend:
             )
             resp.raise_for_status()
             data = resp.json()
-            return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            message = data.get("choices", [{}])[0].get("message", {})
+            content = message.get("content", "")
+            # Qwen3 reasoning models: if content is empty, the model may have
+            # used all token budget on reasoning_content. Fall back to it.
+            if not content.strip():
+                reasoning = message.get("reasoning_content", "")
+                if reasoning.strip():
+                    content = reasoning
+            return content
         except Exception as e:
             logger.error("llama.cpp chat failed: %s", e)
             return f"Error: {e}"

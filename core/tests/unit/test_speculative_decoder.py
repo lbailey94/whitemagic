@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -282,3 +282,234 @@ class TestSingleton:
         d1 = get_speculative_decoder()
         d2 = get_speculative_decoder()
         assert d1 is d2
+
+
+class TestSpeculativeRouterWiring:
+    """Test the speculative decoding router wiring (mock-based, no subprocesses)."""
+
+    def test_draft_handler_returns_tokens(self):
+        """Draft handler should return tokens and text for speculative decoding."""
+        from whitemagic.inference.router import _draft_handler
+
+        with patch("whitemagic.inference.router._get_draft_backend") as mock_get:
+            mock_backend = MagicMock()
+            mock_backend.is_available = True
+            mock_backend.complete_with_tokens.return_value = {
+                "text": "hello",
+                "tokens": [1, 2, 3, 4],
+                "latency_ms": 10.0,
+            }
+            mock_get.return_value = mock_backend
+
+            result = _draft_handler("test prompt", max_tokens=4, temperature=0.3)
+            assert result["tokens"] == [1, 2, 3, 4]
+            assert result["text"] == "hello"
+            assert "verify_per_token_ms" in result
+
+    def test_draft_handler_no_backend(self):
+        """Draft handler returns empty when no backend available."""
+        from whitemagic.inference.router import _draft_handler
+
+        with patch("whitemagic.inference.router._get_draft_backend", return_value=None):
+            result = _draft_handler("test", max_tokens=4)
+            assert result["tokens"] == []
+            assert result["text"] == ""
+
+    def test_verify_handler_returns_tokens(self):
+        """Verify handler should return tokens for token-level comparison."""
+        from whitemagic.inference.router import _verify_handler
+
+        with patch("whitemagic.inference.router._get_large_backend") as mock_large:
+            mock_backend = MagicMock()
+            mock_backend.is_available = True
+            mock_backend.complete_with_tokens.return_value = {
+                "text": "hello",
+                "tokens": [1, 2, 3, 4],
+                "latency_ms": 50.0,
+            }
+            mock_large.return_value = mock_backend
+
+            result = _verify_handler("test prompt", max_tokens=4, temperature=0.5)
+            assert result["tokens"] == [1, 2, 3, 4]
+            assert result["text"] == "hello"
+
+    def test_verify_handler_falls_back_to_small(self):
+        """Verify handler falls back to small backend when large unavailable."""
+        from whitemagic.inference.router import _verify_handler
+
+        with (
+            patch("whitemagic.inference.router._get_large_backend", return_value=None),
+            patch("whitemagic.inference.router._get_small_backend") as mock_small,
+        ):
+            mock_backend = MagicMock()
+            mock_backend.is_available = True
+            mock_backend.complete_with_tokens.return_value = {
+                "text": "fallback",
+                "tokens": [10, 20],
+                "latency_ms": 30.0,
+            }
+            mock_small.return_value = mock_backend
+
+            result = _verify_handler("test", max_tokens=4)
+            assert result["tokens"] == [10, 20]
+
+    def test_get_speculative_router_registers_handlers(self):
+        """get_speculative_router should register draft+verify handlers."""
+        from whitemagic.inference.router import get_speculative_router
+        from whitemagic.inference.speculative_decoder import get_speculative_decoder
+
+        # Reset singleton
+        import whitemagic.inference.speculative_decoder as sd
+
+        sd._decoder = None
+
+        decoder = get_speculative_router()
+        assert decoder.is_available
+        assert decoder._draft is not None
+        assert decoder._verify is not None
+
+
+class TestLlamaCppChatReasoningFallback:
+    """Test that LlamaCppBackend.chat() handles Qwen3 reasoning_content fallback."""
+
+    def test_chat_extracts_content(self):
+        """Normal response: content field is populated."""
+        from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+        backend = LlamaCppBackend(
+            model_path="/fake/model.gguf",
+            port=9999,
+            auto_start=False,
+            config=LlamaCppConfig(),
+        )
+        backend._available = True
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "The answer is 4.",
+                        "reasoning_content": "",
+                    }
+                }
+            ]
+        }
+        with patch("requests.post", return_value=mock_response):
+            result = backend.chat(
+                messages=[{"role": "user", "content": "What is 2+2?"}],
+                max_tokens=100,
+            )
+        assert result == "The answer is 4."
+
+    def test_chat_falls_back_to_reasoning_content(self):
+        """Qwen3 reasoning model: content empty, reasoning_content has the output."""
+        from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+        backend = LlamaCppBackend(
+            model_path="/fake/model.gguf",
+            port=9999,
+            auto_start=False,
+            config=LlamaCppConfig(),
+        )
+        backend._available = True
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "",
+                        "reasoning_content": "Okay, 2+2=4. The answer is 4.",
+                    }
+                }
+            ]
+        }
+        with patch("requests.post", return_value=mock_response):
+            result = backend.chat(
+                messages=[{"role": "user", "content": "What is 2+2?"}],
+                max_tokens=10,
+            )
+        assert "4" in result
+        assert "Okay" in result
+
+    def test_chat_returns_empty_when_both_empty(self):
+        """Both content and reasoning_content empty — return empty string."""
+        from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+        backend = LlamaCppBackend(
+            model_path="/fake/model.gguf",
+            port=9999,
+            auto_start=False,
+            config=LlamaCppConfig(),
+        )
+        backend._available = True
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "",
+                        "reasoning_content": "",
+                    }
+                }
+            ]
+        }
+        with patch("requests.post", return_value=mock_response):
+            result = backend.chat(
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5,
+            )
+        assert result == ""
+
+
+class TestCompleteWithTokens:
+    """Test complete_with_tokens used by speculative decoding."""
+
+    def test_returns_tokens_and_text(self):
+        from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+        backend = LlamaCppBackend(
+            model_path="/fake/model.gguf",
+            port=9999,
+            auto_start=False,
+            config=LlamaCppConfig(),
+        )
+        backend._available = True
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "content": "hello world",
+            "tokens": [100, 200, 300],
+        }
+        with patch("requests.post", return_value=mock_response):
+            result = backend.complete_with_tokens("test", max_tokens=3)
+        assert result["tokens"] == [100, 200, 300]
+        assert result["text"] == "hello world"
+        assert "latency_ms" in result
+
+    def test_tokenizes_text_when_tokens_missing(self):
+        """When server doesn't return tokens, use tokenize endpoint."""
+        from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
+
+        backend = LlamaCppBackend(
+            model_path="/fake/model.gguf",
+            port=9999,
+            auto_start=False,
+            config=LlamaCppConfig(),
+        )
+        backend._available = True
+
+        completion_response = MagicMock()
+        completion_response.json.return_value = {
+            "content": "hello",
+            "tokens": [],
+        }
+        tokenize_response = MagicMock()
+        tokenize_response.json.return_value = {"tokens": [42, 99]}
+
+        with patch("requests.post", side_effect=[completion_response, tokenize_response]):
+            result = backend.complete_with_tokens("test", max_tokens=1)
+        assert result["tokens"] == [42, 99]
+        assert result["text"] == "hello"
