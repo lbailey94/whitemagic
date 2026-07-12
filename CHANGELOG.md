@@ -70,8 +70,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API routes: `/api/mandala/status`, `/api/mandala/debt`, `/api/mandala/effects`, `/api/mandala/templates`
 - Sitemap updated with `/mandala`, `/galaxy`, `/zodiac`, `/ganas`, `/grimoire`
 
+### Added — MC Simulation Integration
+
+- `SimulationOrchestrator` (`core/whitemagic/core/consciousness/simulation_orchestrator.py`) — unifies introspective (yin-within-yang) and external (yang-within-yin) Monte Carlo simulations
+- `polyglot_mc.py` — `PolyglotMCOrchestrator` with Bayesian optimization, Latin Hypercube Sampling, rare event simulation, SDE solvers
+- `evolution_bridge.rs` — JSON RPC handlers for `mc_optimize`, `mc_rare_event`, `mc_sde`, `mc_sensitivity` methods in the `wm-evolution` Rust crate
+- `SimulationOrchestrator` wired into `RecursiveImprovementLoop` prediction phase — runs introspective simulations validating top hypotheses
+- `superforecaster_deep_optimization` autoswarm campaign — deep optimization pipeline for superforecaster parameters
+- `handle_mc_optimize` handler fix — correctly generates LHS initial samples, evaluates fitness_expr, and calls `bayesian_optimize` with proper parameters
+- 31 new tests across `test_simulation_integration.py` and `test_autoswarm.py` — all pass
+
+### Added — Local Model Wiring
+
+- `LlamaCppBackend.chat()` — Qwen3 reasoning_content fallback: when `content` is empty (reasoning model used all token budget on reasoning), falls back to `reasoning_content` field
+- Speculative decoding E2E verified — Qwen3-1.7B (draft) + Qwen3-4B (verify) share the same tokenizer; 31% acceptance rate confirmed
+- Ngram-mod speculative decoding tested on single Qwen3-1.7B model via `llama-server` built-in `--spec-ngram-mod` support
+- Inference router E2E verified — Tier 1 (LOCAL_SMALL) and Tier 2 (LOCAL_LARGE) both functional with `LlamaCppBackend`
+- 10 new unit tests: `TestSpeculativeRouterWiring` (5), `TestLlamaCppChatReasoningFallback` (3), `TestCompleteWithTokens` (2) — all mock-based, no subprocesses
+
 ### Test Results
 - 41 new tests (25 Phase A+B + 16 Phase C) — all pass
+- 10 new inference tests (speculative router wiring, LlamaCppBackend reasoning fallback, complete_with_tokens) — all pass
+- 31 new MC simulation tests — all pass
 - 379 existing dispatch/middleware/pipeline/registry tests — all pass
 - 692 tools in effect registry (582 pure, 61 local, 20 destructive, 16 network, 13 observation)
 
