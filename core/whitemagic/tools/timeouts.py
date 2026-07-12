@@ -111,6 +111,10 @@ LIGHTWEIGHT_STATUS_TOOLS: frozenset[str] = frozenset(
         "vector.status",
         "prompt.list",
         "forge.status",
+        "capabilities",
+        "manifest",
+        "state.paths",
+        "state.summary",
     ]
 )
 

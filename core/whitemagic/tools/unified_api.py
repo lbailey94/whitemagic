@@ -321,6 +321,40 @@ def _dispatch_lightweight_tool(tool_name: str, **kwargs: Any) -> Any:
                 "  handler: 'my_module:my_function'"
             ),
         }
+    if tool_name == "capabilities":
+        from whitemagic.tools.introspection import capabilities
+
+        return {
+            "status": "success",
+            **capabilities(
+                include_tools=bool(kwargs.get("include_tools", True)),
+                include_schemas=bool(kwargs.get("include_schemas", False)),
+                include_env=bool(kwargs.get("include_env", True)),
+            ),
+        }
+    if tool_name == "manifest":
+        from whitemagic.tools.introspection import manifest
+
+        return {
+            "status": "success",
+            **manifest(
+                format=str(kwargs.get("format", "summary")),
+                include_schemas=bool(kwargs.get("include_schemas", False)),
+            ),
+        }
+    if tool_name == "state.paths":
+        from whitemagic.tools.introspection import state_paths
+
+        return {"status": "success", **state_paths()}
+    if tool_name == "state.summary":
+        from whitemagic.tools.introspection import state_summary
+
+        return {
+            "status": "success",
+            **state_summary(
+                include_sizes=bool(kwargs.get("include_sizes", True)),
+            ),
+        }
     raise KeyError(tool_name)
 
 
