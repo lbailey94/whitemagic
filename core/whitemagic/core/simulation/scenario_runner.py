@@ -84,6 +84,9 @@ class ScenarioRunner:
     def run_scenario(self, config: ScenarioConfig) -> ScenarioAnalysis:
         """Run a full Monte Carlo scenario.
 
+        For large trial counts (5000+), delegates parameter sampling to
+        PolyglotMCOrchestrator for Rust-accelerated Latin Hypercube Sampling.
+
         Args:
             config: Scenario configuration.
 
@@ -92,8 +95,26 @@ class ScenarioRunner:
         """
         results: list[TrialResult] = []
 
+        # Use PolyglotMCOrchestrator for Rust-accelerated sampling when trials are large
+        use_rust = config.num_trials >= 5000
+        if use_rust:
+            try:
+                from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+                mc_orch = PolyglotMCOrchestrator()
+                # Generate LHS samples for initial condition variation
+                lhs_samples = mc_orch.latin_hypercube(
+                    n=config.num_trials,
+                    dim=2,  # coherence + emotional_state
+                )
+                logger.info("Using Rust LHS for %d trials", config.num_trials)
+            except Exception:
+                lhs_samples = None
+                use_rust = False
+        else:
+            lhs_samples = None
+
         for trial_idx in range(config.num_trials):
-            result = self._run_single_trial(config, trial_idx)
+            result = self._run_single_trial(config, trial_idx, lhs_samples)
             results.append(result)
 
         self._results[config.name] = results
@@ -101,7 +122,10 @@ class ScenarioRunner:
         logger.info("Scenario %s: %d trials completed", config.name, len(results))
         return analysis
 
-    def _run_single_trial(self, config: ScenarioConfig, trial_idx: int) -> TrialResult:
+    def _run_single_trial(
+        self, config: ScenarioConfig, trial_idx: int,
+        lhs_samples: list[list[float]] | None = None,
+    ) -> TrialResult:
         """Run a single trial with varied initial conditions."""
         # Create world
         world = self._world_builder.create_world(
@@ -121,10 +145,16 @@ class ScenarioRunner:
 
             # Vary initial conditions
             if config.vary_initial_conditions:
-                persona.coherence = max(0.0, min(1.0,
-                    persona.profile.coherence_baseline + random.gauss(0, 0.1)))
-                persona.emotional_state = max(0.0, min(1.0,
-                    persona.profile.emotional_baseline + random.gauss(0, 0.15)))
+                if lhs_samples is not None and trial_idx < len(lhs_samples):
+                    # Use Rust-generated LHS samples for better coverage
+                    sample = lhs_samples[trial_idx]
+                    persona.coherence = max(0.0, min(1.0, sample[0] if len(sample) > 0 else persona.profile.coherence_baseline))
+                    persona.emotional_state = max(0.0, min(1.0, sample[1] if len(sample) > 1 else persona.profile.emotional_baseline))
+                else:
+                    persona.coherence = max(0.0, min(1.0,
+                        persona.profile.coherence_baseline + random.gauss(0, 0.1)))
+                    persona.emotional_state = max(0.0, min(1.0,
+                        persona.profile.emotional_baseline + random.gauss(0, 0.15)))
 
             personas.append(persona)
 
