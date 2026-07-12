@@ -156,16 +156,21 @@ class SQLiteBackend:
                     )
                     conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_garden ON memories(garden)")
                     logger.info("Added generated column 'garden' with index for fast aggregation")
-                except sqlite3.OperationalError:
-                    # Generated columns require SQLite 3.31+; fall back to expression index
-                    try:
-                        conn.execute(
-                            "CREATE INDEX IF NOT EXISTS idx_memories_garden_expr "
-                            "ON memories(json_extract(metadata, '$.garden'))"
-                        )
-                        logger.info("Added expression index on garden for fast aggregation")
-                    except sqlite3.OperationalError as e:
-                        logger.debug("Could not add garden index: %s", e)
+                except sqlite3.OperationalError as e:
+                    # Could be "duplicate column name" (race with concurrent process)
+                    # or "generated columns not supported" (SQLite < 3.31)
+                    if "duplicate column" in str(e):
+                        logger.debug("Garden column already added by concurrent process")
+                    else:
+                        # Fall back to expression index
+                        try:
+                            conn.execute(
+                                "CREATE INDEX IF NOT EXISTS idx_memories_garden_expr "
+                                "ON memories(json_extract(metadata, '$.garden'))"
+                            )
+                            logger.info("Added expression index on garden for fast aggregation")
+                        except sqlite3.OperationalError as e2:
+                            logger.debug("Could not add garden index: %s", e2)
 
             # 2. Tags table
             conn.execute("""

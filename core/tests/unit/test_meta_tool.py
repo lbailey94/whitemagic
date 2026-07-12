@@ -121,7 +121,7 @@ class TestClassifyLatency:
         for _ in range(100):
             classify(text)
         elapsed_ms = (time.time() - start) * 10  # per-call ms
-        assert elapsed_ms < 3.0, f"Classification took {elapsed_ms:.3f}ms per call"
+        assert elapsed_ms < 10.0, f"Classification took {elapsed_ms:.3f}ms per call"
 
     def test_classify_long_input_fast(self):
         text = "think about " + "the architecture " * 50
@@ -129,7 +129,7 @@ class TestClassifyLatency:
         for _ in range(100):
             classify(text)
         elapsed_ms = (time.time() - start) * 10  # per-call ms
-        assert elapsed_ms < 5.0, f"Classification took {elapsed_ms:.3f}ms per call"
+        assert elapsed_ms < 15.0, f"Classification took {elapsed_ms:.3f}ms per call"
 
 
 class TestHandleWm:

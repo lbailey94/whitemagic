@@ -489,7 +489,10 @@ class TestPulseVerification:
             merkle_root="root",
             fitness_claim=0.5,
         )
-        tier = verifier._determine_escalation(pulse, node_reputation=0.8)
+        # Mock random to avoid 5% sampling escalation to REPOPS
+        from unittest.mock import patch
+        with patch("random.random", return_value=0.99):
+            tier = verifier._determine_escalation(pulse, node_reputation=0.8)
         assert tier == VerificationTier.AUTOMATED
 
     def test_get_status(self):

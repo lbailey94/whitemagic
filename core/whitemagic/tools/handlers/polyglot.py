@@ -84,7 +84,7 @@ def handle_polyglot_memory_query(**kwargs: Any) -> dict[str, Any]:
         try:
             if operation == "encode":
                 text = kwargs.get("text", "")
-                raw = backend.call("encode", text=text)
+                raw = backend.call("encode", text=text, timeout=30.0)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
                 return {"status": "success", "operation": "encode", "result": result}
 
@@ -92,7 +92,7 @@ def handle_polyglot_memory_query(**kwargs: Any) -> dict[str, Any]:
                 query = kwargs.get("query", "")
                 texts = kwargs.get("texts", [])
                 k = kwargs.get("k", 5)
-                raw = backend.call("nearest_neighbors", query=query, texts=texts, k=k)
+                raw = backend.call("nearest_neighbors", query=query, texts=texts, k=k, timeout=30.0)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
                 return {
                     "status": "success",
@@ -102,7 +102,7 @@ def handle_polyglot_memory_query(**kwargs: Any) -> dict[str, Any]:
 
             elif operation == "constellation_detect":
                 coords = kwargs.get("coords", [])
-                raw = backend.call("constellation_detect", coords=coords)
+                raw = backend.call("constellation_detect", coords=coords, timeout=30.0)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
                 return {
                     "status": "success",
@@ -112,7 +112,7 @@ def handle_polyglot_memory_query(**kwargs: Any) -> dict[str, Any]:
 
             elif operation == "coherence_score":
                 coords = kwargs.get("coords", [])
-                raw = backend.call("coherence_score", coords=coords)
+                raw = backend.call("coherence_score", coords=coords, timeout=30.0)
                 result = raw.get("result", raw) if raw.get("status") == "ok" else raw
                 return {
                     "status": "success",
