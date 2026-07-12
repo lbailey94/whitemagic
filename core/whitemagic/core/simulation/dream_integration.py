@@ -125,7 +125,13 @@ class DreamCycleIntegration:
                 real_result = self._delegate_to_dream_cycle(
                     phase, data, galaxy, DreamPhase
                 )
-                if real_result is not None:
+                # Only use delegation result if it has actual content
+                if real_result is not None and (
+                    real_result.get("memories_consolidated", 0) > 0
+                    or real_result.get("associations_discovered", 0) > 0
+                    or real_result.get("insights")
+                    or real_result.get("narrative")
+                ):
                     report.memories_consolidated = real_result.get("memories_consolidated", 0)
                     report.associations_discovered = real_result.get("associations_discovered", 0)
                     if real_result.get("insights"):
