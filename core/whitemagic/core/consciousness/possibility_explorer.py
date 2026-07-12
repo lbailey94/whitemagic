@@ -132,6 +132,9 @@ class PossibilitySpaceExplorer:
         n_trials: int = 100,
         custom_params: dict[str, tuple[float, float]] | None = None,
         custom_fitness: Any = None,
+        use_superforecaster: bool = False,
+        n_bo_iterations: int = 20,
+        seed: int = 42,
     ) -> ExplorationResult:
         """Explore a possibility space with Monte Carlo trials.
 
@@ -140,6 +143,10 @@ class PossibilitySpaceExplorer:
             n_trials: Number of trials to run.
             custom_params: Custom parameter ranges (overrides defaults).
             custom_fitness: Custom fitness function (overrides defaults).
+            use_superforecaster: If True, use the full LHS→PCE→Sobol→BO pipeline
+                                 via PolyglotMCOrchestrator.superforecaster_estimate.
+            n_bo_iterations: Bayesian optimization iterations (superforecaster mode).
+            seed: Random seed (superforecaster mode).
 
         Returns:
             ExplorationResult with best trials and sensitivity analysis.
@@ -156,6 +163,12 @@ class PossibilitySpaceExplorer:
 
         # Determine backend
         backend = self._select_backend(n_trials)
+
+        if use_superforecaster:
+            return self._explore_superforecaster(
+                space_name, param_ranges, fitness_fn,
+                n_trials, n_bo_iterations, seed, backend, start,
+            )
 
         # Run trials
         trials: list[PossibilityTrial] = []
@@ -214,6 +227,95 @@ class PossibilitySpaceExplorer:
             n_trials,
             result.best_trial.fitness_score if result.best_trial else 0.0,
             backend,
+            result.execution_time_ms,
+        )
+
+        return result
+
+    def _explore_superforecaster(
+        self,
+        space_name: str,
+        param_ranges: dict[str, tuple[float, float]],
+        fitness_fn: Any,
+        n_trials: int,
+        n_bo_iterations: int,
+        seed: int,
+        backend: str,
+        start: float,
+    ) -> ExplorationResult:
+        """Explore using the full superforecaster pipeline (LHS→PCE→Sobol→BO)."""
+        param_names = list(param_ranges.keys())
+        ranges_list = [(lo, hi) for lo, hi in param_ranges.values()]
+
+        def wrapped_fitness(params: list[float]) -> float:
+            param_dict = dict(zip(param_names, params))
+            return fitness_fn(param_dict)
+
+        try:
+            from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+            orch = PolyglotMCOrchestrator()
+            sf_result = orch.superforecaster_estimate(
+                param_ranges=ranges_list,
+                fitness_fn=wrapped_fitness,
+                n_initial_samples=n_trials,
+                n_bo_iterations=n_bo_iterations,
+                seed=seed,
+            )
+        except Exception as e:
+            logger.warning("Superforecaster failed, falling back to basic MC: %s", e)
+            return self.explore(
+                space_name, n_trials=n_trials,
+                custom_params=param_ranges, custom_fitness=fitness_fn,
+            )
+
+        best_params_list = sf_result.get("best_params", [])
+        best_fitness = sf_result.get("best_fitness", 0.0)
+        best_params_dict = dict(zip(param_names, best_params_list)) if best_params_list else {}
+
+        best_trial = PossibilityTrial(
+            trial_id=f"{space_name}_sf_best",
+            parameters=best_params_dict,
+            fitness_score=best_fitness,
+        )
+
+        sensitivity_raw = sf_result.get("parameter_sensitivity", [])
+        sensitivity = {}
+        if isinstance(sensitivity_raw, list):
+            for item in sensitivity_raw:
+                if isinstance(item, dict):
+                    idx = item.get("param_index", 0)
+                    corr = item.get("correlation", 0.0)
+                    if idx < len(param_names):
+                        sensitivity[param_names[idx]] = float(corr)
+                elif isinstance(item, (int, float)) and len(sensitivity_raw) <= len(param_names):
+                    idx = sensitivity_raw.index(item)
+                    sensitivity[param_names[idx]] = float(item)
+        elif isinstance(sensitivity_raw, dict):
+            sensitivity = {k: float(v) for k, v in sensitivity_raw.items()}
+
+        result = ExplorationResult(
+            space_name=space_name,
+            n_trials=n_trials + n_bo_iterations,
+            best_trial=best_trial,
+            top_trials=[best_trial],
+            avg_fitness=sf_result.get("output_statistics", {}).get("mean", best_fitness),
+            fitness_variance=sf_result.get("output_statistics", {}).get("variance", 0.0),
+            parameter_sensitivity=sensitivity,
+            execution_time_ms=(time.time() - start) * 1000,
+            backend="superforecaster",
+        )
+
+        with self._lock:
+            self._results_history.append(result)
+            if len(self._results_history) > 50:
+                self._results_history = self._results_history[-25:]
+            if result.best_trial:
+                self._best_params[space_name] = result.best_trial.parameters
+
+        logger.info(
+            "PossibilitySpace '%s' [superforecaster]: best fitness=%.4f, R²=%.4f, %.1fms",
+            space_name, best_fitness,
+            sf_result.get("surrogate_r_squared", 0),
             result.execution_time_ms,
         )
 
@@ -340,11 +442,30 @@ class PossibilitySpaceExplorer:
             return 0.0
         return sum(values) / len(values)
 
-    def explore_all(self, n_trials_per_space: int = 50) -> dict[str, ExplorationResult]:
-        """Explore all default possibility spaces."""
+    def explore_all(
+        self,
+        n_trials_per_space: int = 50,
+        use_superforecaster: bool = False,
+        n_bo_iterations: int = 20,
+        seed: int = 42,
+    ) -> dict[str, ExplorationResult]:
+        """Explore all default possibility spaces.
+
+        Args:
+            n_trials_per_space: Number of trials per space.
+            use_superforecaster: If True, use the superforecaster pipeline for each space.
+            n_bo_iterations: BO iterations (superforecaster mode).
+            seed: Random seed.
+        """
         results: dict[str, ExplorationResult] = {}
         for space_name in self.DEFAULT_SPACES:
-            result = self.explore(space_name, n_trials=n_trials_per_space)
+            result = self.explore(
+                space_name,
+                n_trials=n_trials_per_space,
+                use_superforecaster=use_superforecaster,
+                n_bo_iterations=n_bo_iterations,
+                seed=seed,
+            )
             results[space_name] = result
         return results
 

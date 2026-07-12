@@ -195,22 +195,22 @@ class TestTemporalForecastDB:
     def test_seed_validated_claims_inserts_all(self, tmp_db: TemporalForecastDB):
         result = tmp_db.seed_validated_claims()
         assert (
-            result["inserted"] == 28
-        )  # 25 validated + 2 pending + 1 expired = 28 total
+            result["inserted"] == 30
+        )  # 27 validated + 2 pending + 1 expired = 30 total
 
     def test_seed_syncs_existing_rows(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         second = tmp_db.seed_validated_claims()
-        # YAML is source of truth — second call updates all 28 rows to match
+        # YAML is source of truth — second call updates all 30 rows to match
         assert second["inserted"] == 0
-        assert second["updated"] == 28
+        assert second["updated"] == 30
         assert second["removed"] == 0
 
     def test_summary_after_seed(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        assert s["total"] == 28
-        assert s["validated"] == 25
+        assert s["total"] == 30
+        assert s["validated"] == 27
         assert s["pending"] == 2
         assert s["falsified"] == 0
         assert s["total_points"] > 510  # known: 600+
@@ -243,7 +243,7 @@ class TestTemporalForecastDB:
         tmp_db.seed_validated_claims()
         all_preds = tmp_db.all_predictions()
         assert isinstance(all_preds, list)
-        assert len(all_preds) == 28
+        assert len(all_preds) == 30
 
     def test_total_points_matches_known_score(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()

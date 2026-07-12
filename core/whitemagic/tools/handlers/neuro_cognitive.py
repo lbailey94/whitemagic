@@ -732,21 +732,37 @@ def handle_possibility_explore(**kwargs: Any) -> dict[str, Any]:
         space: Possibility space name (guna_balance, coherence_optimization,
                emergence_thresholds, health_setpoints). Default: guna_balance.
         n_trials: Number of trials (default 100).
+        use_superforecaster: If true, use LHS→PCE→Sobol→BO pipeline (default false).
+        n_bo_iterations: BO iterations if using superforecaster (default 20).
+        seed: Random seed (default 42).
     """
     try:
         from whitemagic.core.consciousness.possibility_explorer import get_possibility_explorer
         explorer = get_possibility_explorer()
         space = kwargs.get("space", "guna_balance")
         n_trials = int(kwargs.get("n_trials", 100))
+        use_sf = bool(kwargs.get("use_superforecaster", False))
+        n_bo = int(kwargs.get("n_bo_iterations", 20))
+        seed = int(kwargs.get("seed", 42))
 
         if space == "all":
-            results = explorer.explore_all(n_trials_per_space=n_trials)
+            results = explorer.explore_all(
+                n_trials_per_space=n_trials,
+                use_superforecaster=use_sf,
+                n_bo_iterations=n_bo,
+                seed=seed,
+            )
             return {
                 "status": "success",
                 "spaces": {k: v.to_dict() for k, v in results.items()},
             }
         else:
-            result = explorer.explore(space, n_trials=n_trials)
+            result = explorer.explore(
+                space, n_trials=n_trials,
+                use_superforecaster=use_sf,
+                n_bo_iterations=n_bo,
+                seed=seed,
+            )
             return {
                 "status": "success",
                 **result.to_dict(),
