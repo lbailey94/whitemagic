@@ -364,4 +364,100 @@ def check_db_integrity(db_path: str | None = None) -> str:
     result = pool.integrity_check()
     if result != "ok":
         logger.error("Database integrity check FAILED for %s: %s", db_path, result)
+        logger.info("Attempting automatic database repair for %s", db_path)
+        repair_result = repair_db(db_path)
+        if repair_result.get("status") == "success":
+            logger.info("Database auto-repair succeeded for %s", db_path)
+            return "ok"
+        else:
+            logger.error("Database auto-repair failed: %s", repair_result)
     return result
+
+
+def repair_db(db_path: str | None = None) -> dict[str, Any]:
+    """Repair a corrupted SQLite database by rebuilding from dump.
+
+    Uses .dump → recreate → .restore to produce a clean, compacted file.
+    Creates a backup before repair. Clears WAL and SHM files.
+
+    Returns:
+        Dict with 'status', 'backup_path', 'details'.
+    """
+    import shutil
+    import subprocess
+
+    if db_path is None:
+        from whitemagic.config.paths import DB_PATH
+        db_path = str(DB_PATH)
+
+    backup_path = db_path + ".bak"
+    wal_path = db_path + "-wal"
+    shm_path = db_path + "-shm"
+
+    # Step 1: Backup
+    shutil.copy2(db_path, backup_path)
+
+    # Step 2: Clear WAL/SHM (they may contain corrupt data)
+    for sidecar in (wal_path, shm_path):
+        if os.path.exists(sidecar):
+            os.remove(sidecar)
+
+    # Step 3: Dump to SQL script
+    dump_path = db_path + ".dump.sql"
+    result = subprocess.run(
+        ["sqlite3", db_path, ".dump"],
+        capture_output=True, text=True, timeout=60,
+    )
+    if result.returncode != 0:
+        return {
+            "status": "error",
+            "error": f"sqlite3 .dump failed: {result.stderr[:500]}",
+            "backup_path": backup_path,
+        }
+
+    with open(dump_path, "w") as f:
+        f.write(result.stdout)
+
+    # Step 4: Create new database from dump
+    new_path = db_path + ".new"
+    if os.path.exists(new_path):
+        os.remove(new_path)
+    result = subprocess.run(
+        ["sqlite3", new_path],
+        input=result.stdout, capture_output=True, text=True, timeout=60,
+    )
+    if result.returncode != 0:
+        return {
+            "status": "error",
+            "error": f"sqlite3 restore failed: {result.stderr[:500]}",
+            "backup_path": backup_path,
+        }
+
+    # Step 5: Replace old database
+    os.replace(new_path, db_path)
+    os.remove(dump_path)
+
+    # Step 6: Verify
+    conn = safe_connect(db_path, read_only=True)
+    check = conn.execute("PRAGMA integrity_check").fetchone()
+    conn.close()
+
+    # Reset integrity cache
+    global _last_integrity_check
+    with _integrity_lock:
+        _last_integrity_check = 0.0
+
+    if check and check[0] == "ok":
+        logger.info("Database repaired successfully: %s", db_path)
+        return {
+            "status": "success",
+            "backup_path": backup_path,
+            "integrity_check": "ok",
+        }
+    else:
+        return {
+            "status": "warning",
+            "backup_path": backup_path,
+            "integrity_check": check[0] if check else "unknown",
+            "message": "Repair completed but integrity check still reports issues",
+        }

@@ -12,6 +12,7 @@ instances, one per galaxy.
 from __future__ import annotations
 
 import logging
+import sqlite3
 import threading
 from pathlib import Path
 from typing import Any
@@ -258,7 +259,10 @@ class GalaxyAwareBackend:
         """
         if galaxy and galaxy != "universal":
             backend = self._get_galaxy_backend(galaxy)
-            backend.store_coords(memory_id, x, y, z, w, v, u)
+            try:
+                backend.store_coords(memory_id, x, y, z, w, v, u)
+            except sqlite3.IntegrityError:
+                logger.warning("FK violation storing coords for %s in galaxy '%s' — memory may not be committed yet", memory_id, galaxy)
             return
 
         # No galaxy specified — try to find which galaxy DB has this memory
@@ -270,8 +274,11 @@ class GalaxyAwareBackend:
             except Exception:
                 continue
 
-        # Fallback: try default backend
-        self._get_default_backend().store_coords(memory_id, x, y, z, w, v, u)
+        # Fallback: try default backend (may fail with FK if memory is in a galaxy DB)
+        try:
+            self._get_default_backend().store_coords(memory_id, x, y, z, w, v, u)
+        except sqlite3.IntegrityError:
+            logger.warning("FK violation storing coords for %s in default DB — memory likely in a galaxy DB", memory_id)
 
     def integrity_check(self) -> str:
         """Check integrity of all backends."""

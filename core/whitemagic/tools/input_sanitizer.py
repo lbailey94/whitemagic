@@ -404,6 +404,33 @@ _CONTENT_SCAN_EXEMPT: set = {
     # Metrics (timeframe/format params, not user content)
     "get_metrics_summary",
     "track_metric",
+    # ABI tools (hex calldata, JSON ABI strings trigger semantic false positives)
+    "abi.parse",
+    "abi.summarize",
+    "abi.decode_calldata",
+    # Foundry (build output may contain hex addresses)
+    "foundry.build",
+    "foundry.test",
+    "foundry.test_json",
+}
+
+# Tools exempt from encoding detection (they legitimately handle hex/binary/base64 data)
+_ENCODING_SCAN_EXEMPT: set = {
+    # ABI tools (hex calldata, JSON ABI strings)
+    "abi.parse",
+    "abi.summarize",
+    "abi.decode_calldata",
+    # Fragment search (BM25+semantic, may contain hex hashes)
+    "fragment_search",
+    # Vector tools (float arrays may trigger l33t pattern)
+    "vector.index",
+    "vector.search",
+    "simd.batch",
+    "simd.cosine",
+    # Foundry (build output may contain hex addresses)
+    "foundry.build",
+    "foundry.test",
+    "foundry.test_json",
 }
 
 
@@ -461,17 +488,18 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
             "error_code": "input_rejected",
         }
 
-    # 4. Encoding detection — ALWAYS runs, even on exempt tools
-    err = _scan_encoding(kwargs)
-    if err:
-        logger.warning(
-            "Encoding detection blocked %s: %s", tool_name, err, exc_info=True
-        )
-        return {
-            "status": "error",
-            "error": f"Input rejected: {err}",
-            "error_code": "input_rejected",
-        }
+    # 4. Encoding detection — skip for tools that legitimately handle encoded data
+    if tool_name not in _ENCODING_SCAN_EXEMPT:
+        err = _scan_encoding(kwargs)
+        if err:
+            logger.warning(
+                "Encoding detection blocked %s: %s", tool_name, err, exc_info=True
+            )
+            return {
+                "status": "error",
+                "error": f"Input rejected: {err}",
+                "error_code": "input_rejected",
+            }
 
     # 4.5. Semantic defense layer — embedding-based attack detection
     #      Skip for exempt tools (their content is expected to contain arbitrary text)

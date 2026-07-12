@@ -358,6 +358,13 @@ SUBSYSTEMS: list[dict[str, Any]] = [
         "polyglot": None,
         "category": "governance",
     },
+    {
+        "id": "consciousness",
+        "name": "Consciousness Loop (Citta + Dream + Homeostasis)",
+        "location": "core/consciousness/consciousness_loop.py",
+        "polyglot": None,
+        "category": "intelligence",
+    },
 ]
 
 
@@ -633,6 +640,7 @@ def get_subsystem_status(subsystem_id: str) -> dict[str, Any]:
         "temporal_scheduler": _probe_temporal,
         "homeostatic_loop": _probe_homeostasis,
         "prat_resonance": _probe_resonance,
+        "consciousness": _probe_consciousness,
     }
 
     probe_fn = probes.get(subsystem_id)
@@ -739,4 +747,15 @@ def _probe_resonance() -> dict[str, Any]:
     return {
         "session_calls": summary["session_calls"],
         "last_gana": summary.get("last_gana"),
+    }
+
+
+def _probe_consciousness() -> dict[str, Any]:
+    from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+    cycle = get_citta_cycle()
+    return {
+        "citta_entries": len(getattr(cycle, "_stream", [])),
+        "current_phase": getattr(cycle, "current_phase", "idle"),
+        "coherence": getattr(cycle, "coherence", 0.0),
     }
