@@ -720,6 +720,14 @@ TOOL_TO_GANA: dict[str, str] = {
     "meta.galaxy.overview": "gana_ghost",
     "possibility.explore": "gana_dipper",
     "knowledge_gap.run": "gana_heart",
+    # ── MC Simulation Tools (Tier 2-4) ──
+    "mc.surrogate": "gana_dipper",
+    "mc.optimize": "gana_dipper",
+    "mc.rare_event": "gana_dipper",
+    "mc.sde": "gana_dipper",
+    "mc.superforecaster": "gana_dipper",
+    "simulation.introspect": "gana_ghost",
+    "simulation.forecast": "gana_chariot",
     # ── v24.1: Security Bounty Tools ──
     # Foundry + ABI → Chariot (codebase analysis & navigation)
     "foundry.build": "gana_chariot",

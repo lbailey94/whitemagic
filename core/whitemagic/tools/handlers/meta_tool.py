@@ -1205,6 +1205,14 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(neurotransmitter.*report|neurotransmitter.*status)\b", re.I), "gana_dipper", "neurotransmitter.report"),
     (re.compile(r"\b(predictive.*score|predictive.*batch|prediction.*score)\b", re.I), "gana_dipper", "predictive.score"),
     (re.compile(r"\b(possibility.*explor\w+|monte.*carlo|parameter.*optim)\b", re.I), "gana_dipper", "possibility.explore"),
+    # ── MC Simulation Tools ──
+    (re.compile(r"\b(gaussian.*process|surrogate.*fit|surrogate.*model|gp.*fit)\b", re.I), "gana_dipper", "mc.surrogate"),
+    (re.compile(r"\b(bayesian.*optim|bo.*optim|expected.*improvement)\b", re.I), "gana_dipper", "mc.optimize"),
+    (re.compile(r"\b(rare.*event|subset.*sim|multilevel.*split|importance.*sampl)\b", re.I), "gana_dipper", "mc.rare_event"),
+    (re.compile(r"\b(sde|stochastic.*differential|euler.*maruyama|milstein|mlmc)\b", re.I), "gana_dipper", "mc.sde"),
+    (re.compile(r"\b(superforecast\w*|super.*forecast)\b", re.I), "gana_dipper", "mc.superforecaster"),
+    (re.compile(r"\b(introspect.*sim|simulat.*introspect|internal.*optim|self.*optim)\b", re.I), "gana_ghost", "simulation.introspect"),
+    (re.compile(r"\b(forecast.*sim|simulat.*forecast|external.*sim|research.*sim)\b", re.I), "gana_chariot", "simulation.forecast"),
     # ── gana_encampment: broker, sangha, gan ying ──
     (re.compile(r"\b(broker.*history|broker.*status|message.*history)\b", re.I), "gana_encampment", "broker.history"),
     (re.compile(r"\b(ganying.*emit|emit.*ganying|gan.*ying.*emit)\b", re.I), "gana_encampment", "ganying_emit"),

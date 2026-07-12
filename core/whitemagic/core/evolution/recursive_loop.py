@@ -146,6 +146,8 @@ class RecursiveImprovementLoop:
         self._guna_classifier: Any = None
         # Objective S: Polyglot MC orchestrator
         self._polyglot_mc: Any = None
+        # Objective SIM: Simulation orchestrator (yin/yang MC integration)
+        self._sim_orchestrator: Any = None
         # Objective M: Actor supervisor
         self._actor_supervisor: Any = None
         # Objective I: Resonance transfer engine
@@ -389,6 +391,14 @@ class RecursiveImprovementLoop:
             "_polyglot_mc",
             "whitemagic.core.evolution.polyglot_mc",
             "PolyglotMCOrchestrator",
+        )
+
+    def _get_sim_orchestrator(self) -> Any:
+        """Objective SIM: Lazy-load SimulationOrchestrator."""
+        return self._get_module(
+            "_sim_orchestrator",
+            "whitemagic.core.consciousness.simulation_orchestrator",
+            "get_simulation_orchestrator",
         )
 
     def _get_galactic_hyp(self) -> Any:
@@ -968,6 +978,38 @@ class RecursiveImprovementLoop:
         except Exception as e:
             results["errors"].append(f"auto_prescience: {e}")
             logger.debug("Auto prescience claims failed: %s", e, exc_info=True)
+
+        # Objective SIM: Run introspective simulation on top hypotheses
+        # Yin-within-yang: validate predictions via MC simulation
+        try:
+            sim_orch = self._get_sim_orchestrator()
+            if sim_orch is not None:
+                top_hyps = sorted(
+                    cycle.hypotheses,
+                    key=lambda h: h.confidence,
+                    reverse=True,
+                )[:3]
+                sim_results = []
+                for hyp in top_hyps:
+                    sim = sim_orch.run_introspective(
+                        space=hyp.category if hyp.category in (
+                            "guna_balance", "coherence_optimization",
+                            "emergence_thresholds", "health_setpoints",
+                        ) else "guna_balance",
+                        n_trials=30,
+                        n_bo_iterations=10,
+                        seed=hash(hyp.id) % 10000,
+                        persist=True,
+                    )
+                    sim_results.append(sim.to_dict())
+                results["simulation_validation"] = sim_results
+                logger.info(
+                    "Predict phase: %d simulations run for hypothesis validation",
+                    len(sim_results),
+                )
+        except Exception as e:
+            results["errors"].append(f"simulation: {e}")
+            logger.debug("Simulation validation failed: %s", e, exc_info=True)
 
         return results
 

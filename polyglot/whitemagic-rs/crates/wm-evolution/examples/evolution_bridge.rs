@@ -36,7 +36,10 @@ use wm_evolution::{
     hrr_composition,
     info_theory::{shannon_entropy, kl_divergence, information_gain, system_uncertainty, AdaptiveWeights},
     mc_advanced,
+    mc_bayesian,
     mc_integration,
+    mc_rare_event,
+    mc_sde,
     mc_sensitivity,
     thermodynamic::{boltzmann_probabilities, boltzmann_select, ThermodynamicState},
 };
@@ -695,7 +698,340 @@ fn handle_request(req: serde_json::Value) -> String {
             }
         }
 
+        // ── Tier 2: Bayesian Optimization ──
+
+        "mc_gp_fit" => {
+            let x_train: Vec<Vec<f64>> = params.get("x_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|row| row.as_array().map(|r| r.iter().filter_map(|v| v.as_f64()).collect())).collect())
+                .unwrap_or_default();
+            let y_train: Vec<f64> = params.get("y_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+                .unwrap_or_default();
+            let length_scale = params.get("length_scale").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let sigma_f = params.get("sigma_f").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let sigma_n = params.get("sigma_n").and_then(|v| v.as_f64()).unwrap_or(1e-6);
+
+            if x_train.is_empty() || y_train.is_empty() {
+                json_error("x_train and y_train required")
+            } else {
+                let gp = mc_bayesian::GaussianProcess::fit(x_train, y_train, length_scale, sigma_f, sigma_n);
+                let lml = gp.log_marginal_likelihood();
+                json_ok(serde_json::json!({
+                    "length_scale": gp.length_scale,
+                    "sigma_f": gp.sigma_f,
+                    "sigma_n": gp.sigma_n,
+                    "log_marginal_likelihood": lml,
+                    "n_train": gp.y_train.len()
+                }))
+            }
+        }
+
+        "mc_gp_predict" => {
+            let x_train: Vec<Vec<f64>> = params.get("x_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|row| row.as_array().map(|r| r.iter().filter_map(|v| v.as_f64()).collect())).collect())
+                .unwrap_or_default();
+            let y_train: Vec<f64> = params.get("y_train")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+                .unwrap_or_default();
+            let x_new: Vec<f64> = params.get("x_new")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+                .unwrap_or_default();
+            let length_scale = params.get("length_scale").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let sigma_f = params.get("sigma_f").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let sigma_n = params.get("sigma_n").and_then(|v| v.as_f64()).unwrap_or(1e-6);
+
+            if x_train.is_empty() || x_new.is_empty() {
+                json_error("x_train, y_train, and x_new required")
+            } else {
+                let gp = mc_bayesian::GaussianProcess::fit(x_train, y_train, length_scale, sigma_f, sigma_n);
+                let (mean, variance) = gp.predict(&x_new);
+                json_ok(serde_json::json!({
+                    "mean": mean,
+                    "variance": variance,
+                    "std_dev": variance.sqrt()
+                }))
+            }
+        }
+
+        "mc_bayesian_optimize" => {
+            let initial_x: Vec<Vec<f64>> = params.get("initial_x")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|row| row.as_array().map(|r| r.iter().filter_map(|v| v.as_f64()).collect())).collect())
+                .unwrap_or_default();
+            let initial_y: Vec<f64> = params.get("initial_y")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+                .unwrap_or_default();
+            let param_ranges: Vec<(f64, f64)> = params.get("param_ranges")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|r| {
+                    let a = r.as_array()?;
+                    Some((a.first()?.as_f64()?, a.get(1)?.as_f64()?))
+                }).collect())
+                .unwrap_or_default();
+            let n_iterations = params.get("n_iterations").and_then(|v| v.as_i64()).unwrap_or(10) as usize;
+            let n_candidates = params.get("n_candidates").and_then(|v| v.as_i64()).unwrap_or(50) as usize;
+            let sigma_n = params.get("sigma_n").and_then(|v| v.as_f64()).unwrap_or(1e-4);
+            let xi = params.get("xi").and_then(|v| v.as_f64()).unwrap_or(0.01);
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let fitness_str = params.get("fitness_expr").and_then(|v| v.as_str()).unwrap_or("x[0]");
+
+            if initial_x.is_empty() || param_ranges.is_empty() {
+                json_error("initial_x, initial_y, param_ranges, and fitness_expr required")
+            } else {
+                // Parse fitness expression: supports "x[0]", "x[0]+x[1]", "x[0]*x[1]", etc.
+                let fitness_fn = move |x: &[f64]| -> f64 {
+                    match fitness_str {
+                        "x[0]" => x[0],
+                        "x[0]+x[1]" => x[0] + x[1],
+                        "x[0]*x[1]" => x[0] * x[1],
+                        "sphere" => -(x.iter().map(|xi| xi * xi).sum::<f64>()),
+                        "rosenbrock" => {
+                            let mut s = 0.0;
+                            for i in 0..x.len()-1 {
+                                s += (1.0 - x[i]).powi(2) + 100.0 * (x[i+1] - x[i].powi(2)).powi(2);
+                            }
+                            -s
+                        }
+                        _ => x[0],
+                    }
+                };
+
+                let (best_x, best_y, convergence, all_x, all_y) = mc_bayesian::bayesian_optimize(
+                    initial_x, initial_y, &param_ranges, fitness_fn,
+                    n_iterations, n_candidates, sigma_n, xi, seed,
+                );
+
+                json_ok(serde_json::json!({
+                    "best_x": best_x,
+                    "best_y": best_y,
+                    "convergence": convergence,
+                    "n_evaluations": all_x.len(),
+                    "all_x": all_x,
+                    "all_y": all_y
+                }))
+            }
+        }
+
+        // ── Tier 3: Rare Event Simulation ──
+
+        "mc_subset_simulation" => {
+            let dim = params.get("dim").and_then(|v| v.as_i64()).unwrap_or(1) as usize;
+            let n_samples = params.get("n_samples").and_then(|v| v.as_i64()).unwrap_or(500) as usize;
+            let target_pf = params.get("target_pf").and_then(|v| v.as_f64()).unwrap_or(1e-4);
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let threshold = params.get("threshold").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let g_expr = params.get("g_expr").and_then(|v| v.as_str()).unwrap_or("threshold - x[0]");
+
+            let g_fn = move |x: &[f64]| -> f64 {
+                match g_expr {
+                    "threshold - x[0]" => threshold - x[0],
+                    "threshold - sum_abs" => threshold - x.iter().map(|xi| xi.abs()).sum::<f64>(),
+                    "threshold - sum_sq" => threshold - x.iter().map(|xi| xi * xi).sum::<f64>(),
+                    _ => threshold - x[0],
+                }
+            };
+
+            let (pf, cov, levels) = mc_rare_event::subset_simulation(dim, n_samples, target_pf, g_fn, seed);
+            json_ok(serde_json::json!({
+                "probability": pf,
+                "coefficient_of_variation": cov,
+                "levels": levels
+            }))
+        }
+
+        "mc_multilevel_splitting" => {
+            let dim = params.get("dim").and_then(|v| v.as_i64()).unwrap_or(1) as usize;
+            let n_samples = params.get("n_samples").and_then(|v| v.as_i64()).unwrap_or(500) as usize;
+            let survival_fraction = params.get("survival_fraction").and_then(|v| v.as_f64()).unwrap_or(0.1);
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let threshold = params.get("threshold").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let g_expr = params.get("g_expr").and_then(|v| v.as_str()).unwrap_or("threshold - x[0]");
+
+            let g_fn = move |x: &[f64]| -> f64 {
+                match g_expr {
+                    "threshold - x[0]" => threshold - x[0],
+                    "threshold - sum_abs" => threshold - x.iter().map(|xi| xi.abs()).sum::<f64>(),
+                    "threshold - sum_sq" => threshold - x.iter().map(|xi| xi * xi).sum::<f64>(),
+                    _ => threshold - x[0],
+                }
+            };
+
+            let (prob, thresholds, levels) = mc_rare_event::multilevel_splitting(dim, n_samples, survival_fraction, g_fn, seed);
+            json_ok(serde_json::json!({
+                "probability": prob,
+                "thresholds": thresholds,
+                "levels": levels
+            }))
+        }
+
+        "mc_importance_sampling_rare" => {
+            let dim = params.get("dim").and_then(|v| v.as_i64()).unwrap_or(1) as usize;
+            let n_samples = params.get("n_samples").and_then(|v| v.as_i64()).unwrap_or(2000) as usize;
+            let pilot_n = params.get("pilot_n").and_then(|v| v.as_i64()).unwrap_or(500) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let threshold = params.get("threshold").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let g_expr = params.get("g_expr").and_then(|v| v.as_str()).unwrap_or("threshold - x[0]");
+
+            let g_fn = move |x: &[f64]| -> f64 {
+                match g_expr {
+                    "threshold - x[0]" => threshold - x[0],
+                    "threshold - sum_abs" => threshold - x.iter().map(|xi| xi.abs()).sum::<f64>(),
+                    "threshold - sum_sq" => threshold - x.iter().map(|xi| xi * xi).sum::<f64>(),
+                    _ => threshold - x[0],
+                }
+            };
+
+            let (pf, shifted_mean, ess) = mc_rare_event::importance_sampling_rare(dim, n_samples, g_fn, pilot_n, seed);
+            json_ok(serde_json::json!({
+                "probability": pf,
+                "shifted_mean": shifted_mean,
+                "effective_sample_size": ess
+            }))
+        }
+
+        // ── Tier 4: SDE Solvers ──
+
+        "mc_sde_euler" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let drift_type = params.get("drift_type").and_then(|v| v.as_str()).unwrap_or("gbm");
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.2);
+
+            let sde = build_sde(drift_type, mu, sigma);
+            let path = mc_sde::euler_maruyama(&sde, x0, t0, t_end, n_steps, seed);
+            let final_val = path.last().map(|(_, x)| *x).unwrap_or(x0);
+            json_ok(serde_json::json!({
+                "final_value": final_val,
+                "n_steps": n_steps,
+                "path_length": path.len()
+            }))
+        }
+
+        "mc_sde_milstein" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let drift_type = params.get("drift_type").and_then(|v| v.as_str()).unwrap_or("gbm");
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.2);
+
+            let sde = build_sde(drift_type, mu, sigma);
+            let path = mc_sde::milstein(&sde, x0, t0, t_end, n_steps, seed);
+            let final_val = path.last().map(|(_, x)| *x).unwrap_or(x0);
+            json_ok(serde_json::json!({
+                "final_value": final_val,
+                "n_steps": n_steps,
+                "path_length": path.len()
+            }))
+        }
+
+        "mc_sde_parallel_euler" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let n_paths = params.get("n_paths").and_then(|v| v.as_i64()).unwrap_or(1000) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let drift_type = params.get("drift_type").and_then(|v| v.as_str()).unwrap_or("gbm");
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.2);
+
+            let sde = build_sde(drift_type, mu, sigma);
+            let finals = mc_sde::parallel_euler_maruyama(&sde, x0, t0, t_end, n_steps, n_paths, seed);
+            let (mean, var, std_dev, ci) = mc_sde::path_statistics(&finals);
+            json_ok(serde_json::json!({
+                "mean": mean,
+                "variance": var,
+                "std_dev": std_dev,
+                "ci_95": ci,
+                "n_paths": n_paths
+            }))
+        }
+
+        "mc_sde_parallel_milstein" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_steps = params.get("n_steps").and_then(|v| v.as_i64()).unwrap_or(100) as usize;
+            let n_paths = params.get("n_paths").and_then(|v| v.as_i64()).unwrap_or(1000) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let drift_type = params.get("drift_type").and_then(|v| v.as_str()).unwrap_or("gbm");
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.2);
+
+            let sde = build_sde(drift_type, mu, sigma);
+            let finals = mc_sde::parallel_milstein(&sde, x0, t0, t_end, n_steps, n_paths, seed);
+            let (mean, var, std_dev, ci) = mc_sde::path_statistics(&finals);
+            json_ok(serde_json::json!({
+                "mean": mean,
+                "variance": var,
+                "std_dev": std_dev,
+                "ci_95": ci,
+                "n_paths": n_paths
+            }))
+        }
+
+        "mc_sde_mlmc" => {
+            let x0 = params.get("x0").and_then(|v| v.as_f64()).unwrap_or(100.0);
+            let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let t_end = params.get("t_end").and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let n_levels = params.get("n_levels").and_then(|v| v.as_i64()).unwrap_or(3) as usize;
+            let n_paths_fine = params.get("n_paths_fine").and_then(|v| v.as_i64()).unwrap_or(1000) as usize;
+            let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(42) as u64;
+            let drift_type = params.get("drift_type").and_then(|v| v.as_str()).unwrap_or("gbm");
+            let mu = params.get("mu").and_then(|v| v.as_f64()).unwrap_or(0.05);
+            let sigma = params.get("sigma").and_then(|v| v.as_f64()).unwrap_or(0.2);
+            let payoff = params.get("payoff").and_then(|v| v.as_str()).unwrap_or("identity");
+
+            let sde = build_sde(drift_type, mu, sigma);
+            let payoff_fn = move |x: f64| -> f64 {
+                match payoff {
+                    "identity" => x,
+                    "square" => x * x,
+                    "heaviside" => if x > x0 { 1.0 } else { 0.0 },
+                    _ => x,
+                }
+            };
+
+            let (estimate, var, levels) = mc_sde::multilevel_monte_carlo(
+                &sde, x0, t0, t_end, payoff_fn, n_levels, n_paths_fine, seed,
+            );
+            json_ok(serde_json::json!({
+                "estimate": estimate,
+                "variance": var,
+                "levels": levels
+            }))
+        }
+
         _ => json_error(&format!("Unknown method: {}", method)),
+    }
+}
+
+fn build_sde(drift_type: &str, _mu: f64, _sigma: f64) -> mc_sde::SDE {
+    match drift_type {
+        "ou" => mc_sde::SDE {
+            drift: |_t, x: &[f64]| 1.0 * (0.0 - x[0]),
+            diffusion: |_t, _x: &[f64]| 0.3,
+            diffusion_deriv: |_t, _x: &[f64]| 0.0,
+        },
+        _ => mc_sde::SDE {
+            // GBM with default mu=0.05, sigma=0.2
+            drift: |_t, x: &[f64]| 0.05 * x[0],
+            diffusion: |_t, x: &[f64]| 0.2 * x[0],
+            diffusion_deriv: |_t, _x: &[f64]| 0.2,
+        },
     }
 }
 

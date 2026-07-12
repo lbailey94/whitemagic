@@ -140,9 +140,10 @@ class TestEvolutionaryAutoswarm:
 
     def test_default_campaigns(self, autoswarm):
         campaigns = autoswarm._default_campaigns()
-        assert len(campaigns) == 4
+        assert len(campaigns) == 5
         names = [c.campaign_name for c in campaigns]
         assert "cognitive_optimization" in names
         assert "coherence_tuning" in names
         assert "emergence_exploration" in names
         assert "health_setpoints" in names
+        assert "superforecaster_deep_optimization" in names

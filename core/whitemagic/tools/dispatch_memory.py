@@ -161,6 +161,14 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "meta.galaxy.overview": LazyHandler("neuro_cognitive", "handle_meta_galaxy_overview"),
     "possibility.explore": LazyHandler("neuro_cognitive", "handle_possibility_explore"),
     "knowledge_gap.run": LazyHandler("neuro_cognitive", "handle_knowledge_gap_run"),
+    # ── MC Simulation Tools (Tier 2-4) ──
+    "mc.surrogate": LazyHandler("simulation", "handle_mc_surrogate"),
+    "mc.optimize": LazyHandler("simulation", "handle_mc_optimize"),
+    "mc.rare_event": LazyHandler("simulation", "handle_mc_rare_event"),
+    "mc.sde": LazyHandler("simulation", "handle_mc_sde"),
+    "mc.superforecaster": LazyHandler("simulation", "handle_mc_superforecaster"),
+    "simulation.introspect": LazyHandler("simulation", "handle_simulation_introspect"),
+    "simulation.forecast": LazyHandler("simulation", "handle_simulation_forecast"),
     # ── Codebase Self-Model ──
     "codebase.scan": LazyHandler("codebase", "handle_codebase_scan"),
     "codebase.recall": LazyHandler("codebase", "handle_codebase_recall"),

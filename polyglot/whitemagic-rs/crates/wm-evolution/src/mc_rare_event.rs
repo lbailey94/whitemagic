@@ -194,8 +194,11 @@ pub fn multilevel_splitting(
         // Regenerate full sample set via conditional MCMC
         let mut new_samples = survivors.clone();
         let proposal_std = 1.0 / (level as f64).sqrt().max(1.0);
+        let max_attempts = n_samples * 100;
+        let mut attempts = 0;
         
-        while new_samples.len() < n_samples {
+        while new_samples.len() < n_samples && attempts < max_attempts {
+            attempts += 1;
             let seed_idx = (rng.next_u64() as usize) % survivors.len();
             let mut proposal = survivors[seed_idx].clone();
             
@@ -207,6 +210,12 @@ pub fn multilevel_splitting(
             if g_proposal > threshold {
                 new_samples.push(proposal);
             }
+        }
+        
+        // If MCMC didn't fill enough samples, duplicate survivors to fill
+        while new_samples.len() < n_samples {
+            let idx = new_samples.len() % survivors.len();
+            new_samples.push(survivors[idx].clone());
         }
         
         samples = new_samples;

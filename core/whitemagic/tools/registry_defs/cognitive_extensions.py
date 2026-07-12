@@ -729,4 +729,122 @@ TOOLS: list[ToolDefinition] = [
             },
         },
     ),
+    # ── MC Simulation Tools (Tier 2-4) ──
+    ToolDefinition(
+        name="mc.surrogate",
+        description="Fit and evaluate a Gaussian Process surrogate model for Bayesian optimization or response surface modeling.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "x_train": {"type": "array", "description": "Training inputs (list of lists)"},
+                "y_train": {"type": "array", "description": "Training outputs (list of floats)"},
+                "x_predict": {"type": "array", "description": "Optional points to predict at"},
+                "length_scale": {"type": "number", "default": 1.0},
+                "sigma_f": {"type": "number", "default": 1.0},
+                "sigma_n": {"type": "number", "default": 0.01},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="mc.optimize",
+        description="Run Bayesian optimization to find optimal parameters. Uses GP surrogate + Expected Improvement acquisition. Supports custom fitness functions.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "param_ranges": {"type": "array", "description": "List of [min, max] pairs for each parameter"},
+                "fitness_expr": {"type": "string", "description": "Fitness expression (e.g. 'x[0]')"},
+                "n_initial_samples": {"type": "integer", "default": 50},
+                "n_iterations": {"type": "integer", "default": 20},
+                "n_candidates": {"type": "integer", "default": 100},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="mc.rare_event",
+        description="Estimate rare event probabilities using subset simulation, multilevel splitting, or importance sampling.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "method": {"type": "string", "default": "subset", "description": "subset, splitting, or importance"},
+                "dim": {"type": "integer", "default": 2},
+                "n_samples": {"type": "integer", "default": 1000},
+                "threshold": {"type": "number", "default": 2.0},
+                "g_expr": {"type": "string", "default": "threshold - sum_sq"},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="mc.sde",
+        description="Solve stochastic differential equations via Euler-Maruyama or Milstein. Supports GBM and OU drift, parallel paths, and multilevel Monte Carlo.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "x0": {"type": "number", "default": 100.0},
+                "t_end": {"type": "number", "default": 1.0},
+                "n_steps": {"type": "integer", "default": 100},
+                "n_paths": {"type": "integer", "default": 1000},
+                "drift_type": {"type": "string", "default": "gbm"},
+                "mu": {"type": "number", "default": 0.05},
+                "sigma": {"type": "number", "default": 0.2},
+                "solver": {"type": "string", "default": "euler"},
+                "mlmc": {"type": "boolean", "default": False},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="mc.superforecaster",
+        description="Run the full superforecaster pipeline: LHS → PCE → Sobol → Bayesian optimization → rare event. Unified entry point for comprehensive possibility space exploration.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "param_ranges": {"type": "array", "description": "List of [min, max] pairs"},
+                "fitness_expr": {"type": "string", "description": "Fitness expression"},
+                "n_initial_samples": {"type": "integer", "default": 100},
+                "n_bo_iterations": {"type": "integer", "default": 20},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="simulation.introspect",
+        description="Yin-within-yang: run introspective simulation to optimize internal system parameters (guna balance, coherence, emergence thresholds, health setpoints) via the superforecaster pipeline.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "space": {"type": "string", "default": "guna_balance", "description": "guna_balance, coherence_optimization, emergence_thresholds, health_setpoints"},
+                "n_trials": {"type": "integer", "default": 100},
+                "n_bo_iterations": {"type": "integer", "default": 20},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="simulation.forecast",
+        description="Yang-within-yin: run external research simulation to model and forecast external systems. Supports SDE solving, rare event estimation, and superforecaster pipeline.",
+        category=ToolCategory.SYNTHESIS,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "model_type": {"type": "string", "default": "sde", "description": "sde, rare_event, or superforecaster"},
+                "research_query": {"type": "string", "description": "Optional research question framing the simulation"},
+                "seed": {"type": "integer", "default": 42},
+            },
+        },
+    ),
 ]

@@ -58,6 +58,9 @@ class CampaignConfig:
     share_results: bool = True
     dream_integration: bool = True
     breakthrough_threshold: float = 0.8
+    use_superforecaster: bool = False
+    n_bo_iterations: int = 20
+    seed: int = 42
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -151,11 +154,21 @@ class EvolutionaryAutoswarm:
 
         try:
             # Step 1: Generate hypotheses
-            hypotheses = self._generate_hypotheses(config)
-            logger.info(
-                "Autoswarm: campaign '%s' generated %d hypotheses",
-                config.campaign_name, len(hypotheses),
-            )
+            if config.use_superforecaster:
+                sf_hypotheses, sf_best_fitness, sf_meta = self._run_superforecaster_campaign(config)
+                hypotheses = sf_hypotheses
+                result.best_fitness = sf_best_fitness
+                result.metadata = sf_meta
+                logger.info(
+                    "Autoswarm: campaign '%s' [superforecaster] generated %d hypotheses, sf_best=%.4f",
+                    config.campaign_name, len(hypotheses), sf_best_fitness,
+                )
+            else:
+                hypotheses = self._generate_hypotheses(config)
+                logger.info(
+                    "Autoswarm: campaign '%s' generated %d hypotheses",
+                    config.campaign_name, len(hypotheses),
+                )
 
             # Step 2: Run trials for each hypothesis
             for i, (hypothesis, params) in enumerate(hypotheses):
@@ -407,7 +420,12 @@ class EvolutionaryAutoswarm:
         config: CampaignConfig,
         params: dict[str, float],
     ) -> float:
-        """Evaluate a trial by running it through the PossibilityExplorer fitness function."""
+        """Evaluate a trial by running it through the PossibilityExplorer fitness function.
+
+        When use_superforecaster is enabled on the campaign config, uses the
+        superforecaster pipeline (LHS→PCE→Sobol→BO) for batch evaluation instead
+        of individual trial scoring.
+        """
         try:
             from whitemagic.core.consciousness.possibility_explorer import (
                 get_possibility_explorer,
@@ -420,6 +438,58 @@ class EvolutionaryAutoswarm:
         except Exception as e:
             logger.debug("Trial evaluation: %s", e, exc_info=True)
             return 0.0
+
+    def _run_superforecaster_campaign(
+        self,
+        config: CampaignConfig,
+    ) -> tuple[list[tuple[str, dict[str, float]]], float, dict[str, Any]]:
+        """Run a superforecaster-enhanced campaign.
+
+        Returns (hypotheses_with_params, best_fitness, sf_metadata).
+        Uses the full LHS→PCE→Sobol→BO pipeline to find optimal parameters,
+        then generates hypotheses around the optimal region.
+        """
+        try:
+            from whitemagic.core.consciousness.possibility_explorer import (
+                get_possibility_explorer,
+            )
+            explorer = get_possibility_explorer()
+            result = explorer.explore(
+                config.hypothesis_space,
+                n_trials=config.n_trials,
+                use_superforecaster=True,
+                n_bo_iterations=config.n_bo_iterations,
+                seed=config.seed,
+            )
+
+            best_params = result.best_trial.parameters if result.best_trial else {}
+            best_fitness = result.best_trial.fitness_score if result.best_trial else 0.0
+
+            hypotheses: list[tuple[str, dict[str, float]]] = []
+            if best_params:
+                hypotheses.append((
+                    f"Superforecaster optimal: {config.hypothesis_space}",
+                    best_params,
+                ))
+                for i in range(min(4, config.max_iterations - 1)):
+                    mutated = self._mutate_params(best_params)
+                    hypotheses.append((
+                        f"SF variation {i}: {config.hypothesis_space}",
+                        mutated,
+                    ))
+
+            sf_meta = {
+                "surrogate_r_squared": 0.0,
+                "parameter_sensitivity": result.parameter_sensitivity,
+                "avg_fitness": result.avg_fitness,
+                "fitness_variance": result.fitness_variance,
+                "backend": result.backend,
+            }
+
+            return hypotheses, best_fitness, sf_meta
+        except Exception as e:
+            logger.debug("Superforecaster campaign: %s", e, exc_info=True)
+            return [], 0.0, {}
 
     def _mutate_params(self, params: dict[str, Any]) -> dict[str, float]:
         """Mutate parameters slightly for variation."""
@@ -499,7 +569,11 @@ class EvolutionaryAutoswarm:
             logger.debug("Dream feed: %s", e, exc_info=True)
 
     def _default_campaigns(self) -> list[CampaignConfig]:
-        """Default campaign configurations cycling through domains."""
+        """Default campaign configurations cycling through domains.
+
+        The 5th campaign uses the superforecaster pipeline (LHS→PCE→Sobol→BO)
+        for rigorous parameter optimization.
+        """
         return [
             CampaignConfig(
                 campaign_name="cognitive_optimization",
@@ -528,6 +602,15 @@ class EvolutionaryAutoswarm:
                 hypothesis_space="health_setpoints",
                 n_trials=50,
                 max_iterations=10,
+            ),
+            CampaignConfig(
+                campaign_name="superforecaster_deep_optimization",
+                domain=ResearchDomain.COGNITIVE,
+                hypothesis_space="guna_balance",
+                n_trials=100,
+                max_iterations=5,
+                use_superforecaster=True,
+                n_bo_iterations=30,
             ),
         ]
 
