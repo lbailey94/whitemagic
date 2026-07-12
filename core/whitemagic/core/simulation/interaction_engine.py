@@ -82,6 +82,7 @@ class InteractionEngine:
         personas: list[Persona],
         world: WorldModel,
         ticks: int = 10,
+        injection_points: list[dict[str, Any]] | None = None,
     ) -> InteractionLog:
         """Run a multi-agent interaction simulation.
 
@@ -90,15 +91,28 @@ class InteractionEngine:
             personas: List of personas to simulate.
             world: World model to simulate in.
             ticks: Number of interaction ticks.
+            injection_points: Optional list of {tick, variable, value, target?} dicts
+                to inject at specified ticks. Variables: coherence, emotional_state,
+                world_state, dharma_strictness.
 
         Returns:
             InteractionLog with all events.
         """
         log = InteractionLog()
         self._logs[run_id] = log
+        injections_by_tick: dict[int, list[dict[str, Any]]] = {}
+        if injection_points:
+            for inj in injection_points:
+                t = inj.get("tick", 0)
+                injections_by_tick.setdefault(t, []).append(inj)
 
         for tick in range(ticks):
             world.advance_tick()
+
+            # Apply injections for this tick
+            if tick in injections_by_tick:
+                for inj in injections_by_tick[tick]:
+                    self._apply_injection(personas, world, inj)
 
             for persona in personas:
                 event = self._agent_step(persona, world, tick)
@@ -119,6 +133,32 @@ class InteractionEngine:
 
         logger.info("Interaction run %s: %d events over %d ticks", run_id, len(log.events), ticks)
         return log
+
+    def _apply_injection(
+        self, personas: list[Persona], world: WorldModel, injection: dict[str, Any]
+    ) -> None:
+        """Apply a variable injection to the simulation state."""
+        variable = injection.get("variable", "")
+        value = injection.get("value")
+        target_id = injection.get("target")
+
+        if variable == "coherence":
+            for p in personas:
+                if target_id is None or p.id == target_id or p.name == target_id:
+                    p.coherence = max(0.0, min(1.0, float(value)))
+        elif variable == "emotional_state":
+            for p in personas:
+                if target_id is None or p.id == target_id or p.name == target_id:
+                    p.emotional_state = max(0.0, min(1.0, float(value)))
+        elif variable == "dharma_strictness":
+            for p in personas:
+                if target_id is None or p.id == target_id or p.name == target_id:
+                    p.profile.dharma_strictness = max(0.0, min(1.0, float(value)))
+        elif variable == "world_state":
+            key = injection.get("key", "injected")
+            world._state[key] = value
+        else:
+            world._state[variable] = value
 
     def _agent_step(self, persona: Persona, world: WorldModel, tick: int) -> InteractionEvent | None:
         """Execute one step for a single agent.

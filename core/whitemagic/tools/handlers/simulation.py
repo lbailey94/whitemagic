@@ -105,9 +105,11 @@ def handle_simulation_run(**kwargs: Any) -> dict[str, Any]:
         if not scenario_name:
             return {"status": "error", "error": "scenario_name is required"}
 
-        archetypes = kwargs.get("archetypes", ["analyst", "creative"])
+        archetypes = kwargs.get("archetypes") or ["analyst", "creative"]
         if isinstance(archetypes, str):
             archetypes = [a.strip() for a in archetypes.split(",")]
+        if not archetypes:
+            archetypes = ["analyst", "creative"]
 
         seed_docs = kwargs.get("seed_documents", [])
         if isinstance(seed_docs, str):
@@ -158,14 +160,28 @@ def handle_simulation_search(**kwargs: Any) -> dict[str, Any]:
         max_depth: Maximum tree depth (default: 10)
         branching_factor: Children per node (default: 3)
         initial_state: Optional initial state dict
+        use_cognitive_rollout: Use InteractionEngine for rollouts instead of random (default: false)
+        seed_documents: Seed docs for cognitive rollout
+        archetypes: Persona archetypes for cognitive rollout
     """
     try:
         from whitemagic.core.simulation.trajectory_search import TrajectoryTreeSearch
+
+        rollout_fn = None
+        if kwargs.get("use_cognitive_rollout", False):
+            from whitemagic.core.simulation.trajectory_search import create_cognitive_rollout
+            rollout_fn = create_cognitive_rollout(
+                seed_documents=kwargs.get("seed_documents", []),
+                archetypes=kwargs.get("archetypes"),
+                num_personas=kwargs.get("num_personas", 3),
+                ticks=kwargs.get("rollout_ticks", 5),
+            )
 
         search = TrajectoryTreeSearch(
             max_depth=kwargs.get("max_depth", 10),
             branching_factor=kwargs.get("branching_factor", 3),
             exploration=kwargs.get("exploration", 1.414),
+            rollout_fn=rollout_fn,
         )
 
         initial_state = kwargs.get("initial_state", {})
@@ -186,13 +202,17 @@ def handle_simulation_search(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_simulation_inject(**kwargs: Any) -> dict[str, Any]:
-    """Inject variables into a simulation scenario.
+    """Inject variables into a simulation scenario and run it.
 
     Args (via kwargs):
-        scenario_name: Name of the scenario to inject into
+        scenario_name: Name for the injected scenario (required)
         injection: Dict with {tick, variable, value} or list of such dicts
+        num_trials: Number of MC trials (default: 1)
+        ticks_per_trial: Ticks per trial (default: 10)
     """
     try:
+        from whitemagic.core.simulation.scenario_runner import get_scenario_runner
+
         scenario_name = kwargs.get("scenario_name")
         if not scenario_name:
             return {"status": "error", "error": "scenario_name is required"}
@@ -206,11 +226,30 @@ def handle_simulation_inject(**kwargs: Any) -> dict[str, Any]:
         if isinstance(injection, dict):
             injection = [injection]
 
+        if not injection:
+            return {"status": "error", "error": "injection is required"}
+
+        num_trials = kwargs.get("num_trials", 1)
+        ticks_per_trial = kwargs.get("ticks_per_trial", 10)
+
+        runner = get_scenario_runner()
+        analysis = runner.inject(
+            scenario_name=scenario_name,
+            injections=injection,
+            num_trials=num_trials,
+            ticks_per_trial=ticks_per_trial,
+        )
+
         return {
             "status": "success",
             "scenario": scenario_name,
             "injections": injection,
-            "message": f"Injected {len(injection)} variable(s) into {scenario_name}",
+            "total_trials": analysis.total_trials,
+            "outcome_distribution": analysis.outcome_distribution,
+            "avg_final_coherence": round(analysis.avg_final_coherence, 4),
+            "robustness_score": round(analysis.robustness_score, 4),
+            "injected": True,
+            "message": f"Injected {len(injection)} variable(s) into {scenario_name} across {num_trials} trial(s)",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -396,6 +435,162 @@ def handle_simulation_calibrate(**kwargs: Any) -> dict[str, Any]:
             scorecard = bridge.get_scorecard()
             return {"status": "success", **scorecard}
 
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
+    """Run the full P5 simulation pipeline end-to-end: create → run → analyze → synthesize → calibrate.
+
+    Args (via kwargs):
+        scenario_name: Name for the scenario (required)
+        seed_documents: List of seed document strings
+        archetypes: List of persona archetypes
+        num_personas: Personas per trial (default: 3)
+        ticks_per_trial: Ticks per trial (default: 10)
+        num_trials: Number of MC trials (default: 10)
+        prediction_statement: Optional prediction to record before running
+        prediction_probability: Predicted probability [0,1] (default: 0.5)
+        consolidate: Run dream-cycle consolidation (default: true)
+        top_n_insights: Number of top insights to return (default: 5)
+    """
+    try:
+        scenario_name = kwargs.get("scenario_name") or kwargs.get("name")
+        if not scenario_name:
+            return {"status": "error", "error": "scenario_name is required"}
+
+        result: dict[str, Any] = {"status": "success", "scenario": scenario_name, "stages": {}}
+
+        # Stage 1: Record prediction (if provided)
+        prediction_id = None
+        pred_statement = kwargs.get("prediction_statement")
+        if pred_statement:
+            from whitemagic.core.simulation.calibration_bridge import get_calibration_bridge
+            bridge = get_calibration_bridge()
+            pred = bridge.record_prediction(
+                scenario_name=scenario_name,
+                statement=pred_statement,
+                probability=kwargs.get("prediction_probability", 0.5),
+                confidence=kwargs.get("prediction_confidence", 0.5),
+            )
+            prediction_id = pred.id
+            result["stages"]["predict"] = {
+                "prediction_id": pred.id,
+                "adjusted_probability": round(pred.probability, 4),
+            }
+
+        # Stage 2: Run scenario
+        from whitemagic.core.simulation.scenario_runner import (
+            ScenarioConfig,
+            get_scenario_runner,
+        )
+        archetypes = kwargs.get("archetypes") or ["analyst", "creative"]
+        if isinstance(archetypes, str):
+            archetypes = [a.strip() for a in archetypes.split(",")]
+        seed_docs = kwargs.get("seed_documents", [])
+        if isinstance(seed_docs, str):
+            seed_docs = [seed_docs]
+
+        config = ScenarioConfig(
+            name=scenario_name,
+            seed_documents=seed_docs,
+            persona_archetypes=archetypes,
+            num_personas=kwargs.get("num_personas", 3),
+            ticks_per_trial=kwargs.get("ticks_per_trial", 10),
+            num_trials=kwargs.get("num_trials", 10),
+        )
+        runner = get_scenario_runner()
+        analysis = runner.run_scenario(config)
+
+        result["stages"]["run"] = {
+            "total_trials": analysis.total_trials,
+            "outcome_distribution": analysis.outcome_distribution,
+            "avg_final_coherence": round(analysis.avg_final_coherence, 4),
+            "robustness_score": round(analysis.robustness_score, 4),
+            "best_trial_coherence": round(analysis.best_trial.final_coherence, 4) if analysis.best_trial else None,
+        }
+
+        # Stage 3: Analyze + dream consolidation
+        consolidate = kwargs.get("consolidate", True)
+        consolidation_reports = []
+        if consolidate:
+            from whitemagic.core.simulation.dream_integration import get_dream_integration
+            results = runner.get_results(scenario_name)
+            if results:
+                sim_data = {
+                    "events_count": sum(r.events_count for r in results),
+                    "final_coherence": analysis.avg_final_coherence,
+                    "outcome": max(analysis.outcome_distribution, key=analysis.outcome_distribution.get),
+                    "best_trial": {"final_coherence": max(r.final_coherence for r in results)},
+                    "ticks": max(r.config_snapshot.get("ticks", 0) for r in results),
+                }
+                dream = get_dream_integration()
+                reports = dream.consolidate_simulation(scenario_name, sim_data)
+                consolidation_reports = [
+                    {"phase": r.phase, "insights": r.insights[:3], "narrative": r.narrative[:200]}
+                    for r in reports
+                ]
+
+        result["stages"]["analyze"] = {
+            "consolidation_reports": consolidation_reports,
+        }
+
+        # Persist consolidation reports to galaxies
+        if consolidate and consolidation_reports:
+            try:
+                persist_dream = dream.persist_consolidation(scenario_name)
+                result["stages"]["persist_dream"] = persist_dream
+            except Exception as e:
+                result["stages"]["persist_dream"] = {"persisted": 0, "errors": [str(e)]}
+
+        # Stage 4: Synthesize insights
+        from whitemagic.core.simulation.insight_synthesizer import get_insight_synthesizer
+        results = runner.get_results(scenario_name)
+        if results:
+            traj_dicts = [
+                {
+                    "trial_id": r.trial_id,
+                    "outcome": r.outcome,
+                    "final_coherence": r.final_coherence,
+                    "avg_emergence": r.avg_emergence,
+                    "avg_impact": r.avg_impact,
+                    "events_count": r.events_count,
+                }
+                for r in results
+            ]
+            synthesizer = get_insight_synthesizer()
+            insights = synthesizer.synthesize(traj_dicts)
+            top_n = kwargs.get("top_n_insights", 5)
+            top = insights[:top_n]
+            result["stages"]["synthesize"] = {
+                "total_insights": len(insights),
+                "top_insights": [
+                    {
+                        "id": i.id,
+                        "statement": i.statement,
+                        "type": i.insight_type,
+                        "novelty": round(i.novelty_score, 3),
+                        "composite_rank": round(i.composite_rank, 3),
+                    }
+                    for i in top
+                ],
+            }
+
+            # Persist top insights to codex galaxy
+            persist = kwargs.get("persist_insights", True)
+            if persist and top:
+                persist_result = synthesizer.persist_insights(scenario_name, top_n=top_n)
+                result["stages"]["persist"] = persist_result
+
+        # Stage 5: Resolve prediction (if outcome is known)
+        if prediction_id and results:
+            best_outcome = analysis.outcome_distribution.get("converged", 0) > 0
+            from whitemagic.core.simulation.calibration_bridge import get_calibration_bridge
+            bridge = get_calibration_bridge()
+            resolve_result = bridge.resolve_prediction(prediction_id, best_outcome)
+            result["stages"]["resolve"] = resolve_result
+
+        return result
     except Exception as e:
         return {"status": "error", "error": str(e)}
 

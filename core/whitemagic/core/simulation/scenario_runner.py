@@ -134,9 +134,10 @@ class ScenarioRunner:
         )
 
         # Generate personas with varied initial conditions
+        archetypes = config.persona_archetypes or ["analyst"]
         personas: list[Persona] = []
         for i in range(config.num_personas):
-            archetype = config.persona_archetypes[i % len(config.persona_archetypes)]
+            archetype = archetypes[i % len(archetypes)]
             persona = self._persona_engine.create_persona(
                 name=f"{archetype}_{trial_idx}_{i}",
                 archetype=archetype,
@@ -165,6 +166,7 @@ class ScenarioRunner:
             personas=personas,
             world=world,
             ticks=config.ticks_per_trial,
+            injection_points=config.injection_points,
         )
 
         # Determine outcome
@@ -254,6 +256,30 @@ class ScenarioRunner:
 
     def get_results(self, scenario_name: str) -> list[TrialResult] | None:
         return self._results.get(scenario_name)
+
+    def inject(
+        self, scenario_name: str, injections: list[dict[str, Any]],
+        num_trials: int = 1, ticks_per_trial: int = 10,
+    ) -> ScenarioAnalysis:
+        """Run a scenario with injected variables at specified ticks.
+
+        Args:
+            scenario_name: Name for the injected scenario.
+            injections: List of {tick, variable, value, target?} dicts.
+            num_trials: Number of MC trials (default: 1).
+            ticks_per_trial: Ticks per trial (default: 10).
+
+        Returns:
+            ScenarioAnalysis with injected trial results.
+        """
+        config = ScenarioConfig(
+            name=scenario_name,
+            num_personas=3,
+            ticks_per_trial=ticks_per_trial,
+            num_trials=num_trials,
+            injection_points=injections,
+        )
+        return self.run_scenario(config)
 
     def stats(self) -> dict[str, Any]:
         return {

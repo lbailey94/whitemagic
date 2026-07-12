@@ -175,4 +175,35 @@ TOOLS: list[ToolDefinition] = [
         quadrant="northern",
         element="fire",
     ),
+    ToolDefinition(
+        name="simulation.pipeline",
+        description=(
+            "Run the full P5 simulation pipeline end-to-end: create world, run "
+            "Monte Carlo scenario, analyze with dream consolidation, synthesize "
+            "insights, and optionally record/resolve calibrated predictions. "
+            "Chains all 8 P5 components in a single call."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "scenario_name": {"type": "string", "description": "Name for the scenario"},
+                "seed_documents": {"type": "array", "items": {"type": "string"}},
+                "archetypes": {"type": "array", "items": {"type": "string"}},
+                "num_personas": {"type": "integer", "description": "Personas per trial (default: 3)"},
+                "ticks_per_trial": {"type": "integer", "description": "Ticks per trial (default: 10)"},
+                "num_trials": {"type": "integer", "description": "Number of MC trials (default: 10)"},
+                "prediction_statement": {"type": "string", "description": "Optional prediction to record"},
+                "prediction_probability": {"type": "number", "description": "Predicted probability [0,1]"},
+                "consolidate": {"type": "boolean", "description": "Run dream consolidation (default: true)"},
+                "top_n_insights": {"type": "integer", "description": "Top insights to return (default: 5)"},
+            },
+            "required": ["scenario_name"],
+        },
+        gana="Three Stars",
+        garden="judgment",
+        quadrant="northern",
+        element="fire",
+    ),
 ]

@@ -18,7 +18,7 @@ import logging
 import math
 import random
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +67,13 @@ class TrajectoryTreeSearch:
         branching_factor: int = 3,
         exploration: float = 1.414,
         novelty_weight: float = 0.3,
+        rollout_fn: Callable[[dict[str, Any]], float] | None = None,
     ) -> None:
         self.max_depth = max_depth
         self.branching_factor = branching_factor
         self.exploration = exploration
         self.novelty_weight = novelty_weight
+        self._rollout_fn = rollout_fn
         self._nodes: dict[str, TrajectoryNode] = {}
         self._root_id: str | None = None
         self._total_simulations = 0
@@ -171,13 +173,20 @@ class TrajectoryTreeSearch:
         return children
 
     def _simulate(self, node: TrajectoryNode) -> float:
-        """Lightweight rollout simulation from a node.
+        """Rollout simulation from a node.
 
-        Returns a value estimate [0, 1] based on:
-        - Depth (deeper = more explored)
-        - Novelty (higher = more creative)
-        - Random exploration factor
+        If a rollout_fn is configured, delegates to it for cognitive simulation
+        (e.g. InteractionEngine-based rollout). Otherwise falls back to a
+        lightweight heuristic based on depth, novelty, and random exploration.
+
+        Returns a value estimate [0, 1].
         """
+        if self._rollout_fn is not None:
+            try:
+                return max(0.0, min(1.0, float(self._rollout_fn(node.state))))
+            except Exception:
+                logger.warning("rollout_fn failed, falling back to heuristic", exc_info=True)
+
         depth_factor = node.depth / self.max_depth
         novelty_factor = node.novelty_score
         random_factor = random.uniform(0.2, 0.8)
@@ -233,3 +242,62 @@ def get_trajectory_search() -> TrajectoryTreeSearch:
     if _search is None:
         _search = TrajectoryTreeSearch()
     return _search
+
+
+def create_cognitive_rollout(
+    seed_documents: list[str] | None = None,
+    archetypes: list[str] | None = None,
+    num_personas: int = 3,
+    ticks: int = 5,
+) -> Callable[[dict[str, Any]], float]:
+    """Create a rollout function that uses InteractionEngine for cognitive simulation.
+
+    The returned function takes a node state dict and returns a value [0, 1]
+    based on the final coherence of a short interaction simulation.
+    """
+    from whitemagic.core.simulation.interaction_engine import InteractionEngine
+    from whitemagic.core.simulation.persona_engine import PersonaEngine
+    from whitemagic.core.simulation.world_model import WorldModelBuilder
+
+    engine = InteractionEngine()
+    pe = PersonaEngine()
+    wb = WorldModelBuilder()
+    archs = archetypes or ["analyst", "creative"]
+    run_counter = [0]
+
+    def rollout(state: dict[str, Any]) -> float:
+        run_counter[0] += 1
+        run_id = f"rollout_{run_counter[0]}"
+
+        world = wb.create_world(
+            name=f"rollout_world_{run_counter[0]}",
+            seed_documents=seed_documents or [],
+        )
+
+        personas = []
+        for i in range(num_personas):
+            archetype = archs[i % len(archs)]
+            p = pe.create_persona(
+                name=f"{archetype}_rollout_{run_counter[0]}_{i}",
+                archetype=archetype,
+                galaxy=world.galaxy,
+            )
+            # Apply state-derived variations
+            if "coherence" in state:
+                p.coherence = max(0.0, min(1.0, float(state["coherence"])))
+            if "emotional_state" in state:
+                p.emotional_state = max(0.0, min(1.0, float(state["emotional_state"])))
+            personas.append(p)
+
+        log = engine.run_interaction(run_id, personas, world, ticks=ticks)
+
+        final_coherence = sum(p.coherence for p in personas) / max(len(personas), 1)
+        avg_emergence = (
+            sum(e.emergence_score for e in log.events) / max(len(log.events), 1)
+            if log.events else 0.0
+        )
+
+        # Value = weighted combination of coherence and emergence
+        return min(1.0, final_coherence * 0.6 + avg_emergence * 0.4)
+
+    return rollout

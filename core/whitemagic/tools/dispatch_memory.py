@@ -62,6 +62,7 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "simulation.analyze": LazyHandler("simulation", "handle_simulation_analyze"),
     "simulation.synthesize": LazyHandler("simulation", "handle_simulation_synthesize"),
     "simulation.calibrate": LazyHandler("simulation", "handle_simulation_calibrate"),
+    "simulation.pipeline": LazyHandler("simulation", "handle_simulation_pipeline"),
     "hybrid_recall": LazyHandler("living_graph", "handle_hybrid_recall"),
     "graph_topology": LazyHandler("living_graph", "handle_graph_topology"),
     "graph_walk": LazyHandler("living_graph", "handle_graph_walk"),

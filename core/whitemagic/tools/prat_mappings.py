@@ -337,6 +337,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "simulation.analyze": "gana_three_stars",
     "simulation.synthesize": "gana_three_stars",
     "simulation.calibrate": "gana_three_stars",
+    "simulation.pipeline": "gana_three_stars",
     "galaxy.lineage_stats": "gana_void",
     # ── v24.3.0: Ambient Sensorium, Bounty, Genetic, Model Opt, Network State, TX Firewall ──
     "ambient.state": "gana_ghost",

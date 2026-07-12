@@ -683,6 +683,11 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
         "gana_three_stars",
         "simulation.calibrate",
     ),
+    (
+        re.compile(r"\b(simulation.*pipeline|pipeline.*simulation|end.to.end.*simulation|full.*simulation.*run)\b", re.I),
+        "gana_three_stars",
+        "simulation.pipeline",
+    ),
     # Dreams / consolidation
     (
         re.compile(r"\b(dream|consolidat|sleep)\b", re.I),
