@@ -96,7 +96,7 @@ def _merkle_tree_root(hashes: list[str]) -> str:
     if not hashes:
         return hashlib.sha256(b"empty_karma").hexdigest()
     if len(hashes) == 1:
-        return hashes[0]
+        return hashlib.sha256(hashes[0].encode()).hexdigest()
     # Pad to even length
     if len(hashes) % 2 != 0:
         hashes = list(hashes) + [hashes[-1]]

@@ -25,6 +25,13 @@ def dag():
     dag._initialized = False
     dag._cache.clear()
     dag._ensure_table()
+    # Clear table to prevent state leakage from prior test files
+    try:
+        with dag._get_conn() as conn:
+            conn.execute("DELETE FROM research_experiments")
+            conn.commit()
+    except Exception:
+        pass
     return dag
 
 

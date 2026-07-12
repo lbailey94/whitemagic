@@ -1,7 +1,31 @@
 # ruff: noqa: BLE001
 """Tests for MC simulation integration — handlers, SimulationOrchestrator, superforecaster upgrades."""
 
+import os
+import tempfile
+
+os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp())
+os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
+os.environ.setdefault("WM_SILENT_INIT", "1")
+
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_singletons():
+    """Reset singletons that may have stale DB connections from other test files."""
+    from whitemagic.core.memory.unified import reset_singleton
+    reset_singleton()
+    # Reset ResearchDAG singleton
+    from whitemagic.core.evolution.research_dag import ResearchDAG
+    ResearchDAG._instance = None
+    # Reset SimulationOrchestrator singleton
+    from whitemagic.core.consciousness.simulation_orchestrator import SimulationOrchestrator
+    SimulationOrchestrator._instance = None
+    yield
+    reset_singleton()
+    ResearchDAG._instance = None
+    SimulationOrchestrator._instance = None
 
 
 # ── Simulation Handler Tests ──────────────────────────────────────────

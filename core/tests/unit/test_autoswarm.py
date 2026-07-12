@@ -21,8 +21,11 @@ from whitemagic.core.evolution.research_dag import ResearchDomain
 
 @pytest.fixture
 def autoswarm():
-    """Get a fresh autoswarm instance."""
-    return get_autoswarm()
+    """Get a fresh autoswarm instance with clean DAG state."""
+    from whitemagic.core.evolution.research_dag import ResearchDAG
+    ResearchDAG._instance = None
+    swarm = get_autoswarm()
+    return swarm
 
 
 class TestCampaignConfig:
@@ -99,7 +102,7 @@ class TestEvolutionaryAutoswarm:
         from whitemagic.core.evolution.research_dag import get_research_dag
         dag = get_research_dag()
         stats = dag.get_stats()
-        assert stats["total_experiments"] > 0
+        assert stats.get("total_experiments", 0) > 0
 
     def test_get_status(self, autoswarm):
         status = autoswarm.get_status()
