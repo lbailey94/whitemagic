@@ -443,6 +443,18 @@ class ShelterManager:
         with self._lock:
             self._shelters[name] = shelter
 
+        # Auto-activate violet Dharma profile when violet shelter is created
+        if dharma_profile == "violet" or template == "violet":
+            try:
+                from whitemagic.dharma.rules import get_rules_engine
+
+                engine = get_rules_engine()
+                if engine.get_profile() != "violet":
+                    engine.set_profile("violet")
+                    logger.info("🏠 Shelter '%s': auto-activated violet Dharma profile", name)
+            except (ImportError, ModuleNotFoundError):
+                logger.debug("Shelter '%s': could not auto-activate violet profile (dharma module unavailable)", name)
+
         logger.info("🏠 Shelter '%s' created (tier=%s)", name, resolved_tier.value)
         return {"status": "ok", **shelter.to_dict()}
 
@@ -697,6 +709,12 @@ SHELTER_TEMPLATES: dict[str, dict[str, Any]] = {
         "limits": {"timeout_s": 30, "max_memory_mb": 256, "max_cpu_s": 15, "max_disk_mb": 50},
         "dharma_profile": "secure",
         "description": "Secure shelter — no network, no filesystem, minimal resources, secure Dharma",
+    },
+    "violet": {
+        "capabilities": ["network_read", "network_write", "fs_read:/tmp", "fs_write:/tmp", "fs_read:/data"],
+        "limits": {"timeout_s": 180, "max_memory_mb": 1024, "max_cpu_s": 90, "max_disk_mb": 500},
+        "dharma_profile": "violet",
+        "description": "Violet shelter — purple-team operations with engagement token enforcement, dual-log transparency, and violet Dharma profile",
     },
 }
 

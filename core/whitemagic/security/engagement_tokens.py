@@ -93,6 +93,8 @@ class EngagementToken:
     revoked: bool = False
     uses: int = 0
     max_uses: int = 0  # 0 = unlimited
+    nonce: str = ""  # Unique per-token nonce for replay detection
+    roe_hash: str = ""  # SHA-256 hash of Dharma profile rules at issue time
 
     def is_expired(self) -> bool:
         """
@@ -132,23 +134,30 @@ class EngagementToken:
         Returns:
             dict[str, Any]
         """
-        return {
+        d = {
             "token_id": self.token_id,
             "scope": self.scope,
             "tools": self.tools,
             "issuer": self.issuer,
             "issued_at": self.issued_at,
             "expires_at": self.expires_at,
+            "token_hash": self.token_hash,
             "remaining_s": round(self.remaining_seconds(), 1),
             "valid": self.is_valid(),
             "revoked": self.revoked,
             "uses": self.uses,
             "max_uses": self.max_uses,
         }
+        if self.nonce:
+            d["nonce"] = self.nonce
+        if self.roe_hash:
+            d["roe_hash"] = self.roe_hash
+        return d
 
 
 def _compute_token_hash(
-    token_id: str, scope: list[str], tools: list[str], issuer: str, expires_at: float
+    token_id: str, scope: list[str], tools: list[str], issuer: str, expires_at: float,
+    nonce: str = "", roe_hash: str = "",
 ) -> str:
     """Compute HMAC-SHA256 of token fields for tamper detection."""
     payload = _json_dumps(
@@ -158,6 +167,8 @@ def _compute_token_hash(
             "tools": sorted(tools),
             "issuer": issuer,
             "expires_at": expires_at,
+            "nonce": nonce,
+            "roe_hash": roe_hash,
         },
         sort_keys=True,
     )
@@ -172,8 +183,18 @@ def _verify_token_hash(token: EngagementToken) -> bool:
         token.tools,
         token.issuer,
         token.expires_at,
+        token.nonce,
+        token.roe_hash,
     )
     return hmac.compare_digest(expected, token.token_hash)
+
+
+# Tool patterns that require engagement tokens under violet profile.
+# Matches the Dharma violet rule tool_patterns: red_*, pentest_*, exploit_*, fuzz_*
+RED_OPS_TOOL_PATTERNS: list[str] = [
+    "red_*", "pentest_*", "exploit_*", "fuzz_*", "brute_*",
+    "nmap_*", "recon_*", "vuln_*", "poc_*",
+]
 
 
 class EngagementTokenManager:
@@ -184,6 +205,7 @@ class EngagementTokenManager:
         self._tokens: dict[str, EngagementToken] = {}
         self._storage_dir = storage_dir
         self._audit_log: list[dict[str, Any]] = []
+        self._used_nonces: set[str] = set()  # Replay detection
 
         if self._storage_dir:
             self._storage_dir.mkdir(parents=True, exist_ok=True)
@@ -194,8 +216,9 @@ class EngagementTokenManager:
         scope: list[str],
         tools: list[str],
         issuer: str,
-        duration_minutes: int = 60,
+        duration_minutes: float = 60,
         max_uses: int = 0,
+        roe_hash: str = "",
     ) -> dict[str, Any]:
         """Issue a new engagement token.
 
@@ -204,13 +227,19 @@ class EngagementTokenManager:
             tools: Tool name patterns (fnmatch, e.g., ["nmap_*", "fuzz_*"]).
             issuer: Identity of the person/system authorizing the engagement.
             duration_minutes: How long the token is valid (default 60 min).
-            max_uses: Maximum number of uses (0 = unlimited).
+                For high-risk operations, use 0.5 (30 seconds) for short-lived tokens.
+            max_uses: Maximum number of uses (0 = unlimited, 1 = single-use).
+            roe_hash: SHA-256 hash of the active Dharma profile rules at issue time.
+                Binds the token to a specific ruleset version.
         """
         token_id = f"evt_{secrets.token_hex(12)}"
+        nonce = secrets.token_hex(16)
         now = time.time()
         expires_at = now + (duration_minutes * 60)
 
-        token_hash = _compute_token_hash(token_id, scope, tools, issuer, expires_at)
+        token_hash = _compute_token_hash(
+            token_id, scope, tools, issuer, expires_at, nonce, roe_hash,
+        )
 
         token = EngagementToken(
             token_id=token_id,
@@ -221,6 +250,8 @@ class EngagementTokenManager:
             expires_at=expires_at,
             token_hash=token_hash,
             max_uses=max_uses,
+            nonce=nonce,
+            roe_hash=roe_hash,
         )
 
         with self._lock:
@@ -230,7 +261,7 @@ class EngagementTokenManager:
         self._audit("issue", token_id, issuer=issuer, scope=scope, tools=tools)
 
         logger.info(
-            "Engagement token issued: %s by %s (scope=%s, tools=%s, expires=%dm)",
+            "Engagement token issued: %s by %s (scope=%s, tools=%s, expires=%.1fm)",
             token_id,
             issuer,
             scope,
@@ -413,6 +444,8 @@ class EngagementTokenManager:
                         "revoked": t.revoked,
                         "uses": t.uses,
                         "max_uses": t.max_uses,
+                        "nonce": t.nonce,
+                        "roe_hash": t.roe_hash,
                     }
                     for tid, t in self._tokens.items()
                 }
@@ -441,6 +474,8 @@ class EngagementTokenManager:
                     revoked=td.get("revoked", False),
                     uses=td.get("uses", 0),
                     max_uses=td.get("max_uses", 0),
+                    nonce=td.get("nonce", ""),
+                    roe_hash=td.get("roe_hash", ""),
                 )
             logger.info("Engagement tokens: loaded %d tokens", len(self._tokens))
         except Exception as e:
@@ -465,3 +500,36 @@ def get_token_manager() -> EngagementTokenManager:
                     storage = None
                 _manager = EngagementTokenManager(storage_dir=storage)
     return _manager
+
+
+def is_red_ops_tool(tool_name: str) -> bool:
+    """Check if a tool name matches red-ops (offensive security) patterns."""
+    import fnmatch
+
+    return any(fnmatch.fnmatch(tool_name, pat) for pat in RED_OPS_TOOL_PATTERNS)
+
+
+def is_blue_ops_tool(tool_name: str) -> bool:
+    """Check if a tool name matches blue-ops (defensive security) patterns."""
+    import fnmatch
+
+    blue_patterns = ["blue_*", "scan_*", "detect_*", "anomaly*", "harden_*", "patch_*", "audit_*"]
+    return any(fnmatch.fnmatch(tool_name, pat) for pat in blue_patterns)
+
+
+def classify_ops(tool_name: str) -> str:
+    """Classify a tool as red-ops, blue-ops, or empty string (normal)."""
+    if is_red_ops_tool(tool_name):
+        return "red-ops"
+    if is_blue_ops_tool(tool_name):
+        return "blue-ops"
+    return ""
+
+
+def requires_engagement_token(tool_name: str) -> bool:
+    """Check if a tool requires a valid engagement token under violet profile.
+
+    Only red-ops (offensive security) tools require tokens.
+    Blue-ops (defensive) and normal tools do not require tokens.
+    """
+    return is_red_ops_tool(tool_name)

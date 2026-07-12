@@ -474,6 +474,17 @@ def mw_karma_effects(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
         actual_effects = declared_effects if is_success else []
 
         ledger = get_karma_ledger()
+
+        # Auto-classify ops_class for dual-log transparency (Edgerunner Violet)
+        # If engagement_token middleware already set it, use that. Otherwise infer.
+        ops_class = ctx.meta.get("ops_class", "")
+        if not ops_class:
+            try:
+                from whitemagic.security.engagement_tokens import classify_ops
+                ops_class = classify_ops(ctx.tool_name)
+            except ImportError:
+                pass
+
         ledger.record_with_effects(
             tool=ctx.tool_name,
             declared_safety=declared_safety,
@@ -482,6 +493,7 @@ def mw_karma_effects(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
             declared_effects=declared_effects,
             actual_effects=actual_effects,
             shelter_id=ctx.meta.get("shelter_id", ""),
+            ops_class=ops_class,
         )
     except Exception as e:
         logger.debug(
@@ -597,6 +609,150 @@ def mw_security_monitor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             )
         except RuntimeError as e:
             logger.warning("Security monitor runtime failure: %s", e, exc_info=True)
+    return next_fn(ctx)
+
+
+def mw_engagement_token(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Violet engagement token enforcement — blocks red-ops tools without a valid token.
+
+    Only active when the Dharma profile is 'violet'. Checks:
+    1. Is the tool a red-ops (offensive security) tool?
+    2. If so, is there a valid engagement token in ctx.meta or kwargs?
+    3. Validate token: not expired, not revoked, tool authorized, target in scope.
+
+    Inspired by ROE Gate's reference monitor pattern — the agent cannot bypass
+    this check because it runs in the middleware pipeline before tool execution.
+    """
+    try:
+        from whitemagic.dharma.rules import get_rules_engine
+        from whitemagic.security.engagement_tokens import (
+            get_token_manager,
+            requires_engagement_token,
+        )
+
+        # Only enforce under violet profile
+        engine = get_rules_engine()
+        if engine.get_profile() != "violet":
+            return next_fn(ctx)
+
+        # Only red-ops tools require tokens
+        if not requires_engagement_token(ctx.tool_name):
+            return next_fn(ctx)
+
+        # Extract token_id from kwargs or meta
+        token_id = ctx.kwargs.pop("_engagement_token_id", "") or ctx.meta.get("engagement_token_id", "")
+        if not token_id:
+            return {
+                "status": "error",
+                "error_code": "engagement_token_required",
+                "message": (
+                    f"Tool '{ctx.tool_name}' requires a valid engagement token "
+                    f"under violet profile. Issue one via the engagement_token tool."
+                ),
+            }
+
+        # Extract target from common kwargs
+        target = ""
+        for key in ("target", "host", "ip", "url", "domain", "endpoint"):
+            val = ctx.kwargs.get(key)
+            if isinstance(val, str) and val:
+                target = val
+                break
+
+        mgr = get_token_manager()
+        result = mgr.validate(token_id=token_id, tool=ctx.tool_name, target=target)
+        if not result.get("valid", False):
+            return {
+                "status": "error",
+                "error_code": "engagement_token_invalid",
+                "message": f"Engagement token validation failed: {result.get('reason', 'unknown')}",
+                "token_id": token_id,
+            }
+
+        # Stash validated token info for downstream middleware (karma ledger)
+        ctx.meta["engagement_token"] = token_id
+        ctx.meta["ops_class"] = "red-ops"
+
+    except ImportError:
+        pass  # engagement_tokens module not available — skip
+    except Exception as e:
+        logger.debug(
+            "Middleware: engagement token check failed for %s: %s",
+            ctx.tool_name,
+            e,
+            exc_info=True,
+        )
+    return next_fn(ctx)
+
+
+def mw_model_signing(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Violet model signing enforcement — blocks unsigned/tampered model loading.
+
+    Under violet profile, loading an AI model without a verified signature
+    is blocked (not just warned). This implements the OpenSSF Model Signing
+    (OMS) verification pattern at the dispatch layer.
+
+    Only active when Dharma profile is 'violet'. Checks model loading tools
+    (llama.*, edge_infer, bitnet_infer) against the ModelSigningRegistry.
+    """
+    try:
+        from whitemagic.dharma.rules import get_rules_engine
+
+        engine = get_rules_engine()
+        if engine.get_profile() != "violet":
+            return next_fn(ctx)
+
+        # Check if this is a model-loading tool
+        import fnmatch
+
+        model_tool_patterns = ["llama.*", "edge_infer", "bitnet_infer", "llama_chat", "llama_generate"]
+        is_model_tool = any(fnmatch.fnmatch(ctx.tool_name, pat) for pat in model_tool_patterns)
+        if not is_model_tool:
+            return next_fn(ctx)
+
+        # Extract model name from kwargs
+        model_name = ""
+        for key in ("model", "model_name", "model_path", "name"):
+            val = ctx.kwargs.get(key)
+            if isinstance(val, str) and val:
+                model_name = val
+                break
+
+        if not model_name:
+            # Can't check without a model name — allow but warn in logs
+            logger.debug("Model signing: no model name in kwargs for %s, skipping", ctx.tool_name)
+            return next_fn(ctx)
+
+        from whitemagic.security.model_signing import get_model_registry
+
+        registry = get_model_registry()
+        result = registry.verify_model(model_name)
+
+        if not result.get("verified", False):
+            trust = result.get("trust", "unsigned")
+            action = result.get("action", "warn")
+            # Under violet: block on unsigned, blocked, or tampered models
+            if action == "block" or trust in ("blocked", "tampered", "unsigned"):
+                return {
+                    "status": "error",
+                    "error_code": "model_signing_violation",
+                    "message": (
+                        f"Violet profile: model '{model_name}' failed signing verification "
+                        f"(trust={trust}). {result.get('reason', 'Unknown reason')}"
+                    ),
+                    "model": model_name,
+                    "trust": trust,
+                }
+
+    except ImportError:
+        pass  # model_signing module not available — skip
+    except Exception as e:
+        logger.debug(
+            "Middleware: model signing check failed for %s: %s",
+            ctx.tool_name,
+            e,
+            exc_info=True,
+        )
     return next_fn(ctx)
 
 

@@ -27,14 +27,32 @@ class PoCResult:
 
 
 def _check_governance(target: str, scope: str = "bounty") -> bool:
-    """Violet governance check — verify target is in scope before PoC execution."""
+    """Violet governance check — verify target is in scope before PoC execution.
+
+    Strict by default under violet profile. Permissive only when:
+    - WM_POC_AUTO_APPROVE=1 is set (explicit override)
+    - Target is in WM_POC_APPROVED list
+    """
     approved = os.environ.get("WM_POC_APPROVED", "").split(",")
-    if target in approved:
+    if target and target in approved:
         return True
     if os.environ.get("WM_POC_AUTO_APPROVE", "0") == "1":
         return True
+    # Check Dharma profile — violet requires explicit approval
+    try:
+        from whitemagic.dharma.rules import get_rules_engine
+        engine = get_rules_engine()
+        if engine.get_profile() == "violet":
+            logger.info(
+                "Governance: PoC target %s not in approved list for scope %s (violet profile — strict mode)",
+                target, scope,
+            )
+            return False
+    except (ImportError, ModuleNotFoundError):
+        pass
+    # Non-violet profiles: permissive by default
     logger.info("Governance: PoC target %s not in approved list for scope %s", target, scope)
-    return True  # Permissive by default — real deployments should enforce
+    return True
 
 
 def generate_poc(

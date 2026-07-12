@@ -17,9 +17,14 @@ Provides security middleware and utilities:
 # Tool gating - always available
 # Edgerunner Violet security layer
 from .engagement_tokens import (
+    RED_OPS_TOOL_PATTERNS,
     EngagementToken,
     EngagementTokenManager,
+    classify_ops,
     get_token_manager,
+    is_blue_ops_tool,
+    is_red_ops_tool,
+    requires_engagement_token,
 )
 from .mcp_integrity import McpIntegrity, get_mcp_integrity
 from .model_signing import ModelSigningRegistry, ModelTrust, get_model_registry
@@ -50,6 +55,11 @@ __all__ = [
     "EngagementToken",
     "EngagementTokenManager",
     "get_token_manager",
+    "RED_OPS_TOOL_PATTERNS",
+    "is_red_ops_tool",
+    "is_blue_ops_tool",
+    "classify_ops",
+    "requires_engagement_token",
     "SecurityMonitor",
     "get_security_monitor",
 ]

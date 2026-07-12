@@ -107,8 +107,9 @@ def handle_engagement_issue(**kwargs: Any) -> dict[str, Any]:
         scope=scope,
         tools=tools,
         issuer=issuer,
-        duration_minutes=int(kwargs.get("duration_minutes", 60)),
+        duration_minutes=float(kwargs.get("duration_minutes", 60)),
         max_uses=int(kwargs.get("max_uses", 0)),
+        roe_hash=kwargs.get("roe_hash", ""),
     )
 
 

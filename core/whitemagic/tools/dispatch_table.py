@@ -458,11 +458,13 @@ def _build_pipeline() -> Any:
         mw_citta_consciousness,
         mw_cognitive_mode,
         mw_draft_review,
+        mw_engagement_token,
         mw_governor,
         mw_inference_router,
         mw_input_sanitizer,
         mw_karma_effects,
         mw_maturity_gate,
+        mw_model_signing,
         mw_observability,
         mw_rate_limiter,
         mw_security_monitor,
@@ -481,6 +483,8 @@ def _build_pipeline() -> Any:
     p.use("timeout", mw_timeout)
     p.use("rate_limiter", mw_rate_limiter)
     p.use("security_monitor", mw_security_monitor)
+    p.use("engagement_token", mw_engagement_token)
+    p.use("model_signing", mw_model_signing)
     p.use("cognitive_mode", mw_cognitive_mode)
     p.use("tool_permissions", mw_tool_permissions)
     p.use("maturity_gate", mw_maturity_gate)
