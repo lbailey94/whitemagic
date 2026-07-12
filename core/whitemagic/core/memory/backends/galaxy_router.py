@@ -46,10 +46,15 @@ class GalaxyAwareBackend:
 
     def _resolve_galaxies_dir(self) -> Path:
         """Resolve the per-galaxy database directory."""
+        import os
         try:
-            from whitemagic.core.user_profile import get_user_dir
-            user_dir = get_user_dir("local")
-            galaxies_dir = user_dir / "galaxies"
+            state_root = os.getenv("WM_STATE_ROOT")
+            if state_root:
+                galaxies_dir = Path(state_root) / "users" / "local" / "galaxies"
+            else:
+                from whitemagic.core.user_profile import get_user_dir
+                user_dir = get_user_dir("local")
+                galaxies_dir = user_dir / "galaxies"
             galaxies_dir.mkdir(parents=True, exist_ok=True)
             return galaxies_dir
         except Exception:

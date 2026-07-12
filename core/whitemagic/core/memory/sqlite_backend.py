@@ -134,6 +134,8 @@ class SQLiteBackend:
                 "model_exclude": "INTEGER DEFAULT 0", # v15: exclude from AI context
                 "galaxy": "TEXT DEFAULT 'universal'",  # v23.1: 6D galaxy partition
                 "source_trust": "TEXT DEFAULT 'user'",  # v24: provenance tracking (user/tool_output/web/inferred)
+                "version": "INTEGER DEFAULT 0",  # v25: multi-agent cache coherence
+                "agent_id": "TEXT DEFAULT ''",  # v25: multi-agent cache coherence
             }
 
             for col_name, col_type in new_columns.items():
@@ -355,8 +357,9 @@ class SQLiteBackend:
                         metadata, title,
                         galactic_distance, retention_score, last_retention_sweep,
                         content_hash, event_time, ingestion_time,
-                        is_private, model_exclude, galaxy, source_trust
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        is_private, model_exclude, galaxy, source_trust,
+                        version, agent_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     memory.id,
                     json.dumps(memory.content) if not isinstance(memory.content, str) else memory.content,
@@ -384,6 +387,8 @@ class SQLiteBackend:
                     1 if memory.model_exclude else 0,
                     getattr(memory, 'galaxy', 'universal'),
                     getattr(memory, 'source_trust', 'user'),
+                    getattr(memory, 'version', 0),
+                    getattr(memory, 'agent_id', ''),
                 ))
 
                 # Update Tags
@@ -470,6 +475,8 @@ class SQLiteBackend:
                 last_retention_sweep=parse_datetime(row["last_retention_sweep"]) if "last_retention_sweep" in row.keys() and row["last_retention_sweep"] else None,
                 galaxy=row["galaxy"] if "galaxy" in row.keys() else "universal",
                 metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                version=row["version"] if "version" in row.keys() else 0,
+                agent_id=row["agent_id"] if "agent_id" in row.keys() else "",
             )
 
     def fetch_memory_contents(self, memory_type: str | None = None, limit: int = 10000) -> list[str]:

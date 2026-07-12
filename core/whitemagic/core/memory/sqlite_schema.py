@@ -113,6 +113,9 @@ class SQLiteSchemaManager:
             "is_private": "INTEGER DEFAULT 0",  # v15: exclude from MCP responses
             "model_exclude": "INTEGER DEFAULT 0",  # v15: exclude from AI context
             "galaxy": "TEXT DEFAULT 'universal'",  # v23.1: 6D galaxy partition
+            "source_trust": "TEXT DEFAULT 'user'",  # v24: provenance tracking
+            "version": "INTEGER DEFAULT 0",  # v25: multi-agent cache coherence
+            "agent_id": "TEXT DEFAULT ''",  # v25: multi-agent cache coherence
         }
 
         _valid_ident = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')

@@ -174,6 +174,7 @@ class UnifiedMemory:
               importance: float = 0.5, metadata: dict | None = None, title: str | None = None,
               auto_embed: bool = True, galaxy: str = "universal",
               subsystem: str | None = None, source_trust: str = "user",
+              agent_id: str = "",
               **kwargs: Any) -> Memory:
         """Store a new memory.
 
@@ -278,6 +279,8 @@ class UnifiedMemory:
             title=title,
             galaxy=galaxy,
             source_trust=source_trust,
+            agent_id=agent_id,
+            version=1,
             **kwargs,
         )
 
@@ -397,6 +400,74 @@ class UnifiedMemory:
                 except (sqlite3.Error, AttributeError, TypeError) as _e:
                     logger.debug("Galactic distance update failed for %s: %s", memory_id, _e)  # Don't fail recall
         return memory
+
+    def update_memory(self, memory_id: str, updates: dict[str, Any],
+                       agent_id: str = "", expected_version: int | None = None) -> dict[str, Any]:
+        """Update an existing memory with version increment and conflict resolution.
+
+        Multi-agent cache coherence: uses optimistic concurrency control.
+        If expected_version is provided and doesn't match the stored version,
+        the update is rejected as a conflict.
+
+        Args:
+            memory_id: ID of the memory to update.
+            updates: Dict of field -> new value to apply.
+            agent_id: ID of the agent performing the update.
+            expected_version: If set, update only succeeds when stored version matches.
+
+        Returns:
+            Dict with success status, conflict info, and updated memory.
+        """
+        existing = self._galaxy_backend.recall(memory_id)
+        if not existing:
+            return {"success": False, "error": "Memory not found", "memory_id": memory_id}
+
+        if expected_version is not None and existing.version != expected_version:
+            return {
+                "success": False,
+                "error": "version_conflict",
+                "memory_id": memory_id,
+                "expected_version": expected_version,
+                "actual_version": existing.version,
+                "conflicting_agent": existing.agent_id,
+            }
+
+        for key, value in updates.items():
+            if hasattr(existing, key) and key not in ("id", "created_at"):
+                setattr(existing, key, value)
+
+        existing.version += 1
+        existing.agent_id = agent_id
+        existing.last_modified = datetime.now()
+
+        self._galaxy_backend.store(existing)
+
+        # Cache invalidation
+        try:
+            from whitemagic.core.memory.cache_registry import get_cache_registry
+            get_cache_registry().invalidate_namespace(existing.galaxy)
+        except Exception:
+            pass
+
+        # Emit CACHE_INVALIDATE event
+        try:
+            from whitemagic.core.resonance import emit_event, EventType
+            emit_event(
+                source="memory_update",
+                event_type=EventType.CACHE_INVALIDATE,
+                data={
+                    "galaxy": existing.galaxy,
+                    "memory_id": memory_id,
+                    "namespace": existing.galaxy,
+                    "operation": "update",
+                    "version": existing.version,
+                    "agent_id": agent_id,
+                },
+            )
+        except Exception:
+            pass
+
+        return {"success": True, "memory_id": memory_id, "version": existing.version, "memory": existing}
 
     def search(self, query: str | None = None, tags: set[str] | None = None,
                memory_type: MemoryType | None = None, min_importance: float = 0.0,
