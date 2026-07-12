@@ -401,10 +401,17 @@ class TestPoCPipeline:
         del os.environ["WM_POC_APPROVED"]
 
     def test_governance_check_permissive(self):
+        from whitemagic.dharma.rules import get_rules_engine
         from whitemagic.tools.security.poc_pipeline import _check_governance
         os.environ.pop("WM_POC_APPROVED", None)
         os.environ.pop("WM_POC_AUTO_APPROVE", None)
-        assert _check_governance("unknown") is True
+        engine = get_rules_engine()
+        original = engine.get_profile()
+        try:
+            engine.set_profile("default")
+            assert _check_governance("unknown") is True
+        finally:
+            engine.set_profile(original)
 
 
 class TestContestPipelinePlatforms:
