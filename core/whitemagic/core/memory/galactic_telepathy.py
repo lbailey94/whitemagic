@@ -211,7 +211,7 @@ class GalacticTelepathyEngine:
     def _get_modified_memories(self, um: Any, since_timestamp: float) -> list[Any]:
         """Get memories modified since given timestamp."""
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 cursor = conn.execute(
                     """SELECT id FROM memories
                        WHERE (modified_at > ? OR created_at > ?)
@@ -224,7 +224,7 @@ class GalacticTelepathyEngine:
                 memories = []
                 for mid in memory_ids:
                     try:
-                        mem = um.backend.get(mid)
+                        mem = um.get(mid)
                         if mem:
                             memories.append(mem)
                     except Exception as e:
@@ -312,7 +312,7 @@ class GalacticTelepathyEngine:
         """Extract all embeddings for a memory."""
         embeddings = []
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 cursor = conn.execute(
                     """SELECT model_name, vector, dimensions, created_at
                        FROM embeddings WHERE memory_id = ?""",
@@ -344,7 +344,7 @@ class GalacticTelepathyEngine:
         """Extract bidirectional associations for a memory."""
         associations = []
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 # Outgoing associations
                 cursor = conn.execute(
                     """SELECT target_id, relation_type, strength, direction, edge_type
@@ -388,7 +388,7 @@ class GalacticTelepathyEngine:
     ) -> bool:
         """Restore embedding in target galaxy."""
         try:
-            with tgt_um.backend.pool.connection() as conn:
+            with tgt_um.pool.connection() as conn:
                 import json
                 vector_json = json.dumps(emb.vector)
                 conn.execute(
@@ -432,7 +432,7 @@ class GalacticTelepathyEngine:
                 # Target not yet transferred — store as pending
                 return self._store_pending_association(new_source_id, assoc, tgt_um)
 
-            with tgt_um.backend.pool.connection() as conn:
+            with tgt_um.pool.connection() as conn:
                 now = datetime.now().isoformat()
                 conn.execute(
                     """INSERT OR IGNORE INTO associations
@@ -457,7 +457,7 @@ class GalacticTelepathyEngine:
     ) -> str | None:
         """Find new ID of memory transferred from source to target."""
         try:
-            with tgt_um.backend.pool.connection() as conn:
+            with tgt_um.pool.connection() as conn:
                 cursor = conn.execute(
                     """SELECT id FROM memories
                        WHERE json_extract(metadata, '$.telepathy_source_id') = ?
@@ -478,7 +478,7 @@ class GalacticTelepathyEngine:
     ) -> bool:
         """Store association that can't be resolved yet (target not transferred)."""
         try:
-            with tgt_um.backend.pool.connection() as conn:
+            with tgt_um.pool.connection() as conn:
                 import json
                 now = datetime.now().isoformat()
                 conn.execute(
@@ -506,7 +506,7 @@ class GalacticTelepathyEngine:
         try:
             content_hash = hashlib.sha256(str(mem.content).encode()).hexdigest()
 
-            with tgt_um.backend.pool.connection() as conn:
+            with tgt_um.pool.connection() as conn:
                 # Look for existing memory by content hash
                 cursor = conn.execute(
                     "SELECT id, content, metadata FROM memories WHERE content_hash = ?",
@@ -645,7 +645,7 @@ class GalacticTelepathyEngine:
         remaining = 0
 
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 cursor = conn.execute(
                     "SELECT * FROM pending_associations"
                 )

@@ -151,7 +151,7 @@ if __name__ == "__main__":
             topic="Activation of Unified Data Sea (Phase 25)",
             findings=[
                 "Holographic core synchronized at 198k memories",
-                "Mojo indexing performance restored to 100ms/memory",
+                "Rust indexing performance restored to 100ms/memory",
                 "Legacy reference dump successfully mined (767 artifacts)",
             ],
             urgency="high",

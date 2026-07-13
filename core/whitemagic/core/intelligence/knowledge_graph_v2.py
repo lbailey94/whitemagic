@@ -143,8 +143,6 @@ class KnowledgeGraphV2:
             if not DB_PATH.exists():
                 return None
             conn = safe_connect(str(DB_PATH))
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA synchronous=NORMAL")
             return conn
         except Exception as e:
             logger.error("DB connection failed: %s", e, exc_info=True)

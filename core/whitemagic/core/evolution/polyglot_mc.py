@@ -7,7 +7,6 @@ and latency requirements.
 Backends:
 - Python (fallback): Always available, handles small trial counts
 - Rust: Importance sampling, control variates (existing mc_engine.rs)
-- Mojo (GPU): Massively parallel trial execution (100K+ trials)
 - Julia: Resonance-based covariance estimation
 - Zig: Ultra-low-latency single-trial execution
 - Elixir: Streaming outcome processing
@@ -36,7 +35,6 @@ class MCBackend(Enum):
 
     PYTHON = "python"  # Always available
     RUST = "rust"  # Importance sampling, control variates
-    MOJO = "mojo"  # GPU parallel (100K+ trials)
     JULIA = "julia"  # Covariance estimation
     ZIG = "zig"  # Ultra-low-latency single trial
     ELIXIR = "elixir"  # Streaming outcomes
@@ -80,7 +78,7 @@ class PolyglotMCOrchestrator:
     Selection logic:
     - latency_sensitive + single trial → Zig
     - streaming → Elixir
-    - n_trials > 100K → Mojo (GPU)
+    - n_trials > 100K → Rust (high throughput)
     - correlation_structure → Julia
     - distribute → Go
     - verify → Haskell
@@ -106,15 +104,6 @@ class PolyglotMCOrchestrator:
                 self._available_backends.add(MCBackend.RUST)
                 self._backend_performance[MCBackend.RUST] = 100_000.0
         except (ImportError, AttributeError):
-            pass
-
-        # Mojo (check for compiler)
-        try:
-            import mojo  # noqa: F401
-
-            self._available_backends.add(MCBackend.MOJO)
-            self._backend_performance[MCBackend.MOJO] = 1_000_000.0
-        except ImportError:
             pass
 
         # Julia
@@ -167,9 +156,9 @@ class PolyglotMCOrchestrator:
         if task.streaming and MCBackend.ELIXIR in self._available_backends:
             return MCBackend.ELIXIR
 
-        # 3. Very large trial count → Mojo (GPU)
-        if task.n_trials > 100_000 and MCBackend.MOJO in self._available_backends:
-            return MCBackend.MOJO
+        # 3. Very large trial count → Rust (high throughput)
+        if task.n_trials > 100_000 and MCBackend.RUST in self._available_backends:
+            return MCBackend.RUST
 
         # 4. Correlation structure → Julia
         if task.correlation_structure and MCBackend.JULIA in self._available_backends:

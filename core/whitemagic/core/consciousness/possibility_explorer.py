@@ -14,7 +14,7 @@ This wraps the existing PolyglotMCOrchestrator with a cognitive layer that:
 The fastest path for large-scale parallel testing:
 - Python multiprocessing for CPU-bound trials (100s of workers)
 - Rust backend for importance sampling (100K+ trials, statistical rigor)
-- Future: Mojo/GPU for millions of trials (when compiler available)
+- Future: GPU for millions of trials (when available)
 
 Relation to existing systems:
 - RecursiveImprovementLoop generates hypotheses → MC tests them

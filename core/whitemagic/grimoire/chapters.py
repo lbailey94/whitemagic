@@ -239,7 +239,6 @@ _CHAPTERS_28: list[Chapter] = [
             "speed",
             "ffi",
             "polyglot",
-            "mojo",
             "cascade",
             "latency",
         ],
@@ -740,7 +739,7 @@ _CHAPTERS_28: list[Chapter] = [
         "uses 1-bit quantized models for ultra-efficient inference, "
         "and bitnet_status reports on BitNet availability. The Turtle "
         "Beak's voice is the system's ability to think locally — "
-        "without depending on external APIs — using the Mojo batch "
+        "without depending on external APIs — using the Rust batch "
         "encoder and embedding quantizer for maximum throughput on "
         "CPU. Adjacent: Tail (Ch 6) for SIMD acceleration, Roof "
         "(Ch 26) for llama.cpp integration. Tools: edge_infer, "

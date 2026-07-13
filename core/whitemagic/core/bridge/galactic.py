@@ -1,10 +1,8 @@
-# ruff: noqa: BLE001
-"""Bridge module: galactic substrate operations (v23.0).
+"""Bridge module: galactic substrate operations (v23+).
 
-Connects the mcp_api_bridge to the live substrate at
-``~/.whitemagic/memory/whitemagic.db``. The substrate is real and
-active: 12K+ memories, 21K associations, 12K+ embeddings, 35K+ dharma
-audits (as of v23.0.0-alpha.1 rehydration of Whitemagic-Core data).
+Connects the mcp_api_bridge to the galaxy-first memory substrate.
+Memories live in per-galaxy DBs under ``~/.whitemagic/memory/galaxies/``;
+the legacy monolith may still exist but is typically empty post-migration.
 
 These functions are the substrate's "API" for the bridge catalog —
 they let the librarian, the site, and A2A peers query the actual

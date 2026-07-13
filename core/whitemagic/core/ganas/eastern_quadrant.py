@@ -400,10 +400,9 @@ The dragon's power is in its tail.
                     "mansion": self.mansion.name,
                     "garden": self.garden,
                     "rust_available": stats.get("rust", False),
-                    "mojo_available": stats.get("mojo", False),
                     "zig_available": stats.get("zig", False),
                     "acceleration": "enabled"
-                    if stats.get("rust") or stats.get("mojo")
+                    if stats.get("rust")
                     else "fallback",
                     "native_speedup": stats.get("speedup", 1.0),
                     "status": "accelerated",

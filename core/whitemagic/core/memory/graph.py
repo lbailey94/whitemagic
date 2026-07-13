@@ -202,7 +202,7 @@ class GraphEngine:
         time.perf_counter()
         try:
             from whitemagic.core.memory.unified import get_unified_memory
-            pool = get_unified_memory().backend.pool
+            pool = get_unified_memory().pool
             G = nx.DiGraph()
             with pool.connection() as conn:
                 conn.row_factory = sqlite3.Row

@@ -42,13 +42,22 @@ class GrimoireAuditor:
         """Perform a full audit of available spells."""
         spells: list[Spell] = []
 
-        # 1. Scan Grimoire for references
-        if self.grimoire_path.exists():
-            for root, _, files in os.walk(self.grimoire_path):
-                for file in files:
-                    if file.endswith(".md"):
-                        # In a real system, we'd parse the MD for @tool markers
-                        pass
+        # 1. Count actual registered MCP tools from the dispatch table
+        try:
+            from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+
+            for tool_name in DISPATCH_TABLE:
+                category = self._categorize_tool(tool_name)
+                spells.append(
+                    Spell(
+                        id=f"tool_{tool_name}",
+                        name=tool_name.replace("_", " ").title(),
+                        path=self.project_root / "whitemagic" / "tools",
+                        category=category,
+                    )
+                )
+        except Exception as e:
+            logger.debug("Could not load dispatch table: %s", e)
 
         # 2. Scan scripts/ for executable Python files
         scripts_path = self.project_root / "scripts"
@@ -64,21 +73,77 @@ class GrimoireAuditor:
                         )
                     )
 
-        # 3. Scan core/ for key engines
-        if self.core_path.exists():
-            for engine_dir in self.core_path.iterdir():
-                if engine_dir.is_dir() and not engine_dir.name.startswith("__"):
-                    spells.append(
-                        Spell(
-                            id=f"engine_{engine_dir.name}",
-                            name=f"{engine_dir.name.title()} Engine",
-                            path=engine_dir,
-                            category="core_intelligence",
+        # 3. Scan grimoire/ for spell definitions
+        if self.grimoire_path.exists():
+            for root, _, files in os.walk(self.grimoire_path):
+                for file in files:
+                    if file.endswith(".py") and file != "__init__.py":
+                        spells.append(
+                            Spell(
+                                id=f"grimoire_{Path(file).stem}",
+                                name=Path(file).stem.replace("_", " ").title(),
+                                path=Path(root) / file,
+                                category="grimoire",
+                            )
                         )
-                    )
 
         logger.info("Grimoire Audit complete: Found %s potential spells.", len(spells))
         return spells
+
+    @staticmethod
+    def _categorize_tool(tool_name: str) -> str:
+        """Categorize a tool by its name prefix."""
+        if tool_name.startswith("memory"):
+            return "memory"
+        if tool_name.startswith("galaxy"):
+            return "memory"
+        if tool_name.startswith("session"):
+            return "session"
+        if tool_name.startswith("gana_"):
+            return "gana"
+        if tool_name.startswith("security") or tool_name.startswith("vuln"):
+            return "security"
+        if tool_name.startswith("strata"):
+            return "archaeology"
+        if tool_name.startswith("dharma") or tool_name.startswith("governor"):
+            return "governance"
+        if tool_name.startswith("karmic") or tool_name.startswith("mandala"):
+            return "governance"
+        if tool_name.startswith("effect"):
+            return "governance"
+        if tool_name.startswith("agent"):
+            return "agent"
+        if tool_name.startswith("edge") or tool_name.startswith("bitnet"):
+            return "inference"
+        if tool_name.startswith("llama"):
+            return "inference"
+        if tool_name.startswith("cache"):
+            return "metrics"
+        if tool_name.startswith("health") or tool_name.startswith("rust"):
+            return "system"
+        if tool_name.startswith("state"):
+            return "session"
+        if tool_name.startswith("ambient"):
+            return "consciousness"
+        if tool_name.startswith("bounty"):
+            return "agent"
+        if tool_name.startswith("contest"):
+            return "security"
+        if tool_name.startswith("foundry") or tool_name.startswith("abi"):
+            return "security"
+        if tool_name.startswith("oss"):
+            return "security"
+        if tool_name.startswith("model"):
+            return "inference"
+        if tool_name.startswith("network_state"):
+            return "governance"
+        if tool_name.startswith("genetic"):
+            return "evolution"
+        if tool_name.startswith("tx_"):
+            return "security"
+        if tool_name.startswith("engagement"):
+            return "security"
+        return "tools"
 
     def generate_capability_report(self) -> dict[str, Any]:
         """Generate a structured report for the AI Contract or CLI."""

@@ -607,3 +607,214 @@ def handle_archive_status(**kwargs: Any) -> dict[str, Any]:
 
     archive = get_durable_archive()
     return {"status": "success", "archive": archive.get_status()}
+
+
+# ── DiLoCo Distributed Training ──
+
+def handle_dilo_co_init(**kwargs: Any) -> dict[str, Any]:
+    """Initialize DiLoCo distributed training coordinator with parameters."""
+    from whitemagic.mesh.dilo_co import get_dilo_co
+
+    params = kwargs.get("params", {})
+    if not params:
+        return {"status": "error", "error": "params dict is required"}
+
+    h = int(kwargs.get("h", 16))
+    k_ratio = float(kwargs.get("k_ratio", 0.01))
+    lr = float(kwargs.get("lr", 0.01))
+    lr_outer = float(kwargs.get("lr_outer", 1.0))
+
+    coordinator = get_dilo_co()
+    coordinator.h = h
+    coordinator.k_ratio = k_ratio
+    coordinator.lr = lr
+    coordinator.lr_outer = lr_outer
+    coordinator.init_params(params)
+    return {"status": "success", "param_count": len(params), "h": h, "k_ratio": k_ratio}
+
+
+def handle_dilo_co_register_worker(**kwargs: Any) -> dict[str, Any]:
+    """Register a worker to the DiLoCo Parcae pool."""
+    from whitemagic.mesh.dilo_co import get_dilo_co
+
+    worker_id = kwargs.get("worker_id", "")
+    if not worker_id:
+        return {"status": "error", "error": "worker_id is required"}
+
+    compute_capacity = float(kwargs.get("compute_capacity", 1.0))
+    coordinator = get_dilo_co()
+    success = coordinator.register_worker(worker_id, compute_capacity)
+    if not success:
+        return {"status": "error", "error": "Worker pool is full"}
+    return {"status": "success", "worker_id": worker_id, "compute_capacity": compute_capacity}
+
+
+def handle_dilo_co_submit_gradient(**kwargs: Any) -> dict[str, Any]:
+    """Submit gradients from a worker to the DiLoCo coordinator."""
+    from whitemagic.mesh.dilo_co import get_dilo_co
+
+    worker_id = kwargs.get("worker_id", "")
+    gradients = kwargs.get("gradients", {})
+    if not worker_id or not gradients:
+        return {"status": "error", "error": "worker_id and gradients are required"}
+
+    coordinator = get_dilo_co()
+    result = coordinator.submit_gradient(worker_id, gradients)
+    return result
+
+
+def handle_dilo_co_sync(**kwargs: Any) -> dict[str, Any]:
+    """Perform a DiLoCo global synchronization step."""
+    from whitemagic.mesh.dilo_co import get_dilo_co
+
+    coordinator = get_dilo_co()
+    result = coordinator.sync_step()
+    return result
+
+
+def handle_dilo_co_status(**kwargs: Any) -> dict[str, Any]:
+    """Get DiLoCo coordinator status."""
+    from whitemagic.mesh.dilo_co import get_dilo_co
+
+    coordinator = get_dilo_co()
+    return {"status": "success", "dilo_co": coordinator.get_status()}
+
+
+# ── Warp Marketplace ──
+
+def handle_warp_market_publish(**kwargs: Any) -> dict[str, Any]:
+    """Publish a warp preset to the P2P marketplace."""
+    from whitemagic.mesh.warp_marketplace import get_warp_marketplace
+
+    warp_name = kwargs.get("warp_name", "")
+    warp_data = kwargs.get("warp_data", {})
+    if not warp_name or not warp_data:
+        return {"status": "error", "error": "warp_name and warp_data are required"}
+
+    mp = get_warp_marketplace()
+    return mp.publish(
+        warp_name=warp_name,
+        warp_data=warp_data,
+        author_id=kwargs.get("author_id", ""),
+        author_name=kwargs.get("author_name", ""),
+        description=kwargs.get("description", ""),
+        price_xrp=float(kwargs.get("price_xrp", 0.0)),
+    )
+
+
+def handle_warp_market_discover(**kwargs: Any) -> dict[str, Any]:
+    """Discover warp presets on the marketplace."""
+    from whitemagic.mesh.warp_marketplace import get_warp_marketplace
+
+    mp = get_warp_marketplace()
+    return mp.discover(
+        query=kwargs.get("query", ""),
+        capability=kwargs.get("capability", ""),
+        domain=kwargs.get("domain", ""),
+        inference_tier=kwargs.get("inference_tier", ""),
+        max_price=float(kwargs.get("max_price", 0.0)),
+        limit=int(kwargs.get("limit", 20)),
+    )
+
+
+def handle_warp_market_download(**kwargs: Any) -> dict[str, Any]:
+    """Download and import a warp from the marketplace."""
+    from whitemagic.mesh.warp_marketplace import get_warp_marketplace
+
+    listing_id = kwargs.get("listing_id", "")
+    if not listing_id:
+        return {"status": "error", "error": "listing_id is required"}
+
+    mp = get_warp_marketplace()
+    return mp.download(
+        listing_id=listing_id,
+        target_warp_name=kwargs.get("target_warp_name"),
+    )
+
+
+def handle_warp_market_status(**kwargs: Any) -> dict[str, Any]:
+    """Get warp marketplace status."""
+    from whitemagic.mesh.warp_marketplace import get_warp_marketplace
+
+    mp = get_warp_marketplace()
+    return {"status": "success", "marketplace": mp.get_status()}
+
+
+def handle_warp_market_broadcast(**kwargs: Any) -> dict[str, Any]:
+    """Broadcast a warp listing to mesh peers."""
+    from whitemagic.mesh.warp_marketplace import get_warp_marketplace
+
+    listing_id = kwargs.get("listing_id", "")
+    if not listing_id:
+        return {"status": "error", "error": "listing_id is required"}
+
+    mp = get_warp_marketplace()
+    return mp.broadcast_listing(listing_id)
+
+
+# ── Mesh Inference Router ──
+
+def handle_mesh_route(**kwargs: Any) -> dict[str, Any]:
+    """Route an inference request to the best available mesh node."""
+    from whitemagic.mesh.inference_router import get_inference_router
+
+    model = kwargs.get("model", "")
+    if not model:
+        return {"status": "error", "error": "model is required"}
+
+    router = get_inference_router()
+    decision = router.route(
+        model=model,
+        prompt=kwargs.get("prompt", ""),
+        max_tokens=int(kwargs.get("max_tokens", 128)),
+        temperature=float(kwargs.get("temperature", 0.7)),
+        strategy=kwargs.get("strategy"),
+    )
+    return {"status": "success", "routing": decision.to_dict()}
+
+
+def handle_mesh_route_register(**kwargs: Any) -> dict[str, Any]:
+    """Register a mesh inference node."""
+    from whitemagic.mesh.inference_router import get_inference_router
+
+    node_id = kwargs.get("node_id", "")
+    if not node_id:
+        return {"status": "error", "error": "node_id is required"}
+
+    router = get_inference_router()
+    return router.register_node(
+        node_id=node_id,
+        address=kwargs.get("address", ""),
+        models=kwargs.get("models", []),
+        reputation=float(kwargs.get("reputation", 0.5)),
+    )
+
+
+def handle_mesh_route_nodes(**kwargs: Any) -> dict[str, Any]:
+    """Get available inference nodes, optionally filtered by model."""
+    from whitemagic.mesh.inference_router import get_inference_router
+
+    router = get_inference_router()
+    model = kwargs.get("model")
+    nodes = router.get_available_nodes(model=model)
+    return {"status": "success", "nodes": nodes, "count": len(nodes)}
+
+
+def handle_mesh_route_status(**kwargs: Any) -> dict[str, Any]:
+    """Get inference router status."""
+    from whitemagic.mesh.inference_router import get_inference_router
+
+    router = get_inference_router()
+    return {"status": "success", "router": router.get_status()}
+
+
+def handle_mesh_route_strategy(**kwargs: Any) -> dict[str, Any]:
+    """Change the inference routing strategy."""
+    from whitemagic.mesh.inference_router import get_inference_router
+
+    strategy = kwargs.get("strategy", "")
+    if not strategy:
+        return {"status": "error", "error": "strategy is required"}
+
+    router = get_inference_router()
+    return router.set_strategy(strategy)

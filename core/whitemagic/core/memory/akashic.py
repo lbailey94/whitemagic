@@ -76,7 +76,7 @@ class AkashicField:
 
     def _load_field(self) -> None:
         """Load the field from Unified Memory."""
-        seeds_data = self.unified.backend.get_all_akashic_seeds()
+        seeds_data = self.unified.get_all_akashic_seeds()
         for seed_id, seed_data in seeds_data.items():
             seed = MemorySeed(
                 seed_data["content"],
@@ -98,7 +98,7 @@ class AkashicField:
 
     def _save_seed(self, seed_id: str, seed: MemorySeed, keywords: list[str]) -> None:
         """Persist a single seed to Unified Memory."""
-        self.unified.backend.store_akashic_seed(
+        self.unified.store_akashic_seed(
             seed_id=seed_id,
             content=seed.content,
             bloom_conditions=seed.bloom_conditions,

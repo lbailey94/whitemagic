@@ -194,7 +194,7 @@ def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
         from whitemagic.core.memory.unified import get_unified_memory
 
         um = get_unified_memory()
-        coords = um.backend.get_coords(mem.id)
+        coords = um.get_coords(mem.id)
         if coords and any(c is not None for c in coords):
             coords_populated = True
     except Exception:

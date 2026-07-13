@@ -151,7 +151,7 @@ class ResearchDAG:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS research_experiments (
                         experiment_id TEXT PRIMARY KEY,
@@ -194,7 +194,7 @@ class ResearchDAG:
     def _get_conn(self):
         from whitemagic.core.memory.unified import get_unified_memory
         um = get_unified_memory()
-        return um.backend.pool.connection()
+        return um.pool.connection()
 
     def submit_hypothesis(
         self,

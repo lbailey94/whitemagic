@@ -466,7 +466,7 @@ class NarrativeCompressor:
         """Reduce importance of compressed source memories."""
         demoted = 0
         try:
-            pool = um.backend.pool
+            pool = um.pool
             with pool.connection() as conn:
                 with conn:
                     # N+1 fix: executemany instead of per-memory UPDATE loop

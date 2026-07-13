@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.db_manager import pooled_connection
 import threading
 import time
 from collections.abc import Callable
@@ -162,14 +162,13 @@ class EmbeddingDaemon:
         return None
 
     def _get_db(self) -> sqlite3.Connection | None:
-        """Get database connection."""
+        """Get database connection (legacy — prefer pooled_connection)."""
         try:
             from whitemagic.config.paths import DB_PATH
             if not DB_PATH.exists():
                 return None
+            from whitemagic.core.memory.db_manager import safe_connect
             conn = safe_connect(str(DB_PATH))
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA synchronous=NORMAL")
             return conn
         except Exception as e:
             logger.error("DB connection failed: %s", e, exc_info=True)
@@ -259,42 +258,38 @@ class EmbeddingDaemon:
             "engine": "rust" if self._stats.rust_available else "python",
         }
 
-        db = self._get_db()
-        if db is None:
-            return result
-
         try:
-            # Find memories without embeddings
-            pending = self._find_unembedded(db, limit=self.max_per_run)
-            result["pending"] = len(pending)
-            self._stats.pending_memories = len(pending)
+            with pooled_connection() as db:
+                # Find memories without embeddings
+                pending = self._find_unembedded(db, limit=self.max_per_run)
+                result["pending"] = len(pending)
+                self._stats.pending_memories = len(pending)
 
-            if not pending:
-                return result
+                if not pending:
+                    return result
 
-            total_embedded = 0
-            total_failed = 0
+                total_embedded = 0
+                total_failed = 0
 
-            for i in range(0, len(pending), self.batch_size):
-                batch = pending[i:i + self.batch_size]
-                embedded, failed = self._process_batch(db, batch)
-                total_embedded += embedded
-                total_failed += failed
+                for i in range(0, len(pending), self.batch_size):
+                    batch = pending[i:i + self.batch_size]
+                    embedded, failed = self._process_batch(db, batch)
+                    total_embedded += embedded
+                    total_failed += failed
 
-            result["embedded"] = total_embedded
-            result["failed"] = total_failed
+                result["embedded"] = total_embedded
+                result["failed"] = total_failed
 
-            elapsed = time.perf_counter() - t0
-            if elapsed > 0 and total_embedded > 0:
-                result["rate"] = total_embedded / elapsed
+                elapsed = time.perf_counter() - t0
+                if elapsed > 0 and total_embedded > 0:
+                    result["rate"] = total_embedded / elapsed
 
-            logger.info(
-                "EmbeddingDaemon cycle: embedded=%s, "
-                "failed=%s, rate=%.1f/sec"
-            , total_embedded, total_failed, result['rate'])
-
-        finally:
-            db.close()
+                logger.info(
+                    "EmbeddingDaemon cycle: embedded=%s, "
+                    "failed=%s, rate=%.1f/sec"
+                , total_embedded, total_failed, result['rate'])
+        except Exception as e:
+            logger.error("EmbeddingDaemon cycle failed: %s", e, exc_info=True)
 
         return result
 
@@ -304,6 +299,8 @@ class EmbeddingDaemon:
         Returns list of (memory_id, text) tuples.
         """
         from whitemagic.core.memory.embeddings import MODEL_NAME
+
+        self._ensure_embeddings_table(db)
 
         sql = """
             SELECT id, COALESCE(title, '') || ' ' || COALESCE(content, '') as text
@@ -316,6 +313,19 @@ class EmbeddingDaemon:
 
         rows = db.execute(sql, (MODEL_NAME, limit)).fetchall()
         return [(row[0], row[1].strip()) for row in rows if row[1].strip()]
+
+    @staticmethod
+    def _ensure_embeddings_table(db: sqlite3.Connection) -> None:
+        """Create memory_embeddings table if it doesn't exist."""
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS memory_embeddings (
+                memory_id TEXT PRIMARY KEY,
+                embedding BLOB,
+                model TEXT,
+                created_at TEXT
+            )
+        """)
+        db.commit()
 
     def _process_batch(self, db: sqlite3.Connection, batch: list[tuple[str, str]]) -> tuple[int, int]:
         """Process a batch of memories.

@@ -414,15 +414,22 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug("Silenced memory telemetry err: %s", e, exc_info=True)
 
+    full_content = kwargs.get("full_content", False)
+    preview_chars = 500 if full_content else 200
+
     result: dict[str, Any] = {
         "status": "success",
         "count": len(memories),
         "memories": [
             {
                 "id": str(m.id),
-                "content": m.content[:200]
+                "title": m.title or "",
+                "content": m.content[:preview_chars]
                 if isinstance(m.content, str)
-                else str(m.content)[:200],
+                else str(m.content)[:preview_chars],
+                "galaxy": m.galaxy or "",
+                "tags": list(m.tags) if hasattr(m, "tags") else [],
+                "importance": m.importance if hasattr(m, "importance") else 0.5,
                 "galactic_distance": round(m.galactic_distance, 3),
             }
             for m in memories

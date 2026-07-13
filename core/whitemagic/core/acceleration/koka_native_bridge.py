@@ -202,8 +202,8 @@ class KokaNativeBridge:
                     bufsize=1,  # Line buffered
                 )
 
-                # Consume initialization line with timeout
-                init_line = self._readline_with_timeout(proc, 2.0)
+                # Consume initialization line with timeout (5s for cold starts)
+                init_line = self._readline_with_timeout(proc, 5.0)
                 if not init_line:
                     logger.error("Koka init timed out for %s", module)
                     self._discard_process(module, proc)
@@ -302,6 +302,8 @@ class KokaNativeBridge:
         proc = self._get_process(module)
         if not proc:
             logger.warning("Koka process pool exhausted for %s", module)
+            if breaker:
+                breaker.record_failure()
             return None
 
         try:
@@ -393,6 +395,8 @@ class KokaNativeBridge:
         proc = self._get_process(module)
         if not proc:
             logger.warning("Koka process pool exhausted for %s", module)
+            if breaker:
+                breaker.record_failure()
             return None
 
         try:

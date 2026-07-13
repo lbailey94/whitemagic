@@ -232,7 +232,7 @@ class CausalMiner:
         mem_meta: dict[str, dict[str, Any]] = {}
         try:
             for mid in candidate_ids:
-                mem = um.backend.recall(mid)
+                mem = um.recall(mid)
                 if mem:
                     mem_meta[mid] = {
                         "created_at": mem.created_at,
@@ -246,7 +246,7 @@ class CausalMiner:
 
         existing_directed: set[tuple[str, str]] = set()
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 rows = conn.execute(
                     """SELECT source_id, target_id FROM associations
                        WHERE direction = 'directed'""",
@@ -333,7 +333,7 @@ class CausalMiner:
         # Persist directed edges
         if self._persist and edges:
             try:
-                with um.backend.pool.connection() as conn:
+                with um.pool.connection() as conn:
                     with conn:
                         for edge in edges:
                             try:
@@ -385,7 +385,7 @@ class CausalMiner:
         """
         pairs: list[dict[str, Any]] = []
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 rows = conn.execute(
                     """SELECT id, title, created_at FROM memories
                        WHERE memory_type != 'quarantined'

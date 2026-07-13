@@ -31,30 +31,38 @@ class GalaxyAwareBackend:
 
     The monolithic database is used as a fallback for memories without
     a galaxy field or for galaxies that don't have a dedicated DB yet.
+
+    Phase 2: The backend cache is now namespaced by ``user_id/galaxy_name``
+    so that two users can have identically named galaxies without collision.
+    The ``user_id`` defaults to ``"local"`` for backward compatibility.
     """
 
-    def __init__(self, default_db_path: Path) -> None:
+    def __init__(self, default_db_path: Path, user_id: str = "local") -> None:
         """Initialize with the default (monolithic) database path.
 
         Args:
             default_db_path: Path to the fallback monolithic database.
+            user_id: The user whose galaxies this backend manages.
+                Default ``"local"`` for backward compatibility.
         """
         self._default_path = default_db_path
+        self._user_id = user_id
         self._default_backend: SQLiteBackend | None = None
+        # Cache keys are now "user_id/galaxy_name" for namespace isolation
         self._galaxy_backends: dict[str, SQLiteBackend] = {}
         self._lock = threading.Lock()
         self._galaxies_dir = self._resolve_galaxies_dir()
 
     def _resolve_galaxies_dir(self) -> Path:
-        """Resolve the per-galaxy database directory."""
+        """Resolve the per-galaxy database directory for this backend's user."""
         import os
         try:
             state_root = os.getenv("WM_STATE_ROOT")
             if state_root:
-                galaxies_dir = Path(state_root) / "users" / "local" / "galaxies"
+                galaxies_dir = Path(state_root) / "users" / self._user_id / "galaxies"
             else:
                 from whitemagic.core.user_profile import get_user_dir
-                user_dir = get_user_dir("local")
+                user_dir = get_user_dir(self._user_id)
                 galaxies_dir = user_dir / "galaxies"
             galaxies_dir.mkdir(parents=True, exist_ok=True)
             return galaxies_dir
@@ -71,29 +79,53 @@ class GalaxyAwareBackend:
     def _get_galaxy_backend(self, galaxy: str) -> SQLiteBackend:
         """Get or create a per-galaxy SQLiteBackend.
 
+        The backend is cached under a namespace key ``user_id/galaxy_name``
+        so that two users with the same galaxy name get separate backends.
+
         Args:
             galaxy: Galaxy name (e.g., 'sessions', 'codex', 'universal').
 
         Returns:
             SQLiteBackend for the galaxy's database.
         """
-        if galaxy in self._galaxy_backends:
-            return self._galaxy_backends[galaxy]
+        cache_key = f"{self._user_id}/{galaxy}"
+        if cache_key in self._galaxy_backends:
+            return self._galaxy_backends[cache_key]
 
         with self._lock:
-            if galaxy in self._galaxy_backends:
-                return self._galaxy_backends[galaxy]
+            if cache_key in self._galaxy_backends:
+                return self._galaxy_backends[cache_key]
 
-            # Sanitize galaxy name for filesystem
-            safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in galaxy)
+            # Validate and sanitize galaxy name for filesystem
+            from whitemagic.core.memory.backends.protocol import validate_galaxy_name
+            safe_name = validate_galaxy_name(galaxy)
             galaxy_dir = self._galaxies_dir / safe_name
             galaxy_dir.mkdir(parents=True, exist_ok=True)
             db_path = galaxy_dir / "whitemagic.db"
 
             backend = SQLiteBackend(db_path)
-            self._galaxy_backends[galaxy] = backend
-            logger.debug("Created per-galaxy backend for '%s' at %s", galaxy, db_path)
+            self._galaxy_backends[cache_key] = backend
+            logger.debug("Created per-galaxy backend for '%s' (user='%s') at %s", galaxy, self._user_id, db_path)
             return backend
+
+    def _discover_galaxy_backends(self) -> None:
+        """Discover and register all galaxy DBs on disk for this user."""
+        try:
+            if not self._galaxies_dir.exists():
+                return
+            for galaxy_dir in self._galaxies_dir.iterdir():
+                if not galaxy_dir.is_dir():
+                    continue
+                name = galaxy_dir.name
+                cache_key = f"{self._user_id}/{name}"
+                if cache_key in self._galaxy_backends:
+                    continue
+                db_path = galaxy_dir / "whitemagic.db"
+                if db_path.exists():
+                    self._galaxy_backends[cache_key] = SQLiteBackend(db_path)
+                    logger.debug("Discovered galaxy backend: %s (user='%s')", name, self._user_id)
+        except Exception as e:
+            logger.debug("Galaxy discovery failed: %s", e)
 
     def _get_backend_for_memory(self, memory: Memory) -> SQLiteBackend:
         """Determine which backend to use for a memory.
@@ -310,6 +342,29 @@ class GalaxyAwareBackend:
         for backend in self._galaxy_backends.values():
             backend.pool.close_all()
 
+    # ── Transparent delegation for SQLiteBackend-specific methods ──────
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate unknown attribute access to the default SQLiteBackend.
+
+        This allows consumers that call SQLiteBackend-specific methods
+        (e.g. ``_init_db``, ``get_dharma_stats``, ``rebuild_fts``,
+        ``archive_to_edge``, ``decay_associations``) to transparently
+        work through the galaxy-aware backend without explicit proxying.
+
+        Galaxy-aware operations (store, recall, search, delete, etc.)
+        are explicitly defined above and take precedence.
+        """
+        # Avoid recursion for internal attributes
+        if name.startswith("_") and name not in ("_init_db", "_auto_backup", "_row_to_memory", "_batch_hydrate", "_get_cold_pool", "_recall_from_pool"):
+            raise AttributeError(f"'GalaxyAwareBackend' object has no attribute '{name}'")
+        # Delegate to the default backend
+        default = self.__dict__.get("_default_backend")
+        if default is None:
+            default = self._get_default_backend()
+        attr = getattr(default, name)
+        return attr
+
     @property
     def pool(self) -> Any:
         """Proxy to the default backend's pool for backward compatibility.
@@ -328,12 +383,18 @@ class GalaxyAwareBackend:
     # ── Galaxy management ─────────────────────────────────────────────
 
     def list_galaxies(self) -> list[str]:
-        """List all galaxies that have backends."""
-        return list(self._galaxy_backends.keys())
+        """List all galaxies that have backends for this user."""
+        # Strip the user_id prefix from cache keys for the caller
+        prefix = f"{self._user_id}/"
+        return [
+            k[len(prefix):] if k.startswith(prefix) else k
+            for k in self._galaxy_backends.keys()
+        ]
 
     def get_galaxy_db_path(self, galaxy: str) -> Path:
         """Get the database path for a galaxy."""
-        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in galaxy)
+        from whitemagic.core.memory.backends.protocol import validate_galaxy_name
+        safe_name = validate_galaxy_name(galaxy)
         return self._galaxies_dir / safe_name / "whitemagic.db"
 
     def preload_galaxy(self, galaxy: str) -> None:
@@ -363,6 +424,22 @@ class GalaxyAwareBackend:
                 continue
         return None
 
+    def get_all_coords(self) -> dict[str, tuple]:
+        """Get all holographic coordinates across all galaxy backends."""
+        all_coords: dict[str, tuple] = {}
+        # Default backend first
+        try:
+            all_coords.update(self._get_default_backend().get_all_coords())
+        except Exception as e:
+            logger.debug("get_all_coords failed for default backend: %s", e)
+        # Galaxy backends
+        for gbackend in self._galaxy_backends.values():
+            try:
+                all_coords.update(gbackend.get_all_coords())
+            except Exception as e:
+                logger.debug("get_all_coords failed for galaxy backend: %s", e)
+        return all_coords
+
     def list_recent(self, limit: int = 10, memory_type: Any = None, galaxy: str | None = None) -> list:
         """List recent memories across all galaxy backends."""
         if galaxy:
@@ -373,7 +450,15 @@ class GalaxyAwareBackend:
                 all_mems.extend(gbackend.list_recent(limit=limit, memory_type=memory_type))
             except Exception:
                 continue
-        all_mems.sort(key=lambda m: getattr(m, "created_at", ""), reverse=True)
+        def _sort_key(m):
+            ts = getattr(m, "created_at", None)
+            if ts is None:
+                return ""
+            # Normalize offset-aware datetimes to offset-naive for comparison
+            if hasattr(ts, "tzinfo") and ts.tzinfo is not None:
+                return ts.replace(tzinfo=None)
+            return ts
+        all_mems.sort(key=_sort_key, reverse=True)
         return all_mems[:limit]
 
     def update_galactic_distance(self, memory_id: str, distance: float) -> bool:
@@ -468,6 +553,8 @@ class GalaxyAwareBackend:
 
     def fetch_memory_contents(self, memory_type: Any = None, limit: int = 10000) -> list[str]:
         """Fetch memory contents across all backends."""
+        # Discover all galaxy DBs on disk, not just lazily-loaded ones
+        self._discover_galaxy_backends()
         all_contents: list[str] = []
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:

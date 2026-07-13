@@ -419,10 +419,6 @@ def check_doc_gitignore_hygiene() -> None:
         "apps/SCOPING_BROWSER_FIRST_DECIDED.md",
         "polyglot/BENCHMARKS.md",
         "polyglot/POLYGLOT_SURVEY",
-        "polyglot/mojo/IMPLEMENTATION_STATUS.md",
-        "polyglot/mojo/MOJO_MIGRATION_GUIDE.md",
-        "polyglot/mojo/MOJO_STATUS.md",
-        "polyglot/mojo/README_MOJO_0261.md",
         "polyglot/whitemagic-go/",
         "polyglot/whitemagic-koka/docs/",
     ]

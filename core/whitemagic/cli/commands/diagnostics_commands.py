@@ -198,7 +198,7 @@ def _doctor_fix() -> None:
         from whitemagic.core.memory.unified import get_unified_memory
 
         um = get_unified_memory()
-        um.backend._init_db()
+        um._init_db()
         click.echo("   ✅ All tables and columns verified")
         fixes_applied += 1
     except Exception as exc:
@@ -207,7 +207,7 @@ def _doctor_fix() -> None:
 
     click.echo("3. FTS index integrity...")
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             mem_count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
             fts_count = conn.execute("SELECT COUNT(*) FROM memories_fts").fetchone()[0]
             if abs(mem_count - fts_count) > 10:
@@ -234,7 +234,7 @@ def _doctor_fix() -> None:
 
     click.echo("4. Orphaned associations...")
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             orphaned = conn.execute("""
                 SELECT COUNT(*) FROM associations
                 WHERE source_id NOT IN (SELECT id FROM memories)
@@ -256,7 +256,7 @@ def _doctor_fix() -> None:
 
     click.echo("5. Indexes...")
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             indexes_created = 0
             for idx_sql in [
                 "CREATE INDEX IF NOT EXISTS idx_memories_content_hash ON memories(content_hash)",
@@ -275,7 +275,7 @@ def _doctor_fix() -> None:
 
     click.echo("6. Database compaction...")
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             conn.execute("VACUUM")
         click.echo("   ✅ VACUUM complete")
         fixes_applied += 1

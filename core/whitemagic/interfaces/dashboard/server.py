@@ -410,12 +410,11 @@ def get_polyglot_balance() -> Any:
     """Get language balance metrics (Lichen Architecture)."""
     # Dynamic audit of active codebase (excluding venv and archives)
     base_path = Path(__file__).parent.parent.parent
-    stats = {"Python": 0, "Rust": 0, "Mojo": 0, "Elixir": 0, "Koka": 0, "Zig": 0}
+    stats = {"Python": 0, "Rust": 0, "Elixir": 0, "Koka": 0, "Zig": 0}
 
     extensions = {
         "*.py": "Python",
         "*.rs": "Rust",
-        "*.mojo": "Mojo",
         "*.ex": "Elixir",
         "*.exs": "Elixir",
         "*.kk": "Koka",

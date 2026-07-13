@@ -1,22 +1,14 @@
 """
-Galactic Substrate — v23.0 rehydration layer.
+Galactic Substrate — v23+ galaxy-first memory layer.
 
-Connects the current `whitemagic.core` to the live substrate state DB at
-``~/.whitemagic/memory/whitemagic.db``. The substrate is the persistent
-memory + embeddings + associations + dharma + constellation + akashic
-storage; this module is the read/write API the rest of the core uses.
+Connects the core to the memory substrate. As of v23.3+, memories live
+in per-galaxy SQLite DBs under ``~/.whitemagic/memory/galaxies/``.
+The legacy monolith at ``~/.whitemagic/memory/whitemagic.db`` may still
+exist for backward-compat but is typically empty post-migration.
 
-v23.0 history (per WHITEMAGIC_CHRONOLOGY_2026-06-20.md):
-    - Live Era (2025-11-11 to 2025-12-27): Whitemagic-Core on Inspiron 3582
-      ran a self-recursive substrate writing 33,297 events to disk.
-    - Polyglot Era (v15.8.0, 2026-02-13): 111,665 memories, 2,247,642
-      associations, 30 constellations, 182 communities. Galaxy rehydrated.
-    - Current (v22.5.0 → v23.0): The live DB at ~/.whitemagic/memory/
-      has 12,238 memories + 21,087 associations + 12,638 embeddings
-      (per Phase 5 audit). The current core never imported it.
-
-This module is the bridge: it gives the v22.x catalog access to the
-substrate that already exists on disk.
+This module is the read/write API the rest of the core uses. When the
+monolith has insufficient data, it transparently falls back to scanning
+per-galaxy DBs to aggregate results.
 """
 
 from __future__ import annotations

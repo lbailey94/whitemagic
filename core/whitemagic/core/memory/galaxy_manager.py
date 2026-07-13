@@ -268,7 +268,7 @@ class GalaxyManager:
             d["is_active"] = registry_key == self._active_galaxy
             try:
                 um = self._get_memory(registry_key)
-                stats = um.backend.get_stats()
+                stats = um.get_stats()
                 d["memory_count"] = stats.get("total_memories", 0)
                 info.memory_count = d["memory_count"]
             except Exception as e:
@@ -279,10 +279,24 @@ class GalaxyManager:
     def switch_galaxy(self, name: str, user_id: str | None = None) -> GalaxyInfo:
         """Switch the active galaxy.
 
+        .. deprecated:: Phase 2
+n            Global active-galaxy mutation is unsafe for concurrent requests.
+            Use :meth:`get_memory_for_galaxy` for request-scoped access.
+            This method remains for CLI/admin use only.
+
         Args:
             name: Galaxy name to switch to.
             user_id: Owner user ID. Defaults to ``"local"``.
         """
+        import warnings
+        warnings.warn(
+            "switch_galaxy() mutates process-global state and is unsafe for "
+            "concurrent requests. Use get_memory_for_galaxy() for request-scoped "
+            "galaxy access.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         uid = resolve_user_id(user_id)
         registry_key = f"{uid}/{name}"
         if registry_key not in self._galaxies:
@@ -308,7 +322,11 @@ class GalaxyManager:
         return self._galaxies[registry_key]
 
     def get_active(self) -> GalaxyInfo:
-        """Get the currently active galaxy."""
+        """Get the currently active galaxy.
+
+        .. note:: This returns process-global state. For request-scoped
+            access, use :meth:`get_galaxy` with an explicit ``user_id``.
+        """
         return self._galaxies.get(self._active_galaxy, self._galaxies["local/default"])
 
     def get_galaxy(self, name: str, user_id: str | None = None) -> GalaxyInfo | None:
@@ -320,6 +338,68 @@ class GalaxyManager:
         """
         uid = resolve_user_id(user_id)
         return self._galaxies.get(f"{uid}/{name}")
+
+    def get_memory_for_galaxy(
+        self, name: str, user_id: str | None = None
+    ) -> Any:
+        """Get a UnifiedMemory instance for a specific galaxy without mutating
+        global active-galaxy state.
+
+        This is the request-scoped replacement for ``switch_galaxy()``.
+        It returns a UnifiedMemory instance for the requested galaxy,
+        creating one if needed, without changing the process-global
+        ``_active_galaxy`` or resetting the global singleton.
+
+        Args:
+            name: Galaxy name.
+            user_id: Owner user ID. Defaults to ``"local"``.
+
+        Returns:
+            UnifiedMemory instance for the requested galaxy.
+
+        Raises:
+            ValueError: If the galaxy does not exist for the given user.
+        """
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{name}"
+        if registry_key not in self._galaxies:
+            available = [k.split("/", 1)[1] for k in self._galaxies if k.startswith(f"{uid}/")]
+            raise ValueError(
+                f"Galaxy '{name}' not found for user '{uid}'. Available: {available}"
+            )
+        # Update last_accessed (non-mutating to _active_galaxy)
+        self._galaxies[registry_key].last_accessed = time.time()
+        return self._get_memory(registry_key)
+
+    def galaxy_context(
+        self, name: str, user_id: str | None = None
+    ) -> Any:
+        """Context manager for request-scoped galaxy access.
+
+        Yields a UnifiedMemory instance for the requested galaxy.
+        Does NOT mutate global active-galaxy state.
+
+        Usage::
+
+            with gm.galaxy_context("codex", user_id="alice") as um:
+                um.store(...)
+                results = um.search(...)
+
+        Args:
+            name: Galaxy name.
+            user_id: Owner user ID. Defaults to ``"local"``.
+
+        Yields:
+            UnifiedMemory instance for the requested galaxy.
+        """
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _ctx():
+            um = self.get_memory_for_galaxy(name, user_id=user_id)
+            yield um
+
+        return _ctx()
 
     # ── Galactic Telepathy (v15.3) ─────────────────────────────────
 
@@ -369,7 +449,7 @@ class GalaxyManager:
         if query:
             candidates = src_um.search(query=query, limit=limit)
         else:
-            candidates = src_um.backend.search(
+            candidates = src_um.search(
                 query=None, tags=set(tags) if tags else None,
                 min_importance=min_importance, limit=limit,
             )
@@ -392,7 +472,7 @@ class GalaxyManager:
             content_hash = hashlib.sha256(content_str.encode()).hexdigest()
 
             try:
-                existing = tgt_um.backend.find_by_content_hash(content_hash)
+                existing = tgt_um.find_by_content_hash(content_hash)
                 if existing:
                     skipped_dedup += 1
                     continue
@@ -418,7 +498,7 @@ class GalaxyManager:
 
                 # Copy typed associations between transferred memories
                 try:
-                    with src_um.backend.pool.connection() as conn:
+                    with src_um.pool.connection() as conn:
                         conn.row_factory = __import__("sqlite3").Row
                         assocs = conn.execute(
                             """SELECT target_id, strength, direction, relation_type,
@@ -430,7 +510,7 @@ class GalaxyManager:
                         ).fetchall()
                         if assocs:
                             now = _now_iso()
-                            with tgt_um.backend.pool.connection() as tconn:
+                            with tgt_um.pool.connection() as tconn:
                                 for a in assocs:
                                     try:
                                         tconn.execute(
@@ -465,7 +545,7 @@ class GalaxyManager:
                     pass  # Lineage tracking is best-effort
 
                 if not copy:
-                    src_um.backend.archive_to_edge(mem.id, galactic_distance=0.95)
+                    src_um.archive_to_edge(mem.id, galactic_distance=0.95)
 
                 transferred += 1
             except Exception as e:
@@ -476,7 +556,7 @@ class GalaxyManager:
         for gname in (source_galaxy, target_galaxy):
             try:
                 um = self._get_memory(gname)
-                stats = um.backend.get_stats()
+                stats = um.get_stats()
                 self._galaxies[gname].memory_count = stats.get("total_memories", 0)
             except Exception as e:
                 logger.debug("Galaxy stats update failed: %s", e)
@@ -720,7 +800,7 @@ class GalaxyManager:
 
         # Update memory count
         try:
-            stats = um.backend.get_stats()
+            stats = um.get_stats()
             self._galaxies[registry_key].memory_count = stats.get("total_memories", 0)
             self._save_registry()
         except Exception as e:

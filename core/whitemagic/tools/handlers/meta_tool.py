@@ -1826,6 +1826,24 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     # v24.3: Durable Archive
     (re.compile(r"\b(archive.*run|run.*archive|durable.*archive|snapshot.*breakthrough)\b", re.I), "gana_wings", "archive.run"),
     (re.compile(r"\b(archive.*status|durable.*archive.*status)\b", re.I), "gana_wings", "archive.status"),
+    # v24.3: DiLoCo Distributed Training
+    (re.compile(r"\b(dilo.*co.*init|dilo.*init|distributed.*training.*init)\b", re.I), "gana_ox", "dilo_co.init"),
+    (re.compile(r"\b(dilo.*co.*register|register.*worker.*dilo|parcae.*register)\b", re.I), "gana_ox", "dilo_co.register_worker"),
+    (re.compile(r"\b(dilo.*co.*submit|submit.*gradient|gradient.*submit)\b", re.I), "gana_ox", "dilo_co.submit_gradient"),
+    (re.compile(r"\b(dilo.*co.*sync|distributed.*sync|global.*sync.*step)\b", re.I), "gana_ox", "dilo_co.sync"),
+    (re.compile(r"\b(dilo.*co.*status|distributed.*training.*status)\b", re.I), "gana_ox", "dilo_co.status"),
+    # v24.3: Warp Marketplace
+    (re.compile(r"\b(warp.*market.*publish|publish.*warp.*market|warp.*publish)\b", re.I), "gana_wall", "warp.market.publish"),
+    (re.compile(r"\b(warp.*market.*discover|discover.*warp|warp.*market.*search)\b", re.I), "gana_wall", "warp.market.discover"),
+    (re.compile(r"\b(warp.*market.*download|download.*warp|import.*warp.*market)\b", re.I), "gana_wall", "warp.market.download"),
+    (re.compile(r"\b(warp.*market.*status|warp.*marketplace.*status)\b", re.I), "gana_wall", "warp.market.status"),
+    (re.compile(r"\b(warp.*market.*broadcast|broadcast.*warp|share.*warp.*mesh)\b", re.I), "gana_wings", "warp.market.broadcast"),
+    # v24.3: Mesh Inference Router
+    (re.compile(r"\b(mesh.*route|route.*inference|inference.*route)\b", re.I), "gana_chariot", "mesh.route"),
+    (re.compile(r"\b(mesh.*route.*register|register.*inference.*node|register.*mesh.*node)\b", re.I), "gana_chariot", "mesh.route.register"),
+    (re.compile(r"\b(mesh.*route.*node|inference.*node.*list|available.*inference.*node)\b", re.I), "gana_chariot", "mesh.route.nodes"),
+    (re.compile(r"\b(mesh.*route.*status|inference.*router.*status)\b", re.I), "gana_chariot", "mesh.route.status"),
+    (re.compile(r"\b(mesh.*route.*strategy|routing.*strategy|inference.*strategy)\b", re.I), "gana_dipper", "mesh.route.strategy"),
     # Quantum Geometry
     (re.compile(r"\b(manifold.*distance|geodesic.*distance)\b", re.I), "gana_tail", "quantum.manifold_distance"),
     (re.compile(r"\b(fubini.*study|fubini.*metric)\b", re.I), "gana_tail", "quantum.fubini_study"),

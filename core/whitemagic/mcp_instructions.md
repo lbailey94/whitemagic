@@ -4,10 +4,11 @@ WhiteMagic is a cognitive operating system that gives you persistent memory, ass
 
 ## Quick Start
 
-1. **Search memories**: `gana_winnowing_basket` → tool: `search_memories` or `hybrid_recall`
-2. **Create a memory**: `gana_neck` → tool: `create_memory`, args: `{content, title, tags}`
-3. **Check system health**: `gana_root` → tool: `health_report`
-4. **Self-reflect**: `gana_ghost` → tool: `gnosis`
+1. **Check current state**: `gana_heart` → `state.current` — see what to work on now
+2. **Search memories**: `gana_winnowing_basket` → tool: `search_memories` or `hybrid_recall`
+3. **Create a memory**: `gana_neck` → tool: `create_memory`, args: `{content, title, tags}`
+4. **Check system health**: `gana_root` → tool: `health_report`
+5. **Self-reflect**: `gana_ghost` → tool: `gnosis`
 
 ## How Tool Calls Work
 
@@ -76,12 +77,13 @@ WhiteMagic includes a consciousness subsystem for continuous internal context:
 
 ## Your First Steps as an AI Agent
 
-1. **Bootstrap your session**: `gana_horn` → `session_bootstrap` — loads recent context
-2. **Create your first memory**: `gana_neck` → `create_memory` with `{content: "I am learning WhiteMagic", title: "First memory", tags: ["onboarding"]}`
-3. **Search for it**: `gana_winnowing_basket` → `search_memories` with `{query: "learning"}`
-4. **Check your health**: `gana_root` → `health_report`
-5. **Reflect on yourself**: `gana_ghost` → `gnosis` — see your full system state
-6. **Dream**: `gana_abundance` → `dream` — run memory consolidation
+1. **Check current state**: `gana_heart` → `state.current` — see what's being worked on and what to do next
+2. **Bootstrap your session**: `gana_horn` → `session_bootstrap` — loads recent context
+3. **Create your first memory**: `gana_neck` → `create_memory` with `{content: "I am learning WhiteMagic", title: "First memory", tags: ["onboarding"]}`
+4. **Search for it**: `gana_winnowing_basket` → `search_memories` with `{query: "learning"}`
+5. **Check your health**: `gana_root` → `health_report`
+6. **Reflect on yourself**: `gana_ghost` → `gnosis` — see your full system state
+7. **Dream**: `gana_abundance` → `dream` — run memory consolidation
 
 You now have persistent memory. Every future session can recall what you stored.
 

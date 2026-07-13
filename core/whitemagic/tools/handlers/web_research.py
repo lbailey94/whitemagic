@@ -496,7 +496,7 @@ def handle_codegenome_validate(**kwargs: Any) -> dict[str, Any]:
     """
     prompt = kwargs.get("prompt", "")
     if not prompt:
-        raise ValueError("prompt is required")
+        return {"status": "error", "error_code": "prompt_required", "message": "prompt is required"}
 
     max_iterations = int(kwargs.get("max_iterations", 3))
     score_threshold = float(kwargs.get("score_threshold", 0.8))

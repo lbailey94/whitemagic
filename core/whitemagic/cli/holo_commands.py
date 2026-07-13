@@ -137,7 +137,7 @@ def map_view(axis, width, height):
     ensure_initialized()
     unified = get_unified_memory()
 
-    coords = unified.backend.get_all_coords()
+    coords = unified.get_all_coords()
 
     if not coords:
         click.echo("⚠️  No holographic coordinates found. Run reindex first.")
@@ -211,7 +211,7 @@ def coords(limit, sort):
     ensure_initialized()
     unified = get_unified_memory()
 
-    all_coords = unified.backend.get_all_coords()
+    all_coords = unified.get_all_coords()
 
     if not all_coords:
         click.echo("⚠️  No coordinates found.")
@@ -308,7 +308,7 @@ def export(output, format):
     ensure_initialized()
     unified = get_unified_memory()
 
-    all_coords = unified.backend.get_all_coords()
+    all_coords = unified.get_all_coords()
 
     if not all_coords:
         click.echo("⚠️  No coordinates to export.")
@@ -369,7 +369,7 @@ def sectors():
     ensure_initialized()
     unified = get_unified_memory()
 
-    all_coords = unified.backend.get_all_coords()
+    all_coords = unified.get_all_coords()
 
     if not all_coords:
         click.echo("⚠️  No coordinates found.")
@@ -435,7 +435,7 @@ def dharma_dashboard(limit: int):
     unified = get_unified_memory()
 
     try:
-        stats = unified.backend.get_dharma_stats()
+        stats = unified.get_dharma_stats()
         click.echo("📊 STATISTICS:")
         click.echo(f"   Total audits: {stats.get('total', 0)}")
         click.echo(f"   Avg ethical score: {stats.get('avg_ethical', 0):.2f}")
@@ -446,7 +446,7 @@ def dharma_dashboard(limit: int):
         click.echo()
 
     try:
-        log = unified.backend.get_dharma_audit_log(limit=limit)
+        log = unified.get_dharma_audit_log(limit=limit)
         if log:
             click.echo(f"📜 RECENT AUDITS (last {len(log)}):")
             click.echo("─" * 60)

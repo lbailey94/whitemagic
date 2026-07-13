@@ -12,7 +12,7 @@ _ALLOWED_PATH_FILES = {
     # Security blocklist files — must use ~ patterns to match any user's home
     "core/governor.py",
     "security/tool_gating.py",
-    # External tool discovery — must find system binaries (Mojo, GHC, HuggingFace)
+    # External tool discovery — must find system binaries (GHC, HuggingFace)
     "core/fusions.py",
     "core/memory/embedding_daemon.py",
     "tools/handlers/introspection.py",

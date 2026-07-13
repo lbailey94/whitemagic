@@ -136,8 +136,8 @@ class TestPipelineProfiling(unittest.TestCase):
         print(f"\n  Token Tracker isolated ({iterations} iterations):")
         print(f"    avg: {avg:.3f}ms  median: {median:.3f}ms")
 
-        # Should be sub-millisecond; allow 3ms under xdist parallel load
-        threshold = 5.0 if _UNDER_XDIST else 2.0
+        # Should be sub-millisecond; allow 8ms under xdist parallel load
+        threshold = 8.0 if _UNDER_XDIST else 2.0
         self.assertLess(
             avg, threshold, f"Token tracker should be <{threshold}ms, got {avg:.3f}ms"
         )

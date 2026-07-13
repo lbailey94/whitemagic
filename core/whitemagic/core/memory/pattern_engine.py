@@ -109,13 +109,23 @@ class PatternEngine:
             return PatternReport(0, 0, [], [], [], [], 0.0)
 
         # 2. Call Rust extension with list of strings
-        # Signature: (total, found, solutions, anti, heuristics, opts, duration)
         extract_patterns_from_content = getattr(whitemagic_rs, "extract_patterns_from_content", None)
         if extract_patterns_from_content is None:
             raise AttributeError("extract_patterns_from_content not available")
 
-        total, found, solutions, anti, heuristics, opts, duration = \
-            extract_patterns_from_content(memories, min_confidence)
+        result = extract_patterns_from_content(memories, min_confidence)
+        # Rust extension may return lists instead of scalars — normalize
+        total = len(memories)
+        solutions = result[2] if len(result) > 2 else []
+        anti = result[3] if len(result) > 3 else []
+        heuristics = result[4] if len(result) > 4 else []
+        opts = result[5] if len(result) > 5 else []
+        duration = 0.0
+        found = len(solutions) + len(anti) + len(heuristics) + len(opts)
+
+        # If Rust returned empty, fall back to Python
+        if found == 0:
+            raise ValueError("Rust extraction returned 0 patterns, falling back to Python")
 
         # Helper to convert string lists to Pattern objects
         def to_patterns(type_name: str, descriptions: list[str]) -> list[Pattern]:

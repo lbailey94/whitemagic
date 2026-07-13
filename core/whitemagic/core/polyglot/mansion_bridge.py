@@ -6,7 +6,6 @@ Philosophy: Polyglot specialized alternatives with Python as fallback core.
 This module provides a unified API for all high-performance backends:
 - Rust (whitemagic_rs) — PyO3 bindings
 - Zig (via Rust FFI) — Ultra-low-level operations
-- Mojo (accelerator binaries) — SIMD acceleration
 
 Each operation automatically selects the fastest available backend,
 with transparent fallback to Python if native code isn't available.
@@ -28,7 +27,6 @@ class Backend(Enum):
     PYTHON = "python"
     RUST = "rust"
     ZIG = "zig"
-    MOJO = "mojo"
     KOKA = "koka"
 
 
@@ -48,8 +46,7 @@ class MansionBridge:
 
     Provides automatic backend selection with fallback:
     1. Try Rust (fastest, most functions)
-    2. Try Mojo (SIMD acceleration)
-    3. Fall back to Python (always available)
+    2. Fall back to Python (always available)
     """
 
     # Project root
@@ -59,9 +56,6 @@ class MansionBridge:
 
     # Backend status cache (initialized in __post_init__)
     _rust_status: BackendStatus = field(
-        default_factory=lambda: BackendStatus(available=False)
-    )
-    _mojo_status: BackendStatus = field(
         default_factory=lambda: BackendStatus(available=False)
     )
     _zig_status: BackendStatus = field(
@@ -74,12 +68,10 @@ class MansionBridge:
     def _init_backends(self) -> None:
         """Initialize and detect available backends."""
         self._rust_status = self._detect_rust()
-        self._mojo_status = self._detect_mojo()
         self._zig_status = self._detect_zig()
 
         logger.info("MansionBridge initialized:")
         logger.info("  Rust: %s", "✅" if self._rust_status.available else "❌")
-        logger.info("  Mojo: %s", "✅" if self._mojo_status.available else "❌")
         logger.info("  Zig:  %s", "✅" if self._zig_status.available else "❌")
 
     def _detect_rust(self) -> BackendStatus:
@@ -97,45 +89,6 @@ class MansionBridge:
             )
         except ImportError:
             return BackendStatus(available=False)
-
-    def _detect_mojo(self) -> BackendStatus:
-        """Detect Mojo backend."""
-        mojo_dir = self.project_root / "whitemagic-mojo"
-        bin_dir = self.project_root / "whitemagic-mojo" / "bin"
-        mojo_binaries = []
-
-        if mojo_dir.exists():
-            try:
-                mojo_binaries = [
-                    f.name
-                    for f in mojo_dir.iterdir()
-                    if f.is_file()
-                    and not f.name.startswith(".")
-                    and f.is_file()
-                    and f.stat().st_mode & 0o111
-                ]
-            except (OSError, FileNotFoundError, PermissionError):
-                logger.debug("Swallowed exception", exc_info=True)
-
-        # Fallback to bin directory if it exists
-        if bin_dir.exists() and not mojo_binaries:
-            try:
-                mojo_binaries = [
-                    f.name
-                    for f in bin_dir.iterdir()
-                    if f.is_file() and not f.name.startswith(".")
-                ]
-            except (OSError, FileNotFoundError, PermissionError):
-                logger.debug("Swallowed exception", exc_info=True)
-
-        mojo_path = self.project_root / ".venv" / "bin" / "mojo"
-        mojo_available = mojo_path.exists() or len(mojo_binaries) > 0
-
-        return BackendStatus(
-            available=mojo_available,
-            path=str(mojo_path) if mojo_path.exists() else str(mojo_dir),
-            functions=mojo_binaries,
-        )
 
     def _detect_zig(self) -> BackendStatus:
         """Detect Zig backend (via Rust FFI)."""
@@ -157,7 +110,6 @@ class MansionBridge:
         """Get status of all backends."""
         return {
             "rust": self._rust_status,
-            "mojo": self._mojo_status,
             "zig": self._zig_status,
             "python": BackendStatus(available=True, path="builtin", functions=["all"]),
         }
@@ -255,53 +207,6 @@ class MansionBridge:
                 patterns.append(("heuristic", line, "", ""))
 
         return patterns
-
-    def run_mojo_binary(
-        self,
-        binary_name: str,
-        args: list[str] | None = None,
-        stdin: str | None = None,
-    ) -> str | None:
-        """Run a compiled Mojo binary."""
-        if not self._mojo_status.available:
-            logger.warning("Mojo not available")
-            return None
-
-        bin_path = self.project_root / "whitemagic-mojo" / "bin" / binary_name
-
-        if not bin_path.exists():
-            logger.error("Mojo binary not found: %s", bin_path, exc_info=True)
-            return None
-
-        try:
-            result = subprocess.run(
-                [str(bin_path)] + (args or []),
-                capture_output=True,
-                text=True,
-                input=stdin,
-                timeout=30,
-            )
-
-            if result.returncode != 0:
-                logger.error("Mojo binary failed: %s", result.stderr, exc_info=True)
-                return None
-
-            return result.stdout.strip()
-        except Exception as e:
-            logger.error("Mojo execution error: %s", e, exc_info=True)
-            return None
-
-    def neuro_score(self, data: str) -> str | None:
-        """Run Mojo neuro_score binary."""
-        return self.run_mojo_binary("neuro_score_mojo", stdin=data)
-
-    def zodiac_engine(self, data: str) -> str | None:
-        """Run Mojo zodiac_engine binary."""
-        return self.run_mojo_binary("zodiac_engine_mojo", stdin=data)
-
-    def coordinate_encoder(self, data: str) -> str | None:
-        """Run Mojo coordinate_encoder binary."""
-        return self.run_mojo_binary("coordinate_encoder_mojo", stdin=data)
 
     def iching_cast(self) -> dict[str, Any] | None:
         """Cast I Ching hexagram using Zig backend."""

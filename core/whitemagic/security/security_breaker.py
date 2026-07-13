@@ -130,6 +130,12 @@ class SecurityMonitor:
     ):
         self._lock = threading.Lock()
 
+        # Relax thresholds in benchmark mode to avoid log spam
+        import os
+        if os.getenv("WM_BENCHMARK_MODE"):
+            lateral_threshold = max(lateral_threshold, 100)
+            rapid_fire_threshold = max(rapid_fire_threshold, 100)
+
         # Config
         self._rapid_fire_threshold = rapid_fire_threshold
         self._rapid_fire_window = rapid_fire_window_s

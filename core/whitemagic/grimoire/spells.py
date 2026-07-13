@@ -147,10 +147,10 @@ class SpellBook:
                 "Accelerate",
                 "Invoke polyglot acceleration — Rust PyO3 "
                 "for holographic encoding, Zig SIMD for cosine similarity "
-                "(~220ns FFI), Mojo for batch embedding",
+                "(~220ns FFI), Rust for batch embedding",
                 6,
                 SpellType.TRANSMUTATION,
-                ["fast", "parallel", "rust", "simd", "zig", "mojo", "cascade"],
+                ["fast", "parallel", "rust", "simd", "zig", "cascade"],
                 "wood",
                 "yang",
             ),

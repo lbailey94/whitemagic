@@ -43,7 +43,6 @@ class PolyglotSpecialists:
         self.stats = {
             "rust": 0,
             "zig": 0,
-            "mojo": 0,
             "haskell": 0,
             "elixir": 0,
             "go": 0,

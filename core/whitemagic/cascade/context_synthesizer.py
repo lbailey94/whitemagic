@@ -453,17 +453,16 @@ class ContextSynthesizer:
             logger.warning("Failed to gather coherence state: %s", e, exc_info=True)
 
     def _get_memory_count(self) -> int:
-        """Get total memory count from SQLite backend."""
+        """Get total memory count from the galactic substrate.
+
+        Uses galactic.substrate_health() which aggregates counts from
+        per-galaxy DBs when the legacy monolith is empty.
+        """
         try:
+            from whitemagic.core.galactic import substrate_health
 
-            from whitemagic.config.paths import WM_ROOT
-
-            db_path = WM_ROOT / "memory" / "whitemagic.db"
-            if db_path.exists():
-                conn = safe_connect(str(db_path))
-                count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-                conn.close()
-                return count
+            health = substrate_health()
+            return health.get("total_memories", 0)
         except Exception:
             logger.debug("Swallowed exception", exc_info=True)
         return 0

@@ -247,7 +247,7 @@ class GalaxyRouter:
         memory.metadata["galaxy_migrated_at"] = datetime.now().isoformat()
 
         try:
-            unified_memory.backend.store(memory)
+            unified_memory._galaxy_backend.store(memory)
             logger.info(
                 "Migrated memory %s: %s → %s",
                 memory_id,
@@ -272,7 +272,7 @@ class GalaxyRouter:
         import sqlite3
 
         try:
-            with unified_memory.backend.pool.connection() as conn:
+            with unified_memory.pool.connection() as conn:
                 conn.row_factory = sqlite3.Row
                 row = conn.execute(
                     "SELECT COUNT(*) as count, "

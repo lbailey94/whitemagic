@@ -38,7 +38,7 @@ def handle_galaxy_create(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_galaxy_switch(**kwargs: Any) -> dict[str, Any]:
-    """Switch the active galaxy."""
+    """Switch the active galaxy (CLI/admin only — mutates global state)."""
     name = kwargs.get("name")
     if not name:
         return {"status": "error", "error": "name is required"}
@@ -51,7 +51,50 @@ def handle_galaxy_switch(**kwargs: Any) -> dict[str, Any]:
         return {
             "status": "success",
             "message": f"Switched to galaxy '{name}'",
+            "deprecation_warning": (
+                "switch_galaxy mutates process-global state. "
+                "For request-scoped access, use galaxy.use instead."
+            ),
             **info.to_dict(),
+        }
+    except ValueError as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_use(**kwargs: Any) -> dict[str, Any]:
+    """Get request-scoped access to a galaxy without mutating global state.
+
+    Returns galaxy info and confirms access. The caller should use
+    MemoryContext with the returned galaxy name for subsequent operations.
+    """
+    name = kwargs.get("name")
+    if not name:
+        return {"status": "error", "error": "name is required"}
+
+    from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
+    try:
+        gm = get_galaxy_manager()
+        uid = kwargs.get("user_id")
+        info = gm.get_galaxy(name, user_id=uid)
+        if not info:
+            available = [
+                k.split("/", 1)[1]
+                for k in gm._galaxies
+                if k.startswith(f"{uid or 'local'}/")
+            ]
+            return {
+                "status": "error",
+                "error": f"Galaxy '{name}' not found. Available: {available}",
+            }
+        # Verify the galaxy DB is accessible
+        um = gm.get_memory_for_galaxy(name, user_id=uid)
+        stats = um.get_stats()
+        return {
+            "status": "success",
+            "message": f"Galaxy '{name}' ready for request-scoped use",
+            "galaxy": info.to_dict(),
+            "memory_count": stats.get("total_memories", 0),
         }
     except ValueError as e:
         return {"status": "error", "error": str(e)}

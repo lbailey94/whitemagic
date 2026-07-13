@@ -7,7 +7,7 @@ Bridges the gap between raw pattern extraction and actionable code.
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.db_manager import safe_connect, pooled_connection
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -51,47 +51,45 @@ class SolutionLibrary:
 
     def _init_db(self) -> Any:
         """Ensure solution-specific tables exist."""
-        conn = safe_connect(str(self.db_path))
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS solutions (
-                id TEXT PRIMARY KEY,
-                title TEXT,
-                description TEXT,
-                code_snippet TEXT,
-                pattern_type TEXT,
-                confidence REAL,
-                tags TEXT,
-                metadata TEXT,
-                created_at TEXT
-            )
-        """)
-        conn.commit()
-        conn.close()
+        with pooled_connection(str(self.db_path)) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS solutions (
+                    id TEXT PRIMARY KEY,
+                    title TEXT,
+                    description TEXT,
+                    code_snippet TEXT,
+                    pattern_type TEXT,
+                    confidence REAL,
+                    tags TEXT,
+                    metadata TEXT,
+                    created_at TEXT
+                )
+            """)
+            conn.commit()
 
     def add_solution(
         self, solution: Solution, index_holographically: bool = True
     ) -> Any:
         """Add a solution to the library and optionally index it in 4D space."""
-        conn = safe_connect(str(self.db_path))
-        conn.execute(
-            """
-            INSERT OR REPLACE INTO solutions (id, title, description, code_snippet, pattern_type, confidence, tags, metadata, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-            (
-                solution.id,
-                solution.title,
-                solution.description,
-                solution.code_snippet,
-                solution.pattern_type,
-                solution.confidence,
-                _json_dumps(solution.tags),
-                _json_dumps(solution.metadata),
-                solution.created_at,
-            ),
-        )
-        conn.commit()
-        conn.close()
+        with pooled_connection(str(self.db_path)) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO solutions (id, title, description, code_snippet, pattern_type, confidence, tags, metadata, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    solution.id,
+                    solution.title,
+                    solution.description,
+                    solution.code_snippet,
+                    solution.pattern_type,
+                    solution.confidence,
+                    _json_dumps(solution.tags),
+                    _json_dumps(solution.metadata),
+                    solution.created_at,
+                ),
+            )
+            conn.commit()
 
         if index_holographically:
             holo = get_holographic_memory()
@@ -105,12 +103,11 @@ class SolutionLibrary:
 
     def get_solution(self, solution_id: str) -> Solution | None:
         """Retrieve a specific solution."""
-        conn = safe_connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT * FROM solutions WHERE id = ?", (solution_id,)
-        ).fetchone()
-        conn.close()
+        with pooled_connection(str(self.db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM solutions WHERE id = ?", (solution_id,)
+            ).fetchone()
 
         if row:
             return Solution(
@@ -191,32 +188,31 @@ class SolutionLibrary:
 
     def migrate_from_cluster_patterns(self) -> Any:
         """Migrate existing patterns from the 'cluster_patterns' table into the Solution Library."""
-        conn = safe_connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        patterns = conn.execute("SELECT * FROM cluster_patterns").fetchall()
+        with pooled_connection(str(self.db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            patterns = conn.execute("SELECT * FROM cluster_patterns").fetchall()
 
-        count = 0
-        for p in patterns:
-            # Generate a stable ID based on cluster and content
-            import hashlib
+            count = 0
+            for p in patterns:
+                # Generate a stable ID based on cluster and content
+                import hashlib
 
-            stable_source = f"{p['cluster_id']}{p['content']}"
-            sol_id = f"sol_{hashlib.md5(stable_source.encode()).hexdigest()[:8]}"
+                stable_source = f"{p['cluster_id']}{p['content']}"
+                sol_id = f"sol_{hashlib.md5(stable_source.encode()).hexdigest()[:8]}"
 
-            sol = Solution(
-                id=sol_id,
-                title=f"Cluster {p['cluster_id']} Pattern",
-                description=p["content"],
-                pattern_type="solution"
-                if p["pattern_type"] == "Sol"
-                else "anti_pattern",
-                metadata={"source_cluster": p["cluster_id"]},
-            )
-            self.add_solution(sol)
-            count += 1
+                sol = Solution(
+                    id=sol_id,
+                    title=f"Cluster {p['cluster_id']} Pattern",
+                    description=p["content"],
+                    pattern_type="solution"
+                    if p["pattern_type"] == "Sol"
+                    else "anti_pattern",
+                    metadata={"source_cluster": p["cluster_id"]},
+                )
+                self.add_solution(sol)
+                count += 1
 
-        conn.close()
-        return count
+            return count
 
 
 # Singleton

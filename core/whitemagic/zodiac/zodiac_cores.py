@@ -106,28 +106,11 @@ class ZodiacCore:
         # urgency = float(context.get("urgency_value", 0.5))
         #     urgency = 0.9
 
-        # mojo_result = router.process_zodiac(
-        #     name=self.name,
-        #     element=self.element,
-        #     mode=self.mode,
-        #     urgency=urgency
-        # )
-
-        mojo_result = None
-
-        if mojo_result and mojo_result.get("status") == "mojo_processed":
-            self.frequency = mojo_result["frequency"]
-            transformed = self._apply_transformation(
-                context.get("operation", ""), context
-            )
-            wisdom = self._generate_wisdom(context, transformed)
-            resonance = mojo_result["resonance"]
-        else:
-            # Python Fallback
-            result = self._process_operation(context)
-            transformed = self._apply_transformation(result, context)
-            wisdom = self._generate_wisdom(context, transformed)
-            resonance = self._calculate_resonance(context, transformed)
+        # Python implementation (Mojo removed in v23.2)
+        result = self._process_operation(context)
+        transformed = self._apply_transformation(result, context)
+        wisdom = self._generate_wisdom(context, transformed)
+        resonance = self._calculate_resonance(context, transformed)
 
         return CoreResponse(
             core_name=self.name,

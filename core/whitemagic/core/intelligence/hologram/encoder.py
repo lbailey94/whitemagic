@@ -371,7 +371,7 @@ class CoordinateEncoder:
         except Exception as _e:
             logger.debug("Non-fatal error silenced in holographic encoder: %s", _e)
 
-        # 3. Try polyglot routing for Mojo/Zig acceleration
+        # 3. Try polyglot routing for Zig acceleration
         # Avoid circular imports by checking if we are already in a fallback
         if getattr(self, "_routing_active", False):
             # Already in target calculation, don't route again
@@ -385,21 +385,21 @@ class CoordinateEncoder:
 
                 # Set flag to prevent recursion
                 self._routing_active = True
-                mojo_coords = router.encode_holographic(memory, current_time)
+                coords = router.encode_holographic(memory, current_time)
                 self._routing_active = False
 
-                if mojo_coords:
+                if coords:
                     return HolographicCoordinate(
-                        mojo_coords.get("x", x),
-                        mojo_coords.get("y", y),
-                        mojo_coords.get("z", z),
-                        mojo_coords.get("w", w),
-                        mojo_coords.get("v", v),
+                        coords.get("x", x),
+                        coords.get("y", y),
+                        coords.get("z", z),
+                        coords.get("w", w),
+                        coords.get("v", v),
                         u,
                     )
             except Exception as e:
                 logger.debug(
-                    "Mojo router failed, falling back to Python math: %s",
+                    "Polyglot router failed, falling back to Python math: %s",
                     e,
                     exc_info=True,
                 )

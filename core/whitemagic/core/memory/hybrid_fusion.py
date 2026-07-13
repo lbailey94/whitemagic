@@ -244,7 +244,7 @@ class OptimalHybridSearcher:
             min_similarity=0.05
         )
 
-        bm25_results = self.backend.search(
+        bm25_results = self.search(
             query=query,
             limit=limit * 2
         )

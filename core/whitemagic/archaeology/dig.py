@@ -460,9 +460,9 @@ class ChariotArchaeologist:
         query_lower = query.lower()
         for entry in self._history:
             if (
-                query_lower in entry.get("path", "").lower()
-                or query_lower in entry.get("note", "").lower()
-                or query_lower in entry.get("insight", "").lower()
+                query_lower in (entry.get("path") or "").lower()
+                or query_lower in (entry.get("note") or "").lower()
+                or query_lower in (entry.get("insight") or "").lower()
             ):
                 results.append(entry)
         return results

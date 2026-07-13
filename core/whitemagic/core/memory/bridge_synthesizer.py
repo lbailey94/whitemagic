@@ -223,7 +223,7 @@ class BridgeSynthesizer:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            mem = um.backend.recall(node_id)
+            mem = um.recall(node_id)
             if not mem:
                 return None
 

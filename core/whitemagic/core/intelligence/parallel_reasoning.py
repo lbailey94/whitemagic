@@ -712,11 +712,11 @@ class ParallelReasoningTree:
         if not _HAS_ANTIPATTERN:
             return
         try:
-            import tempfile
             from pathlib import Path
 
-            # AutoimmuneSystem loads from memory/meta dir -- use temp if not available
-            immune = AutoimmuneSystem(base_dir=Path(tempfile.gettempdir()))
+            from whitemagic.config.paths import WM_ROOT
+
+            immune = AutoimmuneSystem(base_dir=WM_ROOT)
             for ap in immune.anti_patterns.values():
                 if ap.confidence >= 0.7:
                     self._anti_patterns.append(ap.title)

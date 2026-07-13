@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [24.3.1] - 2026-07-12
+
+### Added — Memory System Improvements
+
+#### CurrentStateTracker — Live Work State
+- **CurrentStateTracker** (`core/memory/current_state.py`) — singleton that maintains a live, auto-updated snapshot of current task, active tasks, next steps, recent file modifications, decisions, errors, and arbitrary context
+- Auto-persists to `state/current_state.json` and as a memory in the `sessions` galaxy (tagged `current_state`)
+- Injected into MCP server instructions on connect alongside citta continuity, giving AI agents immediate context on what to work on next
+- 3 new MCP tools: `state.current` (get snapshot), `state.update` (modify task/steps/files/decisions), `state.context` (get/set key-value context) — mapped to `gana_heart`, full dispatch + PRAT + registry wiring (756 total dispatch entries)
+
+#### Search Result Enrichment
+- `handle_search_memories` now returns `title`, `galaxy`, `tags`, `importance` fields (was just `id` + 200-char content preview)
+- New `full_content` option increases preview from 200→500 chars for richer context
+
+#### Session Recorder Middleware Improvements
+- Records meaningful content from tool args (`content`, `query`, `description`, `title`, `message`, `text`, `command`) instead of just `"Tool: {name} → {status}"`
+- Error messages now include actual error detail from result
+- Auto-tracks file modifications in CurrentStateTracker when write tools are called with `file_path`/`path` args
+- Auto-tracks errors in CurrentStateTracker
+
+#### WorkingMemory Cross-Session Persistence
+- `save_to_disk()` / `load_from_disk()` methods on `WorkingMemory` — persists active chunks to `state/working_memory.json`
+- Auto-loads on singleton creation (cross-session attentional focus continuity)
+- Auto-saves on session end via `SessionHandoff.end_session()`
+- Activation capped at 0.8 on reload (reflects cross-session time decay)
+
+#### SessionHandoff Auto-Wiring
+- `SessionHandoff.end_session()` now automatically:
+  1. Pushes handoff data (summary, next_steps, active_tasks, files_modified) to CurrentStateTracker
+  2. Triggers sleep consolidation (promotes important session turns to codex galaxy)
+  3. Saves WorkingMemory to disk for next session
+
+#### MCP Instructions Updated
+- `state.current` added as first quick-start step and first agent onboarding step in `mcp_instructions.md`
+
+### Tests
+- 29 new tests in `test_current_state.py` covering CurrentStateTracker, state MCP handlers, search improvements, and session recorder improvements
+- 61 existing memory tests passing
+- 51 existing session tests passing
+- Zero regressions
+
 ## [24.3.0] - 2026-07-12
 
 ### Added — Cache Coherence & Hot-Path Optimization Strategy (v24.3.0)

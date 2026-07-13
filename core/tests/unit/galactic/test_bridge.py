@@ -11,39 +11,9 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.fixture(autouse=True)
-def use_live_substrate(monkeypatch):
-    """Use the live substrate DB for these tests.
-
-    The top-level conftest sets WM_STATE_ROOT to a temp dir; we override
-    so galactic._resolve_db_path() returns the real DB.
-
-    After the galaxy migration, the monolith DB may exist but be empty
-    (all memories moved to per-galaxy DBs). Skip in that case.
-    """
-    from pathlib import Path
-
-    live = Path.home() / ".whitemagic" / "memory" / "whitemagic.db"
-    if live.exists():
-        # Check if monolith has memories — skip if empty (post-galaxy-migration)
-        from whitemagic.core.memory.db_manager import safe_connect
-        try:
-            conn = safe_connect(str(live))
-            count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-            # Also verify associations table is intact (may be corrupted on live DB)
-            try:
-                conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
-            except Exception:
-                conn.close()
-                pytest.skip(f"Monolith DB at {live} has corrupted associations table")
-            conn.close()
-            if count == 0:
-                pytest.skip(f"Monolith DB at {live} is empty (memories migrated to galaxy DBs)")
-        except Exception:
-            pytest.skip(f"Monolith DB at {live} is not queryable")
-        monkeypatch.setenv("WM_MEMORY_DB", str(live))
-    monkeypatch.delenv("WM_STATE_ROOT", raising=False)
-    yield
+# The conftest.py in this directory provides a seeded temp DB via the
+# autouse `use_live_substrate` fixture. No fixture needed here — the
+# conftest handles WM_MEMORY_DB and WM_STATE_ROOT setup automatically.
 
 
 # ─── Tests: each bridge function ──────────────────────────────────

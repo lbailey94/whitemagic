@@ -227,7 +227,7 @@ class TestDreamCyclePhases(unittest.TestCase):
         mock_conn.execute.return_value.fetchall.return_value = [mock_row]
 
         mock_um = MagicMock()
-        mock_um.backend.pool.connection.return_value = mock_conn
+        mock_um.pool.connection.return_value = mock_conn
 
         with patch(
             "whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um
@@ -259,7 +259,7 @@ class TestDreamCyclePhases(unittest.TestCase):
         mock_conn.execute.return_value.fetchall.return_value = [mock_row]
 
         mock_um = MagicMock()
-        mock_um.backend.pool.connection.return_value = mock_conn
+        mock_um.pool.connection.return_value = mock_conn
 
         with patch(
             "whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um
@@ -285,7 +285,7 @@ class TestDreamCyclePhases(unittest.TestCase):
         mock_conn.execute.return_value.fetchone.return_value = [counts[0]]
 
         mock_um = MagicMock()
-        mock_um.backend.pool.connection.return_value = mock_conn
+        mock_um.pool.connection.return_value = mock_conn
 
         with patch(
             "whitemagic.core.memory.unified.get_unified_memory", return_value=mock_um

@@ -149,7 +149,7 @@ class OMSManager:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            pool = um.backend.pool
+            pool = um.pool
         except (ImportError, ModuleNotFoundError) as e:
             return {"status": "error", "reason": f"Cannot access memory system: {e}"}
 
@@ -500,7 +500,7 @@ class OMSManager:
                 except (ImportError, ModuleNotFoundError):
                     continue
 
-            pool = um.backend.pool
+            pool = um.pool
             now = datetime.now().isoformat()
             with pool.connection() as conn:
                 for line in assoc_data.strip().split("\n"):

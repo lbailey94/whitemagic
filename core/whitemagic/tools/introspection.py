@@ -434,7 +434,6 @@ def _is_text_file(path: Path) -> bool:
         ".rs",
         ".go",
         ".zig",
-        ".mojo",
         ".ex",
         ".exs",
         ".hs",

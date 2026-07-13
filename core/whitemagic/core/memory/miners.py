@@ -283,7 +283,7 @@ class AssociationMiner:
         # Sample diverse memories using galaxy-aware backend
         all_mems = []
         try:
-            all_mems = um.backend.list_recent(limit=sample_size)
+            all_mems = um.list_recent(limit=sample_size)
         except Exception as e:
             logger.warning("Association mining: sampling failed: %s", e, exc_info=True)
             all_mems = []
@@ -392,8 +392,8 @@ class AssociationMiner:
             try:
                 for p in proposals:
                     try:
-                        um.backend.add_association(p.source_id, p.target_id, p.overlap_score)
-                        um.backend.add_association(p.target_id, p.source_id, p.overlap_score)
+                        um.add_association(p.source_id, p.target_id, p.overlap_score)
+                        um.add_association(p.target_id, p.source_id, p.overlap_score)
                         report.links_created += 1
                     except Exception as e:
                         logger.debug("Association link insert failed: %s", e)
@@ -510,7 +510,7 @@ class AssociationMiner:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 candidate_ids = set()
                 for pair_item in pairs:
                     candidate_ids.add(pair_item["source_id"])
@@ -559,7 +559,7 @@ class AssociationMiner:
         # Persist
         if persist and proposals:
             try:
-                with um.backend.pool.connection() as conn:
+                with um.pool.connection() as conn:
                     with conn:
                         for proposal in proposals:
                             try:
@@ -881,7 +881,7 @@ class CausalMiner:
         mem_meta: dict[str, dict[str, Any]] = {}
         try:
             for mid in candidate_ids:
-                mem = um.backend.recall(mid)
+                mem = um.recall(mid)
                 if mem:
                     mem_meta[mid] = {
                         "created_at": mem.created_at,
@@ -895,7 +895,7 @@ class CausalMiner:
 
         existing_directed: set[tuple[str, str]] = set()
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 rows = conn.execute(
                     """SELECT source_id, target_id FROM associations
                        WHERE direction = 'directed'""",
@@ -981,7 +981,7 @@ class CausalMiner:
         # Persist directed edges
         if self._persist and edges:
             try:
-                with um.backend.pool.connection() as conn:
+                with um.pool.connection() as conn:
                     with conn:
                         for edge in edges:
                             try:
@@ -1033,7 +1033,7 @@ class CausalMiner:
         """
         pairs: list[dict[str, Any]] = []
         try:
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 rows = conn.execute(
                     """SELECT id, title, created_at FROM memories
                        WHERE memory_type != 'quarantined'

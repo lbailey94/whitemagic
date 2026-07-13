@@ -376,7 +376,7 @@ class SelfDirectedEvolution:
             needs["identified_needs"].append(
                 {
                     "priority": "high",
-                    "need": "Transmute Python hot paths to Rust/Zig/Mojo",
+                    "need": "Transmute Python hot paths to Rust/Zig",
                     "reason": "Performance gains possible through polyglot optimization",
                     "action": "Identify and rewrite critical paths in compiled languages",
                 }

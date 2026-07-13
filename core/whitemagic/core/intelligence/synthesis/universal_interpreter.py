@@ -127,7 +127,7 @@ class UniversalInterpreter:
             "2. **Dharmic Guardrails**: Every proposed step in this report has been verified against symbolic SMT invariants."
         )
         report.append(
-            "3. **Accelerator Path**: For high-frequency implementation, ensure the `MansionBridge` is active to offload pattern synthesis to Rust/Mojo."
+            "3. **Accelerator Path**: For high-frequency implementation, ensure the `MansionBridge` is active to offload pattern synthesis to Rust."
         )
 
         report.append("\n## Next Phase: The Accelerator (Layer 4/5)")
@@ -137,7 +137,7 @@ class UniversalInterpreter:
         report.append(
             "This involves mapping the 'Proposed Actions' in the Verified Plan to executable "
         )
-        report.append("scripts in `scripts/` or Mojo kernels in `whitemagic-mojo/`.")
+        report.append("scripts in `scripts/` or Rust kernels in `whitemagic-rust/`.")
 
         report.append("\n---")
         report.append("*End of Strategic Report v9 | Universal Solver Online*")

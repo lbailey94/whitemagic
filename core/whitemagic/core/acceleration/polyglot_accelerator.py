@@ -2,7 +2,7 @@
 """Unified Polyglot Accelerator - Smart Multi-Backend Routing.
 ================================================================
 Provides a single interface that automatically routes operations to the
-fastest available backend: Rust > Zig > Mojo > Python.
+fastest available backend: Rust > Zig > Python.
 
 This module consolidates acceleration logic and provides graceful fallbacks
 for all compute-intensive operations in WhiteMagic.
@@ -44,12 +44,10 @@ class PolyglotAccelerator:
     def __init__(self):
         self._rust_available = False
         self._zig_available = False
-        self._mojo_available = False
 
         # Metrics
         self.rust_calls = 0
         self.zig_calls = 0
-        self.mojo_calls = 0
         self.python_calls = 0
         self.total_time_ms = 0.0
 
@@ -78,17 +76,7 @@ class PolyglotAccelerator:
         except (ImportError, AttributeError):
             pass
 
-        try:
-            from whitemagic.optimization.polyglot_router import get_router
-
-            router = get_router()
-            if router._mojo_available:
-                self._mojo_available = True
-                logger.info("🔥 Mojo acceleration available")
-        except (ImportError, AttributeError):
-            pass
-
-        if not any([self._rust_available, self._zig_available, self._mojo_available]):
+        if not any([self._rust_available, self._zig_available]):
             logger.warning(
                 "⚠️  No native accelerators available - using Python fallback"
             )
@@ -463,20 +451,18 @@ class PolyglotAccelerator:
     def get_stats(self) -> dict[str, Any]:
         """Get acceleration statistics."""
         total_calls = (
-            self.rust_calls + self.zig_calls + self.mojo_calls + self.python_calls
+            self.rust_calls + self.zig_calls + self.python_calls
         )
-        native_calls = self.rust_calls + self.zig_calls + self.mojo_calls
+        native_calls = self.rust_calls + self.zig_calls
 
         return {
             "backends": {
                 "rust": self._rust_available,
                 "zig": self._zig_available,
-                "mojo": self._mojo_available,
             },
             "calls": {
                 "rust": self.rust_calls,
                 "zig": self.zig_calls,
-                "mojo": self.mojo_calls,
                 "python": self.python_calls,
                 "total": total_calls,
             },

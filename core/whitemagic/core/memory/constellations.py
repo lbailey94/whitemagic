@@ -530,7 +530,7 @@ class ConstellationDetector:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            result = um.backend.get_constellation_membership(memory_id)
+            result = um.get_constellation_membership(memory_id)
             if result:
                 return cast(dict[str, Any], result)
         except (ImportError, AttributeError):
@@ -569,7 +569,7 @@ class ConstellationDetector:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            count = um.backend.update_constellation_membership(memberships)
+            count = um.update_constellation_membership(memberships)
             logger.info("Persisted %s constellation memberships to DB index", count, exc_info=True)
             return cast(int, count)
         except Exception as e:

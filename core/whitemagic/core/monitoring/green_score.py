@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class InferenceLocality:
     """Where inference was executed."""
 
-    EDGE = "edge"  # On-device CPU/GPU (Rust, Zig, Mojo accelerators)
+    EDGE = "edge"  # On-device CPU/GPU (Rust, Zig accelerators)
     LOCAL_LLM = "local_llm"  # Local llama.cpp or similar
     LOCAL_NET = "local_net"  # LAN-accessible service
     CLOUD = "cloud"  # Remote API (OpenAI, Anthropic, etc.)

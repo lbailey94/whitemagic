@@ -367,7 +367,7 @@ class SQLiteBackend:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     memory.id,
-                    json.dumps(memory.content) if not isinstance(memory.content, str) else memory.content,
+                    json.dumps(memory.content, default=str) if not isinstance(memory.content, str) else memory.content,
                     memory.memory_type.name,
                     memory.created_at.isoformat(),
                     (memory.last_modified or memory.created_at).isoformat(),

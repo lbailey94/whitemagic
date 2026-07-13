@@ -83,7 +83,7 @@ def find_by_zone(zone: str, limit: int = 20) -> list[dict[str, Any]]:
     um = get_unified_memory()
     results = []
 
-    with um.backend.pool.connection() as conn:
+    with um.pool.connection() as conn:
         rows = conn.execute(
             """
             SELECT m.id, m.title, m.content, m.memory_type,
@@ -168,7 +168,7 @@ def search_by_coordinates(
     where_clause = " AND ".join(conditions) if conditions else "1=1"
 
     results = []
-    with um.backend.pool.connection() as conn:
+    with um.pool.connection() as conn:
         rows = conn.execute(
             f"""
             SELECT m.id, m.title, m.content, m.memory_type,
@@ -298,7 +298,7 @@ def discover_related(
 
     um = get_unified_memory()
 
-    with um.backend.pool.connection() as conn:
+    with um.pool.connection() as conn:
         row = conn.execute(
             "SELECT x, y, z, w, v FROM holographic_coords WHERE memory_id = ?",
             (memory_id,),
@@ -386,7 +386,7 @@ def analyze_position(memory_id: str) -> dict[str, Any]:
     if not mem:
         return {"error": f"Memory {memory_id} not found"}
 
-    with um.backend.pool.connection() as conn:
+    with um.pool.connection() as conn:
         row = conn.execute(
             "SELECT x, y, z, w, v FROM holographic_coords WHERE memory_id = ?",
             (memory_id,),
@@ -407,7 +407,7 @@ def analyze_position(memory_id: str) -> dict[str, Any]:
     neighbors = find_neighbors(memory_id, k=3)
 
     # Count memories in similar position
-    with um.backend.pool.connection() as conn:
+    with um.pool.connection() as conn:
         similar_count = conn.execute(
             """
             SELECT COUNT(*) FROM holographic_coords

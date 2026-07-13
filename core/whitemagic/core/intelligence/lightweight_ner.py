@@ -60,7 +60,7 @@ class EntityMatch:
 # Technology patterns - common languages, frameworks, tools
 TECH_PATTERNS = [
     # Programming languages
-    r"\b(Python|Rust|Zig|Mojo|Go|Golang|Elixir|Haskell|Julia|TypeScript|JavaScript|"
+    r"\b(Python|Rust|Zig|Go|Golang|Elixir|Haskell|Julia|TypeScript|JavaScript|"
     r"Java|Kotlin|Swift|Rust|C\+\+|C#|Ruby|PHP|Scala|Clojure|F#|OCaml|Erlang)\b",
     # Frameworks & Libraries
     r"\b(React|Vue|Angular|Svelte|Next\.js|Nuxt|Django|Flask|FastAPI|Express|"

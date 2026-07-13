@@ -348,7 +348,8 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
     try:
         from whitemagic.core.bridge.metrics import get_metrics_summary
 
-        base = _ensure_result_dict(get_metrics_summary(**kwargs), "get_metrics_summary")
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in ("timeframe", "format", "start", "end")}
+        base = _ensure_result_dict(get_metrics_summary(**filtered_kwargs), "get_metrics_summary")
         result.update(base)
     except ImportError:
         result["note"] = "Core metrics module archived - using enhanced metrics"
@@ -670,7 +671,7 @@ def handle_list_memories(**kwargs: Any) -> dict[str, Any]:
 
     um = get_unified_memory()
 
-    memories = um.backend.list_recent(limit=limit, memory_type=memory_type)
+    memories = um.list_recent(limit=limit, memory_type=memory_type)
 
     results = []
     for mem in memories:

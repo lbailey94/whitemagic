@@ -27,10 +27,10 @@ def _is_transient_error(error: Exception) -> bool:
             if str(code) in str(error) or f"({code})" in str(error):
                 return True
         err_str = str(error).lower()
-        return any(msg in err_str for msg in ["locked", "busy", "protocol"])
+        return any(msg in err_str for msg in ["locked", "busy", "protocol", "disk i/o"])
     if isinstance(error, sqlite3.DatabaseError):
         err_str = str(error).lower()
-        if "malformed" in err_str or "disk image" in err_str:
+        if "malformed" in err_str or "disk image" in err_str or "disk i/o" in err_str:
             return True
     return False
 
@@ -106,6 +106,7 @@ def safe_connect(
     read_only: bool = False,
     timeout: float = 30.0,
     uri: bool = False,
+    retries: int = 3,
     **kwargs: Any,
 ) -> sqlite3.Connection:
     """Create a SQLite connection with WAL mode and standard pragmas.
@@ -113,45 +114,77 @@ def safe_connect(
     ALL modules that need a direct sqlite3.connect() should use this instead
     to ensure consistent journal mode and prevent database corruption.
 
+    Includes retry logic for transient disk I/O errors.
+
     Args:
         db_path: Path to the SQLite database file.
         read_only: If True, open in read-only mode (no WAL switch attempted).
         timeout: Busy timeout in seconds.
         uri: If True, treat db_path as a URI (enables query params like ?mode=ro).
+        retries: Number of retry attempts for transient errors.
         **kwargs: Additional kwargs passed to sqlite3.connect().
     """
-    if read_only:
-        uri_path = f"file:{db_path}?mode=ro"
-        kwargs.setdefault("check_same_thread", False)
-        conn = sqlite3.connect(uri_path, uri=True, timeout=timeout, **kwargs)
-    else:
-        kwargs.setdefault("check_same_thread", False)
-        conn = sqlite3.connect(db_path, timeout=timeout, uri=uri, **kwargs)
-    conn.row_factory = sqlite3.Row
-    if not read_only:
-        for pragma, in _WAL_PRAGMAS:
-            try:
-                conn.execute(pragma)
-            except sqlite3.OperationalError:
-                pass
-        # Security: disable trusted schema to prevent schema-level attacks
-        for pragma, in _SECURITY_PRAGMAS:
-            try:
-                conn.execute(pragma)
-            except (sqlite3.OperationalError, sqlite3.NotSupportedError):
-                pass  # Older SQLite versions don't support this pragma
-    else:
+    delay = 0.1
+    for attempt in range(retries + 1):
         try:
-            conn.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
-        except sqlite3.OperationalError:
-            pass
-        # Security: disable trusted schema for read-only connections too
-        for pragma, in _SECURITY_PRAGMAS:
-            try:
-                conn.execute(pragma)
-            except (sqlite3.OperationalError, sqlite3.NotSupportedError):
-                pass
-    return conn
+            if read_only:
+                uri_path = f"file:{db_path}?mode=ro"
+                kwargs.setdefault("check_same_thread", False)
+                conn = sqlite3.connect(uri_path, uri=True, timeout=timeout, **kwargs)
+            else:
+                kwargs.setdefault("check_same_thread", False)
+                conn = sqlite3.connect(db_path, timeout=timeout, uri=uri, **kwargs)
+            conn.row_factory = sqlite3.Row
+            if not read_only:
+                for pragma, in _WAL_PRAGMAS:
+                    try:
+                        conn.execute(pragma)
+                    except sqlite3.OperationalError:
+                        pass
+                for pragma, in _SECURITY_PRAGMAS:
+                    try:
+                        conn.execute(pragma)
+                    except (sqlite3.OperationalError, sqlite3.NotSupportedError):
+                        pass
+            else:
+                try:
+                    conn.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
+                except sqlite3.OperationalError:
+                    pass
+                for pragma, in _SECURITY_PRAGMAS:
+                    try:
+                        conn.execute(pragma)
+                    except (sqlite3.OperationalError, sqlite3.NotSupportedError):
+                        pass
+            return conn
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            if _is_transient_error(e) and attempt < retries:
+                logger.debug("safe_connect retry %d/%d: %s", attempt + 1, retries, e)
+                time.sleep(delay)
+                delay = min(delay * 2, 2.0)
+                continue
+            raise
+
+
+@contextmanager
+def pooled_connection(db_path: str | None = None) -> Generator[sqlite3.Connection, None, None]:
+    """Get a pooled connection to the database.
+
+    Prefer this over safe_connect() when the module doesn't need a persistent
+    connection. Uses the shared connection pool to limit total open connections.
+
+    Args:
+        db_path: Path to the database. Defaults to the main WM database.
+    """
+    if db_path is None:
+        from whitemagic.config.paths import DB_PATH
+        db_path = str(DB_PATH)
+    pool = get_db_pool(db_path)
+    conn = pool.get_connection()
+    try:
+        yield conn
+    finally:
+        pool.release_connection(conn)
 
 class ConnectionPool:
     """Thread-safe SQLite connection pool."""
@@ -305,7 +338,7 @@ _registry_lock = threading.Lock()
 _async_registry_lock = asyncio.Lock()
 
 
-def get_db_pool(db_path: str, max_connections: int = 10) -> ConnectionPool:
+def get_db_pool(db_path: str, max_connections: int = 5) -> ConnectionPool:
     """Get or create a connection pool for a specific database."""
     with _registry_lock:
         if db_path not in _pools:

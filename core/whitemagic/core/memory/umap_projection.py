@@ -200,7 +200,7 @@ class UMAPProjector:
                 from whitemagic.core.memory.unified import get_unified_memory
                 um = get_unified_memory()
                 for mid in ids:
-                    mem = um.backend.recall(mid)
+                    mem = um.recall(mid)
                     if mem:
                         mem_meta[mid] = {
                             "title": mem.title or "",

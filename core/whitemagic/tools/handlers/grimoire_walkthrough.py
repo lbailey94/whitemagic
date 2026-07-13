@@ -11,6 +11,8 @@ def handle_grimoire_walkthrough(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     chapter = kwargs.get("chapter")
+    if chapter is not None:
+        chapter = str(chapter)
     quadrant = kwargs.get("quadrant")
 
     from whitemagic.core.intelligence.garden_gana_registry import (

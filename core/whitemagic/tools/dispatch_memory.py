@@ -26,6 +26,7 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "import_memories": LazyHandler("export_import", "handle_import_memories"),
     "galaxy.create": LazyHandler("galaxy", "handle_galaxy_create"),
     "galaxy.switch": LazyHandler("galaxy", "handle_galaxy_switch"),
+    "galaxy.use": LazyHandler("galaxy", "handle_galaxy_use"),
     "galaxy.list": LazyHandler("galaxy", "handle_galaxy_list"),
     "galaxy.status": LazyHandler("galaxy", "handle_galaxy_status"),
     "galaxy.ingest": LazyHandler("galaxy", "handle_galaxy_ingest"),

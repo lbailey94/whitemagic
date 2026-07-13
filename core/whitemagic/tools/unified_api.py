@@ -381,103 +381,18 @@ def _dispatch_tool_with_timeout(tool_name: str, timeout_s: float, **kwargs: Any)
 _DEAD_CODE_REMOVED = True  # Marker for grep-ability
 
 
-_TOOL_ALIASES: dict[str, str] = {
-    # Legacy names -> canonical v11 names
-    "manifest_read": "manifest",
-    "manifest_summary": "manifest",
-    "state_paths": "state.paths",
-    "state_summary": "state.summary",
-    "repo_summary": "repo.summary",
-    "ship_check": "ship.check",
-    # Underscore aliases for dot-notation tools
-    "mesh_connect": "mesh.connect",
-    "broker_publish": "broker.publish",
-    "broker_history": "broker.history",
-    "broker_status": "broker.status",
-    "task_distribute": "task.distribute",
-    "task_status": "task.status",
-    "task_list": "task.list",
-    "task_complete": "task.complete",
-    "vote_create": "vote.create",
-    "vote_cast": "vote.cast",
-    "vote_analyze": "vote.analyze",
-    "vote_list": "vote.list",
-    "vote_record_outcome": "vote.record_outcome",
-    "llama.models": "llama.models",
-    "llama.generate": "llama.generate",
-    "llama.chat": "llama.chat",
-    "agent_register": "agent.register",
-    "agent_heartbeat": "agent.heartbeat",
-    "agent_list": "agent.list",
-    "agent_capabilities": "agent.capabilities",
-    "agent_deregister": "agent.deregister",
-    "pipeline_create": "pipeline.create",
-    "pipeline_status": "pipeline.status",
-    "pipeline_list": "pipeline.list",
-    "homeostasis_status": "homeostasis.status",
-    "homeostasis_check": "homeostasis.check",
-    "maturity_assess": "maturity.assess",
-    "tool_graph": "tool.graph",
-    "tool_graph_full": "tool.graph_full",
-    "dharma_reload": "dharma.reload",
-    "salience_spotlight": "salience.spotlight",
-    "reasoning_bicameral": "reasoning.bicameral",
-    "memory_retention_sweep": "memory.retention_sweep",
-    "read_memory": "memory_read",
-    "update_memory": "memory_update",
-    "delete_memory": "memory_delete",
-    "starter_packs_list": "starter_packs.list",
-    "starter_packs_get": "starter_packs.get",
-    "starter_packs_suggest": "starter_packs.suggest",
-    "capability_matrix": "capability.matrix",
-    "capability_status": "capability.status",
-    "capability_suggest": "capability.suggest",
-    # Missing aliases for tools with handlers
-    "galaxy_status": "galaxy.status",
-    "galaxy_list": "galaxy.list",
-    "galaxy_switch": "galaxy.switch",
-    "galaxy_ingest": "galaxy.ingest",
-    "galaxy_delete": "galaxy.delete",
-    "prompt_list": "prompt.list",
-    "prompt_render": "prompt.render",
-    "prompt_reload": "prompt.reload",
-    "otel_status": "otel.status",
-    "otel_spans": "otel.spans",
-    "otel_metrics": "otel.metrics",
-    "working_memory_status": "working_memory.status",
-    "working_memory_attend": "working_memory.attend",
-    "working_memory_context": "working_memory.context",
-    "cognitive_mode": "cognitive.mode",
-    "cognitive_set": "cognitive.set",
-    "cognitive_hints": "cognitive.hints",
-    "cognitive_stats": "cognitive.stats",
-    "rate_limiter_stats": "rate_limiter.stats",
-    "audit_export": "audit.export",
-    "agent_trust": "agent.trust",
-}
-
-
-def _canonical_tool_name(tool_name: str) -> str:
-    """Convert tool name to canonical form, with deprecation warnings for aliases."""
-    name = tool_name.strip()
-    canonical = _TOOL_ALIASES.get(name, name)
-
-    # Log deprecation warning for aliases (but not too frequently)
-    if canonical != name and name in _TOOL_ALIASES:
-        logger.warning(
-            "DEPRECATION: Tool alias '%s' is deprecated. "
-            "Use '%s' instead. "
-            "This alias will be removed in the next minor release.",
-            name,
-            canonical,
-        )
-
-    return canonical
+from whitemagic.tools.canonical import (
+    _TOOL_ALIASES,
+    canonical_tool_name as _canonical_tool_name,
+)
 
 
 def _tool_writes_hint(tool_name: str) -> list[dict[str, Any]]:
     # Best-effort: most writes are within WM_STATE_ROOT.
     return [{"kind": "wm_state_root", "path": str(WM_ROOT)}]
+
+
+_IN_RUNTIME_DISPATCH = False
 
 
 def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
@@ -489,7 +404,31 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
     - Apply ToolGate policy checks
     - Provide idempotency for write tools via `idempotency_key`
     - Normalize all outputs into the stable envelope format
+
+    When WM_TOOL_RUNTIME=1, delegates to ToolRuntime.execute() (Phase 1
+    of the Codebase Hardening Strategy). The runtime wraps this function,
+    so a re-entrancy guard prevents infinite recursion.
     """
+    # Phase 1 adapter: delegate to ToolRuntime when enabled and not re-entrant
+    global _IN_RUNTIME_DISPATCH
+    if (
+        not _IN_RUNTIME_DISPATCH
+        and os.environ.get("WM_TOOL_RUNTIME", "0") in ("1", "true", "yes")
+    ):
+        from whitemagic.tools.runtime import ExecutionMode, ToolRequest, ToolRuntime
+
+        request = ToolRequest(
+            tool_name=tool_name,
+            arguments=kwargs,
+            requested_mode=ExecutionMode.FULL,
+        )
+        _IN_RUNTIME_DISPATCH = True
+        try:
+            result = ToolRuntime.get().execute(request)
+            return result.to_dict()
+        finally:
+            _IN_RUNTIME_DISPATCH = False
+
     from whitemagic.tools.envelope import err, normalize_raw
     from whitemagic.tools.registry import ToolCategory, ToolSafety, get_tool
     from whitemagic.tools.schema import validate_params

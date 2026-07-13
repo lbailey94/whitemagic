@@ -357,7 +357,7 @@ class GraphWalker:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            pool = um.backend.pool
+            pool = um.pool
         except Exception as e:
             logger.error("GraphWalker: could not access memory system: %s", e)
             result.duration_ms = (time.perf_counter() - start) * 1000
@@ -544,7 +544,7 @@ class GraphWalker:
                 # Build neighbor function for quantum superposition walk
                 def _get_neighbors_q(mid: str) -> list[dict]:
                     try:
-                        pool = um.backend.pool
+                        pool = um.pool
                         neighbors = self._get_neighbors(mid, pool)
                         return [
                             {"target_id": n.memory_id, "strength": n.strength}

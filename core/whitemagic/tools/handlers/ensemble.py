@@ -254,7 +254,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
             "ensemble_id": ensemble_id,
             "models": models,
             "consensus": analysis["consensus_strength"],
-            "winner": analysis.get("winner", {}).get("model"),
+            "winner": (analysis.get("winner") or {}).get("model"),
         },
     )
 

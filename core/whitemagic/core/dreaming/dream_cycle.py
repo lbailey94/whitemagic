@@ -313,7 +313,7 @@ class DreamCycle:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            pool = um.backend.pool
+            pool = um.pool
 
             with pool.connection() as conn:
                 conn.row_factory = __import__("sqlite3").Row
@@ -676,7 +676,7 @@ class DreamCycle:
                     from whitemagic.core.memory.unified import get_unified_memory
 
                     um = get_unified_memory()
-                    with um.backend.pool.connection() as conn:
+                    with um.pool.connection() as conn:
                         with conn:
                             # N+1 fix: executemany instead of per-node UPDATE loop
                             ec_params = [
@@ -1020,7 +1020,7 @@ class DreamCycle:
 
             um = get_unified_memory()
 
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 conn.row_factory = __import__("sqlite3").Row
                 # Find high-importance memories that haven't been accessed recently
                 # and are already drifting outward (galactic_distance > 0.3)
@@ -1093,7 +1093,7 @@ class DreamCycle:
                 "rust_crate": re.compile(r"\bwhitemagic_rs\b|\bfragment\b"),
             }
 
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 conn.row_factory = __import__("sqlite3").Row
                 # Find memories with no tags
                 untagged = conn.execute("""
@@ -1318,7 +1318,7 @@ class DreamCycle:
 
             um = get_unified_memory()
 
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 # Count memories in each galactic zone
                 zone_counts = {}
                 for zone_name, lo, hi in [

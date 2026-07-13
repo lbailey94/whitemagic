@@ -510,7 +510,7 @@ def _galactic_portal() -> dict[str, Any]:
     from whitemagic.core.memory.unified import get_unified_memory
 
     um = get_unified_memory()
-    with um.backend.pool.connection() as conn:
+    with um.pool.connection() as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("""
             SELECT
@@ -543,7 +543,7 @@ def _holographic_portal() -> dict[str, Any]:
     sample_coords: list[dict[str, Any]] = []
     try:
         um = get_unified_memory()
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             rows = conn.execute("""
                 SELECT hc.memory_id, m.title, hc.x, hc.y, hc.z, hc.w, hc.v
                 FROM holographic_coords hc

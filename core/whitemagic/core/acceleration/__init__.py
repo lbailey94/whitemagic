@@ -1,7 +1,7 @@
 # ruff: noqa: E402
 """Acceleration modules — SIMD, FFI, and polyglot-accelerated operations.
 
-Note: Polyglot bridges (Elixir, Go, Haskell, Julia, Mojo) are optional dependencies.
+Note: Polyglot bridges (Elixir, Go, Haskell, Julia) are optional dependencies.
 If not installed, fallback implementations return graceful error dicts instead of raising.
 These bridges are experimental and currently not in active development.
 """
@@ -309,80 +309,8 @@ except ImportError:
         return {"status": "skipped", "reason": "Julia bridge not available."}
 
 
-try:
-    from .mojo_bridge import (
-        mojo_batch_encode,
-        mojo_neuro_score,
-        mojo_quantize,
-        mojo_status,
-    )
-except ImportError:
-
-    def mojo_batch_encode(
-        memories: list[dict[str, Any]],
-    ) -> list[tuple[float, float, float, float, float]] | None:
-        """
-        Perform the mojo batch encode operation.
-
-        Args:
-            memories: Parameter description.
-
-        Returns:
-            list[tuple[float, float, float, float, float]] | None
-        """
-        logger.debug("Mojo bridge not available — mojo_batch_encode skipped")
-        return None
-
-    def mojo_neuro_score(
-        memories: list[dict[str, Any]],
-    ) -> list[dict[str, Any]] | None:
-        """
-        Perform the mojo neuro score operation.
-
-        Args:
-            memories: Parameter description.
-
-        Returns:
-            list[dict[str, Any]] | None
-        """
-        logger.debug("Mojo bridge not available — mojo_neuro_score skipped")
-        return None
-
-    def mojo_quantize(
-        vectors: list[list[float]],
-        mode: str = "int8",
-    ) -> dict[str, Any] | None:
-        """
-        Perform the mojo quantize operation.
-
-        Args:
-            vectors: Parameter description.
-            mode: Parameter description.
-
-        Returns:
-            dict[str, Any] | None
-        """
-        logger.debug("Mojo bridge not available — mojo_quantize skipped")
-        return None
-
-    def mojo_status() -> dict[str, Any]:
-        """
-        Perform the mojo status operation.
-
-        Returns:
-            dict[str, Any]
-        """
-        return {"status": "error", "message": "Mojo bridge not available."}
-
-
 from .dispatch_bridge import DispatchBridge, get_dispatch
 from .event_ring_bridge import EventRingBridge, get_event_ring
-from .mojo_bridge import (
-    mojo_batch_encode,
-    mojo_neuro_score,
-    mojo_quantize,
-    mojo_status,
-)
 
 # Unified SIMD bridge (replaces 6 individual modules)
 from .simd_unified import (
@@ -436,11 +364,6 @@ __all__ = [
     "batch_normalize",
     "batch_centroid",
     "simd_vector_batch_status",
-    # Mojo (if available)
-    "mojo_batch_encode",
-    "mojo_quantize",
-    "mojo_neuro_score",
-    "mojo_status",
     # Core bridges (always available)
     "StateBoardBridge",
     "get_state_board",

@@ -13,7 +13,7 @@
 # limitations under the License.
 """Polyglot Acceleration Subsystem (Consolidated v15.2).
 =====================================================
-Unified gateway for language-specific bridges (Elixir, Julia, Koka, Mojo, Zig, Rust).
+Unified gateway for language-specific bridges (Elixir, Julia, Koka, Zig, Rust).
 Provides high-performance acceleration using the best available backend.
 
 Consolidated from polyglot_accelerator.py and various bridge modules.

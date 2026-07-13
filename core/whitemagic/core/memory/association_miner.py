@@ -194,11 +194,11 @@ class AssociationMiner:
         all_mems = []
         try:
             # Use galaxy-aware list_recent which aggregates across galaxy DBs
-            all_mems = um.backend.list_recent(limit=sample_size)
+            all_mems = um.list_recent(limit=sample_size)
             # If we got enough, try to diversify by searching different importance bands
             if len(all_mems) < sample_size:
                 # Supplement with lower-importance memories
-                more = um.backend.search(
+                more = um.search(
                     query="", limit=sample_size - len(all_mems), min_importance=0.0
                 )
                 # Deduplicate by ID
@@ -315,8 +315,8 @@ class AssociationMiner:
             try:
                 for p in proposals:
                     try:
-                        um.backend.add_association(p.source_id, p.target_id, p.overlap_score)
-                        um.backend.add_association(p.target_id, p.source_id, p.overlap_score)
+                        um.add_association(p.source_id, p.target_id, p.overlap_score)
+                        um.add_association(p.target_id, p.source_id, p.overlap_score)
                         report.links_created += 1
                     except Exception:
                         logger.debug("Swallowed exception", exc_info=True)
@@ -484,8 +484,8 @@ class AssociationMiner:
                 um = get_unified_memory()
                 for proposal in proposals:
                     try:
-                        um.backend.add_association(proposal.source_id, proposal.target_id, proposal.overlap_score)
-                        um.backend.add_association(proposal.target_id, proposal.source_id, proposal.overlap_score)
+                        um.add_association(proposal.source_id, proposal.target_id, proposal.overlap_score)
+                        um.add_association(proposal.target_id, proposal.source_id, proposal.overlap_score)
                         report.links_created += 1
                     except Exception:
                         logger.debug("Swallowed exception", exc_info=True)
@@ -698,8 +698,8 @@ class AssociationMiner:
                                 conn.commit()
                             persisted += 1
                         else:
-                            um.backend.add_association(prop.source_id, prop.target_id, prop.overlap_score)
-                            um.backend.add_association(prop.target_id, prop.source_id, prop.overlap_score)
+                            um.add_association(prop.source_id, prop.target_id, prop.overlap_score)
+                            um.add_association(prop.target_id, prop.source_id, prop.overlap_score)
                             persisted += 1
                     except Exception:
                         continue

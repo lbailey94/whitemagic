@@ -233,7 +233,7 @@ def _build_nodes_from_galaxy(
 
     memories: list[Any] = []
     try:
-        for page in um.backend.list_all_paginated(batch_size=500):
+        for page in um.list_all_paginated(batch_size=500):
             memories.extend(page)
             if len(memories) >= limit:
                 break
@@ -246,7 +246,7 @@ def _build_nodes_from_galaxy(
 
     coords_map: dict[str, tuple] = {}
     try:
-        coords_map = um.backend.get_all_coords()
+        coords_map = um.get_all_coords()
     except Exception as e:
         logger.debug("Operation failed: %s", e)
         pass
@@ -293,7 +293,7 @@ def _build_nodes_from_galaxy(
 
     edges: list[dict[str, Any]] = []
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             cursor = conn.execute(
                 "SELECT source_id, target_id, strength FROM associations LIMIT ?",
                 (limit * 2,),
@@ -337,7 +337,7 @@ def _build_constellations_from_galaxy(
     # Gather nodes with 5D coordinates
     memories: list[Any] = []
     try:
-        for page in um.backend.list_all_paginated(batch_size=500):
+        for page in um.list_all_paginated(batch_size=500):
             memories.extend(page)
             if len(memories) >= limit:
                 break
@@ -350,7 +350,7 @@ def _build_constellations_from_galaxy(
 
     coords_map: dict[str, tuple] = {}
     try:
-        coords_map = um.backend.get_all_coords()
+        coords_map = um.get_all_coords()
     except Exception as e:
         logger.debug("Operation failed: %s", e)
         pass
@@ -493,7 +493,7 @@ def _build_semantic_constellations_from_galaxy(
     mem_lookup: dict[str, Any] = {}
 
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             tables = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_embeddings'",
             ).fetchall()
@@ -527,7 +527,7 @@ def _build_semantic_constellations_from_galaxy(
         return []
 
     try:
-        with um.backend.pool.connection() as conn:
+        with um.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
             placeholders = ",".join("?" * len(mem_ids))
             cursor = conn.execute(
@@ -610,7 +610,10 @@ def _resolve_user_id(x_user_id: str | None) -> str:
 def _resolve_galaxy(
     x_galaxy_name: str | None, x_user_id: str | None = None
 ) -> tuple[Any, Any]:
-    """Resolve galaxy from header or active default.
+    """Resolve galaxy from header or user default.
+
+    Uses request-scoped resolution — does NOT mutate process-global
+    active-galaxy state.
 
     Returns (galaxy_info, unified_memory) or raises HTTPException.
     """
@@ -624,15 +627,21 @@ def _resolve_galaxy(
                 detail=f"Galaxy '{x_galaxy_name}' not found for user '{uid}'",
             )
         try:
-            registry_key = f"{uid}/{x_galaxy_name}"
-            um = gm._get_memory(registry_key)
+            um = gm.get_memory_for_galaxy(x_galaxy_name, user_id=uid)
         except Exception as exc:
             raise HTTPException(
                 status_code=500, detail=f"Galaxy unavailable: {exc}"
             ) from exc
         return info, um
-    active = gm.get_active()
-    return active, gm._get_memory(gm._active_galaxy)
+    # No galaxy header — use user's default galaxy (request-scoped, no global mutation)
+    try:
+        um = gm.get_memory_for_galaxy("default", user_id=uid)
+        info = gm.get_galaxy("default", user_id=uid)
+    except ValueError:
+        # Fallback to process-global active if user default doesn't exist
+        info = gm.get_active()
+        um = gm._get_memory(gm._active_galaxy)
+    return info, um
 
 
 if router is not None:
@@ -735,7 +744,7 @@ if router is not None:
                 memory_type=mem_type,
                 metadata={"created_via": "galaxy_api", "zone": zone},
             )
-            um.backend.store_coords(
+            um.store_coords(
                 mem.id,
                 round((hash(mem.id) % 1000) / 500 - 1, 4),
                 round(((hash(mem.id) // 7) % 1000) / 500 - 1, 4),

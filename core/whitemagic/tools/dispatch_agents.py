@@ -32,6 +32,10 @@ DISPATCH_AGENTS: dict[str, Callable[..., dict[str, Any]]] = {
     "session.backfill": LazyHandler("session", "handle_session_backfill"),
     "session.continuity": LazyHandler("session", "handle_session_continuity"),
     "session.consolidate": LazyHandler("session", "handle_session_consolidate"),
+    # ── Current State — Live work context for AI agents ──
+    "state.current": LazyHandler("state_tools", "handle_state_current"),
+    "state.update": LazyHandler("state_tools", "handle_state_update"),
+    "state.context": LazyHandler("state_tools", "handle_state_context"),
     # ── Swarm ──
     "swarm.decompose": LazyHandler("swarm", "handle_swarm_decompose"),
     "swarm.route": LazyHandler("swarm", "handle_swarm_route"),
@@ -147,4 +151,22 @@ DISPATCH_AGENTS: dict[str, Callable[..., dict[str, Any]]] = {
     # ── Durable Archive ──
     "archive.run": LazyHandler("research", "handle_archive_run"),
     "archive.status": LazyHandler("research", "handle_archive_status"),
+    # ── DiLoCo Distributed Training ──
+    "dilo_co.init": LazyHandler("research", "handle_dilo_co_init"),
+    "dilo_co.register_worker": LazyHandler("research", "handle_dilo_co_register_worker"),
+    "dilo_co.submit_gradient": LazyHandler("research", "handle_dilo_co_submit_gradient"),
+    "dilo_co.sync": LazyHandler("research", "handle_dilo_co_sync"),
+    "dilo_co.status": LazyHandler("research", "handle_dilo_co_status"),
+    # ── Warp Marketplace ──
+    "warp.market.publish": LazyHandler("research", "handle_warp_market_publish"),
+    "warp.market.discover": LazyHandler("research", "handle_warp_market_discover"),
+    "warp.market.download": LazyHandler("research", "handle_warp_market_download"),
+    "warp.market.status": LazyHandler("research", "handle_warp_market_status"),
+    "warp.market.broadcast": LazyHandler("research", "handle_warp_market_broadcast"),
+    # ── Mesh Inference Router ──
+    "mesh.route": LazyHandler("research", "handle_mesh_route"),
+    "mesh.route.register": LazyHandler("research", "handle_mesh_route_register"),
+    "mesh.route.nodes": LazyHandler("research", "handle_mesh_route_nodes"),
+    "mesh.route.status": LazyHandler("research", "handle_mesh_route_status"),
+    "mesh.route.strategy": LazyHandler("research", "handle_mesh_route_strategy"),
 }

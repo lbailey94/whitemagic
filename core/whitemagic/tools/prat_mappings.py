@@ -55,6 +55,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "session.backfill": "gana_heart",
     "session.continuity": "gana_heart",
     "session.consolidate": "gana_heart",
+    # ── Current State — Live work context ──
+    "state.current": "gana_heart",
+    "state.update": "gana_heart",
+    "state.context": "gana_heart",
     # ═══ TAIL — Performance & Acceleration ═══
     "simd.cosine": "gana_tail",
     "simd.batch": "gana_tail",
@@ -899,6 +903,24 @@ TOOL_TO_GANA: dict[str, str] = {
     # ── v24.3: Durable Archive ──
     "archive.run": "gana_wings",
     "archive.status": "gana_wings",
+    # ── v24.3: DiLoCo Distributed Training ──
+    "dilo_co.init": "gana_ox",
+    "dilo_co.register_worker": "gana_ox",
+    "dilo_co.submit_gradient": "gana_ox",
+    "dilo_co.sync": "gana_ox",
+    "dilo_co.status": "gana_ox",
+    # ── v24.3: Warp Marketplace ──
+    "warp.market.publish": "gana_wall",
+    "warp.market.discover": "gana_wall",
+    "warp.market.download": "gana_wall",
+    "warp.market.status": "gana_wall",
+    "warp.market.broadcast": "gana_wings",
+    # ── v24.3: Mesh Inference Router ──
+    "mesh.route": "gana_chariot",
+    "mesh.route.register": "gana_chariot",
+    "mesh.route.nodes": "gana_chariot",
+    "mesh.route.status": "gana_chariot",
+    "mesh.route.strategy": "gana_dipper",
     # ── Quantum Geometry → gana_tail (Performance & Acceleration) ──
     "quantum.manifold_distance": "gana_tail",
     "quantum.fubini_study": "gana_tail",

@@ -81,6 +81,11 @@ _NETWORK_TOOLS: set[str] = {
     "mesh.experiment.peers",
     "mesh.experiment.discover",
     "leaderboard.merge",
+    # v24.3: P4 — DiLoCo, Warp Marketplace, Mesh Router
+    "dilo_co.submit_gradient",
+    "warp.market.broadcast",
+    "mesh.route",
+    "mesh.route.register",
 }
 
 # ── Tools that are destructive ─────────────────────────────────────────
@@ -146,6 +151,12 @@ _PURE_TOOLS: set[str] = {
     "pulse.verify.status",
     "critique.status",
     "archive.status",
+    # v24.3: P4 read-only tools
+    "dilo_co.status",
+    "warp.market.discover",
+    "warp.market.status",
+    "mesh.route.nodes",
+    "mesh.route.status",
 }
 
 # ── Tools that only observe (logging, metrics, telemetry) ──────────────

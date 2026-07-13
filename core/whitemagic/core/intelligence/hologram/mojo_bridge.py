@@ -19,22 +19,28 @@ from whitemagic.core.intelligence.hologram.encoder import HolographicCoordinate
 logger = logging.getLogger(__name__)
 
 
-class MojoEncoderBridge:
+class EncoderBridge:
     """Encoder bridge — Python CoordinateEncoder (Mojo removed in v23.2)."""
 
     def __init__(self) -> None:
         self.python_fallback = PythonEncoder()
-        self.mojo_available = False
-        self.mojo_bin: str | None = None
 
     def encode(self, memory: dict[str, Any]) -> HolographicCoordinate:
         """Encode memory using Python CoordinateEncoder."""
         return self.python_fallback.encode(memory)
 
 
-def get_mojo_encoder() -> Any:
+# Backward compat alias
+MojoEncoderBridge = EncoderBridge
+
+
+def get_encoder() -> Any:
     """Singleton getter for the encoder bridge."""
-    global _mojo_bridge
-    if "_mojo_bridge" not in globals():
-        globals()["_mojo_bridge"] = MojoEncoderBridge()
-    return globals()["_mojo_bridge"]
+    global _encoder_bridge
+    if "_encoder_bridge" not in globals():
+        globals()["_encoder_bridge"] = EncoderBridge()
+    return globals()["_encoder_bridge"]
+
+
+# Backward compat alias
+get_mojo_encoder = get_encoder

@@ -1020,12 +1020,11 @@ class AlchemicalLoop:
             from whitemagic.core.intelligence.parallel_reasoning import _HAS_ANTIPATTERN
 
             if _HAS_ANTIPATTERN:
-                import tempfile
-                from pathlib import Path
+                from whitemagic.config.paths import WM_ROOT
 
                 from whitemagic.core.immune.defense.autoimmune import AutoimmuneSystem
 
-                immune = AutoimmuneSystem(base_dir=Path(tempfile.gettempdir()))
+                immune = AutoimmuneSystem(base_dir=WM_ROOT)
                 return {
                     "patterns_loaded": len(immune.anti_patterns),
                     "violations": 0,

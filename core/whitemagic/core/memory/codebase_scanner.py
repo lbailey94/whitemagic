@@ -83,7 +83,7 @@ SKIP_DIRS = {
 SCAN_EXTENSIONS = {
     # Source code
     ".py", ".rs", ".go", ".zig", ".kk", ".hs", ".ex", ".exs", ".jl",
-    ".mojo", ".c", ".h", ".cpp", ".hpp", ".cc",
+    ".c", ".h", ".cpp", ".hpp", ".cc",
     # Frontend
     ".ts", ".tsx", ".js", ".jsx", ".mjs", ".css", ".html", ".vue", ".svelte",
     # Docs

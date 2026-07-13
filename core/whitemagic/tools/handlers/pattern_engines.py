@@ -86,7 +86,7 @@ def handle_emergence_scan(**kwargs: Any) -> dict[str, Any]:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            recent = um.backend.search(query=None, limit=100)
+            recent = um.search(query=None, limit=100)
             for i, mem in enumerate(recent):
                 detector.add_observation(
                     {

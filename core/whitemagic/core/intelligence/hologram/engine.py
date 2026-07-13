@@ -16,7 +16,7 @@ Responsibility:
 import logging
 from typing import Any
 
-from whitemagic.core.intelligence.hologram.mojo_bridge import get_mojo_encoder
+from whitemagic.core.intelligence.hologram.mojo_bridge import get_encoder
 from whitemagic.core.resonance.gan_ying_enhanced import (
     EventType,
     ResonanceEvent,
@@ -37,7 +37,7 @@ class HologramEngine:
     """HologramEngine: hologram engine."""
 
     def __init__(self) -> None:
-        self.encoder = get_mojo_encoder()
+        self.encoder = get_encoder()
         # Use the unified HolographicMemory wrapper instead of direct Rust SpatialIndex
         from whitemagic.core.memory.holographic import get_holographic_memory
 

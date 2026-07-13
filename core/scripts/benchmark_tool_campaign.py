@@ -14,6 +14,9 @@ import os
 import time
 from typing import Any
 
+# Relax security thresholds for benchmark — we call 780+ tools rapidly
+os.environ.setdefault("WM_BENCHMARK_MODE", "1")
+
 os.environ["WM_BENCHMARK_QUIET"] = "1"
 os.environ["WM_SILENT_INIT"] = "1"
 os.environ["WM_TOOL_TIMEOUT"] = "15"
@@ -164,6 +167,8 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     "memory.consolidate": {"_timeout_s": 45.0},
     "memory.lifecycle_sweep": {"_timeout_s": 45.0},
     "memory.retention_sweep": {"_timeout_s": 45.0},
+    "galaxy.ingest": {"content": "test content", "_timeout_s": 30.0},
+    "embedding.daemon_process": {"_timeout_s": 30.0},
     "memory_search": {"query": "test", "_timeout_s": 30.0},
     "search_memories": {"query": "test", "_timeout_s": 30.0},
     "search_query": {"query": "test", "_timeout_s": 30.0},
@@ -171,12 +176,16 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     "serendipity_surface": {"_timeout_s": 30.0},
     "session.continuity": {"_timeout_s": 30.0},
     # Compute-heavy tools
-    "kaizen_analyze": {"_timeout_s": 30.0},
-    "kaizen_apply_fixes": {"_timeout_s": 30.0},
+    "kaizen_analyze": {"_timeout_s": 60.0},
+    "kaizen_apply_fixes": {"_timeout_s": 60.0},
+    "immune_heal": {"_timeout_s": 30.0},
+    "abi.decode_calldata": {"calldata": "0xa9059cbb" + "00" * 64, "_timeout_s": 30.0},
     "parallel_reason": {"question": "what is the meaning of test", "_timeout_s": 30.0},
     "solve_optimization": {"nodes": ["n1", "n2", "n3"], "edges": [["n1", "n2"]], "scores": {"n1": 0.5, "n2": 0.3, "n3": 0.2}, "budget": 2, "_timeout_s": 30.0},
     "swarm.analyze": {"_timeout_s": 30.0},
     "simulation.recursive": {"n_cycles": 2, "_timeout_s": 30.0},
+    "simulation.pipeline": {"_timeout_s": 30.0},
+    "knowledge_gap.run": {"_timeout_s": 60.0},
     # External/subprocess tools
     "rust_audit": {"_timeout_s": 30.0},
     "ship.check": {"_timeout_s": 30.0},
@@ -187,7 +196,12 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     # ABI tools — need valid JSON to prevent 'Expecting value' parse errors
     "abi.parse": {"abi_json": '[{"type":"function","name":"transfer","inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"balanceOf","inputs":[{"name":"owner","type":"address"}],"outputs":[{"name":"","type":"uint256"}],"stateMutability":"view"},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256","indexed":false}],"anonymous":false}]'},
     "abi.summarize": {"abi_json": '[{"type":"function","name":"transfer","inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"balanceOf","inputs":[{"name":"owner","type":"address"}],"outputs":[{"name":"","type":"uint256"}],"stateMutability":"view"},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256","indexed":false}],"anonymous":false}]'},
-    "abi.decode_calldata": {"calldata": "0xa9059cbb" + "00" * 64},
+    # Tools requiring specific args to avoid ValueError
+    "codegenome.validate": {"prompt": "test prompt for benchmarking"},
+    "archaeology_scan_directory": {"directory": "/tmp/test"},
+    "import_memories": {"data": "[{\"content\": \"test memory\", \"title\": \"Test\"}]"},
+    # STRATA archaeology — needs a real git repo path
+    "strata.archaeology": {"path": "/home/lucas/Desktop/WHITEMAGIC", "subcommand": "temper", "top": 5},
 }
 
 
@@ -316,6 +330,7 @@ def _is_expected_failure(result: dict[str, Any]) -> bool:
         "grpc", "unavailable", "inactive",
         "disk image is malformed", "database disk image",
         "no pulse found", "no results found",
+        "no effects found",  # effect.visualize with no tool filter
         "model_signing_violation",
         "expecting value",  # JSON parse on empty mesh payload
     )

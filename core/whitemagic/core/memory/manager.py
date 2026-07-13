@@ -223,7 +223,7 @@ class MemoryManager:
         if not memory or memory.metadata.get("status") == "archived":
             return {"error": "Memory not found", "memory_id": real_id}
         memory.access()
-        self.unified.backend.store(memory)
+        self.unified._galaxy_backend.store(memory)
         data = self._memory_to_dict(memory)
         if not include_metadata:
             data.pop("metadata", None)
@@ -273,7 +273,7 @@ class MemoryManager:
             memory.memory_type = self._parse_memory_type(memory_type)
         if kwargs:
             memory.metadata.update(kwargs)
-        self.unified.backend.store(memory)
+        self.unified._galaxy_backend.store(memory)
         return {"success": True, "status": "success", **self._memory_to_dict(memory)}
 
     def delete_memory(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:
@@ -295,9 +295,9 @@ class MemoryManager:
             memory.metadata["status"] = "archived"
             memory.importance = 0.0
             memory.galactic_distance = max(memory.galactic_distance, 0.95)
-            self.unified.backend.store(memory)
+            self.unified._galaxy_backend.store(memory)
             return {"success": True, "status": "success", "id": memory_id, "action": "archived"}
-        conn = self.unified.backend.get_connection()
+        conn = self.unified._galaxy_backend.get_connection()
         try:
             exists = conn.execute("SELECT 1 FROM memories WHERE id = ?", (memory_id,)).fetchone()
             if not exists:
@@ -505,7 +505,7 @@ class MemoryManager:
         memory.metadata.pop("status", None)
         memory.importance = 0.5
         memory.memory_type = self._parse_memory_type(memory_type)
-        self.unified.backend.store(memory)
+        self.unified._galaxy_backend.store(memory)
         return {"success": True, "status": "success", "memory_type": memory_type}
 
 

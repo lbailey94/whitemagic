@@ -211,7 +211,7 @@ class MemoryLifecycleManager:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            assoc_decay_report = um.backend.decay_associations()
+            assoc_decay_report = um.decay_associations()
         except Exception as e:
             logger.debug("Association decay skipped: %s", e)
 
@@ -385,8 +385,8 @@ class MemoryLifecycleManager:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            if hasattr(um.backend, "decay_associations"):
-                assoc_decay_report = await loop.run_in_executor(None, um.backend.decay_associations)
+            if hasattr(um, "decay_associations"):
+                assoc_decay_report = await loop.run_in_executor(None, um.decay_associations)
         except Exception as e:
             logger.debug("Association decay skipped: %s", e)
 

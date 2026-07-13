@@ -237,7 +237,7 @@ def _check_radiant() -> list[GateResult]:
         from whitemagic.core.memory.unified import get_unified_memory
 
         um = get_unified_memory()
-        count = um.backend.count() if hasattr(um.backend, "count") else 0
+        count = um.count() if hasattr(um.backend, "count") else 0
         has_usage = count >= 5
         results.append(
             GateResult(

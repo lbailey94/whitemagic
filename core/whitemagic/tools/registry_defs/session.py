@@ -238,4 +238,53 @@ TOOLS: list[ToolDefinition] = [
             },
         },
     ),
+    ToolDefinition(
+        name="state.current",
+        description="Get the current work state snapshot — current task, active tasks, next steps, recent file modifications, and context. This is the primary tool to call on connecting to understand what to work on next.",
+        category=ToolCategory.SESSION,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {},
+        },
+    ),
+    ToolDefinition(
+        name="state.update",
+        description="Update the current work state. Set current task, add/complete tasks, add next steps, record file modifications, decisions, or errors. Replaces reliance on static .md docs for short-term context.",
+        category=ToolCategory.SESSION,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "current_task": {"type": "string", "description": "Set what's being worked on now"},
+                "add_active_task": {"type": "string", "description": "Add an active task"},
+                "complete_task": {"type": "string", "description": "Mark a task as completed"},
+                "add_next_step": {"type": "string", "description": "Add a next step"},
+                "clear_next_steps": {"type": "boolean", "description": "Clear all next steps"},
+                "context_key": {"type": "string", "description": "Context key to set"},
+                "context_value": {"type": "string", "description": "Context value to set"},
+                "record_file": {"type": "string", "description": "Record a file modification (path)"},
+                "file_description": {"type": "string", "description": "Description of file change"},
+                "record_decision": {"type": "string", "description": "Record a decision"},
+                "decision_rationale": {"type": "string", "description": "Rationale for the decision"},
+                "record_error": {"type": "string", "description": "Record an error"},
+                "error_context": {"type": "string", "description": "Context for the error"},
+                "last_session_summary": {"type": "string", "description": "Summary of last session"},
+                "last_session_id": {"type": "string", "description": "ID of last session"},
+            },
+        },
+    ),
+    ToolDefinition(
+        name="state.context",
+        description="Get or set context values in the current work state. Without arguments, returns all context. With key+value, sets a context entry. With just key, gets a specific entry.",
+        category=ToolCategory.SESSION,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "key": {"type": "string", "description": "Context key"},
+                "value": {"type": "string", "description": "Context value (omit to get, include to set)"},
+            },
+        },
+    ),
 ]

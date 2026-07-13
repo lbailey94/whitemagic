@@ -195,6 +195,39 @@ class SessionHandoff:
         handoff_file = self.sessions_dir / "HANDOFF.md"
         self._create_handoff_doc(state, handoff_file)
 
+        # Push handoff data into CurrentStateTracker for live state
+        try:
+            from whitemagic.core.memory.current_state import get_state_tracker
+
+            get_state_tracker().update_from_session_handoff(
+                summary=summary,
+                next_steps=next_steps,
+                active_tasks=state.active_tasks,
+                session_id=session_id,
+                files_modified=state.files_modified,
+            )
+        except Exception:
+            logger.debug("Failed to push handoff to CurrentStateTracker", exc_info=True)
+
+        # Auto-consolidate important session turns to codex galaxy (sleep consolidation)
+        try:
+            from whitemagic.core.memory.session_recorder import get_session_recorder
+
+            recorder = get_session_recorder(session_id=session_id)
+            result = recorder.consolidate_session(min_importance=0.7, dry_run=False)
+            if result.get("promoted", 0) > 0:
+                logger.info("Sleep consolidation: %d turns promoted to codex", result["promoted"])
+        except Exception:
+            logger.debug("Auto-consolidation failed (best-effort)", exc_info=True)
+
+        # Persist working memory for next session
+        try:
+            from whitemagic.core.intelligence.working_memory import get_working_memory
+
+            get_working_memory().save_to_disk()
+        except Exception:
+            logger.debug("Working memory save failed (best-effort)", exc_info=True)
+
         logger.info("🏁 Session ended: %s", session_id)
         logger.info(
             "   Duration: %s minutes",

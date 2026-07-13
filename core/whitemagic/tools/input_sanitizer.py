@@ -412,6 +412,10 @@ _CONTENT_SCAN_EXEMPT: set = {
     "foundry.build",
     "foundry.test",
     "foundry.test_json",
+    # Sabha/council (free-form agenda items trigger semantic false positives)
+    "sabha.convene",
+    # Starter packs (context field triggers semantic false positives)
+    "starter_packs.suggest",
 }
 
 # Tools exempt from encoding detection (they legitimately handle hex/binary/base64 data)

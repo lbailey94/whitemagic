@@ -317,7 +317,7 @@ class EntityExtractor:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            pool = um.backend.pool
+            pool = um.pool
 
             from datetime import datetime
 

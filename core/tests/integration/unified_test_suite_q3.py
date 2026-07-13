@@ -98,13 +98,6 @@ LANGUAGE_SDKS = {
         "serialization": "JSON3 + JLD2",
         "status": "alpha",
     },
-    "mojo": {
-        "path": "whitemagic-mojo",
-        "test_cmd": ["mojo", "test"],
-        "ffi_interface": "Python interop + C ABI",
-        "serialization": "Python pickle + numpy",
-        "status": "experimental",
-    },
     "koka": {
         "path": "whitemagic-koka",
         "test_cmd": ["koka", "--exec", "test"],
@@ -235,7 +228,6 @@ class UnifiedTestSuite:
             "haskell": ["cbits/*.c", "src/FFI.hs"],
             "zig": ["src/ffi.zig"],
             "julia": ["src/ffi.jl"],
-            "mojo": ["src/ffi.mojo"],
             "koka": ["src/ffi.kk"],
         }
 

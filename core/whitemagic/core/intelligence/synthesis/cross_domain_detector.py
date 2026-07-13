@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.db_manager import safe_connect, pooled_connection
 import threading
 import time
 from dataclasses import dataclass, field
@@ -116,12 +116,6 @@ class CrossDomainCollisionDetector:
     def _get_conn(self) -> sqlite3.Connection:
         conn = safe_connect(self.db_path, timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        try:
-            conn.execute("PRAGMA journal_mode = WAL")
-            conn.execute("PRAGMA synchronous = NORMAL")
-            conn.execute("PRAGMA busy_timeout = 30000")
-        except sqlite3.OperationalError:
-            logger.debug("Swallowed exception", exc_info=True)
         return conn
 
     def detect(
@@ -265,14 +259,13 @@ class CrossDomainCollisionDetector:
         """Load embeddings for given memory IDs."""
         embeddings: dict[str, list[float]] = {}
         try:
-            conn = safe_connect(self.db_path, timeout=30, check_same_thread=False)
-            conn.row_factory = sqlite3.Row
-            placeholders = ",".join("?" * len(memory_ids))
-            rows = conn.execute(
-                f"SELECT memory_id, embedding FROM memory_embeddings WHERE memory_id IN ({placeholders})",
-                memory_ids,
-            ).fetchall()
-            conn.close()
+            with pooled_connection(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                placeholders = ",".join("?" * len(memory_ids))
+                rows = conn.execute(
+                    f"SELECT memory_id, embedding FROM memory_embeddings WHERE memory_id IN ({placeholders})",
+                    memory_ids,
+                ).fetchall()
 
             import json
 

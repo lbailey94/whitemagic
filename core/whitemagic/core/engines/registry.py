@@ -169,7 +169,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         wu_xing="wood",
         emotion="metal",
         grimoire_chapter=6,
-        description="Polyglot acceleration: Rust, Zig, Mojo bridges + quantum-inspired Grover's O(√N) search",
+        description="Polyglot acceleration: Rust, Zig bridges + quantum-inspired Grover's O(√N) search",
         status=EngineStatus.DISTRIBUTED,
         absorbs=("QuantumEngine",),
     ),

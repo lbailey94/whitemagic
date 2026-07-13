@@ -142,7 +142,7 @@ class PhylogeneticTracker:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS lineage_edges (
                         id TEXT PRIMARY KEY,
@@ -293,7 +293,7 @@ class PhylogeneticTracker:
             from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
             um = get_unified_memory()
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 conn.execute(
                     """INSERT OR IGNORE INTO lineage_edges
                        (id, source_id, source_galaxy, target_id, target_galaxy,
@@ -352,7 +352,7 @@ class PhylogeneticTracker:
                 if not frontier:
                     break
                 next_frontier = []
-                with um.backend.pool.connection() as conn:
+                with um.pool.connection() as conn:
                     conn.row_factory = __import__("sqlite3").Row
                     for mid in frontier:
                         rows = conn.execute(
@@ -396,7 +396,7 @@ class PhylogeneticTracker:
                 if not frontier:
                     break
                 next_frontier = []
-                with um.backend.pool.connection() as conn:
+                with um.pool.connection() as conn:
                     conn.row_factory = __import__("sqlite3").Row
                     for mid in frontier:
                         rows = conn.execute(
@@ -443,7 +443,7 @@ class PhylogeneticTracker:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            mem = um.backend.recall(memory_id)
+            mem = um.recall(memory_id)
             if not mem:
                 return TaxonomicRank(
                     "unknown", galaxy_name, "unknown", "unknown", "unknown", 0
@@ -496,7 +496,7 @@ class PhylogeneticTracker:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 total = conn.execute("SELECT COUNT(*) FROM lineage_edges").fetchone()[0]
                 by_type = {}
                 for row in conn.execute(

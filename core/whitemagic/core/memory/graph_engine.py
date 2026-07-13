@@ -254,7 +254,7 @@ class GraphEngine:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            pool = um.backend.pool
+            pool = um.pool
         except Exception as e:
             logger.error("GraphEngine: could not access memory system: %s", e, exc_info=True)
             return {"status": "error", "message": str(e)}
@@ -603,7 +603,7 @@ class GraphEngine:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             tag_counts: dict[str, int] = {}
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 placeholders = ",".join("?" * len(member_ids))
                 rows = conn.execute(
                     f"SELECT tag, COUNT(*) as cnt FROM tags WHERE memory_id IN ({placeholders}) GROUP BY tag ORDER BY cnt DESC LIMIT 5",
@@ -714,7 +714,7 @@ class GraphEngine:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-            with um.backend.pool.connection() as conn:
+            with um.pool.connection() as conn:
                 cutoff = datetime.now().isoformat()[:10]  # today's date prefix
                 rows = conn.execute(
                     """SELECT DISTINCT source_id FROM associations

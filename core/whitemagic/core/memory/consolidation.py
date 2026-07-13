@@ -385,8 +385,8 @@ class MemoryConsolidator:
                 continue
 
             try:
-                mem_a = um.backend.recall(src_id)
-                mem_b = um.backend.recall(tgt_id)
+                mem_a = um.recall(src_id)
+                mem_b = um.recall(tgt_id)
                 if not mem_a or not mem_b:
                     continue
             except Exception as e:
@@ -414,9 +414,9 @@ class MemoryConsolidator:
             }
 
             try:
-                um.backend.store(canonical)
+                um._galaxy_backend.store(canonical)
                 # Push duplicate to FAR_EDGE (never delete)
-                um.backend.archive_to_edge(duplicate.id, galactic_distance=0.95)
+                um.archive_to_edge(duplicate.id, galactic_distance=0.95)
                 resolved_ids.add(duplicate.id)
                 result["duplicates_resolved"] += 1
             except Exception as e:
@@ -728,7 +728,7 @@ class MemoryConsolidator:
                     current_dist = getattr(mem, "galactic_distance", None)
                     # Only promote if not already in INNER_RIM or CORE
                     if current_dist is None or current_dist > 0.15:
-                        um.backend.update_galactic_distance(mem.id, 0.12)
+                        um.update_galactic_distance(mem.id, 0.12)
                         promoted += 1
             if promoted:
                 logger.info("Galactic promotion: %s strategy memories → INNER_RIM", promoted, exc_info=True)

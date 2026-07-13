@@ -518,12 +518,25 @@ def get_galaxy_miner(galaxy_paths: list[str] | None = None) -> GalaxyPatternMine
     global _galaxy_miner
     if _galaxy_miner is None:
         if galaxy_paths is None:
-            from whitemagic.config.paths import PROJECT_ROOT, WM_ROOT
+            from whitemagic.config.paths import MEMORY_DIR, PROJECT_ROOT, WM_ROOT
 
-            galaxy_paths = [
+            galaxy_paths = []
+            # Scan per-galaxy DBs (v23+ galaxy-first architecture)
+            galaxies_dir = MEMORY_DIR / "galaxies"
+            if galaxies_dir.exists():
+                for gdir in galaxies_dir.iterdir():
+                    if gdir.is_dir():
+                        gdb = gdir / "whitemagic.db"
+                        if gdb.exists():
+                            galaxy_paths.append(str(gdb))
+            # Legacy fallbacks (may be empty post-migration)
+            legacy = [
                 str(WM_ROOT / "memory/whitemagic.db"),
                 str(WM_ROOT / "memory/whitemagic_cold.db"),
                 str(PROJECT_ROOT / "archive/memory_archive/whitemagic_hot.db"),
             ]
+            for p in legacy:
+                if p not in galaxy_paths:
+                    galaxy_paths.append(p)
         _galaxy_miner = GalaxyPatternMiner(galaxy_paths)
     return _galaxy_miner

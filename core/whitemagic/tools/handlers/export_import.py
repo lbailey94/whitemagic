@@ -67,6 +67,10 @@ def handle_import_memories(**kwargs: Any) -> dict[str, Any]:
     if not data:
         return {"status": "error", "message": "data is required"}
 
+    if isinstance(data, (list, dict)):
+        import json as _json
+        data = _json.dumps(data)
+
     mgr = ExportImportManager()
     request = ImportRequest(
         format=fmt,

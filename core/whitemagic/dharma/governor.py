@@ -117,14 +117,11 @@ class DharmaGovernor:
             metric = get_coherence_metric()
             # Measure with actual memory count for accurate assessment
             try:
+                from whitemagic.core.galactic import substrate_health
 
-                from whitemagic.config.paths import WM_ROOT
-
-                db_path = WM_ROOT / "memory" / "whitemagic.db"
-                if db_path.exists():
-                    conn = safe_connect(str(db_path))
-                    count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-                    conn.close()
+                health = substrate_health()
+                count = health.get("total_memories", 0)
+                if count > 0:
                     metric.measure(memories_accessible=count)
                 else:
                     metric.measure()

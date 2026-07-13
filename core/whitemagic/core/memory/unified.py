@@ -13,8 +13,6 @@ import hashlib
 import os
 import sqlite3
 
-from whitemagic.core.memory.sqlite_backend import SQLiteBackend
-
 # Re-export Memory and MemoryType for compatibility
 from whitemagic.core.memory.unified_types import Memory, MemoryType
 from whitemagic.utils.rust_helper import get_rust_module, is_rust_available
@@ -98,21 +96,23 @@ class UnifiedMemory:
         # Use canonical Data Sea database location
         if base_path is None:
             from whitemagic.config.paths import DB_PATH as _db_path, MEMORY_DIR as _mem_dir
-            self.db_path = _db_path
+            self._db_path = _db_path
             self.base_path = _mem_dir
             self.base_path.mkdir(parents=True, exist_ok=True)
         else:
             self.base_path = base_path
             self.base_path.mkdir(parents=True, exist_ok=True)
-            self.db_path = self.base_path / "whitemagic.db"
+            self._db_path = self.base_path / "whitemagic.db"
 
         # v24: Use GalaxyAwareBackend for per-galaxy SQLite routing
         # This isolates corruption risk and reduces lock contention
         from whitemagic.core.memory.backends.galaxy_router import GalaxyAwareBackend
-        self._galaxy_backend = GalaxyAwareBackend(self.db_path)
-        # Keep .backend pointing to the default SQLiteBackend for backward compat
-        # (code that accesses self.backend directly still works)
-        self.backend = SQLiteBackend(self.db_path)
+        self._galaxy_backend = GalaxyAwareBackend(self._db_path)
+        # Phase 2: .backend now resolves to the GalaxyAwareBackend façade.
+        # GalaxyAwareBackend proxies all SQLiteBackend methods, with
+        # galaxy-aware routing for store/recall/search/delete and
+        # __getattr__ delegation to the default backend for other methods.
+        self.backend = self._galaxy_backend
 
         # Holographic Memory (lazy-loaded via property)
         self._skip_holo = bool(os.getenv("WM_SKIP_HOLO_INDEX", "").strip())
@@ -121,8 +121,28 @@ class UnifiedMemory:
         self._holographic_lock = None  # Lazy-init for thread safety
 
         if not os.getenv("WM_SILENT_INIT"):
-            stats = self.backend.get_stats()
+            stats = self._galaxy_backend.get_stats()
             logger.info("🧠 Unified Memory initialized: %s memories (SQLite)", stats['total_memories'])
+
+    @property
+    def pool(self) -> Any:
+        """Proxy to the galaxy-aware backend's connection pool.
+
+        This provides a clean migration path for consumers that previously
+        accessed ``.backend.pool`` directly. The pool routes to the default
+        backend's connection pool.
+        """
+        return self._galaxy_backend.pool
+
+    @property
+    def db_path(self) -> Path:
+        """Proxy to the galaxy-aware backend's database path."""
+        return self._galaxy_backend.db_path
+
+    @db_path.setter
+    def db_path(self, value: Path) -> None:
+        """Set the database path (used during init)."""
+        self._db_path = value
 
     @property
     def holographic(self) -> Any:
@@ -187,12 +207,33 @@ class UnifiedMemory:
             return remote
         return local
 
+    def __getattr__(self, name: str) -> Any:
+        """Delegate unknown attribute access to the galaxy-aware backend.
+
+        This allows consumers to call backend methods directly on
+        UnifiedMemory (e.g. ``um.decay_associations()`` instead of
+        ``um.backend.decay_associations()``), providing a clean migration
+        path away from ``.backend`` access.
+
+        Core methods (store, recall, search, update_memory, etc.) are
+        explicitly defined on UnifiedMemory and take precedence.
+        """
+        # Avoid recursion for internal attributes
+        if name.startswith("_"):
+            raise AttributeError(f"'UnifiedMemory' object has no attribute '{name}'")
+        # Delegate to the galaxy-aware backend
+        backend = self.__dict__.get("_galaxy_backend")
+        if backend is not None:
+            return getattr(backend, name)
+        raise AttributeError(f"'UnifiedMemory' object has no attribute '{name}'")
+
     def store(self, content: Any, memory_type: MemoryType | str = MemoryType.SHORT_TERM,
               tags: set[str] | None = None, emotional_valence: float = 0.0,
               importance: float = 0.5, metadata: dict | None = None, title: str | None = None,
               auto_embed: bool = True, galaxy: str = "universal",
               subsystem: str | None = None, source_trust: str = "user",
               agent_id: str = "",
+              memory_context: Any = None,
               **kwargs: Any) -> Memory:
         """Store a new memory.
 
@@ -211,6 +252,18 @@ class UnifiedMemory:
                 memory_type = MemoryType.SHORT_TERM
 
         metadata = metadata or {}
+
+        # Phase 2: Apply MemoryContext if provided (request-scoped namespace routing)
+        if memory_context is not None:
+            # MemoryContext overrides galaxy and agent_id for request-scoped operations
+            ctx_galaxy = memory_context.galaxy
+            if ctx_galaxy and ctx_galaxy != "default":
+                galaxy = ctx_galaxy
+            if memory_context.agent_id and memory_context.agent_id != "default":
+                agent_id = memory_context.agent_id
+            # Store the namespace in metadata for audit trail
+            metadata.setdefault("_namespace", memory_context.namespace_key)
+            metadata.setdefault("_user_id", memory_context.user_id)
 
         # v23.4: Auto-route galaxy via GalaxyRouter if subsystem is provided
         # and no explicit galaxy was given (galaxy defaults to "universal").
@@ -312,7 +365,7 @@ class UnifiedMemory:
                     self._galaxy_backend.store_coords(memory.id, *coords, galaxy=galaxy)
                 except (TypeError, AttributeError):
                     # Older backends may not accept galaxy kwarg
-                    self.backend.store_coords(memory.id, *coords)
+                    self._galaxy_backend.store_coords(memory.id, *coords)
 
         # Compute and cache HRR vector for compositional memory operations
         # This binds the content embedding with a type role vector using HRR,
@@ -332,7 +385,7 @@ class UnifiedMemory:
                     else:
                         bound_vec = content_vec
                     try:
-                        self.backend.cache_hrr_vector(memory.id, bound_vec)
+                        self._galaxy_backend.cache_hrr_vector(memory.id, bound_vec)
                     except (AttributeError, sqlite3.Error, TypeError):
                         pass  # Backend doesn't support HRR vector caching yet
         except (ImportError, ModuleNotFoundError, Exception) as _e:
@@ -415,8 +468,13 @@ class UnifiedMemory:
 
         return memory
 
-    def recall(self, memory_id: str) -> Memory | None:
-        """Recall a specific memory by ID. Promotes it inward on the Galactic Map."""
+    def recall(self, memory_id: str, memory_context: Any = None) -> Memory | None:
+        """Recall a specific memory by ID. Promotes it inward on the Galactic Map.
+
+        Phase 2: If memory_context is provided, the recalled memory's namespace
+        is validated against the context. A memory from a different user's
+        namespace is not returned (returns None instead).
+        """
         memory = self._galaxy_backend.recall(memory_id)
         if memory and memory.galactic_distance > 0.0:
             # Spiral inward: reduce galactic distance by 5% on each recall
@@ -428,10 +486,22 @@ class UnifiedMemory:
                     self._galaxy_backend.update_galactic_distance(memory_id, new_distance)
                 except (sqlite3.Error, AttributeError, TypeError) as _e:
                     logger.debug("Galactic distance update failed for %s: %s", memory_id, _e)  # Don't fail recall
+
+        # Phase 2: Namespace validation — don't return memories from other users
+        if memory is not None and memory_context is not None:
+            mem_user = memory.metadata.get("_user_id", "local")
+            if mem_user != memory_context.user_id:
+                logger.debug(
+                    "Namespace isolation: memory %s belongs to user '%s', not '%s'",
+                    memory_id, mem_user, memory_context.user_id,
+                )
+                return None
+
         return memory
 
     def update_memory(self, memory_id: str, updates: dict[str, Any],
-                       agent_id: str = "", expected_version: int | None = None) -> dict[str, Any]:
+                       agent_id: str = "", expected_version: int | None = None,
+                       memory_context: Any = None) -> dict[str, Any]:
         """Update an existing memory with version increment and conflict resolution.
 
         Multi-agent cache coherence: uses optimistic concurrency control.
@@ -450,6 +520,14 @@ class UnifiedMemory:
         existing = self._galaxy_backend.recall(memory_id)
         if not existing:
             return {"success": False, "error": "Memory not found", "memory_id": memory_id}
+
+        # Phase 2: Namespace validation — don't allow updating other users' memories
+        if memory_context is not None:
+            mem_user = existing.metadata.get("_user_id", "local")
+            if mem_user != memory_context.user_id:
+                return {"success": False, "error": "namespace_violation",
+                        "memory_id": memory_id,
+                        "detail": f"Memory belongs to user '{mem_user}', not '{memory_context.user_id}'"}
 
         if expected_version is not None and existing.version != expected_version:
             return {
@@ -511,10 +589,28 @@ class UnifiedMemory:
 
     def search(self, query: str | None = None, tags: set[str] | None = None,
                memory_type: MemoryType | None = None, min_importance: float = 0.0,
-               limit: int = 10, galaxy: str | None = None) -> list[Memory]:
-        """Search memories with various filters."""
+               limit: int = 10, galaxy: str | None = None,
+               memory_context: Any = None) -> list[Memory]:
+        """Search memories with various filters.
+
+        Phase 2: If memory_context is provided, the galaxy from the context
+        overrides the galaxy parameter, and results are filtered to only
+        include memories from the same user namespace.
+        """
+        # Phase 2: Apply MemoryContext galaxy override
+        if memory_context is not None and memory_context.galaxy != "default":
+            galaxy = memory_context.galaxy
+
         results = self._galaxy_backend.search(query=query, tags=tags, memory_type=memory_type,
                                  min_importance=min_importance, limit=limit, galaxy=galaxy)
+
+        # Phase 2: Filter results by user namespace if context is provided
+        if memory_context is not None and results:
+            ctx_user = memory_context.user_id
+            results = [
+                m for m in results
+                if m.metadata.get("_user_id", "local") == ctx_user
+            ]
 
         # Annotate results with constellation context via hooks (breaks circular dep)
         if results:

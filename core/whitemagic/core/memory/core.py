@@ -69,7 +69,7 @@ class MemoryManager:
         memory_id = str(uuid.uuid4())
         tag_str = ",".join(tags) if tags else ""
         now = datetime.now().isoformat()
-        with self.backend.get_connection() as conn:
+        with self.get_connection() as conn:
             conn.execute(
                 """INSERT INTO memories (id, content, title, tags, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?)""",

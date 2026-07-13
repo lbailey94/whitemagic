@@ -654,7 +654,7 @@ def handle_wm_read_status(**kwargs: Any) -> dict[str, Any]:
         mem = get_unified_memory()
         status["backends"]["unified_memory"] = "available"
         status["memory_count"] = (
-            mem.backend.count() if hasattr(mem.backend, "count") else None
+            mem.count() if hasattr(mem.backend, "count") else None
         )
     except Exception:
         status["backends"]["unified_memory"] = "unavailable"

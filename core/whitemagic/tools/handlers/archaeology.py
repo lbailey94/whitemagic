@@ -61,7 +61,7 @@ def handle_archaeology_scan_directory(**kwargs: Any) -> dict[str, Any]:
     """
     directory = kwargs.get("directory")
     if not directory:
-        raise ValueError("directory is required")
+        return {"status": "error", "error_code": "directory_required", "message": "directory is required"}
     depth = kwargs.get("depth", 3)
     patterns = kwargs.get("patterns", None)
     recursive = kwargs.get("recursive", True)

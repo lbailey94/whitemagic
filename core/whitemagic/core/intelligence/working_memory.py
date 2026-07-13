@@ -23,7 +23,12 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+
+from whitemagic.config.paths import WM_ROOT
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +36,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_CAPACITY = 7
 MIN_CAPACITY = 3
 MAX_CAPACITY = 12
+
+_WM_PERSIST_PATH = WM_ROOT / "state" / "working_memory.json"
 
 # Activation decay per second of non-use
 DECAY_RATE = 0.01
@@ -328,14 +335,76 @@ class WorkingMemory:
             ],
         }
 
+    def save_to_disk(self, path: Path | None = None) -> None:
+        """Persist working memory chunks to disk for cross-session continuity.
+
+        Saves all active chunks with their activation, importance, and metadata
+        so they can be restored on the next session start.
+        """
+        path = path or _WM_PERSIST_PATH
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                "capacity": self.capacity,
+                "total_attended": self._total_attended,
+                "total_evicted": self._eviction_count,
+                "chunks": [c.to_dict() for c in self._chunks.values()],
+            }
+            path.write_text(_json_dumps(data, indent=2), encoding="utf-8")
+            logger.debug("WorkingMemory saved %d chunks to %s", len(self._chunks), path)
+        except Exception as e:
+            logger.warning("Failed to save working memory: %s", e)
+
+    def load_from_disk(self, path: Path | None = None) -> int:
+        """Load working memory chunks from a previous session.
+
+        Restores chunks with their original activation (capped at 0.8 to
+        reflect time decay across sessions). Returns number of chunks loaded.
+        """
+        path = path or _WM_PERSIST_PATH
+        if not path.exists():
+            return 0
+        try:
+            data = _json_loads(path.read_text(encoding="utf-8"))
+            if not data or not isinstance(data, dict):
+                return 0
+            loaded = 0
+            for chunk_dict in data.get("chunks", []):
+                mid = chunk_dict.get("memory_id", "")
+                if not mid or mid in self._chunks:
+                    continue
+                # Cap activation at 0.8 — cross-session decay
+                activation = min(chunk_dict.get("activation", 0.5), 0.8)
+                chunk = WorkingChunk(
+                    memory_id=mid,
+                    content=chunk_dict.get("content", ""),
+                    title=chunk_dict.get("title", ""),
+                    activation=activation,
+                    importance=chunk_dict.get("importance", 0.5),
+                    tags=chunk_dict.get("tags", []),
+                    last_accessed=time.time(),  # Reset access time
+                )
+                self._chunks[mid] = chunk
+                loaded += 1
+            logger.info("WorkingMemory loaded %d chunks from %s", loaded, path)
+            return loaded
+        except Exception as e:
+            logger.warning("Failed to load working memory: %s", e)
+            return 0
+
 
 # Global singleton
 _working_memory: WorkingMemory | None = None
 
 
 def get_working_memory(capacity: int = DEFAULT_CAPACITY) -> WorkingMemory:
-    """Get the global working memory instance."""
+    """Get the global working memory instance.
+
+    On first call, automatically loads any persisted working memory chunks
+    from the previous session.
+    """
     global _working_memory
     if _working_memory is None:
         _working_memory = WorkingMemory(capacity=capacity)
+        _working_memory.load_from_disk()
     return _working_memory
