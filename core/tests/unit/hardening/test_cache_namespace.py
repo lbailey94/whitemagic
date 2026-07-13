@@ -1,4 +1,4 @@
-"""Slice 3 — Cache-key namespace tests for user, agent, galaxy, and policy profile.
+"""Phase 3 §7.2 — Cache-key namespace isolation tests.
 
 Tests that:
 - Cache keys for the same tool+args but different user_id are different
@@ -6,11 +6,8 @@ Tests that:
 - Cache keys for the same tool+args but different galaxy are different
 - Cache keys for the same tool+args but different policy profile are different
 - Cache keys are deterministic for identical inputs
-- Current _cache_key() does NOT include namespace fields (documents the gap)
-
-These tests document the current behavior and define the target behavior.
-The tests that assert "current behavior" will be updated when Phase 3
-implements namespace-aware cache keys.
+- _cache_key() now includes namespace fields (Phase 3 fix verified)
+- Private memory tools are excluded from caching by default
 """
 from __future__ import annotations
 
@@ -115,56 +112,68 @@ class TestCacheNamespaceIsolation:
         assert key_a != key_b
 
 
-class TestCurrentCacheKeyGap:
-    """Document the current _cache_key() behavior and its namespace gap.
+class TestCacheKeyNamespaceIsolation:
+    """Verify _cache_key() includes namespace isolation after Phase 3 fix.
 
-    The current implementation in middleware.py builds cache keys from
-    tool_name + prompt kwargs only, WITHOUT user_id, agent_id, galaxy,
-    or policy_profile. This means two users with the same query would
-    share a cache entry — a privacy and security violation.
-
-    These tests document the gap. They will be updated in Phase 3.
+    The implementation in middleware.py now builds cache keys from
+    tool_name + prompt kwargs + namespace (user_id, agent_id, galaxy,
+    policy_profile). This ensures two users with the same query get
+    different cache entries — preventing privacy and security violations.
     """
 
-    def test_current_cache_key_ignores_user(self):
-        """Current _cache_key does NOT include user_id in the key."""
+    def test_cache_key_includes_user_id(self):
+        """_cache_key now includes user_id in the key — different users get different keys."""
         from whitemagic.tools.middleware import _cache_key
 
         kwargs = {"query": "hello world"}
-        key_a = _cache_key("search", {**kwargs, "user_id": "alice"})
-        key_b = _cache_key("search", {**kwargs, "user_id": "bob"})
-        # GAP: These are the same because user_id is not in the prompt kwargs list
-        # and _cache_key only looks at prompt/query/message/text/input/question
-        assert key_a == key_b, (
-            "Documents the gap: cache keys are identical for different users. "
-            "This must be fixed in Phase 3."
+        key_a = _cache_key("search", kwargs, user_id="alice")
+        key_b = _cache_key("search", kwargs, user_id="bob")
+        assert key_a != key_b, (
+            "Cache keys must differ for different users after Phase 3 fix."
         )
 
-    def test_current_cache_key_ignores_galaxy(self):
-        """Current _cache_key does NOT include galaxy in the key."""
+    def test_cache_key_includes_galaxy(self):
+        """_cache_key now includes galaxy in the key for all tools."""
         from whitemagic.tools.middleware import _cache_key
 
-        kwargs = {"query": "hello", "galaxy": "codex"}
-        key_a = _cache_key("search_memories", kwargs)
-        kwargs_b = {"query": "hello", "galaxy": "sessions"}
-        key_b = _cache_key("search_memories", kwargs_b)
-        # GAP: galaxy IS in the read-only structural kwargs list, but only for
-        # tools matching _READ_ONLY_CACHEABLE_PATTERNS. For non-read-only tools,
-        # galaxy is ignored.
-        # For search_memories (which IS read-only), galaxy IS included.
-        # This test verifies that for a non-read-only tool, galaxy is ignored.
-        key_c = _cache_key("llama_cpp", {"query": "hello", "galaxy": "codex"})
-        key_d = _cache_key("llama_cpp", {"query": "hello", "galaxy": "sessions"})
-        assert key_c == key_d, (
-            "Documents the gap: non-read-only tools ignore galaxy in cache keys. "
-            "This must be fixed in Phase 3."
+        key_a = _cache_key("llama_cpp", {"query": "hello"}, galaxy="codex")
+        key_b = _cache_key("llama_cpp", {"query": "hello"}, galaxy="sessions")
+        assert key_a != key_b, (
+            "Cache keys must differ for different galaxies after Phase 3 fix."
         )
 
-    def test_current_cache_key_deterministic(self):
-        """Same inputs produce same key (positive test)."""
+    def test_cache_key_includes_agent_id(self):
+        """_cache_key now includes agent_id in the key."""
         from whitemagic.tools.middleware import _cache_key
 
         kwargs = {"query": "hello world"}
-        key_a = _cache_key("search", kwargs)
-        key_b = _cache_key("search", kwargs)
+        key_a = _cache_key("search", kwargs, agent_id="agent_1")
+        key_b = _cache_key("search", kwargs, agent_id="agent_2")
+        assert key_a != key_b
+
+    def test_cache_key_includes_policy_profile(self):
+        """_cache_key now includes policy_profile in the key."""
+        from whitemagic.tools.middleware import _cache_key
+
+        kwargs = {"query": "hello world"}
+        key_a = _cache_key("search", kwargs, policy_profile="strict")
+        key_b = _cache_key("search", kwargs, policy_profile="permissive")
+        assert key_a != key_b
+
+    def test_cache_key_deterministic_with_namespace(self):
+        """Same inputs including namespace produce same key."""
+        from whitemagic.tools.middleware import _cache_key
+
+        kwargs = {"query": "hello world"}
+        key_a = _cache_key("search", kwargs, user_id="alice", agent_id="a1", galaxy="codex")
+        key_b = _cache_key("search", kwargs, user_id="alice", agent_id="a1", galaxy="codex")
         assert key_a == key_b
+
+    def test_cache_key_backward_compat_default_namespace(self):
+        """Default namespace values produce same key as before (backward compat)."""
+        from whitemagic.tools.middleware import _cache_key
+
+        kwargs = {"query": "hello world"}
+        key_default = _cache_key("search", kwargs)
+        key_explicit = _cache_key("search", kwargs, user_id="local", agent_id="default", galaxy="default", policy_profile="default")
+        assert key_default == key_explicit

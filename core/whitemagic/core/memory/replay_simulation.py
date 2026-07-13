@@ -13,15 +13,12 @@ a pure-Python implementation.
 
 from __future__ import annotations
 
-import json
 import logging
 import math
 import os
-import select
-import subprocess
-import threading
-import time
 from typing import Any
+
+from whitemagic.core.acceleration.process_supervisor import ProcessSupervisor
 
 logger = logging.getLogger(__name__)
 
@@ -40,60 +37,36 @@ _STDP_LTD = -0.5     # long-term depression amplitude
 
 
 class _HaskellBridge:
-    """Manages a persistent Haskell subprocess for replay simulation."""
+    """Manages a persistent Haskell subprocess for replay simulation.
+
+    Phase 5: Migrated to ProcessSupervisor for bounded, observable, supervised I/O.
+    """
 
     def __init__(self):
-        self._proc: subprocess.Popen | None = None
-        self._lock = threading.Lock()
-        self._available = False
+        self._supervisor: ProcessSupervisor | None = None
+
+    def _get_supervisor(self) -> ProcessSupervisor:
+        if self._supervisor is None:
+            from whitemagic.core.acceleration.process_supervisor import register
+            self._supervisor = ProcessSupervisor(
+                name="haskell-replay",
+                cmd=["runhaskell", _BRIDGE_PATH],
+                startup_timeout=10.0,
+                call_timeout=5.0,
+                skip_polyglot=True,
+            )
+            register(self._supervisor)
+        return self._supervisor
 
     def _ensure(self) -> bool:
-        if _SKIP_POLYGLOT:
-            return False
-        if self._proc and self._proc.poll() is None:
-            return True
-        try:
-            self._proc = subprocess.Popen(
-                ["runhaskell", _BRIDGE_PATH],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                bufsize=1,
-            )
-            time.sleep(1.0)  # Haskell takes longer to start
-            if self._proc.poll() is None:
-                self._available = True
-                return True
-            self._available = False
-            return False
-        except Exception as e:
-            logger.debug("Haskell replay bridge unavailable: %s", e, exc_info=True)
-            self._available = False
-            return False
+        return self._get_supervisor().is_available()
 
     def call(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        with self._lock:
-            if not self._ensure():
-                return {"status": "fallback", "reason": "haskell_unavailable"}
-            req = json.dumps({"method": method, "params": params or {}})
-            try:
-                self._proc.stdin.write(req + "\n")
-                self._proc.stdin.flush()
-                # Wait up to 5s for response — prevents infinite hang
-                ready, _, _ = select.select([self._proc.stdout], [], [], 5.0)
-                if not ready:
-                    self._available = False
-                    return {"status": "fallback", "reason": "timeout"}
-                line = self._proc.stdout.readline()
-                if not line:
-                    self._available = False
-                    return {"status": "fallback", "reason": "no_response"}
-                return json.loads(line)
-            except Exception as e:
-                logger.debug("Haskell bridge call failed: %s", e, exc_info=True)
-                self._available = False
-                return {"status": "fallback", "reason": str(e)}
+        sup = self._get_supervisor()
+        result = sup.call({"method": method, "params": params or {}})
+        if result.ok and result.data:
+            return result.data
+        return {"status": "fallback", "reason": result.error or "unknown"}
 
 
 # ── Pure Python fallback ──────────────────────────────────────────────────

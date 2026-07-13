@@ -4,6 +4,10 @@
 High-performance bridge using compiled Koka native binaries.
 Faster than subprocess-per-call by using persistent processes.
 
+Phase 5: Migrated to ProcessSupervisor for bounded, observable, supervised I/O.
+Replaces manual process pooling, readline timeout, and circuit breaker with
+the shared ProcessSupervisor abstraction.
+
 Usage:
     from whitemagic.core.acceleration.koka_native_bridge import (
         KokaNativeBridge, koka_dispatch
@@ -14,18 +18,17 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
 import os
-import queue
-import subprocess
 import threading
 import time
 from pathlib import Path
 from typing import Any, cast
 
-from whitemagic.utils.fast_json import dumps_str as _json_dumps
-from whitemagic.utils.fast_json import loads as _json_loads
+from whitemagic.core.acceleration.process_supervisor import (
+    ProcessSupervisor,
+    register,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,218 +63,62 @@ _MODULE_BINS = {
 }
 
 
-class KokaCircuitBreaker:
-    """KokaCircuitBreaker: koka circuit breaker."""
-
-    def __init__(self, failure_threshold: int = 3, reset_timeout: float = 30.0):
-        self.failures = 0
-        self.failure_threshold = failure_threshold
-        self.reset_timeout = reset_timeout
-        self.last_failure_time = 0.0
-        self.state = "CLOSED"  # CLOSED (ok), OPEN (failing), HALF_OPEN (testing)
-        self.lock = threading.Lock()
-
-    def record_failure(self):
-        """
-        Perform the record failure operation.
-        """
-        with self.lock:
-            self.failures += 1
-            self.last_failure_time = time.time()
-            if self.failures >= self.failure_threshold:
-                self.state = "OPEN"
-                logger.warning(
-                    "Koka circuit breaker OPENED after %s failures", self.failures
-                )
-
-    def record_success(self):
-        """
-        Perform the record success operation.
-        """
-        with self.lock:
-            self.failures = 0
-            if self.state != "CLOSED":
-                self.state = "CLOSED"
-                logger.info("Koka circuit breaker RESET to CLOSED")
-
-    def allow_request(self) -> bool:
-        """
-        Perform the allow request operation.
-
-        Returns:
-            bool
-        """
-        with self.lock:
-            if self.state == "CLOSED":
-                return True
-            if self.state == "OPEN":
-                if time.time() - self.last_failure_time > self.reset_timeout:
-                    self.state = "HALF_OPEN"
-                    return True
-                return False
-            # HALF_OPEN allows 1 request through
-            return True
-
-
 class KokaNativeBridge:
     """High-performance bridge to compiled Koka native binaries.
 
-    Uses persistent subprocesses to avoid process startup overhead.
-    Thread-safe with connection pooling.
+    Uses ProcessSupervisor per module for persistent, supervised subprocesses
+    with circuit breakers, process leases, stderr draining, and stats.
     """
 
     def __init__(self, max_connections: int = 4):
         self._lock = threading.RLock()
         self._max_connections = max_connections
-        self._processes: dict[str, list[subprocess.Popen]] = {}
-        self._available: dict[str, list[subprocess.Popen]] = {}
+        self._supervisors: dict[str, ProcessSupervisor] = {}
         self._binaries: dict[str, Path] = {}
-        self._breakers: dict[str, KokaCircuitBreaker] = {}
 
         self._check_binaries()
 
     def _check_binaries(self) -> None:
-        """Verify which Koka binaries are available."""
+        """Verify which Koka binaries are available and create supervisors."""
         for name, path in _MODULE_BINS.items():
             if path.exists() and os.access(path, os.X_OK):
                 self._binaries[name] = path
-                self._available[name] = []
-                if name not in self._breakers:
-                    self._breakers[name] = KokaCircuitBreaker()
+                if name not in self._supervisors:
+                    self._supervisors[name] = ProcessSupervisor(
+                        name=f"koka-{name}",
+                        cmd=["stdbuf", "-o0", "-i0", str(path)],
+                        binary_path=str(path),
+                        max_processes=self._max_connections,
+                        startup_timeout=5.0,
+                        call_timeout=5.0,
+                        skip_polyglot=True,
+                    )
+                    register(self._supervisors[name])
                 logger.info("Koka binary available: %s", name)
             else:
                 logger.debug("Koka binary not found: %s", path)
 
         if _DISPATCHER_BIN.exists() and os.access(_DISPATCHER_BIN, os.X_OK):
             self._binaries["dispatcher"] = _DISPATCHER_BIN
-            self._available["dispatcher"] = []
-            if "dispatcher" not in self._breakers:
-                self._breakers["dispatcher"] = KokaCircuitBreaker()
+            if "dispatcher" not in self._supervisors:
+                self._supervisors["dispatcher"] = ProcessSupervisor(
+                    name="koka-dispatcher",
+                    cmd=["stdbuf", "-o0", "-i0", str(_DISPATCHER_BIN)],
+                    binary_path=str(_DISPATCHER_BIN),
+                    max_processes=self._max_connections,
+                    startup_timeout=5.0,
+                    call_timeout=5.0,
+                    skip_polyglot=True,
+                )
+                register(self._supervisors["dispatcher"])
             logger.info("Koka dispatcher available")
 
     def is_available(self, module: str) -> bool:
         """Check if a Koka module is available and healthy."""
-        if module not in self._binaries:
+        sup = self._supervisors.get(module)
+        if sup is None:
             return False
-
-        with self._lock:
-            if module in self._processes:
-                dead_procs = [
-                    p for p in self._processes[module] if p.poll() is not None
-                ]
-                for p in dead_procs:
-                    self._processes[module].remove(p)
-                    if module in self._available and p in self._available[module]:
-                        self._available[module].remove(p)
-
-            current_alive = len(self._processes.get(module, []))
-            return current_alive > 0 or current_alive < self._max_connections
-
-    def _get_process(self, module: str) -> subprocess.Popen | None:
-        """Get or create a subprocess for the module."""
-        with self._lock:
-            # Clean dead processes from available pool first
-            if self._available.get(module):
-                valid_procs = [p for p in self._available[module] if p.poll() is None]
-                self._available[module] = valid_procs
-                if valid_procs:
-                    return self._available[module].pop()
-
-            # Clean dead processes from total tracked
-            if module in self._processes:
-                self._processes[module] = [
-                    p for p in self._processes[module] if p.poll() is None
-                ]
-
-            current = len(self._processes.get(module, []))
-            if current >= self._max_connections:
-                return None  # Pool exhausted
-
-            # Create new process
-            binary = self._binaries.get(module)
-            if not binary:
-                return None
-
-            try:
-                proc = subprocess.Popen(
-                    ["stdbuf", "-o0", "-i0", str(binary)],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,  # Line buffered
-                )
-
-                # Consume initialization line with timeout (5s for cold starts)
-                init_line = self._readline_with_timeout(proc, 5.0)
-                if not init_line:
-                    logger.error("Koka init timed out for %s", module)
-                    self._discard_process(module, proc)
-                    return None
-                logger.debug("Koka init: %s", init_line.strip())
-
-                if module not in self._processes:
-                    self._processes[module] = []
-                self._processes[module].append(proc)
-
-                return proc
-            except Exception as e:
-                logger.error("Failed to start Koka process for %s: %s", module, e)
-                return None
-
-    def _return_process(self, module: str, proc: subprocess.Popen) -> None:
-        """Return a process to the available pool."""
-        with self._lock:
-            if proc.poll() is None:
-                # Still running
-                self._available[module].append(proc)
-
-    def _discard_process(self, module: str, proc: subprocess.Popen) -> None:
-        """Remove and terminate a process that timed out or became unhealthy."""
-        with self._lock:
-            if module in self._available and proc in self._available[module]:
-                self._available[module].remove(proc)
-            if module in self._processes and proc in self._processes[module]:
-                self._processes[module].remove(proc)
-        try:
-            proc.terminate()
-            proc.wait(timeout=1.0)
-        except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-            try:
-                proc.kill()
-            except (ProcessLookupError, OSError):
-                logger.debug("Swallowed exception", exc_info=True)
-
-    def _readline_with_timeout(
-        self, proc: subprocess.Popen, timeout: float
-    ) -> str | None:
-        """Read a single line from a process stdout with a hard timeout."""
-        if proc.stdout is None:
-            return None
-
-        result_queue: queue.Queue[str | None] = queue.Queue(maxsize=1)
-
-        def _reader() -> None:
-            try:
-                stdout = proc.stdout
-                if stdout is not None:
-                    line = stdout.readline()
-                    result_queue.put(line)
-                else:
-                    result_queue.put(None)
-            except Exception as e:
-                logger.debug("Operation failed: %s", e)
-                result_queue.put(None)
-
-        thread = threading.Thread(target=_reader, name="wm-koka-readline", daemon=True)
-        thread.start()
-        try:
-            res = result_queue.get(timeout=timeout)
-            # Give thread a chance to finish cleanly
-            thread.join(0.1)
-            return res
-        except queue.Empty:
-            return None
+        return sup.is_available()
 
     def dispatch(
         self, module: str, operation: str, args: dict[str, Any], timeout: float = 5.0
@@ -287,86 +134,27 @@ class KokaNativeBridge:
         Returns:
             Parsed JSON response or None on failure
         """
-
-        if not self.is_available(module):
+        sup = self._supervisors.get(module)
+        if sup is None:
             logger.debug("Koka module not available: %s", module)
             return None
 
-        breaker = self._breakers.get(module)
-        if breaker and not breaker.allow_request():
-            logger.warning(
-                "Koka circuit breaker OPEN for %s - skipping dispatch", module
+        request = {
+            "module": module,
+            "operation": operation,
+            "args": args,
+            "timestamp": time.time(),
+        }
+        result = sup.call(request, timeout=timeout)
+        if result.ok and result.data:
+            data = cast(dict[str, Any], result.data)
+            data["_koka_latency_ms"] = result.latency_ms
+            return data
+        if result.fallback:
+            logger.debug(
+                "Koka dispatch fallback for %s.%s: %s", module, operation, result.error
             )
-            return None
-
-        proc = self._get_process(module)
-        if not proc:
-            logger.warning("Koka process pool exhausted for %s", module)
-            if breaker:
-                breaker.record_failure()
-            return None
-
-        try:
-            # Build request
-            request = {
-                "module": module,
-                "operation": operation,
-                "args": args,
-                "timestamp": time.time(),
-            }
-
-            # Send request
-            request_json = _json_dumps(request)
-            if proc.stdin is not None:
-                proc.stdin.write(request_json + "\n")
-                proc.stdin.flush()
-            else:
-                logger.error("Koka process stdin is None for %s", module)
-                return None
-
-            # Read response with timeout
-            start = time.time()
-            response_line = self._readline_with_timeout(proc, timeout)
-            elapsed = time.time() - start
-
-            if not response_line:
-                logger.error(
-                    "Koka process timed out or returned no response for %s.%s",
-                    module,
-                    operation,
-                )
-                if breaker:
-                    breaker.record_failure()
-                self._discard_process(module, proc)
-                return None
-
-            try:
-                response = _json_loads(response_line)
-                if isinstance(response, dict):
-                    response["_koka_latency_ms"] = elapsed * 1000
-                    if breaker:
-                        breaker.record_success()
-                    return cast(dict[str, Any], response)
-                return None
-            except json.JSONDecodeError as e:
-                logger.error("Invalid JSON from Koka: %s", e)
-                if breaker:
-                    breaker.record_failure()
-                return None
-
-        except subprocess.TimeoutExpired:
-            logger.error("Koka call timed out: %s.%s", module, operation)
-            if breaker:
-                breaker.record_failure()
-            return None
-        except Exception as e:
-            logger.error("Koka dispatch error: %s", e)
-            if breaker:
-                breaker.record_failure()
-            return None
-        finally:
-            if proc.poll() is None:
-                self._return_process(module, proc)
+        return None
 
     def dispatch_line(
         self, module: str, command: str, timeout: float = 5.0
@@ -381,53 +169,15 @@ class KokaNativeBridge:
         Returns:
             Raw response string (e.g., "ok:closed") or None on failure
         """
-        if not self.is_available(module):
+        sup = self._supervisors.get(module)
+        if sup is None:
             logger.debug("Koka module not available: %s", module)
             return None
 
-        breaker = self._breakers.get(module)
-        if breaker and not breaker.allow_request():
-            logger.warning(
-                "Koka circuit breaker OPEN for %s - skipping dispatch", module
-            )
-            return None
-
-        proc = self._get_process(module)
-        if not proc:
-            logger.warning("Koka process pool exhausted for %s", module)
-            if breaker:
-                breaker.record_failure()
-            return None
-
-        try:
-            if proc.stdin is not None:
-                proc.stdin.write(command + "\n")
-                proc.stdin.flush()
-            else:
-                logger.error("Koka process stdin is None for %s", module)
-                return None
-
-            response_line = self._readline_with_timeout(proc, timeout)
-
-            if not response_line:
-                logger.error("Koka process timed out for %s.%s", module, command)
-                if breaker:
-                    breaker.record_failure()
-                self._discard_process(module, proc)
-                return None
-
-            if breaker:
-                breaker.record_success()
-            return response_line.strip()
-
-        except Exception as e:
-            logger.error("Koka dispatch_line error: %s", e)
-            if breaker:
-                breaker.record_failure()
-            return None
-        finally:
-            if proc.poll() is None:
-                self._return_process(module, proc)
+        result = sup.call_line(command, timeout=timeout)
+        if result.ok and result.data:
+            return result.data.get("response")
+        return None
 
     def dispatch_karmic(
         self,
@@ -442,16 +192,6 @@ class KokaNativeBridge:
         Sends declared and actual effect signatures to the Koka karmic_effects
         module, which compares them using Koka's type system and returns
         mismatch information + debt calculation.
-
-        Args:
-            tool: Tool name being dispatched.
-            params: Tool parameters.
-            declared_effects: List of declared effect dicts (effect_type, target, declared).
-            actual_effects: List of actual effect dicts.
-            timeout: Maximum seconds to wait.
-
-        Returns:
-            Karmic result dict with mismatch, debt, and mismatches fields.
         """
         args = {
             "tool": tool,
@@ -464,15 +204,9 @@ class KokaNativeBridge:
     def close(self) -> None:
         """Close all Koka processes."""
         with self._lock:
-            for module, procs in self._processes.items():
-                for proc in procs:
-                    try:
-                        proc.terminate()
-                        proc.wait(timeout=1.0)
-                    except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-                        proc.kill()
-            self._processes.clear()
-            self._available.clear()
+            for sup in self._supervisors.values():
+                sup.close()
+            self._supervisors.clear()
 
     def backpressure_admit(self, priority: int = 0) -> bool | None:
         """Request admission under backpressure control."""
@@ -595,6 +329,17 @@ class KokaNativeBridge:
             return resp[3:]
         return None
 
+    def health_check(self) -> dict[str, Any]:
+        """Return health check for all Koka modules."""
+        modules = {}
+        for name, sup in self._supervisors.items():
+            modules[name] = sup.health_check()
+        return {
+            "available_modules": list(self._binaries.keys()),
+            "max_connections": self._max_connections,
+            "modules": modules,
+        }
+
 
 # Global bridge instance
 _bridge: KokaNativeBridge | None = None
@@ -617,27 +362,13 @@ def koka_dispatch(
     args: dict[str, Any] | None = None,
     timeout: float = 5.0,
 ) -> dict[str, Any] | None:
-    """Convenience function to dispatch to Koka.
-
-    Args:
-        module: Koka module name
-        operation: Effect operation
-        args: Arguments dict (default: empty)
-        timeout: Maximum wait time
-
-    Returns:
-        Response dict or None on failure
-    """
+    """Convenience function to dispatch to Koka."""
     bridge = get_koka_bridge()
     return bridge.dispatch(module, operation, args or {}, timeout)
 
 
 def koka_native_status() -> dict[str, Any]:
-    """Get status of Koka native bridge.
-
-    Returns:
-        Dict with available modules, process counts, etc.
-    """
+    """Get status of Koka native bridge."""
     bridge = get_koka_bridge()
 
     # Also check hybrid dispatcher status
@@ -659,10 +390,12 @@ def koka_native_status() -> dict[str, Any]:
             "available_modules": list(bridge._binaries.keys()),
             "process_pools": {
                 name: {
-                    "total": len(procs),
-                    "available": len(bridge._available.get(name, [])),
+                    "total": len(sup._processes),
+                    "available": len(sup._available),
+                    "health": sup.health_state.value,
+                    "stats": sup.stats.to_dict(),
                 }
-                for name, procs in bridge._processes.items()
+                for name, sup in bridge._supervisors.items()
             },
             "max_connections": bridge._max_connections,
             "hybrid_dispatcher": hybrid_status,
@@ -687,10 +420,7 @@ class KokaPratRouter:
     def route_via_koka(
         self, gana_name: str, tool_name: str, args: dict[str, Any]
     ) -> dict[str, Any] | None:
-        """Route a PRAT call through Koka handlers.
-
-        Falls back to Python if Koka unavailable.
-        """
+        """Route a PRAT call through Koka handlers."""
         if not self._bridge.is_available("prat"):
             return None
 
@@ -712,11 +442,7 @@ class KokaPratRouter:
 def benchmark_koka_dispatch(
     module: str, operation: str, args: dict[str, Any], iterations: int = 1000
 ) -> dict[str, Any]:
-    """Benchmark Koka dispatch latency.
-
-    Returns:
-        Dict with min, max, avg, p50, p99 latencies in microseconds
-    """
+    """Benchmark Koka dispatch latency."""
     bridge = get_koka_bridge()
 
     if not bridge.is_available(module):
@@ -757,11 +483,11 @@ def benchmark_koka_dispatch(
 class KokaCircuitDispatch:
     """Python bridge to the Koka circuit_dispatch binary.
 
-    Uses a persistent subprocess with line protocol (op:name:args).
+    Uses ProcessSupervisor with line protocol for supervised I/O.
     State is maintained inside the Koka handler scope, so circuit
     breaker state persists across calls within the same process.
 
-    Protocol: "op:name:arg1:arg2:..."
+    Protocol: "op:name:args"
     Response: "ok:result" or "error:message"
     """
 
@@ -769,10 +495,7 @@ class KokaCircuitDispatch:
     _init_lock = threading.Lock()
 
     def __init__(self) -> None:
-        self._lock = threading.RLock()
-        self._proc: subprocess.Popen | None = None
-        self._binary = _BASE_DIR / "circuit"
-        self._started = False
+        self._supervisor: ProcessSupervisor | None = None
 
     @classmethod
     def get_instance(cls) -> KokaCircuitDispatch:
@@ -782,76 +505,25 @@ class KokaCircuitDispatch:
                     cls._instance = KokaCircuitDispatch()
         return cls._instance
 
-    def _ensure_running(self) -> bool:
-        """Start the subprocess if not running."""
-        if self._proc is not None and self._proc.poll() is None:
-            return True
-
-        if os.environ.get("WM_SKIP_POLYGLOT", ""):
-            return False
-
-        if not self._binary.exists() or not os.access(self._binary, os.X_OK):
-            return False
-
-        try:
-            self._proc = subprocess.Popen(
-                ["stdbuf", "-o0", "-i0", str(self._binary)],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
+    def _get_supervisor(self) -> ProcessSupervisor:
+        if self._supervisor is None:
+            self._supervisor = ProcessSupervisor(
+                name="koka-circuit-dispatch",
+                cmd=["stdbuf", "-o0", "-i0", str(_BASE_DIR / "circuit_dispatch")],
+                binary_path=str(_BASE_DIR / "circuit_dispatch"),
+                startup_timeout=5.0,
+                call_timeout=5.0,
+                skip_polyglot=True,
             )
-            self._started = True
-            logger.info("KokaCircuitDispatch started")
-            return True
-        except Exception as e:
-            logger.error("Failed to start circuit_dispatch: %s", e)
-            return False
-
-    def _readline_timeout(self, timeout: float = 5.0) -> str | None:
-        """Read a line from stdout with a timeout to avoid hangs."""
-        if self._proc is None or self._proc.stdout is None:
-            return None
-        result_q: queue.Queue[str | None] = queue.Queue(maxsize=1)
-
-        def _reader() -> None:
-            try:
-                proc = self._proc
-                if proc and proc.stdout:
-                    result_q.put(proc.stdout.readline())
-                else:
-                    result_q.put(None)
-            except Exception:
-                result_q.put(None)
-
-        t = threading.Thread(target=_reader, name="koka-circuit-read", daemon=True)
-        t.start()
-        try:
-            return result_q.get(timeout=timeout)
-        except Exception:
-            return None
+            register(self._supervisor)
+        return self._supervisor
 
     def _send(self, line: str) -> str | None:
         """Send a line and read the response."""
-        with self._lock:
-            if not self._ensure_running():
-                return None
-            assert self._proc is not None
-            assert self._proc.stdin is not None
-            assert self._proc.stdout is not None
-
-            try:
-                self._proc.stdin.write(line + "\n")
-                self._proc.stdin.flush()
-                response = self._readline_timeout(5.0)
-                if not response:
-                    return None
-                return response.strip()
-            except (BrokenPipeError, OSError, ValueError) as e:
-                logger.debug("circuit_dispatch I/O error: %s", e)
-                self._proc = None
-                return None
+        result = self._get_supervisor().call_line(line)
+        if result.ok and result.data:
+            return result.data.get("response")
+        return None
 
     def check(self, name: str) -> str:
         """Check circuit state. Returns 'closed', 'open', or 'half-open'."""
@@ -882,16 +554,6 @@ class KokaCircuitDispatch:
         return self.check(name) == "open"
 
     def close(self) -> None:
-        with self._lock:
-            if self._proc is not None:
-                try:
-                    if self._proc.stdin is not None:
-                        self._proc.stdin.write("quit\n")
-                        self._proc.stdin.flush()
-                    self._proc.wait(timeout=2.0)
-                except (subprocess.TimeoutExpired, BrokenPipeError, OSError):
-                    try:
-                        self._proc.kill()
-                    except (ProcessLookupError, OSError):
-                        logger.debug("Swallowed exception", exc_info=True)
-                self._proc = None
+        if self._supervisor is not None:
+            self._supervisor.close()
+            self._supervisor = None

@@ -5,7 +5,8 @@
 Implements batch IPC protocol to reduce per-command overhead.
 Instead of N round-trips for N commands, we use 1 write + N reads.
 
-Target: batch of 10 commands < 5x single command latency (ideally ~1.5x)
+Phase 5: Migrated to ProcessSupervisor for bounded, observable, supervised I/O.
+Uses acquire_lease for process access, supervisor's readline for timeout safety.
 
 Usage:
     from whitemagic.core.acceleration.koka_batch_client import (
@@ -13,25 +14,14 @@ Usage:
     )
 
     client = KokaBatchClient()
-
-    # Single command (backward compatible)
     result = client.execute("emit", {"type": "memory_created"})
-
-    # Batch commands
-    batch = [
-        BatchCommand("emit", {"type": "memory_created"}),
-        BatchCommand("emit", {"type": "memory_updated"}),
-        BatchCommand("status", {}),
-    ]
+    batch = [BatchCommand("emit", {"type": "memory_created"})]
     results = client.execute_batch(batch)
 """
 
 from __future__ import annotations
 
 import logging
-import queue
-import subprocess
-import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -39,6 +29,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, cast
 
+from whitemagic.core.acceleration.process_supervisor import (
+    ProcessSupervisor,
+    register,
+)
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
@@ -47,14 +41,7 @@ _DEFAULT_BATCH_READ_TIMEOUT_S = 5.0
 
 
 class BatchMode(Enum):
-    """BatchMode: batch mode.
-
-    Enumeration.
-
-    Members:
-        SEQUENTIAL
-        PARALLEL"""
-
+    """BatchMode: batch mode."""
     SEQUENTIAL = "sequential"
     PARALLEL = "parallel"
 
@@ -62,29 +49,17 @@ class BatchMode(Enum):
 @dataclass
 class BatchCommand:
     """A single command in a batch."""
-
     op: str
     payload: dict[str, Any] = field(default_factory=dict)
-    id: int = 0  # Assigned by client
+    id: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        """
-        Convert to/from dict.
-
-        Returns:
-            dict[str, Any]
-        """
-        return {
-            "id": self.id,
-            "op": self.op,
-            "payload": _json_dumps(self.payload),
-        }
+        return {"id": self.id, "op": self.op, "payload": _json_dumps(self.payload)}
 
 
 @dataclass
 class BatchResult:
     """Result of a single command execution."""
-
     id: int
     status: str
     result: dict[str, Any]
@@ -92,16 +67,6 @@ class BatchResult:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BatchResult:
-        """
-        Convert to/from m dict.
-
-        Args:
-            cls: Parameter description.
-            data: Parameter description.
-
-        Returns:
-            BatchResult
-        """
         return cls(
             id=data.get("id", 0),
             status=data.get("status", "unknown"),
@@ -113,7 +78,6 @@ class BatchResult:
 @dataclass
 class BatchResponse:
     """Response from a batch execution."""
-
     request_id: str
     results: list[BatchResult]
     total_latency_ms: float
@@ -121,16 +85,6 @@ class BatchResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BatchResponse:
-        """
-        Convert to/from m dict.
-
-        Args:
-            cls: Parameter description.
-            data: Parameter description.
-
-        Returns:
-            BatchResponse
-        """
         return cls(
             request_id=data.get("request_id", ""),
             results=[BatchResult.from_dict(r) for r in data.get("results", [])],
@@ -142,11 +96,7 @@ class BatchResponse:
 class KokaBatchClient:
     """High-performance batch IPC client for Koka binaries.
 
-    Features:
-    - Batch command execution (10x latency reduction target)
-    - Connection pooling with lazy initialization
-    - Automatic fallback to single-command mode
-    - Health monitoring and auto-restart
+    Uses ProcessSupervisor for process lifecycle, leasing, and supervised I/O.
     """
 
     def __init__(
@@ -155,21 +105,17 @@ class KokaBatchClient:
         max_connections: int = 4,
         auto_start: bool = True,
     ):
-        self._lock = threading.Lock()
         self._max_connections = max_connections
-        self._processes: list[subprocess.Popen] = []
-        self._available: list[subprocess.Popen] = []
 
-        # Find binary
         if binary_path:
             self._binary_path = Path(binary_path)
         else:
             base = (
                 Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-koka"
             )
-            self._binary_path = base / "batch_ipc"  # Compiled binary name
+            self._binary_path = base / "batch_ipc"
 
-        self._started = False
+        self._supervisor: ProcessSupervisor | None = None
         self._stats = {
             "total_commands": 0,
             "total_batches": 0,
@@ -180,109 +126,26 @@ class KokaBatchClient:
         if auto_start:
             self._ensure_started()
 
+    def _get_supervisor(self) -> ProcessSupervisor:
+        if self._supervisor is None:
+            self._supervisor = ProcessSupervisor(
+                name="koka-batch",
+                cmd=["stdbuf", "-o0", "-i0", str(self._binary_path)],
+                binary_path=str(self._binary_path),
+                max_processes=self._max_connections,
+                startup_timeout=2.0,
+                call_timeout=30.0,
+                skip_polyglot=True,
+            )
+            register(self._supervisor)
+        return self._supervisor
+
     def _ensure_started(self) -> bool:
         """Ensure at least one process is running."""
-        with self._lock:
-            if self._started and self._available:
-                return True
-
-            if not self._binary_path.exists():
-                logger.debug("Koka batch binary not found: %s", self._binary_path)
-                return False
-
-            try:
-                proc = subprocess.Popen(
-                    ["stdbuf", "-o0", "-i0", str(self._binary_path)],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,  # Line buffered
-                )
-
-                # Read startup banner
-                banner = self._readline_with_timeout(proc, timeout=2.0)
-                if banner and ("started" in banner or "batch_ipc" in banner):
-                    self._processes.append(proc)
-                    self._available.append(proc)
-                    self._started = True
-                    logger.info("Koka batch client started: %s", self._binary_path)
-                    return True
-                else:
-                    logger.warning(
-                        "Unexpected startup from Koka: %s", (banner or "")[:100]
-                    )
-                    self._discard_process(proc)
-                    return False
-
-            except Exception as e:
-                logger.error("Failed to start Koka batch process: %s", e)
-                return False
-
-    def _get_process(self) -> subprocess.Popen | None:
-        """Get an available process from the pool."""
-        with self._lock:
-            if self._available:
-                return self._available.pop()
-
-            if len(self._processes) < self._max_connections:
-                if self._ensure_started():
-                    if self._available:
-                        return self._available.pop()
-
-            return None
-
-    def _return_process(self, proc: subprocess.Popen) -> None:
-        """Return a process to the pool."""
-        with self._lock:
-            if proc.poll() is None:
-                # Still running
-                self._available.append(proc)
-
-    def _discard_process(self, proc: subprocess.Popen) -> None:
-        """Remove and terminate a timed-out or unhealthy process."""
-        with self._lock:
-            if proc in self._available:
-                self._available.remove(proc)
-            if proc in self._processes:
-                self._processes.remove(proc)
-        try:
-            proc.terminate()
-            proc.wait(timeout=1.0)
-        except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-            try:
-                proc.kill()
-            except (ProcessLookupError, OSError):
-                logger.debug("Swallowed exception", exc_info=True)
-
-    def _readline_with_timeout(
-        self, proc: subprocess.Popen, timeout: float = _DEFAULT_BATCH_READ_TIMEOUT_S
-    ) -> str | None:
-        if proc.stdout is None:
-            return None
-
-        result_queue: queue.Queue[str | None] = queue.Queue(maxsize=1)
-
-        def _reader() -> None:
-            try:
-                stdout = proc.stdout
-                if stdout is not None:
-                    result_queue.put(stdout.readline())
-                else:
-                    result_queue.put(None)
-            except Exception as e:
-                logger.debug("Operation failed: %s", e)
-                result_queue.put(None)
-
-        thread = threading.Thread(
-            target=_reader, name="wm-koka-batch-readline", daemon=True
-        )
-        thread.start()
-
-        try:
-            return result_queue.get(timeout=timeout)
-        except queue.Empty:
-            return None
+        if not self._binary_path.exists():
+            logger.debug("Koka batch binary not found: %s", self._binary_path)
+            return False
+        return self._get_supervisor().is_available()
 
     def execute(
         self,
@@ -290,52 +153,15 @@ class KokaBatchClient:
         payload: dict[str, Any] | None = None,
         timeout: float = 5.0,
     ) -> dict[str, Any]:
-        """Execute a single command (backward compatible with non-batch IPC).
-
-        Args:
-            op: Operation name (e.g., "emit", "status", "count")
-            payload: Command payload
-            timeout: Maximum wait time in seconds
-
-        Returns:
-            Response dict with status and result
-        """
-        proc = self._get_process()
-        if not proc:
-            return {"error": "no_process_available", "status": "failed"}
-
-        try:
-            request = {
-                "op": op,
-                "payload": _json_dumps(payload or {}),
-            }
-
-            stdin = proc.stdin
-            if stdin is None:
-                return {"error": "stdin_unavailable", "status": "failed"}
-
-            stdin.write(_json_dumps(request) + "\n")
-            stdin.flush()
-
-            response_line = self._readline_with_timeout(proc, timeout=timeout)
-
-            if response_line:
-                result = _json_loads(response_line)
-                self._stats["total_commands"] += 1
-                return cast(dict[str, Any], result)
-            else:
-                self._stats["errors"] += 1
-                self._discard_process(proc)
-                return {"error": "no_response", "status": "failed"}
-
-        except Exception as e:
-            self._stats["errors"] += 1
-            self._discard_process(proc)
-            logger.error("Koka execute error: %s", e)
-            return {"error": str(e), "status": "failed"}
-        finally:
-            if proc.poll() is None:
-                self._return_process(proc)
+        """Execute a single command (backward compatible with non-batch IPC)."""
+        sup = self._get_supervisor()
+        request = {"op": op, "payload": _json_dumps(payload or {})}
+        result = sup.call(request, timeout=timeout)
+        if result.ok and result.data:
+            self._stats["total_commands"] += 1
+            return cast(dict[str, Any], result.data)
+        self._stats["errors"] += 1
+        return {"error": result.error or "unknown", "status": "failed"}
 
     def execute_batch(
         self,
@@ -345,19 +171,11 @@ class KokaBatchClient:
     ) -> BatchResponse:
         """Execute multiple commands in a single batch.
 
-        This is the key optimization: instead of N round-trips,
-        we send all commands in one write and read all responses.
-
-        Args:
-            commands: List of BatchCommand objects
-            mode: Execution mode (sequential or parallel)
-            timeout: Maximum wait time for entire batch
-
-        Returns:
-            BatchResponse with results for each command
+        Uses acquire_lease to get exclusive process access, then does
+        a single write + single read for all commands.
         """
-        proc = self._get_process()
-        if not proc:
+        sup = self._get_supervisor()
+        if not sup.is_available():
             return BatchResponse(
                 request_id="",
                 results=[
@@ -371,65 +189,69 @@ class KokaBatchClient:
         start_time = time.perf_counter()
         request_id = str(uuid.uuid4())[:8]
 
-        # Assign IDs to commands
         for i, cmd in enumerate(commands):
             cmd.id = i
 
-        try:
-            # Build batch request
-            request = {
-                "mode": mode.value,
-                "request_id": request_id,
-                "commands": [cmd.to_dict() for cmd in commands],
-            }
+        request = {
+            "mode": mode.value,
+            "request_id": request_id,
+            "commands": [cmd.to_dict() for cmd in commands],
+        }
 
-            # Single write for all commands
-            stdin = proc.stdin
-            if stdin is None:
-                elapsed_ms = (time.perf_counter() - start_time) * 1000
-                return BatchResponse(
-                    request_id=request_id,
-                    results=[
-                        BatchResult(i, "failed", {"error": "stdin_unavailable"}, 0.0)
-                        for i in range(len(commands))
-                    ],
-                    total_latency_ms=elapsed_ms,
-                    commands_processed=0,
-                )
-
-            stdin.write(_json_dumps(request) + "\n")
-            stdin.flush()
-
-            # Read response (single read for all results)
-            response_line = self._readline_with_timeout(proc, timeout=timeout)
+        lease = sup.acquire_lease(timeout=1.0)
+        if lease is None:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
+            return BatchResponse(
+                request_id=request_id,
+                results=[
+                    BatchResult(i, "failed", {"error": "pool_exhausted"}, 0.0)
+                    for i in range(len(commands))
+                ],
+                total_latency_ms=elapsed_ms,
+                commands_processed=0,
+            )
 
-            if response_line:
-                data = _json_loads(response_line)
-                response = BatchResponse.from_dict(data)
+        try:
+            with lease as proc:
+                if proc.stdin is None:
+                    elapsed_ms = (time.perf_counter() - start_time) * 1000
+                    return BatchResponse(
+                        request_id=request_id,
+                        results=[
+                            BatchResult(i, "failed", {"error": "stdin_unavailable"}, 0.0)
+                            for i in range(len(commands))
+                        ],
+                        total_latency_ms=elapsed_ms,
+                        commands_processed=0,
+                    )
 
-                # Update stats
-                self._stats["total_commands"] += len(commands)
-                self._stats["total_batches"] += 1
-                self._stats["total_latency_ms"] += elapsed_ms
+                proc.stdin.write(_json_dumps(request) + "\n")
+                proc.stdin.flush()
 
-                return response
-            else:
-                self._stats["errors"] += 1
-                self._discard_process(proc)
-                return BatchResponse(
-                    request_id=request_id,
-                    results=[
-                        BatchResult(i, "failed", {"error": "no_response"}, 0.0)
-                        for i in range(len(commands))
-                    ],
-                    total_latency_ms=elapsed_ms,
-                    commands_processed=0,
-                )
+                response_line = sup._readline_with_timeout(proc, timeout=timeout)
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
 
+                if response_line:
+                    data = _json_loads(response_line)
+                    response = BatchResponse.from_dict(data)
+                    self._stats["total_commands"] += len(commands)
+                    self._stats["total_batches"] += 1
+                    self._stats["total_latency_ms"] += elapsed_ms
+                    return response
+                else:
+                    self._stats["errors"] += 1
+                    # Process will be discarded by lease release
+                    return BatchResponse(
+                        request_id=request_id,
+                        results=[
+                            BatchResult(i, "failed", {"error": "no_response"}, 0.0)
+                            for i in range(len(commands))
+                        ],
+                        total_latency_ms=elapsed_ms,
+                        commands_processed=0,
+                    )
         except Exception as e:
             self._stats["errors"] += 1
-            self._discard_process(proc)
             logger.error("Koka batch execute error: %s", e)
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             return BatchResponse(
@@ -441,9 +263,6 @@ class KokaBatchClient:
                 total_latency_ms=elapsed_ms,
                 commands_processed=0,
             )
-        finally:
-            if proc.poll() is None:
-                self._return_process(proc)
 
     def health_check(self) -> dict[str, Any]:
         """Check if the batch client is healthy."""
@@ -457,45 +276,26 @@ class KokaBatchClient:
 
     def stats(self) -> dict[str, Any]:
         """Get client statistics."""
+        sup = self._supervisor
         return {
             **self._stats,
             "avg_latency_ms": (
                 self._stats["total_latency_ms"] / max(1, self._stats["total_commands"])
             ),
-            "available_processes": len(self._available),
-            "total_processes": len(self._processes),
+            "available_processes": len(sup._available) if sup else 0,
+            "total_processes": len(sup._processes) if sup else 0,
         }
 
     def close(self) -> None:
         """Close all processes."""
-        with self._lock:
-            for proc in self._processes:
-                try:
-                    stdin = proc.stdin
-                    if stdin is not None:
-                        stdin.write(_json_dumps({"op": "quit"}) + "\n")
-                        stdin.flush()
-                    proc.wait(timeout=2.0)
-                except (
-                    subprocess.TimeoutExpired,
-                    ProcessLookupError,
-                    OSError,
-                    BrokenPipeError,
-                ):
-                    proc.terminate()
-                    try:
-                        proc.wait(timeout=1.0)
-                    except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-                        proc.kill()
-
-            self._processes.clear()
-            self._available.clear()
-            self._started = False
+        if self._supervisor is not None:
+            self._supervisor.close()
+            self._supervisor = None
 
 
 # Global client instance
 _client: KokaBatchClient | None = None
-_client_lock = threading.Lock()
+_client_lock = __import__("threading").Lock()
 
 
 def get_batch_client() -> KokaBatchClient:
@@ -520,16 +320,10 @@ def benchmark_batch_vs_single(
     iterations: int = 100,
     batch_size: int = 10,
 ) -> dict[str, Any]:
-    """Benchmark batch IPC vs single command IPC.
-
-    Target: batch of 10 commands < 5x single command latency
-
-    Returns:
-        Dict with benchmark results
-    """
+    """Benchmark batch IPC vs single command IPC."""
     client = get_batch_client()
 
-    if not client._started:
+    if client._supervisor is None or not client._supervisor.is_available():
         return {"error": "Koka batch client not available"}
 
     results: dict[str, Any] = {
@@ -539,18 +333,15 @@ def benchmark_batch_vs_single(
         "batch_latencies_us": [],
     }
 
-    # Warmup
     for _ in range(10):
         client.execute("ping", {})
 
-    # Benchmark single commands
     for _ in range(iterations):
         start = time.perf_counter()
         client.execute("ping", {})
         elapsed_us = (time.perf_counter() - start) * 1_000_000
         results["single_latencies_us"].append(elapsed_us)
 
-    # Benchmark batch commands
     batch = [BatchCommand("ping", {}) for _ in range(batch_size)]
 
     for _ in range(iterations):
@@ -559,13 +350,10 @@ def benchmark_batch_vs_single(
         elapsed_us = (time.perf_counter() - start) * 1_000_000
         results["batch_latencies_us"].append(elapsed_us)
 
-    # Calculate stats
     single_avg = sum(results["single_latencies_us"]) / len(
         results["single_latencies_us"]
     )
     batch_avg = sum(results["batch_latencies_us"]) / len(results["batch_latencies_us"])
-
-    # Per-command comparison
     single_per_cmd = single_avg
     batch_per_cmd = batch_avg / batch_size
 
@@ -575,6 +363,6 @@ def benchmark_batch_vs_single(
     results["speedup_factor"] = (
         single_per_cmd / batch_per_cmd if batch_per_cmd > 0 else 0
     )
-    results["target_met"] = results["speedup_factor"] >= 2.0  # 10 commands < 5x single
+    results["target_met"] = results["speedup_factor"] >= 2.0
 
     return results
