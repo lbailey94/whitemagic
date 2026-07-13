@@ -91,7 +91,7 @@ platformdirs==4.5.1
 pluggy==1.6.0
 prometheus_client==0.24.1
 propcache==0.4.1
-py-key-value-aio==0.3.0
+py-key-value-aio==0.4.5
 py-key-value-shared==0.3.0
 pycparser==3.0
 pydantic==2.12.5
