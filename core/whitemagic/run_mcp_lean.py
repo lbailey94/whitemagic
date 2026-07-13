@@ -144,7 +144,7 @@ _INIT_LOCK = threading.Lock()
 
 def _ensure_init() -> None:
     """One-shot heavy initialisation (DB, singletons, Rust bridge)."""
-    global _INITIALISED
+    global _INITIALISED, _INSTRUCTIONS
     if _INITIALISED:
         return
     with _INIT_LOCK:
@@ -269,7 +269,6 @@ def _ensure_init() -> None:
                     continuity_block += f"- **Where we left off**: {where}\n"
                 continuity_block += "\nUse this context to maintain continuity with the previous session.\n"
 
-                global _INSTRUCTIONS
                 _INSTRUCTIONS = _INSTRUCTIONS + continuity_block
                 # Update the live server instance if it exists
                 try:
@@ -281,6 +280,26 @@ def _ensure_init() -> None:
                 logger.info("Citta continuity injected into server instructions (session %d)", ctx.get("session_count", 0))
         except Exception:
             logger.debug("Citta continuity injection skipped", exc_info=True)
+
+        # ── Current work state: inject live task/file/next-steps context ──
+        # This gives the AI client an accurate picture of what's happening now,
+        # replacing reliance on static .md docs for short-term context.
+        try:
+            from whitemagic.core.memory.current_state import get_state_tracker
+
+            state_tracker = get_state_tracker()
+            state_block = state_tracker.get_context_block()
+            if state_block.strip():
+                _INSTRUCTIONS = _INSTRUCTIONS + "\n\n---\n" + state_block
+                try:
+                    srv = server._srv
+                    if srv is not None:
+                        srv.instructions = _INSTRUCTIONS
+                except Exception:
+                    pass
+                logger.info("Current work state injected into server instructions")
+        except Exception:
+            logger.debug("Current state injection skipped", exc_info=True)
 
         _INITIALISED = True
 

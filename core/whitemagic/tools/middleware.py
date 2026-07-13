@@ -1602,6 +1602,7 @@ _SESSION_RECORD_SKIP = frozenset({
     "session.search", "session.memory_stats", "session.backfill",
     "consciousness.coherence", "consciousness.depth", "consciousness.status",
     "citta.sensorium", "citta.continuity", "citta.cycle", "citta.stream_summary",
+    "state.current", "state.update", "state.context",
 })
 
 
@@ -1652,22 +1653,59 @@ def mw_session_recorder(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             status = "success"
             if isinstance(result, dict):
                 status = str(result.get("status", "success"))
-            content_preview = f"Tool: {tool} → {status}"
+
+            # Build meaningful content from tool args
+            arg_summary = ""
+            for key in ("content", "query", "description", "title", "message", "text", "command"):
+                val = ctx.kwargs.get(key)
+                if val and isinstance(val, str) and len(val) > 5:
+                    arg_summary = val[:200]
+                    break
+
             if status == "error":
                 turn_type = "error"
                 importance = 0.7
+                error_detail = ""
+                if isinstance(result, dict):
+                    error_detail = str(result.get("error", result.get("error_message", "")))[:200]
+                content_preview = f"Error in {tool}: {error_detail}" if error_detail else f"Tool: {tool} → error"
             elif any(kw in tool for kw in ("create", "store", "save", "write", "update", "record")):
                 turn_type = "code_change"
                 importance = 0.6
+                content_preview = arg_summary if arg_summary else f"Tool: {tool} → {status}"
             elif any(kw in tool for kw in ("search", "recall", "read", "list", "status")):
                 turn_type = "context"
                 importance = 0.3
+                content_preview = arg_summary if arg_summary else f"Tool: {tool} → {status}"
+            else:
+                content_preview = arg_summary if arg_summary else f"Tool: {tool} → {status}"
 
         recorder.record_ai(
             content=content_preview,
             turn_type=turn_type,
             importance=importance,
         )
+
+        # Auto-update current state tracker for meaningful events
+        if status != "error":
+            try:
+                from whitemagic.core.memory.current_state import get_state_tracker
+                tracker = get_state_tracker()
+
+                # Track file modifications
+                file_path = ctx.kwargs.get("file_path") or ctx.kwargs.get("path")
+                if file_path and any(kw in tool for kw in ("write", "edit", "create", "save", "update")):
+                    tracker.record_file_modification(
+                        str(file_path),
+                        description=arg_summary[:100] if arg_summary else "",
+                    )
+
+                # Track errors in state
+                if status == "error":
+                    tracker.record_error(f"{tool}: {content_preview[:100]}")
+            except Exception:
+                pass
+
     except Exception:
         logger.debug("Session recorder middleware: best-effort recording failed", exc_info=True)
 
