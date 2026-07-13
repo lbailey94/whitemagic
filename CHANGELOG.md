@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 6: Retrieval and Search Query Planning
+
+#### SearchQueryPlanner — Explicit Staged Retrieval Pipeline
+- **SearchQueryPlanner** (`core/memory/search_planner.py`) — orchestrates retrieval as explicit stages: lexical ranking, semantic ranking, spatial ranking, entity boost, constellation boost, reranking
+- Per-stage timing via `StageTiming` dataclass with `duration_ms`, `candidates_in/out`, error tracking
+- `search_hybrid()` now defaults to `use_planner=True` (new planned path); legacy inline path preserved as `_legacy_search_hybrid()` with `use_planner=False` toggle
+- Candidate explosion protection: trims to `max_candidates` (default 500) by partial RRF score
+- Degraded stage tracking: stages that fail or produce no candidates are recorded in `RetrievalResult.degraded_stages`
+
+#### Retrieval Plan Data Structures
+- **RetrievalStage** enum — 7 explicit stages (lexical, semantic, spatial, entity, constellation, reranking)
+- **CandidateScore** — per-candidate score with per-stage subscores, provenance channels, and final RRF score
+- **QueryProfile** — per-query configuration for channel weights, over-fetch ratio, stage toggles, latency budgets
+- **RetrievalResult** — final result with candidates, per-stage telemetry, total duration, query class, degraded stages
+- **LatencyBudget** — p50/p95/p99 budgets for simple/complex/federated/degraded query classes
+- `classify_query()` auto-classifies queries based on galaxy count and query length
+
+#### Bounded Federated Galaxy Search
+- `GalaxyAwareBackend.search()` upgraded from sequential to bounded concurrent search via `ThreadPoolExecutor`
+- `federated_galaxy_search()` — over-fetches per galaxy (default 3x), merges deterministically by importance, bounded concurrency (default 4 workers)
+- Per-galaxy stats: candidate count, errors, total candidates
+
+#### Batch N+1 Removal
+- `batch_constellation_memberships()` in `entity_reranker.py` — single SQL query per backend for all candidate IDs, eliminating per-candidate constellation lookups
+- Entity lookups already batched via `IN (...)` clause in `lookup_entity_memories()`
+
+#### Namespace-Aware Index Caching
+- **RetrievalIndexCache** (`core/memory/retrieval_cache.py`) — caches HNSW + holographic indexes per `(user_id, galaxy)` with TTL expiry (default 300s)
+- Write invalidation: `GalaxyAwareBackend.store()` invalidates cache entry for the affected namespace
+- `invalidate_user()` for bulk user-level invalidation, `prune_expired()` for maintenance
+- Singleton via `get_retrieval_cache()`
+
+#### Telemetry — `search.telemetry` MCP Tool
+- New `search.telemetry` MCP tool — exposes retrieval index cache stats, latency budget definitions, and hybrid recall cache stats
+- Mapped to `gana_winnowing_basket` with NLU pattern for "search telemetry" / "retrieval telemetry"
+- Full dispatch + PRAT + manifest + timeout wiring (757 total dispatch entries)
+
+#### Tests — 44 new tests
+- `test_phase6_retrieval.py` — 44 tests across 11 test classes
+- Covers: data structures, stage enum, latency budgets, query classification, index cache (get/put/invalidate/TTL/stats/singleton), federated search (merge/errors/over-fetch), batch constellation memberships, planner execution (basic/telemetry/degraded stages), candidate explosion, ranking determinism, telemetry handler, planner vs legacy toggle
+- 709 existing memory/galaxy/search tests passing, 0 regressions
+
+### Files Created
+- `core/whitemagic/core/memory/retrieval_plan.py` — data structures + latency budgets
+- `core/whitemagic/core/memory/search_planner.py` — SearchQueryPlanner + federated_galaxy_search
+- `core/whitemagic/core/memory/retrieval_cache.py` — RetrievalIndexCache singleton
+- `core/tests/unit/test_phase6_retrieval.py` — 44 Phase 6 tests
+
+### Files Modified
+- `core/whitemagic/core/memory/unified.py` — search_hybrid use_planner toggle, _legacy_search_hybrid extraction
+- `core/whitemagic/core/memory/backends/galaxy_router.py` — bounded federated search, cache invalidation on store
+- `core/whitemagic/core/memory/entity_reranker.py` — batch_constellation_memberships function
+- `core/whitemagic/tools/handlers/memory.py` — handle_search_telemetry handler
+- `core/whitemagic/tools/dispatch_memory.py` — search.telemetry dispatch entry
+- `core/whitemagic/tools/prat_mappings.py` — search.telemetry PRAT mapping
+- `core/whitemagic/tools/handlers/meta_tool.py` — search.telemetry NLU pattern
+- `core/whitemagic/tools/manifest.py` — search.telemetry handler mapping
+- `core/whitemagic/tools/timeouts.py` — search.telemetry timeout class
+
 ## [24.3.1] - 2026-07-12
 
 ### Added — Memory System Improvements

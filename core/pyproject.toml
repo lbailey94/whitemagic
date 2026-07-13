@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whitemagic"
-version = "24.3.0"
-description = "AI memory, cognitive upgrades, and more — 687 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments, session recording, dream cycle, and 7-language polyglot acceleration"
+dynamic = ["version"]
+description = "AI memory, cognitive upgrades, and more — 801 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments, session recording, dream cycle, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -348,6 +348,9 @@ full = [
 [project.scripts]
 wm = "whitemagic.cli.cli_app:main"
 whitemagic = "whitemagic.cli.cli_app:main"
+
+[tool.setuptools.dynamic]
+version = {file = ["VERSION"]}
 
 [tool.setuptools]
 packages = {find = {where = ["."], include = ["whitemagic", "whitemagic.*"], exclude = ["whitemagic-mojo", "whitemagic-mojo.*", "whitemagic-rust", "whitemagic-rust.*", "whitemagic-zig", "whitemagic-zig.*", "whitemagic-go", "whitemagic-go.*", "whitemagic-julia", "whitemagic-julia.*", "whitemagic.archive", "whitemagic.archive.*"]}}

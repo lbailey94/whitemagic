@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic",
-  "description": "AI memory, cognitive upgrades, and more — 687 callable tools via single wm meta-tool (28 Gana in PRAT mode, 659 in classic), 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, MandalaOS compartments, citta stream for continuous consciousness, session recording with progressive recall. MIT-licensed, local-first, free forever.",
+  "description": "AI memory, cognitive upgrades, and more — 801 callable tools via single wm meta-tool (28 Gana in PRAT mode, 773 in classic), 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, MandalaOS compartments, citta stream for continuous consciousness, session recording with progressive recall. MIT-licensed, local-first, free forever.",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "24.2.0",
+  "version": "24.3.1",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "24.2.0",
+      "version": "24.3.1",
       "transport": {
         "type": "stdio"
       },
@@ -20,7 +20,7 @@
       "environmentVariables": [
         {
           "name": "WM_MCP_PRAT",
-          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (659 tools)",
+          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (773 tools)",
           "isRequired": false,
           "format": "string",
           "isSecret": false
