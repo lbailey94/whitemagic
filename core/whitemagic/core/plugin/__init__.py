@@ -1,24 +1,48 @@
-"""WhiteMagic v4.10.0 Plugin System.
+"""WhiteMagic Plugin System — Versioned extension points.
 
-Enables third-party extensions without modifying core.
+Phase 8 WI 6 of the Codebase Hardening Strategy.
+
+Enables third-party extensions without modifying core. Provides:
+- Plugin base class and manifest
+- Versioned extension points (tools, handlers, retrieval, governance, accelerators)
+- Plugin registry with lifecycle states
+- Plugin loader (factory function or module attribute)
+- Plugin discovery (directory scanning)
 """
 
-try:
-    from .base import Plugin, PluginManifest
-    from .discovery import PluginDiscovery
-    from .extension_point import ExtensionPoint
-    from .loader import PluginLoader
-    from .registry import PluginInfo, PluginRegistry, get_registry
+from .base import Plugin, PluginManifest
+from .discovery import PluginDiscovery
+from .extension_point import (
+    EP_HANDLERS,
+    EP_GOVERNANCE_POLICIES,
+    EP_NATIVE_ACCELERATORS,
+    EP_RETRIEVAL_STAGES,
+    EP_TOOLS,
+    ExtensionPoint,
+    clear_extension_points,
+    get_extension_point,
+    list_extension_points,
+)
+from .loader import PluginLoader
+from .registry import PluginInfo, PluginRegistry, PluginState, get_registry, reset_registry
 
-    __all__ = [
-        "Plugin",
-        "PluginManifest",
-        "ExtensionPoint",
-        "PluginRegistry",
-        "PluginInfo",
-        "PluginLoader",
-        "PluginDiscovery",
-        "get_registry",
-    ]
-except ImportError:
-    __all__ = []
+__all__ = [
+    "Plugin",
+    "PluginManifest",
+    "ExtensionPoint",
+    "PluginRegistry",
+    "PluginInfo",
+    "PluginState",
+    "PluginLoader",
+    "PluginDiscovery",
+    "get_registry",
+    "reset_registry",
+    "get_extension_point",
+    "list_extension_points",
+    "clear_extension_points",
+    "EP_TOOLS",
+    "EP_HANDLERS",
+    "EP_RETRIEVAL_STAGES",
+    "EP_GOVERNANCE_POLICIES",
+    "EP_NATIVE_ACCELERATORS",
+]
