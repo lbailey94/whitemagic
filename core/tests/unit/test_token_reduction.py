@@ -87,8 +87,13 @@ class TestSemanticCache:
             # Pre-populate cache using the SAME filename the middleware uses
             from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
 
+            from whitemagic.tools.middleware import _compute_tool_schema_hash
             cache = QueryCache(cache_file=Path(tmpdir) / "dispatch_query_cache.json")
-            key = _cache_key("llama.chat", {"prompt": "cached question"})
+            key = _cache_key(
+                "llama.chat", {"prompt": "cached question"},
+                privacy_classification="public",
+                tool_schema_hash=_compute_tool_schema_hash("llama.chat"),
+            )
             cache.set(key, "cached answer", 100)
 
             dispatched = False

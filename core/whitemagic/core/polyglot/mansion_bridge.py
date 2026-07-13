@@ -12,7 +12,6 @@ with transparent fallback to Python if native code isn't available.
 """
 
 import logging
-import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path

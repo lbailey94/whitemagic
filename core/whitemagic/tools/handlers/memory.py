@@ -438,3 +438,43 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     if polyglot_meta:
         result["polyglot"] = polyglot_meta
     return result
+
+
+def handle_search_telemetry(**kwargs: Any) -> dict[str, Any]:
+    """Handle a search telemetry request.
+
+    Returns retrieval cache stats and latency budget definitions.
+    Phase 6: Exposes per-stage timing, cache hit rates, and latency
+    budget violations for observability.
+    """
+    telemetry: dict[str, Any] = {}
+
+    # Retrieval index cache stats
+    try:
+        from whitemagic.core.memory.retrieval_cache import get_retrieval_cache
+        telemetry["index_cache"] = get_retrieval_cache().stats()
+    except Exception as e:
+        telemetry["index_cache"] = {"error": str(e)}
+
+    # Latency budgets
+    try:
+        from whitemagic.core.memory.retrieval_plan import LATENCY_BUDGETS
+        telemetry["latency_budgets"] = {
+            name: {"p50": b.p50, "p95": b.p95, "p99": b.p99}
+            for name, b in LATENCY_BUDGETS.items()
+        }
+    except Exception as e:
+        telemetry["latency_budgets"] = {"error": str(e)}
+
+    # Hybrid recall cache stats
+    try:
+        from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
+        cache = get_hybrid_cache()
+        telemetry["hybrid_recall_cache"] = cache.stats()
+    except Exception as e:
+        telemetry["hybrid_recall_cache"] = {"error": str(e)}
+
+    return {
+        "status": "success",
+        "telemetry": telemetry,
+    }

@@ -7,7 +7,6 @@ Uses weighted sampling favoring high-gravity, low-access memories.
 
 import logging
 import math
-import random
 import sqlite3
 from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.galaxy_scan import (

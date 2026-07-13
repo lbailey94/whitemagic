@@ -191,4 +191,6 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "codebase.structure": LazyHandler("codebase", "handle_codebase_structure"),
     "codebase.status": LazyHandler("codebase", "handle_codebase_status"),
     "codebase.find": LazyHandler("codebase", "handle_codebase_find"),
+    # ── Phase 6: Retrieval Telemetry ──
+    "search.telemetry": LazyHandler("memory", "handle_search_telemetry"),
 }

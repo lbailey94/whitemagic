@@ -168,6 +168,7 @@ def _find_handler_file(tool_name: str) -> Path | None:
         "delete_memory": "memory.py",
         "read_memory": "memory.py",
         "search_memories": "memory.py",
+        "search.telemetry": "memory.py",
         "list_memories": "memory.py",
         "fast_read": "memory.py",
         "batch_read": "memory.py",

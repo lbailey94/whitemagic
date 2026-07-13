@@ -95,18 +95,79 @@ def _load_cached_db_stats() -> dict[str, Any]:
     from whitemagic.config.paths import DB_PATH
 
     def _loader() -> dict[str, Any]:
-        db = Path(DB_PATH)
-        if not db.exists():
-            return {"path": str(db), "exists": False}
-        conn = safe_connect(str(db))
+        # Fast path: read cached summaries from meta galaxy
         try:
-            count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-        finally:
-            conn.close()
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            summaries = um.search("", galaxy="meta", limit=30)
+            galaxy_counts: dict[str, int] = {}
+            total_count = 0
+            total_size = 0
+            for mem in summaries:
+                title = str(getattr(mem, "title", ""))
+                if "Galaxy Summary" not in title:
+                    continue
+                content = str(getattr(mem, "content", ""))
+                try:
+                    import ast
+                    data = ast.literal_eval(content) if content.startswith("{") else {}
+                except (ValueError, SyntaxError):
+                    continue
+                name = data.get("name", "")
+                count = int(data.get("memory_count", 0))
+                galaxy_counts[name] = count
+                total_count += count
+            if total_count > 0:
+                # Estimate size from count (rough: ~2KB/memory avg)
+                total_size = total_count * 2048
+                return {
+                    "total_memories": total_count,
+                    "total_size_mb": round(total_size / (1024 * 1024), 1),
+                    "galaxy_count": len(galaxy_counts),
+                    "galaxies": galaxy_counts,
+                }
+        except Exception:
+            pass
+
+        # Full scan: count rows across all galaxy databases
+        galaxy_counts = {}
+        total_count = 0
+        total_size = 0
+        try:
+            from whitemagic.config.paths import WM_ROOT
+            galaxy_dir = WM_ROOT / "users" / "local" / "galaxies"
+            if galaxy_dir.exists():
+                for gdir in sorted(galaxy_dir.iterdir()):
+                    if gdir.is_dir():
+                        db_file = gdir / "whitemagic.db"
+                        if db_file.exists():
+                            try:
+                                conn = safe_connect(str(db_file))
+                                count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                                conn.close()
+                                galaxy_counts[gdir.name] = count
+                                total_count += count
+                                total_size += db_file.stat().st_size
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
+        if total_count == 0:
+            db = Path(DB_PATH)
+            if db.exists():
+                conn = safe_connect(str(db))
+                try:
+                    total_count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                finally:
+                    conn.close()
+                total_size = db.stat().st_size
+
         return {
-            "path": str(db),
-            "size_mb": round(db.stat().st_size / (1024 * 1024), 1),
-            "memory_count": count,
+            "total_memories": total_count,
+            "total_size_mb": round(total_size / (1024 * 1024), 1),
+            "galaxy_count": len(galaxy_counts),
+            "galaxies": galaxy_counts,
         }
 
     return cast("dict[str, Any]", _ttl_get("db_stats", _HEALTH_CACHE_TTL_S, _loader))
@@ -284,7 +345,14 @@ def handle_gnosis(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_health_report(**kwargs: Any) -> dict[str, Any]:
-    """Consolidated system health report aggregating multiple subsystems."""
+    """Consolidated system health report aggregating multiple subsystems.
+
+    Use lean=True for MCP/IDE integrations — skips garden, archaeology,
+    yin-yang, and bridge sections that account for ~70% of response size.
+    """
+    lean = kwargs.get("lean") or kwargs.get("args", {}).get("lean")
+    lean = lean in (True, "true", "1", "yes")
+
     report: dict[str, Any] = {"status": "success"}
     runtime_status = get_runtime_status()
     report["runtime"] = runtime_status
@@ -323,23 +391,26 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         report["rust"] = {"available": False, "error": str(e)}
 
-    # 4. Garden health
-    try:
-        report["gardens"] = _load_cached_garden_health()
-    except Exception as e:
-        report["gardens_error"] = str(e)
+    # 4. Garden health (heavy: 27 gardens, ~70% of response size)
+    if not lean:
+        try:
+            report["gardens"] = _load_cached_garden_health()
+        except Exception as e:
+            report["gardens_error"] = str(e)
 
     # 5. Archaeology stats
-    try:
-        report["archaeology"] = _load_cached_archaeology_stats()
-    except Exception as e:
-        report["archaeology_error"] = str(e)
+    if not lean:
+        try:
+            report["archaeology"] = _load_cached_archaeology_stats()
+        except Exception as e:
+            report["archaeology_error"] = str(e)
 
     # 6. Yin-Yang balance
-    try:
-        report["yin_yang"] = _load_cached_yin_yang_balance()
-    except Exception as e:
-        report["yin_yang_error"] = str(e)
+    if not lean:
+        try:
+            report["yin_yang"] = _load_cached_yin_yang_balance()
+        except Exception as e:
+            report["yin_yang_error"] = str(e)
 
     # 7. DB stats
     try:
@@ -347,32 +418,41 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         report["db_error"] = str(e)
 
-    # 8. Julia bridge
-    try:
-        report["julia"] = _load_cached_binary_status("julia", "/snap/bin/julia")
-    except Exception as e:
-        logger.debug("Operation failed: %s", e)
-        report["julia"] = {"available": False}
+    # 8. Julia bridge (skip in lean mode)
+    if not lean:
+        try:
+            report["julia"] = _load_cached_binary_status("julia", "/snap/bin/julia")
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
+            report["julia"] = {"available": False}
 
-    # 9. Haskell bridge
-    try:
-        import os
+    # 9. Haskell bridge (skip in lean mode)
+    if not lean:
+        try:
+            import os
 
-        report["haskell"] = _load_cached_binary_status(
-            "ghc",
-            # Tool discovery: GHC compiler path (legitimate expanduser)
-            os.path.expanduser("~/.ghcup/bin/ghc"),
-        )
-    except (ImportError, ModuleNotFoundError):
-        report["haskell"] = {"available": False}
+            report["haskell"] = _load_cached_binary_status(
+                "ghc",
+                os.path.expanduser("~/.ghcup/bin/ghc"),
+            )
+        except (ImportError, ModuleNotFoundError):
+            report["haskell"] = {"available": False}
 
-    # Compute overall health score
+    # Compute overall health score — section-aware (lean skips heavy sections)
     checks = []
+    # Always-present checks
     checks.append(report.get("rust", {}).get("available", False))
-    checks.append(report.get("db", {}).get("memory_count", 0) > 0)
-    checks.append(report.get("julia", {}).get("available", False))
     checks.append("state" in report)
-    checks.append("gardens" in report)
+    checks.append(runtime_status.get("status") == "healthy")
+    # Section-specific checks
+    if "db" in report:
+        checks.append(report["db"].get("total_memories", 0) > 0)
+    if "gardens" in report:
+        checks.append(len(report.get("gardens", {})) > 0)
+    if "julia" in report:
+        checks.append(report["julia"].get("available", False))
+    if "haskell" in report:
+        checks.append(report["haskell"].get("available", False))
     health_score = sum(1 for c in checks if c) / max(len(checks), 1)
     report["health_score"] = round(health_score, 2)
     computed_health = (

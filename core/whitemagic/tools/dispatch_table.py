@@ -517,21 +517,66 @@ _FAST_PATH_TOOLS = frozenset({
     "galaxy.list",
     "health.check",
     "system.status",
+    # ── Common read operations for MCP/IDE response time ──
+    "search_memories",
+    "health_report",
+    "gnosis",
+    "state.current",
+    "session_bootstrap",
+    "galactic.dashboard",
+    "capabilities",
+    "manifest",
 })
 
-_FAST_PATH_PREFIXES = frozenset({
-    "gana_ghost.",  # Introspection/meta tools
-})
+# Phase 3: Registry-declared fast-path tools.
+# Built from ToolDefinition.fast_path=True and gana="gana_ghost" entries.
+# Replaces the former _FAST_PATH_PREFIXES name-pattern inference.
+_FAST_PATH_FROM_REGISTRY: set[str] = set()
+
+
+def _ensure_fast_path_registry() -> None:
+    """Populate _FAST_PATH_FROM_REGISTRY from the tool registry (lazy, once).
+
+    Mechanically enforces fast-path safety declarations:
+    - Tools with ``fast_path=True`` must have ``safety=READ`` and
+      ``fast_path_safety`` declared with all constraints satisfied.
+    - Tools with ``gana="gana_ghost"`` are included as before (legacy trust).
+    - Tools that fail safety verification are skipped with a warning.
+    """
+    if _FAST_PATH_FROM_REGISTRY:
+        return
+    try:
+        from whitemagic.tools.registry import get_all_tools
+        for td in get_all_tools():
+            if td.gana == "gana_ghost":
+                _FAST_PATH_FROM_REGISTRY.add(td.name)
+            elif td.fast_path:
+                if td.fast_path_eligible:
+                    _FAST_PATH_FROM_REGISTRY.add(td.name)
+                else:
+                    logger.warning(
+                        "Fast-path safety check failed for '%s' — "
+                        "safety=%s, fast_path_safety=%s. Skipping.",
+                        td.name, td.safety, td.fast_path_safety,
+                    )
+    except Exception:
+        pass  # Registry not available yet — fall back to explicit set
 
 
 def _is_fast_path(tool_name: str) -> bool:
-    """Check if a tool is safe for fast-path dispatch (bypass heavy middleware)."""
+    """Check if a tool is safe for fast-path dispatch (bypass heavy middleware).
+
+    A tool is fast-path eligible if:
+    1. It's in the explicit _FAST_PATH_TOOLS set, OR
+    2. It's declared fast_path=True in the tool registry, OR
+    3. It belongs to gana_ghost (all introspection/read-only tools)
+
+    No name-pattern prefix inference is used.
+    """
     if tool_name in _FAST_PATH_TOOLS:
         return True
-    for prefix in _FAST_PATH_PREFIXES:
-        if tool_name.startswith(prefix):
-            return True
-    return False
+    _ensure_fast_path_registry()
+    return tool_name in _FAST_PATH_FROM_REGISTRY
 
 
 def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
@@ -542,12 +587,21 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
     maturity gate, zodiac resonance, citta consciousness, governor, semantic cache,
     inference router, draft review, token tracker, observability, session recorder)
     is unnecessary and causes unacceptable latency for status queries.
+
+    A minimal audit envelope (request_id, tool, duration, status, agent_id) is
+    stamped on the result for observability.
     """
+    import time as _time
+    from uuid import uuid4 as _uuid4
+
     _ensure_router_cached()
     # Strip pipeline-internal kwargs so they don't leak to handlers
     kwargs.pop("_timeout_s", None)
     kwargs.pop("_force_full_pipeline", None)
     kwargs.pop("_internal_benchmark", None)
+    _agent_id = kwargs.pop("_agent_id", "default")
+    _request_id = str(_uuid4())[:8]
+    _start = _time.monotonic()
     result = None
 
     # Gana-prefixed tools → gana_invoke
@@ -566,14 +620,48 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
             try:
                 result = handler(**kwargs)
             except Exception as e:
-                return {"status": "error", "error": str(e)}
+                from whitemagic.tools.errors import ToolExecutionError, classify_exception
+
+                if isinstance(e, ToolExecutionError):
+                    return {
+                        "status": "error",
+                        "error_code": e.error_code,
+                        "message": e.message,
+                        "retryable": e.retryable,
+                    }
+                typed = classify_exception(e)
+                return {
+                    "status": "error",
+                    "error_code": typed.error_code,
+                    "message": str(e),
+                    "retryable": typed.retryable,
+                }
 
     # Bridge fallback
     if result is None and _bridge_execute is not None:
         try:
             result = _bridge_execute(tool_name, **kwargs)
-        except Exception:
-            pass
+        except Exception as e:
+
+            logger.debug(
+                "Bridge fallback failed for %s: %s: %s",
+                tool_name,
+                type(e).__name__,
+                e,
+                exc_info=True,
+            )
+
+    # Minimal audit envelope
+    _elapsed_ms = round((_time.monotonic() - _start) * 1000, 2)
+    if isinstance(result, dict):
+        result.setdefault("_audit", {
+            "request_id": _request_id,
+            "tool": tool_name,
+            "duration_ms": _elapsed_ms,
+            "status": result.get("status", "unknown"),
+            "agent_id": _agent_id,
+            "fast_path": True,
+        })
 
     return result
 

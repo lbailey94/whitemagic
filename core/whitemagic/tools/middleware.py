@@ -160,6 +160,9 @@ class DispatchContext:
     tool_name: str
     kwargs: dict[str, Any]
     agent_id: str = "default"
+    user_id: str = "local"
+    galaxy: str = "default"
+    policy_profile: str = "default"
     compact: bool = False
     # When True, Zig dispatch already validated circuit breaker, rate limit,
     # and maturity — Python middleware can skip those redundant checks.
@@ -201,6 +204,9 @@ class DispatchPipeline:
             tool_name=tool_name,
             kwargs=kwargs,
             agent_id=kwargs.pop("_agent_id", "default"),
+            user_id=kwargs.pop("_user_id", "local"),
+            galaxy=kwargs.pop("_galaxy", "default"),
+            policy_profile=kwargs.pop("_policy_profile", "default"),
             compact=kwargs.pop("_compact", False),
             zig_prevalidated=bool(kwargs.pop("_zig_prevalidated", False)),
         )
@@ -274,9 +280,11 @@ def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
         try:
             return mw(ctx, next_fn)
         except Exception as e:
-            # Re-raise explicit tool execution errors so they aren't swallowed
+            # Re-raise typed tool execution errors so they aren't swallowed
             # by the middleware fallback logic.
-            if e.__class__.__name__ == "ToolExecutionError":
+            from whitemagic.tools.errors import ToolExecutionError
+
+            if isinstance(e, ToolExecutionError):
                 raise
             # Log middleware errors at WARNING level for visibility
             logger.warning(
@@ -286,11 +294,20 @@ def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
                 e,
                 exc_info=True,
             )
-            # Record error in context for downstream inspection
+            # Record typed error in context for downstream inspection
+            from whitemagic.tools.errors import classify_exception
+
+            typed = classify_exception(e)
             if "middleware_errors" not in ctx.meta:
                 ctx.meta["middleware_errors"] = []
             ctx.meta["middleware_errors"].append(
-                {"middleware": name, "error": str(e), "type": e.__class__.__name__}
+                {
+                    "middleware": name,
+                    "error": str(e),
+                    "type": e.__class__.__name__,
+                    "error_code": typed.error_code,
+                    "retryable": typed.retryable,
+                }
             )
             return next_fn(ctx)
 
@@ -1182,8 +1199,23 @@ def _is_read_only_tool(tool_name: str) -> bool:
     return any(p in name_lower for p in _READ_ONLY_CACHEABLE_PATTERNS)
 
 
-def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
-    """Build a deterministic cache key from tool name + prompt kwargs.
+def _cache_key(
+    tool_name: str,
+    kwargs: dict[str, Any],
+    *,
+    user_id: str = "local",
+    agent_id: str = "default",
+    galaxy: str = "default",
+    policy_profile: str = "default",
+    privacy_classification: str = "default",
+    tool_schema_hash: str = "",
+) -> str:
+    """Build a deterministic cache key from tool name + prompt kwargs + namespace.
+
+    The namespace component (user_id, agent_id, galaxy, policy_profile,
+    privacy_classification, tool_schema_hash) ensures that cache entries
+    are isolated across security boundaries. Two users with the same
+    query will produce different cache keys.
 
     When WM_SEMANTIC_CACHE_EMBEDDINGS=1, also checks for embedding-based
     similarity against recently cached keys (cosine similarity > 0.95).
@@ -1202,8 +1234,11 @@ def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
             val = kwargs.get(key)
             if val is not None:
                 prompt_parts.append(f"{key}={val}")
-    # Include tool name to avoid cross-tool collisions
-    content = f"{tool_name}:{':'.join(prompt_parts)}"
+    # Namespace isolation: user_id, agent_id, galaxy, policy_profile,
+    # privacy_classification, tool_schema_hash
+    namespace = f"{user_id}:{agent_id}:{galaxy}:{policy_profile}:{privacy_classification}:{tool_schema_hash}"
+    # Include tool name and namespace to avoid cross-tool and cross-context collisions
+    content = f"{tool_name}:{namespace}:{':'.join(prompt_parts)}"
     base_key = hashlib.md5(content.lower().strip().encode()).hexdigest()[:16]
 
     # Opt-in embedding-based semantic similarity check
@@ -1280,6 +1315,26 @@ def _semantic_cache_lookup(tool_name: str, prompt: str, base_key: str) -> str | 
     return None
 
 
+def _compute_tool_schema_hash(tool_name: str) -> str:
+    """Compute a deterministic hash of a tool's input schema.
+
+    This ensures cache entries are invalidated when a tool's schema changes
+    (e.g., new required parameter, changed type). Returns empty string if
+    the tool is not found in the registry.
+    """
+    try:
+        import hashlib
+        import json
+        from whitemagic.tools.registry import get_all_tools
+        for td in get_all_tools():
+            if td.name == tool_name:
+                schema_str = json.dumps(td.input_schema, sort_keys=True, default=str)
+                return hashlib.md5(schema_str.encode()).hexdigest()[:8]
+    except Exception:
+        pass
+    return ""
+
+
 def mw_semantic_cache(
     ctx: DispatchContext,
     next_fn: NextFn,
@@ -1298,8 +1353,30 @@ def mw_semantic_cache(
     if not _is_cacheable_tool(ctx.tool_name):
         return next_fn(ctx)
 
-    # Build cache key
-    key = _cache_key(ctx.tool_name, ctx.kwargs)
+    # Private memory exclusion: do not cache memory read/search results
+    # unless explicitly opted in via WM_CACHE_PRIVATE_MEMORY=1
+    import os as _os
+    _PRIVATE_MEMORY_TOOLS = frozenset({"search_memories", "read_memory", "list_memories", "fast_read", "batch_read"})
+    if (
+        ctx.tool_name in _PRIVATE_MEMORY_TOOLS
+        and _os.environ.get("WM_CACHE_PRIVATE_MEMORY", "0") not in ("1", "true", "yes")
+    ):
+        return next_fn(ctx)
+
+    # Build cache key with namespace isolation
+    # Phase 3 §7.2: Include privacy classification and tool schema hash
+    _privacy = "private" if ctx.tool_name in _PRIVATE_MEMORY_TOOLS else "public"
+    _schema_hash = _compute_tool_schema_hash(ctx.tool_name)
+    key = _cache_key(
+        ctx.tool_name,
+        ctx.kwargs,
+        user_id=ctx.user_id,
+        agent_id=ctx.agent_id,
+        galaxy=ctx.galaxy,
+        policy_profile=ctx.policy_profile,
+        privacy_classification=_privacy,
+        tool_schema_hash=_schema_hash,
+    )
     if not key:
         return next_fn(ctx)
 
@@ -1352,31 +1429,36 @@ def mw_semantic_cache(
     except Exception as e:
         logger.debug("Unified cache check failed: %s", e)
 
-    # Fallback: try legacy QueryCache
-    try:
-        from whitemagic.config.paths import CACHE_DIR
-        from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
+    # Fallback: try legacy QueryCache (deprecated, opt-out via WM_DISABLE_LEGACY_CACHE=1)
+    import os as _os
 
-        legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
-        cached = legacy_cache.get(key)
-        if cached:
-            logger.debug(
-                "Semantic cache HIT (legacy) for %s (key=%s)", ctx.tool_name, key
-            )
-            return {
-                "status": "success",
-                "tool": ctx.tool_name,
-                "result": cached.result,
-                "method": "semantic_cache",
-                "confidence": 1.0,
-                "resolved_locally": True,
-                "tokens_saved": cached.tokens_saved,
-                "cache_hits": cached.hits,
-                "cache_backend": "legacy",
-                "latency_ms": 0.1,
-            }
-    except Exception as e:
-        logger.debug("Legacy cache check failed: %s", e)
+    if not _os.environ.get("WM_DISABLE_LEGACY_CACHE"):
+        try:
+            from whitemagic.config.paths import CACHE_DIR
+            from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
+
+            legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
+            cached = legacy_cache.get(key)
+            if cached:
+                logger.debug(
+                    "Semantic cache HIT (legacy) for %s (key=%s) — "
+                    "set WM_DISABLE_LEGACY_CACHE=1 to disable",
+                    ctx.tool_name, key,
+                )
+                return {
+                    "status": "success",
+                    "tool": ctx.tool_name,
+                    "result": cached.result,
+                    "method": "semantic_cache",
+                    "confidence": 1.0,
+                    "resolved_locally": True,
+                    "tokens_saved": cached.tokens_saved,
+                    "cache_hits": cached.hits,
+                    "cache_backend": "legacy",
+                    "latency_ms": 0.1,
+                }
+        except Exception as e:
+            logger.debug("Legacy cache check failed: %s", e)
 
     # Cache miss — dispatch normally
     result = next_fn(ctx)
@@ -1416,8 +1498,8 @@ def mw_semantic_cache(
                 )
             except Exception:
                 logger.debug("Swallowed exception", exc_info=True)
-            # Also store in legacy cache for backward compat (inference only)
-            if not is_read_only:
+            # Also store in legacy cache for backward compat (deprecated, opt-out)
+            if not is_read_only and not _os.environ.get("WM_DISABLE_LEGACY_CACHE"):
                 try:
                     from whitemagic.config.paths import CACHE_DIR
                     from whitemagic.core.intelligence.agentic.token_optimizer import (
@@ -1441,6 +1523,29 @@ def mw_semantic_cache(
             get_prefetcher().on_call_complete(gana)
     except Exception:
         logger.debug("Swallowed exception", exc_info=True)
+
+    # Phase 3 §7.2: Write-driven cache invalidation
+    # After a write/delete tool completes successfully, invalidate the
+    # semantic cache for this user/galaxy namespace so stale results
+    # are not served to subsequent reads.
+    if (
+        result
+        and isinstance(result, dict)
+        and result.get("status") in ("success", "ok")
+        and not _is_read_only_tool(ctx.tool_name)
+    ):
+        try:
+            from whitemagic.core.cache import get_unified_cache
+            unified = get_unified_cache()
+            # Invalidate the semantic namespace for this galaxy
+            invalidation_ns = f"semantic:{ctx.user_id}:{ctx.galaxy}"
+            unified.invalidate_namespace(invalidation_ns)
+            logger.debug(
+                "Write-driven cache invalidation for %s (ns=%s)",
+                ctx.tool_name, invalidation_ns,
+            )
+        except Exception:
+            logger.debug("Write-driven cache invalidation failed", exc_info=True)
 
     return result
 
@@ -1856,11 +1961,16 @@ def mw_transaction_firewall(
     Pre-dispatch: if the tool is in ECONOMIC_TOOLS, build a TransactionRequest
     from kwargs and validate. Block if not approved.
     Post-dispatch: log result for audit trail.
+
+    Fail-closed: when WM_FIREWALL_FAIL_CLOSED=1, any exception in the firewall
+    middleware itself blocks the economic tool rather than silently allowing it.
     """
     import os as _os
 
     if _os.environ.get("WM_TRANSACTION_FIREWALL", "1") in ("0", "false", "no"):
         return next_fn(ctx)
+
+    fail_closed = _os.environ.get("WM_FIREWALL_FAIL_CLOSED", "0") in ("1", "true", "yes")
 
     try:
         from whitemagic.security.transaction_firewall import (
@@ -1895,12 +2005,19 @@ def mw_transaction_firewall(
                 "verdict": {
                     "approved": verdict.approved,
                     "reason": verdict.reason,
+                    "verdict_reason": verdict.verdict_reason.value,
                     "daily_spent": verdict.daily_spent,
                     "rate_remaining": verdict.rate_remaining,
                 },
             }
     except Exception as e:
         logger.debug("Transaction firewall middleware error: %s", e, exc_info=True)
+        if fail_closed:
+            return {
+                "status": "error",
+                "error_code": "transaction_firewall_error",
+                "message": f"Transaction firewall error (fail-closed): {e}",
+            }
 
     return next_fn(ctx)
 

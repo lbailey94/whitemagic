@@ -3,7 +3,6 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-from functools import lru_cache
 from typing import Any
 
 from whitemagic.config.concurrency import IO_WORKERS

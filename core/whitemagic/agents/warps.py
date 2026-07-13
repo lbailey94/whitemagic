@@ -32,7 +32,6 @@ Custom warps can be created and persisted to the codex galaxy.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import threading
 from dataclasses import dataclass, field

@@ -7,7 +7,7 @@ Bridges the gap between raw pattern extraction and actionable code.
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect, pooled_connection
+from whitemagic.core.memory.db_manager import pooled_connection
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path

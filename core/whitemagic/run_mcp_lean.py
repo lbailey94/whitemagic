@@ -437,10 +437,19 @@ _SLOW_GANAS: set[str] = {
 
 _INSTRUCTIONS_PATH = ROOT_DIR / "mcp_instructions.md"
 _INSTRUCTIONS = ""
+_SHORT_INSTRUCTIONS = (
+    "WhiteMagic cognitive OS — 28 Gana meta-tools (memory, search, governance, "
+    "consciousness). Use wm(route='gana_heart.state.current') to orient, "
+    "wm(route='gana_winnowing_basket.search_memories') to find info, "
+    "wm(route='gana_neck.create_memory') to store. "
+    "wm(thought='help') for full capability discovery."
+)
 try:
     _INSTRUCTIONS = _INSTRUCTIONS_PATH.read_text(encoding="utf-8")
+    if os.environ.get("WM_MCP_SHORT_INSTRUCTIONS", "").strip().lower() in ("1", "true", "yes"):
+        _INSTRUCTIONS = _SHORT_INSTRUCTIONS
 except FileNotFoundError:
-    _INSTRUCTIONS = "WhiteMagic cognitive OS. Use gana_winnowing_basket to search, gana_neck to create memories."
+    _INSTRUCTIONS = _SHORT_INSTRUCTIONS
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -449,46 +458,35 @@ except FileNotFoundError:
 
 
 def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
-    """Build the 'wm' meta-tool definition — world in a seed."""
-    # Build a compact grimoire inline so the AI client sees everything in one tool def
+    """Build the 'wm' meta-tool definition — world in a seed.
+
+    Matryoshka description: each Gana shown as hanzi→name▸domain with its
+    nested tool set in compact form.  Full grimoire discoverable via
+    wm(thought='help') or wm(route='schema:gana_name').
+    """
     from whitemagic.tools.tool_catalog import (
         GANA_NAMES,
-        GANA_SHORT_DESC,
         get_gana_nested_tools,
     )
 
     nested = get_gana_nested_tools()
     gana_lines = []
     for gana in GANA_NAMES:
-        desc = GANA_SHORT_DESC.get(gana, f"Gana {gana}")
+        icon = _GANA_ICONS.get(gana, "?")
         tools = nested.get(gana, [])
-        tool_sample = ", ".join(tools[:4])
-        if len(tools) > 4:
-            tool_sample += f", ... ({len(tools)} total)"
-        gana_lines.append(f"  • {gana}: {desc} [{tool_sample}]")
+        tool_sample = ",".join(tools[:3])
+        count = f"+{len(tools)}" if len(tools) > 3 else ""
+        gana_lines.append(f"  {icon}{gana}:{tool_sample}{count}")
     grimoire_block = "\n".join(gana_lines)
 
     desc = (
-        "[WM] WhiteMagic — 678-tool cognitive OS for AI agents. "
-        "Memory (5D holographic, 10 galaxies, HNSW search), "
-        "governance (8-stage Dharma pipeline, Karma ledger), "
-        "consciousness (citta stream, dream cycle, self-model), "
-        "polyglot acceleration (Rust/Zig/Julia/Elixir/Haskell/Koka/Go), "
-        "and 28 Gana meta-tools routing to 678 nested tools.\n\n"
-        "Usage:\n"
-        "  wm(thought='remember that the API uses X-User-Id headers')  # auto-route\n"
-        "  wm(thought='search for memories', args={'limit': 10})       # with args\n"
-        "  wm(route='gana_neck.create_memory')                         # explicit route\n"
-        "  wm(thought='help')  or wm(route='discover')                 # discover all Ganas\n"
-        "  wm(route='schema:gana_neck')                                # get Gana's nested tools\n"
-        "  wm(thought='batch', args={'calls': [                        # parallel batch\n"
-        "    {'thought': 'create memory', 'args': {'content': 'a'}},\n"
-        "    {'thought': 'search memories', 'args': {'query': 'test'}}\n"
-        "  ]})\n\n"
-        "28 Ganas (Lunar Mansions):\n" + grimoire_block + "\n\n"
-        "If unsure, just describe what you want in natural language. "
-        "The classifier routes to the right Gana automatically. "
-        "For parallel execution, use 'thought=batch' with a 'calls' array."
+        "[WM] WhiteMagic — 678-tool cognitive OS. "
+        "28 Gana meta-tools (Lunar Mansions) routing to 678 nested tools:\n\n"
+        + grimoire_block + "\n\n"
+        "Usage: wm(route='gana_name.tool', args={...}) — explicit\n"
+        "       wm(thought='natural language request') — auto-route + classify\n"
+        "       wm('help') — full capability discovery\n"
+        "       wm(route='schema:gana_name') — nested tool enum for that Gana"
     )
 
     return types.Tool(
@@ -692,9 +690,12 @@ def _sync_dispatch(
 # ── Compact response mode ─────────────────────────────────────────────
 # When WM_MCP_COMPACT=1, strip consciousness metadata from responses
 # to reduce token consumption for AI agents by ~90%.
+# When WM_MCP_COMPACT=2, additionally apply logoglyph key substitution
+# (Chinese hanzi for English keys) for maximal token density.
 # The full metadata is still available via WM_MCP_COMPACT=0 (default).
 
 _COMPACT_STRIP_KEYS = frozenset({
+    # Consciousness/resonance bloat (~80% of response size)
     "_resonance",
     "_citta_predecessor",
     "_sensorium",
@@ -707,26 +708,150 @@ _COMPACT_STRIP_KEYS = frozenset({
     "warnings",
     "_resonance_context",
     "predecessor_context",
+    # Internal envelope fields (infrastructure, not useful to AI clients)
+    "_audit",
+    "note",
+    "timestamp",
+    "envelope_version",
+    "tool_contract_version",
+    "request_id",
+    "idempotency_key",
+    "writes",
+    "artifacts",
+    "retryable",
 })
 
 
 def _compact_response(result: dict[str, Any]) -> dict[str, Any]:
     """Strip consciousness/resonance metadata and apply JSON compaction.
 
-    Removes the heavyweight _resonance, _sensorium, _citta_predecessor
-    blocks that account for ~80% of response token cost, then applies
-    structural compaction (truncate long strings, limit list items).
+    When WM_MCP_COMPACT=2, additionally applies logoglyph key substitution
+    (Chinese hanzi for English keys) for maximal token density.
     """
+    _compact_level = os.environ.get("WM_MCP_COMPACT", "0").strip()
+
     if not isinstance(result, dict):
         return result
 
-    # Strip consciousness metadata
-    out = {k: v for k, v in result.items() if k not in _COMPACT_STRIP_KEYS}
+    out = {
+        k: _compact_response(v) if isinstance(v, dict) else v
+        for k, v in result.items()
+        if k not in _COMPACT_STRIP_KEYS
+    }
 
-    # Apply structural compaction from compact_response module
+    if _compact_level in ("2", "2.0"):
+        out = _apply_logoglyphs(out)
+
     try:
         from whitemagic.tools.compact_response import compact
+        out = compact(out)
+    except (ImportError, AttributeError):
+        pass
 
+    return out
+
+
+# ── Logoglyph compact mode (WM_MCP_COMPACT=2) ─────────────────────────
+# Replaces English dict keys and status values with dense Chinese logoglyphs
+# for maximal token efficiency.  Single-syllable hanzi encode 1-2 tokens
+# while carrying the semantic density of 2-5 English tokens.
+
+_GLYPH_MAP: dict[str, str] = {
+    # Envelope
+    "status": "状", "tool": "工", "message": "言", "error_code": "误",
+    "details": "细",
+    # Values
+    "success": "✓", "error": "✗", "ok": "✓",
+    # Health
+    "health_score": "康分", "health_status": "康状",
+    "healthy": "康", "degraded": "衰", "critical": "危",
+    "total_memories": "总数", "galaxy_count": "系数", "total_size_mb": "总大",
+    "galaxies": "星列", "db": "库", "runtime": "运",
+    "version": "版", "features": "能", "state": "态",
+    "rust": "速", "python_version": "蛇版",
+    "tool_count": "工数", "surface_counts": "面数", "accelerators": "速器",
+    "degraded_mode": "衰模", "degraded_reasons": "衰因",
+    "debug_enabled": "调开", "silent_init": "静启",
+    "health_report": "康报",
+    "physical_health": "身",
+    "cpu_temp": "芯温", "cpu_usage": "芯用",
+    "battery_percent": "电", "battery_status": "电状",
+    "Charging": "充", "Discharging": "放",
+    "memory_percent": "存用", "swap_percent": "换用", "disk_usage": "盘用",
+    "power_draw": "功耗", "fan_rpm": "扇速", "thermal_throttling": "热限",
+    "laptop_optimizer_score": "优分", "adaptive_targets": "适标",
+    # Memory
+    "memory_id": "忆码", "filename": "件", "count": "数", "memories": "忆列",
+    "id": "码", "title": "题", "content": "文", "galaxy": "星系",
+    "tags": "签", "importance": "重", "galactic_distance": "距",
+    "create_memory": "创忆",
+    # Session
+    "mode": "模", "context": "境", "current_state": "现态",
+    "session": "会", "recent_memories": "近忆", "oriented": "定",
+    "lean": "简", "full": "全", "session_bootstrap": "启会",
+    # Search
+    "search_memories": "搜忆", "query": "查", "limit": "限",
+    "warning": "警",
+    # Gnosis
+    "gnosis": "自知", "ready": "备", "maturity_stage": "熟度",
+    "REFLECTIVE": "思", "alert_count": "警数", "alerts": "警列",
+    "suggestions": "议", "next_actions": "行",
+    # Dashboard
+    "galactic.dashboard": "星图", "source": "源", "zones": "区",
+    "distribution": "布",
+    "core": "核", "inner_rim": "内环", "mid_band": "中带",
+    "outer_rim": "外环", "far_edge": "远缘",
+    "meta_galaxy": "元系",
+    # Subsystem names for runtime
+    "mcp_server": "MCP", "rust_bridge": "速桥",
+    "rich_cli": "CLI", "fastapi": "API",
+    "exists": "在", "root": "根",
+}
+
+_GLYPH_VALUES: dict[str, str] = {
+    "healthy": "康", "degraded": "衰", "critical": "危",
+    "success": "✓", "error": "✗", "ok": "✓",
+    "lean": "简", "full": "全", "seed": "种",
+    "Charging": "充", "Discharging": "放",
+    "true": "是", "false": "否",
+    "REFLECTIVE": "思",
+    "meta_galaxy": "元系",
+}
+
+
+def _apply_logoglyphs(obj: Any) -> Any:
+    """Recursively replace English keys/values with logoglyphs."""
+    if isinstance(obj, dict):
+        return {
+            _GLYPH_MAP.get(k, k): _apply_logoglyphs(v)
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [_apply_logoglyphs(v) for v in obj]
+    if isinstance(obj, str):
+        return _GLYPH_VALUES.get(obj, obj)
+    return obj
+
+
+def _compact_enabled() -> bool:
+    """Check if compact response mode is enabled (level 1 or 2)."""
+    val = os.environ.get("WM_MCP_COMPACT", "0").strip().lower()
+    return val in ("1", "true", "yes", "2", "2.0")
+
+    if not isinstance(result, dict):
+        return result
+
+    out = {
+        k: _compact_response(v) if isinstance(v, dict) else v
+        for k, v in result.items()
+        if k not in _COMPACT_STRIP_KEYS
+    }
+
+    if _compact_level in ("2", "2.0"):
+        out = _apply_logoglyphs(out)
+
+    try:
+        from whitemagic.tools.compact_response import compact
         out = compact(out)
     except (ImportError, AttributeError):
         pass
@@ -746,6 +871,27 @@ async def call_tool(
     # ── 'wm' meta-tool: direct dispatch, bypasses Gana routing ──
     if name == "wm":
         _ensure_init()
+
+        # Short-circuit: explicit routes to known read tools skip the
+        # Gana wrapper (handle_wm → call_tool(gana_X) → gana_invoke →
+        # route_prat_call → call_tool(tool)) and call the handler directly.
+        _route = args.get("route", "")
+        _sub_args = args.get("args") if isinstance(args.get("args"), dict) else {}
+        if "." in _route and not args.get("thought"):
+            _gana, _tool = _route.split(".", 1)
+            _FAST_DIRECT = frozenset({
+                "search_memories", "create_memory", "health_report",
+                "gnosis", "state.current", "session_bootstrap",
+                "galactic.dashboard", "capabilities", "manifest",
+            })
+            if _tool in _FAST_DIRECT:
+                from whitemagic.tools.unified_api import call_tool as _ct
+                result = _ct(_tool, **_sub_args)
+                if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0"):
+                    result = _compact_response(result)
+                text = _json_dumps(result, indent=2, default=str)
+                return [types.TextContent(type="text", text=text)]
+
         from whitemagic.tools.handlers.meta_tool import handle_wm
 
         wm_kwargs: dict[str, Any] = {}
@@ -756,7 +902,7 @@ async def call_tool(
         if "args" in args and isinstance(args["args"], dict):
             wm_kwargs["args"] = args["args"]
         result = handle_wm(**wm_kwargs)
-        if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes"):
+        if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0"):
             result = _compact_response(result)
         text = _json_dumps(result, indent=2, default=str)
         return [types.TextContent(type="text", text=text)]
@@ -793,7 +939,7 @@ async def call_tool(
         logger.debug("ToolUsageTracker recording skipped", exc_info=True)
 
     # ── Compact mode: strip consciousness metadata to save tokens ──
-    if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes"):
+    if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0"):
         result = _compact_response(result)
 
     text = _json_dumps(result, indent=2, default=str)
@@ -1306,6 +1452,20 @@ async def main_stdio() -> None:
     except Exception as e:
         logger.debug("Auto-optimizer init failed: %s", e, exc_info=True)
 
+    # ── Background pre-warm: start lazy init in a daemon thread ──
+    # Hides ~8s of embedding-model/DB/singleton init behind the MCP
+    # handshake so the first tool call is already warm.
+    def _bg_warm() -> None:
+        import time as _time
+        _time.sleep(0.5)  # let handshake complete first
+        try:
+            _ensure_init()
+        except Exception:
+            logger.debug("Background pre-warm failed", exc_info=True)
+
+    _warm_thread = threading.Thread(target=_bg_warm, daemon=True, name="wm-pre-warm")
+    _warm_thread.start()
+
     try:
         await server.run(
             read_stream, write_stream, server.create_initialization_options()
@@ -1352,6 +1512,12 @@ async def main_stdio() -> None:
             logger.info("UnifiedCache persisted %d entries", count)
         except Exception as e:
             logger.debug("Cache persist failed: %s", e)
+        # Shutdown all supervised native bridges
+        try:
+            from whitemagic.core.acceleration.process_supervisor import shutdown_all
+            shutdown_all()
+        except Exception:
+            pass
         logger.info("MCP server shutdown complete")
 
 
@@ -1491,6 +1657,12 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
                     _dual_manager.stop_all()
                 except Exception:
                     pass
+            # Shutdown all supervised native bridges
+            try:
+                from whitemagic.core.acceleration.process_supervisor import shutdown_all
+                shutdown_all()
+            except Exception:
+                pass
 
 
 def main() -> None:

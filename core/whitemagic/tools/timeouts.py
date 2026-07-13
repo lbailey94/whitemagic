@@ -23,7 +23,7 @@ _TIMEOUT_CLASS_BUDGETS: dict[str, float] = {
     # Status/introspection tools (fast, read-only)
     "cold_status": float(os.getenv("WM_TOOL_TIMEOUT_COLD_STATUS_S", "15.0")),
     "introspection": 10.0,
-    "health_check": 10.0,
+    "health_check": float(os.getenv("WM_TOOL_TIMEOUT_HEALTH_CHECK_S", "30.0")),
     # Memory operations
     "memory_read": 15.0,
     "memory_write": 30.0,
@@ -66,6 +66,7 @@ _TOOL_TIMEOUT_CLASS_BY_TOOL: dict[str, str] = {
     "update_memory": "memory_write",
     "delete_memory": "memory_write",
     "search_memories": "memory_search",
+    "search.telemetry": "memory_search",
     "read_memory": "memory_read",
     "batch_read_memories": "memory_read",
     "memory.consolidate": "memory_consolidate",

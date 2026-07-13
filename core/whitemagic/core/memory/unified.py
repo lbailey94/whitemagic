@@ -12,6 +12,7 @@ from typing import Any, cast
 import hashlib
 import os
 import sqlite3
+import threading
 
 # Re-export Memory and MemoryType for compatibility
 from whitemagic.core.memory.unified_types import Memory, MemoryType
@@ -92,7 +93,7 @@ class UnifiedMemory:
     integration with the Holographic spatial index.
     """
 
-    def __init__(self, base_path: Path | None = None) -> None:
+    def __init__(self, base_path: Path | None = None, user_id: str = "local") -> None:
         # Use canonical Data Sea database location
         if base_path is None:
             from whitemagic.config.paths import DB_PATH as _db_path, MEMORY_DIR as _mem_dir
@@ -104,10 +105,12 @@ class UnifiedMemory:
             self.base_path.mkdir(parents=True, exist_ok=True)
             self._db_path = self.base_path / "whitemagic.db"
 
+        self._user_id = user_id
+
         # v24: Use GalaxyAwareBackend for per-galaxy SQLite routing
         # This isolates corruption risk and reduces lock contention
         from whitemagic.core.memory.backends.galaxy_router import GalaxyAwareBackend
-        self._galaxy_backend = GalaxyAwareBackend(self._db_path)
+        self._galaxy_backend = GalaxyAwareBackend(self._db_path, user_id=user_id)
         # Phase 2: .backend now resolves to the GalaxyAwareBackend façade.
         # GalaxyAwareBackend proxies all SQLiteBackend methods, with
         # galaxy-aware routing for store/recall/search/delete and
@@ -781,9 +784,17 @@ class UnifiedMemory:
         entity_boost_weight: float = 0.3,
         rerank: bool = True,
         include_skills: bool = True,
+        use_planner: bool = True,
+        galaxy: str | None = None,
+        profile: Any = None,
     ) -> list[Memory]:
         """Hybrid retrieval combining BM25 lexical search + embedding semantic
         search + 5D holographic spatial search via Reciprocal Rank Fusion (RRF).
+
+        Phase 6: When ``use_planner=True`` (default), the search is executed
+        through the ``SearchQueryPlanner`` pipeline with explicit stages,
+        per-stage timing, batched lookups, and candidate explosion protection.
+        Set ``use_planner=False`` to use the legacy inline path.
 
         v24.3 upgrades:
           - Entity-graph retrieval boosting (entity_boost_weight)
@@ -807,9 +818,61 @@ class UnifiedMemory:
                 Set to 0 to disable entity boosting.
             rerank: If True, apply second-pass multi-signal reranking (v24.3).
             include_skills: If True, match query against SkillForge triggers (v24.3).
+            use_planner: If True (default), use the Phase 6 planned pipeline.
+            galaxy: Optional galaxy restriction.
+            profile: Optional QueryProfile for advanced configuration.
         """
-        from collections import defaultdict
+        if use_planner:
+            from whitemagic.core.memory.search_planner import SearchQueryPlanner
+            from whitemagic.core.memory.retrieval_plan import QueryProfile as QP
 
+            qp = profile or QP(
+                lexical_weight=lexical_weight,
+                semantic_weight=semantic_weight,
+                spatial_weight=spatial_weight,
+                entity_boost_weight=entity_boost_weight,
+                rerank=rerank,
+                include_skills=include_skills,
+                include_cold=include_cold,
+                rrf_k=rrf_k,
+                axis_weights=axis_weights,
+            )
+            planner = SearchQueryPlanner(self)
+            results, _telemetry = planner.execute(
+                query=query, limit=limit, memory_type=memory_type,
+                profile=qp, galaxy=galaxy,
+            )
+            return cast(list[Memory], results)
+
+        return self._legacy_search_hybrid(
+            query=query, limit=limit, memory_type=memory_type,
+            rrf_k=rrf_k, semantic_weight=semantic_weight,
+            lexical_weight=lexical_weight, spatial_weight=spatial_weight,
+            include_cold=include_cold, axis_weights=axis_weights,
+            entity_boost_weight=entity_boost_weight,
+            rerank=rerank, include_skills=include_skills,
+        )
+
+    def _legacy_search_hybrid(
+        self,
+        query: str,
+        limit: int = 10,
+        memory_type: MemoryType | None = None,
+        rrf_k: int = 60,
+        semantic_weight: float = 1.0,
+        lexical_weight: float = 1.0,
+        spatial_weight: float = 0.5,
+        include_cold: bool = False,
+        axis_weights: dict[str, float] | None = None,
+        entity_boost_weight: float = 0.3,
+        rerank: bool = True,
+        include_skills: bool = True,
+    ) -> list[Memory]:
+        """Legacy hybrid retrieval (pre-Phase 6 inline implementation).
+
+        Kept as a selectable strategy until ranking parity and latency
+        comparisons against the planned pipeline are complete.
+        """
         rrf_scores: dict[str, float] = defaultdict(float)
         all_memories: dict[str, Memory] = {}
 
@@ -1421,7 +1484,6 @@ class UnifiedMemory:
         Returns:
             Dict with keys: galaxy_meta, memories, associations.
         """
-        import json as _json
         from datetime import datetime
 
         galaxy_name = galaxy or "universal"
@@ -1592,21 +1654,32 @@ class UnifiedMemory:
         }
 
 
-# Singleton instance
-_unified_memory: UnifiedMemory | None = None
+# Namespace-keyed singleton instances (Phase 2 §9)
+_unified_memory_instances: dict[str, UnifiedMemory] = {}
+_unified_memory_lock = threading.Lock()
 
 
 def reset_singleton() -> None:
-    """Reset the singleton instance for testing."""
-    global _unified_memory
-    _unified_memory = None
+    """Reset all singleton instances for testing."""
+    with _unified_memory_lock:
+        for inst in _unified_memory_instances.values():
+            try:
+                inst.close()
+            except Exception:
+                pass
+        _unified_memory_instances.clear()
 
-def get_unified_memory() -> UnifiedMemory:
-    """Get the singleton unified memory instance."""
-    global _unified_memory
-    if _unified_memory is None:
-        _unified_memory = UnifiedMemory()
-    return _unified_memory
+
+def get_unified_memory(user_id: str = "local") -> UnifiedMemory:
+    """Get the singleton unified memory instance for a given user namespace.
+
+    Each user_id gets its own UnifiedMemory instance with a separate
+    GalaxyAwareBackend, ensuring complete namespace isolation.
+    """
+    with _unified_memory_lock:
+        if user_id not in _unified_memory_instances:
+            _unified_memory_instances[user_id] = UnifiedMemory(user_id=user_id)
+        return _unified_memory_instances[user_id]
 
 
 # Convenience functions

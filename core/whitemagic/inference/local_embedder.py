@@ -18,6 +18,11 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Global model cache — avoid loading the same model into memory multiple times
+# when different subsystems create separate LocalEmbedder instances.
+_GLOBAL_MODELS: dict[str, "TextEmbedding"] = {}
+_GLOBAL_MODELS_LOCK = __import__("threading").Lock()
+
 
 class LocalEmbedder:
     """
@@ -35,7 +40,13 @@ class LocalEmbedder:
         self._try_load()
 
     def _try_load(self):
-        """Try to load FastEmbed model."""
+        """Try to load FastEmbed model, reusing cached instances globally."""
+        cache_key = f"{self.model_name}::{self.max_length}"
+        with _GLOBAL_MODELS_LOCK:
+            if cache_key in _GLOBAL_MODELS:
+                self._model = _GLOBAL_MODELS[cache_key]
+                self._available = True
+                return
         try:
             from fastembed import TextEmbedding
 
@@ -44,6 +55,8 @@ class LocalEmbedder:
             self._model = TextEmbedding(
                 model_name=self.model_name, max_length=self.max_length
             )
+            with _GLOBAL_MODELS_LOCK:
+                _GLOBAL_MODELS[cache_key] = self._model
             self._available = True
             elapsed = time.time() - start
             logger.info("Local embedding model loaded in %ss", elapsed)

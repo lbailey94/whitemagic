@@ -382,7 +382,6 @@ _DEAD_CODE_REMOVED = True  # Marker for grep-ability
 
 
 from whitemagic.tools.canonical import (
-    _TOOL_ALIASES,
     canonical_tool_name as _canonical_tool_name,
 )
 
@@ -870,24 +869,29 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 timestamp=ts,
                 error_code=exc.error_code,
                 message=exc.message,
-                details=exc.details or {},
+                details={**exc.details, "error_type": type(exc).__name__} if exc.details else {"error_type": type(exc).__name__},
                 retryable=exc.retryable,
             )
         except Exception as exc:
+            from whitemagic.tools.errors import classify_exception
+
+            typed = classify_exception(exc)
             out = err(
                 tool=canonical,
                 request_id=request_id,
                 idempotency_key=idempotency_key,
                 timestamp=ts,
-                error_code=ErrorCode.INTERNAL_ERROR,
-                message=str(exc),
+                error_code=typed.error_code,
+                message=typed.message,
                 details={
+                    **typed.details,
                     "tool": canonical,
+                    "error_type": type(typed).__name__,
                     "traceback": traceback.format_exc()
                     if os.getenv("WM_DEBUG")
                     else None,
                 },
-                retryable=False,
+                retryable=typed.retryable,
             )
         else:
             # Normalize into the stable envelope.

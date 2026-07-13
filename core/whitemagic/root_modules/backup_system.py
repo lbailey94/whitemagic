@@ -60,25 +60,51 @@ class BackupSystem:
         return {"backup_id": backup_id, "files_copied": files_copied}
 
     def restore(self, backup_id: str, dest: Path | None = None) -> dict[str, Any]:
-        """Restore from a backup."""
+        """Restore from a backup.
+
+        Returns a structured result with partial operation reporting:
+        - ``completed``: files successfully restored
+        - ``failed``: files that raised an error during restore
+        - ``item_errors``: per-file error details
+        - ``rollback_state``: "none" (no transaction for file copies)
+        """
+        from whitemagic.tools.partial_result import PartialOperationResult
+
+        result = PartialOperationResult(operation="restore")
         backup_path = self.backup_dir / backup_id
         if not backup_path.exists():
-            return {"status": "error", "error": "Backup not found"}
+            return {"status": "error", "error": "Backup not found", **result.to_dict()}
 
         if dest is None:
             dest = get_state_root()
         dest = Path(dest)
 
-        files_restored = 0
-        for f in backup_path.rglob("*"):
-            if f.is_file():
+        files = [f for f in backup_path.rglob("*") if f.is_file()]
+        result.total = len(files)
+
+        for i, f in enumerate(files):
+            try:
                 rel = f.relative_to(backup_path)
                 target = dest / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(f, target)
-                files_restored += 1
+                result.completed += 1
+            except Exception as exc:
+                result.add_error(i, exc, item_id=str(f.name))
 
-        return {"status": "success", "files_restored": files_restored}
+        result.rollback_state = "none"
+        status, error_code, retryable = result.to_envelope_status()
+        out = {
+            "files_restored": result.completed,
+            **result.to_dict(),
+        }
+        if status == "success":
+            out["status"] = "success"
+        else:
+            out["status"] = "error"
+            out["error_code"] = error_code
+            out["retryable"] = retryable
+        return out
 
     def list_backups(self) -> list[dict[str, Any]]:
         return [{"id": bid, **info} for bid, info in self._manifest.items()]

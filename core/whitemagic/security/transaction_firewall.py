@@ -35,6 +35,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any
 
 from whitemagic.config.paths import ECONOMY_DIR
@@ -42,6 +43,16 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
+
+
+def _is_fail_closed() -> bool:
+    """Check if firewall should fail-closed on dependency failures."""
+    return os.environ.get("WM_FIREWALL_FAIL_CLOSED", "0") in ("1", "true", "yes")
+
+
+def _is_maintenance_mode() -> bool:
+    """Check if maintenance mode bypass is active."""
+    return os.environ.get("WM_FIREWALL_MAINTENANCE", "0") in ("1", "true", "yes")
 
 # ── Economic tools that must pass through the firewall ──────────────
 
@@ -89,12 +100,50 @@ class TransactionRequest:
     timestamp: float = field(default_factory=time.time)
 
 
+class VerdictReason(StrEnum):
+    """Typed reason for a firewall verdict."""
+
+    APPROVED = "approved"
+    POLICY_DENIED = "policy_denied"
+    POLICY_UNAVAILABLE = "policy_unavailable"
+    POLICY_MALFORMED = "policy_malformed"
+    POLICY_STORAGE_ERROR = "policy_storage_error"
+    MAINTENANCE_BYPASS = "maintenance_bypass"
+
+
+@dataclass
+class SecurityEvent:
+    """Append-only security event for audit trail."""
+
+    timestamp: float
+    tool_name: str
+    agent_id: str
+    verdict_reason: str
+    approved: bool
+    amount: float = 0.0
+    recipient: str = ""
+    detail: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "timestamp": self.timestamp,
+            "tool_name": self.tool_name,
+            "agent_id": self.agent_id,
+            "verdict_reason": self.verdict_reason,
+            "approved": self.approved,
+            "amount": self.amount,
+            "recipient": self.recipient,
+            "detail": self.detail,
+        }
+
+
 @dataclass
 class TransactionVerdict:
     """Result of firewall validation."""
 
     approved: bool
     reason: str
+    verdict_reason: VerdictReason = VerdictReason.POLICY_DENIED
     policy: TransactionPolicy | None = None
     daily_spent: float = 0.0
     rate_remaining: int = 0
@@ -114,6 +163,7 @@ class TransactionFirewall:
         self._rate_log: dict[str, list[float]] = {}  # agent_id -> timestamps
         self._lock = threading.Lock()
         self._spend_log_path = ECONOMY_DIR / "transaction_log.jsonl"
+        self._security_log_path = ECONOMY_DIR / "security_events.jsonl"
         self._spend_log_path.parent.mkdir(parents=True, exist_ok=True)
         self._load_daily_spent()
 
@@ -130,94 +180,153 @@ class TransactionFirewall:
 
     def validate(self, request: TransactionRequest) -> TransactionVerdict:
         """Run all checks and return a verdict."""
+        # ── Maintenance mode bypass ──
+        if _is_maintenance_mode():
+            verdict = TransactionVerdict(
+                approved=True,
+                reason="Maintenance mode bypass active",
+                verdict_reason=VerdictReason.MAINTENANCE_BYPASS,
+            )
+            self._emit_security_event(request, verdict)
+            return verdict
+
+        # ── Check 0: Malformed input validation ──
+        malformed = self._validate_request(request)
+        if malformed is not None:
+            return malformed
+
         policy = self.get_policy(request.agent_id)
 
         with self._lock:
             # ── Check 1: Single transaction limit ──
             if request.amount > policy.max_single_transaction:
-                return TransactionVerdict(
+                v = TransactionVerdict(
                     approved=False,
                     reason=(
                         f"Single transaction {request.amount} {request.currency} "
                         f"exceeds limit {policy.max_single_transaction}"
                     ),
+                    verdict_reason=VerdictReason.POLICY_DENIED,
                     policy=policy,
                 )
+                self._emit_security_event(request, v)
+                return v
 
             # ── Check 2: Daily cumulative limit ──
             self._rollover_daily(request.agent_id)
             spent = self._daily_spent.get(request.agent_id, 0.0)
             if spent + request.amount > policy.daily_limit:
-                return TransactionVerdict(
+                v = TransactionVerdict(
                     approved=False,
                     reason=(
                         f"Daily limit exceeded: {spent + request.amount:.2f} "
                         f"would exceed {policy.daily_limit}"
                     ),
+                    verdict_reason=VerdictReason.POLICY_DENIED,
                     policy=policy,
                     daily_spent=spent,
                 )
+                self._emit_security_event(request, v)
+                return v
 
             # ── Check 3: Rate limit ──
             now = request.timestamp
             log = self._rate_log.setdefault(request.agent_id, [])
             log[:] = [t for t in log if now - t < 60.0]
             if len(log) >= policy.rate_limit_per_minute:
-                return TransactionVerdict(
+                v = TransactionVerdict(
                     approved=False,
                     reason=(
                         f"Rate limit: {len(log)} transactions in last 60s, "
                         f"limit is {policy.rate_limit_per_minute}"
                     ),
+                    verdict_reason=VerdictReason.POLICY_DENIED,
                     policy=policy,
                     rate_remaining=0,
                 )
+                self._emit_security_event(request, v)
+                return v
 
             # ── Check 4: Recipient blocklist ──
             if request.recipient in policy.blocked_recipients:
-                return TransactionVerdict(
+                v = TransactionVerdict(
                     approved=False,
                     reason=f"Recipient {request.recipient} is blocked",
+                    verdict_reason=VerdictReason.POLICY_DENIED,
                     policy=policy,
                 )
+                self._emit_security_event(request, v)
+                return v
 
             # ── Check 5: Recipient allowlist (if non-empty) ──
             if policy.allowed_recipients and request.recipient not in policy.allowed_recipients:
-                return TransactionVerdict(
+                v = TransactionVerdict(
                     approved=False,
                     reason=f"Recipient {request.recipient} not in allowlist",
+                    verdict_reason=VerdictReason.POLICY_DENIED,
                     policy=policy,
                 )
+                self._emit_security_event(request, v)
+                return v
 
             # ── Check 6: Dharma ethical sign-off ──
             if policy.dharma_check_required:
-                dharma_ok = self._check_dharma(request)
-                if not dharma_ok:
-                    return TransactionVerdict(
+                try:
+                    dharma_result = self._check_dharma(request)
+                except Exception as e:
+                    logger.debug("Dharma check raised: %s", e)
+                    dharma_result = None
+                if dharma_result is False:
+                    v = TransactionVerdict(
                         approved=False,
                         reason=(
                             f"Dharma check failed (threshold={policy.dharma_threshold})"
                         ),
+                        verdict_reason=VerdictReason.POLICY_DENIED,
                         policy=policy,
                     )
+                    self._emit_security_event(request, v)
+                    return v
+                if dharma_result is None:
+                    # Dharma unavailable — fail-closed or permissive
+                    if _is_fail_closed():
+                        v = TransactionVerdict(
+                            approved=False,
+                            reason="Dharma engine unavailable (fail-closed)",
+                            verdict_reason=VerdictReason.POLICY_UNAVAILABLE,
+                            policy=policy,
+                        )
+                        self._emit_security_event(request, v)
+                        return v
+                    # Permissive mode: log but allow
+                    logger.warning("Dharma unavailable (permissive mode) — allowing transaction")
 
             # ── All checks passed — record spend ──
             self._daily_spent[request.agent_id] = spent + request.amount
             log.append(now)
             self._persist_spend(request)
 
-            return TransactionVerdict(
+            v = TransactionVerdict(
                 approved=True,
                 reason="approved",
+                verdict_reason=VerdictReason.APPROVED,
                 policy=policy,
                 daily_spent=self._daily_spent[request.agent_id],
                 rate_remaining=policy.rate_limit_per_minute - len(log),
             )
+            self._emit_security_event(request, v)
+            return v
 
     # ── Dharma integration ──
 
-    def _check_dharma(self, request: TransactionRequest) -> bool:
-        """Ask DharmaEngine for ethical sign-off."""
+    def _check_dharma(self, request: TransactionRequest) -> bool | None:
+        """Ask DharmaEngine for ethical sign-off.
+
+        Returns:
+            True  — dharma approved
+            False — dharma denied
+            None  — dharma engine unavailable
+        """
         try:
             from whitemagic.core.consciousness.dharma import get_dharma
 
@@ -238,10 +347,60 @@ class TransactionFirewall:
                 return float(score.get("score", 0.5)) >= self.get_policy(
                     request.agent_id
                 ).dharma_threshold
-            return True  # Permissive if dharma unavailable
+            return None  # Unrecognized response type
         except Exception as e:
-            logger.debug("Dharma check failed (permissive): %s", e)
-            return True
+            logger.debug("Dharma check failed: %s", e)
+            return None  # Unavailable
+
+    # ── Malformed input validation ──
+
+    def _validate_request(self, request: TransactionRequest) -> TransactionVerdict | None:
+        """Validate request structure. Returns a verdict if malformed, None if valid."""
+        if not isinstance(request.agent_id, str) or not request.agent_id.strip():
+            v = TransactionVerdict(
+                approved=False,
+                reason="Malformed request: agent_id is empty or not a string",
+                verdict_reason=VerdictReason.POLICY_MALFORMED,
+            )
+            self._emit_security_event(request, v)
+            return v
+        if not isinstance(request.amount, (int, float)) or request.amount < 0:
+            v = TransactionVerdict(
+                approved=False,
+                reason=f"Malformed request: invalid amount {request.amount}",
+                verdict_reason=VerdictReason.POLICY_MALFORMED,
+            )
+            self._emit_security_event(request, v)
+            return v
+        if not isinstance(request.tool_name, str) or not request.tool_name.strip():
+            v = TransactionVerdict(
+                approved=False,
+                reason="Malformed request: tool_name is empty",
+                verdict_reason=VerdictReason.POLICY_MALFORMED,
+            )
+            self._emit_security_event(request, v)
+            return v
+        return None
+
+    # ── Security event stream ──
+
+    def _emit_security_event(self, request: TransactionRequest, verdict: TransactionVerdict) -> None:
+        """Append a security event to the audit log."""
+        event = SecurityEvent(
+            timestamp=request.timestamp,
+            tool_name=request.tool_name,
+            agent_id=request.agent_id,
+            verdict_reason=verdict.verdict_reason.value,
+            approved=verdict.approved,
+            amount=request.amount,
+            recipient=request.recipient,
+            detail=verdict.reason if not verdict.approved else "",
+        )
+        try:
+            with open(self._security_log_path, "a", encoding="utf-8") as f:
+                f.write(_json_dumps(event.to_dict()) + "\n")
+        except (OSError, ValueError) as e:
+            logger.warning("Failed to persist security event: %s", e)
 
     # ── Daily spend tracking ──
 
@@ -304,6 +463,8 @@ class TransactionFirewall:
         return {
             "enabled": os.environ.get("WM_TRANSACTION_FIREWALL", "1")
             not in ("0", "false", "no"),
+            "fail_closed": _is_fail_closed(),
+            "maintenance_mode": _is_maintenance_mode(),
             "default_policy": {
                 "max_single_transaction": self._default_policy.max_single_transaction,
                 "daily_limit": self._default_policy.daily_limit,

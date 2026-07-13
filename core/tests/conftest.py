@@ -392,9 +392,9 @@ def _mock_heavy_engines(request):
     _mock_embedding.search_similar_by_vector.return_value = []
     _mock_embedding.embedding_dim = _FAKE_DIM
 
-    # Set the singleton directly — get_embedding_engine() checks this first
-    _old_instance = getattr(_emb_mod, "_engine_instance", None)
-    _emb_mod._engine_instance = _mock_embedding
+    # Set the singleton directly — get_embedding_engine() checks _engine_instances dict
+    _old_instances = getattr(_emb_mod, "_engine_instances", None)
+    _emb_mod._engine_instances = {"local": _mock_embedding}
 
     # Also patch the function for modules that import it at module level
     p = patch(
@@ -404,7 +404,7 @@ def _mock_heavy_engines(request):
     p.start()
     yield
     p.stop()
-    _emb_mod._engine_instance = _old_instance
+    _emb_mod._engine_instances = _old_instances if _old_instances is not None else {}
 
 
 # ---------------------------------------------------------------------------

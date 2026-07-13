@@ -13,10 +13,8 @@ import hashlib
 import json
 import logging
 import os
-import subprocess
 import threading
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT

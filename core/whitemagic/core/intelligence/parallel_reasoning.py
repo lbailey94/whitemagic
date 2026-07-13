@@ -712,7 +712,6 @@ class ParallelReasoningTree:
         if not _HAS_ANTIPATTERN:
             return
         try:
-            from pathlib import Path
 
             from whitemagic.config.paths import WM_ROOT
 

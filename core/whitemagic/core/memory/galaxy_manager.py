@@ -681,9 +681,10 @@ n            Global active-galaxy mutation is unsafe for concurrent requests.
             db_path = Path(info.db_path)
             base_path = db_path.parent
 
-            # Replace the singleton
+            # Replace the singleton for this user namespace
             new_um = um_module.UnifiedMemory(base_path=base_path)
-            um_module._unified_memory_instance = new_um  # type: ignore[attr-defined]
+            uid = getattr(info, 'user_id', 'local')
+            um_module._unified_memory_instances[uid] = new_um
 
             # Cache it locally too
             self._memory_instances[galaxy_name] = new_um

@@ -390,3 +390,53 @@ def apply_entity_boosts(
             rrf_scores[mid] = entity_weight * boost
 
     return rrf_scores
+
+
+def batch_constellation_memberships(
+    memory_ids: list[str],
+    backend: Any = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Batch-fetch constellation memberships for multiple memories.
+
+    Queries the backend once with all candidate IDs, eliminating the
+    N+1 pattern of per-candidate get_constellation_memberships() calls.
+
+    Returns:
+        Dict mapping memory_id -> list of membership dicts.
+    """
+    if not memory_ids:
+        return {}
+
+    result: dict[str, list[dict[str, Any]]] = {}
+
+    # Collect all backends to query
+    backends: list[Any] = []
+    if backend and hasattr(backend, "_galaxy_backends"):
+        backends.extend(backend._galaxy_backends.values())
+    if backend and hasattr(backend, "_get_default_backend"):
+        backends.append(backend._get_default_backend())
+
+    for b in backends:
+        try:
+            with b.pool.connection() as conn:
+                placeholders = ",".join("?" * len(memory_ids))
+                rows = conn.execute(
+                    f"""
+                    SELECT memory_id, constellation_name, membership_confidence
+                    FROM constellation_memberships
+                    WHERE memory_id IN ({placeholders})
+                    """,
+                    memory_ids,
+                ).fetchall()
+                for row in rows:
+                    mid = row[0]
+                    if mid not in result:
+                        result[mid] = []
+                    result[mid].append({
+                        "constellation_name": row[1],
+                        "membership_confidence": row[2] if len(row) > 2 else 0.5,
+                    })
+        except (sqlite3.Error, AttributeError, Exception) as e:
+            logger.debug("Batch constellation lookup failed: %s", e)
+
+    return result

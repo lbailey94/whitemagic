@@ -1346,7 +1346,6 @@ class EmbeddingEngine:
 
         Results are cached per galaxy with a 5-minute TTL.
         """
-        import time as _time
 
         cache_key = galaxy or "_default"
         with self._manifold_cache_lock:
@@ -1454,14 +1453,37 @@ class EmbeddingEngine:
         results.sort(key=lambda r: r["similarity"], reverse=True)
         return results[:limit]
 
-_engine_instance: EmbeddingEngine | None = None
+_engine_instances: dict[str, EmbeddingEngine] = {}
 _engine_lock = threading.Lock()
 
 
-def get_embedding_engine() -> EmbeddingEngine:
-    """Get or create the global EmbeddingEngine singleton."""
-    global _engine_instance
+def reset_embedding_engine() -> None:
+    """Reset all embedding engine instances for testing."""
     with _engine_lock:
-        if _engine_instance is None:
-            _engine_instance = EmbeddingEngine()
-        return _engine_instance
+        for inst in _engine_instances.values():
+            try:
+                inst.close()
+            except Exception:
+                pass
+        _engine_instances.clear()
+
+
+def get_embedding_engine(user_id: str = "local") -> EmbeddingEngine:
+    """Get or create the EmbeddingEngine singleton for a given user namespace.
+
+    Each user_id gets its own EmbeddingEngine with namespaced HNSW index
+    paths, ensuring vector caches are isolated across users.
+    """
+    with _engine_lock:
+        if user_id not in _engine_instances:
+            engine = EmbeddingEngine()
+            # Namespace HNSW paths by user_id
+            from whitemagic.config.paths import MEMORY_DIR
+            user_dir = MEMORY_DIR.parent / "users" / user_id
+            user_dir.mkdir(parents=True, exist_ok=True)
+            engine._hnsw_index_path = user_dir / "hnsw_index.bin"
+            engine._hnsw_ids_path = user_dir / "hnsw_ids.json"
+            engine._cold_hnsw_index_path = user_dir / "hnsw_cold_index.bin"
+            engine._cold_hnsw_ids_path = user_dir / "hnsw_cold_ids.json"
+            _engine_instances[user_id] = engine
+        return _engine_instances[user_id]

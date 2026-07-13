@@ -348,6 +348,7 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     ),
     (re.compile(r"\b(session.*recall|recall.*session)\b", re.I), "gana_heart", "session.recall"),
     (re.compile(r"\brecall\b", re.I), "gana_winnowing_basket", "search_memories"),
+    (re.compile(r"\b(search|retrieval).*telemetry|telemetry.*(search|retrieval)\b", re.I), "gana_winnowing_basket", "search.telemetry"),
     (
         re.compile(r"\b(list|show).*memor", re.I),
         "gana_winnowing_basket",

@@ -153,7 +153,15 @@ class GalaxyAwareBackend:
     def store(self, memory: Memory, content_hash: str | None = None) -> str:
         """Store a memory in the appropriate galaxy database."""
         backend = self._get_backend_for_memory(memory)
-        return backend.store(memory, content_hash=content_hash)
+        result = backend.store(memory, content_hash=content_hash)
+        # Phase 6: Invalidate retrieval index cache for this namespace
+        try:
+            from whitemagic.core.memory.retrieval_cache import get_retrieval_cache
+            galaxy = getattr(memory, "galaxy", "universal") or "universal"
+            get_retrieval_cache().invalidate(self._user_id, galaxy)
+        except Exception:
+            pass
+        return result
 
     def recall(self, memory_id: str) -> Memory | None:
         """Recall a memory by ID.
@@ -200,12 +208,16 @@ class GalaxyAwareBackend:
         limit: int = 20,
         galaxy: str | None = None,
         min_importance: float = 0.0,
+        over_fetch_ratio: int = 3,
+        max_concurrency: int = 4,
         **kwargs: Any,
     ) -> list[Memory]:
         """Search memories.
 
         If galaxy is specified, search only that galaxy's database.
-        If galaxy is None, search all galaxy databases and merge results.
+        If galaxy is None, search all galaxy databases with bounded
+        concurrency, over-fetch per galaxy, merge deterministically,
+        then trim to limit (Phase 6 federated search).
         """
         if galaxy:
             backend = self._get_backend_for_galaxy(galaxy)
@@ -214,23 +226,18 @@ class GalaxyAwareBackend:
                 limit=limit, min_importance=min_importance, **kwargs,
             )
 
-        # Search all backends and merge
-        all_results: list[Memory] = []
-        backends_to_search = [self._get_default_backend()] + list(self._galaxy_backends.values())
+        # Phase 6: Bounded federated search with over-fetch + deterministic merge
+        from whitemagic.core.memory.search_planner import federated_galaxy_search
 
-        for backend in backends_to_search:
-            try:
-                results = backend.search(
-                    query=query, tags=tags, memory_type=memory_type,
-                    limit=limit, min_importance=min_importance, **kwargs,
-                )
-                all_results.extend(results)
-            except Exception as e:
-                logger.debug("Search failed in backend %s: %s", backend.db_path, e, exc_info=True)
-
-        # Sort by importance and limit
-        all_results.sort(key=lambda m: m.importance, reverse=True)
-        return all_results[:limit]
+        results, _stats = federated_galaxy_search(
+            galaxy_backend=self,
+            query=query, limit=limit, memory_type=memory_type,
+            over_fetch_ratio=over_fetch_ratio,
+            max_concurrency=max_concurrency,
+            min_importance=min_importance,
+            tags=tags,
+        )
+        return results
 
     def delete(self, memory_id: str) -> bool:
         """Delete a memory from whichever backend has it."""

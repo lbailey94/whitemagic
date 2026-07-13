@@ -11,7 +11,6 @@ from enum import Enum
 from typing import Any
 
 from whitemagic.dharma import get_dharma_system
-from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

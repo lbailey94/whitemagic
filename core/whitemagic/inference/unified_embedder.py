@@ -168,7 +168,7 @@ class UnifiedEmbedder:
         return cast(np.ndarray, batch.column(0).to_numpy(zero_copy_only=True))
 
 
-def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) -> int:
+def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) -> dict[str, Any]:
     """Batch embed all memories in database.
 
     This is the F001 completion function.
@@ -178,8 +178,13 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
         embedder: UnifiedEmbedder instance (creates new if None)
 
     Returns:
-        Number of memories embedded
+        A dict with ``embedded`` count and partial operation details.
+        For backward compatibility, the ``embedded`` field can be used
+        as an int via ``result["embedded"]``.
     """
+    from whitemagic.tools.partial_result import PartialOperationResult
+
+    result = PartialOperationResult(operation="batch_embed")
 
     if embedder is None:
         embedder = UnifiedEmbedder()
@@ -193,44 +198,53 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
     batch_ids: list[str] = []
     batch_texts: list[str] = []
     total_embedded = 0
+    item_index = 0
 
     for memory_id, content in cursor:
         batch_ids.append(str(memory_id))
         batch_texts.append(content[:512])  # Truncate for efficiency
+        item_index += 1
 
         if len(batch_texts) >= batch_size:
-            # Encode via unified pipeline
-            embeddings = embedder.encode_batch(batch_texts, batch_size)
+            try:
+                embeddings = embedder.encode_batch(batch_texts, batch_size)
+                for mid, emb in zip(batch_ids, embeddings):
+                    conn.execute(
+                        """INSERT OR REPLACE INTO memory_embeddings
+                           (memory_id, embedding) VALUES (?, ?)""",
+                        (mid, emb.tobytes()),
+                    )
+                total_embedded += len(batch_texts)
+                result.completed += len(batch_texts)
+                logger.info("Embedded %s memories...", total_embedded)
+            except Exception as exc:
+                for j, mid in enumerate(batch_ids):
+                    result.add_error(item_index - len(batch_ids) + j, exc, item_id=mid)
+            batch_ids.clear()
+            batch_texts.clear()
 
-            # Write to DB
+    if batch_texts:
+        try:
+            embeddings = embedder.encode_batch(batch_texts, batch_size)
             for mid, emb in zip(batch_ids, embeddings):
                 conn.execute(
                     """INSERT OR REPLACE INTO memory_embeddings
                        (memory_id, embedding) VALUES (?, ?)""",
                     (mid, emb.tobytes()),
                 )
-
             total_embedded += len(batch_texts)
-            logger.info("Embedded %s memories...", total_embedded)
-
-            batch_ids.clear()
-            batch_texts.clear()
-
-    if batch_texts:
-        embeddings = embedder.encode_batch(batch_texts, batch_size)
-        for mid, emb in zip(batch_ids, embeddings):
-            conn.execute(
-                """INSERT OR REPLACE INTO memory_embeddings
-                   (memory_id, embedding) VALUES (?, ?)""",
-                (mid, emb.tobytes()),
-            )
-        total_embedded += len(batch_texts)
+            result.completed += len(batch_texts)
+        except Exception as exc:
+            for j, mid in enumerate(batch_ids):
+                result.add_error(item_index - len(batch_ids) + j, exc, item_id=mid)
 
     conn.commit()
     conn.close()
 
-    logger.info("✅ Completed! %s memories embedded", total_embedded)
-    return total_embedded
+    result.total = item_index
+    result.rollback_state = "committed"
+    logger.info("Completed! %s memories embedded", total_embedded)
+    return {"embedded": total_embedded, **result.to_dict()}
 
 
 if __name__ == "__main__":

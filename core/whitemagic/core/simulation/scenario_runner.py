@@ -9,16 +9,14 @@ parameter sensitivity, branching point analysis, robustness.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import random
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 from whitemagic.core.simulation.interaction_engine import InteractionEngine, InteractionLog
 from whitemagic.core.simulation.persona_engine import PersonaEngine, Persona
-from whitemagic.core.simulation.world_model import WorldModel, WorldModelBuilder
+from whitemagic.core.simulation.world_model import WorldModelBuilder
 
 logger = logging.getLogger(__name__)
 

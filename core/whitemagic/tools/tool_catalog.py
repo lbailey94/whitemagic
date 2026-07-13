@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from whitemagic.tools.tool_types import (
@@ -215,23 +216,22 @@ def synthesize_callable_tool_definitions(
             )
             continue
 
-        # Infer safety from tool name pattern for better idempotency support
-        safety = ToolSafety.READ
-        name_lower = name.lower()
-        if any(
-            name_lower.startswith(p)
-            for p in ("create_", "delete_", "update_", "write_", "import_", "export_")
-        ):
-            safety = ToolSafety.WRITE
-        elif any(name_lower.startswith(p) for p in ("destroy_", "remove_", "drop_")):
-            safety = ToolSafety.DELETE
+        # Default to READ safety for dispatch-only tools without authored definitions.
+        # Name-pattern inference was removed (Phase 7 WI 8): safety must be declared
+        # in registry_defs/, not inferred from tool name prefixes.
+        _logger = logging.getLogger(__name__)
+        _logger.debug(
+            "Tool %s has no authored definition — defaulting to READ safety. "
+            "Add a ToolDefinition in registry_defs/ to declare explicit safety.",
+            name,
+        )
 
         defs.append(
             ToolDefinition(
                 name=name,
                 description=f"Dispatch-routable WhiteMagic tool '{name}'.",
                 category=ToolCategory.SYSTEM,
-                safety=safety,
+                safety=ToolSafety.READ,
                 input_schema={"type": "object", "properties": {}},
             )
         )

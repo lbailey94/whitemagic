@@ -413,7 +413,6 @@ class BackgroundOptimizer:
         """Run a single optimization cycle."""
         try:
             from whitemagic.inference.router import _get_small_backend
-            from whitemagic.inference.llama_cpp import LlamaCppConfig
 
             backend = _get_small_backend()
             if backend is None or not backend.is_available:

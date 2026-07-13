@@ -50,13 +50,79 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
     _emit_gan_ying(event_type, data)
 
 
+def _lean_bootstrap(**kwargs: Any) -> dict[str, Any]:
+    """Lightweight session bootstrap — no daemons, no swarm, just recent context.
+
+    Composes a fast orientation block from:
+    - Current state tracker (last file, active task, recent events)
+    - Recent memories across all galaxies (last 10)
+    - Meta galaxy summaries (per-galaxy memory counts, top tags)
+    - Optional focus session
+    """
+    context: dict[str, Any] = {}
+    session_id = kwargs.get("session_id")
+
+    # 1. Current work state (fast in-process read)
+    try:
+        from whitemagic.core.memory.current_state import get_state_tracker
+        tracker = get_state_tracker()
+        state_block = tracker.get_context_block()
+        if state_block.strip():
+            context["current_state"] = state_block.strip()
+    except Exception as exc:
+        logger.debug("Lean bootstrap: current_state skipped (%s)", exc)
+
+    # 2. Session lifecycle (create or focus)
+    session_info: dict[str, Any] = {}
+    try:
+        if session_id:
+            session_info = handle_focus_session(session_id=session_id, **kwargs)
+        else:
+            session_info = handle_create_session(name="Lean Bootstrap Session", **kwargs)
+        context["session"] = session_info.get("session", {})
+    except Exception as exc:
+        logger.debug("Lean bootstrap: session creation skipped (%s)", exc)
+
+    # 3. Recent memories (fast search across all galaxies)
+    try:
+        from whitemagic.tools.handlers.memory import handle_search_memories
+        recent = handle_search_memories(query="", limit=10, **kwargs)
+        if recent.get("status") == "success":
+            context["recent_memories"] = recent.get("details", {}).get("memories", [])
+    except Exception as exc:
+        logger.debug("Lean bootstrap: recent memories skipped (%s)", exc)
+
+    # 4. Meta galaxy dashboard (per-galaxy summaries)
+    try:
+        from whitemagic.tools.handlers.galactic import handle_galactic_dashboard
+        dashboard = handle_galactic_dashboard()
+        if dashboard.get("status") == "success":
+            context["dashboard"] = dashboard.get("details", {})
+    except Exception as exc:
+        logger.debug("Lean bootstrap: dashboard skipped (%s)", exc)
+
+    return {
+        "status": "success",
+        "mode": "lean",
+        "context": context,
+        "oriented": bool(context),
+    }
+
+
 def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a session bootstrap event.
 
+    Use lean=True for a fast context-only bootstrap suitable for MCP/IDE
+    integrations (skips 10-phase full-system startup, daemons, swarm, dream cycle).
+
     Returns:
         dict[str, Any]
     """
+    lean = kwargs.get("lean") or kwargs.get("args", {}).get("lean")
+    if lean in (True, "true", "1", "yes"):
+        return _lean_bootstrap(**kwargs)
+
     from whitemagic.core.orchestration.session_startup import start_session
 
     result = start_session(verbose=False)

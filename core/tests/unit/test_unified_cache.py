@@ -232,7 +232,12 @@ class TestSemanticCacheUnifiedIntegration:
 
         cache = UnifiedCacheBridge(max_size=100, persist=False)
         unique_prompt = "test unified cache — unique-hit-2b8e"
-        key = _cache_key("llama.chat", {"prompt": unique_prompt})
+        from whitemagic.tools.middleware import _compute_tool_schema_hash
+        key = _cache_key(
+            "llama.chat", {"prompt": unique_prompt},
+            privacy_classification="public",
+            tool_schema_hash=_compute_tool_schema_hash("llama.chat"),
+        )
         payload = json.dumps(
             {
                 "result": "unified cache answer",
@@ -293,7 +298,12 @@ class TestSemanticCacheUnifiedIntegration:
             assert result["result"] == "fresh answer"
 
             # Verify it was cached
-            key = _cache_key("llama.chat", {"prompt": unique_prompt})
+            from whitemagic.tools.middleware import _compute_tool_schema_hash
+            key = _cache_key(
+                "llama.chat", {"prompt": unique_prompt},
+                privacy_classification="public",
+                tool_schema_hash=_compute_tool_schema_hash("llama.chat"),
+            )
             cached = cache.get_json("semantic", key)
             assert cached is not None
             assert cached["result"] == "fresh answer"

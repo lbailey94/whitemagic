@@ -80,20 +80,13 @@ class LazyHandler:
 
         result = self._cached_func(*args, **kwargs)
 
-        # Guard: if handler is async and returns a coroutine, await it
+        # Guard: if handler is async and returns a coroutine, await it safely
         import inspect as _inspect
 
         if _inspect.iscoroutine(result):
-            import asyncio as _asyncio
+            from whitemagic.tools.unified_api import _run_async
 
-            try:
-                _asyncio.get_running_loop()
-                # Event loop already running - can't await here
-                # Close the coroutine to avoid warnings
-                result.close()
-                result = {"status": "error", "error": "Async handler called from sync context with running event loop"}
-            except RuntimeError:
-                result = _asyncio.run(result)
+            result = _run_async(result)
 
         if should_audit:
             status = "success" if (isinstance(result, dict) and result.get("status") == "success") else "failure"
@@ -118,14 +111,9 @@ class LazyHandlerAbs:
         import inspect as _inspect
 
         if _inspect.iscoroutine(result):
-            import asyncio as _asyncio
+            from whitemagic.tools.unified_api import _run_async
 
-            try:
-                _asyncio.get_running_loop()
-                result.close()
-                result = {"status": "error", "error": "Async handler called from sync context with running event loop"}
-            except RuntimeError:
-                result = _asyncio.run(result)
+            result = _run_async(result)
         return result
 
 

@@ -14,7 +14,6 @@ import hashlib
 import logging
 import random
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 from whitemagic.core.simulation.persona_engine import Persona
