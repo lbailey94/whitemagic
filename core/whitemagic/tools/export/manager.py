@@ -332,7 +332,18 @@ class ExportImportManager:
         }
 
     def import_memories(self, request: ImportRequest) -> dict[str, Any]:
-        """Import memories from the specified format."""
+        """Import memories from the specified format.
+
+        Returns a structured result with partial operation reporting:
+        - ``completed``: memories successfully imported
+        - ``skipped``: memories that failed validation
+        - ``failed``: memories that raised an error during import
+        - ``item_errors``: per-item error details
+        - ``rollback_state``: "none" (no transaction) or "committed"
+        """
+        from whitemagic.tools.partial_result import ItemError, PartialOperationResult
+
+        result = PartialOperationResult(operation="import")
 
         if request.format == "json":
             memories = self._import_json(request.data)
@@ -343,38 +354,73 @@ class ExportImportManager:
         else:
             raise ValueError(f"Unsupported import format: {request.format}")
 
+        result.total = len(memories)
+
         validation_errors = self._validate_memories(memories)
 
         if validation_errors:
-            return {"success": False, "errors": validation_errors, "imported_count": 0}
+            result.skipped = len(validation_errors)
+            result.item_errors.extend(
+                ItemError(
+                    index=i,
+                    error_type="ValidationError",
+                    error_message=str(err),
+                    error_code="invalid_params",
+                )
+                for i, err in enumerate(validation_errors)
+            )
+            result.rollback_state = "none"
+            status, error_code, retryable = result.to_envelope_status()
+            return {
+                "status": status,
+                "errors": validation_errors,
+                "imported_count": result.completed,
+                **result.to_dict(),
+            }
 
         if request.validate_only:
+            result.completed = 0
+            result.skipped = len(memories)
             return {
                 "success": True,
                 "validated_count": len(memories),
                 "imported_count": 0,
+                **result.to_dict(),
             }
 
         try:
             from whitemagic.core.memory import MemoryManager
 
             mm = MemoryManager()
-            for memory in memories:
-                mm.create_memory(
-                    title=memory.title,
-                    content=memory.content,
-                    memory_type=memory.memory_type,
-                    tags=memory.tags,
-                    extra_fields=memory.metadata,
-                )
+            for i, memory in enumerate(memories):
+                try:
+                    mm.create_memory(
+                        title=memory.title,
+                        content=memory.content,
+                        memory_type=memory.memory_type,
+                        tags=memory.tags,
+                        extra_fields=memory.metadata,
+                    )
+                    result.completed += 1
+                except Exception as exc:
+                    result.add_error(i, exc, item_id=memory.id)
+            result.rollback_state = "committed"
         except ImportError:
             pass  # MemoryManager not available, return validation-only result
 
-        return {
-            "success": True,
-            "imported_count": len(memories),
+        status, error_code, retryable = result.to_envelope_status()
+        out = {
+            "imported_count": result.completed,
             "merge_strategy": request.merge_strategy,
+            **result.to_dict(),
         }
+        if status == "success":
+            out["success"] = True
+        else:
+            out["success"] = False
+            out["error_code"] = error_code
+            out["retryable"] = retryable
+        return out
 
     def _import_json(self, data: str | bytes) -> list[MemoryExport]:
         """Import memories from JSON."""
