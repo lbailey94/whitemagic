@@ -4,8 +4,9 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 22.x    | :white_check_mark: |
-| < 22.0  | :x:                |
+| 25.x    | :white_check_mark: |
+| 24.x    | :white_check_mark: |
+| < 24.0  | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -16,7 +17,7 @@ We take the security of WhiteMagic seriously. If you have discovered a security 
 Instead, please report vulnerabilities by:
 
 1. Opening a GitHub Security Advisory (preferred)
-2. Emailing the maintainers directly
+2. Emailing security@whitemagic.dev
 
 Please include:
 

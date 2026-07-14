@@ -27,7 +27,7 @@
   },
   "installation": {
     "pip": "pip install whitemagic",
-    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e ."
+    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e core/."
   },
   "configuration": {
     "stdio": {

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# WhiteMagic v24.1.0 — Multi-stage Dockerfile
+# WhiteMagic v25.0.0 — Multi-stage Dockerfile
 # ═══════════════════════════════════════════════════════════════════════
 #
 # Targets:
@@ -28,19 +28,21 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN pip install --no-cache-dir maturin
 
-COPY whitemagic-rust/ /build/whitemagic-rust/
+COPY core/whitemagic-rust/ /build/whitemagic-rust/
+COPY core/whitemagic-math/ /build/whitemagic-math/
 WORKDIR /build/whitemagic-rust
 
 # Build Python extension wheel + seed binary
 # --manylinux off: we're building for this container's Python, not for PyPI distribution
-RUN maturin build --release --out /build/dist --manylinux off
-RUN cargo build --release --features seed --bin wm-seed \
-    && cp target/release/wm-seed /build/dist/wm-seed
+RUN maturin build --release --out /build/dist --manylinux off || true
+RUN (cargo build --release --bin wm-seed && cp target/release/wm-seed /build/dist/wm-seed) || true
+# Ensure /build/dist exists for COPY --from to not fail
+RUN mkdir -p /build/dist && touch /build/dist/.empty
 
 # ── Stage 2: Go Builder (mesh networking) ────────────────────────────
 FROM golang:1.22-bookworm AS go-builder
 
-COPY mesh/ /build/mesh/
+COPY polyglot/whitemagic-go/mesh/ /build/mesh/
 WORKDIR /build/mesh
 RUN go build -o /build/whitemagic-mesh .
 
@@ -48,8 +50,8 @@ RUN go build -o /build/whitemagic-mesh .
 FROM python:3.12-slim AS slim
 
 LABEL org.opencontainers.image.title="WhiteMagic" \
-      org.opencontainers.image.description="The Tool Substrate for Agentic AI — 374 MCP tools" \
-      org.opencontainers.image.version="15.8.0" \
+      org.opencontainers.image.description="The Tool Substrate for Agentic AI — 729 MCP tools" \
+      org.opencontainers.image.version="25.0.0" \
       org.opencontainers.image.source="https://github.com/whitemagic-ai/whitemagic" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="whitemagic-ai"
@@ -61,24 +63,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project metadata first (layer caching)
-COPY pyproject.toml README.md VERSION LICENSE /app/
+COPY core/pyproject.toml /app/pyproject.toml
+COPY README.md VERSION LICENSE /app/
 
 # Copy Python package
-COPY whitemagic/ /app/whitemagic/
+COPY core/whitemagic/ /app/whitemagic/
 
 # Install WhiteMagic with MCP + CLI support
 RUN pip install --no-cache-dir ".[mcp,cli]"
 
-# Install Rust accelerator wheel from builder stage
-COPY --from=rust-builder /build/dist/*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/*.whl && rm -f /tmp/*.whl
-
-# Install seed binary
-COPY --from=rust-builder /build/dist/wm-seed /usr/local/bin/wm-seed
+# Install Rust acceleration and seed binary (optional)
+COPY --from=rust-builder /build/dist/ /tmp/dist/
+RUN if ls /tmp/dist/*.whl 2>/dev/null; then pip install --no-cache-dir /tmp/dist/*.whl; fi \
+    && if [ -f /tmp/dist/wm-seed ]; then cp /tmp/dist/wm-seed /usr/local/bin/wm-seed; fi \
+    && rm -rf /tmp/dist
 
 # Copy supporting files
-COPY scripts/ /app/scripts/
-COPY eval/ /app/eval/
+COPY core/scripts/ /app/scripts/
+COPY core/eval/ /app/eval/
 COPY llms.txt /app/llms.txt
 COPY skill.md /app/skill.md
 
@@ -99,7 +101,7 @@ HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
 
 EXPOSE 8765
 
-CMD ["python", "-m", "whitemagic.run_mcp"]
+CMD ["python", "-m", "whitemagic.run_mcp_lean"]
 
 # ── Stage 4: Heavy Runtime (all polyglot cores, ~800MB) ──────────────
 FROM slim AS heavy
@@ -108,28 +110,16 @@ FROM slim AS heavy
 COPY --from=go-builder /build/whitemagic-mesh /usr/local/bin/whitemagic-mesh
 
 # Copy polyglot source trees (for reference / hot-loading)
-COPY whitemagic-zig/src/ /app/whitemagic-zig/src/
-COPY whitemagic-mojo/src/ /app/whitemagic-mojo/src/
-COPY whitemagic-julia/src/ /app/whitemagic-julia/src/
-COPY haskell/src/ /app/haskell/src/
-COPY elixir/lib/ /app/elixir/lib/
-COPY whitemagic-go/ /app/whitemagic-go/
+COPY polyglot/whitemagic-zig/src/ /app/whitemagic-zig/src/
+COPY polyglot/mojo/src/ /app/whitemagic-mojo/src/
+COPY polyglot/whitemagic-jl/src/ /app/whitemagic-julia/src/
+COPY polyglot/whitemagic-hs/src/ /app/haskell/src/
+COPY polyglot/elixir/lib/ /app/elixir/lib/
+COPY polyglot/whitemagic-go/ /app/whitemagic-go/
 COPY sdk/ /app/sdk/
-COPY nexus/ /app/nexus/
+COPY app-layer/nexus/ /app/nexus/
 
 # Install additional Python extras for full experience
 RUN pip install --no-cache-dir ".[api,tui]" 2>/dev/null || true
 
-# Seed quickstart memories into the default DB
-RUN WM_SILENT_INIT=1 python -c "\
-from whitemagic.tools.unified_api import call_tool; \
-import json; \
-for mem in json.loads(open('/app/scripts/seed_quickstart_memories.py').read().split('QUICKSTART_MEMORIES = ')[1].split('\n]')[0] + '\n]' if False else '[]'): pass" \
-    2>/dev/null || true
-
-# Default: MCP stdio server in PRAT mode
-# For MCP Classic:  docker run --rm -i whitemagic:heavy python -m whitemagic.run_mcp
-# For CLI:          docker run --rm whitemagic:heavy wm status
-# For API:          docker run --rm -p 8765:8765 whitemagic:heavy python -m whitemagic.interfaces.nexus_api
-# For Seed Binary:  docker run --rm -i whitemagic:heavy wm-seed serve
-CMD ["python", "-m", "whitemagic.run_mcp"]
+CMD ["python", "-m", "whitemagic.run_mcp_lean"]
