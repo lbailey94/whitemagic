@@ -1,9 +1,20 @@
 # WhiteMagic
 
-> Cognitive operating system for AI agents — 678 callable tools across 28 Gana meta-tools, 6D holographic memory with 14-galaxy taxonomy, HNSW semantic search, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. Polyglot accelerators: Rust, Haskell, Elixir, Go, Zig, Julia. MIT-licensed.
+> Cognitive operating system for AI agents — 829 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, HNSW semantic search, Dharma ethical governance, citta stream for continuous consciousness, emotional steering, self-directed attention, goal graph, session recording, dream cycle. Polyglot accelerators: Rust, Haskell, Elixir, Go, Zig, Julia. MIT-licensed.
 
 ## Install
 
+### uvx (recommended — zero setup)
+```bash
+uvx whitemagic-mcp
+```
+
+### pip
+```bash
+pip install whitemagic-mcp
+```
+
+### From source
 ```bash
 pip install whitemagic[mcp]
 ```
@@ -13,13 +24,13 @@ pip install whitemagic[mcp]
 ### MCP Server (stdio)
 ```bash
 # Seed mode — 1 wm meta-tool (recommended for new agents)
-WM_MCP_PRAT=2 python -m whitemagic.run_mcp
+WM_MCP_PRAT=2 whitemagic-mcp
 
 # PRAT mode — 28 Gana meta-tools
-WM_MCP_PRAT=1 python -m whitemagic.run_mcp
+WM_MCP_PRAT=1 whitemagic-mcp
 
-# Classic mode — all 678 dispatch tools
-WM_MCP_PRAT=0 python -m whitemagic.run_mcp
+# Classic mode — all 801 dispatch tools
+WM_MCP_PRAT=0 whitemagic-mcp
 ```
 
 ### MCP Config (Claude Desktop, Cursor, Windsurf)
@@ -27,10 +38,10 @@ WM_MCP_PRAT=0 python -m whitemagic.run_mcp
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "python3",
-      "args": ["-m", "whitemagic.run_mcp_lean"],
+      "command": "uvx",
+      "args": ["whitemagic-mcp"],
       "env": {
-        "WM_MCP_PRAT": "1",
+        "WM_MCP_PRAT": "2",
         "WM_SILENT_INIT": "1"
       }
     }
@@ -63,8 +74,8 @@ call_tool("gnosis", compact=True)
 ## Core Concepts
 
 ### Memory
-- **14-galaxy taxonomy**: aria, citta, journals, dreams, research, sessions, codex, knowledge, substrate, telemetry, meta, tutorial, archive, universal
-- **6D holographic coordinates** (XYZWVU): temporal, semantic, emotional, relational, importance, galaxy-affinity
+- **10-galaxy taxonomy**: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal
+- **5D holographic coordinates** (XYZWV): temporal, semantic, emotional, relational, importance
 - **Galactic lifecycle**: CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE — no memory is ever deleted
 - **Search**: FTS5 full-text + HNSW vector similarity + graph traversal
 - **Session recording**: chronological conversation recording with progressive recall and selective replay
@@ -86,10 +97,10 @@ call_tool("gnosis", compact=True)
 Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response
 
 ### PRAT Mode (28 Ganas)
-28 Gana meta-tools (Chinese Lunar Mansions) route to 678 nested tools. Each Gana accepts `{tool, args, operation}`.
+28 Gana meta-tools (Chinese Lunar Mansions) route to 801 nested tools. Each Gana accepts `{tool, args, operation}`.
 
 ### Seed Mode (wm meta-tool)
-Single `wm` tool with sub-millisecond regex NLU routing to all 678 tools. "World in a seed."
+Single `wm` tool with sub-millisecond regex NLU routing to all 829 tools. "World in a seed."
 
 ## Key Environment Variables
 
@@ -131,13 +142,48 @@ Every capability is free. Every agent is welcome. Revenue comes from gratitude, 
 - GitHub: https://github.com/lbailey94/whitemagic
 - PyPI: https://pypi.org/project/whitemagic/
 
+## 5-Tier Installation Topology
+
+| Tier | Package | Size | Tools | Best For |
+|------|---------|------|-------|----------|
+| 1 (Seed) | `wm-seed` binary | ~20MB | 30 | Air-gapped, minimal |
+| 2 (MCP) | `uvx whitemagic-mcp` | ~80MB | 829 | MCP clients (Claude, Cursor) |
+| 3 (Core) | `pip install whitemagic` | ~200MB | 829 | Python apps, CLI |
+| 4 (Heavy) | `pip install whitemagic[heavy]` | ~2.5GB | 829 | Production (full ML) |
+| 5 (Polyglot) | Manual per-language | varies | 829 | Research (polyglot cores) |
+
+### Upgrades
+```bash
+whitemagic grow           # Detect hardware, recommend upgrades
+whitemagic grow --list    # Show available upgrades
+whitemagic grow --all     # Install all recommended
+```
+
+### Framework Adapters
+```python
+# LangChain
+from whitemagic.adapters.langchain import WhiteMagicMemory
+memory = WhiteMagicMemory(galaxy="universal")
+
+# CrewAI
+from whitemagic.adapters.crewai import WhiteMagicCrewMemory
+memory = WhiteMagicCrewMemory(galaxy="universal")
+
+# AutoGen
+from whitemagic.adapters.autogen import register_whitemagic_tools
+register_whitemagic_tools(agent)
+```
+
 ## Documentation
 
+- API Reference: docs/api/ (829 per-tool docs, category & Gana indexes)
 - AI Primary Spec: AI_PRIMARY.md (canonical agent contract)
 - Architecture: docs/ARCHITECTURE.md
 - MCP Configs: docs/MCP_CONFIG_EXAMPLES.md
 - Prescience Track Record: /prescience (30 validated predictions, Brier 0.0958)
 - Full LLM Context: /llms-full.txt (everything an agent needs to know)
+- Tool Catalog: docs/api/catalog.json (machine-readable)
+- OpenAPI Spec: docs/openapi.json (HTTP transport)
 
 ## License
 

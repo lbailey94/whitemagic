@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/2020-12/schema",
   "schema_version": "0.1",
   "name": "WhiteMagic",
-  "description": "Cognitive operating system for AI agents — 614 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
-  "version": "24.1.0",
+  "description": "Cognitive operating system for AI agents — 829 callable tools via single wm meta-tool, 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, citta stream for continuous consciousness, emotional steering signals, self-directed attention, goal graph, dream cycle for memory consolidation, session recording with progressive recall. Polyglot accelerators in 7 languages. MIT-licensed, local-first, free forever.",
+  "version": "25.0.0",
   "url": "https://whitemagic.dev",
   "provider": {
     "name": "WhiteMagic Labs",
@@ -27,17 +27,17 @@
       "transport": ["stdio", "streamable-http"],
       "endpoint": {
         "type": "stdio",
-        "command": "python",
-        "args": ["-m", "whitemagic.run_mcp_lean"],
+        "command": "uvx",
+        "args": ["whitemagic-mcp"],
         "env": {
           "WM_MCP_PRAT": "2",
           "WM_SILENT_INIT": "1"
         }
       },
       "tool_modes": {
-        "seed": "1 wm meta-tool — sub-millisecond NLU routing to all 614 tools",
+        "seed": "1 wm meta-tool — sub-millisecond NLU routing to all 829 tools",
         "prat": "28 Gana meta-tools — Lunar Mansion grouping with nested sub-tools",
-        "classic": "490 dispatch tools — full flat tool surface"
+        "classic": "801 dispatch tools — full flat tool surface"
       },
       "registry": {
         "server_json": "https://whitemagic.dev/server.json",
@@ -87,8 +87,11 @@
     }
   ],
   "installation": {
-    "pip": "pip install whitemagic[mcp]",
-    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e .",
+    "uvx": "uvx whitemagic-mcp",
+    "pip": "pip install whitemagic-mcp",
+    "pip_full": "pip install whitemagic",
+    "seed_binary": "curl https://whitemagic.dev/install.sh | sh",
+    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e core/.",
     "pypi": "https://pypi.org/project/whitemagic/",
     "github": "https://github.com/lbailey94/whitemagic"
   },
@@ -106,7 +109,7 @@
   },
   "trust": {
     "license": "MIT",
-    "tests": "4190+ passing, 0 failures, 19 skipped",
+    "tests": "5697+ passing, 0 failures, 3 skipped",
     "prescience": {
       "validated_claims": 21,
       "brier_score": 0.0958,
