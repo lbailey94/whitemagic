@@ -721,7 +721,7 @@ class CodebaseScanner:
             with open(path, "rb") as f:
                 h.update(f.read(10240))
         except OSError:
-            pass
+            logger.debug("Ignored OSError in codebase_scanner.py:723")
         return h.hexdigest()[:16]
 
     # ── Internal: batch file reading ──────────────────────────────────
@@ -1020,12 +1020,12 @@ class CodebaseScanner:
                 try:
                     self._direct_store(content=content, title=title, tags=tags, importance=importance, metadata=metadata)
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in codebase_scanner.py:1022")
             for chunk in chunks:
                 try:
                     self._direct_store(content=chunk.content, title=chunk.title, tags=chunk.to_tags(), importance=0.5, metadata=chunk.to_metadata(chunk.content_hash))
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in codebase_scanner.py:1027")
 
     def _store_manifest(self, result: ScanResult) -> None:
         """Store scan manifest as a substrate galaxy memory."""

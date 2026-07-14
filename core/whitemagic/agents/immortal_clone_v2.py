@@ -112,18 +112,19 @@ class CampaignVictoryTracker:
     3. Avoid duplicate work on already-completed VCs
     """
 
-    def __init__(self, victory_conditions: list[dict]):
+    def __init__(self, victory_conditions: list[dict | str]):
         """Initialize tracker with campaign VCs.
 
         Args:
-            victory_conditions: List of VC dicts with 'id' and optional 'description'
+            victory_conditions: List of VC dicts with 'id' and optional 'description',
+                or plain strings used as VC IDs.
         """
         self.vcs = {
-            vc["id"]: {
+            (vc["id"] if isinstance(vc, dict) else str(vc)): {
                 "met": False,
                 "clone_id": None,
                 "timestamp": None,
-                "description": vc.get("description", ""),
+                "description": vc.get("description", "") if isinstance(vc, dict) else "",
             }
             for vc in victory_conditions
         }
@@ -953,7 +954,15 @@ class GasTownOrchestrator:
 
         # Each victory condition becomes multiple MEOW units
         for i, vc in enumerate(self.campaign.get("victory_conditions", [])):
-            target = vc.get("target", f"target_{i}")
+            if isinstance(vc, str):
+                target = vc
+                vc_dict = {"target": vc}
+            elif isinstance(vc, dict):
+                target = vc.get("target", f"target_{i}")
+                vc_dict = vc
+            else:
+                target = f"target_{i}"
+                vc_dict = {"target": target}
 
             # Analyze phase
             meows.append(

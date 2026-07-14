@@ -191,6 +191,20 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "codebase.structure": LazyHandler("codebase", "handle_codebase_structure"),
     "codebase.status": LazyHandler("codebase", "handle_codebase_status"),
     "codebase.find": LazyHandler("codebase", "handle_codebase_find"),
+    # ── Code Structure Graph ──
+    "code.graph": LazyHandler("code_graph", "handle_code_graph"),
+    "code.query": LazyHandler("code_graph", "handle_code_query"),
+    "code.path": LazyHandler("code_graph", "handle_code_path"),
+    "code.explain": LazyHandler("code_graph", "handle_code_explain"),
+    "code.communities": LazyHandler("code_graph", "handle_code_communities"),
+    "code.god_nodes": LazyHandler("code_graph", "handle_code_god_nodes"),
+    "code.subgraph": LazyHandler("code_graph", "handle_code_subgraph"),
+    "code.export": LazyHandler("code_graph", "handle_code_export"),
+    "code.import": LazyHandler("code_graph", "handle_code_import"),
+    "code.affected_by": LazyHandler("code_graph", "handle_code_affected_by"),
+    "code.correlate": LazyHandler("code_graph", "handle_code_correlate"),
+    "code.cross_repo_query": LazyHandler("code_graph", "handle_code_cross_repo_query"),
+    "code.stats": LazyHandler("code_graph", "handle_code_stats"),
     # ── Phase 6: Retrieval Telemetry ──
     "search.telemetry": LazyHandler("memory", "handle_search_telemetry"),
 }

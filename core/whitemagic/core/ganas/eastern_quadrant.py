@@ -187,7 +187,7 @@ Hold the head high, keep the neck stiff but flexible.
                     "memory_title": title,
                 }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Simulated memory consolidation for other tasks
         result = {
@@ -255,7 +255,7 @@ What is seen is supported by what is unseen.
                     "metrics": state,
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Simulated health check for other tasks
         return {
@@ -349,7 +349,7 @@ A house needs walls to be a home.
                     }
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -435,7 +435,7 @@ The dragon's power is in its tail.
                 }
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -592,7 +592,7 @@ Wind blows away the chaff.
                     }
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # TagNormalizer integration
         try:
@@ -638,7 +638,7 @@ Wind blows away the chaff.
                     "status": "identified",
                 }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,

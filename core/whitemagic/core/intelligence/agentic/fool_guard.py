@@ -219,7 +219,7 @@ class FoolGuard:
                 )
             )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         self.last_ralph_event = datetime.now()
         self._ralph_events_total += 1

@@ -316,7 +316,7 @@ class DurableArchive:
             for root, _dirs, files in os.walk(self._archive_dir):
                 file_count += sum(1 for f in files if f.endswith(".md"))
         except Exception:
-            pass
+            logger.debug("Ignored error in durable_archive.py:318")
 
         return {
             **stats,

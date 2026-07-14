@@ -40,6 +40,7 @@ class KnowledgeGap:
     proposed_action: str = ""
     status: str = "open"  # "open", "in_progress", "filled", "failed"
     result: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
     resolved_at: float = 0.0
 
@@ -98,6 +99,59 @@ class KnowledgeGapActionLoop:
                         gaps.append(gap)
         except Exception as e:
             logger.debug("KnowledgeGap: RIL gap detection failed: %s", e)
+
+        # WI 13: Gaps from EmergenceEngine — novel patterns that reveal
+        # knowledge boundaries. Emergence insights with high novelty but
+        # low confidence indicate areas where the system detected something
+        # interesting but doesn't understand it yet.
+        try:
+            from whitemagic.core.intelligence.agentic.emergence_engine import (
+                get_emergence_engine,
+            )
+
+            ee = get_emergence_engine()
+            insights = ee.get_insights(limit=5)
+            for insight in insights:
+                confidence = insight.get("confidence", 0.5)
+                insight_source = insight.get("source", "unknown")
+                if confidence < 0.3:
+                    gap = KnowledgeGap(
+                        gap_id=f"emergence_gap_{insight.get('id', '')}",
+                        description=f"Emergence pattern '{insight_source}' with low confidence — knowledge boundary detected",
+                        gap_type="missing_knowledge",
+                        galaxy="codex",
+                        priority=0.6,
+                    )
+                    gap.proposed_action = self._propose_action(gap)
+                    gaps.append(gap)
+        except Exception as e:
+            logger.debug("KnowledgeGap: EmergenceEngine gap detection failed: %s", e)
+
+        # WI 13: Reverse direction — check if EmergenceEngine has insights
+        # related to gaps from other sources. This cross-references gaps
+        # with emergence patterns to find connections.
+        try:
+            from whitemagic.core.intelligence.agentic.emergence_engine import (
+                get_emergence_engine,
+            )
+
+            ee = get_emergence_engine()
+            emergence_insights = ee.get_insights(limit=10)
+            if emergence_insights and gaps:
+                for gap in gaps:
+                    for insight in emergence_insights:
+                        insight_title = insight.get("title", "").lower()
+                        gap_desc = gap.description.lower()
+                        # Check for keyword overlap between gap and insight
+                        gap_words = set(gap_desc.split())
+                        insight_words = set(insight_title.split())
+                        overlap = gap_words & insight_words - {"the", "a", "an", "with", "for", "of", "in", "to", "and"}
+                        if overlap:
+                            gap.metadata = gap.metadata or {}
+                            gap.metadata["related_emergence"] = insight.get("id", "")
+                            break
+        except Exception as e:
+            logger.debug("KnowledgeGap: EmergenceEngine reverse cross-ref failed: %s", e)
 
         with self._lock:
             # Merge with existing gaps (avoid duplicates)

@@ -126,14 +126,14 @@ GARDEN_GANA_REGISTRY: list[GardenGanaMapping] = [
         resonance_keywords=["love", "care", "connect", "heart", "compassion"],
     ),
     GardenGanaMapping(
-        garden="courage",
+        garden="wonder",
         gana="Tail (Wei)",
         gana_tool="gana_tail",
         quadrant=Quadrant.EASTERN,
         element=Element.FIRE,
-        primary_emotion="Courage",
-        description="Acceleration - Forward momentum",
-        resonance_keywords=["brave", "push", "accelerate", "challenge", "dare"],
+        primary_emotion="Wonder",
+        description="Acceleration - The thrill of speed and discovery",
+        resonance_keywords=["fast", "accelerate", "push", "discover", "marvel"],
     ),
     GardenGanaMapping(
         garden="wisdom",

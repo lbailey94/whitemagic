@@ -47,7 +47,7 @@ def is_available() -> bool:
         r.ping()
         return True
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     # Fallback: check if llama-cli exists for direct mode
     return Path(LLAMA_CLI).exists()
 
@@ -222,4 +222,4 @@ def _emit_inference_event(result: dict[str, Any], prompt: str) -> Any:
             )
         )
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")

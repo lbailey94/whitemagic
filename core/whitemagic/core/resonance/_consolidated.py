@@ -47,7 +47,7 @@ try:
         _RUST_EVENT_BUS = True
         logger.debug("Rust lock-free event bus primitives available")
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 def _global_worker_loop() -> None:

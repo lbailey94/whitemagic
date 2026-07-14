@@ -65,7 +65,7 @@ def distance_5d(a: tuple[float, ...], b: tuple[float, ...]) -> float:
         )
         return float(holographic_5d_distance(a, b, (1.0, 1.0, 1.0, 1.0, 1.0)))
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     return math.sqrt(sum((ai - bi) ** 2 for ai, bi in zip(a, b)))
 
 

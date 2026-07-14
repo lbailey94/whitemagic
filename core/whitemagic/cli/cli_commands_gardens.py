@@ -65,7 +65,7 @@ def activate(garden: str) -> None:
                 },
             )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     except ValueError as e:
         click.echo(f"✗ {e}")

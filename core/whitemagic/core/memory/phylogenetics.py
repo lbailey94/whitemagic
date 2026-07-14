@@ -259,6 +259,44 @@ class PhylogeneticTracker:
             edges.append(edge)
         return edges
 
+    def record_code_lineage(
+        self,
+        source_symbol: str,
+        source_repo: str,
+        target_symbol: str,
+        target_repo: str,
+        lineage_type: str = "copy",
+        metadata: dict | None = None,
+    ) -> LineageEdge:
+        """Record cross-repo code lineage (e.g., function copied from repo X to repo Y).
+
+        Args:
+            source_symbol: Symbol name in the source repo.
+            source_repo: Source repository name.
+            target_symbol: Symbol name in the target repo.
+            target_repo: Target repository name.
+            lineage_type: Type of lineage (copy, fork, adapt, import).
+            metadata: Additional metadata.
+
+        Returns:
+            The recorded LineageEdge.
+        """
+        return self._record_edge(
+            source_id=source_symbol,
+            source_galaxy=f"codex/{source_repo}",
+            target_id=target_symbol,
+            target_galaxy=f"codex/{target_repo}",
+            edge_type="code_lineage",
+            mechanism=lineage_type,
+            metadata={
+                "source_repo": source_repo,
+                "target_repo": target_repo,
+                "source_symbol": source_symbol,
+                "target_symbol": target_symbol,
+                **(metadata or {}),
+            },
+        )
+
     def _record_edge(
         self,
         source_id: str,

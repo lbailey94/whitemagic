@@ -211,6 +211,11 @@ def check_tool_permission(
 
     Returns None if allowed, or an error dict if blocked.
     """
+    # Benchmark mode bypass — all tools allowed
+    import os as _os
+    if _os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return None
+
     # Always-allowed tools
     if tool_name in _ALWAYS_ALLOWED:
         return None

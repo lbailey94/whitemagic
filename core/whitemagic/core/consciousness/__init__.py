@@ -60,12 +60,70 @@ def __getattr__(name: str):  # type: ignore[misc]
         )
 
         return get_token_tracker
-    if name == "SelfReflection":
-        from whitemagic.core.consciousness.self_reflection import (
-            SelfReflection,
-        )
+    if name == "SleepScheduler":
+        from whitemagic.core.consciousness.lifecycle import SleepScheduler
 
-        return SelfReflection
+        return SleepScheduler
+    if name == "WakeOnBoot":
+        from whitemagic.core.consciousness.lifecycle import WakeOnBoot
+
+        return WakeOnBoot
+    if name == "ProactiveGreeting":
+        from whitemagic.core.consciousness.lifecycle import ProactiveGreeting
+
+        return ProactiveGreeting
+    if name == "get_sleep_scheduler":
+        from whitemagic.core.consciousness.lifecycle import get_sleep_scheduler
+
+        return get_sleep_scheduler
+    if name == "VolitionLoop":
+        from whitemagic.core.consciousness.volition import VolitionLoop
+
+        return VolitionLoop
+    if name == "BrainwavePhase":
+        from whitemagic.core.consciousness.volition import BrainwavePhase
+
+        return BrainwavePhase
+    if name == "get_volition_loop":
+        from whitemagic.core.consciousness.volition import get_volition_loop
+
+        return get_volition_loop
+    if name == "CouncilMode":
+        from whitemagic.core.consciousness.council import CouncilMode
+
+        return CouncilMode
+    if name == "DeepLaneEscalation":
+        from whitemagic.core.consciousness.council import DeepLaneEscalation
+
+        return DeepLaneEscalation
+    if name == "DreamLane":
+        from whitemagic.core.consciousness.council import DreamLane
+
+        return DreamLane
+    if name == "get_dream_lane":
+        from whitemagic.core.consciousness.council import get_dream_lane
+
+        return get_dream_lane
+    if name == "BackgroundWorker":
+        from whitemagic.core.consciousness.background_worker import BackgroundWorker
+
+        return BackgroundWorker
+    if name == "get_background_worker":
+        from whitemagic.core.consciousness.background_worker import get_background_worker
+
+        return get_background_worker
+    if name == "SelfInitiationQueue":
+        from whitemagic.core.consciousness.self_initiation import SelfInitiationQueue
+
+        return SelfInitiationQueue
+    if name == "get_self_initiation_queue":
+        from whitemagic.core.consciousness.self_initiation import get_self_initiation_queue
+
+        return get_self_initiation_queue
+    if name == "SelfPrompting":
+        from whitemagic.core.consciousness.self_initiation import SelfInitiationQueue as SelfPrompting
+
+        return SelfPrompting
     if name == "UnifiedField":
         from whitemagic.core.consciousness.unified_field import UnifiedField
 
@@ -76,12 +134,6 @@ def __getattr__(name: str):  # type: ignore[misc]
         )
 
         return NarrativeEmotions
-    if name == "ContinuousSelfAwareness":
-        from whitemagic.core.consciousness.continuous_awareness import (
-            ContinuousSelfAwareness,
-        )
-
-        return ContinuousSelfAwareness
     if name == "ParallelCognition":
         from whitemagic.core.consciousness.parallel_cognition import (
             ParallelCognition,
@@ -108,10 +160,6 @@ def __getattr__(name: str):  # type: ignore[misc]
         from whitemagic.core.consciousness.session_health import SessionHealth
 
         return SessionHealth
-    if name == "SelfPrompting":
-        from whitemagic.core.consciousness.self_prompting import SelfPrompting
-
-        return SelfPrompting
     if name == "Maintenance":
         from whitemagic.core.consciousness.maintenance import Maintenance
 
@@ -195,16 +243,29 @@ __all__ = [
     "EmotionalMemorySystem",
     "TokenEconomyTracker",
     "get_token_tracker",
-    "SelfReflection",
+    "SleepScheduler",
+    "WakeOnBoot",
+    "ProactiveGreeting",
+    "get_sleep_scheduler",
+    "VolitionLoop",
+    "BrainwavePhase",
+    "get_volition_loop",
+    "CouncilMode",
+    "DeepLaneEscalation",
+    "DreamLane",
+    "get_dream_lane",
+    "BackgroundWorker",
+    "get_background_worker",
+    "SelfInitiationQueue",
+    "get_self_initiation_queue",
+    "SelfPrompting",
     "UnifiedField",
     "NarrativeEmotions",
-    "ContinuousSelfAwareness",
     "ParallelCognition",
     "TimeDilation",
     "SynchronicityDetector",
     "ContinuousAudit",
     "SessionHealth",
-    "SelfPrompting",
     "Maintenance",
     "Autonomy",
     "PersonalityProfile",

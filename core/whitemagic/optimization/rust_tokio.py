@@ -28,7 +28,7 @@ except ImportError:
 
         _rs = _rs_mod
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
 # Detect IPC bridge — supports both flat (legacy) and nested (current) layouts
 if _rs is not None:

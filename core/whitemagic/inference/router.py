@@ -104,7 +104,7 @@ class TokenBudgetTracker:
                 f"inference:{self._request_count}", total
             )
         except (ImportError, RuntimeError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def recommend_downgrade(
         self, requested_tier: InferenceTier
@@ -345,7 +345,7 @@ class InferenceRouter:
                         "items_processed": ghrr_result.get("items_processed", 0),
                     }
             except (ImportError, ModuleNotFoundError):
-                pass  # GHRR not available — skip pre-processing
+                logger.debug("Optional dependency unavailable: ImportError")
 
         escalation_chain: list[InferenceTier] = []
         current_tier = tier

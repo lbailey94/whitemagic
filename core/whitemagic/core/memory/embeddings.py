@@ -197,7 +197,7 @@ class EmbeddingEngine:
                 self._available = True
                 return True
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # 2. Try FastEmbed (LocalEmbedder)
         try:
@@ -206,7 +206,7 @@ class EmbeddingEngine:
                 self._available = True
                 return True
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # 3. Fallback to sentence-transformers
         try:
@@ -237,7 +237,7 @@ class EmbeddingEngine:
                     self._model = embedder
                     return self._model
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
             # 2. Try FastEmbed (LocalEmbedder)
             try:
@@ -248,7 +248,7 @@ class EmbeddingEngine:
                     self._model = embedder
                     return self._model
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
             # 3. Fallback to SentenceTransformer
             try:
@@ -1464,7 +1464,7 @@ def reset_embedding_engine() -> None:
             try:
                 inst.close()
             except Exception:
-                pass
+                logger.debug("Ignored error in embeddings.py:1466")
         _engine_instances.clear()
 
 

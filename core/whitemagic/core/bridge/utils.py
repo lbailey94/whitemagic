@@ -56,4 +56,4 @@ def _emit_resonance_event(
             )
             bus.emit(event)
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")

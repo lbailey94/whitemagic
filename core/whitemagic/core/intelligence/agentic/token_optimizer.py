@@ -352,6 +352,30 @@ class TokenOptimizer:
         self.cache = QueryCache()
         self.compressor = ContextCompressor()
 
+    def _depth_budget_multiplier(self) -> float:
+        """WI 12: Get budget multiplier from current DepthGauge compression.
+
+        Deeper consciousness layers compress more efficiently, allowing
+        larger context windows without proportional token cost.
+
+        Returns: 1.0 (surface) to 3.0 (dream), default 1.0 on error.
+        """
+        try:
+            from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+
+            gauge = get_depth_gauge()
+            compression = gauge.current_compression()
+            if compression <= 1.0:
+                return 1.0
+            elif compression <= 2.5:
+                return 1.5
+            elif compression <= 4.0:
+                return 2.0
+            else:
+                return 3.0
+        except Exception:
+            return 1.0
+
     def optimize_query(self, query: str, context: str = "") -> tuple[str, str, int]:
         """Optimize a query before sending to AI.
 
@@ -366,9 +390,13 @@ class TokenOptimizer:
         if cached:
             return cached.result, optimized_context, cached.tokens_saved
 
+        # WI 12: Adjust context budget based on depth gauge compression
+        _depth_mult = self._depth_budget_multiplier()
+        _context_budget = int(2000 * _depth_mult)
+
         # 2. Compress context if provided — use VSA for large contexts
         if context:
-            if len(context) > 2000:
+            if len(context) > _context_budget:
                 vsa_result = self._vsa_compress(context, query)
                 if vsa_result is not None:
                     compressed, saved = vsa_result
@@ -376,12 +404,12 @@ class TokenOptimizer:
                     tokens_saved += saved
                 else:
                     compressed, saved = self.compressor.truncate_to_budget(
-                        context, 2000
+                        context, _context_budget
                     )
                     optimized_context = compressed
                     tokens_saved += saved
             else:
-                compressed, saved = self.compressor.truncate_to_budget(context, 2000)
+                compressed, saved = self.compressor.truncate_to_budget(context, _context_budget)
                 optimized_context = compressed
                 tokens_saved += saved
 

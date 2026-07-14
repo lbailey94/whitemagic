@@ -204,6 +204,40 @@ class EmergenceEngine:
         """Return past emergence insights."""
         return self._past_insights[-limit:]
 
+    def record_ignition(self, ignition: dict[str, Any], tool: str = "") -> None:
+        """WI 5: Record a citta ignition event as a candidate emergence pattern.
+
+        Ignition events are sudden large displacements in 16D citta space.
+        Recording them here makes them visible to emergence scans and
+        knowledge gap detection.
+        """
+        try:
+            insight = EmergenceInsight(
+                id=f"ignition_{ignition.get('position', 0)}",
+                title=f"Ignition event during {tool}" if tool else "Ignition event",
+                description=(
+                    f"Citta ignition: displacement={ignition.get('displacement', 0.0):.3f}, "
+                    f"layer={ignition.get('layer', 'unknown')}"
+                ),
+                confidence=0.5,
+                source="citta_ignition",
+                metadata=ignition,
+            )
+            self._past_insights.append(
+                {
+                    "id": insight.id,
+                    "title": insight.title,
+                    "description": insight.description,
+                    "confidence": insight.confidence,
+                    "source": insight.source,
+                    "timestamp": insight.timestamp,
+                }
+            )
+            if len(self._past_insights) > 100:
+                self._past_insights = self._past_insights[-100:]
+        except Exception as e:
+            logger.debug("Failed to record ignition: %s", e)
+
     def _detect_tag_clusters(self) -> list[EmergenceInsight]:
         """Find tags that co-occur more frequently than expected by chance."""
         try:

@@ -208,7 +208,7 @@ class MetaGalaxy:
                 if datetime.now() - newest > timedelta(days=7):
                     gaps.append(f"Galaxy '{galaxy_name}' is stale — no new memories in >7 days")
             except Exception:
-                pass
+                logger.debug("Ignored error in meta_galaxy.py:210")
 
         return gaps
 
@@ -292,7 +292,7 @@ class MetaGalaxy:
                     for row in cur.fetchall():
                         summary.top_tags.append((row[0], row[1]))
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in meta_galaxy.py:294")
 
                 # Oldest and newest
                 try:
@@ -302,7 +302,7 @@ class MetaGalaxy:
                         summary.oldest_memory = row[0] or ""
                         summary.newest_memory = row[1] or ""
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in meta_galaxy.py:304")
 
             conn.close()
         except Exception as e:
@@ -428,7 +428,7 @@ class MetaGalaxy:
                 try:
                     cb(index)
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in meta_galaxy.py:430")
 
             return index
 

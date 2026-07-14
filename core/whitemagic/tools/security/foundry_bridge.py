@@ -81,7 +81,7 @@ class FoundryBridge:
             try:
                 result.data = [json.loads(line) for line in result.stdout.strip().splitlines() if line.strip()]
             except (json.JSONDecodeError, ValueError):
-                pass
+                logger.debug("Ignored ValueError in foundry_bridge.py:83")
         return result
 
     def fork(self, rpc_url: str, block_number: int | None = None) -> FoundryResult:

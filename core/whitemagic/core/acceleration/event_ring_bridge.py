@@ -171,7 +171,7 @@ class EventRingBridge:
                 logger.info("🦀 EventRing: Rust LMAX path active")
                 return
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         self._fallback = _FallbackRing()
         logger.info("⚡ EventRing: Python deque fallback")
 

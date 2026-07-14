@@ -165,18 +165,25 @@ class OMSManager:
                 conn.row_factory = sqlite3.Row
                 # Check which columns exist in the memories table
                 cols = {r[1] for r in conn.execute("PRAGMA table_info(memories)").fetchall()}
-                select_cols = ["id", "title", "content", "memory_type", "importance",
+                base_cols = ["id", "title", "content", "memory_type", "importance",
                                "emotional_valence", "metadata", "created_at",
-                               "galactic_distance", "x", "y", "z", "w", "v"]
+                               "galactic_distance"]
                 if "tags" in cols:
-                    select_cols.insert(6, "tags")
+                    base_cols.insert(6, "tags")
                 if "galaxy" in cols:
-                    select_cols.append("galaxy")
-                col_list = ", ".join(select_cols)
-                # Export memories
+                    base_cols.append("galaxy")
+                col_list = ", ".join(f"m.{c}" for c in base_cols)
+                # Export memories with holographic coords via LEFT JOIN
                 rows = conn.execute(
-                    f"""SELECT {col_list}
-                       FROM memories ORDER BY importance DESC"""
+                    f"""SELECT {col_list},
+                           COALESCE(hc.x, 0.0) AS x,
+                           COALESCE(hc.y, 0.0) AS y,
+                           COALESCE(hc.z, 0.0) AS z,
+                           COALESCE(hc.w, 0.5) AS w,
+                           COALESCE(hc.v, 0.5) AS v
+                       FROM memories m
+                       LEFT JOIN holographic_coords hc ON m.id = hc.memory_id
+                       ORDER BY m.importance DESC"""
                 ).fetchall()
 
                 for row in rows:
@@ -238,7 +245,7 @@ class OMSManager:
 
             wm_version = __version__
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Build manifest
         manifest = OMSManifest(

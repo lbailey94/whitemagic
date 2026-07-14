@@ -11,19 +11,167 @@ from whitemagic.tools.security.oss_scanner import get_oss_scanner
 logger = logging.getLogger(__name__)
 
 
+# ── Engagement token defense-in-depth ──────────────────────────────────────
+
+_OFFENSIVE_HANDLER_TOOLS: frozenset[str] = frozenset({
+    "foundry_build", "foundry_test", "foundry_test_json",
+    "http_probe_get", "http_probe_post", "http_probe_xss",
+    "http_probe_sqli", "http_probe_idor", "http_probe_ssrf",
+    "api_state_machine",
+    "echidna_fuzz", "echidna_status",
+    "formal_verify", "formal_verify_status",
+    "poc_generate", "poc_verify",
+})
+
+
+def _check_offensive_token(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any] | None:
+    """Defense-in-depth: validate engagement token for offensive tools.
+
+    The middleware (mw_engagement_token) is the primary gate under violet profile.
+    This handler-level check provides a second layer: if a token_id is supplied,
+    validate it; if violet profile is active and no token is supplied, block.
+    Returns None to proceed, or an error dict to short-circuit.
+    """
+    if tool_name not in _OFFENSIVE_HANDLER_TOOLS:
+        return None
+    try:
+        from whitemagic.dharma.rules import get_rules_engine
+        from whitemagic.security.engagement_tokens import get_token_manager
+
+        token_id = kwargs.get("_engagement_token_id", "")
+        engine = get_rules_engine()
+        is_violet = engine.get_profile() == "violet"
+
+        if not token_id and not is_violet:
+            return None  # non-violet, no token needed
+
+        if not token_id and is_violet:
+            return {
+                "status": "error",
+                "error_code": "engagement_token_required",
+                "message": f"Tool '{tool_name}' requires a valid engagement token under violet profile.",
+            }
+
+        target = ""
+        for key in ("target", "host", "ip", "url", "domain", "endpoint", "rpc_url", "base_url"):
+            val = kwargs.get(key)
+            if isinstance(val, str) and val:
+                target = val
+                break
+
+        result = get_token_manager().validate(token_id=token_id, tool=tool_name, target=target)
+        if not result.get("valid", False):
+            return {
+                "status": "error",
+                "error_code": "engagement_token_invalid",
+                "message": f"Engagement token validation failed: {result.get('reason', 'unknown')}",
+                "token_id": token_id,
+            }
+    except ImportError:
+        logger.debug("Optional dependency unavailable: ImportError")
+    except Exception as e:
+        logger.debug("Handler token check failed for %s: %s", tool_name, e)
+    return None
+
+
+def _execute_in_shelter(
+    shelter_id: str,
+    tool_name: str,
+    kwargs: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Execute an offensive tool call inside a shelter sandbox.
+
+    Returns None if shelter_id is empty or the shelter is not found (caller
+    proceeds normally).  Returns a result dict if the shelter execution
+    completes (success or error).
+    """
+    if not shelter_id:
+        return None
+    try:
+        from whitemagic.shelter.manager import get_shelter_manager
+
+        mgr = get_shelter_manager()
+        shelter = mgr._shelters.get(shelter_id)
+        if shelter is None:
+            return None  # shelter not found, proceed normally
+
+        # Build a Python payload that calls the handler without shelter_id
+        # to avoid recursion, and return the result as JSON.
+        import json as _json
+
+        clean_kwargs = {k: v for k, v in kwargs.items() if k != "_shelter_id"}
+        payload = {
+            "type": "python",
+            "code": (
+                "import json; "
+                f"from whitemagic.tools.handlers.security_tools import "
+                f"_dispatch_offensive_for_shelter; "
+                f"result = _dispatch_offensive_for_shelter({ _json.dumps(tool_name)!r}, "
+                f"{ _json.dumps(clean_kwargs)!r}); "
+                "print(json.dumps(result))"
+            ),
+        }
+        result = mgr.execute(shelter_id, payload)
+        if result.get("status") == "ok":
+            try:
+                parsed = _json.loads(result.get("output", "{}"))
+                return parsed
+            except (_json.JSONDecodeError, ValueError):
+                return result
+        return result
+    except ImportError:
+        return None
+    except Exception as e:
+        logger.debug("Shelter execution failed for %s: %s", tool_name, e)
+        return None
+
+
+def _dispatch_offensive_for_shelter(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Internal: dispatch an offensive tool call from within a shelter."""
+    # Re-invoke the handler function by name, stripping shelter_id to avoid recursion
+    import whitemagic.tools.handlers.security_tools as _mod
+
+    handler_func = getattr(_mod, f"handle_{tool_name}", None)
+    if handler_func is None:
+        return {"status": "error", "error": f"Unknown tool: {tool_name}"}
+    # Remove shelter_id to prevent recursion
+    kwargs.pop("_shelter_id", None)
+    kwargs.pop("shelter_id", None)
+    return handler_func(**kwargs)
+
+
 def handle_foundry_build(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("foundry_build", kwargs)
+    if _err:
+        return _err
+    _shelter = kwargs.get("_shelter_id", "") or kwargs.get("shelter_id", "")
+    if _shelter:
+        _sresult = _execute_in_shelter(_shelter, "foundry_build", kwargs)
+        if _sresult is not None:
+            return _sresult
     bridge = get_foundry_bridge(kwargs.get("project_dir"))
     result = bridge.build(silent=kwargs.get("silent", True))
     return {"success": result.success, "stdout": result.stdout[-500:], "stderr": result.stderr[-500:], "returncode": result.returncode}
 
 
 def handle_foundry_test(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("foundry_test", kwargs)
+    if _err:
+        return _err
+    _shelter = kwargs.get("_shelter_id", "") or kwargs.get("shelter_id", "")
+    if _shelter:
+        _sresult = _execute_in_shelter(_shelter, "foundry_test", kwargs)
+        if _sresult is not None:
+            return _sresult
     bridge = get_foundry_bridge(kwargs.get("project_dir"))
     result = bridge.test(match=kwargs.get("match"), gas_report=kwargs.get("gas_report", False))
     return {"success": result.success, "stdout": result.stdout[-2000:], "stderr": result.stderr[-500:], "returncode": result.returncode}
 
 
 def handle_foundry_test_json(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("foundry_test_json", kwargs)
+    if _err:
+        return _err
     bridge = get_foundry_bridge(kwargs.get("project_dir"))
     result = bridge.test_json(match=kwargs.get("match"))
     return {"success": result.success, "data": result.data, "stdout": result.stdout[-500:], "stderr": result.stderr[-500:]}
@@ -115,6 +263,9 @@ def handle_security_status(**kwargs: Any) -> dict[str, Any]:
 
 # ── PoC Pipeline handlers ──
 def handle_poc_generate(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("poc_generate", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.poc_pipeline import generate_poc
     try:
         code = generate_poc(kwargs.get("template_name", ""), kwargs.get("variables", {}), tier=kwargs.get("tier"))
@@ -124,6 +275,14 @@ def handle_poc_generate(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_poc_verify(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("poc_verify", kwargs)
+    if _err:
+        return _err
+    _shelter = kwargs.get("_shelter_id", "") or kwargs.get("shelter_id", "")
+    if _shelter:
+        _sresult = _execute_in_shelter(_shelter, "poc_verify", kwargs)
+        if _sresult is not None:
+            return _sresult
     from whitemagic.tools.security.poc_pipeline import verify_poc
     result = verify_poc(
         kwargs.get("template_name", ""),
@@ -154,44 +313,78 @@ def handle_contest_prepare(**kwargs: Any) -> dict[str, Any]:
 
 # ── HTTP Probe handlers ──
 def handle_http_probe_get(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("http_probe_get", kwargs)
+    if _err:
+        return _err
+    _shelter = kwargs.get("_shelter_id", "") or kwargs.get("shelter_id", "")
+    if _shelter:
+        _sresult = _execute_in_shelter(_shelter, "http_probe_get", kwargs)
+        if _sresult is not None:
+            return _sresult
     from whitemagic.tools.security.http_probe import get_http_probe
     r = get_http_probe().get(kwargs.get("url", ""), kwargs.get("params"), kwargs.get("headers"))
     return {"status_code": r.status_code, "body": r.body[:2000], "elapsed_ms": r.elapsed_ms, "headers": dict(list(r.headers.items())[:10])}
 
 
 def handle_http_probe_post(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("http_probe_post", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.http_probe import get_http_probe
     r = get_http_probe().post(kwargs.get("url", ""), json_data=kwargs.get("json"), data=kwargs.get("data"), headers=kwargs.get("headers"))
     return {"status_code": r.status_code, "body": r.body[:2000], "elapsed_ms": r.elapsed_ms}
 
 
 def handle_http_probe_xss(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("http_probe_xss", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.http_probe import get_http_probe
     return get_http_probe().probe_xss(kwargs.get("url", ""), kwargs.get("param", ""))
 
 
 def handle_http_probe_sqli(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("http_probe_sqli", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.http_probe import get_http_probe
     return get_http_probe().probe_sqli(kwargs.get("url", ""), kwargs.get("param", ""))
 
 
 def handle_http_probe_idor(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("http_probe_idor", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.http_probe import get_http_probe
     return get_http_probe().probe_idor(kwargs.get("base_url", ""), kwargs.get("resource_path", ""), kwargs.get("max_id", 20))
 
 
 def handle_http_probe_ssrf(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("http_probe_ssrf", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.http_probe import get_http_probe
     return get_http_probe().probe_ssrf(kwargs.get("url", ""), kwargs.get("param", ""))
 
 
 def handle_api_state_machine(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("api_state_machine", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.http_probe import get_http_probe
     return get_http_probe().api_state_machine(kwargs.get("base_url", ""), kwargs.get("sequences", []))
 
 
 # ── Echidna handlers ──
 def handle_echidna_fuzz(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("echidna_fuzz", kwargs)
+    if _err:
+        return _err
+    _shelter = kwargs.get("_shelter_id", "") or kwargs.get("shelter_id", "")
+    if _shelter:
+        _sresult = _execute_in_shelter(_shelter, "echidna_fuzz", kwargs)
+        if _sresult is not None:
+            return _sresult
     from whitemagic.tools.security.echidna_bridge import EchidnaBridge
     bridge = EchidnaBridge()
     result = bridge.fuzz(
@@ -291,6 +484,9 @@ def handle_vuln_graph_cross_chain(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_formal_verify(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("formal_verify", kwargs)
+    if _err:
+        return _err
     from whitemagic.tools.security.formal_verifier import FormalVerifier
     fv = FormalVerifier()
     results = fv.verify_halmos(kwargs.get("project_dir", "."), match=kwargs.get("match", ".*"))

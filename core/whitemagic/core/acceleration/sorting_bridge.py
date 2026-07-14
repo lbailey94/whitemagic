@@ -17,7 +17,7 @@ _rs: Any = None
 try:
     import whitemagic_rust as _rs  # type: ignore[no-redef]
 except (ImportError, ModuleNotFoundError):
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:

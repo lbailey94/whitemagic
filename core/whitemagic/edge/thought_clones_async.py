@@ -62,7 +62,7 @@ try:
     if _RUST_TOKIO:
         logger.debug("Rust Tokio Clone Army available — 208× fast-path enabled")
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 @dataclass
@@ -963,7 +963,7 @@ async def doctrine_deploy(
                         }
                     )
                 except (ImportError, AttributeError):
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "objective": objective,

@@ -441,7 +441,7 @@ class SelfDirectedAdapter(BaseAdapter):
             self._stats.calls += 1
 
         try:
-            from whitemagic.core.consciousness.self_directed_attention import (
+            from whitemagic.core.consciousness.self_initiation import (
                 get_self_directed_attention,
             )
 

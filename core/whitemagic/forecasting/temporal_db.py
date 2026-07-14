@@ -108,6 +108,27 @@ class TemporalForecastDB:
                 conn.execute(
                     "ALTER TABLE predictions ADD COLUMN behavioral_confidence REAL"
                 )
+            # Migrate: add oracle claim columns (added in v24.4.0 — Phase 3)
+            if "claim_type" not in col_names:
+                conn.execute(
+                    "ALTER TABLE predictions ADD COLUMN claim_type TEXT DEFAULT 'binary'"
+                )
+            if "oracle_source" not in col_names:
+                conn.execute(
+                    "ALTER TABLE predictions ADD COLUMN oracle_source TEXT"
+                )
+            if "oracle_hexagram" not in col_names:
+                conn.execute(
+                    "ALTER TABLE predictions ADD COLUMN oracle_hexagram INTEGER"
+                )
+            if "guidance_action" not in col_names:
+                conn.execute(
+                    "ALTER TABLE predictions ADD COLUMN guidance_action TEXT"
+                )
+            if "action_taken" not in col_names:
+                conn.execute(
+                    "ALTER TABLE predictions ADD COLUMN action_taken INTEGER DEFAULT 0"
+                )
 
     @contextmanager
     def _conn(self):
@@ -458,3 +479,178 @@ class TemporalForecastDB:
             "calibration": self.calibration(n_bins=5),
         }
         return json.dumps(payload, indent=indent, default=str)
+
+    def record_oracle_claim(
+        self,
+        question: str,
+        source: str,
+        confidence: float,
+        oracle_source: str = "synthesized",
+        oracle_hexagram: int | None = None,
+        guidance_action: str = "",
+        expected_resolution_date: str | None = None,
+        category: str = "oracle",
+    ) -> str:
+        """Record an oracle reading as a falsifiable claim.
+
+        Creates a pending prediction that can be validated or falsified later,
+        closing the calibration loop for divination guidance.
+
+        Args:
+            question: The question asked or guidance given.
+            source: Source identifier (e.g. 'oracle:32').
+            confidence: Predicted probability [0, 1].
+            oracle_source: Which oracle system ('iching', 'tarot', 'ifa', 'zodiacal', 'synthesized').
+            oracle_hexagram: King Wen hexagram number if applicable.
+            guidance_action: The recommended action from the oracle.
+            expected_resolution_date: ISO date when the claim can be evaluated.
+            category: Domain tag (default 'oracle').
+
+        Returns:
+            UUID of the inserted claim.
+        """
+        if not 0.0 <= confidence <= 1.0:
+            raise ValueError(f"confidence must be in [0, 1], got {confidence}")
+        claim_id = str(uuid.uuid4())
+        source_date = datetime.utcnow().date().isoformat()
+        notes_parts = [f"oracle_source={oracle_source}"]
+        if oracle_hexagram:
+            notes_parts.append(f"hexagram={oracle_hexagram}")
+        if guidance_action:
+            notes_parts.append(f"action={guidance_action[:200]}")
+        if expected_resolution_date:
+            notes_parts.append(f"expected_resolution={expected_resolution_date}")
+        notes = " | ".join(notes_parts)
+
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO predictions
+                  (id, claim, source_date, source_ref, confidence, category,
+                   status, notes, created_at, claim_type, oracle_source,
+                   oracle_hexagram, guidance_action, action_taken)
+                VALUES (?,?,?,?,?,?,'pending',?,?,?,
+                        ?,?,?,0)
+                """,
+                (
+                    claim_id,
+                    question,
+                    source_date,
+                    source,
+                    confidence,
+                    category,
+                    notes,
+                    datetime.utcnow().isoformat(),
+                    "oracle",
+                    oracle_source,
+                    oracle_hexagram,
+                    guidance_action,
+                ),
+            )
+        return claim_id
+
+    def get_oracle_claims(self, status: str | None = None) -> list[dict[str, Any]]:
+        """Return oracle claims, optionally filtered by status.
+
+        Args:
+            status: Filter by 'pending', 'validated', 'falsified', or None for all.
+
+        Returns:
+            List of oracle claim dicts.
+        """
+        with self._conn() as conn:
+            if status:
+                rows = conn.execute(
+                    "SELECT * FROM predictions WHERE claim_type = 'oracle' AND status = ? ORDER BY source_date",
+                    (status,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM predictions WHERE claim_type = 'oracle' ORDER BY source_date"
+                ).fetchall()
+        return [dict(r) for r in rows]
+
+    def resolve_oracle_claim(
+        self,
+        claim_id: str,
+        action_taken: bool,
+        outcome_positive: bool,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        """Resolve an oracle claim by recording whether guidance was followed and outcome.
+
+        Args:
+            claim_id: UUID of the oracle claim.
+            action_taken: Whether the recommended action was followed.
+            outcome_positive: Whether the outcome was favorable.
+            notes: Additional resolution notes.
+
+        Returns:
+            Dict with resolution details.
+        """
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM predictions WHERE id = ? AND claim_type = 'oracle'",
+                (claim_id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"Oracle claim {claim_id} not found")
+
+            action_val = 1 if action_taken else -1
+            status = "validated" if outcome_positive else "falsified"
+            val_date = datetime.utcnow().date().isoformat()
+
+            conn.execute(
+                """
+                UPDATE predictions
+                SET status = ?, validation_date = ?, action_taken = ?,
+                    notes = notes || ?
+                WHERE id = ?
+                """,
+                (
+                    status,
+                    val_date,
+                    action_val,
+                    f"\n[resolved] action_taken={action_taken}, outcome={'positive' if outcome_positive else 'negative'}. {notes}",
+                    claim_id,
+                ),
+            )
+
+        return {"claim_id": claim_id, "status": status, "action_taken": action_taken}
+
+    def oracle_prescience_score(self) -> dict[str, Any]:
+        """Compute prescience score for oracle claims only.
+
+        Returns:
+            Dict with oracle-specific Brier score, counts, and accuracy.
+        """
+        claims = self.get_oracle_claims()
+        closed = [c for c in claims if c.get("status") in ("validated", "falsified")]
+        pending = [c for c in claims if c.get("status") == "pending"]
+
+        if not closed:
+            return {
+                "total": len(claims),
+                "validated": 0,
+                "falsified": 0,
+                "pending": len(pending),
+                "brier_score": None,
+                "accuracy": None,
+            }
+
+        forecasts = [c.get("confidence", 0.5) for c in closed]
+        outcomes = [1 if c["status"] == "validated" else 0 for c in closed]
+
+        from whitemagic.forecasting.brier import brier_score as _bs
+
+        bs = _bs(forecasts, outcomes)
+        accuracy = sum(outcomes) / len(outcomes)
+
+        return {
+            "total": len(claims),
+            "validated": sum(outcomes),
+            "falsified": len(outcomes) - sum(outcomes),
+            "pending": len(pending),
+            "brier_score": round(bs, 4),
+            "accuracy": round(accuracy, 4),
+        }

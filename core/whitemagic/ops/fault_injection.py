@@ -163,7 +163,7 @@ class FaultInjector:
             try:
                 p.stop()
             except Exception:
-                pass
+                logger.debug("Ignored error in fault_injection.py:165")
         self._patches.clear()
         self._active_faults.clear()
         self._triggered.clear()
@@ -188,7 +188,7 @@ class FaultInjector:
             try:
                 p.stop()
             except Exception:
-                pass
+                logger.debug("Ignored error in fault_injection.py:190")
         self._patches.clear()
         remaining = dict(self._active_faults)
         self._active_faults.clear()
@@ -293,7 +293,7 @@ class FaultInjector:
 
             original_dispatch = _orig
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         def _patched_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             if tool_name == target or not target:

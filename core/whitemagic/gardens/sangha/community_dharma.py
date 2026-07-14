@@ -227,7 +227,7 @@ class CommunityDharma:
                     )
                 )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
     def get_community_guidelines(self) -> list[dict[str, Any]]:
         """Get ethical guidelines from community consensus.

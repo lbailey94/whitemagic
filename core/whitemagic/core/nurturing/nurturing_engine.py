@@ -399,7 +399,7 @@ class NurturingEngine:
                 new_emotion = getattr(EmotionalState, top_emotion.upper(), new_emotion)
                 intensity = max(intensity, 0.5 + (resonance[top_garden]["score"] * 0.1))
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Decay intensity if no new stimulus
         if new_emotion == self.current_emotion:

@@ -338,6 +338,7 @@ _CONTENT_SCAN_EXEMPT: set = {
     "galaxy.merge",
     "galaxy.transfer",
     "galaxy.restore",
+    "galaxy.receive",
     # Export & broadcast (arbitrary content)
     "export_memories",
     "audit.export",
@@ -416,6 +417,11 @@ _CONTENT_SCAN_EXEMPT: set = {
     "sabha.convene",
     # Starter packs (context field triggers semantic false positives)
     "starter_packs.suggest",
+    # Mesh routing (thought field triggers semantic false positives)
+    "mesh.route",
+    "mesh.route.strategy",
+    # CodeGenome validation (prompt field triggers semantic false positives)
+    "codegenome_validate",
 }
 
 # Tools exempt from encoding detection (they legitimately handle hex/binary/base64 data)
@@ -435,6 +441,21 @@ _ENCODING_SCAN_EXEMPT: set = {
     "foundry.build",
     "foundry.test",
     "foundry.test_json",
+    # Memory tools (memory_id is a hex hash)
+    "fast_read_memory",
+    # Model signing (sha256 hash is expected)
+    "model.register",
+    "model.hash",
+    # Galaxy packages (content_hash field contains sha256 hex)
+    "galaxy.receive",
+    "galaxy.restore",
+    "galaxy.package",
+    # OMS (may contain hash-like data)
+    "oms.export",
+    "oms.import",
+    "oms.inspect",
+    "oms.verify",
+    "oms.price",
 }
 
 

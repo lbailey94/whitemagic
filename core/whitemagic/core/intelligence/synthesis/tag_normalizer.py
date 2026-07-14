@@ -131,7 +131,7 @@ class TagNormalizer:
 
                     return sorted(similar_pairs, key=lambda x: -x[2])
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception as e:
             logger.debug(
                 "Rust string similarity failed, falling back to Python: %s",

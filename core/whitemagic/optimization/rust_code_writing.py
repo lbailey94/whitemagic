@@ -20,7 +20,7 @@ try:
         _rs = _wmr
         logger.debug("Rust CodeWritingClone available — parallel file ops enabled")
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 def code_writing_available() -> bool:

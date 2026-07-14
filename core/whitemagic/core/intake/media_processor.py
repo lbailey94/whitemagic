@@ -467,7 +467,7 @@ class AudioProcessor:
             text = " ".join(seg.text for seg in segments)
             return text.strip(), info.duration
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Fallback to openai-whisper
         try:
@@ -477,7 +477,7 @@ class AudioProcessor:
             result = model.transcribe(str(path))
             return result["text"].strip(), result.get("duration", 0.0)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return "", 0.0
 

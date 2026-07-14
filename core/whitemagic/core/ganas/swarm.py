@@ -89,7 +89,7 @@ class GanaSwarm:
                         confidence=1.0,
                     )
                 except ImportError:
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
                 return  # Do not add to queue
 
             elif decision.action == GovernanceAction.WARN:
@@ -104,7 +104,7 @@ class GanaSwarm:
                 state["_dharma_warning"] = decision.concerns
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         await self.task_queue.put((sequence, task, state))
 
@@ -247,7 +247,7 @@ class GanaSwarm:
                                 confidence=p.confidence,
                             )
                         except ImportError:
-                            pass
+                            logger.debug("Optional dependency unavailable: ImportError")
 
     def stop_breathing(self) -> None:
         """Stop the breath cycle."""

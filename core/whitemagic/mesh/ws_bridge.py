@@ -101,7 +101,7 @@ class WebSocketBridge:
                     except Exception as e:
                         await websocket.send(json.dumps({"error": str(e)}))
             except Exception:
-                pass
+                logger.debug("Ignored error in ws_bridge.py:103")
             finally:
                 self._clients.discard(websocket)
                 logger.info("WS client disconnected (total=%d)", len(self._clients))
@@ -176,7 +176,7 @@ class WebSocketBridge:
     async def _handle_telemetry(self, data: dict[str, Any]) -> dict[str, Any]:
         """Get a single telemetry snapshot (non-streaming for WS)."""
         try:
-            from whitemagic.core.consciousness.daemon import get_daemon
+            from whitemagic.core.consciousness.consciousness_loop import get_daemon
             daemon = get_daemon()
             return daemon.status()
         except Exception as e:

@@ -193,7 +193,7 @@ def register_all_commands(
 
         main_group.add_command(infer)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     if "infer" not in main_group.commands:
 
@@ -216,7 +216,7 @@ def register_all_commands(
                 infer_fallback_group.add_command(infer_local_query)
                 infer_fallback_group.add_command(infer_local_status)
         except ImportError:
-            pass  # Optional local inference commands not available
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception as e:
             logger.debug(
                 "Unexpected error loading local inference commands: %s",
@@ -239,7 +239,7 @@ def register_all_commands(
                 main_group.commands["infer"].add_command(infer_local_query)
                 main_group.commands["infer"].add_command(infer_local_status)
         except ImportError:
-            pass  # Optional local inference commands not available
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception as e:
             logger.debug(
                 "Unexpected error loading local inference commands: %s",
@@ -270,7 +270,7 @@ def register_all_commands(
         main_group.add_command(archaeology)
         main_group.add_command(windsurf)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 7. Watcher
     register_optional(main_group, "watcher", "whitemagic.cli.cli_watcher", "watch")
@@ -327,7 +327,7 @@ def register_all_commands(
         main_group.add_command(supervisor_cli)
         main_group.add_command(phase_cli)
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 14. PRAT
     register_optional(
@@ -394,7 +394,7 @@ def register_all_commands(
 
         register_interactive_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 21. Discoverability commands (manifest, capabilities, tools search/schema)
     try:
@@ -404,7 +404,7 @@ def register_all_commands(
 
         register_discoverability_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 22. Cognitive workflow commands (think, reflect, dream, evolve, ground)
     try:
@@ -414,7 +414,7 @@ def register_all_commands(
 
         register_cognitive_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 23. Daemon commands (start, stop, status, loops)
     try:
@@ -424,7 +424,7 @@ def register_all_commands(
 
         _register_daemon_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 23b. Sentience commands (serve, sleep, wake, sentience status)
     try:
@@ -434,7 +434,7 @@ def register_all_commands(
 
         _register_sentience_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 24. Mesh commands (status, enable, disable, peers, discover)
     try:
@@ -444,7 +444,7 @@ def register_all_commands(
 
         _register_mesh_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 25. Interop commands (scan, connect, agents, chat, status)
     try:
@@ -454,7 +454,7 @@ def register_all_commands(
 
         _register_interop_commands(main_group)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # 26. TUI command (unified cognitive terminal interface)
     try:
@@ -477,4 +477,4 @@ def register_all_commands(
             from whitemagic.interfaces.cognitive_tui import run_tui
             run_tui(mode=mode)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")

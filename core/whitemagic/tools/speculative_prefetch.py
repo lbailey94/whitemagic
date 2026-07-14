@@ -269,7 +269,7 @@ class SpeculativePrefetcher:
                 },
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in speculative_prefetch.py:271")
 
         # Predict next and prefetch in background
         # Try citta-informed prediction first, fall back to plain Markov
@@ -330,7 +330,7 @@ class SpeculativePrefetcher:
                     )
                     return True
         except (ImportError, OSError, ValueError, RuntimeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return False
 
     def _prefetch_for_predictions(self, predictions: list[tuple[str, float]]) -> None:
@@ -421,7 +421,7 @@ class SpeculativePrefetcher:
             )
             self._prefetch_count += 1
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def _predict_with_citta_if_available(
         self, gana_name: str, top_k: int = 2
@@ -446,7 +446,7 @@ class SpeculativePrefetcher:
                     top_k=top_k,
                 )
         except Exception:
-            pass
+            logger.debug("Ignored error in speculative_prefetch.py:448")
         return self._tracker.predict(gana_name, top_k=top_k)
 
     def predict_with_citta(

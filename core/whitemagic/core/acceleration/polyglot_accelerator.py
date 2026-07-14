@@ -62,7 +62,7 @@ class PolyglotAccelerator:
                 self._rust_available = True
                 logger.info("🦀 Rust acceleration available")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.core.acceleration.simd_cosine import simd_status
@@ -74,7 +74,7 @@ class PolyglotAccelerator:
                     "⚡ Zig SIMD available (lane_width=%s)", status["lane_width"]
                 )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         if not any([self._rust_available, self._zig_available]):
             logger.warning(

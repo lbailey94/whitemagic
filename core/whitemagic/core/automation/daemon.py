@@ -345,7 +345,7 @@ class AutomationDaemon:
                         bus.listen(event_type, lambda e, t=task: self._on_event(t, e))
                     except KeyError:
                         # Custom event, use string matching
-                        pass
+                        logger.debug("Ignored KeyError in daemon.py:346")
 
             logger.info("Connected to Gan Ying event bus")
         except ImportError:

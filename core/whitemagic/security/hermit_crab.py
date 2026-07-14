@@ -246,6 +246,9 @@ class HermitCrab:
                         assessment.threat_level,
                         assessment.reason,
                     )
+                    self._publish_state_change(old_state, HermitState.WITHDRAWN, assessment)
+                    # Revoke all active engagement tokens when withdrawing
+                    self._revoke_engagement_tokens(assessment.reason)
 
             elif assessment.recommended_state == HermitState.GUARDED:
                 if self._state == HermitState.OPEN:
@@ -255,14 +258,53 @@ class HermitCrab:
                         "🛡️ HERMIT CRAB: Entering guarded mode. Threat: %.2f",
                         assessment.threat_level,
                     )
+                    self._publish_state_change(old_state, HermitState.GUARDED, assessment)
 
             elif assessment.recommended_state == HermitState.OPEN:
                 if self._state == HermitState.GUARDED:
                     self._state = HermitState.OPEN
                     self._guarded_since = None
                     logger.info("🐚 HERMIT CRAB: Returning to open state.")
+                    self._publish_state_change(old_state, HermitState.OPEN, assessment)
 
             self._save_state()
+
+    def _revoke_engagement_tokens(self, reason: str) -> None:
+        """Revoke all active engagement tokens when entering WITHDRAWN state."""
+        try:
+            from whitemagic.security.engagement_tokens import get_token_manager
+
+            mgr = get_token_manager()
+            revoked = mgr.revoke_all(reason=f"HermitCrab withdrawal: {reason}")
+            if revoked > 0:
+                logger.warning(
+                    "🐚 HERMIT CRAB: Revoked %d engagement tokens due to withdrawal", revoked
+                )
+        except Exception as e:
+            logger.debug("Failed to revoke engagement tokens: %s", e)
+
+    def _publish_state_change(
+        self, old_state: HermitState, new_state: HermitState, assessment: ThreatAssessment
+    ) -> None:
+        """Publish a hermit crab state change to the SecurityEventBus."""
+        try:
+            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+            bus = get_security_event_bus()
+            bus.emit(
+                event_type=SecurityEventType.HERMIT_CRAB_STATE_CHANGE,
+                source="hermit_crab",
+                severity="high" if new_state == HermitState.WITHDRAWN else "medium",
+                detail=f"State transition: {old_state.value} → {new_state.value}",
+                metadata={
+                    "old_state": old_state.value,
+                    "new_state": new_state.value,
+                    "threat_level": assessment.threat_level,
+                    "reason": assessment.reason,
+                },
+            )
+        except Exception as e:
+            logger.debug("Failed to publish hermit crab state change: %s", e)
 
     def withdraw(self, reason: str = "manual") -> dict[str, Any]:
         """Manually trigger withdrawal (for testing or emergency)."""

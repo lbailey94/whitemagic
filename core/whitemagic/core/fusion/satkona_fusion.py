@@ -103,7 +103,7 @@ def get_current_element() -> str:
                 dominant = elem.value
         return dominant
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # Fallback: hour-based element approximation (traditional Chinese hour mapping)
     hour = datetime.now().hour

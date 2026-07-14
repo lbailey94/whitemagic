@@ -34,7 +34,7 @@ try:
 
     HAS_RESOURCE = True
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 @dataclass

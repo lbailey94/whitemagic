@@ -140,7 +140,7 @@ class ModelAutoOptimizer:
             proc = psutil.Process()
             mem_mb = proc.memory_info().rss / (1024 * 1024)
         except Exception:
-            pass
+            logger.debug("Ignored error in auto_optimizer.py:142")
 
         return BenchmarkResult(
             tokens_per_second=tps,

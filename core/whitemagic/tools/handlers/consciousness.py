@@ -82,19 +82,43 @@ def handle_consciousness_awaken(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_consciousness_reflect(**kwargs: Any) -> dict[str, Any]:
-    """Perform self-reflection on recent session activity."""
-    try:
-        from whitemagic.core.consciousness.self_reflection import get_reflection_loop
+    """Perform self-reflection on recent session activity.
 
-        reflector = get_reflection_loop()
+    Uses citta_cycle introspection (supersedes the old self_reflection module).
+    """
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
         question = kwargs.get("question")
         insight = kwargs.get("insight")
+
         if question and insight:
-            entry = reflector.reflect(question=question, insight=insight, action=kwargs.get("action"))
-            result = entry.to_dict()
+            # Record a specific reflection
+            try:
+                from whitemagic.tools.unified_api import call_tool
+                call_tool(
+                    "create_memory",
+                    content=f"Q: {question}\nA: {insight}",
+                    title=f"Reflection: {question[:60]}",
+                    tags=["reflection", "introspection"],
+                    galaxy="citta",
+                )
+            except Exception:
+                pass
+            return {
+                "status": "success",
+                "reflection": {
+                    "question": question,
+                    "insight": insight,
+                    "action": kwargs.get("action", ""),
+                    "recorded": True,
+                },
+            }
         else:
-            result = reflector.introspect()
-        return {"status": "success", "reflection": result}
+            # General introspection via citta cycle summary
+            summary = cycle.get_cycle_summary()
+            return {"status": "success", "reflection": summary}
     except Exception as e:
         logger.debug("consciousness.reflect error: %s", e, exc_info=True)
         return {"status": "error", "error_code": "reflection_failed", "message": str(e)}
@@ -225,7 +249,7 @@ def handle_consciousness_smarana(**kwargs: Any) -> dict[str, Any]:
                 emotional_tone="sattvic",
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in consciousness.py:227")
 
         return {
             "status": "success",
@@ -356,11 +380,11 @@ def handle_consciousness_status(**kwargs: Any) -> dict[str, Any]:
         ("depth_gauge", "whitemagic.core.consciousness.depth_gauge"),
         ("coherence", "whitemagic.core.consciousness.coherence"),
         ("aria_awakens", "whitemagic.core.consciousness.aria_awakens"),
-        ("self_reflection", "whitemagic.core.consciousness.self_reflection"),
+        ("citta_cycle", "whitemagic.core.consciousness.citta_cycle"),
         ("token_economy", "whitemagic.core.consciousness.token_economy"),
         ("narrative_emotions", "whitemagic.core.consciousness.narrative_emotions"),
         ("unified_field", "whitemagic.core.consciousness.unified_field"),
-        ("continuous_awareness", "whitemagic.core.consciousness.continuous_awareness"),
+        ("lifecycle", "whitemagic.core.consciousness.lifecycle"),
         ("parallel_cognition", "whitemagic.core.consciousness.parallel_cognition"),
         ("time_dilation", "whitemagic.core.consciousness.time_dilation"),
         (
@@ -369,13 +393,13 @@ def handle_consciousness_status(**kwargs: Any) -> dict[str, Any]:
         ),
         ("continuous_audit", "whitemagic.core.consciousness.continuous_audit"),
         ("session_health", "whitemagic.core.consciousness.session_health"),
-        ("self_prompting", "whitemagic.core.consciousness.self_prompting"),
+        ("self_initiation", "whitemagic.core.consciousness.self_initiation"),
         ("maintenance", "whitemagic.core.consciousness.maintenance"),
         ("autonomy", "whitemagic.core.consciousness.autonomy"),
         ("emotional_memory", "whitemagic.core.consciousness.emotional_memory"),
         ("dharma", "whitemagic.core.consciousness.dharma"),
         ("stillness", "whitemagic.core.consciousness.stillness"),
-        ("dream_daemon", "whitemagic.core.consciousness.dream_daemon"),
+        ("consciousness_loop", "whitemagic.core.consciousness.consciousness_loop"),
     ]
 
     for name, mod_path in checks:

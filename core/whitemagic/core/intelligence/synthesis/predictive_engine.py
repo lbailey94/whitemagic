@@ -177,7 +177,7 @@ class PredictiveEngine:
                     # Not typical for predictions, but we handle it
                     pass
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Standard sort is extremely fast for small lists
         predictions.sort(key=lambda p: p.impact_score, reverse=True)
@@ -1082,7 +1082,7 @@ class PredictiveEngine:
                         unique.append(p)
                 return unique
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         seen = set()
         unique = []

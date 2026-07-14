@@ -79,4 +79,4 @@ def register():
 
         get_registry().register(ZodiacPlugin())
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")

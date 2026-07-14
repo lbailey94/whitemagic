@@ -240,7 +240,7 @@ class ModelMeshClient:
                 status = whitemagic_rs.ipc_status()
                 return status.get("iceoryx2_compiled") == "true"
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return False
 
     @property
@@ -442,9 +442,9 @@ class ModelMeshClient:
                         if event:
                             event.set()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception:
-            pass
+            logger.debug("Ignored error in model_mesh.py:446")
 
     def _poll_status(self) -> None:
         """Poll status channel for model health updates."""
@@ -457,9 +457,9 @@ class ModelMeshClient:
                     with self._lock:
                         self._stats.models_available[status.model] = status
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception:
-            pass
+            logger.debug("Ignored error in model_mesh.py:461")
 
 
 # ── Model Mesh Publisher (for model processes) ──────────────────────────
@@ -489,7 +489,7 @@ class ModelMeshPublisher:
                 status = whitemagic_rs.ipc_status()
                 return status.get("iceoryx2_compiled") == "true"
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return False
 
     @property

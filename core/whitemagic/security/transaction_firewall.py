@@ -286,6 +286,26 @@ class TransactionFirewall:
                         policy=policy,
                     )
                     self._emit_security_event(request, v)
+                    # Publish Dharma-specific blocked event
+                    try:
+                        from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+                        bus = get_security_event_bus()
+                        bus.emit(
+                            event_type=SecurityEventType.DHARMA_BLOCKED,
+                            source="transaction_firewall",
+                            severity="high",
+                            tool_name=request.tool_name,
+                            agent_id=request.agent_id,
+                            detail=f"Dharma denied: {v.reason}",
+                            metadata={
+                                "amount": request.amount,
+                                "recipient": request.recipient,
+                                "threshold": policy.dharma_threshold,
+                            },
+                        )
+                    except Exception:
+                        pass
                     return v
                 if dharma_result is None:
                     # Dharma unavailable — fail-closed or permissive
@@ -320,13 +340,56 @@ class TransactionFirewall:
     # ── Dharma integration ──
 
     def _check_dharma(self, request: TransactionRequest) -> bool | None:
-        """Ask DharmaEngine for ethical sign-off.
+        """Ask DharmaRulesEngine for ethical sign-off on a transaction.
+
+        Uses the actual DharmaRulesEngine.evaluate() which returns a
+        DharmaDecision with action (allow/deny/block), score, and
+        triggered_rules.  Falls back to the legacy consciousness Dharma
+        if the rules engine is unavailable.
 
         Returns:
-            True  — dharma approved
-            False — dharma denied
+            True  — dharma approved (action=allow, score >= threshold)
+            False — dharma denied (action=deny/block, or score < threshold)
             None  — dharma engine unavailable
         """
+        # ── Primary: DharmaRulesEngine ──
+        try:
+            from whitemagic.dharma.rules import get_rules_engine
+
+            engine = get_rules_engine()
+            action_dict = {
+                "tool": request.tool_name,
+                "description": request.purpose or f"Transaction of {request.amount} {request.currency} to {request.recipient}",
+                "safety": "economic",
+                "amount": request.amount,
+                "currency": request.currency,
+                "recipient": request.recipient,
+                "agent_id": request.agent_id,
+            }
+            decision = engine.evaluate(action_dict)
+            threshold = self.get_policy(request.agent_id).dharma_threshold
+
+            # DharmaDecision.action is a DharmaAction enum (allow/deny/block/log)
+            action_val = decision.action.value if hasattr(decision.action, "value") else str(decision.action)
+
+            if action_val in ("deny", "block"):
+                logger.info(
+                    "Dharma denied transaction: %s (score=%.2f, rules=%s)",
+                    decision.explain,
+                    decision.score,
+                    decision.triggered_rules,
+                )
+                return False
+            if action_val in ("allow", "log"):
+                return decision.score >= threshold
+            # Unknown action — use score
+            return decision.score >= threshold
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug("DharmaRulesEngine check failed: %s", e)
+
+        # ── Fallback: legacy consciousness Dharma ──
         try:
             from whitemagic.core.consciousness.dharma import get_dharma
 
@@ -349,7 +412,7 @@ class TransactionFirewall:
                 ).dharma_threshold
             return None  # Unrecognized response type
         except Exception as e:
-            logger.debug("Dharma check failed: %s", e)
+            logger.debug("Legacy Dharma check failed: %s", e)
             return None  # Unavailable
 
     # ── Malformed input validation ──
@@ -385,7 +448,7 @@ class TransactionFirewall:
     # ── Security event stream ──
 
     def _emit_security_event(self, request: TransactionRequest, verdict: TransactionVerdict) -> None:
-        """Append a security event to the audit log."""
+        """Append a security event to the audit log and publish to SecurityEventBus."""
         event = SecurityEvent(
             timestamp=request.timestamp,
             tool_name=request.tool_name,
@@ -401,6 +464,31 @@ class TransactionFirewall:
                 f.write(_json_dumps(event.to_dict()) + "\n")
         except (OSError, ValueError) as e:
             logger.warning("Failed to persist security event: %s", e)
+        # Publish to unified SecurityEventBus
+        try:
+            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+            bus = get_security_event_bus()
+            bus.emit(
+                event_type=(
+                    SecurityEventType.TRANSACTION_APPROVED
+                    if verdict.approved
+                    else SecurityEventType.TRANSACTION_BLOCKED
+                ),
+                source="transaction_firewall",
+                severity="info" if verdict.approved else "high",
+                tool_name=request.tool_name,
+                agent_id=request.agent_id,
+                detail=verdict.reason,
+                metadata={
+                    "amount": request.amount,
+                    "currency": request.currency,
+                    "recipient": request.recipient,
+                    "verdict_reason": verdict.verdict_reason.value,
+                },
+            )
+        except Exception as e:
+            logger.debug("Failed to publish to SecurityEventBus: %s", e)
 
     # ── Daily spend tracking ──
 

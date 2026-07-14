@@ -106,19 +106,19 @@ def _decode_chunk(chunk: str) -> str:
         if as_int < 10**18:
             return str(as_int)
     except ValueError:
-        pass
+        logger.debug("Ignored ValueError in abi_decoder.py:108")
     try:
         as_addr = "0x" + chunk[-40:]
         if int(as_addr, 16) != 0:
             return f"address:{as_addr}"
     except ValueError:
-        pass
+        logger.debug("Ignored ValueError in abi_decoder.py:114")
     try:
         as_str = bytes.fromhex(chunk).rstrip(b"\x00").decode("utf-8", errors="replace")
         if as_str.isprintable() and len(as_str.strip()) > 0:
             return f"string:{as_str}"
     except (ValueError, UnicodeDecodeError):
-        pass
+        logger.debug("Ignored ValueError, UnicodeDecodeError in abi_decoder.py:120")
     return "0x" + chunk
 
 

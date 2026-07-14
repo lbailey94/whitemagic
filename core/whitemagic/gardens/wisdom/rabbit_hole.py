@@ -1484,7 +1484,7 @@ def emit_research_event(topic: str, findings: dict[str, Any]) -> None:
             )
         )
     except ImportError:
-        pass  # Gan Ying not available, continue silently
+        logger.debug("Optional dependency unavailable: ImportError")
 
 
 # Convenience functions for direct use

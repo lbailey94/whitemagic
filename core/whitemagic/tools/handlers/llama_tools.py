@@ -187,7 +187,7 @@ def handle_llama_models(**kwargs: Any) -> dict[str, Any]:
                     "server_running": False,
                 }
         except Exception:
-            pass
+            logger.debug("Ignored error in llama_tools.py:189")
         return {
             "status": "error",
             "error": f"llama-server not running at {_llama_server_url()}",

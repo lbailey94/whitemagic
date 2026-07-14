@@ -160,7 +160,7 @@ class GalaxyAwareBackend:
             galaxy = getattr(memory, "galaxy", "universal") or "universal"
             get_retrieval_cache().invalidate(self._user_id, galaxy)
         except Exception:
-            pass
+            logger.debug("Ignored error in galaxy_router.py:162")
         return result
 
     def recall(self, memory_id: str) -> Memory | None:
@@ -196,7 +196,7 @@ class GalaxyAwareBackend:
                         if result:
                             return result
         except Exception:
-            pass
+            logger.debug("Ignored error in galaxy_router.py:198")
 
         return None
 

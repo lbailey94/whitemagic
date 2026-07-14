@@ -293,7 +293,7 @@ class BitMambaAutonomic:
         try:
             _STATE_PERSIST_PATH.unlink(missing_ok=True)
         except OSError:
-            pass
+            logger.debug("Ignored OSError in bitmamba_autonomic.py:295")
 
     # ── Private methods ──────────────────────────────────────────────
 
@@ -466,12 +466,12 @@ class BitMambaAutonomic:
                 try:
                     token_ids = [int(t) for t in line.split()]
                 except ValueError:
-                    pass
+                    logger.debug("Ignored ValueError in bitmamba_autonomic.py:468")
             if "Peak RAM:" in line:
                 try:
                     peak_ram = float(line.split("Peak RAM:")[1].split("MB")[0].strip())
                 except (IndexError, ValueError):
-                    pass
+                    logger.debug("Ignored IndexError, ValueError in bitmamba_autonomic.py:473")
 
         return {
             "token_ids": token_ids,

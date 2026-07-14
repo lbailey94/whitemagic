@@ -513,7 +513,7 @@ class GrandUnifiedCycle:
                 if elem_state:
                     return elem_state.energy
             except (AttributeError, KeyError):
-                pass  # Wu Xing element state unavailable — return default
+                logger.debug("Optional dependency unavailable: AttributeError")
         return 0.5
 
     def _get_generating_element(self, element: WuXingElement) -> WuXingElement:
@@ -560,7 +560,7 @@ class GrandUnifiedCycle:
                 weights = PHASE_FORCE_WEIGHTS.get(phase, {})
                 return {k.value: v for k, v in weights.items()}
             except (ImportError, ModuleNotFoundError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Fallback
         return {"light_infantry": 0.4, "heavy_cavalry": 0.3, "officers": 0.3}

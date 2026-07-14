@@ -290,7 +290,7 @@ class MemoryLifecycleManager:
                     actual_writes=archived,
                 )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def _emit_event(self, report: Any) -> None:
         """Emit a MEMORY_CONSOLIDATED event."""
@@ -310,7 +310,7 @@ class MemoryLifecycleManager:
                 },
             ))
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def get_stats(self) -> dict[str, Any]:
         """

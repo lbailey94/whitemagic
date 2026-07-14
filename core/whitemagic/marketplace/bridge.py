@@ -255,7 +255,7 @@ class MarketplaceBridge:
             user = get_user_manager()
             agent_name = user.profile.name if user.profile else ""
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         listing = ServiceListing(
             listing_id=listing_id,
@@ -421,7 +421,7 @@ class MarketplaceBridge:
                     memo=f"Exchange {negotiation_id}",
                 )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "status": "ok",

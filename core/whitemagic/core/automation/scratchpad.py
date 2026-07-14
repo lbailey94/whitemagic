@@ -71,7 +71,7 @@ class Scratchpad:
                 len(self.entries), f"Scratchpad finalization: {self.session_id}"
             )
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Combine all entries into one "Session Summary" or "Insight Block"
         combined_text = f"# Session Scratchpad: {self.session_id}\n"

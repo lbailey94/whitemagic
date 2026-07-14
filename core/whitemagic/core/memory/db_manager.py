@@ -89,6 +89,11 @@ _WAL_PRAGMAS = (
     ("PRAGMA synchronous=NORMAL",),
     ("PRAGMA busy_timeout=5000",),
     ("PRAGMA temp_store=MEMORY",),
+    # mmap the database file — OS page-cache handles RAM, SQLite avoids
+    # double-buffering.  256MB covers all 22 galaxy DBs (largest ~23MB).
+    ("PRAGMA mmap_size=268435456",),
+    # Page cache: 65536 pages × 4KB = 256MB for hot data
+    ("PRAGMA cache_size=-65536",),
 )
 
 # Security pragmas — defend against schema-level attacks (CVE-2025-7709 class)

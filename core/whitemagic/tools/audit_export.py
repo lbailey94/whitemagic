@@ -119,7 +119,7 @@ def export_audit_log(
                 }
             )
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # Sort by timestamp descending
     entries.sort(key=lambda e: e.get("timestamp", ""), reverse=True)

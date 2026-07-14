@@ -182,7 +182,7 @@ class CodeValidator:
             import yaml
             yaml.safe_load(code)
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception as e:
             result.issues.append(ValidationIssue(
                 severity="error",

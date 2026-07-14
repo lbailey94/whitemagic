@@ -38,7 +38,7 @@ def _init_backends():
             logger.info("graph_walker_hot_path: Zig SIMD active (lane_width=%d)",
                         status["lane_width"])
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     # Rust RRF fusion
     try:
         import whitemagic_rs
@@ -59,7 +59,7 @@ def _init_backends():
         _JULIA_PAGERANK = julia_pagerank
         logger.info("graph_walker_hot_path: Julia RRF + PageRank available")
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     # Title-boosted vector search for LoCoMo 100%
     try:
         from whitemagic.core.search.title_boosted_vector import (

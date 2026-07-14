@@ -227,7 +227,7 @@ class AssociationMiner:
                 if result is not None:
                     return cast(set[str], result)
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Python extraction (fastest path for keywords)
         text_lower = text.lower()
@@ -350,7 +350,7 @@ class AssociationMiner:
                         fingerprints[mid] = kw_set
                     batch_done = True
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
             if not batch_done:
                 for mid, text in texts_for_batch:

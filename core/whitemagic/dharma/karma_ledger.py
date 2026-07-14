@@ -266,7 +266,7 @@ class KarmaLedger:
 
                 get_harmony_vector()  # debt is tracked inside the vector via record_call
             except (ImportError, ModuleNotFoundError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return entry
 
@@ -372,7 +372,7 @@ class KarmaLedger:
 
                 get_harmony_vector()
             except (ImportError, ModuleNotFoundError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return entry
 

@@ -97,6 +97,25 @@ class WasmVerifier:
             self._update_checksum_cache(request)
             return replay_result
 
+        # Publish verification failure to SecurityEventBus
+        try:
+            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+            bus = get_security_event_bus()
+            bus.emit(
+                event_type=SecurityEventType.WASM_VERIFICATION_FAILED,
+                source="wasm_verifier",
+                severity="high",
+                tool_name=request.tool_name,
+                detail=result.details or replay_result.details,
+                metadata={
+                    "method": result.method,
+                    "confidence": result.confidence,
+                },
+            )
+        except Exception:
+            logger.debug("Ignored error in wasm_verifier.py:116")
+
         return result or replay_result
 
     def _checksum_verify(self, request: VerificationRequest) -> VerificationResult:

@@ -49,7 +49,7 @@ try:
         _RUST_CACHE_AVAILABLE = True
         logger.info("Rust UnifiedCache available — sub-microsecond cache reads")
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 class _PyCacheEntry:
@@ -248,7 +248,7 @@ class UnifiedCacheBridge:
             if hasattr(_wrs, "board_write_cache_stats"):
                 self._state_board_fn = _wrs.board_write_cache_stats
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         logger.info("UnifiedCacheBridge initialized (backend=%s)", self._backend)
 
@@ -361,7 +361,7 @@ class UnifiedCacheBridge:
             if hasattr(_wrs, "board_read_cache_stats"):
                 return _wrs.board_read_cache_stats()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return None
 
     def tune_ttl(self, namespace: str, current_ttl: float = 86400.0) -> dict[str, Any]:
@@ -386,7 +386,7 @@ class UnifiedCacheBridge:
             if eff:
                 return {"namespace": namespace, "efficiency": eff, "backend": "julia"}
         except (ImportError, OSError, ValueError, RuntimeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Python fallback: simple heuristic
         hit_rate = s.get("hit_rate", 0.0)

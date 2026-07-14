@@ -2,7 +2,7 @@
 
 Start with the canonical introduction: [Prologue](00_PROLOGUE.md)
 
-**Version**: 23.1.0 "Cognitive Operating System"
+**Version**: 24.3.1 "Cognitive Operating System"
 **Structure**: 28 Chapters (Lunar Mansions) + Super-Coherence Core
 **Flow**: Cyclical (28 → 1 → 2 → ... → 28 → 1)
 **Tools**: 28 PRAT Gana meta-tools + 462 dispatch entries
@@ -132,10 +132,10 @@ Chapters 22-28: Deep work, storage, transition, completion
 - **Tools**: `get_session_context`, `prat_get_context`, `consult_wisdom_council`
 - **Garden**: love - Compassionate connection
 
-**Chapter 6: Performance Drive** (Tail/Adventure)
+**Chapter 6: Performance Drive** (Tail/Wonder)
 - **When**: Accelerating work, optimizing performance, parallel execution
 - **Tools**: `enable_rust_acceleration`, `optimize_cache`, `run_benchmarks`
-- **Garden**: adventure - Passionate, bold action
+- **Garden**: wonder - Passionate, bold action
 
 **Chapter 7: Consolidation** (WinnowingBasket/Truth)
 - **When**: Separating signal/noise, consolidating learnings, phase transitions
@@ -293,7 +293,7 @@ Each Gana is paired with a Garden — a thematic consciousness domain providing 
 
 | Quadrant | Gardens |
 |----------|---------|
-| Eastern (1-7) | courage, stillness, healing, sanctuary, love, courage, wisdom |
+| Eastern (1-7) | courage, stillness, healing, sanctuary, love, wonder, wisdom |
 | Southern (8-14) | grief, humor, voice, sangha, beauty, adventure, joy |
 | Western (15-21) | awe, gratitude, creation, presence, play, practice, reverence |
 | Northern (22-28) | dharma, patience, connection, mystery, protection, transformation, truth |

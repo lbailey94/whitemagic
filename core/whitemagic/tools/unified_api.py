@@ -486,7 +486,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             _economy = get_token_tracker()
             _economy.record_mcp_tool(canonical, duration * 1000)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Machine-time: record actual duration and update calibration
         try:
@@ -497,7 +497,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             _estimator = get_machine_time_estimator()
             _estimator.record_actual(canonical, duration, _effort_prediction)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         try:
             from whitemagic.core.consciousness.prediction_calibration import (
                 get_calibration,
@@ -515,7 +515,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 else "unknown",
             )
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.core.monitoring.telemetry import get_telemetry

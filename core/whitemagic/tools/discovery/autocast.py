@@ -128,7 +128,7 @@ class ToolDiscovery:
                 )
                 self.gan_ying.emit(event, cascade=True)
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
     def discover_by_category(self, category: str) -> list[dict[str, Any]]:
         """Discover tools by category."""
@@ -294,7 +294,7 @@ class ToolDiscovery:
                             }
                         )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Deduplicate and sort by confidence
         seen = set()

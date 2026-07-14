@@ -269,7 +269,7 @@ class CRDTLeaderboard:
             try:
                 return self._loro_doc.export_json()
             except Exception:
-                pass
+                logger.debug("Ignored error in crdt_leaderboard.py:271")
 
         # Fallback: JSON export
         with self._entries_lock:
@@ -292,7 +292,7 @@ class CRDTLeaderboard:
                 # but the API varies by version; fall back to full export
                 return self._loro_doc.export_json()
             except Exception:
-                pass
+                logger.debug("Ignored error in crdt_leaderboard.py:294")
         return self.export()
 
     def get_status(self) -> dict[str, Any]:
@@ -328,7 +328,7 @@ class CRDTLeaderboard:
                 self._loro_map = None
                 self._init_loro()
             except Exception:
-                pass
+                logger.debug("Ignored error in crdt_leaderboard.py:330")
 
 
 def get_leaderboard(node_id: str = "local") -> CRDTLeaderboard:

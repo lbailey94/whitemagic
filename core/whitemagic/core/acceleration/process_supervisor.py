@@ -454,7 +454,7 @@ class ProcessSupervisor:
                     if len(buf) > self._stderr_cap:
                         del buf[: len(buf) - self._stderr_cap]
             except Exception:
-                pass
+                logger.debug("Ignored error in process_supervisor.py:456")
 
         t = threading.Thread(
             target=_drain, name=f"wm-{self.name}-stderr", daemon=True
@@ -525,7 +525,7 @@ class ProcessSupervisor:
             try:
                 proc.kill()
             except (ProcessLookupError, OSError):
-                pass
+                logger.debug("Ignored ProcessLookupError, OSError in process_supervisor.py:527")
         # Clean up stderr tracking
         self._stderr_buffers.pop(proc.pid, None)
         self._stderr_threads.pop(proc.pid, None)
@@ -796,7 +796,7 @@ class ProcessSupervisor:
                     stdin.write(json.dumps({"op": "quit"}) + "\n")
                     stdin.flush()
                 except (BrokenPipeError, OSError):
-                    pass
+                    logger.debug("Ignored BrokenPipeError, OSError in process_supervisor.py:798")
             proc.wait(timeout=2.0)
         except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
             try:
@@ -806,7 +806,7 @@ class ProcessSupervisor:
                 try:
                     proc.kill()
                 except (ProcessLookupError, OSError):
-                    pass
+                    logger.debug("Ignored ProcessLookupError, OSError in process_supervisor.py:808")
         # Capture final stderr
         self._last_stderr = self._get_stderr(proc)
         self._stderr_buffers.pop(proc.pid, None)

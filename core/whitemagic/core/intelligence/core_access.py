@@ -571,7 +571,7 @@ class CoreAccessLayer:
                         min_strength = min(min_strength, row["min_s"] or 0.0)
                         max_strength = max(max_strength, row["max_s"] or 0.0)
             except Exception:
-                pass
+                logger.debug("Ignored error in core_access.py:573")
 
         if total == 0:
             return {"total_associations": 0}
@@ -644,7 +644,7 @@ class CoreAccessLayer:
                     for r in access_rows:
                         access_by_day[r["day"]] = access_by_day.get(r["day"], 0) + r["cnt"]
             except Exception:
-                pass
+                logger.debug("Ignored error in core_access.py:646")
 
         # Build buckets
         buckets: list[TemporalBucket] = []
@@ -697,7 +697,7 @@ class CoreAccessLayer:
                         last_7d += row["last_7d"]
                         last_30d += row["last_30d"]
             except Exception:
-                pass
+                logger.debug("Ignored error in core_access.py:699")
 
         acceleration = (
             (last_7d / 7) / max(0.01, last_30d / 30) if last_30d > 0 else 1.0

@@ -132,7 +132,7 @@ def handle_llama_agent(**kwargs: Any) -> dict[str, Any]:
                 eval_count, source="local", operation=f"llama_agent:{model}"
             )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         calls = _parse_tool_calls(response)
         is_complete = _check_completion(response, calls)

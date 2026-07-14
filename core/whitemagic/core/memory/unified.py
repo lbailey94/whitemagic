@@ -390,7 +390,7 @@ class UnifiedMemory:
                     try:
                         self._galaxy_backend.cache_hrr_vector(memory.id, bound_vec)
                     except (AttributeError, sqlite3.Error, TypeError):
-                        pass  # Backend doesn't support HRR vector caching yet
+                        logger.debug("Optional dependency unavailable: AttributeError")
         except (ImportError, ModuleNotFoundError, Exception) as _e:
             logger.debug("HRR vector computation skipped for %s: %s", memory.id, _e)
 
@@ -410,7 +410,7 @@ class UnifiedMemory:
                                 from whitemagic.core.intelligence.core_access import get_core_access
                                 get_core_access().invalidate_hrr_cache()
                             except (ImportError, AttributeError):
-                                pass
+                                logger.debug("Optional dependency unavailable: ImportError")
                         except (sqlite3.Error, AttributeError, TypeError) as _e:
                             logger.debug("Embedding cache failed for %s: %s", memory.id, _e)  # Skip silently
             except (ImportError, ModuleNotFoundError) as _e:
@@ -449,9 +449,9 @@ class UnifiedMemory:
                         radius=0.3,
                     )
             except Exception:
-                pass
+                logger.debug("Ignored error in unified.py:451")
         except Exception:
-            pass
+            logger.debug("Ignored error in unified.py:453")
 
         # Emit CACHE_INVALIDATE event for multi-agent coherence
         try:
@@ -467,7 +467,7 @@ class UnifiedMemory:
                 },
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in unified.py:469")
 
         return memory
 
@@ -566,9 +566,9 @@ class UnifiedMemory:
                         radius=0.3,
                     )
             except Exception:
-                pass
+                logger.debug("Ignored error in unified.py:568")
         except Exception:
-            pass
+            logger.debug("Ignored error in unified.py:570")
 
         # Emit CACHE_INVALIDATE event
         try:
@@ -586,7 +586,7 @@ class UnifiedMemory:
                 },
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in unified.py:588")
 
         return {"success": True, "memory_id": memory_id, "version": existing.version, "memory": existing}
 
@@ -1109,7 +1109,7 @@ class UnifiedMemory:
                 logger.debug("hybrid_recall cache HIT for query: %s", query[:80])
                 return cached
         except Exception:
-            pass
+            logger.debug("Ignored error in unified.py:1111")
 
         # 1. Try CoreAccessLayer (vector + graph RRF with Rust acceleration)
         try:
@@ -1132,7 +1132,7 @@ class UnifiedMemory:
                     from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
                     get_hybrid_cache().put_query_result(query, formatted, limit=final_limit)
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in unified.py:1134")
                 return formatted
         except Exception as e:
             logger.debug("hybrid_recall: CoreAccessLayer unavailable: %s", e, exc_info=True)
@@ -1152,7 +1152,7 @@ class UnifiedMemory:
                     from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
                     get_hybrid_cache().put_query_result(query, gw_results, limit=final_limit)
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in unified.py:1154")
             return gw_results
         except Exception as e:
             logger.debug("hybrid_recall: graph walker unavailable, falling back to search_hybrid: %s", e, exc_info=True)
@@ -1174,7 +1174,7 @@ class UnifiedMemory:
                 from whitemagic.core.memory.hybrid_cache import get_hybrid_cache
                 get_hybrid_cache().put_query_result(query, formatted, limit=final_limit)
             except Exception:
-                pass
+                logger.debug("Ignored error in unified.py:1176")
         return formatted
 
     def associate(self, memory_id1: str, memory_id2: str, strength: float = 0.5) -> None:
@@ -1448,6 +1448,50 @@ class UnifiedMemory:
             count += 1
         return count
 
+    def mark_for_reconsolidation(self, memory_id: str) -> dict[str, Any]:
+        """Mark a memory for reconsolidation (labile state).
+
+        Delegates to ConsolidationManager.mark_labile after fetching
+        the memory's current content and tags.
+        """
+        from whitemagic.core.memory.consolidation import get_consolidator
+
+        mem = self._galaxy_backend.recall(memory_id)
+        if mem is None:
+            return {"success": False, "error": "Memory not found"}
+        cm = get_consolidator()
+        cm.mark_labile(
+            memory_id=memory_id,
+            content=mem.content if mem else "",
+            tags=list(mem.tags) if mem and hasattr(mem, "tags") else [],
+        )
+        return {"success": True, "memory_id": memory_id}
+
+    def update_reconsolidated(self, memory_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+        """Update a reconsolidated memory with new context.
+
+        Delegates to ConsolidationManager.update_labile, then persists
+        the updated content back to the memory store.
+        """
+        from whitemagic.core.memory.consolidation import get_consolidator
+
+        cm = get_consolidator()
+        new_context = updates.get("content") or updates.get("context", "")
+        new_tags = updates.get("tags")
+        annotation = updates.get("annotation", "")
+        updated = cm.update_labile(
+            memory_id=memory_id,
+            new_context=new_context if new_context else None,
+            new_tags=new_tags if new_tags else None,
+            annotation=annotation if annotation else None,
+        )
+        if updated and new_context:
+            existing = self._galaxy_backend.recall(memory_id)
+            if existing:
+                merged = existing.content + "\n" + new_context if existing.content else new_context
+                self.update_memory(memory_id, {"content": merged})
+        return {"success": updated, "memory_id": memory_id, "updated": updated}
+
     def save(self, memory_type: MemoryType | None = None) -> None:
         """Save memories to disk - No-op for SQLite (auto-save)."""
         # SQLite backend auto-saves; this method exists for API compatibility
@@ -1537,7 +1581,7 @@ class UnifiedMemory:
                         "strength": row["strength"],
                     })
         except Exception:
-            pass
+            logger.debug("Ignored error in unified.py:1583")
 
         return {
             "galaxy_meta": {
@@ -1624,10 +1668,10 @@ class UnifiedMemory:
                             coords.get("u", 0.5),
                         )
                     except Exception:
-                        pass
+                        logger.debug("Ignored error in unified.py:1670")
 
             except Exception:
-                pass
+                logger.debug("Ignored error in unified.py:1673")
 
         # Restore associations to the galaxy-specific backend
         galaxy_backend = self._galaxy_backend._get_backend_for_galaxy(galaxy_name)
@@ -1644,7 +1688,7 @@ class UnifiedMemory:
                     )
                 restored_assocs += 1
             except Exception:
-                pass
+                logger.debug("Ignored error in unified.py:1690")
 
         return {
             "galaxy": galaxy_name,
@@ -1666,7 +1710,7 @@ def reset_singleton() -> None:
             try:
                 inst.close()
             except Exception:
-                pass
+                logger.debug("Ignored error in unified.py:1712")
         _unified_memory_instances.clear()
 
 

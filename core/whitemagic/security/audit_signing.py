@@ -30,7 +30,7 @@ try:
 
     _CRYPTO_AVAILABLE = True
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 # ── Key storage layout ──────────────────────────────────────────────

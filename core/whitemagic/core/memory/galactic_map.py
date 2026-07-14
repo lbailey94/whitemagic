@@ -199,7 +199,7 @@ class GalacticMap:
             if rust_available():
                 rust_scorer = galactic_batch_score
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         for page in backend.list_all_paginated(batch_size=batch_size):
             total_memories += len(page)
@@ -407,7 +407,7 @@ class GalacticMap:
                     if result and "zones" in result:
                         return result["zones"]  # type: ignore[no-any-return]
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
             # Python fallback
             counts: dict[str, int] = {z.value: 0 for z in GalacticZone}

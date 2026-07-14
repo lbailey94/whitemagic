@@ -35,7 +35,7 @@ class BridgeCoordinator:
                 self.bridges[name]["available"] = True
                 self.bridges[name]["module"] = mod
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
     def get_bridge(self, name: str) -> Any | None:
         """Get a bridge module by name."""

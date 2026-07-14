@@ -534,7 +534,7 @@ class ConstellationDetector:
             if result:
                 return cast(dict[str, Any], result)
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Slow path: scan cached report member_ids
         with self._lock:
@@ -930,7 +930,7 @@ class ConstellationDetector:
                     data={"type": "FORGOTTEN_CONCEPT", "constellation": name},
                 )
         except (ImportError, AttributeError):
-            pass  # Gan Ying bus optional
+            logger.debug("Optional dependency unavailable: ImportError")
 
 
 _detector_instance: ConstellationDetector | None = None
@@ -967,8 +967,8 @@ try:
             um = get_unified_memory()
             detector.annotate_memories(results, backend=um.backend)
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     register_search_hook(_constellation_annotation_hook)
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")

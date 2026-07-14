@@ -160,7 +160,7 @@ class SolutionLibrary:
                 # but standard is to return False.
                 return False
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # 2. Execute code snippet if present
         if sol.code_snippet:

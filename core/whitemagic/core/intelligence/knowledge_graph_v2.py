@@ -462,6 +462,57 @@ class KnowledgeGraphV2:
         """Clear the entity cache."""
         self._entity_cache.clear()
 
+    def ingest_code_symbols(self, project_path: str | None = None) -> dict[str, Any]:
+        """Ingest code symbols from the code structure graph as KG entities.
+
+        This bridges the code graph and knowledge graph by registering code
+        symbols (functions, classes) as entities with type='code_symbol'.
+
+        Args:
+            project_path: Optional project path to build graph if not built.
+
+        Returns:
+            Dict with ingestion statistics.
+        """
+        try:
+            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            g = get_code_structure_graph()
+            if g.stats()["node_count"] == 0 and project_path:
+                g.build(project_path)
+            if g.stats()["node_count"] == 0:
+                return {"status": "skipped", "reason": "code graph empty"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
+        entities_added = 0
+        relations_added = 0
+        relations: list[ExtractedRelation] = []
+        for node_id, node in g._nodes.items():
+            if node.node_type not in ("function", "class"):
+                continue
+            entities_added += 1
+
+        # Build relations from code edges
+        for edge_id, edge in g._edges.items():
+            if edge.edge_type not in ("calls", "imports", "inherits"):
+                continue
+            relations.append(ExtractedRelation(
+                subject=f"code:{edge.source_id}",
+                predicate=edge.edge_type,
+                obj=f"code:{edge.target_id}",
+                confidence=edge.confidence,
+                source_id="code_graph",
+            ))
+
+        if relations:
+            relations_added = self.store_relations(relations)
+
+        return {
+            "status": "success",
+            "entities_added": entities_added,
+            "relations_added": relations_added,
+        }
+
 
 def get_kg_v2() -> KnowledgeGraphV2:
     """Get the global KnowledgeGraphV2 instance."""

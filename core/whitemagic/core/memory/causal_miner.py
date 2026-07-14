@@ -203,7 +203,7 @@ class CausalMiner:
             if pairs:
                 use_embeddings = True
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Hydrate memory metadata for temporal + tag signals
         try:

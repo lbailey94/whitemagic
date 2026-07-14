@@ -281,7 +281,7 @@ if HAS_TEXTUAL:
             """Background thread to poll daemon telemetry."""
             while True:
                 try:
-                    from whitemagic.core.consciousness.daemon import get_daemon
+                    from whitemagic.core.consciousness.consciousness_loop import get_daemon
                     daemon = get_daemon()
                     if daemon.is_running:
                         status = daemon.status()
@@ -298,7 +298,7 @@ if HAS_TEXTUAL:
                             self._loop_widget.update_loops, status.get("loops", {})
                         )
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in cognitive_tui.py:300")
                 time.sleep(2)
 
         def _load_galaxy(self) -> None:
@@ -350,7 +350,7 @@ if HAS_TEXTUAL:
                 ]
                 self._agent_widget.update_agents(summaries)
             except Exception:
-                pass
+                logger.debug("Ignored error in cognitive_tui.py:352")
 
         def action_refresh(self) -> None:
             """Refresh all data."""
@@ -402,7 +402,7 @@ if HAS_TEXTUAL:
                 self.exit()
             elif command == "/status":
                 try:
-                    from whitemagic.core.consciousness.daemon import get_daemon
+                    from whitemagic.core.consciousness.consciousness_loop import get_daemon
                     daemon = get_daemon()
                     status = daemon.status()
                     self._chat_log.write(json.dumps(status, indent=2))
@@ -506,11 +506,11 @@ else:
                             table.add_row(a.get("name", "?"), status)
                         console.print(table)
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in cognitive_tui.py:508")
 
                 # Daemon status
                 try:
-                    from whitemagic.core.consciousness.daemon import get_daemon
+                    from whitemagic.core.consciousness.consciousness_loop import get_daemon
                     daemon = get_daemon()
                     if daemon.is_running:
                         status = daemon.status()

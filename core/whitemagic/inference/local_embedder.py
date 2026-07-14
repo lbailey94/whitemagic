@@ -37,7 +37,17 @@ class LocalEmbedder:
         self.max_length = max_length
         self._model = None
         self._available = False
+        self._loaded = False
+        # Defer model load — only load on first embed() or explicit load() call.
+        # Saves ~100MB RAM and ~0.4s startup for MCP/IDE deployments.
+
+    def _ensure_loaded(self) -> bool:
+        """Lazy-load the model if not yet loaded. Returns True if available."""
+        if self._loaded:
+            return self._available
         self._try_load()
+        self._loaded = True
+        return self._available
 
     def _try_load(self):
         """Try to load FastEmbed model, reusing cached instances globally."""
@@ -71,20 +81,14 @@ class LocalEmbedder:
 
     @property
     def is_available(self) -> bool:
-        """
-        Check whether the available condition holds.
-
-        Returns:
-            bool
-        """
-        return self._available
+        return self._ensure_loaded()
 
     def embed(self, texts: str | list[str], batch_size: int = 256) -> np.ndarray | None:
         """
         Generate embeddings for texts.
         Returns numpy array of shape (N, D) or None if unavailable.
         """
-        if not self._available or not self._model:
+        if not self._ensure_loaded() or not self._model:
             return None
 
         if isinstance(texts, str):
@@ -138,7 +142,14 @@ class LlamaCppEmbedder:
         self._available = False
         self._dim: int | None = None
         self._embed_url: str = ""
+        self._loaded = False
+
+    def _ensure_loaded(self) -> bool:
+        if self._loaded:
+            return self._available
         self._try_connect()
+        self._loaded = True
+        return self._available
 
     def _try_connect(self) -> None:
         """Check if llama-server supports embeddings.
@@ -198,7 +209,7 @@ class LlamaCppEmbedder:
 
     @property
     def is_available(self) -> bool:
-        return self._available
+        return self._ensure_loaded()
 
     @property
     def embedding_dim(self) -> int | None:
@@ -206,7 +217,7 @@ class LlamaCppEmbedder:
 
     def embed(self, texts: str | list[str]) -> np.ndarray | None:
         """Generate embeddings. Returns numpy array of shape (N, D)."""
-        if not self._available:
+        if not self._ensure_loaded():
             return None
 
         import requests as _requests

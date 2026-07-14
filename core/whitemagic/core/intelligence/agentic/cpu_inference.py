@@ -425,7 +425,7 @@ class CPUInferenceEngine:
                     tokens_equivalent=500,
                 )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Count Python files (general fallback)
         if "python" in query_lower or "file" in query_lower:

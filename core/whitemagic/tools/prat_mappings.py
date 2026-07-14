@@ -473,6 +473,14 @@ TOOL_TO_GANA: dict[str, str] = {
     "windsurf_search_conversations": "gana_chariot",
     "windsurf_export_conversation": "gana_chariot",
     "windsurf_stats": "gana_chariot",
+    "windsurf.export_all": "gana_chariot",
+    "windsurf.ingest": "gana_chariot",
+    "windsurf.sync": "gana_chariot",
+    "windsurf.mine": "gana_chariot",
+    "windsurf.categorize": "gana_chariot",
+    "windsurf.full_steps": "gana_chariot",
+    "windsurf.compare": "gana_chariot",
+    "windsurf.semantic_search": "gana_chariot",
     # ── ABUNDANCE — Dream cycle + lifecycle sub-tools ──
     "dream_start": "gana_abundance",
     "dream_stop": "gana_abundance",
@@ -697,6 +705,20 @@ TOOL_TO_GANA: dict[str, str] = {
     "codebase.structure": "gana_chariot",
     "codebase.status": "gana_chariot",
     "codebase.find": "gana_chariot",
+    # ── v24.3: Code Structure Graph (Chariot — codebase AST analysis) ──
+    "code.graph": "gana_chariot",
+    "code.query": "gana_chariot",
+    "code.path": "gana_chariot",
+    "code.explain": "gana_chariot",
+    "code.communities": "gana_chariot",
+    "code.god_nodes": "gana_chariot",
+    "code.subgraph": "gana_chariot",
+    "code.export": "gana_chariot",
+    "code.import": "gana_chariot",
+    "code.affected_by": "gana_chariot",
+    "code.correlate": "gana_chariot",
+    "code.cross_repo_query": "gana_chariot",
+    "code.stats": "gana_chariot",
     # ── v23.1: Unified Read API — Winnowing Basket (unified search/recall) ──
     "wm_read": "gana_winnowing_basket",
     "wm_read.status": "gana_winnowing_basket",
@@ -937,6 +959,14 @@ TOOL_TO_GANA: dict[str, str] = {
     "topological.chern_number": "gana_three_stars",
     "topological.encode": "gana_three_stars",
     "topological.decode": "gana_three_stars",
+    # ── Error Pattern Library → gana_hairy_head (Anomaly Detection & Defense) ──
+    "pattern.lookup": "gana_hairy_head",
+    "pattern.avoid": "gana_hairy_head",
+    "pattern.resolve": "gana_hairy_head",
+    "pattern.learn": "gana_hairy_head",
+    "pattern.list": "gana_hairy_head",
+    "pattern.summary": "gana_hairy_head",
+    "pattern.ingest": "gana_hairy_head",
 }
 
 # Reverse: Gana → list of nested tools

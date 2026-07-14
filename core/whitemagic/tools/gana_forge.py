@@ -395,7 +395,7 @@ def handle_forge_status(**kwargs: Any) -> dict[str, Any]:
             if name.startswith("ext.") or name.startswith("custom.")
         ]
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return {
         "status": "success",

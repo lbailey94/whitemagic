@@ -1045,7 +1045,7 @@ class HomeostaticLoop:
                 logger.debug("Association freshness check skipped: %s", e)
 
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception as e:
             logger.debug("Memory health check skipped: %s", e)
 

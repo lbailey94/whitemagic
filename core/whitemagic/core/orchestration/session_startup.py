@@ -453,7 +453,7 @@ class SessionStartupOrchestrator:
 
             setup_listeners()
         except (ImportError, AttributeError):
-            pass  # Optional
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def start_cognition(self) -> None:
         """
@@ -469,7 +469,7 @@ class SessionStartupOrchestrator:
 
             start_rapid_learning()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def start_garden_systems(self) -> list[SystemStatus]:
         """Activate all gardens."""
@@ -558,7 +558,7 @@ class SessionStartupOrchestrator:
             )
             logger.info("👁️ Continuous Awareness activation triggered")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def start_dashboard(self) -> None:
         """
@@ -588,7 +588,7 @@ class SessionStartupOrchestrator:
                 "dashboard_systems", _activate_dashboard, timeout_s=2.0
             )
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def start_context_systems(self) -> list[SystemStatus]:
         """Start context/memory injection systems (v4.3.0)."""
@@ -708,7 +708,7 @@ class SessionStartupOrchestrator:
 
             _ = get_handoff()  # Check for active session
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def start_harmony_governance(self) -> list[SystemStatus]:
         """Start Harmony Vector, Homeostatic Loop, Temporal Scheduler,

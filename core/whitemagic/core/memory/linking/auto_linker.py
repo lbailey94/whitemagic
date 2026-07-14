@@ -118,7 +118,7 @@ class AutoLinker:
                 return links_count
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except (ImportError, ModuleNotFoundError) as e:
             logger.info("⚠️ Rust graph build failed: %s", e, exc_info=True)
 

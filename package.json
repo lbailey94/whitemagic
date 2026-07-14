@@ -1,6 +1,6 @@
 {
   "name": "whitemagic-site",
-  "version": "24.1.0",
+  "version": "24.3.1",
   "private": true,
   "description": "whitemagic.dev — Cognitive operating system for AI agents",
   "scripts": {

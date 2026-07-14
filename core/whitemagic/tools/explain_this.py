@@ -86,7 +86,7 @@ def _get_tool_metadata(tool_name: str) -> dict[str, Any]:
                 "garden": tool.garden,
             }
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     return {"name": tool_name, "category": "unknown", "safety": "unknown"}
 
 
@@ -233,7 +233,7 @@ def _assess_risk(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
         if tool:
             risk_info["level"] = tool.risk_level
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # Governor dry-run
     try:
@@ -246,7 +246,7 @@ def _assess_risk(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
             risk_info["governor_reason"] = validation.reason
             risk_info["governor_risk"] = validation.risk_level.name
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return risk_info
 

@@ -55,6 +55,7 @@ class EngineEntry:
     description: str  # One-line description
     status: EngineStatus = EngineStatus.EXISTS
     absorbs: tuple[str, ...] = ()  # Sub-engine class names fused into this slot
+    affiliated_engines: tuple[str, ...] = ()  # Engines with a soft relationship to this slot
 
     @property
     def handler_id(self) -> int:
@@ -112,7 +113,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="practice",
         grimoire_chapter=2,
         description="Memory consolidation and reconsolidation — batch Dream Cycle + real-time recall updates",
-        absorbs=("ReconsolidationEngine",),
+        absorbs=("ReconsolidationEngine", "_PyReplayEngine"),
     ),
     EngineEntry(
         slot=2,
@@ -162,7 +163,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         mansion_name="Tail",
         mansion_chinese="尾",
         mansion_pinyin="Wěi",
-        garden="courage",
+        garden="wonder",
         engine_name="AccelerationEngine",
         source_path="core/acceleration/__init__.py",
         quadrant=Quadrant.EAST,
@@ -171,7 +172,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         grimoire_chapter=6,
         description="Polyglot acceleration: Rust, Zig bridges + quantum-inspired Grover's O(√N) search",
         status=EngineStatus.DISTRIBUTED,
-        absorbs=("QuantumEngine",),
+        absorbs=("QuantumEngine", "QuantumGraphEngine"),
     ),
     EngineEntry(
         slot=6,
@@ -186,6 +187,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="wisdom",
         grimoire_chapter=7,
         description="Surface dormant knowledge via constellation bridges, orphan discovery, and weighted random selection",
+        affiliated_engines=("SymbolicEngine",),
     ),
     # ── Southern Quadrant (Vermilion Bird, Summer, Fire) ── Mansions 8-14
     EngineEntry(
@@ -260,7 +262,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="adventure",
         grimoire_chapter=12,
         description="Genesis Engine: export memories + generate code templates + generate prompt templates",
-        absorbs=("CodeGenomeEngine", "PromptEngine"),
+        absorbs=("CodeGenomeEngine", "PromptEngine", "PolymorphismEngine"),
     ),
     EngineEntry(
         slot=12,
@@ -320,6 +322,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         grimoire_chapter=16,
         description="Vector Cognition: embeddings + HRR binding/unbinding + quantized edge HRR + hypothesis composition",
         absorbs=("HRREngine", "QuantizedHRREngine", "HRRCompositionEngine"),
+        affiliated_engines=("HologramEngine",),
     ),
     EngineEntry(
         slot=16,
@@ -364,7 +367,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="mystery",
         grimoire_chapter=19,
         description="Pattern Consciousness: detect + continuously learn + refine large clusters into quadrants",
-        absorbs=("EnhancedPatternEngine", "SubClusteringEngine"),
+        absorbs=("EnhancedPatternEngine", "SubClusteringEngine", "HolographicPatternEngine"),
     ),
     EngineEntry(
         slot=19,
@@ -410,7 +413,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="awe",
         grimoire_chapter=22,
         description="Foresight: 10-source opportunity prediction + constellation drift + maintenance failure forecasting",
-        absorbs=("ForesightEngine", "PredictiveMaintenanceEngine"),
+        absorbs=("ForesightEngine", "PredictiveMaintenanceEngine", "GreatYearEngine"),
     ),
     EngineEntry(
         slot=22,
@@ -440,7 +443,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="wonder",
         grimoire_chapter=24,
         description="Local Compute: parallel clone search + local reasoning + CPU inference for 90%+ token reduction",
-        absorbs=("LocalReasoningEngine", "CPUInferenceEngine"),
+        absorbs=("LocalReasoningEngine", "CPUInferenceEngine", "RuleEngine"),
+        affiliated_engines=("PersonaEngine",),
     ),
     EngineEntry(
         slot=24,
@@ -456,6 +460,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         grimoire_chapter=25,
         description="Mindful Forgetting: multi-signal retention + neuro_score management and decay processing",
         absorbs=("NeuroScoreEngine",),
+        affiliated_engines=("MetaplasticityEngine",),
     ),
     EngineEntry(
         slot=25,
@@ -484,6 +489,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         emotion="sangha",
         grimoire_chapter=27,
         description="Multi-agent swarm coordination, community handoff",
+        affiliated_engines=("InteractionEngine",),
     ),
     EngineEntry(
         slot=27,
@@ -523,6 +529,28 @@ def get_engines_by_quadrant(quadrant: Quadrant) -> list[EngineEntry]:
 def get_engines_by_status(status: EngineStatus) -> list[EngineEntry]:
     """Get all engines with a given status."""
     return [e for e in ENGINE_REGISTRY if e.status == status]
+
+
+# ── Sub-engine indices ──
+_ALL_ABSORBED: dict[str, EngineEntry] = {}
+_ALL_AFFILIATED: dict[str, EngineEntry] = {}
+for _e in ENGINE_REGISTRY:
+    for _sub in _e.absorbs:
+        _ALL_ABSORBED[_sub] = _e
+    for _sub in _e.affiliated_engines:
+        _ALL_AFFILIATED[_sub] = _e
+
+
+def get_parent_engine(sub_engine_name: str) -> EngineEntry | None:
+    """Look up the canonical engine that absorbs or affiliates with a sub-engine.
+
+    Args:
+        sub_engine_name: Class name of the sub-engine (e.g., "QuantumEngine")
+
+    Returns:
+        The parent EngineEntry, or None if the sub-engine is not registered.
+    """
+    return _ALL_ABSORBED.get(sub_engine_name) or _ALL_AFFILIATED.get(sub_engine_name)
 
 
 # ── Gana → Garden mapping ──
@@ -627,8 +655,14 @@ def get_engine_stats() -> dict[str, int | dict[str, int]]:
     for e in ENGINE_REGISTRY:
         by_wu_xing[e.wu_xing] = by_wu_xing.get(e.wu_xing, 0) + 1
 
+    total_absorbed = sum(len(e.absorbs) for e in ENGINE_REGISTRY)
+    total_affiliated = sum(len(e.affiliated_engines) for e in ENGINE_REGISTRY)
+
     return {
         "total_engines": len(ENGINE_REGISTRY),
+        "total_absorbed_sub_engines": total_absorbed,
+        "total_affiliated_engines": total_affiliated,
+        "total_all_engines": len(ENGINE_REGISTRY) + total_absorbed + total_affiliated,
         "by_quadrant": by_quadrant,
         "by_status": by_status,
         "by_wu_xing": by_wu_xing,

@@ -99,7 +99,7 @@ def load_plugins() -> list[PluginBase]:
                     "Failed to load plugin %s: %s", entry_point.name, e, exc_info=True
                 )
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return loaded
 

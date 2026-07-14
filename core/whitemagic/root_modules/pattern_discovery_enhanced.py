@@ -30,7 +30,7 @@ class EnhancedPatternDiscovery:
             importlib.import_module("whitemagic_rust")
             self._rust_available = True
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def discover_patterns(
         self, root: Path | None = None, max_files: int = 100

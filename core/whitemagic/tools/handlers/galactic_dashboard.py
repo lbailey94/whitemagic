@@ -34,7 +34,7 @@ def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
                     try:
                         content = getattr(mem, "_content", "")
                     except Exception:
-                        pass
+                        logger.debug("Ignored error in galactic_dashboard.py:36")
                 # Parse content dict from memory repr
                 if isinstance(content, str) and content.startswith("{"):
                     try:

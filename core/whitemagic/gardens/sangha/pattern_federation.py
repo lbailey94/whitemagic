@@ -61,7 +61,7 @@ class PatternFederation:
                 # Auto-federate: listen for PATTERN_DETECTED events and contribute them
                 self.bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
             except ImportError:
-                pass  # EventType unavailable — graceful degradation
+                logger.debug("Optional dependency unavailable: ImportError")
 
     def _on_pattern_detected(self, event: Any) -> None:
         """Auto-federate patterns detected by the Gan Ying Bus.
@@ -154,7 +154,7 @@ class PatternFederation:
                     async_dispatch=True,
                 )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         logger.info("📚 Pattern '%s' added to federation", name, exc_info=True)
         return pattern_id

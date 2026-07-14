@@ -117,7 +117,7 @@ def collect_authored_tool_definitions() -> list[ToolDefinition]:
 
         tools.extend(_collect_domain_tools())
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     return _apply_common_props(tools)
 
 

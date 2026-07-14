@@ -134,7 +134,7 @@ Authority comes from knowing the source.
                     "status": "governing_memory",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Serendipity Integration (Adapted from WellGana)
         if call.task in ["surface_memories", "surface_dormant", "surface_ancient"]:
@@ -174,7 +174,7 @@ Authority comes from knowing the source.
                     "status": "deep_discovery",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -233,7 +233,7 @@ Endurance is a form of reverence.
                     "status": "grounded",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Session management
         if call.task in ["start_session", "set_phase"]:
@@ -254,7 +254,7 @@ Endurance is a form of reverence.
                     "status": "grounded",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Health monitoring
         try:
@@ -271,7 +271,7 @@ Endurance is a form of reverence.
                 "status": "enduring",
             }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -333,7 +333,7 @@ Growth happens in connection.
                 "status": "nurturing",
             }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -431,7 +431,7 @@ Usefulness comes from what is not there.
                         "status": "analyzed",
                     }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         if "clear" in call.task or "optimize" in call.task:
             return {
@@ -512,7 +512,7 @@ The cycle completes to begin again.
                     "status": "sheltering",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -615,7 +615,7 @@ Structure allows for rest and recovery.
                     "status": "housed",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -736,7 +736,7 @@ At the wall between known and unknown, new patterns emerge.
                 "status": "defending",
             }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,

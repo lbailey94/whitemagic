@@ -60,7 +60,7 @@ class HomeostasisSystem:
             persistent_coherence = get_coherence().get_level() / 100.0
             metrics.coherence = (metrics.coherence + persistent_coherence) / 2
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return metrics
 
@@ -103,7 +103,7 @@ class HomeostasisSystem:
                     format(tz_intensity * 0.2, ".2f"),
                 )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         equilibrium = 1.0 - abs(yin - yang)
 

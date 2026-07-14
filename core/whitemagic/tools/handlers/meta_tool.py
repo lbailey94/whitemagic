@@ -242,6 +242,62 @@ _PAYLOAD_MAP: dict[tuple[str, str], tuple[str, re.Pattern[str]]] = {
             re.I,
         ),
     ),
+    # Code graph query — strip "code query", "search code graph"
+    ("gana_chariot", "code.query"): (
+        "query",
+        re.compile(
+            r"^\s*(?:code\s*(?:query|search)|query\s+code\s*graph|search\s+code\s*graph)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Code graph path — strip "code path", "trace call chain"
+    ("gana_chariot", "code.path"): (
+        "symbol_a",
+        re.compile(
+            r"^\s*(?:code\s*path|path\s+between|trace\s+call\s+chain|code\s*trace)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Code graph explain — strip "code explain", "explain symbol"
+    ("gana_chariot", "code.explain"): (
+        "symbol",
+        re.compile(
+            r"^\s*(?:code\s*explain|explain\s+symbol|explain\s+function|explain\s+class)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Code graph affected_by — strip "code affected by"
+    ("gana_chariot", "code.affected_by"): (
+        "symbol",
+        re.compile(
+            r"^\s*(?:code\s*affected\s*by|affected\s*by\s+symbol|impact\s+analysis\s+of)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Code graph correlate — strip "code correlate"
+    ("gana_chariot", "code.correlate"): (
+        "symbol",
+        re.compile(
+            r"^\s*(?:code\s*correlate|correlate\s+memory|memory\s+discuss)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Code graph subgraph — strip "code subgraph"
+    ("gana_chariot", "code.subgraph"): (
+        "symbol",
+        re.compile(
+            r"^\s*(?:code\s*subgraph|subgraph\s+of|neighborhood\s+of)\s*:?\s*",
+            re.I,
+        ),
+    ),
+    # Code graph cross_repo_query — strip "cross repo query"
+    ("gana_chariot", "code.cross_repo_query"): (
+        "query",
+        re.compile(
+            r"^\s*(?:code\s*cross\s*repo|cross\s*repo\s+query|multi\s*repo)\s*:?\s*",
+            re.I,
+        ),
+    ),
 }
 
 
@@ -1522,9 +1578,31 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(wiki.*scan)\b", re.I), "gana_chariot", "wiki.scan"),
     (re.compile(r"\b(wiki.*stats)\b", re.I), "gana_chariot", "wiki.stats"),
     (re.compile(r"\b(wiki.*update)\b", re.I), "gana_chariot", "wiki.update"),
+    # ── Code Structure Graph tools ──
+    (re.compile(r"\b(code.*graph.*build|build.*code.*graph|code.*graph.*rebuild|rebuild.*code.*graph)\b", re.I), "gana_chariot", "code.graph"),
+    (re.compile(r"\b(code.*query|query.*code.*graph|code.*graph.*query|search.*code.*graph)\b", re.I), "gana_chariot", "code.query"),
+    (re.compile(r"\b(code.*path|path.*between.*symbol|trace.*call.*chain|code.*trace)\b", re.I), "gana_chariot", "code.path"),
+    (re.compile(r"\b(code.*explain|explain.*symbol|explain.*function|explain.*class|symbol.*role)\b", re.I), "gana_chariot", "code.explain"),
+    (re.compile(r"\b(code.*communities|code.*community|code.*subsystem|code.*cluster)\b", re.I), "gana_chariot", "code.communities"),
+    (re.compile(r"\b(code.*god.*node|god.*node.*code|most.*connected.*symbol|hub.*symbol)\b", re.I), "gana_chariot", "code.god_nodes"),
+    (re.compile(r"\b(code.*subgraph|subgraph.*symbol|neighborhood.*symbol|code.*neighbor)\b", re.I), "gana_chariot", "code.subgraph"),
+    (re.compile(r"\b(code.*export|export.*code.*graph|graph.*json.*export)\b", re.I), "gana_chariot", "code.export"),
+    (re.compile(r"\b(code.*import|import.*code.*graph|graph.*json.*import)\b", re.I), "gana_chariot", "code.import"),
+    (re.compile(r"\b(code.*stats|code.*graph.*stats|code.*graph.*status)\b", re.I), "gana_chariot", "code.stats"),
+    (re.compile(r"\b(code.*affected.*by|affected.*by.*symbol|impact.*analysis|what.*affected.*by.*change)\b", re.I), "gana_chariot", "code.affected_by"),
+    (re.compile(r"\b(code.*correlate|correlate.*memory.*code|memory.*discuss.*symbol|which.*memory.*discuss)\b", re.I), "gana_chariot", "code.correlate"),
+    (re.compile(r"\b(code.*cross.*repo|cross.*repo.*query|multi.*repo.*graph|query.*across.*repo)\b", re.I), "gana_chariot", "code.cross_repo_query"),
     (re.compile(r"\b(windsurf.*export.*conversation)\b", re.I), "gana_chariot", "windsurf_export_conversation"),
     (re.compile(r"\b(windsurf.*read.*conversation)\b", re.I), "gana_chariot", "windsurf_read_conversation"),
     (re.compile(r"\b(windsurf.*search.*conversations)\b", re.I), "gana_chariot", "windsurf_search_conversations"),
+    (re.compile(r"\b(windsurf.*export.*all|export.*all.*conversations|bulk.*export.*windsurf)\b", re.I), "gana_chariot", "windsurf.export_all"),
+    (re.compile(r"\b(windsurf.*ingest|ingest.*windsurf|ingest.*transcripts|ingest.*conversations)\b", re.I), "gana_chariot", "windsurf.ingest"),
+    (re.compile(r"\b(windsurf.*sync|sync.*windsurf|incremental.*windsurf)\b", re.I), "gana_chariot", "windsurf.sync"),
+    (re.compile(r"\b(windsurf.*mine|mine.*windsurf|pattern.*mine.*session|mine.*conversations)\b", re.I), "gana_chariot", "windsurf.mine"),
+    (re.compile(r"\b(windsurf.*categor|categor.*windsurf|categor.*session)\b", re.I), "gana_chariot", "windsurf.categorize"),
+    (re.compile(r"\b(windsurf.*full.*steps|full.*steps.*windsurf|complete.*steps.*session)\b", re.I), "gana_chariot", "windsurf.full_steps"),
+    (re.compile(r"\b(windsurf.*compare|compare.*exports|compare.*windsurf)\b", re.I), "gana_chariot", "windsurf.compare"),
+    (re.compile(r"\b(windsurf.*semantic.*search|semantic.*search.*windsurf|semantic.*search.*conversations)\b", re.I), "gana_chariot", "windsurf.semantic_search"),
     (re.compile(r"\b(astro.*shift)\b", re.I), "gana_dipper", "astro_shift"),
     (re.compile(r"\b(cognitive.*stats)\b", re.I), "gana_dipper", "cognitive.stats"),
     (re.compile(r"\b(doctrine.*force)\b", re.I), "gana_dipper", "doctrine.force"),
@@ -1877,6 +1955,14 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(bounty.*scan|scan.*bounty)\b", re.I), "gana_abundance", "bounty.scan"),
     (re.compile(r"\b(bounty.*auto.*claim|auto.*claim.*bounty)\b", re.I), "gana_abundance", "bounty.auto_claim"),
     (re.compile(r"\b(bounty.*connector|connector.*status)\b", re.I), "gana_abundance", "bounty.connector_status"),
+    # ── Error Pattern Library ──
+    (re.compile(r"\b(pattern.*lookup|lookup.*error.*pattern|check.*known.*error)\b", re.I), "gana_hairy_head", "pattern.lookup"),
+    (re.compile(r"\b(pattern.*avoid|avoid.*pattern|what.*pitfalls|what.*errors.*expect)\b", re.I), "gana_hairy_head", "pattern.avoid"),
+    (re.compile(r"\b(pattern.*resolve|resolve.*error|fix.*error.*pattern|error.*resolution)\b", re.I), "gana_hairy_head", "pattern.resolve"),
+    (re.compile(r"\b(pattern.*learn|learn.*error.*pattern|teach.*error)\b", re.I), "gana_hairy_head", "pattern.learn"),
+    (re.compile(r"\b(pattern.*list|list.*error.*pattern|list.*known.*error)\b", re.I), "gana_hairy_head", "pattern.list"),
+    (re.compile(r"\b(pattern.*summary|error.*library.*summary|error.*pattern.*stats)\b", re.I), "gana_hairy_head", "pattern.summary"),
+    (re.compile(r"\b(pattern.*ingest|ingest.*mining|ingest.*mine.*output)\b", re.I), "gana_hairy_head", "pattern.ingest"),
 ]
 
 
@@ -2315,11 +2401,14 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                 emotional_tone="neutral",
                 duration_ms=_elapsed_ms,
             )
-            # Inject predecessor context so the next call knows "what just happened"
+            # Inject predecessor context only for sensorium-relevant tools
             if isinstance(result, dict):
-                _predecessor = get_citta_predecessor()
-                if _predecessor is not None:
-                    result.setdefault("_citta_predecessor", _predecessor)
+                from whitemagic.tools.prat_router import _should_include_sensorium
+
+                if _should_include_sensorium(sub_tool):
+                    _predecessor = get_citta_predecessor()
+                    if _predecessor is not None:
+                        result.setdefault("_citta_predecessor", _predecessor)
         except Exception:
             pass  # Citta tracking is best-effort
 

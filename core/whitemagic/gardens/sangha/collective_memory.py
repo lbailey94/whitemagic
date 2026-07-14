@@ -138,7 +138,7 @@ class CollectiveMemory:
                     )
                 )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         logger.info("🙏 Insight contributed to Sangha collective")
 

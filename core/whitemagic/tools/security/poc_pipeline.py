@@ -49,7 +49,7 @@ def _check_governance(target: str, scope: str = "bounty") -> bool:
             )
             return False
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     # Non-violet profiles: permissive by default
     logger.info("Governance: PoC target %s not in approved list for scope %s", target, scope)
     return True

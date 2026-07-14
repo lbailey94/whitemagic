@@ -483,7 +483,7 @@ def get_locomo_stats() -> Any:
                 data = json.load(f)
                 return jsonify(data.get("strategies", {}).get("adaptive", {}))
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # Fallback when no results file exists
     return jsonify(
@@ -579,7 +579,7 @@ def _search_gardens_and_events(query: str) -> list[dict[str, Any]]:
 
                     hub = gh()
                 except ImportError:
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
 
             if hub:
                 # Search garden memories
@@ -596,7 +596,7 @@ def _search_gardens_and_events(query: str) -> list[dict[str, Any]]:
                             },
                         )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Search events if resonance system is available
         try:
@@ -604,9 +604,9 @@ def _search_gardens_and_events(query: str) -> list[dict[str, Any]]:
 
             get_bus()
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     return results
 
 

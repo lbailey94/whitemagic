@@ -295,7 +295,7 @@ class DuckDBBackend(BaseBackend):
         try:
             content = json.loads(content)
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.debug("Ignored TypeError in duckdb_backend.py:297")
 
         return Memory(
             id=row[0],
@@ -317,7 +317,7 @@ class DuckDBBackend(BaseBackend):
         try:
             content = json.loads(content)
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.debug("Ignored TypeError in duckdb_backend.py:319")
 
         mt_str = row["memory_type"] or "SHORT_TERM"
         try:

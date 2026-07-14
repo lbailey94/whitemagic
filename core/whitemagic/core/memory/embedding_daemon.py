@@ -420,7 +420,7 @@ class EmbeddingDaemon:
                 rate_histogram.labels(engine=result["engine"]).observe(result["rate"])
 
         except ImportError:
-            pass  # prometheus_client not installed
+            logger.debug("Optional dependency unavailable: ImportError")
         except Exception as e:
             logger.debug("Metrics recording failed: %s", e, exc_info=True)
 

@@ -54,7 +54,7 @@ try:
 
     _PluginBase: type = _ImportedPlugin  # type: ignore[no-redef,misc]
 except ImportError:
-    pass  # fallback base is sufficient
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 class GrimoirePlugin(_PluginBase):

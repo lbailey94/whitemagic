@@ -195,7 +195,7 @@ created_at: {mem.get('created_at', datetime.now().isoformat())}
                     try:
                         data["importance"] = float(value)
                     except ValueError:
-                        pass
+                        logger.debug("Ignored ValueError in obsidian_adapter.py:197")
                 elif key == "galaxy":
                     data["galaxy"] = value
                 elif key == "type":

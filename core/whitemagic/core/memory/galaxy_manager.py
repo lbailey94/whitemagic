@@ -542,7 +542,7 @@ n            Global active-galaxy mutation is unsafe for concurrent requests.
                         mechanism="galaxy.transfer",
                     )
                 except (ImportError, AttributeError):
-                    pass  # Lineage tracking is best-effort
+                    logger.debug("Optional dependency unavailable: ImportError")
 
                 if not copy:
                     src_um.archive_to_edge(mem.id, galactic_distance=0.95)

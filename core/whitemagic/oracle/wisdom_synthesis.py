@@ -19,12 +19,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Any
+
+from .hrr_bridge import get_hrr_bridge
 
 logger = logging.getLogger(__name__)
 
-
-# Wu Xing → Alchemical Phase
+# Fallback maps — used when SymbolicHRR is unavailable (kept for graceful degradation)
 _WUXING_TO_ALCHEMY: dict[str, str] = {
     "wood": "Nigredo (germination — raw potential breaking through)",
     "fire": "Citrinitas (illumination — the golden moment of clarity)",
@@ -33,12 +35,29 @@ _WUXING_TO_ALCHEMY: dict[str, str] = {
     "water": "Cauda Pavonis (dissolution — all colors present, none fixed)",
 }
 
-# Zodiac modality → I Ching dynamic
 _MODALITY_TO_ICHING: dict[str, str] = {
     "cardinal": "Initiating force — the hexagram's opening line, the spark",
     "fixed": "Sustaining power — the hexagram's central lines, the axis",
     "mutable": "Transforming flow — the hexagram's changing lines, the pivot",
 }
+
+
+def _get_alchemical_phase(wu_xing: str) -> str:
+    """Get alchemical phase via SymbolicHRR with fallback to hardcoded map."""
+    try:
+        from .symbolic_hrr import get_symbolic_hrr
+        return get_symbolic_hrr().alchemical_phase(wu_xing)
+    except Exception:
+        return _WUXING_TO_ALCHEMY.get(wu_xing, "")
+
+
+def _get_modality_dynamic(modality: str) -> str:
+    """Get modality dynamic via SymbolicHRR with fallback to hardcoded map."""
+    try:
+        from .symbolic_hrr import get_symbolic_hrr
+        return get_symbolic_hrr().modality_dynamic(modality)
+    except Exception:
+        return _MODALITY_TO_ICHING.get(modality, "")
 
 # Zodiac element → Ifá leg significance
 _ZODIAC_TO_IFA_ROLE: dict[str, str] = {
@@ -87,6 +106,10 @@ class SynthesisResult:
     cautions: list[str]
     blessings: list[str]
     raw_layers: dict[str, Any] = field(default_factory=dict)
+    hrr_resonances: list[dict[str, Any]] = field(default_factory=list)
+    primary_hexagram: int | None = None
+    claim_ids: list[str] = field(default_factory=list)
+    llm_interpretation: str = ""
 
 
 class OracleSynthesizer:
@@ -97,7 +120,7 @@ class OracleSynthesizer:
     the way a skilled practitioner would read the patterns.
     """
 
-    def synthesize(self, oracle_output: dict[str, Any]) -> SynthesisResult:
+    def synthesize(self, oracle_output: dict[str, Any], use_llm: bool = False) -> SynthesisResult:
         """Produce a unified interpretation from the oracle stack.
 
         Supports 4-layer (Zodiacal → Wu Xing → I Ching → Ifá) or 5-layer
@@ -196,7 +219,20 @@ class OracleSynthesizer:
             ifa_ire, iching_name, resonances, tarot_cards
         )
 
-        return SynthesisResult(
+        # HRR resonances from Rust hexagram engine
+        hrr_resonances: list[dict[str, Any]] = []
+        primary_hexagram = oracle_output.get("iching_number")
+        if primary_hexagram is None:
+            primary_hexagram = oracle_output.get("primary_hexagram")
+        if primary_hexagram is not None and isinstance(primary_hexagram, int):
+            try:
+                bridge = get_hrr_bridge()
+                hrr_resonances = bridge.synergy_for(primary_hexagram, threshold=0.3)
+            except Exception as exc:
+                logger.debug("HRR synergy query failed: %s", exc)
+                hrr_resonances = []
+
+        result = SynthesisResult(
             unified_message=unified,
             narrative=narrative,
             resonances=resonances,
@@ -205,7 +241,61 @@ class OracleSynthesizer:
             cautions=cautions,
             blessings=blessings,
             raw_layers=oracle_output,
+            hrr_resonances=hrr_resonances,
+            primary_hexagram=primary_hexagram if isinstance(primary_hexagram, int) else None,
+            claim_ids=self._create_oracle_claims(practical, primary_hexagram, oracle_output),
         )
+
+        # Optional LLM interpretation (Phase 6)
+        if use_llm:
+            try:
+                from .llm_interpreter import get_oracle_interpreter
+                interpreter = get_oracle_interpreter()
+                result.llm_interpretation = interpreter.interpret(result, oracle_output.get("question", ""))
+            except Exception as exc:
+                logger.debug("LLM interpretation failed: %s", exc)
+
+        return result
+
+    def _create_oracle_claims(
+        self, guidance: str, hexagram: int | None, oracle_output: dict[str, Any]
+    ) -> list[str]:
+        """Create falsifiable claims from oracle guidance.
+
+        Records the oracle reading as a pending claim in TemporalForecastDB
+        so it can be validated or falsified later, closing the calibration loop.
+        """
+        if not guidance or len(guidance) < 10:
+            return []
+        try:
+            from whitemagic.forecasting.temporal_db import TemporalForecastDB
+
+            db = TemporalForecastDB()
+            source = f"oracle:{hexagram}" if hexagram else "oracle:unknown"
+            oracle_source = oracle_output.get("oracle_source", "synthesized")
+            confidence = 0.65  # Default oracle confidence — will be calibrated over time
+
+            # Adjust confidence based on resonance strength
+            hrr_res = oracle_output.get("hrr_resonances", [])
+            if hrr_res:
+                avg_sim = sum(r.get("similarity", 0) for r in hrr_res) / len(hrr_res)
+                confidence = min(0.9, 0.5 + avg_sim * 0.3)
+
+            claim_id = db.record_oracle_claim(
+                question=f"Oracle guidance: {guidance[:200]}",
+                source=source,
+                confidence=confidence,
+                oracle_source=oracle_source,
+                oracle_hexagram=hexagram,
+                guidance_action=guidance[:300],
+                expected_resolution_date=(
+                    datetime.utcnow() + timedelta(days=30)
+                ).date().isoformat(),
+            )
+            return [claim_id]
+        except Exception as exc:
+            logger.debug("Oracle claim creation failed: %s", exc)
+            return []
 
     def _find_resonances(
         self,
@@ -290,12 +380,13 @@ class OracleSynthesizer:
             )
 
         # 3. Modality ↔ I Ching dynamic resonance
-        if modality in _MODALITY_TO_ICHING:
+        modality_dynamic = _get_modality_dynamic(modality)
+        if modality_dynamic:
             resonances.append(
                 ResonancePattern(
                     theme="Modal Expression",
                     layers=["zodiac", "iching"],
-                    description=f"{modality} modality: {_MODALITY_TO_ICHING[modality]}",
+                    description=f"{modality} modality: {modality_dynamic}",
                     strength=0.6,
                 )
             )
@@ -312,12 +403,13 @@ class OracleSynthesizer:
             )
 
         # 5. Alchemical phase resonance
-        if wu_xing in _WUXING_TO_ALCHEMY:
+        alchemy_phase = _get_alchemical_phase(wu_xing)
+        if alchemy_phase:
             resonances.append(
                 ResonancePattern(
                     theme="Alchemical Phase",
                     layers=["wu_xing", "alchemy"],
-                    description=_WUXING_TO_ALCHEMY[wu_xing],
+                    description=alchemy_phase,
                     strength=0.6,
                 )
             )
@@ -327,8 +419,8 @@ class OracleSynthesizer:
             for tc in tarot_cards:
                 card_name = tc.get("name", "")
                 card_alchemy = tc.get("alchemical_stage", "")
-                if card_alchemy and wu_xing in _WUXING_TO_ALCHEMY:
-                    wu_xing_alchemy = _WUXING_TO_ALCHEMY[wu_xing]
+                if card_alchemy and alchemy_phase:
+                    wu_xing_alchemy = alchemy_phase
                     for stage_word in ["nigredo", "albedo", "rubedo", "cauda"]:
                         if (
                             stage_word in card_alchemy
@@ -581,7 +673,7 @@ class OracleSynthesizer:
             parts.append(ifa_wisdom[:150])
 
         # Closing: elemental harmony
-        alchemy = _WUXING_TO_ALCHEMY.get(wu_xing, "")
+        alchemy = _get_alchemical_phase(wu_xing)
         if alchemy:
             parts.append(f"Alchemically: {alchemy}.")
 

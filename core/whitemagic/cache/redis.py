@@ -346,7 +346,7 @@ class RedisCache:
                             if ns:
                                 callback(ns)
                         except Exception:
-                            pass
+                            logger.debug("Ignored error in redis.py:348")
 
             thread = threading.Thread(target=_listener, daemon=True, name="redis-cache-invalidate-sub")
             thread.start()

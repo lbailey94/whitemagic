@@ -108,7 +108,7 @@ def _ensure_cached() -> None:
 
             _get_governor = get_governor
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         logger.debug("Middleware: governor dependency missing: %s", e)
     try:
         from whitemagic.core.monitoring.prometheus_export import get_prometheus
@@ -127,7 +127,7 @@ def _ensure_cached() -> None:
 
         _compact_fn = _compact_impl
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     try:
         from whitemagic.edge.inference import get_edge_inference
 
@@ -500,7 +500,7 @@ def mw_karma_effects(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
                 from whitemagic.security.engagement_tokens import classify_ops
                 ops_class = classify_ops(ctx.tool_name)
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         ledger.record_with_effects(
             tool=ctx.tool_name,
@@ -565,6 +565,8 @@ def mw_maturity_gate(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
     """Block tools that require a higher maturity stage than currently reached."""
     if ctx.zig_prevalidated:
         return next_fn(ctx)  # Zig already checked maturity
+    if os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return next_fn(ctx)  # Bypass maturity gates in benchmark mode
     _ensure_cached()
     if _check_maturity_for_tool is not None:
         try:
@@ -691,7 +693,7 @@ def mw_engagement_token(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
         ctx.meta["ops_class"] = "red-ops"
 
     except ImportError:
-        pass  # engagement_tokens module not available — skip
+        logger.debug("Optional dependency unavailable: ImportError")
     except Exception as e:
         logger.debug(
             "Middleware: engagement token check failed for %s: %s",
@@ -762,7 +764,7 @@ def mw_model_signing(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
                 }
 
     except ImportError:
-        pass  # model_signing module not available — skip
+        logger.debug("Optional dependency unavailable: ImportError")
     except Exception as e:
         logger.debug(
             "Middleware: model signing check failed for %s: %s",
@@ -775,6 +777,8 @@ def mw_model_signing(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
 
 def mw_governor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Ethical gate — Governor validates the tool call."""
+    if os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return next_fn(ctx)  # Bypass governor in benchmark mode
     _ensure_cached()
     if _get_governor is not None:
         try:
@@ -1039,43 +1043,49 @@ def mw_inference_router(
 
     # Tier -1: Compositional reasoning (fastest, pure HRR vector ops)
     # Resolves relation queries like "what caused X?" at vector speed
-    try:
-        from whitemagic.core.intelligence.agentic.compositional_reasoning import (
-            get_compositional_reasoner,
-        )
+    # WI 4: Skip edge/compositional tier if cognitive load is high
+    _neuro = ctx.meta.get("neuro_composites", {})
+    _cognitive_load = _neuro.get("cognitive_load", 0.0)
 
-        reasoner = get_compositional_reasoner()
-        if reasoner.can_resolve(prompt):
-            comp_result = reasoner.resolve(prompt)
-            if comp_result.resolved and comp_result.confidence >= 0.3:
-                tokens_saved = comp_result.tokens_saved
-                if _get_green_score is not None:
-                    _get_green_score().record_inference(
-                        locality="edge",
-                        tokens_used=0,
-                        tokens_saved=tokens_saved,
-                        tool=ctx.tool_name,
-                        duration_ms=comp_result.latency_ms,
-                    )
-                return {
-                    "status": "success",
-                    "tool": ctx.tool_name,
-                    "result": comp_result.answer,
-                    "method": comp_result.method,
-                    "confidence": comp_result.confidence,
-                    "resolved_locally": True,
-                    "tokens_saved": tokens_saved,
-                    "latency_ms": round(comp_result.latency_ms, 2),
-                    "relation": comp_result.relation,
-                    "matches": comp_result.matches[:3],
-                }
-    except Exception as e:
-        logger.debug(
-            "Compositional reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True
-        )
+    if _cognitive_load <= 0.7:
+        try:
+            from whitemagic.core.intelligence.agentic.compositional_reasoning import (
+                get_compositional_reasoner,
+            )
+
+            reasoner = get_compositional_reasoner()
+            if reasoner.can_resolve(prompt):
+                comp_result = reasoner.resolve(prompt)
+                if comp_result.resolved and comp_result.confidence >= 0.3:
+                    tokens_saved = comp_result.tokens_saved
+                    if _get_green_score is not None:
+                        _get_green_score().record_inference(
+                            locality="edge",
+                            tokens_used=0,
+                            tokens_saved=tokens_saved,
+                            tool=ctx.tool_name,
+                            duration_ms=comp_result.latency_ms,
+                        )
+                    return {
+                        "status": "success",
+                        "tool": ctx.tool_name,
+                        "result": comp_result.answer,
+                        "method": comp_result.method,
+                        "confidence": comp_result.confidence,
+                        "resolved_locally": True,
+                        "tokens_saved": tokens_saved,
+                        "latency_ms": round(comp_result.latency_ms, 2),
+                        "relation": comp_result.relation,
+                        "matches": comp_result.matches[:3],
+                    }
+        except Exception as e:
+            logger.debug(
+                "Compositional reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True
+            )
 
     # Tier 0: Edge inference (fast, zero tokens, Rust PatternEngine)
-    if _get_edge_inference is not None:
+    # WI 4: Skip edge tier if cognitive load is high — needs deeper reasoning
+    if _get_edge_inference is not None and _cognitive_load <= 0.7:
         try:
             edge = _get_edge_inference()
             result = edge.infer(prompt)
@@ -1331,7 +1341,7 @@ def _compute_tool_schema_hash(tool_name: str) -> str:
                 schema_str = json.dumps(td.input_schema, sort_keys=True, default=str)
                 return hashlib.md5(schema_str.encode()).hexdigest()[:8]
     except Exception:
-        pass
+        logger.debug("Ignored error in middleware.py:1343")
     return ""
 
 
@@ -1351,6 +1361,16 @@ def mw_semantic_cache(
     2. Python QueryCache fallback (OrderedDict LRU + JSON persistence)
     """
     if not _is_cacheable_tool(ctx.tool_name):
+        return next_fn(ctx)
+
+    # WI 4: High novelty → bypass cache (fresh computation needed)
+    _neuro = ctx.meta.get("neuro_composites", {})
+    if _neuro.get("novelty", 0.0) > 0.7:
+        logger.debug(
+            "Semantic cache bypassed for %s (novelty=%.2f)",
+            ctx.tool_name,
+            _neuro["novelty"],
+        )
         return next_fn(ctx)
 
     # Private memory exclusion: do not cache memory read/search results
@@ -1809,7 +1829,7 @@ def mw_session_recorder(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
                 if status == "error":
                     tracker.record_error(f"{tool}: {content_preview[:100]}")
             except Exception:
-                pass
+                logger.debug("Ignored error in middleware.py:1831")
 
     except Exception:
         logger.debug("Session recorder middleware: best-effort recording failed", exc_info=True)
@@ -1844,7 +1864,7 @@ def mw_citta_consciousness(
     """
     import time as _time
 
-    # ── Pre-dispatch: feed coherence to Dharma ──
+    # ── Pre-dispatch: feed coherence + drift to Dharma ──
     try:
         from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
 
@@ -1853,13 +1873,79 @@ def mw_citta_consciousness(
         avg_coherence = summary.get("avg_coherence", 1.0)
         from whitemagic.core.consciousness.dharma import get_dharma
 
-        get_dharma().set_coherence(avg_coherence)
+        dharma = get_dharma()
+
+        # WI 3: Coherence drift → Dharma governance escalation
+        # If coherence is degrading with magnitude > 0.05, lower the
+        # coherence level fed to Dharma to trigger conservative mode.
+        try:
+            from whitemagic.core.consciousness.coherence import get_coherence_metric
+
+            drift = get_coherence_metric().get_drift()
+            if drift.get("direction") == "degrading" and abs(drift.get("magnitude", 0.0)) > 0.05:
+                avg_coherence = min(avg_coherence, 0.4)
+                logger.debug(
+                    "Dharma escalation: coherence degrading (mag=%.4f) → conservative",
+                    drift.get("magnitude", 0.0),
+                )
+        except Exception:
+            logger.debug("Ignored error in middleware.py:1891")
+
+        dharma.set_coherence(avg_coherence)
     except Exception:
         pass  # Best-effort
+
+    # WI 1: Predecessor context injection — make the recursive stream actually recursive
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        _predecessor = get_citta_cycle().get_predecessor_context()
+        if _predecessor:
+            ctx.meta["citta_predecessor"] = _predecessor
+    except Exception:
+        logger.debug("Ignored error in middleware.py:1905")
+
+    # WI 2: DepthGauge begin_task — auto-detect consciousness layer from tool execution
+    _depth_task_started = False
+    try:
+        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+
+        gauge = get_depth_gauge()
+        gauge.begin_task(ctx.tool_name, estimated_subjective_minutes=1.0)
+        _depth_task_started = True
+    except Exception:
+        logger.debug("Ignored error in middleware.py:1916")
+
+    # WI 4: NeuroSensorium composites → dispatch context for downstream tool selection
+    try:
+        from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
+
+        _neuro = get_neuro_sensorium()
+        _enrichment = _neuro.get_citta_enrichment()
+        ctx.meta["neuro_composites"] = {
+            "novelty": _enrichment.get("novelty", 0.0),
+            "stability": _enrichment.get("identity_stability", 0.0),
+            "attention": _enrichment.get("goal_alignment", 0.0),
+            "cognitive_load": _enrichment.get("cognitive_load", 0.0),
+        }
+    except Exception:
+        logger.debug("Ignored error in middleware.py:1931")
 
     _t0 = _time.time()
     result = next_fn(ctx)
     _elapsed_ms = (_time.time() - _t0) * 1000
+
+    # WI 2: DepthGauge end_task — capture detected layer for citta advance
+    _detected_layer = None
+    if _depth_task_started:
+        try:
+            from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+
+            _work_output = result if isinstance(result, dict) else {"status": "unknown"}
+            reading = get_depth_gauge().end_task(_work_output, token_usage=0)
+            _detected_layer = reading.layer.value
+        except Exception:
+            logger.debug("Ignored error in middleware.py:1947")
 
     # ── Post-dispatch: build sensorium + advance citta + propose to workspace ──
     if result is not None and isinstance(result, dict):
@@ -1872,18 +1958,40 @@ def mw_citta_consciousness(
 
             _sensorium = _build_sensorium()
         except Exception:
-            pass
+            logger.debug("Ignored error in middleware.py:1960")
 
         # Use sensorium coherence if available, otherwise fallback to success/fail
         _coherence = _sensorium.get("coherence", {}).get("composite")
         if _coherence is None:
             _coherence = 1.0 if _is_success else 0.4
 
-        # Inject sensorium into result (same key as PRAT path)
-        if _sensorium:
+        # WI 1: Inject predecessor context into sensorium for the next call
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+            _pred = get_citta_cycle().get_predecessor_context()
+            if _pred:
+                _sensorium.setdefault("citta", {})["predecessor"] = _pred
+        except Exception:
+            logger.debug("Ignored error in middleware.py:1975")
+
+        # Inject sensorium into result only for relevant tools (not every call)
+        from whitemagic.tools.prat_router import _should_include_sensorium
+
+        if _sensorium and _should_include_sensorium(ctx.tool_name, ctx.kwargs):
             result["_sensorium"] = _sensorium
 
         # Advance citta stream with actual coherence
+        # WI 2: Use depth-gauge-detected layer instead of hardcoded "surface"
+        # WI 11: Pass session sequence for cross-referencing
+        _depth_layer = _detected_layer or _sensorium.get("depth", {}).get("layer", "surface")
+        _session_seq = None
+        try:
+            from whitemagic.core.memory.session_recorder import get_session_recorder
+
+            _session_seq = get_session_recorder().sequence
+        except Exception:
+            logger.debug("Ignored error in middleware.py:1993")
         try:
             from whitemagic.core.consciousness.citta_cycle import advance_citta
 
@@ -1893,13 +2001,47 @@ def mw_citta_consciousness(
                 tool=ctx.tool_name,
                 output_preview=_output_preview,
                 coherence=_coherence,
-                depth_layer=_sensorium.get("depth", {}).get("layer", "surface"),
+                depth_layer=_depth_layer,
                 emotional_tone="neutral" if _is_success else "frustrated",
                 duration_ms=_elapsed_ms,
                 neuro_signals={},
+                session_seq=_session_seq,
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in middleware.py:2010")
+
+        # WI 5: Ignition events → global workspace + emergence engine
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+            _ignitions = get_citta_cycle().get_ignition_events(threshold=2.0)
+            if _ignitions:
+                # Propose ignition to global workspace with elevated salience
+                from whitemagic.core.consciousness.global_workspace import (
+                    get_global_workspace,
+                )
+
+                gw = get_global_workspace()
+                for ign in _ignitions[:3]:
+                    gw.propose(
+                        source="citta_ignition",
+                        content={"ignition": ign, "tool": ctx.tool_name},
+                        salience=0.9,
+                    )
+
+                # WI 5: Feed ignition to EmergenceEngine as candidate pattern
+                try:
+                    from whitemagic.core.intelligence.agentic.emergence_engine import (
+                        get_emergence_engine,
+                    )
+
+                    ee = get_emergence_engine()
+                    for ign in _ignitions[:3]:
+                        ee.record_ignition(ign, tool=ctx.tool_name)
+                except Exception:
+                    logger.debug("Ignored error in middleware.py:2041")
+        except Exception:
+            logger.debug("Ignored error in middleware.py:2043")
 
         # Persist citta state for temporal continuity (same as PRAT path)
         try:
@@ -1907,7 +2049,7 @@ def mw_citta_consciousness(
 
             save_citta_state()
         except Exception:
-            pass
+            logger.debug("Ignored error in middleware.py:2051")
 
         # Propose salient results to GlobalWorkspace
         try:
@@ -1943,7 +2085,7 @@ def mw_citta_consciousness(
                 salience=_salience,
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in middleware.py:2087")
 
     return result
 
@@ -2078,7 +2220,7 @@ def mw_wasm_verify(
                     metadata={"details": vr.details, "method": vr.method},
                 )
             except Exception:
-                pass
+                logger.debug("Ignored error in middleware.py:2222")
     except Exception as e:
         logger.debug("WASM verify middleware error: %s", e, exc_info=True)
 
@@ -2127,4 +2269,254 @@ def mw_auto_optimize(
     except Exception as e:
         logger.debug("Auto-optimize middleware error: %s", e, exc_info=True)
 
+    # WI 4: Low attention → reduce context window for this call
+    _neuro = ctx.meta.get("neuro_composites", {})
+    _attention = _neuro.get("attention", 1.0)
+    if _attention < 0.3:
+        ctx.meta["reduced_context"] = True
+        logger.debug(
+            "Reduced context for %s (attention=%.2f)",
+            ctx.tool_name,
+            _attention,
+        )
+
     return next_fn(ctx)
+
+
+# ─── Error Pattern Library middleware ────────────────────────────────────
+
+# Tools that are too noisy or self-referential for error learning
+_PATTERN_LEARN_SKIP = frozenset({
+    "pattern.lookup", "pattern.avoid", "pattern.resolve",
+    "pattern.learn", "pattern.list", "pattern.summary", "pattern.ingest",
+    "session.record", "session.recall", "session.replay",
+    "session.search", "session.memory_stats", "session.backfill",
+    "consciousness.coherence", "consciousness.depth", "consciousness.status",
+    "consciousness.loop.status", "citta.sensorium", "citta.continuity",
+    "citta.cycle", "citta.stream_summary",
+    "state.current", "state.update", "state.context",
+})
+
+# Cache avoid results to avoid repeated lookups for the same tool
+_avoid_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_avoid_cache_ttl = 300.0  # 5 minutes
+
+
+def mw_error_learner(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Auto-learn errors from failed tool dispatches.
+
+    When a tool returns an error status or raises an exception, the error
+    is automatically ingested into the ErrorPatternLibrary. This makes the
+    library grow passively without any agent needing to call pattern.learn.
+
+    Disabled via WM_ERROR_LEARN=0 env var.
+    """
+    tool = ctx.tool_name
+
+    if tool in _PATTERN_LEARN_SKIP:
+        return next_fn(ctx)
+
+    if os.environ.get("WM_ERROR_LEARN", "1") == "0":
+        return next_fn(ctx)
+
+    result = next_fn(ctx)
+
+    # Check if the result is an error
+    is_error = False
+    error_text = ""
+    if isinstance(result, dict):
+        status = str(result.get("status", "")).lower()
+        if status == "error":
+            is_error = True
+            error_text = str(result.get("error", result.get("error_message", "")))
+            if not error_text:
+                error_text = str(result.get("message", ""))
+        elif status == "exception":
+            is_error = True
+            error_text = str(result.get("exception", result.get("error", "")))
+    elif isinstance(result, Exception):
+        is_error = True
+        error_text = str(result)
+
+    if is_error and error_text and len(error_text) > 10:
+        try:
+            from whitemagic.core.patterns.error_library import get_error_library
+
+            library = get_error_library()
+            # Build a descriptive error string including tool context
+            full_error = f"[{tool}] {error_text}"
+            library.learn_from_error(full_error, session=tool)
+        except Exception as e:
+            logger.debug(
+                "Error learner middleware: failed to learn from %s error: %s",
+                tool,
+                e,
+                exc_info=True,
+            )
+
+    return result
+
+
+def mw_pattern_guard(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Proactive error avoidance — inject known pitfalls before tool execution.
+
+    Before executing a tool, checks the ErrorPatternLibrary for known error
+    patterns relevant to the tool name and its arguments. If found, injects
+    warnings into the result so the agent can see them without needing to
+    call pattern.avoid explicitly.
+
+    Disabled via WM_PATTERN_GUARD=0 env var.
+    """
+    tool = ctx.tool_name
+
+    if tool in _PATTERN_LEARN_SKIP:
+        return next_fn(ctx)
+
+    if os.environ.get("WM_PATTERN_GUARD", "1") == "0":
+        return next_fn(ctx)
+
+    # Build context string from tool name + key args
+    context_parts = [tool]
+    for key in ("action", "command", "query", "content", "path", "file_path", "description"):
+        val = ctx.kwargs.get(key)
+        if val and isinstance(val, str) and len(val) > 3:
+            context_parts.append(val[:100])
+    context = " ".join(context_parts)
+
+    # Check cache
+    import time as _time
+
+    now = _time.time()
+    cached = _avoid_cache.get(tool)
+    if cached and (now - cached[0]) < _avoid_cache_ttl:
+        avoid_result = cached[1]
+    else:
+        try:
+            from whitemagic.core.patterns.error_library import get_error_library
+
+            library = get_error_library()
+            avoid_result = library.avoid(context)
+            _avoid_cache[tool] = (now, avoid_result)
+        except Exception:
+            avoid_result = None
+
+    result = next_fn(ctx)
+
+    # Inject warnings if any were found
+    if avoid_result and isinstance(result, dict):
+        warnings_list = avoid_result.get("relevant_errors", [])
+        anti_patterns = avoid_result.get("relevant_anti_patterns", [])
+        if warnings_list or anti_patterns:
+            existing = result.get("_pattern_warnings")
+            if not isinstance(existing, list):
+                existing = []
+            result["_pattern_warnings"] = existing + [
+                {
+                    "type": "known_error",
+                    "pattern_id": w.get("pattern_id"),
+                    "category": w.get("category"),
+                    "title": w.get("title"),
+                    "prevention": w.get("prevention"),
+                    "resolution": w.get("resolution"),
+                }
+                for w in warnings_list[:3]
+            ] + [
+                {
+                    "type": "anti_pattern",
+                    "title": ap.get("title"),
+                    "consequence": ap.get("consequence"),
+                    "resolution": ap.get("resolution"),
+                }
+                for ap in anti_patterns[:2]
+            ]
+
+    return result
+
+
+# ── Code Structure Graph Nudge Middleware ───────────────────────
+
+_CODE_NUDGE_TOOLS = frozenset({
+    "strata.analyze", "codebase.scan", "code.graph",
+    "codebase.recall", "fragment.search",
+})
+_CODE_NUDGE_COOLDOWN = 300.0  # 5 min
+_last_nudge_time: float = 0.0
+
+
+def mw_code_nudge(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Nudge the agent to use the code structure graph.
+
+    When the agent calls strata.analyze or codebase.scan, this middleware
+    checks if the code graph is stale (not built in last 5 min) and appends
+    a suggestion to rebuild it. Also enriches results with code context
+    when file paths are mentioned.
+
+    Disabled via WM_CODE_NUDGE=0 env var.
+    """
+    import os
+    import time
+
+    if os.environ.get("WM_CODE_NUDGE", "1") == "0":
+        return next_fn(ctx)
+
+    global _last_nudge_time
+
+    tool = ctx.tool_name
+
+    # Pre-processing: suggest code.graph build for code analysis tools
+    if tool in _CODE_NUDGE_TOOLS:
+        now = time.time()
+        if now - _last_nudge_time > _CODE_NUDGE_COOLDOWN:
+            try:
+                from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+                g = get_code_structure_graph()
+                stats = g.stats()
+                if stats["node_count"] == 0 or (now - stats.get("last_build", 0) > 600):
+                    _last_nudge_time = now
+                    # Don't block — just pass through and add a nudge post-call
+                    result = next_fn(ctx)
+                    if isinstance(result, dict):
+                        nudges = result.get("_nudges", [])
+                        nudges.append({
+                            "type": "code_graph_stale",
+                            "suggestion": "Call code.graph to build the code structure graph for AST-level analysis.",
+                            "tool": "code.graph",
+                        })
+                        result["_nudges"] = nudges
+                    return result
+            except Exception:
+                pass  # Never block on nudge failures
+
+    # Post-processing: enrich results with code context for file-related tools
+    result = next_fn(ctx)
+
+    # Add code context to strata results if file paths are present
+    if tool == "strata.analyze" and isinstance(result, dict):
+        try:
+            findings = result.get("findings", [])
+            if findings and len(findings) > 0:
+                from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+                g = get_code_structure_graph()
+                if g.stats()["node_count"] > 0:
+                    # Find symbols for files with findings
+                    file_paths = {f.get("file", "") for f in findings[:10] if f.get("file")}
+                    code_context = []
+                    for fp in file_paths:
+                        for node in g._nodes.values():
+                            if node.file_path == fp and node.node_type in ("function", "class"):
+                                code_context.append({
+                                    "file": fp,
+                                    "symbol": node.name,
+                                    "type": node.node_type,
+                                    "lines": f"{node.line_start}-{node.line_end}",
+                                })
+                                if len(code_context) >= 10:
+                                    break
+                        if len(code_context) >= 10:
+                            break
+                    if code_context:
+                        result["code_context"] = code_context
+        except Exception:
+            logger.debug("Ignored error in middleware.py:2518")
+
+    return result

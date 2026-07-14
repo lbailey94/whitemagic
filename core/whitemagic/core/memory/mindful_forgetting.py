@@ -400,7 +400,7 @@ class RetentionEngine:
             from whitemagic.core.memory.neural.identity_anchors import auto_protect_memory
             memory = auto_protect_memory(memory)
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return self.update_score(memory)
 
     def process_decay(self, memories: list[Any]) -> list[Any]:

@@ -315,7 +315,7 @@ class MemoryManager:
             galaxy = memory.galaxy if hasattr(memory, "galaxy") else "universal"
             get_cache_registry().invalidate_namespace(galaxy)
         except Exception:
-            pass
+            logger.debug("Ignored error in manager.py:317")
         # Emit CACHE_INVALIDATE event for multi-agent coherence
         try:
             from whitemagic.core.resonance import emit_event, EventType
@@ -330,7 +330,7 @@ class MemoryManager:
                 },
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in manager.py:332")
         return {"success": True, "status": "success", "id": memory_id, "action": "permanently_deleted"}
 
     def delete(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:

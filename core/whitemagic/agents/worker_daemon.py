@@ -322,7 +322,7 @@ class WorkerDaemon:
 
             handle_agent_deregister(agent_id=self.worker_name)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def get_stats(self) -> dict[str, Any]:
         """

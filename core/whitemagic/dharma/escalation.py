@@ -599,7 +599,7 @@ class EscalationPipeline:
                 reasoning = str(data.get("reasoning", "No reasoning provided"))
                 return score, reasoning
             except (json.JSONDecodeError, ValueError, TypeError):
-                pass
+                logger.debug("Ignored ValueError, TypeError in escalation.py:601")
 
         # Fallback: look for score-like patterns
         score_match = re.search(r'score[:\s]+([0-9]*\.?[0-9]+)', text, re.IGNORECASE)
@@ -608,7 +608,7 @@ class EscalationPipeline:
                 score = max(0.0, min(1.0, float(score_match.group(1))))
                 return score, text[:200]
             except ValueError:
-                pass
+                logger.debug("Ignored ValueError in escalation.py:610")
 
         return 0.5, "Could not parse LLM response"
 

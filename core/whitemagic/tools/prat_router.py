@@ -53,8 +53,36 @@ _RESONANCE_COMPACT_KEYS = (
     "chain_position",
     "successor_hint",
     "vitality_warning",
-    "_sensorium",
 )
+
+# Tools where sensorium data is relevant and should be included in responses
+_SENSORIUM_RELEVANT_TOOLS = frozenset({
+    # Session / state tools
+    "session_status", "session_bootstrap", "create_session", "focus_session",
+    "resume_session", "checkpoint_session",
+    "state.current", "state.update", "state.context",
+    "state.paths", "state.summary",
+    # Health / diagnostic tools
+    "health_report", "check", "rust_status", "ship.check",
+    # Consciousness / citta tools
+    "citta.state", "citta.advance", "citta.stream",
+    "coherence.measure", "coherence.drift",
+    "depth_gauge", "depth.measure",
+    "gnosis", "capabilities", "manifest",
+    # Session recorder tools
+    "session.record", "session.recall", "session.replay",
+    "session.search", "session.memory_stats", "session.backfill",
+    "session.continuity", "session.consolidate",
+})
+
+
+def _should_include_sensorium(tool_name: str, kwargs: dict | None = None) -> bool:
+    """Check if sensorium data should be included in the response for this tool."""
+    if kwargs and kwargs.get("_include_sensorium"):
+        return True
+    if os.getenv("WM_SENSORIUM_ALL", "").strip().lower() in ("1", "true", "yes"):
+        return True
+    return tool_name in _SENSORIUM_RELEVANT_TOOLS
 
 
 def _resonance_verbosity() -> str:
@@ -272,7 +300,7 @@ def route_prat_call(
         resonance_ctx["wuxing_boost"] = wuxing_boost.get("boost_factor", 1.0)
         resonance_ctx["wuxing_boosted"] = wuxing_boost.get("boosted", False)
     except (ImportError, AttributeError, KeyError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # ── Garden integration: resolve the Gana's garden ──
     _garden_instance = None
@@ -339,7 +367,7 @@ def route_prat_call(
                             "retryable": check != DispatchResult.IMMATURE,
                         }
             except (ImportError, AttributeError, IndexError, TypeError):
-                pass  # Dispatch pre-check is optional
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # ── Step 2: Route through existing dispatch pipeline ──
         tool_args = args or {}
@@ -370,7 +398,7 @@ def route_prat_call(
                     operation=f"prat:{gana_name}:{tool}",
                 )
             except (ImportError, AttributeError, TypeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
         except (ValueError, KeyError, TypeError) as e:
             # Known tool execution errors
             _call_success = False
@@ -383,7 +411,7 @@ def route_prat_call(
                     latency_ms=(__import__("time").time() - _call_start) * 1000,
                 )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
             return {
                 "status": "error",
                 "error": str(e),
@@ -410,7 +438,7 @@ def route_prat_call(
                     latency_ms=(__import__("time").time() - _call_start) * 1000,
                 )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
             return {
                 "status": "error",
                 "error": f"Tool execution failed: {type(e).__name__}",
@@ -438,7 +466,7 @@ def route_prat_call(
 
                 modulate_drive_from_resonance(gana_name, tool)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # ── Garden notification: record the tool call ──
         if _garden_instance:
@@ -457,7 +485,7 @@ def route_prat_call(
                         },
                     )
             except (ImportError, AttributeError, KeyError, TypeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # ── Step 4: Inject resonance into response ──
         if isinstance(result, dict):
@@ -484,7 +512,7 @@ def route_prat_call(
                 latency_ms=(__import__("time").time() - _call_start) * 1000,
             )
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # ── v14: Speculative prefetch — record transition, predict next ──
         try:
@@ -493,7 +521,7 @@ def route_prat_call(
 
                 get_prefetcher().on_call_complete(gana_name)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # ── Vectorized mode: attach glyph metadata ──
         if _vectorized_meta and isinstance(result, dict):
@@ -546,7 +574,7 @@ def route_prat_call(
 
         get_vitality_monitor().record_call(gana_name, success=True)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # ── Fusion: Resonance → Emotion/Drive (native ops too) ──
     try:
@@ -555,7 +583,7 @@ def route_prat_call(
 
             modulate_drive_from_resonance(gana_name, None)
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return _normalize_gana_native_result(gana_name, native_result)
 

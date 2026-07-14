@@ -194,6 +194,8 @@ def _verify_token_hash(token: EngagementToken) -> bool:
 RED_OPS_TOOL_PATTERNS: list[str] = [
     "red_*", "pentest_*", "exploit_*", "fuzz_*", "brute_*",
     "nmap_*", "recon_*", "vuln_*", "poc_*",
+    "foundry_*", "http_probe_*", "api_state_*",
+    "echidna_*", "formal_verify", "formal_verify_*",
 ]
 
 
@@ -259,6 +261,21 @@ class EngagementTokenManager:
 
         self._persist()
         self._audit("issue", token_id, issuer=issuer, scope=scope, tools=tools)
+
+        # Publish to SecurityEventBus
+        try:
+            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+            bus = get_security_event_bus()
+            bus.emit(
+                event_type=SecurityEventType.ENGAGEMENT_TOKEN_ISSUED,
+                source="engagement_tokens",
+                severity="info",
+                detail=f"Token {token_id} issued by {issuer}",
+                metadata={"token_id": token_id, "issuer": issuer, "scope": scope, "tools": tools},
+            )
+        except Exception:
+            pass
 
         logger.info(
             "Engagement token issued: %s by %s (scope=%s, tools=%s, expires=%.1fm)",
@@ -362,6 +379,23 @@ class EngagementTokenManager:
             token.uses += 1
 
         self._audit("validate_pass", token_id, tool=tool, target=target)
+
+        # Publish to SecurityEventBus
+        try:
+            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+            bus = get_security_event_bus()
+            bus.emit(
+                event_type=SecurityEventType.ENGAGEMENT_TOKEN_VALIDATED,
+                source="engagement_tokens",
+                severity="info",
+                tool_name=tool,
+                detail=f"Token {token_id} validated for tool={tool} target={target}",
+                metadata={"token_id": token_id, "tool": tool, "target": target},
+            )
+        except Exception:
+            pass
+
         return {
             "status": "success",
             "valid": True,
@@ -379,12 +413,55 @@ class EngagementTokenManager:
 
         self._persist()
         self._audit("revoke", token_id)
+
+        # Publish to SecurityEventBus
+        try:
+            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+            bus = get_security_event_bus()
+            bus.emit(
+                event_type=SecurityEventType.ENGAGEMENT_TOKEN_REVOKED,
+                source="engagement_tokens",
+                severity="high",
+                detail=f"Token {token_id} revoked",
+                metadata={"token_id": token_id},
+            )
+        except Exception:
+            pass
+
         logger.info("Engagement token revoked: %s", token_id)
         return {
             "status": "success",
             "message": f"Token '{token_id}' revoked.",
             "token": token.to_dict(),
         }
+
+    def revoke_all(self, reason: str = "bulk revocation") -> int:
+        """Revoke all active (non-expired, non-revoked) tokens. Returns count revoked."""
+        count = 0
+        with self._lock:
+            for token in self._tokens.values():
+                if not token.revoked and token.is_valid():
+                    token.revoked = True
+                    count += 1
+        if count > 0:
+            self._persist()
+            self._audit("revoke_all", f"revoked {count} tokens: {reason}")
+            try:
+                from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+
+                bus = get_security_event_bus()
+                bus.emit(
+                    event_type=SecurityEventType.ENGAGEMENT_TOKEN_REVOKED,
+                    source="engagement_tokens",
+                    severity="critical",
+                    detail=f"Bulk revoked {count} tokens: {reason}",
+                    metadata={"count": count, "reason": reason},
+                )
+            except Exception:
+                pass
+            logger.warning("Bulk revoked %d engagement tokens: %s", count, reason)
+        return count
 
     def list_tokens(self, include_expired: bool = False) -> dict[str, Any]:
         """List all engagement tokens."""

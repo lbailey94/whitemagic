@@ -740,7 +740,7 @@ class RecursiveImprovementLoop:
 
                         ig = compute_ig(claim["confidence"])
                     except (ImportError, Exception):
-                        pass
+                        logger.debug("Optional dependency unavailable: ImportError")
 
                     hypotheses.append(
                         ImprovementHypothesis(

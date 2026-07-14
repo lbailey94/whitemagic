@@ -176,7 +176,7 @@ class UnifiedProgressionDaemon:
                 },
             )
         except (ImportError, AttributeError):
-            pass  # OTEL is optional; never block the progression clock
+            logger.debug("Optional dependency unavailable: ImportError")
 
 
 # Singleton instance

@@ -54,7 +54,7 @@ class DreamState:
             self.bus = get_bus()
             logger.info("🎵 Dream State connected to Gan Ying Bus")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.core.immune.antibodies import AntibodyLibrary
@@ -62,7 +62,7 @@ class DreamState:
             self.antibody_library = AntibodyLibrary()
             logger.info("💉 Dream State connected to Antibody Library")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.emergence.detector import (
@@ -72,7 +72,7 @@ class DreamState:
             self.emergence_detector = EmergenceDetector()
             logger.info("🌟 Dream State connected to Emergence Detector")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.core.memory.pattern_engine import get_engine
@@ -80,7 +80,7 @@ class DreamState:
             self.pattern_engine = get_engine()
             logger.info("🧠 Dream State connected to Pattern Engine (reads archives!)")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         if self.pattern_engine:
             pass  # (Keep existing logic)
@@ -219,7 +219,7 @@ class DreamState:
             voice = VoiceSynthesis()
             voice.get_persona_prompt()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # 3. Neural Brain Synthesis
         try:

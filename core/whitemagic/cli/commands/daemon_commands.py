@@ -60,7 +60,7 @@ def _register_daemon_commands(cli: click.Group) -> None:
         click.echo(f"   NetworkGuard: {guard.privacy_status}")
 
         # Start consciousness daemon
-        from whitemagic.core.consciousness.daemon import get_daemon
+        from whitemagic.core.consciousness.consciousness_loop import get_daemon
         cd = get_daemon()
         cd.start()
         click.echo(f"   Consciousness loops: {len(cd._loops)} started")
@@ -171,19 +171,19 @@ def _register_daemon_commands(cli: click.Group) -> None:
 
         # Also check in-process daemon
         try:
-            from whitemagic.core.consciousness.daemon import get_daemon
+            from whitemagic.core.consciousness.consciousness_loop import get_daemon
             cd = get_daemon()
             if cd.is_running:
                 status = cd.status()
                 click.echo(json.dumps(status, indent=2))
         except Exception:
-            pass
+            logger.debug("Ignored error in daemon_commands.py:179")
 
     @daemon.command()
     def loops() -> None:
         """Show loop metrics."""
         try:
-            from whitemagic.core.consciousness.daemon import get_daemon
+            from whitemagic.core.consciousness.consciousness_loop import get_daemon
             cd = get_daemon()
             status = cd.status()
             click.echo("Loop Metrics:")

@@ -75,6 +75,7 @@ class CittaMoment:
     duration_ms: float = 0.0
     neuro_signals: dict[str, float] | None = None
     vector: CittaVector | None = None
+    session_seq: int | None = None  # WI 11: cross-ref with session recorder
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -134,6 +135,7 @@ class CittaCycle:
         emotional_tone: str = "neutral",
         duration_ms: float = 0.0,
         neuro_signals: dict[str, float] | None = None,
+        session_seq: int | None = None,
     ) -> CittaMoment:
         """Advance the citta stream by one moment (one tool call).
 
@@ -165,6 +167,7 @@ class CittaCycle:
             duration_ms=round(duration_ms, 2),
             neuro_signals=neuro_signals,
             vector=vec,
+            session_seq=session_seq,
         )
 
         with self._lock:
@@ -304,7 +307,7 @@ class CittaCycle:
                 _STREAM_FILE.parent.mkdir(parents=True, exist_ok=True)
                 _STREAM_FILE.write_text("")
             except OSError:
-                pass
+                logger.debug("Ignored OSError in citta_cycle.py:309")
 
     def _persist_stream(self) -> None:
         """Persist the full stream to JSONL for cross-session continuity."""
@@ -563,6 +566,7 @@ def advance_citta(
     emotional_tone: str = "neutral",
     duration_ms: float = 0.0,
     neuro_signals: dict[str, float] | None = None,
+    session_seq: int | None = None,
 ) -> CittaMoment:
     """Advance the citta stream by one moment."""
     return get_citta_cycle().advance(
@@ -575,6 +579,7 @@ def advance_citta(
         emotional_tone=emotional_tone,
         duration_ms=duration_ms,
         neuro_signals=neuro_signals,
+        session_seq=session_seq,
     )
 
 

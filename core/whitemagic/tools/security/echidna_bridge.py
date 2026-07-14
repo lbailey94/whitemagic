@@ -102,6 +102,66 @@ contractAddr: "{contract_addr}"
         config_path.write_text(config)
         return str(config_path)
 
+    def generate_config_from_findings(
+        self,
+        findings: list[Any],
+        output_dir: str,
+        contract_addr: str = "0x00a329c0648769a73afac7f9381e08fb43dbea72",
+    ) -> str:
+        """Generate risk-scored Echidna config from vulnerability findings.
+
+        Maps finding categories to Echidna test modes and adjusts sequence
+        length based on severity. High-severity findings get longer sequences
+        and exploration mode for deeper coverage.
+        """
+        severity_to_seq_len = {"error": 100, "warning": 50, "info": 20}
+        category_to_test_mode = {
+            "reentrancy": "exploration",
+            "integer_overflow": "property",
+            "integer_underflow": "property",
+            "access_control": "property",
+            "dos": "exploration",
+            "front_running": "exploration",
+            "unchecked_external_call": "property",
+            "tx_origin": "property",
+        }
+
+        max_severity = "info"
+        categories: set[str] = set()
+        for finding in findings:
+            sev = getattr(finding, "severity", None)
+            if hasattr(sev, "value"):
+                sev = sev.value
+            elif isinstance(finding, dict):
+                sev = finding.get("severity", "info")
+            if sev == "error":
+                max_severity = "error"
+            elif sev == "warning" and max_severity != "error":
+                max_severity = "warning"
+            cat = getattr(finding, "category", "") if not isinstance(finding, dict) else finding.get("category", "")
+            if cat:
+                categories.add(cat)
+
+        test_mode = "property"
+        for cat in categories:
+            if cat in category_to_test_mode:
+                if category_to_test_mode[cat] == "exploration":
+                    test_mode = "exploration"
+                    break
+
+        seq_len = severity_to_seq_len.get(max_severity, 20)
+
+        config = f"""testMode: {test_mode}
+seqLen: {seq_len}
+contractAddr: "{contract_addr}"
+# Risk-scored config based on {len(findings)} findings (max severity: {max_severity})
+# Categories: {", ".join(sorted(categories)) if categories else "none"}
+"""
+        config_path = Path(output_dir) / "echidna_config.yaml"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(config)
+        return str(config_path)
+
     def status(self) -> dict[str, Any]:
         return {
             "available": self.available,

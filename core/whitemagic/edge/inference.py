@@ -709,7 +709,7 @@ class EdgeInference:
                     self._cache[cache_key] = result
                     return result
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Local LLM fallback failed: %s", e, exc_info=True)
 

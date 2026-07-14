@@ -239,7 +239,7 @@ def _detect_conflicts(
                     }
                 )
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return conflicts
 
@@ -318,7 +318,7 @@ def _record_sabha_karma(result: dict[str, Any]) -> None:
             success=bool(result.get("recommendation")),
         )
     except (ImportError, AttributeError):
-        pass  # Karma ledger optional
+        logger.debug("Optional dependency unavailable: ImportError")
 
 
 def handle_sabha_convene(**kwargs: Any) -> dict[str, Any]:

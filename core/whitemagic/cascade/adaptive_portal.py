@@ -659,7 +659,7 @@ class AdaptiveToolPortal:
                         try:
                             cleaned_results.append(item.__dict__)
                         except AttributeError:
-                            pass  # Item has no __dict__ — skip silently
+                            logger.debug("Optional dependency unavailable: AttributeError")
             return cleaned_results
         except Exception as e:
             logger.warning("Semantic search failed: %s", e, exc_info=True)

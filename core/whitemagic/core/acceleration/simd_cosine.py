@@ -155,7 +155,7 @@ def _to_c_array(vec: Sequence[float]) -> Any:
         np_arr = np.asarray(vec, dtype=np.float32)
         return np_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     c_arr = (ctypes.c_float * len(vec))()
     for i, v in enumerate(vec):
         c_arr[i] = v

@@ -440,7 +440,7 @@ class NarrativeCompressor:
             if isinstance(result, dict) and result.get("response"):
                 return str(result["response"]).strip()
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Template fallback
         tags_text = ", ".join(sorted(cluster.shared_tags)[:10])

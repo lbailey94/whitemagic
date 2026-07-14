@@ -104,7 +104,7 @@ class PolyglotMCOrchestrator:
                 self._available_backends.add(MCBackend.RUST)
                 self._backend_performance[MCBackend.RUST] = 100_000.0
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Julia
         try:
@@ -114,7 +114,7 @@ class PolyglotMCOrchestrator:
                 self._available_backends.add(MCBackend.JULIA)
                 self._backend_performance[MCBackend.JULIA] = 50_000.0
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Zig, Elixir, Go, Haskell — check via bridge availability
         for backend, module_path in [
@@ -128,7 +128,7 @@ class PolyglotMCOrchestrator:
                 self._available_backends.add(backend)
                 self._backend_performance[backend] = 10_000.0
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Python is always available
         self._backend_performance[MCBackend.PYTHON] = 5_000.0
@@ -964,6 +964,101 @@ class PolyglotMCOrchestrator:
             "bo_convergence": bo_result.get("convergence", []),
             "bo_best_y": bo_result.get("best_y", best_fitness),
             "rare_event": rare_event,
+            "execution_time_ms": elapsed_ms,
+        }
+
+    def multi_objective_estimate(
+        self,
+        fitness_fns: list[Any],
+        param_ranges: list[tuple[float, float]],
+        n_initial: int = 10,
+        n_iterations: int = 20,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Multi-objective Bayesian optimization returning a Pareto front.
+
+        Runs independent BO for each objective, collects all evaluated points,
+        and computes Pareto dominance to identify non-dominated solutions.
+
+        Args:
+            fitness_fns: List of fitness functions (one per objective).
+            param_ranges: Parameter bounds for each dimension.
+            n_initial: Initial LHS samples per objective.
+            n_iterations: BO iterations per objective.
+            seed: Random seed.
+
+        Returns:
+            Dict with pareto_front, all_evaluated, hypervolume, n_objectives.
+        """
+        start = time.time()
+        n_obj = len(fitness_fns)
+        d = len(param_ranges)
+
+        all_points: list[list[float]] = []
+        all_scores: list[list[float]] = []
+
+        for obj_idx, fn in enumerate(fitness_fns):
+            samples = self.lhs_sample(n_initial, param_ranges, seed=seed + obj_idx)
+            if not samples:
+                continue
+            fitness_vals = [fn(s) for s in samples]
+
+            bo_result = self.bayesian_optimize(
+                samples[:min(10, len(samples))],
+                fitness_vals[:min(10, len(fitness_vals))],
+                param_ranges,
+                fitness_expr="x[0]",
+                n_iterations=n_iterations,
+                n_candidates=50,
+                seed=seed + obj_idx,
+            )
+
+            for i, s in enumerate(samples):
+                if s not in all_points:
+                    all_points.append(s)
+                    scores = [0.0] * n_obj
+                    scores[obj_idx] = fitness_vals[i]
+                    all_scores.append(scores)
+                else:
+                    idx = all_points.index(s)
+                    all_scores[idx][obj_idx] = fitness_vals[i]
+
+        pareto_front: list[dict[str, Any]] = []
+        for i, (point, scores) in enumerate(zip(all_points, all_scores)):
+            dominated = False
+            for j, (other_point, other_scores) in enumerate(zip(all_points, all_scores)):
+                if i == j:
+                    continue
+                if all(other_scores[k] >= scores[k] for k in range(n_obj)) and \
+                   any(other_scores[k] > scores[k] for k in range(n_obj)):
+                    dominated = True
+                    break
+            if not dominated:
+                pareto_front.append({"params": point, "scores": scores})
+
+        ref_point = [min(s[k] for s in all_scores) - 1 for k in range(n_obj)] if all_scores else [0.0] * n_obj
+        hypervolume = 0.0
+        if pareto_front and n_obj == 2:
+            sorted_front = sorted(pareto_front, key=lambda x: x["scores"][0])
+            prev_y = ref_point[1]
+            for item in sorted_front:
+                x, y = item["scores"][0], item["scores"][1]
+                if y > prev_y:
+                    hypervolume += (x - ref_point[0]) * (y - prev_y)
+                    prev_y = y
+
+        elapsed_ms = (time.time() - start) * 1000
+
+        return {
+            "n_objectives": n_obj,
+            "n_dimensions": d,
+            "n_evaluated": len(all_points),
+            "pareto_front": pareto_front,
+            "pareto_size": len(pareto_front),
+            "hypervolume": hypervolume,
+            "all_evaluated": [
+                {"params": p, "scores": s} for p, s in zip(all_points, all_scores)
+            ],
             "execution_time_ms": elapsed_ms,
         }
 

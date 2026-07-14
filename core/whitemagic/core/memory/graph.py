@@ -179,7 +179,7 @@ class GraphEngine:
             from whitemagic.core.memory.cache_registry import get_cache_registry
             current_vclock = get_cache_registry().get_version("graph")
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         stale_ttl = (now - self._last_build > self._cache_ttl)
         stale_vclock = (self._loaded_assoc_vclock != current_vclock and current_vclock != 0)
         if self._graph is None or stale_ttl or stale_vclock:

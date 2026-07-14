@@ -72,6 +72,7 @@ class HealthSurface:
         components.append(self._check_native_bridges())
         components.append(self._check_degraded_capabilities())
         components.append(self._check_pending_migrations())
+        components.append(self._check_apotheosis_health())
 
         # Determine overall status
         statuses = [c.status for c in components]
@@ -263,6 +264,39 @@ class HealthSurface:
 
             if pending:
                 health.status = "degraded"
+            else:
+                health.status = "healthy"
+        except Exception as e:
+            health.status = "unknown"
+            health.error = str(e)
+
+        return health
+
+    def _check_apotheosis_health(self) -> ComponentHealth:
+        """WI 6: Check ApotheosisEngine biological/immune health metrics."""
+        health = ComponentHealth(name="apotheosis_health")
+
+        try:
+            from whitemagic.core.consciousness.apotheosis_engine import (
+                get_apotheosis_engine,
+            )
+
+            engine = get_apotheosis_engine()
+            result = engine.tick(available_tools=[])
+
+            health_metrics = result.get("health", {})
+            degraded_metrics = [
+                m for m, v in health_metrics.items()
+                if isinstance(v, dict) and v.get("status") in ("degraded", "critical")
+            ]
+
+            health.details["metrics"] = health_metrics
+            health.details["degraded_metrics"] = degraded_metrics
+            health.details["auto_heal_actions"] = result.get("auto_heal_actions", [])
+
+            if degraded_metrics:
+                health.status = "degraded"
+                health.error = f"Degraded: {', '.join(degraded_metrics[:3])}"
             else:
                 health.status = "healthy"
         except Exception as e:

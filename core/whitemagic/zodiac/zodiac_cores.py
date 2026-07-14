@@ -6,6 +6,36 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+ZODIAC_SIGNS = [
+    "aries",
+    "taurus",
+    "gemini",
+    "cancer",
+    "leo",
+    "virgo",
+    "libra",
+    "scorpio",
+    "sagittarius",
+    "capricorn",
+    "aquarius",
+    "pisces",
+]
+
+SIGN_QUALITIES: dict[str, str] = {
+    "aries": "Initiative, courage, pioneering",
+    "taurus": "Stability, patience, resourcefulness",
+    "gemini": "Communication, adaptability, curiosity",
+    "cancer": "Nurturing, emotional depth, protection",
+    "leo": "Creativity, leadership, self-expression",
+    "virgo": "Analysis, service, precision",
+    "libra": "Balance, harmony, partnership",
+    "scorpio": "Transformation, depth, intensity",
+    "sagittarius": "Exploration, wisdom, freedom",
+    "capricorn": "Discipline, ambition, structure",
+    "aquarius": "Innovation, community, vision",
+    "pisces": "Compassion, intuition, transcendence",
+}
+
 
 @dataclass
 class CoreResponse:
@@ -17,6 +47,16 @@ class CoreResponse:
     resonance: float
     transformation_applied: str
     timestamp: datetime
+
+
+@dataclass
+class CoreInfo:
+    """Simple info holder for ZodiacCoreSystem."""
+
+    sign: str
+    quality: str = ""
+    active: bool = False
+    energy: float = 0.5
 
 
 class ZodiacCore:
@@ -763,6 +803,47 @@ class ZodiacCores:
                 "ruler": core.ruler,
             }
         return stats
+
+
+class ZodiacCoreSystem:
+    """Manages the 12 zodiac consciousness cores — simple activate/deactivate API."""
+
+    def __init__(self) -> None:
+        self.cores: dict[str, CoreInfo] = {}
+        for sign in ZODIAC_SIGNS:
+            self.cores[sign] = CoreInfo(
+                sign=sign,
+                quality=SIGN_QUALITIES.get(sign, ""),
+            )
+
+    def activate(self, sign: str) -> bool:
+        if sign.lower() in self.cores:
+            self.cores[sign.lower()].active = True
+            return True
+        return False
+
+    def deactivate(self, sign: str) -> bool:
+        if sign.lower() in self.cores:
+            self.cores[sign.lower()].active = False
+            return True
+        return False
+
+    def set_energy(self, sign: str, energy: float) -> bool:
+        if sign.lower() in self.cores:
+            self.cores[sign.lower()].energy = max(0.0, min(1.0, energy))
+            return True
+        return False
+
+    def active_cores(self) -> list[str]:
+        return [s for s, c in self.cores.items() if c.active]
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "total_cores": len(self.cores),
+            "active_cores": len(self.active_cores()),
+            "active_signs": self.active_cores(),
+            "avg_energy": sum(c.energy for c in self.cores.values()) / len(self.cores),
+        }
 
 
 # Singleton instance

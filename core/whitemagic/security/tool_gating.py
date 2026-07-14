@@ -453,7 +453,7 @@ def check_tool_execution(
     except (ImportError, ModuleNotFoundError, AttributeError):
         # We only catch Python-level exceptions here (like missing module).
         # Rust panics will bubble up and crash the worker thread safely.
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     gate = get_tool_gate()
 

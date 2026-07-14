@@ -47,7 +47,10 @@ def handle_hexagram_simd_execute(**kwargs: Any) -> dict[str, Any]:
     try:
         import whitemagic_rs
 
-        if not hasattr(whitemagic_rs, "hexagram_simd_execute"):
+        simd_fn = getattr(whitemagic_rs, "hexagram_simd_execute", None) or getattr(
+            whitemagic_rs, "hexagram_simd_py_execute", None
+        )
+        if simd_fn is None:
             return {"status": "error", "error": "Rust hexagram_simd not available"}
         loads = kwargs.get("loads", {})
         if not loads:
@@ -55,7 +58,8 @@ def handle_hexagram_simd_execute(**kwargs: Any) -> dict[str, Any]:
                 "status": "error",
                 "error": "loads dict (hexagram_num → data) is required",
             }
-        results = whitemagic_rs.hexagram_simd_execute(loads)
+        loads = {int(k): v for k, v in loads.items()}
+        results = simd_fn(loads)
         return {"status": "success", "results": results, "lane_count": len(results)}
     except ImportError:
         return {"status": "error", "error": "whitemagic_rs not installed"}

@@ -368,7 +368,7 @@ class SerendipityEngine:
 
                 self._core_access = get_core_access()
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
         return self._core_access
 
     def _surface_constellation_bridges(self, count: int) -> list[SurfacedMemory]:

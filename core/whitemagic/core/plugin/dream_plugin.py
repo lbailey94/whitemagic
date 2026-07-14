@@ -76,4 +76,4 @@ def register():
 
         get_registry().register(DreamPlugin())
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")

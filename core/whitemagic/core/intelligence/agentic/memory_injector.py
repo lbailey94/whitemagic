@@ -152,7 +152,7 @@ class MemoryInjector:
             results = neural.search(query, limit=limit)
             return [r.content[:200] for r in results]
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Fallback: simple keyword search
         query_words = set(query.lower().split())
@@ -200,7 +200,7 @@ class MemoryInjector:
             state["iteration"] = stats.get("iteration_count", 0)
             state["calls_remaining"] = stats.get("calls_remaining", 100)
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.gardens.sangha.session_handoff import get_handoff

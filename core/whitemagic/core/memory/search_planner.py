@@ -367,7 +367,7 @@ class SearchQueryPlanner:
                 from whitemagic.core.memory.unified import _emit_search_hooks
                 _emit_search_hooks(results)
             except Exception:
-                pass
+                logger.debug("Ignored error in search_planner.py:369")
 
         return results, result
 

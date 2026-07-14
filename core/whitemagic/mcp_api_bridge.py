@@ -10,14 +10,14 @@ from whitemagic.utils.fast_json import loads as _json_loads
 try:
     from whitemagic.core.bridge.kaizen import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 from whitemagic.core.bridge.archaeology import *
 from whitemagic.core.bridge.garden import *
 
 try:
     from whitemagic.core.bridge.memory import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 from whitemagic.core.bridge.reasoning import *
 from whitemagic.core.bridge.session import *
 from whitemagic.core.bridge.wisdom import *
@@ -25,23 +25,23 @@ from whitemagic.core.bridge.wisdom import *
 try:
     from whitemagic.core.bridge.pattern import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.dharma import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.web_research import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.kaizen import analyze_wu_xing_phase, kaizen_analyze
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.web_research import research_topic
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 from whitemagic.core.bridge.inference import (
     bitnet_infer,
     bitnet_status,
@@ -70,7 +70,7 @@ __all__ = [
 try:
     from whitemagic.core.bridge.agent import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 from whitemagic.core.bridge.autonomous import *
 from whitemagic.core.bridge.benchmark import *
 from whitemagic.core.bridge.voice import *
@@ -78,26 +78,26 @@ from whitemagic.core.bridge.voice import *
 try:
     from whitemagic.core.bridge.optimization import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 from whitemagic.core.bridge.rust import *
 from whitemagic.core.bridge.system import *
 
 try:
     from whitemagic.core.bridge.adaptive import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.gana import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.metrics import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 try:
     from whitemagic.core.bridge.collaboration import *
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 from whitemagic.core.bridge.gana_wrappers import *
 from whitemagic.core.bridge.meditation import *
 from whitemagic.core.bridge.system import (

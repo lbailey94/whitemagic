@@ -190,7 +190,7 @@ def setup_gan_ying_listeners() -> None:
                         memory.neuro_score = max(0.0, memory.neuro_score - 0.15)
                         logger.info("🧠 Neural decay: %s weakened by rejection", memory.title, exc_info=True)
                 except (ImportError, AttributeError):
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
 
         # 3. Emotional resonance (Joy) boosts active memories
         def on_joy_triggered(event: ResonanceEvent) -> None:
@@ -267,7 +267,7 @@ def setup_gan_ying_listeners() -> None:
                             mem.neuro_score = min(1.0, mem.neuro_score + 0.05)
                     logger.info("🧠 Boosted %s memories from successful clone search", len(related_results))
                 except (ImportError, AttributeError):
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
 
         # Register listeners
         bus.listen(EventType.PATTERN_CONFIRMED, on_pattern_confirmed)

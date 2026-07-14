@@ -30,7 +30,11 @@ def handle_shelter_execute(**kwargs: Any) -> dict[str, Any]:
         payload = {"type": "python", "code": str(payload)}
     # Auto-create shelter if it doesn't exist
     try:
-        return mgr.execute(name=name, payload=payload)
+        result = mgr.execute(name=name, payload=payload)
+        if isinstance(result, dict) and "not found" in str(result.get("reason") or result.get("error") or "").lower():
+            mgr.create(name=name, tier="auto", ephemeral=True)
+            result = mgr.execute(name=name, payload=payload)
+        return result
     except Exception as e:
         if "not found" in str(e).lower():
             mgr.create(name=name, tier="auto", ephemeral=True)

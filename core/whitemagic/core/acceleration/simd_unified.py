@@ -124,7 +124,7 @@ def cosine_similarity_zig(vec_a: list[float], vec_b: list[float]) -> float:
         if zig_acc and hasattr(zig_acc, "cosine_similarity"):
             return float(zig_acc.cosine_similarity(vec_a, vec_b))
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return cosine_similarity(vec_a, vec_b)
 

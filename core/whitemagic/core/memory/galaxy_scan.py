@@ -51,7 +51,7 @@ def get_galaxy_db_paths() -> dict[str, str]:
 
         paths["default"] = str(DB_PATH)
     except Exception:
-        pass
+        logger.debug("Ignored error in galaxy_scan.py:53")
 
     try:
         from whitemagic.core.user_profile import get_user_dir

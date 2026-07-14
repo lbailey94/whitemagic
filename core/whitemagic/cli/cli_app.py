@@ -102,7 +102,7 @@ def main(
             if update_msg:
                 click.echo(update_msg, err=True)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     # If no subcommand was given, launch the native chat loop
     if ctx.invoked_subcommand is None:
@@ -126,7 +126,7 @@ def get_memory():  # type: ignore[return]
 
             _memory = get_unified_memory()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
     return _memory
 
 

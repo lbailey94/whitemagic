@@ -15,6 +15,7 @@ They are designed to be safe to run in automated contexts:
 
 from __future__ import annotations
 
+import logging
 import os
 import platform
 import re
@@ -27,6 +28,8 @@ from functools import lru_cache
 from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from whitemagic import __version__
 from whitemagic.config.paths import (
@@ -146,7 +149,7 @@ def _dir_size_bytes(path: Path, *, max_files: int = 10000) -> int:
             try:
                 total += (Path(root) / fn).stat().st_size
             except OSError:
-                pass
+                logger.debug("Ignored OSError in introspection.py:148")
     return total
 
 

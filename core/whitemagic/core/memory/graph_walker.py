@@ -213,7 +213,7 @@ class GraphWalker:
             if rust_cosine_similarity:
                 return cast(float, rust_cosine_similarity(a, b))
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         dot = sum(x * y for x, y in zip(a, b))
         norm_a = math.sqrt(sum(x * x for x in a))

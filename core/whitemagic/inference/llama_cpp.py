@@ -534,7 +534,7 @@ class LlamaCppBackend:
                     "default_generation_settings", {}
                 ).get("n_ctx", 0)
         except Exception:
-            pass
+            logger.debug("Ignored error in llama_cpp.py:536")
         return status
 
 

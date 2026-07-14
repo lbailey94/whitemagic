@@ -36,7 +36,7 @@ try:
 
     HAS_PROMETHEUS = True
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 class PrometheusMetrics:

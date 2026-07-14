@@ -112,6 +112,8 @@ class SessionRecorder:
                 "sequence": self._sequence,
                 "role": role,
                 "turn_type": turn_type,
+                # WI 11: Cross-reference with citta stream for temporal alignment
+                "citta_stream_pos": self._get_citta_stream_position(),
             },
         )
         self._um._galaxy_backend.store(mem)
@@ -119,6 +121,15 @@ class SessionRecorder:
         return mem_id
 
     # ── Recall ───────────────────────────────────────────────────────────
+
+    def _get_citta_stream_position(self) -> int:
+        """WI 11: Get current citta stream length for cross-referencing."""
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+            return get_citta_cycle().get_cycle_summary().get("stream_length", 0)
+        except Exception:
+            return 0
 
     def recall_recent(self, n: int = 10) -> list[dict[str, Any]]:
         """Recall the last N turns in chronological order (oldest→newest)."""

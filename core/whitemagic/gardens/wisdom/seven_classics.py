@@ -322,7 +322,7 @@ def emit_strategy_event(classic: MilitaryClassic, strategy: StrategyLevel):
             )
         )
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
 
 if __name__ == "__main__":

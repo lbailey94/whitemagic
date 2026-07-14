@@ -278,8 +278,8 @@ def _execute_container(shelter: Shelter, code: str) -> tuple[str, str, int]:
         "--read-only",
         network_flag,
         f"--memory={shelter.limits.max_memory_mb}m",
-        f"--cpus={shelter.limits.max_cpu_s}",
-        f"--timeout={shelter.limits.timeout_s}",
+        "--cpus=1.0",
+        f"--stop-timeout={shelter.limits.timeout_s}",
         "-v",
         f"{shelter.work_dir}:/data:Z",
         "python:3.12-slim",
@@ -727,3 +727,70 @@ def get_shelter_manager() -> ShelterManager:
             if _manager is None:
                 _manager = ShelterManager()
     return _manager
+
+
+def create_for_offensive(
+    engagement_token_id: str,
+    name: str = "",
+    tier: str = "auto",
+) -> dict[str, Any]:
+    """Factory: create a shelter with capabilities derived from an engagement token.
+
+    The token's scope globs become the shelter's ``network_allow`` list, and the
+    token's tools list becomes the shelter's ``tools_allow`` list.  The shelter
+    is created with the violet Dharma profile so engagement-token enforcement
+    is active inside the shelter as well.
+
+    Args:
+        engagement_token_id: Valid engagement token ID.
+        name: Optional shelter name (auto-generated if empty).
+        tier: Isolation tier (auto, thread, namespace, container, microvm, wasm).
+
+    Returns:
+        Shelter status dict or error dict.
+    """
+    from whitemagic.security.engagement_tokens import get_token_manager
+
+    mgr = get_token_manager()
+    # Validate the token exists and is active (without requiring tool/target match)
+    token = mgr._tokens.get(engagement_token_id)
+    if token is None:
+        return {"status": "error", "reason": f"Engagement token '{engagement_token_id}' not found"}
+    if not token.is_valid():
+        return {"status": "error", "reason": f"Engagement token '{engagement_token_id}' is no longer valid"}
+
+    # Derive capabilities from token scope
+    capabilities: list[str] = ["network_read", "network_write", "fs_read:/tmp", "fs_write:/tmp"]
+    # Add tool-specific capabilities
+    for tool_pattern in token.tools:
+        capabilities.append(f"tool:{tool_pattern}")
+
+    # Derive network allow list from token scope
+    # The scope globs (e.g. 10.0.0.*, *.example.com) become network_allow entries
+    network_allow = list(token.scope)
+
+    # Generate shelter name if not provided
+    if not name:
+        name = f"offensive_{engagement_token_id[-8:]}"
+
+    shelter_mgr = get_shelter_manager()
+    result = shelter_mgr.create(
+        name=name,
+        tier=tier,
+        capabilities=capabilities,
+        limits={"timeout_s": 180, "max_memory_mb": 1024, "max_cpu_s": 90, "max_disk_mb": 500},
+        ephemeral=True,
+        dharma_profile="violet",
+        template="violet",
+    )
+
+    # Set network_allow on the shelter capabilities
+    if result.get("status") == "ok":
+        shelter = shelter_mgr._shelters.get(name)
+        if shelter:
+            shelter.capabilities.network_allow = network_allow
+            shelter.capabilities.network = "filtered"
+            result["capabilities"] = shelter.capabilities.to_dict()
+            result["engagement_token_id"] = engagement_token_id
+
+    return result

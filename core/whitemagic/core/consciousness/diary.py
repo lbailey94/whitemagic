@@ -42,7 +42,7 @@ class DiarySystem:
                 self.bus.listen(EventType.SOLUTION_FOUND, self._auto_log_event)
                 self.bus.listen(EventType.HARMONY_ACHIEVED, self._auto_log_event)  # type: ignore[attr-defined]
             except ImportError:
-                pass  # EventType unavailable — graceful degradation
+                logger.debug("Optional dependency unavailable: ImportError")
 
     def log_hourly(
         self, activity: str, insights: str = "", energy_level: int = 5

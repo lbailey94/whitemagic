@@ -201,7 +201,7 @@ class CloneArmy:
                 return results
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except (ImportError, ModuleNotFoundError) as e:
             logger.info("⚠️ Rust search failed, falling back to Python: %s", e, exc_info=True)
 
@@ -356,7 +356,7 @@ class CloneArmy:
                 return results
 
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         except (ImportError, ModuleNotFoundError) as e:
             logger.info("⚠️ Async Rust search failed, falling back to Python async: %s", e, exc_info=True)
 

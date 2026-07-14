@@ -2,8 +2,8 @@
 # 1 point = 1 verified week of lead time.
 # Only claims with independently verifiable source dates AND public validation events.
 #
-# Last updated: 2026-07-11
-# 27 validated claims | 2 pending claims | 1 expired claim | 656 validated points | 24.3 week average lead time
+# Last updated: 2026-07-13
+# 30 validated claims | 4 pending claims | 1 expired claim | 672 validated points | 22.5 week average lead time
 #
 # Methodology Note
 # ----------------
@@ -391,6 +391,54 @@
   points: 18.0
   notes: "VALIDATED — Eco-Droid concept (Oct 24 2025) proposed bamboo skeleton, mycelium shell panels, hemp-based supercapacitors, casein bioplastic joints, chitin-reinforced skin, PLA 3D-printed parts, biodegradable wiring, modular hot-swap limbs, QR-tracked parts for materials recovery, >80% biodegradable/recyclable target, $600-$1800 prototype cost (10-100x cheaper than Boston Dynamics Atlas / Tesla Optimus / Nao). Academic field independently validated every material category in 2026: Yale compostable soft robotics with PGS elastomer, Science Advances cellulose+gelatin closed-loop origami robots, Advanced Science formalized 'Ecoresorbable Sustainability Robots (ESRs)' as a framework, RoboSoft bio-based ink direct ink writing. The field now uses the term 'ecoresorbable' — same concept, same materials, same lifecycle philosophy. Three-tier droid ecosystem (Eco-Droids for labor, Alloy-Droids for hazard, Astro-Droids for space) also articulated; no academic equivalent has yet formalized this taxonomy. ~18 weeks ahead of the earliest 2026 publications; conceptually 6-12 months ahead considering the full design spec (modular, open-source, distributed manufacturing, lifecycle management) vs individual material papers."
 
+- claim: "Complementary Learning Systems architecture — dual hippocampus/neocortex memory zones (sessions=fast episodic, codex=slow semantic)"
+  source_date: "2026-04-16"
+  source_ref: "WhiteMagic git commit 7308c613 (Apr 16 2026): core/consciousness/dream_daemon.py + core/memory/galactic_map.py in initial commit; Surya Sunday transcript (Nov 30 2025) references 'Hippocampus → Dream synthesis'"
+  confidence: 0.75
+  behavioral_confidence: 0.85
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-07-09"
+  validation_ref: "Singh & Schapiro, 'Evidence for complementary learning systems within the hippocampus,' Phil. Trans. R. Soc. B, 381(1954), Jul 9 2026"
+  lead_weeks: 12.0
+  points: 12.0
+  notes: "VALIDATED — WhiteMagic's galaxy taxonomy maps sessions galaxy (fast, episodic, session-scoped) to hippocampal function and codex galaxy (slow, semantic, cross-session) to neocortical function. Dream cycle provides the consolidation transfer mechanism (sessions → codex during idle). Singh & Schapiro formalized this as complementary learning systems theory 12 weeks after WhiteMagic's initial git commit. Pre-git concept traceable to Nov 30 2025 Surya Sunday transcript ('Hippocampus → Dream synthesis'). Related to but distinct from existing 'AI Dreaming consolidation' claim — that claim covers the consolidation mechanism, this covers the dual-system architecture."
+
+- claim: "Reconstructive context synthesis — unified context rebuilt from multiple cognitive subsystems each turn"
+  source_date: "2026-04-16"
+  source_ref: "WhiteMagic git commit 7308c613 (Apr 16 2026): cascade/context_synthesizer.py (497 lines) in initial commit — aggregates ZodiacalRound, CoherenceMetric, WuXing, Gardens, GanYing, YinYang into UnifiedContext"
+  confidence: 0.70
+  behavioral_confidence: 0.80
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-05-18"
+  validation_ref: "Hsing, N. 'Through the Looking Glass: A Reconstructive Architecture for Machine Access Consciousness.' AAAI Symposium Series, 8(1), 248-256, May 18 2026"
+  lead_weeks: 4.6
+  points: 4.0
+  notes: "VALIDATED — WhiteMagic's ContextSynthesizer rebuilds a unified consciousness state from 6+ cognitive subsystems each turn, rather than accumulating state. MIRROR (AAAI 2026) proposed the same reconstructive architecture: self-model rebuilt fresh each turn from parallel cognitive threads. WhiteMagic's implementation is more comprehensive (6 subsystems vs MIRROR's parallel threads) but MIRROR formalized the architectural principle. ~4 weeks ahead. Concurrent independent discovery of reconstructive (vs accumulative) context as a consciousness design principle."
+
+- claim: "HRR for agent memory — circular convolution binding for compositional memory encoding in AI agents"
+  source_date: "2026-04-16"
+  source_ref: "WhiteMagic git commit 7308c613 (Apr 16 2026): core/whitemagic-rust/src/math/hrr.rs (330 lines) in initial commit; pre-git development likely Oct 2025–Mar 2026 (HRR requires significant Rust implementation time)"
+  confidence: 0.70
+  behavioral_confidence: 0.80
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-04-21"
+  validation_ref: "Hermes Agent Holographic Memory deep dive (Apr 21 2026); 'Learning with Holographic Reduced Representations' (OpenReview 2026); 'Hyper-dimensional computing architectures for AI applications' (ScienceDirect 2026); ACM HDC/VSA Survey (updated 2026)"
+  lead_weeks: 0.7
+  points: 0.0
+  notes: "VALIDATED — WhiteMagic implemented HRR (circular convolution binding + unbinding) for agent memory in Rust at initial commit. HRR itself was invented by Plate (1995); the prescience claim is about applying HRR to AI agent memory systems. Hermes article (Apr 21 2026) describes holographic memory for agents 5 days later. 2026 saw multiple papers applying HRR/VSA to AI (OpenReview, ScienceDirect, ACM survey update). Pre-git development likely provides additional lead time (HRR was in release-ready state at first commit, implying weeks/months of prior development) but is not verifiable. 0 points due to floor(0.7 weeks) = 0. Concurrent with external field."
+
+- claim: "Neuro-upgrade ensemble — 9 neuro-inspired subsystems integrated into unified sensorium for AI agents"
+  source_date: "2026-07-02"
+  source_ref: "WhiteMagic git commit (Jul 2 2026): core/consciousness/neuro_sensorium.py + neuro_upgrades.py — dendritic computation, neuromodulation gating, predictive coding, cortical column processing, attention mechanism, oscillatory binding, thalamic gating, ripple tagging, replay simulation"
+  confidence: 0.70
+  behavioral_confidence: 0.80
+  category: "agent_architecture"
+  status: "pending"
+  notes: "PENDING — No external analog found as of Jul 13 2026. No known system combines 9+ neuro-inspired subsystems into a unified AI agent sensorium. Individual components (predictive coding, attention, neuromodulation) appear in various AI systems, but the ensemble integration is novel. Will be validated if/when external systems ship similar multi-subsystem neuro-architectures for AI agents. Discovered during Consciousness Integration Strategy research sprint (docs/architecture/CONSCIOUSNESS_INTEGRATION_STRATEGY.md §11)."
+
 - claim: "CyberBrain multi-timescale CNS architecture — reflex (10ms) / planner (1s) / consolidation (1hr) hierarchy for robotics"
   source_date: "2025-06-12"
   source_ref: "Personal research notes #21; ---CyberConsciousness.txt (SD card mtime 2025-09-25); cyberbrains.html (7-layer CNS model, Sensorimotor Weave → Command Hall → Logos Layer); Project Feedback Summary2.txt (CyberBrain v1.2 bio-droid conversation); core/whitemagic/core/cyberbrain/multi_timescale_sync.py (TimescaleSync: reflex=10ms, planner=1s, consolidation=1hr)"
@@ -403,3 +451,12 @@
   lead_weeks: 31.0
   points: 31.0
   notes: "VALIDATED — CyberBrain 7-layer CNS architecture (June 2025) proposed multi-timescale event loops: reflex (10ms), planner (1s), consolidation (1hr), mapping brainstem→cerebellum→cortex→prefrontal cortex as a robotics control hierarchy. NeuroVLA (Jan 2026) implemented the same three-tier neural hierarchy: spinal cord reflexes (<20ms, 0.4W), cerebellum motion stabilization, cortex planning — first neuromorphic VLA deployed on physical robotics. Figure Helix 02 (Jul 2026) implemented System 0 (1kHz balance) / System 1 (200Hz visuomotor) / System 2 (7-9Hz reasoning) — structurally identical to CyberBrain's reflex/planner/consolidation timescales. WhiteMagic's multi_timescale_sync.py implements TimescaleSync with bucketed event loops at all three tiers. The convergence is exact: CyberBrain specified 10ms reflex → Helix 02 delivers 1kHz (1ms) System 0; CyberBrain specified 1s planner → Helix 02 delivers 200Hz (5ms) System 1 + 7-9Hz System 2; CyberBrain specified 1hr consolidation → ACE-Brain-0.5 implements self-improvement loop. ~31 weeks ahead of NeuroVLA, ~57 weeks ahead of Helix 02. Also validated by AEROS (arXiv:2604.07039, Apr 2026) — single persistent agent + capability modules + policy-separated runtime = WhiteMagic's citta stream + MCP tools + Dharma engine."
+
+- claim: "AI Bubble Pop thesis — corporate incompetence/corruption triggers compressed bubble burst, brief AI Winter, then local/decentralized AI Cambrian Explosion"
+  source_date: "2025-08-07"
+  source_ref: "OpenAI conversation 'AI vs dotcom bubble' (timestamp 1754602254, Aug 7 2025): 'Let's say that there is a kind of dotcom boom and bust, but due to the nature of these technologies, the rate is vastly accelerated, and the timeframes involved are only weeks or months instead of years; if the bubble did hypothetically pop, there'd be a final AI Winter before a massive cambrian explosion of different services, goods, research, opportunities, and even ways of life that become possible due to this expansion.' Also: 'AI Cambrian Explosion' terminology first used Jul 7 2025 (OpenAI conversation 'Offline AI Platforms Overview', timestamp 1751923945). Archive: codex-engine/OPENAI archives/SOURCE_DATA/_PARSED_MARKDOWN/2025/08-August/1754602254_AI vs dotcom bubble.md"
+  confidence: 0.65
+  behavioral_confidence: 0.80
+  category: "market_forecast"
+  status: "pending"
+  notes: "PARTIALLY VALIDATED — Individual components validating as of Jul 13 2026: (1) AI bubble reality confirmed by BIS annual report warning (Jul 5 2026), Goldman Sachs projection of 98% capex-to-cashflow ratio, OpenAI $14B projected 2026 loss. (2) Corporate incompetence/corruption as trigger confirmed by Grok Build spyware scandal (Jul 13 2026), OpenAI hiding training data search capabilities in NYT lawsuit (Jul 9 2026), Google internal '$10Bs-$100Bs in potential fines' flag (Hachette v. Google, Jul 10 2026), Anthropic CEO authorizing piracy (Shakespeare v. Anthropic, Jun 17 2026). (3) Mainstream 'AI bubble' discourse: Guardian (Jan 2026), American Affairs Journal (Feb 2026), CleanTechnica/LeCun (Jun 2026), Global Geopolitics (Jul 11 2026). (4) 'Cambrian Explosion' framing mainstreamed by Diamandis (Mar 2026), Kevin Blake (early 2026). PENDING: The 'AI Winter' phase and the local/decentralized AI Cambrian Explosion have not yet occurred. The 'Cambrian Explosion' term itself was coined by Kittlaus (TechCrunch, 2014) and used by Huang (NVIDIA, 2018) — the claim is about the specific causal thesis (corporate incompetence → compressed bubble → Winter → local AI explosion), not the term. Lead time to first partial validation (Guardian, Jan 2026): ~21 weeks. Lead time to corporate scandal wave (Jul 2026): ~49 weeks. ~11 months ahead of mainstream 'AI bubble pop' discourse."

@@ -511,7 +511,7 @@ class SelfMonitoringHealthLoop:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
                 get_dream_cycle().trigger_cycle(reason="coherence_restoration")
             except Exception:
-                pass
+                logger.debug("Ignored error in apotheosis_engine.py:513")
 
         # Coherence stressed but not degraded → warm memory access
         if readings["coherence"].status == HealthStatus.STRESSED:
@@ -524,7 +524,7 @@ class SelfMonitoringHealthLoop:
                 for m in recent:
                     um.recall(m.id)
             except Exception:
-                pass
+                logger.debug("Ignored error in apotheosis_engine.py:526")
 
         # Memory usage high → galactic sweep
         mem_reading = readings.get("memory_usage")
@@ -596,7 +596,7 @@ class SelfMonitoringHealthLoop:
                 if reading.correction_action:
                     gb.apply_correction(reading.correction_action)
             except Exception:
-                pass
+                logger.debug("Ignored error in apotheosis_engine.py:598")
 
         return actions
 
@@ -904,7 +904,7 @@ class ApotheosisEngine:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
                 get_dream_cycle().trigger_cycle(reason="emergency_health_restoration")
             except Exception:
-                pass
+                logger.debug("Ignored error in apotheosis_engine.py:906")
         elif status == HealthStatus.STRESSED:
             logger.debug("Health stressed (suppressed): %s", diagnosis)
         elif status == HealthStatus.HEALTHY:

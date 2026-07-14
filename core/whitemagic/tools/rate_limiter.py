@@ -45,7 +45,7 @@ try:
     if _RUST_RATE_AVAILABLE:
         logger.debug("Rust atomic rate limiter cached as primary path")
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 @dataclass
@@ -240,7 +240,7 @@ class RateLimiter:
                 tier = agent_data.get("tier", "STANDARD")
                 return self._TRUST_MULTIPLIERS.get(tier, 1.0)
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return 1.0  # default: no adjustment
 
     def _estimate_retry(self, window: _SlidingWindow) -> float:

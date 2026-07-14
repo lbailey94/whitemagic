@@ -519,7 +519,7 @@ def _build_semantic_constellations_from_galaxy(
                         embeddings.append([float(v) for v in vec])
                         mem_ids.append(str(mem_id))
                 except (ImportError, AttributeError):
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
     except (ImportError, AttributeError):
         return []
 

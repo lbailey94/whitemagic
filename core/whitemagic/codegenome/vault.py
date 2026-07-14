@@ -38,7 +38,7 @@ def _emit_gan_ying(event_type: str, data: dict[str, Any]) -> None:
             ResonanceEvent(source="codegenome.vault", event_type=event_type, data=data)
         )  # type: ignore[arg-type]
     except (ImportError, AttributeError):
-        pass  # Graceful degradation if Gan Ying is unavailable
+        logger.debug("Optional dependency unavailable: ImportError")
 
 
 class GeneseedVault:

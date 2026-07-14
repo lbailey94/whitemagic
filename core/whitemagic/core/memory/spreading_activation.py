@@ -276,7 +276,7 @@ class SpreadingActivation:
                     if row:
                         return galaxy_name, row["title"] or ""
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in spreading_activation.py:278")
         return "", ""
 
     def _get_neighbors_cross_galaxy(
@@ -337,7 +337,7 @@ class SpreadingActivation:
                         resolved_title = row["title"] or ""
                         break
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in spreading_activation.py:339")
 
             # If not found in any galaxy, use the galaxy where the association was found
             if not resolved_galaxy:

@@ -253,7 +253,7 @@ class YinYangBalanceTracker:
             )
         except (ImportError, AttributeError):
             # Fail silently if Gan Ying not available
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def _save_activity(self, timestamp: datetime, activity: ActivityType) -> None:
         """Persist activity to history"""

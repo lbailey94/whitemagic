@@ -630,7 +630,7 @@ def _query_model_for_classification(model: str, text: str, timeout: float = 30.0
                 latency_ms=elapsed_ms,
             )
         except (json.JSONDecodeError, ValueError, TypeError):
-            pass
+            logger.debug("Ignored ValueError, TypeError in semantic_defense.py:632")
 
         # Fallback: check for keywords
         lower = response_text.lower()

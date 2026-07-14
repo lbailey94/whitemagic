@@ -106,7 +106,7 @@ def handle_research_dag_breakthroughs(**kwargs: Any) -> dict[str, Any]:
         try:
             domain = ResearchDomain(domain_str)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in research.py:108")
 
     limit = int(kwargs.get("limit", 20))
     dag = get_research_dag()
@@ -159,7 +159,7 @@ def handle_research_dag_experiments(**kwargs: Any) -> dict[str, Any]:
         try:
             domain = ResearchDomain(domain_str)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in research.py:161")
 
     stage_str = kwargs.get("stage")
     stage = None
@@ -167,7 +167,7 @@ def handle_research_dag_experiments(**kwargs: Any) -> dict[str, Any]:
         try:
             stage = ExperimentStage(stage_str)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in research.py:169")
 
     limit = int(kwargs.get("limit", 50))
     offset = int(kwargs.get("offset", 0))
@@ -343,7 +343,7 @@ def handle_mesh_experiment_share(**kwargs: Any) -> dict[str, Any]:
         try:
             domain = ResearchDomain(domain_str)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in research.py:345")
 
     sync = get_experiment_sync()
     return sync.share_experiment(experiment_id, domain)
@@ -383,7 +383,7 @@ def handle_mesh_experiment_peers(**kwargs: Any) -> dict[str, Any]:
         try:
             domain = ResearchDomain(domain_str)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in research.py:385")
 
     limit = int(kwargs.get("limit", 20))
     sync = get_experiment_sync()
@@ -416,7 +416,7 @@ def handle_research_dag_synthesize(**kwargs: Any) -> dict[str, Any]:
         try:
             domain = ResearchDomain(domain_str)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in research.py:418")
 
     min_experiments = int(kwargs.get("min_experiments", 5))
     top_n = int(kwargs.get("top_n", 10))
@@ -510,7 +510,7 @@ def handle_pulse_verify(**kwargs: Any) -> dict[str, Any]:
         try:
             force_tier = VerificationTier(int(force_tier_int))
         except (ValueError, TypeError):
-            pass
+            logger.debug("Ignored ValueError, TypeError in research.py:512")
 
     verifier = get_pulse_verifier()
     pulse = verifier.verify(

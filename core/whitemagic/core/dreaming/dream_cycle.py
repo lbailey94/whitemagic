@@ -58,6 +58,7 @@ class DreamPhase(Enum):
     PREDICTION = "prediction"  # Predictive drift detection
     ENRICHMENT = "enrichment"  # Entity extraction & semantic enrichment
     HARMONIZE = "harmonize"  # Wu Xing balance & harmony tuning
+    CODE_GRAPH = "code_graph"  # v24.3: Code structure graph analysis
 
 
 @dataclass
@@ -190,7 +191,7 @@ class DreamCycle:
                     emotional_tone="sattvic",
                 )
             except Exception:
-                pass
+                logger.debug("Ignored error in dream_cycle.py:193")
 
     def _run_loop(self) -> None:
         """Background thread: watch for idle → dream."""
@@ -255,6 +256,8 @@ class DreamCycle:
                 report.details = self._dream_enrichment()
             elif phase == DreamPhase.HARMONIZE:
                 report.details = self._dream_harmonize()
+            elif phase == DreamPhase.CODE_GRAPH:
+                report.details = self._dream_code_graph()
         except Exception as e:
             report.success = False
             report.error = str(e)
@@ -287,7 +290,25 @@ class DreamCycle:
                 duration_ms=report.duration_ms,
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in dream_cycle.py:292")
+
+        # WI 9: Re-measure coherence after dream phase — dreams consolidate
+        # memories and prune connections, which should improve coherence.
+        # The new measurement feeds into the next Dharma governance cycle.
+        try:
+            from whitemagic.core.consciousness.coherence import get_coherence_metric
+
+            metric = get_coherence_metric()
+            # Count accessible memories for accurate measurement
+            try:
+                from whitemagic.core.memory.unified import get_unified_memory
+
+                mem_count = len(get_unified_memory().list_recent(limit=50))
+            except Exception:
+                mem_count = 0
+            metric.measure(memories_accessible=mem_count)
+        except Exception:
+            logger.debug("Ignored error in dream_cycle.py:310")
 
     def _get_core_access(self) -> Any:
         """Lazy-load the CoreAccessLayer."""
@@ -541,7 +562,7 @@ class DreamCycle:
             result["constellations_detected"] = detection.constellations_found
             result["largest_constellation"] = detection.largest_constellation
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return result
 
@@ -706,7 +727,7 @@ class DreamCycle:
                         success=True,
                     )
                 except (ImportError, AttributeError):
-                    pass
+                    logger.debug("Optional dependency unavailable: ImportError")
 
             # Detect communities for context
             try:
@@ -761,7 +782,7 @@ class DreamCycle:
             # Persist emergence insights as dream memories (self-reinforcing loop)
             persisted_count = self._persist_dream_insights(insights[:3])
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         # Auto-merge converging constellations (v15.9)
         merge_result: dict[str, Any] = {}
@@ -771,7 +792,7 @@ class DreamCycle:
             detector = get_constellation_detector()
             merge_result = detector.auto_merge(max_distance=0.5, min_shared_tags=2)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.harmony.vector import get_harmony_vector
@@ -840,7 +861,7 @@ class DreamCycle:
                             f"Memory '{(mem.title or mem.id[:8])}' score={result.final_score:.3f} — candidate for galactic drift"
                         )
             except (ImportError, ModuleNotFoundError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
             return {
                 "harmony_score": round(snap.balance, 3),
@@ -1062,9 +1083,82 @@ class DreamCycle:
                 result["high_risk"] = sum(
                     1 for p in predictions if p["drift_risk"] > 0.6
                 )
+
+            # Auto-resolve stale oracle claims (Phase 3 gap closure)
+            try:
+                from whitemagic.forecasting.temporal_db import TemporalForecastDB
+                from datetime import datetime, timedelta
+
+                db = TemporalForecastDB()
+                stale_claims = db.get_oracle_claims(status="pending")
+                cutoff = (datetime.utcnow() - timedelta(days=30)).date()
+
+                resolved_count = 0
+                for claim in stale_claims:
+                    claim_date = claim.get("source_date", "")
+                    try:
+                        parsed_date = datetime.fromisoformat(claim_date).date()
+                    except (ValueError, TypeError):
+                        continue
+
+                    if parsed_date < cutoff:
+                        claim_id = claim.get("id", "")
+                        guidance = claim.get("guidance_action", "")
+                        oracle_hex = claim.get("oracle_hexagram")
+
+                        # Search memory for evidence that guidance was followed
+                        action_taken = self._check_oracle_action_evidence(guidance)
+
+                        if action_taken:
+                            db.resolve_oracle_claim(claim_id, "validated", notes="Auto-resolved: action evidence found in dream cycle")
+                        else:
+                            db.resolve_oracle_claim(claim_id, "falsified", notes="Auto-resolved: no action evidence found after 30 days")
+                        resolved_count += 1
+
+                result["oracle_claims_resolved"] = resolved_count
+            except Exception as exc:
+                logger.debug("Oracle claim auto-resolution skipped: %s", exc)
+                result["oracle_claims_resolved"] = 0
+
             return result
         except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
             return {"skipped": True, "reason": str(e)}
+
+    def _check_oracle_action_evidence(self, guidance: str) -> bool:
+        """Check memory for evidence that oracle guidance was followed.
+
+        Searches recent memories for keywords from the guidance text.
+        Returns True if evidence is found, False otherwise.
+        """
+        if not guidance or len(guidance) < 5:
+            return False
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+
+            um = get_unified_memory()
+            keywords = [
+                w.lower()
+                for w in guidance.split()
+                if len(w) > 4 and w.isalpha()
+            ][:5]
+
+            if not keywords:
+                return False
+
+            with um.pool.connection() as conn:
+                for kw in keywords:
+                    rows = conn.execute(
+                        "SELECT COUNT(*) as cnt FROM memories "
+                        "WHERE LOWER(content) LIKE ? "
+                        "AND created_at > datetime('now', '-30 days')",
+                        (f"%{kw}%",),
+                    ).fetchone()
+                    if rows and rows["cnt"] > 0:
+                        return True
+            return False
+        except Exception as exc:
+            logger.debug("Oracle action evidence check failed: %s", exc)
+            return False
 
     def _dream_enrichment(self) -> dict[str, Any]:
         """Phase 10 (v17.0): Entity extraction & semantic enrichment.
@@ -1379,6 +1473,93 @@ class DreamCycle:
         except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
             return {"skipped": True, "reason": str(e)}
 
+    def _dream_code_graph(self) -> dict[str, Any]:
+        """Phase 12 (v24.3): Code structure graph analysis.
+
+        Analyzes the code structure graph for:
+        - God nodes (refactoring candidates with too many connections)
+        - Community health (subsystem cohesion)
+        - Architectural drift (files with disproportionate complexity)
+        - Cross-references between code and memories (discussed_in edges)
+
+        Persists hypotheses as dream memories for future recall.
+        """
+        result: dict[str, Any] = {"skipped": True, "hypotheses": []}
+        try:
+            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+
+            g = get_code_structure_graph()
+            stats = g.stats()
+            if stats["node_count"] == 0:
+                result["reason"] = "code graph not built"
+                return result
+
+            result["skipped"] = False
+            result["node_count"] = stats["node_count"]
+            result["edge_count"] = stats["edge_count"]
+
+            hypotheses: list[dict[str, Any]] = []
+
+            # 1. God node detection — symbols with degree > 15
+            god_nodes = g.god_nodes(limit=10)
+            for gn in god_nodes:
+                if gn["degree"] > 15:
+                    hypotheses.append({
+                        "type": "god_node",
+                        "symbol": gn["name"],
+                        "degree": gn["degree"],
+                        "file": gn.get("file", ""),
+                        "suggestion": f"Consider splitting {gn['name']} — degree {gn['degree']} is very high",
+                    })
+
+            # 2. Community analysis — large communities may indicate tight coupling
+            communities = g.communities()
+            large_communities = [c for c in communities if c.get("size", 0) > 20]
+            if large_communities:
+                hypotheses.append({
+                    "type": "large_community",
+                    "count": len(large_communities),
+                    "largest": max(c.get("size", 0) for c in large_communities),
+                    "suggestion": f"{len(large_communities)} large communities detected — possible tight coupling",
+                })
+
+            # 3. Discussed_in edges — code-memory correlations
+            discussed = [e for e in g._edges.values() if e.edge_type == "discussed_in"]
+            result["discussed_in_count"] = len(discussed)
+
+            # 4. Language distribution
+            lang_counts: dict[str, int] = {}
+            for node in g._nodes.values():
+                lang = getattr(node, "language", "unknown")
+                lang_counts[lang] = lang_counts.get(lang, 0) + 1
+            result["language_distribution"] = lang_counts
+
+            result["hypotheses"] = hypotheses
+
+            # Persist hypotheses as dream memories
+            if hypotheses:
+                try:
+                    from whitemagic.core.memory.unified import get_unified_memory
+                    um = get_unified_memory()
+                    for h in hypotheses[:3]:
+                        um.store(
+                            content=f"Code graph dream hypothesis: {h['type']} — {h.get('suggestion', '')}",
+                            title=f"Code Graph Dream: {h['type']}",
+                            memory_type="dream",
+                            tags=["code_graph", "dream", h["type"]],
+                            importance=0.6,
+                        )
+                except Exception:
+                    pass  # Never fail dream on persistence issues
+
+        except (ImportError, ModuleNotFoundError) as e:
+            result["reason"] = str(e)
+        except Exception as e:
+            result["skipped"] = True
+            result["reason"] = str(e)
+
+        return result
+
     def _persist_dream_insights(self, insights: list) -> int:
         """Persist emergence insights as dream memories.
 
@@ -1448,7 +1629,7 @@ class DreamCycle:
                 )
             )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def status(self) -> dict[str, Any]:
         """Get dream cycle status."""

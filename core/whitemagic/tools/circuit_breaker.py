@@ -243,7 +243,7 @@ class CircuitBreaker:
                 failures=len(self._failure_timestamps),
             )
         except (ImportError, AttributeError):
-            pass  # StateBoard is optional
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def _sync_from_board(self) -> None:
         """Pull breaker state FROM StateBoard (Rust PyO3 authoritative source).
@@ -277,7 +277,7 @@ class CircuitBreaker:
                 if py_state == BreakerState.OPEN and not self._opened_at:
                     self._opened_at = time.time()
         except (ImportError, AttributeError, KeyError):
-            pass  # StateBoard is optional
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def status(self) -> dict[str, Any]:
         """Return breaker status for introspection."""
@@ -471,7 +471,7 @@ class BreakerRegistry:
                 whitemagic_rs.board_reset()
                 logger.info("StateBoard reset via Rust PyO3 (board_reset)")
             except ImportError:
-                pass  # Rust PyO3 not available — Python-only fallback
+                logger.debug("Optional dependency unavailable: ImportError")
 
             # Reset Koka native circuit handler if available
             koka = get_koka_circuit_dispatch()

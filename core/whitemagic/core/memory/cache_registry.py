@@ -59,7 +59,7 @@ class CacheRegistry:
                 lambda ns: self.invalidate_namespace(ns, _from_redis=True)
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in cache_registry.py:61")
 
     def register(
         self,
@@ -165,7 +165,7 @@ class CacheRegistry:
                     from whitemagic.cache.redis import get_redis_cache
                     get_redis_cache().publish_invalidation(namespace)
             except Exception:
-                pass
+                logger.debug("Ignored error in cache_registry.py:167")
 
         return results
 

@@ -61,6 +61,7 @@ class SimulationResult:
     memory_id: str | None = None
     dag_experiment_id: str | None = None
     error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,6 +76,7 @@ class SimulationResult:
             "memory_id": self.memory_id,
             "dag_experiment_id": self.dag_experiment_id,
             "error": self.error,
+            "metadata": self.metadata,
         }
 
 
@@ -104,6 +106,30 @@ class SimulationOrchestrator:
                 if cls._instance is None:
                     cls._instance = cls()
         return cls._instance
+
+    def _consult_oracle_for_bo(self, research_query: str) -> dict[str, Any] | None:
+        """Consult oracle for BO parameter guidance (Phase 4).
+
+        Attempts to get oracle guidance and translate it to BO parameters.
+        Returns None if oracle is unavailable or consultation fails.
+        """
+        if not research_query:
+            return None
+        try:
+            from whitemagic.oracle.oracle_bo_bridge import get_oracle_bo_bridge
+            from whitemagic.oracle.quantum_iching import QuantumIChing
+
+            oracle = QuantumIChing()
+            result = oracle.consult(research_query, {})
+            bridge = get_oracle_bo_bridge()
+            oracle_output = {
+                "primary_hexagram": result.primary_hexagram,
+                "wu_xing": "fire",  # Default; could be derived from hexagram
+            }
+            return bridge.translate(oracle_output)
+        except Exception as exc:
+            logger.debug("Oracle BO consultation failed: %s", exc)
+            return None
 
     # ── Yin-within-Yang: Introspective Simulation ──────────────────────
 
@@ -230,6 +256,14 @@ class SimulationOrchestrator:
         try:
             from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
             orch = PolyglotMCOrchestrator()
+
+            # Phase 4: Oracle-guided BO parameters
+            oracle_params = self._consult_oracle_for_bo(research_query)
+            if oracle_params:
+                kwargs.setdefault("xi", oracle_params.get("xi", 0.01))
+                kwargs.setdefault("n_iterations", oracle_params.get("n_bo_iterations", 20))
+                result.metadata = result.metadata or {}
+                result.metadata["oracle_bo_params"] = oracle_params
 
             if model_type == "sde":
                 mc_result = self._run_sde(orch, **kwargs)

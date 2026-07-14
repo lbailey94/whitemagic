@@ -322,7 +322,7 @@ def garden_count_rule(query: str) -> LocalInsight | None:
                 tokens_saved=1000,
             )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
     return None
 
 
@@ -357,7 +357,7 @@ def cpu_inference_rule(query: str) -> LocalInsight | None:
                     tokens_saved=result.tokens_equivalent,
                 )
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
     return None
 
 

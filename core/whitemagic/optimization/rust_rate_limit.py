@@ -25,7 +25,7 @@ except ImportError:
 
         _rs = _rs_mod
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
 if _rs is not None and hasattr(_rs, "rate_check"):
     _RUST_RATE_LIMITER = True

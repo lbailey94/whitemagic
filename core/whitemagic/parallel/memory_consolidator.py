@@ -259,4 +259,4 @@ def emit_consolidation_event(result: ConsolidationResult):
             )
         )
     except ImportError:
-        pass  # Gan Ying not available
+        logger.debug("Optional dependency unavailable: ImportError")

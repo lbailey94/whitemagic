@@ -100,6 +100,57 @@ class FormalVerifier:
         spec_path.write_text(spec_content)
         return str(spec_path)
 
+    def generate_spec_from_findings(
+        self,
+        findings: list[Any],
+        contract_name: str,
+        output_dir: str,
+    ) -> str:
+        """Auto-generate formal verification specs from STRATA findings.
+
+        Converts static analysis findings into Certora spec rules by
+        mapping finding categories to formal properties.
+        """
+        category_to_property = {
+            "reentrancy": "no_reentrancy_state_change",
+            "integer_overflow": "no_arithmetic_overflow",
+            "integer_underflow": "no_arithmetic_underflow",
+            "access_control": "only_authorized_callers",
+            "unchecked_external_call": "external_call_success_checked",
+            "tx_origin": "no_tx_origin_auth",
+            "dangerous_strict_equality": "no_strict_equality_balance",
+            "shadowing": "no_state_variable_shadowing",
+            "uninitialized_storage": "no_uninitialized_storage_pointer",
+            "delegate_call": "no_untrusted_delegatecall",
+            "selfdestruct": "no_selfdestruct",
+            "block_timestamp": "no_block_timestamp_dependency",
+            "block_number": "no_block_number_dependency",
+            "gas_limit": "no_gas_limit_dependency",
+            "dos": "no_dos_via_gas_limit",
+            "front_running": "no_front_running_susceptibility",
+            "timestamp_dependence": "no_timestamp_manipulation",
+            "ether_payout": "correct_ether_payout",
+            "erc20_violation": "erc20_compliance",
+            "erc721_violation": "erc721_compliance",
+        }
+
+        properties: list[str] = []
+        seen_categories: set[str] = set()
+
+        for finding in findings:
+            category = getattr(finding, "category", "") if not isinstance(finding, dict) else finding.get("category", "")
+            if category in seen_categories:
+                continue
+            prop = category_to_property.get(category)
+            if prop:
+                properties.append(prop)
+                seen_categories.add(category)
+
+        if not properties:
+            properties.append("basic_safety")
+
+        return self.generate_spec(contract_name, properties, output_dir)
+
     def verify_property(
         self,
         project_dir: str,

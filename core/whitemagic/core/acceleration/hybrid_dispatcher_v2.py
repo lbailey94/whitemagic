@@ -1033,7 +1033,7 @@ class HybridDispatcherV2:
             if "unified_fast_brain" in b._binaries:
                 return {"active": True, "shm_ring": True}
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return {"active": False}
 
     def health_check(self) -> dict:

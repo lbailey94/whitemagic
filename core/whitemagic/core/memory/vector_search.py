@@ -95,7 +95,7 @@ def _cosine(a: list[float], b: list[float]) -> float:
         )
         return cast(float, _simd_cos(a, b))
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     d=sum(x*y for x,y in zip(a,b))
     na=math.sqrt(sum(x*x for x in a))
     nb=math.sqrt(sum(x*x for x in b))

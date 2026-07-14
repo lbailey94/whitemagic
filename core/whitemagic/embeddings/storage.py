@@ -164,7 +164,7 @@ class FileBasedEmbeddingCache:
 
                                     return getattr(numpy, name)
                                 except ImportError:
-                                    pass
+                                    logger.debug("Optional dependency unavailable: ImportError")
                             raise pickle.UnpicklingError(f"Forbidden: {module}.{name}")
 
                     return RestrictedUnpickler(io.BytesIO(data)).load()

@@ -297,7 +297,7 @@ class GanYingMixin:
             self._setup_event_listeners()
         except ImportError:
             # Gan Ying not available, garden runs standalone
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def emit_event(self, event_type: str, data: dict[str, Any]) -> None:
         """Emit an event to the Gan Ying bus."""
@@ -353,7 +353,7 @@ def get_garden_bias(garden_name: str) -> CoordinateBias | None:
             if isinstance(garden, BaseGarden):
                 return garden.get_coordinate_bias()
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     try:
         module = __import__(f"whitemagic.gardens.{garden_name}", fromlist=[""])
@@ -363,6 +363,6 @@ def get_garden_bias(garden_name: str) -> CoordinateBias | None:
             if isinstance(garden, BaseGarden):
                 return garden.get_coordinate_bias()
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return None

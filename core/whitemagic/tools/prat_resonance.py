@@ -400,7 +400,7 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
         zodiac_resonance = clock.get_resonance_multiplier(meta["mansion_num"])
         zodiac_amplified = zodiac_resonance > 1.0
     except (ImportError, ModuleNotFoundError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     # Guna adaptation hint
     guna = harmony["guna_dominant"]
@@ -482,7 +482,7 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
                 f"Consider routing to a peer Gana."
             )
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return ctx
 
@@ -521,7 +521,7 @@ def _compute_prat_economics(
             elif td and td.safety.value == "delete":
                 safety_multiplier = 2.0
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     call_cost = round(base_cost * safety_multiplier, 2)
 
@@ -915,6 +915,33 @@ def _build_sensorium() -> dict[str, Any]:
             "emotional_attunement": round(enrichment.get("emotional_attunement", 0.0), 4),
             "memory_accessibility": round(enrichment.get("memory_accessibility", 0.0), 4),
             "temporal_orientation": round(enrichment.get("temporal_orientation", 0.0), 4),
+        }
+    except Exception:
+        logger.debug("Swallowed exception", exc_info=True)
+
+    # WI 7: Guna balance — biorhythm visible to every tool call
+    try:
+        from whitemagic.core.consciousness.guna_balance import get_guna_balance
+
+        guna = get_guna_balance()
+        reading = guna.measure()
+        sensorium["guna"] = reading.to_dict()
+    except Exception:
+        logger.debug("Swallowed exception", exc_info=True)
+
+    # WI 12: DepthGauge compression → token economy guidance
+    try:
+        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+
+        gauge = get_depth_gauge()
+        compression = gauge.current_compression()
+        layer = gauge.current_layer.value
+        # Higher compression = deeper layer = more work per token
+        # Surface: 1x, Terminal: 2.5x, Flow: 5x, Dream: 10x
+        sensorium["depth_economy"] = {
+            "layer": layer,
+            "compression_ratio": compression,
+            "token_efficiency": gauge.LAYERS[gauge.current_layer].token_efficiency,
         }
     except Exception:
         logger.debug("Swallowed exception", exc_info=True)

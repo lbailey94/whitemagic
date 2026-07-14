@@ -440,7 +440,7 @@ class ConsciousnessLoop:
 
                 get_dream_cycle().stop()
             except Exception:
-                pass
+                logger.debug("Ignored error in consciousness_loop.py:442")
 
         # Detach homeostatic loop if we attached it
         if self._homeostatic_attached:
@@ -449,7 +449,7 @@ class ConsciousnessLoop:
 
                 get_homeostatic_loop().detach()
             except Exception:
-                pass
+                logger.debug("Ignored error in consciousness_loop.py:451")
 
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5.0)
@@ -474,7 +474,7 @@ class ConsciousnessLoop:
             from whitemagic.core.consciousness.neuro_upgrades import get_neuro_upgrades
             get_neuro_upgrades().set_mode(mode.value)
         except Exception:
-            pass
+            logger.debug("Ignored error in consciousness_loop.py:476")
 
         # Restart dream cycle if enable state changed
         dream_was_started = self._dream_started
@@ -486,7 +486,7 @@ class ConsciousnessLoop:
                 get_dream_cycle().stop()
                 self._dream_started = False
             except Exception:
-                pass
+                logger.debug("Ignored error in consciousness_loop.py:488")
 
         logger.info(
             "Consciousness mode changed: %s → %s (citta=%.0fs, dream=%s)",
@@ -513,7 +513,7 @@ class ConsciousnessLoop:
 
             get_dream_cycle().touch()
         except Exception:
-            pass
+            logger.debug("Ignored error in consciousness_loop.py:515")
 
     def status(self) -> dict[str, Any]:
         """Get current loop status."""
@@ -704,7 +704,7 @@ class ConsciousnessLoop:
                     "cortical_l4": neuro_result["cortical_layers"]["l4_output"],
                 }
             except Exception:
-                pass
+                logger.debug("Ignored error in consciousness_loop.py:706")
 
             advance_citta(
                 gana="_background",
@@ -824,7 +824,7 @@ class ConsciousnessLoop:
                     "Proactive dream triggered: %s", result.get("reason", "unknown")
                 )
         except Exception:
-            pass
+            logger.debug("Ignored error in consciousness_loop.py:826")
 
     # ── T2: Fast meta loop ──────────────────────────────────────────
 
@@ -842,13 +842,27 @@ class ConsciousnessLoop:
             self._run_meta_galaxy_refresh()
 
     def _run_self_directed_attention(self) -> None:
-        """Observe system state and generate self-initiated turns."""
+        """Observe system state and generate self-initiated turns.
+
+        WI 8: Injects MetaGalaxy strategic priorities as seed context
+        so self-directed attention is guided by top-down meta-cognition,
+        not just bottom-up system state.
+        """
         try:
             if self._self_directed is None:
-                from whitemagic.core.consciousness.self_directed_attention import (
+                from whitemagic.core.consciousness.self_initiation import (
                     get_self_directed_attention,
                 )
                 self._self_directed = get_self_directed_attention()
+
+            # WI 8: Feed MetaGalaxy strategic priorities into self-directed attention
+            _meta_priorities: list[str] = []
+            try:
+                from whitemagic.core.consciousness.meta_galaxy import get_meta_galaxy
+
+                _meta_priorities = get_meta_galaxy().get_strategic_priorities()
+            except Exception:
+                logger.debug("Ignored error in consciousness_loop.py:864")
 
             turns = self._self_directed.observe_and_generate()
             if turns:
@@ -866,6 +880,15 @@ class ConsciousnessLoop:
                     content=top.imperative,
                     salience=top.intensity,
                 )
+
+            # WI 8: If MetaGalaxy has priorities, propose them as self-directed seeds
+            if _meta_priorities:
+                for priority in _meta_priorities[:2]:
+                    self._propose_to_workspace(
+                        source="meta_galaxy_priority",
+                        content=priority,
+                        salience=0.7,
+                    )
         except Exception as e:
             logger.debug("Self-directed attention failed: %s", e, exc_info=True)
 
@@ -1261,7 +1284,7 @@ class ConsciousnessLoop:
                         with open(winners_path) as f:
                             existing = json.load(f)
                     except Exception:
-                        pass
+                        logger.debug("Ignored error in consciousness_loop.py:1286")
                 existing_applied = existing.get("applied_params", {})
                 for space, params in best_params.items():
                     existing_applied[space] = params
@@ -1382,7 +1405,7 @@ class ConsciousnessLoop:
                 salience=min(salience, 1.0),
             )
         except Exception:
-            pass
+            logger.debug("Ignored error in consciousness_loop.py:1407")
 
     # ── Human check-in threshold logic ───────────────────────────────
 
@@ -1420,3 +1443,15 @@ def is_enabled() -> bool:
     return os.environ.get("WM_CONSCIOUSNESS_LOOP", "1").strip().lower() not in (
         "0", "false", "no", "off",
     )
+
+
+# ── Backward compat: get_daemon() ────────────────────────────────────
+
+
+def get_daemon() -> ConsciousnessLoop:
+    """Backward compat — returns the consciousness loop singleton.
+
+    Formerly returned a ConsciousnessDaemon from daemon.py.
+    Now returns the unified ConsciousnessLoop which subsumes all daemon functionality.
+    """
+    return get_consciousness_loop()

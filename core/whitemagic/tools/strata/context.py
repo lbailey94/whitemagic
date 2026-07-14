@@ -1,16 +1,52 @@
 import ast
+import logging
 import re
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["ContextEnricher"]
 
 
 class ContextEnricher:
-    """Find the enclosing function/class for a given file and line."""
+    """Find the enclosing function/class for a given file and line.
+
+    Uses the CodeStructureGraph when available for cross-file, cross-language
+    context lookup. Falls back to AST (Python) or regex (other languages).
+    """
 
     def __init__(self, project_path: Path):
         self.project_path = project_path
         self._cache: dict = {}
+
+    def _try_code_graph(self, file_rel: str, line: int) -> str | None:
+        """Try to get context from the CodeStructureGraph.
+
+        Returns None if graph not built or symbol not found, so caller
+        can fall back to AST/regex.
+        """
+        try:
+            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            g = get_code_structure_graph()
+            if g.stats()["node_count"] == 0:
+                return None
+
+            # Find the node whose line range contains the given line
+            best_match: str | None = None
+            best_start = 0
+            for node in g._nodes.values():
+                if node.file_path == file_rel and node.node_type in ("function", "class", "interface"):
+                    if node.line_start <= line <= node.line_end and node.line_start >= best_start:
+                        best_start = node.line_start
+                        prefix = {
+                            "function": "def" if node.language == "python" else "fn" if node.language == "rust" else "function",
+                            "class": "class",
+                            "interface": "interface",
+                        }.get(node.node_type, node.node_type)
+                        best_match = f"{prefix} {node.name}"
+            return best_match
+        except Exception:
+            return None
 
     def _get_python_context(self, file_path: Path, line: int) -> str | None:
         """Use AST to find enclosing function/class in Python."""
@@ -51,14 +87,25 @@ class ContextEnricher:
         return best_match
 
     def enrich(self, file_rel: str, line: int) -> str | None:
-        """Return a context string like 'def foo' or 'class Bar' for the given location."""
-        file_path = self.project_path / file_rel
-        if not file_path.exists():
-            return None
+        """Return a context string like 'def foo' or 'class Bar' for the given location.
 
+        Tries the CodeStructureGraph first (cross-file, pre-parsed),
+        then falls back to AST/regex parsing.
+        """
         cache_key = (file_rel, line)
         if cache_key in self._cache:
             return self._cache[cache_key]
+
+        # Try code graph first
+        result = self._try_code_graph(file_rel, line)
+        if result is not None:
+            self._cache[cache_key] = result
+            return result
+
+        # Fall back to AST/regex
+        file_path = self.project_path / file_rel
+        if not file_path.exists():
+            return None
 
         ext = file_path.suffix.lower()
         result: str | None = None

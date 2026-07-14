@@ -111,7 +111,7 @@ class ChronosGuard:
             if get_tzimtzum().is_vacant_space_active:
                 ctx += " HOLLOW BAMBOO: You are a vessel for the collective will. Act with non-coercive humility and make space for others."
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         ctx += " You are anchored in the present moment."
         return ctx

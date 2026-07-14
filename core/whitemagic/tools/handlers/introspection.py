@@ -127,7 +127,7 @@ def _load_cached_db_stats() -> dict[str, Any]:
                     "galaxies": galaxy_counts,
                 }
         except Exception:
-            pass
+            logger.debug("Ignored error in introspection.py:129")
 
         # Full scan: count rows across all galaxy databases
         galaxy_counts = {}
@@ -149,9 +149,9 @@ def _load_cached_db_stats() -> dict[str, Any]:
                                 total_count += count
                                 total_size += db_file.stat().st_size
                             except Exception:
-                                pass
+                                logger.debug("Ignored error in introspection.py:151")
         except Exception:
-            pass
+            logger.debug("Ignored error in introspection.py:153")
 
         if total_count == 0:
             db = Path(DB_PATH)

@@ -77,7 +77,7 @@ class UnifiedPatternAPI:
 
             self._engines["core"] = PatternEngine()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.core.intelligence.hologram.patterns import (
@@ -86,7 +86,7 @@ class UnifiedPatternAPI:
 
             self._engines["holographic"] = HolographicPatternEngine()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         self._rust_available = find_spec("whitemagic_rs") is not None
 
@@ -363,7 +363,7 @@ class UnifiedPatternAPI:
 
                 return float(whitemagic_rs.fast_similarity(text1, text2))
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Fallback to word overlap
         words1 = set(text1.lower().split())

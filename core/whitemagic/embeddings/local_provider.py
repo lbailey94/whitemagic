@@ -75,7 +75,7 @@ class LocalEmbeddingProvider:
                 f"local_embed:{self._model_name}", _duration_ms
             )
         except (ImportError, AttributeError, RuntimeError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
         return embedding.tolist()
 
     def embed_batch(

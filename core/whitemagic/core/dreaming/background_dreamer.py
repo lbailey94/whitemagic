@@ -27,7 +27,7 @@ class BackgroundDreamer:
 
             init_ipc()
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def trigger_dream_cycle(self) -> None:
         """Start a background dream cycle."""
@@ -72,7 +72,7 @@ class BackgroundDreamer:
                     {"type": "dream_report_ready", "data": self._last_dream_report},
                 )
             except (ImportError, ModuleNotFoundError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         finally:
             self._dreaming = False

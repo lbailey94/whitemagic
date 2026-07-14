@@ -151,7 +151,7 @@ class EntityExtractor:
             self._llama_available = backend.is_available
             return self._llama_available
         except Exception:
-            pass
+            logger.debug("Ignored error in entity_extractor.py:153")
         self._llama_available = False
         logger.debug("llama-server not available — falling back to regex extraction")
         return False
@@ -403,4 +403,4 @@ try:
 
     register_store_hook(_entity_extraction_hook)
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")

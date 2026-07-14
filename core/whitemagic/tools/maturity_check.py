@@ -60,7 +60,7 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
                 cat = tool_def.category.name
                 required = _CATEGORY_MATURITY.get(cat)
         except (ImportError, ModuleNotFoundError):
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     if required is None:
         return None  # No maturity requirement — allow
@@ -81,7 +81,7 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
             if hs_result and "allowed_categories" in hs_result:
                 logger.debug("Haskell maturity gate consulted for %s", tool_name)
     except (ImportError, AttributeError):
-        pass  # Haskell unavailable, fall through to Python
+        logger.debug("Optional dependency unavailable: ImportError")
 
     try:
         from whitemagic.core.governance.maturity_gates import (

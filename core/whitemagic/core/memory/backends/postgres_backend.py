@@ -372,7 +372,7 @@ class PostgresBackend(BaseBackend):
         try:
             content = json.loads(content)
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.debug("Ignored TypeError in postgres_backend.py:374")
 
         mt_str = row.get("memory_type", "SHORT_TERM")
         try:

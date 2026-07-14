@@ -111,7 +111,7 @@ class SafeSandbox:
             try:
                 safe[module_name] = __import__(module_name)  # type: ignore[assignment]
             except ImportError:
-                pass  # Module not available
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return safe
 
@@ -269,7 +269,7 @@ class SafeSandbox:
                 if old_handler is not None:
                     signal.signal(signal.SIGALRM, old_handler)
             except (AttributeError, ValueError):
-                pass  # Platform doesn't support signals
+                logger.debug("Optional dependency unavailable: AttributeError")
 
             stdout_buffer.close()
             stderr_buffer.close()
@@ -396,7 +396,7 @@ class SafeSandbox:
                 if old_handler is not None:
                     signal.signal(signal.SIGALRM, old_handler)
             except (AttributeError, ValueError):
-                pass  # Platform doesn't support signals
+                logger.debug("Optional dependency unavailable: AttributeError")
 
 
 class CodeExecutor:

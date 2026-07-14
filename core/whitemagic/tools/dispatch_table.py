@@ -74,6 +74,14 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "fool_guard.ralph": LazyHandler("war_room", "handle_fool_guard_ralph"),
     "immune_scan": LazyHandler("misc", "handle_immune_scan"),
     "immune_heal": LazyHandler("misc", "handle_immune_heal"),
+    # ── Error Pattern Library ──
+    "pattern.lookup": LazyHandler("pattern_tools", "handle_pattern_lookup"),
+    "pattern.avoid": LazyHandler("pattern_tools", "handle_pattern_avoid"),
+    "pattern.resolve": LazyHandler("pattern_tools", "handle_pattern_resolve"),
+    "pattern.learn": LazyHandler("pattern_tools", "handle_pattern_learn"),
+    "pattern.list": LazyHandler("pattern_tools", "handle_pattern_list"),
+    "pattern.summary": LazyHandler("pattern_tools", "handle_pattern_summary"),
+    "pattern.ingest": LazyHandler("pattern_tools", "handle_pattern_ingest"),
     "dna_validate": LazyHandler("misc", "handle_dna_validate"),
     "dna_principles": LazyHandler("misc", "handle_dna_principles"),
     "cast_oracle": LazyHandler("misc", "handle_cast_oracle"),
@@ -150,6 +158,14 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
         "windsurf_conv", "handle_windsurf_search_conversations"
     ),
     "windsurf_stats": LazyHandler("windsurf_conv", "handle_windsurf_stats"),
+    "windsurf.export_all": LazyHandler("windsurf_conv", "handle_windsurf_export_all"),
+    "windsurf.ingest": LazyHandler("windsurf_conv", "handle_windsurf_ingest"),
+    "windsurf.sync": LazyHandler("windsurf_conv", "handle_windsurf_sync"),
+    "windsurf.mine": LazyHandler("windsurf_conv", "handle_windsurf_mine"),
+    "windsurf.categorize": LazyHandler("windsurf_conv", "handle_windsurf_categorize"),
+    "windsurf.full_steps": LazyHandler("windsurf_conv", "handle_windsurf_full_steps"),
+    "windsurf.compare": LazyHandler("windsurf_conv", "handle_windsurf_compare"),
+    "windsurf.semantic_search": LazyHandler("windsurf_conv", "handle_windsurf_semantic_search"),
     "browser_navigate": LazyHandler("browser_tools", "handle_browser_navigate"),
     "browser_click": LazyHandler("browser_tools", "handle_browser_click"),
     "browser_type": LazyHandler("browser_tools", "handle_browser_type"),
@@ -382,7 +398,7 @@ def _ensure_router_cached() -> None:
             from whitemagic.core.bridge.tools import execute_mcp_tool
         _bridge_execute = execute_mcp_tool
     except ImportError:
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
     _router_cached = True
 
 
@@ -459,6 +475,7 @@ def _build_pipeline() -> Any:
         mw_cognitive_mode,
         mw_draft_review,
         mw_engagement_token,
+        mw_error_learner,
         mw_governor,
         mw_inference_router,
         mw_input_sanitizer,
@@ -466,6 +483,7 @@ def _build_pipeline() -> Any:
         mw_maturity_gate,
         mw_model_signing,
         mw_observability,
+        mw_pattern_guard,
         mw_rate_limiter,
         mw_security_monitor,
         mw_semantic_cache,
@@ -475,6 +493,7 @@ def _build_pipeline() -> Any:
         mw_transaction_firewall,
         mw_wasm_verify,
         mw_zodiac_resonance,
+        mw_code_nudge,
     )
 
     p = DispatchPipeline()
@@ -483,6 +502,7 @@ def _build_pipeline() -> Any:
     p.use("timeout", mw_timeout)
     p.use("rate_limiter", mw_rate_limiter)
     p.use("security_monitor", mw_security_monitor)
+    p.use("pattern_guard", mw_pattern_guard)
     p.use("engagement_token", mw_engagement_token)
     p.use("model_signing", mw_model_signing)
     p.use("cognitive_mode", mw_cognitive_mode)
@@ -500,7 +520,9 @@ def _build_pipeline() -> Any:
     p.use("karma_effects", mw_karma_effects)
     p.use("observability", mw_observability)
     p.use("session_recorder", mw_session_recorder)
+    p.use("error_learner", mw_error_learner)
     p.use("wasm_verify", mw_wasm_verify)
+    p.use("code_nudge", mw_code_nudge)
     p.use("core_router", _mw_core_router)
     return p
 

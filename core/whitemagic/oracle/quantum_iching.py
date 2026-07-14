@@ -259,27 +259,49 @@ class QuantumIChing:
     def _create_quantum_state(
         self, question: str, context: dict[str, Any]
     ) -> QuantumState:
-        """Create quantum superposition based on question and context"""
-        # Hash the question to seed quantum state
+        """Create quantum superposition based on question and context.
+        
+        Layer A: HRR-derived amplitudes — uses hexagram HRR interaction scores
+        to seed the quantum state, connecting it to the symbolic structure of the
+        I Ching rather than hash noise. Falls back to hash-seeded random when
+        HRR engine is unavailable.
+        """
         question_hash = hashlib.sha256(question.encode()).hexdigest()
         seed = int(question_hash[:8], 16)
         random.seed(seed)
 
         amplitudes = {}
 
-        # Base amplitude distribution
-        for i in range(1, 65):
-            # Quantum amplitude based on question resonance
-            amplitude = complex(
-                random.gauss(0, 0.5),
-                random.gauss(0, 0.5),
-            )
-            amplitudes[i] = amplitude
+        # Layer A: Try HRR-derived amplitudes first
+        hrr_available = False
+        try:
+            from .hrr_bridge import get_hrr_bridge
+            bridge = get_hrr_bridge()
+            if bridge.available:
+                hrr_available = True
+                # Use HRR interaction scores between question-seeded hexagram and all others
+                # The question hash determines a "question vector" hexagram
+                question_kw = (seed % 64) + 1
+                for i in range(1, 65):
+                    score = bridge.interaction_score(question_kw, i)
+                    # Add complex phase from question hash for quantum character
+                    phase = (int(question_hash[(i * 2) % 64:(i * 2) % 64 + 8], 16) / 0xFFFFFFFF) * 2 * math.pi
+                    amplitudes[i] = complex(score * math.cos(phase), score * math.sin(phase))
+        except Exception:
+            hrr_available = False
+
+        if not hrr_available:
+            # Fallback: hash-seeded random amplitudes (original behavior)
+            for i in range(1, 65):
+                amplitude = complex(
+                    random.gauss(0, 0.5),
+                    random.gauss(0, 0.5),
+                )
+                amplitudes[i] = amplitude
 
         # Contextual modulation
         if context:
             for key, value in context.items():
-                # Modulate amplitudes based on context
                 modulation = self._calculate_context_modulation(key, value)
                 for i in amplitudes:
                     amplitudes[i] *= modulation
@@ -292,7 +314,6 @@ class QuantumIChing:
         # Create entanglements
         entanglements: list[tuple[int, int]] = []
         if random.random() < self.entanglement_strength:
-            # Create entangled pairs
             for _ in range(random.randint(1, 3)):
                 pair = random.sample(range(1, 65), 2)
                 entanglements.append((pair[0], pair[1]))
@@ -305,8 +326,13 @@ class QuantumIChing:
         )
 
     def _collapse_quantum_state(self, state: QuantumState, question: str) -> int:
-        """Collapse quantum state to a specific hexagram"""
-        # Calculate probabilities
+        """Collapse quantum state to a specific hexagram.
+        
+        Layer B: Uses Born-rule sampling from PolyglotMCOrchestrator when available.
+        Layer C: Applies quantum interference for entangled pairs before collapse.
+        Falls back to numpy weighted-random when PolyglotMC unavailable.
+        """
+        # Calculate probabilities (Born rule: |amplitude|^2)
         probabilities = {}
         for hex_num, amplitude in state.amplitudes.items():
             probabilities[hex_num] = abs(amplitude) ** 2
@@ -316,21 +342,52 @@ class QuantumIChing:
         for keyword in keywords:
             keyword_hex_num = self.db.get_hexagram_by_keyword(keyword)
             if keyword_hex_num and keyword_hex_num in probabilities:
-                # Boost probability for matching hexagrams
                 probabilities[keyword_hex_num] *= 1.5
+
+        # Layer C: Quantum interference for entangled pairs
+        if state.entanglement:
+            try:
+                from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+                orch = PolyglotMCOrchestrator()
+                for pair_a, pair_b in state.entanglement:
+                    if pair_a in probabilities and pair_b in probabilities:
+                        # Interference modulates probabilities
+                        a_amp = [state.amplitudes.get(pair_a, 0).real]
+                        b_amp = [state.amplitudes.get(pair_b, 0).real]
+                        result = orch.quantum_interference(a_amp, b_amp)
+                        if not result.get("fallback") and "interference" in result:
+                            interference_val = result["interference"][0] if result["interference"] else 0.0
+                            # Modulate both probabilities by interference
+                            probabilities[pair_a] *= max(0.01, abs(interference_val))
+                            probabilities[pair_b] *= max(0.01, abs(interference_val))
+            except Exception:
+                pass  # Interference is optional enhancement
 
         # Renormalize
         total = sum(probabilities.values())
         for hex_num in probabilities:
             probabilities[hex_num] /= total
 
-        # Collapse based on probabilities
+        # Layer B: Try Born-rule sampling from PolyglotMCOrchestrator
+        try:
+            from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+            orch = PolyglotMCOrchestrator()
+            # Build amplitude list ordered by hexagram number 1-64
+            real_amplitudes = [probabilities.get(i, 0.0) for i in range(1, 65)]
+            seed = int(hashlib.sha256(question.encode()).hexdigest()[:8], 16)
+            result = orch.born_sample(real_amplitudes, seed=seed)
+            if "index" in result and not result.get("fallback"):
+                selected = result["index"] + 1  # 0-indexed → 1-indexed
+                return selected if selected in self.db.hexagrams else 1
+        except Exception:
+            pass  # Fall through to numpy/weighted-random
+
+        # Fallback: existing numpy/weighted-random collapse
         if NUMPY_AVAILABLE:
             hex_numbers = list(probabilities.keys())
             probs = list(probabilities.values())
             selected = int(np.random.choice(hex_numbers, p=probs))
         else:
-            # Fallback to weighted random
             r = random.random()
             cumulative = 0.0
             selected = 1  # Default
@@ -340,7 +397,6 @@ class QuantumIChing:
                     selected = hex_num
                     break
 
-        # Ensure we have a valid hexagram from our database
         return selected if selected in self.db.hexagrams else 1
 
     def _generate_changing_lines(self, state: QuantumState, hexagram: int) -> list[int]:
@@ -423,7 +479,7 @@ class QuantumIChing:
                     return response_text.strip()
 
         except ImportError:
-            pass  # Fallback to template
+            logger.debug("Optional dependency unavailable: ImportError")
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("⚠️ Brain disconnect: %s", e)
 

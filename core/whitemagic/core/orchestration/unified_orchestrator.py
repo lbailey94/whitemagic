@@ -244,7 +244,7 @@ class UnifiedOrchestrator:
             setup_garden_resonance()
             logger.info("     ✓ Garden resonance cascades active")
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         logger.info("     📊 %s gardens initialized", len(self._gardens))
 
@@ -500,7 +500,7 @@ class UnifiedOrchestrator:
             )
             logger.info("   🌊 Garden cascade: %s", " → ".join(cascaded))
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     async def _on_memory_stored(self, event: OrchestrationEvent) -> None:
         """

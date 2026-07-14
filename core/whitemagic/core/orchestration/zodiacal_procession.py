@@ -167,7 +167,7 @@ class ZodiacalProcession:
                 )
             )
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
     def get_current_order(self) -> list[ZodiacSign]:
         """Get the sign order for current phase."""

@@ -276,7 +276,7 @@ def _ensure_init() -> None:
                     if srv is not None:
                         srv.instructions = _INSTRUCTIONS
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in run_mcp_lean.py:278")
                 logger.info("Citta continuity injected into server instructions (session %d)", ctx.get("session_count", 0))
         except Exception:
             logger.debug("Citta continuity injection skipped", exc_info=True)
@@ -296,7 +296,7 @@ def _ensure_init() -> None:
                     if srv is not None:
                         srv.instructions = _INSTRUCTIONS
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in run_mcp_lean.py:298")
                 logger.info("Current work state injected into server instructions")
         except Exception:
             logger.debug("Current state injection skipped", exc_info=True)
@@ -322,7 +322,7 @@ try:
 
     _GANA_TOOLS = _get_gana_nested_tools()
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 def _load_gana_metadata() -> dict[str, tuple[str, list[str]]]:
@@ -595,7 +595,7 @@ def _sync_dispatch(
                 _compressed_in = True
                 gana, tool_name, tool_args, operation = dg, dt, da, do
     except (ImportError, AttributeError):
-        pass  # Compression is optional; never block dispatch
+        logger.debug("Optional dependency unavailable: ImportError")
 
     if not tool_name:
         return {
@@ -669,7 +669,7 @@ def _sync_dispatch(
                         st["ratio"],
                     )
             except (ImportError, AttributeError):
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
         return result
     except ImportError as exc:
         logger.error("PRAT router import failed: %s", exc)
@@ -725,28 +725,35 @@ _COMPACT_STRIP_KEYS = frozenset({
 def _compact_response(result: dict[str, Any]) -> dict[str, Any]:
     """Strip consciousness/resonance metadata and apply JSON compaction.
 
-    When WM_MCP_COMPACT=2, additionally applies logoglyph key substitution
-    (Chinese hanzi for English keys) for maximal token density.
+    WM_MCP_COMPACT levels:
+      1 — strip bloat keys only (English)
+      2 — strip bloat keys + logoglyph key substitution
+      3 — keep all data fields + logoglyph key substitution (richest mode)
     """
     _compact_level = os.environ.get("WM_MCP_COMPACT", "0").strip()
 
     if not isinstance(result, dict):
         return result
 
-    out = {
-        k: _compact_response(v) if isinstance(v, dict) else v
-        for k, v in result.items()
-        if k not in _COMPACT_STRIP_KEYS
-    }
-
-    if _compact_level in ("2", "2.0"):
+    # Level 3: keep all fields, apply glyphs only
+    if _compact_level in ("3", "3.0"):
+        out = dict(result)
         out = _apply_logoglyphs(out)
+    else:
+        # Levels 0, 1, 2: strip bloat keys
+        out = {
+            k: _compact_response(v) if isinstance(v, dict) else v
+            for k, v in result.items()
+            if k not in _COMPACT_STRIP_KEYS
+        }
+        if _compact_level in ("2", "2.0"):
+            out = _apply_logoglyphs(out)
 
     try:
         from whitemagic.tools.compact_response import compact
         out = compact(out)
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return out
 
@@ -806,6 +813,60 @@ _GLYPH_MAP: dict[str, str] = {
     "mcp_server": "MCP", "rust_bridge": "速桥",
     "rich_cli": "CLI", "fastapi": "API",
     "exists": "在", "root": "根",
+    # Sensorium / metadata blocks (visible in WM_MCP_COMPACT=3)
+    "_sensorium": "感", "_resonance": "共", "_audit": "审", "metadata": "元",
+    "note": "注", "timestamp": "时", "writes": "写", "artifacts": "器",
+    "retryable": "再", "request_id": "求码", "idempotency_key": "幂码",
+    "coherence": "协", "flow": "流", "depth": "深",
+    "continuity": "续", "stillness": "静", "neuro_cognitive": "神经",
+    "session_duration_s": "会长秒", "duration_ms": "毫秒", "fast_path": "捷径",
+    "token_tracking": "令牌", "zodiac_amplified": "星扩",
+    "token_economy": "令牌", "calibration": "校准",
+    "metrics": "度", "side_effects": "副", "warnings": "警言",
+    "envelope_version": "封版", "tool_contract_version": "约版",
+    "_garden": "园", "_citta_predecessor": "识前",
+    # 27 (+1 stillness) Gardens with Taoist/Buddhist ethos
+    "gardens": "园群",
+    "adventure": "险", "awe": "畏", "beauty": "美",
+    "connection": "连", "courage": "勇", "creation": "创",
+    "dharma": "法", "gratitude": "谢", "grief": "悲",
+    "healing": "愈", "humor": "趣", "love": "爱",
+    "mystery": "秘", "patience": "忍", "play": "嬉",
+    "practice": "修", "presence": "临", "protection": "护",
+    "reverence": "敬", "sanctuary": "殿", "sangha": "僧",
+    "stillness": "静", "transformation": "化", "truth": "真",
+    "voice": "声", "wisdom": "智", "wonder": "奇",
+    # Archaeology
+    "archaeology": "考", "files_tracked": "追件", "total_reads": "读次",
+    # Sensorium inner keys
+    "stillness_index": "静指", "setpoint_deviation": "偏置", "signal_to_noise": "信噪",
+    "avg_coherence": "均协", "stream_length": "流长", "cycle_count": "轮数",
+    "avg_depth": "均深", "max_depth": "极深",
+    "prediction_calibration": "预校", "foresight_misses": "预失",
+    # Garden sub-keys
+    "activation_count": "启次", "is_active": "活", "last_activated": "末启",
+    "total_hours_active": "总时",
+    # Galaxy names (dynamic, but cover the canonical 10)
+    "archive": "档", "aria": "咏", "citta": "识", "codex": "典",
+    "journals": "记", "dreams": "梦", "research": "研", "sessions": "会列",
+    "substrate": "基", "tutorial": "教", "universal": "宇", "telemetry": "测",
+    "knowledge": "知", "creative_solutions": "创解", "insight": "见",
+    "openai_archives": "OAI档", "self_learning": "自学", "default": "默",
+    "main": "主", "meta": "元", "test": "试", "translation": "译",
+    # Audit
+    "agent_id": "代理",
+    # Remaining health/report subkeys
+    "path": "径", "julia": "朱", "haskell": "哈",
+    "resolution_hints": "解示", "available": "可",
+    "fastmcp": "快M", "authored_tools": "撰具", "by_stability": "稳分",
+    "battery_min": "电低", "cpu_temp_max": "芯高", "memory_max": "存高",
+    "accelerators": "速器", "surface_counts": "面数",
+    # Remaining deep sub-keys
+    "callable_tools": "可调", "dispatch_tools": "分派", "gana_tools": "宿具",
+    "nested_unique_tools": "嵌独", "stable": "稳", "experimental": "试",
+    "optional": "选",
+    "yin_yang": "阴阳", "harmony_score": "和分", "cognitive_mode": "知模",
+    "guna": "德",
 }
 
 _GLYPH_VALUES: dict[str, str] = {
@@ -834,9 +895,9 @@ def _apply_logoglyphs(obj: Any) -> Any:
 
 
 def _compact_enabled() -> bool:
-    """Check if compact response mode is enabled (level 1 or 2)."""
+    """Check if compact response mode is enabled (levels 1-3)."""
     val = os.environ.get("WM_MCP_COMPACT", "0").strip().lower()
-    return val in ("1", "true", "yes", "2", "2.0")
+    return val in ("1", "true", "yes", "2", "2.0", "3", "3.0")
 
     if not isinstance(result, dict):
         return result
@@ -854,7 +915,7 @@ def _compact_enabled() -> bool:
         from whitemagic.tools.compact_response import compact
         out = compact(out)
     except (ImportError, AttributeError):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
     return out
 
@@ -885,12 +946,17 @@ async def call_tool(
                 "galactic.dashboard", "capabilities", "manifest",
             })
             if _tool in _FAST_DIRECT:
-                from whitemagic.tools.unified_api import call_tool as _ct
-                result = _ct(_tool, **_sub_args)
-                if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0"):
-                    result = _compact_response(result)
-                text = _json_dumps(result, indent=2, default=str)
-                return [types.TextContent(type="text", text=text)]
+                # Level 3 needs sensorium (comes from Gana wrapper path)
+                _compact_lvl = os.environ.get("WM_MCP_COMPACT", "0").strip()
+                if _compact_lvl in ("3", "3.0"):
+                    pass  # fall through to full Gana wrapper below
+                else:
+                    from whitemagic.tools.unified_api import call_tool as _ct
+                    result = _ct(_tool, **_sub_args)
+                    if _compact_enabled():
+                        result = _compact_response(result)
+                    text = _json_dumps(result, indent=2, default=str)
+                    return [types.TextContent(type="text", text=text)]
 
         from whitemagic.tools.handlers.meta_tool import handle_wm
 
@@ -902,7 +968,7 @@ async def call_tool(
         if "args" in args and isinstance(args["args"], dict):
             wm_kwargs["args"] = args["args"]
         result = handle_wm(**wm_kwargs)
-        if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0"):
+        if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0", "3", "3.0"):
             result = _compact_response(result)
         text = _json_dumps(result, indent=2, default=str)
         return [types.TextContent(type="text", text=text)]
@@ -939,7 +1005,7 @@ async def call_tool(
         logger.debug("ToolUsageTracker recording skipped", exc_info=True)
 
     # ── Compact mode: strip consciousness metadata to save tokens ──
-    if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0"):
+    if os.environ.get("WM_MCP_COMPACT", "").strip().lower() in ("1", "true", "yes", "2", "2.0", "3", "3.0"):
         result = _compact_response(result)
 
     text = _json_dumps(result, indent=2, default=str)
@@ -1311,7 +1377,7 @@ async def main_stdio() -> None:
 
         register_grimoire_plugin()
     except (ImportError, ModuleNotFoundError):
-        pass  # Plugin system is optional; never block MCP startup
+        logger.debug("Optional dependency unavailable: ImportError")
 
     read_stream_writer, read_stream = anyio.create_memory_object_stream[
         SessionMessage | Exception
@@ -1452,20 +1518,6 @@ async def main_stdio() -> None:
     except Exception as e:
         logger.debug("Auto-optimizer init failed: %s", e, exc_info=True)
 
-    # ── Background pre-warm: start lazy init in a daemon thread ──
-    # Hides ~8s of embedding-model/DB/singleton init behind the MCP
-    # handshake so the first tool call is already warm.
-    def _bg_warm() -> None:
-        import time as _time
-        _time.sleep(0.5)  # let handshake complete first
-        try:
-            _ensure_init()
-        except Exception:
-            logger.debug("Background pre-warm failed", exc_info=True)
-
-    _warm_thread = threading.Thread(target=_bg_warm, daemon=True, name="wm-pre-warm")
-    _warm_thread.start()
-
     try:
         await server.run(
             read_stream, write_stream, server.create_initialization_options()
@@ -1502,7 +1554,7 @@ async def main_stdio() -> None:
             try:
                 _dual_manager.stop_all()
             except Exception:
-                pass
+                logger.debug("Ignored error in run_mcp_lean.py:1556")
         # Persist unified cache for cross-session cache hits
         try:
             from whitemagic.core.cache import get_unified_cache
@@ -1517,7 +1569,7 @@ async def main_stdio() -> None:
             from whitemagic.core.acceleration.process_supervisor import shutdown_all
             shutdown_all()
         except Exception:
-            pass
+            logger.debug("Ignored error in run_mcp_lean.py:1571")
         logger.info("MCP server shutdown complete")
 
 
@@ -1646,23 +1698,23 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
                 try:
                     _consciousness_loop.stop()
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in run_mcp_lean.py:1700")
             if _bg_optimizer is not None:
                 try:
                     _bg_optimizer.stop()
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in run_mcp_lean.py:1705")
             if _dual_manager is not None:
                 try:
                     _dual_manager.stop_all()
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in run_mcp_lean.py:1710")
             # Shutdown all supervised native bridges
             try:
                 from whitemagic.core.acceleration.process_supervisor import shutdown_all
                 shutdown_all()
             except Exception:
-                pass
+                logger.debug("Ignored error in run_mcp_lean.py:1716")
 
 
 def main() -> None:

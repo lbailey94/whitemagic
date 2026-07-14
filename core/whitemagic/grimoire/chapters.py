@@ -243,7 +243,7 @@ _CHAPTERS_28: list[Chapter] = [
             "latency",
         ],
         gana="gana_tail",
-        garden="courage",
+        garden="wonder",
         quadrant="East",
         chinese="尾",
         pinyin="Wěi",

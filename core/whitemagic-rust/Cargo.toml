@@ -16,6 +16,7 @@ python = ["pyo3", "numpy", "pyo3-build-config", "tokio", "rusqlite", "reqwest", 
 arrow = ["dep:arrow"]
 wasm = ["wasm-bindgen", "js-sys", "web-sys", "console_error_panic_hook", "getrandom/js", "whitemagic-math/wasm", "wasm-bindgen-futures"]
 zig = []  # Zig FFI bridge (optional, requires whitemagic-zig library)
+codegraph = ["dep:tree-sitter", "dep:tree-sitter-languages"]
 
 [dependencies]
 iceoryx2 = { version = "0.8.1", optional = true }
@@ -74,6 +75,10 @@ parking_lot = { version = "0.12", optional = true }
 tracing = { version = "0.1", optional = true }
 metrics = { version = "0.22", optional = true }
 tokio = { version = "1.35", features = ["full"], optional = true }
+
+# Code Structure Graph (tree-sitter AST extraction)
+tree-sitter = { version = "0.22", optional = true }
+tree-sitter-languages = { version = "0.1", optional = true }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.21", optional = true }

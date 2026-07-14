@@ -41,7 +41,7 @@ try:
 
     HAS_OTEL = True
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 HAS_OTLP = False
 try:
@@ -51,7 +51,7 @@ try:
 
     HAS_OTLP = True
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 @dataclass

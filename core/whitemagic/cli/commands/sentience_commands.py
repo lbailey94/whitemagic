@@ -60,7 +60,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
         click.echo()
 
         # ── Wake sequence ────────────────────────────────────────────
-        from whitemagic.core.consciousness.sentience import WakeOnBoot
+        from whitemagic.core.consciousness.lifecycle import WakeOnBoot
 
         click.echo("  Waking up...")
         wake_result = WakeOnBoot.wake()
@@ -101,7 +101,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
         # Volition loop
         if not no_volition:
             try:
-                from whitemagic.core.consciousness.sentience import get_volition_loop
+                from whitemagic.core.consciousness.volition import get_volition_loop
 
                 vl = get_volition_loop()
                 vl.start()
@@ -112,20 +112,17 @@ def _register_sentience_commands(cli: click.Group) -> None:
         # Intention queue
         if not no_intentions:
             try:
-                from whitemagic.core.consciousness.sentience import (
-                    get_intention_queue,
-                )
+                from whitemagic.core.consciousness.self_initiation import get_self_initiation_queue
 
-                iq = get_intention_queue()
-                iq.start()
-                started.append("intention queue")
+                iq = get_self_initiation_queue()
+                started.append("self-initiation queue")
             except Exception as e:
                 click.echo(f"  Intention queue: failed ({e})")
 
         # Sleep scheduler
         if not no_sleep:
             try:
-                from whitemagic.core.consciousness.sentience import (
+                from whitemagic.core.consciousness.lifecycle import (
                     SleepConfig,
                     get_sleep_scheduler,
                 )
@@ -135,7 +132,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
                     sleep_time=sleep_time or "23:00",
                     wake_time=wake_time or "07:00",
                 )
-                from whitemagic.core.consciousness.sentience import SleepScheduler
+                from whitemagic.core.consciousness.lifecycle import SleepScheduler
 
                 scheduler = SleepScheduler(config)
                 scheduler.start()
@@ -162,23 +159,23 @@ def _register_sentience_commands(cli: click.Group) -> None:
         # ── Cleanup ──────────────────────────────────────────────────
         if not no_intentions:
             try:
-                from whitemagic.core.consciousness.sentience import (
-                    get_intention_queue,
+                from whitemagic.core.consciousness.self_initiation import (
+                    get_self_initiation_queue,
                 )
 
-                get_intention_queue().stop()
+                # No stop needed — queue is passive
             except Exception:
-                pass
+                logger.debug("Ignored error in sentience_commands.py:170")
 
         if not no_volition:
             try:
-                from whitemagic.core.consciousness.sentience import (
+                from whitemagic.core.consciousness.volition import (
                     get_volition_loop,
                 )
 
                 get_volition_loop().stop()
             except Exception:
-                pass
+                logger.debug("Ignored error in sentience_commands.py:180")
 
         if not no_dream:
             try:
@@ -186,17 +183,17 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
                 get_dream_cycle().stop()
             except Exception:
-                pass
+                logger.debug("Ignored error in sentience_commands.py:188")
 
         if not no_sleep:
             try:
-                from whitemagic.core.consciousness.sentience import (
+                from whitemagic.core.consciousness.lifecycle import (
                     get_sleep_scheduler,
                 )
 
                 get_sleep_scheduler().stop()
             except Exception:
-                pass
+                logger.debug("Ignored error in sentience_commands.py:198")
 
         click.echo("  Sentience daemon stopped.")
 
@@ -209,7 +206,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
         """
         click.echo("→ Initiating sleep cycle...")
 
-        from whitemagic.core.consciousness.sentience import get_sleep_scheduler
+        from whitemagic.core.consciousness.lifecycle import get_sleep_scheduler
 
         scheduler = get_sleep_scheduler()
 
@@ -231,7 +228,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         Recovers citta state and generates a proactive greeting.
         """
-        from whitemagic.core.consciousness.sentience import WakeOnBoot
+        from whitemagic.core.consciousness.lifecycle import WakeOnBoot
 
         click.echo("→ Waking up...")
         result = WakeOnBoot.wake()
@@ -271,7 +268,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         # Sleep scheduler
         try:
-            from whitemagic.core.consciousness.sentience import get_sleep_scheduler
+            from whitemagic.core.consciousness.lifecycle import get_sleep_scheduler
 
             status["sleep"] = get_sleep_scheduler().status()
         except Exception as e:
@@ -279,7 +276,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         # Volition loop
         try:
-            from whitemagic.core.consciousness.sentience import get_volition_loop
+            from whitemagic.core.consciousness.volition import get_volition_loop
 
             status["volition"] = get_volition_loop().status()
         except Exception as e:
@@ -287,9 +284,9 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         # Intention queue
         try:
-            from whitemagic.core.consciousness.sentience import get_intention_queue
+            from whitemagic.core.consciousness.self_initiation import get_self_initiation_queue
 
-            status["intentions"] = get_intention_queue().status()
+            status["self_initiation"] = get_self_initiation_queue().status()
         except Exception as e:
             status["intentions"] = {"error": str(e)}
 
@@ -303,7 +300,7 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         # Background worker
         try:
-            from whitemagic.core.consciousness.sentience import get_background_worker
+            from whitemagic.core.consciousness.background_worker import get_background_worker
 
             status["background_worker"] = get_background_worker().status()
         except Exception as e:

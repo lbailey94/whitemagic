@@ -5,10 +5,13 @@ Implementations for Lunar Mansions 8-14 (Summer/South).
 Theme: Expression, Harmony, Visibility.
 """
 
+import logging
 from datetime import datetime
 from typing import Any
 
 from .base import BaseGana, GanaCall, LunarMansion
+
+logger = logging.getLogger(__name__)
 
 
 class GhostGana(BaseGana):
@@ -95,7 +98,7 @@ In the shadows, truth is found.
                     "status": "introspected",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         elif call.task == "deep_search":
             try:
@@ -145,7 +148,7 @@ In the shadows, truth is found.
                     "status": "improved",
                 }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         # Default/Direct invocation
         return {
@@ -419,7 +422,7 @@ Everything is connected to everything else.
                         "status": "connected",
                     }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -567,7 +570,7 @@ Flight requires balance and thrust.
                         "status": "expanded",
                     }
             except ImportError:
-                pass
+                logger.debug("Optional dependency unavailable: ImportError")
 
         try:
             from whitemagic.cascade.advanced_parallel import AdaptiveParallelExecutor
@@ -583,7 +586,7 @@ Flight requires balance and thrust.
                 "status": "flying",
             }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,
@@ -769,7 +772,7 @@ Joy increases when shared. Dreams regenerate what waking depletes.
                 "status": "abundant",
             }
         except ImportError:
-            pass
+            logger.debug("Optional dependency unavailable: ImportError")
 
         return {
             "mansion": self.mansion.name,

@@ -40,7 +40,7 @@ try:
 
     HAS_GRPC = True
 except ImportError:
-    pass
+    logger.debug("Optional dependency unavailable: ImportError")
 
 
 @dataclass
@@ -139,7 +139,7 @@ class MeshClient:
             self._channel = grpc.insecure_channel(self._address)
             try:
                 mesh_pb2_grpc = cast(
-                    Any, importlib.import_module("whitemagic.mesh.mesh_pb2_grpc")
+                    Any, importlib.import_module("whitemagic.mesh.proto.mesh_pb2_grpc")
                 )
                 self._stub = mesh_pb2_grpc.MeshServiceStub(self._channel)
                 self._connected = True

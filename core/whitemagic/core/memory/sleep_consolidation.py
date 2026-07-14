@@ -288,7 +288,7 @@ class SleepConsolidation:
                     rows = filtered_rows
                     dst_conn.close()
                 except Exception:
-                    pass
+                    logger.debug("Ignored error in sleep_consolidation.py:290")
 
             for row in rows:
                 transfers.append(ConsolidationTransfer(

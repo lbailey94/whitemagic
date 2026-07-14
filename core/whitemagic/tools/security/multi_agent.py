@@ -172,7 +172,7 @@ class SecuritySwarm:
                                 "agent": agent_id,
                             })
                     except Exception:
-                        pass
+                        logger.debug("Ignored error in multi_agent.py:174")
 
         elif role == AgentRole.WEB_AUDITOR:
             for checker in checkers:
@@ -192,7 +192,7 @@ class SecuritySwarm:
                                 "agent": agent_id,
                             })
                     except Exception:
-                        pass
+                        logger.debug("Ignored error in multi_agent.py:194")
 
         return findings
 
@@ -214,6 +214,55 @@ class SecuritySwarm:
         """Find findings reported by multiple agents (high confidence)."""
         merged = self._merge_findings(all_findings)
         return [f for f in merged if len(f.get("agents", [])) >= 2]
+
+    def verify_consensus(self, consensus_findings: list[dict[str, Any]]) -> dict[str, Any]:
+        """Verify consensus findings using WASM replay verification.
+
+        For each consensus finding, encodes the analysis logic as a WASM module
+        and replays it to check that all agents reached the same conclusion
+        via correct reasoning (not shared blind spots).
+        """
+        verified: list[dict[str, Any]] = []
+        unverified: list[dict[str, Any]] = []
+
+        for finding in consensus_findings:
+            try:
+                from whitemagic.security.wasm_verifier import get_wasm_verifier
+
+                verifier = get_wasm_verifier()
+                if verifier is None:
+                    finding["verification_status"] = "wasm_unavailable"
+                    unverified.append(finding)
+                    continue
+
+                tool_name = f"security_swarm_consensus_{finding.get('category', 'unknown')}"
+                args = {
+                    "file": finding.get("file", ""),
+                    "line": finding.get("line", 0),
+                    "category": finding.get("category", ""),
+                    "message": finding.get("message", ""),
+                }
+
+                result = verifier.verify(tool_name, args)
+                if result.get("verified", False):
+                    finding["verification_status"] = "verified"
+                    verified.append(finding)
+                else:
+                    finding["verification_status"] = "unverified_consensus"
+                    finding["verification_detail"] = result.get("error", "WASM replay mismatch")
+                    unverified.append(finding)
+            except Exception as e:
+                finding["verification_status"] = "verification_error"
+                finding["verification_detail"] = str(e)
+                unverified.append(finding)
+
+        return {
+            "verified_count": len(verified),
+            "unverified_count": len(unverified),
+            "verified": verified,
+            "unverified": unverified,
+            "total": len(consensus_findings),
+        }
 
     def status(self) -> dict[str, Any]:
         return {

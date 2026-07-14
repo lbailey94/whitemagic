@@ -316,7 +316,7 @@ def _register_interop_commands(cli: click.Group) -> None:
 
         # Daemon
         try:
-            from whitemagic.core.consciousness.daemon import get_daemon
+            from whitemagic.core.consciousness.consciousness_loop import get_daemon
             d = get_daemon()
             click.echo(f"Daemon:         {'running' if d.is_running else 'stopped'}")
         except Exception:

@@ -843,7 +843,7 @@ def _emit_research_event(topic: str, num_findings: int, duration_ms: float) -> N
             )
         )
     except (ImportError, Exception):
-        pass
+        logger.debug("Optional dependency unavailable: ImportError")
 
 
 class BrowserSessionManager:
