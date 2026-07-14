@@ -43,7 +43,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -58,7 +58,7 @@ _DEFAULT_CIRCUIT_RESET_TIMEOUT = 30.0
 _LEASE_WAIT_TIMEOUT = 2.0
 
 
-class CapabilityState(str, Enum):
+class CapabilityState(StrEnum):
     """Health states for a native bridge capability."""
 
     UNAVAILABLE = "unavailable"

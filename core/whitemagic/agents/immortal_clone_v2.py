@@ -956,13 +956,10 @@ class GasTownOrchestrator:
         for i, vc in enumerate(self.campaign.get("victory_conditions", [])):
             if isinstance(vc, str):
                 target = vc
-                vc_dict = {"target": vc}
             elif isinstance(vc, dict):
                 target = vc.get("target", f"target_{i}")
-                vc_dict = vc
             else:
                 target = f"target_{i}"
-                vc_dict = {"target": target}
 
             # Analyze phase
             meows.append(

@@ -10,7 +10,6 @@ Fixes the scalability issue where _load_all() loads everything into RAM.
 import hashlib
 import json
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
@@ -18,6 +17,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from whitemagic.config.paths import WM_ROOT
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 class MemoryType(Enum):

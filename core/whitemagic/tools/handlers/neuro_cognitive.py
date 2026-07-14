@@ -779,7 +779,9 @@ def handle_possibility_explore(**kwargs: Any) -> dict[str, Any]:
         seed: Random seed (default 42).
     """
     try:
-        from whitemagic.core.consciousness.possibility_explorer import get_possibility_explorer
+        from whitemagic.core.consciousness.possibility_explorer import (
+            get_possibility_explorer,
+        )
         explorer = get_possibility_explorer()
         space = kwargs.get("space", "guna_balance")
         n_trials = int(kwargs.get("n_trials", 100))
@@ -820,7 +822,9 @@ def handle_knowledge_gap_run(**kwargs: Any) -> dict[str, Any]:
         max_gaps: Maximum number of gaps to attempt per run (default 3).
     """
     try:
-        from whitemagic.core.consciousness.knowledge_gap_loop import get_knowledge_gap_loop
+        from whitemagic.core.consciousness.knowledge_gap_loop import (
+            get_knowledge_gap_loop,
+        )
         kg = get_knowledge_gap_loop()
         max_gaps = int(kwargs.get("max_gaps", 3))
         results = kg.run(max_gaps=max_gaps)

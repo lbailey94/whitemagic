@@ -7,6 +7,7 @@ Coherence = Memory + Identity + Context + Relationship Awareness
 """
 
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -16,8 +17,6 @@ from whitemagic.config.paths import WM_ROOT, get_state_root
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fileio import atomic_write, file_lock
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 class CoherenceMetric:

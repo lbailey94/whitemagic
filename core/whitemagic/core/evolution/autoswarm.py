@@ -379,10 +379,11 @@ class EvolutionaryAutoswarm:
 
         # Source 2: PossibilityExplorer sampling
         try:
+            import random
+
             from whitemagic.core.consciousness.possibility_explorer import (
                 get_possibility_explorer,
             )
-            import random
 
             explorer = get_possibility_explorer()
             space = explorer.DEFAULT_SPACES.get(config.hypothesis_space, {})
@@ -504,8 +505,9 @@ class EvolutionaryAutoswarm:
     def _share_via_mesh(self, result: CampaignResult, config: CampaignConfig) -> bool:
         """Share breakthrough results via the P2P mesh."""
         try:
-            from whitemagic.mesh.client import get_mesh_client
             import json
+
+            from whitemagic.mesh.client import get_mesh_client
 
             client = get_mesh_client()
             payload = json.dumps({

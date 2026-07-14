@@ -413,7 +413,9 @@ class CloneArmy:
     def _get_local_reasoning(self):
         """Lazy accessor for the LocalReasoningEngine."""
         if self._local_reasoning_instance is None:
-            from whitemagic.core.intelligence.agentic.local_reasoning import get_local_reasoning
+            from whitemagic.core.intelligence.agentic.local_reasoning import (
+                get_local_reasoning,
+            )
             self._local_reasoning_instance = get_local_reasoning()
         return self._local_reasoning_instance
 
@@ -432,7 +434,9 @@ class CloneArmy:
     def _get_cpu_inference(self):
         """Lazy accessor for the CPUInferenceEngine."""
         if self._cpu_inference_instance is None:
-            from whitemagic.core.intelligence.agentic.cpu_inference import get_cpu_inference
+            from whitemagic.core.intelligence.agentic.cpu_inference import (
+                get_cpu_inference,
+            )
             self._cpu_inference_instance = get_cpu_inference()
         return self._cpu_inference_instance
 

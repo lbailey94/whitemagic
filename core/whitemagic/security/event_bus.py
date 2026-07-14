@@ -13,9 +13,10 @@ import os
 import threading
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps

@@ -397,7 +397,9 @@ class RetentionEngine:
     def on_create(self, memory: Any) -> Any:
         """Called when a NeuralMemory is created. Applies auto-protection and scoring."""
         try:
-            from whitemagic.core.memory.neural.identity_anchors import auto_protect_memory
+            from whitemagic.core.memory.neural.identity_anchors import (
+                auto_protect_memory,
+            )
             memory = auto_protect_memory(memory)
         except ImportError:
             logger.debug("Optional dependency unavailable: ImportError")

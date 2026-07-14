@@ -1,6 +1,11 @@
 """Research Tools — Research DAG, Autoswarm, Warps, Mesh Experiment Sync."""
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety, ToolStability
+from whitemagic.tools.tool_types import (
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+    ToolStability,
+)
 
 TOOLS: list[ToolDefinition] = [
     # ── Research DAG ──

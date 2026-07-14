@@ -1,9 +1,8 @@
 """MCP handlers for Vector Memory Search."""
 
+import logging
 from typing import Any
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def handle_vector_search(**kwargs: Any) -> dict[str, Any]:

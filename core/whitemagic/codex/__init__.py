@@ -14,12 +14,11 @@ Stages:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -56,7 +55,11 @@ class CodexPipeline:
             raise FileNotFoundError(f"Corpus directory not found: {src}")
 
         # Use scanner's extension set for code files + docs
-        from whitemagic.core.memory.codebase_scanner import SCAN_EXTENSIONS, NO_EXT_FILES, SKIP_DIRS
+        from whitemagic.core.memory.codebase_scanner import (
+            NO_EXT_FILES,
+            SCAN_EXTENSIONS,
+            SKIP_DIRS,
+        )
 
         docs: list[dict[str, Any]] = []
 

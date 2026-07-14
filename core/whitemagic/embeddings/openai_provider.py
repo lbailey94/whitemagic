@@ -4,12 +4,12 @@ OpenAI embeddings provider.
 Uses OpenAI's text embedding models for cloud-based embedding generation.
 """
 
+import logging
+
 from openai import AsyncOpenAI, OpenAIError
 
 from .base import EmbeddingProvider
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 class OpenAIEmbeddings(EmbeddingProvider):

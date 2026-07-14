@@ -13,12 +13,12 @@ import json
 import logging
 import re
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import DB_PATH
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

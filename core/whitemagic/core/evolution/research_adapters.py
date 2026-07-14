@@ -204,7 +204,9 @@ class ParallelReasoningAdapter(BaseAdapter):
             self._stats.calls += 1
 
         try:
-            from whitemagic.core.intelligence.parallel_reasoning import ParallelReasoningTree
+            from whitemagic.core.intelligence.parallel_reasoning import (
+                ParallelReasoningTree,
+            )
 
             tree = ParallelReasoningTree(topic=topic)
             result = tree.explore(
@@ -331,7 +333,9 @@ class RecursiveLoopAdapter(BaseAdapter):
             self._stats.calls += 1
 
         try:
-            from whitemagic.core.evolution.recursive_loop import RecursiveImprovementLoop
+            from whitemagic.core.evolution.recursive_loop import (
+                RecursiveImprovementLoop,
+            )
 
             loop = RecursiveImprovementLoop()
             result = loop.run_cycle(focus_area=focus_area)
@@ -390,7 +394,9 @@ class KnowledgeGapAdapter(BaseAdapter):
             self._stats.calls += 1
 
         try:
-            from whitemagic.core.consciousness.knowledge_gap_loop import get_knowledge_gap_loop
+            from whitemagic.core.consciousness.knowledge_gap_loop import (
+                get_knowledge_gap_loop,
+            )
 
             loop = get_knowledge_gap_loop()
             results = loop.run(max_gaps=max_gaps)

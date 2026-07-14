@@ -5,11 +5,11 @@ Enables gradual migration without breaking existing code.
 import asyncio
 import atexit
 import functools
+import logging
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar
 
-import logging
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")

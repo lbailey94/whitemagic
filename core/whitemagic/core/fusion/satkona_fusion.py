@@ -21,13 +21,13 @@ Phase: 2 (Fusion Opportunities)
 import logging
 import os
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import DB_PATH as MEM_DB
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 

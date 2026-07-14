@@ -281,7 +281,9 @@ if HAS_TEXTUAL:
             """Background thread to poll daemon telemetry."""
             while True:
                 try:
-                    from whitemagic.core.consciousness.consciousness_loop import get_daemon
+                    from whitemagic.core.consciousness.consciousness_loop import (
+                        get_daemon,
+                    )
                     daemon = get_daemon()
                     if daemon.is_running:
                         status = daemon.status()
@@ -402,7 +404,9 @@ if HAS_TEXTUAL:
                 self.exit()
             elif command == "/status":
                 try:
-                    from whitemagic.core.consciousness.consciousness_loop import get_daemon
+                    from whitemagic.core.consciousness.consciousness_loop import (
+                        get_daemon,
+                    )
                     daemon = get_daemon()
                     status = daemon.status()
                     self._chat_log.write(json.dumps(status, indent=2))
@@ -510,7 +514,9 @@ else:
 
                 # Daemon status
                 try:
-                    from whitemagic.core.consciousness.consciousness_loop import get_daemon
+                    from whitemagic.core.consciousness.consciousness_loop import (
+                        get_daemon,
+                    )
                     daemon = get_daemon()
                     if daemon.is_running:
                         status = daemon.status()

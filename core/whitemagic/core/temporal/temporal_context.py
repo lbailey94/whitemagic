@@ -12,6 +12,7 @@ Philosophy:
 """
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -20,8 +21,6 @@ from typing import Any, Optional
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.core import parse_datetime
 from whitemagic.utils.fileio import file_lock
-import logging
-
 
 logger = logging.getLogger(__name__)
 

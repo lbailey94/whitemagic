@@ -264,7 +264,10 @@ class EngagementTokenManager:
 
         # Publish to SecurityEventBus
         try:
-            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+            from whitemagic.security.event_bus import (
+                SecurityEventType,
+                get_security_event_bus,
+            )
 
             bus = get_security_event_bus()
             bus.emit(
@@ -382,7 +385,10 @@ class EngagementTokenManager:
 
         # Publish to SecurityEventBus
         try:
-            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+            from whitemagic.security.event_bus import (
+                SecurityEventType,
+                get_security_event_bus,
+            )
 
             bus = get_security_event_bus()
             bus.emit(
@@ -416,7 +422,10 @@ class EngagementTokenManager:
 
         # Publish to SecurityEventBus
         try:
-            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+            from whitemagic.security.event_bus import (
+                SecurityEventType,
+                get_security_event_bus,
+            )
 
             bus = get_security_event_bus()
             bus.emit(
@@ -448,7 +457,10 @@ class EngagementTokenManager:
             self._persist()
             self._audit("revoke_all", f"revoked {count} tokens: {reason}")
             try:
-                from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+                from whitemagic.security.event_bus import (
+                    SecurityEventType,
+                    get_security_event_bus,
+                )
 
                 bus = get_security_event_bus()
                 bus.emit(

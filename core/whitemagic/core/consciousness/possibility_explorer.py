@@ -547,7 +547,7 @@ class PossibilitySpaceExplorer:
         n_params = len(param_names)
         fitness_fn = self._get_fitness_fn(space["fitness"])
 
-        rng = _rng.Random(seed)
+        _rng.Random(seed)
 
         # Initialize at midpoint of each range
         params = {

@@ -23,12 +23,13 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect, pooled_connection
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+
+from whitemagic.core.memory.db_manager import pooled_connection, safe_connect
 
 logger = logging.getLogger(__name__)
 

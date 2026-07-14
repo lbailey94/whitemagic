@@ -1,12 +1,12 @@
 # ruff: noqa: BLE001
 import json
 import logging
-from whitemagic.core.memory.db_manager import safe_connect
 from pathlib import Path
 from typing import Any
 
 from whitemagic.core.intelligence.confidence import ConfidenceLearner
 from whitemagic.core.intelligence.synthesis.solution_library import SolutionLibrary
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)

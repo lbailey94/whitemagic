@@ -4,11 +4,11 @@
 Status, health, doctor, explore, galaxy, and related diagnostic commands.
 """
 
+import logging
 import sqlite3
 
 import click
 
-import logging
 logger = logging.getLogger(__name__)
 
 try:

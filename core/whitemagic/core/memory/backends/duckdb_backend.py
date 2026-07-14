@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.core.memory.backends.base import BaseBackend
-from whitemagic.core.memory.unified_types import Memory, MemoryType
 from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.unified_types import Memory, MemoryType
 
 logger = logging.getLogger(__name__)
 

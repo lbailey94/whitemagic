@@ -43,7 +43,7 @@ class BittensorBridge:
                         self.discovery_cache = data
                         self.last_discovery = datetime.now()
                         return data
-        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
+        except (TimeoutError, aiohttp.ClientError, OSError) as e:
             logger.debug("SN51 API unreachable, using fallback: %s", e)
 
         # Fallback when API is unreachable

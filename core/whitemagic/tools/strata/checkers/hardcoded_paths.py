@@ -1,3 +1,4 @@
+import logging
 import re
 from pathlib import Path
 
@@ -5,7 +6,6 @@ from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
 
-import logging
 logger = logging.getLogger(__name__)
 
 # Files where Path.home() / .expanduser() is allowed per AGENTS.md

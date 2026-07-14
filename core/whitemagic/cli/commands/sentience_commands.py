@@ -112,9 +112,11 @@ def _register_sentience_commands(cli: click.Group) -> None:
         # Intention queue
         if not no_intentions:
             try:
-                from whitemagic.core.consciousness.self_initiation import get_self_initiation_queue
+                from whitemagic.core.consciousness.self_initiation import (
+                    get_self_initiation_queue,
+                )
 
-                iq = get_self_initiation_queue()
+                get_self_initiation_queue()
                 started.append("self-initiation queue")
             except Exception as e:
                 click.echo(f"  Intention queue: failed ({e})")
@@ -284,7 +286,9 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         # Intention queue
         try:
-            from whitemagic.core.consciousness.self_initiation import get_self_initiation_queue
+            from whitemagic.core.consciousness.self_initiation import (
+                get_self_initiation_queue,
+            )
 
             status["self_initiation"] = get_self_initiation_queue().status()
         except Exception as e:
@@ -300,7 +304,9 @@ def _register_sentience_commands(cli: click.Group) -> None:
 
         # Background worker
         try:
-            from whitemagic.core.consciousness.background_worker import get_background_worker
+            from whitemagic.core.consciousness.background_worker import (
+                get_background_worker,
+            )
 
             status["background_worker"] = get_background_worker().status()
         except Exception as e:

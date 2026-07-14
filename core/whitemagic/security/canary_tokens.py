@@ -12,9 +12,7 @@ Token types:
 
 Integrates with SecurityEventBus for real-time alerting.
 """
-import hashlib
 import logging
-import os
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -241,7 +239,7 @@ class CanaryTokenManager:
     def _emit_security_event(self, canary: CanaryToken, triggered_by: str, context: dict[str, Any]) -> None:
         """Emit a security event when a canary is triggered."""
         try:
-            from whitemagic.security.event_bus import get_event_bus, SecurityEvent
+            from whitemagic.security.event_bus import SecurityEvent, get_event_bus
 
             bus = get_event_bus()
             bus.publish(SecurityEvent(

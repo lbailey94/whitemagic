@@ -333,7 +333,6 @@ TOOL_TO_GANA: dict[str, str] = {
     "galaxy.share": "gana_void",
     "galaxy.list_shared": "gana_void",
     "galaxy.snapshot": "gana_void",
-    "galaxy.restore": "gana_void",
     "galaxy.package": "gana_void",
     "galaxy.receive": "gana_void",
     "simulation.create": "gana_three_stars",

@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import uuid
 import zipfile
 from dataclasses import asdict, dataclass
@@ -24,8 +25,6 @@ from whitemagic.utils.core import parse_datetime
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 @dataclass

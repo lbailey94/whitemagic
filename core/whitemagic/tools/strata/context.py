@@ -26,7 +26,9 @@ class ContextEnricher:
         can fall back to AST/regex.
         """
         try:
-            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            from whitemagic.core.intelligence.code_structure_graph import (
+                get_code_structure_graph,
+            )
             g = get_code_structure_graph()
             if g.stats()["node_count"] == 0:
                 return None

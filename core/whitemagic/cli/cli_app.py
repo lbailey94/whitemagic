@@ -63,6 +63,17 @@ bootstrap_env_from_argv(sys.argv)
     default=None,
     help="Path to GGUF model for chat mode (auto-discovers if omitted).",
 )
+@click.option(
+    "--cloud",
+    default=None,
+    help="Cloud provider: openrouter, openai, or anthropic.",
+)
+@click.option(
+    "--cloud-model",
+    "cloud_model_id",
+    default="",
+    help="Specific cloud model ID (e.g. anthropic/claude-3.5-sonnet).",
+)
 @click.pass_context
 def main(
     ctx,
@@ -73,10 +84,12 @@ def main(
     now: str | None,
     silent_init: bool,
     model_path: str | None,
+    cloud: str | None,
+    cloud_model_id: str,
 ):
     """WhiteMagic CLI - AI Memory & Context Management
 
-    Run `wm` with no subcommand to launch the native chat (Aria).
+    Run `wm` with no subcommand to launch the unified TUI (Aria).
     """
     effective_state_root = state_root or base_dir
 
@@ -104,11 +117,15 @@ def main(
         except (ImportError, ModuleNotFoundError):
             logger.debug("Optional dependency unavailable: ImportError")
 
-    # If no subcommand was given, launch the native chat loop
+    # If no subcommand was given, launch the unified TUI
     if ctx.invoked_subcommand is None:
-        from whitemagic.interfaces.chat import run_chat
+        from whitemagic.interfaces.unified_tui import run_unified_tui
 
-        run_chat(model_path=model_path)
+        run_unified_tui(
+            model_path=model_path,
+            cloud=cloud,
+            cloud_model_id=cloud_model_id,
+        )
         ctx.exit(0)
 
 

@@ -22,7 +22,7 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -116,7 +116,7 @@ class CodeEdge:
             "confidence": self.confidence,
             "weight": self.weight,
             "metadata": json.dumps(self.metadata),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
 
@@ -386,7 +386,7 @@ class CodeStructureGraph:
         if not node:
             return {"status": "error", "error": f"Symbol not found: {symbol}"}
 
-        adj = self._build_adjacency()
+        self._build_adjacency()
         in_edges = [e for e in self._edges.values() if e.target_id == node.id]
         out_edges = [e for e in self._edges.values() if e.source_id == node.id]
 
@@ -490,7 +490,7 @@ class CodeStructureGraph:
 
     def god_nodes(self, limit: int = 10) -> list[dict[str, Any]]:
         """List the most-connected concepts (highest degree centrality)."""
-        adj = self._build_adjacency()
+        self._build_adjacency()
         degrees = {}
         for nid in self._nodes:
             in_deg = sum(1 for e in self._edges.values() if e.target_id == nid)
@@ -588,7 +588,7 @@ class CodeStructureGraph:
             "metadata": {
                 "node_count": len(nodes_json),
                 "edge_count": len(edges_json),
-                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "exported_at": datetime.now(UTC).isoformat(),
             },
         }
 
@@ -819,7 +819,7 @@ class CodeStructureGraph:
 
         # Persist
         if self._db_path is not None:
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             with sqlite3.connect(self._db_path) as conn:
                 conn.execute(
                     """INSERT OR REPLACE INTO code_edges
@@ -1632,7 +1632,7 @@ class CodeStructureGraph:
                 )
 
             # Insert/replace edges
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             for edge in edges:
                 conn.execute(
                     """INSERT OR REPLACE INTO code_edges

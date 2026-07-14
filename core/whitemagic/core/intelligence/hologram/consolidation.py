@@ -5,7 +5,6 @@ import itertools
 import logging
 import math
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
@@ -13,6 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from whitemagic.config.paths import DB_PATH
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.utils.fast_json import dumps_str as _fast_dumps
 
 logger = logging.getLogger(__name__)

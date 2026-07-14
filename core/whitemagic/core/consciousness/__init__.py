@@ -109,7 +109,9 @@ def __getattr__(name: str):  # type: ignore[misc]
 
         return BackgroundWorker
     if name == "get_background_worker":
-        from whitemagic.core.consciousness.background_worker import get_background_worker
+        from whitemagic.core.consciousness.background_worker import (
+            get_background_worker,
+        )
 
         return get_background_worker
     if name == "SelfInitiationQueue":
@@ -117,11 +119,15 @@ def __getattr__(name: str):  # type: ignore[misc]
 
         return SelfInitiationQueue
     if name == "get_self_initiation_queue":
-        from whitemagic.core.consciousness.self_initiation import get_self_initiation_queue
+        from whitemagic.core.consciousness.self_initiation import (
+            get_self_initiation_queue,
+        )
 
         return get_self_initiation_queue
     if name == "SelfPrompting":
-        from whitemagic.core.consciousness.self_initiation import SelfInitiationQueue as SelfPrompting
+        from whitemagic.core.consciousness.self_initiation import (
+            SelfInitiationQueue as SelfPrompting,
+        )
 
         return SelfPrompting
     if name == "UnifiedField":

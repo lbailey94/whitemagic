@@ -1197,7 +1197,9 @@ class RecursiveImprovementLoop:
                 gradients = [jacobian[i][0] for i in range(n_params)]
 
                 try:
-                    from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
+                    from whitemagic.core.evolution.polyglot_mc import (
+                        PolyglotMCOrchestrator,
+                    )
 
                     orch = PolyglotMCOrchestrator()
                     metric_result = orch.fubini_study_metric(

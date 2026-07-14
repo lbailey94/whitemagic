@@ -169,7 +169,9 @@ def handle_simulation_search(**kwargs: Any) -> dict[str, Any]:
 
         rollout_fn = None
         if kwargs.get("use_cognitive_rollout", False):
-            from whitemagic.core.simulation.trajectory_search import create_cognitive_rollout
+            from whitemagic.core.simulation.trajectory_search import (
+                create_cognitive_rollout,
+            )
             rollout_fn = create_cognitive_rollout(
                 seed_documents=kwargs.get("seed_documents", []),
                 archetypes=kwargs.get("archetypes"),
@@ -264,8 +266,8 @@ def handle_simulation_analyze(**kwargs: Any) -> dict[str, Any]:
         consolidate: Whether to run dream-cycle consolidation (default: true)
     """
     try:
-        from whitemagic.core.simulation.scenario_runner import get_scenario_runner
         from whitemagic.core.simulation.dream_integration import get_dream_integration
+        from whitemagic.core.simulation.scenario_runner import get_scenario_runner
 
         scenario_name = kwargs.get("scenario_name")
         if not scenario_name:
@@ -331,8 +333,10 @@ def handle_simulation_synthesize(**kwargs: Any) -> dict[str, Any]:
         calibration_data: Optional calibration data dict
     """
     try:
+        from whitemagic.core.simulation.insight_synthesizer import (
+            get_insight_synthesizer,
+        )
         from whitemagic.core.simulation.scenario_runner import get_scenario_runner
-        from whitemagic.core.simulation.insight_synthesizer import get_insight_synthesizer
 
         scenario_name = kwargs.get("scenario_name")
         if not scenario_name:
@@ -465,7 +469,9 @@ def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
         prediction_id = None
         pred_statement = kwargs.get("prediction_statement")
         if pred_statement:
-            from whitemagic.core.simulation.calibration_bridge import get_calibration_bridge
+            from whitemagic.core.simulation.calibration_bridge import (
+                get_calibration_bridge,
+            )
             bridge = get_calibration_bridge()
             pred = bridge.record_prediction(
                 scenario_name=scenario_name,
@@ -514,7 +520,9 @@ def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
         consolidate = kwargs.get("consolidate", True)
         consolidation_reports = []
         if consolidate:
-            from whitemagic.core.simulation.dream_integration import get_dream_integration
+            from whitemagic.core.simulation.dream_integration import (
+                get_dream_integration,
+            )
             results = runner.get_results(scenario_name)
             if results:
                 sim_data = {
@@ -544,7 +552,9 @@ def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
                 result["stages"]["persist_dream"] = {"persisted": 0, "errors": [str(e)]}
 
         # Stage 4: Synthesize insights
-        from whitemagic.core.simulation.insight_synthesizer import get_insight_synthesizer
+        from whitemagic.core.simulation.insight_synthesizer import (
+            get_insight_synthesizer,
+        )
         results = runner.get_results(scenario_name)
         if results:
             traj_dicts = [
@@ -585,7 +595,9 @@ def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
         # Stage 5: Resolve prediction (if outcome is known)
         if prediction_id and results:
             best_outcome = analysis.outcome_distribution.get("converged", 0) > 0
-            from whitemagic.core.simulation.calibration_bridge import get_calibration_bridge
+            from whitemagic.core.simulation.calibration_bridge import (
+                get_calibration_bridge,
+            )
             bridge = get_calibration_bridge()
             resolve_result = bridge.resolve_prediction(prediction_id, best_outcome)
             result["stages"]["resolve"] = resolve_result
@@ -629,8 +641,9 @@ def handle_mc_surrogate(**kwargs: Any) -> dict[str, Any]:
 def handle_mc_optimize(**kwargs: Any) -> dict[str, Any]:
     """Run Bayesian optimization to find optimal parameters."""
     try:
-        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
         import numpy as np
+
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
         orch = PolyglotMCOrchestrator()
         param_ranges = kwargs.get("param_ranges", [[0.0, 1.0]])
         fitness_expr = kwargs.get("fitness_expr", "x[0]")
@@ -710,7 +723,7 @@ def handle_mc_sde(**kwargs: Any) -> dict[str, Any]:
         drift_type = kwargs.get("drift_type", "gbm")
         mu = float(kwargs.get("mu", 0.05))
         sigma = float(kwargs.get("sigma", 0.2))
-        solver = kwargs.get("solver", "euler")
+        kwargs.get("solver", "euler")
         mlmc = kwargs.get("mlmc", False)
         seed = kwargs.get("seed", 42)
 
@@ -740,8 +753,9 @@ def handle_mc_sde(**kwargs: Any) -> dict[str, Any]:
 def handle_mc_superforecaster(**kwargs: Any) -> dict[str, Any]:
     """Run the full superforecaster pipeline."""
     try:
-        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
         import numpy as np
+
+        from whitemagic.core.evolution.polyglot_mc import PolyglotMCOrchestrator
         orch = PolyglotMCOrchestrator()
         param_ranges = kwargs.get("param_ranges", [[0.0, 1.0]])
         fitness_expr = kwargs.get("fitness_expr", "x[0]")
@@ -750,7 +764,7 @@ def handle_mc_superforecaster(**kwargs: Any) -> dict[str, Any]:
         seed = kwargs.get("seed", 42)
 
         rng = np.random.RandomState(seed)
-        initial_x = [[rng.uniform(lo, hi) for lo, hi in param_ranges] for _ in range(n_initial)]
+        [[rng.uniform(lo, hi) for lo, hi in param_ranges] for _ in range(n_initial)]
 
         def fitness_fn(x):
             try:

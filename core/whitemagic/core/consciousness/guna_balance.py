@@ -298,14 +298,18 @@ class GunaBalanceMetric:
                 get_dream_cycle().trigger_cycle(reason="guna_balance_tamasic_deficit")
 
             elif action == "trigger_self_directed_attention":
-                from whitemagic.core.consciousness.consciousness_loop import get_consciousness_loop
+                from whitemagic.core.consciousness.consciousness_loop import (
+                    get_consciousness_loop,
+                )
                 loop = get_consciousness_loop()
                 if loop._running:
                     loop._tick_t2()
 
             elif action == "trigger_active_processing":
                 # Trigger an emergence scan to find something to work on
-                from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    EmergenceEngine,
+                )
                 engine = EmergenceEngine()
                 engine.scan_for_emergence()
 
@@ -314,7 +318,9 @@ class GunaBalanceMetric:
                 get_coherence_metric().measure()
 
             elif action == "trigger_emergence_scan":
-                from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    EmergenceEngine,
+                )
                 EmergenceEngine().scan_for_emergence()
 
             elif action == "trigger_memory_consolidation":

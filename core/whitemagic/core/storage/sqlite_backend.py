@@ -11,12 +11,12 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import time
 from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import get_state_root
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

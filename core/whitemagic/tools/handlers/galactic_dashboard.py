@@ -28,7 +28,7 @@ def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
             galaxy_stats: dict[str, dict[str, Any]] = {}
             total = 0
             for mem in summaries:
-                title = getattr(mem, "title", "")
+                getattr(mem, "title", "")
                 content = getattr(mem, "content", "")
                 if not content:
                     try:

@@ -14,7 +14,6 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -76,7 +75,10 @@ class PatternReport:
 
 
 # PatternEngine is canonical in pattern_engine.py — re-export to avoid drift
-from whitemagic.core.memory.pattern_engine import PatternEngine, get_engine  # noqa: E402,F401
+from whitemagic.core.memory.pattern_engine import (  # noqa: E402,F401
+    PatternEngine,
+    get_engine,
+)
 
 """Cross-Memory Association Miner.
 ===============================

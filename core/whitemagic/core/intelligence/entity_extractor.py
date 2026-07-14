@@ -187,8 +187,8 @@ class EntityExtractor:
     def _extract_llama(self, text: str) -> ExtractionResult | None:
         """Extract entities/relations using llama.cpp with grammar-constrained JSON."""
         try:
-            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
             from whitemagic.inference.grammar_schemas import ENTITY_EXTRACTION_SCHEMA
+            from whitemagic.inference.llama_cpp import get_llama_cpp_backend
 
             backend = get_llama_cpp_backend()
             prompt = _EXTRACTION_PROMPT + text

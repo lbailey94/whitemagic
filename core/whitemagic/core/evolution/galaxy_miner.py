@@ -12,12 +12,13 @@ Part of Phase 3 Recursive Evolution - Data Lake Integration.
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

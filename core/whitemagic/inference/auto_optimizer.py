@@ -354,7 +354,10 @@ class BackgroundOptimizer:
             return False
 
         try:
-            from whitemagic.inference.router import _get_small_backend, _get_large_backend
+            from whitemagic.inference.router import (
+                _get_large_backend,
+                _get_small_backend,
+            )
 
             # Apply to small backend if it exists
             small = _get_small_backend()

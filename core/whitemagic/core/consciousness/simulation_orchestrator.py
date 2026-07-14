@@ -397,7 +397,7 @@ class SimulationOrchestrator:
         drift_type = kwargs.get("drift_type", "gbm")
         mu = float(kwargs.get("mu", 0.05))
         sigma = float(kwargs.get("sigma", 0.2))
-        solver = kwargs.get("solver", "euler")
+        kwargs.get("solver", "euler")
         seed = int(kwargs.get("seed", 42))
         use_mlmc = bool(kwargs.get("mlmc", False))
 
@@ -449,7 +449,8 @@ class SimulationOrchestrator:
         fitness_fn = kwargs.get("fitness_fn")
         if fitness_fn is None:
             expr = kwargs.get("fitness_expr", "x[0]")
-            fitness_fn = lambda x: eval(expr, {"x": x, "sum": sum, "abs": abs, "max": max, "min": min})
+            def fitness_fn(x):
+                return eval(expr, {"x": x, "sum": sum, "abs": abs, "max": max, "min": min})
         n_initial = int(kwargs.get("n_initial_samples", 100))
         n_bo = int(kwargs.get("n_bo_iterations", 20))
         seed = int(kwargs.get("seed", 42))
@@ -499,8 +500,8 @@ class SimulationOrchestrator:
         """Record in Research DAG. Returns experiment ID or None."""
         try:
             from whitemagic.core.evolution.research_dag import (
-                get_research_dag,
                 ResearchDomain,
+                get_research_dag,
             )
             dag = get_research_dag()
             exp = dag.submit_hypothesis(
@@ -509,7 +510,7 @@ class SimulationOrchestrator:
                 parameters=parameters,
             )
             dag.record_trial(exp.experiment_id, parameters=parameters)
-            result = dag.record_result(
+            dag.record_result(
                 exp.experiment_id,
                 fitness_score=fitness_score,
                 outcome=outcome,

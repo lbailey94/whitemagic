@@ -5,12 +5,11 @@ Implementations for Lunar Mansions 15-21 (Autumn/West).
 Theme: Completion, Ethics, Balance.
 """
 
+import logging
 from typing import Any
 
 from .base import BaseGana, GanaCall, LunarMansion
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 class StraddlingLegsGana(BaseGana):

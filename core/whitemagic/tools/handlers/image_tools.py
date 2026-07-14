@@ -122,6 +122,7 @@ def _llama_vision_describe(
 
         # Use OpenAI-compatible chat completions with vision
         import base64 as _b64
+
         import requests as _req
 
         with open(image_path, "rb") as _f:

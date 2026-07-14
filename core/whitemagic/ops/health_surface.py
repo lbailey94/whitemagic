@@ -21,7 +21,6 @@ Usage::
 from __future__ import annotations
 
 import logging
-import os
 import time
 from dataclasses import asdict, dataclass, field
 from importlib.util import find_spec
@@ -131,7 +130,7 @@ class HealthSurface:
             galaxies = cli.inspect()
 
             total_memories = sum(g.memory_count for g in galaxies)
-            all_ok = all(g.integrity_ok for g in galaxies)
+            all(g.integrity_ok for g in galaxies)
             errors = [e for g in galaxies for e in g.integrity_errors]
 
             health.details["galaxy_count"] = len(galaxies)

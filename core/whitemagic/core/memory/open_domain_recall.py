@@ -5,13 +5,13 @@ Implements title-boosted vector scoring to lift recall from 48% → 70%.
 
 import logging
 import re
-from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 from whitemagic.config.paths import DB_PATH
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

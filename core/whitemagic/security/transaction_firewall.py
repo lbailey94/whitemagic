@@ -288,7 +288,10 @@ class TransactionFirewall:
                     self._emit_security_event(request, v)
                     # Publish Dharma-specific blocked event
                     try:
-                        from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+                        from whitemagic.security.event_bus import (
+                            SecurityEventType,
+                            get_security_event_bus,
+                        )
 
                         bus = get_security_event_bus()
                         bus.emit(
@@ -466,7 +469,10 @@ class TransactionFirewall:
             logger.warning("Failed to persist security event: %s", e)
         # Publish to unified SecurityEventBus
         try:
-            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+            from whitemagic.security.event_bus import (
+                SecurityEventType,
+                get_security_event_bus,
+            )
 
             bus = get_security_event_bus()
             bus.emit(

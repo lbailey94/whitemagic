@@ -1,11 +1,10 @@
 # ruff: noqa: BLE001
 
+import logging
 from typing import Any, cast
 
 from whitemagic.core.bridge.utils import ensure_string
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def memory_create(

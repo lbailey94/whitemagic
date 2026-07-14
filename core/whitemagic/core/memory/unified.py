@@ -3,16 +3,16 @@
 Consolidates all memory implementations into one coherent system using SQLite backend.
 """
 
+import hashlib
 import logging
+import os
+import sqlite3
+import threading
+from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
-
-import hashlib
-import os
-import sqlite3
-import threading
 
 # Re-export Memory and MemoryType for compatibility
 from whitemagic.core.memory.unified_types import Memory, MemoryType
@@ -96,7 +96,8 @@ class UnifiedMemory:
     def __init__(self, base_path: Path | None = None, user_id: str = "local") -> None:
         # Use canonical Data Sea database location
         if base_path is None:
-            from whitemagic.config.paths import DB_PATH as _db_path, MEMORY_DIR as _mem_dir
+            from whitemagic.config.paths import DB_PATH as _db_path
+            from whitemagic.config.paths import MEMORY_DIR as _mem_dir
             self._db_path = _db_path
             self.base_path = _mem_dir
             self.base_path.mkdir(parents=True, exist_ok=True)
@@ -374,8 +375,8 @@ class UnifiedMemory:
         # This binds the content embedding with a type role vector using HRR,
         # enabling typed retrieval via unbind(compressed, type_vector)
         try:
-            from whitemagic.core.memory.hrr import get_hrr_engine
             from whitemagic.core.memory.embeddings import get_embedding_engine
+            from whitemagic.core.memory.hrr import get_hrr_engine
             hrr_engine = get_hrr_engine()
             embed_engine = get_embedding_engine()
             if embed_engine and embed_engine.available():
@@ -407,7 +408,9 @@ class UnifiedMemory:
                             # Invalidate HRR pre-filter cache so new memory
                             # appears in pre-filter results on next query
                             try:
-                                from whitemagic.core.intelligence.core_access import get_core_access
+                                from whitemagic.core.intelligence.core_access import (
+                                    get_core_access,
+                                )
                                 get_core_access().invalidate_hrr_cache()
                             except (ImportError, AttributeError):
                                 logger.debug("Optional dependency unavailable: ImportError")
@@ -455,7 +458,7 @@ class UnifiedMemory:
 
         # Emit CACHE_INVALIDATE event for multi-agent coherence
         try:
-            from whitemagic.core.resonance import emit_event, EventType
+            from whitemagic.core.resonance import EventType, emit_event
             emit_event(
                 source="memory_store",
                 event_type=EventType.CACHE_INVALIDATE,
@@ -572,7 +575,7 @@ class UnifiedMemory:
 
         # Emit CACHE_INVALIDATE event
         try:
-            from whitemagic.core.resonance import emit_event, EventType
+            from whitemagic.core.resonance import EventType, emit_event
             emit_event(
                 source="memory_update",
                 event_type=EventType.CACHE_INVALIDATE,
@@ -823,8 +826,8 @@ class UnifiedMemory:
             profile: Optional QueryProfile for advanced configuration.
         """
         if use_planner:
-            from whitemagic.core.memory.search_planner import SearchQueryPlanner
             from whitemagic.core.memory.retrieval_plan import QueryProfile as QP
+            from whitemagic.core.memory.search_planner import SearchQueryPlanner
 
             qp = profile or QP(
                 lexical_weight=lexical_weight,
@@ -1053,7 +1056,9 @@ class UnifiedMemory:
         # v24.3: Procedural memory integration — inject matching skills
         if include_skills:
             try:
-                from whitemagic.core.memory.entity_reranker import match_procedural_skills
+                from whitemagic.core.memory.entity_reranker import (
+                    match_procedural_skills,
+                )
 
                 skill_matches = match_procedural_skills(query)
                 if skill_matches:

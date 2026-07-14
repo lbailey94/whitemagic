@@ -10,13 +10,13 @@ This creates true recursive evolution.
 """
 
 import json
-from whitemagic.core.memory.db_manager import safe_connect
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import AUTODIDACTIC_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 @dataclass

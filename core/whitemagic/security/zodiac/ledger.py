@@ -12,7 +12,10 @@ and the human user's consent.
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -22,7 +25,6 @@ from whitemagic.core.memory.db_manager import get_db_pool
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 
-import logging
 @dataclass
 class ZodiacEntry:
     """ZodiacEntry: zodiac entry.

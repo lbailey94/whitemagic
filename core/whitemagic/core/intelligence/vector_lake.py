@@ -10,7 +10,7 @@ singleton.
 from __future__ import annotations
 
 import logging
-from threading import Lock, RLock
+from threading import RLock
 from typing import Any
 
 logger = logging.getLogger(__name__)

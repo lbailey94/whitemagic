@@ -1,10 +1,9 @@
 # ruff: noqa: BLE001
 """CyberBrain module handlers — salience, bicameral reasoning, retention, drives, self-model, worker."""
 
+import logging
 from typing import Any
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def handle_salience_spotlight(**kwargs: Any) -> dict[str, Any]:

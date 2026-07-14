@@ -29,7 +29,6 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import uuid
 from contextlib import contextmanager
 from datetime import date, datetime
@@ -39,6 +38,7 @@ from typing import Any
 import yaml
 
 from whitemagic.config.paths import get_state_root
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

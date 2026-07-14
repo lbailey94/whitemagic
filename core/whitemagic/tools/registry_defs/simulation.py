@@ -8,7 +8,6 @@ from whitemagic.tools.tool_types import (
     ToolSafety,
 )
 
-
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(
         name="simulation.create",

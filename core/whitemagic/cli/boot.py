@@ -461,20 +461,12 @@ def register_all_commands(
         import click
 
         @main_group.command()
-        @click.option("--cockpit", is_flag=True, help="Cockpit mode only")
-        @click.option("--chat", is_flag=True, help="Chat mode only")
-        @click.option("--galaxy", is_flag=True, help="Galaxy map only")
-        def tui(cockpit: bool, chat: bool, galaxy: bool) -> None:
-            """Launch the unified cognitive TUI."""
-            mode = "full"
-            if cockpit:
-                mode = "cockpit"
-            elif chat:
-                mode = "chat"
-            elif galaxy:
-                mode = "galaxy"
-
-            from whitemagic.interfaces.cognitive_tui import run_tui
-            run_tui(mode=mode)
+        @click.option("--model", "model_path", default=None, help="Path to GGUF model")
+        @click.option("--cloud", default=None, help="Cloud provider: openrouter, openai, anthropic")
+        @click.option("--cloud-model", "cloud_model_id", default="", help="Cloud model ID")
+        def tui(model_path: str | None, cloud: str | None, cloud_model_id: str) -> None:
+            """Launch the unified WhiteMagic TUI (Aria)."""
+            from whitemagic.interfaces.unified_tui import run_unified_tui
+            run_unified_tui(model_path=model_path, cloud=cloud, cloud_model_id=cloud_model_id)
     except (ImportError, ModuleNotFoundError):
         logger.debug("Optional dependency unavailable: ImportError")

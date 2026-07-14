@@ -50,10 +50,14 @@ def __getattr__(name: str):
         from whitemagic.core.memory.adapters.crewai_adapter import WhiteMagicCrewMemory
         return WhiteMagicCrewMemory
     if name == "WhiteMagicAutoGenMemory":
-        from whitemagic.core.memory.adapters.autogen_adapter import WhiteMagicAutoGenMemory
+        from whitemagic.core.memory.adapters.autogen_adapter import (
+            WhiteMagicAutoGenMemory,
+        )
         return WhiteMagicAutoGenMemory
     if name == "WhiteMagicOpenAIMemory":
-        from whitemagic.core.memory.adapters.openai_adapter import WhiteMagicOpenAIMemory
+        from whitemagic.core.memory.adapters.openai_adapter import (
+            WhiteMagicOpenAIMemory,
+        )
         return WhiteMagicOpenAIMemory
     if name == "ObsidianAdapter":
         from whitemagic.core.memory.adapters.obsidian_adapter import ObsidianAdapter

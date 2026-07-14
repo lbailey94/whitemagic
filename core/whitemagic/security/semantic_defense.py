@@ -600,8 +600,8 @@ def _query_model_for_classification(model: str, text: str, timeout: float = 30.0
     """Query llama-server to classify text as attack/benign."""
     start = time.time()
     try:
-        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
         from whitemagic.inference.grammar_schemas import SECURITY_CLASSIFICATION_SCHEMA
+        from whitemagic.inference.llama_cpp import get_llama_cpp_backend
 
         backend = get_llama_cpp_backend()
         messages = [

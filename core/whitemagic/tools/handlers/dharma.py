@@ -292,7 +292,10 @@ def handle_karmic_effects(**kwargs: Any) -> dict[str, Any]:
     Args:
         tool: Optional tool name to query. If omitted, returns summary for all tools.
     """
-    from whitemagic.dharma.effect_registry import get_effect_registry, get_declared_effects
+    from whitemagic.dharma.effect_registry import (
+        get_declared_effects,
+        get_effect_registry,
+    )
 
     tool_name = kwargs.get("tool", "")
     if tool_name:

@@ -7,8 +7,9 @@ Handles case normalization, plural/singular, synonyms, and orphan tags.
 import logging
 import re
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from typing import Any
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

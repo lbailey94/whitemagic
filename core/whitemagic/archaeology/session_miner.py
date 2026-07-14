@@ -26,7 +26,7 @@ import re
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -1456,7 +1456,6 @@ class PatternMiner:
         # Classify each turn's emotional valence
         POSITIVE = {"breakthrough", "decision", "summary"}
         NEGATIVE = {"error"}
-        NEUTRAL = {"message", "question", "answer", "code_change", "context"}
 
         session_arcs: list[dict[str, Any]] = []
         for session in sessions:

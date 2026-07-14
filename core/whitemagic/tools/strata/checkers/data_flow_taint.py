@@ -8,6 +8,7 @@ Detects:
 """
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -15,7 +16,6 @@ from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
 
-import logging
 logger = logging.getLogger(__name__)
 
 # Source patterns — entry points for untrusted data
@@ -84,7 +84,9 @@ def _check_graph_data_flow() -> list[Finding]:
     """Use code graph data_flow edges for cross-file taint tracking."""
     findings: list[Finding] = []
     try:
-        from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+        from whitemagic.core.intelligence.code_structure_graph import (
+            get_code_structure_graph,
+        )
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return findings

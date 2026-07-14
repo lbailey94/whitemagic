@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib.util import find_spec
 from pathlib import Path
-from threading import Lock, RLock
+from threading import RLock
 from typing import Any
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps

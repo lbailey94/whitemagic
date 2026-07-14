@@ -4,15 +4,15 @@ Moves noisy/duplicate memories from active DB to archival quarantine.
 """
 
 import hashlib
+import logging
 import os
-from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.unified_types import MemoryGalaxy
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
-import logging
 logger = logging.getLogger(__name__)
 
 

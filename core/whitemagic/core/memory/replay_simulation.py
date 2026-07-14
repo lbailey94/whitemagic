@@ -66,6 +66,8 @@ class _HaskellBridge:
         result = sup.call({"method": method, "params": params or {}})
         if result.ok and result.data:
             return result.data
+        global _use_haskell
+        _use_haskell = False
         return {"status": "fallback", "reason": result.error or "unknown"}
 
 

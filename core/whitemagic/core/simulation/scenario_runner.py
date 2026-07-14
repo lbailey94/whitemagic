@@ -14,8 +14,11 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from whitemagic.core.simulation.interaction_engine import InteractionEngine, InteractionLog
-from whitemagic.core.simulation.persona_engine import PersonaEngine, Persona
+from whitemagic.core.simulation.interaction_engine import (
+    InteractionEngine,
+    InteractionLog,
+)
+from whitemagic.core.simulation.persona_engine import Persona, PersonaEngine
 from whitemagic.core.simulation.world_model import WorldModelBuilder
 
 logger = logging.getLogger(__name__)

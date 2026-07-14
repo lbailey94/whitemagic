@@ -499,8 +499,10 @@ class PulseVerifier:
 
         if _check_nacl():
             try:
+                from nacl.exceptions import (
+                    BadSignatureError,  # type: ignore[import-untyped]
+                )
                 from nacl.signing import VerifyKey  # type: ignore[import-untyped]
-                from nacl.exceptions import BadSignatureError  # type: ignore[import-untyped]
 
                 _, public_key_bytes = _get_or_create_keypair(pulse.node_id)
                 vk = VerifyKey(public_key_bytes)

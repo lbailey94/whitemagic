@@ -18,12 +18,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, cast
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

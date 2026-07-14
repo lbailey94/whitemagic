@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
-from whitemagic.core.memory.galaxy_scan import scan_query_all
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
+
+from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.galaxy_scan import scan_query_all
 
 logger = logging.getLogger(__name__)
 

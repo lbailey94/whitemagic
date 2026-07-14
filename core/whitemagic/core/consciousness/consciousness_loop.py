@@ -84,13 +84,13 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class CittaMode(str, Enum):
+class CittaMode(StrEnum):
     """Frequency modes for the consciousness loop.
 
     Each mode adjusts the tier intervals and feature enables to produce
@@ -684,7 +684,9 @@ class ConsciousnessLoop:
             # Advance neuro-upgrades (P4.3)
             neuro_signals: dict[str, Any] = {}
             try:
-                from whitemagic.core.consciousness.neuro_upgrades import get_neuro_upgrades
+                from whitemagic.core.consciousness.neuro_upgrades import (
+                    get_neuro_upgrades,
+                )
                 nu = get_neuro_upgrades()
                 citta_dims = {
                     "context_continuity": coherence,
@@ -1119,7 +1121,9 @@ class ConsciousnessLoop:
     def _run_knowledge_gap_loop(self) -> None:
         """Detect and attempt to fill knowledge gaps."""
         try:
-            from whitemagic.core.consciousness.knowledge_gap_loop import get_knowledge_gap_loop
+            from whitemagic.core.consciousness.knowledge_gap_loop import (
+                get_knowledge_gap_loop,
+            )
             kg = get_knowledge_gap_loop()
             results = kg.run(max_gaps=2)
             self._stats.knowledge_gap_runs += 1
@@ -1251,7 +1255,9 @@ class ConsciousnessLoop:
             import time
             from pathlib import Path
 
-            from whitemagic.core.consciousness.possibility_explorer import get_possibility_explorer
+            from whitemagic.core.consciousness.possibility_explorer import (
+                get_possibility_explorer,
+            )
 
             explorer = get_possibility_explorer()
             results = explorer.explore_all(n_trials_per_space=50)

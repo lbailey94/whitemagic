@@ -288,7 +288,10 @@ class HermitCrab:
     ) -> None:
         """Publish a hermit crab state change to the SecurityEventBus."""
         try:
-            from whitemagic.security.event_bus import SecurityEventType, get_security_event_bus
+            from whitemagic.security.event_bus import (
+                SecurityEventType,
+                get_security_event_bus,
+            )
 
             bus = get_security_event_bus()
             bus.emit(

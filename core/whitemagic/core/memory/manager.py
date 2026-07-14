@@ -318,7 +318,7 @@ class MemoryManager:
             logger.debug("Ignored error in manager.py:317")
         # Emit CACHE_INVALIDATE event for multi-agent coherence
         try:
-            from whitemagic.core.resonance import emit_event, EventType
+            from whitemagic.core.resonance import EventType, emit_event
             emit_event(
                 source="memory_delete",
                 event_type=EventType.CACHE_INVALIDATE,

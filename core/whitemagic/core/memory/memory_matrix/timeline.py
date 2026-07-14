@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from threading import Lock, RLock
+from threading import RLock
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT

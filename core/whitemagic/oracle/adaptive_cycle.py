@@ -153,7 +153,9 @@ class AdaptiveOracleCycle:
         # Step 5: Run simulation (optional)
         if run_simulation and result.bo_params:
             try:
-                from whitemagic.core.consciousness.simulation_orchestrator import SimulationOrchestrator
+                from whitemagic.core.consciousness.simulation_orchestrator import (
+                    SimulationOrchestrator,
+                )
                 sim = SimulationOrchestrator()
                 sim_result = sim.run_external(
                     model_type="superforecaster",

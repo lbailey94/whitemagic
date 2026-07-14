@@ -1335,6 +1335,7 @@ def _compute_tool_schema_hash(tool_name: str) -> str:
     try:
         import hashlib
         import json
+
         from whitemagic.tools.registry import get_all_tools
         for td in get_all_tools():
             if td.name == tool_name:
@@ -1845,7 +1846,7 @@ def mw_session_recorder(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
 
 
 def mw_citta_consciousness(
-    ctx: "DispatchContext", next_fn: "NextFn"
+    ctx: DispatchContext, next_fn: NextFn
 ) -> dict[str, Any] | None:
     """Citta consciousness integration — coherence gating + workspace proposals + sensorium injection.
 
@@ -2468,7 +2469,9 @@ def mw_code_nudge(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | Non
         now = time.time()
         if now - _last_nudge_time > _CODE_NUDGE_COOLDOWN:
             try:
-                from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+                from whitemagic.core.intelligence.code_structure_graph import (
+                    get_code_structure_graph,
+                )
                 g = get_code_structure_graph()
                 stats = g.stats()
                 if stats["node_count"] == 0 or (now - stats.get("last_build", 0) > 600):
@@ -2495,7 +2498,9 @@ def mw_code_nudge(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | Non
         try:
             findings = result.get("findings", [])
             if findings and len(findings) > 0:
-                from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+                from whitemagic.core.intelligence.code_structure_graph import (
+                    get_code_structure_graph,
+                )
                 g = get_code_structure_graph()
                 if g.stats()["node_count"] > 0:
                     # Find symbols for files with findings

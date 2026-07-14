@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import importlib
 import logging
-from typing import Any
 
 from whitemagic.core.plugin.base import Plugin, PluginManifest
 from whitemagic.core.plugin.registry import PluginInfo, PluginState, get_registry

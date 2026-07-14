@@ -15,10 +15,11 @@ import base64
 import hashlib
 import logging
 import os
-from whitemagic.core.memory.db_manager import safe_connect
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

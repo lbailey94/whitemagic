@@ -230,8 +230,8 @@ def rerank_results(
     entity_boosts: dict[str, float] = {}
     if query_entities:
         try:
-            from whitemagic.core.memory.db_manager import safe_connect
             from whitemagic.config.paths import DB_PATH
+            from whitemagic.core.memory.db_manager import safe_connect
 
             if DB_PATH.exists():
                 conn = safe_connect(str(DB_PATH))
@@ -369,8 +369,8 @@ def apply_entity_boosts(
     # Fallback: direct connection
     if not entity_boosts:
         try:
-            from whitemagic.core.memory.db_manager import safe_connect
             from whitemagic.config.paths import DB_PATH
+            from whitemagic.core.memory.db_manager import safe_connect
 
             if DB_PATH.exists():
                 conn = safe_connect(str(DB_PATH))

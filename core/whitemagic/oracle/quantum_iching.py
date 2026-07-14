@@ -260,7 +260,7 @@ class QuantumIChing:
         self, question: str, context: dict[str, Any]
     ) -> QuantumState:
         """Create quantum superposition based on question and context.
-        
+
         Layer A: HRR-derived amplitudes — uses hexagram HRR interaction scores
         to seed the quantum state, connecting it to the symbolic structure of the
         I Ching rather than hash noise. Falls back to hash-seeded random when
@@ -327,7 +327,7 @@ class QuantumIChing:
 
     def _collapse_quantum_state(self, state: QuantumState, question: str) -> int:
         """Collapse quantum state to a specific hexagram.
-        
+
         Layer B: Uses Born-rule sampling from PolyglotMCOrchestrator when available.
         Layer C: Applies quantum interference for entangled pairs before collapse.
         Falls back to numpy weighted-random when PolyglotMC unavailable.

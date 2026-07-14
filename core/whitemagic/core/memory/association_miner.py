@@ -535,7 +535,9 @@ class AssociationMiner:
         """Lazy accessor for the Rust-based neural GraphEngine."""
         if self._neural_graph_engine_instance is None:
             try:
-                from whitemagic.core.memory.neural.graph_engine import get_graph_engine as get_neural
+                from whitemagic.core.memory.neural.graph_engine import (
+                    get_graph_engine as get_neural,
+                )
                 self._neural_graph_engine_instance = get_neural()
             except Exception:
                 return None

@@ -13,6 +13,7 @@ Usage:
 # ruff: noqa: BLE001
 
 import logging
+
 from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)

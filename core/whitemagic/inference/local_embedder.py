@@ -11,16 +11,22 @@ Usage:
     vectors = embedder.embed(["hello world", "local ai is fast"])
 """
 
+from __future__ import annotations
+
 import logging
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from fastembed import TextEmbedding
 
 logger = logging.getLogger(__name__)
 
 # Global model cache — avoid loading the same model into memory multiple times
 # when different subsystems create separate LocalEmbedder instances.
-_GLOBAL_MODELS: dict[str, "TextEmbedding"] = {}
+_GLOBAL_MODELS: dict[str, TextEmbedding] = {}
 _GLOBAL_MODELS_LOCK = __import__("threading").RLock()
 
 

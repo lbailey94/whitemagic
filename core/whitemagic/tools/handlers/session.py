@@ -76,6 +76,7 @@ def _lean_bootstrap(**kwargs: Any) -> dict[str, Any]:
     session_info: dict[str, Any] = {}
     try:
         if session_id:
+            from whitemagic.tools.handlers.misc import handle_focus_session
             session_info = handle_focus_session(session_id=session_id, **kwargs)
         else:
             session_info = handle_create_session(name="Lean Bootstrap Session", **kwargs)

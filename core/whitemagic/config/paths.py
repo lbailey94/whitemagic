@@ -16,6 +16,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+log = logging.getLogger(__name__)
+
 
 def _is_writable(path: Path) -> bool:
     try:
@@ -224,12 +226,12 @@ def ensure_paths() -> Any:
     try:
         WM_ROOT.chmod(0o700)
     except OSError:
-        logger.debug("Ignored OSError in paths.py:226")
+        log.debug("Ignored OSError in paths.py:226")
     # DB path may be overridden (e.g., containers); ensure its parent exists.
     try:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         log.debug("Operation failed: %s", e)
-        logger.debug("Ignored OSError in paths.py:226")
+        log.debug("Ignored OSError in paths.py:233")
     if not os.getenv("WM_SILENT_INIT"):
         log.info("Paths verified.")

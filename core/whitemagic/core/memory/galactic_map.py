@@ -632,7 +632,9 @@ class GalacticMap:
     def _get_telepathy_engine(self):
         """Lazy accessor for the GalacticTelepathyEngine."""
         if self._telepathy_engine_instance is None:
-            from whitemagic.core.memory.galactic_telepathy import GalacticTelepathyEngine
+            from whitemagic.core.memory.galactic_telepathy import (
+                GalacticTelepathyEngine,
+            )
             from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
             gm = get_galaxy_manager()
             self._telepathy_engine_instance = GalacticTelepathyEngine(gm)

@@ -4,6 +4,7 @@ Manages user preferences, learning patterns, and adaptation history.
 Used by GirlGana (Nurture) to adapt the system to the user.
 """
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -11,8 +12,6 @@ from typing import Any
 from whitemagic.config.paths import USER_PROFILE_PATH
 from whitemagic.utils.fast_json import loads as _json_loads
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 @dataclass

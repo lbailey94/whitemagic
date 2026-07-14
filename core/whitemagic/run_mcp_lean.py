@@ -28,9 +28,9 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Any, cast
 
 from whitemagic import __version__ as _VERSION
-from typing import Any, cast
 
 # ── Ensure project root is on sys.path ──────────────────────────────
 ROOT_DIR = Path(__file__).resolve().parent
@@ -833,8 +833,7 @@ _GLYPH_MAP: dict[str, str] = {
     "healing": "愈", "humor": "趣", "love": "爱",
     "mystery": "秘", "patience": "忍", "play": "嬉",
     "practice": "修", "presence": "临", "protection": "护",
-    "reverence": "敬", "sanctuary": "殿", "sangha": "僧",
-    "stillness": "静", "transformation": "化", "truth": "真",
+    "reverence": "敬", "sanctuary": "殿", "sangha": "僧", "transformation": "化", "truth": "真",
     "voice": "声", "wisdom": "智", "wonder": "奇",
     # Archaeology
     "archaeology": "考", "files_tracked": "追件", "total_reads": "读次",
@@ -860,7 +859,6 @@ _GLYPH_MAP: dict[str, str] = {
     "resolution_hints": "解示", "available": "可",
     "fastmcp": "快M", "authored_tools": "撰具", "by_stability": "稳分",
     "battery_min": "电低", "cpu_temp_max": "芯高", "memory_max": "存高",
-    "accelerators": "速器", "surface_counts": "面数",
     # Remaining deep sub-keys
     "callable_tools": "可调", "dispatch_tools": "分派", "gana_tools": "宿具",
     "nested_unique_tools": "嵌独", "stable": "稳", "experimental": "试",
@@ -898,26 +896,6 @@ def _compact_enabled() -> bool:
     """Check if compact response mode is enabled (levels 1-3)."""
     val = os.environ.get("WM_MCP_COMPACT", "0").strip().lower()
     return val in ("1", "true", "yes", "2", "2.0", "3", "3.0")
-
-    if not isinstance(result, dict):
-        return result
-
-    out = {
-        k: _compact_response(v) if isinstance(v, dict) else v
-        for k, v in result.items()
-        if k not in _COMPACT_STRIP_KEYS
-    }
-
-    if _compact_level in ("2", "2.0"):
-        out = _apply_logoglyphs(out)
-
-    try:
-        from whitemagic.tools.compact_response import compact
-        out = compact(out)
-    except (ImportError, AttributeError):
-        logger.debug("Optional dependency unavailable: ImportError")
-
-    return out
 
 
 @server.call_tool()

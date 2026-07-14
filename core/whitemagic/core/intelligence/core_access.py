@@ -33,6 +33,11 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any, cast
+
 from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.galaxy_scan import (
     galaxy_connection,
@@ -40,10 +45,6 @@ from whitemagic.core.memory.galaxy_scan import (
     scan_query_all,
     scan_query_one,
 )
-import threading
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -1024,7 +1025,7 @@ class CoreAccessLayer:
 
             scored.sort(key=lambda x: -x[1])
 
-        conn = self._get_conn()
+        self._get_conn()
         results: list[HybridResult] = []
         for mid, score, sources in scored[:k]:
             title = None

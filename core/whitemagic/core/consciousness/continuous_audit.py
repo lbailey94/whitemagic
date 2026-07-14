@@ -17,11 +17,11 @@ Instead of auditing every few hours/days, audit constantly:
 This is the "check before walking" system - constant awareness update.
 """
 
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-import logging
 logger = logging.getLogger(__name__)
 
 try:

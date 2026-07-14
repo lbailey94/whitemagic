@@ -374,7 +374,8 @@ class PolyglotMCOrchestrator:
         mean = sum(values) / n
         var = sum((v - mean) ** 2 for v in values) / n
         sorted_v = sorted(values)
-        pct = lambda q: sorted_v[min(int(q * (n - 1)), n - 1)]
+        def pct(q):
+            return sorted_v[min(int(q * (n - 1)), n - 1)]
         std = math.sqrt(var) if var > 0 else 0.0
         return {
             "mean": mean,
@@ -1003,7 +1004,7 @@ class PolyglotMCOrchestrator:
                 continue
             fitness_vals = [fn(s) for s in samples]
 
-            bo_result = self.bayesian_optimize(
+            self.bayesian_optimize(
                 samples[:min(10, len(samples))],
                 fitness_vals[:min(10, len(fitness_vals))],
                 param_ranges,

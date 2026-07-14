@@ -3,9 +3,9 @@ Combines vector similarity, BM25 text matching, and graph PageRank
 using Reciprocal Rank Fusion (RRF) and learned weights.
 """
 
+import logging
 from dataclasses import dataclass
 
-import logging
 logger = logging.getLogger(__name__)
 
 

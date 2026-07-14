@@ -38,7 +38,7 @@ class FileDiff:
     old_path: str = ""
     additions: int = 0
     deletions: int = 0
-    hunks: list["HunkDiff"] = field(default_factory=list)
+    hunks: list[HunkDiff] = field(default_factory=list)
     is_new: bool = False
     is_deleted: bool = False
     is_rename: bool = False
@@ -86,7 +86,7 @@ class HunkDiff:
     old_count: int
     new_start: int
     new_count: int
-    lines: list["DiffLine"] = field(default_factory=list)
+    lines: list[DiffLine] = field(default_factory=list)
 
     @property
     def added_line_numbers(self) -> set[int]:

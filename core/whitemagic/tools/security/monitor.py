@@ -2,9 +2,10 @@
 import logging
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from threading import Event, Thread
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

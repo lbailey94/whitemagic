@@ -4,10 +4,9 @@ Includes upgraded existing tools (using SessionMiner when API is available)
 and 8 new tools for export, ingest, sync, mining, categorization, and search.
 """
 
+import logging
 from typing import Any
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def _get_miner() -> Any:
@@ -37,7 +36,7 @@ def handle_windsurf_list_conversations(**kwargs: Any) -> dict[str, Any]:
                     "method": "api",
                 })
             return {"status": "success", "conversations": conversations, "method": "api"}
-        except Exception as e:
+        except Exception:
             logger.debug("Ignored Exception in windsurf_conv.py:40")
 
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
@@ -169,8 +168,9 @@ def handle_windsurf_mine(**kwargs: Any) -> dict[str, Any]:
     export_dir = Path(export_dir)
 
     # Load sessions from export
-    from whitemagic.archaeology.session_miner import TranscriptParser
     import json
+
+    from whitemagic.archaeology.session_miner import TranscriptParser
 
     md_files = sorted(export_dir.glob("*.md"))
     md_files = [f for f in md_files if f.name != "INDEX.md"]

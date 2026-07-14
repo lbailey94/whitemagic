@@ -880,7 +880,6 @@ wm(thought="{chain_intent}")
             return False
 
         # Current chain becomes a version entry (for audit)
-        old_chain = skill.optimized_chain
         previous = skill.previous_versions.pop()
 
         skill.optimized_chain = previous

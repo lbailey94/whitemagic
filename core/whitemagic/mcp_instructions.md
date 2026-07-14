@@ -1,6 +1,6 @@
 # WhiteMagic — Server Instructions for AI Clients
 
-WhiteMagic is a cognitive operating system that gives you persistent memory, associative recall, ethical governance, and self-awareness across sessions. It exposes 586 tools organized into 28 Gana meta-tools based on the 28 Lunar Mansions (614 callable total including the 28 Gana meta-tools and the wm meta-tool).
+WhiteMagic is a cognitive operating system that gives you persistent memory, associative recall, ethical governance, and self-awareness across sessions. It exposes 829 tools organized into 28 Gana meta-tools based on the 28 Lunar Mansions (829 callable total including the 28 Gana meta-tools).
 
 ## Quick Start
 

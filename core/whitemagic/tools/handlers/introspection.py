@@ -3,12 +3,12 @@
 
 import logging
 import shutil
-from whitemagic.core.memory.db_manager import safe_connect
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.runtime_status import get_runtime_status
 from whitemagic.tools import introspection as _core
 

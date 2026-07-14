@@ -16,13 +16,13 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class SecurityEventType(str, Enum):
+class SecurityEventType(StrEnum):
     """Security event types for immune system."""
 
     TOOL_BLOCKED = "security.tool_blocked"
@@ -36,7 +36,7 @@ class SecurityEventType(str, Enum):
     FALSE_POSITIVE = "security.false_positive"
 
 
-class ThreatLevel(str, Enum):
+class ThreatLevel(StrEnum):
     """System threat level."""
 
     NORMAL = "normal"

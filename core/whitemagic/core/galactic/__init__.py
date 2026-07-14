@@ -17,7 +17,6 @@ import json
 import logging
 import os
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from collections.abc import Iterator
@@ -29,6 +28,7 @@ from typing import Any
 # Centralized path config — never use Path.home() / .expanduser() here.
 # Per core/AGENTS.md §10 rule 6.
 from whitemagic.config.paths import MEMORY_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

@@ -3,12 +3,11 @@
 Centralized management of worker limits to prevent resource exhaustion.
 """
 
+import logging
 import multiprocessing
 import os
 from typing import Any
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def get_safe_cpu_count() -> int:

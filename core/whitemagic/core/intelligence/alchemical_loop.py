@@ -1021,7 +1021,6 @@ class AlchemicalLoop:
 
             if _HAS_ANTIPATTERN:
                 from whitemagic.config.paths import WM_ROOT
-
                 from whitemagic.core.immune.defense.autoimmune import AutoimmuneSystem
 
                 immune = AutoimmuneSystem(base_dir=WM_ROOT)

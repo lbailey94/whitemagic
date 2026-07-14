@@ -10,13 +10,13 @@ Commands:
 
 import asyncio
 import json as json_lib
+import logging
 from typing import Any
 
 import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-import logging
 logger = logging.getLogger(__name__)
 
 # wm repl — Interactive REPL

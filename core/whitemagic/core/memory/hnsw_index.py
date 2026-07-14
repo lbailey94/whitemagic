@@ -5,13 +5,13 @@ Provides 1000x speedup for similarity search on large corpora.
 
 import logging
 import pickle
-from whitemagic.core.memory.db_manager import safe_connect
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from whitemagic.config.paths import MEMORY_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ import json
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
-from threading import Lock, RLock
+from threading import RLock
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT

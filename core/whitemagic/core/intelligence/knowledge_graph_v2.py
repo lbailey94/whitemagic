@@ -21,7 +21,6 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from dataclasses import dataclass
@@ -29,6 +28,7 @@ from datetime import datetime
 from typing import Any
 
 from whitemagic.core.intelligence.lightweight_ner import get_light_ner
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 
@@ -475,7 +475,9 @@ class KnowledgeGraphV2:
             Dict with ingestion statistics.
         """
         try:
-            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            from whitemagic.core.intelligence.code_structure_graph import (
+                get_code_structure_graph,
+            )
             g = get_code_structure_graph()
             if g.stats()["node_count"] == 0 and project_path:
                 g.build(project_path)

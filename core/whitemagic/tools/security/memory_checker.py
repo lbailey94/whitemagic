@@ -3,9 +3,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from whitemagic.tools.strata.checkers import register
-from whitemagic.tools.strata.checkers.solidity import FileIndex, Finding, FindingSeverity
 from whitemagic.tools.security.vuln_knowledge import get_vuln_knowledge_base
+from whitemagic.tools.strata.checkers import register
+from whitemagic.tools.strata.checkers.solidity import (
+    FileIndex,
+    Finding,
+    FindingSeverity,
+)
 
 logger = logging.getLogger(__name__)
 

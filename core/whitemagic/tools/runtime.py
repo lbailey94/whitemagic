@@ -315,10 +315,8 @@ class ToolRuntime:
         self, request: ToolRequest, kwargs: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute in maintenance mode — fast-path only, no middleware."""
-        from whitemagic.tools.dispatch_table import _fast_path_dispatch
-
         # Try fast-path first
-        from whitemagic.tools.dispatch_table import _is_fast_path
+        from whitemagic.tools.dispatch_table import _fast_path_dispatch, _is_fast_path
         if _is_fast_path(request.tool_name):
             return _fast_path_dispatch(request.tool_name, **kwargs)
 

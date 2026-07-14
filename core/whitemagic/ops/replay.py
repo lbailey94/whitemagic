@@ -117,7 +117,7 @@ class ReplayRecorder:
         self,
         tool_name: str,
         **kwargs: Any,
-    ) -> "_RecordContext":
+    ) -> _RecordContext:
         """Context manager that records a tool execution trace."""
         return _RecordContext(self, tool_name, kwargs)
 

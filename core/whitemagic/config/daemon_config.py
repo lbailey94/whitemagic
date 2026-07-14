@@ -12,6 +12,7 @@ Configuration is loaded from (in priority order):
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,6 @@ from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
 
-import logging
 logger = logging.getLogger(__name__)
 
 CONFIG_FILE = WM_ROOT / "config.yaml"

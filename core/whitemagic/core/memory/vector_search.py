@@ -10,7 +10,6 @@ import importlib.util
 import logging
 import math
 import os
-from whitemagic.core.memory.db_manager import safe_connect
 import struct
 import threading
 from collections import Counter
@@ -18,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from whitemagic.config.paths import DB_PATH, MEMORY_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 _sbert_model = None
@@ -275,6 +275,7 @@ class VectorSearch:
                 if not scored and len(self._cache) > 10:
                     try:
                         import numpy as np
+
                         import whitemagic_rs
 
                         ids = list(self._cache.keys())

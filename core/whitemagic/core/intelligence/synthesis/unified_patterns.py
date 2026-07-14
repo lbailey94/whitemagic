@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from importlib.util import find_spec
 from typing import Any
+
 from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)

@@ -333,7 +333,11 @@ class ConsciousnessDepthGauge:
                 return {"total": len(rows), "closed": 0, "message": "No closed predictions yet"}
             forecasts = [r["confidence"] for r in closed]
             outcomes = [1 if r["status"] == "validated" else 0 for r in closed]
-            from whitemagic.forecasting.brier import brier_score, calibration_gap, brier_index
+            from whitemagic.forecasting.brier import (
+                brier_index,
+                brier_score,
+                calibration_gap,
+            )
             bs = brier_score(forecasts, outcomes)
             cg = calibration_gap(forecasts, outcomes)
             bi = brier_index(bs)

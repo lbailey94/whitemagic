@@ -9,6 +9,7 @@ Measures and tracks:
 """
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -16,8 +17,6 @@ from pathlib import Path
 
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.core import parse_datetime
-import logging
-
 
 logger = logging.getLogger(__name__)
 

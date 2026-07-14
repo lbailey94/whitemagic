@@ -16,6 +16,8 @@ Provides security middleware and utilities:
 
 # Tool gating - always available
 # Edgerunner Violet security layer
+import logging
+
 from .engagement_tokens import (
     RED_OPS_TOOL_PATTERNS,
     EngagementToken,
@@ -38,7 +40,6 @@ from .tool_gating import (
     get_tool_gate,
 )
 
-import logging
 logger = logging.getLogger(__name__)
 
 __all__ = [

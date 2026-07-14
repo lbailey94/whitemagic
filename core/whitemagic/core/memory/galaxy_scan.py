@@ -18,9 +18,9 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
 from whitemagic.core.memory.db_manager import safe_connect
 

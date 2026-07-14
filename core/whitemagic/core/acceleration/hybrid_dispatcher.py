@@ -424,7 +424,11 @@ class HybridDispatcher:
             # Fall through to Python on Koka error
 
         # Python fallback: compare effect types
-        from whitemagic.dharma.karma_ledger import EffectSignature, EffectType, KarmaLedger
+        from whitemagic.dharma.karma_ledger import (
+            EffectSignature,
+            EffectType,
+            KarmaLedger,
+        )
         declared_sigs = [
             EffectSignature(
                 effect_type=EffectType(e.get("effect_type", "pure")),

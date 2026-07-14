@@ -10,12 +10,12 @@ Enables introspection, pattern mining, and retrieval of past reasoning strategie
 import json
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import uuid
 from datetime import datetime
 from typing import Any
 
 from whitemagic.core.memory.cognitive_episode import CognitiveEpisode
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

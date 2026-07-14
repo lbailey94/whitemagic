@@ -6,12 +6,12 @@ about its own learning process.
 """
 
 import json
-from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from whitemagic.config.paths import MEMORY_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 
 
 @dataclass

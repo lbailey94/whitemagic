@@ -1,9 +1,8 @@
 """MCP handlers for Harmony Vector Anomaly Detection."""
 
+import logging
 from typing import Any
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def handle_anomaly(**kwargs: Any) -> dict[str, Any]:

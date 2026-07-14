@@ -190,8 +190,8 @@ class GeneseedVault:
         llm_refined = False
         final_code = base_code
         try:
-            from whitemagic.inference.local_llm import LocalLLM
             from whitemagic.inference.grammar_schemas import PYTHON_CODE_GRAMMAR
+            from whitemagic.inference.local_llm import LocalLLM
 
             llm = LocalLLM()
             if llm.is_available:

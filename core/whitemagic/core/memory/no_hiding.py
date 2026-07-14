@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying import get_bus
 from whitemagic.core.memory.unified import get_unified_memory
+from whitemagic.core.resonance.gan_ying import get_bus
 
 logger = logging.getLogger(__name__)
 

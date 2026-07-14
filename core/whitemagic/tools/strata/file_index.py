@@ -1,10 +1,10 @@
 import ast
 import hashlib
 import json
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 
-import logging
 logger = logging.getLogger(__name__)
 
 __all__ = ["FileIndex"]

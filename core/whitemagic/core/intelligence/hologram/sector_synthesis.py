@@ -10,11 +10,11 @@ using the LLM Bridge and 4D spatial context.
 import json
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from pathlib import Path
 
 from whitemagic.config.paths import WM_ROOT
+from whitemagic.core.memory.db_manager import safe_connect
 
 try:
     from ...llm_bridge import LLMBridge

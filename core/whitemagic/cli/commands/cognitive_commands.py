@@ -12,12 +12,12 @@ Commands:
     wm ground <action>    — Dharma evaluation shortcut for go/no-go decisions
 """
 
+import logging
+
 import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def _get_json_output(ctx, json_flag: bool) -> bool:

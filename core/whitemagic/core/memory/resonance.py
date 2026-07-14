@@ -1,9 +1,9 @@
 # ruff: noqa: BLE001
 
 import ctypes
+import logging
 from pathlib import Path
 
-import logging
 logger = logging.getLogger(__name__)
 
 # Path to the shared library

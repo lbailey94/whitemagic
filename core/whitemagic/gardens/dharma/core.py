@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -9,8 +10,6 @@ from typing import Any
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 class DharmaCore:

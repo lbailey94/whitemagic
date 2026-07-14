@@ -13,8 +13,8 @@ Enables third-party extensions without modifying core. Provides:
 from .base import Plugin, PluginManifest
 from .discovery import PluginDiscovery
 from .extension_point import (
-    EP_HANDLERS,
     EP_GOVERNANCE_POLICIES,
+    EP_HANDLERS,
     EP_NATIVE_ACCELERATORS,
     EP_RETRIEVAL_STAGES,
     EP_TOOLS,
@@ -24,7 +24,13 @@ from .extension_point import (
     list_extension_points,
 )
 from .loader import PluginLoader
-from .registry import PluginInfo, PluginRegistry, PluginState, get_registry, reset_registry
+from .registry import (
+    PluginInfo,
+    PluginRegistry,
+    PluginState,
+    get_registry,
+    reset_registry,
+)
 
 __all__ = [
     "Plugin",

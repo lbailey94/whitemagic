@@ -29,13 +29,13 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ExperimentStage(str, Enum):
+class ExperimentStage(StrEnum):
     """Lifecycle stages for an experiment."""
 
     HYPOTHESIS = "hypothesis"
@@ -48,7 +48,7 @@ class ExperimentStage(str, Enum):
     ABANDONED = "abandoned"
 
 
-class ResearchDomain(str, Enum):
+class ResearchDomain(StrEnum):
     """Research domains mapped to WhiteMagic subsystems."""
 
     COGNITIVE = "cognitive"
@@ -572,6 +572,7 @@ class ResearchDAG:
         """Persist an experiment to SQLite."""
         self._ensure_table()
         import json
+
         from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
         try:
@@ -630,7 +631,7 @@ class ResearchDAG:
         """Walk upstream via lineage_edges to find inspiration/parent experiments."""
         try:
             from whitemagic.core.memory.phylogenetics import get_phylogenetics
-            pg = get_phylogenetics()
+            get_phylogenetics()
             ancestors: list[dict[str, Any]] = []
             visited = {experiment_id}
             frontier = [experiment_id]
@@ -813,7 +814,7 @@ class ResearchDAG:
         top_experiments = all_results[:top_n]
 
         # Extract themes
-        hypotheses = [e.hypothesis for e in top_experiments]
+        [e.hypothesis for e in top_experiments]
         domains_represented = set(e.domain.value for e in top_experiments)
         avg_fitness = sum(e.fitness_score for e in top_experiments) / len(top_experiments)
         max_fitness = top_experiments[0].fitness_score

@@ -6,12 +6,12 @@ Together they form a complete system - all human experience represented.
 Your original architecture, User. Built with love.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from typing import Any
 
-import logging
 logger = logging.getLogger(__name__)
 
 _get_bus: Any = None

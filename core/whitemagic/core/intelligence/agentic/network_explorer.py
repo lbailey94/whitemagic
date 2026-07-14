@@ -4,10 +4,10 @@ Based on Grimoire Chapter 22: Well Deep Search.
 """
 
 import logging
-from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from enum import Enum
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.unified import get_unified_memory
 from whitemagic.core.memory.unified_types import Memory
 

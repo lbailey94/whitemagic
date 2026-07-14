@@ -6,9 +6,10 @@ and quadrant-based segmentation.
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 from dataclasses import dataclass
 from typing import Any
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

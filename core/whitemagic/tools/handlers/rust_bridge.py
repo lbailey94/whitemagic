@@ -1,9 +1,8 @@
 """Rust bridge tool handlers."""
 
+import logging
 from typing import Any, cast
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 def _load_rust() -> tuple[Any, Any]:
@@ -25,7 +24,6 @@ def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
     if rust is None or not hasattr(rust, "audit_directory"):
         # Python fallback: basic file listing
         import os
-
         from pathlib import Path
 
         search_path = Path(str(path))

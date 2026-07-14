@@ -13,7 +13,6 @@ from typing import Any
 from whitemagic.tools.security.vuln_knowledge import (
     VulnerabilityPattern,
     VulnKnowledgeBase,
-    _BUILTIN_PATTERNS,
 )
 
 logger = logging.getLogger(__name__)
@@ -252,9 +251,8 @@ def get_persistent_vuln_kb() -> PersistentVulnKnowledgeBase:
     """Get the global PersistentVulnKnowledgeBase singleton."""
     global _persistent_kb
     if _persistent_kb is None:
-        from pathlib import Path
-
         import os
+        from pathlib import Path
 
         wm_root = os.environ.get("WM_ROOT", os.path.expanduser("~/.whitemagic"))
         db_path = Path(wm_root) / "security" / "vuln_kb.db"

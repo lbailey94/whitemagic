@@ -21,7 +21,9 @@ def check_god_classes(
 ):
     """Detect classes/functions with abnormally high degree (god nodes)."""
     try:
-        from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+        from whitemagic.core.intelligence.code_structure_graph import (
+            get_code_structure_graph,
+        )
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
@@ -47,7 +49,9 @@ def check_circular_dependencies(
 ):
     """Detect circular dependencies in the import graph."""
     try:
-        from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+        from whitemagic.core.intelligence.code_structure_graph import (
+            get_code_structure_graph,
+        )
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
@@ -121,7 +125,9 @@ def check_dead_code(
 ):
     """Detect dead code — symbols with zero in-degree that aren't entry points."""
     try:
-        from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+        from whitemagic.core.intelligence.code_structure_graph import (
+            get_code_structure_graph,
+        )
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
@@ -178,7 +184,10 @@ def check_bridge_modules(
     """Detect bridge modules — files with high betweenness centrality."""
     try:
         import networkx as nx
-        from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+
+        from whitemagic.core.intelligence.code_structure_graph import (
+            get_code_structure_graph,
+        )
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return

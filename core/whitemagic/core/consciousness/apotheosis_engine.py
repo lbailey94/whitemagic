@@ -168,8 +168,8 @@ class SelfMonitoringHealthLoop:
 
         # 3. Response time check — real avg from calibration data
         try:
-            import os as _os
             import json as _json
+            import os as _os
             state_root = _os.environ.get("WM_STATE_ROOT", _os.path.expanduser("~/.whitemagic"))
             cal_path = _os.path.join(state_root, "citta", "calibration.jsonl")
             if _os.path.exists(cal_path):
@@ -196,8 +196,8 @@ class SelfMonitoringHealthLoop:
 
         # 4. Error rate check — real from telemetry
         try:
-            import os as _os
             import json as _json
+            import os as _os
             state_root = _os.environ.get("WM_STATE_ROOT", _os.path.expanduser("~/.whitemagic"))
             telem_path = _os.path.join(state_root, "citta", "telemetry.jsonl")
             if _os.path.exists(telem_path):
@@ -308,8 +308,8 @@ class SelfMonitoringHealthLoop:
 
         # 9. Antibody diversity — distinct error types recovered from
         try:
-            import os as _os2
             import json as _json2
+            import os as _os2
             state_root = _os2.environ.get("WM_STATE_ROOT", _os2.path.expanduser("~/.whitemagic"))
             recovery_path = _os2.path.join(state_root, "citta", "recovery_registry.jsonl")
             if _os2.path.exists(recovery_path):

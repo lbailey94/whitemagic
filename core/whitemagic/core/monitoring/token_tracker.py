@@ -38,7 +38,8 @@ NextFn = None
 def _ensure_types():
     global DispatchContext, NextFn
     if DispatchContext is None:
-        from whitemagic.tools.middleware import DispatchContext as _DC, NextFn as _NF
+        from whitemagic.tools.middleware import DispatchContext as _DC
+        from whitemagic.tools.middleware import NextFn as _NF
         DispatchContext = _DC
         NextFn = _NF
 

@@ -38,7 +38,7 @@ class LocalLLM:
     def _check_availability(self):
         """Check if llama-server is running and auto-select model if needed."""
         try:
-            from whitemagic.inference.llama_cpp import LlamaCppBackend, BinaryManager
+            from whitemagic.inference.llama_cpp import BinaryManager, LlamaCppBackend
 
             # Try to get or create a backend
             binary = BinaryManager.find_binary()

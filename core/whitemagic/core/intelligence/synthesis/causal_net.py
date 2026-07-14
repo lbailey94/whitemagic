@@ -4,13 +4,13 @@ Infers directed edges between memory clusters using 4D holographic coordinates.
 """
 
 import logging
-from whitemagic.core.memory.db_manager import safe_connect
 import subprocess
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 

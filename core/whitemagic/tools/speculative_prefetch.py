@@ -258,7 +258,7 @@ class SpeculativePrefetcher:
 
         # Broadcast transition for cross-agent prefetch (Phase 4)
         try:
-            from whitemagic.core.resonance import emit_event, EventType
+            from whitemagic.core.resonance import EventType, emit_event
             emit_event(
                 source="speculative_prefetch",
                 event_type=EventType.CACHE_TRANSFER,

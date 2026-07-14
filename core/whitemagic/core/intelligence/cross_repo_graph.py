@@ -13,9 +13,7 @@ from whitemagic.core.intelligence.code_structure_graph import (
     CodeEdge,
     CodeNode,
     CodeStructureGraph,
-    _hash_content,
     _make_edge_id,
-    _make_node_id,
 )
 
 logger = logging.getLogger(__name__)

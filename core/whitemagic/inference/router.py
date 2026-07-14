@@ -616,6 +616,7 @@ def _get_small_backend() -> LlamaCppBackend | None:
         return _small_backend if _small_backend.is_available else None
 
     import os
+
     from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
 
     model_path = (
@@ -693,6 +694,7 @@ def _get_large_backend() -> LlamaCppBackend | None:
         return _large_backend if _large_backend.is_available else None
 
     import os
+
     from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
 
     model_path = (
@@ -890,6 +892,7 @@ def _get_draft_backend() -> LlamaCppBackend | None:
         return _draft_backend if _draft_backend.is_available else None
 
     import os
+
     from whitemagic.inference.llama_cpp import LlamaCppBackend, LlamaCppConfig
 
     model_path = (

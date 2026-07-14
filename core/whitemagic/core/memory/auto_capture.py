@@ -10,14 +10,13 @@ Captures short-term memories every N actions to enable:
 """
 
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-import logging
-
 
 logger = logging.getLogger(__name__)
 

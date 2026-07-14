@@ -37,10 +37,10 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import DATA_DIR, DB_PATH, MEMORY_DIR
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.utils.core import parse_datetime
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
-from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 

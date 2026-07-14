@@ -12,6 +12,7 @@ Modes:
 The TUI reuses CLI commands internally — it's a view layer, not a separate API.
 """
 
+import logging
 from typing import Any
 
 from textual.app import App, ComposeResult  # type: ignore[import-not-found]
@@ -27,7 +28,6 @@ from textual.widgets import (  # type: ignore[import-not-found]
 
 from whitemagic import __version__
 
-import logging
 logger = logging.getLogger(__name__)
 
 try:

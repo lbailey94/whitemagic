@@ -473,9 +473,10 @@ class SessionRecorder:
                 continue
 
             # Create a copy in codex galaxy
-            from whitemagic.core.memory.unified_types import Memory as UMemory
             import time as _time
             import uuid as _uuid
+
+            from whitemagic.core.memory.unified_types import Memory as UMemory
 
             new_id = str(_uuid.uuid4())
             promoted_mem = UMemory(

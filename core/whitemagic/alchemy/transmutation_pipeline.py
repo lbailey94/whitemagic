@@ -10,10 +10,11 @@ Usage:
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import sys
 import time
 from pathlib import Path
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:

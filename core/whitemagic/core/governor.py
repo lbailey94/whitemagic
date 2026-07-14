@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
-from threading import Lock, RLock
+from threading import RLock
 from typing import Any
 
 # Singleton instance

@@ -440,6 +440,7 @@ class GanYingBus:
             None  # Lazy-loaded Rust cascade backend (JSON stdio)
         )
         _ensure_global_worker()
+        self._probe_koka_availability()
 
     @property
     def total_emissions(self) -> int:
@@ -876,6 +877,32 @@ class GanYingBus:
         if koka_result:
             event.data["_garden_resonance"] = koka_result
 
+    def _probe_koka_availability(self) -> None:
+        """Probe Koka backend availability and cache at class level."""
+        if GanYingBus._koka_available is not None:
+            return
+        try:
+            import sys
+            from pathlib import Path
+
+            _bridge_path = (
+                Path(__file__).resolve().parent.parent.parent.parent.parent
+                / "polyglot"
+                / "bridges"
+                / "python"
+            )
+            if str(_bridge_path) not in sys.path:
+                sys.path.insert(0, str(_bridge_path))
+            from whitemagic_polyglot import KokaCascadeBackend
+
+            backend = KokaCascadeBackend()
+            backend.call("ping", timeout=0.5)
+            self._koka_backend = backend
+            GanYingBus._koka_available = True
+        except Exception:
+            self._koka_backend = False
+            GanYingBus._koka_available = False
+
     def _try_koka_garden_resonance(
         self, event: ResonanceEvent
     ) -> dict[str, float] | None:
@@ -894,27 +921,8 @@ class GanYingBus:
             return None
 
         if self._koka_backend is None:
-            try:
-                import sys
-                from pathlib import Path
-
-                _bridge_path = (
-                    Path(__file__).resolve().parent.parent.parent.parent.parent
-                    / "polyglot"
-                    / "bridges"
-                    / "python"
-                )
-                if str(_bridge_path) not in sys.path:
-                    sys.path.insert(0, str(_bridge_path))
-                from whitemagic_polyglot import KokaCascadeBackend
-
-                backend = KokaCascadeBackend()
-                backend.call("ping", timeout=0.5)
-                self._koka_backend = backend
-                GanYingBus._koka_available = True
-            except Exception:
-                self._koka_backend = False
-                GanYingBus._koka_available = False
+            self._probe_koka_availability()
+            if self._koka_backend is False:
                 return None
 
         try:

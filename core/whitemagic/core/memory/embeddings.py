@@ -34,11 +34,11 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import threading
 import time
 from typing import Any, cast
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.embedding_similarity import (
     batch_cosine_similarity,
     batch_cosine_similarity_numpy,
@@ -582,8 +582,9 @@ class EmbeddingEngine:
                 return self._hnsw_index, self._hnsw_ids
         try:
             if self._hnsw_index_path.exists() and self._hnsw_ids_path.exists():
-                import hnswlib  # type: ignore[import-untyped]
                 import json
+
+                import hnswlib  # type: ignore[import-untyped]
                 saved_ids = json.loads(self._hnsw_ids_path.read_text())
                 if len(saved_ids) == len(ids):
                     dim = vectors.shape[1] if hasattr(vectors, 'shape') else len(vectors[0])

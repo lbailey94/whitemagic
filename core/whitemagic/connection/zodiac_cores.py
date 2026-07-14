@@ -7,7 +7,7 @@ from whitemagic.zodiac.zodiac_cores import (  # noqa: F401
     SIGN_QUALITIES,
     ZODIAC_SIGNS,
     ZodiacCore,
-    ZodiacCoreSystem,
     ZodiacCores,
+    ZodiacCoreSystem,
     get_zodiac_cores,
 )

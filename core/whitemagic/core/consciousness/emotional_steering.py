@@ -17,7 +17,6 @@ from enum import Enum
 from typing import Any
 
 
-
 class EmotionalSignal(Enum):
     """The three initial emotional steering signals."""
     FRUSTRATION = "frustration"

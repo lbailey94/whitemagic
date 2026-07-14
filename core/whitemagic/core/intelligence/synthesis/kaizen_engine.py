@@ -9,14 +9,15 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
-from whitemagic.core.memory.galaxy_scan import (
-    scan_query_all,
-)
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from whitemagic.core.memory.db_manager import safe_connect
+from whitemagic.core.memory.galaxy_scan import (
+    scan_query_all,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -764,11 +765,11 @@ class KaizenEngine:
 
                         get_sub_clustering_engine().subdivide_large_clusters()
                     elif "skill_forge.amend" in proposal.fix_action:
+                        import re as _re
+
                         from whitemagic.core.intelligence.omni.skill_forge import (
                             get_skill_forge,
                         )
-
-                        import re as _re
 
                         match = _re.search(r"amend\('([^']+)'\)", proposal.fix_action)
                         if match:

@@ -7,12 +7,12 @@ Bridges the gap between raw pattern extraction and actionable code.
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import pooled_connection
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from whitemagic.core.memory.db_manager import pooled_connection
 from whitemagic.core.memory.holographic import get_holographic_memory
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads

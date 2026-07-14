@@ -7,9 +7,8 @@ Reads a JSON event from stdin and returns context to prepend to the LLM prompt.
 from __future__ import annotations
 
 import json
-import sys
 import logging
-
+import sys
 
 logger = logging.getLogger(__name__)
 

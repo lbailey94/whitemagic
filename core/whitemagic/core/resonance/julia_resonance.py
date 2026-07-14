@@ -42,12 +42,13 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import safe_connect
 import threading
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+
+from whitemagic.core.memory.db_manager import safe_connect
 
 try:
     from scipy.spatial import cKDTree

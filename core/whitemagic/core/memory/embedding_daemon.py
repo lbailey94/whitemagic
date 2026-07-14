@@ -28,13 +28,14 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from whitemagic.core.memory.db_manager import pooled_connection
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+
+from whitemagic.core.memory.db_manager import pooled_connection
 
 logger = logging.getLogger(__name__)
 

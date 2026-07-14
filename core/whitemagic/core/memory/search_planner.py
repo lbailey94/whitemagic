@@ -253,7 +253,9 @@ class SearchQueryPlanner:
             if query_constellation:
                 # Batch: collect all candidate IDs, do one lookup per galaxy backend
                 candidate_ids = list(scores.keys())
-                from whitemagic.core.memory.entity_reranker import batch_constellation_memberships
+                from whitemagic.core.memory.entity_reranker import (
+                    batch_constellation_memberships,
+                )
                 batch_memberships = batch_constellation_memberships(candidate_ids, galaxy_backend)
                 for mid, memberships in batch_memberships.items():
                     cs = scores.get(mid)
@@ -333,7 +335,9 @@ class SearchQueryPlanner:
         # ── Procedural skill matching (post-result injection) ────────
         if profile.include_skills:
             try:
-                from whitemagic.core.memory.entity_reranker import match_procedural_skills
+                from whitemagic.core.memory.entity_reranker import (
+                    match_procedural_skills,
+                )
                 skill_matches = match_procedural_skills(query)
                 if skill_matches:
                     from whitemagic.core.memory.unified_types import Memory, MemoryType

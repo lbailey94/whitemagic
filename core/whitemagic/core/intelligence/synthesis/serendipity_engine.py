@@ -8,15 +8,15 @@ Uses weighted sampling favoring high-gravity, low-access memories.
 import logging
 import math
 import sqlite3
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any
+
 from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.galaxy_scan import (
     execute_across_galaxies,
     scan_query_all,
 )
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Any
-
 from whitemagic.utils.core import parse_datetime
 
 logger = logging.getLogger(__name__)

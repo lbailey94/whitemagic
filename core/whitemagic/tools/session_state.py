@@ -6,9 +6,9 @@ that the sensorium injects into PRAT responses.
 
 from __future__ import annotations
 
+import logging
 import time
 
-import logging
 logger = logging.getLogger(__name__)
 
 _session_start: float | None = None

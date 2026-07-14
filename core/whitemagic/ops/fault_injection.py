@@ -36,14 +36,14 @@ Usage::
 from __future__ import annotations
 
 import logging
-import os
 import sqlite3
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Callable
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +224,6 @@ class FaultInjector:
 
     def _apply_database_lock(self, config: FaultConfig) -> None:
         """Inject database lock contention."""
-        original_connect = sqlite3.connect
         lock_error = sqlite3.OperationalError("database is locked")
 
         def _locked_connect(*args: Any, **kwargs: Any) -> sqlite3.Connection:
@@ -309,7 +308,6 @@ class FaultInjector:
 
     def _apply_cache_corruption(self, config: FaultConfig) -> None:
         """Inject cache corruption — cache returns wrong data."""
-        from whitemagic.tools.middleware import _cache_key
 
         _corrupt_cache: dict[str, dict[str, Any]] = {}
 
@@ -323,11 +321,10 @@ class FaultInjector:
 
     def _apply_network_failure(self, config: FaultConfig) -> None:
         """Inject network failure."""
-        import socket
 
         def _network_error(*args: Any, **kwargs: Any) -> Any:
             self._trigger(FaultType.NETWORK_FAILURE)
-            raise socket.timeout("Injected network timeout")
+            raise TimeoutError("Injected network timeout")
 
         p = patch("socket.socket.connect", side_effect=_network_error)
         p.start()
